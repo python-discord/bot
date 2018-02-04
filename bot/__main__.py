@@ -1,15 +1,11 @@
-#!/usr/bin/env python3
-
-import discord
-from discord.ext import commands
+# coding=utf-8
 import os
 
-bot = commands.Bot(command_prefix=commands.when_mentioned_or(
-    os.environ.get("BOT_PREFIX")))
+from discord.ext.commands import AutoShardedBot, when_mentioned_or
 
+bot = AutoShardedBot(command_prefix=when_mentioned_or(">>>", ">>> "))
 
-@bot.command()
-async def ping(ctx):
-    await ctx.send("Pong.")
+bot.load_extension("bot.cogs.logging")
+bot.load_extension("bot.cogs.bot")
 
 bot.run(os.environ.get("BOT_TOKEN"))
