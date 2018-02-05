@@ -13,7 +13,7 @@ class Security:
         self.bot = bot
         self.bot.check(self.check_not_bot)
 
-    async def check_not_bot(self, ctx: Context):
+    def check_not_bot(self, ctx: Context):
         return not ctx.author.bot
 
 
