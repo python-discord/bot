@@ -3,4 +3,4 @@ linters = flake8, safety, dodgy
 
 [flake8]
 max-line-length=120
-application_import_names=pybot
+application_import_names=bot
