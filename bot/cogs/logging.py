@@ -14,7 +14,7 @@ class Logging:
         self.bot = bot
 
     async def on_ready(self):
-        print("Ready!")
+        print("Henlo online!")
 
     async def on_message(self, message: Message):
         if not message.guild:  # It's a DM
