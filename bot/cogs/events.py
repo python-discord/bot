@@ -1,5 +1,4 @@
 # coding=utf-8
-from discord import Guild
 from discord.ext.commands import (
     AutoShardedBot, CommandError, Context, BadArgument, NoPrivateMessage,
     CommandInvokeError, UserInputError, BotMissingPermissions
