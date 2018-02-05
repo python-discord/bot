@@ -3,7 +3,7 @@ import os
 
 from discord.ext.commands import AutoShardedBot, when_mentioned_or
 
-bot = AutoShardedBot(command_prefix=when_mentioned_or(">>>", ">>> "))
+bot = AutoShardedBot(command_prefix=when_mentioned_or(">>> ", ">>>"))
 
 # Internal/debug
 bot.load_extension("bot.cogs.logging")
