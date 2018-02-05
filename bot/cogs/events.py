@@ -1,7 +1,8 @@
 # coding=utf-8
 from discord.ext.commands import (
-    AutoShardedBot, CommandError, Context, BadArgument, NoPrivateMessage,
-    CommandInvokeError, UserInputError, BotMissingPermissions
+    AutoShardedBot, BadArgument, BotMissingPermissions,
+    CommandError, CommandInvokeError, Context,
+    NoPrivateMessage, UserInputError
 )
 
 __author__ = "Gareth Coles"

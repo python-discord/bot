@@ -1,8 +1,10 @@
 # coding=utf-8
-from discord.ext.commands import AutoShardedBot, Context, is_owner, command
+
 from io import StringIO
 
 from bot.interpreter import Interpreter
+
+from discord.ext.commands import AutoShardedBot, Context, command, is_owner
 
 __author__ = "Gareth Coles"
 

@@ -6,7 +6,7 @@ __author__ = 'Gareth Coles'
 
 CODE_TEMPLATE = """
 async def _func():
-{}
+{0}
 """
 
 

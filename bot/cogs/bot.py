@@ -1,6 +1,6 @@
 # coding=utf-8
 from discord import Embed
-from discord.ext.commands import AutoShardedBot, group, Context
+from discord.ext.commands import AutoShardedBot, Context, group
 
 __author__ = "Gareth Coles"
 
