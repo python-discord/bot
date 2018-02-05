@@ -2,9 +2,9 @@
 
 from io import StringIO
 
-from bot.interpreter import Interpreter
-
 from discord.ext.commands import AutoShardedBot, Context, command, is_owner
+
+from bot.interpreter import Interpreter
 
 __author__ = "Gareth Coles"
 
