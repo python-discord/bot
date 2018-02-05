@@ -8,6 +8,7 @@ bot = AutoShardedBot(command_prefix=when_mentioned_or(">>> ", ">>>"))
 # Internal/debug
 bot.load_extension("bot.cogs.logging")
 bot.load_extension("bot.cogs.security")
+bot.load_extension("bot.cogs.events")
 
 # Owner-only
 bot.load_extension("bot.cogs.eval")
