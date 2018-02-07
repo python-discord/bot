@@ -1,9 +1,13 @@
 # coding=utf-8
 import os
 
+from discord import Game
 from discord.ext.commands import AutoShardedBot, when_mentioned_or
 
-bot = AutoShardedBot(command_prefix=when_mentioned_or(">>> ", ">>>"))
+bot = AutoShardedBot(
+    command_prefix=when_mentioned_or(">>> ", ">> ", ">>>", ">>"),  # Order matters
+    game=Game(name=">>> help")
+)
 
 # Internal/debug
 bot.load_extension("bot.cogs.logging")
