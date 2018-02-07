@@ -17,6 +17,9 @@ class Verification:
         self.bot = bot
 
     async def on_message(self, message: Message):
+        if message.author.bot:
+            return  # They're a bot, ignore
+
         ctx = await self.bot.get_context(message)  # type: Context
 
         if ctx.command is not None and ctx.command.name == "accept":
