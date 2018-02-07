@@ -1,7 +1,8 @@
 # coding=utf-8
-from dulwich.repo import Repo
 from discord import Embed
 from discord.ext.commands import AutoShardedBot, Context, group
+
+from dulwich.repo import Repo
 
 __author__ = "Gareth Coles"
 
