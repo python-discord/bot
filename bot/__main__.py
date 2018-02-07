@@ -5,7 +5,9 @@ from discord import Game
 from discord.ext.commands import AutoShardedBot, when_mentioned_or
 
 bot = AutoShardedBot(
-    command_prefix=when_mentioned_or(">>> ", ">> ", ">>>", ">>"),  # Order matters
+    command_prefix=when_mentioned_or(
+        ">>> self." ">> self.", "> self.", "self.", ">>> ", ">> ", "> ", ">>>", ">>", ">"
+    ),  # Order matters
     game=Game(name=">>> help")
 )
 
