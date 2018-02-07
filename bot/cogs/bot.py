@@ -4,6 +4,8 @@ from discord.ext.commands import AutoShardedBot, Context, group
 
 from dulwich.repo import Repo
 
+from bot.decorators import is_verified
+
 __author__ = "Gareth Coles"
 
 
@@ -16,6 +18,7 @@ class Bot:
         self.bot = bot
 
     @group(invoke_without_command=True, name="bot")
+    @is_verified()
     async def bot_group(self, ctx: Context):
         """
         Bot informational commands
@@ -24,6 +27,7 @@ class Bot:
         await ctx.invoke(self.bot.get_command("help"), "bot")
 
     @bot_group.command(aliases=["about"])
+    @is_verified()
     async def info(self, ctx: Context):
         """
         Get information about the current bot
