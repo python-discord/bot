@@ -17,7 +17,7 @@ class Verification:
         self.bot = bot
 
     async def on_message(self, message: Message):
-        ctx = self.bot.get_context(message)  # type: Context
+        ctx = await self.bot.get_context(message)  # type: Context
 
         if ctx.command is not None and ctx.command.name == "accept":
             return  # They didn't use a command, or they used a command that isn't the accept command
@@ -28,13 +28,13 @@ class Verification:
                     return  # They're already verified
 
             await ctx.send(
-                f"{ctx.author.mention} Please type `>>> accept` to verify that you accept our rules, and gain access "
+                f"{ctx.author.mention} Please type `>>> accept()` to verify that you accept our rules, and gain access "
                 f"to the rest of the server.",
                 delete_after=10
             )
             await ctx.message.delete()
 
-    @command(name="accept", hidden=True, aliases=["verify", "verified", "accepted"])
+    @command(name="accept", hidden=True, aliases=["verify", "verified", "accepted", "accept()"])
     @is_not_verified()
     @is_in_verification_channel()
     async def accept(self, ctx: Context):
@@ -42,7 +42,8 @@ class Verification:
         Accept our rules and gain access to the rest of the server
         """
 
-        ctx.author.add_roles(Object(VERIFIED_ROLE), reason="Accepted the rules")
+        await ctx.author.add_roles(Object(VERIFIED_ROLE), reason="Accepted the rules")
+        await ctx.message.delete()
 
 
 def setup(bot):
