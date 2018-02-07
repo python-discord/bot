@@ -1,9 +1,8 @@
 # coding=utf-8
-from discord import Guild
 from discord.ext import commands
-from discord.ext.commands import Context, Bot
+from discord.ext.commands import Context
 
-from bot.constants import ADMIN_ROLE, MODERATOR_ROLE, VERIFIED_ROLE, VERIFICATION_CHANNEL
+from bot.constants import ADMIN_ROLE, MODERATOR_ROLE, VERIFICATION_CHANNEL, VERIFIED_ROLE
 
 __author__ = "Gareth Coles"
 

@@ -1,9 +1,9 @@
 # coding=utf-8
-from discord import Message, Member, Object
-from discord.ext.commands import AutoShardedBot, Context, command, Command
+from discord import Message, Object
+from discord.ext.commands import AutoShardedBot, Context, command
 
 from bot.constants import VERIFICATION_CHANNEL, VERIFIED_ROLE
-from bot.decorators import is_not_verified, is_in_verification_channel
+from bot.decorators import is_in_verification_channel, is_not_verified
 
 __author__ = "Gareth Coles"
 
