@@ -11,7 +11,7 @@ from bot.interpreter import Interpreter
 __author__ = "Careth Goles"
 
 
-class EvalCog:
+class EvalCog:  # Named this way because a flake8 plugin isn't case-sensitive
     """
     Bot owner only: Evaluate Python code
     """

@@ -10,8 +10,8 @@ bot = AutoShardedBot(
         ">>> bot.", ">> bot.", "> bot.", "bot.",
         ">>> ", ">> ", "> ",
         ">>>", ">>", ">"
-    ),  # Order matters
-    game=Game(name=">>> help"),
+    ),  # Order matters (and so do commas)
+    game=Game(name="Help: bot.help()"),
     help_attrs={"aliases": ["help()"]}
 )
 
