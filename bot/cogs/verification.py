@@ -31,7 +31,7 @@ class Verification:
                     return  # They're already verified
 
             await ctx.send(
-                f"{ctx.author.mention} Please type `>>> self.accept()` to verify that you accept our rules, "
+                f"{ctx.author.mention} Please type `self.accept()` to verify that you accept our rules, "
                 f"and gain access to the rest of the server.",
                 delete_after=10
             )

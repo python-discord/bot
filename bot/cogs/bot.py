@@ -1,6 +1,6 @@
 # coding=utf-8
 from discord import Embed
-from discord.ext.commands import AutoShardedBot, Context, group, command
+from discord.ext.commands import AutoShardedBot, Context, command, group
 
 from dulwich.repo import Repo
 
