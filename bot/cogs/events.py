@@ -18,12 +18,17 @@ class Events:
 
     async def on_command_error(self, ctx: Context, e: CommandError):
         command = ctx.command
-        parent = command.parent
+        parent = None
 
-        if parent:
+        if command is not None:
+            parent = command.parent
+
+        if parent and command:
             help_command = (self.bot.get_command("help"), parent.name, command.name)
-        else:
+        elif command:
             help_command = (self.bot.get_command("help"), command.name)
+        else:
+            help_command = (self.bot.get_command("help"),)
 
         if isinstance(e, BadArgument):
             await ctx.send(f"Bad argument: {e}\n")

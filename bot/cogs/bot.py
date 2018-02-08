@@ -1,8 +1,11 @@
 # coding=utf-8
 from discord import Embed
-from discord.ext.commands import AutoShardedBot, Context, group
+from discord.ext.commands import AutoShardedBot, Context, command, group
 
 from dulwich.repo import Repo
+
+from bot.constants import VERIFIED_ROLE
+from bot.decorators import with_role
 
 __author__ = "Gareth Coles"
 
@@ -16,6 +19,7 @@ class Bot:
         self.bot = bot
 
     @group(invoke_without_command=True, name="bot")
+    @with_role(VERIFIED_ROLE)
     async def bot_group(self, ctx: Context):
         """
         Bot informational commands
@@ -23,14 +27,15 @@ class Bot:
 
         await ctx.invoke(self.bot.get_command("help"), "bot")
 
-    @bot_group.command(aliases=["about"])
+    @bot_group.command(aliases=["about"], hidden=True)
+    @with_role(VERIFIED_ROLE)
     async def info(self, ctx: Context):
         """
-        Get information about the current bot
+        Get information about the bot
         """
 
         embed = Embed(
-            description="A utility bot designed just for the Python server! Try `>>> help` for more info.",
+            description="A utility bot designed just for the Python server! Try `bot.help()` for more info.",
             url="https://github.com/discord-python/bot"
         )
 
@@ -47,6 +52,14 @@ class Bot:
         )
 
         await ctx.send(embed=embed)
+
+    @command(name="bot.info()", aliases=["bot.info", "bot.about", "bot.about()"])
+    def info_wrapper(self, ctx: Context):
+        """
+        Get information about the bot
+        """
+
+        return self.info(ctx)
 
 
 def setup(bot):

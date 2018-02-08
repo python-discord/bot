@@ -2,14 +2,16 @@
 
 from io import StringIO
 
-from discord.ext.commands import AutoShardedBot, Context, command, is_owner
+from discord.ext.commands import AutoShardedBot, Context, command
 
+from bot.constants import OWNER_ROLE
+from bot.decorators import with_role
 from bot.interpreter import Interpreter
 
-__author__ = "Gareth Coles"
+__author__ = "Careth Goles"
 
 
-class Eval:
+class EvalCog:  # Named this way because a flake8 plugin isn't case-sensitive
     """
     Bot owner only: Evaluate Python code
     """
@@ -19,7 +21,7 @@ class Eval:
         self.interpreter = Interpreter(bot)
 
     @command()
-    @is_owner()
+    @with_role(OWNER_ROLE)
     async def eval(self, ctx: Context, *, string: str):
         """
         Bot owner only: Evaluate Python code
@@ -75,5 +77,5 @@ class Eval:
 
 
 def setup(bot):
-    bot.add_cog(Eval(bot))
+    bot.add_cog(EvalCog(bot))
     print("Cog loaded: Eval")
