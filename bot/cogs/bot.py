@@ -4,8 +4,8 @@ from discord.ext.commands import AutoShardedBot, Context, group
 
 from dulwich.repo import Repo
 
-from bot.decorators import with_role
 from bot.constants import VERIFIED_ROLE
+from bot.decorators import with_role
 
 __author__ = "Gareth Coles"
 

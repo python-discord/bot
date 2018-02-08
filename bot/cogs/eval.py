@@ -2,15 +2,16 @@
 
 from io import StringIO
 
-from discord.ext.commands import AutoShardedBot, Context, command, is_owner
+from discord.ext.commands import AutoShardedBot, Context, command
 
-from bot.interpreter import Interpreter
 from bot.constants import OWNER_ROLE
+from bot.decorators import with_role
+from bot.interpreter import Interpreter
 
 __author__ = "Careth Goles"
 
 
-class Eval:
+class EvalCog:
     """
     Bot owner only: Evaluate Python code
     """
@@ -76,5 +77,5 @@ class Eval:
 
 
 def setup(bot):
-    bot.add_cog(Eval(bot))
+    bot.add_cog(EvalCog(bot))
     print("Cog loaded: Eval")
