@@ -5,8 +5,9 @@ from io import StringIO
 from discord.ext.commands import AutoShardedBot, Context, command, is_owner
 
 from bot.interpreter import Interpreter
+from bot.constants import OWNER_ROLE
 
-__author__ = "Gareth Coles"
+__author__ = "Careth Goles"
 
 
 class Eval:
@@ -19,7 +20,7 @@ class Eval:
         self.interpreter = Interpreter(bot)
 
     @command()
-    @is_owner()
+    @with_role(OWNER_ROLE)
     async def eval(self, ctx: Context, *, string: str):
         """
         Bot owner only: Evaluate Python code

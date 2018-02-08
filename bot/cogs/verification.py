@@ -3,9 +3,9 @@ from discord import Message, Object
 from discord.ext.commands import AutoShardedBot, Context, command
 
 from bot.constants import VERIFICATION_CHANNEL, VERIFIED_ROLE
-from bot.decorators import is_in_verification_channel, is_not_verified
+from bot.decorators import in_channel, without_role
 
-__author__ = "Gareth Coles"
+__author__ = "Careth Goles"
 
 
 class Verification:
@@ -38,8 +38,8 @@ class Verification:
             await ctx.message.delete()
 
     @command(name="accept", hidden=True, aliases=["verify", "verified", "accepted", "accept()"])
-    @is_not_verified()
-    @is_in_verification_channel()
+    @without_role(VERIFIED_ROLE)
+    @in_channel(VERIFICATION_CHANNEL)
     async def accept(self, ctx: Context):
         """
         Accept our rules and gain access to the rest of the server
