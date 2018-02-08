@@ -8,8 +8,6 @@ from bot.constants import OWNER_ROLE
 from bot.decorators import with_role
 from bot.interpreter import Interpreter
 
-__author__ = "Careth Goles"
-
 
 class EvalCog:  # Named this way because a flake8 plugin isn't case-sensitive
     """

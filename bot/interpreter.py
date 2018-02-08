@@ -2,8 +2,6 @@
 from code import InteractiveInterpreter
 from io import StringIO
 
-__author__ = 'Gareth Coles'
-
 CODE_TEMPLATE = """
 async def _func():
 {0}

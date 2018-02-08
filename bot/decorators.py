@@ -2,8 +2,6 @@
 from discord.ext import commands
 from discord.ext.commands import Context
 
-__author__ = "Careth Goles"
-
 
 def with_role(*role_ids: int):
     async def predicate(ctx: Context):

@@ -1,8 +1,6 @@
 # coding=utf-8
 from discord.ext.commands import AutoShardedBot, Context
 
-__author__ = "Gareth Coles"
-
 
 class Security:
     """

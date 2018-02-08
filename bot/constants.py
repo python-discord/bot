@@ -1,7 +1,5 @@
 # coding=utf-8
 
-__author__ = "Gareth Coles"
-
 
 VERIFICATION_CHANNEL = 352442727016693763
 

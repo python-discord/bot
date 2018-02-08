@@ -5,8 +5,6 @@ from discord.ext.commands import AutoShardedBot, Context, command
 from bot.constants import VERIFICATION_CHANNEL, VERIFIED_ROLE
 from bot.decorators import in_channel, without_role
 
-__author__ = "Careth Goles"
-
 
 class Verification:
     """

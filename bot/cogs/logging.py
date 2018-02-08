@@ -2,8 +2,6 @@
 from discord import Message
 from discord.ext.commands import AutoShardedBot
 
-__author__ = "Gareth Coles"
-
 
 class Logging:
     """

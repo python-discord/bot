@@ -5,8 +5,6 @@ from discord.ext.commands import (
     NoPrivateMessage, UserInputError
 )
 
-__author__ = "Gareth Coles"
-
 
 class Events:
     """
