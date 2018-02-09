@@ -38,7 +38,7 @@ class Verification:
     @command(name="accept", hidden=True, aliases=["verify", "verified", "accepted", "accept()"])
     @without_role(VERIFIED_ROLE)
     @in_channel(VERIFICATION_CHANNEL)
-    async def accept(self, ctx: Context):
+    async def accept(self, ctx: Context, *_):  # We don't actually care about the args
         """
         Accept our rules and gain access to the rest of the server
         """
