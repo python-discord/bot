@@ -52,12 +52,12 @@ class Bot:
         await ctx.send(embed=embed)
 
     @command(name="bot.info()", aliases=["bot.info", "bot.about", "bot.about()"])
-    def info_wrapper(self, ctx: Context):
+    async def info_wrapper(self, ctx: Context):
         """
         Get information about the bot
         """
 
-        return self.info(ctx)
+        await self.info(ctx)
 
 
 def setup(bot):
