@@ -1,7 +1,14 @@
 # coding=utf-8
 
+import contextlib
 from io import StringIO
+import inspect
+import textwrap
+import pprint
+import traceback
+import re
 
+import discord
 from discord.ext.commands import AutoShardedBot, Context, command
 
 from bot.constants import OWNER_ROLE
@@ -12,66 +19,153 @@ from bot.interpreter import Interpreter
 class EvalCog:  # Named this way because a flake8 plugin isn't case-sensitive
     """
     Bot owner only: Evaluate Python code
+    
+    Made by martmists
     """
 
     def __init__(self, bot: AutoShardedBot):
         self.bot = bot
+        self.env = {}
+        self.ln = 0
+        self.stdout = io.StringIO()
+
         self.interpreter = Interpreter(bot)
+    
+    def _format(self, inp, out):
+        self._ = out
+
+        res = ""
+
+        # Erase temp input we made
+        if inp.startswith("_ = "):
+            inp = inp[4:]
+
+        lines = [l for l in inp.split("\n") if l.strip()]
+        if len(lines) != 1:
+            lines += [""]
+
+        # Create the inpit dialog
+        for i, line in enumerate(lines):
+            if i == 0:
+                s = f"In [{self.ln}]: "
+
+            else:
+                # Indent the 3 dots correctly
+                s = (f"{{:<{len(str(self.ln))+2}}}...: ").format("")
+
+            if i == len(lines) - 2:
+                if line.startswith("return"):
+                    line = line[6:].strip()
+
+            res += s + line + "\n"
+
+        self.stdout.seek(0)
+        text = self.stdout.read()
+        self.stdout.close()
+        self.stdout = io.StringIO()
+
+        if text:
+            res += text + "\n"
+
+        if out is None:
+            # No output, return the input statement
+            return (res, None)
+
+        res += f"Out[{self.ln}]: "
+
+        if isinstance(out, discord.Embed):
+            # We made an embed? Send that as embed
+            res += "<Embed>"
+            res = (res, out)
+
+        else:
+            if (isinstance(out, str) and
+                    out.startswith("Traceback (most recent call last):\n")):
+                # Leave out the traceback message
+                out = "\n" + "\n".join(out.split("\n")[1:])
+
+            pretty = (pprint.pformat(out, compact=True, width=60)
+                      if not isinstance(out, str) else str(out))
+
+            if pretty != str(out):
+                # We're using the pretty version, start on the next line
+                res += "\n"
+
+            if pretty.count("\n") > 20:
+                # Text too long, shorten
+                li = pretty.split("\n")
+                pretty = "\n".join(li[:3]) + "\n ...\n" + "\n".join(li[-3:])
+
+            # Add the output
+            res += pretty
+            res = (res, None)
+
+        return res
+
+    async def _eval(self, ctx, code):
+        self.ln += 1
+
+        if code.startswith("exit"):
+            self.ln = 0
+            self.env = {}
+            return await ctx.send(f"```Reset history!```")
+
+        env = {
+            "message": ctx.message,
+            "author": ctx.message.author,
+            "channel": ctx.channel,
+            "guild": ctx.guild,
+            "ctx": ctx,
+            "self": self,
+            "bot": self.bot,
+            "inspect": inspect,
+            "discord": discord,
+            "contextlib": contextlib
+        }
+
+        self.env.update(env)
+
+        # Ignore this shitcode, it works
+        _code = """
+async def func():
+    try:
+        with contextlib.redirect_stdout(self.stdout):
+{}
+        if '_' in locals():
+            if inspect.isawaitable(_):
+                _ = await _
+            return _
+    finally:
+        self.env.update(locals())
+""".format(textwrap.indent(code, '            '))
+
+        try:
+            exec(_code, self.env)  # pylint: disable=exec-used
+            func = self.env['func']
+            res = await func()
+
+        except:  # noqa pylint: disable=bare-except
+            res = traceback.format_exc()
+
+        out, embed = self._format(code, res)
+        await ctx.send(f"```py\n{out}```", embed=embed)
 
     @command()
     @with_role(OWNER_ROLE)
-    async def eval(self, ctx: Context, *, string: str):
-        """
-        Bot owner only: Evaluate Python code
+    async def eval(self, ctx, *, code: str):
+        """ Run eval in a REPL-like format. """
+        code = code.strip("`")
+        if code.startswith("py\n"):
+            code = "\n".join(code.split("\n")[1:])
 
-        Your code may be surrounded in a code fence, but it's not required.
-        Scope will be preserved - variables set will be present later on.
-        """
+        if not re.search(  # Check if it's an expression
+                r"^(return|import|for|while|def|class|"
+                r"from|exit|[a-zA-Z0-9]+\s*=)", code, re.M) and len(
+                    code.split("\n")) == 1:
+            code = "_ = " + code
 
-        code = string.strip()
+        await self._eval(ctx, code)
 
-        if code.startswith("```") and code.endswith("```"):
-            if code.startswith("```python"):
-                code = code[9:-3]
-            elif code.startswith("```py"):
-                code = code[5:-3]
-            else:
-                code = code[3:-3]
-        elif code.startswith("`") and code.endswith("`"):
-            code = code[1:-1]
-
-        code = code.strip().strip("\n")
-        io = StringIO()
-
-        try:
-            rvalue = await self.interpreter.run(code, ctx, io)
-        except Exception as e:
-            await ctx.send(
-                f"{ctx.author.mention} **Code**\n"
-                f"```py\n{code}```\n\n"
-                f"**Error**\n```{e}```"
-            )
-        else:
-            out_message = (
-                f"{ctx.author.mention} **Code**\n"
-                f"```py\n{code}\n```"
-            )
-
-            output = io.getvalue()
-
-            if output:
-                out_message = (
-                    f"{out_message}\n\n"
-                    f"**Output**\n```{output}```"
-                )
-
-            if rvalue is not None:
-                out_message = (
-                    f"{out_message}\n\n"
-                    f"**Returned**\n```py\n{repr(rvalue)}\n```"
-                )
-
-            await ctx.send(out_message)
 
 
 def setup(bot):
