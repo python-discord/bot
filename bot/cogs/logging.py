@@ -2,6 +2,8 @@
 from discord import Message
 from discord.ext.commands import AutoShardedBot
 
+from bot.constants import DEVLOG_CHANNEL
+
 
 class Logging:
     """
@@ -12,7 +14,9 @@ class Logging:
         self.bot = bot
 
     async def on_ready(self):
-        print("Henlo online!")
+        print("Connected!")
+
+        await self.bot.get_channel(DEVLOG_CHANNEL).send("Connected!")
 
     async def on_message(self, message: Message):
         if not message.guild:  # It's a DM
