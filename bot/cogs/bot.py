@@ -52,6 +52,7 @@ class Bot:
         await ctx.send(embed=embed)
 
     @command(name="bot.info()", aliases=["bot.info", "bot.about", "bot.about()", "info", "info()"])
+    @with_role(VERIFIED_ROLE)
     async def info_wrapper(self, ctx: Context):
         """
         Get information about the bot
