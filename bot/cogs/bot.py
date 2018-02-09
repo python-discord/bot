@@ -16,7 +16,7 @@ class Bot:
     def __init__(self, bot: AutoShardedBot):
         self.bot = bot
 
-    @group(invoke_without_command=True, name="bot")
+    @group(invoke_without_command=True, name="bot", hidden=True)
     @with_role(VERIFIED_ROLE)
     async def bot_group(self, ctx: Context):
         """
