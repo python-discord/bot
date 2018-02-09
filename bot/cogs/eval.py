@@ -1,12 +1,12 @@
 # coding=utf-8
 
 import contextlib
-from io import StringIO
 import inspect
-import textwrap
+from io import StringIO
 import pprint
-import traceback
 import re
+import textwrap
+import traceback
 
 import discord
 from discord.ext.commands import AutoShardedBot, command
@@ -77,7 +77,7 @@ class EvalCog:  # Named this way because a flake8 plugin isn't case-sensitive
         self.stdout.seek(0)
         text = self.stdout.read()
         self.stdout.close()
-        self.stdout = io.StringIO()
+        self.stdout = StringIO()
 
         if text:
             res += text + "\n"
