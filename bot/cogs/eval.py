@@ -50,8 +50,23 @@ class EvalCog:  # Named this way because a flake8 plugin isn't case-sensitive
                 s = f"In [{self.ln}]: "
 
             else:
-                # Indent the 3 dots correctly
-                s = (f"{{:<{len(str(self.ln))+2}}}...: ").format("")
+                # Indent the 3 dots correctly;
+                # Normally, it's something like
+                # In [X]:
+                #    ...:
+                # 
+                # But if it's 
+                # In [XX]:
+                #    ...:
+                # 
+                # You can see it doesn't look right.
+                # This code simply indents the dots
+                # far enough to align them.
+                # we first `str()` the line number
+                # then we get the length
+                # and do a simple {:<LENGHT}
+                # to indent it.
+                s = f"{'':<{len(str(self.ln))+2}}...: "
 
             if i == len(lines) - 2:
                 if line.startswith("return"):
