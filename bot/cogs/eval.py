@@ -9,7 +9,7 @@ import traceback
 import re
 
 import discord
-from discord.ext.commands import AutoShardedBot, Context, command
+from discord.ext.commands import AutoShardedBot, command
 
 from bot.constants import OWNER_ROLE
 from bot.decorators import with_role
@@ -19,7 +19,7 @@ from bot.interpreter import Interpreter
 class EvalCog:  # Named this way because a flake8 plugin isn't case-sensitive
     """
     Bot owner only: Evaluate Python code
-    
+
     Made by martmists
     """
 
@@ -27,10 +27,10 @@ class EvalCog:  # Named this way because a flake8 plugin isn't case-sensitive
         self.bot = bot
         self.env = {}
         self.ln = 0
-        self.stdout = io.StringIO()
+        self.stdout = StringIO()
 
         self.interpreter = Interpreter(bot)
-    
+
     def _format(self, inp, out):
         self._ = out
 
@@ -130,7 +130,7 @@ class EvalCog:  # Named this way because a flake8 plugin isn't case-sensitive
 async def func():
     try:
         with contextlib.redirect_stdout(self.stdout):
-{}
+{0}
         if '_' in locals():
             if inspect.isawaitable(_):
                 _ = await _
@@ -140,7 +140,7 @@ async def func():
 """.format(textwrap.indent(code, '            '))
 
         try:
-            exec(_code, self.env)  # pylint: disable=exec-used
+            exec(_code, self.env)  # noqa: B102 pylint: disable=exec-used
             func = self.env['func']
             res = await func()
 
@@ -165,7 +165,6 @@ async def func():
             code = "_ = " + code
 
         await self._eval(ctx, code)
-
 
 
 def setup(bot):
