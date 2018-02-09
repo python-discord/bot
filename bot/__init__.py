@@ -3,13 +3,17 @@ import discord.ext.commands.view
 
 
 def case_insensitive_skip_string(self, string: str):
-    """Invokes the skip_string method from
-    discord.ext.commands.view used to find
-    the prefix in a message, but allows prefix
+    """Our version of the skip_string method from
+    discord.ext.commands.view; used to find
+    the prefix in a message, but allowing prefix
     to ignore case sensitivity
     """
-    string = string.lower()
-    return _skip_string(self, string)
+    strlen = len(string)
+    if self.buffer.lower()[self.index:self.index + strlen] == string:
+        self.previous = self.index
+        self.index += strlen
+        return True
+    return False
 
 
 def case_insensitive_get_word(self):
