@@ -40,14 +40,16 @@ class EvalCog:  # Named this way because a flake8 plugin isn't case-sensitive
         if inp.startswith("_ = "):
             inp = inp[4:]
 
-        lines = [l for l in inp.split("\n") if l.strip()]
+        # Get all non-empty lines
+        lines = [line for line in inp.split("\n") if l.strip()]
         if len(lines) != 1:
             lines += [""]
 
-        # Create the inpit dialog
+        # Create the input dialog
         for i, line in enumerate(lines):
             if i == 0:
-                s = f"In [{self.ln}]: "
+                # Start dialog
+                start = f"In [{self.ln}]: "
 
             else:
                 # Indent the 3 dots correctly;
@@ -64,7 +66,7 @@ class EvalCog:  # Named this way because a flake8 plugin isn't case-sensitive
                 # far enough to align them.
                 # we first `str()` the line number
                 # then we get the length
-                # and do a simple {:<LENGHT}
+                # and do a simple {:<LENGTH}
                 # to indent it.
                 s = f"{'':<{len(str(self.ln))+2}}...: "
 
@@ -72,7 +74,7 @@ class EvalCog:  # Named this way because a flake8 plugin isn't case-sensitive
                 if line.startswith("return"):
                     line = line[6:].strip()
 
-            res += s + line + "\n"
+            res += (start + line + "\n")
 
         self.stdout.seek(0)
         text = self.stdout.read()
@@ -80,7 +82,7 @@ class EvalCog:  # Named this way because a flake8 plugin isn't case-sensitive
         self.stdout = StringIO()
 
         if text:
-            res += text + "\n"
+            res += (text + "\n")
 
         if out is None:
             # No output, return the input statement
@@ -123,7 +125,7 @@ class EvalCog:  # Named this way because a flake8 plugin isn't case-sensitive
         if code.startswith("exit"):
             self.ln = 0
             self.env = {}
-            return await ctx.send(f"```Reset history!```")
+            return await ctx.send("```Reset history!```")
 
         env = {
             "message": ctx.message,
@@ -159,7 +161,7 @@ async def func():
             func = self.env['func']
             res = await func()
 
-        except:  # noqa pylint: disable=bare-except
+        except Exception:  # noqa pylint: disable=broad-except
             res = traceback.format_exc()
 
         out, embed = self._format(code, res)
