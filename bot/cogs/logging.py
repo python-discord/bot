@@ -18,17 +18,6 @@ class Logging:
 
         await self.bot.get_channel(DEVLOG_CHANNEL).send("Connected!")
 
-    async def on_message(self, message: Message):
-        if not message.guild:  # It's a DM
-            print(f"DM: @{message.author.name}#{message.author.discriminator} -> {message.clean_content}")
-        else:
-            print(
-                f"{message.guild.name} | #{message.channel.name} | "
-                f"@{message.author.name}#{message.author.discriminator} -> "
-                f"{message.clean_content}"
-            )
-
-
 def setup(bot):
     bot.add_cog(Logging(bot))
     print("Cog loaded: Logging")
