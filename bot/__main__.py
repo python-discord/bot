@@ -4,6 +4,8 @@ import os
 from discord import Game
 from discord.ext.commands import AutoShardedBot, when_mentioned_or
 
+from bot.utils import CaseInsensitiveDict
+
 bot = AutoShardedBot(
     command_prefix=when_mentioned_or(
         ">>> self.", ">> self.", "> self.", "self.",
@@ -14,6 +16,8 @@ bot = AutoShardedBot(
     game=Game(name="Help: bot.help()"),
     help_attrs={"aliases": ["help()"]}
 )
+
+bot.cogs = CaseInsensitiveDict()
 
 # Internal/debug
 bot.load_extension("bot.cogs.logging")
