@@ -14,7 +14,6 @@ class Logging:
 
     async def on_ready(self):
         print("Connected!")
-
         await self.bot.get_channel(DEVLOG_CHANNEL).send("Connected!")
 
 
