@@ -30,6 +30,35 @@ class Formatter(HelpFormatter):
     async def format(self):
         self._paginator = Paginator(prefix="```py")
 
+        if isinstance(self.command, Command):
+            # help on a specific command to look like an async function
+
+            # example:
+            # async def <command>(ctx, <args>):
+            #     """
+            #     <help text>
+            #     """
+            #     await do_<command>(ctx, <args>)
+
+            # strip the command of bot. and ()
+            stripped_command = self.command.name.replace(PREFIX, "").replace("()", "")
+            # getting args using the handy inspect module
+            argspec = getfullargspec(self.command.callback)
+            arguments = formatargspec(*argspec)
+            args_no_type_hints = ", ".join(argspec[0])
+            # remove self from the arguments
+            arguments = arguments.replace("self, ", "")
+            args_no_type_hints = args_no_type_hints.replace("self, ", "")
+            # first line of help containing the command name and arguments
+            definition = f"async def {stripped_command}{arguments}:"
+            self._paginator.add_line(definition)
+            # next few lines containing the help text formatted as a docstring
+            self._paginator.add_line(f"    \"\"\"\n    {self.command.help}\n    \"\"\"")
+            # last line 'invoking' the command
+            self._paginator.add_line(f"    await do_{stripped_command}({args_no_type_hints})")
+
+            return self._paginator.pages
+
         max_width = self.max_name_size
 
         def category_check(tup):
