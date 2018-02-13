@@ -61,6 +61,14 @@ class Formatter(HelpFormatter):
 
             return self._paginator.pages
 
+        # if not a specific command, help page will be in the format:
+        # class <cog1>:
+        #     bot.<command1>() # <command1 help>
+        # class <cog2>:
+        #     bot.<command2>() # <command2 help>
+        #
+        # # <ending help note>
+
         max_width = self.max_name_size
 
         def category_check(tup):
