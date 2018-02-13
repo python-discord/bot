@@ -49,7 +49,7 @@ class Formatter(HelpFormatter):
             bot.<command1>() # <command1 help>
         class <cog2>:
             bot.<command2>() # <command2 help>
-    
+
         # <ending help note>
         """
         self._paginator = Paginator(prefix="```py")
