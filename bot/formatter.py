@@ -18,7 +18,7 @@ class Formatter(HelpFormatter):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def _add_subcommands_to_page(self, max_width, commands):
+    def _add_subcommands_to_page(self, max_width: int, commands: list):
         """
         basically the same function from d.py but changed:
         - to make the helptext appear as a comment
@@ -56,21 +56,24 @@ class Formatter(HelpFormatter):
 
         if isinstance(self.command, Command):
             # strip the command of bot. and ()
-            stripped_command = self.command.name.replace("()", "")
-            # getting args using the handy inspect module
+            stripped_command = self.command.name.replace(HELP_PREFIX, "").replace("()", "")
+
+            # get the args using the handy inspect module
             argspec = getfullargspec(self.command.callback)
             arguments = formatargspec(*argspec)
             args_no_type_hints = ", ".join(argspec[0])
-            # remove self from the arguments
+
+            # remove self from the args
             arguments = arguments.replace("self, ", "")
             args_no_type_hints = args_no_type_hints.replace("self, ", "")
-            # first line of help containing the command name and arguments
+
+            # prepare the different sections of the help output, and add them to the paginator
             definition = f"async def {stripped_command}{arguments}:"
+            docstring = f"    \"\"\"\n    {self.command.help}\n    \"\"\""
+            invocation = f"    await do_{stripped_command}({args_no_type_hints})"
             self._paginator.add_line(definition)
-            # next few lines containing the help text formatted as a docstring
-            self._paginator.add_line(f"    \"\"\"\n    {self.command.help}\n    \"\"\"")
-            # last line 'invoking' the command
-            self._paginator.add_line(f"    await do_{stripped_command}({args_no_type_hints})")
+            self._paginator.add_line(docstring)
+            self._paginator.add_line(invocation)
 
             return self._paginator.pages
 
