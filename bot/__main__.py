@@ -4,8 +4,8 @@ import os
 from discord import Game
 from discord.ext.commands import AutoShardedBot, when_mentioned_or
 
-from bot.utils import CaseInsensitiveDict
 from bot.formatter import Formatter
+from bot.utils import CaseInsensitiveDict
 
 bot = AutoShardedBot(
     command_prefix=when_mentioned_or(
