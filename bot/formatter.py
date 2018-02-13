@@ -8,8 +8,10 @@ Which falls under The MIT License.
 
 import itertools
 
-from discord.ext.commands import HelpFormatter, Paginator, Command
-from inspect import getfullargspec, formatargspec
+from inspect import formatargspec, getfullargspec
+
+from discord.ext.commands import Command, HelpFormatter, Paginator
+
 from bot.constants import HELP_PREFIX
 
 class Formatter(HelpFormatter):
@@ -92,3 +94,4 @@ class Formatter(HelpFormatter):
         self._paginator.add_line(ending_note)
 
         return self._paginator.pages
+    
