@@ -4,7 +4,7 @@ from discord.ext.commands import AutoShardedBot, Context, command, group
 
 from dulwich.repo import Repo
 
-from bot.constants import VERIFIED_ROLE, PYTHON_GUILD
+from bot.constants import PYTHON_GUILD, VERIFIED_ROLE
 from bot.decorators import with_role
 
 
