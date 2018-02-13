@@ -8,7 +8,9 @@ Which falls under The MIT License.
 
 import itertools
 
-from discord.ext.commands import HelpFormatter, Paginator
+from discord.ext.commands import HelpFormatter, Paginator, Command
+from inspect import getfullargspec, formatargspec
+from constants import HELP_PREFIX
 
 class Formatter(HelpFormatter):
     def __init__(self, *args, **kwargs):
@@ -41,7 +43,7 @@ class Formatter(HelpFormatter):
             #     await do_<command>(ctx, <args>)
 
             # strip the command of bot. and ()
-            stripped_command = self.command.name.replace(PREFIX, "").replace("()", "")
+            stripped_command = self.command.name.replace(HELP_PREFIX, "").replace("()", "")
             # getting args using the handy inspect module
             argspec = getfullargspec(self.command.callback)
             arguments = formatargspec(*argspec)
