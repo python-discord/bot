@@ -5,6 +5,7 @@ from discord import Game
 from discord.ext.commands import AutoShardedBot, when_mentioned_or
 
 from bot.utils import CaseInsensitiveDict
+from bot.formatter import Formatter
 
 bot = AutoShardedBot(
     command_prefix=when_mentioned_or(
@@ -14,7 +15,8 @@ bot = AutoShardedBot(
         ">>>", ">>", ">"
     ),  # Order matters (and so do commas)
     game=Game(name="Help: bot.help()"),
-    help_attrs={"aliases": ["help()"]}
+    help_attrs={"aliases": ["help()"]},
+    formatter=Formatter()
 )
 
 bot.cogs = CaseInsensitiveDict()
