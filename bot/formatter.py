@@ -29,7 +29,7 @@ class Formatter(HelpFormatter):
                 # skip aliases
                 continue
 
-            entry = "    {0:<{width}} # {1}".format(name, command.short_doc, width=max_width)
+            entry = "    {0}{1:<{width}} # {2}".format(HELP_PREFIX, name, command.short_doc, width=max_width)
             shortened = self.shorten(entry)
             self._paginator.add_line(shortened)
 
@@ -56,7 +56,7 @@ class Formatter(HelpFormatter):
 
         if isinstance(self.command, Command):
             # strip the command of bot. and ()
-            stripped_command = self.command.name.replace(HELP_PREFIX, "").replace("()", "")
+            stripped_command = self.command.name.replace("()", "")
             # getting args using the handy inspect module
             argspec = getfullargspec(self.command.callback)
             arguments = formatargspec(*argspec)
