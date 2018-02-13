@@ -10,7 +10,7 @@ import itertools
 
 from discord.ext.commands import HelpFormatter, Paginator, Command
 from inspect import getfullargspec, formatargspec
-from constants import HELP_PREFIX
+from bot.constants import HELP_PREFIX
 
 class Formatter(HelpFormatter):
     def __init__(self, *args, **kwargs):
