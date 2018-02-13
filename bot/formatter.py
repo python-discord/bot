@@ -18,10 +18,12 @@ class Formatter(HelpFormatter):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    # basically the same function but changed:
-    # - to make the helptext appear as a comment
-    # - to change the indentation to the PEP8 standard: 4 spaces
     def _add_subcommands_to_page(self, max_width, commands):
+        """
+        basically the same function from d.py but changed:
+        - to make the helptext appear as a comment
+        - to change the indentation to the PEP8 standard: 4 spaces
+        """
         for name, command in commands:
             if name in command.aliases:
                 # skip aliases
@@ -32,18 +34,27 @@ class Formatter(HelpFormatter):
             self._paginator.add_line(shortened)
 
     async def format(self):
+        """
+        rewritten help command to make it more python-y
+
+        example of specific command:
+        async def <command>(ctx, <args>):
+            \"""
+            <help text>
+            \"""
+            await do_<command>(ctx, <args>)
+
+        example of standard help page:
+        class <cog1>:
+            bot.<command1>() # <command1 help>
+        class <cog2>:
+            bot.<command2>() # <command2 help>
+    
+        # <ending help note>
+        """
         self._paginator = Paginator(prefix="```py")
 
         if isinstance(self.command, Command):
-            # help on a specific command to look like an async function
-
-            # example:
-            # async def <command>(ctx, <args>):
-            #     """
-            #     <help text>
-            #     """
-            #     await do_<command>(ctx, <args>)
-
             # strip the command of bot. and ()
             stripped_command = self.command.name.replace(HELP_PREFIX, "").replace("()", "")
             # getting args using the handy inspect module
@@ -62,14 +73,6 @@ class Formatter(HelpFormatter):
             self._paginator.add_line(f"    await do_{stripped_command}({args_no_type_hints})")
 
             return self._paginator.pages
-
-        # if not a specific command, help page will be in the format:
-        # class <cog1>:
-        #     bot.<command1>() # <command1 help>
-        # class <cog2>:
-        #     bot.<command2>() # <command2 help>
-        #
-        # # <ending help note>
 
         max_width = self.max_name_size
 
