@@ -7,12 +7,12 @@ Which falls under The MIT License.
 """
 
 import itertools
-
 from inspect import formatargspec, getfullargspec
 
 from discord.ext.commands import Command, HelpFormatter, Paginator
 
 from bot.constants import HELP_PREFIX
+
 
 class Formatter(HelpFormatter):
     def __init__(self, *args, **kwargs):
@@ -94,4 +94,3 @@ class Formatter(HelpFormatter):
         self._paginator.add_line(ending_note)
 
         return self._paginator.pages
-    
