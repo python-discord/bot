@@ -16,7 +16,7 @@ class Logging:
     async def on_ready(self):
         print("Connected!")
 
-        embed = discord.Embed(description="Connected!")
+        embed = Embed(description="Connected!")
         embed.set_author(
             name="Python Bot",
             url="https://github.com/discord-python/bot",
