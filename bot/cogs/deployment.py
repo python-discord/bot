@@ -1,5 +1,5 @@
 # coding=utf-8
-from aiohttp import ClientSession
+from aiohttp import ClientSession, ClientResponse
 from discord import Embed, Colour
 
 from discord.ext.commands import AutoShardedBot, Context, command
@@ -24,7 +24,8 @@ class Deployment:
         """
 
         with ClientSession() as session:
-            result = await session.get(DEPLOY_URL, headers={"token": DEPLOY_BOT_KEY})
+            response = await session.get(DEPLOY_URL, headers={"token": DEPLOY_BOT_KEY})
+            result = response.text()
 
         if result == "True":
             await ctx.send(f"{ctx.author.mention} Bot deployment started.")
@@ -39,7 +40,8 @@ class Deployment:
         """
 
         with ClientSession() as session:
-            result = await session.get(DEPLOY_URL, headers={"token": DEPLOY_SITE_KEY})
+            response = await session.get(DEPLOY_URL, headers={"token": DEPLOY_SITE_KEY})
+            result = response.text()
 
         if result == "True":
             await ctx.send(f"{ctx.author.mention} Site deployment started.")
