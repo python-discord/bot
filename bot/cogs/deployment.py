@@ -62,7 +62,9 @@ class Deployment:
             color=Colour.blurple()
         )
 
-        for key, value in data.items():
+        for obj in data:
+            key, value = obj.items()[0]
+
             embed.add_field(
                 name=key, value=value, inline=True
             )
