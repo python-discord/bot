@@ -1,6 +1,6 @@
 # coding=utf-8
-from discord.ext.commands import AutoShardedBot
 from discord import Embed
+from discord.ext.commands import AutoShardedBot
 
 from bot.constants import DEVLOG_CHANNEL
 
@@ -17,8 +17,10 @@ class Logging:
         print("Connected!")
 
         embed = Embed(title="Python", description="Connected!")
-        embed.set_thumbnail("https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle.png") 
-        
+        embed.set_thumbnail(
+            url="https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle.png"
+        )
+
         await self.bot.get_channel(DEVLOG_CHANNEL).send(embed=embed)
 
 
