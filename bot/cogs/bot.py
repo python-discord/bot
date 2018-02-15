@@ -4,7 +4,7 @@ from discord.ext.commands import AutoShardedBot, Context, command, group
 
 from dulwich.repo import Repo
 
-from bot.constants import VERIFIED_ROLE
+from bot.constants import PYTHON_GUILD, VERIFIED_ROLE
 from bot.decorators import with_role
 
 
@@ -40,7 +40,7 @@ class Bot:
         repo = Repo(".")
         sha = repo[repo.head()].sha().hexdigest()
 
-        embed.add_field(name="Total Users", value=str(len(self.bot.users)))
+        embed.add_field(name="Total Users", value=str(len(self.bot.get_guild(PYTHON_GUILD).members)))
         embed.add_field(name="Git SHA", value=str(sha)[:7])
 
         embed.set_author(
