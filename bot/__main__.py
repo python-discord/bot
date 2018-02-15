@@ -25,11 +25,10 @@ bot.load_extension("bot.cogs.security")
 bot.load_extension("bot.cogs.events")
 
 
-# Owner-only
-bot.load_extension("bot.cogs.eval")
-
 # Commands, etc
 bot.load_extension("bot.cogs.bot")
+bot.load_extension("bot.cogs.deployment")
+bot.load_extension("bot.cogs.eval")
 bot.load_extension("bot.cogs.verification")
 
 bot.run(os.environ.get("BOT_TOKEN"))
