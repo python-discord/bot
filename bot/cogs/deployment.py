@@ -65,7 +65,7 @@ class Deployment:
         )
 
         for obj in data:
-            key, value = obj.items()[0]
+            key, value = list(obj.items())[0]
 
             embed.add_field(
                 name=key, value=value, inline=True
