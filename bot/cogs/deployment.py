@@ -36,7 +36,7 @@ class Deployment:
     @with_role(ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
     async def deploy_site(self, ctx: Context):
         """
-        Trigger website deployment on the server
+        Trigger website deployment on the server - will only redeploy if there were changes to deploy
         """
 
         with ClientSession() as session:
