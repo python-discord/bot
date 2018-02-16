@@ -22,16 +22,13 @@ class Events:
         self.bot = bot
 
     async def send_updated_users(self, *users):
-        session = ClientSession(
-            headers={"X-API-Key": SITE_API_KEY}
-        )
+        with ClientSession(headers={"X-API-Key": SITE_API_KEY}) as session:
+            response = await session.post(
+                url=SITE_API_USER_URL,
+                json=list(users)
+            )
 
-        response = await session.post(
-            url=SITE_API_USER_URL,
-            json=list(users)
-        )
-
-        return await response.json()
+            return await response.json()
 
     async def on_command_error(self, ctx: Context, e: CommandError):
         command = ctx.command
