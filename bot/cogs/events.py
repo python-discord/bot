@@ -26,10 +26,12 @@ class Events:
             headers={"X-API-Key": SITE_API_KEY}
         )
 
-        await session.post(
+        response = await session.post(
             url=SITE_API_USER_URL,
             json=list(users)
         )
+
+        return await response.json()
 
     async def on_command_error(self, ctx: Context, e: CommandError):
         command = ctx.command
@@ -92,12 +94,22 @@ class Events:
                 })
 
         if users:
-            await self.send_updated_users(*users)
-            await self.bot.get_channel(DEVLOG_CHANNEL).send(
-                embed=Embed(
-                    title="User roles updated", description=f"Updated {len(users)} users."
+            data = await self.send_updated_users(*users)  # type: dict
+
+            if any(data.values()):
+                embed = Embed(
+                    title="User roles updated"
                 )
-            )
+
+                for key, value in data.items():
+                    if value:
+                        embed.add_field(
+                            name=key.title(), value=str(value)
+                        )
+
+                await self.bot.get_channel(DEVLOG_CHANNEL).send(
+                    embed=embed
+                )
 
     async def on_member_update(self, before: Member, after: Member):
         if before.roles == after.roles:
