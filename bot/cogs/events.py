@@ -1,6 +1,7 @@
 # coding=utf-8
 from aiohttp import ClientSession
-from discord import Member, Embed
+
+from discord import Embed, Member
 from discord.ext.commands import (
     AutoShardedBot, BadArgument, BotMissingPermissions,
     CommandError, CommandInvokeError, Context,
@@ -8,9 +9,7 @@ from discord.ext.commands import (
 )
 
 from bot.constants import (
-    SITE_API_KEY, SITE_API_USER_URL, PYTHON_GUILD, OWNER_ROLE, ADMIN_ROLE, MODERATOR_ROLE,
-    DEVOPS_ROLE,
-    DEVLOG_CHANNEL
+    ADMIN_ROLE, DEVLOG_CHANNEL, DEVOPS_ROLE, MODERATOR_ROLE, OWNER_ROLE, PYTHON_GUILD, SITE_API_KEY, SITE_API_USER_URL
 )
 
 
