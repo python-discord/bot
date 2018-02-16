@@ -31,7 +31,7 @@ class EvalCog:  # Named this way because a flake8 plugin isn't case-sensitive
 
         self.interpreter = Interpreter(bot)
 
-    def _format(self, inp, out):
+    def _format(self, inp, out):  # (str, Any) -> (str, discord.Embed)
         self._ = out
 
         res = ""
@@ -74,6 +74,7 @@ class EvalCog:  # Named this way because a flake8 plugin isn't case-sensitive
                 if line.startswith("return"):
                     line = line[6:].strip()
 
+            # Combine everything
             res += (start + line + "\n")
 
         self.stdout.seek(0)
@@ -101,8 +102,10 @@ class EvalCog:  # Named this way because a flake8 plugin isn't case-sensitive
                 # Leave out the traceback message
                 out = "\n" + "\n".join(out.split("\n")[1:])
 
-            pretty = (pprint.pformat(out, compact=True, width=60)
-                      if not isinstance(out, str) else str(out))
+            if isinstance(out, str):
+                pretty = out
+            else:
+                pretty = pprint.pformat(out, compact=True, width=60)
 
             if pretty != str(out):
                 # We're using the pretty version, start on the next line
@@ -111,15 +114,19 @@ class EvalCog:  # Named this way because a flake8 plugin isn't case-sensitive
             if pretty.count("\n") > 20:
                 # Text too long, shorten
                 li = pretty.split("\n")
-                pretty = "\n".join(li[:3]) + "\n ...\n" + "\n".join(li[-3:])
+                
+                # 
+                pretty = ("\n".join(li[:3]) +  # First 3 lines
+                          "\n ...\n" +  # Ellipsis to indicate removed lines
+                          "\n".join(li[-3:])  # last 3 lines
 
             # Add the output
             res += pretty
             res = (res, None)
 
-        return res
+        return res  # Return (text, embed)
 
-    async def _eval(self, ctx, code):
+    async def _eval(self, ctx, code):  # (discord.Context, str) -> None
         self.ln += 1
 
         if code.startswith("exit"):
@@ -144,7 +151,7 @@ class EvalCog:  # Named this way because a flake8 plugin isn't case-sensitive
 
         # Ignore this shitcode, it works
         _code = """
-async def func():
+async def func():  # (None,) -> Any
     try:
         with contextlib.redirect_stdout(self.stdout):
 {0}
