@@ -20,4 +20,7 @@ STATUS_URL = os.environ.get("STATUS_URL")
 DEPLOY_BOT_KEY = os.environ.get("DEPLOY_BOT_KEY")
 DEPLOY_SITE_KEY = os.environ.get("DEPLOY_SITE_KEY")
 
+SITE_API_KEY = os.environ.get("BOT_API_KEY")
+SITE_API_USER_URL = "https://api.pythondiscord.com/user"
+
 HELP_PREFIX = "bot."

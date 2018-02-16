@@ -1,8 +1,16 @@
 # coding=utf-8
+from aiohttp import ClientSession
+from discord import Member, Embed
 from discord.ext.commands import (
     AutoShardedBot, BadArgument, BotMissingPermissions,
     CommandError, CommandInvokeError, Context,
     NoPrivateMessage, UserInputError
+)
+
+from bot.constants import (
+    SITE_API_KEY, SITE_API_USER_URL, PYTHON_GUILD, OWNER_ROLE, ADMIN_ROLE, MODERATOR_ROLE,
+    DEVOPS_ROLE,
+    DEVLOG_CHANNEL
 )
 
 
@@ -13,6 +21,16 @@ class Events:
 
     def __init__(self, bot: AutoShardedBot):
         self.bot = bot
+
+    async def send_updated_users(self, *users):
+        session = ClientSession(
+            headers={"": SITE_API_KEY}
+        )
+
+        await session.post(
+            url=SITE_API_USER_URL,
+            json=list(users)
+        )
 
     async def on_command_error(self, ctx: Context, e: CommandError):
         command = ctx.command
@@ -46,6 +64,68 @@ class Events:
             )
             raise e.original
         print(e)
+
+    async def on_ready(self):
+        users = []
+
+        for member in self.bot.get_guild(PYTHON_GUILD).members:  # type: Member
+            roles = [r.id for r in member.roles]  # type: List[int]
+
+            if OWNER_ROLE in roles:
+                users.append({
+                    "user_id": member.id,
+                    "role": OWNER_ROLE
+                })
+            elif ADMIN_ROLE in roles:
+                users.append({
+                    "user_id": member.id,
+                    "role": ADMIN_ROLE
+                })
+            elif MODERATOR_ROLE in roles:
+                users.append({
+                    "user_id": member.id,
+                    "role": MODERATOR_ROLE
+                })
+            elif DEVOPS_ROLE in roles:
+                users.append({
+                    "user_id": member.id,
+                    "role": DEVOPS_ROLE
+                })
+
+        if users:
+            await self.send_updated_users(*users)
+            await self.bot.get_channel(DEVLOG_CHANNEL).send(
+                embed=Embed(
+                    title="User roles updated", description=f"Updated {len(users)} users."
+                )
+            )
+
+    async def on_member_update(self, before: Member, after: Member):
+        if before.roles == after.roles:
+            return
+
+        roles = [r.id for r in after.roles]  # type: List[int]
+
+        if OWNER_ROLE in roles:
+            self.send_updated_users({
+                "user_id": after.id,
+                "role": OWNER_ROLE
+            })
+        elif ADMIN_ROLE in roles:
+            self.send_updated_users({
+                "user_id": after.id,
+                "role": ADMIN_ROLE
+            })
+        elif MODERATOR_ROLE in roles:
+            self.send_updated_users({
+                "user_id": after.id,
+                "role": MODERATOR_ROLE
+            })
+        elif DEVOPS_ROLE in roles:
+            self.send_updated_users({
+                "user_id": after.id,
+                "role": DEVOPS_ROLE
+            })
 
 
 def setup(bot):
