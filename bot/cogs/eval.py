@@ -2,8 +2,8 @@
 
 import contextlib
 import inspect
-from io import StringIO
 import pprint
+from io import StringIO
 import re
 import textwrap
 import traceback
@@ -41,7 +41,7 @@ class EvalCog:  # Named this way because a flake8 plugin isn't case-sensitive
             inp = inp[4:]
 
         # Get all non-empty lines
-        lines = [line for line in inp.split("\n") if l.strip()]
+        lines = [line for line in inp.split("\n") if line.strip()]
         if len(lines) != 1:
             lines += [""]
 
@@ -56,11 +56,11 @@ class EvalCog:  # Named this way because a flake8 plugin isn't case-sensitive
                 # Normally, it's something like
                 # In [X]:
                 #    ...:
-                # 
-                # But if it's 
+                #
+                # But if it's
                 # In [XX]:
                 #    ...:
-                # 
+                #
                 # You can see it doesn't look right.
                 # This code simply indents the dots
                 # far enough to align them.
@@ -68,7 +68,7 @@ class EvalCog:  # Named this way because a flake8 plugin isn't case-sensitive
                 # then we get the length
                 # and do a simple {:<LENGTH}
                 # to indent it.
-                s = f"{'':<{len(str(self.ln))+2}}...: "
+                start = f"{'':<{len(str(self.ln))+2}}...: "
 
             if i == len(lines) - 2:
                 if line.startswith("return"):
