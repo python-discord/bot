@@ -20,7 +20,7 @@ class Deployment:
     @with_role(ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
     async def redeploy(self, ctx: Context):
         """
-        Trigger bot deployment on the server
+        Trigger bot deployment on the server - will only redeploy if there were changes to deploy
         """
 
         with ClientSession() as session:
