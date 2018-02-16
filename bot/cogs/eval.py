@@ -114,11 +114,10 @@ class EvalCog:  # Named this way because a flake8 plugin isn't case-sensitive
             if pretty.count("\n") > 20:
                 # Text too long, shorten
                 li = pretty.split("\n")
-                
-                # 
+
                 pretty = ("\n".join(li[:3]) +  # First 3 lines
                           "\n ...\n" +  # Ellipsis to indicate removed lines
-                          "\n".join(li[-3:])  # last 3 lines
+                          "\n".join(li[-3:]))  # last 3 lines
 
             # Add the output
             res += pretty
