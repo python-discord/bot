@@ -5,12 +5,13 @@ from discord.ext.commands import Context
 
 def with_prefix(*prefixes) -> commands.check:
     """Allow a command to only be invoked with one prefix
-    :str: :tuple: prefixes - 
+    :str: :tuple: prefixes -
         A tuple of string prefixes to trigger the command with
     """
     async def predicate(ctx: Context):
         return ctx.prefix in prefixes
     return commands.check(predicate)
+
 
 def with_role(*role_ids: int):
     async def predicate(ctx: Context):
