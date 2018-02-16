@@ -1,5 +1,5 @@
 # coding=utf-8
-from discord import Message
+from discord import Embed
 from discord.ext.commands import AutoShardedBot
 
 from bot.constants import DEVLOG_CHANNEL
@@ -16,17 +16,14 @@ class Logging:
     async def on_ready(self):
         print("Connected!")
 
-        await self.bot.get_channel(DEVLOG_CHANNEL).send("Connected!")
+        embed = Embed(description="Connected!")
+        embed.set_author(
+            name="Python Bot",
+            url="https://github.com/discord-python/bot",
+            icon_url="https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle.png"
+        )
 
-    async def on_message(self, message: Message):
-        if not message.guild:  # It's a DM
-            print(f"DM: @{message.author.name}#{message.author.discriminator} -> {message.clean_content}")
-        else:
-            print(
-                f"{message.guild.name} | #{message.channel.name} | "
-                f"@{message.author.name}#{message.author.discriminator} -> "
-                f"{message.clean_content}"
-            )
+        await self.bot.get_channel(DEVLOG_CHANNEL).send(embed=embed)
 
 
 def setup(bot):
