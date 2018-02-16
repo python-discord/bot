@@ -3,10 +3,10 @@
 import contextlib
 import inspect
 import pprint
-from io import StringIO
 import re
 import textwrap
 import traceback
+from io import StringIO
 
 import discord
 from discord.ext.commands import AutoShardedBot, command
