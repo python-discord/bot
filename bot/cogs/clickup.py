@@ -125,7 +125,7 @@ class ClickUp:
             colour=Colour.blurple()
         )
 
-        for project in result:
+        for project in result["projects"]:
             lists = []
 
             for list_ in project["lists"]:
