@@ -57,7 +57,7 @@ class ClickUp:
         for task in result["tasks"]:
             # \u00BB is a right-pointing double chevron
             lines.append(
-                f"{task['id']} \u00BB {task['name'}}: {task['status']['status']}\n"
+                f"{task['id']} \u00BB {task['name']}: {task['status']['status']}\n"
             )
 
         message = ""
