@@ -8,8 +8,11 @@ from bot.constants import ADMIN_ROLE, CLICKUP_KEY, CLICKUP_SPACE, CLICKUP_TEAM, 
 from bot.decorators import with_role
 
 CREATE_TASK_URL = "https://api.clickup.com/api/v1/list/{list_id}/task"
+GET_TASKS_URL = "https://api.clickup.com/api/v1/team/{team_id}/task"
 PROJECTS_URL = "https://api.clickup.com/api/v1/space/{space_id}/project"
-SPACES_URL = "https://api.clickup.com/api/v1/team/{team_id}/space"
+
+# Don't ask me why the below line is a syntax error, but that's what flake8 thinks...
+SPACES_URL = "https://api.clickup.com/api/v1/team/{team_id}/space"  # flake8: noqa
 TEAM_URL = "https://api.clickup.com/api/v1/team/{team_id}"
 
 HEADERS = {
@@ -26,20 +29,86 @@ class ClickUp:
     # Set statuses: Open, In Progress, Review, Closed
     # Open task
     # Assign task
-    # Get tasks
-    # Get user IDs
-    # Get lists
 
     def __init__(self, bot: AutoShardedBot):
         self.bot = bot
-        self.space_id = 0
 
-    async def on_ready(self):
+    @command(name="clickup.tasks()", aliases=["clickup.tasks", "tasks"])
+    @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
+    async def tasks(self, ctx: Context, list: int = None, status: str = None):
+        """
+        Get a list of tasks, optionally on a specific list or with a specific status
+        """
+
+        params = {}
+
+        if list:
+            params["list_ids"] = list
+
+        if status:
+            params["statuses"] = status
+
         with ClientSession() as session:
-            response = await session.get(SPACES_URL.format(team_id=CLICKUP_TEAM), headers=HEADERS)
+            response = await session.get(TEAM_URL.format(team_id=CLICKUP_TEAM), headers=HEADERS, params=params)
             result = response.json()
 
-        self.space_id = result[0]["id"]
+        lines = []
+
+        for task in result["tasks"]:
+            # \u00BB is a right-pointing double chevron
+            lines.append(
+                f"{task['id']} \u00BB {task['name'}}: {task['status']['status']}\n"
+            )
+
+        message = ""
+
+        while lines:
+            item = lines.pop(0)
+
+            if len(message) + len(item) < 2000:
+                message += item
+            else:
+                message += f"...and {len(lines)} more"
+                break
+
+        embed = Embed(description=message)
+
+        embed.set_author(
+            name="ClickUp Members",
+            icon_url="https://clickup.com/landing/favicons/favicon-32x32.png",
+            url=f"https://app.clickup.com/{CLICKUP_TEAM}/{CLICKUP_SPACE}/"
+        )
+
+        await ctx.send(embed=embed)
+
+    @command(name="clickup.team()", aliases=["clickup.team", "team"])
+    @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
+    async def team(self, ctx: Context):
+        """
+        Get a list of every member of the team
+        """
+
+        with ClientSession() as session:
+            response = await session.get(TEAM_URL.format(team_id=CLICKUP_TEAM), headers=HEADERS)
+            result = response.json()
+
+        embed = Embed(
+            colour=Colour.blurple()
+        )
+
+        for member in result["team"]["members"]:
+            embed.add_field(
+                name=member["user"]["username"],
+                value=member["user"]["id"]
+            )
+
+        embed.set_author(
+            name="ClickUp Members",
+            icon_url="https://clickup.com/landing/favicons/favicon-32x32.png",
+            url=f"https://app.clickup.com/{CLICKUP_TEAM}/{CLICKUP_SPACE}/"
+        )
+
+        await ctx.send(embed=embed)
 
     @command(name="clickup.lists()", aliases=["clickup.lists", "lists"])
     @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
@@ -72,7 +141,7 @@ class ClickUp:
         embed.set_author(
             name="ClickUp Projects",
             icon_url="https://clickup.com/landing/favicons/favicon-32x32.png",
-            url="https://app.clickup.com/754996/757069/"
+            url=f"https://app.clickup.com/{CLICKUP_TEAM}/{CLICKUP_SPACE}/"
         )
 
         await ctx.send(embed=embed)
