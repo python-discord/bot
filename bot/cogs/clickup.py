@@ -35,15 +35,15 @@ class ClickUp:
 
     @command(name="clickup.tasks()", aliases=["clickup.tasks", "tasks"])
     @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
-    async def tasks(self, ctx: Context, list: int = None, status: str = None):
+    async def tasks(self, ctx: Context, task_list: int = None, status: str = None):
         """
         Get a list of tasks, optionally on a specific list or with a specific status
         """
 
         params = {}
 
-        if list:
-            params["list_ids"] = list
+        if task_list:
+            params["list_ids"] = task_list
 
         if status:
             params["statuses"] = status
