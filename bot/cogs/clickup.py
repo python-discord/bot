@@ -49,7 +49,7 @@ class ClickUp:
             params["statuses"] = status
 
         with ClientSession() as session:
-            response = await session.get(TEAM_URL.format(team_id=CLICKUP_TEAM), headers=HEADERS, params=params)
+            response = await session.get(GET_TASKS_URL.format(team_id=CLICKUP_TEAM), headers=HEADERS, params=params)
             result = await response.json()
 
         lines = []
