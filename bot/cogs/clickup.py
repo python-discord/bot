@@ -50,7 +50,7 @@ class ClickUp:
 
         with ClientSession() as session:
             response = await session.get(TEAM_URL.format(team_id=CLICKUP_TEAM), headers=HEADERS, params=params)
-            result = response.json()
+            result = await response.json()
 
         lines = []
 
@@ -90,7 +90,7 @@ class ClickUp:
 
         with ClientSession() as session:
             response = await session.get(TEAM_URL.format(team_id=CLICKUP_TEAM), headers=HEADERS)
-            result = response.json()
+            result = await response.json()
 
         embed = Embed(
             colour=Colour.blurple()
@@ -119,7 +119,7 @@ class ClickUp:
 
         with ClientSession() as session:
             response = await session.get(PROJECTS_URL.format(space_id=CLICKUP_SPACE), headers=HEADERS)
-            result = response.json()
+            result = await response.json()
 
         embed = Embed(
             colour=Colour.blurple()
