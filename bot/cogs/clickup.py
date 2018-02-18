@@ -1,11 +1,14 @@
 # coding=utf-8
+import asyncio
+
 from aiohttp import ClientSession
 
 from discord import Colour, Embed
-from discord.ext.commands import AutoShardedBot, Context, command
+from discord.ext.commands import AutoShardedBot, Context, command, Paginator
 
 from bot.constants import ADMIN_ROLE, CLICKUP_KEY, CLICKUP_SPACE, CLICKUP_TEAM, DEVOPS_ROLE, MODERATOR_ROLE, OWNER_ROLE
 from bot.decorators import with_role
+from bot.utils import paginate
 
 CREATE_TASK_URL = "https://api.clickup.com/api/v1/list/{list_id}/task"
 GET_TASKS_URL = "https://api.clickup.com/api/v1/team/{team_id}/task"
@@ -19,6 +22,11 @@ HEADERS = {
     "Authorization": CLICKUP_KEY,
     "Content-Type": "application/json"
 }
+
+LEFT_EMOJI = "\u2B05"
+RIGHT_EMOJI = "\u27A1"
+
+PAGE_EMOJI = [LEFT_EMOJI, RIGHT_EMOJI]
 
 
 class ClickUp:
@@ -42,6 +50,13 @@ class ClickUp:
 
         params = {}
 
+        embed = Embed()
+        embed.set_author(
+            name="ClickUp Tasks",
+            icon_url="https://clickup.com/landing/favicons/favicon-32x32.png",
+            url=f"https://app.clickup.com/{CLICKUP_TEAM}/{CLICKUP_SPACE}/"
+        )
+
         if task_list:
             params["list_ids[]"] = task_list
 
@@ -53,40 +68,22 @@ class ClickUp:
             result = await response.json()
 
         if "err" in result:
-            embed = Embed(description=f"`{result['ECODE']}`: {result['err']}")
+            embed.description = f"`{result['ECODE']}`: {result['err']}"
 
         else:
             tasks = result["tasks"]
 
             if not tasks:
-                embed = Embed(description="No tasks found.")
+                embed.description = "No tasks found."
             else:
-                lines = []
-
-                while len(lines) <= 5 and tasks:
-                    task = tasks.pop(0)
-
-                    # \u00BB is a right-pointing double chevron
-                    lines.append(
-                        f"`#{task['id']: <5}` ({task['status']['status'].title()})\n\u00BB {task['name']}\n\n"
-                    )
-
-                left_over = len(tasks)
-
-                message = "".join(lines)
-
-                if left_over:
-                    message += f"... and {left_over} more tasks"
-
-                embed = Embed(description=message)
-
-            embed.set_author(
-                name="ClickUp Tasks",
-                icon_url="https://clickup.com/landing/favicons/favicon-32x32.png",
-                url=f"https://app.clickup.com/{CLICKUP_TEAM}/{CLICKUP_SPACE}/"
-            )
-
-        await ctx.send(embed=embed)
+                return await paginate(
+                    (
+                        f"`#{task['id']: <5}` ({task['status']['status'].title()})\n\u00BB {task['name']}"
+                        for task in tasks
+                    ),
+                    ctx, embed
+                )
+        return await ctx.send(embed=embed)
 
     @command(name="clickup.team()", aliases=["clickup.team", "team"])
     @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
