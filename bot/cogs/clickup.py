@@ -35,7 +35,7 @@ class ClickUp:
 
     @command(name="clickup.tasks()", aliases=["clickup.tasks", "tasks"])
     @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
-    async def tasks(self, ctx: Context, task_list: int = None, status: str = None):
+    async def tasks(self, ctx: Context, status: str = None, task_list: int = None):
         """
         Get a list of tasks, optionally on a specific list or with a specific status
         """
@@ -43,41 +43,48 @@ class ClickUp:
         params = {}
 
         if task_list:
-            params["list_ids"] = task_list
+            params["list_ids[]"] = task_list
 
         if status:
-            params["statuses"] = status
+            params["statuses[]"] = status
 
         with ClientSession() as session:
             response = await session.get(GET_TASKS_URL.format(team_id=CLICKUP_TEAM), headers=HEADERS, params=params)
             result = await response.json()
 
-        lines = []
+        if "err" in result:
+            embed = Embed(description=f"`{result['ECODE']}`: {result['err']}")
 
-        for task in result["tasks"]:
-            # \u00BB is a right-pointing double chevron
-            lines.append(
-                f"{task['id']} \u00BB {task['name']}: {task['status']['status']}\n"
-            )
+        else:
+            tasks = result["tasks"]
 
-        message = ""
-
-        while lines:
-            item = lines.pop(0)
-
-            if len(message) + len(item) < 2000:
-                message += item
+            if not tasks:
+                embed = Embed(description="No tasks found.")
             else:
-                message += f"...and {len(lines)} more"
-                break
+                lines = []
 
-        embed = Embed(description=message)
+                while len(lines) <= 5 and tasks:
+                    task = tasks.pop(0)
 
-        embed.set_author(
-            name="ClickUp Members",
-            icon_url="https://clickup.com/landing/favicons/favicon-32x32.png",
-            url=f"https://app.clickup.com/{CLICKUP_TEAM}/{CLICKUP_SPACE}/"
-        )
+                    # \u00BB is a right-pointing double chevron
+                    lines.append(
+                        f"`#{task['id']: <5}` ({task['status']['status'].title()})\n\u00BB {task['name']}\n\n"
+                    )
+
+                left_over = len(tasks)
+
+                message = "".join(lines)
+
+                if left_over:
+                    message += f"... and {left_over} more tasks"
+
+                embed = Embed(description=message)
+
+            embed.set_author(
+                name="ClickUp Tasks",
+                icon_url="https://clickup.com/landing/favicons/favicon-32x32.png",
+                url=f"https://app.clickup.com/{CLICKUP_TEAM}/{CLICKUP_SPACE}/"
+            )
 
         await ctx.send(embed=embed)
 
@@ -92,15 +99,18 @@ class ClickUp:
             response = await session.get(TEAM_URL.format(team_id=CLICKUP_TEAM), headers=HEADERS)
             result = await response.json()
 
-        embed = Embed(
-            colour=Colour.blurple()
-        )
-
-        for member in result["team"]["members"]:
-            embed.add_field(
-                name=member["user"]["username"],
-                value=member["user"]["id"]
+        if "err" in result:
+            embed = Embed(description=f"`{result['ECODE']}`: {result['err']}")
+        else:
+            embed = Embed(
+                colour=Colour.blurple()
             )
+
+            for member in result["team"]["members"]:
+                embed.add_field(
+                    name=member["user"]["username"],
+                    value=member["user"]["id"]
+                )
 
         embed.set_author(
             name="ClickUp Members",
@@ -121,22 +131,25 @@ class ClickUp:
             response = await session.get(PROJECTS_URL.format(space_id=CLICKUP_SPACE), headers=HEADERS)
             result = await response.json()
 
-        embed = Embed(
-            colour=Colour.blurple()
-        )
-
-        for project in result["projects"]:
-            lists = []
-
-            for list_ in project["lists"]:
-                lists.append(f"{list_['name']} ({list_['id']})")
-
-            lists = "\n".join(lists)
-
-            embed.add_field(
-                name=f"{project['name']} ({project['id']})",
-                value=lists
+        if "err" in result:
+            embed = Embed(description=f"`{result['ECODE']}`: {result['err']}")
+        else:
+            embed = Embed(
+                colour=Colour.blurple()
             )
+
+            for project in result["projects"]:
+                lists = []
+
+                for list_ in project["lists"]:
+                    lists.append(f"{list_['name']} ({list_['id']})")
+
+                lists = "\n".join(lists)
+
+                embed.add_field(
+                    name=f"{project['name']} ({project['id']})",
+                    value=lists
+                )
 
         embed.set_author(
             name="ClickUp Projects",
