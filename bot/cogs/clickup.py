@@ -1,12 +1,12 @@
 # coding=utf-8
-import asyncio
-
 from aiohttp import ClientSession
 
 from discord import Colour, Embed
-from discord.ext.commands import AutoShardedBot, Context, command, Paginator
+from discord.ext.commands import AutoShardedBot, Context, command
 
-from bot.constants import ADMIN_ROLE, CLICKUP_KEY, CLICKUP_SPACE, CLICKUP_TEAM, DEVOPS_ROLE, MODERATOR_ROLE, OWNER_ROLE
+from bot.constants import (
+    ADMIN_ROLE, CLICKUP_KEY, CLICKUP_SPACE, CLICKUP_TEAM, DEVOPS_ROLE, MODERATOR_ROLE, OWNER_ROLE
+)
 from bot.decorators import with_role
 from bot.utils import paginate
 
