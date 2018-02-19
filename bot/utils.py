@@ -94,12 +94,13 @@ async def paginate(lines: Iterable[str], ctx: Context, embed: Embed,
         paginator.add_line(line, empty=empty)
 
     embed.description = paginator.pages[current_page]
-    embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
 
     message = await ctx.send(embed=embed)
 
     if len(paginator.pages) <= 1:
         return  # There's only one page
+
+    embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
 
     def event_check(reaction_: Reaction, user_: Member):
         """
