@@ -61,16 +61,29 @@ class Formatter(HelpFormatter):
             # get the args using the handy inspect module
             argspec = getfullargspec(self.command.callback)
             arguments = formatargspec(*argspec)
-            args_no_type_hints = ", ".join(argspec[0])
+            for arg, annotation in argspec.annotations.items():
+                # remove module name to only show class name
+                # discord.ext.commands.context.Context -> Context
+                arguments = arguments.replace(f"{annotation.__module__}.", "")
+
+            # manipulate the argspec to make it valid python when 'calling' the do_<command>
+            args_no_type_hints = argspec.args
+            for kwarg in argspec.kwonlyargs:
+                args_no_type_hints.append("{0}={0}".format(kwarg))
+            args_no_type_hints = "({})".format(", ".join(args_no_type_hints))
 
             # remove self from the args
             arguments = arguments.replace("self, ", "")
             args_no_type_hints = args_no_type_hints.replace("self, ", "")
 
+            # indent every line in the help message
+            helptext = [f"    {line}" for line in self.command.help.split("\n")]
+            helptext = "\n".join(helptext)
+
             # prepare the different sections of the help output, and add them to the paginator
             definition = f"async def {stripped_command}{arguments}:"
-            docstring = f"    \"\"\"\n    {self.command.help}\n    \"\"\""
-            invocation = f"    await do_{stripped_command}({args_no_type_hints})"
+            docstring = f"    \"\"\"\n{helptext}\n    \"\"\""
+            invocation = f"    await do_{stripped_command}{args_no_type_hints}"
             self._paginator.add_line(definition)
             self._paginator.add_line(docstring)
             self._paginator.add_line(invocation)
