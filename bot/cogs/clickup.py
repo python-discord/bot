@@ -61,6 +61,9 @@ class ClickUp:
         Get a list of tasks, optionally on a specific list or with a specific status
 
         Provide "*" for the status to match everything except for "Closed".
+
+        When specifying a list you may use the list name on its own, but it is preferable to give the project name
+        as well - for example, "Bot/Cogs". This is case-insensitive.
         """
 
         params = {}
@@ -252,7 +255,10 @@ class ClickUp:
     @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
     async def open_command(self, ctx: Context, task_list: str, *, title: str):
         """
-        Open a new task under a specific task list
+        Open a new task under a specific task list, with a title
+
+        When specifying a list you may use the list name on its own, but it is preferable to give the project name
+        as well - for example, "Bot/Cogs". This is case-insensitive.
         """
 
         embed = Embed(colour=Colour.blurple())
@@ -294,6 +300,10 @@ class ClickUp:
     @command(name="clickup.set_status()", aliases=["clickup.set_status", "set_status", "set_task_status"])
     @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
     async def set_status_command(self, ctx: Context, task_id: str, *, status: str):
+        """
+        Update the status of a specific task
+        """
+
         embed = Embed(colour=Colour.blurple())
         embed.set_author(
             name="ClickUp Tasks",
