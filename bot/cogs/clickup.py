@@ -8,7 +8,7 @@ from bot.constants import (
     ADMIN_ROLE, CLICKUP_KEY, CLICKUP_SPACE, CLICKUP_TEAM, DEVOPS_ROLE, MODERATOR_ROLE, OWNER_ROLE
 )
 from bot.decorators import with_role
-from bot.utils import paginate
+from bot.utils import CaseInsensitiveDict, paginate
 
 CREATE_TASK_URL = "https://api.clickup.com/api/v1/list/{list_id}/task"
 GET_TASKS_URL = "https://api.clickup.com/api/v1/team/{team_id}/task"
@@ -40,12 +40,29 @@ class ClickUp:
 
     def __init__(self, bot: AutoShardedBot):
         self.bot = bot
+        self.lists = CaseInsensitiveDict()
+
+    async def on_ready(self):
+        with ClientSession() as session:
+            response = await session.get(PROJECTS_URL.format(space_id=CLICKUP_SPACE), headers=HEADERS)
+            result = await response.json()
+
+        if "err" in result:
+            print(f"Failed to get ClickUp lists: `{result['ECODE']}`: {result['err']}")
+        else:
+            # Save all the lists with their IDs so that we can get at them later
+            for project in result["projects"]:
+                for list_ in project["lists"]:
+                    self.lists[list_["name"]] = list_["id"]
+                    self.lists[f"{project['name']}/{list_['name']}"] = list_["id"]  # Just in case we have duplicates
 
     @command(name="clickup.tasks()", aliases=["clickup.tasks", "tasks"])
     @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
-    async def tasks(self, ctx: Context, status: str = None, task_list: int = None):
+    async def tasks(self, ctx: Context, status: str = None, task_list: str = None):
         """
         Get a list of tasks, optionally on a specific list or with a specific status
+
+        Provide "*" for the status to match everything except for "Closed".
         """
 
         params = {}
@@ -58,9 +75,14 @@ class ClickUp:
         )
 
         if task_list:
-            params["list_ids[]"] = task_list
+            if task_list in self.lists:
+                params["list_ids[]"] = self.lists[task_list]
+            else:
+                embed.colour = Colour.red()
+                embed.description = f"Unknown list: {task_list}"
+                return await ctx.send(embed=embed)
 
-        if status:
+        if status and status != "*":
             params["statuses[]"] = status
 
         with ClientSession() as session:
