@@ -70,7 +70,7 @@ class Formatter(HelpFormatter):
             args_no_type_hints = argspec.args
             for kwarg in argspec.kwonlyargs:
                 args_no_type_hints.append("{0}={0}".format(kwarg))
-            args_no_type_hints = "({})".format(", ".join(args_no_type_hints))
+            args_no_type_hints = "({0})".format(", ".join(args_no_type_hints))
 
             # remove self from the args
             arguments = arguments.replace("self, ", "")
