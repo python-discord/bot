@@ -67,7 +67,7 @@ class ClickUp:
 
         params = {}
 
-        embed = Embed()
+        embed = Embed(colour=Colour.blurple())
         embed.set_author(
             name="ClickUp Tasks",
             icon_url="https://clickup.com/landing/favicons/favicon-32x32.png",
@@ -91,12 +91,14 @@ class ClickUp:
 
         if "err" in result:
             embed.description = f"`{result['ECODE']}`: {result['err']}"
+            embed.colour = Colour.red()
 
         else:
             tasks = result["tasks"]
 
             if not tasks:
                 embed.description = "No tasks found."
+                embed.colour = Colour.red()
             else:
                 return await paginate(
                     (
@@ -120,6 +122,7 @@ class ClickUp:
 
         if "err" in result:
             embed = Embed(description=f"`{result['ECODE']}`: {result['err']}")
+            embed.colour = Colour.red()
         else:
             embed = Embed(
                 colour=Colour.blurple()
@@ -152,6 +155,7 @@ class ClickUp:
 
         if "err" in result:
             embed = Embed(description=f"`{result['ECODE']}`: {result['err']}")
+            embed.colour = Colour.red()
         else:
             embed = Embed(
                 colour=Colour.blurple()
