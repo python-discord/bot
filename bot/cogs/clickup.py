@@ -52,7 +52,8 @@ class ClickUp:
                     self.lists[list_["name"]] = list_["id"]
                     self.lists[f"{project['name']}/{list_['name']}"] = list_["id"]  # Just in case we have duplicates
 
-            self.lists.update({v: k for k, v in self.lists.items()})  # Add the reverse so we can look up by ID as well
+            # Add the reverse so we can look up by ID as well
+            self.lists.update({v: k for k, v in self.lists.items()})
 
     @command(name="clickup.tasks()", aliases=["clickup.tasks", "tasks", "list_tasks"])
     @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
