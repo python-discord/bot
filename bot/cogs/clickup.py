@@ -97,8 +97,8 @@ class ClickUp:
             tasks = result["tasks"]
 
             if not tasks:
-                embed.description = "No tasks found."
                 embed.colour = Colour.red()
+                embed.description = "No tasks found."
             else:
                 return await paginate(
                     (
@@ -121,8 +121,10 @@ class ClickUp:
             result = await response.json()
 
         if "err" in result:
-            embed = Embed(description=f"`{result['ECODE']}`: {result['err']}")
-            embed.colour = Colour.red()
+            embed = Embed(
+                colour=Colour.red(),
+                description=f"`{result['ECODE']}`: {result['err']}"
+            )
         else:
             embed = Embed(
                 colour=Colour.blurple()
@@ -154,8 +156,10 @@ class ClickUp:
             result = await response.json()
 
         if "err" in result:
-            embed = Embed(description=f"`{result['ECODE']}`: {result['err']}")
-            embed.colour = Colour.red()
+            embed = Embed(
+                colour=Colour.red(),
+                description=f"`{result['ECODE']}`: {result['err']}"
+            )
         else:
             embed = Embed(
                 colour=Colour.blurple()
