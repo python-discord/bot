@@ -98,6 +98,9 @@ async def paginate(lines: Iterable[str], ctx: Context, embed: Embed,
 
     message = await ctx.send(embed=embed)
 
+    if len(paginator.pages) <= 1:
+        return  # There's only one page
+
     def event_check(reaction_: Reaction, user_: Member):
         """
         Make sure that this reaction is what we want to operate on
