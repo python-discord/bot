@@ -10,6 +10,8 @@ script:
 after_success:
   - python deploy.py
 
+cache: pip
+
 notifications:
   email:
     on_success: never
