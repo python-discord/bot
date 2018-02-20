@@ -61,7 +61,7 @@ class CaseInsensitiveDict(dict):
 
 async def paginate(lines: Iterable[str], ctx: Context, embed: Embed,
                    prefix: str = "", suffix: str = "", max_size: int = 500, empty: bool = True,
-                   restrict_to_user: User = None):
+                   restrict_to_user: User = None, timeout=300):
     """
     Use a paginator and set of reactions to provide pagination over a set of lines. The reactions are used to
     switch page, or to finish with pagination.
@@ -87,6 +87,20 @@ async def paginate(lines: Iterable[str], ctx: Context, embed: Embed,
     :param restrict_to_user: A user to lock pagination operations to for this message, if supplied
     """
 
+    def event_check(reaction_: Reaction, user_: Member):
+        """
+        Make sure that this reaction is what we want to operate on
+        """
+
+        return (
+            reaction_.message.id == message.id and  # Reaction on this specific message
+            reaction_.emoji in PAGINATION_EMOJI and  # One of the reactions we handle
+            user_.id != ctx.bot.user.id and (  # Not applied by the bot itself
+                not restrict_to_user or   # Unrestricted if there's no user to restrict to, or...
+                user_.id == restrict_to_user.id  # Only by the restricted user
+            )
+        )
+
     paginator = Paginator(prefix=prefix, suffix=suffix, max_size=max_size)
     current_page = 0
 
@@ -102,27 +116,13 @@ async def paginate(lines: Iterable[str], ctx: Context, embed: Embed,
 
     embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
 
-    def event_check(reaction_: Reaction, user_: Member):
-        """
-        Make sure that this reaction is what we want to operate on
-        """
-
-        return (
-            reaction_.message.id == message.id and  # Reaction on this specific message
-            reaction_.emoji in PAGINATION_EMOJI and  # One of the reactions we handle
-            user_.id != ctx.bot.user.id and (  # Not applied by the bot itself
-                not restrict_to_user or   # Unrestricted if there's no user to restrict to, or...
-                user_.id == restrict_to_user.id  # Only by the restricted user
-            )
-        )
-
     for emoji in PAGINATION_EMOJI:
         # Add all the applicable emoji to the message
         await message.add_reaction(emoji)
 
     while True:
         try:
-            reaction, user = await ctx.bot.wait_for("reaction_add", timeout=300, check=event_check)
+            reaction, user = await ctx.bot.wait_for("reaction_add", timeout=timeout, check=event_check)
         except asyncio.TimeoutError:
             break  # We're done, no reactions for the last 5 minutes
 
