@@ -22,13 +22,17 @@ class Events:
         self.bot = bot
 
     async def send_updated_users(self, *users):
-        with ClientSession(headers={"X-API-Key": SITE_API_KEY}) as session:
-            response = await session.post(
-                url=SITE_API_USER_URL,
-                json=list(users)
-            )
+        try:
+            with ClientSession(headers={"X-API-Key": SITE_API_KEY}) as session:
+                response = await session.post(
+                    url=SITE_API_USER_URL,
+                    json=list(users)
+                )
 
-            return await response.json()
+                return await response.json()
+        except Exception as e:
+            print(f"Failed to send role updates: {e}")
+            return {}
 
     async def on_command_error(self, ctx: Context, e: CommandError):
         command = ctx.command
