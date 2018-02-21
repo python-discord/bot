@@ -77,12 +77,20 @@ class Formatter(HelpFormatter):
             args_no_type_hints = args_no_type_hints.replace("self, ", "")
 
             # indent every line in the help message
-            helptext = [f"    {line}" for line in self.command.help.split("\n")]
-            helptext = "\n".join(helptext)
+            helptext = "\n    ".join(self.command.help.split("\n"))
 
             # prepare the different sections of the help output, and add them to the paginator
             definition = f"async def {stripped_command}{arguments}:"
-            docstring = f"    \"\"\"\n{helptext}\n    \"\"\""
+            doc_elems = [
+                '"""',
+                helptext,
+                '"""'
+            ]
+
+            docstring = ""
+            for elem in doc_elems:
+                docstring += f'    {elem}\n'
+
             invocation = f"    await do_{stripped_command}{args_no_type_hints}"
             self._paginator.add_line(definition)
             self._paginator.add_line(docstring)
