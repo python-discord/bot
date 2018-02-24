@@ -1,11 +1,15 @@
 import os
 
+from discord import Message
+from discord.ext.commands import AutoShardedBot, command
 from aiohttp import ClientSession
 
-GET_TAG_URL = "https://api.pythondiscord.com/tag"
+from bot.constants import ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE
+
+GET_TAG_URL = "https://api.pythondiscord.com:8080/tag"
 
 
-class Tag:
+class Tags:
     """
     Save new tags and fetch existing tags.
     """
@@ -13,6 +17,7 @@ class Tag:
     def __init__(self, bot: AutoShardedBot):
         self.bot = bot
 
+    @command(name="get_tag()", aliases=["bot.get_tag", "bot.get_tag()", "get_tag"])
     async def get_tag(tag_name: str = None):
         """
         Get tag_data from api.pythondiscord.com
@@ -32,13 +37,17 @@ class Tag:
             response = await session.get(GET_TAG_URL, headers=headers, params=params)
             result = await response.json()
 
+        embed = Embed(
+            description="A utility bot designed just for the Python server! Try `bot.help()` for more info.",
+            url="https://github.com/discord-python/bot"
+        )
+
         return await result
 
-
-t = Tag()
-print(t.rget_tag("jonas"))
-
+    @with_role(ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
+    @command(name="redeploy()", aliases=["bot.redeploy", "bot.redeploy()", "redeploy"])
+    async def save_tag
 
 def setup(bot):
-    bot.add_cog(Tag(bot))
-    print("Cog loaded: Events")
+    bot.add_cog(Tags(bot))
+    print("Cog loaded: Tags")
