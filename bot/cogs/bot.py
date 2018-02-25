@@ -70,7 +70,7 @@ class Bot:
             try:
                 tree = ast.parse(msg.content)  # no syntax errors
                 if not all(isinstance(node, ast.Expr) for node in tree.body):  # we dont want hi\nthere\nguys\nD
-                    await self.bot.send_message(msg.author, "```Python\n{}\n```".format(msg.content))  # send codeblocked code
+                    await self.bot.send_message(msg.author, "```Python\n{}\n```".format(msg.content))
             except SyntaxError:
                 pass
 
