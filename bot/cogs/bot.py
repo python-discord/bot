@@ -18,7 +18,7 @@ class Bot:
 
     def __init__(self, bot: AutoShardedBot):
         self.bot = bot
-        self.allowed = {303906576991780866: 0, 303906556754395136: 0, 303906514266226689: 0, 267624335836053506: 0}
+        self.code_block_channels = {303906576991780866: 0, 303906556754395136: 0, 303906514266226689: 0, 267624335836053506: 0}
         # stores allowed channels plus unix timestmp from last call
 
     @group(invoke_without_command=True, name="bot", hidden=True)
@@ -66,7 +66,7 @@ class Bot:
         await ctx.invoke(self.info)
 
     async def on_message(self, msg: Message):
-        if msg.channel.id in self.allowed:
+        if msg.channel.id in self.code_block_channels:
             if self.allowed[msg.channel.id]-time.time() > 300:
                 if msg.content.count("\n") >= 3:
                     try:
@@ -94,7 +94,7 @@ print("Hello world!")
 """
                             information = Embed(title="Code formatting", description=howto)
                             await msg.channel.send(embed=information)
-                            self.allowed[msg.channel.id] = time.time()
+                            self.code_block_channels[msg.channel.id] = time.time()
                     except SyntaxError:
                         pass
 
