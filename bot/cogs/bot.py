@@ -68,7 +68,8 @@ class Bot:
         """
         if msg.content.count("\n") >= 3:  # more than three lines
             try:
-                tree = ast.parse(msg.content)  # no syntax errors
+                tree = ast.parse(msg.content)
+                # tries to parse the code into a valid ast if it throws a SyntaxError it is no valid python
                 if not all(isinstance(node, ast.Expr) for node in tree.body):  # we dont want hi\nthere\nguys\nD
                     await self.bot.send_message(msg.author, "```python\n{}\n```".format(msg.content))
                     await self.bot.delete_message(msg)
