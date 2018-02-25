@@ -19,7 +19,7 @@ class Bot:
     def __init__(self, bot: AutoShardedBot):
         self.bot = bot
         self.code_block_channels = {303906576991780866: 0, 303906556754395136: 0, 303906514266226689: 0, 267624335836053506: 0}
-        # stores allowed channels plus unix timestmp from last call
+        # Stores allowed channels plus unix timestamp from last call
 
     @group(invoke_without_command=True, name="bot", hidden=True)
     @with_role(VERIFIED_ROLE)
