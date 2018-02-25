@@ -63,9 +63,6 @@ class Bot:
         await ctx.invoke(self.info)
 
     async def on_message(self, msg: Message):
-        """
-        Auto codeblock python code
-        """
         if msg.content.count("\n") >= 3:  # more than three lines
             try:
                 tree = ast.parse(msg.content)
