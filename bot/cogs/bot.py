@@ -73,7 +73,7 @@ class Bot:
                     # they would be syntactically valid Python but could also be
                     # just some random multiline text someone is sending.
                     formatted = f"```python\n{msg.content}\n```"
-                    if len(formatted) > 2000:
+                    if len(formatted) >= 2000:
                         await msg.channel.send(formatted)
                         await self.bot.delete_message(msg)
             except SyntaxError:
