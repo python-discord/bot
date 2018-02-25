@@ -1,7 +1,7 @@
 # coding=utf-8
 import ast
 
-from discord import Embed, message
+from discord import Embed
 from discord.ext.commands import AutoShardedBot, Context, command, group
 
 from dulwich.repo import Repo
@@ -62,14 +62,14 @@ class Bot:
 
         await ctx.invoke(self.info)
 
-    async def on_message(self, msg: message):
+    async def on_message(self, msg: discord.Message):
         """
         Auto codeblock python code
         """
         if msg.content.count("\n") >= 3:  # more than three lines
             try:
                 tree = ast.parse(msg.content)  # no syntax errors
-                if not all(isinstance(node, ast.Expr) for node in tree):  # we dont want hi\nthere\nguys\nD
+                if not all(isinstance(node, ast.Expr) for node in tree.body):  # we dont want hi\nthere\nguys\nD
                     await self.bot.send_message(msg.author, "```Python\n{}\n```".format(msg.content))  # send codeblocked code
             except:
                 pass
