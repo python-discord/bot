@@ -1,7 +1,7 @@
 # coding=utf-8
 import ast
 
-from discord import Embed
+from discord import Embed, Message
 from discord.ext.commands import AutoShardedBot, Context, command, group
 
 from dulwich.repo import Repo
@@ -62,7 +62,7 @@ class Bot:
 
         await ctx.invoke(self.info)
 
-    async def on_message(self, msg: discord.Message):
+    async def on_message(self, msg: Message):
         """
         Auto codeblock python code
         """
@@ -71,7 +71,7 @@ class Bot:
                 tree = ast.parse(msg.content)  # no syntax errors
                 if not all(isinstance(node, ast.Expr) for node in tree.body):  # we dont want hi\nthere\nguys\nD
                     await self.bot.send_message(msg.author, "```Python\n{}\n```".format(msg.content))  # send codeblocked code
-            except:
+            except SyntaxError:
                 pass
 
 
