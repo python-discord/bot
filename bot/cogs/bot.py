@@ -69,9 +69,9 @@ class Bot:
                 # Attempts to parse the message into an AST node.
                 # Invalid Python code will raise a SyntaxError.
                 if not all(isinstance(node, ast.Expr) for node in tree.body):
-                    # we dont want multiple lines of single words,
-                    # they would be syntactically valid Python but could also be
-                    # just some random multiline text someone is sending.
+                    # We dont want multiple lines of single words,
+                    # They would be syntactically valid Python but could also be
+                    # Just some random multiline text someone is sending.
                     formatted = f"```python\n{msg.content}\n```"
                     if len(formatted) <= 2000:
                         await msg.channel.send(formatted)
