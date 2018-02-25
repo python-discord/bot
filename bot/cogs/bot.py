@@ -74,10 +74,22 @@ class Bot:
                     # We don't want multiple lines of single words,
                     # They would be syntactically valid Python but could also be
                     # Just some random multiline text someone is sending.
-                    formatted = f"```python\n{msg.content}\n```"
-                    if len(formatted) <= 2000:
-                        await msg.channel.send(formatted)
-                        await msg.delete()
+                    howto = """If you are going to post code in Discord, please use syntax highlighted blocks, as it makes it more legible for other users.
+
+To do this, you should input your content like this:
+
+\`\`\`python
+print("Hello world!")
+\`\`\`
+
+This will result in the following:
+```
+print("Hello world!")
+```
+"""
+                    information = Embed(title="Code formatting")
+                    information.add_field(name="Information", value=howto)
+                    msg.channel.send(embed=information)
             except SyntaxError:
                 pass
 
