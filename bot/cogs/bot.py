@@ -75,7 +75,7 @@ class Bot:
                     formatted = f"```python\n{msg.content}\n```"
                     if len(formatted) <= 2000:
                         await msg.channel.send(formatted)
-                        await bot.delete_message(msg)
+                        await msg.delete()
             except SyntaxError:
                 pass
 
