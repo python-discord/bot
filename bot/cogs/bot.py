@@ -1,5 +1,6 @@
 # coding=utf-8
 import ast
+import time
 
 from discord import Embed, Message
 from discord.ext.commands import AutoShardedBot, Context, command, group
@@ -17,6 +18,8 @@ class Bot:
 
     def __init__(self, bot: AutoShardedBot):
         self.bot = bot
+        self.allowed = {303906576991780866: 0, 303906556754395136: 0, 303906514266226689: 0, 267624335836053506: 0}
+        # stores allowed channels plus unix timestmp from last call
 
     @group(invoke_without_command=True, name="bot", hidden=True)
     @with_role(VERIFIED_ROLE)
@@ -63,18 +66,20 @@ class Bot:
         await ctx.invoke(self.info)
 
     async def on_message(self, msg: Message):
-        if msg.content.count("\n") >= 3:
-            try:
-                tree = ast.parse(msg.content)
+        if msg.channel.id in self.allowed:
+            if self.allowed[msg.channel.id]-time.time() > 300:
+                if msg.content.count("\n") >= 3:
+                    try:
+                        tree = ast.parse(msg.content)
 
-                # Attempts to parse the message into an AST node.
-                # Invalid Python code will raise a SyntaxError.
-                if not all(isinstance(node, ast.Expr) for node in tree.body):
+                        # Attempts to parse the message into an AST node.
+                        # Invalid Python code will raise a SyntaxError.
+                        if not all(isinstance(node, ast.Expr) for node in tree.body):
 
-                    # We don't want multiple lines of single words,
-                    # They would be syntactically valid Python but could also be
-                    # Just some random multiline text someone is sending.
-                    howto = """If you are going to post code in Discord, please use syntax highlighted blocks, as it makes it more legible for other users.
+                            # We don't want multiple lines of single words,
+                            # They would be syntactically valid Python but could also be
+                            # Just some random multiline text someone is sending.
+                            howto = """If you are going to post code in Discord, please use syntax highlighted blocks, as it makes it more legible for other users.
 
 To do this, you should input your content like this:
 
@@ -87,11 +92,12 @@ This will result in the following:
 print("Hello world!")
 ```
 """
-                    information = Embed(title="Code formatting")
-                    information.add_field(name="Information", value=howto)
-                    msg.channel.send(embed=information)
-            except SyntaxError:
-                pass
+                            information = Embed(title="Code formatting")
+                            information.add_field(name="Information", value=howto)
+                            msg.channel.send(embed=information)
+                            self.allowed[msg.channel.id] = time.time()
+                    except SyntaxError:
+                        pass
 
 
 def setup(bot):
