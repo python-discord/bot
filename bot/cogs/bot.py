@@ -72,9 +72,10 @@ class Bot:
                     # we dont want multiple lines of single words,
                     # they would be syntactically valid Python but could also be
                     # just some random multiline text someone is sending.
-
-                    await msg.channel.send(f"```python\n{msg.content}\n```")
-                    await self.bot.delete_message(msg)
+                    formatted = f"```python\n{msg.content}\n```"
+                    if len(formatted) > 2000:
+                        await msg.channel.send(formatted)
+                        await self.bot.delete_message(msg)
             except SyntaxError:
                 pass
 
