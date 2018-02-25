@@ -66,6 +66,7 @@ class Bot:
         if msg.content.count("\n") >= 3:  # more than three lines
             try:
                 tree = ast.parse(msg.content)
+                
                 # Attempts to parse the message into an AST node.
                 # Invalid Python code will raise a SyntaxError.
                 if not all(isinstance(node, ast.Expr) for node in tree.body):  # we dont want hi\nthere\nguys\nD
