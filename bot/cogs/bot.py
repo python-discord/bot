@@ -79,7 +79,8 @@ class Bot:
                             # We don't want multiple lines of single words,
                             # They would be syntactically valid Python but could also be
                             # Just some random multiline text someone is sending.
-                            howto = """If you are going to post code in Discord, please use syntax highlighted blocks, as it makes it more legible for other users.
+                            howto = """\n
+If you are going to post code in Discord, please use syntax highlighted blocks, as it makes it more legible for other users.
 
 To do this, you should input your content like this:
 
