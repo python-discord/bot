@@ -94,7 +94,7 @@ print("Hello world!")
 """
                             information = Embed(title="Code formatting")
                             information.add_field(name="Information", value=howto)
-                            msg.channel.send(embed=information)
+                            await msg.channel.send(embed=information)
                             self.allowed[msg.channel.id] = time.time()
                     except SyntaxError:
                         pass
