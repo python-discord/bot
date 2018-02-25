@@ -92,8 +92,7 @@ This will result in the following:
 print("Hello world!")
 ```
 """
-                            information = Embed(title="Code formatting")
-                            information.add_field(name="Information", value=howto)
+                            information = Embed(title="Code formatting", description=howto)
                             await msg.channel.send(embed=information)
                             self.allowed[msg.channel.id] = time.time()
                     except SyntaxError:
