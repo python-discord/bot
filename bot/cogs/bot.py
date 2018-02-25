@@ -78,7 +78,7 @@ class Bot:
                     # that would be syntactically valid Python but in this case
                     # just some random multiline text someone is sending.
 
-                    await msg.channel.send("```python\n{}\n```".format(msg.content))
+                    await msg.channel.send(f"```python\n{msg.content}\n```")
                     await self.bot.delete_message(msg)
             except SyntaxError:
                 pass
