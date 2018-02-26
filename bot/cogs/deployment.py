@@ -23,7 +23,7 @@ class Deployment:
         Trigger bot deployment on the server - will only redeploy if there were changes to deploy
         """
 
-        with ClientSession() as session:
+        async with ClientSession() as session:
             response = await session.get(DEPLOY_URL, headers={"token": DEPLOY_BOT_KEY})
             result = response.text()
 
@@ -39,7 +39,7 @@ class Deployment:
         Trigger website deployment on the server - will only redeploy if there were changes to deploy
         """
 
-        with ClientSession() as session:
+        async with ClientSession() as session:
             response = await session.get(DEPLOY_URL, headers={"token": DEPLOY_SITE_KEY})
             result = response.text()
 
@@ -55,7 +55,7 @@ class Deployment:
         Check the various deployment uptimes for each service
         """
 
-        with ClientSession() as session:
+        async with ClientSession() as session:
             response = await session.get(STATUS_URL)
             data = await response.json()
 
