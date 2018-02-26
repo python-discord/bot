@@ -91,7 +91,7 @@ class Bot:
                                      "```\n"
                                      "print(\"Hello world!\")\n"
                                      "```"
-                                     )
+                            )
                             information = Embed(title="Code formatting", description=howto)
                             await msg.channel.send(embed=information)
                             self.code_block_channels[msg.channel.id] = time.time()
