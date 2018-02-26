@@ -23,7 +23,7 @@ class Events:
 
     async def send_updated_users(self, *users):
         try:
-            with ClientSession(headers={"X-API-Key": SITE_API_KEY}) as session:
+            async with ClientSession(headers={"X-API-Key": SITE_API_KEY}) as session:
                 response = await session.post(
                     url=SITE_API_USER_URL,
                     json=list(users)

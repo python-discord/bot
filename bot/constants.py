@@ -25,6 +25,9 @@ DEPLOY_BOT_KEY = os.environ.get("DEPLOY_BOT_KEY")
 DEPLOY_SITE_KEY = os.environ.get("DEPLOY_SITE_KEY")
 
 SITE_API_KEY = os.environ.get("BOT_API_KEY")
-SITE_API_USER_URL = "https://api.pythondiscord.com/user"
+SITE_API_USER_URL = "http://api.pythondiscord.com:8080/user"
+SITE_API_DOCS_URL = "http://api.pythondiscord.com:8080/docs"
 
 HELP_PREFIX = "bot."
+
+

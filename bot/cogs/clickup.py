@@ -39,7 +39,7 @@ class ClickUp:
         self.lists = CaseInsensitiveDict()
 
     async def on_ready(self):
-        with ClientSession() as session:
+        async with ClientSession() as session:
             response = await session.get(PROJECTS_URL.format(space_id=CLICKUP_SPACE), headers=HEADERS)
             result = await response.json()
 
@@ -87,7 +87,7 @@ class ClickUp:
         if status and status != "*":
             params["statuses[]"] = status
 
-        with ClientSession() as session:
+        async with ClientSession() as session:
             response = await session.get(GET_TASKS_URL.format(team_id=CLICKUP_TEAM), headers=HEADERS, params=params)
             result = await response.json()
 
@@ -133,7 +133,7 @@ class ClickUp:
         params.add("statuses[]", "review")
         params.add("statuses[]", "Closed")
 
-        with ClientSession() as session:
+        async with ClientSession() as session:
             response = await session.get(GET_TASKS_URL.format(team_id=CLICKUP_TEAM), headers=HEADERS, params=params)
             result = await response.json()
 
@@ -182,7 +182,7 @@ class ClickUp:
         Get a list of every member of the team
         """
 
-        with ClientSession() as session:
+        async with ClientSession() as session:
             response = await session.get(TEAM_URL.format(team_id=CLICKUP_TEAM), headers=HEADERS)
             result = await response.json()
 
@@ -217,7 +217,7 @@ class ClickUp:
         Get all the lists belonging to the ClickUp space
         """
 
-        with ClientSession() as session:
+        async with ClientSession() as session:
             response = await session.get(PROJECTS_URL.format(space_id=CLICKUP_SPACE), headers=HEADERS)
             result = await response.json()
 
@@ -276,7 +276,7 @@ class ClickUp:
             embed.description = f"Unknown list: {task_list}"
             return await ctx.send(embed=embed)
 
-        with ClientSession() as session:
+        async with ClientSession() as session:
             response = await session.post(
                 CREATE_TASK_URL.format(list_id=task_list), headers=HEADERS, json={
                     "name": title,
@@ -316,7 +316,7 @@ class ClickUp:
             embed.colour = Colour.red()
             embed.description = f"Unknown status: {status}"
         else:
-            with ClientSession() as session:
+            async with ClientSession() as session:
                 response = await session.put(
                     EDIT_TASK_URL.format(task_id=task_id), headers=HEADERS, json={"status": status}
                 )
