@@ -76,9 +76,9 @@ class Bot:
                         # Invalid Python code will raise a SyntaxError.
                         if not all(isinstance(node, ast.Expr) for node in tree.body):
 
-                            # We don't want multiple lines of single words,
-                            # They would be syntactically valid Python but could also be
-                            # Just some random multiline text someone is sending.
+                            # Multiple lines of single words could be interpreted as expressions.
+                            # This check is to avoid all nodes being parsed as expressions.
+                            # (e.g. words over multiple lines)
                             howto = ("Please use syntax highlighted blocks, as it makes it more legible for other users.\n"
                                      "\nTo do this, you should input your content like this:\n"
                                      "\n\`\`\`python\n"
