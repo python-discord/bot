@@ -10,7 +10,6 @@ from dulwich.repo import Repo
 from bot.constants import (DEVTEST_CHANNEL, HELP1_CHANNEL, HELP2_CHANNEL,
                            HELP3_CHANNEL, PYTHON_CHANNEL, PYTHON_GUILD,
                            VERIFIED_ROLE)
-
 from bot.decorators import with_role
 
 
