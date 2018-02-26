@@ -79,19 +79,19 @@ class Bot:
                             # We don't want multiple lines of single words,
                             # They would be syntactically valid Python but could also be
                             # Just some random multiline text someone is sending.
-                            howto = """Please use syntax highlighted blocks, as it makes it more legible for other users.
-
-To do this, you should input your content like this:
-
-\`\`\`python
-print("Hello world!")
-\`\`\`
-
-This will result in the following:
-```
-print("Hello world!")
-```
-"""
+                            howto = ("Please use syntax highlighted blocks, as it makes it more legible for other users.\n"
+                                     "\n"
+                                     "To do this, you should input your content like this:\n"
+                                     "\n"
+                                     "\`\`\`python\n"
+                                     "print(\"Hello world!\")\n"
+                                     "\`\`\`"
+                                     "\n"
+                                     "This will result in the following:\n"
+                                     "```\n"
+                                     "print(\"Hello world!\")\n"
+                                     "```"
+                                     )
                             information = Embed(title="Code formatting", description=howto)
                             await msg.channel.send(embed=information)
                             self.code_block_channels[msg.channel.id] = time.time()
