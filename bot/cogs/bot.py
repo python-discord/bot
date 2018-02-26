@@ -7,8 +7,9 @@ from discord.ext.commands import AutoShardedBot, Context, command, group
 
 from dulwich.repo import Repo
 
-from bot.constants import (HELP1_CHANNEL, HELP2_CHANNEL, HELP3_CHANNEL,
-                           PYTHON_CHANNEL, PYTHON_GUILD, VERIFIED_ROLE)
+from bot.constants import (DEVTEST_CHANNEL, HELP1_CHANNEL, HELP2_CHANNEL,
+                           HELP3_CHANNEL, PYTHON_CHANNEL, PYTHON_GUILD,
+                           VERIFIED_ROLE)
 from bot.decorators import with_role
 
 
@@ -21,10 +22,11 @@ class Bot:
         self.bot = bot
 
         # Stores allowed channels plus unix timestamp from last call
-        self.code_block_channels = {HELP1_CHANNEL: 0,
-                                    HELP2_CHANNEL: 0,
-                                    HELP3_CHANNEL: 0,
-                                    PYTHON_CHANNEL: 0
+        self.previous_format_times = {HELP1_CHANNEL: 0,
+                                      HELP2_CHANNEL: 0,
+                                      HELP3_CHANNEL: 0,
+                                      PYTHON_CHANNEL: 0,
+                                      DEVTEST_CHANNEL: 0
         }  # noqa. E124
 
     @group(invoke_without_command=True, name="bot", hidden=True)
@@ -72,8 +74,8 @@ class Bot:
         await ctx.invoke(self.info)
 
     async def on_message(self, msg: Message):
-        if msg.channel.id in self.code_block_channels:
-            if self.code_block_channels[msg.channel.id]-time.time() > 300:
+        if msg.channel.id in self.previous_format_times:
+            if time.time()-self.previous_format_times[msg.channel.id] > 300:
                 if msg.content.count("\n") >= 3:
                     try:
                         tree = ast.parse(msg.content)
@@ -98,7 +100,7 @@ class Bot:
                             )  # noqa. E124
                             information = Embed(title="Code formatting", description=howto)
                             await msg.channel.send(embed=information)
-                            self.code_block_channels[msg.channel.id] = time.time()
+                            self.previous_format_times[msg.channel.id] = time.time()
                     except SyntaxError:
                         pass
 
