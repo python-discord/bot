@@ -7,7 +7,7 @@ from discord.ext.commands import AutoShardedBot, Context, command, group
 
 from dulwich.repo import Repo
 
-from bot.constants import PYTHON_GUILD, VERIFIED_ROLE
+from bot.constants import HELP1_CHANNEL, HELP2_CHANNEL, HELP3_CHANNEL, PYTHON_CHANNEL, PYTHON_GUILD, VERIFIED_ROLE
 from bot.decorators import with_role
 
 
@@ -20,11 +20,11 @@ class Bot:
         self.bot = bot
 
         # Stores allowed channels plus unix timestamp from last call
-        self.code_block_channels = {303906576991780866: 0,
-                                    303906556754395136: 0,
-                                    303906514266226689: 0,
-                                    267624335836053506: 0
-        }
+        self.code_block_channels = {HELP1_CHANNEL: 0,
+                                    HELP2_CHANNEL: 0,
+                                    HELP3_CHANNEL: 0,
+                                    PYTHON_CHANNEL: 0
+                                    }
 
     @group(invoke_without_command=True, name="bot", hidden=True)
     @with_role(VERIFIED_ROLE)
