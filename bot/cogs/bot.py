@@ -24,7 +24,7 @@ class Bot:
                                     HELP2_CHANNEL: 0,
                                     HELP3_CHANNEL: 0,
                                     PYTHON_CHANNEL: 0
-                                    }
+        }  # noqa: E731
 
     @group(invoke_without_command=True, name="bot", hidden=True)
     @with_role(VERIFIED_ROLE)
@@ -94,7 +94,7 @@ class Bot:
                                      "```\n"
                                      "print(\"Hello world!\")"
                                      "```"
-                            )
+                                     )  # noqa: E731
                             information = Embed(title="Code formatting", description=howto)
                             await msg.channel.send(embed=information)
                             self.code_block_channels[msg.channel.id] = time.time()
