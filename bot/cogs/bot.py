@@ -95,7 +95,7 @@ class Bot:
                                      "```\n"
                                      "print(\"Hello world!\")"
                                      "```"
-                                     )  # noqa. E124
+                            )  # noqa. E124
                             information = Embed(title="Code formatting", description=howto)
                             await msg.channel.send(embed=information)
                             self.code_block_channels[msg.channel.id] = time.time()
