@@ -79,12 +79,12 @@ class Bot:
                             # We don't want multiple lines of single words,
                             # They would be syntactically valid Python but could also be
                             # Just some random multiline text someone is sending.
-                            howto = ("Please use syntax highlighted blocks, as it makes it more legible for other users.\n\n"
-                                     "To do this, you should input your content like this:\n\n"
-                                     "\`\`\`python\n"
+                            howto = ("Please use syntax highlighted blocks, as it makes it more legible for other users.\n"
+                                     "\nTo do this, you should input your content like this:\n"
+                                     "\n\`\`\`python\n"
                                      "print(\"Hello world!\")\n"
-                                     "\`\`\`\n\n"
-                                     "This will result in the following:\n"
+                                     "\`\`\`\n"
+                                     "\nThis will result in the following:\n"
                                      "```\n"
                                      "print(\"Hello world!\")"
                                      "```"
