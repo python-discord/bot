@@ -73,7 +73,7 @@ class Bot:
 
     async def on_message(self, msg: Message):
         if msg.channel.id in self.code_block_channels:
-            if self.code_block_channels[msg.channel.id]-time.time() > 300:
+            if time.time()-self.code_block_channels[msg.channel.id] > 300:
                 if msg.content.count("\n") >= 3:
                     try:
                         tree = ast.parse(msg.content)
