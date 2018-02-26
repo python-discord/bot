@@ -75,7 +75,7 @@ class Bot:
 
     async def on_message(self, msg: Message):
         if msg.channel.id in self.previous_format_times:
-            if time.time()-self.previous_format_times[msg.channel.id] > 300:
+            if time.time()-self.previous_format_times[msg.channel.id] > 300 or msg.channel.id == DEVTEST_CHANNEL:
                 if msg.content.count("\n") >= 3:
                     try:
                         tree = ast.parse(msg.content)
@@ -87,7 +87,7 @@ class Bot:
                             # Multiple lines of single words could be interpreted as expressions.
                             # This check is to avoid all nodes being parsed as expressions.
                             # (e.g. words over multiple lines)
-                            howto = ("Please use syntax highlighted blocks, as it makes"
+                            howto = ("Please use syntax highlighted blocks, as it makes "
                                      "your code more legible for other users.\n"
                                      "\nTo do this, you should input your content like this:\n"
                                      "\n\`\`\`python\n"
