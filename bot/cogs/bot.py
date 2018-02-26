@@ -84,7 +84,8 @@ class Bot:
                             # Multiple lines of single words could be interpreted as expressions.
                             # This check is to avoid all nodes being parsed as expressions.
                             # (e.g. words over multiple lines)
-                            howto = ("Please use syntax highlighted blocks, as it makes it more legible for other users.\n"
+                            howto = ("Please use syntax highlighted blocks, as it makes"
+                                     "your code more legible for other users.\n"
                                      "\nTo do this, you should input your content like this:\n"
                                      "\n\`\`\`python\n"
                                      "print(\"Hello world!\")\n"
