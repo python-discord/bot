@@ -32,7 +32,6 @@ class MathCog:
             ltx = latex(parsed)
             urlsafe = urlescape(ltx)
 
-
             async with ClientSession() as session:
                 async with session.get(LATEX_URL + urlsafe) as resp:
                     bytes_img = await resp.read()
