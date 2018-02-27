@@ -1,10 +1,11 @@
 import os
 
-from discord import Colour, Embed
-from discord.ext.commands import AutoShardedBot, command, Context, cooldown
 from aiohttp import ClientSession
 
-from bot.constants import ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE
+from discord import Colour, Embed
+from discord.ext.commands import AutoShardedBot, Context, command
+
+from bot.constants import ADMIN_ROLE, MODERATOR_ROLE, OWNER_ROLE
 from bot.constants import SITE_API_TAGS_URL
 from bot.decorators import with_role
 
@@ -17,7 +18,6 @@ class Tags:
     def __init__(self, bot: AutoShardedBot):
         self.bot = bot
 
-    @cooldown(1, 60.0)
     @command(name="tags.get()", aliases=["tags.get"])
     async def get(self, ctx: Context, tag_name: str = None):
         """
@@ -34,18 +34,30 @@ class Tags:
         embed = Embed()
 
         if tag_name:
-            params = {'tag_name': tag_name}
+            params['tag_name'] = tag_name
 
         async with ClientSession() as session:
-            response = await session.get(SITE_API_tags_URL, headers=headers, params=params)
+            response = await session.get(SITE_API_TAGS_URL, headers=headers, params=params)
             result = await response.json()
 
         # tag not found
         if result:
             embed.colour = Colour.blurple()
-            embed.title = tag_name
+
+            if tag_name:
+                embed.title = tag_name
+            else:
+                embed.title = "**Current tags**"
+
             if isinstance(result, list):
-                embed.description = "\n".join(result)
+                names = [f"»   {tag_data['tag_name']}" for tag_data in result]
+                if len(names) > 1:
+                    names = "\n".join(sorted(names))
+                    embed.description = names
+                    embed.footer = "To show a tag, type `bot.tags.get <tagname>`"
+                else:
+                    embed.description = names[0]
+
             else:
                 embed.description = result['tag_content']
 
@@ -54,11 +66,12 @@ class Tags:
             embed.title = "tag not found!"
             if isinstance(result, dict):
                 embed.description = f"Unknown tag: {tag_name}"
+            embed.footer = "To show a list of all tags, use `bot.tags.get()`"
 
         return await ctx.send(embed=embed)
 
-    @with_role(ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
-    @command(name="tags.set()", aliases=["tags.set, tags.add, tags.add(), tags.edit, tags.edit()"])
+    @with_role(ADMIN_ROLE, OWNER_ROLE, MODERATOR_ROLE)
+    @command(name="tags.set()", aliases=["tags.set", "tags.add", "tags.add()", "tags.edit", "tags.edit()"])
     async def set(self, ctx: Context, tag_name: str, tag_content: str):
         """
         Set tag_data using api.pythondiscord.com.
@@ -74,10 +87,9 @@ class Tags:
         embed = Embed()
 
         if tag_name and tag_content:
-            params = {
-                'tag_name': tag_name,
-                'tag_content': tag_content
-            }
+            params["tag_name"] = tag_name
+            params["tag_content"] = tag_content
+
         else:
             embed.colour = Colour.red(),
             embed.title = "Missing parameters!",
@@ -85,24 +97,62 @@ class Tags:
             return await ctx.send(embed=embed)
 
         async with ClientSession() as session:
-            response = await session.post(SITE_API_tags_URL,
+            response = await session.post(SITE_API_TAGS_URL,
                                           headers=headers,
                                           json=params)
             result = await response.json()
 
         if result.get("success"):
             embed.colour = Colour.blurple()
-            embed.title = tag_name
             embed.description = f"tag successfully added: {tag_name}"
         else:
+            # something terrible happened. we should probably log or something.
+            pass
+
+        return await ctx.send(embed=embed)
+
+    @with_role(ADMIN_ROLE, OWNER_ROLE)
+    @command(name="tags.delete()", aliases=["tags.delete", "tags.remove", "tags.remove()"])
+    async def delete(self, ctx: Context, tag_name: str):
+        """
+        Delete a tag using api.pythondiscord.com.
+
+        :param ctx: discord message context
+        :param tag_name: The name of the tag to delete.
+        """
+
+        headers = {"X-API-KEY": os.environ.get("BOT_API_KEY")}
+        params = {}
+        embed = Embed()
+
+        if tag_name:
+            params['tag_name'] = tag_name
+
+        else:
+            embed.colour = Colour.red(),
+            embed.title = "Missing parameters!",
+            embed.description = "This method requires a `tag_name` parameter"
+            return await ctx.send(embed=embed)
+
+        async with ClientSession() as session:
+            response = await session.delete(SITE_API_TAGS_URL,
+                                            headers=headers,
+                                            json=params)
+            result = await response.json()
+
+        if result.get("success"):
+            embed.colour = Colour.blurple()
+            embed.title = tag_name
+            embed.description = f"tag successfully removed: {tag_name}"
+
+        else:
             embed.colour = Colour.red()
-            embed.title = "tag not found!"
+            embed.title = "Tag not found!"
             embed.description = str(result)
-            # embed.description = f"Unknown tag: {tag_name}"
 
         return await ctx.send(embed=embed)
 
 
 def setup(bot):
     bot.add_cog(Tags(bot))
-    print("Cog loaded: tags")
+    print("Cog loaded: Tags")

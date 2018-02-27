@@ -29,5 +29,3 @@ SITE_API_USER_URL = "http://api.pythondiscord.com:8080/user"
 SITE_API_TAGS_URL = "http://api.pythondiscord.com:8080/tags"
 
 HELP_PREFIX = "bot."
-
-
