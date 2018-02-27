@@ -8,6 +8,7 @@ from discord.ext.commands import AutoShardedBot, Context, command
 from bot.constants import ADMIN_ROLE, MODERATOR_ROLE, OWNER_ROLE
 from bot.constants import SITE_API_TAGS_URL
 from bot.decorators import with_role
+from bot.utils import paginate
 
 
 class Tags:
@@ -21,7 +22,7 @@ class Tags:
     @command(name="tags.get()", aliases=["tags.get"])
     async def get(self, ctx: Context, tag_name: str = None):
         """
-        Get tag_data from api.pythondiscord.com
+        Get tag_data from our API.
 
         :param ctx: Discord message context
         :param tag_name:
@@ -31,6 +32,7 @@ class Tags:
 
         headers = {"X-API-KEY": os.environ.get("BOT_API_KEY")}
         params = {}
+        tags = []
         embed = Embed()
 
         if tag_name:
@@ -50,23 +52,28 @@ class Tags:
                 embed.title = "**Current tags**"
 
             if isinstance(result, list):
-                names = [f"»   {tag_data['tag_name']}" for tag_data in result]
-                if len(names) > 1:
-                    names = "\n".join(sorted(names))
-                    embed.description = names
-                    embed.footer = "To show a tag, type `bot.tags.get <tagname>`"
-                else:
-                    embed.description = names[0]
+                tags = [f"»   {tag_data['tag_name']}" for tag_data in result]
+                tags = sorted(tags)
 
             else:
                 embed.description = result['tag_content']
 
         else:
             embed.colour = Colour.red()
-            embed.title = "tag not found!"
+            embed.title = "Tag not found!"
             if isinstance(result, dict):
-                embed.description = f"Unknown tag: {tag_name}"
-            embed.footer = "To show a list of all tags, use `bot.tags.get()`"
+                embed.description = f"Unknown tag: **{tag_name}**"
+            embed.set_footer(text="To show a list of all tags, use bot.tags.get()")
+
+        # Paginate if this is a list of all tags
+        if tags:
+            return await paginate(
+                (lines for lines in tags),
+                ctx, embed,
+                footer_text="To show a tag, type bot.tags.get <tagname>",
+                empty=False,
+                max_size=200
+            )
 
         return await ctx.send(embed=embed)
 
@@ -74,7 +81,7 @@ class Tags:
     @command(name="tags.set()", aliases=["tags.set", "tags.add", "tags.add()", "tags.edit", "tags.edit()"])
     async def set(self, ctx: Context, tag_name: str, tag_content: str):
         """
-        Set tag_data using api.pythondiscord.com.
+        Set tag_data using our API.
         Either creates a new tag or edits an existing one.
 
         :param ctx: discord message context
@@ -87,13 +94,14 @@ class Tags:
         embed = Embed()
 
         if tag_name and tag_content:
+            tag_name = tag_name.lower()
             params["tag_name"] = tag_name
             params["tag_content"] = tag_content
 
         else:
             embed.colour = Colour.red(),
             embed.title = "Missing parameters!",
-            embed.description = "This method requires both tag_name and tag_content"
+            embed.description = "The tag needs both a name and some content"
             return await ctx.send(embed=embed)
 
         async with ClientSession() as session:
@@ -104,10 +112,16 @@ class Tags:
 
         if result.get("success"):
             embed.colour = Colour.blurple()
-            embed.description = f"tag successfully added: {tag_name}"
+            embed.title = "Tag successfully added!"
+            embed.description = f"**{tag_name}** added to tag database."
         else:
             # something terrible happened. we should probably log or something.
             pass
+
+        if "\n" in tag_name:
+            embed.colour = Colour.red()
+            embed.title = "Please don't do that"
+            embed.description = "Don't be ridiculous. '\\n' is obviously not allowed in the tag name."
 
         return await ctx.send(embed=embed)
 
@@ -115,7 +129,7 @@ class Tags:
     @command(name="tags.delete()", aliases=["tags.delete", "tags.remove", "tags.remove()"])
     async def delete(self, ctx: Context, tag_name: str):
         """
-        Delete a tag using api.pythondiscord.com.
+        Delete a tag using our API.
 
         :param ctx: discord message context
         :param tag_name: The name of the tag to delete.
