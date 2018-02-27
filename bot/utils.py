@@ -61,7 +61,8 @@ class CaseInsensitiveDict(dict):
 
 async def paginate(lines: Iterable[str], ctx: Context, embed: Embed,
                    prefix: str = "", suffix: str = "", max_size: int = 500, empty: bool = True,
-                   restrict_to_user: User = None, timeout=300):
+                   restrict_to_user: User = None, timeout: int=300,
+                   footer_text: str = None):
     """
     Use a paginator and set of reactions to provide pagination over a set of lines. The reactions are used to
     switch page, or to finish with pagination.
@@ -85,6 +86,8 @@ async def paginate(lines: Iterable[str], ctx: Context, embed: Embed,
     :param max_size: The maximum number of characters on each page
     :param empty: Whether to place an empty line between each given line
     :param restrict_to_user: A user to lock pagination operations to for this message, if supplied
+    :param timeout: The amount of time in seconds to disable pagination of no reaction is added
+    :param footer_text: Text to prefix the page number in the footer with
     """
 
     def event_check(reaction_: Reaction, user_: Member):
@@ -109,12 +112,18 @@ async def paginate(lines: Iterable[str], ctx: Context, embed: Embed,
 
     embed.description = paginator.pages[current_page]
 
-    message = await ctx.send(embed=embed)
-
     if len(paginator.pages) <= 1:
-        return  # There's only one page
+        if footer_text:
+            embed.set_footer(text=footer_text)
 
-    embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
+        return await ctx.send(embed=embed)
+    else:
+        if footer_text:
+            embed.set_footer(text=f"{footer_text} (Page {current_page + 1}/{len(paginator.pages)})")
+        else:
+            embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
+
+        message = await ctx.send(embed=embed)
 
     for emoji in PAGINATION_EMOJI:
         # Add all the applicable emoji to the message
@@ -138,7 +147,12 @@ async def paginate(lines: Iterable[str], ctx: Context, embed: Embed,
             current_page -= 1
 
             embed.description = paginator.pages[current_page]
-            embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
+
+            if footer_text:
+                embed.set_footer(text=f"{footer_text} (Page {current_page + 1}/{len(paginator.pages)})")
+            else:
+                embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
+
             await message.edit(embed=embed)
 
         if reaction.emoji == RIGHT_EMOJI:
@@ -150,7 +164,12 @@ async def paginate(lines: Iterable[str], ctx: Context, embed: Embed,
             current_page += 1
 
             embed.description = paginator.pages[current_page]
-            embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
+
+            if footer_text:
+                embed.set_footer(text=f"{footer_text} (Page {current_page + 1}/{len(paginator.pages)})")
+            else:
+                embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
+
             await message.edit(embed=embed)
 
     await message.clear_reactions()
