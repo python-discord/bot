@@ -2,7 +2,7 @@
 import discord.ext.commands.view
 
 
-def case_insensitive_skip_string(self, string: str):
+def case_insensitive_skip_string(self, string: str) -> bool:
     """Our version of the skip_string method from
     discord.ext.commands.view; used to find
     the prefix in a message, but allowing prefix
@@ -16,7 +16,7 @@ def case_insensitive_skip_string(self, string: str):
     return False
 
 
-def case_insensitive_get_word(self):
+def case_insensitive_get_word(self) -> str:
     """Invokes the get_word method from
     discord.ext.commands.view used to find
     the bot command part of a message, but
