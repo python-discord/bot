@@ -35,6 +35,13 @@ class Cogs:
     @command(name="cogs.load()", aliases=["cogs.load", "load_cog"])
     @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
     async def load_command(self, ctx: Context, cog: str):
+        """
+        Load up an unloaded cog, given the module containing it
+
+        You can specify the cog name for any cogs that are placed directly within `bot.cogs`, or specify the
+        entire module directly.
+        """
+
         cog = cog.lower()
 
         embed = Embed()
@@ -74,6 +81,13 @@ class Cogs:
     @command(name="cogs.unload()", aliases=["cogs.unload", "unload_cog"])
     @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
     async def unload_command(self, ctx: Context, cog: str):
+        """
+        Unload an already-loaded cog, given the module containing it
+
+        You can specify the cog name for any cogs that are placed directly within `bot.cogs`, or specify the
+        entire module directly.
+        """
+
         cog = cog.lower()
 
         embed = Embed()
@@ -111,6 +125,13 @@ class Cogs:
     @command(name="cogs.reload()", aliases=["cogs.reload", "reload_cog"])
     @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
     async def reload_command(self, ctx: Context, cog: str):
+        """
+        Reload up an unloaded cog, given the module containing it
+
+        You can specify the cog name for any cogs that are placed directly within `bot.cogs`, or specify the
+        entire module directly.
+        """
+
         cog = cog.lower()
 
         embed = Embed()
@@ -149,6 +170,12 @@ class Cogs:
     @command(name="cogs.get_all()", aliases=["cogs.get_all", "get_cogs", "get_all_cogs", "cogs"])
     @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
     async def list_command(self, ctx: Context):
+        """
+        Get a list of all cogs, including their loaded status.
+
+        A red double-chevron indicates that the cog is unloaded. Green indicates that the cog is currently loaded.
+        """
+
         embed = Embed()
         lines = []
         cogs = {}
