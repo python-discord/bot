@@ -23,7 +23,7 @@ class Math:
         self.bot = bot
 
     @command()
-    async def latexify(self, ctx, expr: str):
+    async def latexify(self, ctx, *, expr: str):
         fixed_expr = expr.replace('^', '**')
         try:
             parsed = parse_expr(fixed_expr, evaluate=False)
