@@ -3,7 +3,7 @@
 
 
 from io import BytesIO
-from urllib.parse import quote
+from re import search
 
 
 from aiohttp import ClientSession
@@ -15,7 +15,7 @@ from sympy import latex
 from sympy.parsing.sympy_parser import parse_expr
 
 
-LATEX_URL = "https://latex.codecogs.com/png.download?%5Cdpi%7B150%7D%20%5Cbg_white%20%5Chuge%20"
+LATEX_URL = "http://latex2png.com"
 
 
 class Math:
@@ -33,10 +33,20 @@ class Math:
 
         else:
             ltx = latex(parsed)
-            urlsafe = quote(ltx)
+
+            data = {
+                "latex": ltx,
+                "res": 300,
+                "color": 808080
+            }
 
             async with ClientSession() as session:
-                async with session.get(LATEX_URL + urlsafe) as resp:
+                async with session.post(LATEX_URL, data=data) as resp:
+                    html = await resp.text()
+
+                name = search(r'hist\.request\.basename = "(?P<url>[^"]+)"', html).group('url')
+
+                async with session.get(f"{LATEX_URL}/output/{name}.png") as resp:
                     bytes_img = await resp.read()
 
             file = File(fp=BytesIO(bytes_img), filename="latex.png")
