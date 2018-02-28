@@ -1,13 +1,11 @@
 # coding=utf-8
 import os
 
-from discord import Embed, ClientException, Colour
+from discord import ClientException, Colour, Embed
 from discord.ext.commands import AutoShardedBot, Context, command
-
 from bot.constants import (
-    MODERATOR_ROLE, ADMIN_ROLE, DEVOPS_ROLE, OWNER_ROLE, GREEN_CHEVRON, RED_CHEVRON,
-    BOT_AVATAR_URL, GITHUB_URL_BOT)
-
+    ADMIN_ROLE, BOT_AVATAR_URL, DEVOPS_ROLE, GITHUB_URL_BOT, GREEN_CHEVRON, MODERATOR_ROLE, OWNER_ROLE, RED_CHEVRON
+)
 from bot.decorators import with_role
 from bot.utils import paginate
 
