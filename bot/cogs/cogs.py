@@ -3,6 +3,7 @@ import os
 
 from discord import ClientException, Colour, Embed
 from discord.ext.commands import AutoShardedBot, Context, command
+
 from bot.constants import (
     ADMIN_ROLE, BOT_AVATAR_URL, DEVOPS_ROLE, GITHUB_URL_BOT, GREEN_CHEVRON, MODERATOR_ROLE, OWNER_ROLE, RED_CHEVRON
 )
