@@ -5,7 +5,7 @@ from discord import Embed, ClientException, Colour
 from discord.ext.commands import AutoShardedBot, Context, command
 
 from bot.constants import (
-    MODERATOR_ROLE, ADMIN_ROLE, DEVOPS_ROLE, OWNER_ROLE, GREEN_CHEVRON, RED_CHEVRON, WHITE_CHEVRON
+    MODERATOR_ROLE, ADMIN_ROLE, DEVOPS_ROLE, OWNER_ROLE, GREEN_CHEVRON, RED_CHEVRON
 )
 
 from bot.decorators import with_role
