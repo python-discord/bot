@@ -5,8 +5,8 @@ from discord import Embed, ClientException, Colour
 from discord.ext.commands import AutoShardedBot, Context, command
 
 from bot.constants import (
-    MODERATOR_ROLE, ADMIN_ROLE, DEVOPS_ROLE, OWNER_ROLE, GREEN_CHEVRON, RED_CHEVRON
-)
+    MODERATOR_ROLE, ADMIN_ROLE, DEVOPS_ROLE, OWNER_ROLE, GREEN_CHEVRON, RED_CHEVRON,
+    BOT_AVATAR_URL, GITHUB_URL_BOT)
 
 from bot.decorators import with_role
 from bot.utils import paginate
@@ -42,8 +42,8 @@ class Cogs:
 
         embed.set_author(
             name="Python Bot (Cogs)",
-            url="https://github.com/discord-python/bot",
-            icon_url="https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle.png"
+            url=GITHUB_URL_BOT,
+            icon_url=BOT_AVATAR_URL
         )
 
         if cog in self.cogs:
@@ -81,8 +81,8 @@ class Cogs:
 
         embed.set_author(
             name="Python Bot (Cogs)",
-            url="https://github.com/discord-python/bot",
-            icon_url="https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle.png"
+            url=GITHUB_URL_BOT,
+            icon_url=BOT_AVATAR_URL
         )
 
         if cog in self.cogs:
@@ -118,8 +118,8 @@ class Cogs:
 
         embed.set_author(
             name="Python Bot (Cogs)",
-            url="https://github.com/discord-python/bot",
-            icon_url="https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle.png"
+            url=GITHUB_URL_BOT,
+            icon_url=BOT_AVATAR_URL
         )
 
         if cog in self.cogs:
@@ -156,8 +156,8 @@ class Cogs:
         embed.colour = Colour.blurple()
         embed.set_author(
             name="Python Bot (Cogs)",
-            url="https://github.com/discord-python/bot",
-            icon_url="https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle.png"
+            url=GITHUB_URL_BOT,
+            icon_url=BOT_AVATAR_URL
         )
 
         for key, value in self.cogs.items():
@@ -170,10 +170,8 @@ class Cogs:
                 cogs[key] = False
 
         for key in self.bot.extensions.keys():
-            if key in self.cogs:
-                continue
-
-            cogs[key] = True
+            if key not in self.cogs:
+                cogs[key] = True
 
         for cog, loaded in sorted(cogs.items(), key=lambda x: x[0]):
             if cog in self.cogs:
