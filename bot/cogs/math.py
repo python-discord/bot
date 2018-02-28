@@ -53,7 +53,6 @@ class Math:
 
             await ctx.send(file=file)
 
-
     @command()
     async def calc(self, ctx, *, expr: str):
         fixed_expr = expr.replace('^', '**').strip('`')
