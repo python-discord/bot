@@ -15,7 +15,7 @@ from sympy import latex
 from sympy.parsing.sympy_parser import parse_expr
 
 
-LATEX_URL = "https://latex.codecogs.com/png.download?%5Cdpi%7B300%7D%20%5Cbg_white%20%5Chuge%20"
+LATEX_URL = "https://latex.codecogs.com/png.download?%5Cdpi%7B150%7D%20%5Cbg_white%20%5Chuge%20"
 
 
 class Math:
