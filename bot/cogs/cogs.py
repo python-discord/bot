@@ -54,9 +54,7 @@ class Cogs:
             full_cog = None
             embed.description = f"Unknown cog: {cog}"
 
-        if full_cog == "bot.cogs.cogs":
-            embed.description = "You may not reload the cog management cog!"
-        elif full_cog not in self.bot.extensions:
+        if full_cog not in self.bot.extensions:
             try:
                 self.bot.load_extension(full_cog)
             except ClientException:
