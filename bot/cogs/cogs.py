@@ -1,10 +1,13 @@
 # coding=utf-8
 import os
 
-from discord import Embed, Message, ClientException, Colour
+from discord import Embed, ClientException, Colour
 from discord.ext.commands import AutoShardedBot, Context, command
 
-from bot.constants import MODERATOR_ROLE, ADMIN_ROLE, DEVOPS_ROLE, OWNER_ROLE
+from bot.constants import (
+    MODERATOR_ROLE, ADMIN_ROLE, DEVOPS_ROLE, OWNER_ROLE, GREEN_CHEVRON, RED_CHEVRON, WHITE_CHEVRON
+)
+
 from bot.decorators import with_role
 from bot.utils import paginate
 
@@ -113,11 +116,12 @@ class Cogs:
         self.bot.load_extension(cog)
         self.bot.unload_extension(cog)
 
-    @command(name="cogs.get_all()", aliases=["cogs.get_all", "get_cogs", "get_all_cogs"])
+    @command(name="cogs.get_all()", aliases=["cogs.get_all", "get_cogs", "get_all_cogs", "cogs"])
     @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
     async def list_command(self, ctx: Context):
         embed = Embed()
         lines = []
+        cogs = {}
 
         embed.colour = Colour.blurple()
         embed.set_author(
@@ -131,17 +135,28 @@ class Cogs:
                 continue
 
             if key in self.bot.extensions:
-                lines.append(f"\u00BB **`{value}`** (Loaded)")
+                cogs[key] = True
             else:
-                lines.append(f"\u00BB **`{value}`** (Unloaded)")
+                cogs[key] = False
 
-        for cog_name in self.bot.extensions.keys():
-            if cog_name in self.cogs:
+        for key in self.bot.extensions.keys():
+            if key in self.cogs:
                 continue
 
-            lines.append(f"\u00BB **`{cog_name}`** (Loaded)")
+            cogs[key] = True
 
-        await paginate(sorted(lines), ctx, embed, max_size=300, empty=False)
+        for cog, loaded in sorted(cogs.items(), key=lambda x: x[0]):
+            if cog in self.cogs:
+                cog = self.cogs[cog]
+
+            if loaded:
+                chevron = GREEN_CHEVRON
+            else:
+                chevron = RED_CHEVRON
+
+            lines.append(f"{chevron}  {cog}")
+
+        await paginate(lines, ctx, embed, max_size=300, empty=False)
 
 
 def setup(bot):
