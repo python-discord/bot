@@ -24,7 +24,7 @@ class Math:
 
     @command()
     async def latexify(self, ctx, *, expr: str):
-        fixed_expr = expr.replace('^', '**')
+        fixed_expr = expr.replace('^', '**').strip('`')
         try:
             parsed = parse_expr(fixed_expr, evaluate=False)
 
