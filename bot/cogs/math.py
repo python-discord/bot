@@ -18,7 +18,10 @@ from sympy.parsing.sympy_parser import parse_expr
 LATEX_URL = "https://latex.codecogs.com/png.download?%5Cdpi%7B300%7D%20%5Cbg_white%20%5Chuge%20"
 
 
-class MathCog:
+class Math:
+    def __init__(self, bot):
+        self.bot = bot
+
     @command()
     async def latexify(self, ctx, expr: str):
         fixed_expr = expr.replace('^', '**')
@@ -39,3 +42,7 @@ class MathCog:
             file = File(fp=BytesIO(bytes_img), filename="latex.png")
 
             await ctx.send(file=file)
+
+
+def setup(bot):
+    bot.add_cog(Math(bot))
