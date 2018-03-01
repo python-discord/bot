@@ -1,4 +1,5 @@
 import os
+import time
 from typing import Union
 
 from aiohttp import ClientSession
@@ -7,7 +8,7 @@ from discord import Colour, Embed
 from discord.ext.commands import AutoShardedBot, Context, command
 
 from bot.constants import ADMIN_ROLE, MODERATOR_ROLE, OWNER_ROLE
-from bot.constants import SITE_API_TAGS_URL
+from bot.constants import SITE_API_TAGS_URL, TAG_COOLDOWN
 from bot.decorators import with_role
 from bot.utils import paginate
 
@@ -20,8 +21,9 @@ class Tags:
     def __init__(self, bot: AutoShardedBot):
         self.bot = bot
         self.api_key = os.environ.get("BOT_API_KEY")
+        self.tag_cooldowns = {}
 
-    async def get_tag_data(self, tag_name: Union[str, None] = None):
+    async def get_tag_data(self, tag_name: Union[str, None] = None) -> dict:
         """
         Retrieve the tag_data from our API
 
@@ -43,7 +45,7 @@ class Tags:
 
         return tag_data
 
-    async def post_tag_data(self, tag_name: str, tag_content: str):
+    async def post_tag_data(self, tag_name: str, tag_content: str) -> dict:
         """
         Send some tag_data to our API to have it saved in the database.
 
@@ -67,7 +69,7 @@ class Tags:
 
         return tag_data
 
-    async def delete_tag_data(self, tag_name: str):
+    async def delete_tag_data(self, tag_name: str) -> dict:
         """
         Delete a tag using our API.
 
@@ -111,8 +113,37 @@ class Tags:
         If not provided, this function shows the caller a list of all tags.
         """
 
+        def _command_on_cooldown(tag_name: Union[str, None]) -> bool:
+            """
+            Check if the command is currently on cooldown.
+            The cooldown duration is set in constants.py.
+
+            This works on a per-tag, per-channel basis.
+            :param tag_name: The name of the command to check.
+            :return: True if the command is cooling down. Otherwise False.
+            """
+
+            now = time.time()
+
+            cooldown_conditions = (
+                tag_name
+                and tag_name in self.tag_cooldowns
+                and (now - self.tag_cooldowns[tag_name]["time"]) < TAG_COOLDOWN
+                and self.tag_cooldowns[tag_name]["channel"] == ctx.channel.id
+            )
+
+            if cooldown_conditions:
+                return True
+            return False
+
+        if _command_on_cooldown(tag_name):
+            time_left = TAG_COOLDOWN - (time.time() - self.tag_cooldowns[tag_name]["time"])
+            print(f"That command is currently on cooldown. Try again in {time_left:.1f} seconds")
+            return
+
         embed = Embed()
         tags = []
+
         tag_data = await self.get_tag_data(tag_name)
 
         # If we found something, prepare that data
@@ -121,6 +152,11 @@ class Tags:
 
             if tag_name:
                 embed.title = tag_name
+                self.tag_cooldowns[tag_name] = {
+                    "time": time.time(),
+                    "channel": ctx.channel.id
+                }
+
             else:
                 embed.title = "**Current tags**"
 

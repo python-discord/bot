@@ -23,6 +23,8 @@ CLICKUP_KEY = os.environ.get("CLICKUP_KEY")
 CLICKUP_SPACE = 757069
 CLICKUP_TEAM = 754996
 
+TAG_COOLDOWN = 60  # Per channel, per tag
+
 DEPLOY_URL = os.environ.get("DEPLOY_URL")
 STATUS_URL = os.environ.get("STATUS_URL")
 
@@ -30,7 +32,7 @@ DEPLOY_BOT_KEY = os.environ.get("DEPLOY_BOT_KEY")
 DEPLOY_SITE_KEY = os.environ.get("DEPLOY_SITE_KEY")
 
 SITE_API_KEY = os.environ.get("BOT_API_KEY")
-SITE_API_USER_URL = "http://api.pythondiscord.com:8080/user"
-SITE_API_TAGS_URL = "http://api.pythondiscord.com:8080/tags"
+SITE_API_USER_URL = "http://api.pythondiscord.com/user"
+SITE_API_TAGS_URL = "http://api.pythondiscord.local:8080/tags"
 
 HELP_PREFIX = "bot."
