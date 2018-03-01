@@ -33,6 +33,6 @@ DEPLOY_SITE_KEY = os.environ.get("DEPLOY_SITE_KEY")
 
 SITE_API_KEY = os.environ.get("BOT_API_KEY")
 SITE_API_USER_URL = "http://api.pythondiscord.com/user"
-SITE_API_TAGS_URL = "http://api.pythondiscord.local:8080/tags"
+SITE_API_TAGS_URL = "http://api.pythondiscord.com/tags"
 
 HELP_PREFIX = "bot."
