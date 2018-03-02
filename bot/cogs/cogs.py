@@ -162,7 +162,7 @@ class Cogs:
         elif full_cog == "*":
             all_cogs = [
                 f"bot.cogs.{fn[:-3]}" for fn in os.listdir("bot/cogs")
-                if os.path.isfile("bot/cogs/{}".format(fn)) and fn.endswith(".py") and "_" not in fn
+                if os.path.isfile(f"bot/cogs/{fn}") and fn.endswith(".py") and "_" not in fn
             ]
 
             failed_unloads = {}
