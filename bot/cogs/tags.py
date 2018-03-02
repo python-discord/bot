@@ -208,15 +208,14 @@ class Tags:
             embed.description = "Don't be ridiculous. Newlines are obviously not allowed in the tag name."
 
         else:
-            if tag_name and tag_content:
-                tag_name = tag_name.lower()
-                tag_data = await self.post_tag_data(tag_name, tag_content)
-
-            else:
+            if not (tag_name and tag_content):
                 embed.colour = Colour.red(),
                 embed.title = "Missing parameters!",
                 embed.description = "The tag needs both a name and some content"
                 return await ctx.send(embed=embed)
+
+            tag_name = tag_name.lower()
+            tag_data = await self.post_tag_data(tag_name, tag_content)
 
             if tag_data.get("success"):
                 embed.colour = Colour.blurple()
@@ -239,14 +238,13 @@ class Tags:
 
         embed = Embed()
 
-        if tag_name:
-            tag_data = await self.delete_tag_data(tag_name)
-
-        else:
+        if not tag_name:
             embed.colour = Colour.red(),
             embed.title = "Missing parameters!",
             embed.description = "This method requires a `tag_name` parameter"
             return await ctx.send(embed=embed)
+
+        tag_data = await self.delete_tag_data(tag_name)
 
         if tag_data.get("success"):
             embed.colour = Colour.blurple()
