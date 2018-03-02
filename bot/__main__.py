@@ -29,10 +29,11 @@ bot.load_extension("bot.cogs.events")
 
 # Commands, etc
 bot.load_extension("bot.cogs.bot")
+bot.load_extension("bot.cogs.cogs")
 bot.load_extension("bot.cogs.clickup")
 bot.load_extension("bot.cogs.deployment")
-bot.load_extension("bot.cogs.fun")
 bot.load_extension("bot.cogs.eval")
+bot.load_extension("bot.cogs.fun")
 bot.load_extension("bot.cogs.verification")
 bot.load_extension("bot.cogs.tags")
 
