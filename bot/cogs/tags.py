@@ -1,4 +1,3 @@
-import os
 import time
 from typing import Union
 
@@ -8,7 +7,7 @@ from discord import Colour, Embed
 from discord.ext.commands import AutoShardedBot, Context, command
 
 from bot.constants import ADMIN_ROLE, MODERATOR_ROLE, OWNER_ROLE
-from bot.constants import SITE_API_TAGS_URL, TAG_COOLDOWN
+from bot.constants import SITE_API_KEY, SITE_API_TAGS_URL, TAG_COOLDOWN
 from bot.decorators import with_role
 from bot.utils import paginate
 
@@ -20,7 +19,6 @@ class Tags:
 
     def __init__(self, bot: AutoShardedBot):
         self.bot = bot
-        self.api_key = os.environ.get("BOT_API_KEY")
         self.tag_cooldowns = {}
 
     async def get_tag_data(self, tag_name: Union[str, None] = None) -> dict:
@@ -33,7 +31,7 @@ class Tags:
         if not, returns a list of dicts with all tag data.
 
         """
-        headers = {"X-API-KEY": self.api_key}
+        headers = {"X-API-KEY": SITE_API_KEY}
         params = {}
 
         if tag_name:
@@ -57,7 +55,7 @@ class Tags:
         }
         """
 
-        headers = {"X-API-KEY": self.api_key}
+        headers = {"X-API-KEY": SITE_API_KEY}
         params = {
             'tag_name': tag_name,
             'tag_content': tag_content
@@ -80,7 +78,7 @@ class Tags:
         }
         """
 
-        headers = {"X-API-KEY": self.api_key}
+        headers = {"X-API-KEY": SITE_API_KEY}
         params = {}
 
         if tag_name:
