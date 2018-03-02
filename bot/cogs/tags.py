@@ -20,6 +20,7 @@ class Tags:
     def __init__(self, bot: AutoShardedBot):
         self.bot = bot
         self.tag_cooldowns = {}
+        self.headers = {"X-API-KEY": SITE_API_KEY}
 
     async def get_tag_data(self, tag_name: Optional[str] = None) -> dict:
         """
@@ -31,14 +32,13 @@ class Tags:
         if not, returns a list of dicts with all tag data.
 
         """
-        headers = {"X-API-KEY": SITE_API_KEY}
         params = {}
 
         if tag_name:
             params['tag_name'] = tag_name
 
         async with ClientSession() as session:
-            response = await session.get(SITE_API_TAGS_URL, headers=headers, params=params)
+            response = await session.get(SITE_API_TAGS_URL, headers=self.headers, params=params)
             tag_data = await response.json()
 
         return tag_data
@@ -55,14 +55,13 @@ class Tags:
         }
         """
 
-        headers = {"X-API-KEY": SITE_API_KEY}
         params = {
             'tag_name': tag_name,
             'tag_content': tag_content
         }
 
         async with ClientSession() as session:
-            response = await session.post(SITE_API_TAGS_URL, headers=headers, json=params)
+            response = await session.post(SITE_API_TAGS_URL, headers=self.headers, json=params)
             tag_data = await response.json()
 
         return tag_data
@@ -78,14 +77,13 @@ class Tags:
         }
         """
 
-        headers = {"X-API-KEY": SITE_API_KEY}
         params = {}
 
         if tag_name:
             params['tag_name'] = tag_name
 
         async with ClientSession() as session:
-            response = await session.delete(SITE_API_TAGS_URL, headers=headers, json=params)
+            response = await session.delete(SITE_API_TAGS_URL, headers=self.headers, json=params)
             tag_data = await response.json()
 
         return tag_data
@@ -101,7 +99,7 @@ class Tags:
         return await ctx.invoke(self.bot.get_command("help"), "Tags")
 
     @command(name="tags.get()", aliases=["tags.get", "tags.show()", "tags.show", "get_tag"])
-    async def get_command(self, ctx: Context, tag_name: str = None):
+    async def get_command(self, ctx: Context, tag_name: Optional[str] = None):
         """
         Get a list of all tags or a specified tag.
 
@@ -111,7 +109,7 @@ class Tags:
         If not provided, this function shows the caller a list of all tags.
         """
 
-        def _command_on_cooldown(tag_name: Optional[str]) -> bool:
+        def _command_on_cooldown(tag_name: str) -> bool:
             """
             Check if the command is currently on cooldown.
             The cooldown duration is set in constants.py.
@@ -136,7 +134,7 @@ class Tags:
 
         if _command_on_cooldown(tag_name):
             time_left = TAG_COOLDOWN - (time.time() - self.tag_cooldowns[tag_name]["time"])
-            print(f"That command is currently on cooldown. Try again in {time_left:.1f} seconds")
+            print(f"That command is currently on cooldown. Try again in {time_left:.1f} seconds.")
             return
 
         embed = Embed()
@@ -168,21 +166,21 @@ class Tags:
         # If not, prepare an error message.
         else:
             embed.colour = Colour.red()
-            embed.title = "There are no tags in the database!"
+            embed.description = "**There are no tags in the database!**"
 
             if isinstance(tag_data, dict):
                 embed.description = f"Unknown tag: **{tag_name}**"
 
             if tag_name:
-                embed.set_footer(text="To show a list of all tags, use bot.tags.get()")
-                embed.title = "Tag not found!"
+                embed.set_footer(text="To show a list of all tags, use bot.tags.get().")
+                embed.title = "Tag not found"
 
         # Paginate if this is a list of all tags
         if tags:
             return await paginate(
                 (lines for lines in tags),
                 ctx, embed,
-                footer_text="To show a tag, type bot.tags.get <tagname>",
+                footer_text="To show a tag, type bot.tags.get <tagname>.",
                 empty=False,
                 max_size=200
             )
@@ -209,8 +207,8 @@ class Tags:
 
         else:
             if not (tag_name and tag_content):
-                embed.title = "Missing parameters!"
-                embed.description = "The tag needs both a name and some content"
+                embed.title = "Missing parameters"
+                embed.description = "The tag needs both a name and some content."
                 return await ctx.send(embed=embed)
 
             tag_name = tag_name.lower()
@@ -218,7 +216,7 @@ class Tags:
 
             if tag_data.get("success"):
                 embed.colour = Colour.blurple()
-                embed.title = "Tag successfully added!"
+                embed.title = "Tag successfully added"
                 embed.description = f"**{tag_name}** added to tag database."
             else:
                 embed.title = "Database error",
@@ -241,8 +239,8 @@ class Tags:
         embed.colour = Colour.red()
 
         if not tag_name:
-            embed.title = "Missing parameters!"
-            embed.description = "This method requires a `tag_name` parameter"
+            embed.title = "Missing parameters"
+            embed.description = "This method requires a `tag_name` parameter."
             return await ctx.send(embed=embed)
 
         tag_data = await self.delete_tag_data(tag_name)
@@ -250,7 +248,7 @@ class Tags:
         if tag_data.get("success"):
             embed.colour = Colour.blurple()
             embed.title = tag_name
-            embed.description = f"tag successfully removed: {tag_name}"
+            embed.description = f"Tag successfully removed: {tag_name}."
 
         else:
             embed.title = "Database error",
