@@ -1,5 +1,5 @@
 import time
-from typing import Union
+from typing import Optional
 
 from aiohttp import ClientSession
 
@@ -21,7 +21,7 @@ class Tags:
         self.bot = bot
         self.tag_cooldowns = {}
 
-    async def get_tag_data(self, tag_name: Union[str, None] = None) -> dict:
+    async def get_tag_data(self, tag_name: Optional[str] = None) -> dict:
         """
         Retrieve the tag_data from our API
 
@@ -111,7 +111,7 @@ class Tags:
         If not provided, this function shows the caller a list of all tags.
         """
 
-        def _command_on_cooldown(tag_name: Union[str, None]) -> bool:
+        def _command_on_cooldown(tag_name: Optional[str]) -> bool:
             """
             Check if the command is currently on cooldown.
             The cooldown duration is set in constants.py.
