@@ -2,11 +2,15 @@ language: python
 python:
   - "3.6"
 
+branches:
+  only:
+    - "master"
+
 install:
   - pip install -r requirements.txt
   - pip install -r requirements-ci.txt
 script:
-  - snekchek
+  - flake8
 after_success:
   - python deploy.py
 
