@@ -24,6 +24,9 @@ CLICKUP_TEAM = 754996
 
 TAG_COOLDOWN = 60  # Per channel, per tag
 
+GITHUB_URL_BOT = "https://github.com/discord-python/bot"
+BOT_AVATAR_URL = "https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle.png"
+
 DEPLOY_URL = os.environ.get("DEPLOY_URL")
 STATUS_URL = os.environ.get("STATUS_URL")
 
