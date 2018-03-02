@@ -78,6 +78,10 @@ class Bot:
             if time.time()-self.previous_format_times[msg.channel.id] > 300 or msg.channel.id == DEVTEST_CHANNEL:
                 if msg.content.count("\n") >= 3:
                     try:
+                        # Some users formatted multi-line code using `'s
+                        # This fixes that by treating them as nothing.
+                        if "`" in msg.content:
+                            msg.content = msg.content.replace("`", "").replace("`", "")
                         tree = ast.parse(msg.content)
 
                         # Attempts to parse the message into an AST node.
