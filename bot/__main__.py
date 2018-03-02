@@ -34,6 +34,7 @@ bot.load_extension("bot.cogs.clickup")
 bot.load_extension("bot.cogs.deployment")
 bot.load_extension("bot.cogs.eval")
 bot.load_extension("bot.cogs.fun")
+bot.load_extension("bot.cogs.tags")
 bot.load_extension("bot.cogs.verification")
 
 bot.run(os.environ.get("BOT_TOKEN"))
