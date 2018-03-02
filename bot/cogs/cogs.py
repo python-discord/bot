@@ -5,7 +5,8 @@ from discord import ClientException, Colour, Embed
 from discord.ext.commands import AutoShardedBot, Context, command
 
 from bot.constants import (
-    ADMIN_ROLE, BOT_AVATAR_URL, DEVOPS_ROLE, GITHUB_URL_BOT, GREEN_CHEVRON, MODERATOR_ROLE, OWNER_ROLE, RED_CHEVRON
+    ADMIN_ROLE, BOT_AVATAR_URL, DEVOPS_ROLE, GITHUB_URL_BOT,
+    GREEN_CHEVRON, MODERATOR_ROLE, OWNER_ROLE, RED_CHEVRON
 )
 from bot.decorators import with_role
 from bot.utils import paginate
@@ -125,7 +126,7 @@ class Cogs:
     @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
     async def reload_command(self, ctx: Context, cog: str):
         """
-        Reload up an unloaded cog, given the module containing it
+        Reload an unloaded cog, given the module containing it
 
         You can specify the cog name for any cogs that are placed directly within `bot.cogs`, or specify the
         entire module directly.
