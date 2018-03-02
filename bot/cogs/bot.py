@@ -98,7 +98,7 @@ class Bot:
                                      "print(\"Hello world!\")\n"
                                      "\`\`\`\n"
                                      "\nThis will result in the following:\n"
-                                     "```\n"
+                                     "```python\n"
                                      "print(\"Hello world!\")"
                                      "```"
                             )  # noqa. E124
