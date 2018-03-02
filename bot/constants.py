@@ -1,5 +1,4 @@
 # coding=utf-8
-
 import os
 
 PYTHON_GUILD = 267624335836053506
@@ -36,3 +35,9 @@ SITE_API_USER_URL = "http://api.pythondiscord.com/user"
 SITE_API_TAGS_URL = "http://api.pythondiscord.com/tags"
 
 HELP_PREFIX = "bot."
+
+# There are Emoji objects, but they're not usable until the bot is connected,
+# so we're using string constants instead
+GREEN_CHEVRON = "<:greenchevron:418104310329769993>"
+RED_CHEVRON = "<:redchevron:418112778184818698>"
+WHITE_CHEVRON = "<:whitechevron:418110396973711363>"
