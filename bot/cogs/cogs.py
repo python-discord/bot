@@ -6,7 +6,8 @@ from discord.ext.commands import AutoShardedBot, Context, command
 
 from bot.constants import (
     ADMIN_ROLE, BOT_AVATAR_URL, DEVOPS_ROLE, GITHUB_URL_BOT,
-    GREEN_CHEVRON, MODERATOR_ROLE, OWNER_ROLE, RED_CHEVRON
+    GREEN_CHEVRON, MODERATOR_ROLE, OWNER_ROLE, RED_CHEVRON,
+    WHITE_CHEVRON
 )
 from bot.decorators import with_role
 from bot.utils import paginate
@@ -130,6 +131,9 @@ class Cogs:
 
         You can specify the cog name for any cogs that are placed directly within `bot.cogs`, or specify the
         entire module directly.
+
+        If you specify "*" as the cog, every cog currently loaded will be unloaded, and then every cog present in the
+        bot/cogs directory will be loaded.
         """
 
         cog = cog.lower()
@@ -143,7 +147,9 @@ class Cogs:
             icon_url=BOT_AVATAR_URL
         )
 
-        if cog in self.cogs:
+        if cog == "*":
+            full_cog = cog
+        elif cog in self.cogs:
             full_cog = self.cogs[cog]
         elif "." in cog:
             full_cog = cog
@@ -153,6 +159,53 @@ class Cogs:
 
         if full_cog == "bot.cogs.cogs":
             embed.description = "You may not reload the cog management cog!"
+        elif full_cog == "*":
+            all_cogs = [
+                f"bot.cogs.{fn[:-3]}" for fn in os.listdir("bot/cogs")
+                if os.path.isfile("bot/cogs/{}".format(fn)) and fn.endswith(".py") and "_" not in fn
+            ]
+
+            failed_unloads = {}
+            failed_loads = {}
+
+            unloaded = 0
+            loaded = 0
+
+            for loaded_cog in self.bot.extensions.copy().keys():
+                try:
+                    self.bot.unload_extension(loaded_cog)
+                except Exception as e:
+                    failed_unloads[loaded_cog] = str(e)
+                else:
+                    unloaded += 1
+
+            for unloaded_cog in all_cogs:
+                try:
+                    self.bot.load_extension(unloaded_cog)
+                except Exception as e:
+                    failed_loads[unloaded_cog] = str(e)
+                else:
+                    loaded += 1
+
+            lines = [
+                "**All cogs reloaded**",
+                f"**Unloaded**: {unloaded} / **Loaded**: {loaded}"
+            ]
+
+            if failed_unloads:
+                lines.append("\n**Unload failures**")
+
+                for cog, error in failed_unloads:
+                    lines.append(f"`{cog}` {WHITE_CHEVRON} `{error}`")
+
+            if failed_loads:
+                lines.append("\n**Load failures**")
+
+                for cog, error in failed_loads:
+                    lines.append(f"`{cog}` {WHITE_CHEVRON} `{error}`")
+
+            return await paginate(lines, ctx, embed, empty=False)
+
         elif full_cog in self.bot.extensions:
             try:
                 self.bot.unload_extension(full_cog)
@@ -167,7 +220,7 @@ class Cogs:
 
         await ctx.send(embed=embed)
 
-    @command(name="cogs.get_all()", aliases=["cogs.get_all", "get_cogs", "get_all_cogs", "cogs"])
+    @command(name="cogs.get_all()", aliases=["cogs.get_all", "get_cogs", "get_all_cogs", "cogs", "cogs.list"])
     @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
     async def list_command(self, ctx: Context):
         """
