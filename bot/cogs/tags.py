@@ -100,7 +100,7 @@ class Tags:
 
         return await ctx.invoke(self.bot.get_command("help"), "Tags")
 
-    @command(name="tags.get()", aliases=["tags.get", "tags.show()", "tags.show"])
+    @command(name="tags.get()", aliases=["tags.get", "tags.show()", "tags.show", "get_tag"])
     async def get(self, ctx: Context, tag_name: str = None):
         """
         Get a list of all tags or a specified tag.
@@ -190,7 +190,7 @@ class Tags:
         return await ctx.send(embed=embed)
 
     @with_role(ADMIN_ROLE, OWNER_ROLE, MODERATOR_ROLE)
-    @command(name="tags.set()", aliases=["tags.set", "tags.add", "tags.add()", "tags.edit", "tags.edit()"])
+    @command(name="tags.set()", aliases=["tags.set", "tags.add", "tags.add()", "tags.edit", "tags.edit()", "add_tag"])
     async def set(self, ctx: Context, tag_name: str, tag_content: str):
         """
         Create a new tag or edit an existing one.
@@ -228,7 +228,7 @@ class Tags:
         return await ctx.send(embed=embed)
 
     @with_role(ADMIN_ROLE, OWNER_ROLE)
-    @command(name="tags.delete()", aliases=["tags.delete", "tags.remove", "tags.remove()"])
+    @command(name="tags.delete()", aliases=["tags.delete", "tags.remove", "tags.remove()", "remove_tag"])
     async def delete(self, ctx: Context, tag_name: str):
         """
         Remove a tag from the database.
