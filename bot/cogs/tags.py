@@ -201,16 +201,15 @@ class Tags:
         """
 
         embed = Embed()
+        embed.colour = Colour.red()
 
         if "\n" in tag_name:
-            embed.colour = Colour.red()
             embed.title = "Please don't do that"
             embed.description = "Don't be ridiculous. Newlines are obviously not allowed in the tag name."
 
         else:
             if not (tag_name and tag_content):
-                embed.colour = Colour.red(),
-                embed.title = "Missing parameters!",
+                embed.title = "Missing parameters!"
                 embed.description = "The tag needs both a name and some content"
                 return await ctx.send(embed=embed)
 
@@ -222,7 +221,9 @@ class Tags:
                 embed.title = "Tag successfully added!"
                 embed.description = f"**{tag_name}** added to tag database."
             else:
-                print(f"Something terrible happened. The API returned {tag_data}")
+                embed.title = "Database error",
+                embed.description = ("There was a problem adding the data to the tags database. "
+                                     "Please try again. If the problem persists, check the API logs.")
 
         return await ctx.send(embed=embed)
 
@@ -237,10 +238,10 @@ class Tags:
         """
 
         embed = Embed()
+        embed.colour = Colour.red()
 
         if not tag_name:
-            embed.colour = Colour.red(),
-            embed.title = "Missing parameters!",
+            embed.title = "Missing parameters!"
             embed.description = "This method requires a `tag_name` parameter"
             return await ctx.send(embed=embed)
 
@@ -252,7 +253,9 @@ class Tags:
             embed.description = f"tag successfully removed: {tag_name}"
 
         else:
-            print(f"Something terrifying happened. The API returned {tag_data}")
+            embed.title = "Database error",
+            embed.description = ("There was a problem deleting the data from the tags database. "
+                                 "Please try again. If the problem persists, check the API logs.")
 
         return await ctx.send(embed=embed)
 
