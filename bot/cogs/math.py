@@ -61,7 +61,6 @@ class Math:
             return await ctx.send(
                 "You used an expression that has been disabled for security, our apologies")
 
-
         try:
             parsed = parse_expr(fixed_expr, evaluate=False)
             result = parsed.doit()
