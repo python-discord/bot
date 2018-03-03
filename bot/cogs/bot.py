@@ -1,5 +1,6 @@
 # coding=utf-8
 import ast
+import re
 import time
 
 from discord import Embed, Message
@@ -11,6 +12,7 @@ from bot.constants import (DEVTEST_CHANNEL, HELP1_CHANNEL, HELP2_CHANNEL,
                            HELP3_CHANNEL, PYTHON_CHANNEL, PYTHON_GUILD,
                            VERIFIED_ROLE)
 from bot.decorators import with_role
+from bot.tags import get_tag_data
 
 
 class Bot:
@@ -78,10 +80,19 @@ class Bot:
             if time.time()-self.previous_format_times[msg.channel.id] > 300 or msg.channel.id == DEVTEST_CHANNEL:
                 if msg.content.count("\n") >= 3:
                     try:
-                        # Some users formatted multi-line code using `'sip("
-                        # This fixes that by treating them as nothing.
-                        if "`" in msg.content:
-                            msg.content = msg.content[:-1][1:]
+                        # Filtering valid Python codeblocks
+                        if re.match(msg.content, "```(python|py)\n((?:.*\n*)+)```", re.IGNORECASE):
+                            return
+                        else:
+                            # Format the block into python source
+                            for line in msg.content.split("\n"):
+                                msg.content += line.strip("`") + "\n"
+                            if msg.content.startswith("python") or msg.content.startswith("Python"):
+                                msg.content = msg.content[6:]
+                            elif msg.content.startswith("py") or msg.content.startswith("Py"):
+                                msg.content = msg.content[2:]
+                            msg.content = msg.content.strip()
+
                         tree = ast.parse(msg.content)
 
                         # Attempts to parse the message into an AST node.
@@ -91,18 +102,7 @@ class Bot:
                             # Multiple lines of single words could be interpreted as expressions.
                             # This check is to avoid all nodes being parsed as expressions.
                             # (e.g. words over multiple lines)
-                            howto = ("Please use syntax highlighted blocks, as it makes "
-                                     "your code more legible for other users.\n"
-                                     "\nTo do this, you should input your content like this:\n"
-                                     "\n\`\`\`python\n"
-                                     "print(\"Hello world!\")\n"
-                                     "\`\`\`\n"
-                                     "\nThis will result in the following:\n"
-                                     "```python\n"
-                                     "print(\"Hello world!\")"
-                                     "```"
-                            )  # noqa. E124
-                            information = Embed(title="Code formatting", description=howto)
+                            information = Embed(title="Codeblocks", description=get_tag_data("codeblock"))
                             await msg.channel.send(embed=information)
                             self.previous_format_times[msg.channel.id] = time.time()
                     except SyntaxError:
