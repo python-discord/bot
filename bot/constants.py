@@ -22,6 +22,11 @@ CLICKUP_KEY = os.environ.get("CLICKUP_KEY")
 CLICKUP_SPACE = 757069
 CLICKUP_TEAM = 754996
 
+TAG_COOLDOWN = 60  # Per channel, per tag
+
+GITHUB_URL_BOT = "https://github.com/discord-python/bot"
+BOT_AVATAR_URL = "https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle.png"
+
 DEPLOY_URL = os.environ.get("DEPLOY_URL")
 STATUS_URL = os.environ.get("STATUS_URL")
 
@@ -29,7 +34,8 @@ DEPLOY_BOT_KEY = os.environ.get("DEPLOY_BOT_KEY")
 DEPLOY_SITE_KEY = os.environ.get("DEPLOY_SITE_KEY")
 
 SITE_API_KEY = os.environ.get("BOT_API_KEY")
-SITE_API_USER_URL = "https://api.pythondiscord.com/user"
+SITE_API_USER_URL = "http://api.pythondiscord.com/user"
+SITE_API_TAGS_URL = "http://api.pythondiscord.com/tags"
 
 HELP_PREFIX = "bot."
 
