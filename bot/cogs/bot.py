@@ -104,8 +104,10 @@ class Bot:
                         # This check is to avoid all nodes being parsed as expressions.
                         # (e.g. words over multiple lines)
                         if not all(isinstance(node, ast.Expr) for node in tree.body):
+                            header = (f"Hey {msg.author.mention()} I noticed you tried to paste code. ",
+                                      "Here's how you should have done it:")
                             information = Embed(title="Codeblocks", description=get_tag_data("codeblock"))
-                            await msg.channel.send(embed=information)
+                            await msg.channel.send(header, embed=information)
                             self.previous_format_times[msg.channel.id] = time.time()
                     except SyntaxError:
                         pass
