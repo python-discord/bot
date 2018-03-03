@@ -80,28 +80,30 @@ class Bot:
             if time.time()-self.previous_format_times[msg.channel.id] > 300 or msg.channel.id == DEVTEST_CHANNEL:
                 if msg.content.count("\n") >= 3:
                     try:
-                        # Filtering valid Python codeblocks
+                        # Filtering valid Python codeblocks and exiting if a valid Python codeblock is found
                         if re.match(msg.content, "```(python|py)\n((?:.*\n*)+)```", re.IGNORECASE):
                             return
                         else:
                             # Format the block into python source
                             for line in msg.content.split("\n"):
                                 msg.content += line.strip("`") + "\n"
+                            # Remove "Python" or "Py" from top of the message if exists
                             if msg.content.startswith("python") or msg.content.startswith("Python"):
                                 msg.content = msg.content[6:]
                             elif msg.content.startswith("py") or msg.content.startswith("Py"):
                                 msg.content = msg.content[2:]
+                            # Strip again to remove the whitespace(s) left if the msg looks like
+                            # " Python"
                             msg.content = msg.content.strip()
-
-                        tree = ast.parse(msg.content)
 
                         # Attempts to parse the message into an AST node.
                         # Invalid Python code will raise a SyntaxError.
-                        if not all(isinstance(node, ast.Expr) for node in tree.body):
+                        tree = ast.parse(msg.content)
 
-                            # Multiple lines of single words could be interpreted as expressions.
-                            # This check is to avoid all nodes being parsed as expressions.
-                            # (e.g. words over multiple lines)
+                        # Multiple lines of single words could be interpreted as expressions.
+                        # This check is to avoid all nodes being parsed as expressions.
+                        # (e.g. words over multiple lines)
+                        if not all(isinstance(node, ast.Expr) for node in tree.body):
                             information = Embed(title="Codeblocks", description=get_tag_data("codeblock"))
                             await msg.channel.send(embed=information)
                             self.previous_format_times[msg.channel.id] = time.time()
