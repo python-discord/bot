@@ -58,9 +58,9 @@ class Math:
         fixed_expr = expr.replace('^', '**').strip('`')
 
         if any(x in fixed_expr for x in ("**", "__")):
-            await ctx.send(
+            return await ctx.send(
                 "You used an expression that has been disabled for security, our apologies")
-            return
+
 
         try:
             parsed = parse_expr(fixed_expr, evaluate=False)
