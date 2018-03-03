@@ -24,6 +24,10 @@ class Math:
 
     @command()
     async def latexify(self, ctx, *, expr: str):
+        """
+        Return the LaTex output for a mathematical expression
+        """
+
         fixed_expr = expr.replace('^', '**').strip('`').replace("__", "")
         try:
             parsed = parse_expr(fixed_expr, evaluate=False)
@@ -55,6 +59,12 @@ class Math:
 
     @command()
     async def calc(self, ctx, *, expr: str):
+        """
+        Return the LaTex output for the solution to a mathematical expression
+
+        Note that exponentials are disabled to avoid abuse
+        """
+
         fixed_expr = expr.replace('^', '**').strip('`')
 
         if any(x in fixed_expr for x in ("**", "__")):
