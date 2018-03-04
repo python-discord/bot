@@ -26,10 +26,10 @@ async def run_sympy(sympy_code: str, calc: bool = False, timeout: int = 10) -> s
     if "__" in sympy_code:
         raise TypeError("'__' not allowed in sympy code")
 
-    proc = Popen([sys.executable, "-c",
+    proc = Popen([sys.executable, "-c",  # noqa: B603,
                   "import sys,sympy;from sympy.parsing.sympy_parser import parse_expr;"
                   f"print(sympy.latex({code_}))", sympy_code],
-                 stdout=PIPE, stderr=STDOUT)  # noqa: B603
+                 stdout=PIPE, stderr=STDOUT)
 
     for _ in range(timeout*4):
         await asyncio.sleep(1/4)
@@ -53,7 +53,7 @@ class Math:
 
         fixed_expr = expr.replace('^', '**').strip('`')
         try:
-            retcode, parsed = await run_sympy(fixed_expr) 
+            retcode, parsed = await run_sympy(fixed_expr)
 
         except TypeError as e:
             await ctx.send(e.args[0])
@@ -93,7 +93,7 @@ class Math:
 
         fixed_expr = expr.replace('^', '**').strip('`')
         try:
-            retcode, parsed = await run_sympy(fixed_expr, calc=True) 
+            retcode, parsed = await run_sympy(fixed_expr, calc=True)
 
         except TypeError as e:
             await ctx.send(e.args[0])
