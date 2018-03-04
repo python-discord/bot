@@ -9,7 +9,7 @@ from discord.ext.commands import AutoShardedBot, Context, command
 from bot.constants import ADMIN_ROLE, MODERATOR_ROLE, OWNER_ROLE
 from bot.constants import SITE_API_KEY, SITE_API_TAGS_URL, TAG_COOLDOWN
 from bot.decorators import with_role
-from bot.utils import paginate
+from bot.pagination import LinePaginator
 
 
 class Tags:
@@ -177,12 +177,12 @@ class Tags:
 
         # Paginate if this is a list of all tags
         if tags:
-            return await paginate(
+            return await LinePaginator.paginate(
                 (lines for lines in tags),
                 ctx, embed,
                 footer_text="To show a tag, type bot.tags.get <tagname>.",
                 empty=False,
-                max_size=200
+                max_lines=15
             )
 
         return await ctx.send(embed=embed)
