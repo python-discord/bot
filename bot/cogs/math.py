@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import os
+import sys
 
+from contextlib import suppress
 from io import BytesIO
 from re import search
-
+from subprocess import Popen, PIPE, STDOUT, TimeoutExpired
 
 from aiohttp import ClientSession
 
@@ -15,7 +18,40 @@ from sympy import latex
 from sympy.parsing.sympy_parser import parse_expr
 
 
-LATEX_URL = "http://latex2png.com"
+LATEX_URL = "https://latex2png.com"
+
+
+async def run_sympy(sympy_code: str, timeout: int = 10) -> str:
+    if "__" in sympy_code:
+        raise TypeError("'__' not allowed in sympy code")
+    proc = Popen([sys.executable, "-c", 
+                  "import sys,sympy;from sympy.parsing.sympy_parser import parse_expr;"
+                  "print(sympy.latex(parse_expr(sys.argv[1]).doit()))", sympy_code],
+                 stdout=PIPE, stderr=STDOUT)
+
+    for _ in range(timeout):
+        await asyncio.sleep(1)
+        with suppress(TimeoutExpired):
+            proc.wait(0)
+            break
+    proc.kill()
+    return proc.returncode, proc.stdout.read().decode().strip()
+
+async def latex_sympy(sympy_code: str, timeout: int = 10) -> str:
+    if "__" in sympy_code:
+        raise TypeError("'__' not allowed in sympy code")
+    proc = Popen([sys.executable, "-c", 
+                  "import sys,sympy;from sympy.parsing.sympy_parser import parse_expr;"
+                  "print(sympy.latex(parse_expr(sys.argv[1], evaluate=False)))", sympy_code],
+                 stdout=PIPE, stderr=STDOUT)
+
+    for _ in range(timeout):
+        await asyncio.sleep(1)
+        with suppress(TimeoutExpired):
+            proc.wait(0)
+            break
+    proc.kill()
+    return proc.returncode, proc.stdout.read().decode().strip()
 
 
 class Math:
@@ -28,18 +64,20 @@ class Math:
         Return the LaTex output for a mathematical expression
         """
 
-        fixed_expr = expr.replace('^', '**').strip('`').replace("__", "")
+        fixed_expr = expr.replace('^', '**').strip('`')
         try:
-            parsed = parse_expr(fixed_expr, evaluate=False)
+            retcode, parsed = await latex_sympy(fixed_expr) 
 
-        except SyntaxError:
-            await ctx.send("Invalid expression!")
+        except TypeError as e:
+            await ctx.send(e.args[0])
 
         else:
-            ltx = latex(parsed)
+            if retcode != 0:
+                await ctx.send(f"Error:\n```{parsed}```")
+                return
 
             data = {
-                "latex": ltx,
+                "latex": parsed,
                 "res": 300,
                 "color": 808080
             }
@@ -62,24 +100,19 @@ class Math:
         """
         Return the LaTex output for the solution to a mathematical expression
 
-        Note that exponentials are disabled to avoid abuse
         """
 
         fixed_expr = expr.replace('^', '**').strip('`')
-
-        if any(x in fixed_expr for x in ("**", "__")):
-            return await ctx.send(
-                "You used an expression that has been disabled for security, our apologies")
-
         try:
-            parsed = parse_expr(fixed_expr, evaluate=False)
-            result = parsed.doit()
+            retcode, parsed = await run_sympy(fixed_expr) 
 
-        except SyntaxError:
-            await ctx.send("Invalid expression!")
+        except TypeError as e:
+            await ctx.send(e.args[0])
 
         else:
-            ltx = latex(result)
+            if retcode != 0:
+                await ctx.send(f"Error:\n```{parsed}```")
+                return
 
             data = {
                 "latex": ltx,
