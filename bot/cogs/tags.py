@@ -204,6 +204,10 @@ class Tags:
             embed.title = "Please don't do that"
             embed.description = "Don't be ridiculous. Newlines are obviously not allowed in the tag name."
 
+        if not tag_name.isalpha():
+            embed.title = "Please don't do that"
+            embed.description = "Only letters in the tag names, please."
+
         else:
             if not (tag_name and tag_content):
                 embed.title = "Missing parameters"
