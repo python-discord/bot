@@ -1,4 +1,6 @@
 # coding=utf-8
+import re
+
 import discord.ext.commands.view
 
 
@@ -26,10 +28,32 @@ def case_insensitive_get_word(self) -> str:
     allows the command to ignore case sensitivity
     """
 
-    word = _get_word(self)
-    if isinstance(word, str):
-        return word.lower()
-    return word
+    pos = 0
+    while not self.eof:
+        try:
+            current = self.buffer[self.index + pos]
+            if current.isspace() or current == "(":
+                break
+            pos += 1
+        except IndexError:
+            break
+
+    self.previous = self.index
+    result = self.buffer[self.index:self.index + pos]
+    self.index += pos
+
+    # Python syntax support
+    split_outside_quotes = r'(?:[^\s,"]|"(?:\\.|[^"])*")+'
+    new_args = re.findall(split_outside_quotes, self.buffer[self.index:])
+    new_args[-1] = new_args[-1].replace(")", "")
+    new_args[0] = new_args[0].replace("(", "")
+    new_args = " ".join(new_args)
+    self.buffer = f"{self.buffer[:self.index]} {new_args}"
+    self.end = len(self.buffer)
+
+    if isinstance(result, str):
+        return result.lower()
+    return result
 
 
 # Save the old methods
