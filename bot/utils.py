@@ -4,7 +4,7 @@ from typing import Iterable
 
 from discord import Embed, Member, Reaction
 from discord.abc import User
-from discord.ext.commands import Context
+from discord.ext.commands import Context, Paginator
 
 LEFT_EMOJI = "\u2B05"
 RIGHT_EMOJI = "\u27A1"
@@ -13,6 +13,7 @@ FIRST_EMOJI = "\u23EE"
 LAST_EMOJI = "\u23ED"
 
 PAGINATION_EMOJI = [FIRST_EMOJI, LEFT_EMOJI, RIGHT_EMOJI, LAST_EMOJI, DELETE_EMOJI]
+
 
 class CaseInsensitiveDict(dict):
     """
@@ -61,7 +62,7 @@ class CaseInsensitiveDict(dict):
 
 
 async def paginate(lines: Iterable[str], ctx: Context, embed: Embed,
-                   prefix: str = "", suffix: str = "", max_lines: int = 10, max_size: int = 500, 
+                   prefix: str = "", suffix: str = "", max_lines: int = 10, max_size: int = 500,
                    empty: bool = True, restrict_to_user: User = None, timeout: int=300,
                    footer_text: str = None):
     """
