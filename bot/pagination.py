@@ -1,6 +1,5 @@
 # coding=utf-8
 import asyncio
-
 from typing import Iterable, Optional
 
 from discord import Embed, Member, Reaction
