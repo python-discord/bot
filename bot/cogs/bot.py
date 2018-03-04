@@ -75,40 +75,54 @@ class Bot:
 
         await ctx.invoke(self.info)
 
+    def codeblock_stripping(self, msg: str):
+        """
+        Strip msg in order to find Python code.
+
+        Tries to strip out Python code out of msg and returns the stripped block or
+        None if the block is a valid Python codeblock.
+        """
+        if msg.content.count("\n") >= 3:
+            # Filtering valid Python codeblocks and exiting if a valid Python codeblock is found
+            if re.search(msg.content, "```(python|py)\n((?:.*\n*)+)```", re.IGNORECASE):
+                return None
+            else:
+                # Stripping backticks from every line of the message.
+                content = ""
+                for line in msg.content.splitlines():
+                    content += line.strip("`") + "\n"
+
+                # Remove "Python" or "Py" from top of the message if exists
+                if content.lower().startswith("python"):
+                    content = content[6:]
+                elif content.lower().startswith("py"):
+                    content = content[2:]
+                # Strip again to remove the whitespace(s) left before the code
+                # If the msg looked like "Python <code>" before removing Python
+                content = content.strip()
+                return content
+
     async def on_message(self, msg: Message):
         if msg.channel.id in self.previous_format_times:
             if time.time()-self.previous_format_times[msg.channel.id] > 300 or msg.channel.id == DEVTEST_CHANNEL:
-                if msg.content.count("\n") >= 3:
                     try:
-                        # Filtering valid Python codeblocks and exiting if a valid Python codeblock is found
-                        if re.match(msg.content, "```(python|py)\n((?:.*\n*)+)```", re.IGNORECASE):
-                            return
-                        else:
-                            # Format the block into python source
-                            content = ""
-                            for line in msg.content.split("\n"):
-                                content += line.strip("`") + "\n"
-                            # Remove "Python" or "Py" from top of the message if exists
-                            if content.startswith("python") or content.startswith("Python"):
-                                content = content[6:]
-                            elif content.startswith("py") or content.startswith("Py"):
-                                content = content[2:]
-                            # Strip again to remove the whitespace(s) left if the msg looks like
-                            # " Python"
-                            content = content.strip()
-
                         # Attempts to parse the message into an AST node.
                         # Invalid Python code will raise a SyntaxError.
+                        content = self.codeblock_stripping(msg.content)
+                        if not content:
+                            return
+
                         tree = ast.parse(content)
 
                         # Multiple lines of single words could be interpreted as expressions.
                         # This check is to avoid all nodes being parsed as expressions.
                         # (e.g. words over multiple lines)
                         if not all(isinstance(node, ast.Expr) for node in tree.body):
-                            header = (f"Hey {msg.author.mention} I noticed you tried to paste code. ",
-                                      "Here's how you should have done it:")
-                            information = Embed(title="Codeblocks", description=get_tag_data("codeblock"))
-                            await msg.channel.send(header, embed=information)
+                            howto = (f"Hey {msg.author.mention} I noticed you tried to paste code. ",
+                                     "Here's how you should have done it:",
+                                     get_tag_data("codeblock"))
+                            information = Embed(title="Codeblocks", description=howto)
+                            await msg.channel.send(embed=information)
                             self.previous_format_times[msg.channel.id] = time.time()
                     except SyntaxError:
                         pass
