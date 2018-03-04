@@ -1,5 +1,4 @@
 import time
-from typing import Optional
 
 from aiohttp import ClientSession
 
@@ -22,7 +21,7 @@ class Tags:
         self.tag_cooldowns = {}
         self.headers = {"X-API-KEY": SITE_API_KEY}
 
-    async def get_tag_data(self, tag_name: Optional[str] = None) -> dict:
+    async def get_tag_data(self, tag_name=None) -> dict:
         """
         Retrieve the tag_data from our API
 
@@ -99,7 +98,7 @@ class Tags:
         return await ctx.invoke(self.bot.get_command("help"), "Tags")
 
     @command(name="tags.get()", aliases=["tags.get", "tags.show()", "tags.show", "get_tag"])
-    async def get_command(self, ctx: Context, tag_name: Optional[str] = None):
+    async def get_command(self, ctx: Context, tag_name=None):
         """
         Get a list of all tags or a specified tag.
 
@@ -109,7 +108,7 @@ class Tags:
         If not provided, this function shows the caller a list of all tags.
         """
 
-        def _command_on_cooldown(tag_name: str) -> bool:
+        def _command_on_cooldown(tag_name) -> bool:
             """
             Check if the command is currently on cooldown.
             The cooldown duration is set in constants.py.
