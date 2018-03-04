@@ -25,7 +25,14 @@ def case_insensitive_get_word(self) -> str:
     Invokes the get_word method from
     discord.ext.commands.view used to find
     the bot command part of a message, but
-    allows the command to ignore case sensitivity
+    allows the command to ignore case sensitivity,
+    and allows commands to have Python syntax.
+
+    Example of valid Python syntax calls:
+    ------------------------------
+    bot.tags.set("test", 'a dark, dark night')
+    bot.help(tags.delete)
+    bot.hELP(tags.delete)
     """
 
     pos = 0
@@ -42,23 +49,24 @@ def case_insensitive_get_word(self) -> str:
     result = self.buffer[self.index:self.index + pos]
     self.index += pos
 
-    # Python syntax support
-    split_outside_quotes = r'(?:[^\s,"]|"(?:\\.|[^"])*")+'
+    # This unholy regex splits the string by commas that are outside quotes
+    split_outside_quotes = r'(?:[^\s,\"\']|[\"\'](?:\\.|[^\"\'])*[\'\"])+'
     new_args = re.findall(split_outside_quotes, self.buffer[self.index:])
-    new_args[-1] = new_args[-1].replace(")", "")
-    new_args[0] = new_args[0].replace("(", "")
-    new_args = " ".join(new_args)
-    self.buffer = f"{self.buffer[:self.index]} {new_args}"
-    self.end = len(self.buffer)
+
+    # if the len is 0, we're just calling bot.tags() or something
+    if len(new_args) > 0:
+        new_args = " ".join(new_args)  # Replace those commas with spaces
+        new_args = new_args.replace("(", "").replace(")", "")  # remove the ()'s
+        new_args = new_args.replace("'", "\"")  # d.py doesn't like single quotes
+
+        # We've changed the command from `tags("a", "b, c, d")` into `tags "a" "b, c, d"`
+        self.buffer = f"{self.buffer[:self.index]} {new_args}"
+        self.end = len(self.buffer)  # reset the end now that we've removed characters.
 
     if isinstance(result, str):
-        return result.lower()
+        return result.lower()  # Case insensitivity, baby
     return result
 
-
-# Save the old methods
-_skip_string = discord.ext.commands.view.StringView.skip_string
-_get_word = discord.ext.commands.view.StringView.get_word
 
 # Monkey patch them to be case insensitive
 discord.ext.commands.view.StringView.skip_string = case_insensitive_skip_string
