@@ -36,6 +36,6 @@ def case_insensitive_get_word(self) -> str:
 _skip_string = discord.ext.commands.view.StringView.skip_string
 _get_word = discord.ext.commands.view.StringView.get_word
 
-# Monkey patching prefixes and commands to be case insensitive
+# Monkey patch them to be case insensitive
 discord.ext.commands.view.StringView.skip_string = case_insensitive_skip_string
 discord.ext.commands.view.StringView.get_word = case_insensitive_get_word
