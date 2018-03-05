@@ -24,7 +24,7 @@ class Bot:
         self.bot = bot
 
         # Stores allowed channels plus unix timestamp from last call
-        self.previous_hint_times = {HELP1_CHANNEL: 0,
+        self.channel_cooldowns = {HELP1_CHANNEL: 0,
                                       HELP2_CHANNEL: 0,
                                       HELP3_CHANNEL: 0,
                                       PYTHON_CHANNEL: 0,
@@ -103,8 +103,8 @@ class Bot:
                 return content
 
     async def on_message(self, msg: Message):
-        if msg.channel.id in self.previous_hint_times:
-            on_cooldown = time.time() - self.previous_hint_times[msg.channel.id] > 300
+        if msg.channel.id in self.channel_cooldowns:
+            on_cooldown = time.time() - self.channel_cooldowns[msg.channel.id] > 300
             if not on_cooldown or msg.channel.id == DEVTEST_CHANNEL:
                     try:
                         # Attempts to parse the message into an AST node.
@@ -125,7 +125,7 @@ class Bot:
                                      get_tag_data("codeblock"))
                             information = Embed(title="Codeblocks", description=howto)
                             await msg.channel.send(embed=information)
-                            self.previous_hint_times[msg.channel.id] = time.time()
+                            self.channel_cooldowns[msg.channel.id] = time.time()
                     except SyntaxError:
                         pass
 
