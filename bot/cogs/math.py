@@ -19,26 +19,27 @@ LATEX_URL = "https://latex2png.com"
 
 async def run_sympy(sympy_code: str, calc: bool = False, timeout: int = 10) -> str:
     if calc:
-        code_ = "parse_expr(sys.argv[1]).doit()"
+        code_ = "parse_expr(sys.argv[1]).doit()"  # Run the expression
     else:
-        code_ = "parse_expr(sys.argv[1], evaluate=True)"
+        code_ = "parse_expr(sys.argv[1], evaluate=True)"  # Just latexify it without running
 
-    if "__" in sympy_code:
+    if "__" in sympy_code:  # They're trying to exploit something, raise an error
         raise TypeError("'__' not allowed in sympy code")
 
     proc = Popen([sys.executable, "-c",  # noqa: B603,
                   "import sys,sympy;from sympy.parsing.sympy_parser import parse_expr;"
                   f"print(sympy.latex({code_}))", sympy_code],
-                 stdout=PIPE, stderr=STDOUT)
+                 stdout=PIPE, stderr=STDOUT,  # reroute all to stdout
+                 env={})  # Disable environment variables for security
 
-    for _ in range(timeout*4):
+    for _ in range(timeout*4):  # check if done every .25 seconds for `timeout` seconds
         await asyncio.sleep(1/4)
-        with suppress(TimeoutExpired):
+        with suppress(TimeoutExpired):  # Ignore TimeoutExpired...
             proc.wait(0)
-            break
+            break  # ... But stop the loop when not raised
 
-    proc.kill()
-    return proc.returncode, proc.stdout.read().decode().strip()
+    proc.kill()  # Kill the process regardless of whether it finished or not
+    return proc.returncode, proc.stdout.read().decode().strip()  # Return a clean string
 
 
 class Math:
@@ -51,20 +52,22 @@ class Math:
         Return the LaTex output for a mathematical expression
         """
 
-        fixed_expr = expr.replace('^', '**').strip('`')
+        fixed_expr = expr.replace('^', '**').strip('`')  # Syntax fixes
         try:
-            retcode, parsed = await run_sympy(fixed_expr)
+            retcode, parsed = await run_sympy(fixed_expr)  # Run the sympy code
 
-        except TypeError as e:
+        except TypeError as e:  # Exploit was tried
             await ctx.send(e.args[0])
 
         else:
-            if retcode != 0:
+            if retcode != 0:  # ERROR
                 await ctx.send(f"Error:\n```{parsed}```")
                 return
-            elif not parsed:
+            elif not parsed:  # Timeout
                 await ctx.send("Code did not return or took too long")
                 return
+
+            # Send LaTeX to website to get image
 
             data = {
                 "latex": parsed,
@@ -91,20 +94,22 @@ class Math:
         Return the LaTex output for the solution to a mathematical expression
         """
 
-        fixed_expr = expr.replace('^', '**').strip('`')
+        fixed_expr = expr.replace('^', '**').strip('`')  # Syntax fixes
         try:
-            retcode, parsed = await run_sympy(fixed_expr, calc=True)
+            retcode, parsed = await run_sympy(fixed_expr, calc=True)  # Run sympy
 
-        except TypeError as e:
+        except TypeError as e:  # Exploitation tried
             await ctx.send(e.args[0])
 
         else:
-            if retcode != 0:
+            if retcode != 0:  # ERROR
                 await ctx.send(f"Error:\n```{parsed}```")
                 return
-            elif not parsed:
+            elif not parsed:  # Timeout
                 await ctx.send("Code did not return or took too long")
                 return
+
+            # Send LaTeX to website to get image
 
             data = {
                 "latex": parsed,
