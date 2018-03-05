@@ -24,7 +24,7 @@ class Bot:
         self.bot = bot
 
         # Stores allowed channels plus unix timestamp from last call
-        self.previous_format_times = {HELP1_CHANNEL: 0,
+        self.previous_hint_times = {HELP1_CHANNEL: 0,
                                       HELP2_CHANNEL: 0,
                                       HELP3_CHANNEL: 0,
                                       PYTHON_CHANNEL: 0,
@@ -103,8 +103,9 @@ class Bot:
                 return content
 
     async def on_message(self, msg: Message):
-        if msg.channel.id in self.previous_format_times:
-            if time.time()-self.previous_format_times[msg.channel.id] > 300 or msg.channel.id == DEVTEST_CHANNEL:
+        if msg.channel.id in self.previous_hint_times:
+            on_cooldown = time.time()-self.previous_hint_times[msg.channel.id] > 300
+            if on_cooldown or msg.channel.id == DEVTEST_CHANNEL:
                     try:
                         # Attempts to parse the message into an AST node.
                         # Invalid Python code will raise a SyntaxError.
@@ -118,12 +119,13 @@ class Bot:
                         # This check is to avoid all nodes being parsed as expressions.
                         # (e.g. words over multiple lines)
                         if not all(isinstance(node, ast.Expr) for node in tree.body):
-                            howto = (f"Hey {msg.author.mention} I noticed you tried to paste code. ",
-                                     "Here's how you should have done it:",
+                            howto = (f"Hey {msg.author.mention}! I noticed you were trying to paste code into this ",
+                                     "channel. Discord supports something called Markdown, which allows you to make ",
+                                     "beautiful code blocks with Python syntax highlighting! Here's how they work:",
                                      get_tag_data("codeblock"))
                             information = Embed(title="Codeblocks", description=howto)
                             await msg.channel.send(embed=information)
-                            self.previous_format_times[msg.channel.id] = time.time()
+                            self.previous_hint_times[msg.channel.id] = time.time()
                     except SyntaxError:
                         pass
 
