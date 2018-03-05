@@ -23,10 +23,11 @@ async def run_sympy(sympy_code: str, calc: bool = False, timeout: int = 10) -> s
     else:
         code_ = "parse_expr(sys.argv[1], evaluate=True)"  # Just latexify it without running
 
-    if "__" in sympy_code:  # They're trying to exploit something, raise an error
+    if "__" in sympy_code:
+        # They're trying to exploit something, raise an error
         raise TypeError("'__' not allowed in sympy code")
 
-    proc = Popen([sys.executable, "-c",  # noqa: B603,
+    proc = Popen([sys.executable, "-c",  # noqa: B603
                   "import sys,sympy;from sympy.parsing.sympy_parser import parse_expr;"
                   f"print(sympy.latex({code_}))", sympy_code],
                  stdout=PIPE, stderr=STDOUT,  # reroute all to stdout
@@ -34,12 +35,13 @@ async def run_sympy(sympy_code: str, calc: bool = False, timeout: int = 10) -> s
 
     for _ in range(timeout*4):  # check if done every .25 seconds for `timeout` seconds
         await asyncio.sleep(1/4)
-        with suppress(TimeoutExpired):  # Ignore TimeoutExpired...
+        with suppress(TimeoutExpired):  
+            # Ignore TimeoutExpired...
             proc.wait(0)
             break  # ... But stop the loop when not raised
 
     proc.kill()  # Kill the process regardless of whether it finished or not
-    return proc.returncode, proc.stdout.read().decode().strip()  # Return a clean string
+    return proc.returncode, proc.stdout.read().decode().strip()
 
 
 class Math:
