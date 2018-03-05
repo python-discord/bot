@@ -204,9 +204,9 @@ class Tags:
             embed.title = "Please don't do that"
             embed.description = "Don't be ridiculous. Newlines are obviously not allowed in the tag name."
 
-        elif not tag_name.isalpha():
+        elif tag_name.isdigit():
             embed.title = "Please don't do that"
-            embed.description = "Only letters in the tag names, please."
+            embed.description = "Tag names can't be numbers."
 
         elif not tag_content.strip():
             embed.title = "Please don't do that"

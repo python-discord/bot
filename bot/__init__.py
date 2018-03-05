@@ -4,7 +4,7 @@ import re
 import discord.ext.commands.view
 
 
-def case_insensitive_skip_string(self, string: str) -> bool:
+def _skip_string(self, string: str) -> bool:
     """
     Our version of the skip_string method from
     discord.ext.commands.view; used to find
@@ -20,7 +20,7 @@ def case_insensitive_skip_string(self, string: str) -> bool:
     return False
 
 
-def case_insensitive_get_word(self) -> str:
+def _get_word(self) -> str:
     """
     Invokes the get_word method from
     discord.ext.commands.view used to find
@@ -49,25 +49,55 @@ def case_insensitive_get_word(self) -> str:
     result = self.buffer[self.index:self.index + pos]
     self.index += pos
 
-    # This unholy regex splits the string by commas that are outside quotes
-    split_outside_quotes = r'(?:[^\s,\"\']|[\"\'](?:\\.|[^\"\'])*[\'\"])+'
-    new_args = re.findall(split_outside_quotes, self.buffer[self.index:])
+    # get all single and double quote encased args
+    single_quotes = r'[\']([^\']*?)[\']'
+    double_quotes = r'[\"]([^\"]*?)[\"]'
 
-    # if the len is 0, we're just calling bot.tags() or something
+    # start with the type of quote that occurs first
+    buf = self.buffer[self.index:]
+
+    # single quotes occur first
+    if (buf.find("'") < buf.find('"')) and buf.find("'") != -1:
+        first = single_quotes
+        second = double_quotes
+    # double quotes occur first
+    else:
+        first = double_quotes
+        second = single_quotes
+
+    # after we get the first arg, we remove it from the buf so that
+    # quotes inside the arg will not be picked up in the second findall.
+    new_args = re.findall(first, buf)
+    print(new_args)
+    for arg in new_args:
+        buf = buf.replace(arg, "")
+    new_args += re.findall(second, buf)
+    print(new_args)
+
     if len(new_args) > 0:
-        new_args = " ".join(new_args)  # Replace those commas with spaces
-        new_args = new_args.replace("(", "").replace(")", "")  # remove the ()'s
-        new_args = new_args.replace("'", "\"")  # d.py doesn't like single quotes
+        reformatted_args = []
 
-        # We've changed the command from `tags("a", "b, c, d")` into `tags "a" "b, c, d"`
-        self.buffer = f"{self.buffer[:self.index]} {new_args}"
+        for arg in new_args:
+            arg = arg.strip("()\"\'")  # Remove (), ' and " from start and end
+            reformatted_args.append(f'"{arg}"')  # Surround by double quotes instead
+
+        # We've changed the command from `tags("a", 'b, c, d')` into `tags "a" "b, c, d"`
+        new_args = " ".join(reformatted_args)
+        self.buffer = f"{self.buffer[:self.index]} {new_args}"  # Put a space between command and args in the buffer
         self.end = len(self.buffer)  # reset the end now that we've removed characters.
+
+    # if the len is 0, we're calling bot.command() without args
+    else:
+        # Move the cursor to capture the ()'s
+        pos += 2
+        result = self.buffer[self.previous:self.index + (pos+2)]
+        self.index += 2
 
     if isinstance(result, str):
         return result.lower()  # Case insensitivity, baby
     return result
 
 
-# Monkey patch them to be case insensitive
-discord.ext.commands.view.StringView.skip_string = case_insensitive_skip_string
-discord.ext.commands.view.StringView.get_word = case_insensitive_get_word
+# Monkey patch the methods
+discord.ext.commands.view.StringView.skip_string = _skip_string
+discord.ext.commands.view.StringView.get_word = _get_word
