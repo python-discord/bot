@@ -125,12 +125,24 @@ class LinePaginator(Paginator):
             Make sure that this reaction is what we want to operate on
             """
 
+            no_restrictions = (
+                # Pagination is not restricted
+                    not restrict_to_user or
+                    # The reaction was by a whitelisted user
+                    user_.id == restrict_to_user.id
+            )
+
             return (
-                reaction_.message.id == message.id and  # Reaction on this specific message
-                reaction_.emoji in PAGINATION_EMOJI and  # One of the reactions we handle
-                user_.id != ctx.bot.user.id and (  # Not applied by the bot itself
-                    not restrict_to_user or   # Unrestricted if there's no user to restrict to, or...
-                    user_.id == restrict_to_user.id  # Only by the restricted user
+                # Conditions for a successful pagination:
+                all(
+                    # Reaction is on this message
+                    reaction_.message.id == message.id,
+                    # Reaction is one of the pagination emotes
+                    reaction_.emoji in PAGINATION_EMOJI,
+                    # Reaction was not made by the Bot
+                    user_.id != ctx.bot.user.id,
+                    # There were no restrictions
+                    no_restrictions
                 )
             )
 
