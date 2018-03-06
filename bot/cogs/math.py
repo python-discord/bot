@@ -35,8 +35,9 @@ async def run_sympy(sympy_code: str, calc: bool = False, timeout: int = 10) -> s
 
     for _ in range(timeout*4):  # Check if done every .25 seconds for `timeout` seconds
         await asyncio.sleep(1/4)
+
+        # Ignore TimeoutExpired...
         with suppress(TimeoutExpired):
-            # Ignore TimeoutExpired...
             proc.wait(0)
             break  # ... But stop the loop when not raised
 
