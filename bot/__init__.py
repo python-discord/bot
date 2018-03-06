@@ -1,5 +1,5 @@
 # coding=utf-8
-import re
+import ast
 
 import discord.ext.commands.view
 
@@ -49,44 +49,31 @@ def _get_word(self) -> str:
     result = self.buffer[self.index:self.index + pos]
     self.index += pos
 
-    # get all single and double quote encased args
-    single_quotes = r'[\']([^\']*?)[\']'
-    double_quotes = r'[\"]([^\"]*?)[\"]'
+    if current == "(" and self.buffer[self.index + 1] != ")":
 
-    # start with the type of quote that occurs first
-    buf = self.buffer[self.index:]
+        # Parse the args
+        args = self.buffer[self.index:]
+        args = ast.literal_eval(args)
 
-    # single quotes occur first
-    if (buf.find("'") < buf.find('"')) and buf.find("'") != -1:
-        first = single_quotes
-        second = double_quotes
-    # double quotes occur first
-    else:
-        first = double_quotes
-        second = single_quotes
+        # Force args into container
+        if isinstance(args, str):
+            args = (args,)
 
-    # after we get the first arg, we remove it from the buf so that
-    # quotes inside the arg will not be picked up in the second findall.
-    new_args = re.findall(first, buf)
-    print(new_args)
-    for arg in new_args:
-        buf = buf.replace(arg, "")
-    new_args += re.findall(second, buf)
-    print(new_args)
+        # Type validate and format
+        new_args = []
+        for arg in args:
 
-    if len(new_args) > 0:
-        reformatted_args = []
+            # Other types get converted to strings
+            if not isinstance(arg, str):
+                arg = str(arg)
 
-        for arg in new_args:
-            arg = arg.strip("()\"\'")  # Remove (), ' and " from start and end
-            reformatted_args.append(f'"{arg}"')  # Surround by double quotes instead
+            # Adding double quotes to every argument
+            new_args.append(f'"{arg}"')
 
-        # We've changed the command from `tags("a", 'b, c, d')` into `tags "a" "b, c, d"`
-        new_args = " ".join(reformatted_args)
-        self.buffer = f"{self.buffer[:self.index]} {new_args}"  # Put a space between command and args in the buffer
-        self.end = len(self.buffer)  # reset the end now that we've removed characters.
+        new_args = " ".join(new_args)
+        self.buffer = f"{self.buffer[:self.index]} {new_args}"
+        self.end = len(self.buffer)  # Recalibrate the end since we've removed commas
 
-    # if the len is 0, we're calling bot.command() without args
     else:
         # Move the cursor to capture the ()'s
         pos += 2
