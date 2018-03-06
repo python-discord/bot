@@ -134,7 +134,7 @@ class LinePaginator(Paginator):
                 )
             )
 
-        paginator = cls(prefix=prefix, suffix=suffix, max_size=max_size, line_size=max_lines)
+        paginator = cls(prefix=prefix, suffix=suffix, max_size=max_size, max_lines=max_lines)
         current_page = 0
 
         for line in lines:
