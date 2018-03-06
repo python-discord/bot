@@ -127,9 +127,9 @@ class LinePaginator(Paginator):
 
             no_restrictions = (
                 # Pagination is not restricted
-                    not restrict_to_user or
-                    # The reaction was by a whitelisted user
-                    user_.id == restrict_to_user.id
+                not restrict_to_user or
+                # The reaction was by a whitelisted user
+                user_.id == restrict_to_user.id
             )
 
             return (
