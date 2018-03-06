@@ -25,10 +25,10 @@ class Bot:
 
         # Stores allowed channels plus unix timestamp from last call
         self.channel_cooldowns = {HELP1_CHANNEL: 0,
-                                      HELP2_CHANNEL: 0,
-                                      HELP3_CHANNEL: 0,
-                                      PYTHON_CHANNEL: 0,
-                                      DEVTEST_CHANNEL: 0
+                                  HELP2_CHANNEL: 0,
+                                  HELP3_CHANNEL: 0,
+                                  PYTHON_CHANNEL: 0,
+                                  DEVTEST_CHANNEL: 0
         }  # noqa. E124
 
     @group(invoke_without_command=True, name="bot", hidden=True)
