@@ -12,7 +12,6 @@ from bot.constants import (DEVTEST_CHANNEL, HELP1_CHANNEL, HELP2_CHANNEL,
                            HELP3_CHANNEL, PYTHON_CHANNEL, PYTHON_GUILD,
                            VERIFIED_ROLE)
 from bot.decorators import with_role
-from bot.cogs.tags import get_tag_data
 
 
 class Bot:
@@ -122,7 +121,7 @@ class Bot:
                             howto = (f"Hey {msg.author.mention}! I noticed you were trying to paste code into this ",
                                      "channel. Discord supports something called Markdown, which allows you to make ",
                                      "beautiful code blocks with Python syntax highlighting! Here's how they work:",
-                                     get_tag_data("codeblock"))
+                                     await self.bot.get_cog("Tags").get_tag_data("codeblock"))
                             information = Embed(title="Codeblocks", description=howto)
                             await msg.channel.send(embed=information)
                             self.channel_cooldowns[msg.channel.id] = time.time()
