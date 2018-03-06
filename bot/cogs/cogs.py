@@ -10,7 +10,7 @@ from bot.constants import (
     WHITE_CHEVRON
 )
 from bot.decorators import with_role
-from bot.utils import paginate
+from bot.pagination import LinePaginator
 
 
 class Cogs:
@@ -202,7 +202,7 @@ class Cogs:
                 for cog, error in failed_loads:
                     lines.append(f"`{cog}` {WHITE_CHEVRON} `{error}`")
 
-            return await paginate(lines, ctx, embed, empty=False)
+            return await LinePaginator.paginate(lines, ctx, embed, empty=False)
 
         elif full_cog in self.bot.extensions:
             try:
@@ -262,7 +262,7 @@ class Cogs:
 
             lines.append(f"{chevron}  {cog}")
 
-        await paginate(lines, ctx, embed, max_size=300, empty=False)
+        await LinePaginator.paginate(lines, ctx, embed, max_size=300, empty=False)
 
 
 def setup(bot):
