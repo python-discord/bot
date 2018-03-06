@@ -72,7 +72,6 @@ class Math:
                 return
 
             # Send LaTeX to website to get image
-
             data = {
                 "latex": parsed,
                 "res": 300,
@@ -114,7 +113,6 @@ class Math:
                 return
 
             # Send LaTeX to website to get image
-
             data = {
                 "latex": parsed,
                 "res": 300,
