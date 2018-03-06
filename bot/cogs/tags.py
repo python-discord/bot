@@ -204,9 +204,13 @@ class Tags:
             embed.title = "Please don't do that"
             embed.description = "Don't be ridiculous. Newlines are obviously not allowed in the tag name."
 
-        if not tag_name.isalpha():
+        elif tag_name.isdigit():
             embed.title = "Please don't do that"
-            embed.description = "Only letters in the tag names, please."
+            embed.description = "Tag names can't be numbers."
+
+        elif not tag_content.strip():
+            embed.title = "Please don't do that"
+            embed.description = "Tags should not be empty, or filled with whitespace."
 
         else:
             if not (tag_name and tag_content):
@@ -222,7 +226,7 @@ class Tags:
                 embed.title = "Tag successfully added"
                 embed.description = f"**{tag_name}** added to tag database."
             else:
-                embed.title = "Database error",
+                embed.title = "Database error"
                 embed.description = ("There was a problem adding the data to the tags database. "
                                      "Please try again. If the problem persists, check the API logs.")
 
