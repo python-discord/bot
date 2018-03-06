@@ -27,11 +27,12 @@ async def run_sympy(sympy_code: str, calc: bool = False, timeout: int = 10) -> s
         # They're trying to exploit something, raise an error
         raise TypeError("'__' not allowed in sympy code")
 
-    proc = Popen([sys.executable, "-c",  # noqa: B603
-                  "import sys,sympy;from sympy.parsing.sympy_parser import parse_expr;"
-                  f"print(sympy.latex({code_}))", sympy_code],
-                 stdout=PIPE, stderr=STDOUT,  # reroute all to stdout
-                 env={})  # Disable environment variables for security
+    proc = Popen([
+                    sys.executable, "-c",  # noqa: B603
+                    "import sys,sympy;from sympy.parsing.sympy_parser import parse_expr;"
+                    f"print(sympy.latex({code_}))", sympy_code
+                 ], env={},  # Disable environment variables for security
+                 stdout=PIPE, stderr=STDOUT)  # reroute all to stdout
 
     for _ in range(timeout*4):  # Check if done every .25 seconds for `timeout` seconds
         await asyncio.sleep(1/4)
