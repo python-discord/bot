@@ -134,7 +134,7 @@ class LinePaginator(Paginator):
 
             return (
                 # Conditions for a successful pagination:
-                all(
+                all((
                     # Reaction is on this message
                     reaction_.message.id == message.id,
                     # Reaction is one of the pagination emotes
@@ -143,7 +143,7 @@ class LinePaginator(Paginator):
                     user_.id != ctx.bot.user.id,
                     # There were no restrictions
                     no_restrictions
-                )
+                ))
             )
 
         paginator = cls(prefix=prefix, suffix=suffix, max_size=max_size, max_lines=max_lines)
