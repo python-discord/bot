@@ -81,7 +81,7 @@ class Bot:
         Tries to strip out Python code out of msg and returns the stripped block or
         None if the block is a valid Python codeblock.
         """
-        if msg.content.count("\n") >= 3:
+        if msg.count("\n") >= 3:
             # Filtering valid Python codeblocks and exiting if a valid Python codeblock is found
             if re.search(msg, "```(python|py)\n((?:.*\n*)+)```", re.IGNORECASE):
                 return None
