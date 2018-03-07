@@ -91,6 +91,7 @@ class Bot:
                 for line in msg.splitlines():
                     content += line.strip("`") + "\n"
 
+                content = content.strip()
                 # Remove "Python" or "Py" from top of the message if exists
                 if content.lower().startswith("python"):
                     content = content[6:]
@@ -118,10 +119,11 @@ class Bot:
                         # This check is to avoid all nodes being parsed as expressions.
                         # (e.g. words over multiple lines)
                         if not all(isinstance(node, ast.Expr) for node in tree.body):
-                            howto = (f"Hey {msg.author.mention}! I noticed you were trying to paste code into this ",
-                                     "channel. Discord supports something called Markdown, which allows you to make ",
-                                     "beautiful code blocks with Python syntax highlighting! Here's how they work:",
-                                     await self.bot.get_cog("Tags").get_tag_data("codeblock"))
+                            codeblock_tag = await self.bot.get_cog("Tags").get_tag_data("codeblock")
+                            howto = (f"Hey {msg.author.mention}! I noticed you were trying to paste code into this "
+                                     "channel. Discord supports something called Markdown, which allows you to make "
+                                     "beautiful code blocks with Python syntax highlighting! Here's how they work:\n"
+                                     f"{codeblock_tag}")
                             information = Embed(title="Codeblocks", description=howto)
                             await msg.channel.send(embed=information)
                             self.channel_cooldowns[msg.channel.id] = time.time()
