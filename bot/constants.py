@@ -27,7 +27,7 @@ CLICKUP_TEAM = 754996
 # URLs
 DEPLOY_URL = os.environ.get("DEPLOY_URL")
 STATUS_URL = os.environ.get("STATUS_URL")
-API_URL = os.environ.get("API_URL", "pythondiscord.local:8080")
+API_URL = os.environ.get("API_URL", "api.pythondiscord.local:8080")
 SITE_PROTOCOL = 'http' if 'local' in API_URL else 'https'
 SITE_API_USER_URL = f"{SITE_PROTOCOL}://{API_URL}/user"
 SITE_API_TAGS_URL = f"{SITE_PROTOCOL}://{API_URL}/tags"
