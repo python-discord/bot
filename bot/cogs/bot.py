@@ -83,7 +83,7 @@ class Bot:
         """
         if msg.count("\n") >= 3:
             # Filtering valid Python codeblocks and exiting if a valid Python codeblock is found
-            if re.search(msg, "```(python|py)\n((?:.*\n*)+)```", re.IGNORECASE):
+            if re.search("```(python|py)\n((?:.*\n*)+)```", msg, re.IGNORECASE):
                 return None
             else:
                 # Stripping backticks from every line of the message.
