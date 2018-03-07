@@ -124,11 +124,9 @@ class Bot:
                                 # todo: add logging
                                 return
                             howto = (f"Hey {msg.author.mention}!\n\nI noticed you were trying to paste code into this "
-                                     "channel. Discord supports something called Markdown, which allows you to make "
-                                     "beautiful code blocks with Python syntax highlighting!\n"
-                                     "{codeblock_tag['tag_content']}")
+                                     "channel.\n\n{codeblock_tag['tag_content']}")
 
-                            howto_embed = Embed(title="Codeblocks", description=howto)
+                            howto_embed = Embed(description=howto)
                             await msg.channel.send(embed=howto_embed)
                             self.channel_cooldowns[msg.channel.id] = time.time()
                     except SyntaxError:
