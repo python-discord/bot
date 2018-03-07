@@ -106,31 +106,31 @@ class Bot:
         if msg.channel.id in self.channel_cooldowns:
             on_cooldown = time.time() - self.channel_cooldowns[msg.channel.id] > 300
             if not on_cooldown or msg.channel.id == DEVTEST_CHANNEL:
-                    try:
-                        # Attempts to parse the message into an AST node.
-                        # Invalid Python code will raise a SyntaxError.
-                        content = self.codeblock_stripping(msg.content)
-                        if not content:
+                try:
+                    # Attempts to parse the message into an AST node.
+                    # Invalid Python code will raise a SyntaxError.
+                    content = self.codeblock_stripping(msg.content)
+                    if not content:
+                        return
+
+                    tree = ast.parse(content)
+
+                    # Multiple lines of single words could be interpreted as expressions.
+                    # This check is to avoid all nodes being parsed as expressions.
+                    # (e.g. words over multiple lines)
+                    if not all(isinstance(node, ast.Expr) for node in tree.body):
+                        codeblock_tag = await self.bot.get_cog("Tags").get_tag_data("codeblock")
+                        if codeblock_tag == {}:
+                            # todo: add logging
                             return
+                        howto = (f"Hey {msg.author.mention}!\n\nI noticed you were trying to paste code into this "
+                                 f"channel.\n\n{codeblock_tag['tag_content']}")
 
-                        tree = ast.parse(content)
-
-                        # Multiple lines of single words could be interpreted as expressions.
-                        # This check is to avoid all nodes being parsed as expressions.
-                        # (e.g. words over multiple lines)
-                        if not all(isinstance(node, ast.Expr) for node in tree.body):
-                            codeblock_tag = await self.bot.get_cog("Tags").get_tag_data("codeblock")
-                            if codeblock_tag == {}:
-                                # todo: add logging
-                                return
-                            howto = (f"Hey {msg.author.mention}!\n\nI noticed you were trying to paste code into this "
-                                     f"channel.\n\n{codeblock_tag['tag_content']}")
-
-                            howto_embed = Embed(description=howto)
-                            await msg.channel.send(embed=howto_embed)
-                            self.channel_cooldowns[msg.channel.id] = time.time()
-                    except SyntaxError:
-                        pass
+                        howto_embed = Embed(description=howto)
+                        await msg.channel.send(embed=howto_embed)
+                        self.channel_cooldowns[msg.channel.id] = time.time()
+                except SyntaxError:
+                    pass
 
 
 def setup(bot):
