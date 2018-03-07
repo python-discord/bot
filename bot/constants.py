@@ -29,8 +29,8 @@ DEPLOY_URL = os.environ.get("DEPLOY_URL")
 STATUS_URL = os.environ.get("STATUS_URL")
 SITE_URL = os.environ.get("SITE_URL", "pythondiscord.local:8080")
 SITE_PROTOCOL = 'http' if 'local' in SITE_URL else 'https'
-SITE_API_USER_URL = f"{SITE_PROTOCOL}://{SITE_URL}/user"
-SITE_API_TAGS_URL = f"{SITE_PROTOCOL}://{SITE_URL}/tags"
+SITE_API_USER_URL = f"{SITE_PROTOCOL}://api.{SITE_URL}/user"
+SITE_API_TAGS_URL = f"{SITE_PROTOCOL}://api.{SITE_URL}/tags"
 GITHUB_URL_BOT = "https://github.com/discord-python/bot"
 BOT_AVATAR_URL = "https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle.png"
 
