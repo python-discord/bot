@@ -120,6 +120,9 @@ class Bot:
                         # (e.g. words over multiple lines)
                         if not all(isinstance(node, ast.Expr) for node in tree.body):
                             codeblock_tag = await self.bot.get_cog("Tags").get_tag_data("codeblock")
+                            if codeblock_tag == {}:
+                                # todo: add logging
+                                return
                             howto = (f"Hey {msg.author.mention}!\n I noticed you were trying to paste code into this "
                                      "channel. Discord supports something called Markdown, which allows you to make "
                                      "beautiful code blocks with Python syntax highlighting!\n"
