@@ -123,7 +123,7 @@ class Bot:
                             if codeblock_tag == {}:
                                 # todo: add logging
                                 return
-                            howto = (f"Hey {msg.author.mention}!\n I noticed you were trying to paste code into this "
+                            howto = (f"Hey {msg.author.mention}!\n\nI noticed you were trying to paste code into this "
                                      "channel. Discord supports something called Markdown, which allows you to make "
                                      "beautiful code blocks with Python syntax highlighting!\n"
                                      f"{codeblock_tag['tag_content']}")
