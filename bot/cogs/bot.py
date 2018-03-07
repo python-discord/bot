@@ -124,7 +124,7 @@ class Bot:
                                 # todo: add logging
                                 return
                             howto = (f"Hey {msg.author.mention}!\n\nI noticed you were trying to paste code into this "
-                                     "channel.\n\n{codeblock_tag['tag_content']}")
+                                     f"channel.\n\n{codeblock_tag['tag_content']}")
 
                             howto_embed = Embed(description=howto)
                             await msg.channel.send(embed=howto_embed)
