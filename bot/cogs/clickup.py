@@ -10,7 +10,9 @@ from bot.constants import (
     ADMIN_ROLE, CLICKUP_KEY, CLICKUP_SPACE, CLICKUP_TEAM, DEVOPS_ROLE, MODERATOR_ROLE, OWNER_ROLE
 )
 from bot.decorators import with_role
-from bot.utils import CaseInsensitiveDict, paginate
+from bot.pagination import LinePaginator
+from bot.utils import CaseInsensitiveDict
+
 
 CREATE_TASK_URL = "https://api.clickup.com/api/v1/list/{list_id}/task"
 EDIT_TASK_URL = "https://api.clickup.com/api/v1/task/{task_id}"
@@ -110,7 +112,7 @@ class ClickUp:
                     status = f"{task['status']['status'].title()}"
 
                     lines.append(f"{id_fragment} ({status})\n\u00BB {task['name']}")
-                return await paginate(lines, ctx, embed, max_size=750)
+                return await LinePaginator.paginate(lines, ctx, embed, max_size=750)
         return await ctx.send(embed=embed)
 
     @command(name="clickup.task()", aliases=["clickup.task", "task", "get_task"])
@@ -172,7 +174,7 @@ class ClickUp:
                         f"**Assignees**\n{assignees}"
                     )
 
-                return await paginate(lines, ctx, embed, max_size=750)
+                return await LinePaginator.paginate(lines, ctx, embed, max_size=750)
         return await ctx.send(embed=embed)
 
     @command(name="clickup.team()", aliases=["clickup.team", "team", "list_team"])

@@ -8,7 +8,7 @@ from discord.ext.commands import AutoShardedBot, Context, command
 from bot.constants import ADMIN_ROLE, MODERATOR_ROLE, OWNER_ROLE
 from bot.constants import SITE_API_KEY, SITE_API_TAGS_URL, TAG_COOLDOWN
 from bot.decorators import with_role
-from bot.utils import paginate
+from bot.pagination import LinePaginator
 
 
 class Tags:
@@ -176,12 +176,12 @@ class Tags:
 
         # Paginate if this is a list of all tags
         if tags:
-            return await paginate(
+            return await LinePaginator.paginate(
                 (lines for lines in tags),
                 ctx, embed,
                 footer_text="To show a tag, type bot.tags.get <tagname>.",
                 empty=False,
-                max_size=200
+                max_lines=15
             )
 
         return await ctx.send(embed=embed)
@@ -204,9 +204,13 @@ class Tags:
             embed.title = "Please don't do that"
             embed.description = "Don't be ridiculous. Newlines are obviously not allowed in the tag name."
 
-        if not tag_name.isalpha():
+        elif tag_name.isdigit():
             embed.title = "Please don't do that"
-            embed.description = "Only letters in the tag names, please."
+            embed.description = "Tag names can't be numbers."
+
+        elif not tag_content.strip():
+            embed.title = "Please don't do that"
+            embed.description = "Tags should not be empty, or filled with whitespace."
 
         else:
             if not (tag_name and tag_content):
@@ -222,7 +226,7 @@ class Tags:
                 embed.title = "Tag successfully added"
                 embed.description = f"**{tag_name}** added to tag database."
             else:
-                embed.title = "Database error",
+                embed.title = "Database error"
                 embed.description = ("There was a problem adding the data to the tags database. "
                                      "Please try again. If the problem persists, check the API logs.")
 
