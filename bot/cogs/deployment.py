@@ -1,6 +1,4 @@
 # coding=utf-8
-from aiohttp import ClientSession
-
 from discord import Colour, Embed
 from discord.ext.commands import AutoShardedBot, Context, command
 
@@ -23,9 +21,8 @@ class Deployment:
         Trigger bot deployment on the server - will only redeploy if there were changes to deploy
         """
 
-        with ClientSession() as session:
-            response = await session.get(DEPLOY_URL, headers={"token": DEPLOY_BOT_KEY})
-            result = response.text()
+        response = await self.bot.http_session.get(DEPLOY_URL, headers={"token": DEPLOY_BOT_KEY})
+        result = response.text()
 
         if result == "True":
             await ctx.send(f"{ctx.author.mention} Bot deployment started.")
@@ -39,9 +36,8 @@ class Deployment:
         Trigger website deployment on the server - will only redeploy if there were changes to deploy
         """
 
-        with ClientSession() as session:
-            response = await session.get(DEPLOY_URL, headers={"token": DEPLOY_SITE_KEY})
-            result = response.text()
+        response = await self.bot.http_session.get(DEPLOY_URL, headers={"token": DEPLOY_SITE_KEY})
+        result = response.text()
 
         if result == "True":
             await ctx.send(f"{ctx.author.mention} Site deployment started.")
@@ -55,9 +51,8 @@ class Deployment:
         Check the various deployment uptimes for each service
         """
 
-        with ClientSession() as session:
-            response = await session.get(STATUS_URL)
-            data = await response.json()
+        response = await self.bot.http_session.get(STATUS_URL)
+        data = await response.json()
 
         embed = Embed(
             title="Service status",
