@@ -98,7 +98,7 @@ class Bot:
                     content = content[6:]
                 elif content.lower().startswith("py"):
                     content = content[2:]
-        
+
                 # Strip again to remove the whitespace(s) left before the code
                 # If the msg looked like "Python <code>" before removing Python
                 content = content.strip()
