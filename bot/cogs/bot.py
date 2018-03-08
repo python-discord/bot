@@ -104,7 +104,7 @@ class Bot:
 
     async def on_message(self, msg: Message):
         if msg.channel.id in self.channel_cooldowns:
-            on_cooldown = time.time() - self.channel_cooldowns[msg.channel.id] > 300
+            on_cooldown = time.time() - self.channel_cooldowns[msg.channel.id] < 300
             if not on_cooldown or msg.channel.id == DEVTEST_CHANNEL:
                 try:
                     # Attempts to parse the message into an AST node.
