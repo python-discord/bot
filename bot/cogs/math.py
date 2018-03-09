@@ -5,7 +5,7 @@ import asyncio
 import sys
 from contextlib import suppress
 from io import BytesIO
-from re import search
+from re import search, finditer
 from subprocess import PIPE, Popen, STDOUT, TimeoutExpired  # noqa: B404
 
 from aiohttp import ClientSession
@@ -17,7 +17,7 @@ from discord.ext.commands import command
 LATEX_URL = "https://latex2png.com"
 
 
-async def run_sympy(sympy_code: str, calc: bool = False, timeout: int = 10) -> str:
+async def run_sympy(sympy_code: str, calc: bool = False, timeout: int = 10) -> tuple:
     if calc:
         code_ = "parse_expr(sys.argv[1]).doit()"  # Run the expression
     else:
@@ -46,14 +46,50 @@ async def run_sympy(sympy_code: str, calc: bool = False, timeout: int = 10) -> s
     return proc.returncode, proc.stdout.read().decode().strip()
 
 
+async def download_latex(latex: str) -> File:
+    data = {
+        "latex": latex,
+        "res": 300,
+        "color": 808080
+    }
+
+    async with ClientSession() as session:
+        async with session.post(LATEX_URL, data=data) as resp:
+            html = await resp.text()
+
+        name = search(r'hist\.request\.basename = "(?P<url>[^"]+)"', html).group('url')
+
+        async with session.get(f"{LATEX_URL}/output/{name}.png") as resp:
+            bytes_img = await resp.read()
+
+    return File(fp=BytesIO(bytes_img), filename="latex.png")
+
+
 class Math:
+    latex_regexp = r"\$(?P<lim>`{1,2})(?P<latex>.+?)(?P=lim)"
+
     def __init__(self, bot):
         self.bot = bot
+
+    async def on_message(self, message):
+        """Parser for LaTeX
+        Checks for any $`...` or $``...`` in a message,
+        and uploads the rendered images
+        """
+        files = []
+        for match in finditer(self.latex_regexp, message.content):
+            latex = match.group('latex')
+            files.append(
+                await download_latex(latex)
+            )
+
+        if files:
+            await message.channel.send(files=files)
 
     @command()
     async def latexify(self, ctx, *, expr: str):
         """
-        Return the LaTex output for a mathematical expression
+        Return the LaTeX output for a mathematical expression
         """
 
         fixed_expr = expr.replace('^', '**').strip('`')  # Syntax fixes
@@ -72,29 +108,14 @@ class Math:
                 return
 
             # Send LaTeX to website to get image
-            data = {
-                "latex": parsed,
-                "res": 300,
-                "color": 808080
-            }
-
-            async with ClientSession() as session:
-                async with session.post(LATEX_URL, data=data) as resp:
-                    html = await resp.text()
-
-                name = search(r'hist\.request\.basename = "(?P<url>[^"]+)"', html).group('url')
-
-                async with session.get(f"{LATEX_URL}/output/{name}.png") as resp:
-                    bytes_img = await resp.read()
-
-            file = File(fp=BytesIO(bytes_img), filename="latex.png")
+            file = await download_latex(parsed)
 
             await ctx.send(file=file)
 
     @command()
     async def calc(self, ctx, *, expr: str):
         """
-        Return the LaTex output for the solution to a mathematical expression
+        Return the LaTeX output for the solution to a mathematical expression
         """
 
         fixed_expr = expr.replace('^', '**').strip('`')  # Syntax fixes
@@ -113,22 +134,7 @@ class Math:
                 return
 
             # Send LaTeX to website to get image
-            data = {
-                "latex": parsed,
-                "res": 300,
-                "color": 808080
-            }
-
-            async with ClientSession() as session:
-                async with session.post(LATEX_URL, data=data) as resp:
-                    html = await resp.text()
-
-                name = search(r'hist\.request\.basename = "(?P<url>[^"]+)"', html).group('url')
-
-                async with session.get(f"{LATEX_URL}/output/{name}.png") as resp:
-                    bytes_img = await resp.read()
-
-            file = File(fp=BytesIO(bytes_img), filename="latex.png")
+            file = await download_latex(parsed)
 
             await ctx.send(file=file)
 
