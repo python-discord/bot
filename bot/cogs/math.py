@@ -5,7 +5,7 @@ import asyncio
 import sys
 from contextlib import suppress
 from io import BytesIO
-from re import search, finditer
+from re import finditer, search
 from subprocess import PIPE, Popen, STDOUT, TimeoutExpired  # noqa: B404
 
 from aiohttp import ClientSession
