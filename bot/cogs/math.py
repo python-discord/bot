@@ -66,7 +66,7 @@ async def download_latex(latex: str) -> File:
 
 
 class Math:
-    latex_regexp = r"\$(?P<lim>`{1,2})(?P<latex>.+?)(?P=lim)"
+    latex_regexp = r"\$(?P<lim>`{1,2})(?P<latex>.+?[^\\])(?P=lim)"
 
     def __init__(self, bot):
         self.bot = bot
