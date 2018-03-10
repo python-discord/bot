@@ -1,16 +1,16 @@
 # coding=utf-8
-import ast
+# import ast
 import re
-import time
+# import time
 
-from discord import Embed, Message
+from discord import Embed  # Message
 from discord.ext.commands import AutoShardedBot, Context, command, group
 
 from dulwich.repo import Repo
 
-from bot.constants import (DEVTEST_CHANNEL, HELP1_CHANNEL, HELP2_CHANNEL,
-                           HELP3_CHANNEL, PYTHON_CHANNEL, PYTHON_GUILD,
-                           VERIFIED_ROLE)
+from bot.constants import (BOT_CHANNEL, DEVTEST_CHANNEL, HELP1_CHANNEL,
+                           HELP2_CHANNEL, HELP3_CHANNEL, PYTHON_CHANNEL,
+                           PYTHON_GUILD, VERIFIED_ROLE)
 from bot.decorators import with_role
 
 
@@ -27,7 +27,8 @@ class Bot:
                                   HELP2_CHANNEL: 0,
                                   HELP3_CHANNEL: 0,
                                   PYTHON_CHANNEL: 0,
-                                  DEVTEST_CHANNEL: 0
+                                  DEVTEST_CHANNEL: 0,
+                                  BOT_CHANNEL: 0
         }  # noqa. E124
 
     @group(invoke_without_command=True, name="bot", hidden=True)
@@ -104,37 +105,37 @@ class Bot:
                 content = content.strip()
                 return content
 
-    async def on_message(self, msg: Message):
-        if msg.channel.id in self.channel_cooldowns:
-            on_cooldown = time.time() - self.channel_cooldowns[msg.channel.id] < 300
-            if not on_cooldown or msg.channel.id == DEVTEST_CHANNEL:
-                try:
-                    content = self.codeblock_stripping(msg.content)
-                    if not content:
-                        return
-
-                    # Attempts to parse the message into an AST node.
-                    # Invalid Python code will raise a SyntaxError.
-                    tree = ast.parse(content)
-
-                    # Multiple lines of single words could be interpreted as expressions.
-                    # This check is to avoid all nodes being parsed as expressions.
-                    # (e.g. words over multiple lines)
-                    if not all(isinstance(node, ast.Expr) for node in tree.body):
-                        codeblock_tag = await self.bot.get_cog("Tags").get_tag_data("codeblock")
-                        if codeblock_tag == {}:
-                            # todo: add logging
-                            return
-                        howto = (f"Hey {msg.author.mention}!\n\n"
-                                 "I noticed you were trying to paste code into this channel.\n\n"
-                                 f"{codeblock_tag['tag_content']}")
-
-                        howto_embed = Embed(description=howto)
-                        await msg.channel.send(embed=howto_embed)
-                        self.channel_cooldowns[msg.channel.id] = time.time()
-                except SyntaxError:
-                    # todo: add logging
-                    pass
+#    async def on_message(self, msg: Message):
+#        if msg.channel.id in self.channel_cooldowns:
+#            on_cooldown = time.time() - self.channel_cooldowns[msg.channel.id] < 300
+#            if not on_cooldown or msg.channel.id == DEVTEST_CHANNEL:
+#                try:
+#                    content = self.codeblock_stripping(msg.content)
+#                    if not content:
+#                        return
+#
+#                    # Attempts to parse the message into an AST node.
+#                    # Invalid Python code will raise a SyntaxError.
+#                    tree = ast.parse(content)
+#
+#                    # Multiple lines of single words could be interpreted as expressions.
+#                    # This check is to avoid all nodes being parsed as expressions.
+#                    # (e.g. words over multiple lines)
+#                    if not all(isinstance(node, ast.Expr) for node in tree.body):
+#                        codeblock_tag = await self.bot.get_cog("Tags").get_tag_data("codeblock")
+#                        if codeblock_tag == {}:
+#                            # todo: add logging
+#                            return
+#                        howto = (f"Hey {msg.author.mention}!\n\n"
+#                                 "I noticed you were trying to paste code into this channel.\n\n"
+#                                 f"{codeblock_tag['tag_content']}")
+#
+#                        howto_embed = Embed(description=howto)
+#                        await msg.channel.send(embed=howto_embed)
+#                        self.channel_cooldowns[msg.channel.id] = time.time()
+#                except SyntaxError:
+#                    # todo: add logging
+#                    pass
 
 
 def setup(bot):
