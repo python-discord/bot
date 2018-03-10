@@ -24,7 +24,7 @@ class Events:
             response = await self.bot.http_session.post(
                 url=SITE_API_USER_URL,
                 json=list(users),
-                headers={"X-API-ey": SITE_API_KEY}
+                headers={"X-API-Key": SITE_API_KEY}
             )
 
             return await response.json()
