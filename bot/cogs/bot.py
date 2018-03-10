@@ -29,7 +29,6 @@ class Bot:
                                   PYTHON_CHANNEL: 0,
                                   DEVTEST_CHANNEL: 0,
                                   BOT_CHANNEL: 0
-
         }  # noqa. E124
 
     @group(invoke_without_command=True, name="bot", hidden=True)
