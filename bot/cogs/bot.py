@@ -10,7 +10,7 @@ from dulwich.repo import Repo
 
 from bot.constants import (DEVTEST_CHANNEL, HELP1_CHANNEL, HELP2_CHANNEL,
                            HELP3_CHANNEL, PYTHON_CHANNEL, PYTHON_GUILD,
-                           VERIFIED_ROLE)
+                           VERIFIED_ROLE, BOT_CHANNEL)
 from bot.decorators import with_role
 
 
@@ -27,7 +27,9 @@ class Bot:
                                   HELP2_CHANNEL: 0,
                                   HELP3_CHANNEL: 0,
                                   PYTHON_CHANNEL: 0,
-                                  DEVTEST_CHANNEL: 0
+                                  DEVTEST_CHANNEL: 0,
+                                  BOT_CHANNEL: 0
+
         }  # noqa. E124
 
     @group(invoke_without_command=True, name="bot", hidden=True)
