@@ -3,7 +3,7 @@
 import re
 # import time
 
-from discord import Embed # Message
+from discord import Embed  # Message
 from discord.ext.commands import AutoShardedBot, Context, command, group
 
 from dulwich.repo import Repo
