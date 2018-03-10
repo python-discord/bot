@@ -8,6 +8,7 @@ from io import BytesIO
 from re import finditer, search
 from subprocess import PIPE, Popen, STDOUT, TimeoutExpired  # noqa: B404
 
+from aiohttp import ClientSession
 from discord import File
 from discord.ext.commands import command
 
