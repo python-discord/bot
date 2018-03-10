@@ -1,7 +1,28 @@
 # coding=utf-8
 import ast
+import logging
+import sys
+from logging import StreamHandler
+from logging.handlers import SysLogHandler
 
 import discord.ext.commands.view
+
+from bot.constants import PAPERTRAIL_ADDRESS, PAPERTRAIL_PORT
+
+
+logging_handlers = []
+
+if PAPERTRAIL_ADDRESS:
+    logging_handlers.append(SysLogHandler(address=(PAPERTRAIL_ADDRESS, PAPERTRAIL_PORT)))
+
+logging_handlers.append(StreamHandler(stream=sys.stderr))
+
+logging.basicConfig(
+    format="%(asctime)s pd.beardfist.com Bot: | %(name)15s | %(levelname)8s | %(message)s",
+    datefmt="%b %d %H:%M:%S",
+    level=logging.INFO,
+    handlers=logging_handlers
+)
 
 
 def _skip_string(self, string: str) -> bool:
