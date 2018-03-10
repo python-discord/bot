@@ -8,8 +8,6 @@ from io import BytesIO
 from re import search
 from subprocess import PIPE, Popen, STDOUT, TimeoutExpired  # noqa: B404
 
-from aiohttp import ClientSession
-
 from discord import File
 from discord.ext.commands import command
 
@@ -78,14 +76,13 @@ class Math:
                 "color": 808080
             }
 
-            async with ClientSession() as session:
-                async with session.post(LATEX_URL, data=data) as resp:
-                    html = await resp.text()
+            async with self.bot.http_session.post(LATEX_URL, data=data) as resp:
+                html = await resp.text()
 
-                name = search(r'hist\.request\.basename = "(?P<url>[^"]+)"', html).group('url')
+            name = search(r'hist\.request\.basename = "(?P<url>[^"]+)"', html).group('url')
 
-                async with session.get(f"{LATEX_URL}/output/{name}.png") as resp:
-                    bytes_img = await resp.read()
+            async with self.bot.http_session.get(f"{LATEX_URL}/output/{name}.png") as resp:
+                bytes_img = await resp.read()
 
             file = File(fp=BytesIO(bytes_img), filename="latex.png")
 
@@ -119,14 +116,13 @@ class Math:
                 "color": 808080
             }
 
-            async with ClientSession() as session:
-                async with session.post(LATEX_URL, data=data) as resp:
-                    html = await resp.text()
+            async with self.bot.http_session.post(LATEX_URL, data=data) as resp:
+                html = await resp.text()
 
-                name = search(r'hist\.request\.basename = "(?P<url>[^"]+)"', html).group('url')
+            name = search(r'hist\.request\.basename = "(?P<url>[^"]+)"', html).group('url')
 
-                async with session.get(f"{LATEX_URL}/output/{name}.png") as resp:
-                    bytes_img = await resp.read()
+            async with self.bot.http_session.get(f"{LATEX_URL}/output/{name}.png") as resp:
+                bytes_img = await resp.read()
 
             file = File(fp=BytesIO(bytes_img), filename="latex.png")
 

@@ -1,9 +1,9 @@
 # coding=utf-8
-# import ast
+import ast
 import re
-# import time
+import time
 
-from discord import Embed  # Message
+from discord import Embed, Message
 from discord.ext.commands import AutoShardedBot, Context, command, group
 
 from dulwich.repo import Repo
@@ -104,7 +104,6 @@ class Bot:
                 content = content.strip()
                 return content
 
-    """
     async def on_message(self, msg: Message):
         if msg.channel.id in self.channel_cooldowns:
             on_cooldown = time.time() - self.channel_cooldowns[msg.channel.id] < 300
@@ -136,7 +135,6 @@ class Bot:
                 except SyntaxError:
                     # todo: add logging
                     pass
-    """
 
 
 def setup(bot):
