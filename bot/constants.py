@@ -50,5 +50,5 @@ RED_CHEVRON = "<:redchevron:418112778184818698>"
 WHITE_CHEVRON = "<:whitechevron:418110396973711363>"
 
 # PaperTrail logging
-PAPERTRAIL_ADDRESS = os.environ.get("PAPERTRAIL_ADDRESS")
-PAPERTRAIL_PORT = int(os.environ.get("PAPERTRAIL_PORT", 0))
+PAPERTRAIL_ADDRESS = os.environ.get("PAPERTRAIL_ADDRESS") or None
+PAPERTRAIL_PORT = int(os.environ.get("PAPERTRAIL_PORT") or 0)
