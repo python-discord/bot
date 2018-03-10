@@ -1,7 +1,5 @@
 import time
 
-from aiohttp import ClientSession
-
 from discord import Colour, Embed
 from discord.ext.commands import AutoShardedBot, Context, command
 
@@ -36,9 +34,8 @@ class Tags:
         if tag_name:
             params['tag_name'] = tag_name
 
-        async with ClientSession() as session:
-            response = await session.get(SITE_API_TAGS_URL, headers=self.headers, params=params)
-            tag_data = await response.json()
+        response = await self.bot.http_session.get(SITE_API_TAGS_URL, headers=self.headers, params=params)
+        tag_data = await response.json()
 
         return tag_data
 
@@ -59,9 +56,8 @@ class Tags:
             'tag_content': tag_content
         }
 
-        async with ClientSession() as session:
-            response = await session.post(SITE_API_TAGS_URL, headers=self.headers, json=params)
-            tag_data = await response.json()
+        response = await self.bot.http_session.post(SITE_API_TAGS_URL, headers=self.headers, json=params)
+        tag_data = await response.json()
 
         return tag_data
 
@@ -81,9 +77,8 @@ class Tags:
         if tag_name:
             params['tag_name'] = tag_name
 
-        async with ClientSession() as session:
-            response = await session.delete(SITE_API_TAGS_URL, headers=self.headers, json=params)
-            tag_data = await response.json()
+        response = await self.bot.http_session.delete(SITE_API_TAGS_URL, headers=self.headers, json=params)
+        tag_data = await response.json()
 
         return tag_data
 
