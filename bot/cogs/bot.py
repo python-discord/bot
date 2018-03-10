@@ -1,9 +1,9 @@
 # coding=utf-8
-import ast
+# import ast
 import re
-import time
+# import time
 
-from discord import Embed, Message
+from discord import Embed # Message
 from discord.ext.commands import AutoShardedBot, Context, command, group
 
 from dulwich.repo import Repo
