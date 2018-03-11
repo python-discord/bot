@@ -10,10 +10,13 @@ import discord.ext.commands.view
 from bot.constants import PAPERTRAIL_ADDRESS, PAPERTRAIL_PORT
 
 
+# Set up logging
 logging_handlers = []
 
 if PAPERTRAIL_ADDRESS:
-    logging_handlers.append(SysLogHandler(address=(PAPERTRAIL_ADDRESS, PAPERTRAIL_PORT)))
+    papertrail_handler = SysLogHandler(address=(PAPERTRAIL_ADDRESS, PAPERTRAIL_PORT))
+    papertrail_handler.setLevel(logging.TRACE)
+    logging_handlers.append(papertrail_handler)
 
 logging_handlers.append(StreamHandler(stream=sys.stderr))
 
@@ -23,6 +26,8 @@ logging.basicConfig(
     level=logging.INFO,
     handlers=logging_handlers
 )
+
+log = logging.getLogger(__name__)
 
 
 def _skip_string(self, string: str) -> bool:
@@ -69,10 +74,13 @@ def _get_word(self) -> str:
     self.previous = self.index
     result = self.buffer[self.index:self.index + pos]
     self.index += pos
+    next = self.buffer[self.index + 1]
 
-    if current == "(" and self.buffer[self.index + 1] != ")":
+    if current == "(" and next != ")" and len(self.buffer) != self.index:
+        log.debug(f"A python-style command was used. Attempting to parse. Buffer is {self.buffer}")
 
         # Parse the args
+        log.debug("Parsing command with ast.literal_eval")
         args = self.buffer[self.index:]
         args = ast.literal_eval(args)
 
@@ -86,17 +94,24 @@ def _get_word(self) -> str:
 
             # Other types get converted to strings
             if not isinstance(arg, str):
+                log.debug(f"{arg} is not a str, casting to str.")
                 arg = str(arg)
 
             # Adding double quotes to every argument
+            log.debug(f"Wrapping all args in double quotes.")
             new_args.append(f'"{arg}"')
 
+        # Add the result to the buffer
         new_args = " ".join(new_args)
         self.buffer = f"{self.buffer[:self.index]} {new_args}"
-        self.end = len(self.buffer)  # Recalibrate the end since we've removed commas
+        log.debug(f"Modified the buffer. New buffer is now {self.buffer}")
 
-    else:
+        # Recalibrate the end since we've removed commas
+        self.end = len(self.buffer)
+
+    elif current == "(" and next == ")":
         # Move the cursor to capture the ()'s
+        self.debug("User called command without providing arguments.")
         pos += 2
         result = self.buffer[self.previous:self.index + (pos+2)]
         self.index += 2

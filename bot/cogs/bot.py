@@ -93,6 +93,7 @@ class Bot:
                 return None
             else:
                 # Stripping backticks from every line of the message.
+                log.debug(f"Stripping backticks from message.\n\n{msg}\n\n")
                 content = ""
                 for line in msg.splitlines():
                     content += line.strip("`") + "\n"
@@ -100,6 +101,7 @@ class Bot:
                 content = content.strip()
 
                 # Remove "Python" or "Py" from top of the message if exists
+                log.debug(f"Removing 'py' or 'python' from message.\n\n{content}\n\n")
                 if content.lower().startswith("python"):
                     content = content[6:]
                 elif content.lower().startswith("py"):
@@ -108,6 +110,7 @@ class Bot:
                 # Strip again to remove the whitespace(s) left before the code
                 # If the msg looked like "Python <code>" before removing Python
                 content = content.strip()
+                log.debug(f"Returning message.\n\n{content}\n\n")
                 return content
 
     async def on_message(self, msg: Message):
