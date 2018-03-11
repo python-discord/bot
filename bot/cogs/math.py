@@ -30,7 +30,7 @@ async def run_sympy(sympy_code: str, calc: bool = False, timeout: int = 10) -> t
         # They're trying to exploit something, raise an error
         raise TypeError("'__' not allowed in sympy code")
     
-    log.info("Running expression")
+    log.info(f"Running expression (Will eval: {calc}")
 
     proc = Popen([  # noqa: B603
                     sys.executable, "-c",
@@ -38,6 +38,8 @@ async def run_sympy(sympy_code: str, calc: bool = False, timeout: int = 10) -> t
                     f"print(sympy.latex({code_}))", sympy_code
                  ], env={},  # Disable environment variables for security
                  stdout=PIPE, stderr=STDOUT)  # reroute all to stdout
+
+    log.debug("Waiting for process to end...")
 
     for _ in range(timeout*4):  # Check if done every .25 seconds for `timeout` seconds
         await asyncio.sleep(1/4)
@@ -92,7 +94,7 @@ class Math:
             )
 
         if files:
-            log.info("Latex expressions found, uploading...")
+            log.info("Latex expressions found in message, uploading...")
             await message.channel.send(files=files)
 
     @command()
