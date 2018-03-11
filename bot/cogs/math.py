@@ -29,7 +29,7 @@ async def run_sympy(sympy_code: str, calc: bool = False, timeout: int = 10) -> t
     if "__" in sympy_code:
         # They're trying to exploit something, raise an error
         raise TypeError("'__' not allowed in sympy code")
-    
+
     log.info(f"Running expression (Will eval: {calc}")
 
     proc = Popen([  # noqa: B603
