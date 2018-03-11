@@ -8,7 +8,7 @@ from bot.constants import BOT_CHANNEL
 
 RESPONSES = {
     "_pokes {us}_": "_Pokes {them}_",
-    "_eats {us}_": "_Tastes crunchy_",
+    "_eats {us}_": "_Tastes slimy and snake-like_",
     "_pets {us}_": "_Purrs_"
 }
 
