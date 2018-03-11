@@ -63,12 +63,12 @@ class Events:
                 f"Here's what I'm missing: **{e.missing_perms}**"
             )
         elif isinstance(e, CommandInvokeError):
-            log.error(f"function '{command.name}' failed with error message: '{e}'")
+            log.error(f"'{command.name}' failed with error message: '{e}'")
             await ctx.send(
                 f"Sorry, an unexpected error occurred. Please let us know!\n\n```{e}```"
             )
             raise e.original
-        log.error(f"function '{command.name}' failed with error message: '{e}'")
+        log.error(f"'{command.name}' failed with error message: '{e}'")
 
     async def on_ready(self):
         users = []
@@ -124,7 +124,7 @@ class Events:
         after_role_names = [role.name for role in after.roles]  # type: List[str]
         role_ids = [r.id for r in after.roles]  # type: List[int]
 
-        log.info(f"member roles changing from {before_role_names} to {after_role_names}")
+        log.info(f"{before.display_name} roles changing from {before_role_names} to {after_role_names}")
 
         if OWNER_ROLE in role_ids:
             self.send_updated_users({

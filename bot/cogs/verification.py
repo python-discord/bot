@@ -24,22 +24,24 @@ class Verification:
         ctx = await self.bot.get_context(message)  # type: Context
 
         if ctx.command is not None and ctx.command.name == "accept":
-            return  # user called self.accept() or one of its
+            return  # They used the accept command
 
         if ctx.channel.id == VERIFICATION_CHANNEL:  # We're in the verification channel
             for role in ctx.author.roles:
                 if role.id == VERIFIED_ROLE:
-                    log.info(f"user {ctx.author} posted '{ctx.message.content}' in the verification channel, but is already verified")  # noqa: E501
+                    log.info(f"{ctx.author} posted '{ctx.message.content}' "
+                             "in the verification channel, but is already verified")
                     return  # They're already verified
 
-            log.info(f"user {ctx.author} posted '{ctx.message.content}' in the verification channel, bot is providing instructions how to verify")  # noqa: E501
+            log.info(f"{ctx.author} posted '{ctx.message.content}' in the verification "
+                     "channel, we is providing instructions how to verify")
             await ctx.send(
                 f"{ctx.author.mention} Please type `self.accept()` to verify that you accept our rules, "
                 f"and gain access to the rest of the server.",
                 delete_after=10
             )
 
-            log.info(f"deleting the previous message posted by {ctx.author}")
+            log.info(f"Deleting the message posted by {ctx.author}")
             await ctx.message.delete()
 
     @command(name="accept", hidden=True, aliases=["verify", "verified", "accepted", "accept()"])
@@ -50,10 +52,10 @@ class Verification:
         Accept our rules and gain access to the rest of the server
         """
 
-        log.info(f"user {ctx.author} called self.accept(), giving user Developer role")
+        log.info(f"{ctx.author} called self.accept(). Assigning the user 'Developer' role")
         await ctx.author.add_roles(Object(VERIFIED_ROLE), reason="Accepted the rules")
 
-        log.info(f"deleting the self.accept() message posted by {ctx.author}")
+        log.info(f"Deleting the message posted by {ctx.author}")
         await ctx.message.delete()
 
 
