@@ -45,7 +45,7 @@ class Fun:
         response = RESPONSES.get(content)
 
         if response:
-            log.info(f"{message.author} said '{content}'. Responding with '{response}'.")
+            log.debug(f"{message.author} said '{content}'. Responding with '{response}'.")
             await message.channel.send(response.replace("{them}", message.author.mention))
 
 

@@ -93,7 +93,7 @@ class Tags:
         :param ctx: Discord message context
         """
 
-        log.info(f"{ctx.author} requested info about the tags cog")
+        log.debug(f"{ctx.author} requested info about the tags cog")
         return await ctx.invoke(self.bot.get_command("help"), "Tags")
 
     @command(name="tags.get()", aliases=["tags.get", "tags.show()", "tags.show", "get_tag"])
@@ -132,8 +132,8 @@ class Tags:
 
         if _command_on_cooldown(tag_name):
             time_left = TAG_COOLDOWN - (time.time() - self.tag_cooldowns[tag_name]["time"])
-            log.info(f"{ctx.author} tried to get the '{tag_name}' tag, but the tag is on cooldown. "
-                     f"Cooldown ends in {time_left:.1f} seconds.")
+            log.warning(f"{ctx.author} tried to get the '{tag_name}' tag, but the tag is on cooldown. "
+                        f"Cooldown ends in {time_left:.1f} seconds.")
             return
 
         embed = Embed()
@@ -146,7 +146,7 @@ class Tags:
             embed.colour = Colour.blurple()
 
             if tag_name:
-                log.info(f"{ctx.author} requested the tag '{tag_name}'")
+                log.debug(f"{ctx.author} requested the tag '{tag_name}'")
                 embed.title = tag_name
                 self.tag_cooldowns[tag_name] = {
                     "time": time.time(),
@@ -157,7 +157,7 @@ class Tags:
                 embed.title = "**Current tags**"
 
             if isinstance(tag_data, list):
-                log.info(f"{ctx.author} requested a list of all tags")
+                log.debug(f"{ctx.author} requested a list of all tags")
                 tags = [f"**»**   {tag['tag_name']}" for tag in tag_data]
                 tags = sorted(tags)
 
@@ -181,7 +181,7 @@ class Tags:
 
         # Paginate if this is a list of all tags
         if tags:
-            log.info(f"Returning a paginated list of all tags.")
+            log.debug(f"Returning a paginated list of all tags.")
             return await LinePaginator.paginate(
                 (lines for lines in tags),
                 ctx, embed,
@@ -190,8 +190,6 @@ class Tags:
                 max_lines=15
             )
 
-        log.info("Returning tags.get result. If no warnings can be seen in the "
-                 "warning log, we're returning the tag the user requested.")
         return await ctx.send(embed=embed)
 
     @with_role(ADMIN_ROLE, OWNER_ROLE, MODERATOR_ROLE)
@@ -238,9 +236,9 @@ class Tags:
             tag_data = await self.post_tag_data(tag_name, tag_content)
 
             if tag_data.get("success"):
-                log.info(f"{ctx.author} successfully added the following tag to our database: \n"
-                         f"tag_name: {tag_name}\n"
-                         f"tag_content: '{tag_content}'")
+                log.debug(f"{ctx.author} successfully added the following tag to our database: \n"
+                          f"tag_name: {tag_name}\n"
+                          f"tag_content: '{tag_content}'")
                 embed.colour = Colour.blurple()
                 embed.title = "Tag successfully added"
                 embed.description = f"**{tag_name}** added to tag database."
@@ -271,7 +269,7 @@ class Tags:
         tag_data = await self.delete_tag_data(tag_name)
 
         if tag_data.get("success"):
-            log.info(f"{ctx.author} successfully deleted the tag called '{tag_name}'")
+            log.debug(f"{ctx.author} successfully deleted the tag called '{tag_name}'")
             embed.colour = Colour.blurple()
             embed.title = tag_name
             embed.description = f"Tag successfully removed: {tag_name}."

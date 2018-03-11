@@ -29,10 +29,10 @@ class Deployment:
         result = response.text()
 
         if result == "True":
-            log.info(f"{ctx.author} triggered deployment for bot. Deployment was started.")
+            log.debug(f"{ctx.author} triggered deployment for bot. Deployment was started.")
             await ctx.send(f"{ctx.author.mention} Bot deployment started.")
         else:
-            log.info(f"{ctx.author} triggered deployment for bot. Deployment failed to start.")
+            log.error(f"{ctx.author} triggered deployment for bot. Deployment failed to start.")
             await ctx.send(f"{ctx.author.mention} Bot deployment failed - check the logs!")
 
     @command(name="deploy_site()", aliases=["bot.deploy_site", "bot.deploy_site()", "deploy_site"])
@@ -46,10 +46,10 @@ class Deployment:
         result = response.text()
 
         if result == "True":
-            log.info(f"{ctx.author} triggered deployment for site. Deployment was started.")
+            log.debug(f"{ctx.author} triggered deployment for site. Deployment was started.")
             await ctx.send(f"{ctx.author.mention} Site deployment started.")
         else:
-            log.info(f"{ctx.author} triggered deployment for site. Deployment failed to start.")
+            log.error(f"{ctx.author} triggered deployment for site. Deployment failed to start.")
             await ctx.send(f"{ctx.author.mention} Site deployment failed - check the logs!")
 
     @command(name="uptimes()", aliases=["bot.uptimes", "bot.uptimes()", "uptimes"])
@@ -59,7 +59,7 @@ class Deployment:
         Check the various deployment uptimes for each service
         """
 
-        log.info(f"{ctx.author} requested service uptimes.")
+        log.debug(f"{ctx.author} requested service uptimes.")
         response = await self.bot.http_session.get(STATUS_URL)
         data = await response.json()
 
@@ -75,7 +75,7 @@ class Deployment:
                 name=key, value=value, inline=True
             )
 
-        log.info(f"Uptimes retrieved and parsed, returning data.")
+        log.debug(f"Uptimes retrieved and parsed, returning data.")
         await ctx.send(embed=embed)
 
 

@@ -84,7 +84,7 @@ class Cogs:
                           f"{e}")
                 embed.description = f"Failed to load cog: {cog}\n\n```{e}```"
             else:
-                log.info(f"{ctx.author} requested we load the '{cog}' cog. Cog loaded!")
+                log.debug(f"{ctx.author} requested we load the '{cog}' cog. Cog loaded!")
                 embed.description = f"Cog loaded: {cog}"
                 embed.colour = Colour.green()
         else:
@@ -135,7 +135,7 @@ class Cogs:
                           f"{e}")
                 embed.description = f"Failed to unload cog: {cog}\n\n```{e}```"
             else:
-                log.info(f"{ctx.author} requested we unload the '{cog}' cog. Cog unloaded!")
+                log.debug(f"{ctx.author} requested we unload the '{cog}' cog. Cog unloaded!")
                 embed.description = f"Cog unloaded: {cog}"
                 embed.colour = Colour.green()
         else:
@@ -224,8 +224,8 @@ class Cogs:
                 for cog, error in failed_loads:
                     lines.append(f"`{cog}` {WHITE_CHEVRON} `{error}`")
 
-            log.info(f"{ctx.author} requested we reload all cogs. Here are the results: \n"
-                     f"{lines}")
+            log.debug(f"{ctx.author} requested we reload all cogs. Here are the results: \n"
+                      f"{lines}")
 
             return await LinePaginator.paginate(lines, ctx, embed, empty=False)
 
@@ -239,7 +239,7 @@ class Cogs:
                           f"{e}")
                 embed.description = f"Failed to reload cog: {cog}\n\n```{e}```"
             else:
-                log.info(f"{ctx.author} requested we reload the '{cog}' cog. Cog reloaded!")
+                log.debug(f"{ctx.author} requested we reload the '{cog}' cog. Cog reloaded!")
                 embed.description = f"Cog reload: {cog}"
                 embed.colour = Colour.green()
         else:
@@ -292,7 +292,7 @@ class Cogs:
 
             lines.append(f"{chevron}  {cog}")
 
-        log.info(f"{ctx.author} requested a list of all cogs. Returning paginated list.")
+        log.debug(f"{ctx.author} requested a list of all cogs. Returning a paginated list.")
         await LinePaginator.paginate(lines, ctx, embed, max_size=300, empty=False)
 
 

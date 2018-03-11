@@ -97,7 +97,7 @@ class Events:
                 })
 
         if users:
-            log.info(f"{len(users)} user roles updated")
+            log.debug(f"{len(users)} user roles updated")
             data = await self.send_updated_users(*users)  # type: dict
 
             if any(data.values()):
@@ -123,7 +123,7 @@ class Events:
         after_role_names = [role.name for role in after.roles]  # type: List[str]
         role_ids = [r.id for r in after.roles]  # type: List[int]
 
-        log.info(f"{before.display_name} roles changing from {before_role_names} to {after_role_names}")
+        log.debug(f"{before.display_name} roles changing from {before_role_names} to {after_role_names}")
 
         if OWNER_ROLE in role_ids:
             self.send_updated_users({
