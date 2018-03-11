@@ -1,4 +1,6 @@
 # coding=utf-8
+import logging
+
 from discord import Message
 from discord.ext.commands import AutoShardedBot
 
@@ -9,6 +11,8 @@ RESPONSES = {
     "_eats {us}_": "_Tastes crunchy_",
     "_pets {us}_": "_Purrs_"
 }
+
+log = logging.getLogger(__name__)
 
 
 class Fun:
@@ -41,9 +45,10 @@ class Fun:
         response = RESPONSES.get(content)
 
         if response:
+            log.info(f"{message.author} said '{content}'. Responding with '{response}'.")
             await message.channel.send(response.replace("{them}", message.author.mention))
 
 
 def setup(bot):
     bot.add_cog(Fun(bot))
-    print("Cog loaded: Fun")
+    log.info("Cog loaded: Fun")

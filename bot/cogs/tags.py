@@ -289,4 +289,4 @@ class Tags:
 
 def setup(bot):
     bot.add_cog(Tags(bot))
-    print("Cog loaded: Tags")
+    log.info("Cog loaded: Tags")
