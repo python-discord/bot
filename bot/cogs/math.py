@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
+import logging
 import sys
 from contextlib import suppress
 from io import BytesIO
@@ -12,6 +13,8 @@ from aiohttp import ClientSession
 
 from discord import File
 from discord.ext.commands import command
+
+log = logging.getLogger(__name__)
 
 
 LATEX_URL = "https://latex2png.com"
@@ -26,6 +29,8 @@ async def run_sympy(sympy_code: str, calc: bool = False, timeout: int = 10) -> t
     if "__" in sympy_code:
         # They're trying to exploit something, raise an error
         raise TypeError("'__' not allowed in sympy code")
+    
+    log.info("Running expression")
 
     proc = Popen([  # noqa: B603
                     sys.executable, "-c",
@@ -41,12 +46,15 @@ async def run_sympy(sympy_code: str, calc: bool = False, timeout: int = 10) -> t
         with suppress(TimeoutExpired):
             proc.wait(0)
             break  # ... But stop the loop when not raised
+    else:
+        log.warn("Calculation forcibly stopped for taking too long!")
 
     proc.kill()  # Kill the process regardless of whether it finished or not
     return proc.returncode, proc.stdout.read().decode().strip()
 
 
 async def download_latex(latex: str) -> File:
+    log.info("Downloading latex from 'API'")
     data = {
         "latex": latex,
         "res": 300,
@@ -84,6 +92,7 @@ class Math:
             )
 
         if files:
+            log.info("Latex expressions found, uploading...")
             await message.channel.send(files=files)
 
     @command()
