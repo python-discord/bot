@@ -63,12 +63,11 @@ class Events:
                 f"Here's what I'm missing: **{e.missing_perms}**"
             )
         elif isinstance(e, CommandInvokeError):
-            log.error(f"'{command.name}' failed with error message: '{e}'")
             await ctx.send(
                 f"Sorry, an unexpected error occurred. Please let us know!\n\n```{e}```"
             )
             raise e.original
-        log.error(f"'{command.name}' failed with error message: '{e}'")
+        log.error(f"COMMAND ERROR: '{e}'")
 
     async def on_ready(self):
         users = []

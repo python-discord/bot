@@ -1,4 +1,6 @@
 # coding=utf-8
+import logging
+
 from discord import Colour, Embed
 from discord.ext.commands import AutoShardedBot, Context, command
 
@@ -11,14 +13,11 @@ from bot.decorators import with_role
 from bot.pagination import LinePaginator
 from bot.utils import CaseInsensitiveDict
 
-
 CREATE_TASK_URL = "https://api.clickup.com/api/v1/list/{list_id}/task"
 EDIT_TASK_URL = "https://api.clickup.com/api/v1/task/{task_id}"
 GET_TASKS_URL = "https://api.clickup.com/api/v1/team/{team_id}/task"
 PROJECTS_URL = "https://api.clickup.com/api/v1/space/{space_id}/project"
-
-# Don't ask me why the below line is a syntax error, but that's what flake8 thinks...
-SPACES_URL = "https://api.clickup.com/api/v1/team/{team_id}/space"  # flake8: noqa
+SPACES_URL = "https://api.clickup.com/api/v1/team/{team_id}/space"
 TEAM_URL = "https://api.clickup.com/api/v1/team/{team_id}"
 
 HEADERS = {
@@ -27,6 +26,8 @@ HEADERS = {
 }
 
 STATUSES = ["open", "in progress", "review", "closed"]
+
+log = logging.getLogger(__name__)
 
 
 class ClickUp:
@@ -45,7 +46,7 @@ class ClickUp:
         result = await response.json()
 
         if "err" in result:
-            print(f"Failed to get ClickUp lists: `{result['ECODE']}`: {result['err']}")
+            log.error(f"Failed to get ClickUp lists: `{result['ECODE']}`: {result['err']}")
         else:
             # Save all the lists with their IDs so that we can get at them later
             for project in result["projects"]:
@@ -81,8 +82,9 @@ class ClickUp:
             if task_list in self.lists:
                 params["list_ids[]"] = self.lists[task_list]
             else:
-                embed.colour = Colour.red()
+                log.warning(f"{ctx.author} requested '{task_list}', but that list is unknown. Rejecting request.")
                 embed.description = f"Unknown list: {task_list}"
+                embed.colour = Colour.red()
                 return await ctx.send(embed=embed)
 
         if status and status != "*":
@@ -94,6 +96,9 @@ class ClickUp:
         result = await response.json()
 
         if "err" in result:
+            log.error("ClickUp responded to the task list request with an error!\n"
+                      f"error code: '{result['ECODE']}'\n"
+                      f"error: {result['err']}")
             embed.description = f"`{result['ECODE']}`: {result['err']}"
             embed.colour = Colour.red()
 
@@ -101,8 +106,10 @@ class ClickUp:
             tasks = result["tasks"]
 
             if not tasks:
-                embed.colour = Colour.red()
+                log.warning("{ctx.author} requested a list of ClickUp tasks, but no ClickUp tasks were found!")
                 embed.description = "No tasks found."
+                embed.colour = Colour.red()
+
             else:
                 lines = []
 
@@ -112,6 +119,8 @@ class ClickUp:
                     status = f"{task['status']['status'].title()}"
 
                     lines.append(f"{id_fragment} ({status})\n\u00BB {task['name']}")
+
+                log.warning(f"{ctx.author} requested a list of ClickUp tasks. Returning list.")
                 return await LinePaginator.paginate(lines, ctx, embed, max_size=750)
         return await ctx.send(embed=embed)
 
@@ -141,6 +150,9 @@ class ClickUp:
         result = await response.json()
 
         if "err" in result:
+            log.error("ClickUp responded to the get task request with an error!\n"
+                      f"error code: '{result['ECODE']}'\n"
+                      f"error: {result['err']}")
             embed.description = f"`{result['ECODE']}`: {result['err']}"
             embed.colour = Colour.red()
         else:
@@ -152,6 +164,7 @@ class ClickUp:
                     break
 
             if task is None:
+                log.warning(f"{ctx.author} requested the task '#{task_id}', but it could not be found.")
                 embed.description = f"Unable to find task with ID `#{task_id}`:"
                 embed.colour = Colour.red()
             else:
@@ -175,6 +188,7 @@ class ClickUp:
                         f"**Assignees**\n{assignees}"
                     )
 
+                log.debug(f"{ctx.author} requested the task '#{task_id}'. Returning the task data.")
                 return await LinePaginator.paginate(lines, ctx, embed, max_size=750)
         return await ctx.send(embed=embed)
 
@@ -191,11 +205,15 @@ class ClickUp:
         result = await response.json()
 
         if "err" in result:
+            log.error("ClickUp responded to the team request with an error!\n"
+                      f"error code: '{result['ECODE']}'\n"
+                      f"error: {result['err']}")
             embed = Embed(
                 colour=Colour.red(),
                 description=f"`{result['ECODE']}`: {result['err']}"
             )
         else:
+            log.debug(f"{ctx.author} requested a list of team members. Preparing the list...")
             embed = Embed(
                 colour=Colour.blurple()
             )
@@ -212,6 +230,7 @@ class ClickUp:
             url=f"https://app.clickup.com/{CLICKUP_TEAM}/{CLICKUP_SPACE}/"
         )
 
+        log.debug("List fully prepared, returning list to channel.")
         await ctx.send(embed=embed)
 
     @command(name="clickup.lists()", aliases=["clickup.lists", "lists"])
@@ -227,11 +246,15 @@ class ClickUp:
         result = await response.json()
 
         if "err" in result:
+            log.error("ClickUp responded to the lists request with an error!\n"
+                      f"error code: '{result['ECODE']}'\n"
+                      f"error: {result['err']}")
             embed = Embed(
                 colour=Colour.red(),
                 description=f"`{result['ECODE']}`: {result['err']}"
             )
         else:
+            log.debug(f"{ctx.author} requested a list of all ClickUp lists. Preparing the list...")
             embed = Embed(
                 colour=Colour.blurple()
             )
@@ -255,6 +278,7 @@ class ClickUp:
             url=f"https://app.clickup.com/{CLICKUP_TEAM}/{CLICKUP_SPACE}/"
         )
 
+        log.debug(f"List fully prepared, returning list to channel.")
         await ctx.send(embed=embed)
 
     @command(name="clickup.open()", aliases=["clickup.open", "open", "open_task"])
@@ -277,8 +301,10 @@ class ClickUp:
         if task_list in self.lists:
             task_list = self.lists[task_list]
         else:
-            embed.colour = Colour.red()
+            log.warning(f"{ctx.author} tried to open a new task on ClickUp, "
+                        f"but '{task_list}' is not a known list. Rejecting request.")
             embed.description = f"Unknown list: {task_list}"
+            embed.colour = Colour.red()
             return await ctx.send(embed=embed)
 
         response = await self.bot.http_session.post(
@@ -290,6 +316,9 @@ class ClickUp:
         result = await response.json()
 
         if "err" in result:
+            log.error("ClickUp responded to the get task request with an error!\n"
+                      f"error code: '{result['ECODE']}'\n"
+                      f"error: {result['err']}")
             embed.colour = Colour.red()
             embed.description = f"`{result['ECODE']}`: {result['err']}"
         else:
@@ -298,6 +327,8 @@ class ClickUp:
             project, task_list = self.lists[task_list].split("/", 1)
             task_list = f"{project.title()}/{task_list.title()}"
 
+            log.debug(f"{ctx.author} opened a new task on ClickUp: \n"
+                      f"{task_list} - #{task_id}")
             embed.description = f"New task created: [{task_list} \u00BB `#{task_id}`]({task_url})"
 
         await ctx.send(embed=embed)
@@ -317,8 +348,9 @@ class ClickUp:
         )
 
         if status.lower() not in STATUSES:
-            embed.colour = Colour.red()
+            log.warning(f"{ctx.author} tried to update a task on ClickUp, but '{status}' is not a known status.")
             embed.description = f"Unknown status: {status}"
+            embed.colour = Colour.red()
         else:
             response = await self.bot.http_session.put(
                 EDIT_TASK_URL.format(task_id=task_id), headers=HEADERS, json={"status": status}
@@ -326,9 +358,13 @@ class ClickUp:
             result = await response.json()
 
             if "err" in result:
+                log.error("ClickUp responded to the get task request with an error!\n"
+                          f"error code: '{result['ECODE']}'\n"
+                          f"error: {result['err']}")
                 embed.description = f"`{result['ECODE']}`: {result['err']}"
                 embed.colour = Colour.red()
             else:
+                log.debug(f"{ctx.author} updated a task on ClickUp: #{task_id}")
                 task_url = f"https://app.clickup.com/{CLICKUP_TEAM}/{CLICKUP_SPACE}/t/{task_id}"
                 embed.description = f"Task updated: [`#{task_id}`]({task_url})"
 
@@ -337,4 +373,4 @@ class ClickUp:
 
 def setup(bot):
     bot.add_cog(ClickUp(bot))
-    print("Cog loaded: ClickUp")
+    log.info("Cog loaded: ClickUp")
