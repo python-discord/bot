@@ -89,7 +89,7 @@ class Bot:
         if msg.count("\n") >= 3:
             # Filtering valid Python codeblocks and exiting if a valid Python codeblock is found
             if re.search("```(python|py)\n((?:.*\n*)+)```", msg, re.IGNORECASE):
-                log.trace(f"{msg.author} wrote a message that was already a "
+                log.trace(f"Someone wrote a message that was already a "
                           "valid Python syntax highlighted code block. No action taken.")
                 return None
             else:

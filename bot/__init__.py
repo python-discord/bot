@@ -108,10 +108,28 @@ def _get_word(self) -> str:
     self.index += pos
     next = None
 
+    # Check what's after the '('
     if len(self.buffer) != self.index:
         next = self.buffer[self.index + 1]
 
-    if current == "(" and next and next != ")":
+    # Is it possible to parse this without syntax error?
+    syntax_valid = True
+    try:
+        ast.literal_eval(self.buffer[self.index:])
+    except SyntaxError:
+        log.warning("The command cannot be parsed by ast.literal_eval because it raises a SyntaxError.")
+        # TODO: It would be nice if this actually made the bot return a SyntaxError. ClickUp #1b12z  # noqa: T000
+        syntax_valid = False
+
+    # Conditions for a valid, parsable command.
+    python_parse_conditions = (
+        current == "("
+        and next
+        and next != ")"
+        and syntax_valid
+    )
+
+    if python_parse_conditions:
         log.debug(f"A python-style command was used. Attempting to parse. Buffer is {self.buffer}. "
                   f"A step-by-step can be found in the trace log.")
 

@@ -203,35 +203,40 @@ class Tags:
         :param tag_content: The content of the tag.
         """
 
+        def is_number(string):
+            try:
+                float(string)
+            except ValueError:
+                return False
+            else:
+                return True
+
         embed = Embed()
         embed.colour = Colour.red()
 
+        # Newline in 'tag_name'
         if "\n" in tag_name:
             log.warning(f"{ctx.author} tried to put a newline in a tag name. "
                         "Rejecting the request.")
             embed.title = "Please don't do that"
             embed.description = "Don't be ridiculous. Newlines are obviously not allowed in the tag name."
 
-        elif tag_name.isdigit():
-            log.warning(f"{ctx.author} tried to create a tag with a digit as its name. "
-                        "Rejecting the request.")
-            embed.title = "Please don't do that"
-            embed.description = "Tag names can't be numbers."
-
-        elif not tag_content.strip():
+        # 'tag_name' or 'tag_content' consists of nothing but whitespace
+        elif not tag_content.strip() or not tag_name.strip():
             log.warning(f"{ctx.author} tried to create a tag with a name consisting only of whitespace. "
                         "Rejecting the request.")
             embed.title = "Please don't do that"
             embed.description = "Tags should not be empty, or filled with whitespace."
 
-        else:
-            if not (tag_name and tag_content):
-                log.warning(f"{ctx.author} tried to create a tag without providing both a name and some content. "
-                            "Rejecting the request.")
-                embed.title = "Missing parameters"
-                embed.description = "The tag needs both a name and some content."
-                return await ctx.send(embed=embed)
+        # 'tag_name' is a number of some kind, we don't allow that.
+        elif is_number(tag_name):
+            log.error("inside the is_number")
+            log.warning(f"{ctx.author} tried to create a tag with a digit as its name. "
+                        "Rejecting the request.")
+            embed.title = "Please don't do that"
+            embed.description = "Tag names can't be numbers."
 
+        else:
             tag_name = tag_name.lower()
             tag_data = await self.post_tag_data(tag_name, tag_content)
 
@@ -268,18 +273,24 @@ class Tags:
 
         tag_data = await self.delete_tag_data(tag_name)
 
-        if tag_data.get("success"):
+        if tag_data.get("success") is True:
             log.debug(f"{ctx.author} successfully deleted the tag called '{tag_name}'")
             embed.colour = Colour.blurple()
             embed.title = tag_name
             embed.description = f"Tag successfully removed: {tag_name}."
 
+        elif tag_data.get("success") is False:
+            log.debug(f"{ctx.author} tried to delete a tag called '{tag_name}', but the tag does not exist.")
+            embed.colour = Colour.red()
+            embed.title = tag_name
+            embed.description = f"Tag doesn't appear to exist."
+
         else:
             log.error("There was an unexpected database error when trying to delete the following tag: \n"
                       f"tag_name: {tag_name}\n"
                       f"response: {tag_data}")
-            embed.title = "Database error",
-            embed.description = ("There was a problem deleting the data from the tags database. "
+            embed.title = "Database error"
+            embed.description = ("There was an unexpected error with deleting the data from the tags database. "
                                  "Please try again. If the problem persists, see the error logs.")
 
         return await ctx.send(embed=embed)
