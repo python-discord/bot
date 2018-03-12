@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 
 class Fun:
     """
-    Fun, mostly-useless stuff
+    Fun, entirely useless stuff
     """
 
     def __init__(self, bot: AutoShardedBot):
@@ -45,8 +45,8 @@ class Fun:
         response = RESPONSES.get(content)
 
         if response:
-            log.debug(f"{message.author} said '{content}'. Responding with '{response}'.")
-            await message.channel.send(response.replace("{them}", message.author.mention))
+            log.debug(f"{message.author} said '{message.clean_content}'. Responding with '{response}'.")
+            await message.channel.send(response.format(them=message.author.mention))
 
 
 def setup(bot):
