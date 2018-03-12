@@ -148,8 +148,8 @@ class Bot:
                         self.channel_cooldowns[msg.channel.id] = time.time()
 
                 except SyntaxError:
-                    log.error(f"{msg.author} posted something that needed to be put "
-                              "inside python code blocks, however the ast.parse raised a SyntaxError.")
+                    log.error(f"{msg.author} posted something that looked like code, but "
+                              f"ast.parse raised a SyntaxError.")
                     pass
 
 

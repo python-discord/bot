@@ -15,7 +15,7 @@ logging_handlers = []
 
 if PAPERTRAIL_ADDRESS:
     papertrail_handler = SysLogHandler(address=(PAPERTRAIL_ADDRESS, PAPERTRAIL_PORT))
-    papertrail_handler.setLevel(logging.TRACE)
+    papertrail_handler.setLevel(logging.DEBUG)
     logging_handlers.append(papertrail_handler)
 
 logging_handlers.append(StreamHandler(stream=sys.stderr))
@@ -23,11 +23,18 @@ logging_handlers.append(StreamHandler(stream=sys.stderr))
 logging.basicConfig(
     format="%(asctime)s pd.beardfist.com Bot: | %(name)30s | %(levelname)8s | %(message)s",
     datefmt="%b %d %H:%M:%S",
-    level=logging.INFO,
+    level=logging.DEBUG,
     handlers=logging_handlers
 )
 
 log = logging.getLogger(__name__)
+
+# Silence discord and websockets
+logging.getLogger("discord.client").setLevel(logging.ERROR)
+logging.getLogger("discord.gateway").setLevel(logging.ERROR)
+logging.getLogger("discord.state").setLevel(logging.ERROR)
+logging.getLogger("discord.http").setLevel(logging.ERROR)
+logging.getLogger("websockets.protocol").setLevel(logging.ERROR)
 
 
 def _skip_string(self, string: str) -> bool:
@@ -111,7 +118,7 @@ def _get_word(self) -> str:
 
     elif current == "(" and next == ")":
         # Move the cursor to capture the ()'s
-        self.debug("User called command without providing arguments.")
+        log.debug("User called command without providing arguments.")
         pos += 2
         result = self.buffer[self.previous:self.index + (pos+2)]
         self.index += 2

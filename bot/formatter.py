@@ -28,8 +28,6 @@ class Formatter(HelpFormatter):
         - to change the indentation to the PEP8 standard: 4 spaces
         """
 
-        self._paginator = Paginator(prefix="```py")
-
         for name, command in commands:
             if name in command.aliases:
                 # skip aliases
@@ -58,6 +56,8 @@ class Formatter(HelpFormatter):
 
         # <ending help note>
         """
+
+        self._paginator = Paginator(prefix="```py")
 
         if isinstance(self.command, Command):
             # strip the command off bot. and ()
