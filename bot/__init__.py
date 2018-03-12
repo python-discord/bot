@@ -7,6 +7,8 @@ from logging.handlers import SysLogHandler
 
 import discord.ext.commands.view
 
+from logmatic import JsonFormatter
+
 from bot.constants import PAPERTRAIL_ADDRESS, PAPERTRAIL_PORT
 
 
@@ -38,6 +40,10 @@ if PAPERTRAIL_ADDRESS:
     logging_handlers.append(papertrail_handler)
 
 logging_handlers.append(StreamHandler(stream=sys.stderr))
+
+json_handler = logging.FileHandler(filename="log.json", mode="w")
+json_handler.formatter = JsonFormatter()
+logging_handlers.append(json_handler)
 
 logging.basicConfig(
     format="%(asctime)s pd.beardfist.com Bot: | %(name)30s | %(levelname)8s | %(message)s",
