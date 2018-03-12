@@ -106,7 +106,7 @@ class ClickUp:
             tasks = result["tasks"]
 
             if not tasks:
-                log.warning("{ctx.author} requested a list of ClickUp tasks, but no ClickUp tasks were found!")
+                log.debug("{ctx.author} requested a list of ClickUp tasks, but no ClickUp tasks were found.")
                 embed.description = "No tasks found."
                 embed.colour = Colour.red()
 
@@ -120,7 +120,7 @@ class ClickUp:
 
                     lines.append(f"{id_fragment} ({status})\n\u00BB {task['name']}")
 
-                log.warning(f"{ctx.author} requested a list of ClickUp tasks. Returning list.")
+                log.debug(f"{ctx.author} requested a list of ClickUp tasks. Returning list.")
                 return await LinePaginator.paginate(lines, ctx, embed, max_size=750)
         return await ctx.send(embed=embed)
 

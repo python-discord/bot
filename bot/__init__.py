@@ -109,10 +109,11 @@ def _get_word(self) -> str:
     next = self.buffer[self.index + 1]
 
     if current == "(" and next != ")" and len(self.buffer) != self.index:
-        log.debug(f"A python-style command was used. Attempting to parse. Buffer is {self.buffer}")
+        log.debug(f"A python-style command was used. Attempting to parse. Buffer is {self.buffer}. "
+                  f"A step-by-step can be found in the trace log.")
 
         # Parse the args
-        log.debug("Parsing command with ast.literal_eval")
+        log.trace("Parsing command with ast.literal_eval.")
         args = self.buffer[self.index:]
         args = ast.literal_eval(args)
 
@@ -126,17 +127,17 @@ def _get_word(self) -> str:
 
             # Other types get converted to strings
             if not isinstance(arg, str):
-                log.debug(f"{arg} is not a str, casting to str.")
+                log.trace(f"{arg} is not a str, casting to str.")
                 arg = str(arg)
 
             # Adding double quotes to every argument
-            log.debug(f"Wrapping all args in double quotes.")
+            log.trace(f"Wrapping all args in double quotes.")
             new_args.append(f'"{arg}"')
 
         # Add the result to the buffer
         new_args = " ".join(new_args)
         self.buffer = f"{self.buffer[:self.index]} {new_args}"
-        log.debug(f"Modified the buffer. New buffer is now {self.buffer}")
+        log.trace(f"Modified the buffer. New buffer is now {self.buffer}")
 
         # Recalibrate the end since we've removed commas
         self.end = len(self.buffer)

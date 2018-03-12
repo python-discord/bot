@@ -30,18 +30,18 @@ class Verification:
             for role in ctx.author.roles:
                 if role.id == VERIFIED_ROLE:
                     log.warning(f"{ctx.author} posted '{ctx.message.content}' "
-                                "in the verification channel, but is already verified")
+                                "in the verification channel, but is already verified.")
                     return  # They're already verified
 
             log.debug(f"{ctx.author} posted '{ctx.message.content}' in the verification "
-                      "channel, we is providing instructions how to verify")
+                      "channel. We are providing instructions how to verify.")
             await ctx.send(
                 f"{ctx.author.mention} Please type `self.accept()` to verify that you accept our rules, "
                 f"and gain access to the rest of the server.",
                 delete_after=10
             )
 
-            log.debug(f"Deleting the message posted by {ctx.author}")
+            log.trace(f"Deleting the message posted by {ctx.author}")
             await ctx.message.delete()
 
     @command(name="accept", hidden=True, aliases=["verify", "verified", "accepted", "accept()"])
@@ -52,10 +52,10 @@ class Verification:
         Accept our rules and gain access to the rest of the server
         """
 
-        log.debug(f"{ctx.author} called self.accept(). Assigning the user 'Developer' role")
+        log.debug(f"{ctx.author} called self.accept(). Assigning the user 'Developer' role.")
         await ctx.author.add_roles(Object(VERIFIED_ROLE), reason="Accepted the rules")
 
-        log.debug(f"Deleting the message posted by {ctx.author}")
+        log.trace(f"Deleting the message posted by {ctx.author}.")
         await ctx.message.delete()
 
 

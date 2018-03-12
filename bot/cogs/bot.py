@@ -89,11 +89,11 @@ class Bot:
         if msg.count("\n") >= 3:
             # Filtering valid Python codeblocks and exiting if a valid Python codeblock is found
             if re.search("```(python|py)\n((?:.*\n*)+)```", msg, re.IGNORECASE):
-                log.debug("Message is already a valid Python syntax highlighted code block!")
+                log.debug("Message is already a valid Python syntax highlighted code block.")
                 return None
             else:
                 # Stripping backticks from every line of the message.
-                log.debug(f"Stripping backticks from message.\n\n{msg}\n\n")
+                log.trace(f"Stripping backticks from message.\n\n{msg}\n\n")
                 content = ""
                 for line in msg.splitlines():
                     content += line.strip("`") + "\n"
@@ -101,7 +101,7 @@ class Bot:
                 content = content.strip()
 
                 # Remove "Python" or "Py" from top of the message if exists
-                log.debug(f"Removing 'py' or 'python' from message.\n\n{content}\n\n")
+                log.trace(f"Removing 'py' or 'python' from message.\n\n{content}\n\n")
                 if content.lower().startswith("python"):
                     content = content[6:]
                 elif content.lower().startswith("py"):
@@ -110,7 +110,7 @@ class Bot:
                 # Strip again to remove the whitespace(s) left before the code
                 # If the msg looked like "Python <code>" before removing Python
                 content = content.strip()
-                log.debug(f"Returning message.\n\n{content}\n\n")
+                log.trace(f"Returning message.\n\n{content}\n\n")
                 return content
 
     async def on_message(self, msg: Message):
@@ -133,8 +133,8 @@ class Bot:
                         codeblock_tag = await self.bot.get_cog("Tags").get_tag_data("codeblock")
 
                         if codeblock_tag == {}:
-                            log.error(f"{msg.author} posted something that needed to be put inside python code blocks, "
-                                      f"but the 'codeblock' tag was not in the tags database!")
+                            log.warning(f"{msg.author} posted something that needed to be put inside Python "
+                                        "code blocks, but the 'codeblock' tag was not in the tags database!")
                             return
 
                         log.debug(f"{msg.author} posted something that needed to be put inside python code blocks. "
@@ -148,8 +148,9 @@ class Bot:
                         self.channel_cooldowns[msg.channel.id] = time.time()
 
                 except SyntaxError:
-                    log.error(f"{msg.author} posted something that looked like code, but "
-                              f"ast.parse raised a SyntaxError.")
+                    log.trace(f"{msg.author} posted in a help channel, and when we tried to parse it as Python code, "
+                              f"ast.parse raised a SyntaxError. This probably just means it wasn't Python code. "
+                              f"The message that was posted was:\n\n{msg}\n\n")
                     pass
 
 
