@@ -48,7 +48,7 @@ logging_handlers.append(json_handler)
 logging.basicConfig(
     format="%(asctime)s pd.beardfist.com Bot: | %(name)30s | %(levelname)8s | %(message)s",
     datefmt="%b %d %H:%M:%S",
-    level=logging.DEBUG,
+    level=logging.TRACE,
     handlers=logging_handlers
 )
 
@@ -106,9 +106,12 @@ def _get_word(self) -> str:
     self.previous = self.index
     result = self.buffer[self.index:self.index + pos]
     self.index += pos
-    next = self.buffer[self.index + 1]
+    next = None
 
-    if current == "(" and next != ")" and len(self.buffer) != self.index:
+    if len(self.buffer) != self.index:
+        next = self.buffer[self.index + 1]
+
+    if current == "(" and next and next != ")":
         log.debug(f"A python-style command was used. Attempting to parse. Buffer is {self.buffer}. "
                   f"A step-by-step can be found in the trace log.")
 
