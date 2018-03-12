@@ -106,7 +106,7 @@ class ClickUp:
             tasks = result["tasks"]
 
             if not tasks:
-                log.debug("{ctx.author} requested a list of ClickUp tasks, but no ClickUp tasks were found.")
+                log.debug(f"{ctx.author} requested a list of ClickUp tasks, but no ClickUp tasks were found.")
                 embed.description = "No tasks found."
                 embed.colour = Colour.red()
 
@@ -283,7 +283,7 @@ class ClickUp:
 
     @command(name="clickup.open()", aliases=["clickup.open", "open", "open_task"])
     @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
-    async def open_command(self, ctx: Context, task_list: str, *, title: str):
+    async def open_command(self, ctx: Context, task_list: str, title: str):
         """
         Open a new task under a specific task list, with a title
 
@@ -335,7 +335,7 @@ class ClickUp:
 
     @command(name="clickup.set_status()", aliases=["clickup.set_status", "set_status", "set_task_status"])
     @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
-    async def set_status_command(self, ctx: Context, task_id: str, *, status: str):
+    async def set_status_command(self, ctx: Context, task_id: str, status: str):
         """
         Update the status of a specific task
         """
