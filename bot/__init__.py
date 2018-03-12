@@ -2,13 +2,32 @@
 import ast
 import logging
 import sys
-from logging import StreamHandler
+from logging import Logger, StreamHandler
 from logging.handlers import SysLogHandler
 
 import discord.ext.commands.view
 
 from bot.constants import PAPERTRAIL_ADDRESS, PAPERTRAIL_PORT
 
+
+logging.TRACE = 5
+logging.addLevelName(logging.TRACE, "TRACE")
+
+
+def monkeypatch_trace(self, msg, *args, **kwargs):
+    """
+    Log 'msg % args' with severity 'TRACE'.
+
+    To pass exception information, use the keyword argument exc_info with
+    a true value, e.g.
+
+    logger.trace("Houston, we have a %s", "interesting problem", exc_info=1)
+    """
+    if self.isEnabledFor(logging.TRACE):
+        self._log(logging.TRACE, msg, args, **kwargs)
+
+
+Logger.trace = monkeypatch_trace
 
 # Set up logging
 logging_handlers = []
