@@ -26,7 +26,7 @@ class Deployment:
         """
 
         response = await self.bot.http_session.get(DEPLOY_URL, headers={"token": DEPLOY_BOT_KEY})
-        result = response.text()
+        result = await response.text()
 
         if result == "True":
             log.debug(f"{ctx.author} triggered deployment for bot. Deployment was started.")
@@ -43,7 +43,7 @@ class Deployment:
         """
 
         response = await self.bot.http_session.get(DEPLOY_URL, headers={"token": DEPLOY_SITE_KEY})
-        result = response.text()
+        result = await response.text()
 
         if result == "True":
             log.debug(f"{ctx.author} triggered deployment for site. Deployment was started.")
