@@ -23,7 +23,7 @@ def monkeypatch_trace(self, msg, *args, **kwargs):
     To pass exception information, use the keyword argument exc_info with
     a true value, e.g.
 
-    logger.trace("Houston, we have a %s", "interesting problem", exc_info=1)
+    logger.trace("Houston, we have an %s", "interesting problem", exc_info=1)
     """
     if self.isEnabledFor(logging.TRACE):
         self._log(logging.TRACE, msg, args, **kwargs)
@@ -131,7 +131,7 @@ def _get_word(self) -> str:
 
     if python_parse_conditions:
         log.debug(f"A python-style command was used. Attempting to parse. Buffer is {self.buffer}. "
-                  f"A step-by-step can be found in the trace log.")
+                  "A step-by-step can be found in the trace log.")
 
         # Parse the args
         log.trace("Parsing command with ast.literal_eval.")

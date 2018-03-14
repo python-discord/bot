@@ -75,7 +75,7 @@ class Deployment:
                 name=key, value=value, inline=True
             )
 
-        log.debug(f"Uptimes retrieved and parsed, returning data.")
+        log.debug("Uptimes retrieved and parsed, returning data.")
         await ctx.send(embed=embed)
 
 

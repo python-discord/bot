@@ -283,7 +283,7 @@ class Tags:
             log.debug(f"{ctx.author} tried to delete a tag called '{tag_name}', but the tag does not exist.")
             embed.colour = Colour.red()
             embed.title = tag_name
-            embed.description = f"Tag doesn't appear to exist."
+            embed.description = "Tag doesn't appear to exist."
 
         else:
             log.error("There was an unexpected database error when trying to delete the following tag: \n"

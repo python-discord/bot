@@ -89,7 +89,7 @@ class Bot:
         if msg.count("\n") >= 3:
             # Filtering valid Python codeblocks and exiting if a valid Python codeblock is found
             if re.search("```(python|py)\n((?:.*\n*)+)```", msg, re.IGNORECASE):
-                log.trace(f"Someone wrote a message that was already a "
+                log.trace("Someone wrote a message that was already a "
                           "valid Python syntax highlighted code block. No action taken.")
                 return None
             else:
@@ -150,7 +150,7 @@ class Bot:
 
                 except SyntaxError:
                     log.trace(f"{msg.author} posted in a help channel, and when we tried to parse it as Python code, "
-                              f"ast.parse raised a SyntaxError. This probably just means it wasn't Python code. "
+                              "ast.parse raised a SyntaxError. This probably just means it wasn't Python code. "
                               f"The message that was posted was:\n\n{msg.content}\n\n")
                     pass
 
