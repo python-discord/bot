@@ -1,4 +1,6 @@
 # coding=utf-8
+import logging
+
 from discord import Message
 from discord.ext.commands import AutoShardedBot
 
@@ -6,14 +8,16 @@ from bot.constants import BOT_CHANNEL
 
 RESPONSES = {
     "_pokes {us}_": "_Pokes {them}_",
-    "_eats {us}_": "_Tastes crunchy_",
+    "_eats {us}_": "_Tastes slimy and snake-like_",
     "_pets {us}_": "_Purrs_"
 }
+
+log = logging.getLogger(__name__)
 
 
 class Fun:
     """
-    Fun, mostly-useless stuff
+    Fun, entirely useless stuff
     """
 
     def __init__(self, bot: AutoShardedBot):
@@ -41,9 +45,10 @@ class Fun:
         response = RESPONSES.get(content)
 
         if response:
-            await message.channel.send(response.replace("{them}", message.author.mention))
+            log.debug(f"{message.author} said '{message.clean_content}'. Responding with '{response}'.")
+            await message.channel.send(response.format(them=message.author.mention))
 
 
 def setup(bot):
     bot.add_cog(Fun(bot))
-    print("Cog loaded: Fun")
+    log.info("Cog loaded: Fun")

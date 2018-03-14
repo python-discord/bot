@@ -105,3 +105,6 @@ ENV/
 
 # Vagrant
 .vagrant
+
+# JSON logfile
+log.json

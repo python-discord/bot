@@ -7,11 +7,14 @@ Which falls under The MIT License.
 """
 
 import itertools
+import logging
 from inspect import formatargspec, getfullargspec
 
 from discord.ext.commands import Command, HelpFormatter, Paginator
 
 from bot.constants import HELP_PREFIX
+
+log = logging.getLogger(__name__)
 
 
 class Formatter(HelpFormatter):
@@ -24,6 +27,7 @@ class Formatter(HelpFormatter):
         - to make the helptext appear as a comment
         - to change the indentation to the PEP8 standard: 4 spaces
         """
+
         for name, command in commands:
             if name in command.aliases:
                 # skip aliases
@@ -52,10 +56,11 @@ class Formatter(HelpFormatter):
 
         # <ending help note>
         """
+
         self._paginator = Paginator(prefix="```py")
 
         if isinstance(self.command, Command):
-            # strip the command of bot. and ()
+            # strip the command off bot. and ()
             stripped_command = self.command.name.replace(HELP_PREFIX, "").replace("()", "")
 
             # get the args using the handy inspect module

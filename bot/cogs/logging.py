@@ -1,8 +1,12 @@
 # coding=utf-8
+import logging
+
 from discord import Embed
 from discord.ext.commands import AutoShardedBot
 
 from bot.constants import DEVLOG_CHANNEL
+
+log = logging.getLogger(__name__)
 
 
 class Logging:
@@ -14,7 +18,7 @@ class Logging:
         self.bot = bot
 
     async def on_ready(self):
-        print("Connected!")
+        log.info("Bot connected!")
 
         embed = Embed(description="Connected!")
         embed.set_author(
@@ -28,4 +32,4 @@ class Logging:
 
 def setup(bot):
     bot.add_cog(Logging(bot))
-    print("Cog loaded: Logging")
+    log.info("Cog loaded: Logging")
