@@ -128,6 +128,6 @@ class Formatter(HelpFormatter):
         ending_note = "# "+ending_note.replace("\n", "\n# ")
         self._paginator.add_line(ending_note)
 
-        log.debug(f"General or Cog help generated.")
+        log.debug("General or Cog help generated.")
 
         return self._paginator.pages
