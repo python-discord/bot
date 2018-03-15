@@ -60,7 +60,10 @@ class Formatter(HelpFormatter):
         self._paginator = Paginator(prefix="```py")
 
         if isinstance(self.command, Command):
-            log.trace(f"Help command is on specific command {self.command.name} from {self.command.cog_name}")
+            # string used purely to make logs a teensy bit more readable
+            cog_string = f" from {self.command.cog_name}" if self.command.cog_name else ""
+
+            log.trace(f"Help command is on specific command {self.command.name}{cog_string}.")
 
             # strip the command off bot. and ()
             stripped_command = self.command.name.replace(HELP_PREFIX, "").replace("()", "")
@@ -73,7 +76,7 @@ class Formatter(HelpFormatter):
                 # discord.ext.commands.context.Context -> Context
                 arguments = arguments.replace(f"{annotation.__module__}.", "")
 
-            log.trace("Acquired arguments of the command in string form for use within the help command.")
+            log.trace(f"Acquired arguments for command: '{arguments}' ")
 
             # manipulate the argspec to make it valid python when 'calling' the do_<command>
             args_no_type_hints = argspec.args
@@ -105,9 +108,9 @@ class Formatter(HelpFormatter):
             self._paginator.add_line(docstring)
             self._paginator.add_line(invocation)
 
-            log.trace(f"Help for {self.command.name} from {self.command.cog_name} added to paginator.")
+            log.trace(f"Help for {self.command.name}{cog_string}. added to paginator.")
 
-            log.debug(f"Help for {self.command.name} from {self.command.cog_name} generated.")
+            log.debug(f"Help for {self.command.name}{cog_string}. generated.")
 
             return self._paginator.pages
 
@@ -121,7 +124,7 @@ class Formatter(HelpFormatter):
         command_list = await self.filter_command_list()
         data = sorted(command_list, key=category_check)
 
-        log.trace("Acquired command list and sorted by cog name.")
+        log.trace(f"Acquired command list and sorted by cog name: {[command.name for command in data]}")
 
         for category, commands in itertools.groupby(data, key=category_check):
             commands = sorted(commands)
