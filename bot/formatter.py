@@ -60,6 +60,7 @@ class Formatter(HelpFormatter):
         self._paginator = Paginator(prefix="```py")
 
         if isinstance(self.command, Command):
+
             # strip the command off bot. and ()
             stripped_command = self.command.name.replace(HELP_PREFIX, "").replace("()", "")
 
@@ -101,6 +102,8 @@ class Formatter(HelpFormatter):
             self._paginator.add_line(docstring)
             self._paginator.add_line(invocation)
 
+            log.debug(f"Help for {self.command.name} from {self.command.cog_name} generated.")
+
             return self._paginator.pages
 
         max_width = self.max_name_size
@@ -124,5 +127,7 @@ class Formatter(HelpFormatter):
         # make the ending note appear as comments
         ending_note = "# "+ending_note.replace("\n", "\n# ")
         self._paginator.add_line(ending_note)
+
+        log.debug(f"General or Cog help generated.")
 
         return self._paginator.pages
