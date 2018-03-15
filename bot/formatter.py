@@ -3,7 +3,7 @@
 """
 Credit to Rapptz's script used as an example:
 https://github.com/Rapptz/discord.py/blob/rewrite/discord/ext/commands/formatter.py
-Which falls under The MIT License.
+which falls under The MIT License.
 """
 
 import itertools
