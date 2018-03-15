@@ -108,9 +108,9 @@ class Formatter(HelpFormatter):
             self._paginator.add_line(docstring)
             self._paginator.add_line(invocation)
 
-            log.trace(f"Help for {self.command.name}{cog_string}. added to paginator.")
+            log.trace(f"Help for {self.command.name}{cog_string} added to paginator.")
 
-            log.debug(f"Help for {self.command.name}{cog_string}. generated.")
+            log.debug(f"Help for {self.command.name}{cog_string} generated.")
 
             return self._paginator.pages
 
