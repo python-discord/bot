@@ -112,14 +112,13 @@ class Bot:
                     howto_embed = ""
                     not_backticks = ["'''", "\"\"\"", "´´´"]
                     python_syntax = any(
-                        msg.content.lower()[3:9] == "python",
-                        msg.content.lower()[3:5] == "py"
+                        msg.content[3:9].lower() == "python",
+                        msg.content[3:5].lower() == "py"
                     )
 
                     bad_ticks = msg.content[:3] in not_backticks
 
                     if bad_ticks and python_syntax:
-
                         howto = (f"You are using the wrong signs, use ``` instead of"
                                  f" {not_backticks.index(msg.content[:3])}")
 
@@ -137,15 +136,28 @@ class Bot:
                         # This check is to avoid all nodes being parsed as expressions.
                         # (e.g. words over multiple lines)
                         if not all(isinstance(node, ast.Expr) for node in tree.body):
-                            codeblock_tag = await self.bot.get_cog("Tags").get_tag_data("codeblock")
-                            if codeblock_tag == {}:
-                                # todo: add logging
-                                return
-                            howto = (f"Hey {msg.author.mention}!\n\n"
-                                     "I noticed you were trying to paste code into this channel.\n\n"
-                                     f"{codeblock_tag['tag_content']}")
+                            howto = (f"Hey {msg.author.mention}!\n"
+                                     "I noticed you were trying to paste code into this channel.\n")
 
+                            space_left = 816
+                            print(len(content))
+                            if len(content) >= space_left:
+                                current_length = 0
+                                for line in content.splitlines(keepends=True):
+                                    if current_length+len(line) > space_left:
+                                        break
+                                    current_length += len(line)
+                                content = content[:current_length]+"#..."
+                            howto = (f"Hey {msg.author.mention}!\n"
+                                     f"I noticed you were trying to paste code into this channel.\n"
+                                     "Discord has support for Markdown, which allows you to post code with full syntax"
+                                     " highlighting. Please use these whenever you paste code, as this helps improve"
+                                     " the legibility and makes it easier for us to help you.\nTo do this, use the"
+                                     f"following method:\n\n\`\`\`Python\n{content}\n\`\`\`\n\nThis will result in the"
+                                     f" following:\n```Python\n{content}\n```")
                             howto_embed = Embed(description=howto)
+                        else:
+                            return
 
                     await msg.channel.send(embed=howto_embed)
                     self.channel_cooldowns[msg.channel.id] = time.time()
