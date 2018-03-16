@@ -89,7 +89,8 @@ class Bot:
         final = ""
         for line in msg.splitlines(keepends=True):
             if line.startswith(">>>") or line.startswith("..."):
-                if not repl: repl = True
+                if not repl:
+                    repl = True
                 final += line
         if repl:
             return final
