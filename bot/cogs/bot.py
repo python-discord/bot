@@ -164,7 +164,7 @@ class Bot:
                         # (e.g. words over multiple lines)
                         if not all(isinstance(node, ast.Expr) for node in tree.body):
                             space_left = 204
-                            # Shorten the code.
+                            # Shorten the code to 10 lines and/or 204 characters.
                             if len(content) >= space_left:
                                 current_length = 0
                                 lines_walked = 0
