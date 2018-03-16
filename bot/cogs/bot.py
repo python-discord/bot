@@ -79,6 +79,23 @@ class Bot:
 
         await ctx.invoke(self.info)
 
+    def repl_stripping(self, msg: str):
+        """
+        Strip msg in order to extract Python code out of REPL output.
+
+        Tries to strip out REPL Python code out of msg and returns the stripped msg.
+        """
+        repl = False
+        final = ""
+        for line in msg.splitlines(keepends=True):
+            if line.startswith(">>>") or line.startswith("..."):
+                if not repl: repl = True
+                final += line
+        if repl:
+            return final
+        else:
+            return msg
+
     def codeblock_stripping(self, msg: str):
         """
         Strip msg in order to find Python code.
@@ -92,12 +109,13 @@ class Bot:
                 log.trace("Someone wrote a message that was already a "
                           "valid Python syntax highlighted code block. No action taken.")
                 return None
+
             else:
                 # Stripping backticks from every line of the message.
                 log.trace(f"Stripping backticks from message.\n\n{msg}\n\n")
                 content = ""
-                for line in msg.splitlines():
-                    content += line.strip("`") + "\n"
+                for line in msg.splitlines(keepends=True):
+                    content += line.strip("`")
 
                 content = content.strip()
 
@@ -110,7 +128,8 @@ class Bot:
 
                 # Strip again to remove the whitespace(s) left before the code
                 # If the msg looked like "Python <code>" before removing Python
-                content = content.strip()
+                # And strips REPL code out of the message if there is any
+                content = self.repl_stripping(content.strip())
                 log.trace(f"Returning message.\n\n{content}\n\n")
                 return content
 
@@ -146,11 +165,8 @@ class Bot:
                         # This check is to avoid all nodes being parsed as expressions.
                         # (e.g. words over multiple lines)
                         if not all(isinstance(node, ast.Expr) for node in tree.body):
-                            howto = (f"Hey {msg.author.mention}!\n"
-                                     "I noticed you were trying to paste code into this channel.\n")
-
-                            space_left = 816
-                            print(len(content))
+                            space_left = 204
+                            # Shorten the code.
                             if len(content) >= space_left:
                                 current_length = 0
                                 for line in content.splitlines(keepends=True):
@@ -158,6 +174,7 @@ class Bot:
                                         break
                                     current_length += len(line)
                                 content = content[:current_length]+"#..."
+
                             howto = (f"Hey {msg.author.mention}!\n"
                                      f"I noticed you were trying to paste code into this channel.\n"
                                      "Discord has support for Markdown, which allows you to post code with full syntax"
@@ -168,7 +185,8 @@ class Bot:
                             howto_embed = Embed(description=howto)
                         else:
                             return
-
+                    log.debug(f"{msg.author} posted something that needed to be put inside python code blocks. "
+                              "Sending the user some instructions.")
                     await msg.channel.send(embed=howto_embed)
                     self.channel_cooldowns[msg.channel.id] = time.time()
                 except SyntaxError:
