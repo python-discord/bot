@@ -85,17 +85,14 @@ class Bot:
 
         Tries to strip out REPL Python code out of msg and returns the stripped msg.
         """
-        repl = False
         final = ""
         for line in msg.splitlines(keepends=True):
             if line.startswith(">>>") or line.startswith("..."):
-                if not repl:
-                    repl = True
-                final += line
-        if repl:
-            return final
-        else:
+                final += line[4:]
+        if len(final):
             return msg
+        else:
+            return final
 
     def codeblock_stripping(self, msg: str):
         """
