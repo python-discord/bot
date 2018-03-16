@@ -90,8 +90,10 @@ class Bot:
             if line.startswith(">>>") or line.startswith("..."):
                 final += line[4:]
         if len(final):
+            log.trace(f"Found no REPL code in {msg}")
             return msg
         else:
+            log.trace(f"Found REPL code in {msg}")
             return final
 
     def codeblock_stripping(self, msg: str):
