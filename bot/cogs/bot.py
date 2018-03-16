@@ -103,7 +103,7 @@ class Bot:
         """
         if msg.count("\n") >= 3:
             # Filtering valid Python codeblocks and exiting if a valid Python codeblock is found
-            if re.search("```(python|py)\n((?:.*\n*)+)```", msg, re.IGNORECASE):
+            if re.search("```(?:py|python)\n(.*?)```", msg, re.IGNORECASE | re.DOTALL):
                 log.trace("Someone wrote a message that was already a "
                           "valid Python syntax highlighted code block. No action taken.")
                 return None
