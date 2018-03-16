@@ -1,4 +1,6 @@
 # coding=utf-8
+import logging
+
 from discord import Embed, Member
 from discord.ext.commands import (
     AutoShardedBot, BadArgument, BotMissingPermissions,
@@ -9,6 +11,8 @@ from discord.ext.commands import (
 from bot.constants import (
     ADMIN_ROLE, DEVLOG_CHANNEL, DEVOPS_ROLE, MODERATOR_ROLE, OWNER_ROLE, PYTHON_GUILD, SITE_API_KEY, SITE_API_USER_URL
 )
+
+log = logging.getLogger(__name__)
 
 
 class Events:
@@ -29,7 +33,7 @@ class Events:
 
             return await response.json()
         except Exception as e:
-            print(f"Failed to send role updates: {e}")
+            log.error(f"Failed to send role updates: {e}")
             return {}
 
     async def on_command_error(self, ctx: Context, e: CommandError):
@@ -63,7 +67,7 @@ class Events:
                 f"Sorry, an unexpected error occurred. Please let us know!\n\n```{e}```"
             )
             raise e.original
-        print(e)
+        log.error(f"COMMAND ERROR: '{e}'")
 
     async def on_ready(self):
         users = []
@@ -93,6 +97,7 @@ class Events:
                 })
 
         if users:
+            log.debug(f"{len(users)} user roles updated")
             data = await self.send_updated_users(*users)  # type: dict
 
             if any(data.values()):
@@ -114,24 +119,28 @@ class Events:
         if before.roles == after.roles:
             return
 
-        roles = [r.id for r in after.roles]  # type: List[int]
+        before_role_names = [role.name for role in before.roles]  # type: List[str]
+        after_role_names = [role.name for role in after.roles]  # type: List[str]
+        role_ids = [r.id for r in after.roles]  # type: List[int]
 
-        if OWNER_ROLE in roles:
+        log.debug(f"{before.display_name} roles changing from {before_role_names} to {after_role_names}")
+
+        if OWNER_ROLE in role_ids:
             self.send_updated_users({
                 "user_id": after.id,
                 "role": OWNER_ROLE
             })
-        elif ADMIN_ROLE in roles:
+        elif ADMIN_ROLE in role_ids:
             self.send_updated_users({
                 "user_id": after.id,
                 "role": ADMIN_ROLE
             })
-        elif MODERATOR_ROLE in roles:
+        elif MODERATOR_ROLE in role_ids:
             self.send_updated_users({
                 "user_id": after.id,
                 "role": MODERATOR_ROLE
             })
-        elif DEVOPS_ROLE in roles:
+        elif DEVOPS_ROLE in role_ids:
             self.send_updated_users({
                 "user_id": after.id,
                 "role": DEVOPS_ROLE
@@ -140,4 +149,4 @@ class Events:
 
 def setup(bot):
     bot.add_cog(Events(bot))
-    print("Cog loaded: Events")
+    log.info("Cog loaded: Events")

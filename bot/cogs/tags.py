@@ -1,3 +1,4 @@
+import logging
 import time
 
 from discord import Colour, Embed
@@ -7,6 +8,8 @@ from bot.constants import ADMIN_ROLE, MODERATOR_ROLE, OWNER_ROLE
 from bot.constants import SITE_API_KEY, SITE_API_TAGS_URL, TAG_COOLDOWN
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
+
+log = logging.getLogger(__name__)
 
 
 class Tags:
@@ -32,7 +35,7 @@ class Tags:
         params = {}
 
         if tag_name:
-            params['tag_name'] = tag_name
+            params["tag_name"] = tag_name
 
         response = await self.bot.http_session.get(SITE_API_TAGS_URL, headers=self.headers, params=params)
         tag_data = await response.json()
@@ -90,6 +93,7 @@ class Tags:
         :param ctx: Discord message context
         """
 
+        log.debug(f"{ctx.author} requested info about the tags cog")
         return await ctx.invoke(self.bot.get_command("help"), "Tags")
 
     @command(name="tags.get()", aliases=["tags.get", "tags.show()", "tags.show", "get_tag"])
@@ -128,7 +132,8 @@ class Tags:
 
         if _command_on_cooldown(tag_name):
             time_left = TAG_COOLDOWN - (time.time() - self.tag_cooldowns[tag_name]["time"])
-            print(f"That command is currently on cooldown. Try again in {time_left:.1f} seconds.")
+            log.warning(f"{ctx.author} tried to get the '{tag_name}' tag, but the tag is on cooldown. "
+                        f"Cooldown ends in {time_left:.1f} seconds.")
             return
 
         embed = Embed()
@@ -141,6 +146,7 @@ class Tags:
             embed.colour = Colour.blurple()
 
             if tag_name:
+                log.debug(f"{ctx.author} requested the tag '{tag_name}'")
                 embed.title = tag_name
                 self.tag_cooldowns[tag_name] = {
                     "time": time.time(),
@@ -151,6 +157,7 @@ class Tags:
                 embed.title = "**Current tags**"
 
             if isinstance(tag_data, list):
+                log.debug(f"{ctx.author} requested a list of all tags")
                 tags = [f"**»**   {tag['tag_name']}" for tag in tag_data]
                 tags = sorted(tags)
 
@@ -160,10 +167,13 @@ class Tags:
         # If not, prepare an error message.
         else:
             embed.colour = Colour.red()
-            embed.description = "**There are no tags in the database!**"
 
             if isinstance(tag_data, dict):
+                log.warning(f"{ctx.author} requested the tag '{tag_name}', but it could not be found.")
                 embed.description = f"Unknown tag: **{tag_name}**"
+            else:
+                log.warning(f"{ctx.author} requested a list of all tags, but the tags database was empty!")
+                embed.description = "**There are no tags in the database!**"
 
             if tag_name:
                 embed.set_footer(text="To show a list of all tags, use bot.tags.get().")
@@ -171,6 +181,7 @@ class Tags:
 
         # Paginate if this is a list of all tags
         if tags:
+            log.debug(f"Returning a paginated list of all tags.")
             return await LinePaginator.paginate(
                 (lines for lines in tags),
                 ctx, embed,
@@ -192,38 +203,58 @@ class Tags:
         :param tag_content: The content of the tag.
         """
 
+        def is_number(string):
+            try:
+                float(string)
+            except ValueError:
+                return False
+            else:
+                return True
+
         embed = Embed()
         embed.colour = Colour.red()
 
+        # Newline in 'tag_name'
         if "\n" in tag_name:
+            log.warning(f"{ctx.author} tried to put a newline in a tag name. "
+                        "Rejecting the request.")
             embed.title = "Please don't do that"
             embed.description = "Don't be ridiculous. Newlines are obviously not allowed in the tag name."
 
-        elif tag_name.isdigit():
-            embed.title = "Please don't do that"
-            embed.description = "Tag names can't be numbers."
-
-        elif not tag_content.strip():
+        # 'tag_name' or 'tag_content' consists of nothing but whitespace
+        elif not tag_content.strip() or not tag_name.strip():
+            log.warning(f"{ctx.author} tried to create a tag with a name consisting only of whitespace. "
+                        "Rejecting the request.")
             embed.title = "Please don't do that"
             embed.description = "Tags should not be empty, or filled with whitespace."
 
-        else:
-            if not (tag_name and tag_content):
-                embed.title = "Missing parameters"
-                embed.description = "The tag needs both a name and some content."
-                return await ctx.send(embed=embed)
+        # 'tag_name' is a number of some kind, we don't allow that.
+        elif is_number(tag_name):
+            log.error("inside the is_number")
+            log.warning(f"{ctx.author} tried to create a tag with a digit as its name. "
+                        "Rejecting the request.")
+            embed.title = "Please don't do that"
+            embed.description = "Tag names can't be numbers."
 
+        else:
             tag_name = tag_name.lower()
             tag_data = await self.post_tag_data(tag_name, tag_content)
 
             if tag_data.get("success"):
+                log.debug(f"{ctx.author} successfully added the following tag to our database: \n"
+                          f"tag_name: {tag_name}\n"
+                          f"tag_content: '{tag_content}'")
                 embed.colour = Colour.blurple()
                 embed.title = "Tag successfully added"
                 embed.description = f"**{tag_name}** added to tag database."
             else:
+                log.error("There was an unexpected database error when trying to add the following tag: \n"
+                          f"tag_name: {tag_name}\n"
+                          f"tag_content: '{tag_content}'\n"
+                          f"response: {tag_data}")
                 embed.title = "Database error"
                 embed.description = ("There was a problem adding the data to the tags database. "
-                                     "Please try again. If the problem persists, check the API logs.")
+                                     "Please try again. If the problem persists, see the error logs.")
 
         return await ctx.send(embed=embed)
 
@@ -240,26 +271,31 @@ class Tags:
         embed = Embed()
         embed.colour = Colour.red()
 
-        if not tag_name:
-            embed.title = "Missing parameters"
-            embed.description = "This method requires a `tag_name` parameter."
-            return await ctx.send(embed=embed)
-
         tag_data = await self.delete_tag_data(tag_name)
 
-        if tag_data.get("success"):
+        if tag_data.get("success") is True:
+            log.debug(f"{ctx.author} successfully deleted the tag called '{tag_name}'")
             embed.colour = Colour.blurple()
             embed.title = tag_name
             embed.description = f"Tag successfully removed: {tag_name}."
 
+        elif tag_data.get("success") is False:
+            log.debug(f"{ctx.author} tried to delete a tag called '{tag_name}', but the tag does not exist.")
+            embed.colour = Colour.red()
+            embed.title = tag_name
+            embed.description = "Tag doesn't appear to exist."
+
         else:
-            embed.title = "Database error",
-            embed.description = ("There was a problem deleting the data from the tags database. "
-                                 "Please try again. If the problem persists, check the API logs.")
+            log.error("There was an unexpected database error when trying to delete the following tag: \n"
+                      f"tag_name: {tag_name}\n"
+                      f"response: {tag_data}")
+            embed.title = "Database error"
+            embed.description = ("There was an unexpected error with deleting the data from the tags database. "
+                                 "Please try again. If the problem persists, see the error logs.")
 
         return await ctx.send(embed=embed)
 
 
 def setup(bot):
     bot.add_cog(Tags(bot))
-    print("Cog loaded: Tags")
+    log.info("Cog loaded: Tags")
