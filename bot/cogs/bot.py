@@ -167,10 +167,12 @@ class Bot:
                             # Shorten the code.
                             if len(content) >= space_left:
                                 current_length = 0
+                                lines_walked = 0
                                 for line in content.splitlines(keepends=True):
-                                    if current_length+len(line) > space_left:
+                                    if current_length+len(line) > space_left or lines_walked == 10:
                                         break
                                     current_length += len(line)
+                                    lines_walked += 1
                                 content = content[:current_length]+"#..."
 
                             howto = (f"Hey {msg.author.mention}!\n"
