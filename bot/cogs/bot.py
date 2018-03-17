@@ -89,11 +89,12 @@ class Bot:
         for line in msg.splitlines(keepends=True):
             if line.startswith(">>>") or line.startswith("..."):
                 final += line[4:]
+        log.trace(f"Formatted: {msg} to {final}")
         if len(final):
-            log.trace(f"Found no REPL code in {msg}")
+            log.debug(f"Found no REPL code in {msg}")
             return msg
         else:
-            log.trace(f"Found REPL code in {msg}")
+            log.debug(f"Found REPL code in {msg}")
             return final
 
     def codeblock_stripping(self, msg: str):
