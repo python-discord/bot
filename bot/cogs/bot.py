@@ -141,13 +141,9 @@ class Bot:
                 try:
                     howto = ""
                     not_backticks = ["'''", '"""', "´´´", "‘‘‘", "’’’", "′′′", "“““", "”””", "″″″", "〃〃〃"]
-                    python_syntax = any(
-                        msg.content[3:9].lower() == "python",
-                        msg.content[3:5].lower() == "py"
-                    )
-
                     bad_ticks = msg.content[:3] in not_backticks
-                    if bad_ticks and python_syntax:
+
+                    if bad_ticks:
                         howto = ("You are using the wrong signs, use ``` instead of "
                                  f"{not_backticks.index(msg.content[:3])}\n\n")
                         msg.content = msg.contet.replace(not_backticks.index(msg.content[3:]), "```")
