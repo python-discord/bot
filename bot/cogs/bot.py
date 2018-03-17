@@ -139,7 +139,7 @@ class Bot:
             on_cooldown = time.time() - self.channel_cooldowns[msg.channel.id] < 300
             if not on_cooldown or msg.channel.id == DEVTEST_CHANNEL:
                 try:
-                    howto_embed = ""
+                    howto = ""
                     not_backticks = ["'''", '"""', "´´´", "‘‘‘", "’’’", "′′′", "“““", "”””", "″″″", "〃〃〃"]
                     python_syntax = any(
                         msg.content[3:9].lower() == "python",
@@ -147,50 +147,49 @@ class Bot:
                     )
 
                     bad_ticks = msg.content[:3] in not_backticks
-
                     if bad_ticks and python_syntax:
-                        howto = ("You are using the wrong signs, use ``` instead of"
-                                 f" {not_backticks.index(msg.content[:3])}")
+                        howto = ("You are using the wrong signs, use ``` instead of "
+                                 f"{not_backticks.index(msg.content[:3])}\n\n")
+                        msg.content = msg.contet.replace(not_backticks.index(msg.content[3:]), "```")
 
+                    content = self.codeblock_stripping(msg.content)
+
+                    # Attempts to parse the message into an AST node.
+                    # Invalid Python code will raise a SyntaxError.
+                    tree = ast.parse(content)
+
+                    # Multiple lines of single words could be interpreted as expressions.
+                    # This check is to avoid all nodes being parsed as expressions.
+                    # (e.g. words over multiple lines)
+                    if not all(isinstance(node, ast.Expr) for node in tree.body):
+                        # Shorten the code to 10 lines and/or 204 characters.
+                        space_left = 204
+                        if len(content) >= space_left:
+                            current_length = 0
+                            lines_walked = 0
+                            for line in content.splitlines(keepends=True):
+                                if current_length+len(line) > space_left or lines_walked == 10:
+                                    break
+                                current_length += len(line)
+                                lines_walked += 1
+                            content = content[:current_length]+"#..."
+
+                        howto += (f"Hey {msg.author.mention}!\n"
+                                  "I noticed you were trying to paste code into this channel.\n"
+                                  "Discord has support for Markdown, which allows you to post code with full syntax "
+                                  "highlighting. Please use these whenever you paste code, as this helps improve "
+                                  "the legibility and makes it easier for us to help you.\n"
+                                  f"To do this, use the following method:\n\n \`\`\`Python\n{content}\n\`\`\`\n\n"
+                                  f"This will result in the following:\n```Python\n{content}\n```")
+
+                        log.debug(f"{msg.author} posted something that needed to be put inside python code blocks. "
+                                  "Sending the user some instructions.")
+
+                    if howto != "":
                         howto_embed = Embed(description=howto)
+                        await msg.channel.send(embed=howto_embed)
                     else:
-                        content = self.codeblock_stripping(msg.content)
-                        if not content:
-                            return
-
-                        # Attempts to parse the message into an AST node.
-                        # Invalid Python code will raise a SyntaxError.
-                        tree = ast.parse(content)
-
-                        # Multiple lines of single words could be interpreted as expressions.
-                        # This check is to avoid all nodes being parsed as expressions.
-                        # (e.g. words over multiple lines)
-                        if not all(isinstance(node, ast.Expr) for node in tree.body):
-                            # Shorten the code to 10 lines and/or 204 characters.
-                            space_left = 204
-                            if len(content) >= space_left:
-                                current_length = 0
-                                lines_walked = 0
-                                for line in content.splitlines(keepends=True):
-                                    if current_length+len(line) > space_left or lines_walked == 10:
-                                        break
-                                    current_length += len(line)
-                                    lines_walked += 1
-                                content = content[:current_length]+"#..."
-
-                            howto = (f"Hey {msg.author.mention}!\n"
-                                     "I noticed you were trying to paste code into this channel.\n"
-                                     "Discord has support for Markdown, which allows you to post code with full syntax "
-                                     "highlighting. Please use these whenever you paste code, as this helps improve "
-                                     "the legibility and makes it easier for us to help you.\n"
-                                     f"To do this, use the following method:\n\n \`\`\`Python\n{content}\n\`\`\`\n\n"
-                                     f"This will result in the following:\n```Python\n{content}\n```")
-                            howto_embed = Embed(description=howto)
-                        else:
-                            return
-                    log.debug(f"{msg.author} posted something that needed to be put inside python code blocks. "
-                              "Sending the user some instructions.")
-                    await msg.channel.send(embed=howto_embed)
+                        return
                     self.channel_cooldowns[msg.channel.id] = time.time()
                 except SyntaxError:
                     log.trace(f"{msg.author} posted in a help channel, and when we tried to parse it as Python code, "
