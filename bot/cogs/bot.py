@@ -139,7 +139,7 @@ class Bot:
             if not on_cooldown or msg.channel.id == DEVTEST_CHANNEL:
                 try:
                     howto_embed = ""
-                    not_backticks = ["'''", "\"\"\"", "´´´"]
+                    not_backticks = ["'''", '"""', "´´´", "‘‘‘", "’’’", "′′′", "“““", "”””", "″″″", "〃〃〃"]
                     python_syntax = any(
                         msg.content[3:9].lower() == "python",
                         msg.content[3:5].lower() == "py"
@@ -148,7 +148,7 @@ class Bot:
                     bad_ticks = msg.content[:3] in not_backticks
 
                     if bad_ticks and python_syntax:
-                        howto = (f"You are using the wrong signs, use ``` instead of"
+                        howto = ("You are using the wrong signs, use ``` instead of"
                                  f" {not_backticks.index(msg.content[:3])}")
 
                         howto_embed = Embed(description=howto)
@@ -165,8 +165,8 @@ class Bot:
                         # This check is to avoid all nodes being parsed as expressions.
                         # (e.g. words over multiple lines)
                         if not all(isinstance(node, ast.Expr) for node in tree.body):
-                            space_left = 204
                             # Shorten the code to 10 lines and/or 204 characters.
+                            space_left = 204
                             if len(content) >= space_left:
                                 current_length = 0
                                 lines_walked = 0
@@ -178,12 +178,12 @@ class Bot:
                                 content = content[:current_length]+"#..."
 
                             howto = (f"Hey {msg.author.mention}!\n"
-                                     f"I noticed you were trying to paste code into this channel.\n"
-                                     "Discord has support for Markdown, which allows you to post code with full syntax"
-                                     " highlighting. Please use these whenever you paste code, as this helps improve"
-                                     " the legibility and makes it easier for us to help you.\nTo do this, use the"
-                                     f"following method:\n\n\`\`\`Python\n{content}\n\`\`\`\n\nThis will result in the"
-                                     f" following:\n```Python\n{content}\n```")
+                                     "I noticed you were trying to paste code into this channel.\n"
+                                     "Discord has support for Markdown, which allows you to post code with full syntax "
+                                     "highlighting. Please use these whenever you paste code, as this helps improve "
+                                     "the legibility and makes it easier for us to help you.\n"
+                                     f"To do this, use the following method:\n\n \`\`\`Python\n{content}\n\`\`\`\n\n"
+                                     f"This will result in the following:\n```Python\n{content}\n```")
                             howto_embed = Embed(description=howto)
                         else:
                             return
