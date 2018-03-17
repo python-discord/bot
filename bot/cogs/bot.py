@@ -139,47 +139,59 @@ class Bot:
             on_cooldown = time.time() - self.channel_cooldowns[msg.channel.id] < 300
             if not on_cooldown or msg.channel.id == DEVTEST_CHANNEL:
                 try:
-                    howto = ""
                     not_backticks = ["'''", '"""', "´´´", "‘‘‘", "’’’", "′′′", "“““", "”””", "″″″", "〃〃〃"]
+                    python_syntax = any(
+                        msg.content[3:9].lower() == "python",
+                        msg.content[3:5].lower() == "py"
+                    )
+
                     bad_ticks = msg.content[:3] in not_backticks
+                    if bad_ticks and python_syntax:
+                        howto = (f"Hey {msg.author.mention}!\n"
+                                 "I noticed you were trying to paste code into this channel.\n"
+                                 f"You almost did it but used {not_backticks.index(msg.content[3:])} instead of ```")
 
-                    if bad_ticks:
-                        howto = ("You are using the wrong signs, use ``` instead of "
-                                 f"{not_backticks.index(msg.content[:3])}\n\n")
-                        msg.content = msg.contet.replace(not_backticks.index(msg.content[3:]), "```")
+                    else:
+                        howto = ""
+                        if bad_ticks:
+                            howto += ("You are using the wrong ticks, use ``` instead of "
+                                      f"{not_backticks.index(msg.content[:3])}\n\n")
 
-                    content = self.codeblock_stripping(msg.content)
+                            msg.content = msg.contet.replace(not_backticks.index(msg.content[3:]), "```")
 
-                    # Attempts to parse the message into an AST node.
-                    # Invalid Python code will raise a SyntaxError.
-                    tree = ast.parse(content)
+                        content = self.codeblock_stripping(msg.content)
 
-                    # Multiple lines of single words could be interpreted as expressions.
-                    # This check is to avoid all nodes being parsed as expressions.
-                    # (e.g. words over multiple lines)
-                    if not all(isinstance(node, ast.Expr) for node in tree.body):
-                        # Shorten the code to 10 lines and/or 204 characters.
-                        space_left = 204
-                        if len(content) >= space_left:
-                            current_length = 0
-                            lines_walked = 0
-                            for line in content.splitlines(keepends=True):
-                                if current_length+len(line) > space_left or lines_walked == 10:
-                                    break
-                                current_length += len(line)
-                                lines_walked += 1
-                            content = content[:current_length]+"#..."
+                        # Attempts to parse the message into an AST node.
+                        # Invalid Python code will raise a SyntaxError.
+                        tree = ast.parse(content)
 
-                        howto += (f"Hey {msg.author.mention}!\n"
-                                  "I noticed you were trying to paste code into this channel.\n"
-                                  "Discord has support for Markdown, which allows you to post code with full syntax "
-                                  "highlighting. Please use these whenever you paste code, as this helps improve "
-                                  "the legibility and makes it easier for us to help you.\n"
-                                  f"To do this, use the following method:\n\n \`\`\`Python\n{content}\n\`\`\`\n\n"
-                                  f"This will result in the following:\n```Python\n{content}\n```")
+                        # Multiple lines of single words could be interpreted as expressions.
+                        # This check is to avoid all nodes being parsed as expressions.
+                        # (e.g. words over multiple lines)
+                        if not all(isinstance(node, ast.Expr) for node in tree.body):
+                            # Shorten the code to 10 lines and/or 204 characters.
+                            space_left = 204
+                            if len(content) >= space_left:
+                                current_length = 0
+                                lines_walked = 0
+                                for line in content.splitlines(keepends=True):
+                                    if current_length+len(line) > space_left or lines_walked == 10:
+                                        break
+                                    current_length += len(line)
+                                    lines_walked += 1
+                                content = content[:current_length]+"#..."
 
-                        log.debug(f"{msg.author} posted something that needed to be put inside python code blocks. "
-                                  "Sending the user some instructions.")
+                                howto += (f"Hey {msg.author.mention}!\n"
+                                          "I noticed you were trying to paste code into this channel.\n"
+                                          "Discord has support for Markdown, which allows you to post code with full "
+                                          "syntax highlighting. Please use these whenever you paste code, as this "
+                                          "helps improve the legibility and makes it easier for us to help you.\n"
+                                          f"To do this, use the following method:\n\n"
+                                          f"\`\`\`Python\n{content}\n\`\`\`\n\n This will result in the following:\n"
+                                          f"```Python\n{content}\n```")
+
+                                log.debug(f"{msg.author} posted something that needed to be put inside python code "
+                                          "blocks. Sending the user some instructions.")
 
                     if howto != "":
                         howto_embed = Embed(description=howto)
