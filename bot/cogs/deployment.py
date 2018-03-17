@@ -1,9 +1,13 @@
 # coding=utf-8
+import logging
+
 from discord import Colour, Embed
 from discord.ext.commands import AutoShardedBot, Context, command
 
 from bot.constants import ADMIN_ROLE, DEPLOY_BOT_KEY, DEPLOY_SITE_KEY, DEPLOY_URL, DEVOPS_ROLE, OWNER_ROLE, STATUS_URL
 from bot.decorators import with_role
+
+log = logging.getLogger(__name__)
 
 
 class Deployment:
@@ -22,11 +26,13 @@ class Deployment:
         """
 
         response = await self.bot.http_session.get(DEPLOY_URL, headers={"token": DEPLOY_BOT_KEY})
-        result = response.text()
+        result = await response.text()
 
         if result == "True":
+            log.debug(f"{ctx.author} triggered deployment for bot. Deployment was started.")
             await ctx.send(f"{ctx.author.mention} Bot deployment started.")
         else:
+            log.error(f"{ctx.author} triggered deployment for bot. Deployment failed to start.")
             await ctx.send(f"{ctx.author.mention} Bot deployment failed - check the logs!")
 
     @command(name="deploy_site()", aliases=["bot.deploy_site", "bot.deploy_site()", "deploy_site"])
@@ -37,11 +43,13 @@ class Deployment:
         """
 
         response = await self.bot.http_session.get(DEPLOY_URL, headers={"token": DEPLOY_SITE_KEY})
-        result = response.text()
+        result = await response.text()
 
         if result == "True":
+            log.debug(f"{ctx.author} triggered deployment for site. Deployment was started.")
             await ctx.send(f"{ctx.author.mention} Site deployment started.")
         else:
+            log.error(f"{ctx.author} triggered deployment for site. Deployment failed to start.")
             await ctx.send(f"{ctx.author.mention} Site deployment failed - check the logs!")
 
     @command(name="uptimes()", aliases=["bot.uptimes", "bot.uptimes()", "uptimes"])
@@ -51,6 +59,7 @@ class Deployment:
         Check the various deployment uptimes for each service
         """
 
+        log.debug(f"{ctx.author} requested service uptimes.")
         response = await self.bot.http_session.get(STATUS_URL)
         data = await response.json()
 
@@ -66,9 +75,10 @@ class Deployment:
                 name=key, value=value, inline=True
             )
 
+        log.debug("Uptimes retrieved and parsed, returning data.")
         await ctx.send(embed=embed)
 
 
 def setup(bot):
     bot.add_cog(Deployment(bot))
-    print("Cog loaded: Deployment")
+    log.info("Cog loaded: Deployment")

@@ -1,5 +1,9 @@
 # coding=utf-8
+import logging
+
 from discord.ext.commands import AutoShardedBot, Context
+
+log = logging.getLogger(__name__)
 
 
 class Security:
@@ -17,4 +21,4 @@ class Security:
 
 def setup(bot):
     bot.add_cog(Security(bot))
-    print("Cog loaded: Security")
+    log.info("Cog loaded: Security")

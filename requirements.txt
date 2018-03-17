@@ -3,3 +3,4 @@ dulwich
 multidict
 sympy
 aiodns
+logmatic-python
