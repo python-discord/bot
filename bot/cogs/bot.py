@@ -150,9 +150,9 @@ class Bot:
                             self.channel_cooldowns[msg.channel.id] = time.time()
 
                     except SyntaxError:
-                        log.trace(f"{msg.author} posted in a help channel, and when we tried to parse it as Python code, "
-                                  "ast.parse raised a SyntaxError. This probably just means it wasn't Python code. "
-                                  f"The message that was posted was:\n\n{msg.content}\n\n")
+                        log.trace(f"{msg.author} posted in a help channel, and when we tried to parse it as Python "
+                                  f"code, ast.parse raised a SyntaxError. This probably just means it wasn't Python "
+                                  f"code. The message that was posted was:\n\n{msg.content}\n\n")
                         pass
 
 
