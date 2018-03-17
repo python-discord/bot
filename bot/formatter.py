@@ -124,7 +124,7 @@ class Formatter(HelpFormatter):
         command_list = await self.filter_command_list()
         data = sorted(command_list, key=category_check)
 
-        log.trace(f"Acquired command list and sorted by cog name: {[command.name for command in data]}")
+        log.trace(f"Acquired command list and sorted by cog name: {[command[1].name for command in data]}")
 
         for category, commands in itertools.groupby(data, key=category_check):
             commands = sorted(commands)
