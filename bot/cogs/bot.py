@@ -115,44 +115,45 @@ class Bot:
                 return content
 
     async def on_message(self, msg: Message):
-        if msg.channel.id in self.channel_cooldowns:
-            on_cooldown = time.time() - self.channel_cooldowns[msg.channel.id] < 300
-            if not on_cooldown or msg.channel.id == DEVTEST_CHANNEL:
-                try:
-                    content = self.codeblock_stripping(msg.content)
-                    if not content:
-                        return
-
-                    # Attempts to parse the message into an AST node.
-                    # Invalid Python code will raise a SyntaxError.
-                    tree = ast.parse(content)
-
-                    # Multiple lines of single words could be interpreted as expressions.
-                    # This check is to avoid all nodes being parsed as expressions.
-                    # (e.g. words over multiple lines)
-                    if not all(isinstance(node, ast.Expr) for node in tree.body):
-                        codeblock_tag = await self.bot.get_cog("Tags").get_tag_data("codeblock")
-
-                        if codeblock_tag == {}:
-                            log.warning(f"{msg.author} posted something that needed to be put inside Python "
-                                        "code blocks, but the 'codeblock' tag was not in the tags database!")
+        if not msg.author.bot:
+            if msg.channel.id in self.channel_cooldowns:
+                on_cooldown = time.time() - self.channel_cooldowns[msg.channel.id] < 300
+                if not on_cooldown or msg.channel.id == DEVTEST_CHANNEL:
+                    try:
+                        content = self.codeblock_stripping(msg.content)
+                        if not content:
                             return
 
-                        log.debug(f"{msg.author} posted something that needed to be put inside python code blocks. "
-                                  "Sending the user some instructions.")
-                        howto = (f"Hey {msg.author.mention}!\n\n"
-                                 "I noticed you were trying to paste code into this channel.\n\n"
-                                 f"{codeblock_tag['tag_content']}")
+                        # Attempts to parse the message into an AST node.
+                        # Invalid Python code will raise a SyntaxError.
+                        tree = ast.parse(content)
 
-                        howto_embed = Embed(description=howto)
-                        await msg.channel.send(embed=howto_embed)
-                        self.channel_cooldowns[msg.channel.id] = time.time()
+                        # Multiple lines of single words could be interpreted as expressions.
+                        # This check is to avoid all nodes being parsed as expressions.
+                        # (e.g. words over multiple lines)
+                        if not all(isinstance(node, ast.Expr) for node in tree.body):
+                            codeblock_tag = await self.bot.get_cog("Tags").get_tag_data("codeblock")
 
-                except SyntaxError:
-                    log.trace(f"{msg.author} posted in a help channel, and when we tried to parse it as Python code, "
-                              "ast.parse raised a SyntaxError. This probably just means it wasn't Python code. "
-                              f"The message that was posted was:\n\n{msg.content}\n\n")
-                    pass
+                            if codeblock_tag == {}:
+                                log.warning(f"{msg.author} posted something that needed to be put inside Python "
+                                            "code blocks, but the 'codeblock' tag was not in the tags database!")
+                                return
+
+                            log.debug(f"{msg.author} posted something that needed to be put inside python code blocks. "
+                                      "Sending the user some instructions.")
+                            howto = (f"Hey {msg.author.mention}!\n\n"
+                                     "I noticed you were trying to paste code into this channel.\n\n"
+                                     f"{codeblock_tag['tag_content']}")
+
+                            howto_embed = Embed(description=howto)
+                            await msg.channel.send(embed=howto_embed)
+                            self.channel_cooldowns[msg.channel.id] = time.time()
+
+                    except SyntaxError:
+                        log.trace(f"{msg.author} posted in a help channel, and when we tried to parse it as Python code, "
+                                  "ast.parse raised a SyntaxError. This probably just means it wasn't Python code. "
+                                  f"The message that was posted was:\n\n{msg.content}\n\n")
+                        pass
 
 
 def setup(bot):
