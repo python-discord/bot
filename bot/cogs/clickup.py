@@ -197,7 +197,7 @@ class ClickUp:
                     )
 
                 log.debug(f"{ctx.author} requested the task '#{task_id}'. Returning the task data.")
-                return await LinePaginator.paginate(lines, ctx, embed, max_size=750)
+                return await LinePaginator.paginate(lines, ctx, embed, max_size=1500)
         return await ctx.send(embed=embed)
 
     @command(name="clickup.team()", aliases=["clickup.team", "team", "list_team"])
