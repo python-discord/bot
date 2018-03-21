@@ -180,7 +180,12 @@ class ClickUp:
                 lines = [first_line]
 
                 if task.get("text_content"):
-                    lines.append(task["text_content"])
+                    text = task["text_content"]
+
+                    if len(text) >= 1500:
+                        text = text[:1497] + "..."
+
+                    lines.append(text)
 
                 if task.get("assignees"):
                     assignees = ", ".join(user["username"] for user in task["assignees"])
