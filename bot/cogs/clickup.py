@@ -131,6 +131,9 @@ class ClickUp:
         Get a task and return information specific to it
         """
 
+        if task_id.startswith("#"):
+            task_id = task_id[1:]
+
         embed = Embed(colour=Colour.blurple())
         embed.set_author(
             name=f"ClickUp Task: #{task_id}",
