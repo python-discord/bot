@@ -16,7 +16,7 @@ bot = AutoShardedBot(
         ">>> ", ">> ", "> ",
         ">>>", ">>", ">"
     ),  # Order matters (and so do commas)
-    game=Game(name="Help: bot.help()"),
+    activity=Game(name="Help: bot.help()"),
     help_attrs={"aliases": ["help()"]},
     formatter=Formatter()
 )
