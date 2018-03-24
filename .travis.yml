@@ -17,6 +17,4 @@ after_success:
 cache: pip
 
 notifications:
-  email:
-    on_success: never
-    on_failure: never
+  email: false
