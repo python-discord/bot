@@ -6,11 +6,16 @@ branches:
   only:
     - "master"
 
+env:
+  global:
+    - PIPENV_VENV_IN_PROJECT=1
+    - PIPENV_IGNORE_VIRTUALENVS=1
+
 install:
-  - pip install -r requirements.txt
-  - pip install -r requirements-ci.txt
+  - pip install pipenv
+  - pipenv sync --dev --three
 script:
-  - flake8
+  - pipenv run python -m flake8
 after_success:
   - python deploy.py
 
