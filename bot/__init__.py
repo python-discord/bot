@@ -6,11 +6,9 @@ from logging import Logger, StreamHandler
 from logging.handlers import SysLogHandler
 
 import discord.ext.commands.view
-
 from logmatic import JsonFormatter
 
 from bot.constants import PAPERTRAIL_ADDRESS, PAPERTRAIL_PORT
-
 
 logging.TRACE = 5
 logging.addLevelName(logging.TRACE, "TRACE")

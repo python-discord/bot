@@ -3,7 +3,6 @@ import logging
 
 from discord import Colour, Embed
 from discord.ext.commands import AutoShardedBot, Context, command
-
 from multidict import MultiDict
 
 from bot.constants import (

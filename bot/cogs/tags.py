@@ -4,8 +4,7 @@ import time
 from discord import Colour, Embed
 from discord.ext.commands import AutoShardedBot, Context, command
 
-from bot.constants import ADMIN_ROLE, MODERATOR_ROLE, OWNER_ROLE
-from bot.constants import SITE_API_KEY, SITE_API_TAGS_URL, TAG_COOLDOWN
+from bot.constants import ADMIN_ROLE, MODERATOR_ROLE, OWNER_ROLE, SITE_API_KEY, SITE_API_TAGS_URL, TAG_COOLDOWN
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
 

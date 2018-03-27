@@ -11,7 +11,6 @@ from subprocess import PIPE, Popen, STDOUT, TimeoutExpired  # noqa: B404
 from discord import File
 from discord.ext.commands import command
 
-
 LATEX_URL = "https://latex2png.com"
 
 

@@ -2,7 +2,6 @@
 import os
 
 from aiohttp import AsyncResolver, ClientSession, TCPConnector
-
 from discord import Game
 from discord.ext.commands import AutoShardedBot, when_mentioned_or
 
