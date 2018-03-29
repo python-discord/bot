@@ -271,11 +271,11 @@
         },
         "flake8-bandit": {
             "hashes": [
-                "sha256:24572dc2181c967bec1e7767c1a1faa4921f3d5a4cf9f84a78e2a555ca6c442a",
-                "sha256:345f5e61cd5eaf354156d7b45173fd14f6e31d35391d884c3222597a363c61ca"
+                "sha256:a66c7b42af9530d5e988851ccee02958a51a85d46f1f4609ecc3546948f809b8",
+                "sha256:f7c3421fd9aebc63689c0693511e16dcad678fd4a0ce624b78ca91ae713eacdc"
             ],
             "index": "pypi",
-            "version": "==1.0.1"
+            "version": "==1.0.2"
         },
         "flake8-bugbear": {
             "hashes": [
@@ -360,10 +360,10 @@
         },
         "pbr": {
             "hashes": [
-                "sha256:05f61c71aaefc02d8e37c0a3eeb9815ff526ea28b3b76324769e6158d7f95be1",
-                "sha256:60c25b7dfd054ef9bb0ae327af949dd4676aa09ac3a9471cdc871d8a9213f9ac"
+                "sha256:8b9a7c3704657cb0831b3ded0a6b61377947c8235b76649bb7de4bfe2e6cfa56",
+                "sha256:cf66675e22ae91a4f20e4b8354f117d3e3d1de651513051d109cc39645fb3672"
             ],
-            "version": "==3.1.1"
+            "version": "==4.0.0"
         },
         "pycodestyle": {
             "hashes": [
