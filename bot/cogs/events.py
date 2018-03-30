@@ -76,7 +76,9 @@ class Events:
 
             users.append({
                 "user_id": member.id,
-                "roles": roles
+                "roles": roles,
+                "username": member.name,
+                "discriminator": member.discriminator
             })
 
         if users:
@@ -112,7 +114,7 @@ class Events:
                 )
 
     async def on_member_update(self, before: Member, after: Member):
-        if before.roles == after.roles:
+        if before.roles == after.roles and before.name == after.name and before.discriminator == after.discriminator:
             return
 
         before_role_names = [role.name for role in before.roles]  # type: List[str]
@@ -123,7 +125,9 @@ class Events:
 
         await self.send_updated_users({
             "user_id": after.id,
-            "roles": role_ids
+            "roles": role_ids,
+            "username": after.name,
+            "discriminator": after.discriminator
         })
 
 
