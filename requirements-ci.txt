@@ -7,3 +7,4 @@ flake8-todo
 flake8-string-format 
 safety 
 dodgy
+requests
