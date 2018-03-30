@@ -8,9 +8,7 @@ from discord.ext.commands import (
     NoPrivateMessage, UserInputError
 )
 
-from bot.constants import (
-    ADMIN_ROLE, DEVLOG_CHANNEL, DEVOPS_ROLE, MODERATOR_ROLE, OWNER_ROLE, PYTHON_GUILD, SITE_API_KEY, SITE_API_USER_URL
-)
+from bot.constants import DEVLOG_CHANNEL, PYTHON_GUILD, SITE_API_KEY, SITE_API_USER_URL
 from bot.utils import chunks
 
 log = logging.getLogger(__name__)
