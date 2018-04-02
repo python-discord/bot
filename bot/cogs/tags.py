@@ -167,6 +167,18 @@ class Tags:
         else:
             embed.colour = Colour.red()
 
+            # Replace all whitespace (Probably not the best place to put this though)
+            tag_data = tag_date.translate(
+                {
+                    0x8: "\\b",
+                    0x9: "\\t",
+                    0xA: "\\n",
+                    0xB: "\\v",
+                    0xC: "\\f",
+                    0xD: "\\r"
+                }
+            )
+
             if isinstance(tag_data, dict):
                 log.warning(f"{ctx.author} requested the tag '{tag_name}', but it could not be found.")
                 embed.description = f"Unknown tag: **{tag_name}**"
