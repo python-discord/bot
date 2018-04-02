@@ -168,7 +168,7 @@ class Tags:
             embed.colour = Colour.red()
 
             # Replace all whitespace (Probably not the best place to put this though)
-            tag_data = tag_date.translate(
+            tag_data = tag_data.translate(
                 {
                     0x8: "\\b",
                     0x9: "\\t",
