@@ -85,15 +85,14 @@ class Tags:
         return tag_data
 
     @staticmethod
-    async def validate(embed: Embed, author: User, tag_name: str, tag_content: str = None) -> bool:
+    async def validate(author: User, tag_name: str, tag_content: str = None):
         """
-        Edit an embed based on the validity of a tag name
+        Create an embed based on the validity of a tag's content
 
-        :param embed: The embed to modify.
         :param author: The user that called the command
         :param tag_name: The name of the tag to validate.
         :param tag_content: The tag's content, if any.
-        :return: True if tag details passed all checks, otherwise False.
+        :return: A validation embed if invalid, otherwise None
         """
 
         def is_number(string):
@@ -103,6 +102,8 @@ class Tags:
                 return False
             else:
                 return True
+
+        embed = Embed()
 
         # Replace any special characters
         raw_name = tag_name.translate(
@@ -116,15 +117,15 @@ class Tags:
             }
         )
 
-        # 'tag_name' has any special characters
+        # 'tag_name' has at least one special character.
         if tag_name != raw_name:
             log.warning(f"{author} tried to put a special character in a tag name. "
                         "Rejecting the request.")
             embed.title = "Please don't do that"
             embed.description = "Don't be ridiculous, special characters obviously aren't allowed in the tag name"
 
-        # 'tag_content' (when not None) or 'tag_name' consists of nothing but whitespace
-        elif (tag_content and not tag_content.strip()) or not tag_name.strip():
+        # 'tag_content' or 'tag_name' are either empty, or consist of nothing but whitespace
+        elif (tag_content is not None and not tag_content) or not tag_name:
             log.warning(f"{author} tried to create a tag with a name consisting only of whitespace. "
                         "Rejecting the request.")
             embed.title = "Please don't do that"
@@ -138,11 +139,10 @@ class Tags:
             embed.title = "Please don't do that"
             embed.description = "Tag names can't be numbers."
 
-        # No checks failed, return True (valid)
         else:
-            return True
+            return
 
-        return False
+        return embed
 
     @command(name="tags()", aliases=["tags"], hidden=True)
     async def info_command(self, ctx: Context):
@@ -195,14 +195,14 @@ class Tags:
                         f"Cooldown ends in {time_left:.1f} seconds.")
             return
 
-        embed = Embed()
         tags = []
+        tag_name = tag_name.lower().strip()
+        validation = await self.validate(ctx.author, tag_name)
 
-        is_valid = await self.validate(embed, ctx.author, tag_name)
+        if validation is not None:
+            return await ctx.send(embed=validation)
 
-        if not is_valid:
-            return await ctx.send(embed=embed)
-
+        embed = Embed()
         tag_data = await self.get_tag_data(tag_name)
 
         # If we found something, prepare that data
@@ -267,13 +267,14 @@ class Tags:
         :param tag_content: The content of the tag.
         """
 
+        tag_name = tag_name.lower().strip()
+        tag_content = tag_content.strip()
+        validation = await self.validate(ctx.author, tag_name, tag_content)
+
+        if validation is not None:
+            return await ctx.send(embed=validation)
+
         embed = Embed()
-        is_valid = await self.validate(embed, ctx.author, tag_name, tag_content)
-
-        if not is_valid:
-            return await ctx.send(embed=embed)
-
-        tag_name = tag_name.lower()
         tag_data = await self.post_tag_data(tag_name, tag_content)
 
         if tag_data.get("success"):
@@ -304,13 +305,13 @@ class Tags:
         :param tag_name: The name of the tag to delete.
         """
 
+        tag_name = tag_name.lower().strip()
+        validation = await self.validate(ctx.author, tag_name)
+
+        if validation is not None:
+            return await ctx.send(embed=validation)
+
         embed = Embed()
-        embed.colour = Colour.red()
-        is_valid = await self.validate(embed, ctx.author, tag_name)
-
-        if not is_valid:
-            return await ctx.send(embed=embed)
-
         tag_data = await self.delete_tag_data(tag_name)
 
         if tag_data.get("success") is True:
