@@ -1,7 +1,7 @@
 import logging
 import time
 
-from discord import Colour, Embed
+from discord import Colour, Embed, User
 from discord.ext.commands import AutoShardedBot, Context, command
 
 from bot.constants import ADMIN_ROLE, MODERATOR_ROLE, OWNER_ROLE, SITE_API_KEY, SITE_API_TAGS_URL, TAG_COOLDOWN
@@ -84,6 +84,66 @@ class Tags:
 
         return tag_data
 
+    @staticmethod
+    async def validate(embed: Embed, author: User, tag_name: str, tag_content: str = None) -> bool:
+        """
+        Edit an embed based on the validity of a tag name
+
+        :param embed: The embed to modify.
+        :param author: The user that called the command
+        :param tag_name: The name of the tag to validate.
+        :param tag_content: The tag's content, if any.
+        :return: True if tag details passed all checks, otherwise False.
+        """
+
+        def is_number(string):
+            try:
+                float(string)
+            except ValueError:
+                return False
+            else:
+                return True
+
+        # Replace any special characters
+        raw_name = tag_name.translate(
+            {
+                0x8: "\\b",  # Backspace
+                0x9: "\\t",  # Horizontal tab
+                0xA: "\\n",  # Linefeed
+                0xB: "\\v",  # Vertical tab
+                0xC: "\\f",  # Form feed
+                0xD: "\\r"   # Carriage return
+            }
+        )
+
+        # 'tag_name' has any special characters
+        if tag_name != raw_name:
+            log.warning(f"{author} tried to put a special character in a tag name. "
+                        "Rejecting the request.")
+            embed.title = "Please don't do that"
+            embed.description = "Don't be ridiculous, special characters obviously aren't allowed in the tag name"
+
+        # 'tag_content' (when not None) or 'tag_name' consists of nothing but whitespace
+        elif (tag_content and not tag_content.strip()) or not tag_name.strip():
+            log.warning(f"{author} tried to create a tag with a name consisting only of whitespace. "
+                        "Rejecting the request.")
+            embed.title = "Please don't do that"
+            embed.description = "Tags should not be empty, or filled with whitespace."
+
+        # 'tag_name' is a number of some kind, we don't allow that.
+        elif is_number(tag_name):
+            log.error("inside the is_number")
+            log.warning(f"{author} tried to create a tag with a digit as its name. "
+                        "Rejecting the request.")
+            embed.title = "Please don't do that"
+            embed.description = "Tag names can't be numbers."
+
+        # No checks failed, return True (valid)
+        else:
+            return True
+
+        return False
+
     @command(name="tags()", aliases=["tags"], hidden=True)
     async def info_command(self, ctx: Context):
         """
@@ -138,6 +198,11 @@ class Tags:
         embed = Embed()
         tags = []
 
+        is_valid = await self.validate(embed, ctx.author, tag_name)
+
+        if not is_valid:
+            return await ctx.send(embed=embed)
+
         tag_data = await self.get_tag_data(tag_name)
 
         # If we found something, prepare that data
@@ -166,18 +231,6 @@ class Tags:
         # If not, prepare an error message.
         else:
             embed.colour = Colour.red()
-
-            # Replace all whitespace (Probably not the best place to put this though)
-            tag_data = tag_data.translate(
-                {
-                    0x8: "\\b",
-                    0x9: "\\t",
-                    0xA: "\\n",
-                    0xB: "\\v",
-                    0xC: "\\f",
-                    0xD: "\\r"
-                }
-            )
 
             if isinstance(tag_data, dict):
                 log.warning(f"{ctx.author} requested the tag '{tag_name}', but it could not be found.")
@@ -214,58 +267,30 @@ class Tags:
         :param tag_content: The content of the tag.
         """
 
-        def is_number(string):
-            try:
-                float(string)
-            except ValueError:
-                return False
-            else:
-                return True
-
         embed = Embed()
-        embed.colour = Colour.red()
+        is_valid = await self.validate(embed, ctx.author, tag_name, tag_content)
 
-        # Newline in 'tag_name'
-        if "\n" in tag_name:
-            log.warning(f"{ctx.author} tried to put a newline in a tag name. "
-                        "Rejecting the request.")
-            embed.title = "Please don't do that"
-            embed.description = "Don't be ridiculous. Newlines are obviously not allowed in the tag name."
+        if not is_valid:
+            return await ctx.send(embed=embed)
 
-        # 'tag_name' or 'tag_content' consists of nothing but whitespace
-        elif not tag_content.strip() or not tag_name.strip():
-            log.warning(f"{ctx.author} tried to create a tag with a name consisting only of whitespace. "
-                        "Rejecting the request.")
-            embed.title = "Please don't do that"
-            embed.description = "Tags should not be empty, or filled with whitespace."
+        tag_name = tag_name.lower()
+        tag_data = await self.post_tag_data(tag_name, tag_content)
 
-        # 'tag_name' is a number of some kind, we don't allow that.
-        elif is_number(tag_name):
-            log.error("inside the is_number")
-            log.warning(f"{ctx.author} tried to create a tag with a digit as its name. "
-                        "Rejecting the request.")
-            embed.title = "Please don't do that"
-            embed.description = "Tag names can't be numbers."
-
+        if tag_data.get("success"):
+            log.debug(f"{ctx.author} successfully added the following tag to our database: \n"
+                      f"tag_name: {tag_name}\n"
+                      f"tag_content: '{tag_content}'")
+            embed.colour = Colour.blurple()
+            embed.title = "Tag successfully added"
+            embed.description = f"**{tag_name}** added to tag database."
         else:
-            tag_name = tag_name.lower()
-            tag_data = await self.post_tag_data(tag_name, tag_content)
-
-            if tag_data.get("success"):
-                log.debug(f"{ctx.author} successfully added the following tag to our database: \n"
-                          f"tag_name: {tag_name}\n"
-                          f"tag_content: '{tag_content}'")
-                embed.colour = Colour.blurple()
-                embed.title = "Tag successfully added"
-                embed.description = f"**{tag_name}** added to tag database."
-            else:
-                log.error("There was an unexpected database error when trying to add the following tag: \n"
-                          f"tag_name: {tag_name}\n"
-                          f"tag_content: '{tag_content}'\n"
-                          f"response: {tag_data}")
-                embed.title = "Database error"
-                embed.description = ("There was a problem adding the data to the tags database. "
-                                     "Please try again. If the problem persists, see the error logs.")
+            log.error("There was an unexpected database error when trying to add the following tag: \n"
+                      f"tag_name: {tag_name}\n"
+                      f"tag_content: '{tag_content}'\n"
+                      f"response: {tag_data}")
+            embed.title = "Database error"
+            embed.description = ("There was a problem adding the data to the tags database. "
+                                 "Please try again. If the problem persists, see the error logs.")
 
         return await ctx.send(embed=embed)
 
@@ -281,6 +306,10 @@ class Tags:
 
         embed = Embed()
         embed.colour = Colour.red()
+        is_valid = await self.validate(embed, ctx.author, tag_name)
+
+        if not is_valid:
+            return await ctx.send(embed=embed)
 
         tag_data = await self.delete_tag_data(tag_name)
 
