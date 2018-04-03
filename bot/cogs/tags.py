@@ -104,6 +104,7 @@ class Tags:
                 return True
 
         embed = Embed()
+        embed.colour = Colour.red()
 
         # Replace any special characters
         raw_name = tag_name.translate(
@@ -203,6 +204,7 @@ class Tags:
             return await ctx.send(embed=validation)
 
         embed = Embed()
+        embed.colour = Colour.red()
         tag_data = await self.get_tag_data(tag_name)
 
         # If we found something, prepare that data
@@ -275,6 +277,7 @@ class Tags:
             return await ctx.send(embed=validation)
 
         embed = Embed()
+        embed.colour = Colour.red()
         tag_data = await self.post_tag_data(tag_name, tag_content)
 
         if tag_data.get("success"):
@@ -312,6 +315,7 @@ class Tags:
             return await ctx.send(embed=validation)
 
         embed = Embed()
+        embed.colour = Colour.red()
         tag_data = await self.delete_tag_data(tag_name)
 
         if tag_data.get("success") is True:
