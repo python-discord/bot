@@ -1,4 +1,6 @@
 import logging
+import random
+import string
 import time
 from typing import Optional
 
@@ -16,6 +18,19 @@ class Tags:
     """
     Save new tags and fetch existing tags.
     """
+
+    FAIL_TITLES = [
+        "Please don't do that.",
+        "You silly tart.",
+        "You have to stop.",
+        "Do you mind?",
+        "In the future, don't do that.",
+        "That was a mistake.",
+        "You blew it.",
+        "You're bad at computers.",
+        "Are you trying to kill me?",
+        "Noooooo!!"
+    ]
 
     def __init__(self, bot: AutoShardedBot):
         self.bot = bot
@@ -119,18 +134,20 @@ class Tags:
             }
         )
 
-        # 'tag_name' has at least one special character.
-        if tag_name != raw_name:
-            log.warning(f"{author} tried to put a special character in a tag name. "
+        is_printable = all(char in string.printable for char in tag_name)
+
+        # 'tag_name' has at least one invalid character.
+        if tag_name != raw_name or not is_printable:
+            log.warning(f"{author} tried to put an invalid character in a tag name. "
                         "Rejecting the request.")
-            embed.title = "Please don't do that"
-            embed.description = "Don't be ridiculous, special characters obviously aren't allowed in the tag name"
+            embed.title = random.choice(Tags.FAIL_TITLES)
+            embed.description = "Don't be ridiculous, you can't use that character!"
 
         # 'tag_content' or 'tag_name' are either empty, or consist of nothing but whitespace
         elif (tag_content is not None and not tag_content) or not tag_name:
             log.warning(f"{author} tried to create a tag with a name consisting only of whitespace. "
                         "Rejecting the request.")
-            embed.title = "Please don't do that"
+            embed.title = random.choice(Tags.FAIL_TITLES)
             embed.description = "Tags should not be empty, or filled with whitespace."
 
         # 'tag_name' is a number of some kind, we don't allow that.
@@ -138,7 +155,7 @@ class Tags:
             log.error("inside the is_number")
             log.warning(f"{author} tried to create a tag with a digit as its name. "
                         "Rejecting the request.")
-            embed.title = "Please don't do that"
+            embed.title = random.choice(Tags.FAIL_TITLES)
             embed.description = "Tag names can't be numbers."
 
         else:
@@ -158,7 +175,7 @@ class Tags:
         return await ctx.invoke(self.bot.get_command("help"), "Tags")
 
     @command(name="tags.get()", aliases=["tags.get", "tags.show()", "tags.show", "get_tag"])
-    async def get_command(self, ctx: Context, tag_name=None):
+    async def get_command(self, ctx: Context, tag_name: str=None):
         """
         Get a list of all tags or a specified tag.
 
@@ -198,11 +215,13 @@ class Tags:
             return
 
         tags = []
-        tag_name = tag_name.lower().strip()
-        validation = await self.validate(ctx.author, tag_name)
 
-        if validation is not None:
-            return await ctx.send(embed=validation)
+        if tag_name is not None:
+            tag_name = tag_name.lower().strip()
+            validation = await self.validate(ctx.author, tag_name)
+
+            if validation is not None:
+                return await ctx.send(embed=validation)
 
         embed = Embed()
         embed.colour = Colour.red()
@@ -237,14 +256,14 @@ class Tags:
 
             if isinstance(tag_data, dict):
                 log.warning(f"{ctx.author} requested the tag '{tag_name}', but it could not be found.")
-                embed.description = f"Unknown tag: **{tag_name}**"
+                embed.description = f"There wasn't a **{tag_name}** tag! Make sure you typed it correctly."
             else:
                 log.warning(f"{ctx.author} requested a list of all tags, but the tags database was empty!")
                 embed.description = "**There are no tags in the database!**"
 
             if tag_name:
                 embed.set_footer(text="To show a list of all tags, use bot.tags.get().")
-                embed.title = "Tag not found"
+                embed.title = "Couldn't find that tag!"
 
         # Paginate if this is a list of all tags
         if tags:
@@ -270,12 +289,13 @@ class Tags:
         :param tag_content: The content of the tag.
         """
 
-        tag_name = tag_name.lower().strip()
-        tag_content = tag_content.strip()
         validation = await self.validate(ctx.author, tag_name, tag_content)
 
         if validation is not None:
             return await ctx.send(embed=validation)
+
+        tag_name = tag_name.lower().strip()
+        tag_content = tag_content.strip()
 
         embed = Embed()
         embed.colour = Colour.red()
@@ -309,11 +329,12 @@ class Tags:
         :param tag_name: The name of the tag to delete.
         """
 
-        tag_name = tag_name.lower().strip()
         validation = await self.validate(ctx.author, tag_name)
 
         if validation is not None:
             return await ctx.send(embed=validation)
+
+        tag_name = tag_name.lower().strip()
 
         embed = Embed()
         embed.colour = Colour.red()
