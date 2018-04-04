@@ -87,7 +87,7 @@ class Tags:
     @staticmethod
     async def validate(author: User, tag_name: str, tag_content: str = None):
         """
-        Create an embed based on the validity of a tag's content
+        Create an embed based on the validity of a tag's name and content
 
         :param author: The user that called the command
         :param tag_name: The name of the tag to validate.
