@@ -1,5 +1,6 @@
 import logging
 import time
+from typing import Optional
 
 from discord import Colour, Embed, User
 from discord.ext.commands import AutoShardedBot, Context, command
@@ -85,7 +86,7 @@ class Tags:
         return tag_data
 
     @staticmethod
-    async def validate(author: User, tag_name: str, tag_content: str = None):
+    async def validate(author: User, tag_name: str, tag_content: str = None) -> Optional[Embed]:
         """
         Create an embed based on the validity of a tag's name and content
 
