@@ -142,7 +142,7 @@ class Tags:
             embed.description = "Tag names can't be numbers."
 
         else:
-            return
+            return None
 
         return embed
 
