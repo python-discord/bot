@@ -4,3 +4,4 @@ multidict
 sympy
 aiodns
 logmatic-python
+git+https://github.com/BeatButton/websockets@663530bd0a
