@@ -122,7 +122,7 @@ class Tags:
         embed.colour = Colour.red()
 
         # 'tag_name' has at least one invalid character.
-        if ascii(tag_name) != repr(tag_name):
+        if ascii(tag_name)[1:-1] != tag_name:
             log.warning(f"{author} tried to put an invalid character in a tag name. "
                         "Rejecting the request.")
             embed.title = random.choice(Tags.FAIL_TITLES)
@@ -143,9 +143,15 @@ class Tags:
             embed.title = random.choice(Tags.FAIL_TITLES)
             embed.description = "Tag names can't be numbers."
 
+        # 'tag_name' is longer than 127 characters
+        elif len(tag_name) > 127:
+            log.warning(f"{author} tried to request a tag name with over 127 characters. "
+                        "Rejecting the request.")
+            embed.title = random.choice(Tags.FAIL_TITLES)
+            embed.description = "Are you insane? That's way too long!"
+
         else:
             return None
-
         return embed
 
     @command(name="tags()", aliases=["tags"], hidden=True)
@@ -263,7 +269,7 @@ class Tags:
 
         return await ctx.send(embed=embed)
 
-    @with_role(ADMIN_ROLE, OWNER_ROLE, MODERATOR_ROLE)
+    # @with_role(ADMIN_ROLE, OWNER_ROLE, MODERATOR_ROLE)
     @command(name="tags.set()", aliases=["tags.set", "tags.add", "tags.add()", "tags.edit", "tags.edit()", "add_tag"])
     async def set_command(self, ctx: Context, tag_name: str, tag_content: str):
         """
@@ -304,7 +310,7 @@ class Tags:
 
         return await ctx.send(embed=embed)
 
-    @with_role(ADMIN_ROLE, OWNER_ROLE)
+    # @with_role(ADMIN_ROLE, OWNER_ROLE)
     @command(name="tags.delete()", aliases=["tags.delete", "tags.remove", "tags.remove()", "remove_tag"])
     async def delete_command(self, ctx: Context, tag_name: str):
         """
