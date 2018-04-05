@@ -111,9 +111,9 @@ class Tags:
         :return: A validation embed if invalid, otherwise None
         """
 
-        def is_number(string):
+        def is_number(value):
             try:
-                float(string)
+                float(value)
             except ValueError:
                 return False
             else:
@@ -122,22 +122,8 @@ class Tags:
         embed = Embed()
         embed.colour = Colour.red()
 
-        # Replace any special characters
-        raw_name = tag_name.translate(
-            {
-                0x8: "\\b",  # Backspace
-                0x9: "\\t",  # Horizontal tab
-                0xA: "\\n",  # Linefeed
-                0xB: "\\v",  # Vertical tab
-                0xC: "\\f",  # Form feed
-                0xD: "\\r"   # Carriage return
-            }
-        )
-
-        is_printable = all(char in string.printable for char in tag_name)
-
         # 'tag_name' has at least one invalid character.
-        if tag_name != raw_name or not is_printable:
+        if ascii(tag_name) != repr(tag_name):
             log.warning(f"{author} tried to put an invalid character in a tag name. "
                         "Rejecting the request.")
             embed.title = random.choice(Tags.FAIL_TITLES)
