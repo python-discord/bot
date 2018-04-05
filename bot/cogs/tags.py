@@ -215,7 +215,7 @@ class Tags:
             return
 
         tags = []
-
+        
         if tag_name is not None:
             tag_name = tag_name.lower().strip()
             validation = await self.validate(ctx.author, tag_name)
@@ -335,7 +335,6 @@ class Tags:
             return await ctx.send(embed=validation)
 
         tag_name = tag_name.lower().strip()
-
         embed = Embed()
         embed.colour = Colour.red()
         tag_data = await self.delete_tag_data(tag_name)
