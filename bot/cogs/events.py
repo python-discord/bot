@@ -1,6 +1,4 @@
 # coding=utf-8
-from aiohttp import ClientSession
-
 from discord import Embed, Member
 from discord.ext.commands import (
     AutoShardedBot, BadArgument, BotMissingPermissions,
@@ -23,13 +21,13 @@ class Events:
 
     async def send_updated_users(self, *users):
         try:
-            with ClientSession(headers={"X-API-Key": SITE_API_KEY}) as session:
-                response = await session.post(
-                    url=SITE_API_USER_URL,
-                    json=list(users)
-                )
+            response = await self.bot.http_session.post(
+                url=SITE_API_USER_URL,
+                json=list(users),
+                headers={"X-API-Key": SITE_API_KEY}
+            )
 
-                return await response.json()
+            return await response.json()
         except Exception as e:
             print(f"Failed to send role updates: {e}")
             return {}

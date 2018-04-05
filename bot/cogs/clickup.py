@@ -1,6 +1,4 @@
 # coding=utf-8
-from aiohttp import ClientSession
-
 from discord import Colour, Embed
 from discord.ext.commands import AutoShardedBot, Context, command
 
@@ -10,7 +8,9 @@ from bot.constants import (
     ADMIN_ROLE, CLICKUP_KEY, CLICKUP_SPACE, CLICKUP_TEAM, DEVOPS_ROLE, MODERATOR_ROLE, OWNER_ROLE
 )
 from bot.decorators import with_role
-from bot.utils import CaseInsensitiveDict, paginate
+from bot.pagination import LinePaginator
+from bot.utils import CaseInsensitiveDict
+
 
 CREATE_TASK_URL = "https://api.clickup.com/api/v1/list/{list_id}/task"
 EDIT_TASK_URL = "https://api.clickup.com/api/v1/task/{task_id}"
@@ -39,9 +39,10 @@ class ClickUp:
         self.lists = CaseInsensitiveDict()
 
     async def on_ready(self):
-        with ClientSession() as session:
-            response = await session.get(PROJECTS_URL.format(space_id=CLICKUP_SPACE), headers=HEADERS)
-            result = await response.json()
+        response = await self.bot.http_session.get(
+            PROJECTS_URL.format(space_id=CLICKUP_SPACE), headers=HEADERS
+        )
+        result = await response.json()
 
         if "err" in result:
             print(f"Failed to get ClickUp lists: `{result['ECODE']}`: {result['err']}")
@@ -87,9 +88,10 @@ class ClickUp:
         if status and status != "*":
             params["statuses[]"] = status
 
-        with ClientSession() as session:
-            response = await session.get(GET_TASKS_URL.format(team_id=CLICKUP_TEAM), headers=HEADERS, params=params)
-            result = await response.json()
+        response = await self.bot.http_session.get(
+            GET_TASKS_URL.format(team_id=CLICKUP_TEAM), headers=HEADERS, params=params
+        )
+        result = await response.json()
 
         if "err" in result:
             embed.description = f"`{result['ECODE']}`: {result['err']}"
@@ -110,7 +112,7 @@ class ClickUp:
                     status = f"{task['status']['status'].title()}"
 
                     lines.append(f"{id_fragment} ({status})\n\u00BB {task['name']}")
-                return await paginate(lines, ctx, embed, max_size=750)
+                return await LinePaginator.paginate(lines, ctx, embed, max_size=750)
         return await ctx.send(embed=embed)
 
     @command(name="clickup.task()", aliases=["clickup.task", "task", "get_task"])
@@ -133,9 +135,10 @@ class ClickUp:
         params.add("statuses[]", "review")
         params.add("statuses[]", "Closed")
 
-        with ClientSession() as session:
-            response = await session.get(GET_TASKS_URL.format(team_id=CLICKUP_TEAM), headers=HEADERS, params=params)
-            result = await response.json()
+        response = await self.bot.http_session.get(
+            GET_TASKS_URL.format(team_id=CLICKUP_TEAM), headers=HEADERS, params=params
+        )
+        result = await response.json()
 
         if "err" in result:
             embed.description = f"`{result['ECODE']}`: {result['err']}"
@@ -172,7 +175,7 @@ class ClickUp:
                         f"**Assignees**\n{assignees}"
                     )
 
-                return await paginate(lines, ctx, embed, max_size=750)
+                return await LinePaginator.paginate(lines, ctx, embed, max_size=750)
         return await ctx.send(embed=embed)
 
     @command(name="clickup.team()", aliases=["clickup.team", "team", "list_team"])
@@ -182,9 +185,10 @@ class ClickUp:
         Get a list of every member of the team
         """
 
-        with ClientSession() as session:
-            response = await session.get(TEAM_URL.format(team_id=CLICKUP_TEAM), headers=HEADERS)
-            result = await response.json()
+        response = await self.bot.http_session.get(
+            TEAM_URL.format(team_id=CLICKUP_TEAM), headers=HEADERS
+        )
+        result = await response.json()
 
         if "err" in result:
             embed = Embed(
@@ -217,9 +221,10 @@ class ClickUp:
         Get all the lists belonging to the ClickUp space
         """
 
-        with ClientSession() as session:
-            response = await session.get(PROJECTS_URL.format(space_id=CLICKUP_SPACE), headers=HEADERS)
-            result = await response.json()
+        response = await self.bot.http_session.get(
+            PROJECTS_URL.format(space_id=CLICKUP_SPACE), headers=HEADERS
+        )
+        result = await response.json()
 
         if "err" in result:
             embed = Embed(
@@ -276,14 +281,13 @@ class ClickUp:
             embed.description = f"Unknown list: {task_list}"
             return await ctx.send(embed=embed)
 
-        with ClientSession() as session:
-            response = await session.post(
-                CREATE_TASK_URL.format(list_id=task_list), headers=HEADERS, json={
-                    "name": title,
-                    "status": "Open"
-                }
-            )
-            result = await response.json()
+        response = await self.bot.http_session.post(
+            CREATE_TASK_URL.format(list_id=task_list), headers=HEADERS, json={
+                "name": title,
+                "status": "Open"
+            }
+        )
+        result = await response.json()
 
         if "err" in result:
             embed.colour = Colour.red()
@@ -316,11 +320,10 @@ class ClickUp:
             embed.colour = Colour.red()
             embed.description = f"Unknown status: {status}"
         else:
-            with ClientSession() as session:
-                response = await session.put(
-                    EDIT_TASK_URL.format(task_id=task_id), headers=HEADERS, json={"status": status}
-                )
-                result = await response.json()
+            response = await self.bot.http_session.put(
+                EDIT_TASK_URL.format(task_id=task_id), headers=HEADERS, json={"status": status}
+            )
+            result = await response.json()
 
             if "err" in result:
                 embed.description = f"`{result['ECODE']}`: {result['err']}"
