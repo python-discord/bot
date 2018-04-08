@@ -20,7 +20,6 @@ class Tags:
 
     FAIL_TITLES = [
         "Please don't do that.",
-        "You silly tart.",
         "You have to stop.",
         "Do you mind?",
         "In the future, don't do that.",
@@ -125,14 +124,12 @@ class Tags:
         if ascii(tag_name)[1:-1] != tag_name:
             log.warning(f"{author} tried to put an invalid character in a tag name. "
                         "Rejecting the request.")
-            embed.title = random.choice(Tags.FAIL_TITLES)
             embed.description = "Don't be ridiculous, you can't use that character!"
 
         # 'tag_content' or 'tag_name' are either empty, or consist of nothing but whitespace
         elif (tag_content is not None and not tag_content) or not tag_name:
             log.warning(f"{author} tried to create a tag with a name consisting only of whitespace. "
                         "Rejecting the request.")
-            embed.title = random.choice(Tags.FAIL_TITLES)
             embed.description = "Tags should not be empty, or filled with whitespace."
 
         # 'tag_name' is a number of some kind, we don't allow that.
@@ -140,18 +137,18 @@ class Tags:
             log.error("inside the is_number")
             log.warning(f"{author} tried to create a tag with a digit as its name. "
                         "Rejecting the request.")
-            embed.title = random.choice(Tags.FAIL_TITLES)
             embed.description = "Tag names can't be numbers."
 
         # 'tag_name' is longer than 127 characters
         elif len(tag_name) > 127:
             log.warning(f"{author} tried to request a tag name with over 127 characters. "
                         "Rejecting the request.")
-            embed.title = random.choice(Tags.FAIL_TITLES)
             embed.description = "Are you insane? That's way too long!"
 
         else:
             return None
+
+        embed.title = random.choice(Tags.FAIL_TITLES)
         return embed
 
     @command(name="tags()", aliases=["tags"], hidden=True)
@@ -247,14 +244,14 @@ class Tags:
 
             if isinstance(tag_data, dict):
                 log.warning(f"{ctx.author} requested the tag '{tag_name}', but it could not be found.")
-                embed.description = f"There wasn't a **{tag_name}** tag! Make sure you typed it correctly."
+                embed.description = f"**{tag_name}** is an unknown tag name. Please check the spelling and try again."
             else:
                 log.warning(f"{ctx.author} requested a list of all tags, but the tags database was empty!")
                 embed.description = "**There are no tags in the database!**"
 
             if tag_name:
                 embed.set_footer(text="To show a list of all tags, use bot.tags.get().")
-                embed.title = "Couldn't find that tag!"
+                embed.title = "Tag not found."
 
         # Paginate if this is a list of all tags
         if tags:
@@ -269,7 +266,7 @@ class Tags:
 
         return await ctx.send(embed=embed)
 
-    @with_role(ADMIN_ROLE, OWNER_ROLE, MODERATOR_ROLE)
+    # @with_role(ADMIN_ROLE, OWNER_ROLE, MODERATOR_ROLE)
     @command(name="tags.set()", aliases=["tags.set", "tags.add", "tags.add()", "tags.edit", "tags.edit()", "add_tag"])
     async def set_command(self, ctx: Context, tag_name: str, tag_content: str):
         """
