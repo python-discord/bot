@@ -266,7 +266,7 @@ class Tags:
 
         return await ctx.send(embed=embed)
 
-    # @with_role(ADMIN_ROLE, OWNER_ROLE, MODERATOR_ROLE)
+    @with_role(ADMIN_ROLE, OWNER_ROLE, MODERATOR_ROLE)
     @command(name="tags.set()", aliases=["tags.set", "tags.add", "tags.add()", "tags.edit", "tags.edit()", "add_tag"])
     async def set_command(self, ctx: Context, tag_name: str, tag_content: str):
         """
