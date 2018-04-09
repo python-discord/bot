@@ -3,7 +3,7 @@ import logging
 from discord import Embed
 from discord.ext.commands import AutoShardedBot, Context, command
 
-from bot.constants import SITE_URL, SITE_PROTOCOL, FREE_ICON, FREEWARE_ICON, PAID_ICON
+from bot.constants import FREEWARE_ICON, FREE_ICON, PAID_ICON, SITE_PROTOCOL, SITE_URL
 from bot.pagination import LinePaginator
 
 log = logging.getLogger(__name__)
