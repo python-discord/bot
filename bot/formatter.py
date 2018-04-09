@@ -71,7 +71,7 @@ class Formatter(HelpFormatter):
             # get the args using the handy inspect module
             argspec = getfullargspec(self.command.callback)
             arguments = formatargspec(*argspec)
-            for arg, annotation in argspec.annotations.items():
+            for _arg, annotation in argspec.annotations.items():
                 # remove module name to only show class name
                 # discord.ext.commands.context.Context -> Context
                 arguments = arguments.replace(f"{annotation.__module__}.", "")
@@ -124,7 +124,7 @@ class Formatter(HelpFormatter):
         command_list = await self.filter_command_list()
         data = sorted(command_list, key=category_check)
 
-        log.trace(f"Acquired command list and sorted by cog name: {[command.name for command in data]}")
+        log.trace(f"Acquired command list and sorted by cog name: {[command[1].name for command in data]}")
 
         for category, commands in itertools.groupby(data, key=category_check):
             commands = sorted(commands)

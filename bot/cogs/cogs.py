@@ -271,7 +271,7 @@ class Cogs:
             icon_url=BOT_AVATAR_URL
         )
 
-        for key, value in self.cogs.items():
+        for key, _value in self.cogs.items():
             if "." not in key:
                 continue
 

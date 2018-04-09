@@ -6,11 +6,9 @@ from logging import Logger, StreamHandler
 from logging.handlers import SysLogHandler
 
 import discord.ext.commands.view
-
 from logmatic import JsonFormatter
 
 from bot.constants import PAPERTRAIL_ADDRESS, PAPERTRAIL_PORT
-
 
 logging.TRACE = 5
 logging.addLevelName(logging.TRACE, "TRACE")
@@ -139,7 +137,7 @@ def _get_word(self) -> str:
         args = ast.literal_eval(args)
 
         # Force args into container
-        if isinstance(args, str):
+        if not isinstance(args, tuple):
             args = (args,)
 
         # Type validate and format

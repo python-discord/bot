@@ -6,17 +6,16 @@ import logging
 import sys
 from contextlib import suppress
 from io import BytesIO
-from re import finditer, search
-from subprocess import PIPE, Popen, STDOUT, TimeoutExpired  # noqa: B404
+from re import search
+from subprocess import PIPE, Popen, STDOUT, TimeoutExpired  # noqa: B404 S404
 
 from aiohttp import ClientSession
 
 from discord import File
 from discord.ext.commands import command
 
+
 log = logging.getLogger(__name__)
-
-
 LATEX_URL = "https://latex2png.com"
 
 
@@ -32,7 +31,7 @@ async def run_sympy(sympy_code: str, calc: bool = False, timeout: int = 10) -> t
 
     log.info(f"Running expression (Will eval: {calc}")
 
-    proc = Popen([  # noqa: B603
+    proc = Popen([  # noqa: B603 S603
                     sys.executable, "-c",
                     "import sys,sympy;from sympy.parsing.sympy_parser import parse_expr;"
                     f"print(sympy.latex({code_}))", sympy_code

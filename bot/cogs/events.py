@@ -8,9 +8,8 @@ from discord.ext.commands import (
     NoPrivateMessage, UserInputError
 )
 
-from bot.constants import (
-    ADMIN_ROLE, DEVLOG_CHANNEL, DEVOPS_ROLE, MODERATOR_ROLE, OWNER_ROLE, PYTHON_GUILD, SITE_API_KEY, SITE_API_USER_URL
-)
+from bot.constants import DEVLOG_CHANNEL, PYTHON_GUILD, SITE_API_KEY, SITE_API_USER_URL
+from bot.utils import chunks
 
 log = logging.getLogger(__name__)
 
@@ -32,8 +31,8 @@ class Events:
             )
 
             return await response.json()
-        except Exception as e:
-            log.error(f"Failed to send role updates: {e}")
+        except Exception:
+            log.exception(f"Failed to send role updates")
             return {}
 
     async def on_command_error(self, ctx: Context, e: CommandError):
@@ -75,37 +74,36 @@ class Events:
         for member in self.bot.get_guild(PYTHON_GUILD).members:  # type: Member
             roles = [r.id for r in member.roles]  # type: List[int]
 
-            if OWNER_ROLE in roles:
-                users.append({
-                    "user_id": member.id,
-                    "role": OWNER_ROLE
-                })
-            elif ADMIN_ROLE in roles:
-                users.append({
-                    "user_id": member.id,
-                    "role": ADMIN_ROLE
-                })
-            elif MODERATOR_ROLE in roles:
-                users.append({
-                    "user_id": member.id,
-                    "role": MODERATOR_ROLE
-                })
-            elif DEVOPS_ROLE in roles:
-                users.append({
-                    "user_id": member.id,
-                    "role": DEVOPS_ROLE
-                })
+            users.append({
+                "user_id": member.id,
+                "roles": roles,
+                "username": member.name,
+                "discriminator": member.discriminator
+            })
 
         if users:
-            log.debug(f"{len(users)} user roles updated")
-            data = await self.send_updated_users(*users)  # type: dict
+            log.debug(f"{len(users)} user roles to be updated")
 
-            if any(data.values()):
+            data = []  # type: List[dict]
+
+            for chunk in chunks(users, 1000):
+                data.append(await self.send_updated_users(*chunk))
+
+            done = {}
+
+            for item in data:
+                for key, value in item.items():
+                    if key not in done:
+                        done[key] = value
+                    else:
+                        done[key] += value
+
+            if any(done.values()):
                 embed = Embed(
                     title="User roles updated"
                 )
 
-                for key, value in data.items():
+                for key, value in done.items():
                     if value:
                         embed.add_field(
                             name=key.title(), value=str(value)
@@ -116,7 +114,7 @@ class Events:
                 )
 
     async def on_member_update(self, before: Member, after: Member):
-        if before.roles == after.roles:
+        if before.roles == after.roles and before.name == after.name and before.discriminator == after.discriminator:
             return
 
         before_role_names = [role.name for role in before.roles]  # type: List[str]
@@ -125,26 +123,12 @@ class Events:
 
         log.debug(f"{before.display_name} roles changing from {before_role_names} to {after_role_names}")
 
-        if OWNER_ROLE in role_ids:
-            self.send_updated_users({
-                "user_id": after.id,
-                "role": OWNER_ROLE
-            })
-        elif ADMIN_ROLE in role_ids:
-            self.send_updated_users({
-                "user_id": after.id,
-                "role": ADMIN_ROLE
-            })
-        elif MODERATOR_ROLE in role_ids:
-            self.send_updated_users({
-                "user_id": after.id,
-                "role": MODERATOR_ROLE
-            })
-        elif DEVOPS_ROLE in role_ids:
-            self.send_updated_users({
-                "user_id": after.id,
-                "role": DEVOPS_ROLE
-            })
+        await self.send_updated_users({
+            "user_id": after.id,
+            "roles": role_ids,
+            "username": after.name,
+            "discriminator": after.discriminator
+        })
 
 
 def setup(bot):

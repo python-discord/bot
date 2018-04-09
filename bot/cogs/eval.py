@@ -166,7 +166,7 @@ async def func():  # (None,) -> Any
 """.format(textwrap.indent(code, '            '))
 
         try:
-            exec(_code, self.env)  # noqa: B102 pylint: disable=exec-used
+            exec(_code, self.env)  # noqa: B102 S102 pylint: disable=exec-used
             func = self.env['func']
             res = await func()
 
