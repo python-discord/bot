@@ -137,7 +137,7 @@ def _get_word(self) -> str:
         args = ast.literal_eval(args)
 
         # Force args into container
-        if isinstance(args, str):
+        if not isinstance(args, tuple):
             args = (args,)
 
         # Type validate and format
