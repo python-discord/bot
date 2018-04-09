@@ -420,11 +420,11 @@
         },
         "safety": {
             "hashes": [
-                "sha256:1065a2e9f394a3d6b6195755dc5511e13bd7ad445b6496047d509044035b7198",
-                "sha256:2ec98a27468e9f1d30859ada59a0336610cbd5ec2cc3fe01fef4a564fa64b60b"
+                "sha256:0bd2a26b872668767c6db8efecfc8869b547463bedff5e7cd7b52f037aa6f200",
+                "sha256:fc3fc55656f1c909d65311b49a38211c42c937f57a05393289fb3f17cadfa4a1"
             ],
             "index": "pypi",
-            "version": "==1.8.0"
+            "version": "==1.8.1"
         },
         "six": {
             "hashes": [
