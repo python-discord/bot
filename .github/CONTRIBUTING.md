@@ -17,7 +17,8 @@ contributions may be rejected on the basis of a contributor failing to follow th
       as well.
 1. **Adhere to the prevailing code style**, which we enforce using [flake8](http://flake8.pycqa.org/en/latest/index.html).
     * Additionally, run `flake8` against your code before you push it. Your commit will be rejected by the build server 
-      if it fails to lint.
+      if it fails to lint. For an automatic way to do this, check out 
+      [our article on Git hooks](https://github.com/discord-python/site/wiki/Git-Hooks).
 1. **Don't fight the framework**. Every framework has its flaws, but the frameworks we've picked out have been carefully 
     chosen for their particular merits. If you can avoid it, please resist reimplementing swathes of framework logic - the
     work has already been done for you!
