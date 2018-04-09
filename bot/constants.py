@@ -49,6 +49,9 @@ TAG_COOLDOWN = 60  # Per channel, per tag
 GREEN_CHEVRON = "<:greenchevron:418104310329769993>"
 RED_CHEVRON = "<:redchevron:418112778184818698>"
 WHITE_CHEVRON = "<:whitechevron:418110396973711363>"
+PAID_ICON = "<:paid_icon:432872213088305153>"
+FREEWARE_ICON = "<:freeware_icon:432872213088305153>"
+FREE_ICON = "<:free_icon:432872213088305153>"
 
 # PaperTrail logging
 PAPERTRAIL_ADDRESS = os.environ.get("PAPERTRAIL_ADDRESS") or None
