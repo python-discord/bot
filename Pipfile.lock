@@ -70,10 +70,10 @@
         },
         "dulwich": {
             "hashes": [
-                "sha256:91aad98f37a5494c6eabf08c78ed2b6e1b1ce6e7a5556406245d8763a352b99e"
+                "sha256:c51e10c260543240e0806052af046e1a78b98cbe1ac1ef3880a78d2269e09da4"
             ],
             "index": "pypi",
-            "version": "==0.19.0"
+            "version": "==0.19.2"
         },
         "idna": {
             "hashes": [
@@ -256,10 +256,10 @@
         },
         "dparse": {
             "hashes": [
-                "sha256:7c9f9175d8fd83aed6d31a16c1a3ba4c38189120f1df416b46029d940b4ef582",
-                "sha256:e4b479dd4d6078ba5f087b28447a50eee0caed57f135b0f5a5e5d5024390f41d"
+                "sha256:00a5fdfa900629e5159bf3600d44905b333f4059a3366f28e0dbd13eeab17b19",
+                "sha256:cef95156fa0adedaf042cd42f9990974bec76f25dfeca4dc01f381a243d5aa5b"
             ],
-            "version": "==0.2.1"
+            "version": "==0.4.1"
         },
         "flake8": {
             "hashes": [
@@ -360,10 +360,10 @@
         },
         "pbr": {
             "hashes": [
-                "sha256:8b9a7c3704657cb0831b3ded0a6b61377947c8235b76649bb7de4bfe2e6cfa56",
-                "sha256:cf66675e22ae91a4f20e4b8354f117d3e3d1de651513051d109cc39645fb3672"
+                "sha256:56b7a8ba7d64bf6135a9dfefb85a80d95924b3fde5ed6343a1a1d464a040dae3",
+                "sha256:de75cf1d510542c746beeff66b52241eb12c8f95f2ef846ee50ed5d72392caa4"
             ],
-            "version": "==4.0.0"
+            "version": "==4.0.1"
         },
         "pycodestyle": {
             "hashes": [
@@ -420,11 +420,11 @@
         },
         "safety": {
             "hashes": [
-                "sha256:9fb74211a0a0ab09541fe894293d66a558b6138a9fe8ebabc8cf56670e8a009c",
-                "sha256:ff0c4b76ad791d33825e36c41671ea45330d438921e5395903c0e87e576a377a"
+                "sha256:0bd2a26b872668767c6db8efecfc8869b547463bedff5e7cd7b52f037aa6f200",
+                "sha256:fc3fc55656f1c909d65311b49a38211c42c937f57a05393289fb3f17cadfa4a1"
             ],
             "index": "pypi",
-            "version": "==1.7.0"
+            "version": "==1.8.1"
         },
         "six": {
             "hashes": [
