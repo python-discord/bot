@@ -72,10 +72,10 @@ class Events:
         users = []
 
         for member in self.bot.get_guild(PYTHON_GUILD).members:  # type: Member
-            roles = [r.id for r in member.roles]  # type: List[int]
+            roles = [str(r.id) for r in member.roles]  # type: List[int]
 
             users.append({
-                "user_id": member.id,
+                "user_id": str(member.id),
                 "roles": roles,
                 "username": member.name,
                 "discriminator": member.discriminator
@@ -119,12 +119,12 @@ class Events:
 
         before_role_names = [role.name for role in before.roles]  # type: List[str]
         after_role_names = [role.name for role in after.roles]  # type: List[str]
-        role_ids = [r.id for r in after.roles]  # type: List[int]
+        role_ids = [str(r.id) for r in after.roles]  # type: List[int]
 
         log.debug(f"{before.display_name} roles changing from {before_role_names} to {after_role_names}")
 
         await self.send_updated_users({
-            "user_id": after.id,
+            "user_id": str(after.id),
             "roles": role_ids,
             "username": after.name,
             "discriminator": after.discriminator
