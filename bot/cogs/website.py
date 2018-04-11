@@ -1,9 +1,10 @@
+# coding=utf-8
 import logging
 
 from discord import Embed
 from discord.ext.commands import AutoShardedBot, Context, command
 
-from bot.constants import FREEWARE_ICON, FREE_ICON, PAID_ICON, SITE_PROTOCOL, SITE_URL
+from bot.constants import FREEWARE_ICON, FREE_ICON, LINK_ICON, PAID_ICON, SITE_PROTOCOL, SITE_URL
 from bot.pagination import LinePaginator
 
 log = logging.getLogger(__name__)
@@ -38,13 +39,19 @@ class Website:
 
             resources = content["resources"]
             for name, details in resources.items():
-                url = details["url"]
                 payment = details["payment"]
                 item_description = details["description"]
                 icon = PAYMENT_ICONS[payment]
 
-                lines.append(f"{icon} **[{name}]({url})**")
+                lines.append(f"{icon} **{name}** {LINK_ICON}")
                 lines.append(f"{item_description}")
+
+                urls = details["urls"]
+                for url in urls:
+                    title = url['title']
+                    link = url['url']
+
+                    lines.append(f"[{title}]({link})")
 
         embed = Embed()
         embed.title = "Useful Resources."
