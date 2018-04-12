@@ -179,10 +179,12 @@ def _get_word(self) -> str:
 
             return arg.strip("[]'\" ")
 
+        log.trace(f"Got a command candidate for getitem / setitem mimick: {self.buffer}")
         # Syntax is `bot.tags['ask']` => mimic `getattr`
         if self.buffer.endswith("]"):
             # Key: The first argument, specified `bot.tags[here]`
             key = clean_argument(self.buffer[self.index:])
+            log.trace(f"Command mimicks getitem. Key: {key!r}")
 
             # note: if not key, this corresponds to an empty argument
             #       so this should throw / return a SyntaxError ?
@@ -206,6 +208,7 @@ def _get_word(self) -> str:
                 .replace('"', '\\"')  # escape any unescaped quotes
                 .replace("'", "\\'")  # to mimic triple quote behaviour.
             )
+            log.trace(f"Command mimicks setitem. Key: {key!r}, value: {value!r}.")
 
             # Use the cog's `set` command.
             result = self.buffer[self.previous:self.index] + ".set"
@@ -216,11 +219,13 @@ def _get_word(self) -> str:
         else:
             result = self.buffer
             args = ''
+            log.trace(f"Command is of unknown syntax: {self.buffer}")
 
         # Reconstruct valid discord.py syntax
         self.buffer = f"{result} {args}"
         self.index = len(result)
         self.end = len(self.buffer)
+        log.trace(f"Mimicked command: {self.buffer}")
 
     if isinstance(result, str):
         return result.lower()  # Case insensitivity, baby
