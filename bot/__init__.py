@@ -173,8 +173,9 @@ def _get_word(self) -> str:
 
     # Check if a command in the form of `bot.tags['ask'] {= 'whatever'}` was used
     elif current == "[":
-        # Helper function to remove any characters we don't care about
         def clean_argument(arg: str) -> str:
+            """Helper function to remove any characters we don't care about."""
+
             return arg.strip("[]'\" ")
 
         # Syntax is `bot.tags['ask']` => mimic `getattr`
@@ -193,9 +194,13 @@ def _get_word(self) -> str:
             # Key: The first argument, specified `bot.tags[here]`
             key = clean_argument(self.buffer[self.index:equals_pos])
             # Value: The second argument, specified after the `=`
-            value = (clean_argument(self.buffer.split("=")[1])
-                     .replace("\"", "\\\"")  # escape any unescaped quotes
-                     .replace("'", "\\'"))   # to mimic triple quote behaviour.
+            value = (
+                clean_argument(
+                    self.buffer.split("=")[1]
+                )
+                .replace('"', '\\"')  # escape any unescaped quotes
+                .replace("'", "\\'")  # to mimic triple quote behaviour.
+            )
             # Use the cog's `set` command.
             result = self.buffer[self.previous:self.index] + ".set"
             args = f"\"{key}\" \"{value}\""
