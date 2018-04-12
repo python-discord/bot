@@ -173,34 +173,41 @@ def _get_word(self) -> str:
 
     # Check if a command in the form of `bot.tags['ask'] {= 'whatever'}` was used
     elif current == "[":
+        # Helper function to remove any characters we don't care about
         def clean_argument(arg: str) -> str:
-            return arg.strip("[]'\" ") \
-                      .replace("\"", "\\\"") \
-                      .replace("'", "\\'")
+            return arg.strip("[]'\" ")
 
         # Syntax is `bot.tags['ask']` => mimic `getattr`
         if self.buffer.endswith("]"):
+            # Key: The first argument, specified `bot.tags[here]`
             key = clean_argument(self.buffer[self.index:])
             # note: if not key, this corresponds to an empty argument
             #       so this should throw / return a SyntaxError ?
-            arg = f"\"{key}\""
+            args = f"\"{key}\""
+            # Use the cog's `get` command.
             result = self.buffer[self.previous:self.index] + ".get"
 
         # Syntax is `bot.tags['ask'] = 'whatever'` => mimic `setattr`
         elif "=" in self.buffer and not self.buffer.endswith("="):
             equals_pos = self.buffer.find("=")
+            # Key: The first argument, specified `bot.tags[here]`
             key = clean_argument(self.buffer[self.index:equals_pos])
-            value = clean_argument(self.buffer.split("=")[1])
+            # Value: The second argument, specified after the `=`
+            value = (clean_argument(self.buffer.split("=")[1])
+                     .replace("\"", "\\\"")  # escape any unescaped quotes
+                     .replace("'", "\\'"))   # to mimic triple quote behaviour.
+            # Use the cog's `set` command.
             result = self.buffer[self.previous:self.index] + ".set"
-            arg = f"\"{key}\" \"{value}\""
+            args = f"\"{key}\" \"{value}\""
 
         # Syntax is god knows what, pass it along
         # in the future, this should probably return / throw SyntaxError
         else:
             result = self.buffer
-            arg = ''
+            args = ''
 
-        self.buffer = f"{result} {arg}"
+        # Reconstruct valid discord.py syntax
+        self.buffer = f"{result} {args}"
         self.index = len(result)
         self.end = len(self.buffer)
 
