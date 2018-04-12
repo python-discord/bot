@@ -9,8 +9,9 @@ from discord.ext.commands import AutoShardedBot, Context, command, group
 from dulwich.repo import Repo
 
 from bot.constants import (
-    BOT_CHANNEL, DEVTEST_CHANNEL, HELP1_CHANNEL,
-    HELP2_CHANNEL, HELP3_CHANNEL, PYTHON_CHANNEL,
+    ADMIN_ROLE, BOT_CHANNEL, DEVTEST_CHANNEL,
+    HELP1_CHANNEL, HELP2_CHANNEL, HELP3_CHANNEL,
+    MODERATOR_ROLE, OWNER_ROLE, PYTHON_CHANNEL,
     PYTHON_GUILD, VERIFIED_ROLE
 )
 from bot.decorators import with_role
@@ -79,6 +80,25 @@ class Bot:
         """
 
         await ctx.invoke(self.info)
+
+    @command(name="echo")
+    @with_role(OWNER_ROLE, ADMIN_ROLE, MODERATOR_ROLE)
+    async def echo_command(self, ctx: Context, text: str):
+        """
+        Send the input verbatim to the current channel
+        """
+
+        await ctx.send(text)
+
+    @command(name="embed")
+    @with_role(OWNER_ROLE, ADMIN_ROLE, MODERATOR_ROLE)
+    async def embed_command(self, ctx: Context, text: str):
+        """
+        Send the input within an embed to the current channel
+        """
+
+        embed = Embed(description=text)
+        await ctx.send(embed=embed)
 
     def codeblock_stripping(self, msg: str):
         """
