@@ -95,7 +95,7 @@ def _get_word(self) -> str:
     while not self.eof:
         try:
             current = self.buffer[self.index + pos]
-            if current.isspace() or current == "(":
+            if current.isspace() or current == "(" or current == "[":
                 break
             pos += 1
         except IndexError:
@@ -170,6 +170,37 @@ def _get_word(self) -> str:
         pos += 2
         result = self.buffer[self.previous:self.index + (pos+2)]
         self.index += 2
+
+    # Check if a command in the form of `bot.tags['ask'] {= 'whatever'}` was used
+    elif current == "[":
+        def clean_argument(arg: str) -> str:
+            return arg.strip("[]'\" ") \
+                      .replace("\"", "\\\"") \
+                      .replace("'", "\\'")
+
+        # Syntax is `bot.tags['ask']` => mimic `getattr`
+        if self.buffer.endswith("]"):
+            key = clean_argument(self.buffer[self.index:])
+            arg = f"\"{key}\""
+            result = self.buffer[self.previous:self.index] + ".get"
+
+        # Syntax is `bot.tags['ask'] = 'whatever'` => mimic `setattr`
+        elif "=" in self.buffer and not self.buffer.endswith("="):
+            equals_pos = self.buffer.find("=")
+            key = clean_argument(self.buffer[self.index:equals_pos])
+            value = clean_argument(self.buffer.split("=")[1])
+            result = self.buffer[self.previous:self.index] + ".set"
+            arg = f"\"{key}\" \"{value}\""
+
+        # Syntax is god knows what, pass it along
+        else:
+            result = self.buffer
+            arg = ''
+
+        self.buffer = f"{result} {arg}"
+        self.index = len(result)
+        self.end = len(self.buffer)
+
 
     if isinstance(result, str):
         return result.lower()  # Case insensitivity, baby
