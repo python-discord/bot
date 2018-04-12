@@ -181,6 +181,8 @@ def _get_word(self) -> str:
         # Syntax is `bot.tags['ask']` => mimic `getattr`
         if self.buffer.endswith("]"):
             key = clean_argument(self.buffer[self.index:])
+            # note: if not key, this corresponds to an empty argument
+            #       so this should throw / return a SyntaxError ?
             arg = f"\"{key}\""
             result = self.buffer[self.previous:self.index] + ".get"
 
@@ -193,6 +195,7 @@ def _get_word(self) -> str:
             arg = f"\"{key}\" \"{value}\""
 
         # Syntax is god knows what, pass it along
+        # in the future, this should probably return / throw SyntaxError
         else:
             result = self.buffer
             arg = ''
@@ -200,7 +203,6 @@ def _get_word(self) -> str:
         self.buffer = f"{result} {arg}"
         self.index = len(result)
         self.end = len(self.buffer)
-
 
     if isinstance(result, str):
         return result.lower()  # Case insensitivity, baby
