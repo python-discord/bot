@@ -177,8 +177,7 @@ def _get_word(self) -> str:
         def clean_argument(arg: str) -> str:
             """Helper function to remove any characters we don't care about."""
 
-            return arg.strip("[]'\" ") \
-                    .replace('"', '\\"')
+            return arg.strip("[]'\" ").replace('"', '\\"')
 
         log.trace(f"Got a command candidate for getitem / setitem mimick: {self.buffer}")
         # Syntax is `bot.tags['ask']` => mimic `getattr`
