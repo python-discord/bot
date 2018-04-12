@@ -183,17 +183,21 @@ def _get_word(self) -> str:
         if self.buffer.endswith("]"):
             # Key: The first argument, specified `bot.tags[here]`
             key = clean_argument(self.buffer[self.index:])
+
             # note: if not key, this corresponds to an empty argument
             #       so this should throw / return a SyntaxError ?
-            args = f"\"{key}\""
+            args = f'"{key}"'
+
             # Use the cog's `get` command.
             result = self.buffer[self.previous:self.index] + ".get"
 
         # Syntax is `bot.tags['ask'] = 'whatever'` => mimic `setattr`
         elif "=" in self.buffer and not self.buffer.endswith("="):
             equals_pos = self.buffer.find("=")
+
             # Key: The first argument, specified `bot.tags[here]`
             key = clean_argument(self.buffer[self.index:equals_pos])
+
             # Value: The second argument, specified after the `=`
             value = (
                 clean_argument(
@@ -202,6 +206,7 @@ def _get_word(self) -> str:
                 .replace('"', '\\"')  # escape any unescaped quotes
                 .replace("'", "\\'")  # to mimic triple quote behaviour.
             )
+
             # Use the cog's `set` command.
             result = self.buffer[self.previous:self.index] + ".set"
             args = f'"{key}" "{value}"'
