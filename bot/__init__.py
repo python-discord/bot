@@ -149,6 +149,9 @@ def _get_word(self) -> str:
                 log.trace(f"{arg} is not a str, casting to str.")
                 arg = str(arg)
 
+            # Allow using double quotes within triple double quotes
+            arg = arg.replace('"', '\\"')
+
             # Adding double quotes to every argument
             log.trace(f"Wrapping all args in double quotes.")
             new_args.append(f'"{arg}"')
