@@ -171,7 +171,8 @@ def _get_word(self) -> str:
         result = self.buffer[self.previous:self.index + (pos+2)]
         self.index += 2
 
-    # Check if a command in the form of `bot.tags['ask'] {= 'whatever'}` was used
+    # Check if a command in the form of `bot.tags['ask']`
+    # or alternatively `bot.tags['ask'] = 'whatever'` was used.
     elif current == "[":
         def clean_argument(arg: str) -> str:
             """Helper function to remove any characters we don't care about."""
@@ -203,7 +204,7 @@ def _get_word(self) -> str:
             )
             # Use the cog's `set` command.
             result = self.buffer[self.previous:self.index] + ".set"
-            args = f"\"{key}\" \"{value}\""
+            args = f'"{key}" "{value}"'
 
         # Syntax is god knows what, pass it along
         # in the future, this should probably return / throw SyntaxError
