@@ -201,17 +201,27 @@ def _get_word(self) -> str:
             key = clean_argument(self.buffer[self.index:equals_pos])
 
             # Value: The second argument, specified after the `=`
-            value = (
-                clean_argument(
-                    self.buffer.split("=")[1]
-                )
-                .replace("'", "\\'")  # escape any unescaped quotes
-            )
-            log.trace(f"Command mimicks setitem. Key: {key!r}, value: {value!r}.")
+            rhs = self.buffer.split("=")[1].strip()
 
-            # Use the cog's `set` command.
-            result = self.buffer[self.previous:self.index] + ".set"
-            args = f'"{key}" "{value}"'
+            # If the value is None or '', mimick `bot.tags.delete(key)`
+            if rhs in ("None", "''", '""'):
+                log.trace(f"Command mimicks delitem. Key: {key!r}.")
+                result = self.buffer[self.previous:self.index] + ".delete"
+                args = f'"{key}"'
+
+            # Otherwise, assume assignment, for example `bot.tags['this'] = 'that'`
+            else:
+                value = (
+                    clean_argument(
+                        rhs
+                    )
+                    .replace("'", "\\'")  # escape any unescaped quotes
+                )
+                log.trace(f"Command mimicks setitem. Key: {key!r}, value: {value!r}.")
+
+                # Use the cog's `set` command.
+                result = self.buffer[self.previous:self.index] + ".set"
+                args = f'"{key}" "{value}"'
 
         # Syntax is god knows what, pass it along
         # in the future, this should probably return / throw SyntaxError
