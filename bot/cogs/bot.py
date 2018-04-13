@@ -98,7 +98,7 @@ class Bot:
         else:
             log.debug(f"Found REPL code in {msg}")
             return final
-            
+
     @command(name="echo")
     @with_role(OWNER_ROLE, ADMIN_ROLE, MODERATOR_ROLE)
     async def echo_command(self, ctx: Context, text: str):
