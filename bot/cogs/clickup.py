@@ -3,7 +3,6 @@ import logging
 
 from discord import Colour, Embed
 from discord.ext.commands import AutoShardedBot, Context, command
-
 from multidict import MultiDict
 
 from bot.constants import (
@@ -131,6 +130,9 @@ class ClickUp:
         Get a task and return information specific to it
         """
 
+        if task_id.startswith("#"):
+            task_id = task_id[1:]
+
         embed = Embed(colour=Colour.blurple())
         embed.set_author(
             name=f"ClickUp Task: #{task_id}",
@@ -180,7 +182,12 @@ class ClickUp:
                 lines = [first_line]
 
                 if task.get("text_content"):
-                    lines.append(task["text_content"])
+                    text = task["text_content"]
+
+                    if len(text) >= 1500:
+                        text = text[:1497] + "..."
+
+                    lines.append(text)
 
                 if task.get("assignees"):
                     assignees = ", ".join(user["username"] for user in task["assignees"])
@@ -189,7 +196,7 @@ class ClickUp:
                     )
 
                 log.debug(f"{ctx.author} requested the task '#{task_id}'. Returning the task data.")
-                return await LinePaginator.paginate(lines, ctx, embed, max_size=750)
+                return await LinePaginator.paginate(lines, ctx, embed, max_size=1500)
         return await ctx.send(embed=embed)
 
     @command(name="clickup.team()", aliases=["clickup.team", "team", "list_team"])

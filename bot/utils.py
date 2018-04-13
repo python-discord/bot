@@ -45,3 +45,14 @@ class CaseInsensitiveDict(dict):
         for k in list(self.keys()):
             v = super(CaseInsensitiveDict, self).pop(k)
             self.__setitem__(k, v)
+
+
+def chunks(iterable, size):
+    """
+    Generator that allows you to iterate over any indexable collection in `size`-length chunks
+
+    Found: https://stackoverflow.com/a/312464/4022104
+    """
+
+    for i in range(0, len(iterable), size):
+        yield iterable[i:i + size]

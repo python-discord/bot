@@ -6,12 +6,14 @@ import time
 
 from discord import Embed, Message
 from discord.ext.commands import AutoShardedBot, Context, command, group
-
 from dulwich.repo import Repo
 
-from bot.constants import (BOT_CHANNEL, DEVTEST_CHANNEL, HELP1_CHANNEL,
-                           HELP2_CHANNEL, HELP3_CHANNEL, PYTHON_CHANNEL,
-                           PYTHON_GUILD, VERIFIED_ROLE)
+from bot.constants import (
+    ADMIN_ROLE, BOT_CHANNEL, DEVTEST_CHANNEL,
+    HELP1_CHANNEL, HELP2_CHANNEL, HELP3_CHANNEL,
+    MODERATOR_ROLE, OWNER_ROLE, PYTHON_CHANNEL,
+    PYTHON_GUILD, VERIFIED_ROLE
+)
 from bot.decorators import with_role
 
 log = logging.getLogger(__name__)
@@ -96,6 +98,25 @@ class Bot:
         else:
             log.debug(f"Found REPL code in {msg}")
             return final
+            
+    @command(name="echo")
+    @with_role(OWNER_ROLE, ADMIN_ROLE, MODERATOR_ROLE)
+    async def echo_command(self, ctx: Context, text: str):
+        """
+        Send the input verbatim to the current channel
+        """
+
+        await ctx.send(text)
+
+    @command(name="embed")
+    @with_role(OWNER_ROLE, ADMIN_ROLE, MODERATOR_ROLE)
+    async def embed_command(self, ctx: Context, text: str):
+        """
+        Send the input within an embed to the current channel
+        """
+
+        embed = Embed(description=text)
+        await ctx.send(embed=embed)
 
     def codeblock_stripping(self, msg: str):
         """
@@ -135,7 +156,7 @@ class Bot:
                 return content
 
     async def on_message(self, msg: Message):
-        if msg.channel.id in self.channel_cooldowns:
+        if msg.channel.id in self.channel_cooldowns and not msg.author.bot:
             on_cooldown = time.time() - self.channel_cooldowns[msg.channel.id] < 300
             if not on_cooldown or msg.channel.id == DEVTEST_CHANNEL:
                 try:

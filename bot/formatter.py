@@ -60,16 +60,23 @@ class Formatter(HelpFormatter):
         self._paginator = Paginator(prefix="```py")
 
         if isinstance(self.command, Command):
+            # string used purely to make logs a teensy bit more readable
+            cog_string = f" from {self.command.cog_name}" if self.command.cog_name else ""
+
+            log.trace(f"Help command is on specific command {self.command.name}{cog_string}.")
+
             # strip the command off bot. and ()
             stripped_command = self.command.name.replace(HELP_PREFIX, "").replace("()", "")
 
             # get the args using the handy inspect module
             argspec = getfullargspec(self.command.callback)
             arguments = formatargspec(*argspec)
-            for arg, annotation in argspec.annotations.items():
+            for _arg, annotation in argspec.annotations.items():
                 # remove module name to only show class name
                 # discord.ext.commands.context.Context -> Context
                 arguments = arguments.replace(f"{annotation.__module__}.", "")
+
+            log.trace(f"Acquired arguments for command: '{arguments}' ")
 
             # manipulate the argspec to make it valid python when 'calling' the do_<command>
             args_no_type_hints = argspec.args
@@ -101,6 +108,10 @@ class Formatter(HelpFormatter):
             self._paginator.add_line(docstring)
             self._paginator.add_line(invocation)
 
+            log.trace(f"Help for {self.command.name}{cog_string} added to paginator.")
+
+            log.debug(f"Help for {self.command.name}{cog_string} generated.")
+
             return self._paginator.pages
 
         max_width = self.max_name_size
@@ -113,16 +124,23 @@ class Formatter(HelpFormatter):
         command_list = await self.filter_command_list()
         data = sorted(command_list, key=category_check)
 
+        log.trace(f"Acquired command list and sorted by cog name: {[command[1].name for command in data]}")
+
         for category, commands in itertools.groupby(data, key=category_check):
             commands = sorted(commands)
             if len(commands) > 0:
                 self._paginator.add_line(f"class {category}:")
                 self._add_subcommands_to_page(max_width, commands)
 
+        log.trace("Added cog and command names to the paginator.")
+
         self._paginator.add_line()
         ending_note = self.get_ending_note()
         # make the ending note appear as comments
         ending_note = "# "+ending_note.replace("\n", "\n# ")
         self._paginator.add_line(ending_note)
+
+        log.trace("Added ending note to paginator.")
+        log.debug("General or Cog help generated.")
 
         return self._paginator.pages
