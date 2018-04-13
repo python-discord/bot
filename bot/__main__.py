@@ -2,7 +2,6 @@
 import os
 
 from aiohttp import AsyncResolver, ClientSession, TCPConnector
-
 from discord import Game
 from discord.ext.commands import AutoShardedBot, when_mentioned_or
 
@@ -16,7 +15,7 @@ bot = AutoShardedBot(
         ">>> ", ">> ", "> ",
         ">>>", ">>", ">"
     ),  # Order matters (and so do commas)
-    game=Game(name="Help: bot.help()"),
+    activity=Game(name="Help: bot.help()"),
     help_attrs={"aliases": ["help()"]},
     formatter=Formatter()
 )

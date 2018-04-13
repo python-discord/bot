@@ -2,6 +2,7 @@
 
 import contextlib
 import inspect
+import logging
 import pprint
 import re
 import textwrap
@@ -14,6 +15,8 @@ from discord.ext.commands import AutoShardedBot, command
 from bot.constants import OWNER_ROLE
 from bot.decorators import with_role
 from bot.interpreter import Interpreter
+
+log = logging.getLogger(__name__)
 
 
 class EvalCog:  # Named this way because a flake8 plugin isn't case-sensitive
@@ -148,7 +151,7 @@ class EvalCog:  # Named this way because a flake8 plugin isn't case-sensitive
 
         self.env.update(env)
 
-        # Ignore this shitcode, it works
+        # Ignore this code, it works
         _code = """
 async def func():  # (None,) -> Any
     try:
@@ -163,7 +166,7 @@ async def func():  # (None,) -> Any
 """.format(textwrap.indent(code, '            '))
 
         try:
-            exec(_code, self.env)  # noqa: B102 pylint: disable=exec-used
+            exec(_code, self.env)  # noqa: B102 S102 pylint: disable=exec-used
             func = self.env['func']
             res = await func()
 
@@ -192,4 +195,4 @@ async def func():  # (None,) -> Any
 
 def setup(bot):
     bot.add_cog(EvalCog(bot))
-    print("Cog loaded: Eval")
+    log.info("Cog loaded: Eval")
