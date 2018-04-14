@@ -201,22 +201,18 @@ def _get_word(self) -> str:
             key = clean_argument(self.buffer[self.index:equals_pos])
 
             # Value: The second argument, specified after the `=`
-            rhs = self.buffer.split("=")[1].strip()
+            right_hand = self.buffer.split("=", maxsplit=1)[1].strip()
 
             # If the value is None or '', mimick `bot.tags.delete(key)`
-            if rhs in ("None", "''", '""'):
+            if right_hand in ("None", "''", '""'):
                 log.trace(f"Command mimicks delitem. Key: {key!r}.")
                 result = self.buffer[self.previous:self.index] + ".delete"
                 args = f'"{key}"'
 
             # Otherwise, assume assignment, for example `bot.tags['this'] = 'that'`
             else:
-                value = (
-                    clean_argument(
-                        rhs
-                    )
-                    .replace("'", "\\'")  # escape any unescaped quotes
-                )
+                # Escape any unescaped quotes
+                value = clean_argument(right_hand).replace("'", "\\'")
                 log.trace(f"Command mimicks setitem. Key: {key!r}, value: {value!r}.")
 
                 # Use the cog's `set` command.
