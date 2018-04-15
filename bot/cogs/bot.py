@@ -92,7 +92,7 @@ class Bot:
             if line.startswith(">>>") or line.startswith("..."):
                 final += line[4:]
         log.trace(f"Formatted: {msg} to {final}")
-        if len(final):
+        if not final:
             log.debug(f"Found no REPL code in {msg}")
             return msg
         else:
@@ -162,8 +162,10 @@ class Bot:
                 try:
                     not_backticks = ["'''", '"""', "´´´", "‘‘‘", "’’’", "′′′", "“““", "”””", "″″″", "〃〃〃"]
                     python_syntax = any(
-                        msg.content[3:9].lower() == "python",
-                        msg.content[3:5].lower() == "py"
+                        (
+                            msg.content[3:9].lower() == "python",
+                            msg.content[3:5].lower() == "py"
+                        )
                     )
 
                     bad_ticks = msg.content[:3] in not_backticks
@@ -178,10 +180,11 @@ class Bot:
                             howto += ("You are using the wrong ticks, use ``` instead of "
                                       f"{not_backticks.index(msg.content[:3])}\n\n")
 
-                            msg.content = msg.contet.replace(not_backticks.index(msg.content[3:]), "```")
+                            msg.content = msg.content.replace(not_backticks.index(msg.content[3:]), "```")
 
                         content = self.codeblock_stripping(msg.content)
-
+                        if content is None:
+                            return
                         # Attempts to parse the message into an AST node.
                         # Invalid Python code will raise a SyntaxError.
                         tree = ast.parse(content)
