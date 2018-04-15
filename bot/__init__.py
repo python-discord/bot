@@ -95,7 +95,7 @@ def _get_word(self) -> str:
     while not self.eof:
         try:
             current = self.buffer[self.index + pos]
-            if current.isspace() or current == "(":
+            if current.isspace() or current == "(" or current == "[":
                 break
             pos += 1
         except IndexError:
@@ -149,6 +149,9 @@ def _get_word(self) -> str:
                 log.trace(f"{arg} is not a str, casting to str.")
                 arg = str(arg)
 
+            # Allow using double quotes within triple double quotes
+            arg = arg.replace('"', '\\"')
+
             # Adding double quotes to every argument
             log.trace(f"Wrapping all args in double quotes.")
             new_args.append(f'"{arg}"')
@@ -167,6 +170,67 @@ def _get_word(self) -> str:
         pos += 2
         result = self.buffer[self.previous:self.index + (pos+2)]
         self.index += 2
+
+    # Check if a command in the form of `bot.tags['ask']`
+    # or alternatively `bot.tags['ask'] = 'whatever'` was used.
+    elif current == "[":
+        def clean_argument(arg: str) -> str:
+            """Helper function to remove any characters we don't care about."""
+
+            return arg.strip("[]'\" ").replace('"', '\\"')
+
+        log.trace(f"Got a command candidate for getitem / setitem mimick: {self.buffer}")
+        # Syntax is `bot.tags['ask']` => mimic `getattr`
+        if self.buffer.endswith("]"):
+            # Key: The first argument, specified `bot.tags[here]`
+            key = clean_argument(self.buffer[self.index:])
+            log.trace(f"Command mimicks getitem. Key: {key!r}")
+
+            # note: if not key, this corresponds to an empty argument
+            #       so this should throw / return a SyntaxError ?
+            args = f'"{key}"'
+
+            # Use the cog's `get` command.
+            result = self.buffer[self.previous:self.index] + ".get"
+
+        # Syntax is `bot.tags['ask'] = 'whatever'` => mimic `setattr`
+        elif "=" in self.buffer and not self.buffer.endswith("="):
+            equals_pos = self.buffer.find("=")
+
+            # Key: The first argument, specified `bot.tags[here]`
+            key = clean_argument(self.buffer[self.index:equals_pos])
+
+            # Value: The second argument, specified after the `=`
+            right_hand = self.buffer.split("=", maxsplit=1)[1].strip()
+
+            # If the value is None or '', mimick `bot.tags.delete(key)`
+            if right_hand in ("None", "''", '""'):
+                log.trace(f"Command mimicks delitem. Key: {key!r}.")
+                result = self.buffer[self.previous:self.index] + ".delete"
+                args = f'"{key}"'
+
+            # Otherwise, assume assignment, for example `bot.tags['this'] = 'that'`
+            else:
+                # Escape any unescaped quotes
+                value = clean_argument(right_hand).replace("'", "\\'")
+                log.trace(f"Command mimicks setitem. Key: {key!r}, value: {value!r}.")
+
+                # Use the cog's `set` command.
+                result = self.buffer[self.previous:self.index] + ".set"
+                args = f'"{key}" "{value}"'
+
+        # Syntax is god knows what, pass it along
+        # in the future, this should probably return / throw SyntaxError
+        else:
+            result = self.buffer
+            args = ''
+            log.trace(f"Command is of unknown syntax: {self.buffer}")
+
+        # Reconstruct valid discord.py syntax
+        self.buffer = f"{result} {args}"
+        self.index = len(result)
+        self.end = len(self.buffer)
+        log.trace(f"Mimicked command: {self.buffer}")
 
     if isinstance(result, str):
         return result.lower()  # Case insensitivity, baby

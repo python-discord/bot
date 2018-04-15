@@ -349,6 +349,16 @@ class Tags:
 
         return await ctx.send(embed=embed)
 
+    @command(name="tags.keys()")
+    async def keys_command(self, ctx: Context):
+        """
+        Alias for `tags.get()` with no arguments.
+
+        :param ctx: discord message context
+        """
+
+        return await ctx.invoke(self.get_command)
+
 
 def setup(bot):
     bot.add_cog(Tags(bot))
