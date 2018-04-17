@@ -72,7 +72,7 @@ class Bot:
         log.info(f"{ctx.author} called bot.about(). Returning information about the bot.")
         await ctx.send(embed=embed)
 
-    @command(name="info()", aliases=["bot.info", "bot.about", "bot.about()", "info", "bot.info()"])
+    @command(name="info()", aliases=["info", "about()", "about"])
     @with_role(VERIFIED_ROLE)
     async def info_wrapper(self, ctx: Context):
         """
@@ -81,7 +81,7 @@ class Bot:
 
         await ctx.invoke(self.info)
 
-    @command(name="echo")
+    @command(name="print()", aliases=["print", "echo", "echo()"])
     @with_role(OWNER_ROLE, ADMIN_ROLE, MODERATOR_ROLE)
     async def echo_command(self, ctx: Context, text: str):
         """
@@ -90,7 +90,7 @@ class Bot:
 
         await ctx.send(text)
 
-    @command(name="embed")
+    @command(name="embed()", aliases=["embed"])
     @with_role(OWNER_ROLE, ADMIN_ROLE, MODERATOR_ROLE)
     async def embed_command(self, ctx: Context, text: str):
         """

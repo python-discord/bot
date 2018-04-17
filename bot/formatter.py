@@ -119,7 +119,7 @@ class Formatter(HelpFormatter):
         def category_check(tup):
             cog = tup[1].cog_name
             # zero width character to make it appear last when put in alphabetical order
-            return cog if cog is not None else "\u200bNoCategory"
+            return cog if cog is not None else "Bot"
 
         command_list = await self.filter_command_list()
         data = sorted(command_list, key=category_check)
