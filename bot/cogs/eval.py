@@ -19,11 +19,10 @@ from bot.interpreter import Interpreter
 log = logging.getLogger(__name__)
 
 
-class EvalCog:  # Named this way because a flake8 plugin isn't case-sensitive
+class CodeEval:
     """
-    Bot owner only: Evaluate Python code
-
-    Made by martmists
+    Owner and admin feature that evaluates code
+    and returns the result to the channel.
     """
 
     def __init__(self, bot: AutoShardedBot):
@@ -166,17 +165,17 @@ async def func():  # (None,) -> Any
 """.format(textwrap.indent(code, '            '))
 
         try:
-            exec(_code, self.env)  # noqa: B102 S102 pylint: disable=exec-used
+            exec(_code, self.env)  # noqa: B102,S102
             func = self.env['func']
             res = await func()
 
-        except Exception:  # noqa pylint: disable=broad-except
+        except Exception:
             res = traceback.format_exc()
 
         out, embed = self._format(code, res)
         await ctx.send(f"```py\n{out}```", embed=embed)
 
-    @command()
+    @command(name="eval()", aliases=["eval"])
     @with_role(ADMIN_ROLE, OWNER_ROLE)
     async def eval(self, ctx, *, code: str):
         """ Run eval in a REPL-like format. """
@@ -194,5 +193,5 @@ async def func():  # (None,) -> Any
 
 
 def setup(bot):
-    bot.add_cog(EvalCog(bot))
+    bot.add_cog(CodeEval(bot))
     log.info("Cog loaded: Eval")
