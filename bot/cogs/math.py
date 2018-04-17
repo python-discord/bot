@@ -6,7 +6,7 @@ import logging
 import sys
 from contextlib import suppress
 from io import BytesIO
-from re import finditer, search
+from re import finditer
 from subprocess import PIPE, Popen, STDOUT, TimeoutExpired  # noqa: B404 S404
 from urllib.parse import quote
 
