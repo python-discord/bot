@@ -10,13 +10,15 @@ from bot.utils import CaseInsensitiveDict
 
 bot = AutoShardedBot(
     command_prefix=when_mentioned_or(
-        ">>> self.", ">> self.", "> self.", "self.",
-        ">>> bot.", ">> bot.", "> bot.", "bot.",
-        ">>> ", ">> ", "> ",
-        ">>>", ">>", ">"
-    ),  # Order matters (and so do commas)
-    activity=Game(name="Help: bot.help()"),
-    help_attrs={"aliases": ["help()"]},
+        "self.", "bot."
+    ),
+    activity=Game(
+        name="Help: bot.help()"
+    ),
+    help_attrs={
+        "name": "help()",
+        "aliases": ["help"]
+    },
     formatter=Formatter()
 )
 
