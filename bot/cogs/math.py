@@ -8,6 +8,7 @@ from contextlib import suppress
 from io import BytesIO
 from re import finditer, search
 from subprocess import PIPE, Popen, STDOUT, TimeoutExpired  # noqa: B404 S404
+from urllib.parse import quote
 
 from aiohttp import ClientSession
 from discord import File
@@ -15,7 +16,7 @@ from discord.ext.commands import command
 
 
 log = logging.getLogger(__name__)
-LATEX_URL = "https://latex2png.com"
+LATEX_URL = "https://latex.codecogs.com/png.latex?%5Cinline%20%5Cdpi%7B300%7D%20%5Clarge%20"
 
 
 async def run_sympy(sympy_code: str, calc: bool = False, timeout: int = 10) -> tuple:
@@ -55,20 +56,10 @@ async def run_sympy(sympy_code: str, calc: bool = False, timeout: int = 10) -> t
 
 async def download_latex(latex: str) -> File:
     log.info("Downloading latex from 'API'")
-    data = {
-        "latex": latex,
-        "res": 300,
-        "color": 808080
-    }
 
     async with ClientSession() as session:
-        async with session.post(LATEX_URL, data=data) as resp:
-            html = await resp.text()
-
-        name = search(r'hist\.request\.basename = "(?P<url>[^"]+)"', html).group('url')
-
-        async with session.get(f"{LATEX_URL}/output/{name}.png") as resp:
-            bytes_img = await resp.read()
+        async with session.get(LATEX_URL+quote(latex)) as resp:
+            bytes_img = await resp.text()
 
     return File(fp=BytesIO(bytes_img), filename="latex.png")
 
