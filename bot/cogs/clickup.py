@@ -6,7 +6,7 @@ from discord.ext.commands import AutoShardedBot, Context, command
 from multidict import MultiDict
 
 from bot.constants import (
-    ADMIN_ROLE, CLICKUP_KEY, CLICKUP_SPACE, CLICKUP_TEAM, DEVOPS_ROLE, MODERATOR_ROLE, OWNER_ROLE
+    ADMIN_ROLE, CLICKUP_KEY, CLICKUP_SPACE, CLICKUP_TEAM, CONTRIBUTOR_ROLE, DEVOPS_ROLE, MODERATOR_ROLE, OWNER_ROLE
 )
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
@@ -57,7 +57,7 @@ class ClickUp:
             self.lists.update({v: k for k, v in self.lists.items()})
 
     @command(name="clickup.tasks()", aliases=["clickup.tasks", "tasks", "list_tasks"])
-    @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
+    @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE, CONTRIBUTOR_ROLE)
     async def tasks_command(self, ctx: Context, status: str = None, task_list: str = None):
         """
         Get a list of tasks, optionally on a specific list or with a specific status
@@ -124,7 +124,7 @@ class ClickUp:
         return await ctx.send(embed=embed)
 
     @command(name="clickup.task()", aliases=["clickup.task", "task", "get_task"])
-    @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
+    @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE, CONTRIBUTOR_ROLE)
     async def task_command(self, ctx: Context, task_id: str):
         """
         Get a task and return information specific to it
@@ -241,7 +241,7 @@ class ClickUp:
         await ctx.send(embed=embed)
 
     @command(name="clickup.lists()", aliases=["clickup.lists", "lists"])
-    @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
+    @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE, CONTRIBUTOR_ROLE)
     async def lists_command(self, ctx: Context):
         """
         Get all the lists belonging to the ClickUp space
@@ -289,7 +289,7 @@ class ClickUp:
         await ctx.send(embed=embed)
 
     @command(name="clickup.open()", aliases=["clickup.open", "open", "open_task"])
-    @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
+    @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE, CONTRIBUTOR_ROLE)
     async def open_command(self, ctx: Context, task_list: str, title: str):
         """
         Open a new task under a specific task list, with a title
@@ -341,7 +341,7 @@ class ClickUp:
         await ctx.send(embed=embed)
 
     @command(name="clickup.set_status()", aliases=["clickup.set_status", "set_status", "set_task_status"])
-    @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
+    @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE, CONTRIBUTOR_ROLE)
     async def set_status_command(self, ctx: Context, task_id: str, status: str):
         """
         Update the status of a specific task
