@@ -1,5 +1,6 @@
 import logging
 import sys
+import re
 from typing import Optional
 
 import aiohttp
@@ -25,6 +26,8 @@ INTERSPHINX_INVENTORIES = {
     'django': "https://docs.djangoproject.com/en/dev/_objects/",
     'stdlib': "https://docs.python.org/%d.%d/objects.inv" % sys.version_info[:2]
 }
+
+WHITESPACE_AFTER_NEWLINES_RE = re.compile(r"(?<=\n\n)( +)")
 
 
 class DocMarkdownConverter(MarkdownConverter):
@@ -102,6 +105,8 @@ class Doc:
         description = markdownify(scraped_html[1])
         if len(description) > 1000:
             description = description[:1000] + f"... [read more]({permalink})"
+
+        description = WHITESPACE_AFTER_NEWLINES_RE.sub('', description)
 
         if not signature:
             # It's some "meta-page", for example:
