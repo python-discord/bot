@@ -71,7 +71,8 @@ class Formatter(HelpFormatter):
             # get the args using the handy inspect module
             argspec = getfullargspec(self.command.callback)
             arguments = formatargspec(*argspec)
-            for _arg, annotation in argspec.annotations.items():
+
+            for annotation in argspec.annotations.values():
                 # remove module name to only show class name
                 # discord.ext.commands.context.Context -> Context
                 arguments = arguments.replace(f"{annotation.__module__}.", "")
