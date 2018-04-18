@@ -39,7 +39,7 @@ class DocMarkdownConverter(MarkdownConverter):
 
 
 def markdownify(html):
-    return DocMarkdownConverter().convert(html)
+    return DocMarkdownConverter(bullets='•').convert(html)
 
 
 class DummyObject(object):
