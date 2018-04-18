@@ -4,7 +4,7 @@ from discord import Colour, Embed, Member
 from discord.ext.commands import AutoShardedBot, Context, command
 
 from bot.constants import ADMIN_ROLE, MODERATOR_ROLE, OWNER_ROLE
-from bot.constants import SITE_API_KEY
+from bot.constants import SITE_API_HIPHOPIFY_URL, SITE_API_KEY
 from bot.decorators import with_role
 
 log = logging.getLogger(__name__)
@@ -60,7 +60,24 @@ class Hiphopify:
 
         embed = Embed()
         embed.colour = Colour.red()
-        embed.description = member.display_name
+
+        params = {
+            "user_id": str(member.id)
+        }
+
+        response = await self.bot.http_session.delete(
+            SITE_API_HIPHOPIFY_URL,
+            headers=self.headers,
+            json=params
+        )
+
+        response = await response.json()
+        embed.description = "User has been released from hiphop-prison"
+
+        log.debug(response)
+
+        if "error_message" in response:
+            embed.description = response.get("error_message")
 
         return await ctx.send(embed=embed)
 
