@@ -1,6 +1,8 @@
+import functools
 import logging
 import re
 import sys
+from collections import OrderedDict
 from typing import Optional, Tuple
 
 import aiohttp
@@ -31,6 +33,36 @@ UNWANTED_SIGNATURE_SYMBOLS = ('[source]', '¶')
 WHITESPACE_AFTER_NEWLINES_RE = re.compile(r"(?<=\n\n)( +)")
 
 
+def async_cache(max_size=128, arg_offset=0):
+    """
+    LRU cache implementation for coroutines.
+
+    :param max_size:
+    Specifies the maximum size the cache should have.
+    Once it exceeds the maximum size, keys are deleted in FIFO order.
+    :param arg_offset:
+    The offset that should be applied to the coroutine's arguments
+    when creating the cache key. Defaults to `0`.
+    """
+
+    cache = OrderedDict()
+
+    def decorator(function):
+        @functools.wraps(function)
+        async def wrapper(*args):
+            key = ':'.join(args[arg_offset:])
+
+            value = cache.get(key)
+            if value is None:
+                if len(cache) > max_size:
+                    cache.popitem(last=False)
+
+                cache[key] = await function(*args)
+            return cache[key]
+        return wrapper
+    return decorator
+
+
 class DocMarkdownConverter(MarkdownConverter):
     def convert_code(self, el, text):
         # Some part of `markdownify` believes that it should escape
@@ -59,8 +91,13 @@ class SphinxConfiguration:
 class Doc:
     def __init__(self, bot):
         self.bot = bot
+        self.client_session = aiohttp.ClientSession(loop=self.bot.loop)
         self.inventories = {}
         self.fetch_initial_inventory_data()
+
+    def __unload(self):
+        if not self.client_session.closed:
+            self.bot.loop.run_until_complete(self.client_session.close())
 
     def fetch_initial_inventory_data(self):
         log.debug("Loading initial intersphinx inventory data...")
@@ -110,6 +147,7 @@ class Doc:
 
         return signature, description
 
+    @async_cache(arg_offset=1)
     async def get_symbol_embed(self, symbol: str) -> Optional[discord.Embed]:
         """
         Using `get_symbol_html`, attempt to scrape and
