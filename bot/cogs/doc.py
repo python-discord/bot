@@ -5,7 +5,6 @@ import sys
 from collections import OrderedDict
 from typing import Optional, Tuple
 
-import aiohttp
 import discord
 from bs4 import BeautifulSoup
 from discord.ext import commands
@@ -92,13 +91,8 @@ class SphinxConfiguration:
 class Doc:
     def __init__(self, bot):
         self.bot = bot
-        self.client_session = aiohttp.ClientSession(loop=self.bot.loop)
         self.inventories = {}
         self.fetch_initial_inventory_data()
-
-    def __unload(self):
-        if not self.client_session.closed:
-            self.bot.loop.run_until_complete(self.client_session.close())
 
     def fetch_initial_inventory_data(self):
         log.debug("Loading initial intersphinx inventory data...")
@@ -129,9 +123,8 @@ class Doc:
         if url is None:
             return None
 
-        async with aiohttp.ClientSession() as cs:
-            async with cs.get(url) as response:
-                html = await response.text(encoding='utf-8')
+        async with self.bot.http_session.get(url) as response:
+            html = await response.text(encoding='utf-8')
 
         # Find the signature header and parse the relevant parts.
         symbol_id = url.split('#')[-1]
