@@ -1,9 +1,7 @@
 import logging
-import random
 import time
-from typing import Optional
 
-from discord import Colour, Embed, User
+from discord import Colour, Embed
 from discord.ext.commands import (
     AutoShardedBot, BadArgument, Context,
     Converter, command
