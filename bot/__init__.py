@@ -115,10 +115,11 @@ def _get_word(self) -> str:
     syntax_valid = True
     try:
         # Catch raw channel, member or role mentions and wrap them in quotes.
-        self.buffer = re.sub(r"(<(?:@|@!|[#&])\d+>)",
-                             r'"\1"',
-                             self.buffer)
-        ast.literal_eval(self.buffer[self.index:])
+        tempbuffer = re.sub(r"(<(?:@|@!|[#&])\d+>)",
+                            r'"\1"',
+                            self.buffer)
+        ast.literal_eval(tempbuffer[self.index:])
+        self.buffer = tempbuffer
     except SyntaxError:
         log.warning("The command cannot be parsed by ast.literal_eval because it raises a SyntaxError.")
         # TODO: It would be nice if this actually made the bot return a SyntaxError. ClickUp #1b12z  # noqa: T000
