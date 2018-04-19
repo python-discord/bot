@@ -104,6 +104,10 @@ class Hiphopify:
         response = await response.json()
 
         if "error_message" in response:
+            log.warning(
+                "Encountered the following error when trying to hiphopify the user:\n"
+                f"{response.get('error_message')}"
+            )
             embed.colour = Colour.red()
             embed.title = random.choice(NEGATIVE_REPLIES)
             embed.description = response.get("error_message")
@@ -123,6 +127,7 @@ class Hiphopify:
             embed.set_image(url=image_url)
 
             # Log to the mod_log channel
+            log.trace("Logging to the #mod-log channel. This could fail because of channel permissions.")
             mod_log = self.bot.get_channel(MOD_LOG_CHANNEL)
             await mod_log.send(
                 f":middle_finger: {member.name}#{member.discriminator} (`{member.id}`) "
@@ -131,6 +136,7 @@ class Hiphopify:
             )
 
             # Change the nick and return the embed
+            log.debug("Changing the users nickname and sending the embed.")
             await member.edit(nick=forced_nick)
             return await ctx.send(member.mention, embed=embed)
 
