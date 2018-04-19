@@ -13,6 +13,7 @@ from markdownify import MarkdownConverter
 from sphinx.ext import intersphinx
 
 log = logging.getLogger(__name__)
+logging.getLogger('urllib3').setLevel(logging.WARNING)
 
 
 BASE_URLS = {
