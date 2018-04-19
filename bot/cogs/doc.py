@@ -96,11 +96,20 @@ class Doc:
 
     def fetch_initial_inventory_data(self):
         log.debug("Loading initial intersphinx inventory data...")
+
+        # Since Intersphinx is intended to be used with Sphinx,
+        # we need to mock its configuration.
         config = SphinxConfiguration()
+
         for name, url in INTERSPHINX_INVENTORIES.items():
+            # `fetch_inventory` performs HTTP GET and returns
+            # a dictionary from the specified inventory URL.
             for _, value in intersphinx.fetch_inventory(config, '', url).items():
-                for symbol, info_tuple in value.items():
-                    relative_doc_url = info_tuple[2]
+
+                # Each value has a bunch of information in the form
+                # `(package_name, version, relative_url, ???)`, and we only
+                # need the relative documentation URL.
+                for symbol, (_, _, relative_doc_url, _) in value.items():
                     absolute_doc_url = BASE_URLS[name] + relative_doc_url
                     self.inventories[symbol] = absolute_doc_url
             log.trace(f"Fetched inventory for {name}.")
