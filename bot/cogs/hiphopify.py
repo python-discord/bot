@@ -5,8 +5,8 @@ from discord import Colour, Embed, Member
 from discord.ext.commands import AutoShardedBot, Context, command
 
 from bot.constants import (
-    ADMIN_ROLE, MODERATOR_ROLE, NEGATIVE_REPLIES,
-    OWNER_ROLE, POSITIVE_REPLIES,
+    ADMIN_ROLE, MODERATOR_ROLE, MOD_LOG_CHANNEL,
+    NEGATIVE_REPLIES, OWNER_ROLE, POSITIVE_REPLIES,
     SITE_API_HIPHOPIFY_URL, SITE_API_KEY
 )
 from bot.decorators import with_role
@@ -108,16 +108,29 @@ class Hiphopify:
             embed.title = random.choice(NEGATIVE_REPLIES)
             embed.description = response.get("error_message")
             return await ctx.send(embed=embed)
+
         else:
             forced_nick = response.get('forced_nick')
             end_time = response.get("end_timestamp")
+            image_url = response.get("image_url")
+
             embed.title = "Congratulations!"
             embed.description = (
                 f"Your previous nickname was so bad that we have decided to change it. "
                 f"Your new nickname will be **{forced_nick}**.\n\n"
                 f"You will be unable to change your nickname back until \n**{end_time}**."
             )
-            embed.set_image(url="http://www.festivalrykten.se/wp-content/uploads/2013/07/2chainz.jpg")
+            embed.set_image(url=image_url)
+
+            # Log to the mod_log channel
+            mod_log = self.bot.get_channel(MOD_LOG_CHANNEL)
+            await mod_log.send(
+                f":middle_finger: {member.name}#{member.discriminator} (`{member.id}`) "
+                f"has been hiphopified by **{ctx.author.name}**. Their new nickname is `{forced_nick}`. "
+                f"They will not be able to change their nickname again until **{end_time}**"
+            )
+
+            # Change the nick and return the embed
             await member.edit(nick=forced_nick)
             return await ctx.send(member.mention, embed=embed)
 
