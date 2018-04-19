@@ -1,7 +1,7 @@
 import logging
-import sys
 import re
-from typing import Optional
+import sys
+from typing import Optional, Tuple
 
 import aiohttp
 import discord
@@ -27,6 +27,7 @@ INTERSPHINX_INVENTORIES = {
     'stdlib': "https://docs.python.org/%d.%d/objects.inv" % sys.version_info[:2]
 }
 
+UNWANTED_SIGNATURE_SYMBOLS = ('[source]', '¶')
 WHITESPACE_AFTER_NEWLINES_RE = re.compile(r"(?<=\n\n)( +)")
 
 
@@ -72,7 +73,20 @@ class Doc:
                     self.inventories[symbol] = absolute_doc_url
             log.trace(f"Fetched inventory for {name}.")
 
-    async def get_symbol_html(self, symbol: str) -> Optional[str]:
+    async def get_symbol_html(self, symbol: str) -> Optional[Tuple[str, str]]:
+        """
+        Given a Python symbol, return its signature and description.
+
+        :param symbol: The symbol for which HTML data should be returned.
+        :return:
+        A tuple in the form (str, str), or `None`.
+        The first tuple element is the signature of the given
+        symbol as a markup-free string, and the second tuple
+        element is the description of the given symbol with HTML
+        markup included. If the given symbol could not be found,
+        returns `None`.
+        """
+
         url = self.inventories.get(symbol)
         if url is None:
             return None
@@ -81,13 +95,14 @@ class Doc:
             async with cs.get(url) as response:
                 html = await response.text(encoding='utf-8')
 
+        # Find the signature header and parse the relevant parts.
         symbol_id = url.split('#')[-1]
         soup = BeautifulSoup(html, 'html.parser')
         symbol_heading = soup.find(id=symbol_id)
         signature_buffer = []
 
         for tag in symbol_heading.strings:
-            if tag not in ('¶', '[source]'):
+            if tag not in UNWANTED_SIGNATURE_SYMBOLS:
                 signature_buffer.append(tag.replace('\\', ''))
 
         signature = ''.join(signature_buffer)
@@ -96,6 +111,17 @@ class Doc:
         return signature, description
 
     async def get_symbol_embed(self, symbol: str) -> Optional[discord.Embed]:
+        """
+        Using `get_symbol_html`, attempt to scrape and
+        fetch the data for the given `symbol`, and build
+        a formatted embed out of its contents.
+
+        :param symbol: The symbol for which the embed should be returned
+        :return:
+        If the symbol is known, an Embed with documentation about it.
+        Otherwise, `None`.
+        """
+
         scraped_html = await self.get_symbol_html(symbol)
         if scraped_html is None:
             return None
@@ -123,31 +149,20 @@ class Doc:
             description=f"```py\n{signature}```{description}"
         )
 
-    @commands.command()
-    async def doc(self, ctx, *, full_symbol: commands.clean_content):
+    @commands.command(name='doc()', aliases=['doc'])
+    async def doc(self, ctx, *, symbol: commands.clean_content):
         """
-        Return documentation for the given symbol.
+        Return a documentation embed for the given symbol.
+
+        :param ctx: Discord message context
+        :param symbol: The symbol for which documentation should be returned
         """
 
-        if '.' in full_symbol:
-            package, dotted_path = full_symbol.split('.', maxsplit=1)
+        doc_embed = await self.get_symbol_embed(symbol)
+        if doc_embed is None:
+            await ctx.send(f"Sorry, I could not find any documentation for `{symbol}`.")
         else:
-            package = full_symbol
-            dotted_path = ''
-
-        if not dotted_path or package not in self.inventories:
-            doc_embed = await self.get_symbol_embed(full_symbol)
-            if doc_embed is None:
-                await ctx.send(f"Sorry, I tried searching the stdlib documentation for "
-                               f"`{full_symbol}`, but it didn't turn up any results.")
-            else:
-                await ctx.send(embed=doc_embed)
-        else:
-            doc_embed = await self.get_symbol_embed(full_symbol)
-            if doc_embed is None:
-                await ctx.send(f"Sorry, I could not find any documentation for `{full_symbol}`.")
-            else:
-                await ctx.send(embed=doc_embed)
+            await ctx.send(embed=doc_embed)
 
 
 def setup(bot):
