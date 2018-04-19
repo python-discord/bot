@@ -66,7 +66,7 @@ class Bot:
         embed.set_author(
             name="Python Bot",
             url="https://github.com/discord-python/bot",
-            icon_url="https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle.png"
+            icon_url="https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle/logo_circle.png"
         )
 
         log.info(f"{ctx.author} called bot.about(). Returning information about the bot.")
