@@ -9,10 +9,10 @@ from discord.ext.commands import AutoShardedBot, Context, command, group
 from dulwich.repo import Repo
 
 from bot.constants import (
-    ADMIN_ROLE, BOT_CHANNEL, DEVTEST_CHANNEL,
-    HELP1_CHANNEL, HELP2_CHANNEL, HELP3_CHANNEL,
-    MODERATOR_ROLE, OWNER_ROLE, PYTHON_CHANNEL,
-    PYTHON_GUILD, VERIFIED_ROLE, BOT_AVATAR_URL
+    ADMIN_ROLE, BOT_AVATAR_URL, BOT_CHANNEL,
+    DEVTEST_CHANNEL, HELP1_CHANNEL, HELP2_CHANNEL,
+    HELP3_CHANNEL, MODERATOR_ROLE, OWNER_ROLE,
+    PYTHON_CHANNEL, PYTHON_GUILD, VERIFIED_ROLE
 )
 from bot.decorators import with_role
 
