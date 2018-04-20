@@ -2,6 +2,7 @@ import logging
 import random
 
 from discord import Colour, Embed, Member
+from discord.errors import Forbidden
 from discord.ext.commands import AutoShardedBot, Context, command
 
 from bot.constants import (
@@ -37,7 +38,7 @@ class Hiphopify:
 
         log.debug(
             f"{before.display_name} is trying to change their nickname to {after.display_name}. "
-            f"Checking if the user is in hiphop-prison..."
+            "Checking if the user is in hiphop-prison..."
         )
 
         response = await self.bot.http_session.get(
@@ -49,22 +50,29 @@ class Hiphopify:
         response = await response.json()
 
         if response:
-
             if after.display_name == response.get("forced_nick"):
                 return  # Nick change was triggered by this event. Ignore.
 
-            log.warning(
+            log.debug(
                 f"{after.display_name} is currently in hiphop-prison. "
                 f"Changing the nick back to {before.display_name}."
             )
             await after.edit(nick=response.get("forced_nick"))
-            await after.send(
-                "You have tried to change your nickname on the **Python Discord** server "
-                f"from **{before.display_name}** to **{after.display_name}**, but as you "
-                "are currently in hiphop-prison, you do not have permission to do so. "
-                "You will be allowed to change your nickname again at the following time:\n\n"
-                f"**{response.get('end_timestamp')}**."
-            )
+            try:
+                await after.send(
+                    "You have tried to change your nickname on the **Python Discord** server "
+                    f"from **{before.display_name}** to **{after.display_name}**, but as you "
+                    "are currently in hiphop-prison, you do not have permission to do so. "
+                    "You will be allowed to change your nickname again at the following time:\n\n"
+                    f"**{response.get('end_timestamp')}**."
+                )
+            except Forbidden:
+                log.warning(
+                    "The user tried to change their nickname while in hiphop-prison. "
+                    "This led to the bot trying to DM the user to let them know they cannot do that, "
+                    "but the user had either blocked the bot or disabled DMs, so it was not possible "
+                    "to DM them, and a discord.errors.Forbidden error was incurred."
+                )
 
     @with_role(ADMIN_ROLE, OWNER_ROLE, MODERATOR_ROLE)
     @command(name="hiphopify()", aliases=["hiphopify", "force_nick()", "force_nick"])
@@ -120,7 +128,7 @@ class Hiphopify:
 
             embed.title = "Congratulations!"
             embed.description = (
-                f"Your previous nickname was so bad that we have decided to change it. "
+                "Your previous nickname was so bad that we have decided to change it. "
                 f"Your new nickname will be **{forced_nick}**.\n\n"
                 f"You will be unable to change your nickname back until \n**{end_time}**."
             )
@@ -138,7 +146,7 @@ class Hiphopify:
             # Change the nick and return the embed
             log.debug("Changing the users nickname and sending the embed.")
             await member.edit(nick=forced_nick)
-            return await ctx.send(member.mention, embed=embed)
+            await ctx.send(member.mention, embed=embed)
 
     @with_role(ADMIN_ROLE, OWNER_ROLE, MODERATOR_ROLE)
     @command(name="unhiphopify()", aliases=["unhiphopify", "release_nick()", "release_nick"])
@@ -176,7 +184,7 @@ class Hiphopify:
             )
 
         log.debug(f"{member.display_name} was successfully released from hiphop-prison.")
-        return await ctx.send(embed=embed)
+        await ctx.send(embed=embed)
 
 
 def setup(bot):
