@@ -1,14 +1,16 @@
 import logging
+import random
 import time
 
 from discord import Colour, Embed
 from discord.ext.commands import (
-    AutoShardedBot, BadArgument, Context,
+    AutoShardedBot, Context,
     Converter, command
 )
 
 from bot.constants import ADMIN_ROLE, MODERATOR_ROLE, OWNER_ROLE, SITE_API_KEY, SITE_API_TAGS_URL, TAG_COOLDOWN
 from bot.decorators import with_role
+from bot.exceptions import CogBadArgument
 from bot.pagination import LinePaginator
 
 log = logging.getLogger(__name__)
@@ -30,25 +32,25 @@ class TagNameConverter(Converter):
         if ascii(tag_name)[1:-1] != tag_name:
             log.warning(f"{ctx.author} tried to put an invalid character in a tag name. "
                         "Rejecting the request.")
-            raise BadArgument("Don't be ridiculous, you can't use that character!")
+            raise CogBadArgument("Don't be ridiculous, you can't use that character!")
 
         # The tag name is either empty, or consists of nothing but whitespace.
         elif not tag_name:
             log.warning(f"{ctx.author} tried to create a tag with a name consisting only of whitespace. "
                         "Rejecting the request.")
-            raise BadArgument("Tag names should not be empty, or filled with whitespace.")
+            raise CogBadArgument("Tag names should not be empty, or filled with whitespace.")
 
         # The tag name is a number of some kind, we don't allow that.
         elif is_number(tag_name):
             log.warning(f"{ctx.author} tried to create a tag with a digit as its name. "
                         "Rejecting the request.")
-            raise BadArgument("Tag names can't be numbers.")
+            raise CogBadArgument("Tag names can't be numbers.")
 
         # The tag name is longer than 127 characters.
         elif len(tag_name) > 127:
             log.warning(f"{ctx.author} tried to request a tag name with over 127 characters. "
                         "Rejecting the request.")
-            raise BadArgument("Are you insane? That's way too long!")
+            raise CogBadArgument("Are you insane? That's way too long!")
 
         return tag_name
 
@@ -62,7 +64,7 @@ class TagContentConverter(Converter):
         if not tag_content:
             log.warning(f"{ctx.author} tried to create a tag containing only whitespace. "
                         "Rejecting the request.")
-            raise BadArgument("Tag contents should not be empty, or filled with whitespace.")
+            raise CogBadArgument("Tag contents should not be empty, or filled with whitespace.")
 
         return tag_content
 
@@ -71,6 +73,18 @@ class Tags:
     """
     Save new tags and fetch existing tags.
     """
+
+    FAIL_TITLES = [
+        "Please don't do that.",
+        "You have to stop.",
+        "Do you mind?",
+        "In the future, don't do that.",
+        "That was a mistake.",
+        "You blew it.",
+        "You're bad at computers.",
+        "Are you trying to kill me?",
+        "Noooooo!!"
+    ]
 
     def __init__(self, bot: AutoShardedBot):
         self.bot = bot
@@ -320,6 +334,17 @@ class Tags:
                                  "Please try again. If the problem persists, see the error logs.")
 
         return await ctx.send(embed=embed)
+
+    @get_command.error
+    @set_command.error
+    @delete_command.error
+    async def command_error(self, ctx, error):
+        if isinstance(error, CogBadArgument):
+            embed = Embed()
+            embed.colour = Colour.red()
+            embed.description = str(error)
+            embed.title = random.choice(self.FAIL_TITLES)
+            await ctx.send(embed=embed)
 
     @command(name="tags.keys()")
     async def keys_command(self, ctx: Context):
