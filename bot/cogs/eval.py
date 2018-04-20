@@ -12,7 +12,7 @@ from io import StringIO
 import discord
 from discord.ext.commands import AutoShardedBot, command
 
-from bot.constants import ADMIN_ROLE, OWNER_ROLE
+from bot.constants import Roles
 from bot.decorators import with_role
 from bot.interpreter import Interpreter
 
@@ -176,7 +176,7 @@ async def func():  # (None,) -> Any
         await ctx.send(f"```py\n{out}```", embed=embed)
 
     @command(name="eval()", aliases=["eval"])
-    @with_role(ADMIN_ROLE, OWNER_ROLE)
+    @with_role(Roles.admin, Roles.owner)
     async def eval(self, ctx, *, code: str):
         """ Run eval in a REPL-like format. """
         code = code.strip("`")

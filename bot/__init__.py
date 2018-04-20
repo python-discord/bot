@@ -8,7 +8,7 @@ from logging.handlers import SysLogHandler
 import discord.ext.commands.view
 from logmatic import JsonFormatter
 
-from bot.constants import PAPERTRAIL_ADDRESS, PAPERTRAIL_PORT
+from bot.constants import Papertrail
 
 logging.TRACE = 5
 logging.addLevelName(logging.TRACE, "TRACE")
@@ -32,8 +32,8 @@ Logger.trace = monkeypatch_trace
 # Set up logging
 logging_handlers = []
 
-if PAPERTRAIL_ADDRESS:
-    papertrail_handler = SysLogHandler(address=(PAPERTRAIL_ADDRESS, PAPERTRAIL_PORT))
+if Papertrail.address:
+    papertrail_handler = SysLogHandler(address=(Papertrail.address, Papertrail.port))
     papertrail_handler.setLevel(logging.DEBUG)
     logging_handlers.append(papertrail_handler)
 

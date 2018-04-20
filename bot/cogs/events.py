@@ -8,7 +8,10 @@ from discord.ext.commands import (
     NoPrivateMessage, UserInputError
 )
 
-from bot.constants import DEVLOG_CHANNEL, PYTHON_GUILD, SITE_API_KEY, SITE_API_USER_URL
+from bot.constants import (
+    Channels, Guild, Keys,
+    SITE_API_USER_URL
+)
 from bot.utils import chunks
 
 log = logging.getLogger(__name__)
@@ -27,7 +30,7 @@ class Events:
             response = await self.bot.http_session.post(
                 url=SITE_API_USER_URL,
                 json=list(users),
-                headers={"X-API-Key": SITE_API_KEY}
+                headers={"X-API-Key": Keys.site_api}
             )
 
             return await response.json()
@@ -71,7 +74,7 @@ class Events:
     async def on_ready(self):
         users = []
 
-        for member in self.bot.get_guild(PYTHON_GUILD).members:  # type: Member
+        for member in self.bot.get_guild(Guild.id).members:  # type: Member
             roles = [str(r.id) for r in member.roles]  # type: List[int]
 
             users.append({
@@ -109,7 +112,7 @@ class Events:
                             name=key.title(), value=str(value)
                         )
 
-                await self.bot.get_channel(DEVLOG_CHANNEL).send(
+                await self.bot.get_channel(Channels.devlog).send(
                     embed=embed
                 )
 

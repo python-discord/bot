@@ -43,6 +43,7 @@ keys:
 clickup:
     space: 757069
     team: 754996
+    key: !ENV 'CLICKUP_KEY'
 
 
 papertrail:

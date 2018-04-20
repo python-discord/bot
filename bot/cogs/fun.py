@@ -4,7 +4,7 @@ import logging
 from discord import Message
 from discord.ext.commands import AutoShardedBot
 
-from bot.constants import BOT_CHANNEL
+from bot.constants import Channels
 
 RESPONSES = {
     "_pokes {us}_": "_Pokes {them}_",
@@ -34,7 +34,7 @@ class Fun:
                 del RESPONSES[key]
 
     async def on_message(self, message: Message):
-        if message.channel.id != BOT_CHANNEL:
+        if message.channel.id != Channels.bot:
             return
 
         content = message.content
