@@ -34,11 +34,25 @@ guild:
         contributor: 295488872404484098
 
 
+keys:
+    deploy_bot: !ENV 'DEPLOY_BOT_KEY'
+    deploy_site: !ENV 'DEPLOY_SITE'
+    site_api: !ENV 'BOT_API_KEY'
+
+
 clickup:
     space: 757069
     team: 754996
 
 
+papertrail:
+    address: !ENV 'PAPERTRAIL_ADDRESS'
+    port: !ENV 'PAPERTRAIL_PORT'
+
+
 urls:
+    deploy: !ENV 'DEPLOY_URL'
+    status: !ENV 'STATUS_URL'
+    site: !ENV 'SITE_URL'
     github_bot_repo: 'https://github.com/discord-python/bot'
     bot_avatar: 'https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle/logo_circle.png'
