@@ -8,8 +8,6 @@ from logging.handlers import SysLogHandler
 import discord.ext.commands.view
 from logmatic import JsonFormatter
 
-from bot.constants import Papertrail
-
 logging.TRACE = 5
 logging.addLevelName(logging.TRACE, "TRACE")
 
@@ -32,10 +30,6 @@ Logger.trace = monkeypatch_trace
 # Set up logging
 logging_handlers = []
 
-if Papertrail.address:
-    papertrail_handler = SysLogHandler(address=(Papertrail.address, Papertrail.port))
-    papertrail_handler.setLevel(logging.DEBUG)
-    logging_handlers.append(papertrail_handler)
 
 logging_handlers.append(StreamHandler(stream=sys.stderr))
 
@@ -51,6 +45,16 @@ logging.basicConfig(
 )
 
 log = logging.getLogger(__name__)
+
+# We need to defer the import from `constants.py`
+# because otherwise the logging config would not be applied
+# to any logging done in the module.
+from bot.constants import Papertrail  # noqa
+if Papertrail.address:
+    papertrail_handler = SysLogHandler(address=(Papertrail.address, Papertrail.port))
+    papertrail_handler.setLevel(logging.DEBUG)
+    logging.getLogger('bot').addHandler(papertrail_handler)
+
 
 # Silence discord and websockets
 logging.getLogger("discord.client").setLevel(logging.ERROR)

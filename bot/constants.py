@@ -29,7 +29,7 @@ with open('config-example.yml') as f:
 
 
 if Path('config.yml').exists():
-    log.error("Found `config.yml` file, loading constants from it.")
+    log.info("Found `config.yml` file, loading constants from it.")
     with open('config.yml') as f:
         _CONFIG_YAML.new_child(yaml.safe_load(f))
 
