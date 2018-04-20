@@ -1,0 +1,44 @@
+bot:
+    help_prefix: 'bot.'
+
+    cooldowns:
+        # Per channel, per tag.
+        tags: 60
+
+    emojis:
+        green_chevron: '<:greenchevron:418104310329769993>'
+        red_chevron: '<:redchevron:418112778184818698>'
+        white_chevron: '<:whitechevron:418110396973711363>'
+
+
+guild:
+    id: 267624335836053506
+
+    channels:
+        bot: 267659945086812160
+        help1: 303906576991780866
+        help2: 303906556754395136
+        help3: 303906514266226689
+        python: 267624335836053506
+        devlog: 409308876241108992
+        devtest: 414574275865870337
+        verification: 352442727016693763
+        checkpoint_test: 422077681434099723
+
+    roles:
+        admin: 267628507062992896
+        moderator: 267629731250176001
+        verified: 352427296948486144
+        owner: 267627879762755584
+        devops: 409416496733880320
+        contributor: 295488872404484098
+
+
+clickup:
+    space: 757069
+    team: 754996
+
+
+urls:
+    github_bot_repo: 'https://github.com/discord-python/bot'
+    bot_avatar: 'https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle/logo_circle.png'
