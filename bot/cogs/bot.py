@@ -9,10 +9,10 @@ from discord.ext.commands import AutoShardedBot, Context, command, group
 from dulwich.repo import Repo
 
 from bot.constants import (
-    ADMIN_ROLE, BOT_CHANNEL, DEVTEST_CHANNEL,
-    HELP1_CHANNEL, HELP2_CHANNEL, HELP3_CHANNEL,
-    MODERATOR_ROLE, OWNER_ROLE, PYTHON_CHANNEL,
-    PYTHON_GUILD, VERIFIED_ROLE
+    ADMIN_ROLE, BOT_AVATAR_URL, BOT_CHANNEL,
+    DEVTEST_CHANNEL, HELP1_CHANNEL, HELP2_CHANNEL,
+    HELP3_CHANNEL, MODERATOR_ROLE, OWNER_ROLE,
+    PYTHON_CHANNEL, PYTHON_GUILD, VERIFIED_ROLE
 )
 from bot.decorators import with_role
 
@@ -66,7 +66,7 @@ class Bot:
         embed.set_author(
             name="Python Bot",
             url="https://github.com/discord-python/bot",
-            icon_url="https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle.png"
+            icon_url=BOT_AVATAR_URL
         )
 
         log.info(f"{ctx.author} called bot.about(). Returning information about the bot.")
