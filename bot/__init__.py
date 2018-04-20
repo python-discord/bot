@@ -238,8 +238,6 @@ def _get_word(self) -> str:
         self.end = len(self.buffer)
         log.trace(f"Mimicked command: {self.buffer}")
 
-    if isinstance(result, str):
-        return result.lower()  # Case insensitivity, baby
     return result
 
 
