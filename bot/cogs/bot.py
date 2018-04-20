@@ -9,10 +9,10 @@ from discord.ext.commands import AutoShardedBot, Context, command, group
 from dulwich.repo import Repo
 
 from bot.constants import (
-    ADMIN_ROLE, BOT_CHANNEL, DEVTEST_CHANNEL,
-    HELP1_CHANNEL, HELP2_CHANNEL, HELP3_CHANNEL,
-    MODERATOR_ROLE, OWNER_ROLE, PYTHON_CHANNEL,
-    PYTHON_GUILD, VERIFIED_ROLE
+    ADMIN_ROLE, BOT_AVATAR_URL, BOT_CHANNEL,
+    DEVTEST_CHANNEL, HELP1_CHANNEL, HELP2_CHANNEL,
+    HELP3_CHANNEL, MODERATOR_ROLE, OWNER_ROLE,
+    PYTHON_CHANNEL, PYTHON_GUILD, VERIFIED_ROLE
 )
 from bot.decorators import with_role
 
@@ -66,13 +66,13 @@ class Bot:
         embed.set_author(
             name="Python Bot",
             url="https://github.com/discord-python/bot",
-            icon_url="https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle.png"
+            icon_url=BOT_AVATAR_URL
         )
 
         log.info(f"{ctx.author} called bot.about(). Returning information about the bot.")
         await ctx.send(embed=embed)
 
-    @command(name="info()", aliases=["bot.info", "bot.about", "bot.about()", "info", "bot.info()"])
+    @command(name="info()", aliases=["info", "about()", "about"])
     @with_role(VERIFIED_ROLE)
     async def info_wrapper(self, ctx: Context):
         """
@@ -81,7 +81,7 @@ class Bot:
 
         await ctx.invoke(self.info)
 
-    @command(name="echo")
+    @command(name="print()", aliases=["print", "echo", "echo()"])
     @with_role(OWNER_ROLE, ADMIN_ROLE, MODERATOR_ROLE)
     async def echo_command(self, ctx: Context, text: str):
         """
@@ -90,7 +90,7 @@ class Bot:
 
         await ctx.send(text)
 
-    @command(name="embed")
+    @command(name="embed()", aliases=["embed"])
     @with_role(OWNER_ROLE, ADMIN_ROLE, MODERATOR_ROLE)
     async def embed_command(self, ctx: Context, text: str):
         """
