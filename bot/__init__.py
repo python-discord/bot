@@ -1,6 +1,7 @@
 # coding=utf-8
 import ast
 import logging
+import re
 import sys
 from logging import Logger, StreamHandler
 from logging.handlers import SysLogHandler
@@ -113,7 +114,12 @@ def _get_word(self) -> str:
     # Is it possible to parse this without syntax error?
     syntax_valid = True
     try:
-        ast.literal_eval(self.buffer[self.index:])
+        # Catch raw channel, member or role mentions and wrap them in quotes.
+        tempbuffer = re.sub(r"(<(?:@|@!|[#&])\d+>)",
+                            r'"\1"',
+                            self.buffer)
+        ast.literal_eval(tempbuffer[self.index:])
+        self.buffer = tempbuffer
     except SyntaxError:
         log.warning("The command cannot be parsed by ast.literal_eval because it raises a SyntaxError.")
         # TODO: It would be nice if this actually made the bot return a SyntaxError. ClickUp #1b12z  # noqa: T000

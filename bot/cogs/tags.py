@@ -8,7 +8,10 @@ from discord.ext.commands import (
     Converter, command
 )
 
-from bot.constants import ADMIN_ROLE, MODERATOR_ROLE, OWNER_ROLE, SITE_API_KEY, SITE_API_TAGS_URL, TAG_COOLDOWN
+from bot.constants import (
+    ADMIN_ROLE, ERROR_REPLIES, MODERATOR_ROLE, OWNER_ROLE,
+    SITE_API_KEY, SITE_API_TAGS_URL, TAG_COOLDOWN,
+)
 from bot.decorators import with_role
 from bot.exceptions import CogBadArgument
 from bot.pagination import LinePaginator
@@ -73,18 +76,6 @@ class Tags:
     """
     Save new tags and fetch existing tags.
     """
-
-    FAIL_TITLES = [
-        "Please don't do that.",
-        "You have to stop.",
-        "Do you mind?",
-        "In the future, don't do that.",
-        "That was a mistake.",
-        "You blew it.",
-        "You're bad at computers.",
-        "Are you trying to kill me?",
-        "Noooooo!!"
-    ]
 
     def __init__(self, bot: AutoShardedBot):
         self.bot = bot
