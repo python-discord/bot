@@ -7,8 +7,7 @@ from discord import Colour, Embed, User
 from discord.ext.commands import AutoShardedBot, Context, command
 
 from bot.constants import (
-    Cooldowns, Keys, Roles,
-    SITE_API_TAGS_URL
+    Cooldowns, Keys, Roles, URLs
 )
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
@@ -53,7 +52,7 @@ class Tags:
         if tag_name:
             params["tag_name"] = tag_name
 
-        response = await self.bot.http_session.get(SITE_API_TAGS_URL, headers=self.headers, params=params)
+        response = await self.bot.http_session.get(URLs.site_tags_api, headers=self.headers, params=params)
         tag_data = await response.json()
 
         return tag_data
@@ -75,7 +74,7 @@ class Tags:
             'tag_content': tag_content
         }
 
-        response = await self.bot.http_session.post(SITE_API_TAGS_URL, headers=self.headers, json=params)
+        response = await self.bot.http_session.post(URLs.site_tags_api, headers=self.headers, json=params)
         tag_data = await response.json()
 
         return tag_data
@@ -96,7 +95,7 @@ class Tags:
         if tag_name:
             params['tag_name'] = tag_name
 
-        response = await self.bot.http_session.delete(SITE_API_TAGS_URL, headers=self.headers, json=params)
+        response = await self.bot.http_session.delete(URLs.site_tags_api, headers=self.headers, json=params)
         tag_data = await response.json()
 
         return tag_data

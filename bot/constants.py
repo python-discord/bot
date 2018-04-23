@@ -1,7 +1,7 @@
 # coding=utf-8
 import logging
 import os
-from collections import ChainMap
+from collections.abc import Mapping
 from pathlib import Path
 
 import yaml
@@ -25,13 +25,32 @@ yaml.SafeLoader.add_constructor('!ENV', _env_var_constructor)
 
 
 with open('config-example.yml') as f:
-    _CONFIG_YAML = ChainMap(yaml.safe_load(f))
+    _CONFIG_YAML = yaml.safe_load(f)
+
+
+def _recursive_update(original, new):
+    """
+    Helper method which implements a recursive `dict.update`
+    method, used for updating the original configuration with
+    configuration specified by the user.
+    """
+
+    for key, value in original.items():
+        if new.get(key) is None:
+            continue
+
+        if isinstance(value, Mapping):
+            if not any(isinstance(subvalue, Mapping) for subvalue in value.values()):
+                original[key].update(new[key])
+            _recursive_update(original[key], new[key])
+        original[key] = new[key]
 
 
 if Path('config.yml').exists():
     log.info("Found `config.yml` file, loading constants from it.")
     with open('config.yml') as f:
-        _CONFIG_YAML.new_child(yaml.safe_load(f))
+        user_config = yaml.safe_load(f)
+    _recursive_update(_CONFIG_YAML, user_config)
 
 
 class YAMLGetter(type):
@@ -90,9 +109,3 @@ class Papertrail(metaclass=YAMLGetter):
 
 class URLs(metaclass=YAMLGetter):
     section = 'urls'
-
-
-SITE_URL = URLs.site or "pythondiscord.local:8080"
-SITE_PROTOCOL = 'http' if 'local' in SITE_URL else 'https'
-SITE_API_USER_URL = f"{SITE_PROTOCOL}://api.{SITE_URL}/user"
-SITE_API_TAGS_URL = f"{SITE_PROTOCOL}://api.{SITE_URL}/tags"

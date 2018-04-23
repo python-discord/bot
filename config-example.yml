@@ -54,6 +54,8 @@ papertrail:
 urls:
     deploy: !ENV 'DEPLOY_URL'
     status: !ENV 'STATUS_URL'
-    site: !ENV 'SITE_URL'
+    site: 'pythondiscord.com'
+    site_tags_api: 'https://api.pythondiscord.com/tags'
+    site_user_api: 'https://api.pythondiscord.com/users'
     github_bot_repo: 'https://github.com/discord-python/bot'
     bot_avatar: 'https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle/logo_circle.png'

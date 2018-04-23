@@ -9,8 +9,7 @@ from discord.ext.commands import (
 )
 
 from bot.constants import (
-    Channels, Guild, Keys,
-    SITE_API_USER_URL
+    Channels, Guild, Keys, URLs
 )
 from bot.utils import chunks
 
@@ -28,7 +27,7 @@ class Events:
     async def send_updated_users(self, *users):
         try:
             response = await self.bot.http_session.post(
-                url=SITE_API_USER_URL,
+                url=URLs.site_user_api,
                 json=list(users),
                 headers={"X-API-Key": Keys.site_api}
             )
