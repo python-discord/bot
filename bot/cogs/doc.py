@@ -19,14 +19,14 @@ BASE_URLS = {
     'aiohttp': "https://aiohttp.readthedocs.io/en/stable/",
     'discord': "https://discordpy.readthedocs.io/en/rewrite/",
     'django': "https://docs.djangoproject.com/en/dev/",
-    'stdlib': "https://docs.python.org/%d.%d/" % sys.version_info[:2]
+    'stdlib': "https://docs.python.org/{0}.{1}/".format(*sys.version_info[:2])
 }
 
 INTERSPHINX_INVENTORIES = {
     'aiohttp': "https://aiohttp.readthedocs.io/en/stable/objects.inv",
     'discord': "https://discordpy.readthedocs.io/en/rewrite/objects.inv",
     'django': "https://docs.djangoproject.com/en/dev/_objects/",
-    'stdlib': "https://docs.python.org/%d.%d/objects.inv" % sys.version_info[:2]
+    'stdlib': "https://docs.python.org/{0}.{1}/objects.inv".format(*sys.version_info[:2])
 }
 
 UNWANTED_SIGNATURE_SYMBOLS = ('[source]', '¶')
@@ -65,8 +65,8 @@ def async_cache(max_size=128, arg_offset=0):
 
 class DocMarkdownConverter(MarkdownConverter):
     def convert_code(self, el, text):
-        # Some part of `markdownify` believes that it should escape
-        # underscored in variable names. I do not.
+        """Undo `markdownify`s underscore escaping."""
+
         return f"`{text}`".replace('\\', '')
 
     def convert_pre(self, el, text):
@@ -191,7 +191,7 @@ class Doc:
         )
 
     @commands.command(name='doc()', aliases=['doc'])
-    async def doc(self, ctx, *, symbol: commands.clean_content):
+    async def doc(self, ctx, symbol: commands.clean_content):
         """
         Return a documentation embed for the given symbol.
 
@@ -201,7 +201,11 @@ class Doc:
 
         doc_embed = await self.get_symbol_embed(symbol)
         if doc_embed is None:
-            await ctx.send(f"Sorry, I could not find any documentation for `{symbol}`.")
+            error_embed = discord.Embed(
+                description=f"Sorry, I could not find any documentation for `{symbol}`.",
+                colour=discord.Colour.red()
+            )
+            await ctx.send(embed=error_embed)
         else:
             await ctx.send(embed=doc_embed)
 

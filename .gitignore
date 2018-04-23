@@ -108,3 +108,6 @@ ENV/
 
 # JSON logfile
 log.json
+
+# Custom bot configuration
+config.yml
