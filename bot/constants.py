@@ -10,7 +10,6 @@ out in the custom user configuration will stay
 their default values from `config-default.yml`.
 """
 
-# coding=utf-8
 import logging
 import os
 from collections.abc import Mapping
