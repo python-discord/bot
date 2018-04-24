@@ -1,5 +1,6 @@
 bot:
     help_prefix: 'bot.'
+    token: !REQUIRED_ENV 'BOT_TOKEN'
 
     cooldowns:
         # Per channel, per tag.

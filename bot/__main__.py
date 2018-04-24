@@ -1,10 +1,9 @@
 # coding=utf-8
-import os
-
 from aiohttp import AsyncResolver, ClientSession, TCPConnector
 from discord import Game
 from discord.ext.commands import AutoShardedBot, when_mentioned_or
 
+from bot.constants import Bot
 from bot.formatter import Formatter
 from bot.utils import CaseInsensitiveDict
 
@@ -45,6 +44,6 @@ bot.load_extension("bot.cogs.fun")
 bot.load_extension("bot.cogs.tags")
 bot.load_extension("bot.cogs.verification")
 
-bot.run(os.environ.get("BOT_TOKEN"))
+bot.run(Bot.token)
 
 bot.http_session.close()  # Close the aiohttp session when the bot finishes running
