@@ -43,7 +43,8 @@ def _recursive_update(original, new):
             if not any(isinstance(subvalue, Mapping) for subvalue in value.values()):
                 original[key].update(new[key])
             _recursive_update(original[key], new[key])
-        original[key] = new[key]
+        else:
+            original[key] = new[key]
 
 
 if Path('config.yml').exists():
