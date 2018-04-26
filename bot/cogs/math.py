@@ -9,7 +9,6 @@ from contextlib import suppress
 from io import BytesIO
 from re import finditer
 from subprocess import PIPE, Popen, STDOUT, TimeoutExpired  # noqa: B404 S404
-from urllib.parse import quote
 
 from discord import File
 from discord.ext.commands import command
@@ -27,52 +26,54 @@ def ropen(filename, *args, **kwargs):
 with ropen("base.tex") as f:
     LATEX_BASE = f.read()
 
-async def run_sympy(sympy_code: str, calc: bool = False, timeout: int = 10) -> tuple:
-    if calc:
-        code_ = "parse_expr(sys.argv[1]).doit()"  # Run the expression
-    else:
-        code_ = "parse_expr(sys.argv[1], evaluate=True)"  # Just latexify it without running
-
-    if "__" in sympy_code:
-        # They're trying to exploit something, raise an error
-        raise TypeError("'__' not allowed in sympy code")
-
-    log.info(f"Running expression (Will eval: {calc}")
-
-    proc = Popen([  # noqa: B603 S603
-                    sys.executable, "-c",
-                    "import sys,sympy;from sympy.parsing.sympy_parser import parse_expr;"
-                    f"print(sympy.latex({code_}))", sympy_code
-                 ], env={},  # Disable environment variables for security
-                 stdout=PIPE, stderr=STDOUT)  # reroute all to stdout
-
-    log.debug("Waiting for process to end...")
-
-    for _ in range(timeout*4):  # Check if done every .25 seconds for `timeout` seconds
-        await asyncio.sleep(1/4)
-
-        # Ignore TimeoutExpired...
-        with suppress(TimeoutExpired):
-            proc.wait(0)
-            break  # ... But stop the loop when not raised
-    else:
-        log.warn("Calculation forcibly stopped for taking too long!")
-
-    proc.kill()  # Kill the process regardless of whether it finished or not
-    return proc.returncode, proc.stdout.read().decode().strip()
-
-
 class Math:
     latex_regexp = r"\$(?P<lim>`{1,2})(?P<latex>.+?[^\\])(?P=lim)"
 
     def __init__(self, bot):
         self.bot = bot
 
+    async def run_sympy(self, sympy_code: str, calc: bool = False, timeout: int = 10) -> tuple:
+        """ Safely run Sympy expressions """
+        if calc:
+            code_ = "parse_expr(sys.argv[1]).doit()"  # Run the expression
+        else:
+            code_ = "parse_expr(sys.argv[1], evaluate=True)"  # Just latexify it without running
+
+        if "__" in sympy_code:
+            # They're trying to exploit something, raise an error
+            raise TypeError("'__' not allowed in sympy code")
+
+        log.info(f"Running expression (Will eval: {calc}")
+
+        proc = Popen([  # noqa: B603 S603
+                        sys.executable, "-c",
+                        "import sys,sympy;from sympy.parsing.sympy_parser import parse_expr;"
+                        f"print(sympy.latex({code_}))", sympy_code
+                     ], env={},  # Disable environment variables for security
+                     stdout=PIPE, stderr=STDOUT)  # reroute all to stdout
+
+        log.debug("Waiting for process to end...")
+
+        for _ in range(timeout*4):  # Check if done every .25 seconds for `timeout` seconds
+            await asyncio.sleep(1/4)
+
+            # Ignore TimeoutExpired...
+            with suppress(TimeoutExpired):
+                proc.wait(0)
+                break  # ... But stop the loop when not raised
+        else:
+            log.warn("Calculation forcibly stopped for taking too long!")
+
+        proc.kill()  # Kill the process regardless of whether it finished or not
+        return proc.returncode, proc.stdout.read().decode().strip()
+
     async def download_latex(self, latex: str) -> File:
+        """ Query the API and download the LaTeX, return a BytesIO containing the image """
         log.info("Downloading latex from 'API'")
 
         async with self.bot.http_session as session:
-            async with session.post(LATEX_URL, json={"code": LATEX_BASE.replace("CONTENT", latex), "format": "png"}) as resp:
+            async with session.post(LATEX_URL, json={"code": LATEX_BASE.replace("CONTENT", latex),
+                                                     "format": "png"}) as resp:
                 data = await resp.json()
 
             log.debug(json.dumps(data))
@@ -88,10 +89,10 @@ class Math:
         and uploads the rendered images
         """
         files = []
-        for match in finditer(self.latex_regexp, message.content):
+        for i, match in enumerate(finditer(self.latex_regexp, message.content)):
             latex = match.group('latex')
             files.append(
-                await self.download_latex(latex)
+                File(fp=await self.download_latex(latex), filename=f"{i}.png")
             )
 
         if files:
@@ -106,7 +107,7 @@ class Math:
 
         fixed_expr = expr.replace('^', '**').strip('`')  # Syntax fixes
         try:
-            retcode, parsed = await run_sympy(fixed_expr)  # Run the sympy code
+            retcode, parsed = await self.run_sympy(fixed_expr)  # Run the sympy code
 
         except TypeError as e:  # Exploit was tried
             await ctx.send(e.args[0])
@@ -132,7 +133,7 @@ class Math:
 
         fixed_expr = expr.replace('^', '**').strip('`')  # Syntax fixes
         try:
-            retcode, parsed = await run_sympy(fixed_expr, calc=True)  # Run sympy
+            retcode, parsed = await self.run_sympy(fixed_expr, calc=True)  # Run sympy
 
         except TypeError as e:  # Exploitation tried
             await ctx.send(e.args[0])
