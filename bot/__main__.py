@@ -6,22 +6,21 @@ from discord import Game
 from discord.ext.commands import AutoShardedBot, when_mentioned_or
 
 from bot.formatter import Formatter
-from bot.utils import CaseInsensitiveDict
 
 bot = AutoShardedBot(
     command_prefix=when_mentioned_or(
-        ">>> self.", ">> self.", "> self.", "self.",
-        ">>> bot.", ">> bot.", "> bot.", "bot.",
-        ">>> ", ">> ", "> ",
-        ">>>", ">>", ">"
-    ),  # Order matters (and so do commas)
-    activity=Game(name="Help: bot.help()"),
-    help_attrs={"aliases": ["help()"]},
-    formatter=Formatter()
+        "self.", "bot."
+    ),
+    activity=Game(
+        name="Help: bot.help()"
+    ),
+    help_attrs={
+        "name": "help()",
+        "aliases": ["help"]
+    },
+    formatter=Formatter(),
+    case_insensitive=True
 )
-
-# Make cog names case-insensitive
-bot.cogs = CaseInsensitiveDict()
 
 # Global aiohttp session for all cogs - uses asyncio for DNS resolution instead of threads, so we don't *spam threads*
 bot.http_session = ClientSession(connector=TCPConnector(resolver=AsyncResolver()))
@@ -38,8 +37,9 @@ bot.load_extension("bot.cogs.cogs")
 bot.load_extension("bot.cogs.clickup")
 bot.load_extension("bot.cogs.deployment")
 bot.load_extension("bot.cogs.eval")
-# bot.load_extension("bot.cogs.math")
 bot.load_extension("bot.cogs.fun")
+bot.load_extension("bot.cogs.hiphopify")
+# bot.load_extension("bot.cogs.math")
 bot.load_extension("bot.cogs.tags")
 bot.load_extension("bot.cogs.verification")
 

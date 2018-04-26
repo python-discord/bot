@@ -1,6 +1,7 @@
 # coding=utf-8
 import ast
 import logging
+import re
 import sys
 from logging import Logger, StreamHandler
 from logging.handlers import SysLogHandler
@@ -113,7 +114,12 @@ def _get_word(self) -> str:
     # Is it possible to parse this without syntax error?
     syntax_valid = True
     try:
-        ast.literal_eval(self.buffer[self.index:])
+        # Catch raw channel, member or role mentions and wrap them in quotes.
+        tempbuffer = re.sub(r"(<(?:@|@!|[#&])\d+>)",
+                            r'"\1"',
+                            self.buffer)
+        ast.literal_eval(tempbuffer[self.index:])
+        self.buffer = tempbuffer
     except SyntaxError:
         log.warning("The command cannot be parsed by ast.literal_eval because it raises a SyntaxError.")
         # TODO: It would be nice if this actually made the bot return a SyntaxError. ClickUp #1b12z  # noqa: T000
@@ -201,17 +207,23 @@ def _get_word(self) -> str:
             key = clean_argument(self.buffer[self.index:equals_pos])
 
             # Value: The second argument, specified after the `=`
-            value = (
-                clean_argument(
-                    self.buffer.split("=")[1]
-                )
-                .replace("'", "\\'")  # escape any unescaped quotes
-            )
-            log.trace(f"Command mimicks setitem. Key: {key!r}, value: {value!r}.")
+            right_hand = self.buffer.split("=", maxsplit=1)[1].strip()
 
-            # Use the cog's `set` command.
-            result = self.buffer[self.previous:self.index] + ".set"
-            args = f'"{key}" "{value}"'
+            # If the value is None or '', mimick `bot.tags.delete(key)`
+            if right_hand in ("None", "''", '""'):
+                log.trace(f"Command mimicks delitem. Key: {key!r}.")
+                result = self.buffer[self.previous:self.index] + ".delete"
+                args = f'"{key}"'
+
+            # Otherwise, assume assignment, for example `bot.tags['this'] = 'that'`
+            else:
+                # Escape any unescaped quotes
+                value = clean_argument(right_hand).replace("'", "\\'")
+                log.trace(f"Command mimicks setitem. Key: {key!r}, value: {value!r}.")
+
+                # Use the cog's `set` command.
+                result = self.buffer[self.previous:self.index] + ".set"
+                args = f'"{key}" "{value}"'
 
         # Syntax is god knows what, pass it along
         # in the future, this should probably return / throw SyntaxError
@@ -226,8 +238,6 @@ def _get_word(self) -> str:
         self.end = len(self.buffer)
         log.trace(f"Mimicked command: {self.buffer}")
 
-    if isinstance(result, str):
-        return result.lower()  # Case insensitivity, baby
     return result
 
 
