@@ -18,6 +18,12 @@ from discord.ext.commands import command
 
 log = logging.getLogger(__name__)
 LATEX_URL = "http://rtex.probablyaweb.site/api/v2"
+LATEX_BASE = r"""
+\documentclass{{article}}
+\begin{{document}}
+{0}
+\end{{document}}
+"""
 
 
 async def run_sympy(sympy_code: str, calc: bool = False, timeout: int = 10) -> tuple:
@@ -59,7 +65,7 @@ async def download_latex(latex: str) -> File:
     log.info("Downloading latex from 'API'")
 
     async with ClientSession() as session:
-        async with session.post(LATEX_URL, json={"code": f"\\begin{{document}}{latex}\\end{{document}}", "format": "png"}) as resp:
+        async with session.post(LATEX_URL, json={"code": LATEX_BASE.format(latex), "format": "png"}) as resp:
             data = await resp.json()
         
         log.debug(json.dumps(data))
