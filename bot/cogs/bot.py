@@ -97,7 +97,7 @@ class Bot:
             return msg
         else:
             log.debug(f"Found REPL code in {msg}")
-            return final.strip()
+            return final.rstrip()
 
     @command(name="echo")
     @with_role(OWNER_ROLE, ADMIN_ROLE, MODERATOR_ROLE)
