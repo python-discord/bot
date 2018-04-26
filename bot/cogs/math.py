@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
+import json
 import logging
 import sys
 from contextlib import suppress
@@ -58,8 +59,10 @@ async def download_latex(latex: str) -> File:
     log.info("Downloading latex from 'API'")
 
     async with ClientSession() as session:
-        async with session.post(LATEX_URL, data={"code": latex, "format": "png"}) as resp:
+        async with session.post(LATEX_URL, data={"code": f"\\{{begin}}{latex}\\{{end}}", "format": "png"}) as resp:
             data = await resp.json()
+        
+        log.debug(json.dumps(data))
         
         async with session.get(f"{LATEX_URL}/{data['filename']}") as resp:
             bytes_img = await resp.read()
