@@ -97,7 +97,7 @@ class Bot:
             return msg
         else:
             log.debug(f"Found REPL code in {msg}")
-            return final
+            return final.strip()
 
     @command(name="echo")
     @with_role(OWNER_ROLE, ADMIN_ROLE, MODERATOR_ROLE)
@@ -170,8 +170,7 @@ class Bot:
 
                     bad_ticks = msg.content[:3] in not_backticks
                     if bad_ticks and python_syntax:
-                        howto = (f"Hey {msg.author.mention}!\n"
-                                 "I noticed you were trying to paste code into this channel.\n"
+                        howto = ("I noticed you were trying to paste code into this channel.\n"
                                  f"You almost did it but used {not_backticks.index(msg.content[3:])} instead of ```")
 
                     else:
@@ -205,14 +204,13 @@ class Bot:
                                     lines_walked += 1
                                 content = content[:current_length]+"#..."
 
-                                howto += (f"Hey {msg.author.mention}!\n"
-                                          "I noticed you were trying to paste code into this channel.\n"
-                                          "Discord has support for Markdown, which allows you to post code with full "
-                                          "syntax highlighting. Please use these whenever you paste code, as this "
-                                          "helps improve the legibility and makes it easier for us to help you.\n"
-                                          f"To do this, use the following method:\n\n"
-                                          f"\`\`\`Python\n{content}\n\`\`\`\n\n This will result in the following:\n"
-                                          f"```Python\n{content}\n```")
+                            howto += ("I noticed you were trying to paste code into this channel.\n"
+                                      "Discord has support for Markdown, which allows you to post code with full "
+                                      "syntax highlighting. Please use these whenever you paste code, as this "
+                                      "helps improve the legibility and makes it easier for us to help you.\n"
+                                      f"To do this, use the following method:\n\n"
+                                      f"\`\`\`python\n{content}\n\`\`\`\n\n This will result in the following:\n"
+                                      f"```python\n{content}\n```")
 
                                 log.debug(f"{msg.author} posted something that needed to be put inside python code "
                                           "blocks. Sending the user some instructions.")
