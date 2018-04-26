@@ -89,7 +89,7 @@ class Math:
         for match in finditer(self.latex_regexp, message.content):
             latex = match.group('latex')
             files.append(
-                await download_latex(latex)
+                await self.download_latex(latex)
             )
 
         if files:
@@ -118,7 +118,7 @@ class Math:
                 return
 
             # Send LaTeX to website to get image
-            file = await download_latex(parsed)
+            file = await self.download_latex(parsed)
 
             await ctx.send(file=file)
 
@@ -144,7 +144,7 @@ class Math:
                 return
 
             # Send LaTeX to website to get image
-            file = await download_latex(parsed)
+            file = await self.download_latex(parsed)
 
             await ctx.send(file=file)
 
