@@ -11,7 +11,6 @@ from re import finditer
 from subprocess import PIPE, Popen, STDOUT, TimeoutExpired  # noqa: B404 S404
 from urllib.parse import quote
 
-from aiohttp import ClientSession
 from discord import File
 from discord.ext.commands import command
 
@@ -61,26 +60,25 @@ async def run_sympy(sympy_code: str, calc: bool = False, timeout: int = 10) -> t
     return proc.returncode, proc.stdout.read().decode().strip()
 
 
-async def download_latex(latex: str) -> File:
-    log.info("Downloading latex from 'API'")
-
-    async with ClientSession() as session:
-        async with session.post(LATEX_URL, json={"code": LATEX_BASE.format(latex), "format": "png"}) as resp:
-            data = await resp.json()
-        
-        log.debug(json.dumps(data))
-        
-        async with session.get(f"{LATEX_URL}/{data['filename']}") as resp:
-            bytes_img = await resp.read()
-
-    return File(fp=BytesIO(bytes_img), filename="latex.png")
-
-
 class Math:
     latex_regexp = r"\$(?P<lim>`{1,2})(?P<latex>.+?[^\\])(?P=lim)"
 
     def __init__(self, bot):
         self.bot = bot
+
+    async def download_latex(self, latex: str) -> File:
+        log.info("Downloading latex from 'API'")
+
+        async with self.bot.http_session as session:
+            async with session.post(LATEX_URL, json={"code": LATEX_BASE.format(latex), "format": "png"}) as resp:
+                data = await resp.json()
+
+            log.debug(json.dumps(data))
+
+            async with session.get(f"{LATEX_URL}/{data['filename']}") as resp:
+                bytes_img = await resp.read()
+
+        return File(fp=BytesIO(bytes_img), filename="latex.png")
 
     async def on_message(self, message):
         """Parser for LaTeX
