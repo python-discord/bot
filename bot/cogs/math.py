@@ -6,7 +6,7 @@ import sys
 from contextlib import suppress
 from io import BytesIO
 from re import search
-from subprocess import PIPE, Popen, STDOUT, TimeoutExpired  # noqa: B404 S404
+from subprocess import PIPE, Popen, STDOUT, TimeoutExpired  # noqa: B404,S404
 
 from discord import File
 from discord.ext.commands import command
@@ -24,7 +24,7 @@ async def run_sympy(sympy_code: str, calc: bool = False, timeout: int = 10) -> s
         # They're trying to exploit something, raise an error
         raise TypeError("'__' not allowed in sympy code")
 
-    proc = Popen([  # noqa: B603 S603
+    proc = Popen([  # noqa: B603,S603
                     sys.executable, "-c",
                     "import sys,sympy;from sympy.parsing.sympy_parser import parse_expr;"
                     f"print(sympy.latex({code_}))", sympy_code

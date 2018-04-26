@@ -71,7 +71,8 @@ class Formatter(HelpFormatter):
             # get the args using the handy inspect module
             argspec = getfullargspec(self.command.callback)
             arguments = formatargspec(*argspec)
-            for _arg, annotation in argspec.annotations.items():
+
+            for annotation in argspec.annotations.values():
                 # remove module name to only show class name
                 # discord.ext.commands.context.Context -> Context
                 arguments = arguments.replace(f"{annotation.__module__}.", "")
@@ -119,7 +120,7 @@ class Formatter(HelpFormatter):
         def category_check(tup):
             cog = tup[1].cog_name
             # zero width character to make it appear last when put in alphabetical order
-            return cog if cog is not None else "\u200bNoCategory"
+            return cog if cog is not None else "Bot"
 
         command_list = await self.filter_command_list()
         data = sorted(command_list, key=category_check)
