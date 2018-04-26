@@ -212,8 +212,8 @@ class Bot:
                                       f"\`\`\`python\n{content}\n\`\`\`\n\n This will result in the following:\n"
                                       f"```python\n{content}\n```")
 
-                                log.debug(f"{msg.author} posted something that needed to be put inside python code "
-                                          "blocks. Sending the user some instructions.")
+                            log.debug(f"{msg.author} posted something that needed to be put inside python code "
+                                      "blocks. Sending the user some instructions.")
 
                     if howto != "":
                         howto_embed = Embed(description=howto)
