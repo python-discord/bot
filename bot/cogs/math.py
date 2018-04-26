@@ -16,7 +16,7 @@ from discord.ext.commands import command
 
 
 log = logging.getLogger(__name__)
-LATEX_URL = "https://latex.codecogs.com/png.latex?%5Cinline%20%5Cdpi%7B300%7D%20%5Clarge%20"
+LATEX_URL = "http://rtex.probablyaweb.site/api/v2"
 
 
 async def run_sympy(sympy_code: str, calc: bool = False, timeout: int = 10) -> tuple:
@@ -58,8 +58,11 @@ async def download_latex(latex: str) -> File:
     log.info("Downloading latex from 'API'")
 
     async with ClientSession() as session:
-        async with session.get(LATEX_URL+quote(latex)) as resp:
-            bytes_img = await resp.text()
+        async with session.post(LATEX_URL, data={"code": latex, "format": "png"}) as resp:
+            data = await resp.json()
+        
+        async with session.get(f"{LATEX_URL}/{data['filename']}") as resp:
+            bytes_img = await resp.read()
 
     return File(fp=BytesIO(bytes_img), filename="latex.png")
 
