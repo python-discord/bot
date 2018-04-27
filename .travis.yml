@@ -6,6 +6,11 @@ branches:
   only:
     - "master"
 
+sudo: required
+
+services:
+  - docker
+
 env:
   global:
     - PIPENV_VENV_IN_PROJECT=1
