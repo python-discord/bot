@@ -16,15 +16,9 @@ from discord.ext.commands import command
 log = logging.getLogger(__name__)
 LATEX_URL = "http://rtex.probablyaweb.site/api/v2"
 
-def ropen(filename, *args, **kwargs):
-    codefile = inspect.stack()[1].filename
-    abspath = os.path.abspath(codefile)
-    directory = os.path.dirname(abspath)
-    path = os.path.join(directory, filename)
-    return open(path, *args, **kwargs)
-
-with ropen("base.tex") as f:
+with open("static/base.tex") as f:
     LATEX_BASE = f.read()
+
 
 class Math:
     latex_regexp = r"\$(?P<lim>`{1,2})(?P<latex>.+?[^\\])(?P=lim)"
@@ -62,7 +56,7 @@ class Math:
                 proc.wait(0)
                 break  # ... But stop the loop when not raised
         else:
-            log.warn("Calculation forcibly stopped for taking too long!")
+            log.warning("Calculation forcibly stopped for taking too long!")
 
         proc.kill()  # Kill the process regardless of whether it finished or not
         return proc.returncode, proc.stdout.read().decode().strip()
@@ -76,7 +70,7 @@ class Math:
                                                      "format": "png"}) as resp:
                 data = await resp.json()
 
-            log.debug(json.dumps(data))
+            log.trace(json.dumps(data))
 
             async with session.get(f"{LATEX_URL}/{data['filename']}") as resp:
                 bytes_img = await resp.read()
