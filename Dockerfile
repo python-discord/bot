@@ -1,8 +1,4 @@
-FROM python:3.6-alpine
-
-RUN apk add --update tini
-RUN apk add --update build-base
-RUN apk add --update libffi-dev
+FROM pythondiscord/bot-base:latest
 
 ENV PIPENV_VENV_IN_PROJECT=1
 ENV PIPENV_IGNORE_VIRTUALENVS=1
