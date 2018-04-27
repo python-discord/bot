@@ -28,7 +28,7 @@ class Hiphopify:
         """
         This event will trigger when someone changes their name.
         At this point we will look up the user in our database and check
-        whether they are allowed o change their names, or if they are in
+        whether they are allowed to change their names, or if they are in
         hiphop-prison. If they are not allowed, we will change it back.
         :return:
         """
