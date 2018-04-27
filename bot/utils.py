@@ -1,6 +1,3 @@
-# coding=utf-8
-
-
 class CaseInsensitiveDict(dict):
     """
     We found this class on StackOverflow. Thanks to m000 for writing it!
