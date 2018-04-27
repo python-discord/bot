@@ -11,7 +11,8 @@ ENV PIPENV_HIDE_EMOJIS=1
 
 RUN pip install pipenv
 
-COPY . /
+COPY . /bot
+WORKDIR /bot
 
 RUN pipenv sync
 
