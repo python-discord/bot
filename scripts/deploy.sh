@@ -1,15 +1,16 @@
-echo "travis branch"
-echo $TRAVIS_BRANCH
-echo "travis PR"
-echo $TRAVIS_PULL_REQUEST
+#!/bin/bash
 
+# Build and deploy on master branch
 if [[ $TRAVIS_BRANCH == 'master' && $TRAVIS_PULL_REQUEST == 'false' ]]; then
-    echo "testing if this works"
-fi
+    echo "Connecting to docker hub"
+    echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
 
-if [[ $TRAVIS_BRANCH == 'dockerfile' && $TRAVIS_PULL_REQUEST == 'true' ]]; then
-    echo "travis branch"
-    echo $TRAVIS_BRANCH
-    echo "travis PR"
-    echo $TRAVIS_PULL_REQUEST
+    echo "Building image"
+    docker build -t pythondiscord/bot:latest .
+
+    echo "Pushing image"
+    docker push pythondiscord/bot:latest
+
+    echo "Deploying container"
+    pipenv run python deploy.py
 fi

@@ -23,10 +23,6 @@ script:
   - pipenv run python -m flake8
 after_success:
   - bash scripts/deploy.sh
-  # - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-  # - docker build -t pythondiscord/bot:latest .
-  # - docker push pythondiscord/bot:latest
-  - pipenv run python deploy.py
 
 cache: pip
 
