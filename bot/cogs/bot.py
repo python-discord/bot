@@ -81,23 +81,7 @@ class Bot:
 
         await ctx.invoke(self.info)
 
-    def repl_stripping(self, msg: str):
-        """
-        Strip msg in order to extract Python code out of REPL output.
 
-        Tries to strip out REPL Python code out of msg and returns the stripped msg.
-        """
-        final = ""
-        for line in msg.splitlines(keepends=True):
-            if line.startswith(">>>") or line.startswith("..."):
-                final += line[4:]
-        log.trace(f"Formatted: {msg} to {final}")
-        if not final:
-            log.debug(f"Found no REPL code in {msg}")
-            return msg
-        else:
-            log.debug(f"Found REPL code in {msg}")
-            return final.rstrip()
 
     @command(name="print()", aliases=["print", "echo", "echo()"])
     @with_role(OWNER_ROLE, ADMIN_ROLE, MODERATOR_ROLE)
@@ -150,10 +134,52 @@ class Bot:
 
                 # Strip again to remove the whitespace(s) left before the code
                 # If the msg looked like "Python <code>" before removing Python
-                # And strips REPL code out of the message if there is any
+                # Strips REPL code out of the message if there is any
+                # And tries to apply identation fixes to the code
                 content = self.repl_stripping(content.strip())
+                content = self.fix_overindented(content)
+
                 log.trace(f"Returning message.\n\n{content}\n\n")
                 return content
+
+    def fix_overindented(self, msg: str):
+        """
+        Attempts to fix overidented code by obtaining identation level from the first line
+        and then removing that amount of spaces from the beginning of every line.
+        """
+        current = " "
+        counter = 0
+        while current == " ":
+            current = msg[counter+1]
+            counter += 1
+        if counter > 0:
+            final = ""
+            for line in msg.splitlines(keepends=True):
+                line = line[counter:]
+                final += line
+            log.trace(f"Formatted: {msg} to {final}")
+            return final
+        else:
+            log.trace("No overidentation found, returning original message")
+            return msg
+    
+    def repl_stripping(self, msg: str):
+        """
+        Strip msg in order to extract Python code out of REPL output.
+
+        Tries to strip out REPL Python code out of msg and returns the stripped msg.
+        """
+        final = ""
+        for line in msg.splitlines(keepends=True):
+            if line.startswith(">>>") or line.startswith("..."):
+                final += line[4:]
+        log.trace(f"Formatted: {msg} to {final}")
+        if not final:
+            log.debug(f"Found no REPL code in {msg}")
+            return msg
+        else:
+            log.debug(f"Found REPL code in {msg}")
+            return final.rstrip()
 
     async def on_message(self, msg: Message):
         if msg.channel.id in self.channel_cooldowns and not msg.author.bot:
