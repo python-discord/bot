@@ -4,6 +4,10 @@ htmlcov
 __pycache__
 .vagrant
 .pytest_cache
-.github
+.git
 .cache
 Vagrantfile
+.coverage
+.coveragerc
+.gitignore
+.travis.yml
