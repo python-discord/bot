@@ -1,4 +1,3 @@
-# coding=utf-8
 import ast
 import logging
 import re
@@ -180,21 +179,16 @@ def _get_word(self) -> str:
     # Check if a command in the form of `bot.tags['ask']`
     # or alternatively `bot.tags['ask'] = 'whatever'` was used.
     elif current == "[":
-        def clean_argument(arg: str) -> str:
-            """Helper function to remove any characters we don't care about."""
-
-            return arg.strip("[]'\" ").replace('"', '\\"')
-
         log.trace(f"Got a command candidate for getitem / setitem mimick: {self.buffer}")
         # Syntax is `bot.tags['ask']` => mimic `getattr`
         if self.buffer.endswith("]"):
             # Key: The first argument, specified `bot.tags[here]`
-            key = clean_argument(self.buffer[self.index:])
+            key = self.buffer[self.index + 1:self.buffer.rfind("]")]
             log.trace(f"Command mimicks getitem. Key: {key!r}")
 
             # note: if not key, this corresponds to an empty argument
             #       so this should throw / return a SyntaxError ?
-            args = f'"{key}"'
+            args = ast.literal_eval(key)
 
             # Use the cog's `get` command.
             result = self.buffer[self.previous:self.index] + ".get"
@@ -202,23 +196,26 @@ def _get_word(self) -> str:
         # Syntax is `bot.tags['ask'] = 'whatever'` => mimic `setattr`
         elif "=" in self.buffer and not self.buffer.endswith("="):
             equals_pos = self.buffer.find("=")
+            closing_bracket_pos = self.buffer.rfind("]", 0, equals_pos)
 
             # Key: The first argument, specified `bot.tags[here]`
-            key = clean_argument(self.buffer[self.index:equals_pos])
+            key_contents = self.buffer[self.index + 1:closing_bracket_pos]
+            key = ast.literal_eval(key_contents)
 
             # Value: The second argument, specified after the `=`
             right_hand = self.buffer.split("=", maxsplit=1)[1].strip()
+            value = ast.literal_eval(right_hand)
 
-            # If the value is None or '', mimick `bot.tags.delete(key)`
-            if right_hand in ("None", "''", '""'):
+            # If the value is a falsy value - mimick `bot.tags.delete(key)`
+            if not value:
                 log.trace(f"Command mimicks delitem. Key: {key!r}.")
                 result = self.buffer[self.previous:self.index] + ".delete"
-                args = f'"{key}"'
+                args = key
 
             # Otherwise, assume assignment, for example `bot.tags['this'] = 'that'`
             else:
-                # Escape any unescaped quotes
-                value = clean_argument(right_hand).replace("'", "\\'")
+                # Allow using double quotes in triple double quote string
+                value = value.replace('"', '\\"')
                 log.trace(f"Command mimicks setitem. Key: {key!r}, value: {value!r}.")
 
                 # Use the cog's `set` command.
