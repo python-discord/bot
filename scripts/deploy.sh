@@ -13,4 +13,6 @@ if [[ $TRAVIS_BRANCH == 'master' && $TRAVIS_PULL_REQUEST == 'false' ]]; then
 
     echo "Deploying container"
     pipenv run python scripts/deploy.py
+else
+    echo "Skipping deploy"
 fi
