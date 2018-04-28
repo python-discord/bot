@@ -1,1 +1,14 @@
 .venv
+scripts
+htmlcov
+__pycache__
+.vagrant
+.pytest_cache
+.git
+.github
+.cache
+Vagrantfile
+.coverage
+.coveragerc
+.gitignore
+.travis.yml
