@@ -19,11 +19,11 @@ from bot.pagination import LinePaginator
 
 log = logging.getLogger(__name__)
 
-TEST_CHANNELS = [
+TEST_CHANNELS = (
     DEVTEST_CHANNEL,
     BOT_COMMANDS_CHANNEL,
     HELPERS_CHANNEL
-]
+)
 
 
 class TagNameConverter(Converter):
@@ -217,7 +217,6 @@ class Tags:
                 log.debug(f"{ctx.author} requested the tag '{tag_name}'")
                 embed.title = tag_name
 
-                # Cooldown
                 if ctx.channel.id not in TEST_CHANNELS:
                     self.tag_cooldowns[tag_name] = {
                         "time": time.time(),
