@@ -113,7 +113,7 @@ def _get_word(self) -> str:
                             tempbuffer)
 
         # Let's parse!
-        log.debug(f"A python-style command was used. Attempting to parse. "
+        log.debug("A python-style command was used. Attempting to parse. "
                   f"Buffer is '{self.buffer}'. Tempbuffer is '{tempbuffer}'. "
                   "A step-by-step can be found in the trace log.")
 
@@ -200,7 +200,7 @@ def _get_word(self) -> str:
             arg = arg.replace('"', '\\"')
 
             # Adding double quotes to every argument
-            log.trace(f"Wrapping all args in double quotes.")
+            log.trace("Wrapping all args in double quotes.")
             new_args.append(f'"{arg}"')
 
         # Reconstruct valid discord.py syntax
