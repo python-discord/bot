@@ -81,8 +81,6 @@ class Bot:
 
         await ctx.invoke(self.info)
 
-
-
     @command(name="print()", aliases=["print", "echo", "echo()"])
     @with_role(OWNER_ROLE, ADMIN_ROLE, MODERATOR_ROLE)
     async def echo_command(self, ctx: Context, text: str):
