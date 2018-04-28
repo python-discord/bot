@@ -135,31 +135,50 @@ class Bot:
                 # Strips REPL code out of the message if there is any
                 # And tries to apply identation fixes to the code
                 content = self.repl_stripping(content.strip())
-                content = self.fix_overindented(content)
+                content = self.fix_indentation(content)
 
                 log.trace(f"Returning message.\n\n{content}\n\n")
                 return content
 
-    def fix_overindented(self, msg: str):
+    def fix_indentation(self, msg: str):
         """
-        Attempts to fix overidented code by obtaining identation level from the first line
-        and then removing that amount of spaces from the beginning of every line.
+        Attempts to fix badly indented code.
         """
-        current = " "
-        counter = 0
-        while current == " ":
-            current = msg[counter+1]
-            counter += 1
-        if counter > 0:
+        def unindent(code, leave=0):
             final = ""
-            for line in msg.splitlines(keepends=True):
-                line = line[counter:]
-                final += line
-            log.trace(f"Formatted: {msg} to {final}")
-            return final
+            current = code[0]
+            counter = 0
+
+            # Get numbers of spaces before code in the first line
+            while current == " ":
+                current = code[counter+1]
+                counter += 1
+            counter -= leave
+
+            # If there are any remove that number of spaces from every line
+            if counter > 0:
+                for line in code.splitlines(keepends=True):
+                    line = line[counter:]
+                    final += line
+                return final
+            else:
+                return code
+
+        # apply fix for "all lines are overindented" case
+        msg = unindent(msg)
+
+        # If the first line does not end on ":" we can be
+        # Sure the next line has to be moved to the same level
+        # Otherwise the all the other lines are dedented by the
+        # Amount of spaces required to dedent the second line to
+        # Four spaces
+        first_line = msg.splitlines()[0]
+        code = "".join(msg.splitlines(keepends=True)[1:])
+        if not first_line.endswith(":"):
+            msg = f"{first_line}\n{unindent(code)}"
         else:
-            log.trace("No overidentation found, returning original message")
-            return msg
+            msg = f"{first_line}\n{unindent(code, 4)}"
+        return msg
 
     def repl_stripping(self, msg: str):
         """
