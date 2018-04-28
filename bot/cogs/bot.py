@@ -160,7 +160,7 @@ class Bot:
         else:
             log.trace("No overidentation found, returning original message")
             return msg
-    
+
     def repl_stripping(self, msg: str):
         """
         Strip msg in order to extract Python code out of REPL output.
