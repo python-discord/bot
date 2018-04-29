@@ -123,9 +123,9 @@ def _get_word(self) -> str:
             buffer_pos += 2
             parsed_result = self.buffer[self.previous:self.index + (buffer_pos+2)]
             self.index += 2
-            args = ''
+            return parsed_result
 
-        if current == "(" and next_char:
+        elif current == "(" and next_char:
 
             # Parse the args
             log.trace(f"Parsing command with ast.literal_eval. args are {tempbuffer[self.index:]}")
