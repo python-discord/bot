@@ -11,3 +11,4 @@ Vagrantfile
 .coveragerc
 .gitignore
 .travis.yml
+*.log

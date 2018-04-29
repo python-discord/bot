@@ -10,6 +10,7 @@ RUN pip install pipenv
 COPY . /bot
 WORKDIR /bot
 
+RUN pipenv clean
 RUN pipenv sync
 
 ENTRYPOINT ["/sbin/tini", "--"]
