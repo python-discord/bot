@@ -207,7 +207,7 @@ class Bot:
                     bad_ticks = msg.content[:3] in not_backticks
                     if bad_ticks:
                         howto = ("I noticed you were trying to paste code into this channel.\n"
-                                 f"You almost did it but used {not_backticks.index(msg.content[3:])} instead of ```")
+                                 f"You almost did it but used {not_backticks.index(msg.content[:3])} instead of ```")
 
                     else:
                         howto = ""
