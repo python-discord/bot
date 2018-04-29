@@ -37,6 +37,13 @@ class Formatter(HelpFormatter):
             shortened = self.shorten(entry)
             self._paginator.add_line(shortened)
 
+            if name.endswith('get()'):
+                alternate_syntax_entry = "    {0}{1:<{width}} # {2}".format(
+                    HELP_PREFIX, name.split('.')[0] + '[<arg>]',
+                    f"Alternative syntax for {name}", width=max_width
+                )
+                self._paginator.add_line(self.shorten(alternate_syntax_entry))
+
     async def format(self):
         """
         rewritten help command to make it more python-y
