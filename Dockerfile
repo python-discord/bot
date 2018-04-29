@@ -14,4 +14,4 @@ RUN pipenv clean
 RUN pipenv sync
 
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["pipenv", "run", "python", "-m", "bot"]
+CMD ["pipenv", "run", "start"]
