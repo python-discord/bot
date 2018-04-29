@@ -204,15 +204,8 @@ class Bot:
             if not on_cooldown or msg.channel.id == DEVTEST_CHANNEL:
                 try:
                     not_backticks = ["'''", '"""', "´´´", "‘‘‘", "’’’", "′′′", "“““", "”””", "″″″", "〃〃〃"]
-                    python_syntax = any(
-                        (
-                            msg.content[3:9].lower() == "python",
-                            msg.content[3:5].lower() == "py"
-                        )
-                    )
-
                     bad_ticks = msg.content[:3] in not_backticks
-                    if bad_ticks and python_syntax:
+                    if bad_ticks:
                         howto = ("I noticed you were trying to paste code into this channel.\n"
                                  f"You almost did it but used {not_backticks.index(msg.content[3:])} instead of ```")
 
@@ -260,7 +253,7 @@ class Bot:
 
                     if howto != "":
                         howto_embed = Embed(description=howto)
-                        await msg.channel.send(embed=howto_embed)
+                        await msg.channel.send(msg.author.mention, embed=howto_embed)
                     else:
                         return
                     self.channel_cooldowns[msg.channel.id] = time.time()
