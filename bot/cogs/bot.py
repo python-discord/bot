@@ -206,17 +206,26 @@ class Bot:
                     not_backticks = ["'''", '"""', "´´´", "‘‘‘", "’’’", "′′′", "“““", "”””", "″″″", "〃〃〃"]
                     bad_ticks = msg.content[:3] in not_backticks
                     if bad_ticks:
-                        howto = ("I noticed you were trying to paste code into this channel.\n"
-                                 f"You almost did it but used {not_backticks.index(msg.content[:3])} instead of ```")
+                        ticks = msg.content[:3]
+                        content = self.codeblock_stripping(f"```{msg.content[3:-3]}```")
+                        space_left = 204
+                        if len(content) >= space_left:
+                            current_length = 0
+                            lines_walked = 0
+                            for line in content.splitlines(keepends=True):
+                                if current_length+len(line) > space_left or lines_walked == 10:
+                                    break
+                                current_length += len(line)
+                                lines_walked += 1
+                            content = content[:current_length]+"#..."
 
+                        howto = ("I noticed you were trying to paste code into this channel.\n"
+                                 f"You seem to be using the wrong symbols - the correct symbols are three backticks "
+                                 f"\`\`\`, not `{ticks}`.\n Here is an example of how it should look:\n\n"
+                                 f"\`\`\`python\n{content}\n\`\`\`\nThis will result in the following:\n"
+                                 f"```python\n{content}\n```")
                     else:
                         howto = ""
-                        if bad_ticks:
-                            howto += ("You are using the wrong ticks, use ``` instead of "
-                                      f"{not_backticks.index(msg.content[:3])}\n\n")
-
-                            msg.content = msg.content.replace(not_backticks.index(msg.content[3:]), "```")
-
                         content = self.codeblock_stripping(msg.content)
                         if content is None:
                             return
