@@ -136,9 +136,12 @@ class Bot:
                 # And tries to apply identation fixes to the code
                 content = self.repl_stripping(content.strip())
                 content = self.fix_indentation(content)
-
-                log.trace(f"Returning message.\n\n{content}\n\n")
-                return content
+                if "`" in content:
+                    log.trace("Detected ` inside the code, won't reply")
+                    return None
+                else:
+                    log.trace(f"Returning message.\n\n{content}\n\n")
+                    return content
 
     def fix_indentation(self, msg: str):
         """
@@ -208,6 +211,8 @@ class Bot:
                     if bad_ticks:
                         ticks = msg.content[:3]
                         content = self.codeblock_stripping(f"```{msg.content[3:-3]}```")
+                        if content is None:
+                            return
                         space_left = 204
                         if len(content) >= space_left:
                             current_length = 0
@@ -219,9 +224,10 @@ class Bot:
                                 lines_walked += 1
                             content = content[:current_length]+"#..."
 
-                        howto = ("I noticed you were trying to paste code into this channel.\n"
-                                 f"You seem to be using the wrong symbols - the correct symbols are three backticks "
-                                 f"\`\`\`, not `{ticks}`.\n Here is an example of how it should look:\n\n"
+                        howto = ("It looks like you are trying to paste code into this channel.\n"
+                                 "You seem to be using the wrong symbols to indicate where the codeblock should start. "
+                                 f"The correct symbols would be \`\`\`, not `{ticks}`.\n "
+                                 "Here is an example of how it should look:\n\n"
                                  f"\`\`\`python\n{content}\n\`\`\`\nThis will result in the following:\n"
                                  f"```python\n{content}\n```")
                     else:
