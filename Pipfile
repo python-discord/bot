@@ -27,3 +27,7 @@ requests = "*"
 
 [requires]
 python_version = "3.6"
+
+[scripts]
+
+start = "python -m bot"

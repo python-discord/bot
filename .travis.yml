@@ -6,6 +6,11 @@ branches:
   only:
     - "master"
 
+sudo: required
+
+services:
+  - docker
+
 env:
   global:
     - PIPENV_VENV_IN_PROJECT=1
@@ -17,7 +22,7 @@ install:
 script:
   - pipenv run python -m flake8
 after_success:
-  - pipenv run python deploy.py
+  - bash scripts/deploy.sh
 
 cache: pip
 
