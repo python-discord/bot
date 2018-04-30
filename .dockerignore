@@ -12,3 +12,4 @@ Vagrantfile
 .gitignore
 .travis.yml
 *.log
+docker
