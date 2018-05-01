@@ -137,7 +137,7 @@ class Doc:
 
         # Find the signature header and parse the relevant parts.
         symbol_id = url.split('#')[-1]
-        soup = BeautifulSoup(html, 'html.parser')
+        soup = BeautifulSoup(html, 'lxml')
         symbol_heading = soup.find(id=symbol_id)
         signature_buffer = []
 
