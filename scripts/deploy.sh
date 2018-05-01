@@ -6,7 +6,7 @@ if [[ $TRAVIS_BRANCH == 'master' && $TRAVIS_PULL_REQUEST == 'false' ]]; then
     echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
 
     echo "Building image"
-    docker build -t pythondiscord/bot:latest .
+    docker build -t pythondiscord/bot:latest -f docker/Dockerfile .
 
     echo "Pushing image"
     docker push pythondiscord/bot:latest
