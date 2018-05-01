@@ -227,8 +227,8 @@ class Bot:
                         howto = ("It looks like you are trying to paste code into this channel.\n"
                                  "You seem to be using the wrong symbols to indicate where the codeblock should start. "
                                  f"The correct symbols would be \`\`\`, not `{ticks}`.\n "
-                                 "Here is an example of how it should look:\n\n"
-                                 f"\`\`\`python\n{content}\n\`\`\`\nThis will result in the following:\n"
+                                 "**Here is an example of how it should look:**\n\n"
+                                 f"\`\`\`python\n{content}\n\`\`\`\n**This will result in the following:**\n"
                                  f"```python\n{content}\n```")
                     else:
                         howto = ""
@@ -255,12 +255,12 @@ class Bot:
                                     lines_walked += 1
                                 content = content[:current_length]+"#..."
 
-                            howto += ("I noticed you were trying to paste code into this channel.\n"
+                            howto += ("It looks like you're trying to paste code into this channel.\n"
                                       "Discord has support for Markdown, which allows you to post code with full "
                                       "syntax highlighting. Please use these whenever you paste code, as this "
                                       "helps improve the legibility and makes it easier for us to help you.\n"
-                                      f"To do this, use the following method:\n\n"
-                                      f"\`\`\`python\n{content}\n\`\`\`\n\n This will result in the following:\n"
+                                      f"**To do this, use the following method:**\n\n"
+                                      f"\`\`\`python\n{content}\n\`\`\`\n**This will result in the following:**\n"
                                       f"```python\n{content}\n```")
 
                             log.debug(f"{msg.author} posted something that needed to be put inside python code "
@@ -268,7 +268,7 @@ class Bot:
 
                     if howto != "":
                         howto_embed = Embed(description=howto)
-                        await msg.channel.send(msg.author.mention, embed=howto_embed)
+                        await msg.channel.send(f"Hey {msg.author.mention}!", embed=howto_embed)
                     else:
                         return
                     self.channel_cooldowns[msg.channel.id] = time.time()
