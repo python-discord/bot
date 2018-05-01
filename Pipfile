@@ -15,6 +15,7 @@ websockets = ">=4.0,<5.0"
 sphinx = "*"
 markdownify = "*"
 lxml = "*"
+yarl = "==1.1.1"
 
 [dev-packages]
 "flake8" = "*"
@@ -30,3 +31,6 @@ requests = "*"
 
 [requires]
 python_version = "3.6"
+
+[scripts]
+start = "python -m bot"
