@@ -32,5 +32,6 @@ python_version = "3.6"
 
 start = "python -m bot"
 build = "docker build -t pythondiscord/bot:latest -f docker/Dockerfile ."
-buildbase = "docker build -t pythondiscord/bot:latest -f docker/Dockerfile.base ."
+buildbase = "docker build -t pythondiscord/bot-base:latest -f docker/Dockerfile.base ."
 push = "docker push pythondiscord/bot:latest"
+pushbase = "docker push pythondiscord/bot-base:latest"
