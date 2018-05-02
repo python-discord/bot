@@ -26,13 +26,19 @@ class CaseInsensitiveDict(dict):
         return super(CaseInsensitiveDict, self).__contains__(self.__class__._k(key))
 
     def pop(self, key, *args, **kwargs):
-        return super(CaseInsensitiveDict, self).pop(self.__class__._k(key), *args, **kwargs)
+        return super(CaseInsensitiveDict, self).pop(
+            self.__class__._k(key), *args, **kwargs
+        )
 
     def get(self, key, *args, **kwargs):
-        return super(CaseInsensitiveDict, self).get(self.__class__._k(key), *args, **kwargs)
+        return super(CaseInsensitiveDict, self).get(
+            self.__class__._k(key), *args, **kwargs
+        )
 
     def setdefault(self, key, *args, **kwargs):
-        return super(CaseInsensitiveDict, self).setdefault(self.__class__._k(key), *args, **kwargs)
+        return super(CaseInsensitiveDict, self).setdefault(
+            self.__class__._k(key), *args, **kwargs
+        )
 
     def update(self, E=None, **F):
         super(CaseInsensitiveDict, self).update(self.__class__(E))

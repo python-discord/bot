@@ -24,15 +24,23 @@ async def run_sympy(sympy_code: str, calc: bool = False, timeout: int = 10) -> s
         # They're trying to exploit something, raise an error
         raise TypeError("'__' not allowed in sympy code")
 
-    proc = Popen([  # noqa: B603,S603
-                    sys.executable, "-c",
-                    "import sys,sympy;from sympy.parsing.sympy_parser import parse_expr;"
-                    f"print(sympy.latex({code_}))", sympy_code
-                 ], env={},  # Disable environment variables for security
-                 stdout=PIPE, stderr=STDOUT)  # reroute all to stdout
+    proc = Popen(
+        [  # noqa: B603,S603
+            sys.executable,
+            "-c",
+            "import sys,sympy;from sympy.parsing.sympy_parser import parse_expr;"
+            f"print(sympy.latex({code_}))",
+            sympy_code,
+        ],
+        env={},  # Disable environment variables for security
+        stdout=PIPE,
+        stderr=STDOUT,
+    )  # reroute all to stdout
 
-    for _ in range(timeout*4):  # Check if done every .25 seconds for `timeout` seconds
-        await asyncio.sleep(1/4)
+    for _ in range(
+        timeout * 4
+    ):  # Check if done every .25 seconds for `timeout` seconds
+        await asyncio.sleep(1 / 4)
 
         # Ignore TimeoutExpired...
         with suppress(TimeoutExpired):
@@ -44,6 +52,7 @@ async def run_sympy(sympy_code: str, calc: bool = False, timeout: int = 10) -> s
 
 
 class Math:
+
     def __init__(self, bot):
         self.bot = bot
 
@@ -53,7 +62,7 @@ class Math:
         Return the LaTex output for a mathematical expression
         """
 
-        fixed_expr = expr.replace('^', '**').strip('`')  # Syntax fixes
+        fixed_expr = expr.replace("^", "**").strip("`")  # Syntax fixes
         try:
             retcode, parsed = await run_sympy(fixed_expr)  # Run the sympy code
 
@@ -69,18 +78,18 @@ class Math:
                 return
 
             # Send LaTeX to website to get image
-            data = {
-                "latex": parsed,
-                "res": 300,
-                "color": 808080
-            }
+            data = {"latex": parsed, "res": 300, "color": 808080}
 
             async with self.bot.http_session.post(LATEX_URL, data=data) as resp:
                 html = await resp.text()
 
-            name = search(r'hist\.request\.basename = "(?P<url>[^"]+)"', html).group('url')
+            name = search(r'hist\.request\.basename = "(?P<url>[^"]+)"', html).group(
+                "url"
+            )
 
-            async with self.bot.http_session.get(f"{LATEX_URL}/output/{name}.png") as resp:
+            async with self.bot.http_session.get(
+                f"{LATEX_URL}/output/{name}.png"
+            ) as resp:
                 bytes_img = await resp.read()
 
             file = File(fp=BytesIO(bytes_img), filename="latex.png")
@@ -93,7 +102,7 @@ class Math:
         Return the LaTex output for the solution to a mathematical expression
         """
 
-        fixed_expr = expr.replace('^', '**').strip('`')  # Syntax fixes
+        fixed_expr = expr.replace("^", "**").strip("`")  # Syntax fixes
         try:
             retcode, parsed = await run_sympy(fixed_expr, calc=True)  # Run sympy
 
@@ -109,18 +118,18 @@ class Math:
                 return
 
             # Send LaTeX to website to get image
-            data = {
-                "latex": parsed,
-                "res": 300,
-                "color": 808080
-            }
+            data = {"latex": parsed, "res": 300, "color": 808080}
 
             async with self.bot.http_session.post(LATEX_URL, data=data) as resp:
                 html = await resp.text()
 
-            name = search(r'hist\.request\.basename = "(?P<url>[^"]+)"', html).group('url')
+            name = search(r'hist\.request\.basename = "(?P<url>[^"]+)"', html).group(
+                "url"
+            )
 
-            async with self.bot.http_session.get(f"{LATEX_URL}/output/{name}.png") as resp:
+            async with self.bot.http_session.get(
+                f"{LATEX_URL}/output/{name}.png"
+            ) as resp:
                 bytes_img = await resp.read()
 
             file = File(fp=BytesIO(bytes_img), filename="latex.png")

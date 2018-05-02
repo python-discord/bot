@@ -23,7 +23,7 @@ class Logging:
         embed.set_author(
             name="Python Bot",
             url="https://github.com/discord-python/bot",
-            icon_url="https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle.png"
+            icon_url="https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle.png",
         )
 
         await self.bot.get_channel(DEVLOG_CHANNEL).send(embed=embed)

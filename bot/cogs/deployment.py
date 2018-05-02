@@ -3,7 +3,15 @@ import logging
 from discord import Colour, Embed
 from discord.ext.commands import AutoShardedBot, Context, command
 
-from bot.constants import ADMIN_ROLE, DEPLOY_BOT_KEY, DEPLOY_SITE_KEY, DEPLOY_URL, DEVOPS_ROLE, OWNER_ROLE, STATUS_URL
+from bot.constants import (
+    ADMIN_ROLE,
+    DEPLOY_BOT_KEY,
+    DEPLOY_SITE_KEY,
+    DEPLOY_URL,
+    DEVOPS_ROLE,
+    OWNER_ROLE,
+    STATUS_URL,
+)
 from bot.decorators import with_role
 
 log = logging.getLogger(__name__)
@@ -24,32 +32,51 @@ class Deployment:
         Trigger bot deployment on the server - will only redeploy if there were changes to deploy
         """
 
-        response = await self.bot.http_session.get(DEPLOY_URL, headers={"token": DEPLOY_BOT_KEY})
+        response = await self.bot.http_session.get(
+            DEPLOY_URL, headers={"token": DEPLOY_BOT_KEY}
+        )
         result = await response.text()
 
         if result == "True":
-            log.debug(f"{ctx.author} triggered deployment for bot. Deployment was started.")
+            log.debug(
+                f"{ctx.author} triggered deployment for bot. Deployment was started."
+            )
             await ctx.send(f"{ctx.author.mention} Bot deployment started.")
         else:
-            log.error(f"{ctx.author} triggered deployment for bot. Deployment failed to start.")
-            await ctx.send(f"{ctx.author.mention} Bot deployment failed - check the logs!")
+            log.error(
+                f"{ctx.author} triggered deployment for bot. Deployment failed to start."
+            )
+            await ctx.send(
+                f"{ctx.author.mention} Bot deployment failed - check the logs!"
+            )
 
-    @command(name="deploy_site()", aliases=["bot.deploy_site", "bot.deploy_site()", "deploy_site"])
+    @command(
+        name="deploy_site()",
+        aliases=["bot.deploy_site", "bot.deploy_site()", "deploy_site"],
+    )
     @with_role(ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
     async def deploy_site(self, ctx: Context):
         """
         Trigger website deployment on the server - will only redeploy if there were changes to deploy
         """
 
-        response = await self.bot.http_session.get(DEPLOY_URL, headers={"token": DEPLOY_SITE_KEY})
+        response = await self.bot.http_session.get(
+            DEPLOY_URL, headers={"token": DEPLOY_SITE_KEY}
+        )
         result = await response.text()
 
         if result == "True":
-            log.debug(f"{ctx.author} triggered deployment for site. Deployment was started.")
+            log.debug(
+                f"{ctx.author} triggered deployment for site. Deployment was started."
+            )
             await ctx.send(f"{ctx.author.mention} Site deployment started.")
         else:
-            log.error(f"{ctx.author} triggered deployment for site. Deployment failed to start.")
-            await ctx.send(f"{ctx.author.mention} Site deployment failed - check the logs!")
+            log.error(
+                f"{ctx.author} triggered deployment for site. Deployment failed to start."
+            )
+            await ctx.send(
+                f"{ctx.author.mention} Site deployment failed - check the logs!"
+            )
 
     @command(name="uptimes()", aliases=["bot.uptimes", "bot.uptimes()", "uptimes"])
     @with_role(ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
@@ -62,17 +89,12 @@ class Deployment:
         response = await self.bot.http_session.get(STATUS_URL)
         data = await response.json()
 
-        embed = Embed(
-            title="Service status",
-            color=Colour.blurple()
-        )
+        embed = Embed(title="Service status", color=Colour.blurple())
 
         for obj in data:
             key, value = list(obj.items())[0]
 
-            embed.add_field(
-                name=key, value=value, inline=True
-            )
+            embed.add_field(name=key, value=value, inline=True)
 
         log.debug("Uptimes retrieved and parsed, returning data.")
         await ctx.send(embed=embed)

@@ -6,9 +6,14 @@ from discord.errors import Forbidden
 from discord.ext.commands import AutoShardedBot, Context, command
 
 from bot.constants import (
-    ADMIN_ROLE, MODERATOR_ROLE, MOD_LOG_CHANNEL,
-    NEGATIVE_REPLIES, OWNER_ROLE, POSITIVE_REPLIES,
-    SITE_API_HIPHOPIFY_URL, SITE_API_KEY
+    ADMIN_ROLE,
+    MODERATOR_ROLE,
+    MOD_LOG_CHANNEL,
+    NEGATIVE_REPLIES,
+    OWNER_ROLE,
+    POSITIVE_REPLIES,
+    SITE_API_HIPHOPIFY_URL,
+    SITE_API_KEY,
 )
 from bot.decorators import with_role
 
@@ -44,12 +49,16 @@ class Hiphopify:
         response = await self.bot.http_session.get(
             SITE_API_HIPHOPIFY_URL,
             headers=self.headers,
-            params={"user_id": str(before.id)}
+            params={"user_id": str(before.id)},
         )
 
         response = await response.json()
 
-        if response and response.get("end_timestamp") and not response.get("error_code"):
+        if (
+            response
+            and response.get("end_timestamp")
+            and not response.get("error_code")
+        ):
             if after.display_name == response.get("forced_nick"):
                 return  # Nick change was triggered by this event. Ignore.
 
@@ -76,7 +85,9 @@ class Hiphopify:
 
     @with_role(ADMIN_ROLE, OWNER_ROLE, MODERATOR_ROLE)
     @command(name="hiphopify()", aliases=["hiphopify", "force_nick()", "force_nick"])
-    async def hiphopify(self, ctx: Context, member: Member, duration: str, forced_nick: str = None):
+    async def hiphopify(
+        self, ctx: Context, member: Member, duration: str, forced_nick: str = None
+    ):
         """
         This command will force a random rapper name (like Lil' Wayne) to be the users
         nickname for a specified duration. If a forced_nick is provided, it will use that instead.
@@ -95,18 +106,13 @@ class Hiphopify:
         embed = Embed()
         embed.colour = Colour.blurple()
 
-        params = {
-            "user_id": str(member.id),
-            "duration": duration
-        }
+        params = {"user_id": str(member.id), "duration": duration}
 
         if forced_nick:
             params["forced_nick"] = forced_nick
 
         response = await self.bot.http_session.post(
-            SITE_API_HIPHOPIFY_URL,
-            headers=self.headers,
-            json=params
+            SITE_API_HIPHOPIFY_URL, headers=self.headers, json=params
         )
 
         response = await response.json()
@@ -122,7 +128,7 @@ class Hiphopify:
             return await ctx.send(embed=embed)
 
         else:
-            forced_nick = response.get('forced_nick')
+            forced_nick = response.get("forced_nick")
             end_time = response.get("end_timestamp")
             image_url = response.get("image_url")
 
@@ -137,7 +143,9 @@ class Hiphopify:
             embed.set_image(url=image_url)
 
             # Log to the mod_log channel
-            log.trace("Logging to the #mod-log channel. This could fail because of channel permissions.")
+            log.trace(
+                "Logging to the #mod-log channel. This could fail because of channel permissions."
+            )
             mod_log = self.bot.get_channel(MOD_LOG_CHANNEL)
             await mod_log.send(
                 f":middle_finger: {member.name}#{member.discriminator} (`{member.id}`) "
@@ -151,7 +159,9 @@ class Hiphopify:
             await ctx.send(embed=embed)
 
     @with_role(ADMIN_ROLE, OWNER_ROLE, MODERATOR_ROLE)
-    @command(name="unhiphopify()", aliases=["unhiphopify", "release_nick()", "release_nick"])
+    @command(
+        name="unhiphopify()", aliases=["unhiphopify", "release_nick()", "release_nick"]
+    )
     async def unhiphopify(self, ctx: Context, member: Member):
         """
         This command will remove the entry from our database, allowing the user
@@ -161,7 +171,9 @@ class Hiphopify:
         :param member: The member to unhiphopify
         """
 
-        log.debug(f"Attempting to unhiphopify the following user: {member.display_name}")
+        log.debug(
+            f"Attempting to unhiphopify the following user: {member.display_name}"
+        )
 
         embed = Embed()
         embed.colour = Colour.blurple()
@@ -169,7 +181,7 @@ class Hiphopify:
         response = await self.bot.http_session.delete(
             SITE_API_HIPHOPIFY_URL,
             headers=self.headers,
-            json={"user_id": str(member.id)}
+            json={"user_id": str(member.id)},
         )
 
         response = await response.json()
@@ -185,7 +197,9 @@ class Hiphopify:
                 f"{response}"
             )
 
-        log.debug(f"{member.display_name} was successfully released from hiphop-prison.")
+        log.debug(
+            f"{member.display_name} was successfully released from hiphop-prison."
+        )
         await ctx.send(embed=embed)
 
 
