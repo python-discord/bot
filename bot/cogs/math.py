@@ -24,8 +24,8 @@ async def run_sympy(sympy_code: str, calc: bool = False, timeout: int = 10) -> s
         # They're trying to exploit something, raise an error
         raise TypeError("'__' not allowed in sympy code")
 
-    proc = Popen(
-        [  # noqa: B603,S603
+    proc = Popen(  # noqa: B603,S603
+        [
             sys.executable,
             "-c",
             "import sys,sympy;from sympy.parsing.sympy_parser import parse_expr;"
