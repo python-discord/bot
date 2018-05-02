@@ -415,6 +415,10 @@ class Doc:
         :param ctx: Discord message context
         :param symbol: The symbol for which documentation should be returned,
                        or nothing to get a list of all inventories
+
+        Examples:
+            bot.docs.get('aiohttp')
+            bot.docs['aiohttp']
         """
 
         # Fetching documentation for a symbol, at least for the first time (since
@@ -458,6 +462,13 @@ class Doc:
         :param package_name: The package name, for example `aiohttp`.
         :param base_url: The package documentation's root URL, used to build absolute links.
         :param inventory_url: The intersphinx inventory URL.
+
+        Example:
+            bot.docs.set(
+                'discord',
+                'https://discordpy.readthedocs.io/en/rewrite/',
+                'https://discordpy.readthedocs.io/en/rewrite/objects.inv'
+            )
         """
 
         async with ctx.typing():
@@ -488,6 +499,10 @@ class Doc:
 
         :param ctx: Discord message context
         :param package_name: The package name, for example `aiohttp`.
+
+        Examples:
+            bot.tags.delete('aiohttp')
+            bot.tags['aiohttp'] = None
         """
 
         success = await self.delete_package(package_name)
