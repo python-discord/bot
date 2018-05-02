@@ -421,31 +421,32 @@ class Doc:
             bot.docs['aiohttp']
         """
 
-        # Fetching documentation for a symbol, at least for the first time (since
-        # caching is used) takes quite some time, so let's send typing to indicate
-        # that we got the command, but are still working on it.
-        async with ctx.typing():
-            if symbol is None:
-                all_inventories = "\n".join(
-                    f"• [`{name}`]({url})" for name, url in self.base_urls.items()
-                )
-                inventory_embed = discord.Embed(
-                    title="All inventories",
-                    description=all_inventories or "*Seems like there's nothing here yet.*",
-                    colour=discord.Colour.blue()
-                )
-                await ctx.send(embed=inventory_embed)
+        if symbol is None:
+            all_inventories = "\n".join(
+                f"• [`{name}`]({url})" for name, url in self.base_urls.items()
+            )
+            inventory_embed = discord.Embed(
+                title="All inventories",
+                description=all_inventories or "*Seems like there's nothing here yet.*",
+                colour=discord.Colour.blue()
+            )
+            await ctx.send(embed=inventory_embed)
 
-            else:
+        else:
+            # Fetching documentation for a symbol (at least for the first time, since
+            # caching is used) takes quite some time, so let's send typing to indicate
+            # that we got the command, but are still working on it.
+            async with ctx.typing():
                 doc_embed = await self.get_symbol_embed(symbol)
-                if doc_embed is None:
-                    error_embed = discord.Embed(
-                        description=f"Sorry, I could not find any documentation for `{symbol}`.",
-                        colour=discord.Colour.red()
-                    )
-                    await ctx.send(embed=error_embed)
-                else:
-                    await ctx.send(embed=doc_embed)
+
+            if doc_embed is None:
+                error_embed = discord.Embed(
+                    description=f"Sorry, I could not find any documentation for `{symbol}`.",
+                    colour=discord.Colour.red()
+                )
+                await ctx.send(embed=error_embed)
+            else:
+                await ctx.send(embed=doc_embed)
 
     @with_role(ADMIN_ROLE, OWNER_ROLE, MODERATOR_ROLE)
     @commands.command(name='docs.set()', aliases=['docs.set'])
@@ -471,25 +472,20 @@ class Doc:
             )
         """
 
-        async with ctx.typing():
-            await self.set_package(package_name, base_url, inventory_url)
-            log.info(
-                f"User @{ctx.author.name}#{ctx.author.discriminator} ({ctx.author.id}) "
-                "added a new documentation package:\n"
-                f"Package name: {package_name}\n"
-                f"Base url: {base_url}\n"
-                f"Inventory URL: {inventory_url}"
-            )
+        await self.set_package(package_name, base_url, inventory_url)
+        log.info(
+            f"User @{ctx.author.name}#{ctx.author.discriminator} ({ctx.author.id}) "
+            "added a new documentation package:\n"
+            f"Package name: {package_name}\n"
+            f"Base url: {base_url}\n"
+            f"Inventory URL: {inventory_url}"
+        )
 
-            msg = await ctx.send(
-                f"Added package `{package_name}` to database, refreshing inventory..."
-            )
-
-        # Rebuilding the inventory can take some time, so lets send out another
+        # Rebuilding the inventory can take some time, so lets send out a
         # typing event to show that the Bot is still working.
         async with ctx.typing():
             await self.refresh_inventory()
-            await msg.edit(content=msg.content + " done.")
+        await ctx.send(f"Added package `{package_name}` to database and refreshed inventory.")
 
     @with_role(ADMIN_ROLE, OWNER_ROLE, MODERATOR_ROLE)
     @commands.command(name='docs.delete()', aliases=['docs.delete', 'docs.remove()', 'docs.remove'])
@@ -507,13 +503,12 @@ class Doc:
 
         success = await self.delete_package(package_name)
         if success:
-            msg = await ctx.send(f"Successfully deleted `{package_name}`, refreshing inventory...")
 
             async with ctx.typing():
                 # Rebuild the inventory to ensure that everything
                 # that was from this package is properly deleted.
                 await self.refresh_inventory()
-                await msg.edit(content=msg.content + " done.")
+            await ctx.send(f"Successfully deleted `{package_name}` and refreshed inventory.")
 
         else:
             await ctx.send(
