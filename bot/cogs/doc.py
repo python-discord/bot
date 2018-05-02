@@ -1,6 +1,7 @@
 import asyncio
 import functools
 import logging
+import random
 import re
 from collections import OrderedDict
 from ssl import CertificateError
@@ -14,7 +15,9 @@ from markdownify import MarkdownConverter
 from requests import ConnectionError
 from sphinx.ext import intersphinx
 
-from bot.constants import ADMIN_ROLE, OWNER_ROLE, MODERATOR_ROLE, SITE_API_DOCS_URL, SITE_API_KEY
+from bot.constants import (
+    ADMIN_ROLE, ERROR_REPLIES, OWNER_ROLE, MODERATOR_ROLE, SITE_API_DOCS_URL, SITE_API_KEY
+)
 from bot.decorators import with_role
 from bot.exceptions import CogBadArgument
 
@@ -197,6 +200,8 @@ class Doc:
                            project layout. Required for use with intersphinx.
             """
 
+            self.base_urls[package_name] = base_url
+
             fetch_func = functools.partial(intersphinx.fetch_inventory, config, '', inventory_url)
             for _, value in (await self.bot.loop.run_in_executor(None, fetch_func)).items():
                 # Each value has a bunch of information in the form
@@ -205,6 +210,7 @@ class Doc:
                 for symbol, (_, _, relative_doc_url, _) in value.items():
                     absolute_doc_url = base_url + relative_doc_url
                     self.inventories[symbol] = absolute_doc_url
+
             log.trace(f"Fetched inventory for {package_name}.")
 
         log.debug("Refreshing documentation inventory...")
@@ -474,11 +480,6 @@ class Doc:
             await self.refresh_inventory()
             await msg.edit(content=msg.content + " done.")
 
-    @set_command.error
-    async def set_command_error(self, ctx, error):
-        if isinstance(error, CogBadArgument):
-            await ctx.send(f"Error: {error}")
-
     @with_role(ADMIN_ROLE, OWNER_ROLE, MODERATOR_ROLE)
     @commands.command(name='docs.delete()', aliases=['docs.delete', 'docs.remove()', 'docs.remove'])
     async def delete_command(self, ctx, package_name: ValidPythonIdentifier):
@@ -505,10 +506,25 @@ class Doc:
                 "View all known packages by using `docs.get()`."
             )
 
+    @get_command.error
     @delete_command.error
-    async def delete_command_error(self, ctx, error):
+    @set_command.error
+    async def general_command_error(self, ctx, error: commands.CommandError):
+        """
+        Handle the `CogBadArgument` error caused by
+        the commands when argument validation fails.
+
+        :param ctx: Discord message context of the message creating the error
+        :param error: The error raised, usually `CogBadArgument`
+        """
+
         if isinstance(error, CogBadArgument):
-            await ctx.send(f"Error: {error}")
+            embed = discord.Embed(
+                title=random.choice(ERROR_REPLIES),
+                description=f"Error: {error}",
+                colour=discord.Colour.red()
+            )
+            await ctx.send(embed=embed)
 
 
 def setup(bot):
