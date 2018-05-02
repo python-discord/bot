@@ -1,33 +1,26 @@
 import functools
 import logging
 import re
-import sys
 from collections import OrderedDict
-from typing import Optional, Tuple
+from ssl import CertificateError
+from typing import Dict, Optional, List, Tuple
 
 import discord
+from aiohttp import ClientConnectorError
 from bs4 import BeautifulSoup
 from discord.ext import commands
 from markdownify import MarkdownConverter
+from requests import ConnectionError
 from sphinx.ext import intersphinx
+
+from bot.constants import ADMIN_ROLE, OWNER_ROLE, MODERATOR_ROLE, SITE_API_DOCS_URL, SITE_API_KEY
+from bot.decorators import with_role
+from bot.exceptions import CogBadArgument
+
 
 log = logging.getLogger(__name__)
 logging.getLogger('urllib3').setLevel(logging.WARNING)
 
-
-BASE_URLS = {
-    'aiohttp': "https://aiohttp.readthedocs.io/en/stable/",
-    'discord': "https://discordpy.readthedocs.io/en/rewrite/",
-    'django': "https://docs.djangoproject.com/en/dev/",
-    'stdlib': "https://docs.python.org/{0}.{1}/".format(*sys.version_info[:2])
-}
-
-INTERSPHINX_INVENTORIES = {
-    'aiohttp': "https://aiohttp.readthedocs.io/en/stable/objects.inv",
-    'discord': "https://discordpy.readthedocs.io/en/rewrite/objects.inv",
-    'django': "https://docs.djangoproject.com/en/dev/_objects/",
-    'stdlib': "https://docs.python.org/{0}.{1}/objects.inv".format(*sys.version_info[:2])
-}
 
 UNWANTED_SIGNATURE_SYMBOLS = ('[source]', '¶')
 WHITESPACE_AFTER_NEWLINES_RE = re.compile(r"(?<=\n\n)( +)")
@@ -70,6 +63,8 @@ class DocMarkdownConverter(MarkdownConverter):
         return f"`{text}`".replace('\\', '')
 
     def convert_pre(self, el, text):
+        """Wrap any codeblocks in `py` for syntax highlighting."""
+
         code = ''.join(el.strings)
         return f"```py\n{code}```"
 
@@ -79,40 +74,141 @@ def markdownify(html):
 
 
 class DummyObject(object):
-    pass
+    """
+    A dummy object which supports assigning anything,
+    which the builtin `object()` does not support normally.
+    """
 
 
 class SphinxConfiguration:
+    """Dummy configuration for use with intersphinx."""
+
     config = DummyObject()
     config.intersphinx_timeout = 3
     config.tls_verify = True
 
 
+class ValidPythonIdentifier(commands.Converter):
+    """
+    A converter that checks whether the given string is a valid Python identifier.
+
+    This is used to have package names
+    that correspond to how you would use
+    the package in your code, e.g.
+    `import package`. Raises `CogBadArgument`
+    if the argument is not a valid Python
+    identifier, and simply passes through
+    the given argument otherwise.
+    """
+
+    @staticmethod
+    async def convert(ctx, argument: str):
+        if not argument.isidentifier():
+            raise CogBadArgument(f"`{argument}` is not a valid Python identifier")
+        return argument
+
+
+class DocumentationBaseURL(commands.Converter):
+    """
+    Represents a documentation base URL.
+
+    This converter checks whether the given
+    URL can be reached and requesting it returns
+    a status code of 200. If not, `CogBadArgument`
+    is raised. Otherwise, it simply passes through the given URL.
+    """
+
+    @staticmethod
+    async def convert(ctx, url: str):
+        try:
+            async with ctx.bot.http_session.get(url) as resp:
+                if resp.status != 200:
+                    raise CogBadArgument(
+                        f"HTTP GET on `{url}` returned status `{resp.status_code}`, expected 200"
+                    )
+        except CertificateError:
+            if url.startswith('https'):
+                raise CogBadArgument(
+                    f"Got a `CertificateError` for URL `{url}`. Does it support HTTPS?"
+                )
+            raise CogBadArgument(f"Got a `CertificateError` for URL `{url}`.")
+        except ValueError:
+            raise CogBadArgument(f"`{url}` doesn't look like a valid hostname to me.")
+        except ClientConnectorError:
+            raise CogBadArgument(f"Cannot connect to host with URL `{url}`.")
+        return url
+
+
+class InventoryURL(commands.Converter):
+    """
+    Represents an Intersphinx inventory URL.
+
+    This converter checks whether intersphinx
+    accepts the given inventory URL, and raises
+    `CogBadArgument` if that is not the case.
+    Otherwise, it simply passes through the given URL.
+    """
+
+    @staticmethod
+    async def convert(ctx, url: str):
+        try:
+            intersphinx.fetch_inventory(SphinxConfiguration(), '', url)
+        except AttributeError:
+            raise CogBadArgument(f"Failed to fetch Intersphinx inventory from URL `{url}`.")
+        except ConnectionError:
+            if url.startswith('https'):
+                raise CogBadArgument(
+                    f"Cannot establish a connection to `{url}`. Does it support HTTPS?"
+                )
+            raise CogBadArgument(f"Cannot connect to host with URL `{url}`.")
+        except ValueError:
+            raise CogBadArgument(
+                f"Failed to read Intersphinx inventory from URL `{url}`. "
+                "Are you sure that it's a valid inventory file?"
+            )
+        return url
+
+
 class Doc:
     def __init__(self, bot):
+        self.base_urls = {}
         self.bot = bot
         self.inventories = {}
-        self.fetch_initial_inventory_data()
+        self.headers = {"X-API-KEY": SITE_API_KEY}
 
-    def fetch_initial_inventory_data(self):
-        log.debug("Loading initial intersphinx inventory data...")
+    async def on_ready(self):
+        await self.refresh_inventory()
+
+    async def refresh_inventory(self):
+        log.debug("Refreshing documentation inventories...")
+
+        # Clear the old base URLS and inventories to ensure
+        # that we start from a fresh local dataset.
+        self.base_urls.clear()
+        self.inventories.clear()
 
         # Since Intersphinx is intended to be used with Sphinx,
         # we need to mock its configuration.
         config = SphinxConfiguration()
 
-        for name, url in INTERSPHINX_INVENTORIES.items():
+        for package in await self.get_all_packages():
+            base_url = package["base_url"]
+            inventory_url = package["inventory_url"]
+            package_name = package["package"]
+
+            self.base_urls[package_name] = base_url
+
             # `fetch_inventory` performs HTTP GET and returns
             # a dictionary from the specified inventory URL.
-            for _, value in intersphinx.fetch_inventory(config, '', url).items():
+            for _, value in intersphinx.fetch_inventory(config, '', inventory_url).items():
 
                 # Each value has a bunch of information in the form
                 # `(package_name, version, relative_url, ???)`, and we only
                 # need the relative documentation URL.
                 for symbol, (_, _, relative_doc_url, _) in value.items():
-                    absolute_doc_url = BASE_URLS[name] + relative_doc_url
+                    absolute_doc_url = base_url + relative_doc_url
                     self.inventories[symbol] = absolute_doc_url
-            log.trace(f"Fetched inventory for {name}.")
+            log.trace(f"Fetched inventory for {package_name}.")
 
     async def get_symbol_html(self, symbol: str) -> Optional[Tuple[str, str]]:
         """
@@ -141,6 +237,8 @@ class Doc:
         symbol_heading = soup.find(id=symbol_id)
         signature_buffer = []
 
+        # Traverse the tags of the signature header and ignore any
+        # unwanted symbols from it. Add all of it to a temporary buffer.
         for tag in symbol_heading.strings:
             if tag not in UNWANTED_SIGNATURE_SYMBOLS:
                 signature_buffer.append(tag.replace('\\', ''))
@@ -170,8 +268,13 @@ class Doc:
         signature = scraped_html[0]
         permalink = self.inventories[symbol]
         description = markdownify(scraped_html[1])
+
+        # Truncate the description of the embed to the last occurrence
+        # of a double newline (interpreted as a paragraph) before index 1000.
         if len(description) > 1000:
-            description = description[:1000] + f"... [read more]({permalink})"
+            shortened = description[:1000]
+            last_paragraph_end = shortened.rfind('\n\n')
+            description = description[:last_paragraph_end] + f"... [read more]({permalink})"
 
         description = WHITESPACE_AFTER_NEWLINES_RE.sub('', description)
 
@@ -190,24 +293,206 @@ class Doc:
             description=f"```py\n{signature}```{description}"
         )
 
-    @commands.command(name='doc()', aliases=['doc'])
-    async def doc(self, ctx, symbol: commands.clean_content):
+    async def get_all_packages(self) -> List[Dict[str, str]]:
         """
-        Return a documentation embed for the given symbol.
+        Performs HTTP GET to get all packages from the website.
+
+        :return:
+        A list of packages, in the following format:
+        [
+            {
+                "package": "example-package",
+                "base_url": "https://example.readthedocs.io",
+                "inventory_url": "https://example.readthedocs.io/objects.inv"
+            },
+            ...
+        ]
+        `package` specifies the package name, for example 'aiohttp'.
+        `base_url` specifies the documentation root URL, used to build absolute links.
+        `inventory_url` specifies the location of the Intersphinx inventory.
+        """
+
+        async with self.bot.http_session.get(SITE_API_DOCS_URL, headers=self.headers) as resp:
+            return await resp.json()
+
+    async def get_package(self, package_name: str) -> Optional[Dict[str, str]]:
+        """
+        Performs HTTP GET to get the specified package from the documentation database.
+
+        :param package_name: The package name for which information should be returned.
+        :return:
+        Either a dictionary with information in the following format:
+        {
+            "package": "example-package",
+            "base_url": "https://example.readthedocs.io",
+            "inventory_url": "https://example.readthedocs.io/objects.inv"
+        }
+        or `None` if the site didn't returned no results for the given name.
+        """
+
+        params = {"package": package_name}
+
+        async with self.bot.http_session.get(
+            SITE_API_DOCS_URL, headers=self.headers, params=params
+        ) as resp:
+            package_data = await resp.json()
+            if not package_data:
+                return None
+            return package_data[0]
+
+    async def set_package(self, name: str, base_url: str, inventory_url: str) -> Dict[str, bool]:
+        """
+        Performs HTTP POST to add a new package to the website's documentation database.
+
+        :param name: The name of the package, for example `aiohttp`.
+        :param base_url: The documentation root URL, used to build absolute links.
+        :param inventory_url: The absolute URl to the intersphinx inventory of the package.
+
+        :return: The JSON response of the server, which is always:
+        {
+            "success": True
+        }
+        """
+
+        package_json = {
+            'package': name,
+            'base_url': base_url,
+            'inventory_url': inventory_url
+        }
+
+        async with self.bot.http_session.post(
+            SITE_API_DOCS_URL, headers=self.headers, json=package_json
+        ) as resp:
+            return await resp.json()
+
+    async def delete_package(self, name: str) -> bool:
+        """
+        Performs HTTP DELETE to delete the specified package from the documentation database.
+
+        :param name: The package to delete.
+
+        :return: `True` if successful, `False` if the package is unknown.
+        """
+
+        package_json = {
+            'package': name
+        }
+
+        async with self.bot.http_session.delete(
+            SITE_API_DOCS_URL, headers=self.headers, json=package_json
+        ) as resp:
+            changes = await resp.json()
+            return changes["deleted"] == 1  # Did the package delete successfully?
+
+    @commands.command(name='docs.get()', aliases=['docs.get'])
+    async def get_command(self, ctx, symbol: commands.clean_content = None):
+        """
+        Return a documentation embed for a given symbol.
+        If no symbol is given, return a list of all available inventories.
 
         :param ctx: Discord message context
-        :param symbol: The symbol for which documentation should be returned
+        :param symbol: The symbol for which documentation should be returned,
+                       or nothing to get a list of all inventories
         """
 
-        doc_embed = await self.get_symbol_embed(symbol)
-        if doc_embed is None:
-            error_embed = discord.Embed(
-                description=f"Sorry, I could not find any documentation for `{symbol}`.",
-                colour=discord.Colour.red()
+        # Fetching documentation for a symbol, at least for the first time (since
+        # caching is used) takes quite some time, so let's send typing to indicate
+        # that we got the command, but are still working on it.
+        async with ctx.typing():
+            if symbol is None:
+                all_inventories = "\n".join(
+                    f"• [`{name}`]({url})" for name, url in self.base_urls.items()
+                )
+                inventory_embed = discord.Embed(
+                    title="All inventories",
+                    description=all_inventories or "*Seems like there's nothing here yet.*",
+                    colour=discord.Colour.blue()
+                )
+                await ctx.send(embed=inventory_embed)
+
+            else:
+                doc_embed = await self.get_symbol_embed(symbol)
+                if doc_embed is None:
+                    error_embed = discord.Embed(
+                        description=f"Sorry, I could not find any documentation for `{symbol}`.",
+                        colour=discord.Colour.red()
+                    )
+                    await ctx.send(embed=error_embed)
+                else:
+                    await ctx.send(embed=doc_embed)
+
+    @with_role(ADMIN_ROLE, OWNER_ROLE, MODERATOR_ROLE)
+    @commands.command(name='docs.set()', aliases=['docs.set'])
+    async def set_command(
+        self, ctx, package_name: ValidPythonIdentifier,
+        base_url: DocumentationBaseURL, inventory_url: InventoryURL
+    ):
+        """
+        Adds a new documentation metadata object to the site's database.
+        The database will update the object, should an existing item
+        with the specified `package_name` already exist.
+
+        :param ctx: Discord message context
+        :param package_name: The package name, for example `aiohttp`.
+        :param base_url: The package documentation's root URL, used to build absolute links.
+        :param inventory_url: The intersphinx inventory URL.
+        """
+
+        async with ctx.typing():
+            await self.set_package(package_name, base_url, inventory_url)
+            log.info(
+                f"User @{ctx.author.name}#{ctx.author.discriminator} ({ctx.author.id}) "
+                "added a new documentation package:\n"
+                f"Package name: {package_name}\n"
+                f"Base url: {base_url}\n"
+                f"Inventory URL: {inventory_url}"
             )
-            await ctx.send(embed=error_embed)
+
+            msg = await ctx.send(
+                f"Added package `{package_name}` to database, refreshing inventory..."
+            )
+
+        # Rebuilding the inventory can take some time, so lets send out another
+        # typing event to show that the Bot is still working.
+        async with ctx.typing():
+            await self.refresh_inventory()
+            await msg.edit(content=msg.content + " done.")
+
+    @set_command.error
+    async def set_command_error(self, ctx, error):
+        if isinstance(error, CogBadArgument):
+            await ctx.send(f"Error: {error}")
+
+    @with_role(ADMIN_ROLE, OWNER_ROLE, MODERATOR_ROLE)
+    @commands.command(name='docs.delete()', aliases=['docs.delete', 'docs.remove()', 'docs.remove'])
+    async def delete_command(self, ctx, package_name: ValidPythonIdentifier):
+        """
+        Removes the specified package from the database.
+
+        :param ctx: Discord message context
+        :param package_name: The package name, for example `aiohttp`.
+        """
+
+        success = await self.delete_package(package_name)
+        if success:
+            msg = await ctx.send(f"Successfully deleted `{package_name}`, refreshing inventory...")
+
+            async with ctx.typing():
+                # Rebuild the inventory to ensure that everything
+                # that was from this package is properly deleted.
+                await self.refresh_inventory()
+                await msg.edit(content=msg.content + " done.")
+
         else:
-            await ctx.send(embed=doc_embed)
+            await ctx.send(
+                f"Can't find any package named `{package_name}` in the database. "
+                "View all known packages by using `docs.get()`."
+            )
+
+    @delete_command.error
+    async def delete_command_error(self, ctx, error):
+        if isinstance(error, CogBadArgument):
+            await ctx.send(f"Error: {error}")
 
 
 def setup(bot):
