@@ -42,20 +42,21 @@ def async_cache(max_size=128, arg_offset=0):
     when creating the cache key. Defaults to `0`.
     """
 
-    cache = OrderedDict()
+    # Assign the cache to the function itself so we can clear it from outside.
+    async_cache.cache = OrderedDict()
 
     def decorator(function):
         @functools.wraps(function)
         async def wrapper(*args):
             key = ':'.join(args[arg_offset:])
 
-            value = cache.get(key)
+            value = async_cache.cache.get(key)
             if value is None:
-                if len(cache) > max_size:
-                    cache.popitem(last=False)
+                if len(async_cache.cache) > max_size:
+                    async_cache.cache.popitem(last=False)
 
-                cache[key] = await function(*args)
-            return cache[key]
+                async_cache.cache[key] = await function(*args)
+            return async_cache.cache[key]
         return wrapper
     return decorator
 
@@ -217,8 +218,10 @@ class Doc:
 
         # Clear the old base URLS and inventories to ensure
         # that we start from a fresh local dataset.
+        # Also, reset the cache used for fetching documentation.
         self.base_urls.clear()
         self.inventories.clear()
+        async_cache.cache = OrderedDict()
 
         # Since Intersphinx is intended to be used with Sphinx,
         # we need to mock its configuration.
