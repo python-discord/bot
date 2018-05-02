@@ -1,3 +1,4 @@
+import asyncio
 import functools
 import logging
 import re
@@ -180,7 +181,33 @@ class Doc:
         await self.refresh_inventory()
 
     async def refresh_inventory(self):
-        log.debug("Refreshing documentation inventories...")
+        async def update_single(
+            package_name: str, base_url: str, inventory_url: str, config: SphinxConfiguration
+        ):
+            """
+            Rebuild the inventory for a single package.
+
+            :param package_name: The package name to use, appears in the log.
+            :param base_url: The root documentation URL for the specified package.
+                             Used to build absolute paths that link to specific symbols.
+            :param inventory_url: The absolute URL to the intersphinx inventory.
+                                  Fetched by running `intersphinx.fetch_inventory` in an
+                                  executor on the bot's event loop.
+            :param config: A `SphinxConfiguration` instance to mock the regular sphinx
+                           project layout. Required for use with intersphinx.
+            """
+
+            fetch_func = functools.partial(intersphinx.fetch_inventory, config, '', inventory_url)
+            for _, value in (await self.bot.loop.run_in_executor(None, fetch_func)).items():
+                # Each value has a bunch of information in the form
+                # `(package_name, version, relative_url, ???)`, and we only
+                # need the relative documentation URL.
+                for symbol, (_, _, relative_doc_url, _) in value.items():
+                    absolute_doc_url = base_url + relative_doc_url
+                    self.inventories[symbol] = absolute_doc_url
+            log.trace(f"Fetched inventory for {package_name}.")
+
+        log.debug("Refreshing documentation inventory...")
 
         # Clear the old base URLS and inventories to ensure
         # that we start from a fresh local dataset.
@@ -191,24 +218,13 @@ class Doc:
         # we need to mock its configuration.
         config = SphinxConfiguration()
 
-        for package in await self.get_all_packages():
-            base_url = package["base_url"]
-            inventory_url = package["inventory_url"]
-            package_name = package["package"]
-
-            self.base_urls[package_name] = base_url
-
-            # `fetch_inventory` performs HTTP GET and returns
-            # a dictionary from the specified inventory URL.
-            for _, value in intersphinx.fetch_inventory(config, '', inventory_url).items():
-
-                # Each value has a bunch of information in the form
-                # `(package_name, version, relative_url, ???)`, and we only
-                # need the relative documentation URL.
-                for symbol, (_, _, relative_doc_url, _) in value.items():
-                    absolute_doc_url = base_url + relative_doc_url
-                    self.inventories[symbol] = absolute_doc_url
-            log.trace(f"Fetched inventory for {package_name}.")
+        # Run all coroutines concurrently - since each of them performs a HTTP
+        # request, this speeds up fetching the inventory data heavily.
+        coros = [
+            update_single(package["package"], package["base_url"], package["inventory_url"], config)
+            for package in await self.get_all_packages()
+        ]
+        await asyncio.gather(*coros)
 
     async def get_symbol_html(self, symbol: str) -> Optional[Tuple[str, str]]:
         """
