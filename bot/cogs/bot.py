@@ -217,7 +217,7 @@ class Bot:
                         print("ticks call")
                         if content is None:
                             return
-                        
+          
                         if len(content) == 2:
                             content = content[1]
                         else:
