@@ -134,14 +134,17 @@ class Bot:
                 # If the msg looked like "Python <code>" before removing Python
                 # Strips REPL code out of the message if there is any
                 # And tries to apply identation fixes to the code
-                content = self.repl_stripping(content.strip())
+                old = content.strip()
+                content = self.repl_stripping(old)
+                if old != content:
+                    return (content, old)
                 content = self.fix_indentation(content)
                 if "`" in content:
                     log.trace("Detected ` inside the code, won't reply")
                     return None
                 else:
                     log.trace(f"Returning message.\n\n{content}\n\n")
-                    return content
+                    return (content,)
 
     def fix_indentation(self, msg: str):
         """
@@ -211,8 +214,15 @@ class Bot:
                     if bad_ticks:
                         ticks = msg.content[:3]
                         content = self.codeblock_stripping(f"```{msg.content[3:-3]}```")
+                        print("ticks call")
                         if content is None:
                             return
+                        
+                        if len(content) == 2:
+                            content = content[1]
+                        else:
+                            content = content[0]
+
                         space_left = 204
                         if len(content) >= space_left:
                             current_length = 0
@@ -237,7 +247,7 @@ class Bot:
                             return
                         # Attempts to parse the message into an AST node.
                         # Invalid Python code will raise a SyntaxError.
-                        tree = ast.parse(content)
+                        tree = ast.parse(content[0])
 
                         # Multiple lines of single words could be interpreted as expressions.
                         # This check is to avoid all nodes being parsed as expressions.
@@ -245,6 +255,11 @@ class Bot:
                         if not all(isinstance(node, ast.Expr) for node in tree.body):
                             # Shorten the code to 10 lines and/or 204 characters.
                             space_left = 204
+                            if len(content) == 2:
+                                content = content[1]
+                            else:
+                                content = content[0]
+
                             if len(content) >= space_left:
                                 current_length = 0
                                 lines_walked = 0
