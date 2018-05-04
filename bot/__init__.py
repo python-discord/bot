@@ -47,7 +47,7 @@ logging.basicConfig(
     format="%(asctime)s pd.beardfist.com Bot: | %(name)30s | %(levelname)8s | %(message)s",
     datefmt="%b %d %H:%M:%S",
     level=logging.TRACE,
-    handlers=logging_handlers
+    handlers=logging_handlers,
 )
 
 log = logging.getLogger(__name__)
@@ -108,20 +108,20 @@ def _get_word(self) -> str:
 
         # Catch raw channel, member or role mentions and wrap them in quotes.
         tempbuffer = self.buffer
-        tempbuffer = re.sub(r"(<(?:@|@!|[#&])\d+>)",
-                            r'"\1"',
-                            tempbuffer)
+        tempbuffer = re.sub(r"(<(?:@|@!|[#&])\d+>)", r'"\1"', tempbuffer)
 
         # Let's parse!
-        log.debug("A python-style command was used. Attempting to parse. "
-                  f"Buffer is '{self.buffer}'. Tempbuffer is '{tempbuffer}'. "
-                  "A step-by-step can be found in the trace log.")
+        log.debug(
+            "A python-style command was used. Attempting to parse. "
+            f"Buffer is '{self.buffer}'. Tempbuffer is '{tempbuffer}'. "
+            "A step-by-step can be found in the trace log."
+        )
 
         if current == "(" and next_char == ")":
             # Move the cursor to capture the ()'s
             log.debug("User called command without providing arguments.")
             buffer_pos += 2
-            parsed_result = self.buffer[self.previous:self.index + (buffer_pos+2)]
+            parsed_result = self.buffer[self.previous:self.index + (buffer_pos + 2)]
             self.index += 2
             return parsed_result
 
@@ -180,7 +180,7 @@ def _get_word(self) -> str:
             # Syntax is god knows what, pass it along
             else:
                 parsed_result = self.buffer
-                args = ''
+                args = ""
                 log.trace(f"Command is of unknown syntax: {self.buffer}")
 
         # Force args into container

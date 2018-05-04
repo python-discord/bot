@@ -33,8 +33,7 @@ class LinePaginator(Paginator):
         The maximum amount of lines allowed in a page.
     """
 
-    def __init__(self, prefix='```', suffix='```',
-                 max_size=2000, max_lines=None):
+    def __init__(self, prefix="```", suffix="```", max_size=2000, max_lines=None):
         """
         This function overrides the Paginator.__init__
         from inside discord.ext.commands.
@@ -50,7 +49,7 @@ class LinePaginator(Paginator):
         self._count = len(prefix) + 1  # prefix + newline
         self._pages = []
 
-    def add_line(self, line='', *, empty=False):
+    def add_line(self, line="", *, empty=False):
         """Adds a line to the current page.
 
         If the line exceeds the :attr:`max_size` then an exception
@@ -74,7 +73,7 @@ class LinePaginator(Paginator):
             The line was too big for the current :attr:`max_size`.
         """
         if len(line) > self.max_size - len(self.prefix) - 2:
-            raise RuntimeError('Line exceeds maximum page size %s' % (self.max_size - len(self.prefix) - 2))
+            raise RuntimeError("Line exceeds maximum page size %s" % (self.max_size - len(self.prefix) - 2))
 
         if self.max_lines is not None:
             if self._linecount >= self.max_lines:
@@ -89,14 +88,24 @@ class LinePaginator(Paginator):
         self._current_page.append(line)
 
         if empty:
-            self._current_page.append('')
+            self._current_page.append("")
             self._count += 1
 
     @classmethod
-    async def paginate(cls, lines: Iterable[str], ctx: Context, embed: Embed,
-                       prefix: str = "", suffix: str = "", max_lines: Optional[int] = None, max_size: int = 500,
-                       empty: bool = True, restrict_to_user: User = None, timeout: int=300,
-                       footer_text: str = None):
+    async def paginate(
+        cls,
+        lines: Iterable[str],
+        ctx: Context,
+        embed: Embed,
+        prefix: str = "",
+        suffix: str = "",
+        max_lines: Optional[int] = None,
+        max_size: int = 500,
+        empty: bool = True,
+        restrict_to_user: User = None,
+        timeout: int = 300,
+        footer_text: str = None,
+    ):
         """
         Use a paginator and set of reactions to provide pagination over a set of lines. The reactions are used to
         switch page, or to finish with pagination.
@@ -129,23 +138,26 @@ class LinePaginator(Paginator):
 
             no_restrictions = (
                 # Pagination is not restricted
-                not restrict_to_user or
+                not restrict_to_user
+                or
                 # The reaction was by a whitelisted user
                 user_.id == restrict_to_user.id
             )
 
             return (
                 # Conditions for a successful pagination:
-                all((
-                    # Reaction is on this message
-                    reaction_.message.id == message.id,
-                    # Reaction is one of the pagination emotes
-                    reaction_.emoji in PAGINATION_EMOJI,
-                    # Reaction was not made by the Bot
-                    user_.id != ctx.bot.user.id,
-                    # There were no restrictions
-                    no_restrictions
-                ))
+                all(
+                    (
+                        # Reaction is on this message
+                        reaction_.message.id == message.id,
+                        # Reaction is one of the pagination emotes
+                        reaction_.emoji in PAGINATION_EMOJI,
+                        # Reaction was not made by the Bot
+                        user_.id != ctx.bot.user.id,
+                        # There were no restrictions
+                        no_restrictions,
+                    )
+                )
             )
 
         paginator = cls(prefix=prefix, suffix=suffix, max_size=max_size, max_lines=max_lines)

@@ -16,6 +16,7 @@ log = logging.getLogger(__name__)
 
 
 class Formatter(HelpFormatter):
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -92,15 +93,11 @@ class Formatter(HelpFormatter):
 
             # prepare the different sections of the help output, and add them to the paginator
             definition = f"async def {stripped_command}{arguments}:"
-            doc_elems = [
-                '"""',
-                helptext,
-                '"""'
-            ]
+            doc_elems = ['"""', helptext, '"""']
 
             docstring = ""
             for elem in doc_elems:
-                docstring += f'    {elem}\n'
+                docstring += f"    {elem}\n"
 
             invocation = f"    await do_{stripped_command}{args_no_type_hints}"
             self._paginator.add_line(definition)
@@ -136,7 +133,7 @@ class Formatter(HelpFormatter):
         self._paginator.add_line()
         ending_note = self.get_ending_note()
         # make the ending note appear as comments
-        ending_note = "# "+ending_note.replace("\n", "\n# ")
+        ending_note = "# " + ending_note.replace("\n", "\n# ")
         self._paginator.add_line(ending_note)
 
         log.trace("Added ending note to paginator.")

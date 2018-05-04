@@ -6,9 +6,14 @@ from discord.errors import Forbidden
 from discord.ext.commands import AutoShardedBot, Context, command
 
 from bot.constants import (
-    ADMIN_ROLE, MODERATOR_ROLE, MOD_LOG_CHANNEL,
-    NEGATIVE_REPLIES, OWNER_ROLE, POSITIVE_REPLIES,
-    SITE_API_HIPHOPIFY_URL, SITE_API_KEY
+    ADMIN_ROLE,
+    MODERATOR_ROLE,
+    MOD_LOG_CHANNEL,
+    NEGATIVE_REPLIES,
+    OWNER_ROLE,
+    POSITIVE_REPLIES,
+    SITE_API_HIPHOPIFY_URL,
+    SITE_API_KEY,
 )
 from bot.decorators import with_role
 
@@ -42,9 +47,7 @@ class Hiphopify:
         )
 
         response = await self.bot.http_session.get(
-            SITE_API_HIPHOPIFY_URL,
-            headers=self.headers,
-            params={"user_id": str(before.id)}
+            SITE_API_HIPHOPIFY_URL, headers=self.headers, params={"user_id": str(before.id)}
         )
 
         response = await response.json()
@@ -88,26 +91,18 @@ class Hiphopify:
         """
 
         log.debug(
-            f"Attempting to hiphopify {member.display_name} for {duration}. "
-            f"forced_nick is set to {forced_nick}."
+            f"Attempting to hiphopify {member.display_name} for {duration}. " f"forced_nick is set to {forced_nick}."
         )
 
         embed = Embed()
         embed.colour = Colour.blurple()
 
-        params = {
-            "user_id": str(member.id),
-            "duration": duration
-        }
+        params = {"user_id": str(member.id), "duration": duration}
 
         if forced_nick:
             params["forced_nick"] = forced_nick
 
-        response = await self.bot.http_session.post(
-            SITE_API_HIPHOPIFY_URL,
-            headers=self.headers,
-            json=params
-        )
+        response = await self.bot.http_session.post(SITE_API_HIPHOPIFY_URL, headers=self.headers, json=params)
 
         response = await response.json()
 
@@ -122,7 +117,7 @@ class Hiphopify:
             return await ctx.send(embed=embed)
 
         else:
-            forced_nick = response.get('forced_nick')
+            forced_nick = response.get("forced_nick")
             end_time = response.get("end_timestamp")
             image_url = response.get("image_url")
 
@@ -167,9 +162,7 @@ class Hiphopify:
         embed.colour = Colour.blurple()
 
         response = await self.bot.http_session.delete(
-            SITE_API_HIPHOPIFY_URL,
-            headers=self.headers,
-            json={"user_id": str(member.id)}
+            SITE_API_HIPHOPIFY_URL, headers=self.headers, json={"user_id": str(member.id)}
         )
 
         response = await response.json()
@@ -180,10 +173,7 @@ class Hiphopify:
             embed.colour = Colour.red()
             embed.title = random.choice(NEGATIVE_REPLIES)
             embed.description = response.get("error_message")
-            log.warning(
-                f"Error encountered when trying to unhiphopify {member.display_name}:\n"
-                f"{response}"
-            )
+            log.warning(f"Error encountered when trying to unhiphopify {member.display_name}:\n" f"{response}")
 
         log.debug(f"{member.display_name} was successfully released from hiphop-prison.")
         await ctx.send(embed=embed)
