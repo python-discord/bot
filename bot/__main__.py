@@ -7,11 +7,18 @@ from discord.ext.commands import AutoShardedBot, when_mentioned_or
 from bot.formatter import Formatter
 
 bot = AutoShardedBot(
-    command_prefix=when_mentioned_or("self.", "bot."),
-    activity=Game(name="Help: bot.help()"),
-    help_attrs={"name": "help()", "aliases": ["help"]},
+    command_prefix=when_mentioned_or(
+        "self.", "bot."
+    ),
+    activity=Game(
+        name="Help: bot.help()"
+    ),
+    help_attrs={
+        "name": "help()",
+        "aliases": ["help"]
+    },
     formatter=Formatter(),
-    case_insensitive=True,
+    case_insensitive=True
 )
 
 # Global aiohttp session for all cogs - uses asyncio for DNS resolution instead of threads, so we don't *spam threads*

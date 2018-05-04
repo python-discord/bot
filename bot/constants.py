@@ -35,7 +35,7 @@ CLICKUP_TEAM = 754996
 DEPLOY_URL = os.environ.get("DEPLOY_URL")
 STATUS_URL = os.environ.get("STATUS_URL")
 SITE_URL = os.environ.get("SITE_URL", "pythondiscord.local:8080")
-SITE_PROTOCOL = "http" if "local" in SITE_URL else "https"
+SITE_PROTOCOL = 'http' if 'local' in SITE_URL else 'https'
 SITE_API_URL = f"{SITE_PROTOCOL}://api.{SITE_URL}"
 SITE_API_USER_URL = f"{SITE_API_URL}/user"
 SITE_API_TAGS_URL = f"{SITE_API_URL}/tags"
@@ -78,7 +78,7 @@ NEGATIVE_REPLIES = [
     "Not in a million years.",
     "Fat chance.",
     "Certainly not.",
-    "NEGATORY.",
+    "NEGATORY."
 ]
 
 POSITIVE_REPLIES = [
@@ -98,7 +98,7 @@ POSITIVE_REPLIES = [
     "ROGER THAT",
     "Of course!",
     "Aye aye, cap'n!",
-    "I'll allow it.",
+    "I'll allow it."
 ]
 
 ERROR_REPLIES = [
@@ -110,5 +110,5 @@ ERROR_REPLIES = [
     "You blew it.",
     "You're bad at computers.",
     "Are you trying to kill me?",
-    "Noooooo!!",
+    "Noooooo!!"
 ]

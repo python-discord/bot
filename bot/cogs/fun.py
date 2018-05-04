@@ -8,7 +8,7 @@ from bot.constants import BOT_CHANNEL
 RESPONSES = {
     "_pokes {us}_": "_Pokes {them}_",
     "_eats {us}_": "_Tastes slimy and snake-like_",
-    "_pets {us}_": "_Purrs_",
+    "_pets {us}_": "_Purrs_"
 }
 
 log = logging.getLogger(__name__)
@@ -44,9 +44,7 @@ class Fun:
         response = RESPONSES.get(content)
 
         if response:
-            log.debug(
-                f"{message.author} said '{message.clean_content}'. Responding with '{response}'."
-            )
+            log.debug(f"{message.author} said '{message.clean_content}'. Responding with '{response}'.")
             await message.channel.send(response.format(them=message.author.mention))
 
 

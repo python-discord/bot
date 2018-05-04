@@ -5,15 +5,9 @@ from discord import ClientException, Colour, Embed
 from discord.ext.commands import AutoShardedBot, Context, command
 
 from bot.constants import (
-    ADMIN_ROLE,
-    BOT_AVATAR_URL,
-    DEVOPS_ROLE,
-    GITHUB_URL_BOT,
-    GREEN_CHEVRON,
-    MODERATOR_ROLE,
-    OWNER_ROLE,
-    RED_CHEVRON,
-    WHITE_CHEVRON,
+    ADMIN_ROLE, BOT_AVATAR_URL, DEVOPS_ROLE, GITHUB_URL_BOT,
+    GREEN_CHEVRON, MODERATOR_ROLE, OWNER_ROLE, RED_CHEVRON,
+    WHITE_CHEVRON
 )
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
@@ -58,7 +52,9 @@ class Cogs:
         embed.colour = Colour.red()
 
         embed.set_author(
-            name="Python Bot (Cogs)", url=GITHUB_URL_BOT, icon_url=BOT_AVATAR_URL
+            name="Python Bot (Cogs)",
+            url=GITHUB_URL_BOT,
+            icon_url=BOT_AVATAR_URL
         )
 
         if cog in self.cogs:
@@ -67,9 +63,7 @@ class Cogs:
             full_cog = cog
         else:
             full_cog = None
-            log.warning(
-                f"{ctx.author} requested we load the '{cog}' cog, but that cog doesn't exist."
-            )
+            log.warning(f"{ctx.author} requested we load the '{cog}' cog, but that cog doesn't exist.")
             embed.description = f"Unknown cog: {cog}"
 
         if full_cog:
@@ -77,34 +71,24 @@ class Cogs:
                 try:
                     self.bot.load_extension(full_cog)
                 except ClientException:
-                    log.error(
-                        f"{ctx.author} requested we load the '{cog}' cog, "
-                        "but that cog doesn't have a 'setup()' function."
-                    )
+                    log.error(f"{ctx.author} requested we load the '{cog}' cog, "
+                              "but that cog doesn't have a 'setup()' function.")
                     embed.description = f"Invalid cog: {cog}\n\nCog does not have a `setup()` function"
                 except ImportError:
-                    log.error(
-                        f"{ctx.author} requested we load the '{cog}' cog, "
-                        f"but the cog module {full_cog} could not be found!"
-                    )
+                    log.error(f"{ctx.author} requested we load the '{cog}' cog, "
+                              f"but the cog module {full_cog} could not be found!")
                     embed.description = f"Invalid cog: {cog}\n\nCould not find cog module {full_cog}"
                 except Exception as e:
-                    log.error(
-                        f"{ctx.author} requested we load the '{cog}' cog, "
-                        "but the loading failed with the following error: \n"
-                        f"{e}"
-                    )
+                    log.error(f"{ctx.author} requested we load the '{cog}' cog, "
+                              "but the loading failed with the following error: \n"
+                              f"{e}")
                     embed.description = f"Failed to load cog: {cog}\n\n```{e}```"
                 else:
-                    log.debug(
-                        f"{ctx.author} requested we load the '{cog}' cog. Cog loaded!"
-                    )
+                    log.debug(f"{ctx.author} requested we load the '{cog}' cog. Cog loaded!")
                     embed.description = f"Cog loaded: {cog}"
                     embed.colour = Colour.green()
             else:
-                log.warning(
-                    f"{ctx.author} requested we load the '{cog}' cog, but the cog was already loaded!"
-                )
+                log.warning(f"{ctx.author} requested we load the '{cog}' cog, but the cog was already loaded!")
                 embed.description = f"Cog {cog} is already loaded"
 
         await ctx.send(embed=embed)
@@ -125,7 +109,9 @@ class Cogs:
         embed.colour = Colour.red()
 
         embed.set_author(
-            name="Python Bot (Cogs)", url=GITHUB_URL_BOT, icon_url=BOT_AVATAR_URL
+            name="Python Bot (Cogs)",
+            url=GITHUB_URL_BOT,
+            icon_url=BOT_AVATAR_URL
         )
 
         if cog in self.cogs:
@@ -134,37 +120,27 @@ class Cogs:
             full_cog = cog
         else:
             full_cog = None
-            log.warning(
-                f"{ctx.author} requested we unload the '{cog}' cog, but that cog doesn't exist."
-            )
+            log.warning(f"{ctx.author} requested we unload the '{cog}' cog, but that cog doesn't exist.")
             embed.description = f"Unknown cog: {cog}"
 
         if full_cog:
             if full_cog == "bot.cogs.cogs":
-                log.warning(
-                    f"{ctx.author} requested we unload the cog management cog, that sneaky pete. We said no."
-                )
+                log.warning(f"{ctx.author} requested we unload the cog management cog, that sneaky pete. We said no.")
                 embed.description = "You may not unload the cog management cog!"
             elif full_cog in self.bot.extensions:
                 try:
                     self.bot.unload_extension(full_cog)
                 except Exception as e:
-                    log.error(
-                        f"{ctx.author} requested we unload the '{cog}' cog, "
-                        "but the unloading failed with the following error: \n"
-                        f"{e}"
-                    )
+                    log.error(f"{ctx.author} requested we unload the '{cog}' cog, "
+                              "but the unloading failed with the following error: \n"
+                              f"{e}")
                     embed.description = f"Failed to unload cog: {cog}\n\n```{e}```"
                 else:
-                    log.debug(
-                        f"{ctx.author} requested we unload the '{cog}' cog. Cog unloaded!"
-                    )
+                    log.debug(f"{ctx.author} requested we unload the '{cog}' cog. Cog unloaded!")
                     embed.description = f"Cog unloaded: {cog}"
                     embed.colour = Colour.green()
             else:
-                log.warning(
-                    f"{ctx.author} requested we unload the '{cog}' cog, but the cog wasn't loaded!"
-                )
+                log.warning(f"{ctx.author} requested we unload the '{cog}' cog, but the cog wasn't loaded!")
                 embed.description = f"Cog {cog} is not loaded"
 
         await ctx.send(embed=embed)
@@ -188,7 +164,9 @@ class Cogs:
         embed.colour = Colour.red()
 
         embed.set_author(
-            name="Python Bot (Cogs)", url=GITHUB_URL_BOT, icon_url=BOT_AVATAR_URL
+            name="Python Bot (Cogs)",
+            url=GITHUB_URL_BOT,
+            icon_url=BOT_AVATAR_URL
         )
 
         if cog == "*":
@@ -199,19 +177,14 @@ class Cogs:
             full_cog = cog
         else:
             full_cog = None
-            log.warning(
-                f"{ctx.author} requested we reload the '{cog}' cog, but that cog doesn't exist."
-            )
+            log.warning(f"{ctx.author} requested we reload the '{cog}' cog, but that cog doesn't exist.")
             embed.description = f"Unknown cog: {cog}"
 
         if full_cog:
             if full_cog == "*":
                 all_cogs = [
-                    f"bot.cogs.{fn[:-3]}"
-                    for fn in os.listdir("bot/cogs")
-                    if os.path.isfile(f"bot/cogs/{fn}")
-                    and fn.endswith(".py")
-                    and "_" not in fn
+                    f"bot.cogs.{fn[:-3]}" for fn in os.listdir("bot/cogs")
+                    if os.path.isfile(f"bot/cogs/{fn}") and fn.endswith(".py") and "_" not in fn
                 ]
 
                 failed_unloads = {}
@@ -238,7 +211,7 @@ class Cogs:
 
                 lines = [
                     "**All cogs reloaded**",
-                    f"**Unloaded**: {unloaded} / **Loaded**: {loaded}",
+                    f"**Unloaded**: {unloaded} / **Loaded**: {loaded}"
                 ]
 
                 if failed_unloads:
@@ -253,10 +226,8 @@ class Cogs:
                     for cog, error in failed_loads:
                         lines.append(f"`{cog}` {WHITE_CHEVRON} `{error}`")
 
-                log.debug(
-                    f"{ctx.author} requested we reload all cogs. Here are the results: \n"
-                    f"{lines}"
-                )
+                log.debug(f"{ctx.author} requested we reload all cogs. Here are the results: \n"
+                          f"{lines}")
 
                 return await LinePaginator.paginate(lines, ctx, embed, empty=False)
 
@@ -265,22 +236,16 @@ class Cogs:
                     self.bot.unload_extension(full_cog)
                     self.bot.load_extension(full_cog)
                 except Exception as e:
-                    log.error(
-                        f"{ctx.author} requested we reload the '{cog}' cog, "
-                        "but the unloading failed with the following error: \n"
-                        f"{e}"
-                    )
+                    log.error(f"{ctx.author} requested we reload the '{cog}' cog, "
+                              "but the unloading failed with the following error: \n"
+                              f"{e}")
                     embed.description = f"Failed to reload cog: {cog}\n\n```{e}```"
                 else:
-                    log.debug(
-                        f"{ctx.author} requested we reload the '{cog}' cog. Cog reloaded!"
-                    )
+                    log.debug(f"{ctx.author} requested we reload the '{cog}' cog. Cog reloaded!")
                     embed.description = f"Cog reload: {cog}"
                     embed.colour = Colour.green()
             else:
-                log.warning(
-                    f"{ctx.author} requested we reload the '{cog}' cog, but the cog wasn't loaded!"
-                )
+                log.warning(f"{ctx.author} requested we reload the '{cog}' cog, but the cog wasn't loaded!")
                 embed.description = f"Cog {cog} is not loaded"
 
         await ctx.send(embed=embed)
@@ -300,7 +265,9 @@ class Cogs:
 
         embed.colour = Colour.blurple()
         embed.set_author(
-            name="Python Bot (Cogs)", url=GITHUB_URL_BOT, icon_url=BOT_AVATAR_URL
+            name="Python Bot (Cogs)",
+            url=GITHUB_URL_BOT,
+            icon_url=BOT_AVATAR_URL
         )
 
         for key, _value in self.cogs.items():
@@ -327,9 +294,7 @@ class Cogs:
 
             lines.append(f"{chevron}  {cog}")
 
-        log.debug(
-            f"{ctx.author} requested a list of all cogs. Returning a paginated list."
-        )
+        log.debug(f"{ctx.author} requested a list of all cogs. Returning a paginated list.")
         await LinePaginator.paginate(lines, ctx, embed, max_size=300, empty=False)
 
 

@@ -16,7 +16,6 @@ log = logging.getLogger(__name__)
 
 
 class Formatter(HelpFormatter):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -32,9 +31,7 @@ class Formatter(HelpFormatter):
                 # skip aliases
                 continue
 
-            entry = "    {0}{1:<{width}} # {2}".format(
-                HELP_PREFIX, name, command.short_doc, width=max_width
-            )
+            entry = "    {0}{1:<{width}} # {2}".format(HELP_PREFIX, name, command.short_doc, width=max_width)
             shortened = self.shorten(entry)
             self._paginator.add_line(shortened)
 
@@ -64,14 +61,10 @@ class Formatter(HelpFormatter):
             # string used purely to make logs a teensy bit more readable
             cog_string = f" from {self.command.cog_name}" if self.command.cog_name else ""
 
-            log.trace(
-                f"Help command is on specific command {self.command.name}{cog_string}."
-            )
+            log.trace(f"Help command is on specific command {self.command.name}{cog_string}.")
 
             # strip the command off bot. and ()
-            stripped_command = self.command.name.replace(HELP_PREFIX, "").replace(
-                "()", ""
-            )
+            stripped_command = self.command.name.replace(HELP_PREFIX, "").replace("()", "")
 
             # get the args using the handy inspect module
             argspec = getfullargspec(self.command.callback)
@@ -99,11 +92,15 @@ class Formatter(HelpFormatter):
 
             # prepare the different sections of the help output, and add them to the paginator
             definition = f"async def {stripped_command}{arguments}:"
-            doc_elems = ['"""', helptext, '"""']
+            doc_elems = [
+                '"""',
+                helptext,
+                '"""'
+            ]
 
             docstring = ""
             for elem in doc_elems:
-                docstring += f"    {elem}\n"
+                docstring += f'    {elem}\n'
 
             invocation = f"    await do_{stripped_command}{args_no_type_hints}"
             self._paginator.add_line(definition)
@@ -126,9 +123,7 @@ class Formatter(HelpFormatter):
         command_list = await self.filter_command_list()
         data = sorted(command_list, key=category_check)
 
-        log.trace(
-            f"Acquired command list and sorted by cog name: {[command[1].name for command in data]}"
-        )
+        log.trace(f"Acquired command list and sorted by cog name: {[command[1].name for command in data]}")
 
         for category, commands in itertools.groupby(data, key=category_check):
             commands = sorted(commands)
@@ -141,7 +136,7 @@ class Formatter(HelpFormatter):
         self._paginator.add_line()
         ending_note = self.get_ending_note()
         # make the ending note appear as comments
-        ending_note = "# " + ending_note.replace("\n", "\n# ")
+        ending_note = "# "+ending_note.replace("\n", "\n# ")
         self._paginator.add_line(ending_note)
 
         log.trace("Added ending note to paginator.")
