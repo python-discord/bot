@@ -62,17 +62,12 @@ class Deployment:
         response = await self.bot.http_session.get(STATUS_URL)
         data = await response.json()
 
-        embed = Embed(
-            title="Service status",
-            color=Colour.blurple()
-        )
+        embed = Embed(title="Service status", color=Colour.blurple())
 
         for obj in data:
             key, value = list(obj.items())[0]
 
-            embed.add_field(
-                name=key, value=value, inline=True
-            )
+            embed.add_field(name=key, value=value, inline=True)
 
         log.debug("Uptimes retrieved and parsed, returning data.")
         await ctx.send(embed=embed)

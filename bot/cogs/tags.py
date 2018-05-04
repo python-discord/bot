@@ -3,15 +3,18 @@ import random
 import time
 
 from discord import Colour, Embed
-from discord.ext.commands import (
-    AutoShardedBot, Context,
-    Converter, command
-)
+from discord.ext.commands import AutoShardedBot, Context, Converter, command
 
 from bot.constants import (
-    ADMIN_ROLE, BOT_COMMANDS_CHANNEL, DEVTEST_CHANNEL,
-    HELPERS_CHANNEL, MODERATOR_ROLE, OWNER_ROLE,
-    SITE_API_KEY, SITE_API_TAGS_URL, TAG_COOLDOWN
+    ADMIN_ROLE,
+    BOT_COMMANDS_CHANNEL,
+    DEVTEST_CHANNEL,
+    HELPERS_CHANNEL,
+    MODERATOR_ROLE,
+    OWNER_ROLE,
+    SITE_API_KEY,
+    SITE_API_TAGS_URL,
+    TAG_COOLDOWN,
 )
 from bot.decorators import with_role
 from bot.exceptions import CogBadArgument
@@ -19,16 +22,14 @@ from bot.pagination import LinePaginator
 
 log = logging.getLogger(__name__)
 
-TEST_CHANNELS = (
-    DEVTEST_CHANNEL,
-    BOT_COMMANDS_CHANNEL,
-    HELPERS_CHANNEL
-)
+TEST_CHANNELS = (DEVTEST_CHANNEL, BOT_COMMANDS_CHANNEL, HELPERS_CHANNEL)
 
 
 class TagNameConverter(Converter):
+
     @staticmethod
     async def convert(ctx: Context, tag_name: str):
+
         def is_number(value):
             try:
                 float(value)
@@ -40,40 +41,39 @@ class TagNameConverter(Converter):
 
         # The tag name has at least one invalid character.
         if ascii(tag_name)[1:-1] != tag_name:
-            log.warning(f"{ctx.author} tried to put an invalid character in a tag name. "
-                        "Rejecting the request.")
+            log.warning(f"{ctx.author} tried to put an invalid character in a tag name. " "Rejecting the request.")
             raise CogBadArgument("Don't be ridiculous, you can't use that character!")
 
         # The tag name is either empty, or consists of nothing but whitespace.
         elif not tag_name:
-            log.warning(f"{ctx.author} tried to create a tag with a name consisting only of whitespace. "
-                        "Rejecting the request.")
+            log.warning(
+                f"{ctx.author} tried to create a tag with a name consisting only of whitespace. "
+                "Rejecting the request."
+            )
             raise CogBadArgument("Tag names should not be empty, or filled with whitespace.")
 
         # The tag name is a number of some kind, we don't allow that.
         elif is_number(tag_name):
-            log.warning(f"{ctx.author} tried to create a tag with a digit as its name. "
-                        "Rejecting the request.")
+            log.warning(f"{ctx.author} tried to create a tag with a digit as its name. " "Rejecting the request.")
             raise CogBadArgument("Tag names can't be numbers.")
 
         # The tag name is longer than 127 characters.
         elif len(tag_name) > 127:
-            log.warning(f"{ctx.author} tried to request a tag name with over 127 characters. "
-                        "Rejecting the request.")
+            log.warning(f"{ctx.author} tried to request a tag name with over 127 characters. " "Rejecting the request.")
             raise CogBadArgument("Are you insane? That's way too long!")
 
         return tag_name
 
 
 class TagContentConverter(Converter):
+
     @staticmethod
     async def convert(ctx: Context, tag_content: str):
         tag_content = tag_content.strip()
 
         # The tag contents should not be empty, or filled with whitespace.
         if not tag_content:
-            log.warning(f"{ctx.author} tried to create a tag containing only whitespace. "
-                        "Rejecting the request.")
+            log.warning(f"{ctx.author} tried to create a tag containing only whitespace. " "Rejecting the request.")
             raise CogBadArgument("Tag contents should not be empty, or filled with whitespace.")
 
         return tag_content
@@ -121,10 +121,7 @@ class Tags:
         }
         """
 
-        params = {
-            'tag_name': tag_name,
-            'tag_content': tag_content
-        }
+        params = {"tag_name": tag_name, "tag_content": tag_content}
 
         response = await self.bot.http_session.post(SITE_API_TAGS_URL, headers=self.headers, json=params)
         tag_data = await response.json()
@@ -145,7 +142,7 @@ class Tags:
         params = {}
 
         if tag_name:
-            params['tag_name'] = tag_name
+            params["tag_name"] = tag_name
 
         response = await self.bot.http_session.delete(SITE_API_TAGS_URL, headers=self.headers, json=params)
         tag_data = await response.json()
@@ -164,7 +161,7 @@ class Tags:
         return await ctx.invoke(self.bot.get_command("help"), "Tags")
 
     @command(name="tags.get()", aliases=["tags.get", "tags.show()", "tags.show", "get_tag"])
-    async def get_command(self, ctx: Context, tag_name: TagNameConverter=None):
+    async def get_command(self, ctx: Context, tag_name: TagNameConverter = None):
         """
         Get a list of all tags or a specified tag.
 
@@ -199,8 +196,10 @@ class Tags:
 
         if _command_on_cooldown(tag_name):
             time_left = TAG_COOLDOWN - (time.time() - self.tag_cooldowns[tag_name]["time"])
-            log.warning(f"{ctx.author} tried to get the '{tag_name}' tag, but the tag is on cooldown. "
-                        f"Cooldown ends in {time_left:.1f} seconds.")
+            log.warning(
+                f"{ctx.author} tried to get the '{tag_name}' tag, but the tag is on cooldown. "
+                f"Cooldown ends in {time_left:.1f} seconds."
+            )
             return
 
         tags = []
@@ -218,10 +217,7 @@ class Tags:
                 embed.title = tag_name
 
                 if ctx.channel.id not in TEST_CHANNELS:
-                    self.tag_cooldowns[tag_name] = {
-                        "time": time.time(),
-                        "channel": ctx.channel.id
-                    }
+                    self.tag_cooldowns[tag_name] = {"time": time.time(), "channel": ctx.channel.id}
 
             else:
                 embed.title = "**Current tags**"
@@ -232,7 +228,7 @@ class Tags:
                 tags = sorted(tags)
 
             else:
-                embed.description = tag_data['tag_content']
+                embed.description = tag_data["tag_content"]
 
         # If not, prepare an error message.
         else:
@@ -254,10 +250,11 @@ class Tags:
             log.debug(f"Returning a paginated list of all tags.")
             return await LinePaginator.paginate(
                 (lines for lines in tags),
-                ctx, embed,
+                ctx,
+                embed,
                 footer_text="To show a tag, type bot.tags.get <tagname>.",
                 empty=False,
-                max_lines=15
+                max_lines=15,
             )
 
         return await ctx.send(embed=embed)
@@ -281,20 +278,26 @@ class Tags:
         tag_data = await self.post_tag_data(tag_name, tag_content)
 
         if tag_data.get("success"):
-            log.debug(f"{ctx.author} successfully added the following tag to our database: \n"
-                      f"tag_name: {tag_name}\n"
-                      f"tag_content: '{tag_content}'")
+            log.debug(
+                f"{ctx.author} successfully added the following tag to our database: \n"
+                f"tag_name: {tag_name}\n"
+                f"tag_content: '{tag_content}'"
+            )
             embed.colour = Colour.blurple()
             embed.title = "Tag successfully added"
             embed.description = f"**{tag_name}** added to tag database."
         else:
-            log.error("There was an unexpected database error when trying to add the following tag: \n"
-                      f"tag_name: {tag_name}\n"
-                      f"tag_content: '{tag_content}'\n"
-                      f"response: {tag_data}")
+            log.error(
+                "There was an unexpected database error when trying to add the following tag: \n"
+                f"tag_name: {tag_name}\n"
+                f"tag_content: '{tag_content}'\n"
+                f"response: {tag_data}"
+            )
             embed.title = "Database error"
-            embed.description = ("There was a problem adding the data to the tags database. "
-                                 "Please try again. If the problem persists, see the error logs.")
+            embed.description = (
+                "There was a problem adding the data to the tags database. "
+                "Please try again. If the problem persists, see the error logs."
+            )
 
         return await ctx.send(embed=embed)
 
@@ -326,12 +329,16 @@ class Tags:
             embed.description = "Tag doesn't appear to exist."
 
         else:
-            log.error("There was an unexpected database error when trying to delete the following tag: \n"
-                      f"tag_name: {tag_name}\n"
-                      f"response: {tag_data}")
+            log.error(
+                "There was an unexpected database error when trying to delete the following tag: \n"
+                f"tag_name: {tag_name}\n"
+                f"response: {tag_data}"
+            )
             embed.title = "Database error"
-            embed.description = ("There was an unexpected error with deleting the data from the tags database. "
-                                 "Please try again. If the problem persists, see the error logs.")
+            embed.description = (
+                "There was an unexpected error with deleting the data from the tags database. "
+                "Please try again. If the problem persists, see the error logs."
+            )
 
         return await ctx.send(embed=embed)
 

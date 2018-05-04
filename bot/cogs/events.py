@@ -2,9 +2,14 @@ import logging
 
 from discord import Embed, Member
 from discord.ext.commands import (
-    AutoShardedBot, BadArgument, BotMissingPermissions,
-    CommandError, CommandInvokeError, Context,
-    NoPrivateMessage, UserInputError
+    AutoShardedBot,
+    BadArgument,
+    BotMissingPermissions,
+    CommandError,
+    CommandInvokeError,
+    Context,
+    NoPrivateMessage,
+    UserInputError,
 )
 
 from bot.constants import DEVLOG_CHANNEL, PYTHON_GUILD, SITE_API_KEY, SITE_API_USER_URL
@@ -25,9 +30,7 @@ class Events:
     async def send_updated_users(self, *users):
         try:
             response = await self.bot.http_session.post(
-                url=SITE_API_USER_URL,
-                json=list(users),
-                headers={"X-API-Key": SITE_API_KEY}
+                url=SITE_API_USER_URL, json=list(users), headers={"X-API-Key": SITE_API_KEY}
             )
 
             return await response.json()
@@ -64,9 +67,7 @@ class Events:
                 f"Here's what I'm missing: **{e.missing_perms}**"
             )
         elif isinstance(e, CommandInvokeError):
-            await ctx.send(
-                f"Sorry, an unexpected error occurred. Please let us know!\n\n```{e}```"
-            )
+            await ctx.send(f"Sorry, an unexpected error occurred. Please let us know!\n\n```{e}```")
             raise e.original
         log.error(f"COMMAND ERROR: '{e}'")
 
@@ -76,12 +77,14 @@ class Events:
         for member in self.bot.get_guild(PYTHON_GUILD).members:  # type: Member
             roles = [str(r.id) for r in member.roles]  # type: List[int]
 
-            users.append({
-                "user_id": str(member.id),
-                "roles": roles,
-                "username": member.name,
-                "discriminator": member.discriminator
-            })
+            users.append(
+                {
+                    "user_id": str(member.id),
+                    "roles": roles,
+                    "username": member.name,
+                    "discriminator": member.discriminator,
+                }
+            )
 
         if users:
             log.debug(f"{len(users)} user roles to be updated")
@@ -101,19 +104,13 @@ class Events:
                         done[key] += value
 
             if any(done.values()):
-                embed = Embed(
-                    title="User roles updated"
-                )
+                embed = Embed(title="User roles updated")
 
                 for key, value in done.items():
                     if value:
-                        embed.add_field(
-                            name=key.title(), value=str(value)
-                        )
+                        embed.add_field(name=key.title(), value=str(value))
 
-                await self.bot.get_channel(DEVLOG_CHANNEL).send(
-                    embed=embed
-                )
+                await self.bot.get_channel(DEVLOG_CHANNEL).send(embed=embed)
 
     async def on_member_update(self, before: Member, after: Member):
         if before.roles == after.roles and before.name == after.name and before.discriminator == after.discriminator:
@@ -125,12 +122,9 @@ class Events:
 
         log.debug(f"{before.display_name} roles changing from {before_role_names} to {after_role_names}")
 
-        await self.send_updated_users({
-            "user_id": str(after.id),
-            "roles": role_ids,
-            "username": after.name,
-            "discriminator": after.discriminator
-        })
+        await self.send_updated_users(
+            {"user_id": str(after.id), "roles": role_ids, "username": after.name, "discriminator": after.discriminator}
+        )
 
 
 def setup(bot):

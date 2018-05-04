@@ -97,8 +97,7 @@ class CodeEval:
             res = (res, out)
 
         else:
-            if (isinstance(out, str) and
-                    out.startswith("Traceback (most recent call last):\n")):
+            if isinstance(out, str) and out.startswith("Traceback (most recent call last):\n"):
                 # Leave out the traceback message
                 out = "\n" + "\n".join(out.split("\n")[1:])
 
@@ -115,9 +114,11 @@ class CodeEval:
                 # Text too long, shorten
                 li = pretty.split("\n")
 
-                pretty = ("\n".join(li[:3]) +  # First 3 lines
-                          "\n ...\n" +  # Ellipsis to indicate removed lines
-                          "\n".join(li[-3:]))  # last 3 lines
+                pretty = (
+                    "\n".join(li[:3])
+                    + "\n ...\n"  # First 3 lines
+                    + "\n".join(li[-3:])  # Ellipsis to indicate removed lines
+                )  # last 3 lines
 
             # Add the output
             res += pretty
@@ -143,7 +144,7 @@ class CodeEval:
             "bot": self.bot,
             "inspect": inspect,
             "discord": discord,
-            "contextlib": contextlib
+            "contextlib": contextlib,
         }
 
         self.env.update(env)
@@ -160,11 +161,13 @@ async def func():  # (None,) -> Any
             return _
     finally:
         self.env.update(locals())
-""".format(textwrap.indent(code, '            '))
+""".format(
+            textwrap.indent(code, "            ")
+        )
 
         try:
             exec(_code, self.env)  # noqa: B102,S102
-            func = self.env['func']
+            func = self.env["func"]
             res = await func()
 
         except Exception:
@@ -181,10 +184,12 @@ async def func():  # (None,) -> Any
         if code.startswith("py\n"):
             code = "\n".join(code.split("\n")[1:])
 
-        if not re.search(  # Check if it's an expression
-                r"^(return|import|for|while|def|class|"
-                r"from|exit|[a-zA-Z0-9]+\s*=)", code, re.M) and len(
-                    code.split("\n")) == 1:
+        if (
+            not re.search(  # Check if it's an expression
+                r"^(return|import|for|while|def|class|" r"from|exit|[a-zA-Z0-9]+\s*=)", code, re.M
+            )
+            and len(code.split("\n")) == 1
+        ):
             code = "_ = " + code
 
         await self._eval(ctx, code)

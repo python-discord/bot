@@ -13,6 +13,7 @@ class Verification:
     """
     User verification
     """
+
     def __init__(self, bot: AutoShardedBot):
         self.bot = bot
 
@@ -28,16 +29,20 @@ class Verification:
         if ctx.channel.id == VERIFICATION_CHANNEL:  # We're in the verification channel
             for role in ctx.author.roles:
                 if role.id == VERIFIED_ROLE:
-                    log.warning(f"{ctx.author} posted '{ctx.message.content}' "
-                                "in the verification channel, but is already verified.")
+                    log.warning(
+                        f"{ctx.author} posted '{ctx.message.content}' "
+                        "in the verification channel, but is already verified."
+                    )
                     return  # They're already verified
 
-            log.debug(f"{ctx.author} posted '{ctx.message.content}' in the verification "
-                      "channel. We are providing instructions how to verify.")
+            log.debug(
+                f"{ctx.author} posted '{ctx.message.content}' in the verification "
+                "channel. We are providing instructions how to verify."
+            )
             await ctx.send(
                 f"{ctx.author.mention} Please type `self.accept()` to verify that you accept our rules, "
                 f"and gain access to the rest of the server.",
-                delete_after=10
+                delete_after=10,
             )
 
             log.trace(f"Deleting the message posted by {ctx.author}")
