@@ -244,6 +244,8 @@ class Tags:
         if tags:
             if ctx.invoked_with == "tags.keys()":
                 detail_invocation = "bot.tags[<tagname>]"
+            elif ctx.invoked_with == "tags.get()":
+                detail_invocation = "bot.tags.get(<tagname>)"
             else:
                 detail_invocation = "bot.tags.get <tagname>"
 
