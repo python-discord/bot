@@ -125,10 +125,21 @@ class Bot:
 
                 # Remove "Python" or "Py" from top of the message if exists
                 log.trace(f"Removing 'py' or 'python' from message.\n\n{content}\n\n")
+                pycode = False
                 if content.lower().startswith("python"):
                     content = content[6:]
+                    pycode = True
                 elif content.lower().startswith("py"):
                     content = content[2:]
+                    pycode = True
+
+                if pycode:
+                    content = content.splitlines(keepends=True)
+                    if " " in content[0]:
+                        content[0] = content[0][content[0].index(" "):]
+                        content = "".join(content)
+                    else:
+                        content = "".join(content[1:])
 
                 # Strip again to remove the whitespace(s) left before the code
                 # If the msg looked like "Python <code>" before removing Python
