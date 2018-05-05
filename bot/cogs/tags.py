@@ -9,14 +9,21 @@ from discord.ext.commands import (
 )
 
 from bot.constants import (
-    ADMIN_ROLE, MODERATOR_ROLE, OWNER_ROLE,
-    SITE_API_KEY, SITE_API_TAGS_URL, TAG_COOLDOWN,
+    ADMIN_ROLE, BOT_COMMANDS_CHANNEL, DEVTEST_CHANNEL,
+    HELPERS_CHANNEL, MODERATOR_ROLE, OWNER_ROLE,
+    SITE_API_KEY, SITE_API_TAGS_URL, TAG_COOLDOWN
 )
 from bot.decorators import with_role
 from bot.exceptions import CogBadArgument
 from bot.pagination import LinePaginator
 
 log = logging.getLogger(__name__)
+
+TEST_CHANNELS = (
+    DEVTEST_CHANNEL,
+    BOT_COMMANDS_CHANNEL,
+    HELPERS_CHANNEL
+)
 
 
 class TagNameConverter(Converter):
@@ -209,10 +216,12 @@ class Tags:
             if tag_name:
                 log.debug(f"{ctx.author} requested the tag '{tag_name}'")
                 embed.title = tag_name
-                self.tag_cooldowns[tag_name] = {
-                    "time": time.time(),
-                    "channel": ctx.channel.id
-                }
+
+                if ctx.channel.id not in TEST_CHANNELS:
+                    self.tag_cooldowns[tag_name] = {
+                        "time": time.time(),
+                        "channel": ctx.channel.id
+                    }
 
             else:
                 embed.title = "**Current tags**"

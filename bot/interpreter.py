@@ -1,4 +1,3 @@
-# coding=utf-8
 from code import InteractiveInterpreter
 from io import StringIO
 

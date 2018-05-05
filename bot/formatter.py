@@ -1,5 +1,3 @@
-# coding=utf-8
-
 """
 Credit to Rapptz's script used as an example:
 https://github.com/Rapptz/discord.py/blob/rewrite/discord/ext/commands/formatter.py
