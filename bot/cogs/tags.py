@@ -250,11 +250,18 @@ class Tags:
 
         # Paginate if this is a list of all tags
         if tags:
+            if ctx.invoked_with == "tags.keys()":
+                detail_invocation = "bot.tags[<tagname>]"
+            elif ctx.invoked_with == "tags.get()":
+                detail_invocation = "bot.tags.get(<tagname>)"
+            else:
+                detail_invocation = "bot.tags.get <tagname>"
+
             log.debug(f"Returning a paginated list of all tags.")
             return await LinePaginator.paginate(
                 (lines for lines in tags),
                 ctx, embed,
-                footer_text="To show a tag, type bot.tags.get <tagname>.",
+                footer_text=f"To show a tag, type {detail_invocation}.",
                 empty=False,
                 max_lines=15
             )
