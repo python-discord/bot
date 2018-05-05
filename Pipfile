@@ -12,6 +12,7 @@ aiodns = "*"
 logmatic-python = "*"
 aiohttp = "<2.3.0,>=2.0.0"
 websockets = ">=4.0,<5.0"
+yarl = "==1.1.1"
 
 [dev-packages]
 "flake8" = "*"
@@ -29,5 +30,8 @@ requests = "*"
 python_version = "3.6"
 
 [scripts]
-
 start = "python -m bot"
+build = "docker build -t pythondiscord/bot:latest -f docker/Dockerfile ."
+push = "docker push pythondiscord/bot:latest"
+buildbase = "docker build -t pythondiscord/bot-base:latest -f docker/Dockerfile.base ."
+pushbase = "docker push pythondiscord/bot-base:latest"
