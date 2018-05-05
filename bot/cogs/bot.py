@@ -1,4 +1,3 @@
-# coding=utf-8
 import ast
 import logging
 import re
@@ -11,7 +10,7 @@ from dulwich.repo import Repo
 from bot.constants import (
     ADMIN_ROLE, BOT_AVATAR_URL, BOT_CHANNEL,
     DEVTEST_CHANNEL, HELP1_CHANNEL, HELP2_CHANNEL,
-    HELP3_CHANNEL, MODERATOR_ROLE, OWNER_ROLE,
+    HELP3_CHANNEL, HELP4_CHANNEL, MODERATOR_ROLE, OWNER_ROLE,
     PYTHON_CHANNEL, PYTHON_GUILD, VERIFIED_ROLE
 )
 from bot.decorators import with_role
@@ -31,6 +30,7 @@ class Bot:
         self.channel_cooldowns = {HELP1_CHANNEL: 0,
                                   HELP2_CHANNEL: 0,
                                   HELP3_CHANNEL: 0,
+                                  HELP4_CHANNEL: 0,
                                   PYTHON_CHANNEL: 0,
                                   DEVTEST_CHANNEL: 0,
                                   BOT_CHANNEL: 0
