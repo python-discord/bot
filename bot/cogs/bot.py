@@ -112,7 +112,7 @@ class Bot:
             if re.search("```(?:py|python)\n(.*?)```", msg, re.IGNORECASE | re.DOTALL) and not bad_ticks:
                 log.trace("Someone wrote a message that was already a "
                           "valid Python syntax highlighted code block. No action taken.")
-                return None, None
+                return None
 
             else:
                 # Stripping backticks from every line of the message.
@@ -123,7 +123,7 @@ class Bot:
 
                 content = content.strip()
 
-                # Remove "Python" or "Py" from top of the message if exists.
+                # Remove "Python" or "Py" from start of the message if it exists.
                 log.trace(f"Removing 'py' or 'python' from message.\n\n{content}\n\n")
                 pycode = False
                 if content.lower().startswith("python"):
@@ -147,22 +147,22 @@ class Bot:
                     else:
                         content = "".join(content[1:])
 
-                # Strip again to remove the whitespace(s) left before the code
-                # if the msg looked like "Python <code>" before removing Python.
+                # Strip it again to remove any leading whitespace. This is neccessary
+                # if the first line of the message looked like ```python <code>
                 old = content.strip()
 
-                # Strips REPL code out of the message if there is any
+                # Strips REPL code out of the message if there is any.
                 content, repl_code = self.repl_stripping(old)
                 if old != content:
                     return (content, old), repl_code
 
-                # Try to apply identation fixes to the code.
+                # Try to apply indentation fixes to the code.
                 content = self.fix_indentation(content)
 
                 # Check if the code contains backticks, if it does ignore the message.
                 if "`" in content:
                     log.trace("Detected ` inside the code, won't reply")
-                    return None, None
+                    return None
                 else:
                     log.trace(f"Returning message.\n\n{content}\n\n")
                     return (content,), repl_code
@@ -171,21 +171,24 @@ class Bot:
         """
         Attempts to fix badly indented code.
         """
-        def unindent(code, leave=0):
+        def unindent(code, skip_spaces=0):
+            """
+            Unindents all code down to the number of spaces given ins skip_spaces
+            """
             final = ""
             current = code[0]
-            counter = 0
+            leading_spaces = 0
 
             # Get numbers of spaces before code in the first line.
             while current == " ":
-                current = code[counter+1]
-                counter += 1
-            counter -= leave
+                current = code[leading_spaces+1]
+                leading_spaces += 1
+            leading_spaces -= skip_spaces
 
-            # If there are any remove that number of spaces from every line.
-            if counter > 0:
+            # If there are any, remove that number of spaces from every line.
+            if leading_spaces > 0:
                 for line in code.splitlines(keepends=True):
-                    line = line[counter:]
+                    line = line[leading_spaces:]
                     final += line
                 return final
             else:
@@ -234,9 +237,11 @@ class Bot:
                     bad_ticks = msg.content[:3] in not_backticks
                     if bad_ticks:
                         ticks = msg.content[:3]
-                        content, repl_code = self.codeblock_stripping(f"```{msg.content[3:-3]}```", True)
+                        content = self.codeblock_stripping(f"```{msg.content[3:-3]}```", True)
                         if content is None:
                             return
+
+                        content, repl_code = content
 
                         if len(content) == 2:
                             content = content[1]
@@ -252,7 +257,7 @@ class Bot:
                                     break
                                 current_length += len(line)
                                 lines_walked += 1
-                            content = content[:current_length]+"#..."
+                            content = content[:current_length] + "#..."
 
                         howto = ("It looks like you are trying to paste code into this channel.\n\n"
                                  "You seem to be using the wrong symbols to indicate where the codeblock should start. "
@@ -262,9 +267,11 @@ class Bot:
                                  f"```python\n{content}\n```")
                     else:
                         howto = ""
-                        content, repl_code = self.codeblock_stripping(msg.content, False)
+                        content = self.codeblock_stripping(msg.content, False)
                         if content is None:
                             return
+
+                        content, repl_code = content
                         # Attempts to parse the message into an AST node.
                         # Invalid Python code will raise a SyntaxError.
                         tree = ast.parse(content[0])
@@ -308,6 +315,7 @@ class Bot:
                         await msg.channel.send(f"Hey {msg.author.mention}!", embed=howto_embed)
                     else:
                         return
+
                     self.channel_cooldowns[msg.channel.id] = time.time()
                 except SyntaxError:
                     log.trace(f"{msg.author} posted in a help channel, and when we tried to parse it as Python code, "
