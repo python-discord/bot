@@ -156,8 +156,7 @@ class Bot:
                 else:
                     log.trace(f"Returning message.\n\n{content}\n\n")
                     return (content,)
-        else:
-            log.trace("Message too short, ignoring  ")
+
 
     def fix_indentation(self, msg: str):
         """
