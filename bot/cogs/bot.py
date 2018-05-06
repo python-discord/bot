@@ -229,7 +229,7 @@ class Bot:
             return final.rstrip(), True
 
     async def on_message(self, msg: Message):
-        if msg.channel.id in self.channel_cooldowns and not msg.author.bot:
+        if msg.channel.id in self.channel_cooldowns and not msg.author.bot and len(msg.splitlines()) > 3:
             on_cooldown = time.time() - self.channel_cooldowns[msg.channel.id] < 300
             if not on_cooldown or msg.channel.id == DEVTEST_CHANNEL:
                 try:
