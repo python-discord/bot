@@ -146,17 +146,16 @@ class Bot:
                 # Strips REPL code out of the message if there is any
                 # And tries to apply identation fixes to the code
                 old = content.strip()
-                content = self.repl_stripping(old)
-                if old != content[0]:
-                    return (content, old)
-                content = self.fix_indentation(content[0])
+                content, repl_code = self.repl_stripping(old)
+                if old != content:
+                    return (content, old), repl_code
+                content = self.fix_indentation(content)
                 if "`" in content:
                     log.trace("Detected ` inside the code, won't reply")
-                    return None
+                    return None, None
                 else:
                     log.trace(f"Returning message.\n\n{content}\n\n")
-                    return (content,)
-
+                    return (content,), repl_code
 
     def fix_indentation(self, msg: str):
         """
@@ -211,10 +210,10 @@ class Bot:
         log.trace(f"Formatted: \n\n{msg}\n\n to \n\n{final}\n\n")
         if not final:
             log.debug(f"Found no REPL code in \n\n{msg}\n\n")
-            return (msg, False)
+            return msg, False
         else:
             log.debug(f"Found REPL code in \n\n{msg}\n\n")
-            return (final.rstrip(), True)
+            return final.rstrip(), True
 
     async def on_message(self, msg: Message):
         if msg.channel.id in self.channel_cooldowns and not msg.author.bot:
@@ -225,15 +224,14 @@ class Bot:
                     bad_ticks = msg.content[:3] in not_backticks
                     if bad_ticks:
                         ticks = msg.content[:3]
-                        content = self.codeblock_stripping(f"```{msg.content[3:-3]}```", True)
-                        print(content)
+                        content, repl_code = self.codeblock_stripping(f"```{msg.content[3:-3]}```", True)
                         if content is None:
                             return
 
                         if len(content) == 2:
                             content = content[1]
                         else:
-                            content = content[0][0]
+                            content = content[0]
 
                         space_left = 204
                         if len(content) >= space_left:
@@ -254,21 +252,21 @@ class Bot:
                                  f"```python\n{content}\n```")
                     else:
                         howto = ""
-                        content = self.codeblock_stripping(msg.content, False)
+                        content, repl_code = self.codeblock_stripping(msg.content, False)
                         if content is None:
                             return
                         # Attempts to parse the message into an AST node.
                         # Invalid Python code will raise a SyntaxError.
-                        repl_detected = content[0][1]
-                        tree = ast.parse(content[0][0])
+                        tree = ast.parse(content[0])
+                        print(repl_code, content)
 
                         # Multiple lines of single words could be interpreted as expressions.
                         # This check is to avoid all nodes being parsed as expressions.
                         # (e.g. words over multiple lines)
-                        if not all(isinstance(node, ast.Expr) for node in tree.body) or repl_detected:
+                        if not all(isinstance(node, ast.Expr) for node in tree.body) or repl_code:
                             # Shorten the code to 10 lines and/or 204 characters.
                             space_left = 204
-                            if len(content) == 2:
+                            if content and repl_code:
                                 content = content[1]
                             else:
                                 content = content[0]
