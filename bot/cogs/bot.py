@@ -136,14 +136,14 @@ class Bot:
                 if pycode:
                     content = content.splitlines(keepends=True)
 
-                    # check if there might be code in the first line, and preservet it.
+                    # Check if there might be code in the first line, and preserve it.
                     first_line = content[0]
                     if " " in content[0]:
                         first_space = first_line.index(" ")
                         content[0] = first_line[first_space:]
                         content = "".join(content)
 
-                    # if there's no code we can just get rid of the first line
+                    # If there's no code we can just get rid of the first line
                     else:
                         content = "".join(content[1:])
 
