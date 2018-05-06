@@ -147,15 +147,17 @@ class Bot:
                 # And tries to apply identation fixes to the code
                 old = content.strip()
                 content = self.repl_stripping(old)
-                if old != content:
+                if old != content[0]:
                     return (content, old)
-                content = self.fix_indentation(content)
+                content = self.fix_indentation(content[0])
                 if "`" in content:
                     log.trace("Detected ` inside the code, won't reply")
                     return None
                 else:
                     log.trace(f"Returning message.\n\n{content}\n\n")
                     return (content,)
+        else:
+            log.trace("Message too short, ignoring  ")
 
     def fix_indentation(self, msg: str):
         """
@@ -207,13 +209,13 @@ class Bot:
         for line in msg.splitlines(keepends=True):
             if line.startswith(">>>") or line.startswith("..."):
                 final += line[4:]
-        log.trace(f"Formatted: {msg} to {final}")
+        log.trace(f"Formatted: \n\n{msg}\n\n to \n\n{final}\n\n")
         if not final:
-            log.debug(f"Found no REPL code in {msg}")
-            return msg
+            log.debug(f"Found no REPL code in \n\n{msg}\n\n")
+            return (msg, False)
         else:
-            log.debug(f"Found REPL code in {msg}")
-            return final.rstrip()
+            log.debug(f"Found REPL code in \n\n{msg}\n\n")
+            return (final.rstrip(), True)
 
     async def on_message(self, msg: Message):
         if msg.channel.id in self.channel_cooldowns and not msg.author.bot:
@@ -232,7 +234,7 @@ class Bot:
                         if len(content) == 2:
                             content = content[1]
                         else:
-                            content = content[0]
+                            content = content[0][0]
 
                         space_left = 204
                         if len(content) >= space_left:
@@ -258,12 +260,13 @@ class Bot:
                             return
                         # Attempts to parse the message into an AST node.
                         # Invalid Python code will raise a SyntaxError.
-                        tree = ast.parse(content[0])
+                        repl_detected = content[0][1]
+                        tree = ast.parse(content[0][0])
 
                         # Multiple lines of single words could be interpreted as expressions.
                         # This check is to avoid all nodes being parsed as expressions.
                         # (e.g. words over multiple lines)
-                        if not all(isinstance(node, ast.Expr) for node in tree.body):
+                        if not all(isinstance(node, ast.Expr) for node in tree.body) or repl_detected:
                             # Shorten the code to 10 lines and/or 204 characters.
                             space_left = 204
                             if len(content) == 2:
@@ -291,6 +294,8 @@ class Bot:
 
                             log.debug(f"{msg.author} posted something that needed to be put inside python code "
                                       "blocks. Sending the user some instructions.")
+                        else:
+                            log.trace("The code only consists of expressions, not sending instructions")
 
                     if howto != "":
                         howto_embed = Embed(description=howto)
