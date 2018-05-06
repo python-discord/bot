@@ -258,7 +258,6 @@ class Bot:
                         # Attempts to parse the message into an AST node.
                         # Invalid Python code will raise a SyntaxError.
                         tree = ast.parse(content[0])
-                        print(repl_code, content)
 
                         # Multiple lines of single words could be interpreted as expressions.
                         # This check is to avoid all nodes being parsed as expressions.
