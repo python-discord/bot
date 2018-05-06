@@ -197,11 +197,11 @@ class Bot:
         # Apply fix for "all lines are overindented" case.
         msg = unindent(msg)
 
-        # If the first line does not end on ":" we can be
-        # sure the next line has to be moved to the same level
-        # otherwise the all the other lines are dedented by the
-        # amount of spaces required to dedent the second line to
-        # four spaces.
+        # If the first line does not end with a colon, we can be
+        # certain the next line will be on the same indentation level.
+        #
+        # If it does end with a colon, we will need to indent all successive 
+        # lines one additional level.
         first_line = msg.splitlines()[0]
         code = "".join(msg.splitlines(keepends=True)[1:])
         if not first_line.endswith(":"):
