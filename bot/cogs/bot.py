@@ -200,7 +200,7 @@ class Bot:
         # If the first line does not end with a colon, we can be
         # certain the next line will be on the same indentation level.
         #
-        # If it does end with a colon, we will need to indent all successive 
+        # If it does end with a colon, we will need to indent all successive
         # lines one additional level.
         first_line = msg.splitlines()[0]
         code = "".join(msg.splitlines(keepends=True)[1:])
@@ -317,7 +317,7 @@ class Bot:
                         return
 
                     self.channel_cooldowns[msg.channel.id] = time.time()
-                    
+
                 except SyntaxError:
                     log.trace(f"{msg.author} posted in a help channel, and when we tried to parse it as Python code, "
                               "ast.parse raised a SyntaxError. This probably just means it wasn't Python code. "
