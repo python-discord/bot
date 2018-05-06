@@ -100,7 +100,7 @@ class Bot:
         embed = Embed(description=text)
         await ctx.send(embed=embed)
 
-    def codeblock_stripping(self, msg: str):
+    def codeblock_stripping(self, msg: str, bad_ticks: bool):
         """
         Strip msg in order to find Python code.
 
@@ -109,7 +109,7 @@ class Bot:
         """
         if msg.count("\n") >= 3:
             # Filtering valid Python codeblocks and exiting if a valid Python codeblock is found
-            if re.search("```(?:py|python)\n(.*?)```", msg, re.IGNORECASE | re.DOTALL):
+            if re.search("```(?:py|python)\n(.*?)```", msg, re.IGNORECASE | re.DOTALL) and not bad_ticks:
                 log.trace("Someone wrote a message that was already a "
                           "valid Python syntax highlighted code block. No action taken.")
                 return None
@@ -224,8 +224,8 @@ class Bot:
                     bad_ticks = msg.content[:3] in not_backticks
                     if bad_ticks:
                         ticks = msg.content[:3]
-                        content = self.codeblock_stripping(f"```{msg.content[3:-3]}```")
-                        print("ticks call")
+                        content = self.codeblock_stripping(f"```{msg.content[3:-3]}```", True)
+                        print(content)
                         if content is None:
                             return
 
@@ -253,7 +253,7 @@ class Bot:
                                  f"```python\n{content}\n```")
                     else:
                         howto = ""
-                        content = self.codeblock_stripping(msg.content)
+                        content = self.codeblock_stripping(msg.content, False)
                         if content is None:
                             return
                         # Attempts to parse the message into an AST node.
