@@ -155,7 +155,7 @@ class Bot:
                 content, repl_code = self.repl_stripping(old)
                 if old != content:
                     return (content, old), repl_code
-                
+
                 # Try to apply identation fixes to the code.
                 content = self.fix_indentation(content)
 
