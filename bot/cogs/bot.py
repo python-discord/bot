@@ -26,7 +26,7 @@ class Bot:
     def __init__(self, bot: AutoShardedBot):
         self.bot = bot
 
-        # Stores allowed channels plus unix timestamp from last call
+        # Stores allowed channels plus unix timestamp from last call.
         self.channel_cooldowns = {HELP1_CHANNEL: 0,
                                   HELP2_CHANNEL: 0,
                                   HELP3_CHANNEL: 0,
@@ -108,11 +108,11 @@ class Bot:
         None if the block is a valid Python codeblock.
         """
         if msg.count("\n") >= 3:
-            # Filtering valid Python codeblocks and exiting if a valid Python codeblock is found
+            # Filtering valid Python codeblocks and exiting if a valid Python codeblock is found.
             if re.search("```(?:py|python)\n(.*?)```", msg, re.IGNORECASE | re.DOTALL) and not bad_ticks:
                 log.trace("Someone wrote a message that was already a "
                           "valid Python syntax highlighted code block. No action taken.")
-                return None
+                return None, None
 
             else:
                 # Stripping backticks from every line of the message.
@@ -123,7 +123,7 @@ class Bot:
 
                 content = content.strip()
 
-                # Remove "Python" or "Py" from top of the message if exists
+                # Remove "Python" or "Py" from top of the message if exists.
                 log.trace(f"Removing 'py' or 'python' from message.\n\n{content}\n\n")
                 pycode = False
                 if content.lower().startswith("python"):
@@ -143,19 +143,23 @@ class Bot:
                         content[0] = first_line[first_space:]
                         content = "".join(content)
 
-                    # If there's no code we can just get rid of the first line
+                    # If there's no code we can just get rid of the first line.
                     else:
                         content = "".join(content[1:])
 
                 # Strip again to remove the whitespace(s) left before the code
-                # If the msg looked like "Python <code>" before removing Python
-                # Strips REPL code out of the message if there is any
-                # And tries to apply identation fixes to the code
+                # if the msg looked like "Python <code>" before removing Python.
                 old = content.strip()
+
+                # Strips REPL code out of the message if there is any
                 content, repl_code = self.repl_stripping(old)
                 if old != content:
                     return (content, old), repl_code
+                
+                # Try to apply identation fixes to the code.
                 content = self.fix_indentation(content)
+
+                # Check if the code contains backticks, if it does ignore the message.
                 if "`" in content:
                     log.trace("Detected ` inside the code, won't reply")
                     return None, None
@@ -172,13 +176,13 @@ class Bot:
             current = code[0]
             counter = 0
 
-            # Get numbers of spaces before code in the first line
+            # Get numbers of spaces before code in the first line.
             while current == " ":
                 current = code[counter+1]
                 counter += 1
             counter -= leave
 
-            # If there are any remove that number of spaces from every line
+            # If there are any remove that number of spaces from every line.
             if counter > 0:
                 for line in code.splitlines(keepends=True):
                     line = line[counter:]
@@ -187,7 +191,7 @@ class Bot:
             else:
                 return code
 
-        # apply fix for "all lines are overindented" case
+        # Apply fix for "all lines are overindented" case.
         msg = unindent(msg)
 
         # If the first line does not end on ":" we can be
@@ -297,7 +301,7 @@ class Bot:
                             log.debug(f"{msg.author} posted something that needed to be put inside python code "
                                       "blocks. Sending the user some instructions.")
                         else:
-                            log.trace("The code only consists of expressions, not sending instructions")
+                            log.trace("The code consists only of expressions, not sending instructions")
 
                     if howto != "":
                         howto_embed = Embed(description=howto)
