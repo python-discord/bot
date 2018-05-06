@@ -135,9 +135,15 @@ class Bot:
 
                 if pycode:
                     content = content.splitlines(keepends=True)
+
+                    # check if there might be code in the first line, and preservet it.
+                    first_line = content[0]
                     if " " in content[0]:
-                        content[0] = content[0][content[0].index(" "):]
+                        first_space = first_line.index(" ")
+                        content[0] = first_line[first_space:]
                         content = "".join(content)
+
+                    # if there's no code we can just get rid of the first line
                     else:
                         content = "".join(content[1:])
 
@@ -185,10 +191,10 @@ class Bot:
         msg = unindent(msg)
 
         # If the first line does not end on ":" we can be
-        # Sure the next line has to be moved to the same level
-        # Otherwise the all the other lines are dedented by the
-        # Amount of spaces required to dedent the second line to
-        # Four spaces
+        # sure the next line has to be moved to the same level
+        # otherwise the all the other lines are dedented by the
+        # amount of spaces required to dedent the second line to
+        # four spaces.
         first_line = msg.splitlines()[0]
         code = "".join(msg.splitlines(keepends=True)[1:])
         if not first_line.endswith(":"):
