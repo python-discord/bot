@@ -27,14 +27,15 @@ class Bot:
         self.bot = bot
 
         # Stores allowed channels plus unix timestamp from last call.
-        self.channel_cooldowns = {HELP1_CHANNEL: 0,
-                                  HELP2_CHANNEL: 0,
-                                  HELP3_CHANNEL: 0,
-                                  HELP4_CHANNEL: 0,
-                                  PYTHON_CHANNEL: 0,
-                                  DEVTEST_CHANNEL: 0,
-                                  BOT_CHANNEL: 0
-        }  # noqa. E124
+        self.channel_cooldowns = {
+            HELP1_CHANNEL: 0,
+            HELP2_CHANNEL: 0,
+            HELP3_CHANNEL: 0,
+            HELP4_CHANNEL: 0,
+            PYTHON_CHANNEL: 0,
+            DEVTEST_CHANNEL: 0,
+            BOT_CHANNEL: 0
+        }
 
     @group(invoke_without_command=True, name="bot", hidden=True)
     @with_role(VERIFIED_ROLE)
@@ -110,8 +111,10 @@ class Bot:
         if msg.count("\n") >= 3:
             # Filtering valid Python codeblocks and exiting if a valid Python codeblock is found.
             if re.search("```(?:py|python)\n(.*?)```", msg, re.IGNORECASE | re.DOTALL) and not bad_ticks:
-                log.trace("Someone wrote a message that was already a "
-                          "valid Python syntax highlighted code block. No action taken.")
+                log.trace(
+                    "Someone wrote a message that was already a "
+                    "valid Python syntax highlighted code block. No action taken."
+                )
                 return None
 
             else:
@@ -259,12 +262,15 @@ class Bot:
                                 lines_walked += 1
                             content = content[:current_length] + "#..."
 
-                        howto = ("It looks like you are trying to paste code into this channel.\n\n"
-                                 "You seem to be using the wrong symbols to indicate where the codeblock should start. "
-                                 f"The correct symbols would be \`\`\`, not `{ticks}`.\n\n"
-                                 "**Here is an example of how it should look:**\n"
-                                 f"\`\`\`python\n{content}\n\`\`\`\n\n**This will result in the following:**\n"
-                                 f"```python\n{content}\n```")
+                        howto = (
+                            "It looks like you are trying to paste code into this channel.\n\n"
+                            "You seem to be using the wrong symbols to indicate where the codeblock should start. "
+                            f"The correct symbols would be \`\`\`, not `{ticks}`.\n\n"
+                            "**Here is an example of how it should look:**\n"
+                            f"\`\`\`python\n{content}\n\`\`\`\n\n**This will result in the following:**\n"
+                            f"```python\n{content}\n```"
+                        )
+
                     else:
                         howto = ""
                         content = self.codeblock_stripping(msg.content, False)
@@ -297,13 +303,15 @@ class Bot:
                                     lines_walked += 1
                                 content = content[:current_length]+"#..."
 
-                            howto += ("It looks like you're trying to paste code into this channel.\n\n"
-                                      "Discord has support for Markdown, which allows you to post code with full "
-                                      "syntax highlighting. Please use these whenever you paste code, as this "
-                                      "helps improve the legibility and makes it easier for us to help you.\n\n"
-                                      f"**To do this, use the following method:**\n"
-                                      f"\`\`\`python\n{content}\n\`\`\`\n\n**This will result in the following:**\n"
-                                      f"```python\n{content}\n```")
+                            howto += (
+                                "It looks like you're trying to paste code into this channel.\n\n"
+                                "Discord has support for Markdown, which allows you to post code with full "
+                                "syntax highlighting. Please use these whenever you paste code, as this "
+                                "helps improve the legibility and makes it easier for us to help you.\n\n"
+                                f"**To do this, use the following method:**\n"
+                                f"\`\`\`python\n{content}\n\`\`\`\n\n**This will result in the following:**\n"
+                                f"```python\n{content}\n```"
+                            )
 
                             log.debug(f"{msg.author} posted something that needed to be put inside python code "
                                       "blocks. Sending the user some instructions.")
@@ -319,10 +327,11 @@ class Bot:
                     self.channel_cooldowns[msg.channel.id] = time.time()
 
                 except SyntaxError:
-                    log.trace(f"{msg.author} posted in a help channel, and when we tried to parse it as Python code, "
-                              "ast.parse raised a SyntaxError. This probably just means it wasn't Python code. "
-                              f"The message that was posted was:\n\n{msg.content}\n\n")
-                    pass
+                    log.trace(
+                        f"{msg.author} posted in a help channel, and when we tried to parse it as Python code, "
+                        "ast.parse raised a SyntaxError. This probably just means it wasn't Python code. "
+                        f"The message that was posted was:\n\n{msg.content}\n\n"
+                    )
 
 
 def setup(bot):
