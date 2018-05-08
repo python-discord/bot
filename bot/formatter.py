@@ -1,5 +1,3 @@
-# coding=utf-8
-
 """
 Credit to Rapptz's script used as an example:
 https://github.com/Rapptz/discord.py/blob/rewrite/discord/ext/commands/formatter.py
@@ -36,6 +34,13 @@ class Formatter(HelpFormatter):
             entry = "    {0}{1:<{width}} # {2}".format(HELP_PREFIX, name, command.short_doc, width=max_width)
             shortened = self.shorten(entry)
             self._paginator.add_line(shortened)
+
+            if name.endswith('get()'):
+                alternate_syntax_entry = "    {0}{1:<{width}} # {2}".format(
+                    HELP_PREFIX, name.split('.')[0] + '[<arg>]',
+                    f"Alternative syntax for {name}", width=max_width
+                )
+                self._paginator.add_line(self.shorten(alternate_syntax_entry))
 
     async def format(self):
         """

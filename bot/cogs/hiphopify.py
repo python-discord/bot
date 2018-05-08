@@ -28,7 +28,7 @@ class Hiphopify:
         """
         This event will trigger when someone changes their name.
         At this point we will look up the user in our database and check
-        whether they are allowed o change their names, or if they are in
+        whether they are allowed to change their names, or if they are in
         hiphop-prison. If they are not allowed, we will change it back.
         :return:
         """
@@ -49,7 +49,7 @@ class Hiphopify:
 
         response = await response.json()
 
-        if response:
+        if response and response.get("end_timestamp") and not response.get("error_code"):
             if after.display_name == response.get("forced_nick"):
                 return  # Nick change was triggered by this event. Ignore.
 
@@ -128,9 +128,11 @@ class Hiphopify:
 
             embed.title = "Congratulations!"
             embed.description = (
-                "Your previous nickname was so bad that we have decided to change it. "
+                f"Your previous nickname, **{member.display_name}**, was so bad that we have decided to change it. "
                 f"Your new nickname will be **{forced_nick}**.\n\n"
-                f"You will be unable to change your nickname back until \n**{end_time}**."
+                f"You will be unable to change your nickname until \n**{end_time}**.\n\n"
+                "If you're confused by this, please read our "
+                "[official nickname policy](https://pythondiscord.com/about/rules#nickname-policy)."
             )
             embed.set_image(url=image_url)
 
@@ -146,7 +148,7 @@ class Hiphopify:
             # Change the nick and return the embed
             log.debug("Changing the users nickname and sending the embed.")
             await member.edit(nick=forced_nick)
-            await ctx.send(member.mention, embed=embed)
+            await ctx.send(embed=embed)
 
     @with_role(ADMIN_ROLE, OWNER_ROLE, MODERATOR_ROLE)
     @command(name="unhiphopify()", aliases=["unhiphopify", "release_nick()", "release_nick"])
