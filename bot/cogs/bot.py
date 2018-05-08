@@ -8,7 +8,7 @@ from discord.ext.commands import AutoShardedBot, Context, command, group
 from dulwich.repo import Repo
 
 from bot.constants import (
-    ADMIN_ROLE, BOT_AVATAR_URL, BOT_CHANNEL,
+    ADMIN_ROLE, BOT_AVATAR_URL, BOT_COMMANDS_CHANNEL,
     DEVTEST_CHANNEL, HELP1_CHANNEL, HELP2_CHANNEL,
     HELP3_CHANNEL, HELP4_CHANNEL, MODERATOR_ROLE, OWNER_ROLE,
     PYTHON_CHANNEL, PYTHON_GUILD, VERIFIED_ROLE
@@ -34,7 +34,7 @@ class Bot:
             HELP4_CHANNEL: 0,
             PYTHON_CHANNEL: 0,
             DEVTEST_CHANNEL: 0,
-            BOT_CHANNEL: 0
+            BOT_COMMANDS_CHANNEL: 0
         }
 
     @group(invoke_without_command=True, name="bot", hidden=True)
@@ -234,7 +234,7 @@ class Bot:
     async def on_message(self, msg: Message):
         if msg.channel.id in self.channel_cooldowns and not msg.author.bot and len(msg.content.splitlines()) > 3:
             on_cooldown = time.time() - self.channel_cooldowns[msg.channel.id] < 300
-            if not on_cooldown or msg.channel.id == DEVTEST_CHANNEL:
+            if not on_cooldown or msg.channel.id in [DEVTEST_CHANNEL, BOT_COMMANDS_CHANNEL]:
                 try:
                     not_backticks = ["'''", '"""', "´´´", "‘‘‘", "’’’", "′′′", "“““", "”””", "″″″", "〃〃〃"]
                     bad_ticks = msg.content[:3] in not_backticks
