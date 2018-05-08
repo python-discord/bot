@@ -231,10 +231,10 @@ class Bot:
                 final += line[4:]
         log.trace(f"Formatted: \n\n{msg}\n\n to \n\n{final}\n\n")
         if not final:
-            log.debug(f"Found no REPL code in \n\n{msg}\n\n")
+            log.trace(f"Found no REPL code in \n\n{msg}\n\n")
             return msg, False
         else:
-            log.debug(f"Found REPL code in \n\n{msg}\n\n")
+            log.trace(f"Found REPL code in \n\n{msg}\n\n")
             return final.rstrip(), True
 
     async def on_message(self, msg: Message):
