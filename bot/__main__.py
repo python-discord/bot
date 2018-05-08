@@ -1,10 +1,14 @@
+import logging
 import os
 
 from aiohttp import AsyncResolver, ClientSession, TCPConnector
 from discord import Game
 from discord.ext.commands import AutoShardedBot, when_mentioned_or
 
+from bot.constants import CLICKUP_KEY
 from bot.formatter import Formatter
+
+log = logging.getLogger(__name__)
 
 bot = AutoShardedBot(
     command_prefix=when_mentioned_or(
@@ -33,13 +37,19 @@ bot.load_extension("bot.cogs.events")
 # Commands, etc
 bot.load_extension("bot.cogs.bot")
 bot.load_extension("bot.cogs.cogs")
-bot.load_extension("bot.cogs.clickup")
+
+# Local setups usually don't have the clickup key set,
+# and loading the cog would simply spam errors in the console.
+if CLICKUP_KEY is not None:
+    bot.load_extension("bot.cogs.clickup")
+else:
+    log.warning("`CLICKUP_KEY` not set in the environment, not loading the ClickUp cog.")
+
 bot.load_extension("bot.cogs.deployment")
 bot.load_extension("bot.cogs.doc")
 bot.load_extension("bot.cogs.eval")
 bot.load_extension("bot.cogs.fun")
 bot.load_extension("bot.cogs.hiphopify")
-# bot.load_extension("bot.cogs.math")
 bot.load_extension("bot.cogs.tags")
 bot.load_extension("bot.cogs.verification")
 
