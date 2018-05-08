@@ -1,5 +1,3 @@
-# coding=utf-8
-
 """
 Credit to Rapptz's script used as an example:
 https://github.com/Rapptz/discord.py/blob/rewrite/discord/ext/commands/formatter.py
@@ -37,6 +35,13 @@ class Formatter(HelpFormatter):
             shortened = self.shorten(entry)
             self._paginator.add_line(shortened)
 
+            if name.endswith('get()'):
+                alternate_syntax_entry = "    {0}{1:<{width}} # {2}".format(
+                    HELP_PREFIX, name.split('.')[0] + '[<arg>]',
+                    f"Alternative syntax for {name}", width=max_width
+                )
+                self._paginator.add_line(self.shorten(alternate_syntax_entry))
+
     async def format(self):
         """
         rewritten help command to make it more python-y
@@ -71,7 +76,8 @@ class Formatter(HelpFormatter):
             # get the args using the handy inspect module
             argspec = getfullargspec(self.command.callback)
             arguments = formatargspec(*argspec)
-            for _arg, annotation in argspec.annotations.items():
+
+            for annotation in argspec.annotations.values():
                 # remove module name to only show class name
                 # discord.ext.commands.context.Context -> Context
                 arguments = arguments.replace(f"{annotation.__module__}.", "")
@@ -119,7 +125,7 @@ class Formatter(HelpFormatter):
         def category_check(tup):
             cog = tup[1].cog_name
             # zero width character to make it appear last when put in alphabetical order
-            return cog if cog is not None else "\u200bNoCategory"
+            return cog if cog is not None else "Bot"
 
         command_list = await self.filter_command_list()
         data = sorted(command_list, key=category_check)
