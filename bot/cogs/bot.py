@@ -26,16 +26,22 @@ class Bot:
     def __init__(self, bot: AutoShardedBot):
         self.bot = bot
 
-        # Stores allowed channels plus unix timestamp from last call.
+        # Stores allowed channels plus epoch time since last call.
         self.channel_cooldowns = {
+            BOT_COMMANDS_CHANNEL: 0,
+            DEVTEST_CHANNEL: 0,
             HELP1_CHANNEL: 0,
             HELP2_CHANNEL: 0,
             HELP3_CHANNEL: 0,
             HELP4_CHANNEL: 0,
             PYTHON_CHANNEL: 0,
-            DEVTEST_CHANNEL: 0,
-            BOT_COMMANDS_CHANNEL: 0
         }
+
+        # These channels will not be subject to cooldown
+        self.channel_whitelist = (
+            BOT_COMMANDS_CHANNEL,
+            DEVTEST_CHANNEL,
+        )
 
     @group(invoke_without_command=True, name="bot", hidden=True)
     @with_role(VERIFIED_ROLE)
@@ -234,7 +240,7 @@ class Bot:
     async def on_message(self, msg: Message):
         if msg.channel.id in self.channel_cooldowns and not msg.author.bot and len(msg.content.splitlines()) > 3:
             on_cooldown = time.time() - self.channel_cooldowns[msg.channel.id] < 300
-            if not on_cooldown or msg.channel.id in [DEVTEST_CHANNEL, BOT_COMMANDS_CHANNEL]:
+            if not on_cooldown or msg.channel.id in self.channel_whitelist:
                 try:
                     not_backticks = ["'''", '"""', "´´´", "‘‘‘", "’’’", "′′′", "“““", "”””", "″″″", "〃〃〃"]
                     bad_ticks = msg.content[:3] in not_backticks
