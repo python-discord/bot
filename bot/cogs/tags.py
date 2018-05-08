@@ -1,36 +1,85 @@
 import logging
 import random
 import time
-from typing import Optional
 
-from discord import Colour, Embed, User
-from discord.ext.commands import AutoShardedBot, Context, command
+from discord import Colour, Embed
+from discord.ext.commands import (
+    AutoShardedBot, BadArgument,
+    Context, Converter, command
+)
 
 from bot.constants import (
-    Cooldowns, Keys, Roles, URLs
+    Channels, Cooldowns, Keys, Roles, URLs
 )
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
 
 log = logging.getLogger(__name__)
 
+TEST_CHANNELS = (
+    Channels.devtest,
+    Channels.bot,
+    Channels.helpers
+)
+
+
+class TagNameConverter(Converter):
+    @staticmethod
+    async def convert(ctx: Context, tag_name: str):
+        def is_number(value):
+            try:
+                float(value)
+            except ValueError:
+                return False
+            return True
+
+        tag_name = tag_name.lower().strip()
+
+        # The tag name has at least one invalid character.
+        if ascii(tag_name)[1:-1] != tag_name:
+            log.warning(f"{ctx.author} tried to put an invalid character in a tag name. "
+                        "Rejecting the request.")
+            raise BadArgument("Don't be ridiculous, you can't use that character!")
+
+        # The tag name is either empty, or consists of nothing but whitespace.
+        elif not tag_name:
+            log.warning(f"{ctx.author} tried to create a tag with a name consisting only of whitespace. "
+                        "Rejecting the request.")
+            raise BadArgument("Tag names should not be empty, or filled with whitespace.")
+
+        # The tag name is a number of some kind, we don't allow that.
+        elif is_number(tag_name):
+            log.warning(f"{ctx.author} tried to create a tag with a digit as its name. "
+                        "Rejecting the request.")
+            raise BadArgument("Tag names can't be numbers.")
+
+        # The tag name is longer than 127 characters.
+        elif len(tag_name) > 127:
+            log.warning(f"{ctx.author} tried to request a tag name with over 127 characters. "
+                        "Rejecting the request.")
+            raise BadArgument("Are you insane? That's way too long!")
+
+        return tag_name
+
+
+class TagContentConverter(Converter):
+    @staticmethod
+    async def convert(ctx: Context, tag_content: str):
+        tag_content = tag_content.strip()
+
+        # The tag contents should not be empty, or filled with whitespace.
+        if not tag_content:
+            log.warning(f"{ctx.author} tried to create a tag containing only whitespace. "
+                        "Rejecting the request.")
+            raise BadArgument("Tag contents should not be empty, or filled with whitespace.")
+
+        return tag_content
+
 
 class Tags:
     """
     Save new tags and fetch existing tags.
     """
-
-    FAIL_TITLES = [
-        "Please don't do that.",
-        "You have to stop.",
-        "Do you mind?",
-        "In the future, don't do that.",
-        "That was a mistake.",
-        "You blew it.",
-        "You're bad at computers.",
-        "Are you trying to kill me?",
-        "Noooooo!!"
-    ]
 
     def __init__(self, bot: AutoShardedBot):
         self.bot = bot
@@ -100,59 +149,6 @@ class Tags:
 
         return tag_data
 
-    @staticmethod
-    async def validate(author: User, tag_name: str, tag_content: str = None) -> Optional[Embed]:
-        """
-        Create an embed based on the validity of a tag's name and content
-
-        :param author: The user that called the command
-        :param tag_name: The name of the tag to validate.
-        :param tag_content: The tag's content, if any.
-        :return: A validation embed if invalid, otherwise None
-        """
-
-        def is_number(value):
-            try:
-                float(value)
-            except ValueError:
-                return False
-            else:
-                return True
-
-        embed = Embed()
-        embed.colour = Colour.red()
-
-        # 'tag_name' has at least one invalid character.
-        if ascii(tag_name)[1:-1] != tag_name:
-            log.warning(f"{author} tried to put an invalid character in a tag name. "
-                        "Rejecting the request.")
-            embed.description = "Don't be ridiculous, you can't use that character!"
-
-        # 'tag_content' or 'tag_name' are either empty, or consist of nothing but whitespace
-        elif (tag_content is not None and not tag_content) or not tag_name:
-            log.warning(f"{author} tried to create a tag with a name consisting only of whitespace. "
-                        "Rejecting the request.")
-            embed.description = "Tags should not be empty, or filled with whitespace."
-
-        # 'tag_name' is a number of some kind, we don't allow that.
-        elif is_number(tag_name):
-            log.error("inside the is_number")
-            log.warning(f"{author} tried to create a tag with a digit as its name. "
-                        "Rejecting the request.")
-            embed.description = "Tag names can't be numbers."
-
-        # 'tag_name' is longer than 127 characters
-        elif len(tag_name) > 127:
-            log.warning(f"{author} tried to request a tag name with over 127 characters. "
-                        "Rejecting the request.")
-            embed.description = "Are you insane? That's way too long!"
-
-        else:
-            return None
-
-        embed.title = random.choice(Tags.FAIL_TITLES)
-        return embed
-
     @command(name="tags()", aliases=["tags"], hidden=True)
     async def info_command(self, ctx: Context):
         """
@@ -165,7 +161,7 @@ class Tags:
         return await ctx.invoke(self.bot.get_command("help"), "Tags")
 
     @command(name="tags.get()", aliases=["tags.get", "tags.show()", "tags.show", "get_tag"])
-    async def get_command(self, ctx: Context, tag_name: str=None):
+    async def get_command(self, ctx: Context, tag_name: TagNameConverter=None):
         """
         Get a list of all tags or a specified tag.
 
@@ -206,13 +202,6 @@ class Tags:
 
         tags = []
 
-        if tag_name is not None:
-            tag_name = tag_name.lower().strip()
-            validation = await self.validate(ctx.author, tag_name)
-
-            if validation is not None:
-                return await ctx.send(embed=validation)
-
         embed = Embed()
         embed.colour = Colour.red()
         tag_data = await self.get_tag_data(tag_name)
@@ -224,10 +213,12 @@ class Tags:
             if tag_name:
                 log.debug(f"{ctx.author} requested the tag '{tag_name}'")
                 embed.title = tag_name
-                self.tag_cooldowns[tag_name] = {
-                    "time": time.time(),
-                    "channel": ctx.channel.id
-                }
+
+                if ctx.channel.id not in TEST_CHANNELS:
+                    self.tag_cooldowns[tag_name] = {
+                        "time": time.time(),
+                        "channel": ctx.channel.id
+                    }
 
             else:
                 embed.title = "**Current tags**"
@@ -257,11 +248,18 @@ class Tags:
 
         # Paginate if this is a list of all tags
         if tags:
+            if ctx.invoked_with == "tags.keys()":
+                detail_invocation = "bot.tags[<tagname>]"
+            elif ctx.invoked_with == "tags.get()":
+                detail_invocation = "bot.tags.get(<tagname>)"
+            else:
+                detail_invocation = "bot.tags.get <tagname>"
+
             log.debug(f"Returning a paginated list of all tags.")
             return await LinePaginator.paginate(
                 (lines for lines in tags),
                 ctx, embed,
-                footer_text="To show a tag, type bot.tags.get <tagname>.",
+                footer_text=f"To show a tag, type {detail_invocation}.",
                 empty=False,
                 max_lines=15
             )
@@ -270,7 +268,7 @@ class Tags:
 
     @with_role(Roles.admin, Roles.owner, Roles.moderator)
     @command(name="tags.set()", aliases=["tags.set", "tags.add", "tags.add()", "tags.edit", "tags.edit()", "add_tag"])
-    async def set_command(self, ctx: Context, tag_name: str, tag_content: str):
+    async def set_command(self, ctx: Context, tag_name: TagNameConverter, tag_content: TagContentConverter):
         """
         Create a new tag or edit an existing one.
 
@@ -278,11 +276,6 @@ class Tags:
         :param tag_name: The name of the tag to create or edit.
         :param tag_content: The content of the tag.
         """
-
-        validation = await self.validate(ctx.author, tag_name, tag_content)
-
-        if validation is not None:
-            return await ctx.send(embed=validation)
 
         tag_name = tag_name.lower().strip()
         tag_content = tag_content.strip()
@@ -311,18 +304,13 @@ class Tags:
 
     @with_role(Roles.admin, Roles.owner)
     @command(name="tags.delete()", aliases=["tags.delete", "tags.remove", "tags.remove()", "remove_tag"])
-    async def delete_command(self, ctx: Context, tag_name: str):
+    async def delete_command(self, ctx: Context, tag_name: TagNameConverter):
         """
         Remove a tag from the database.
 
         :param ctx: discord message context
         :param tag_name: The name of the tag to delete.
         """
-
-        validation = await self.validate(ctx.author, tag_name)
-
-        if validation is not None:
-            return await ctx.send(embed=validation)
 
         tag_name = tag_name.lower().strip()
         embed = Embed()
@@ -350,6 +338,19 @@ class Tags:
                                  "Please try again. If the problem persists, see the error logs.")
 
         return await ctx.send(embed=embed)
+
+    @get_command.error
+    @set_command.error
+    @delete_command.error
+    async def command_error(self, ctx, error):
+        if isinstance(error, BadArgument):
+            embed = Embed()
+            embed.colour = Colour.red()
+            embed.description = str(error)
+            embed.title = random.choice(self.FAIL_TITLES)
+            await ctx.send(embed=embed)
+        else:
+            log.error(f"Unhandled tag command error: {error} ({error.original})")
 
     @command(name="tags.keys()")
     async def keys_command(self, ctx: Context):

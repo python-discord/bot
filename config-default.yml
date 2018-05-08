@@ -25,6 +25,8 @@ guild:
         devtest: 414574275865870337
         verification: 352442727016693763
         checkpoint_test: 422077681434099723
+        helpers: 385474242440986624
+        modlog: 282638479504965634
 
     roles:
         admin: 267628507062992896
@@ -56,6 +58,7 @@ urls:
     deploy: !ENV 'DEPLOY_URL'
     status: !ENV 'STATUS_URL'
     site: 'pythondiscord.com'
+    site_hiphopify_api: 'https://api.pythondiscord.com/hiphopify'
     site_tags_api: 'https://api.pythondiscord.com/tags'
     site_user_api: 'https://api.pythondiscord.com/users'
     github_bot_repo: 'https://github.com/discord-python/bot'

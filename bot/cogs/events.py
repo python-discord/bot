@@ -1,4 +1,3 @@
-# coding=utf-8
 import logging
 
 from discord import Embed, Member
@@ -50,6 +49,10 @@ class Events:
             help_command = (self.bot.get_command("help"), command.name)
         else:
             help_command = (self.bot.get_command("help"),)
+
+        if hasattr(command, "error"):
+            log.debug(f"Command {command} has a local error handler, ignoring.")
+            return
 
         if isinstance(e, BadArgument):
             await ctx.send(f"Bad argument: {e}\n")
