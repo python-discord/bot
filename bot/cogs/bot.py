@@ -28,8 +28,6 @@ class Bot:
 
         # Stores allowed channels plus epoch time since last call.
         self.channel_cooldowns = {
-            BOT_COMMANDS_CHANNEL: 0,
-            DEVTEST_CHANNEL: 0,
             HELP1_CHANNEL: 0,
             HELP2_CHANNEL: 0,
             HELP3_CHANNEL: 0,
@@ -37,7 +35,7 @@ class Bot:
             PYTHON_CHANNEL: 0,
         }
 
-        # These channels will not be subject to cooldown
+        # These channels will also work, but will not be subject to cooldown
         self.channel_whitelist = (
             BOT_COMMANDS_CHANNEL,
             DEVTEST_CHANNEL,
@@ -238,9 +236,24 @@ class Bot:
             return final.rstrip(), True
 
     async def on_message(self, msg: Message):
-        if msg.channel.id in self.channel_cooldowns and not msg.author.bot and len(msg.content.splitlines()) > 3:
-            on_cooldown = time.time() - self.channel_cooldowns[msg.channel.id] < 300
-            if not on_cooldown or msg.channel.id in self.channel_whitelist:
+        """
+        Detect poorly formatted Python code and send the user
+        a helpful message explaining how to do properly
+        formatted Python syntax highlighting codeblocks.
+        """
+
+        parse_codeblock = (
+            (
+                msg.channel.id in self.channel_cooldowns
+                or msg.channel.id in self.channel_whitelist
+            )
+            and not msg.author.bot
+            and len(msg.content.splitlines()) > 3
+        )
+
+        if parse_codeblock:
+            on_cooldown = (time.time() - self.channel_cooldowns.get(msg.channel.id, 0)) < 300
+            if not on_cooldown:
                 try:
                     not_backticks = ["'''", '"""', "´´´", "‘‘‘", "’’’", "′′′", "“““", "”””", "″″″", "〃〃〃"]
                     bad_ticks = msg.content[:3] in not_backticks
@@ -330,7 +343,8 @@ class Bot:
                     else:
                         return
 
-                    self.channel_cooldowns[msg.channel.id] = time.time()
+                    if msg.channel.id not in self.channel_whitelist:
+                        self.channel_cooldowns[msg.channel.id] = time.time()
 
                 except SyntaxError:
                     log.trace(
