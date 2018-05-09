@@ -103,7 +103,7 @@ def _get_word(self) -> str:
 
         # Check what's after the '(' or '['
         next_char = None
-        if len(self.buffer) != self.index:
+        if len(self.buffer) - 1 != self.index:
             next_char = self.buffer[self.index + 1]
 
         # Catch raw channel, member or role mentions and wrap them in quotes.
@@ -135,6 +135,13 @@ def _get_word(self) -> str:
             # Return what we'd return for a non-python syntax call
             log.trace(f"Returning {self.buffer[self.previous:self.index]}")
             parsed_result = self.buffer[self.previous:self.index]
+
+        elif current == "(" or current == "[" and not next_char:
+
+            # Just remove the start bracket
+            log.debug("User called command with a single bracket. Removing bracket.")
+            parsed_result = self.buffer[self.previous:self.index]
+            args = None
 
         # Check if a command in the form of `bot.tags['ask']`
         # or alternatively `bot.tags['ask'] = 'whatever'` was used.
@@ -183,29 +190,35 @@ def _get_word(self) -> str:
                 args = ''
                 log.trace(f"Command is of unknown syntax: {self.buffer}")
 
-        # Force args into container
-        if not isinstance(args, tuple):
-            args = (args,)
-
-        # Type validate and format
+        # Args handling
         new_args = []
-        for arg in args:
+        if args:
+            # Force args into container
+            if not isinstance(args, tuple):
+                args = (args,)
 
-            # Other types get converted to strings
-            if not isinstance(arg, str):
-                log.trace(f"{arg} is not a str, casting to str.")
-                arg = str(arg)
+            # Type validate and format
+            for arg in args:
 
-            # Allow using double quotes within triple double quotes
-            arg = arg.replace('"', '\\"')
+                # Other types get converted to strings
+                if not isinstance(arg, str):
+                    log.trace(f"{arg} is not a str, casting to str.")
+                    arg = str(arg)
 
-            # Adding double quotes to every argument
-            log.trace("Wrapping all args in double quotes.")
-            new_args.append(f'"{arg}"')
+                # Allow using double quotes within triple double quotes
+                arg = arg.replace('"', '\\"')
+
+                # Adding double quotes to every argument
+                log.trace("Wrapping all args in double quotes.")
+                new_args.append(f'"{arg}"')
 
         # Reconstruct valid discord.py syntax
         prefix = self.buffer[:self.previous]
-        self.buffer = f"{prefix}{parsed_result} {' '.join(new_args)}"
+        self.buffer = f"{prefix}{parsed_result}"
+
+        if new_args:
+            self.buffer += ' '.join(new_args)
+
         self.index = len(f"{prefix}{parsed_result}")
         self.end = len(self.buffer)
         log.trace(f"Modified the buffer. New buffer is now '{self.buffer}'")

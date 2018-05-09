@@ -8,7 +8,7 @@ from discord.ext.commands import AutoShardedBot, Context, command, group
 from dulwich.repo import Repo
 
 from bot.constants import (
-    ADMIN_ROLE, BOT_AVATAR_URL, BOT_CHANNEL,
+    ADMIN_ROLE, BOT_AVATAR_URL, BOT_COMMANDS_CHANNEL,
     DEVTEST_CHANNEL, HELP1_CHANNEL, HELP2_CHANNEL,
     HELP3_CHANNEL, HELP4_CHANNEL, MODERATOR_ROLE, OWNER_ROLE,
     PYTHON_CHANNEL, PYTHON_GUILD, VERIFIED_ROLE
@@ -26,16 +26,20 @@ class Bot:
     def __init__(self, bot: AutoShardedBot):
         self.bot = bot
 
-        # Stores allowed channels plus unix timestamp from last call.
+        # Stores allowed channels plus epoch time since last call.
         self.channel_cooldowns = {
             HELP1_CHANNEL: 0,
             HELP2_CHANNEL: 0,
             HELP3_CHANNEL: 0,
             HELP4_CHANNEL: 0,
             PYTHON_CHANNEL: 0,
-            DEVTEST_CHANNEL: 0,
-            BOT_CHANNEL: 0
         }
+
+        # These channels will also work, but will not be subject to cooldown
+        self.channel_whitelist = (
+            BOT_COMMANDS_CHANNEL,
+            DEVTEST_CHANNEL,
+        )
 
     @group(invoke_without_command=True, name="bot", hidden=True)
     @with_role(VERIFIED_ROLE)
@@ -225,16 +229,31 @@ class Bot:
                 final += line[4:]
         log.trace(f"Formatted: \n\n{msg}\n\n to \n\n{final}\n\n")
         if not final:
-            log.debug(f"Found no REPL code in \n\n{msg}\n\n")
+            log.trace(f"Found no REPL code in \n\n{msg}\n\n")
             return msg, False
         else:
-            log.debug(f"Found REPL code in \n\n{msg}\n\n")
+            log.trace(f"Found REPL code in \n\n{msg}\n\n")
             return final.rstrip(), True
 
     async def on_message(self, msg: Message):
-        if msg.channel.id in self.channel_cooldowns and not msg.author.bot and len(msg.content.splitlines()) > 3:
-            on_cooldown = time.time() - self.channel_cooldowns[msg.channel.id] < 300
-            if not on_cooldown or msg.channel.id == DEVTEST_CHANNEL:
+        """
+        Detect poorly formatted Python code and send the user
+        a helpful message explaining how to do properly
+        formatted Python syntax highlighting codeblocks.
+        """
+
+        parse_codeblock = (
+            (
+                msg.channel.id in self.channel_cooldowns
+                or msg.channel.id in self.channel_whitelist
+            )
+            and not msg.author.bot
+            and len(msg.content.splitlines()) > 3
+        )
+
+        if parse_codeblock:
+            on_cooldown = (time.time() - self.channel_cooldowns.get(msg.channel.id, 0)) < 300
+            if not on_cooldown:
                 try:
                     not_backticks = ["'''", '"""', "´´´", "‘‘‘", "’’’", "′′′", "“““", "”””", "″″″", "〃〃〃"]
                     bad_ticks = msg.content[:3] in not_backticks
@@ -324,7 +343,8 @@ class Bot:
                     else:
                         return
 
-                    self.channel_cooldowns[msg.channel.id] = time.time()
+                    if msg.channel.id not in self.channel_whitelist:
+                        self.channel_cooldowns[msg.channel.id] = time.time()
 
                 except SyntaxError:
                     log.trace(
