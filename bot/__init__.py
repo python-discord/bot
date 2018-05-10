@@ -172,7 +172,7 @@ def _get_word(self) -> str:
 
     elif current == "(" and next == ")":
         # Move the cursor to capture the ()'s
-        log.debug("User called command without providing arguments.")
+        log.trace("User called command without providing arguments.")
         pos += 2
         result = self.buffer[self.previous:self.index + (pos+2)]
         self.index += 2

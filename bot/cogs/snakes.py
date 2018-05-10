@@ -38,6 +38,13 @@ ANSWERS_EMOJI = {
     "d": "\U0001F1E9",  # :regional_indicator_d: 🇩
 }
 
+ANSWERS_EMOJI_REVERSE = {
+    "\U0001F1E6": "A",  # :regional_indicator_a: 🇦
+    "\U0001F1E7": "B",  # :regional_indicator_b: 🇧
+    "\U0001F1E8": "C",  # :regional_indicator_c: 🇨
+    "\U0001F1E9": "D",  # :regional_indicator_d: 🇩
+}
+
 
 class Snakes:
     """
@@ -150,7 +157,7 @@ class Snakes:
 
         # Check to see if the bot can remove reactions
         if not ctx.channel.permissions_for(ctx.guild.me).manage_messages:
-            await ctx.send("Unable to start game as I dont have manage_messages permissions")
+            log.warning(f"Unable to start Antidote game - Missing manage_messages permissions in {ctx.channel}")
             return
 
         # Initialize variables
@@ -170,7 +177,6 @@ class Snakes:
         antidote_answer = list(ANTIDOTE_EMOJI)  # Duplicate list, not reference it
         random.shuffle(antidote_answer)
         antidote_answer.pop()
-        log.info(antidote_answer)
 
         # Begin initial board building
         for i in range(0, 10):
@@ -206,7 +212,7 @@ class Snakes:
             try:
                 reaction, user = await ctx.bot.wait_for("reaction_add", timeout=300, check=event_check)
             except asyncio.TimeoutError:
-                log.debug("Timed out waiting for a reaction")
+                log.debug("Antidote timed out waiting for a reaction")
                 break  # We're done, no reactions for the last 5 minutes
 
             if antidote_tries < 10:
@@ -218,7 +224,6 @@ class Snakes:
                     if antidote_guess_count == 4:  # Guesses complete
                         antidote_guess_count = 0
                         page_guess_list[antidote_tries] = " ".join(antidote_guess_list)
-                        log.info(f"Guess: {' '.join(antidote_guess_list)}")
 
                         # Now check guess
                         for i in range(0, len(antidote_answer)):
@@ -230,7 +235,6 @@ class Snakes:
                                 guess_result.append(CROSS_EMOJI)
                         guess_result.sort()
                         page_result_list[antidote_tries] = " ".join(guess_result)
-                        log.info(f"Guess Result: {' '.join(guess_result)}")
 
                         # Rebuild the board
                         board = []
@@ -320,10 +324,11 @@ class Snakes:
             return
 
         if str(reaction.emoji) == ANSWERS_EMOJI[answer]:
-            await ctx.channel.send("You got it! Well done!")
+            await ctx.channel.send(f"You selected **{options[answer]}**, which is correct! Well done!")
         else:
+            wrong_answer = ANSWERS_EMOJI_REVERSE[str(reaction.emoji)]
             await ctx.channel.send(
-                f"Sorry, that's incorrect. The correct answer was **{answer}**."
+                f"Sorry, **{wrong_answer}** is incorrect. The correct answer was \"**{options[answer]}**\"."
             )
 
 
