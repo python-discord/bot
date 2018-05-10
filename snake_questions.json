@@ -1,0 +1,104 @@
+{
+    "questions":[
+        {
+            "id": 0,
+            "question": "How long have snakes been roaming the Earth?",
+            "a":"3 million years",
+            "b":"30 million years",
+            "c":"130 million years",
+            "d":"200 million years",
+            "answerkey":"c"
+        },
+        {
+            "id": 1,
+            "question": "What characteristics do all snakes share?",
+            "a":"They are carnivoes",
+            "b":"They are all programming languages",
+            "c":"Cold-blooded",
+            "d":"They are both carnivores and cold-blooded",
+            "answerkey":"c"
+        },
+        {
+            "id": 2,
+            "question": "How snakes hear?",
+            "a":"With small ears",
+            "b":"Through their skin",
+            "c":"Through their tail",
+            "d":"They don't use their ears at all",
+            "answerkey":"b"
+        },
+        {
+            "id": 3,
+            "question": "What don't snakes see?",
+            "a":"Colour",
+            "b":"Light",
+            "c":"Both of the above",
+            "d":"Other snakes",
+            "answerkey":"a"
+        },
+        {
+            "id": 4,
+            "question": "What unique vision ability do boas and pythons possess?",
+            "a":"Night vision",
+            "b":"Infared vision",
+            "c":"See through walls",
+            "d":"They don't have vision",
+            "answerkey":"b"
+        },
+        {
+            "id": 5,
+            "question": "How does a snake smell?",
+            "a":"Through its nose",
+            "b":"Through its tongue",
+            "c":"Through its ears",
+            "d":"Both through its nose and its tongues",
+            "answerkey":"d"
+        },
+        {
+            "id": 6,
+            "question": "Where are Jacobson's organs located in snakes?",
+            "a":"Mouth",
+            "b":"Tail",
+            "c":"Stomach",
+            "d":"Liver",
+            "answerkey":"a"
+        },
+        {
+            "id": 7,
+            "question": "Snakes have very similar internal organs compared to humans. Snakes, however; lack the following:",
+            "a":"A diaphragm",
+            "b":"Intestines",
+            "c":"Lungs",
+            "d":"Kidney",
+            "answerkey":"a"
+        },
+        {
+            "id": 8,
+            "question": "Snakes have different shaped lungs than humans. What do snakes have?",
+            "a":"An elongated right lung",
+            "b":"A small left lung",
+            "c":"Both of the above",
+            "d":"None of the above",
+            "answerkey":"c"
+        },
+        {
+            "id": 9,
+            "question": "What's true about two-headed snakes?",
+            "a":"They're a myth!",
+            "b":"Rarely survive in the wild",
+            "c":"They're very dangerous",
+            "d":"They can kiss each other",
+            "answerkey":"b"
+        },
+        {
+            "id": 10,
+            "question": "What substance covers a snake's skin?",
+            "a":"Calcium",
+            "b":"Keratin",
+            "c":"Copper",
+            "d":"Iron",
+            "answerkey":"b"
+        }
+    ]
+
+}
