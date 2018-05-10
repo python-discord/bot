@@ -1,5 +1,4 @@
 import asyncio
-import json
 import logging
 import random
 import string
@@ -7,7 +6,7 @@ import string
 from discord import Colour, Embed, Member, Reaction
 from discord.ext.commands import AutoShardedBot, Context, command
 
-from bot import constants
+from bot.constants import SITE_API_KEY, SITE_API_SNAKE_QUIZ_URL
 
 log = logging.getLogger(__name__)
 
@@ -53,6 +52,7 @@ class Snakes:
     def __init__(self, bot: AutoShardedBot):
         self.bot = bot
         self.SNAKES = ['black cobra', 'children\'s python']  # temporary
+        self.headers = {"X-API-KEY": SITE_API_KEY}
 
     def get_snake_name(self) -> str:
         """
@@ -296,17 +296,17 @@ class Snakes:
             )
 
         # Prepare a question.
-        with open(f"{constants.PROJECT_ROOT}/snake_questions.json") as all_questions:
-            questions = json.load(all_questions)
-
-        question = random.choice(questions["questions"])
+        response = await self.bot.http_session.get(SITE_API_SNAKE_QUIZ_URL, headers=self.headers)
+        question = await response.json()
         answer = question["answerkey"]
-        options = [f"**{key.upper()}**. {question[key]}" for key in ANSWERS_EMOJI.keys()]
+        options = {key: question[key] for key in ANSWERS_EMOJI.keys()}
 
         # Build and send the embed.
         embed = Embed(
             title=question["question"],
-            description="\n".join(options)
+            description="\n".join(
+                [f"**{key.upper()}**: {answer}" for key, answer in options.items()]
+            )
         )
         quiz = await ctx.channel.send("", embed=embed)
         for emoji in ANSWERS_EMOJI.values():
@@ -323,7 +323,7 @@ class Snakes:
             await ctx.channel.send("You got it! Well done!")
         else:
             await ctx.channel.send(
-                f"Sorry, that's incorrect. The correct answer was **{answer.upper()}**."
+                f"Sorry, that's incorrect. The correct answer was **{answer}**."
             )
 
 

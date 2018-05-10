@@ -38,6 +38,7 @@ SITE_API_URL = f"{SITE_PROTOCOL}://api.{SITE_URL}"
 SITE_API_USER_URL = f"{SITE_API_URL}/user"
 SITE_API_TAGS_URL = f"{SITE_API_URL}/tags"
 SITE_API_HIPHOPIFY_URL = f"{SITE_API_URL}/hiphopify"
+SITE_API_SNAKE_QUIZ_URL = f"{SITE_API_URL}/snake_quiz"
 GITHUB_URL_BOT = "https://github.com/discord-python/bot"
 BOT_AVATAR_URL = "https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle/logo_circle.png"
 
