@@ -1,10 +1,15 @@
 import asyncio
+import json
 import logging
 import random
 import string
+from typing import Dict
 
-from discord import Colour, Embed, Member, Reaction
+from discord import Colour, Embed, Member, Message, Reaction
+from discord.abc import Messageable
 from discord.ext.commands import AutoShardedBot, Context, command
+
+from bot import constants
 
 log = logging.getLogger(__name__)
 
@@ -260,6 +265,50 @@ class Snakes:
 
         log.debug("Ending pagination and removing all reactions...")
         await board_id.clear_reactions()
+
+    @command(name="snakes.quiz()", alias=["snakes.quiz"])
+    async def quiz(self, ctx: Context):
+        """Asks a snake-related question in the chat and validates the user's guess."""
+        channel = ctx.channel
+        answers_emoji = {
+            "a": "🇦",
+            "b": "🇧",
+            "c": "🇨",
+            "d": "🇩"
+        }
+        question, message = await self._post_quiz_question(answers_emoji, channel)
+        await self._validate_quiz_answer(answers_emoji, channel, ctx, question, message)
+
+    async def _post_quiz_question(self, answers_emoji:Dict[str,str], channel:Messageable):
+        """Ask a random question from the snake_questions.json in the chat."""
+        with open(f"{constants.PROJECT_ROOT}/snake_questions.json") as quizson:
+            questions = json.load(quizson)
+        question = questions["questions"][random.randint(0, 10)]
+        em = Embed(title=question["question"],
+                   description="\n\n".join(f"{value}: {question[key]}"
+                                           for key, value in answers_emoji.items()))
+        quiz = await channel.send("", embed=em)
+        for emoji in answers_emoji.values():
+            await quiz.add_reaction(emoji)
+        return question, quiz
+
+    async def _validate_quiz_answer(self, answers_emoji:Dict[str,str], channel:Messageable, ctx:Context,
+                                    question:Dict[str,str], message:Message):
+        """Validates the author's guess to the given question."""
+        def my_check(reaction, user):
+            return reaction.message.id == message.id and user == ctx.author and str(reaction.emoji)
+
+        try:
+            reaction, user = await ctx.bot.wait_for("reaction_add", timeout=20.0, check=my_check)
+        except asyncio.TimeoutError:
+            await channel.send("Bah! You took too long.")
+        else:
+            answer = question["answerkey"]
+            if str(reaction.emoji) == answers_emoji[answer]:
+                await channel.send("That was correct! Well done!")
+            else:
+                await channel.send(f"That was incorrect! "
+                                   f"The correct answer was {answer}, unfortunately.")
 
 
 def setup(bot):

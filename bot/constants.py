@@ -60,6 +60,10 @@ WHITE_CHEVRON = "<:whitechevron:418110396973711363>"
 PAPERTRAIL_ADDRESS = os.environ.get("PAPERTRAIL_ADDRESS") or None
 PAPERTRAIL_PORT = int(os.environ.get("PAPERTRAIL_PORT") or 0)
 
+# Paths
+BOT_DIR = os.path.dirname(__file__)
+PROJECT_ROOT = os.path.abspath(os.path.join(BOT_DIR, os.pardir))
+
 # Bot replies
 NEGATIVE_REPLIES = [
     "Noooooo!!",
