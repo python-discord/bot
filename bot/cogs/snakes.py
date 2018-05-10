@@ -3,10 +3,8 @@ import json
 import logging
 import random
 import string
-from typing import Dict
 
-from discord import Colour, Embed, Member, Message, Reaction
-from discord.abc import Messageable
+from discord import Colour, Embed, Member, Reaction
 from discord.ext.commands import AutoShardedBot, Context, command
 
 from bot import constants
@@ -14,17 +12,32 @@ from bot import constants
 log = logging.getLogger(__name__)
 
 # Antidote constants
-FIRST_EMOJI = "\U0001F489"
-SECOND_EMOJI = "\U0001F48A"
-THIRD_EMOJI = "\u231B"
-FOURTH_EMOJI = "\u2620"
-FIFTH_EMOJI = "\u2697"
-EMPTY = u'\u200b'
-TICK_EMOJI = "\u2705"  # Correct peg, correct hole
-CROSS_EMOJI = "\u274C"  # Wrong
-BLANK_EMOJI = "\u26AA"  # Correct peg, wrong hle
-HOLE_EMOJI = "\u2B1C"
-ANTIDOTE_EMOJI = [FIRST_EMOJI, SECOND_EMOJI, THIRD_EMOJI, FOURTH_EMOJI, FIFTH_EMOJI]
+SYRINGE_EMOJI = "\U0001F489"  # :syringe:
+PILL_EMOJI = "\U0001F48A"     # :pill:
+HOURGLASS_EMOJI = "\u231B"    # :hourglass:
+CROSSBONES_EMOJI = "\u2620"   # :skull_crossbones:
+ALEMBIC_EMOJI = "\u2697"      # :alembic:
+TICK_EMOJI = "\u2705"         # :white_check_mark: - Correct peg, correct hole
+CROSS_EMOJI = "\u274C"        # :x: - Wrong peg, wrong hole
+BLANK_EMOJI = "\u26AA"        # :white_circle: - Correct peg, wrong hole
+HOLE_EMOJI = "\u2B1C"         # :white_square: - Used in guesses
+EMPTY_UNICODE = "\u200b"      # literally just an empty space
+
+ANTIDOTE_EMOJI = [
+    SYRINGE_EMOJI,
+    PILL_EMOJI,
+    HOURGLASS_EMOJI,
+    CROSSBONES_EMOJI,
+    ALEMBIC_EMOJI,
+]
+
+# Quiz constants
+ANSWERS_EMOJI = {
+    "a": "\U0001F1E6",  # :regional_indicator_a: 🇦
+    "b": "\U0001F1E7",  # :regional_indicator_b: 🇧
+    "c": "\U0001F1E8",  # :regional_indicator_c: 🇨
+    "d": "\U0001F1E9",  # :regional_indicator_d: 🇩
+}
 
 
 class Snakes:
@@ -166,7 +179,7 @@ class Snakes:
             board.append(f"`{i+1:02d}` "
                          f"{page_guess_list[i]} - "
                          f"{page_result_list[i]}")
-            board.append(EMPTY)
+            board.append(EMPTY_UNICODE)
         antidote_embed.add_field(name="10 guesses remaining", value="\n".join(board))
         board_id = await ctx.send(embed=antidote_embed)  # Display board
 
@@ -225,7 +238,7 @@ class Snakes:
                             board.append(f"`{i+1:02d}` "
                                          f"{page_guess_list[i]} - "
                                          f"{page_result_list[i]}")
-                            board.append(EMPTY)
+                            board.append(EMPTY_UNICODE)
 
                         # Remove Reactions
                         for emoji in antidote_guess_list:
@@ -258,7 +271,7 @@ class Snakes:
             antidote_embed = Embed(color=ctx.me.color, title="Antidote")
             antidote_embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar_url)
             antidote_embed.set_image(url="https://media.giphy.com/media/ceeN6U57leAhi/giphy.gif")
-            antidote_embed.add_field(name=EMPTY,
+            antidote_embed.add_field(name=EMPTY_UNICODE,
                                      value=f"Sorry you didnt make the antidote in time.\n"
                                            f"The formula was {' '.join(antidote_answer)}")
             await board_id.edit(embed=antidote_embed)
@@ -268,47 +281,50 @@ class Snakes:
 
     @command(name="snakes.quiz()", alias=["snakes.quiz"])
     async def quiz(self, ctx: Context):
-        """Asks a snake-related question in the chat and validates the user's guess."""
-        channel = ctx.channel
-        answers_emoji = {
-            "a": "🇦",
-            "b": "🇧",
-            "c": "🇨",
-            "d": "🇩"
-        }
-        question, message = await self._post_quiz_question(answers_emoji, channel)
-        await self._validate_quiz_answer(answers_emoji, channel, ctx, question, message)
+        """
+        Asks a snake-related question in the chat and validates the user's guess.
+        """
 
-    async def _post_quiz_question(self, answers_emoji:Dict[str,str], channel:Messageable):
-        """Ask a random question from the snake_questions.json in the chat."""
-        with open(f"{constants.PROJECT_ROOT}/snake_questions.json") as quizson:
-            questions = json.load(quizson)
-        question = questions["questions"][random.randint(0, 10)]
-        em = Embed(title=question["question"],
-                   description="\n\n".join(f"{value}: {question[key]}"
-                                           for key, value in answers_emoji.items()))
-        quiz = await channel.send("", embed=em)
-        for emoji in answers_emoji.values():
+        def valid_answer(reaction, user):
+            """
+            Test if the the answer is valid and can be evaluated.
+            """
+            return (
+                reaction.message.id == quiz.id                     # The reaction is attached to the question we asked.
+                and user == ctx.author                             # It's the user who triggered the quiz.
+                and str(reaction.emoji) in ANSWERS_EMOJI.values()  # The reaction is one of the options.
+            )
+
+        # Prepare a question.
+        with open(f"{constants.PROJECT_ROOT}/snake_questions.json") as all_questions:
+            questions = json.load(all_questions)
+
+        question = random.choice(questions["questions"])
+        answer = question["answerkey"]
+        options = [f"**{key.upper()}**. {question[key]}" for key in ANSWERS_EMOJI.keys()]
+
+        # Build and send the embed.
+        embed = Embed(
+            title=question["question"],
+            description="\n".join(options)
+        )
+        quiz = await ctx.channel.send("", embed=embed)
+        for emoji in ANSWERS_EMOJI.values():
             await quiz.add_reaction(emoji)
-        return question, quiz
 
-    async def _validate_quiz_answer(self, answers_emoji:Dict[str,str], channel:Messageable, ctx:Context,
-                                    question:Dict[str,str], message:Message):
-        """Validates the author's guess to the given question."""
-        def my_check(reaction, user):
-            return reaction.message.id == message.id and user == ctx.author and str(reaction.emoji)
-
+        # Validate the answer
         try:
-            reaction, user = await ctx.bot.wait_for("reaction_add", timeout=20.0, check=my_check)
+            reaction, user = await ctx.bot.wait_for("reaction_add", timeout=20.0, check=valid_answer)
         except asyncio.TimeoutError:
-            await channel.send("Bah! You took too long.")
+            await ctx.channel.send("Bah! You took too long.")
+            return
+
+        if str(reaction.emoji) == ANSWERS_EMOJI[answer]:
+            await ctx.channel.send("You got it! Well done!")
         else:
-            answer = question["answerkey"]
-            if str(reaction.emoji) == answers_emoji[answer]:
-                await channel.send("That was correct! Well done!")
-            else:
-                await channel.send(f"That was incorrect! "
-                                   f"The correct answer was {answer}, unfortunately.")
+            await ctx.channel.send(
+                f"Sorry, that's incorrect. The correct answer was **{answer.upper()}**."
+            )
 
 
 def setup(bot):

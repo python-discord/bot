@@ -14,7 +14,7 @@
             "question": "What characteristics do all snakes share?",
             "a":"They are carnivoes",
             "b":"They are all programming languages",
-            "c":"Cold-blooded",
+            "c":"They're all cold-blooded",
             "d":"They are both carnivores and cold-blooded",
             "answerkey":"c"
         },
@@ -48,9 +48,9 @@
         {
             "id": 5,
             "question": "How does a snake smell?",
-            "a":"Through its nose",
-            "b":"Through its tongue",
-            "c":"Through its ears",
+            "a":"Quite pleasant",
+            "b":"Through its nose",
+            "c":"Through its tongues",
             "d":"Both through its nose and its tongues",
             "answerkey":"d"
         },
@@ -85,7 +85,7 @@
             "id": 9,
             "question": "What's true about two-headed snakes?",
             "a":"They're a myth!",
-            "b":"Rarely survive in the wild",
+            "b":"They rarely survive in the wild",
             "c":"They're very dangerous",
             "d":"They can kiss each other",
             "answerkey":"b"
@@ -98,6 +98,69 @@
             "c":"Copper",
             "d":"Iron",
             "answerkey":"b"
+        },
+        {
+            "id": 11,
+            "question": "What snake doesn't have to have a mate to lay eggs?",
+            "a":"Copperhead",
+            "b":"Cornsnake",
+            "c":"Kingsnake",
+            "d":"Flower pot snake",
+            "answerkey":"d"
+        },
+        {
+            "id": 12,
+            "question": "What snake is the longest?",
+            "a":"Green anaconda",
+            "b":"Reticulated python",
+            "c":"King cobra",
+            "d":"Kingsnake",
+            "answerkey":"b"
+        },
+        {
+            "id": 13,
+            "question": "Though invasive species can now be found in the Everglades, in which three continents are pythons (members of the family Pythonidae) found in the wild?",
+            "a":"Africa, Asia and Australia",
+            "b":"Africa, Australia and Europe",
+            "c":"Africa, Australia and South America",
+            "d":"Africa, Asia and South America",
+            "answerkey":"a"
+        },
+        {
+            "id": 14,
+            "question": "Pythons are held as some of the most dangerous snakes on earth, but are often confused with anacondas. Which of these is *not* a difference between pythons and anacondas?",
+            "a":"Pythons suffocate their prey, anacondas crush them",
+            "b":"Pythons lay eggs, anacondas give birth to live young",
+            "c":"Pythons grow longer, anacondas grow heavier",
+            "d":"Pythons generally spend less time in water than anacondas do",
+            "answerkey":"a"
+        },
+        {
+            "id": 15,
+            "question": "Pythons are unable to chew their food, and so swallow prey whole. Which of these methods is most commonly demonstrated to help a python to swallow large prey?",
+            "a":"The python's stomach pressure is reduced, so prey is sucked in",
+            "b":"An extra set of upper teeth 'walk' along the prey",
+            "c":"The python holds its head up, so prey falls into its stomach",
+            "d":"Prey is pushed against a barrier and is forced down the python's throat",
+            "answerkey":"b"
+        },
+        {
+            "id": 16,
+            "question": "Pythons, like many large constrictors, possess vestigial hind limbs. Whilst these 'spurs' serve no purpose in locomotion, how are they put to use by some male pythons? ",
+            "a":"To store sperm",
+            "b":"To release pheromones",
+            "c":"To grip females during mating",
+            "d":"To fight off rival males",
+            "answerkey":"c"
+        },
+        {
+            "id": 17,
+            "question": "Pythons tend to travel by the rectilinear method (in straight lines) when on land, as opposed to the concertina method (s-shaped movement). Why do large pythons tend not to use the concertina method? ",
+            "a":"Their spine is too inflexible",
+            "b":"They move too slowly",
+            "c":"The scales on their backs are too rigid",
+            "d":"They are too heavy",
+            "answerkey":"d"
         }
     ]
 
