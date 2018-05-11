@@ -20,14 +20,14 @@ class Utils:
         self.base_pep_url = "https://www.python.org/dev/peps/pep-"
         self.http_session = ClientSession()
 
-    @command(name="pep()", aliases=["peps", "get_pep"])
+    @command(name="pep()", aliases=["pep", "get_pep"])
     @with_role(VERIFIED_ROLE)
     async def pep_search(self, ctx: Context, pep_number: str):
         """
         Fetches information about a PEP and sends it to the user
         """
         pep_url = f"{self.base_pep_url}{pep_number.zfill(4)}"
-
+        print(pep_url)
         async with self.http_session.get(pep_url) as resp:
             print(await resp.status())
 
