@@ -26,7 +26,7 @@ class Utils:
         """
         Fetches information about a PEP and sends it to the user
         """
-        pep_url = f"{self.base_pep_url}{str(pep_number.zfill(4))}"
+        pep_url = f"{self.base_pep_url}{pep_number.zfill(4)}"
 
         async with self.http_session.get(pep_url) as resp:
             print(await resp.status())

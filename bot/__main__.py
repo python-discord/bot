@@ -51,6 +51,7 @@ bot.load_extension("bot.cogs.fun")
 bot.load_extension("bot.cogs.hiphopify")
 bot.load_extension("bot.cogs.tags")
 bot.load_extension("bot.cogs.verification")
+bot.load_extension("bot.cogs.utils")
 
 bot.run(os.environ.get("BOT_TOKEN"))
 
