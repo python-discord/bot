@@ -1,5 +1,8 @@
 import os
 
+# Debug mode
+DEBUG_MODE = True if 'local' in os.environ.get("SITE_URL", "local") else False
+
 # Server
 PYTHON_GUILD = 267624335836053506
 
