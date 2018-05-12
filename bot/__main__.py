@@ -1,11 +1,14 @@
 # coding=utf-8
 import os
+import socket
 
 from aiohttp import AsyncResolver, ClientSession, TCPConnector
 from discord import Game
 from discord.ext.commands import AutoShardedBot, when_mentioned_or
 
+from bot.constants import DEBUG_MODE
 from bot.formatter import Formatter
+
 
 bot = AutoShardedBot(
     command_prefix=when_mentioned_or(
@@ -23,7 +26,16 @@ bot = AutoShardedBot(
 )
 
 # Global aiohttp session for all cogs - uses asyncio for DNS resolution instead of threads, so we don't *spam threads*
-bot.http_session = ClientSession(connector=TCPConnector(resolver=AsyncResolver()))
+if DEBUG_MODE:
+    bot.http_session = ClientSession(
+        connector=TCPConnector(
+            resolver=AsyncResolver(),
+            family=socket.AF_INET,
+            verify_ssl=False,
+        )
+    )
+else:
+    bot.http_session = ClientSession(connector=TCPConnector(resolver=AsyncResolver()))
 
 # Internal/debug
 bot.load_extension("bot.cogs.logging")

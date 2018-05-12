@@ -1,6 +1,9 @@
 # coding=utf-8
 import os
 
+# Debug mode
+DEBUG_MODE = True if 'local' in os.environ.get("SITE_URL", "local") else False
+
 # Server
 PYTHON_GUILD = 267624335836053506
 
@@ -33,7 +36,7 @@ CLICKUP_TEAM = 754996
 DEPLOY_URL = os.environ.get("DEPLOY_URL")
 STATUS_URL = os.environ.get("STATUS_URL")
 SITE_URL = os.environ.get("SITE_URL", "pythondiscord.local:8080")
-SITE_PROTOCOL = 'http' if 'local' in SITE_URL else 'https'
+SITE_PROTOCOL = 'http' if DEBUG_MODE else 'https'
 SITE_API_URL = f"{SITE_PROTOCOL}://api.{SITE_URL}"
 GITHUB_URL_BOT = "https://github.com/discord-python/bot"
 BOT_AVATAR_URL = "https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle/logo_circle.png"
@@ -42,6 +45,7 @@ BOT_AVATAR_URL = "https://raw.githubusercontent.com/discord-python/branding/mast
 DEPLOY_BOT_KEY = os.environ.get("DEPLOY_BOT_KEY")
 DEPLOY_SITE_KEY = os.environ.get("DEPLOY_SITE_KEY")
 SITE_API_KEY = os.environ.get("BOT_API_KEY")
+YOUTUBE_API_KEY = os.getenv('YOUTUBE_API_KEY')
 
 # Bot internals
 HELP_PREFIX = "bot."

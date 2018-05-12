@@ -2,11 +2,12 @@ import asyncio
 import logging
 import random
 import string
+import urllib
 
 from discord import Embed, Member, Reaction
 from discord.ext.commands import AutoShardedBot, Context, command
 
-from bot.constants import SITE_API_KEY, SITE_API_URL
+from bot.constants import SITE_API_KEY, SITE_API_URL, YOUTUBE_API_KEY
 
 log = logging.getLogger(__name__)
 
@@ -420,6 +421,42 @@ class Snakes:
             description=question
         )
         await ctx.channel.send(embed=embed)
+
+    @command(name="snakes.video()", aliases=["snakes.video", "snakes.get_video()", "snakes.get_video"])
+    async def video(self, ctx: Context, search: str = None):
+        """
+        Gets a YouTube video about snakes
+        :param name: Optional, a name of a snake. Used to search for videos with that name
+        :param ctx: Context object passed from discord.py
+        :return:
+        """
+
+        # Are we searching for anything specific?
+        if search:
+            query = search + ' snake'
+        else:
+            query = 'snake'
+
+        # Build the URL and make the request
+        url = f'https://www.googleapis.com/youtube/v3/search'
+        response = await self.bot.http_session.get(
+            url,
+            params={
+                "part": "snippet",
+                "q": urllib.parse.quote(query),
+                "type": "video",
+                "key": YOUTUBE_API_KEY
+            }
+        )
+        response = await response.json()
+        data = response['items']
+
+        # Send the user a video
+        num = random.randint(0, 5)  # 5 videos are returned from the api
+        youtube_base_url = 'https://www.youtube.com/watch?v='
+        await ctx.channel.send(
+            content=f"{youtube_base_url}{data[num]['id']['videoId']}"
+        )
 
 
 def setup(bot):
