@@ -1,6 +1,7 @@
 from email.parser import HeaderParser
-from io import StringIO
 import logging
+from io import StringIO
+
 
 from discord import Embed
 from discord.ext.commands import AutoShardedBot, Context, command
@@ -27,7 +28,6 @@ class Utils:
     async def pep_search(self, ctx: Context, pep_number: str):
         """
         Fetches information about a PEP and sends it to the user
-        
         """
         # Attempt to fetch the PEP from Github.
         pep_url = f"{self.base_github_pep_url}{pep_number.zfill(4)}.txt"
@@ -65,7 +65,7 @@ class Utils:
 
         await ctx.message.channel.send(embed=pep_embed)
 
+
 def setup(bot):
     bot.add_cog(Utils(bot))
     log.info("Utils cog loaded")
-
