@@ -6,7 +6,7 @@ import string
 from discord import Embed, Member, Reaction
 from discord.ext.commands import AutoShardedBot, Context, command
 
-from bot.constants import SITE_API_KEY, SITE_API_SNAKE_QUIZ_URL
+from bot.constants import SITE_API_KEY, SITE_API_URL
 
 log = logging.getLogger(__name__)
 
@@ -81,6 +81,8 @@ class Snakes:
         self.bot = bot
         self.SNAKES = ['black cobra', 'children\'s python']  # temporary
         self.headers = {"X-API-KEY": SITE_API_KEY}
+        self.quiz_url = f"{SITE_API_URL}/snake_quiz"
+        self.fact_url = f"{SITE_API_URL}/snake_fact"
 
     def get_snake_name(self) -> str:
         """
@@ -89,7 +91,7 @@ class Snakes:
         """
         return random.choice(self.SNAKES)
 
-    @command(name="snakes.name_gen()", aliases=["snakes.name_gen"])
+    @command(name="snakes.name()", aliases=["snakes.name", "snakes.name_gen", "snakes.name_gen()"])
     async def random_snake_name(self, ctx: Context, name: str = None):
         """
         Slices the users name at the last vowel (or second last if the name
@@ -153,6 +155,7 @@ class Snakes:
 
         # Embed and send
         embed = Embed(
+            title="Snake name",
             description=f"Your snake-name is **{result}**",
             color=0x399600
         )
@@ -324,7 +327,7 @@ class Snakes:
             )
 
         # Prepare a question.
-        response = await self.bot.http_session.get(SITE_API_SNAKE_QUIZ_URL, headers=self.headers)
+        response = await self.bot.http_session.get(self.quiz_url, headers=self.headers)
         question = await response.json()
         answer = question["answerkey"]
         options = {key: question[key] for key in ANSWERS_EMOJI.keys()}
@@ -365,7 +368,10 @@ class Snakes:
         Modified by lemon for inclusion in the bot.
         """
 
-        embed = Embed(color=0x399600)
+        embed = Embed(
+            title="Zzzen of Pythhon",
+            color=0x399600
+        )
 
         # Get the zen quote
         zen_quote = random.choice(ZEN.splitlines())
@@ -393,6 +399,27 @@ class Snakes:
         await ctx.channel.send(
             embed=embed
         )
+
+    @command(name="snakes.fact()", aliases=["snakes.fact"])
+    async def snake_fact(self, ctx: Context):
+        """
+        Gets a snake-related fact
+
+        This was created by Prithaj and Andrew for code jam 1,
+        and modified by lemon for inclusion in this bot.
+        """
+
+        # Get a fact from the API.
+        response = await self.bot.http_session.get(self.fact_url, headers=self.headers)
+        question = await response.json()
+
+        # Build and send the embed.
+        embed = Embed(
+            title="Snake fact",
+            color=0x399600,
+            description=question
+        )
+        await ctx.channel.send(embed=embed)
 
 
 def setup(bot):

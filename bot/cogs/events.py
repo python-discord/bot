@@ -8,7 +8,7 @@ from discord.ext.commands import (
     NoPrivateMessage, UserInputError
 )
 
-from bot.constants import DEVLOG_CHANNEL, PYTHON_GUILD, SITE_API_KEY, SITE_API_USER_URL
+from bot.constants import DEVLOG_CHANNEL, PYTHON_GUILD, SITE_API_KEY, SITE_API_URL
 from bot.exceptions import CogBadArgument
 from bot.utils import chunks
 
@@ -26,7 +26,7 @@ class Events:
     async def send_updated_users(self, *users):
         try:
             response = await self.bot.http_session.post(
-                url=SITE_API_USER_URL,
+                url=f"{SITE_API_URL}/user",
                 json=list(users),
                 headers={"X-API-Key": SITE_API_KEY}
             )
