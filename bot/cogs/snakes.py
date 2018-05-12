@@ -3,7 +3,7 @@ import logging
 import random
 import string
 
-from discord import Colour, Embed, Member, Reaction
+from discord import Embed, Member, Reaction
 from discord.ext.commands import AutoShardedBot, Context, command
 
 from bot.constants import SITE_API_KEY, SITE_API_SNAKE_QUIZ_URL
@@ -44,6 +44,27 @@ ANSWERS_EMOJI_REVERSE = {
     "\U0001F1E8": "C",  # :regional_indicator_c: 🇨
     "\U0001F1E9": "D",  # :regional_indicator_d: 🇩
 }
+
+# Zzzen of pythhhon constant
+ZEN = """
+Beautiful is better than ugly.
+Explicit is better than implicit.
+Simple is better than complex.
+Complex is better than complicated.
+Flat is better than nested.
+Sparse is better than dense.
+Readability counts.
+Special cases aren't special enough to break the rules.
+Although practicality beats purity.
+Errors should never pass silently.
+Unless explicitly silenced.
+In the face of ambiguity, refuse the temptation to guess.
+There should be one-- and preferably only one --obvious way to do it.
+Now is better than never.
+Although never is often better than *right* now.
+If the implementation is hard to explain, it's a bad idea.
+If the implementation is easy to explain, it may be a good idea.
+"""
 
 
 class Snakes:
@@ -133,12 +154,12 @@ class Snakes:
         # Embed and send
         embed = Embed(
             description=f"Your snake-name is **{result}**",
-            color=Colour.blurple()
+            color=0x399600
         )
 
         return await ctx.send(embed=embed)
 
-    @command(name="snakes.antidote()", alias=["snakes.antidote"])
+    @command(name="snakes.antidote()", aliases=["snakes.antidote"])
     async def antidote(self, ctx: Context):
         """
         Antidote - Can you create the antivenom before the patient dies?
@@ -170,7 +191,7 @@ class Snakes:
         page_result_list = []
         win = False
 
-        antidote_embed = Embed(color=ctx.me.color, title="Antidote")
+        antidote_embed = Embed(color=0x399600, title="Antidote")
         antidote_embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar_url)
 
         # Generate answer
@@ -264,7 +285,7 @@ class Snakes:
 
         # Winning / Ending Screen
         if win is True:
-            antidote_embed = Embed(color=ctx.me.color, title="Antidote")
+            antidote_embed = Embed(color=0x399600, title="Antidote")
             antidote_embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar_url)
             antidote_embed.set_image(url="https://i.makeagif.com/media/7-12-2015/Cj1pts.gif")
             antidote_embed.add_field(name=f"You have created the snake antidote!",
@@ -272,7 +293,7 @@ class Snakes:
                                            f"You had {10 - antidote_tries} tries remaining.")
             await board_id.edit(embed=antidote_embed)
         else:
-            antidote_embed = Embed(color=ctx.me.color, title="Antidote")
+            antidote_embed = Embed(color=0x399600, title="Antidote")
             antidote_embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar_url)
             antidote_embed.set_image(url="https://media.giphy.com/media/ceeN6U57leAhi/giphy.gif")
             antidote_embed.add_field(name=EMPTY_UNICODE,
@@ -283,10 +304,13 @@ class Snakes:
         log.debug("Ending pagination and removing all reactions...")
         await board_id.clear_reactions()
 
-    @command(name="snakes.quiz()", alias=["snakes.quiz"])
+    @command(name="snakes.quiz()", aliases=["snakes.quiz"])
     async def quiz(self, ctx: Context):
         """
         Asks a snake-related question in the chat and validates the user's guess.
+
+        This was created by Mushy and Cardium for the code jam,
+        and modified by lemon for inclusion in this bot.
         """
 
         def valid_answer(reaction, user):
@@ -307,6 +331,7 @@ class Snakes:
 
         # Build and send the embed.
         embed = Embed(
+            color=0x399600,
             title=question["question"],
             description="\n".join(
                 [f"**{key.upper()}**: {answer}" for key, answer in options.items()]
@@ -330,6 +355,44 @@ class Snakes:
             await ctx.channel.send(
                 f"Sorry, **{wrong_answer}** is incorrect. The correct answer was \"**{options[answer]}**\"."
             )
+
+    @command(name="snakes.zen()", aliases=["zen"])
+    async def zen(self, ctx: Context):
+        """
+        Gets a random quote from the Zen of Python.
+
+        Written by Prithaj and Andrew during the very first code jam.
+        Modified by lemon for inclusion in the bot.
+        """
+
+        embed = Embed(color=0x399600)
+
+        # Get the zen quote
+        zen_quote = random.choice(ZEN.splitlines())
+
+        # Replace fricatives with exaggerated snake fricatives.
+        simple_fricatives = [
+            "f", "s", "z", "h",
+            "F", "S", "Z", "H",
+        ]
+        complex_fricatives = [
+            "th", "sh", "Th", "Sh"
+        ]
+
+        for letter in simple_fricatives:
+            if letter.islower():
+                zen_quote = zen_quote.replace(letter, letter * random.randint(1, 3))
+            else:
+                zen_quote = zen_quote.replace(letter, (letter * random.randint(1, 3)).title())
+
+        for fricative in complex_fricatives:
+            zen_quote = zen_quote.replace(fricative, fricative[0] + fricative[1] * random.randint(1, 3))
+
+        # Embed and send
+        embed.description = zen_quote
+        await ctx.channel.send(
+            embed=embed
+        )
 
 
 def setup(bot):
