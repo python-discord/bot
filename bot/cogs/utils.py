@@ -1,5 +1,5 @@
-from email.parser import HeaderParser
 import logging
+from email.parser import HeaderParser
 from io import StringIO
 
 
