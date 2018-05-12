@@ -47,7 +47,7 @@ class Utils:
             del pep_header["PEP"]
             del pep_header["Author"]
             del pep_header["Post-History"]
-            
+
             for key in pep_header:
                 if "$" in pep_header[key] or not pep_header[key]:
                     del pep_header[key]
