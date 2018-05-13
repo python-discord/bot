@@ -48,7 +48,7 @@ class Events:
         else:
             help_command = (self.bot.get_command("help"),)
 
-        if hasattr(command, "error"):
+        if hasattr(command, "on_error"):
             log.debug(f"Command {command} has a local error handler, ignoring.")
             return
 
