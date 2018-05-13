@@ -1,4 +1,3 @@
-# coding=utf-8
 import ast
 import logging
 import re
@@ -9,9 +8,9 @@ from discord.ext.commands import AutoShardedBot, Context, command, group
 from dulwich.repo import Repo
 
 from bot.constants import (
-    ADMIN_ROLE, BOT_AVATAR_URL, BOT_CHANNEL,
+    ADMIN_ROLE, BOT_AVATAR_URL, BOT_COMMANDS_CHANNEL,
     DEVTEST_CHANNEL, HELP1_CHANNEL, HELP2_CHANNEL,
-    HELP3_CHANNEL, MODERATOR_ROLE, OWNER_ROLE,
+    HELP3_CHANNEL, HELP4_CHANNEL, MODERATOR_ROLE, OWNER_ROLE,
     PYTHON_CHANNEL, PYTHON_GUILD, VERIFIED_ROLE
 )
 from bot.decorators import with_role
@@ -27,14 +26,20 @@ class Bot:
     def __init__(self, bot: AutoShardedBot):
         self.bot = bot
 
-        # Stores allowed channels plus unix timestamp from last call
-        self.channel_cooldowns = {HELP1_CHANNEL: 0,
-                                  HELP2_CHANNEL: 0,
-                                  HELP3_CHANNEL: 0,
-                                  PYTHON_CHANNEL: 0,
-                                  DEVTEST_CHANNEL: 0,
-                                  BOT_CHANNEL: 0
-        }  # noqa. E124
+        # Stores allowed channels plus epoch time since last call.
+        self.channel_cooldowns = {
+            HELP1_CHANNEL: 0,
+            HELP2_CHANNEL: 0,
+            HELP3_CHANNEL: 0,
+            HELP4_CHANNEL: 0,
+            PYTHON_CHANNEL: 0,
+        }
+
+        # These channels will also work, but will not be subject to cooldown
+        self.channel_whitelist = (
+            BOT_COMMANDS_CHANNEL,
+            DEVTEST_CHANNEL,
+        )
 
     @group(invoke_without_command=True, name="bot", hidden=True)
     @with_role(VERIFIED_ROLE)
@@ -100,7 +105,7 @@ class Bot:
         embed = Embed(description=text)
         await ctx.send(embed=embed)
 
-    def codeblock_stripping(self, msg: str):
+    def codeblock_stripping(self, msg: str, bad_ticks: bool):
         """
         Strip msg in order to find Python code.
 
@@ -108,73 +113,245 @@ class Bot:
         None if the block is a valid Python codeblock.
         """
         if msg.count("\n") >= 3:
-            # Filtering valid Python codeblocks and exiting if a valid Python codeblock is found
-            if re.search("```(?:py|python)\n(.*?)```", msg, re.IGNORECASE | re.DOTALL):
-                log.trace("Someone wrote a message that was already a "
-                          "valid Python syntax highlighted code block. No action taken.")
+            # Filtering valid Python codeblocks and exiting if a valid Python codeblock is found.
+            if re.search("```(?:py|python)\n(.*?)```", msg, re.IGNORECASE | re.DOTALL) and not bad_ticks:
+                log.trace(
+                    "Someone wrote a message that was already a "
+                    "valid Python syntax highlighted code block. No action taken."
+                )
                 return None
+
             else:
                 # Stripping backticks from every line of the message.
                 log.trace(f"Stripping backticks from message.\n\n{msg}\n\n")
                 content = ""
-                for line in msg.splitlines():
-                    content += line.strip("`") + "\n"
+                for line in msg.splitlines(keepends=True):
+                    content += line.strip("`")
 
                 content = content.strip()
 
-                # Remove "Python" or "Py" from top of the message if exists
+                # Remove "Python" or "Py" from start of the message if it exists.
                 log.trace(f"Removing 'py' or 'python' from message.\n\n{content}\n\n")
+                pycode = False
                 if content.lower().startswith("python"):
                     content = content[6:]
+                    pycode = True
                 elif content.lower().startswith("py"):
                     content = content[2:]
+                    pycode = True
 
-                # Strip again to remove the whitespace(s) left before the code
-                # If the msg looked like "Python <code>" before removing Python
-                content = content.strip()
-                log.trace(f"Returning message.\n\n{content}\n\n")
-                return content
+                if pycode:
+                    content = content.splitlines(keepends=True)
+
+                    # Check if there might be code in the first line, and preserve it.
+                    first_line = content[0]
+                    if " " in content[0]:
+                        first_space = first_line.index(" ")
+                        content[0] = first_line[first_space:]
+                        content = "".join(content)
+
+                    # If there's no code we can just get rid of the first line.
+                    else:
+                        content = "".join(content[1:])
+
+                # Strip it again to remove any leading whitespace. This is neccessary
+                # if the first line of the message looked like ```python <code>
+                old = content.strip()
+
+                # Strips REPL code out of the message if there is any.
+                content, repl_code = self.repl_stripping(old)
+                if old != content:
+                    return (content, old), repl_code
+
+                # Try to apply indentation fixes to the code.
+                content = self.fix_indentation(content)
+
+                # Check if the code contains backticks, if it does ignore the message.
+                if "`" in content:
+                    log.trace("Detected ` inside the code, won't reply")
+                    return None
+                else:
+                    log.trace(f"Returning message.\n\n{content}\n\n")
+                    return (content,), repl_code
+
+    def fix_indentation(self, msg: str):
+        """
+        Attempts to fix badly indented code.
+        """
+        def unindent(code, skip_spaces=0):
+            """
+            Unindents all code down to the number of spaces given ins skip_spaces
+            """
+            final = ""
+            current = code[0]
+            leading_spaces = 0
+
+            # Get numbers of spaces before code in the first line.
+            while current == " ":
+                current = code[leading_spaces+1]
+                leading_spaces += 1
+            leading_spaces -= skip_spaces
+
+            # If there are any, remove that number of spaces from every line.
+            if leading_spaces > 0:
+                for line in code.splitlines(keepends=True):
+                    line = line[leading_spaces:]
+                    final += line
+                return final
+            else:
+                return code
+
+        # Apply fix for "all lines are overindented" case.
+        msg = unindent(msg)
+
+        # If the first line does not end with a colon, we can be
+        # certain the next line will be on the same indentation level.
+        #
+        # If it does end with a colon, we will need to indent all successive
+        # lines one additional level.
+        first_line = msg.splitlines()[0]
+        code = "".join(msg.splitlines(keepends=True)[1:])
+        if not first_line.endswith(":"):
+            msg = f"{first_line}\n{unindent(code)}"
+        else:
+            msg = f"{first_line}\n{unindent(code, 4)}"
+        return msg
+
+    def repl_stripping(self, msg: str):
+        """
+        Strip msg in order to extract Python code out of REPL output.
+
+        Tries to strip out REPL Python code out of msg and returns the stripped msg.
+        """
+        final = ""
+        for line in msg.splitlines(keepends=True):
+            if line.startswith(">>>") or line.startswith("..."):
+                final += line[4:]
+        log.trace(f"Formatted: \n\n{msg}\n\n to \n\n{final}\n\n")
+        if not final:
+            log.trace(f"Found no REPL code in \n\n{msg}\n\n")
+            return msg, False
+        else:
+            log.trace(f"Found REPL code in \n\n{msg}\n\n")
+            return final.rstrip(), True
 
     async def on_message(self, msg: Message):
-        if not msg.author.bot:
-            if msg.channel.id in self.channel_cooldowns:
-                on_cooldown = time.time() - self.channel_cooldowns[msg.channel.id] < 300
-                if not on_cooldown or msg.channel.id == DEVTEST_CHANNEL:
-                    try:
-                        content = self.codeblock_stripping(msg.content)
-                        if not content:
+        """
+        Detect poorly formatted Python code and send the user
+        a helpful message explaining how to do properly
+        formatted Python syntax highlighting codeblocks.
+        """
+
+        parse_codeblock = (
+            (
+                msg.channel.id in self.channel_cooldowns
+                or msg.channel.id in self.channel_whitelist
+            )
+            and not msg.author.bot
+            and len(msg.content.splitlines()) > 3
+        )
+
+        if parse_codeblock:
+            on_cooldown = (time.time() - self.channel_cooldowns.get(msg.channel.id, 0)) < 300
+            if not on_cooldown:
+                try:
+                    not_backticks = ["'''", '"""', "´´´", "‘‘‘", "’’’", "′′′", "“““", "”””", "″″″", "〃〃〃"]
+                    bad_ticks = msg.content[:3] in not_backticks
+                    if bad_ticks:
+                        ticks = msg.content[:3]
+                        content = self.codeblock_stripping(f"```{msg.content[3:-3]}```", True)
+                        if content is None:
                             return
 
+                        content, repl_code = content
+
+                        if len(content) == 2:
+                            content = content[1]
+                        else:
+                            content = content[0]
+
+                        space_left = 204
+                        if len(content) >= space_left:
+                            current_length = 0
+                            lines_walked = 0
+                            for line in content.splitlines(keepends=True):
+                                if current_length+len(line) > space_left or lines_walked == 10:
+                                    break
+                                current_length += len(line)
+                                lines_walked += 1
+                            content = content[:current_length] + "#..."
+
+                        howto = (
+                            "It looks like you are trying to paste code into this channel.\n\n"
+                            "You seem to be using the wrong symbols to indicate where the codeblock should start. "
+                            f"The correct symbols would be \`\`\`, not `{ticks}`.\n\n"
+                            "**Here is an example of how it should look:**\n"
+                            f"\`\`\`python\n{content}\n\`\`\`\n\n**This will result in the following:**\n"
+                            f"```python\n{content}\n```"
+                        )
+
+                    else:
+                        howto = ""
+                        content = self.codeblock_stripping(msg.content, False)
+                        if content is None:
+                            return
+
+                        content, repl_code = content
                         # Attempts to parse the message into an AST node.
                         # Invalid Python code will raise a SyntaxError.
-                        tree = ast.parse(content)
+                        tree = ast.parse(content[0])
 
                         # Multiple lines of single words could be interpreted as expressions.
                         # This check is to avoid all nodes being parsed as expressions.
                         # (e.g. words over multiple lines)
-                        if not all(isinstance(node, ast.Expr) for node in tree.body):
-                            codeblock_tag = await self.bot.get_cog("Tags").get_tag_data("codeblock")
+                        if not all(isinstance(node, ast.Expr) for node in tree.body) or repl_code:
+                            # Shorten the code to 10 lines and/or 204 characters.
+                            space_left = 204
+                            if content and repl_code:
+                                content = content[1]
+                            else:
+                                content = content[0]
 
-                            if codeblock_tag == {}:
-                                log.warning(f"{msg.author} posted something that needed to be put inside Python "
-                                            "code blocks, but the 'codeblock' tag was not in the tags database!")
-                                return
+                            if len(content) >= space_left:
+                                current_length = 0
+                                lines_walked = 0
+                                for line in content.splitlines(keepends=True):
+                                    if current_length+len(line) > space_left or lines_walked == 10:
+                                        break
+                                    current_length += len(line)
+                                    lines_walked += 1
+                                content = content[:current_length]+"#..."
 
-                            log.debug(f"{msg.author} posted something that needed to be put inside python code blocks. "
-                                      "Sending the user some instructions.")
-                            howto = (f"Hey {msg.author.mention}!\n\n"
-                                     "I noticed you were trying to paste code into this channel.\n\n"
-                                     f"{codeblock_tag['tag_content']}")
+                            howto += (
+                                "It looks like you're trying to paste code into this channel.\n\n"
+                                "Discord has support for Markdown, which allows you to post code with full "
+                                "syntax highlighting. Please use these whenever you paste code, as this "
+                                "helps improve the legibility and makes it easier for us to help you.\n\n"
+                                f"**To do this, use the following method:**\n"
+                                f"\`\`\`python\n{content}\n\`\`\`\n\n**This will result in the following:**\n"
+                                f"```python\n{content}\n```"
+                            )
 
-                            howto_embed = Embed(description=howto)
-                            await msg.channel.send(embed=howto_embed)
-                            self.channel_cooldowns[msg.channel.id] = time.time()
+                            log.debug(f"{msg.author} posted something that needed to be put inside python code "
+                                      "blocks. Sending the user some instructions.")
+                        else:
+                            log.trace("The code consists only of expressions, not sending instructions")
 
-                    except SyntaxError:
-                        log.trace(f"{msg.author} posted in a help channel, and when we tried to parse it as Python "
-                                  f"code, ast.parse raised a SyntaxError. This probably just means it wasn't Python "
-                                  f"code. The message that was posted was:\n\n{msg.content}\n\n")
-                        pass
+                    if howto != "":
+                        howto_embed = Embed(description=howto)
+                        await msg.channel.send(f"Hey {msg.author.mention}!", embed=howto_embed)
+                    else:
+                        return
+
+                    if msg.channel.id not in self.channel_whitelist:
+                        self.channel_cooldowns[msg.channel.id] = time.time()
+
+                except SyntaxError:
+                    log.trace(
+                        f"{msg.author} posted in a help channel, and when we tried to parse it as Python code, "
+                        "ast.parse raised a SyntaxError. This probably just means it wasn't Python code. "
+                        f"The message that was posted was:\n\n{msg.content}\n\n"
+                    )
 
 
 def setup(bot):

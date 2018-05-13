@@ -4,7 +4,7 @@ import time
 
 from discord import Colour, Embed
 from discord.ext.commands import (
-    AutoShardedBot, Context,
+    AutoShardedBot, BadArgument, Context,
     Converter, command
 )
 
@@ -13,10 +13,15 @@ from bot.constants import (
     SITE_API_KEY, SITE_API_URL, TAG_COOLDOWN,
 )
 from bot.decorators import with_role
-from bot.exceptions import CogBadArgument
 from bot.pagination import LinePaginator
 
 log = logging.getLogger(__name__)
+
+TEST_CHANNELS = (
+    DEVTEST_CHANNEL,
+    BOT_COMMANDS_CHANNEL,
+    HELPERS_CHANNEL
+)
 
 
 class TagNameConverter(Converter):
@@ -35,25 +40,25 @@ class TagNameConverter(Converter):
         if ascii(tag_name)[1:-1] != tag_name:
             log.warning(f"{ctx.author} tried to put an invalid character in a tag name. "
                         "Rejecting the request.")
-            raise CogBadArgument("Don't be ridiculous, you can't use that character!")
+            raise BadArgument("Don't be ridiculous, you can't use that character!")
 
         # The tag name is either empty, or consists of nothing but whitespace.
         elif not tag_name:
             log.warning(f"{ctx.author} tried to create a tag with a name consisting only of whitespace. "
                         "Rejecting the request.")
-            raise CogBadArgument("Tag names should not be empty, or filled with whitespace.")
+            raise BadArgument("Tag names should not be empty, or filled with whitespace.")
 
         # The tag name is a number of some kind, we don't allow that.
         elif is_number(tag_name):
             log.warning(f"{ctx.author} tried to create a tag with a digit as its name. "
                         "Rejecting the request.")
-            raise CogBadArgument("Tag names can't be numbers.")
+            raise BadArgument("Tag names can't be numbers.")
 
         # The tag name is longer than 127 characters.
         elif len(tag_name) > 127:
             log.warning(f"{ctx.author} tried to request a tag name with over 127 characters. "
                         "Rejecting the request.")
-            raise CogBadArgument("Are you insane? That's way too long!")
+            raise BadArgument("Are you insane? That's way too long!")
 
         return tag_name
 
@@ -67,7 +72,7 @@ class TagContentConverter(Converter):
         if not tag_content:
             log.warning(f"{ctx.author} tried to create a tag containing only whitespace. "
                         "Rejecting the request.")
-            raise CogBadArgument("Tag contents should not be empty, or filled with whitespace.")
+            raise BadArgument("Tag contents should not be empty, or filled with whitespace.")
 
         return tag_content
 
@@ -210,10 +215,12 @@ class Tags:
             if tag_name:
                 log.debug(f"{ctx.author} requested the tag '{tag_name}'")
                 embed.title = tag_name
-                self.tag_cooldowns[tag_name] = {
-                    "time": time.time(),
-                    "channel": ctx.channel.id
-                }
+
+                if ctx.channel.id not in TEST_CHANNELS:
+                    self.tag_cooldowns[tag_name] = {
+                        "time": time.time(),
+                        "channel": ctx.channel.id
+                    }
 
             else:
                 embed.title = "**Current tags**"
@@ -243,11 +250,18 @@ class Tags:
 
         # Paginate if this is a list of all tags
         if tags:
+            if ctx.invoked_with == "tags.keys()":
+                detail_invocation = "bot.tags[<tagname>]"
+            elif ctx.invoked_with == "tags.get()":
+                detail_invocation = "bot.tags.get(<tagname>)"
+            else:
+                detail_invocation = "bot.tags.get <tagname>"
+
             log.debug(f"Returning a paginated list of all tags.")
             return await LinePaginator.paginate(
                 (lines for lines in tags),
                 ctx, embed,
-                footer_text="To show a tag, type bot.tags.get <tagname>.",
+                footer_text=f"To show a tag, type {detail_invocation}.",
                 empty=False,
                 max_lines=15
             )
@@ -331,12 +345,14 @@ class Tags:
     @set_command.error
     @delete_command.error
     async def command_error(self, ctx, error):
-        if isinstance(error, CogBadArgument):
+        if isinstance(error, BadArgument):
             embed = Embed()
             embed.colour = Colour.red()
             embed.description = str(error)
             embed.title = random.choice(self.FAIL_TITLES)
             await ctx.send(embed=embed)
+        else:
+            log.error(f"Unhandled tag command error: {error} ({error.original})")
 
     @command(name="tags.keys()")
     async def keys_command(self, ctx: Context):

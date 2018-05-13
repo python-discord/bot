@@ -1,4 +1,3 @@
-# coding=utf-8
 import logging
 
 from discord import Embed, Member
@@ -9,7 +8,6 @@ from discord.ext.commands import (
 )
 
 from bot.constants import DEVLOG_CHANNEL, PYTHON_GUILD, SITE_API_KEY, SITE_API_URL
-from bot.exceptions import CogBadArgument
 from bot.utils import chunks
 
 log = logging.getLogger(__name__)
@@ -50,9 +48,11 @@ class Events:
         else:
             help_command = (self.bot.get_command("help"),)
 
-        if isinstance(e, CogBadArgument):
-            log.debug(f"Command {command} raised `CogBadArgument`, ignoring.")
-        elif isinstance(e, BadArgument):
+        if hasattr(command, "error"):
+            log.debug(f"Command {command} has a local error handler, ignoring.")
+            return
+
+        if isinstance(e, BadArgument):
             await ctx.send(f"Bad argument: {e}\n")
             await ctx.invoke(*help_command)
         elif isinstance(e, UserInputError):
