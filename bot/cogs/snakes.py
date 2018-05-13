@@ -12,7 +12,7 @@ from PIL import Image
 from PIL.ImageDraw import ImageDraw
 
 from bot.constants import SITE_API_KEY, SITE_API_URL, YOUTUBE_API_KEY
-from bot.utils.snakes import perlin
+from bot.utils.snakes import hatching, perlin
 
 log = logging.getLogger(__name__)
 
@@ -499,6 +499,38 @@ class Snakes:
         stream = generate_snake_image()
         file = File(stream, filename='snek.png')
         await ctx.send(file=file)
+
+    @command(name="snakes.hatch()", aliases=["snakes.hatch", "hatch"])
+    async def hatch(self, ctx: Context):
+        """
+        Hatches your personal snake
+        :param ctx: context
+        :return: baby snake
+        """
+
+        # Pick a random snake to hatch.
+        snake_name = random.choice(list(hatching.snakes.keys()))
+        snake_image = hatching.snakes[snake_name]
+
+        # Hatch the snake
+        message = await ctx.channel.send(embed=Embed(description="Hatching your snake :snake:..."))
+        await asyncio.sleep(1)
+
+        for stage in hatching.stages:
+            hatch_embed = Embed(description=stage)
+            await message.edit(embed=hatch_embed)
+            await asyncio.sleep(1)
+        await asyncio.sleep(1)
+        await message.delete()
+
+        # Build and send the embed.
+        my_snake_embed = Embed(description=":tada: Congrats! You hatched: **{0}**".format(snake_name))
+        my_snake_embed.set_thumbnail(url=snake_image)
+        my_snake_embed.set_footer(
+            text=" Owner: {0}#{1}".format(ctx.message.author.name, ctx.message.author.discriminator)
+        )
+
+        await ctx.channel.send(embed=my_snake_embed)
 
     @command(name="snakes.video()", aliases=["snakes.video", "snakes.get_video()", "snakes.get_video"])
     async def video(self, ctx: Context, search: str = None):
