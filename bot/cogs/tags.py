@@ -9,7 +9,8 @@ from discord.ext.commands import (
 )
 
 from bot.constants import (
-    ADMIN_ROLE, MODERATOR_ROLE, OWNER_ROLE,
+    ADMIN_ROLE, BOT_COMMANDS_CHANNEL, DEVTEST_CHANNEL,
+    HELPERS_CHANNEL, MODERATOR_ROLE, OWNER_ROLE,
     SITE_API_KEY, SITE_API_URL, TAG_COOLDOWN,
 )
 from bot.decorators import with_role
