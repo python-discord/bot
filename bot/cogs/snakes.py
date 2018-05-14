@@ -72,6 +72,9 @@ If the implementation is hard to explain, it's a bad idea.
 If the implementation is easy to explain, it may be a good idea.
 """
 
+# Max messages to train snake_chat on
+MSG_MAX = 100
+
 
 class Snakes:
     """
@@ -89,6 +92,32 @@ class Snakes:
         self.headers = {"X-API-KEY": SITE_API_KEY}
         self.quiz_url = f"{SITE_API_URL}/snake_quiz"
         self.fact_url = f"{SITE_API_URL}/snake_fact"
+
+    @staticmethod
+    def _snakify(message):
+        """
+        Sssnakifffiesss a sstring.
+        """
+
+        # Replace fricatives with exaggerated snake fricatives.
+        simple_fricatives = [
+            "f", "s", "z", "h",
+            "F", "S", "Z", "H",
+        ]
+        complex_fricatives = [
+            "th", "sh", "Th", "Sh"
+        ]
+
+        for letter in simple_fricatives:
+            if letter.islower():
+                message = message.replace(letter, letter * random.randint(2, 4))
+            else:
+                message = message.replace(letter, (letter * random.randint(2, 4)).title())
+
+        for fricative in complex_fricatives:
+            message = message.replace(fricative, fricative[0] + fricative[1] * random.randint(2, 4))
+
+        return message
 
     def get_snake_name(self) -> str:
         """
@@ -379,32 +408,73 @@ class Snakes:
             color=0x399600
         )
 
-        # Get the zen quote
+        # Get the zen quote and snakify it
         zen_quote = random.choice(ZEN.splitlines())
-
-        # Replace fricatives with exaggerated snake fricatives.
-        simple_fricatives = [
-            "f", "s", "z", "h",
-            "F", "S", "Z", "H",
-        ]
-        complex_fricatives = [
-            "th", "sh", "Th", "Sh"
-        ]
-
-        for letter in simple_fricatives:
-            if letter.islower():
-                zen_quote = zen_quote.replace(letter, letter * random.randint(1, 3))
-            else:
-                zen_quote = zen_quote.replace(letter, (letter * random.randint(1, 3)).title())
-
-        for fricative in complex_fricatives:
-            zen_quote = zen_quote.replace(fricative, fricative[0] + fricative[1] * random.randint(1, 3))
+        zen_quote = self._snakify(zen_quote)
 
         # Embed and send
         embed.description = zen_quote
         await ctx.channel.send(
             embed=embed
         )
+
+    @command(name="snakes.snakify()", aliases=["snakes.snakify"])
+    async def snake_chat(self, ctx: Context, message: str = None):
+        """
+        How would I talk if I were a snake?
+        :param ctx: context
+        :param message: If this is passed, it will snakify the message.
+                        If not, it will snakify a random message from
+                        the users history.
+        """
+
+        def predicate(message):
+            """
+            Check if the message was sent by the author.
+            """
+            return message.author == ctx.message.author
+
+        def get_random_long_message(messages, retries=10):
+            """
+            Fetch a message that's at least 3 words long,
+            but only if it is possible to do so in retries
+            attempts. Else, just return whatever the last
+            message is.
+            """
+            long_message = random.choice(messages)
+            if len(long_message.split()) < 3 or retries <= 0:
+                return get_random_long_message(messages, retries - 1)
+            return long_message
+
+        embed = Embed()
+        user = ctx.message.author
+
+        if not message:
+
+            # Get a random message from the users history
+            messages = []
+            async for message in ctx.channel.history(limit=500).filter(predicate):
+                messages.append(message.content)
+
+            message = get_random_long_message(messages)
+
+        # Set the avatar
+        if user.avatar is not None:
+            avatar = f"https://cdn.discordapp.com/avatars/{user.id}/{user.avatar}"
+        else:
+            avatar = (
+                "https://img00.deviantart.net/eee3/i/2017/168/3/4/"
+                "discord__app__avatar_rev1_by_nodeviantarthere-dbd2tp9.png"
+            )
+
+        # Build and send the embed
+        embed.set_author(
+            name=f"{user.name}#{user.discriminator}",
+            icon_url=avatar,
+        )
+        embed.description = f"*{self._snakify(message)}*"
+
+        await ctx.channel.send(embed=embed)
 
     @command(name="snakes.fact()", aliases=["snakes.fact"])
     async def snake_fact(self, ctx: Context):
