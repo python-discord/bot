@@ -5,7 +5,7 @@ import string
 import urllib
 
 from discord import Embed, File, Member, Reaction
-from discord.ext.commands import AutoShardedBot, Context, command, group
+from discord.ext.commands import AutoShardedBot, Context, command
 
 from bot.constants import SITE_API_KEY, SITE_API_URL, YOUTUBE_API_KEY
 from bot.utils.snakes import hatching, perlin, perlinsneks, sal
@@ -71,14 +71,6 @@ If the implementation is easy to explain, it may be a good idea.
 # Max messages to train snake_chat on
 MSG_MAX = 100
 
-# Rattlesnake mp3s
-RATTLES = [
-    'rattle1.mp3',
-    'rattle2.mp3',
-    'rattle3.mp3',
-    'rattle4.mp3'
-]
-
 
 class Snakes:
     """
@@ -91,6 +83,7 @@ class Snakes:
     """
 
     def __init__(self, bot: AutoShardedBot):
+        self.active_sal = {}
         self.bot = bot
         self.SNAKES = ['black cobra', 'children\'s python']  # temporary
         self.headers = {"X-API-KEY": SITE_API_KEY}
@@ -218,6 +211,19 @@ class Snakes:
         This game was created by Bisk and Runew0lf for the first PythonDiscord codejam.
         """
 
+        def event_check(reaction_: Reaction, user_: Member):
+            """
+            Make sure that this reaction is what we want to operate on
+            """
+            return (
+                all((
+                    reaction_.message.id == board_id.id,  # Reaction is on this message
+                    reaction_.emoji in ANTIDOTE_EMOJI,    # Reaction is one of the pagination emotes
+                    user_.id != self.bot.user.id,         # Reaction was not made by the Bot
+                    user_.id == ctx.author.id             # Reaction was made by author
+                ))
+            )
+
         # Check to see if the bot can remove reactions
         if not ctx.channel.permissions_for(ctx.guild.me).manage_messages:
             log.warning(f"Unable to start Antidote game - Missing manage_messages permissions in {ctx.channel}")
@@ -255,20 +261,6 @@ class Snakes:
         # Add our player reactions
         for emoji in ANTIDOTE_EMOJI:
             await board_id.add_reaction(emoji)
-
-        def event_check(reaction_: Reaction, user_: Member):
-            """
-            Make sure that this reaction is what we want to operate on
-            """
-            return (
-                # Conditions for a successful pagination:
-                all((
-                    reaction_.message.id == board_id.id,  # Reaction is on this message
-                    reaction_.emoji in ANTIDOTE_EMOJI,  # Reaction is one of the pagination emotes
-                    user_.id != self.bot.user.id,  # Reaction was not made by the Bot
-                    user_.id == ctx.author.id  # There were no restrictions
-                ))
-            )
 
         # Begin main game loop
         while not win and antidote_tries < 10:
@@ -600,8 +592,7 @@ class Snakes:
             content=f"{youtube_base_url}{data[num]['id']['videoId']}"
         )
 
-    # region: Snakes and Ladders group
-    @group(name="snakes.sal()", aliases=["snakes.sal"])
+    @command(name="snakes.sal()", aliases=["snakes.sal"])
     async def sal(self, ctx: Context):
         """
         Command group for Snakes and Ladders
@@ -612,93 +603,17 @@ class Snakes:
         - Start a S&L game (author): sal start
         - Roll the dice: sal roll OR roll
         """
-        if ctx.invoked_subcommand is None:
-            # alias for 'sal roll' -> roll()
-            if ctx.subcommand_passed is not None and ctx.subcommand_passed.lower() == "roll":
-                await self.bot.get_command("roll()").invoke(ctx)
-                return
-            await ctx.send("{0} Unknown S&L command".format(ctx.author.mention))
 
-    @sal.command(name="snakes.sal.create()", aliases=["snakes.sal.create"])
-    async def create_sal(self, ctx: Context):
-        """
-        Create a Snakes and Ladders in the channel.
-        """
+        # CREATE #
         # check if there is already a game in this channel
-        channel = ctx.channel
-        if channel in self.active_sal:
-            await ctx.send("{0} A game is already in progress in this channel.".format(ctx.author.mention))
+        if ctx.channel in self.active_sal:
+            await ctx.send(f"{ctx.author.mention} A game is already in progress in this channel.")
             return
-        game = sal.SnakeAndLaddersGame(snakes=self, channel=channel, author=ctx.author)
-        self.active_sal[channel] = game
+
+        game = sal.SnakeAndLaddersGame(snakes=self, context=ctx)
+        self.active_sal[ctx.channel] = game
+
         await game.open_game()
-
-    @sal.command(name="join()", aliases=["join"])
-    async def join_sal(self, ctx: Context):
-        """
-        Join a Snakes and Ladders game in the channel.
-        """
-        channel = ctx.channel
-        if channel not in self.active_sal:
-            await ctx.send(
-                "{0} There is no active Snakes & Ladders game in this channel.".format(ctx.author.mention))
-            return
-        game = self.active_sal[channel]
-        await game.player_join(ctx.author)
-
-    @sal.command(name="leave()", aliases=["leave", "quit"])
-    async def leave_sal(self, ctx: Context):
-        """
-        Leave the Snakes and Ladders game.
-        """
-        channel = ctx.channel
-        if channel not in self.active_sal:
-            await ctx.send(
-                "{0} There is no active Snakes & Ladders game in this channel.".format(ctx.author.mention))
-            return
-        game = self.active_sal[channel]
-        await game.player_leave(ctx.author)
-
-    @sal.command(name="cancel()", aliases=["cancel"])
-    async def cancel_sal(self, ctx: Context):
-        """
-        Cancel the Snakes and Ladders game (author only).
-        """
-        channel = ctx.channel
-        if channel not in self.active_sal:
-            await ctx.send(
-                "{0} There is no active Snakes & Ladders game in this channel.".format(ctx.author.mention))
-            return
-        game = self.active_sal[channel]
-        await game.cancel_game(ctx.author)
-
-    @sal.command(name="start()", aliases=["start"])
-    async def start_sal(self, ctx: Context):
-        """
-        Start the Snakes and Ladders game (author only).
-        """
-        channel = ctx.channel
-        if channel not in self.active_sal:
-            await ctx.send(
-                "{0} There is no active Snakes & Ladders game in this channel.".format(ctx.author.mention))
-            return
-        game = self.active_sal[channel]
-        await game.start_game(ctx.author)
-
-    @command(name="roll()", aliases=["sal roll", "roll"])
-    async def roll_sal(self, ctx: Context):
-        """
-        Roll the dice in Snakes and Ladders.
-        """
-        channel = ctx.channel
-        if channel not in self.active_sal:
-            await ctx.send(
-                "{0} There is no active Snakes & Ladders game in this channel.".format(ctx.author.mention))
-            return
-        game = self.active_sal[channel]
-
-        await game.player_roll(ctx.author)
-    # endregion
 
 
 def setup(bot):
