@@ -46,7 +46,8 @@ BOT_AVATAR_URL = "https://raw.githubusercontent.com/discord-python/branding/mast
 DEPLOY_BOT_KEY = os.environ.get("DEPLOY_BOT_KEY")
 DEPLOY_SITE_KEY = os.environ.get("DEPLOY_SITE_KEY")
 SITE_API_KEY = os.environ.get("BOT_API_KEY")
-YOUTUBE_API_KEY = os.getenv('YOUTUBE_API_KEY')
+YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
+OMDB_API_KEY = os.getenv("OMDB_API_KEY")
 
 # Bot internals
 HELP_PREFIX = "bot."
