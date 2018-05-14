@@ -228,6 +228,7 @@ def _get_word(self) -> str:
 
     # Iterate through the buffer and determine
     pos = 0
+    current = None
     while not self.eof:
         try:
             current = self.buffer[self.index + pos]
@@ -242,7 +243,7 @@ def _get_word(self) -> str:
     self.index += pos
 
     # If the command looks like a python syntax command, try to parse it.
-    if current == "(" or current == "[":
+    if current and current == "(" or current == "[":
         try:
             result = parse_python(pos)
 
