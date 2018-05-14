@@ -10,7 +10,7 @@ from discord.ext.commands import (
 
 from bot.constants import (
     ADMIN_ROLE, BOT_COMMANDS_CHANNEL, DEVTEST_CHANNEL,
-    HELPERS_CHANNEL, MODERATOR_ROLE, OWNER_ROLE,
+    ERROR_REPLIES, HELPERS_CHANNEL, MODERATOR_ROLE, OWNER_ROLE,
     SITE_API_KEY, SITE_API_TAGS_URL, TAG_COOLDOWN
 )
 from bot.decorators import with_role
@@ -349,7 +349,7 @@ class Tags:
             embed = Embed()
             embed.colour = Colour.red()
             embed.description = str(error)
-            embed.title = random.choice(self.FAIL_TITLES)
+            embed.title = random.choice(ERROR_REPLIES)
             await ctx.send(embed=embed)
         else:
             log.error(f"Unhandled tag command error: {error} ({error.original})")
