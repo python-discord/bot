@@ -1,4 +1,5 @@
 import asyncio
+import colorsys
 import logging
 import random
 import string
@@ -442,35 +443,36 @@ class Snakes:
                 return get_random_long_message(messages, retries - 1)
             return long_message
 
-        embed = Embed()
-        user = ctx.message.author
+        with ctx.typing():
+            embed = Embed()
+            user = ctx.message.author
 
-        if not message:
+            if not message:
 
-            # Get a random message from the users history
-            messages = []
-            async for message in ctx.channel.history(limit=500).filter(predicate):
-                messages.append(message.content)
+                # Get a random message from the users history
+                messages = []
+                async for message in ctx.channel.history(limit=500).filter(predicate):
+                    messages.append(message.content)
 
-            message = get_random_long_message(messages)
+                message = get_random_long_message(messages)
 
-        # Set the avatar
-        if user.avatar is not None:
-            avatar = f"https://cdn.discordapp.com/avatars/{user.id}/{user.avatar}"
-        else:
-            avatar = (
-                "https://img00.deviantart.net/eee3/i/2017/168/3/4/"
-                "discord__app__avatar_rev1_by_nodeviantarthere-dbd2tp9.png"
+            # Set the avatar
+            if user.avatar is not None:
+                avatar = f"https://cdn.discordapp.com/avatars/{user.id}/{user.avatar}"
+            else:
+                avatar = (
+                    "https://img00.deviantart.net/eee3/i/2017/168/3/4/"
+                    "discord__app__avatar_rev1_by_nodeviantarthere-dbd2tp9.png"
+                )
+
+            # Build and send the embed
+            embed.set_author(
+                name=f"{user.name}#{user.discriminator}",
+                icon_url=avatar,
             )
+            embed.description = f"*{self._snakify(message)}*"
 
-        # Build and send the embed
-        embed.set_author(
-            name=f"{user.name}#{user.discriminator}",
-            icon_url=avatar,
-        )
-        embed.description = f"*{self._snakify(message)}*"
-
-        await ctx.channel.send(embed=embed)
+            await ctx.channel.send(embed=embed)
 
     @command(name="snakes.fact()", aliases=["snakes.fact"])
     async def snake_fact(self, ctx: Context):
@@ -501,27 +503,54 @@ class Snakes:
         Made by Momo and kel during the first code jam.
         """
 
-        # Generate random snake attributes
-        width = random.randint(8, 12)
-        length = random.randint(15, 22)
-        snek_color, text_color = random.sample(perlinsneks.SNAKE_COLORS, 2)
-        text = random.choice(perlinsneks.SNAKE_TEXTS)
+        def beautiful_pastel(hue):
+            """
+            Returns random bright pastels.
+            """
 
-        # Build and send the snek
-        factory = perlin.PerlinNoiseFactory(dimension=1, octaves=2)
-        image_frame = perlinsneks.create_snek_frame(
-            factory,
-            snake_width=width,
-            snake_length=length,
-            snake_color=snek_color,
-            text=text,
-            text_color=text_color,
-        )
-        png_bytes = perlinsneks.frame_to_png_bytes(image_frame)
+            light = random.uniform(0.7, 0.85)
+            saturation = 1
 
-        file = File(png_bytes, filename='snek.png')
+            rgb = colorsys.hls_to_rgb(hue, light, saturation)
+            hex_rgb = ""
 
-        await ctx.send(file=file)
+            for part in rgb:
+                value = int(part * 0xFF)
+                hex_rgb += f"{value:02x}"
+
+            return int(hex_rgb, 16)
+
+        with ctx.typing():
+
+            # Generate random snake attributes
+            width = random.randint(6, 10)
+            length = random.randint(15, 22)
+            random_hue = random.random()
+            snek_color = beautiful_pastel(random_hue)
+            text_color = beautiful_pastel((random_hue + 0.5) % 1)
+            bg_color = (
+                random.randint(32, 50),
+                random.randint(32, 50),
+                random.randint(50, 70),
+            )
+            text = random.choice(perlinsneks.SNAKE_TEXTS)
+
+            # Build and send the snek
+            factory = perlin.PerlinNoiseFactory(dimension=1, octaves=2)
+            image_frame = perlinsneks.create_snek_frame(
+                factory,
+                snake_width=width,
+                snake_length=length,
+                snake_color=snek_color,
+                text=text,
+                text_color=text_color,
+                bg_color=bg_color
+            )
+            png_bytes = perlinsneks.frame_to_png_bytes(image_frame)
+
+            file = File(png_bytes, filename='snek.png')
+
+            await ctx.send(file=file)
 
     @command(name="snakes.hatch()", aliases=["snakes.hatch", "hatch"])
     async def hatch(self, ctx: Context):
