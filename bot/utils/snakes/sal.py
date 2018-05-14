@@ -108,6 +108,7 @@ class SnakeAndLaddersGame:
                 elif reaction.emoji == CANCEL_EMOJI:
                     if self.ctx.author == user:
                         await self.cancel_game(user)
+                        return
                     else:
                         await self.player_leave(user)
                 elif reaction.emoji == START_EMOJI:
@@ -122,7 +123,7 @@ class SnakeAndLaddersGame:
             except asyncio.TimeoutError:
                 log.debug("Snakes and Ladders timed out waiting for a reaction")
                 self.cancel_game(self.author)
-                break  # We're done, no reactions for the last 5 minutes
+                return  # We're done, no reactions for the last 5 minutes
 
     async def _add_player(self, user: Member):
         self.players.append(user)
@@ -279,6 +280,7 @@ class SnakeAndLaddersGame:
                 elif reaction.emoji == CANCEL_EMOJI:
                     if self.ctx.author == user:
                         await self.cancel_game(user)
+                        return
                     else:
                         await self.player_leave(user)
 
@@ -290,7 +292,7 @@ class SnakeAndLaddersGame:
             except asyncio.TimeoutError:
                 log.debug("Snakes and Ladders timed out waiting for a reaction")
                 await self.cancel_game(self.author)
-                break  # We're done, no reactions for the last 5 minutes
+                return  # We're done, no reactions for the last 5 minutes
 
         # Round completed
         await self._complete_round()

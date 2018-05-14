@@ -2,13 +2,19 @@ import asyncio
 import colorsys
 import logging
 import random
+import re
 import string
 import urllib
+from typing import Any, Dict
 
+import aiohttp
+import async_timeout
 from discord import Embed, File, Member, Reaction
-from discord.ext.commands import AutoShardedBot, Context, command
+from discord.ext.commands import AutoShardedBot, Context, bot_has_permissions, command
 
 from bot.constants import OMDB_API_KEY, SITE_API_KEY, SITE_API_URL, YOUTUBE_API_KEY
+from bot.converters import Snake
+from bot.decorators import locked
 from bot.utils.snakes import hatching, perlin, perlinsneks, sal
 
 log = logging.getLogger(__name__)
@@ -72,6 +78,9 @@ If the implementation is easy to explain, it may be a good idea.
 # Max messages to train snake_chat on
 MSG_MAX = 100
 
+# get_snek constants
+URL = "https://en.wikipedia.org/w/api.php?"
+
 
 class Snakes:
     """
@@ -83,6 +92,9 @@ class Snakes:
     https://github.com/discord-python/code-jam-1
     """
 
+    wiki_brief = re.compile(r'(.*?)(=+ (.*?) =+)', flags=re.DOTALL)
+    valid = ('gif', 'png', 'jpeg', 'jpg', 'webp')
+
     def __init__(self, bot: AutoShardedBot):
         self.active_sal = {}
         self.bot = bot
@@ -90,6 +102,142 @@ class Snakes:
         self.headers = {"X-API-KEY": SITE_API_KEY}
         self.quiz_url = f"{SITE_API_URL}/snake_quiz"
         self.fact_url = f"{SITE_API_URL}/snake_fact"
+
+    async def _fetch(self, session, url, params=None):
+        if params is None:
+            params = {}
+
+        async with async_timeout.timeout(10):
+            async with session.get(url, params=params) as response:
+                return await response.json()
+
+    async def get_snek(self, name: str) -> Dict[str, Any]:
+        """
+        Goes online and fetches all the data from a wikipedia article
+        about a snake. Builds a dict that the get() method can use.
+
+        Created by Ava and eivl for the very first code jam on PythonDiscord.
+
+        :param name: The name of the snake to get information for - omit for a random snake
+        :return: A dict containing information on a snake
+        """
+
+        snake_info = {}
+
+        async with aiohttp.ClientSession() as session:
+            params = {
+                'format': 'json',
+                'action': 'query',
+                'list': 'search',
+                'srsearch': name,
+                'utf8': '',
+                'srlimit': '1',
+            }
+
+            json = await self._fetch(session, URL, params=params)
+
+            # wikipedia does have a error page
+            try:
+                pageid = json["query"]["search"][0]["pageid"]
+            except KeyError:
+                # Wikipedia error page ID(?)
+                pageid = 41118
+
+            params = {
+                'format': 'json',
+                'action': 'query',
+                'prop': 'extracts|images|info',
+                'exlimit': 'max',
+                'explaintext': '',
+                'inprop': 'url',
+                'pageids': pageid
+            }
+
+            json = await self._fetch(session, URL, params=params)
+
+            # constructing dict - handle exceptions later
+            try:
+                snake_info["title"] = json["query"]["pages"][f"{pageid}"]["title"]
+                snake_info["extract"] = json["query"]["pages"][f"{pageid}"]["extract"]
+                snake_info["images"] = json["query"]["pages"][f"{pageid}"]["images"]
+                snake_info["fullurl"] = json["query"]["pages"][f"{pageid}"]["fullurl"]
+                snake_info["pageid"] = json["query"]["pages"][f"{pageid}"]["pageid"]
+            except KeyError:
+                snake_info["error"] = True
+
+            if snake_info["images"]:
+                i_url = 'https://commons.wikimedia.org/wiki/Special:FilePath/'
+                image_list = []
+                map_list = []
+                thumb_list = []
+
+                # Wikipedia has arbitrary images that are not snakes
+                banned = [
+                    'Commons-logo.svg',
+                    'Red%20Pencil%20Icon.png',
+                    'distribution',
+                    'The%20Death%20of%20Cleopatra%20arthur.jpg',
+                    'Head%20of%20holotype',
+                    'locator',
+                    'Woma.png',
+                    '-map.',
+                    '.svg',
+                    'ange.',
+                    'Adder%20(PSF).png'
+                ]
+
+                for image in snake_info["images"]:
+                    # images come in the format of `File:filename.extension`
+                    file, sep, filename = image["title"].partition(':')
+                    filename = filename.replace(" ", "%20")  # Wikipedia returns good data!
+
+                    if not filename.startswith('Map'):
+                        if any(ban in filename for ban in banned):
+                            pass
+                        else:
+                            image_list.append(f"{i_url}{filename}")
+                            thumb_list.append(f"{i_url}{filename}?width=100")
+                    else:
+                        map_list.append(f"{i_url}{filename}")
+
+            snake_info["image_list"] = image_list
+            snake_info["map_list"] = map_list
+            snake_info["thumb_list"] = thumb_list
+        return snake_info
+
+    @command(name="snakes.get()", aliases=["snakes.get"])
+    @bot_has_permissions(manage_messages=True)
+    @locked()
+    async def get(self, ctx: Context, name: Snake = None):
+        """
+        Fetches information about a snake from Wikipedia.
+        :param ctx: Context object passed from discord.py
+        :param name: Optional, the name of the snake to get information for - omit for a random snake
+        """
+        if name is None:
+            name = Snake.random()
+
+        data = await self.get_snek(name)
+
+        if data.get('error'):
+            return await ctx.send('Could not fetch data from Wikipedia.')
+
+        match = self.wiki_brief.match(data['extract'])
+        description = match.group(1) if match else None
+        description = description.replace("\n", "\n\n")  # Give us some proper paragraphs.
+        embed = Embed(
+            title=data['title'],
+            description=description,
+            colour=0x59982F,
+        )
+
+        embed.set_footer(text='Powered by Wikipedia')
+
+        emoji = 'https://emojipedia-us.s3.amazonaws.com/thumbs/60/google/3/snake_1f40d.png'
+        image = next((url for url in data['image_list'] if url.endswith(self.valid)), emoji)
+        embed.set_image(url=image)
+
+        await ctx.send(embed=embed)
 
     @staticmethod
     def _snakify(message):
@@ -195,6 +343,7 @@ class Snakes:
 
         return await ctx.send(embed=embed)
 
+    @bot_has_permissions(manage_messages=True)
     @command(name="snakes.antidote()", aliases=["snakes.antidote"])
     async def antidote(self, ctx: Context):
         """
@@ -224,11 +373,6 @@ class Snakes:
                     user_.id == ctx.author.id             # Reaction was made by author
                 ))
             )
-
-        # Check to see if the bot can remove reactions
-        if not ctx.channel.permissions_for(ctx.guild.me).manage_messages:
-            log.warning(f"Unable to start Antidote game - Missing manage_messages permissions in {ctx.channel}")
-            return
 
         # Initialize variables
         antidote_tries = 0

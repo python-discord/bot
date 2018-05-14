@@ -1,4 +1,7 @@
 import logging
+from asyncio import Lock
+from functools import wraps
+from weakref import WeakValueDictionary
 
 from discord.ext import commands
 from discord.ext.commands import Context
@@ -46,3 +49,24 @@ def in_channel(channel_id):
                   f"The result of the in_channel check was {check}.")
         return check
     return commands.check(predicate)
+
+
+def locked():
+    """
+    Allows the user to only run one instance of the decorated command at a time.
+    Subsequent calls to the command from the same author are
+    ignored until the command has completed invocation.
+    This decorator has to go before (below) the `command` decorator.
+    """
+    def wrap(func):
+        func.__locks = WeakValueDictionary()
+
+        @wraps(func)
+        async def inner(self, ctx, *args, **kwargs):
+            lock = func.__locks.setdefault(ctx.author.id, Lock())
+            if lock.locked():
+                return
+            async with func.__locks.setdefault(ctx.author.id, Lock()):
+                return await func(self, ctx, *args, **kwargs)
+        return inner
+    return wrap
