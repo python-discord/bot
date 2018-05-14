@@ -7,7 +7,7 @@ import urllib
 from discord import Embed, File, Member, Reaction
 from discord.ext.commands import AutoShardedBot, Context, command
 
-from bot.constants import SITE_API_KEY, SITE_API_URL, YOUTUBE_API_KEY
+from bot.constants import OMDB_API_KEY, SITE_API_KEY, SITE_API_URL, YOUTUBE_API_KEY
 from bot.utils.snakes import hatching, perlin, perlinsneks, sal
 
 log = logging.getLogger(__name__)
@@ -614,6 +614,82 @@ class Snakes:
         self.active_sal[ctx.channel] = game
 
         await game.open_game()
+
+    # region: Snake movies
+
+    @command(name="snakes.movie()", aliases=["movie"])
+    async def movie(self, ctx: Context):
+        """
+        Gets a random snake-related movie from OMDB.
+
+        Written by Samuel and Fat & Proud during the very first code jam.
+        Modified by gdude for inclusion in the bot.
+        """
+
+        url = "http://www.omdbapi.com/"
+        page = random.randint(1, 27)
+
+        response = await self.bot.http_session.get(
+            url,
+            params={
+                "s": "snake",
+                "page": page,
+                "type": "movie",
+                "apikey": OMDB_API_KEY
+            }
+        )
+
+        data = await response.json()
+        movie = random.choice(data["Search"])["imdbID"]
+
+        response = await self.bot.http_session.get(
+            url,
+            params={
+                "i": movie,
+                "apikey": OMDB_API_KEY
+            }
+        )
+
+        data = await response.json()
+
+        embed = Embed(
+            title=data["Title"],
+            color=0x399600
+        )
+
+        del data["Response"], data["imdbID"], data["Title"]
+
+        for key, value in data.items():
+            if not value or value == "N/A" or key in ("Response", "imdbID", "Title", "Type"):
+                continue
+
+            if key == "Ratings":  # [{'Source': 'Internet Movie Database', 'Value': '7.6/10'}]
+                rating = random.choice(value)
+
+                if rating["Source"] != "Internet Movie Database":
+                    embed.add_field(name=f"Rating: {rating['Source']}", value=rating["Value"])
+
+                continue
+
+            if key == "Poster":
+                embed.set_image(url=value)
+                continue
+
+            elif key == "imdbRating":
+                key = "IMDB Rating"
+
+            elif key == "imdbVotes":
+                key = "IMDB Votes"
+
+            embed.add_field(name=key, value=value, inline=True)
+
+        embed.set_footer(text="Data provided by the OMDB API")
+
+        await ctx.channel.send(
+            embed=embed
+        )
+
+    # endregion
 
 
 def setup(bot):
