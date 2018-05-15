@@ -73,7 +73,7 @@ class Events:
                 f"Sorry, an unexpected error occurred. Please let us know!\n\n```{e}```"
             )
             raise e.original
-        log.error(f"COMMAND ERROR: '{e}'")
+        raise e
 
     async def on_ready(self):
         users = []

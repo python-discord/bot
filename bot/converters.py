@@ -16,6 +16,7 @@ class Snake(Converter):
     snakes = None
 
     async def convert(self, ctx, name):
+        await self.build_list()
         name = name.lower()
 
         if name == 'python':
@@ -37,26 +38,18 @@ class Snake(Converter):
 
             return potential
 
-        names = [snake['name'] for snake in self.snakes]
-        scientific = [snake['scientific'] for snake in self.snakes]
-        all_names = names | scientific
+        names = {snake['name']: snake['scientific'] for snake in self.snakes}
+        all_names = names.keys() | names.values()
         timeout = len(all_names) * (3 / 4)
 
         embed = discord.Embed(title='Found multiple choices. Please choose the correct one.', colour=0x59982F)
         embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
 
         name = await disambiguate(ctx, get_potential(all_names), timeout=timeout, embed=embed)
-        return self.snakes.get(name, name)
+        return names.get(name, name)
 
     @classmethod
-    async def random(cls):
-        """
-        This is stupid. We should find a way to
-        somehow get the global session into a
-        global context, so I can get it from here.
-        :return:
-        """
-
+    async def build_list(cls):
         if cls.snakes is None:
             if DEBUG_MODE:
                 http_session = ClientSession(
@@ -82,5 +75,15 @@ class Snake(Converter):
             cls.snakes = await response.json()
             http_session.close()
 
+    @classmethod
+    async def random(cls):
+        """
+        This is stupid. We should find a way to
+        somehow get the global session into a
+        global context, so I can get it from here.
+        :return:
+        """
+
+        await cls.build_list()
         names = [snake['scientific'] for snake in cls.snakes]
         return random.choice(names)

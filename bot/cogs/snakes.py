@@ -19,6 +19,9 @@ from bot.utils.snakes import hatching, perlin, perlinsneks, sal
 
 log = logging.getLogger(__name__)
 
+# Color
+SNAKE_COLOR = 0x399600
+
 # Antidote constants
 SYRINGE_EMOJI = "\U0001F489"  # :syringe:
 PILL_EMOJI = "\U0001F48A"     # :pill:
@@ -98,7 +101,6 @@ class Snakes:
     def __init__(self, bot: AutoShardedBot):
         self.active_sal = {}
         self.bot = bot
-        self.SNAKES = ['black cobra', 'children\'s python']  # temporary
         self.headers = {"X-API-KEY": SITE_API_KEY}
 
         # Build API urls.
@@ -106,7 +108,6 @@ class Snakes:
         self.facts_url = f"{SITE_API_URL}/snake_facts"
         self.names_url = f"{SITE_API_URL}/snake_names"
         self.idioms_url = f"{SITE_API_URL}/snake_idioms"
-        self.idioms_url = f"{SITE_API_URL}/snake_movies"
 
     async def _fetch(self, session, url, params=None):
         if params is None:
@@ -119,7 +120,7 @@ class Snakes:
     async def get_snek(self, name: str) -> Dict[str, Any]:
         """
         Goes online and fetches all the data from a wikipedia article
-        about a snake. Builds a dict that the get() method can use.
+        about a snake. Builds a dict that the .get() method can use.
 
         Created by Ava and eivl for the very first code jam on PythonDiscord.
 
@@ -218,31 +219,46 @@ class Snakes:
         Fetches information about a snake from Wikipedia.
         :param ctx: Context object passed from discord.py
         :param name: Optional, the name of the snake to get information for - omit for a random snake
+
+        Created by Ava and eivl
         """
-        if name is None:
-            name = await Snake.random()
 
-        data = await self.get_snek(name)
+        with ctx.typing():
+            if name is None:
+                name = await Snake.random()
 
-        if data.get('error'):
-            return await ctx.send('Could not fetch data from Wikipedia.')
+            data = await self.get_snek(name)
 
-        match = self.wiki_brief.match(data['extract'])
-        description = match.group(1) if match else None
-        description = description.replace("\n", "\n\n")  # Give us some proper paragraphs.
-        embed = Embed(
-            title=data['title'],
-            description=description,
-            colour=0x59982F,
-        )
+            if data.get('error'):
+                return await ctx.send('Could not fetch data from Wikipedia.')
 
-        embed.set_footer(text='Powered by Wikipedia')
+            match = self.wiki_brief.match(data['extract'])
+            description = match.group(1) if match else None
+            description = description.replace("\n", "\n\n")  # Give us some proper paragraphs.
 
-        emoji = 'https://emojipedia-us.s3.amazonaws.com/thumbs/60/google/3/snake_1f40d.png'
-        image = next((url for url in data['image_list'] if url.endswith(self.valid)), emoji)
-        embed.set_image(url=image)
+            # Shorten the description if needed
+            if len(description) > 1000:
+                description = description[:1000]
+                last_newline = description.rfind("\n")
+                if last_newline > 0:
+                    description = description[:last_newline]
 
-        await ctx.send(embed=embed)
+            # Strip and add the Wiki link.
+            description = description.strip("\n")
+            description += f"\n\nRead more on [Wikipedia]({data['fullurl']})"
+
+            # Build and send the embed.
+            embed = Embed(
+                title=data['title'],
+                description=description,
+                colour=0x59982F,
+            )
+
+            emoji = 'https://emojipedia-us.s3.amazonaws.com/thumbs/60/google/3/snake_1f40d.png'
+            image = next((url for url in data['image_list'] if url.endswith(self.valid)), emoji)
+            embed.set_image(url=image)
+
+            await ctx.send(embed=embed)
 
     @staticmethod
     def _snakify(message):
@@ -346,7 +362,7 @@ class Snakes:
         embed = Embed(
             title="Snake name",
             description=f"Your snake-name is **{result}**",
-            color=0x399600
+            color=SNAKE_COLOR
         )
 
         return await ctx.send(embed=embed)
@@ -392,7 +408,7 @@ class Snakes:
         page_result_list = []
         win = False
 
-        antidote_embed = Embed(color=0x399600, title="Antidote")
+        antidote_embed = Embed(color=SNAKE_COLOR, title="Antidote")
         antidote_embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar_url)
 
         # Generate answer
@@ -472,7 +488,7 @@ class Snakes:
 
         # Winning / Ending Screen
         if win is True:
-            antidote_embed = Embed(color=0x399600, title="Antidote")
+            antidote_embed = Embed(color=SNAKE_COLOR, title="Antidote")
             antidote_embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar_url)
             antidote_embed.set_image(url="https://i.makeagif.com/media/7-12-2015/Cj1pts.gif")
             antidote_embed.add_field(name=f"You have created the snake antidote!",
@@ -480,7 +496,7 @@ class Snakes:
                                            f"You had {10 - antidote_tries} tries remaining.")
             await board_id.edit(embed=antidote_embed)
         else:
-            antidote_embed = Embed(color=0x399600, title="Antidote")
+            antidote_embed = Embed(color=SNAKE_COLOR, title="Antidote")
             antidote_embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar_url)
             antidote_embed.set_image(url="https://media.giphy.com/media/ceeN6U57leAhi/giphy.gif")
             antidote_embed.add_field(name=EMPTY_UNICODE,
@@ -518,7 +534,7 @@ class Snakes:
 
         # Build and send the embed.
         embed = Embed(
-            color=0x399600,
+            color=SNAKE_COLOR,
             title=question["question"],
             description="\n".join(
                 [f"**{key.upper()}**: {answer}" for key, answer in options.items()]
@@ -554,7 +570,7 @@ class Snakes:
 
         embed = Embed(
             title="Zzzen of Pythhon",
-            color=0x399600
+            color=SNAKE_COLOR
         )
 
         # Get the zen quote and snakify it
@@ -568,7 +584,7 @@ class Snakes:
         )
 
     @command(name="snakes.snakify()", aliases=["snakes.snakify"])
-    async def snake_chat(self, ctx: Context, message: str = None):
+    async def snakify(self, ctx: Context, message: str = None):
         """
         How would I talk if I were a snake?
         :param ctx: context
@@ -642,7 +658,7 @@ class Snakes:
         # Build and send the embed.
         embed = Embed(
             title="Snake fact",
-            color=0x399600,
+            color=SNAKE_COLOR,
             description=question
         )
         await ctx.channel.send(embed=embed)
@@ -685,7 +701,10 @@ class Snakes:
                 random.randint(32, 50),
                 random.randint(50, 70),
             )
-            text = random.choice(perlinsneks.SNAKE_TEXTS)
+
+            # Get a snake idiom from the API
+            response = await self.bot.http_session.get(self.idioms_url, headers=self.headers)
+            text = await response.json()
 
             # Build and send the snek
             factory = perlin.PerlinNoiseFactory(dimension=1, octaves=2)
@@ -750,7 +769,8 @@ class Snakes:
         if search:
             query = search + ' snake'
         else:
-            query = 'snake'
+            snake = await self.get_snake_name()
+            query = snake['name']
 
         # Build the URL and make the request
         url = f'https://www.googleapis.com/youtube/v3/search'
@@ -767,11 +787,14 @@ class Snakes:
         data = response['items']
 
         # Send the user a video
-        num = random.randint(0, 5)  # 5 videos are returned from the api
-        youtube_base_url = 'https://www.youtube.com/watch?v='
-        await ctx.channel.send(
-            content=f"{youtube_base_url}{data[num]['id']['videoId']}"
-        )
+        if len(data) > 0:
+            num = random.randint(0, len(data) - 1)
+            youtube_base_url = 'https://www.youtube.com/watch?v='
+            await ctx.channel.send(
+                content=f"{youtube_base_url}{data[num]['id']['videoId']}"
+            )
+        else:
+            log.warning(f"CRITICAL ERROR: YouTube API returned {response}")
 
     @command(name="snakes.sal()", aliases=["snakes.sal"])
     async def sal(self, ctx: Context):
@@ -796,8 +819,6 @@ class Snakes:
 
         await game.open_game()
 
-    # region: Snake movies
-
     @command(name="snakes.movie()", aliases=["movie"])
     async def movie(self, ctx: Context):
         """
@@ -819,7 +840,6 @@ class Snakes:
                 "apikey": OMDB_API_KEY
             }
         )
-
         data = await response.json()
         movie = random.choice(data["Search"])["imdbID"]
 
@@ -830,12 +850,11 @@ class Snakes:
                 "apikey": OMDB_API_KEY
             }
         )
-
         data = await response.json()
 
         embed = Embed(
             title=data["Title"],
-            color=0x399600
+            color=SNAKE_COLOR
         )
 
         del data["Response"], data["imdbID"], data["Title"]
@@ -869,8 +888,6 @@ class Snakes:
         await ctx.channel.send(
             embed=embed
         )
-
-    # endregion
 
 
 def setup(bot):

@@ -41,6 +41,7 @@ SITE_PROTOCOL = 'http' if DEBUG_MODE else 'https'
 SITE_API_URL = f"{SITE_PROTOCOL}://api.{SITE_URL}"
 GITHUB_URL_BOT = "https://github.com/discord-python/bot"
 BOT_AVATAR_URL = "https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle/logo_circle.png"
+OMDB_URL = "http://www.omdbapi.com/"
 
 # Keys
 DEPLOY_BOT_KEY = os.environ.get("DEPLOY_BOT_KEY")
