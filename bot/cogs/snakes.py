@@ -9,7 +9,7 @@ from typing import Any, Dict
 
 import aiohttp
 import async_timeout
-from discord import Embed, File, Member, Message, Reaction,
+from discord import Embed, File, Member, Message, Reaction
 from discord.ext.commands import AutoShardedBot, Context, bot_has_permissions, command
 
 from bot.constants import OMDB_API_KEY, SITE_API_KEY, SITE_API_URL, YOUTUBE_API_KEY
