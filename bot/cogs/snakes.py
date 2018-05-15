@@ -220,7 +220,7 @@ class Snakes:
         :param name: Optional, the name of the snake to get information for - omit for a random snake
         """
         if name is None:
-            name = Snake.random()
+            name = await Snake.random()
 
         data = await self.get_snek(name)
 
@@ -303,7 +303,8 @@ class Snakes:
         This was written by Iceman, and modified for inclusion into the bot by lemon.
         """
 
-        snake_name = self.get_snake_name()
+        snake_name = await self.get_snake_name()
+        snake_name = snake_name['name']
         snake_prefix = ""
 
         # Set aside every word in the snake name except the last.
@@ -325,7 +326,6 @@ class Snakes:
             if char.lower() in "aeiouy":
                 user_slice_index -= index
                 break
-        log.trace(f"name is {user_name}, index is {user_slice_index}")
 
         # Now, get the index of the vowel to slice the snake_name at
         snake_slice_index = 0
@@ -335,7 +335,6 @@ class Snakes:
             if char.lower() in "aeiouy":
                 snake_slice_index = index + 1
                 break
-        log.trace(f"snake name is {snake_name}, index is {snake_slice_index}")
 
         # Combine!
         snake_name = snake_name[snake_slice_index:]

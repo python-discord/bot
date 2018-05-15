@@ -218,7 +218,7 @@ def _get_word(self) -> str:
         self.buffer = f"{prefix}{parsed_result}"
 
         if new_args:
-            self.buffer += ' '.join(new_args)
+            self.buffer += (" " + " ".join(new_args))
 
         self.index = len(f"{prefix}{parsed_result}")
         self.end = len(self.buffer)

@@ -1,13 +1,19 @@
 import random
+import socket
 
 import discord
+from aiohttp import AsyncResolver, ClientSession, TCPConnector
 from discord.ext.commands import Converter
 from fuzzywuzzy import fuzz
 
+from bot.constants import DEBUG_MODE, SITE_API_KEY, SITE_API_URL
 from bot.utils import disambiguate
+
+NAMES_URL = f"{SITE_API_URL}/snake_names"
 
 
 class Snake(Converter):
+    snakes = None
 
     async def convert(self, ctx, name):
         name = name.lower()
@@ -31,7 +37,9 @@ class Snake(Converter):
 
             return potential
 
-        all_names = self.snakes.keys() | self.snakes.values()
+        names = [snake['name'] for snake in self.snakes]
+        scientific = [snake['scientific'] for snake in self.snakes]
+        all_names = names | scientific
         timeout = len(all_names) * (3 / 4)
 
         embed = discord.Embed(title='Found multiple choices. Please choose the correct one.', colour=0x59982F)
@@ -41,6 +49,38 @@ class Snake(Converter):
         return self.snakes.get(name, name)
 
     @classmethod
-    def random(cls):
-        # list cast necessary because choice() uses indexing internally
-        return random.choice(list(cls.snakes.values()))
+    async def random(cls):
+        """
+        This is stupid. We should find a way to
+        somehow get the global session into a
+        global context, so I can get it from here.
+        :return:
+        """
+
+        if cls.snakes is None:
+            if DEBUG_MODE:
+                http_session = ClientSession(
+                    connector=TCPConnector(
+                        resolver=AsyncResolver(),
+                        family=socket.AF_INET,
+                        verify_ssl=False,
+                    )
+                )
+            else:
+                http_session = ClientSession(
+                    connector=TCPConnector(
+                        resolver=AsyncResolver()
+                    )
+                )
+
+            headers = {"X-API-KEY": SITE_API_KEY}
+            response = await http_session.get(
+                NAMES_URL,
+                params={"get_all": "true"},
+                headers=headers
+            )
+            cls.snakes = await response.json()
+            http_session.close()
+
+        names = [snake['scientific'] for snake in cls.snakes]
+        return random.choice(names)
