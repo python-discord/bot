@@ -115,8 +115,13 @@ class Events:
 
                 for key, value in done.items():
                     if value:
+                        if key == "deleted_oauth":
+                            key = "Deleted (OAuth)"
+                        else:
+                            key = key.title()
+
                         embed.add_field(
-                            name=key.title(), value=str(value)
+                            name=key, value=str(value)
                         )
 
                 await self.bot.get_channel(DEVLOG_CHANNEL).send(
