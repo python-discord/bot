@@ -106,7 +106,7 @@ class Events:
         if users:
             log.debug(f"{len(users)} user roles to be updated")
 
-            done = self.send_updated_users(*users, replace_all=True)
+            done = await self.send_updated_users(*users, replace_all=True)
 
             if any(done.values()):
                 embed = Embed(
