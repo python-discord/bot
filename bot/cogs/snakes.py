@@ -100,8 +100,13 @@ class Snakes:
         self.bot = bot
         self.SNAKES = ['black cobra', 'children\'s python']  # temporary
         self.headers = {"X-API-KEY": SITE_API_KEY}
+
+        # Build API urls.
         self.quiz_url = f"{SITE_API_URL}/snake_quiz"
-        self.fact_url = f"{SITE_API_URL}/snake_fact"
+        self.facts_url = f"{SITE_API_URL}/snake_facts"
+        self.names_url = f"{SITE_API_URL}/snake_names"
+        self.idioms_url = f"{SITE_API_URL}/snake_idioms"
+        self.idioms_url = f"{SITE_API_URL}/snake_movies"
 
     async def _fetch(self, session, url, params=None):
         if params is None:
@@ -265,12 +270,16 @@ class Snakes:
 
         return message
 
-    def get_snake_name(self) -> str:
+    async def get_snake_name(self) -> Dict[str, str]:
         """
         Gets a random snake name.
         :return: A random snake name, as a string.
         """
-        return random.choice(self.SNAKES)
+
+        response = await self.bot.http_session.get(self.names_url, headers=self.headers)
+        name_data = await response.json()
+
+        return name_data
 
     @command(name="snakes.name()", aliases=["snakes.name", "snakes.name_gen", "snakes.name_gen()"])
     async def random_snake_name(self, ctx: Context, name: str = None):
@@ -628,7 +637,7 @@ class Snakes:
         """
 
         # Get a fact from the API.
-        response = await self.bot.http_session.get(self.fact_url, headers=self.headers)
+        response = await self.bot.http_session.get(self.facts_url, headers=self.headers)
         question = await response.json()
 
         # Build and send the embed.

@@ -1,4 +1,3 @@
-import json
 import random
 
 import discord
@@ -9,8 +8,6 @@ from bot.utils import disambiguate
 
 
 class Snake(Converter):
-    with open('snakes.json', 'r') as f:
-        snakes = json.load(f)
 
     async def convert(self, ctx, name):
         name = name.lower()

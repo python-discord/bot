@@ -7,7 +7,11 @@ from discord.ext.commands import (
     NoPrivateMessage, UserInputError
 )
 
-from bot.constants import DEVLOG_CHANNEL, PYTHON_GUILD, SITE_API_KEY, SITE_API_URL
+from bot.constants import (
+    DEBUG_MODE, DEVLOG_CHANNEL,
+    PYTHON_GUILD, SITE_API_KEY,
+    SITE_API_URL
+)
 from bot.utils import chunks
 
 log = logging.getLogger(__name__)
@@ -112,9 +116,10 @@ class Events:
                             name=key.title(), value=str(value)
                         )
 
-                await self.bot.get_channel(DEVLOG_CHANNEL).send(
-                    embed=embed
-                )
+                if not DEBUG_MODE:
+                    await self.bot.get_channel(DEVLOG_CHANNEL).send(
+                        embed=embed
+                    )
 
     async def on_member_update(self, before: Member, after: Member):
         if before.roles == after.roles and before.name == after.name and before.discriminator == after.discriminator:
