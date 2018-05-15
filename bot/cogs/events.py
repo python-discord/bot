@@ -134,7 +134,7 @@ class Events:
 
         before_role_names = [role.name for role in before.roles]  # type: List[str]
         after_role_names = [role.name for role in after.roles]  # type: List[str]
-        role_ids = [str(r.id) for r in after.roles]  # type: List[int]
+        role_ids = [str(r.id) for r in after.roles]  # type: List[str]
 
         log.debug(f"{before.display_name} roles changing from {before_role_names} to {after_role_names}")
 
@@ -148,7 +148,7 @@ class Events:
         log.debug(f"User {after.id} updated; changes: {changes}")
 
     async def on_member_join(self, member: Member):
-        role_ids = [str(r.id) for r in member.roles]  # type: List[int]
+        role_ids = [str(r.id) for r in member.roles]  # type: List[str]
 
         changes = await self.send_updated_users({
             "user_id": str(member.id),
