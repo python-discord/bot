@@ -9,7 +9,7 @@ from typing import Any, Dict
 
 import aiohttp
 import async_timeout
-from discord import Embed, File, Member, Reaction
+from discord import Embed, File, Member, Message, Reaction,
 from discord.ext.commands import AutoShardedBot, Context, bot_has_permissions, command
 
 from bot.constants import OMDB_API_KEY, SITE_API_KEY, SITE_API_URL, YOUTUBE_API_KEY
@@ -83,6 +83,33 @@ MSG_MAX = 100
 
 # get_snek constants
 URL = "https://en.wikipedia.org/w/api.php?"
+
+# snake guess responses
+INCORRECT_GUESS = [
+    "Nope, that's not what it is.",
+    "Not quite.",
+    "Not even close.",
+    "Terrible guess.",
+    "Nnnno.",
+    "Dude. No.",
+    "I thought everyone knew this one.",
+    "Guess you suck at snakes.",
+    "Bet you feel stupid now.",
+    "Hahahaha, no.",
+    "Did you hit the wrong key?"
+]
+
+CORRECT_GUESS = [
+    "**WRONG**. Wait, no, actually you're right.",
+    "Yeah, you got it!",
+    "Yep, that's exactly what it is.",
+    "Uh-huh. Yep yep yep.",
+    "Yeah that's right.",
+    "Yup. How did you know that?",
+    "Are you a herpetologist?",
+    "Sure, okay, but I bet you can't pronounce it.",
+    "Are you cheating?"
+]
 
 
 class Snakes:
@@ -296,6 +323,44 @@ class Snakes:
         name_data = await response.json()
 
         return name_data
+
+    async def validate_answer(self, ctx: Context, message: Message, answer: str, options: list):
+        """
+        Validate the answer using a reaction event loop
+        :return:
+        """
+
+        def predicate(reaction, user):
+            """
+            Test if the the answer is valid and can be evaluated.
+            """
+            return (
+                reaction.message.id == message.id                  # The reaction is attached to the question we asked.
+                and user == ctx.author                             # It's the user who triggered the quiz.
+                and str(reaction.emoji) in ANSWERS_EMOJI.values()  # The reaction is one of the options.
+            )
+
+        for emoji in ANSWERS_EMOJI.values():
+            await message.add_reaction(emoji)
+
+        # Validate the answer
+        try:
+            reaction, user = await ctx.bot.wait_for("reaction_add", timeout=45.0, check=predicate)
+        except asyncio.TimeoutError:
+            await ctx.channel.send(f"You took too long. The correct answer was **{options[answer]}**.")
+            await message.clear_reactions()
+            return
+
+        if str(reaction.emoji) == ANSWERS_EMOJI[answer]:
+            await ctx.send(f"{random.choice(CORRECT_GUESS)} The correct answer was **{options[answer]}**.")
+        else:
+            wrong_answer = ANSWERS_EMOJI_REVERSE[str(reaction.emoji)]
+            await ctx.send(
+                f"{random.choice(INCORRECT_GUESS)} **{wrong_answer}** is incorrect. "
+                f"The correct answer was **{options[answer].lower()}**."
+            )
+
+        await message.clear_reactions()
 
     @command(name="snakes.name()", aliases=["snakes.name", "snakes.name_gen", "snakes.name_gen()"])
     async def random_snake_name(self, ctx: Context, name: str = None):
@@ -516,16 +581,6 @@ class Snakes:
         and modified by lemon for inclusion in this bot.
         """
 
-        def valid_answer(reaction, user):
-            """
-            Test if the the answer is valid and can be evaluated.
-            """
-            return (
-                reaction.message.id == quiz.id                     # The reaction is attached to the question we asked.
-                and user == ctx.author                             # It's the user who triggered the quiz.
-                and str(reaction.emoji) in ANSWERS_EMOJI.values()  # The reaction is one of the options.
-            )
-
         # Prepare a question.
         response = await self.bot.http_session.get(self.quiz_url, headers=self.headers)
         question = await response.json()
@@ -540,24 +595,9 @@ class Snakes:
                 [f"**{key.upper()}**: {answer}" for key, answer in options.items()]
             )
         )
+
         quiz = await ctx.channel.send("", embed=embed)
-        for emoji in ANSWERS_EMOJI.values():
-            await quiz.add_reaction(emoji)
-
-        # Validate the answer
-        try:
-            reaction, user = await ctx.bot.wait_for("reaction_add", timeout=20.0, check=valid_answer)
-        except asyncio.TimeoutError:
-            await ctx.channel.send("Bah! You took too long.")
-            return
-
-        if str(reaction.emoji) == ANSWERS_EMOJI[answer]:
-            await ctx.channel.send(f"You selected **{options[answer]}**, which is correct! Well done!")
-        else:
-            wrong_answer = ANSWERS_EMOJI_REVERSE[str(reaction.emoji)]
-            await ctx.channel.send(
-                f"Sorry, **{wrong_answer}** is incorrect. The correct answer was \"**{options[answer]}**\"."
-            )
+        await self.validate_answer(ctx, quiz, answer, options)
 
     @command(name="snakes.zen()", aliases=["zen"])
     async def zen(self, ctx: Context):
@@ -818,6 +858,37 @@ class Snakes:
         self.active_sal[ctx.channel] = game
 
         await game.open_game()
+
+    @command(name="snakes.guess()", aliases=["snakes.guess", "identify"])
+    @locked()
+    async def guess(self, ctx):
+        """
+        Snake identifying game!
+        """
+
+        with ctx.typing():
+
+            image = None
+
+            while image is None:
+                snakes = [await Snake.random() for _ in range(4)]
+                snake = random.choice(snakes)
+                answer = "abcd"[snakes.index(snake)]
+
+                data = await self.get_snek(snake)
+
+                image = next((url for url in data['image_list'] if url.endswith(self.valid)), None)
+
+            embed = Embed(
+                title='Which of the following is the snake in the image?',
+                description="\n".join(f"{'ABCD'[snakes.index(snake)]}: {snake}" for snake in snakes),
+                colour=SNAKE_COLOR
+            )
+            embed.set_image(url=image)
+
+        guess = await ctx.send(embed=embed)
+        options = {f"{'abcd'[snakes.index(snake)]}": snake for snake in snakes}
+        await self.validate_answer(ctx, guess, answer, options)
 
     @command(name="snakes.movie()", aliases=["movie"])
     async def movie(self, ctx: Context):
