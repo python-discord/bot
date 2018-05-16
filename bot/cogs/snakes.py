@@ -13,17 +13,18 @@ from typing import Any, Dict
 
 import aiohttp
 import async_timeout
+from discord import Colour, Embed, File, Member, Message, Reaction
+from discord.ext.commands import AutoShardedBot, BadArgument, Context, bot_has_permissions, command
 from PIL import Image, ImageDraw, ImageFont
-from discord import Embed, File, Member, Message, Reaction
-from discord.ext.commands import AutoShardedBot, Context, bot_has_permissions, command
 
-from bot.constants import OMDB_API_KEY, SITE_API_KEY, SITE_API_URL, YOUTUBE_API_KEY
+from bot.constants import ERROR_REPLIES, OMDB_API_KEY, SITE_API_KEY, SITE_API_URL, YOUTUBE_API_KEY
 from bot.converters import Snake
 from bot.decorators import locked
 from bot.utils.snakes import hatching, perlin, perlinsneks, sal
 
 log = logging.getLogger(__name__)
 
+# region: Constants
 # Color
 SNAKE_COLOR = 0x399600
 
@@ -121,7 +122,10 @@ CARD = {
     "top": Image.open("bot/resources/snake_cards/card_top.png"),
     "frame": Image.open("bot/resources/snake_cards/card_frame.png"),
     "bottom": Image.open("bot/resources/snake_cards/card_bottom.png"),
-    "backs": [Image.open(f"bot/resources/snake_cards/backs/{file}") for file in os.listdir("bot/resources/snake_cards/backs")],
+    "backs": [
+        Image.open(f"bot/resources/snake_cards/backs/{file}")
+        for file in os.listdir("bot/resources/snake_cards/backs")
+    ],
     "font": ImageFont.truetype("bot/resources/snake_cards/expressway.ttf", 20)
 }
 
@@ -130,9 +134,7 @@ SPECIAL_CARDS = {
         "name": "Python",
         "info": "Python is a species of programming language, commonly used by coding beginners and experts alike. "
                 "It was first discovered in 1989 by Guido van Rossum in the Netherlands, and was released to the wild "
-                "two years later. Its use of dynamic typing is one of many distinct features, alongside significant "
-                "whitespace, heavy emphasis on readability, and, above all, absolutely pain-free software "
-                "distribution... *sigh*",
+                "two years later.",
         "image_list": [
             "https://www.python.org/static/community_logos/python-logo-master-v3-TM-flattened.png"
         ]
@@ -142,15 +144,22 @@ SPECIAL_CARDS = {
         "info": "Robert Norman Ross (October 29, 1942 – July 4, 1995) was an American painter, art instructor, and "
                 "television host. He was the creator and host of The Joy of Painting, an instructional television "
                 "program that aired from 1983 to 1994 on PBS in the United States, and also aired in Canada, "
-                "Latin America, and Europe. Ross went from being a public-television personality in the 1980s and "
-                "1990s to being an Internet celebrity in the 21st century, popular with fans on "
-                "YouTube and many other websites.",
+                "Latin America, and Europe.",
         "image_list": [
             "https://images05.military.com/sites/default/files/styles/full/public/media/people/2013/05/"
             "bobrosspainting.jpg?itok=A3G_e8MM"
         ]
+    },
+    "mystery snake": {
+        "name": "Mystery Snake",
+        "info": "The Mystery Snake is rumored to be a thin, serpentine creature that hides in spaghetti dinners. "
+                "It has yellow, pasta-like scales with a completely smooth texture, and is quite glossy. ",
+        "image_list": [
+            "https://img.thrfun.com/img/080/349/spaghetti_dinner_l1.jpg"
+        ]
     }
 }
+# endregion
 
 
 class Snakes:
@@ -176,6 +185,93 @@ class Snakes:
         self.facts_url = f"{SITE_API_URL}/snake_facts"
         self.names_url = f"{SITE_API_URL}/snake_names"
         self.idioms_url = f"{SITE_API_URL}/snake_idioms"
+
+    # region: Helper methods
+    @staticmethod
+    def generate_card(buffer: BytesIO, content: dict) -> BytesIO:
+        """
+        Generate a card from snake information.
+
+        Written by juan and Someone during the first code jam.
+        """
+
+        snake = Image.open(buffer)
+
+        # Get the size of the snake icon, configure the height of the image box (yes, it changes)
+        icon_width = 347  # Hardcoded, not much i can do about that
+        icon_height = int((icon_width / snake.width) * snake.height)
+        frame_copies = icon_height // CARD['frame'].height + 1
+        snake.thumbnail((icon_width, icon_height))
+
+        # Get the dimensions of the final image
+        main_height = icon_height + CARD['top'].height + CARD['bottom'].height
+        main_width = CARD['frame'].width
+
+        # Start creating the foreground
+        foreground = Image.new("RGBA", (main_width, main_height), (0, 0, 0, 0))
+        foreground.paste(CARD['top'], (0, 0))
+
+        # Generate the frame borders to the correct height
+        for offset in range(frame_copies):
+            position = (0, CARD['top'].height + offset * CARD['frame'].height)
+            foreground.paste(CARD['frame'], position)
+
+        # Add the image and bottom part of the image
+        foreground.paste(snake, (36, CARD['top'].height))  # Also hardcoded :(
+        foreground.paste(CARD['bottom'], (0, CARD['top'].height + icon_height))
+
+        # Setup the background
+        back = random.choice(CARD['backs'])
+        back_copies = main_height // back.height + 1
+        full_image = Image.new("RGBA", (main_width, main_height), (0, 0, 0, 0))
+
+        # Generate the tiled background
+        for offset in range(back_copies):
+            full_image.paste(back, (16, 16 + offset * back.height))
+
+        # Place the foreground onto the final image
+        full_image.paste(foreground, (0, 0), foreground)
+
+        # Get the first two sentences of the info
+        description = '.'.join(content['info'].split(".")[:2]) + '.'
+
+        # Setup positioning variables
+        margin = 36
+        offset = CARD['top'].height + icon_height + margin
+
+        # Create blank rectangle image which will be behind the text
+        rectangle = Image.new(
+            "RGBA",
+            (main_width, main_height),
+            (0, 0, 0, 0)
+        )
+
+        # Draw a semi-transparent rectangle on it
+        rect = ImageDraw.Draw(rectangle)
+        rect.rectangle(
+            (margin, offset, main_width - margin, main_height - margin),
+            fill=(63, 63, 63, 128)
+        )
+
+        del rect
+
+        # Paste it onto the final image
+        full_image.paste(rectangle, (0, 0), mask=rectangle)
+
+        # Draw the text onto the final image
+        draw = ImageDraw.Draw(full_image)
+        for line in textwrap.wrap(description, 36):
+            draw.text([margin + 4, offset], line, font=CARD['font'])
+            offset += CARD['font'].getsize(line)[1]
+
+        del draw
+
+        # Get the image contents as a BufferIO object
+        buffer = BytesIO()
+        full_image.save(buffer, 'PNG')
+        buffer.seek(0)
+
+        return buffer
 
     @staticmethod
     def _snakify(message):
@@ -204,6 +300,10 @@ class Snakes:
         return message
 
     async def _fetch(self, session, url, params=None):
+        """
+        Asyncronous web request helper method.
+        """
+
         if params is None:
             params = {}
 
@@ -216,7 +316,7 @@ class Snakes:
         Goes online and fetches all the data from a wikipedia article
         about a snake. Builds a dict that the .get() method can use.
 
-        Created by Ava and eivl for the very first code jam on PythonDiscord.
+        Created by Ava and eivl.
 
         :param name: The name of the snake to get information for - omit for a random snake
         :return: A dict containing information on a snake
@@ -242,6 +342,8 @@ class Snakes:
             except KeyError:
                 # Wikipedia error page ID(?)
                 pageid = 41118
+            except IndexError:
+                return None
 
             params = {
                 'format': 'json',
@@ -307,8 +409,12 @@ class Snakes:
 
             match = self.wiki_brief.match(snake_info['extract'])
             info = match.group(1) if match else None
-            info = info.replace("\n", "\n\n")  # Give us some proper paragraphs.
+
+            if info:
+                info = info.replace("\n", "\n\n")  # Give us some proper paragraphs.
+
             snake_info["info"] = info
+
         return snake_info
 
     async def _get_snake_name(self) -> Dict[str, str]:
@@ -352,131 +458,14 @@ class Snakes:
         if str(reaction.emoji) == ANSWERS_EMOJI[answer]:
             await ctx.send(f"{random.choice(CORRECT_GUESS)} The correct answer was **{options[answer]}**.")
         else:
-            wrong_answer = ANSWERS_EMOJI_REVERSE[str(reaction.emoji)]
             await ctx.send(
-                f"{random.choice(INCORRECT_GUESS)} **{wrong_answer}** is incorrect. "
-                f"The correct answer was **{options[answer].lower()}**."
+                f"{random.choice(INCORRECT_GUESS)} The correct answer was **{options[answer]}**."
             )
 
         await message.clear_reactions()
+    # endregion
 
-    @command(name="snakes.get()", aliases=["snakes.get"])
-    @bot_has_permissions(manage_messages=True)
-    @locked()
-    async def get(self, ctx: Context, name: Snake = None):
-        """
-        Fetches information about a snake from Wikipedia.
-        :param ctx: Context object passed from discord.py
-        :param name: Optional, the name of the snake to get information for - omit for a random snake
-
-        Created by Ava and eivl
-        """
-
-        with ctx.typing():
-            if name is None:
-                name = await Snake.random()
-
-            data = await self._get_snek(name)
-
-            if data.get('error'):
-                return await ctx.send('Could not fetch data from Wikipedia.')
-
-            description = data["info"]
-
-            # Shorten the description if needed
-            if len(description) > 1000:
-                description = description[:1000]
-                last_newline = description.rfind("\n")
-                if last_newline > 0:
-                    description = description[:last_newline]
-
-            # Strip and add the Wiki link.
-            description = description.strip("\n")
-            description += f"\n\nRead more on [Wikipedia]({data['fullurl']})"
-
-            # Build and send the embed.
-            embed = Embed(
-                title=data['title'],
-                description=description,
-                colour=0x59982F,
-            )
-
-            emoji = 'https://emojipedia-us.s3.amazonaws.com/thumbs/60/google/3/snake_1f40d.png'
-            image = next((url for url in data['image_list'] if url.endswith(self.valid)), emoji)
-            embed.set_image(url=image)
-
-            await ctx.send(embed=embed)
-
-    @command(name="snakes.name()", aliases=["snakes.name", "snakes.name_gen", "snakes.name_gen()"])
-    async def random_snake_name(self, ctx: Context, name: str = None):
-        """
-        Slices the users name at the last vowel (or second last if the name
-        ends with a vowel), and then combines it with a random snake name,
-        which is sliced at the first vowel (or second if the name starts with
-        a vowel).
-
-        If the name contains no vowels, it just appends the snakename
-        to the end of the name.
-
-        Examples:
-            lemon + anaconda = lemoconda
-            krzsn + anaconda = krzsnconda
-            gdude + anaconda = gduconda
-            aperture + anaconda = apertuconda
-            lucy + python = luthon
-            joseph + taipan = joseipan
-
-        This was written by Iceman, and modified for inclusion into the bot by lemon.
-        """
-
-        snake_name = await self._get_snake_name()
-        snake_name = snake_name['name']
-        snake_prefix = ""
-
-        # Set aside every word in the snake name except the last.
-        if " " in snake_name:
-            snake_prefix = " ".join(snake_name.split()[:-1])
-            snake_name = snake_name.split()[-1]
-
-        # If no name is provided, use whoever called the command.
-        if name:
-            user_name = name
-        else:
-            user_name = ctx.author.display_name
-
-        # Get the index of the vowel to slice the username at
-        user_slice_index = len(user_name)
-        for index, char in enumerate(reversed(user_name)):
-            if index == 0:
-                continue
-            if char.lower() in "aeiouy":
-                user_slice_index -= index
-                break
-
-        # Now, get the index of the vowel to slice the snake_name at
-        snake_slice_index = 0
-        for index, char in enumerate(snake_name):
-            if index == 0:
-                continue
-            if char.lower() in "aeiouy":
-                snake_slice_index = index + 1
-                break
-
-        # Combine!
-        snake_name = snake_name[snake_slice_index:]
-        user_name = user_name[:user_slice_index]
-        result = f"{snake_prefix} {user_name}{snake_name}"
-        result = string.capwords(result)
-
-        # Embed and send
-        embed = Embed(
-            title="Snake name",
-            description=f"Your snake-name is **{result}**",
-            color=SNAKE_COLOR
-        )
-
-        return await ctx.send(embed=embed)
-
+    # region: Commands
     @bot_has_permissions(manage_messages=True)
     @command(name="snakes.antidote()", aliases=["snakes.antidote"])
     async def antidote(self, ctx: Context):
@@ -492,7 +481,7 @@ class Snakes:
         Info:   The game automatically ends after 5 minutes inactivity.
                 You should only use each ingredient once.
 
-        This game was created by Bisk and Runew0lf for the first PythonDiscord codejam.
+        This game was created by Lord Bisk and Runew0lf.
         """
 
         def event_check(reaction_: Reaction, user_: Member):
@@ -617,143 +606,13 @@ class Snakes:
         log.debug("Ending pagination and removing all reactions...")
         await board_id.clear_reactions()
 
-    @command(name="snakes.quiz()", aliases=["snakes.quiz"])
-    async def quiz(self, ctx: Context):
-        """
-        Asks a snake-related question in the chat and validates the user's guess.
-
-        This was created by Mushy and Cardium for the code jam,
-        and modified by lemon for inclusion in this bot.
-        """
-
-        # Prepare a question.
-        response = await self.bot.http_session.get(self.quiz_url, headers=self.headers)
-        question = await response.json()
-        answer = question["answerkey"]
-        options = {key: question[key] for key in ANSWERS_EMOJI.keys()}
-
-        # Build and send the embed.
-        embed = Embed(
-            color=SNAKE_COLOR,
-            title=question["question"],
-            description="\n".join(
-                [f"**{key.upper()}**: {answer}" for key, answer in options.items()]
-            )
-        )
-
-        quiz = await ctx.channel.send("", embed=embed)
-        await self._validate_answer(ctx, quiz, answer, options)
-
-    @command(name="snakes.zen()", aliases=["zen"])
-    async def zen(self, ctx: Context):
-        """
-        Gets a random quote from the Zen of Python.
-
-        Written by Prithaj and Andrew during the very first code jam.
-        Modified by lemon for inclusion in the bot.
-        """
-
-        embed = Embed(
-            title="Zzzen of Pythhon",
-            color=SNAKE_COLOR
-        )
-
-        # Get the zen quote and snakify it
-        zen_quote = random.choice(ZEN.splitlines())
-        zen_quote = self._snakify(zen_quote)
-
-        # Embed and send
-        embed.description = zen_quote
-        await ctx.channel.send(
-            embed=embed
-        )
-
-    @command(name="snakes.snakify()", aliases=["snakes.snakify"])
-    async def snakify(self, ctx: Context, message: str = None):
-        """
-        How would I talk if I were a snake?
-        :param ctx: context
-        :param message: If this is passed, it will snakify the message.
-                        If not, it will snakify a random message from
-                        the users history.
-        """
-
-        def predicate(message):
-            """
-            Check if the message was sent by the author.
-            """
-            return message.author == ctx.message.author
-
-        def get_random_long_message(messages, retries=10):
-            """
-            Fetch a message that's at least 3 words long,
-            but only if it is possible to do so in retries
-            attempts. Else, just return whatever the last
-            message is.
-            """
-            long_message = random.choice(messages)
-            if len(long_message.split()) < 3 or retries <= 0:
-                return get_random_long_message(messages, retries - 1)
-            return long_message
-
-        with ctx.typing():
-            embed = Embed()
-            user = ctx.message.author
-
-            if not message:
-
-                # Get a random message from the users history
-                messages = []
-                async for message in ctx.channel.history(limit=500).filter(predicate):
-                    messages.append(message.content)
-
-                message = get_random_long_message(messages)
-
-            # Set the avatar
-            if user.avatar is not None:
-                avatar = f"https://cdn.discordapp.com/avatars/{user.id}/{user.avatar}"
-            else:
-                avatar = (
-                    "https://img00.deviantart.net/eee3/i/2017/168/3/4/"
-                    "discord__app__avatar_rev1_by_nodeviantarthere-dbd2tp9.png"
-                )
-
-            # Build and send the embed
-            embed.set_author(
-                name=f"{user.name}#{user.discriminator}",
-                icon_url=avatar,
-            )
-            embed.description = f"*{self._snakify(message)}*"
-
-            await ctx.channel.send(embed=embed)
-
-    @command(name="snakes.fact()", aliases=["snakes.fact"])
-    async def snake_fact(self, ctx: Context):
-        """
-        Gets a snake-related fact
-
-        This was created by Prithaj and Andrew for code jam 1,
-        and modified by lemon for inclusion in this bot.
-        """
-
-        # Get a fact from the API.
-        response = await self.bot.http_session.get(self.facts_url, headers=self.headers)
-        question = await response.json()
-
-        # Build and send the embed.
-        embed = Embed(
-            title="Snake fact",
-            color=SNAKE_COLOR,
-            description=question
-        )
-        await ctx.channel.send(embed=embed)
-
     @command(name="snakes.draw()", aliases=["snakes.draw"])
     async def draw(self, ctx: Context):
         """
         Draws a random snek using Perlin noise
 
-        Made by Momo and kel during the first code jam.
+        Written by Momo and kel.
+        Modified by juan and lemon.
         """
 
         def beautiful_pastel(hue):
@@ -808,101 +667,52 @@ class Snakes:
 
             await ctx.send(file=file)
 
-    @command(name="snakes.hatch()", aliases=["snakes.hatch", "hatch"])
-    async def hatch(self, ctx: Context):
+    @command(name="snakes.get()", aliases=["snakes.get"])
+    @bot_has_permissions(manage_messages=True)
+    @locked()
+    async def get(self, ctx: Context, name: Snake = None):
         """
-        Hatches your personal snake
-
-        Made by Momo and kel during the first code jam.
-        """
-
-        # Pick a random snake to hatch.
-        snake_name = random.choice(list(hatching.snakes.keys()))
-        snake_image = hatching.snakes[snake_name]
-
-        # Hatch the snake
-        message = await ctx.channel.send(embed=Embed(description="Hatching your snake :snake:..."))
-        await asyncio.sleep(1)
-
-        for stage in hatching.stages:
-            hatch_embed = Embed(description=stage)
-            await message.edit(embed=hatch_embed)
-            await asyncio.sleep(1)
-        await asyncio.sleep(1)
-        await message.delete()
-
-        # Build and send the embed.
-        my_snake_embed = Embed(description=":tada: Congrats! You hatched: **{0}**".format(snake_name))
-        my_snake_embed.set_thumbnail(url=snake_image)
-        my_snake_embed.set_footer(
-            text=" Owner: {0}#{1}".format(ctx.message.author.name, ctx.message.author.discriminator)
-        )
-
-        await ctx.channel.send(embed=my_snake_embed)
-
-    @command(name="snakes.video()", aliases=["snakes.video", "snakes.get_video()", "snakes.get_video"])
-    async def video(self, ctx: Context, search: str = None):
-        """
-        Gets a YouTube video about snakes
-        :param name: Optional, a name of a snake. Used to search for videos with that name
+        Fetches information about a snake from Wikipedia.
         :param ctx: Context object passed from discord.py
+        :param name: Optional, the name of the snake to get information for - omit for a random snake
 
-        Created by Andrew and Prithaj for the first code jam.
+        Created by Ava and eivl.
         """
 
-        # Are we searching for anything specific?
-        if search:
-            query = search + ' snake'
-        else:
-            snake = await self._get_snake_name()
-            query = snake['name']
+        with ctx.typing():
+            if name is None:
+                name = await Snake.random()
 
-        # Build the URL and make the request
-        url = f'https://www.googleapis.com/youtube/v3/search'
-        response = await self.bot.http_session.get(
-            url,
-            params={
-                "part": "snippet",
-                "q": urllib.parse.quote(query),
-                "type": "video",
-                "key": YOUTUBE_API_KEY
-            }
-        )
-        response = await response.json()
-        data = response['items']
+            data = await self._get_snek(name)
 
-        # Send the user a video
-        if len(data) > 0:
-            num = random.randint(0, len(data) - 1)
-            youtube_base_url = 'https://www.youtube.com/watch?v='
-            await ctx.channel.send(
-                content=f"{youtube_base_url}{data[num]['id']['videoId']}"
+            if data.get('error'):
+                return await ctx.send('Could not fetch data from Wikipedia.')
+
+            description = data["info"]
+
+            # Shorten the description if needed
+            if len(description) > 1000:
+                description = description[:1000]
+                last_newline = description.rfind("\n")
+                if last_newline > 0:
+                    description = description[:last_newline]
+
+            # Strip and add the Wiki link.
+            description = description.strip("\n")
+            description += f"\n\nRead more on [Wikipedia]({data['fullurl']})"
+
+            # Build and send the embed.
+            embed = Embed(
+                title=data['title'],
+                description=description,
+                colour=0x59982F,
             )
-        else:
-            log.warning(f"CRITICAL ERROR: YouTube API returned {response}")
 
-    @command(name="snakes.sal()", aliases=["snakes.sal"])
-    async def sal(self, ctx: Context):
-        """
-        Command group for Snakes and Ladders
-        - Create a S&L game: sal create
-        - Join a S&L game: sal join
-        - Leave a S&L game: sal leave
-        - Cancel a S&L game (author): sal cancel
-        - Start a S&L game (author): sal start
-        - Roll the dice: sal roll OR roll
-        """
+            emoji = 'https://emojipedia-us.s3.amazonaws.com/thumbs/60/google/3/snake_1f40d.png'
+            image = next((url for url in data['image_list'] if url.endswith(self.valid)), emoji)
+            embed.set_image(url=image)
 
-        # CREATE #
-        # check if there is already a game in this channel
-        if ctx.channel in self.active_sal:
-            await ctx.send(f"{ctx.author.mention} A game is already in progress in this channel.")
-            return
-
-        game = sal.SnakeAndLaddersGame(snakes=self, context=ctx)
-        self.active_sal[ctx.channel] = game
-
-        await game.open_game()
+            await ctx.send(embed=embed)
 
     @command(name="snakes.guess()", aliases=["snakes.guess", "identify"])
     @locked()
@@ -910,7 +720,7 @@ class Snakes:
         """
         Snake identifying game!
 
-        Made by Ava and eivl for the first code jam.
+        Made by Ava and eivl.
         Modified by lemon.
         """
 
@@ -938,13 +748,45 @@ class Snakes:
         options = {f"{'abcd'[snakes.index(snake)]}": snake for snake in snakes}
         await self._validate_answer(ctx, guess, answer, options)
 
+    @command(name="snakes.hatch()", aliases=["snakes.hatch", "hatch"])
+    async def hatch(self, ctx: Context):
+        """
+        Hatches your personal snake
+
+        Written by Momo and kel.
+        """
+
+        # Pick a random snake to hatch.
+        snake_name = random.choice(list(hatching.snakes.keys()))
+        snake_image = hatching.snakes[snake_name]
+
+        # Hatch the snake
+        message = await ctx.channel.send(embed=Embed(description="Hatching your snake :snake:..."))
+        await asyncio.sleep(1)
+
+        for stage in hatching.stages:
+            hatch_embed = Embed(description=stage)
+            await message.edit(embed=hatch_embed)
+            await asyncio.sleep(1)
+        await asyncio.sleep(1)
+        await message.delete()
+
+        # Build and send the embed.
+        my_snake_embed = Embed(description=":tada: Congrats! You hatched: **{0}**".format(snake_name))
+        my_snake_embed.set_thumbnail(url=snake_image)
+        my_snake_embed.set_footer(
+            text=" Owner: {0}#{1}".format(ctx.message.author.name, ctx.message.author.discriminator)
+        )
+
+        await ctx.channel.send(embed=my_snake_embed)
+
     @command(name="snakes.movie()", aliases=["snakes.movie"])
     async def movie(self, ctx: Context):
         """
         Gets a random snake-related movie from OMDB.
 
-        Written by Samuel and Fat & Proud during the very first code jam.
-        Modified by gdude for inclusion in the bot.
+        Written by Samuel.
+        Modified by gdude.
         """
 
         url = "http://www.omdbapi.com/"
@@ -1008,91 +850,169 @@ class Snakes:
             embed=embed
         )
 
-    @staticmethod
-    def generate_card(buffer: BytesIO, content: dict) -> BytesIO:
+    @command(name="snakes.quiz()", aliases=["snakes.quiz"])
+    async def quiz(self, ctx: Context):
         """
-        Generate a card from snake information.
+        Asks a snake-related question in the chat and validates the user's guess.
 
-        Written by juan and Someone during the first code jam.
+        This was created by Mushy and Cardium,
+        and modified by Urthas and lemon.
         """
 
-        snake = Image.open(buffer)
+        # Prepare a question.
+        response = await self.bot.http_session.get(self.quiz_url, headers=self.headers)
+        question = await response.json()
+        answer = question["answerkey"]
+        options = {key: question["options"][key] for key in ANSWERS_EMOJI.keys()}
 
-        # Get the size of the snake icon, configure the height of the image box (yes, it changes)
-        icon_width = 347  # Hardcoded, not much i can do about that
-        icon_height = int((icon_width / snake.width) * snake.height)
-        frame_copies = icon_height // CARD['frame'].height + 1
-        snake.thumbnail((icon_width, icon_height))
-
-        # Get the dimensions of the final image
-        main_height = icon_height + CARD['top'].height + CARD['bottom'].height
-        main_width = CARD['frame'].width
-
-        # Start creating the foreground
-        foreground = Image.new("RGBA", (main_width, main_height), (0, 0, 0, 0))
-        foreground.paste(CARD['top'], (0, 0))
-
-        # Generate the frame borders to the correct height
-        for offset in range(frame_copies):
-            position = (0, CARD['top'].height + offset * CARD['frame'].height)
-            foreground.paste(CARD['frame'], position)
-
-        # Add the image and bottom part of the image
-        foreground.paste(snake, (36, CARD['top'].height))  # Also hardcoded :(
-        foreground.paste(CARD['bottom'], (0, CARD['top'].height + icon_height))
-
-        # Setup the background
-        back = random.choice(CARD['backs'])
-        back_copies = main_height // back.height + 1
-        full_image = Image.new("RGBA", (main_width, main_height), (0, 0, 0, 0))
-
-        # Generate the tiled background
-        for offset in range(back_copies):
-            full_image.paste(back, (16, 16 + offset * back.height))
-
-        # Place the foreground onto the final image
-        full_image.paste(foreground, (0, 0), foreground)
-
-        # Get the first two sentences of the info
-        description = '.'.join(content['info'].split(".")[:2]) + '.'
-
-        # Setup positioning variables
-        margin = 36
-        offset = CARD['top'].height + icon_height + margin
-
-        # Create blank rectangle image which will be behind the text
-        rectangle = Image.new(
-            "RGBA",
-            (main_width, main_height),
-            (0, 0, 0, 0)
+        # Build and send the embed.
+        embed = Embed(
+            color=SNAKE_COLOR,
+            title=question["question"],
+            description="\n".join(
+                [f"**{key.upper()}**: {answer}" for key, answer in options.items()]
+            )
         )
 
-        # Draw a semi-transparent rectangle on it
-        rect = ImageDraw.Draw(rectangle)
-        rect.rectangle(
-            (margin, offset, main_width - margin, main_height - margin),
-            fill=(63, 63, 63, 128)
+        quiz = await ctx.channel.send("", embed=embed)
+        await self._validate_answer(ctx, quiz, answer, options)
+
+    @command(name="snakes.name()", aliases=["snakes.name", "snakes.name_gen", "snakes.name_gen()"])
+    async def random_snake_name(self, ctx: Context, name: str = None):
+        """
+        Slices the users name at the last vowel (or second last if the name
+        ends with a vowel), and then combines it with a random snake name,
+        which is sliced at the first vowel (or second if the name starts with
+        a vowel).
+
+        If the name contains no vowels, it just appends the snakename
+        to the end of the name.
+
+        Examples:
+            lemon + anaconda = lemoconda
+            krzsn + anaconda = krzsnconda
+            gdude + anaconda = gduconda
+            aperture + anaconda = apertuconda
+            lucy + python = luthon
+            joseph + taipan = joseipan
+
+        This was written by Iceman, and modified for inclusion into the bot by lemon.
+        """
+
+        snake_name = await self._get_snake_name()
+        snake_name = snake_name['name']
+        snake_prefix = ""
+
+        # Set aside every word in the snake name except the last.
+        if " " in snake_name:
+            snake_prefix = " ".join(snake_name.split()[:-1])
+            snake_name = snake_name.split()[-1]
+
+        # If no name is provided, use whoever called the command.
+        if name:
+            user_name = name
+        else:
+            user_name = ctx.author.display_name
+
+        # Get the index of the vowel to slice the username at
+        user_slice_index = len(user_name)
+        for index, char in enumerate(reversed(user_name)):
+            if index == 0:
+                continue
+            if char.lower() in "aeiouy":
+                user_slice_index -= index
+                break
+
+        # Now, get the index of the vowel to slice the snake_name at
+        snake_slice_index = 0
+        for index, char in enumerate(snake_name):
+            if index == 0:
+                continue
+            if char.lower() in "aeiouy":
+                snake_slice_index = index + 1
+                break
+
+        # Combine!
+        snake_name = snake_name[snake_slice_index:]
+        user_name = user_name[:user_slice_index]
+        result = f"{snake_prefix} {user_name}{snake_name}"
+        result = string.capwords(result)
+
+        # Embed and send
+        embed = Embed(
+            title="Snake name",
+            description=f"Your snake-name is **{result}**",
+            color=SNAKE_COLOR
         )
 
-        del rect
+        return await ctx.send(embed=embed)
 
-        # Paste it onto the final image
-        full_image.paste(rectangle, (0, 0), mask=rectangle)
+    @command(name="snakes.sal()", aliases=["snakes.sal"])
+    async def sal(self, ctx: Context):
+        """
+        Play a game of Snakes and Ladders!
 
-        # Draw the text onto the final image
-        draw = ImageDraw.Draw(full_image)
-        for line in textwrap.wrap(description, 36):
-            draw.text([margin + 4, offset], line, font=CARD['font'])
-            offset += CARD['font'].getsize(line)[1]
+        Written by Momo and kel.
+        Modified by lemon.
+        """
 
-        del draw
+        # CREATE #
+        # check if there is already a game in this channel
+        if ctx.channel in self.active_sal:
+            await ctx.send(f"{ctx.author.mention} A game is already in progress in this channel.")
+            return
 
-        # Get the image contents as a BufferIO object
-        buffer = BytesIO()
-        full_image.save(buffer, 'PNG')
-        buffer.seek(0)
+        game = sal.SnakeAndLaddersGame(snakes=self, context=ctx)
+        self.active_sal[ctx.channel] = game
 
-        return buffer
+        await game.open_game()
+
+    @command(name="snakes.about()", aliases=["snakes.about"])
+    async def snake_about(self, ctx: Context):
+        """
+        A command that shows an embed with information about the event,
+        it's participants, and its winners.
+        """
+
+        contributors = [
+            "<@!245270749919576066>",
+            "<@!396290259907903491>",
+            "<@!172395097705414656>",
+            "<@!361708843425726474>",
+            "<@!300302216663793665>",
+            "<@!210248051430916096>",
+            "<@!174588005745557505>",
+            "<@!87793066227822592>",
+            "<@!211619754039967744>",
+            "<@!97347867923976192>",
+            "<@!136081839474343936>",
+            "<@!263560579770220554>",
+            "<@!104749643715387392>",
+            "<@!303940835005825024>",
+        ]
+
+        embed = Embed(
+            title="About the snake cog",
+            description=(
+                "The features in this cog were created by members of the community "
+                "during our first ever [code jam event](https://github.com/discord-python/code-jam-1). \n\n"
+                "The event saw over 50 participants, who competed to write a discord bot cog with a snake theme over "
+                "48 hours. The staff then selected the best features from all the best teams, and made modifications "
+                "to ensure they would all work together before integrating them into the community bot.\n\n"
+                "It was a tight race, but in the end, <@!104749643715387392> and <@!303940835005825024> "
+                "walked away as grand champions. Make sure you check out `bot.snakes.sal()`, `bot.snakes.draw()` "
+                "and `bot.snakes.hatch()` to see what they came up with."
+            )
+        )
+
+        embed.add_field(
+            name="Contributors",
+            value=(
+                ", ".join(contributors)
+            )
+        )
+
+        await ctx.channel.send(embed=embed)
 
     @command(name="snakes.card()", aliases=["snakes.card"])
     async def snake_card(self, ctx: Context, name: str = None):
@@ -1114,6 +1034,9 @@ class Snakes:
         else:
             content = await self._get_snek(name)
 
+        if not content or not len(content['image_list']):
+            content = SPECIAL_CARDS['mystery snake']
+
         # Make the card
         async with ctx.typing():
 
@@ -1131,7 +1054,176 @@ class Snakes:
         await ctx.send(
             f"A wild {content['name'].title()} appears!",
             file=File(final_buffer, filename=content['name'].replace(" ", "") + ".png")
-)
+        )
+
+    @command(name="snakes.fact()", aliases=["snakes.fact"])
+    async def snake_fact(self, ctx: Context):
+        """
+        Gets a snake-related fact
+
+        Written by Andrew and Prithaj.
+        Modified by lemon.
+        """
+
+        # Get a fact from the API.
+        response = await self.bot.http_session.get(self.facts_url, headers=self.headers)
+        question = await response.json()
+
+        # Build and send the embed.
+        embed = Embed(
+            title="Snake fact",
+            color=SNAKE_COLOR,
+            description=question
+        )
+        await ctx.channel.send(embed=embed)
+
+    @command(name="snakes()", aliases=["snakes"])
+    async def snake_help(self, ctx: Context):
+        """
+        This just invokes the help command on this cog.
+        """
+
+        log.debug(f"{ctx.author} requested info about the snakes cog")
+        return await ctx.invoke(self.bot.get_command("help"), "Snakes")
+
+    @command(name="snakes.snakify()", aliases=["snakes.snakify"])
+    async def snakify(self, ctx: Context, message: str = None):
+        """
+        How would I talk if I were a snake?
+        :param ctx: context
+        :param message: If this is passed, it will snakify the message.
+                        If not, it will snakify a random message from
+                        the users history.
+
+        Written by Momo and kel.
+        Modified by lemon.
+        """
+
+        def predicate(message):
+            """
+            Check if the message was sent by the author.
+            """
+            return message.author == ctx.message.author
+
+        def get_random_long_message(messages, retries=10):
+            """
+            Fetch a message that's at least 3 words long,
+            but only if it is possible to do so in retries
+            attempts. Else, just return whatever the last
+            message is.
+            """
+            long_message = random.choice(messages)
+            if len(long_message.split()) < 3 or retries <= 0:
+                return get_random_long_message(messages, retries - 1)
+            return long_message
+
+        with ctx.typing():
+            embed = Embed()
+            user = ctx.message.author
+
+            if not message:
+
+                # Get a random message from the users history
+                messages = []
+                async for message in ctx.channel.history(limit=500).filter(predicate):
+                    messages.append(message.content)
+
+                message = get_random_long_message(messages)
+
+            # Set the avatar
+            if user.avatar is not None:
+                avatar = f"https://cdn.discordapp.com/avatars/{user.id}/{user.avatar}"
+            else:
+                avatar = (
+                    "https://img00.deviantart.net/eee3/i/2017/168/3/4/"
+                    "discord__app__avatar_rev1_by_nodeviantarthere-dbd2tp9.png"
+                )
+
+            # Build and send the embed
+            embed.set_author(
+                name=f"{user.name}#{user.discriminator}",
+                icon_url=avatar,
+            )
+            embed.description = f"*{self._snakify(message)}*"
+
+            await ctx.channel.send(embed=embed)
+
+    @command(name="snakes.video()", aliases=["snakes.video", "snakes.get_video()", "snakes.get_video"])
+    async def video(self, ctx: Context, search: str = None):
+        """
+        Gets a YouTube video about snakes
+        :param name: Optional, a name of a snake. Used to search for videos with that name
+        :param ctx: Context object passed from discord.py
+
+        Written by Andrew and Prithaj.
+        """
+
+        # Are we searching for anything specific?
+        if search:
+            query = search + ' snake'
+        else:
+            snake = await self._get_snake_name()
+            query = snake['name']
+
+        # Build the URL and make the request
+        url = f'https://www.googleapis.com/youtube/v3/search'
+        response = await self.bot.http_session.get(
+            url,
+            params={
+                "part": "snippet",
+                "q": urllib.parse.quote(query),
+                "type": "video",
+                "key": YOUTUBE_API_KEY
+            }
+        )
+        response = await response.json()
+        data = response['items']
+
+        # Send the user a video
+        if len(data) > 0:
+            num = random.randint(0, len(data) - 1)
+            youtube_base_url = 'https://www.youtube.com/watch?v='
+            await ctx.channel.send(
+                content=f"{youtube_base_url}{data[num]['id']['videoId']}"
+            )
+        else:
+            log.warning(f"CRITICAL ERROR: YouTube API returned {response}")
+
+    @command(name="snakes.zen()", aliases=["zen"])
+    async def zen(self, ctx: Context):
+        """
+        Gets a random quote from the Zen of Python.
+
+        Written by Prithaj and Andrew.
+        Modified by lemon.
+        """
+
+        embed = Embed(
+            title="Zzzen of Pythhon",
+            color=SNAKE_COLOR
+        )
+
+        # Get the zen quote and snakify it
+        zen_quote = random.choice(ZEN.splitlines())
+        zen_quote = self._snakify(zen_quote)
+
+        # Embed and send
+        embed.description = zen_quote
+        await ctx.channel.send(
+            embed=embed
+        )
+    # endregion
+
+    @get.error
+    async def command_error(self, ctx, error):
+        if isinstance(error, BadArgument):
+            embed = Embed()
+            embed.colour = Colour.red()
+            embed.description = str(error)
+            embed.title = random.choice(ERROR_REPLIES)
+            await ctx.send(embed=embed)
+        else:
+            log.error(f"Unhandled tag command error: {error} ({error.original})")
 
 
 def setup(bot):
