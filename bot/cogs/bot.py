@@ -25,7 +25,7 @@ class Bot:
 
         # Stores allowed channels plus epoch time since last call.
         self.channel_cooldowns = {
-            Channels.help1: 0,
+            Channels.help0: 0,
             Channels.help2: 0,
             Channels.help3: 0,
             Channels.help4: 0,
