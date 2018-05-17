@@ -28,7 +28,7 @@ class Bot:
             Channels.help0: 0,
             Channels.help1: 0,
             Channels.help2: 0,
-            Channels.help4: 0,
+            Channels.help3: 0,
             Channels.python: 0,
         }
 
