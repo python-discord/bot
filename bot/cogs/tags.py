@@ -9,7 +9,7 @@ from discord.ext.commands import (
 )
 
 from bot.constants import (
-    Channels, Cooldowns, Keys, Roles, URLs
+    Channels, Cooldowns, ERROR_REPLIES, Keys, Roles, URLs
 )
 from bot.decorators import with_role
 from bot.pagination import LinePaginator

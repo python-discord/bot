@@ -10,7 +10,6 @@ from discord.ext.commands import (
 from bot.constants import (
     Channels, Guild, Keys, URLs
 )
-from bot.utils import chunks
 
 
 log = logging.getLogger(__name__)

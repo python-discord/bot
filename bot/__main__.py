@@ -1,5 +1,4 @@
 import logging
-import os
 import socket
 
 from aiohttp import AsyncResolver, ClientSession, TCPConnector
