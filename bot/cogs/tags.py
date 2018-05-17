@@ -347,7 +347,7 @@ class Tags:
             embed = Embed()
             embed.colour = Colour.red()
             embed.description = str(error)
-            embed.title = random.choice(self.FAIL_TITLES)
+            embed.title = random.choice(ERROR_REPLIES)
             await ctx.send(embed=embed)
         else:
             log.error(f"Unhandled tag command error: {error} ({error.original})")

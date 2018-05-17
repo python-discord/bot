@@ -196,6 +196,9 @@ class URLs(metaclass=YAMLGetter):
     section = "urls"
 
 
+# Debug mode
+DEBUG_MODE = True if 'local' in os.environ.get("SITE_URL", "local") else False
+
 # Bot replies
 NEGATIVE_REPLIES = [
     "Noooooo!!",
