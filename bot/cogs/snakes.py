@@ -150,10 +150,10 @@ class Snakes:
         self.headers = {"X-API-KEY": SITE_API_KEY}
 
         # Build API urls.
-        self.quiz_url = f"{SITE_API_URL}/snake_quiz"
-        self.facts_url = f"{SITE_API_URL}/snake_facts"
-        self.names_url = f"{SITE_API_URL}/snake_names"
-        self.idioms_url = f"{SITE_API_URL}/snake_idioms"
+        self.quiz_url = f"{SITE_API_URL}/bot/snake_quiz"
+        self.facts_url = f"{SITE_API_URL}/bot/snake_facts"
+        self.names_url = f"{SITE_API_URL}/bot/snake_names"
+        self.idioms_url = f"{SITE_API_URL}/bot/snake_idioms"
 
     # region: Helper methods
     @staticmethod

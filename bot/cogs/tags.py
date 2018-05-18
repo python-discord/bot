@@ -87,7 +87,7 @@ class Tags:
         self.bot = bot
         self.tag_cooldowns = {}
         self.headers = {"X-API-KEY": SITE_API_KEY}
-        self.url = f"{SITE_API_URL}/tags"
+        self.url = f"{SITE_API_URL}/bot/tags"
 
     async def get_tag_data(self, tag_name=None) -> dict:
         """

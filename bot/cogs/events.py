@@ -7,9 +7,13 @@ from discord.ext.commands import (
     NoPrivateMessage, UserInputError
 )
 
-from bot.constants import DEVLOG_CHANNEL, PYTHON_GUILD, SITE_API_KEY, SITE_API_USER_URL
+from bot.constants import (
+    DEBUG_MODE, DEVLOG_CHANNEL, PYTHON_GUILD,
+    SITE_API_KEY, SITE_API_URL
+)
 
 log = logging.getLogger(__name__)
+USERS_URL = f"{SITE_API_URL}/bot/users"
 
 
 class Events:
@@ -24,13 +28,13 @@ class Events:
         try:
             if replace_all:
                 response = await self.bot.http_session.post(
-                    url=f"{SITE_API_URL}/user",
+                    url=USERS_URL,
                     json=list(users),
                     headers={"X-API-Key": SITE_API_KEY}
                 )
             else:
                 response = await self.bot.http_session.put(
-                    url=f"{SITE_API_URL}/user",
+                    url=USERS_URL,
                     json=list(users),
                     headers={"X-API-Key": SITE_API_KEY}
                 )
@@ -43,7 +47,7 @@ class Events:
     async def send_delete_users(self, *users):
         try:
             response = await self.bot.http_session.delete(
-                url=f"{SITE_API_URL}/user",
+                url=USERS_URL,
 
                 json=list(users),
                 headers={"X-API-Key": SITE_API_KEY}

@@ -9,8 +9,8 @@ from fuzzywuzzy import fuzz
 from bot.constants import DEBUG_MODE, SITE_API_KEY, SITE_API_URL
 from bot.utils import disambiguate
 
-NAMES_URL = f"{SITE_API_URL}/snake_names"
-SPECIAL_URL = f"{SITE_API_URL}/special_snakes"
+NAMES_URL = f"{SITE_API_URL}/bot/snake_names"
+SPECIAL_URL = f"{SITE_API_URL}/bot/special_snakes"
 
 
 class Snake(Converter):

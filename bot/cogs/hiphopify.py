@@ -23,7 +23,7 @@ class Hiphopify:
     def __init__(self, bot: AutoShardedBot):
         self.bot = bot
         self.headers = {"X-API-KEY": SITE_API_KEY}
-        self.url = f"{SITE_API_URL}/hiphopify"
+        self.url = f"{SITE_API_URL}/bot/hiphopify"
 
     async def on_member_update(self, before, after):
         """
