@@ -13,6 +13,10 @@ async def disambiguate(
 ):
     """
     Has the user choose between multiple entries in case one could not be chosen automatically.
+
+    This will raise a BadArgument if entries is empty, if the disambiguation event times out,
+    or if the user makes an invalid choice.
+
     :param ctx: Context object from discord.py
     :param entries: List of items for user to choose from
     :param timeout: Number of seconds to wait before canceling disambiguation

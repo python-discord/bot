@@ -58,6 +58,7 @@ def locked():
     ignored until the command has completed invocation.
     This decorator has to go before (below) the `command` decorator.
     """
+
     def wrap(func):
         func.__locks = WeakValueDictionary()
 

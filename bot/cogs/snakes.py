@@ -40,13 +40,13 @@ BLANK_EMOJI = "\u26AA"        # :white_circle: - Correct peg, wrong hole
 HOLE_EMOJI = "\u2B1C"         # :white_square: - Used in guesses
 EMPTY_UNICODE = "\u200b"      # literally just an empty space
 
-ANTIDOTE_EMOJI = [
+ANTIDOTE_EMOJI = (
     SYRINGE_EMOJI,
     PILL_EMOJI,
     HOURGLASS_EMOJI,
     CROSSBONES_EMOJI,
     ALEMBIC_EMOJI,
-]
+)
 
 # Quiz constants
 ANSWERS_EMOJI = {
@@ -91,7 +91,7 @@ MSG_MAX = 100
 URL = "https://en.wikipedia.org/w/api.php?"
 
 # snake guess responses
-INCORRECT_GUESS = [
+INCORRECT_GUESS = (
     "Nope, that's not what it is.",
     "Not quite.",
     "Not even close.",
@@ -103,9 +103,9 @@ INCORRECT_GUESS = [
     "Bet you feel stupid now.",
     "Hahahaha, no.",
     "Did you hit the wrong key?"
-]
+)
 
-CORRECT_GUESS = [
+CORRECT_GUESS = (
     "**WRONG**. Wait, no, actually you're right.",
     "Yeah, you got it!",
     "Yep, that's exactly what it is.",
@@ -115,7 +115,7 @@ CORRECT_GUESS = [
     "Are you a herpetologist?",
     "Sure, okay, but I bet you can't pronounce it.",
     "Are you cheating?"
-]
+)
 
 # snake card consts
 CARD = {
@@ -142,7 +142,7 @@ class Snakes:
     """
 
     wiki_brief = re.compile(r'(.*?)(=+ (.*?) =+)', flags=re.DOTALL)
-    valid = ('gif', 'png', 'jpeg', 'jpg', 'webp')
+    valid_image_extensions = ('gif', 'png', 'jpeg', 'jpg', 'webp')
 
     def __init__(self, bot: AutoShardedBot):
         self.active_sal = {}
@@ -222,8 +222,6 @@ class Snakes:
             fill=(63, 63, 63, 128)
         )
 
-        del rect
-
         # Paste it onto the final image
         full_image.paste(rectangle, (0, 0), mask=rectangle)
 
@@ -232,8 +230,6 @@ class Snakes:
         for line in textwrap.wrap(description, 36):
             draw.text([margin + 4, offset], line, font=CARD['font'])
             offset += CARD['font'].getsize(line)[1]
-
-        del draw
 
         # Get the image contents as a BufferIO object
         buffer = BytesIO()
@@ -682,8 +678,7 @@ class Snakes:
             )
 
             emoji = 'https://emojipedia-us.s3.amazonaws.com/thumbs/60/google/3/snake_1f40d.png'
-            print(next((url for url in data['image_list'])))
-            image = next((url for url in data['image_list'] if url.endswith(self.valid)), emoji)
+            image = next((url for url in data['image_list'] if url.endswith(self.valid_image_extensions)), emoji)
             embed.set_image(url=image)
 
             await ctx.send(embed=embed)
@@ -709,7 +704,7 @@ class Snakes:
 
                 data = await self._get_snek(snake)
 
-                image = next((url for url in data['image_list'] if url.endswith(self.valid)), None)
+                image = next((url for url in data['image_list'] if url.endswith(self.valid_image_extensions)), None)
 
             embed = Embed(
                 title='Which of the following is the snake in the image?',

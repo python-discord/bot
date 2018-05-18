@@ -243,7 +243,7 @@ def _get_word(self) -> str:
     self.index += pos
 
     # If the command looks like a python syntax command, try to parse it.
-    if current and current == "(" or current == "[":
+    if current == "(" or current == "[":
         try:
             result = parse_python(pos)
 
