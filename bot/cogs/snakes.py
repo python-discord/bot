@@ -128,37 +128,6 @@ CARD = {
     ],
     "font": ImageFont.truetype("bot/resources/snake_cards/expressway.ttf", 20)
 }
-
-SPECIAL_CARDS = {
-    "python": {
-        "name": "Python",
-        "info": "Python is a species of programming language, commonly used by coding beginners and experts alike. "
-                "It was first discovered in 1989 by Guido van Rossum in the Netherlands, and was released to the wild "
-                "two years later.",
-        "image_list": [
-            "https://www.python.org/static/community_logos/python-logo-master-v3-TM-flattened.png"
-        ]
-    },
-    "bob ross": {
-        "name": "Bob Ross",
-        "info": "Robert Norman Ross (October 29, 1942 – July 4, 1995) was an American painter, art instructor, and "
-                "television host. He was the creator and host of The Joy of Painting, an instructional television "
-                "program that aired from 1983 to 1994 on PBS in the United States, and also aired in Canada, "
-                "Latin America, and Europe.",
-        "image_list": [
-            "https://images05.military.com/sites/default/files/styles/full/public/media/people/2013/05/"
-            "bobrosspainting.jpg?itok=A3G_e8MM"
-        ]
-    },
-    "mystery snake": {
-        "name": "Mystery Snake",
-        "info": "The Mystery Snake is rumored to be a thin, serpentine creature that hides in spaghetti dinners. "
-                "It has yellow, pasta-like scales with a completely smooth texture, and is quite glossy. ",
-        "image_list": [
-            "https://img.thrfun.com/img/080/349/spaghetti_dinner_l1.jpg"
-        ]
-    }
-}
 # endregion
 
 
@@ -683,7 +652,10 @@ class Snakes:
             if name is None:
                 name = await Snake.random()
 
-            data = await self._get_snek(name)
+            if isinstance(name, dict):
+                data = name
+            else:
+                data = await self._get_snek(name)
 
             if data.get('error'):
                 return await ctx.send('Could not fetch data from Wikipedia.')
@@ -698,17 +670,19 @@ class Snakes:
                     description = description[:last_newline]
 
             # Strip and add the Wiki link.
-            description = description.strip("\n")
-            description += f"\n\nRead more on [Wikipedia]({data['fullurl']})"
+            if "fullurl" in data:
+                description = description.strip("\n")
+                description += f"\n\nRead more on [Wikipedia]({data['fullurl']})"
 
             # Build and send the embed.
             embed = Embed(
-                title=data['title'],
+                title=data.get("title", data.get('name')),
                 description=description,
                 colour=0x59982F,
             )
 
             emoji = 'https://emojipedia-us.s3.amazonaws.com/thumbs/60/google/3/snake_1f40d.png'
+            print(next((url for url in data['image_list'])))
             image = next((url for url in data['image_list'] if url.endswith(self.valid)), emoji)
             embed.set_image(url=image)
 
@@ -1015,7 +989,7 @@ class Snakes:
         await ctx.channel.send(embed=embed)
 
     @command(name="snakes.card()", aliases=["snakes.card"])
-    async def snake_card(self, ctx: Context, name: str = None):
+    async def snake_card(self, ctx: Context, name: Snake = None):
         """
         Create an interesting little card from a snake!
 
@@ -1023,19 +997,16 @@ class Snakes:
         """
 
         # Get the snake data we need
-        if name and name.lower() in SPECIAL_CARDS:
-            content = SPECIAL_CARDS[name.lower()]
-
-        elif not name:
+        if not name:
             name_obj = await self._get_snake_name()
             name = name_obj['scientific']
             content = await self._get_snek(name)
 
+        elif isinstance(name, dict):
+            content = name
+
         else:
             content = await self._get_snek(name)
-
-        if not content or not len(content['image_list']):
-            content = SPECIAL_CARDS['mystery snake']
 
         # Make the card
         async with ctx.typing():
@@ -1214,16 +1185,27 @@ class Snakes:
         )
     # endregion
 
+    @snake_card.error
     @get.error
     async def command_error(self, ctx, error):
+
+        embed = Embed()
+        embed.colour = Colour.red()
+
         if isinstance(error, BadArgument):
-            embed = Embed()
-            embed.colour = Colour.red()
             embed.description = str(error)
             embed.title = random.choice(ERROR_REPLIES)
-            await ctx.send(embed=embed)
+
+        elif isinstance(error, OSError):
+            log.error(f"snake_card encountered an OSError: {error} ({error.original})")
+            embed.description = "Could not generate the snake card! Please try again."
+            embed.title = random.choice(ERROR_REPLIES)
+
         else:
             log.error(f"Unhandled tag command error: {error} ({error.original})")
+            return
+
+        await ctx.send(embed=embed)
 
 
 def setup(bot):
