@@ -8,7 +8,7 @@ from discord.ext.commands import AutoShardedBot, Context, command
 from bot.constants import (
     ADMIN_ROLE, MODERATOR_ROLE, MOD_LOG_CHANNEL,
     NEGATIVE_REPLIES, OWNER_ROLE, POSITIVE_REPLIES,
-    SITE_API_HIPHOPIFY_URL, SITE_API_KEY
+    SITE_API_KEY, SITE_API_URL
 )
 from bot.decorators import with_role
 
@@ -23,6 +23,7 @@ class Hiphopify:
     def __init__(self, bot: AutoShardedBot):
         self.bot = bot
         self.headers = {"X-API-KEY": SITE_API_KEY}
+        self.url = f"{SITE_API_URL}/bot/hiphopify"
 
     async def on_member_update(self, before, after):
         """
@@ -42,7 +43,7 @@ class Hiphopify:
         )
 
         response = await self.bot.http_session.get(
-            SITE_API_HIPHOPIFY_URL,
+            self.url,
             headers=self.headers,
             params={"user_id": str(before.id)}
         )
@@ -104,7 +105,7 @@ class Hiphopify:
             params["forced_nick"] = forced_nick
 
         response = await self.bot.http_session.post(
-            SITE_API_HIPHOPIFY_URL,
+            self.url,
             headers=self.headers,
             json=params
         )
@@ -167,7 +168,7 @@ class Hiphopify:
         embed.colour = Colour.blurple()
 
         response = await self.bot.http_session.delete(
-            SITE_API_HIPHOPIFY_URL,
+            self.url,
             headers=self.headers,
             json={"user_id": str(member.id)}
         )

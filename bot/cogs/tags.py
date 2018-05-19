@@ -11,7 +11,7 @@ from discord.ext.commands import (
 from bot.constants import (
     ADMIN_ROLE, BOT_COMMANDS_CHANNEL, DEVTEST_CHANNEL,
     ERROR_REPLIES, HELPERS_CHANNEL, MODERATOR_ROLE, OWNER_ROLE,
-    SITE_API_KEY, SITE_API_TAGS_URL, TAG_COOLDOWN
+    SITE_API_KEY, SITE_API_URL, TAG_COOLDOWN
 )
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
@@ -87,6 +87,7 @@ class Tags:
         self.bot = bot
         self.tag_cooldowns = {}
         self.headers = {"X-API-KEY": SITE_API_KEY}
+        self.url = f"{SITE_API_URL}/bot/tags"
 
     async def get_tag_data(self, tag_name=None) -> dict:
         """
@@ -103,7 +104,7 @@ class Tags:
         if tag_name:
             params["tag_name"] = tag_name
 
-        response = await self.bot.http_session.get(SITE_API_TAGS_URL, headers=self.headers, params=params)
+        response = await self.bot.http_session.get(self.url, headers=self.headers, params=params)
         tag_data = await response.json()
 
         return tag_data
@@ -125,7 +126,7 @@ class Tags:
             'tag_content': tag_content
         }
 
-        response = await self.bot.http_session.post(SITE_API_TAGS_URL, headers=self.headers, json=params)
+        response = await self.bot.http_session.post(self.url, headers=self.headers, json=params)
         tag_data = await response.json()
 
         return tag_data
@@ -146,7 +147,7 @@ class Tags:
         if tag_name:
             params['tag_name'] = tag_name
 
-        response = await self.bot.http_session.delete(SITE_API_TAGS_URL, headers=self.headers, json=params)
+        response = await self.bot.http_session.delete(self.url, headers=self.headers, json=params)
         tag_data = await response.json()
 
         return tag_data

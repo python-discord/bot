@@ -7,9 +7,13 @@ from discord.ext.commands import (
     NoPrivateMessage, UserInputError
 )
 
-from bot.constants import DEVLOG_CHANNEL, PYTHON_GUILD, SITE_API_KEY, SITE_API_USER_URL
+from bot.constants import (
+    DEBUG_MODE, DEVLOG_CHANNEL, PYTHON_GUILD,
+    SITE_API_KEY, SITE_API_URL
+)
 
 log = logging.getLogger(__name__)
+USERS_URL = f"{SITE_API_URL}/bot/users"
 
 
 class Events:
@@ -24,13 +28,13 @@ class Events:
         try:
             if replace_all:
                 response = await self.bot.http_session.post(
-                    url=SITE_API_USER_URL,
+                    url=USERS_URL,
                     json=list(users),
                     headers={"X-API-Key": SITE_API_KEY}
                 )
             else:
                 response = await self.bot.http_session.put(
-                    url=SITE_API_USER_URL,
+                    url=USERS_URL,
                     json=list(users),
                     headers={"X-API-Key": SITE_API_KEY}
                 )
@@ -43,7 +47,8 @@ class Events:
     async def send_delete_users(self, *users):
         try:
             response = await self.bot.http_session.delete(
-                url=SITE_API_USER_URL,
+                url=USERS_URL,
+
                 json=list(users),
                 headers={"X-API-Key": SITE_API_KEY}
             )
@@ -88,7 +93,7 @@ class Events:
                 f"Sorry, an unexpected error occurred. Please let us know!\n\n```{e}```"
             )
             raise e.original
-        log.error(f"COMMAND ERROR: '{e}'")
+        raise e
 
     async def on_ready(self):
         users = []
@@ -124,9 +129,10 @@ class Events:
                             name=key, value=str(value)
                         )
 
-                await self.bot.get_channel(DEVLOG_CHANNEL).send(
-                    embed=embed
-                )
+                if not DEBUG_MODE:
+                    await self.bot.get_channel(DEVLOG_CHANNEL).send(
+                        embed=embed
+                    )
 
     async def on_member_update(self, before: Member, after: Member):
         if before.roles == after.roles and before.name == after.name and before.discriminator == after.discriminator:

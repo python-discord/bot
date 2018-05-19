@@ -192,6 +192,7 @@ def _get_word(self) -> str:
 
         # Args handling
         new_args = []
+
         if args:
             # Force args into container
             if not isinstance(args, tuple):
@@ -227,6 +228,7 @@ def _get_word(self) -> str:
 
     # Iterate through the buffer and determine
     pos = 0
+    current = None
     while not self.eof:
         try:
             current = self.buffer[self.index + pos]
