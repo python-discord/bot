@@ -8,7 +8,6 @@ from discord.ext.commands import (
 )
 
 from bot.constants import DEVLOG_CHANNEL, PYTHON_GUILD, SITE_API_KEY, SITE_API_USER_URL
-from bot.utils import chunks
 
 log = logging.getLogger(__name__)
 
@@ -21,9 +20,29 @@ class Events:
     def __init__(self, bot: AutoShardedBot):
         self.bot = bot
 
-    async def send_updated_users(self, *users):
+    async def send_updated_users(self, *users, replace_all=False):
         try:
-            response = await self.bot.http_session.post(
+            if replace_all:
+                response = await self.bot.http_session.post(
+                    url=SITE_API_USER_URL,
+                    json=list(users),
+                    headers={"X-API-Key": SITE_API_KEY}
+                )
+            else:
+                response = await self.bot.http_session.put(
+                    url=SITE_API_USER_URL,
+                    json=list(users),
+                    headers={"X-API-Key": SITE_API_KEY}
+                )
+
+            return await response.json()
+        except Exception:
+            log.exception(f"Failed to send {len(users)} users")
+            return {}
+
+    async def send_delete_users(self, *users):
+        try:
+            response = await self.bot.http_session.delete(
                 url=SITE_API_USER_URL,
                 json=list(users),
                 headers={"X-API-Key": SITE_API_KEY}
@@ -31,7 +50,7 @@ class Events:
 
             return await response.json()
         except Exception:
-            log.exception(f"Failed to send role updates")
+            log.exception(f"Failed to send {len(users)} users")
             return {}
 
     async def on_command_error(self, ctx: Context, e: CommandError):
@@ -48,7 +67,7 @@ class Events:
         else:
             help_command = (self.bot.get_command("help"),)
 
-        if hasattr(command, "error"):
+        if hasattr(command, "on_error"):
             log.debug(f"Command {command} has a local error handler, ignoring.")
             return
 
@@ -87,29 +106,22 @@ class Events:
         if users:
             log.debug(f"{len(users)} user roles to be updated")
 
-            data = []  # type: List[dict]
-
-            for chunk in chunks(users, 1000):
-                data.append(await self.send_updated_users(*chunk))
-
-            done = {}
-
-            for item in data:
-                for key, value in item.items():
-                    if key not in done:
-                        done[key] = value
-                    else:
-                        done[key] += value
+            done = await self.send_updated_users(*users, replace_all=True)
 
             if any(done.values()):
                 embed = Embed(
-                    title="User roles updated"
+                    title="Users updated"
                 )
 
                 for key, value in done.items():
                     if value:
+                        if key == "deleted_oauth":
+                            key = "Deleted (OAuth)"
+                        else:
+                            key = key.title()
+
                         embed.add_field(
-                            name=key.title(), value=str(value)
+                            name=key, value=str(value)
                         )
 
                 await self.bot.get_channel(DEVLOG_CHANNEL).send(
@@ -122,16 +134,37 @@ class Events:
 
         before_role_names = [role.name for role in before.roles]  # type: List[str]
         after_role_names = [role.name for role in after.roles]  # type: List[str]
-        role_ids = [str(r.id) for r in after.roles]  # type: List[int]
+        role_ids = [str(r.id) for r in after.roles]  # type: List[str]
 
         log.debug(f"{before.display_name} roles changing from {before_role_names} to {after_role_names}")
 
-        await self.send_updated_users({
+        changes = await self.send_updated_users({
             "user_id": str(after.id),
             "roles": role_ids,
             "username": after.name,
             "discriminator": after.discriminator
         })
+
+        log.debug(f"User {after.id} updated; changes: {changes}")
+
+    async def on_member_join(self, member: Member):
+        role_ids = [str(r.id) for r in member.roles]  # type: List[str]
+
+        changes = await self.send_updated_users({
+            "user_id": str(member.id),
+            "roles": role_ids,
+            "username": member.name,
+            "discriminator": member.discriminator
+        })
+
+        log.debug(f"User {member.id} joined; changes: {changes}")
+
+    async def on_member_remove(self, member: Member):
+        changes = await self.send_delete_users({
+            "user_id": str(member.id)
+        })
+
+        log.debug(f"User {member.id} left; changes: {changes}")
 
 
 def setup(bot):
