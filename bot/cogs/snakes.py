@@ -17,7 +17,10 @@ from discord import Colour, Embed, File, Member, Message, Reaction
 from discord.ext.commands import AutoShardedBot, BadArgument, Context, bot_has_permissions, command
 from PIL import Image, ImageDraw, ImageFont
 
-from bot.constants import ERROR_REPLIES, OMDB_API_KEY, SITE_API_KEY, SITE_API_URL, YOUTUBE_API_KEY
+from bot.constants import (
+    ERROR_REPLIES, OMDB_API_KEY, SITE_API_KEY,
+    SITE_API_URL, YOUTUBE_API_KEY
+)
 from bot.converters import Snake
 from bot.decorators import locked
 from bot.utils.snakes import hatching, perlin, perlinsneks, sal
@@ -157,7 +160,25 @@ class Snakes:
 
     # region: Helper methods
     @staticmethod
-    def generate_card(buffer: BytesIO, content: dict) -> BytesIO:
+    def _beautiful_pastel(hue):
+        """
+        Returns random bright pastels.
+        """
+
+        light = random.uniform(0.7, 0.85)
+        saturation = 1
+
+        rgb = colorsys.hls_to_rgb(hue, light, saturation)
+        hex_rgb = ""
+
+        for part in rgb:
+            value = int(part * 0xFF)
+            hex_rgb += f"{value:02x}"
+
+        return int(hex_rgb, 16)
+
+    @staticmethod
+    def _generate_card(buffer: BytesIO, content: dict) -> BytesIO:
         """
         Generate a card from snake information.
 
@@ -275,6 +296,20 @@ class Snakes:
         async with async_timeout.timeout(10):
             async with session.get(url, params=params) as response:
                 return await response.json()
+
+    def _get_random_long_message(self, messages, retries=10):
+        """
+        Fetch a message that's at least 3 words long,
+        but only if it is possible to do so in retries
+        attempts. Else, just return whatever the last
+        message is.
+        """
+
+        long_message = random.choice(messages)
+        if len(long_message.split()) < 3 or retries <= 0:
+            return self._get_random_long_message(messages, retries - 1)
+
+        return long_message
 
     async def _get_snek(self, name: str) -> Dict[str, Any]:
         """
@@ -433,6 +468,7 @@ class Snakes:
     # region: Commands
     @bot_has_permissions(manage_messages=True)
     @command(name="snakes.antidote()", aliases=["snakes.antidote"])
+    @locked()
     async def antidote(self, ctx: Context):
         """
         Antidote - Can you create the antivenom before the patient dies?
@@ -449,10 +485,11 @@ class Snakes:
         This game was created by Lord Bisk and Runew0lf.
         """
 
-        def event_check(reaction_: Reaction, user_: Member):
+        def predicate(reaction_: Reaction, user_: Member):
             """
             Make sure that this reaction is what we want to operate on
             """
+
             return (
                 all((
                     reaction_.message.id == board_id.id,  # Reaction is on this message
@@ -498,7 +535,7 @@ class Snakes:
         # Begin main game loop
         while not win and antidote_tries < 10:
             try:
-                reaction, user = await ctx.bot.wait_for("reaction_add", timeout=300, check=event_check)
+                reaction, user = await ctx.bot.wait_for("reaction_add", timeout=300, check=predicate)
             except asyncio.TimeoutError:
                 log.debug("Antidote timed out waiting for a reaction")
                 break  # We're done, no reactions for the last 5 minutes
@@ -580,31 +617,14 @@ class Snakes:
         Modified by juan and lemon.
         """
 
-        def beautiful_pastel(hue):
-            """
-            Returns random bright pastels.
-            """
-
-            light = random.uniform(0.7, 0.85)
-            saturation = 1
-
-            rgb = colorsys.hls_to_rgb(hue, light, saturation)
-            hex_rgb = ""
-
-            for part in rgb:
-                value = int(part * 0xFF)
-                hex_rgb += f"{value:02x}"
-
-            return int(hex_rgb, 16)
-
         with ctx.typing():
 
             # Generate random snake attributes
             width = random.randint(6, 10)
             length = random.randint(15, 22)
             random_hue = random.random()
-            snek_color = beautiful_pastel(random_hue)
-            text_color = beautiful_pastel((random_hue + 0.5) % 1)
+            snek_color = self._beautiful_pastel(random_hue)
+            text_color = self._beautiful_pastel((random_hue + 0.5) % 1)
             bg_color = (
                 random.randint(32, 50),
                 random.randint(32, 50),
@@ -820,6 +840,7 @@ class Snakes:
         )
 
     @command(name="snakes.quiz()", aliases=["snakes.quiz"])
+    @locked()
     async def quiz(self, ctx: Context):
         """
         Asks a snake-related question in the chat and validates the user's guess.
@@ -917,6 +938,7 @@ class Snakes:
         return await ctx.send(embed=embed)
 
     @command(name="snakes.sal()", aliases=["snakes.sal"])
+    @locked()
     async def sal(self, ctx: Context):
         """
         Play a game of Snakes and Ladders!
@@ -925,7 +947,6 @@ class Snakes:
         Modified by lemon.
         """
 
-        # CREATE #
         # check if there is already a game in this channel
         if ctx.channel in self.active_sal:
             await ctx.send(f"{ctx.author.mention} A game is already in progress in this channel.")
@@ -1013,7 +1034,7 @@ class Snakes:
 
             stream.seek(0)
 
-            func = partial(self.generate_card, stream, content)
+            func = partial(self._generate_card, stream, content)
             final_buffer = await self.bot.loop.run_in_executor(None, func)
 
         # Send it!
@@ -1065,24 +1086,6 @@ class Snakes:
         Modified by lemon.
         """
 
-        def predicate(message):
-            """
-            Check if the message was sent by the author.
-            """
-            return message.author == ctx.message.author
-
-        def get_random_long_message(messages, retries=10):
-            """
-            Fetch a message that's at least 3 words long,
-            but only if it is possible to do so in retries
-            attempts. Else, just return whatever the last
-            message is.
-            """
-            long_message = random.choice(messages)
-            if len(long_message.split()) < 3 or retries <= 0:
-                return get_random_long_message(messages, retries - 1)
-            return long_message
-
         with ctx.typing():
             embed = Embed()
             user = ctx.message.author
@@ -1091,19 +1094,18 @@ class Snakes:
 
                 # Get a random message from the users history
                 messages = []
-                async for message in ctx.channel.history(limit=500).filter(predicate):
+                async for message in ctx.channel.history(limit=500).filter(
+                        lambda msg: msg.author == ctx.message.author  # Message was sent by author.
+                ):
                     messages.append(message.content)
 
-                message = get_random_long_message(messages)
+                message = self._get_random_long_message(messages)
 
             # Set the avatar
             if user.avatar is not None:
                 avatar = f"https://cdn.discordapp.com/avatars/{user.id}/{user.avatar}"
             else:
-                avatar = (
-                    "https://img00.deviantart.net/eee3/i/2017/168/3/4/"
-                    "discord__app__avatar_rev1_by_nodeviantarthere-dbd2tp9.png"
-                )
+                avatar = ctx.author.default_avatar_url
 
             # Build and send the embed
             embed.set_author(
@@ -1153,12 +1155,13 @@ class Snakes:
                 content=f"{youtube_base_url}{data[num]['id']['videoId']}"
             )
         else:
-            log.warning(f"CRITICAL ERROR: YouTube API returned {response}")
+            log.warning(f"YouTube API error. Full response looks like {response}")
 
     @command(name="snakes.zen()", aliases=["zen"])
     async def zen(self, ctx: Context):
         """
-        Gets a random quote from the Zen of Python.
+        Gets a random quote from the Zen of Python,
+        except as if spoken by a snake.
 
         Written by Prithaj and Andrew.
         Modified by lemon.
@@ -1180,8 +1183,10 @@ class Snakes:
         )
     # endregion
 
-    @snake_card.error
+    # region: Error handlers
     @get.error
+    @snake_card.error
+    @video.error
     async def command_error(self, ctx, error):
 
         embed = Embed()
@@ -1201,6 +1206,7 @@ class Snakes:
             return
 
         await ctx.send(embed=embed)
+    # endregion
 
 
 def setup(bot):
