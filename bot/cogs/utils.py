@@ -42,20 +42,24 @@ class Utils:
             # Taken from https://github.com/python/peps/blob/master/pep0/pep.py#L179
             pep_header = HeaderParser().parse(StringIO(pep_content))
 
-            # Remove unnecessary information.
-            del pep_header["Content-Type"]
-            del pep_header["PEP"]
-            del pep_header["Author"]
-            del pep_header["Post-History"]
+            # Assemble the embed
+            pep_embed = Embed(
+                    title=f"**PEP {pep_number} - {pep_header['Title']}**",
+                    description=f"[Link]({self.base_pep_url+pep_number.zfill(4)})",
 
-            for key in pep_header:
-                if "$" in pep_header[key] or not pep_header[key]:
-                    del pep_header[key]
+            )
 
-            pep_embed = Embed(title=f"PEP {pep_number}")
-            pep_embed.add_field(name="Link", value=f"{self.base_pep_url}{pep_number.zfill(4)}")
-            for key in pep_header:
-                pep_embed.add_field(name=key, value=pep_header[key], inline=False)
+            pep_embed.set_thumbnail(url="https://www.python.org/static/opengraph-icon-200x200.png")
+            
+            # Add the interesting information
+            if "Status" in pep_header:
+                pep_embed.add_field(name="Status", value=pep_header["Status"])
+            if "Python-Version" in pep_header:
+                pep_embed.add_field(name="Python-Version", value=pep_header["Python-Version"])
+            if "Created" in pep_header:
+                pep_embed.add_field(name="Created", value=pep_header["Created"])
+            if "Type" in pep_header:
+                pep_embed.add_field(name="Type", value=pep_header["Type"])
 
         elif response.status == 404:
             log.trace("PEP was not found")
