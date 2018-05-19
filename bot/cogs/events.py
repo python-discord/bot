@@ -13,7 +13,7 @@ from bot.constants import (
 )
 
 log = logging.getLogger(__name__)
-USERS_URL = f"{SITE_API_URL}/bot/users"
+USERS_URL = f"{SITE_API_URL}/bot/user"
 
 
 class Events:
