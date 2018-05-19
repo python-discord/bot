@@ -6,6 +6,7 @@ RUN apk add --update libffi-dev
 RUN apk add --update zlib
 RUN apk add --update jpeg-dev
 RUN apk add --update zlib-dev
+RUN apk add --update freetype-dev
 
 RUN pip install pipenv
 
