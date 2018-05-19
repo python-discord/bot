@@ -4,6 +4,9 @@ RUN apk add --update tini
 RUN apk add --update build-base
 RUN apk add --update libffi-dev
 RUN apk add --update zlib
+RUN apk add --update jpeg-dev
+RUN apk add --update zlib-dev
+
 RUN pip install pipenv
 
 RUN mkdir /bot
@@ -11,6 +14,7 @@ COPY Pipfile /bot
 COPY Pipfile.lock /bot
 WORKDIR /bot
 
+ENV LIBRARY_PATH=/lib:/usr/lib
 ENV PIPENV_VENV_IN_PROJECT=1
 ENV PIPENV_IGNORE_VIRTUALENVS=1
 ENV PIPENV_NOSPIN=1
