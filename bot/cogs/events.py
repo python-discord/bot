@@ -25,7 +25,7 @@ class Events:
         self.bot = bot
 
     async def send_updated_users(self, *users, replace_all=False):
-        users = filter(lambda user: VERIFIED_ROLE in user["roles"], users)
+        users = filter(lambda user: str(VERIFIED_ROLE) in user["roles"], users)
 
         try:
             if replace_all:
