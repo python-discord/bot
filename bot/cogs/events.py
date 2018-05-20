@@ -8,7 +8,8 @@ from discord.ext.commands import (
 )
 
 from bot.constants import (
-    Channels, Guild, Keys, URLs
+    Channels, DEBUG_MODE,
+    Guild, Keys, URLs
 )
 
 
@@ -91,7 +92,7 @@ class Events:
                 f"Sorry, an unexpected error occurred. Please let us know!\n\n```{e}```"
             )
             raise e.original
-        log.error(f"COMMAND ERROR: '{e}'")
+        raise e
 
     async def on_ready(self):
         users = []
@@ -127,9 +128,10 @@ class Events:
                             name=key, value=str(value)
                         )
 
-                await self.bot.get_channel(Channels.devlog).send(
-                    embed=embed
-                )
+                if not DEBUG_MODE:
+                    await self.bot.get_channel(Channels.devlog).send(
+                        embed=embed
+                    )
 
     async def on_member_update(self, before: Member, after: Member):
         if before.roles == after.roles and before.name == after.name and before.discriminator == after.discriminator:

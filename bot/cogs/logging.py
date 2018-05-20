@@ -3,7 +3,8 @@ import logging
 from discord import Embed
 from discord.ext.commands import AutoShardedBot
 
-from bot.constants import Channels
+from bot.constants import Channels, DEBUG_MODE
+
 
 log = logging.getLogger(__name__)
 
@@ -26,7 +27,8 @@ class Logging:
             icon_url="https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle.png"
         )
 
-        await self.bot.get_channel(Channels.devlog).send(embed=embed)
+        if not DEBUG_MODE:
+            await self.bot.get_channel(Channels.devlog).send(embed=embed)
 
 
 def setup(bot):

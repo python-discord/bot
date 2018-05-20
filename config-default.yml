@@ -42,6 +42,8 @@ keys:
     deploy_bot: !ENV 'DEPLOY_BOT_KEY'
     deploy_site: !ENV 'DEPLOY_SITE'
     site_api: !ENV 'BOT_API_KEY'
+    youtube: !ENV 'YOUTUBE_API_KEY'
+    omdb: !ENV 'OMDB_API_KEY'
 
 
 clickup:
@@ -59,8 +61,14 @@ urls:
     deploy: !ENV 'DEPLOY_URL'
     status: !ENV 'STATUS_URL'
     site: 'pythondiscord.com'
-    site_hiphopify_api: 'https://api.pythondiscord.com/hiphopify'
-    site_tags_api: 'https://api.pythondiscord.com/tags'
-    site_user_api: 'https://api.pythondiscord.com/users'
+    site_hiphopify_api: 'https://api.pythondiscord.com/bot/hiphopify'
+    site_tags_api: 'https://api.pythondiscord.com/bot/tags'
+    site_user_api: 'https://api.pythondiscord.com/bot/users'
+    site_quiz_api: 'https://api.pythondiscord.com/bot/snake_quiz'
+    site_facts_api: 'https://api.pythondiscord.com/bot/snake_facts'
+    site_names_api: 'https://api.pythondiscord.com/bot/snake_names'
+    site_idioms_api: 'https://api.pythondiscord.com/bot/snake_idioms'
+    site_special_api: 'https://api.pythondiscord.com/bot/special_snakes'
     github_bot_repo: 'https://github.com/discord-python/bot'
     bot_avatar: 'https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle/logo_circle.png'
+    omdb: 'http://omdbapi.com'

@@ -199,6 +199,10 @@ class URLs(metaclass=YAMLGetter):
 # Debug mode
 DEBUG_MODE = True if 'local' in os.environ.get("SITE_URL", "local") else False
 
+# Paths
+BOT_DIR = os.path.dirname(__file__)
+PROJECT_ROOT = os.path.abspath(os.path.join(BOT_DIR, os.pardir))
+
 # Bot replies
 NEGATIVE_REPLIES = [
     "Noooooo!!",
