@@ -6,7 +6,7 @@ from aiohttp import AsyncResolver, ClientSession, TCPConnector
 from discord import Game
 from discord.ext.commands import AutoShardedBot, when_mentioned_or
 
-from bot.constants import CLICKUP_KEY, DEBUG_MODE
+from bot.constants import CLICKUP_KEY
 from bot.formatter import Formatter
 
 log = logging.getLogger(__name__)
@@ -26,17 +26,15 @@ bot = AutoShardedBot(
     case_insensitive=True
 )
 
-# Global aiohttp session for all cogs - uses asyncio for DNS resolution instead of threads, so we don't *spam threads*
-if DEBUG_MODE:
-    bot.http_session = ClientSession(
-        connector=TCPConnector(
-            resolver=AsyncResolver(),
-            family=socket.AF_INET,  # Force aiohttp to use AF_INET if this is a local session. Prevents crashes.
-            verify_ssl=False,
-        )
+# Global aiohttp session for all cogs
+# - Uses asyncio for DNS resolution instead of threads, so we don't spam threads
+# - Uses AF_INET as its socket family to prevent https related problems both locally and in prod.
+bot.http_session = ClientSession(
+    connector=TCPConnector(
+        resolver=AsyncResolver(),
+        family=socket.AF_INET,
     )
-else:
-    bot.http_session = ClientSession(connector=TCPConnector(resolver=AsyncResolver()))
+)
 
 # Internal/debug
 bot.load_extension("bot.cogs.logging")
