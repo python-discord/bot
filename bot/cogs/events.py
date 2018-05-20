@@ -9,8 +9,8 @@ from discord.ext.commands import (
 
 from bot.constants import (
     DEBUG_MODE, DEVLOG_CHANNEL, PYTHON_GUILD,
-    SITE_API_KEY, SITE_API_URL
-)
+    SITE_API_KEY, SITE_API_URL,
+    VERIFIED_ROLE)
 
 log = logging.getLogger(__name__)
 USERS_URL = f"{SITE_API_URL}/bot/users"
@@ -25,6 +25,8 @@ class Events:
         self.bot = bot
 
     async def send_updated_users(self, *users, replace_all=False):
+        users = filter(lambda user: VERIFIED_ROLE in user["roles"], users)
+
         try:
             if replace_all:
                 response = await self.bot.http_session.post(
@@ -122,6 +124,12 @@ class Events:
                     if value:
                         if key == "deleted_oauth":
                             key = "Deleted (OAuth)"
+                        elif key == "deleted_jam_profiles":
+                            key = "Deleted (Jammer Profiles)"
+                        elif key == "deleted_responses":
+                            key = "Deleted (Jam Form Responses)"
+                        elif key == "jam_bans":
+                            key = "Ex-Jammer Bans"
                         else:
                             key = key.title()
 
