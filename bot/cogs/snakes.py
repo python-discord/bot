@@ -306,8 +306,11 @@ class Snakes:
         """
 
         long_message = random.choice(messages)
-        if len(long_message.split()) < 3 or retries <= 0:
-            return self._get_random_long_message(messages, retries - 1)
+        if len(long_message.split()) < 3 or retries > 0:
+            return self._get_random_long_message(
+                messages,
+                retries=retries - 1
+            )
 
         return long_message
 
