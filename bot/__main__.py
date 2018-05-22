@@ -1,5 +1,6 @@
 import logging
 import os
+import socket
 
 from aiohttp import AsyncResolver, ClientSession, TCPConnector
 from discord import Game
@@ -25,8 +26,15 @@ bot = AutoShardedBot(
     case_insensitive=True
 )
 
-# Global aiohttp session for all cogs - uses asyncio for DNS resolution instead of threads, so we don't *spam threads*
-bot.http_session = ClientSession(connector=TCPConnector(resolver=AsyncResolver()))
+# Global aiohttp session for all cogs
+# - Uses asyncio for DNS resolution instead of threads, so we don't spam threads
+# - Uses AF_INET as its socket family to prevent https related problems both locally and in prod.
+bot.http_session = ClientSession(
+    connector=TCPConnector(
+        resolver=AsyncResolver(),
+        family=socket.AF_INET,
+    )
+)
 
 # Internal/debug
 bot.load_extension("bot.cogs.logging")
@@ -50,6 +58,7 @@ bot.load_extension("bot.cogs.doc")
 bot.load_extension("bot.cogs.eval")
 bot.load_extension("bot.cogs.fun")
 bot.load_extension("bot.cogs.hiphopify")
+bot.load_extension("bot.cogs.snakes")
 bot.load_extension("bot.cogs.tags")
 bot.load_extension("bot.cogs.verification")
 

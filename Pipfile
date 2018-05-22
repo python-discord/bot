@@ -16,6 +16,9 @@ sphinx = "*"
 markdownify = "*"
 lxml = "*"
 yarl = "==1.1.1"
+fuzzywuzzy = "*"
+python-levenshtein = "*"
+pillow = "*"
 
 [dev-packages]
 "flake8" = "*"

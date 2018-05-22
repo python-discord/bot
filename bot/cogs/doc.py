@@ -5,7 +5,7 @@ import random
 import re
 from collections import OrderedDict
 from ssl import CertificateError
-from typing import Dict, Optional, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import discord
 from aiohttp import ClientConnectorError
@@ -16,7 +16,8 @@ from requests import ConnectionError
 from sphinx.ext import intersphinx
 
 from bot.constants import (
-    ADMIN_ROLE, ERROR_REPLIES, OWNER_ROLE, MODERATOR_ROLE, SITE_API_DOCS_URL, SITE_API_KEY
+    ADMIN_ROLE, ERROR_REPLIES, MODERATOR_ROLE,
+    OWNER_ROLE, SITE_API_KEY, SITE_API_URL
 )
 from bot.decorators import with_role
 from bot.exceptions import CogBadArgument
@@ -180,6 +181,7 @@ class Doc:
         self.bot = bot
         self.inventories = {}
         self.headers = {"X-API-KEY": SITE_API_KEY}
+        self.url = f"{SITE_API_URL}/bot/doc"
 
     async def on_ready(self):
         await self.refresh_inventory()
@@ -337,7 +339,7 @@ class Doc:
         `inventory_url` specifies the location of the Intersphinx inventory.
         """
 
-        async with self.bot.http_session.get(SITE_API_DOCS_URL, headers=self.headers) as resp:
+        async with self.bot.http_session.get(self.url, headers=self.headers) as resp:
             return await resp.json()
 
     async def get_package(self, package_name: str) -> Optional[Dict[str, str]]:
@@ -358,7 +360,7 @@ class Doc:
         params = {"package": package_name}
 
         async with self.bot.http_session.get(
-            SITE_API_DOCS_URL, headers=self.headers, params=params
+            self.url, headers=self.headers, params=params
         ) as resp:
             package_data = await resp.json()
             if not package_data:
@@ -386,7 +388,7 @@ class Doc:
         }
 
         async with self.bot.http_session.post(
-            SITE_API_DOCS_URL, headers=self.headers, json=package_json
+            self.url, headers=self.headers, json=package_json
         ) as resp:
             return await resp.json()
 
@@ -404,7 +406,7 @@ class Doc:
         }
 
         async with self.bot.http_session.delete(
-            SITE_API_DOCS_URL, headers=self.headers, json=package_json
+            self.url, headers=self.headers, json=package_json
         ) as resp:
             changes = await resp.json()
             return changes["deleted"] == 1  # Did the package delete successfully?

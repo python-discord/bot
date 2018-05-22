@@ -1,5 +1,8 @@
 import os
 
+# Debug mode
+DEBUG_MODE = True if 'local' in os.environ.get("SITE_URL", "local") else False
+
 # Server
 PYTHON_GUILD = 267624335836053506
 
@@ -34,19 +37,18 @@ CLICKUP_TEAM = 754996
 DEPLOY_URL = os.environ.get("DEPLOY_URL")
 STATUS_URL = os.environ.get("STATUS_URL")
 SITE_URL = os.environ.get("SITE_URL", "pythondiscord.local:8080")
-SITE_PROTOCOL = 'http' if 'local' in SITE_URL else 'https'
+SITE_PROTOCOL = 'http' if DEBUG_MODE else 'https'
 SITE_API_URL = f"{SITE_PROTOCOL}://api.{SITE_URL}"
-SITE_API_USER_URL = f"{SITE_API_URL}/user"
-SITE_API_TAGS_URL = f"{SITE_API_URL}/tags"
-SITE_API_HIPHOPIFY_URL = f"{SITE_API_URL}/hiphopify"
-SITE_API_DOCS_URL = f"{SITE_API_URL}/docs"
 GITHUB_URL_BOT = "https://github.com/discord-python/bot"
 BOT_AVATAR_URL = "https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle/logo_circle.png"
+OMDB_URL = "http://www.omdbapi.com/"
 
 # Keys
 DEPLOY_BOT_KEY = os.environ.get("DEPLOY_BOT_KEY")
 DEPLOY_SITE_KEY = os.environ.get("DEPLOY_SITE_KEY")
 SITE_API_KEY = os.environ.get("BOT_API_KEY")
+YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
+OMDB_API_KEY = os.getenv("OMDB_API_KEY")
 
 # Bot internals
 HELP_PREFIX = "bot."
@@ -61,6 +63,10 @@ WHITE_CHEVRON = "<:whitechevron:418110396973711363>"
 # PaperTrail logging
 PAPERTRAIL_ADDRESS = os.environ.get("PAPERTRAIL_ADDRESS") or None
 PAPERTRAIL_PORT = int(os.environ.get("PAPERTRAIL_PORT") or 0)
+
+# Paths
+BOT_DIR = os.path.dirname(__file__)
+PROJECT_ROOT = os.path.abspath(os.path.join(BOT_DIR, os.pardir))
 
 # Bot replies
 NEGATIVE_REPLIES = [
