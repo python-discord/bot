@@ -6,11 +6,12 @@ from discord.errors import Forbidden
 from discord.ext.commands import AutoShardedBot, Context, command
 
 from bot.constants import (
-    ADMIN_ROLE, MODERATOR_ROLE, MOD_LOG_CHANNEL,
-    NEGATIVE_REPLIES, OWNER_ROLE, POSITIVE_REPLIES,
-    SITE_API_KEY, SITE_API_URL
+    Channels, Keys,
+    NEGATIVE_REPLIES, POSITIVE_REPLIES,
+    Roles, URLs
 )
 from bot.decorators import with_role
+
 
 log = logging.getLogger(__name__)
 
@@ -22,8 +23,7 @@ class Hiphopify:
 
     def __init__(self, bot: AutoShardedBot):
         self.bot = bot
-        self.headers = {"X-API-KEY": SITE_API_KEY}
-        self.url = f"{SITE_API_URL}/bot/hiphopify"
+        self.headers = {"X-API-KEY": Keys.site_api}
 
     async def on_member_update(self, before, after):
         """
@@ -43,7 +43,7 @@ class Hiphopify:
         )
 
         response = await self.bot.http_session.get(
-            self.url,
+            URLs.site_hiphopify_api,
             headers=self.headers,
             params={"user_id": str(before.id)}
         )
@@ -75,7 +75,7 @@ class Hiphopify:
                     "to DM them, and a discord.errors.Forbidden error was incurred."
                 )
 
-    @with_role(ADMIN_ROLE, OWNER_ROLE, MODERATOR_ROLE)
+    @with_role(Roles.admin, Roles.owner, Roles.moderator)
     @command(name="hiphopify()", aliases=["hiphopify", "force_nick()", "force_nick"])
     async def hiphopify(self, ctx: Context, member: Member, duration: str, forced_nick: str = None):
         """
@@ -105,7 +105,7 @@ class Hiphopify:
             params["forced_nick"] = forced_nick
 
         response = await self.bot.http_session.post(
-            self.url,
+            URLs.site_hiphopify_api,
             headers=self.headers,
             json=params
         )
@@ -139,7 +139,7 @@ class Hiphopify:
 
             # Log to the mod_log channel
             log.trace("Logging to the #mod-log channel. This could fail because of channel permissions.")
-            mod_log = self.bot.get_channel(MOD_LOG_CHANNEL)
+            mod_log = self.bot.get_channel(Channels.modlog)
             await mod_log.send(
                 f":middle_finger: {member.name}#{member.discriminator} (`{member.id}`) "
                 f"has been hiphopified by **{ctx.author.name}**. Their new nickname is `{forced_nick}`. "
@@ -151,7 +151,7 @@ class Hiphopify:
             await member.edit(nick=forced_nick)
             await ctx.send(embed=embed)
 
-    @with_role(ADMIN_ROLE, OWNER_ROLE, MODERATOR_ROLE)
+    @with_role(Roles.admin, Roles.owner, Roles.moderator)
     @command(name="unhiphopify()", aliases=["unhiphopify", "release_nick()", "release_nick"])
     async def unhiphopify(self, ctx: Context, member: Member):
         """
@@ -168,7 +168,7 @@ class Hiphopify:
         embed.colour = Colour.blurple()
 
         response = await self.bot.http_session.delete(
-            self.url,
+            URLs.site_hiphopify_api,
             headers=self.headers,
             json={"user_id": str(member.id)}
         )

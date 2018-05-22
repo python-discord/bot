@@ -17,15 +17,14 @@ from discord import Colour, Embed, File, Member, Message, Reaction
 from discord.ext.commands import AutoShardedBot, BadArgument, Context, bot_has_permissions, command
 from PIL import Image, ImageDraw, ImageFont
 
-from bot.constants import (
-    ERROR_REPLIES, OMDB_API_KEY, SITE_API_KEY,
-    SITE_API_URL, YOUTUBE_API_KEY
-)
+from bot.constants import ERROR_REPLIES, Keys, URLs
 from bot.converters import Snake
 from bot.decorators import locked
 from bot.utils.snakes import hatching, perlin, perlinsneks, sal
 
+
 log = logging.getLogger(__name__)
+
 
 # region: Constants
 # Color
@@ -150,13 +149,7 @@ class Snakes:
     def __init__(self, bot: AutoShardedBot):
         self.active_sal = {}
         self.bot = bot
-        self.headers = {"X-API-KEY": SITE_API_KEY}
-
-        # Build API urls.
-        self.quiz_url = f"{SITE_API_URL}/bot/snake_quiz"
-        self.facts_url = f"{SITE_API_URL}/bot/snake_facts"
-        self.names_url = f"{SITE_API_URL}/bot/snake_names"
-        self.idioms_url = f"{SITE_API_URL}/bot/snake_idioms"
+        self.headers = {"X-API-KEY": Keys.site_api}
 
     # region: Helper methods
     @staticmethod
@@ -426,7 +419,7 @@ class Snakes:
         :return: A random snake name, as a string.
         """
 
-        response = await self.bot.http_session.get(self.names_url, headers=self.headers)
+        response = await self.bot.http_session.get(URLs.site_names_api, headers=self.headers)
         name_data = await response.json()
 
         return name_data
@@ -635,7 +628,7 @@ class Snakes:
             )
 
             # Get a snake idiom from the API
-            response = await self.bot.http_session.get(self.idioms_url, headers=self.headers)
+            response = await self.bot.http_session.get(URLs.site_idioms_api, headers=self.headers)
             text = await response.json()
 
             # Build and send the snek
@@ -790,7 +783,7 @@ class Snakes:
                 "s": "snake",
                 "page": page,
                 "type": "movie",
-                "apikey": OMDB_API_KEY
+                "apikey": Keys.omdb
             }
         )
         data = await response.json()
@@ -800,7 +793,7 @@ class Snakes:
             url,
             params={
                 "i": movie,
-                "apikey": OMDB_API_KEY
+                "apikey": Keys.omdb
             }
         )
         data = await response.json()
@@ -853,7 +846,7 @@ class Snakes:
         """
 
         # Prepare a question.
-        response = await self.bot.http_session.get(self.quiz_url, headers=self.headers)
+        response = await self.bot.http_session.get(URLs.site_quiz_api, headers=self.headers)
         question = await response.json()
         answer = question["answerkey"]
         options = {key: question["options"][key] for key in ANSWERS_EMOJI.keys()}
@@ -1056,7 +1049,7 @@ class Snakes:
         """
 
         # Get a fact from the API.
-        response = await self.bot.http_session.get(self.facts_url, headers=self.headers)
+        response = await self.bot.http_session.get(URLs.site_facts_api, headers=self.headers)
         question = await response.json()
 
         # Build and send the embed.
@@ -1144,7 +1137,7 @@ class Snakes:
                 "part": "snippet",
                 "q": urllib.parse.quote(query),
                 "type": "video",
-                "key": YOUTUBE_API_KEY
+                "key": Keys.youtube
             }
         )
         response = await response.json()

@@ -6,11 +6,8 @@ from aiohttp import AsyncResolver, ClientSession, TCPConnector
 from discord.ext.commands import Converter
 from fuzzywuzzy import fuzz
 
-from bot.constants import DEBUG_MODE, SITE_API_KEY, SITE_API_URL
+from bot.constants import DEBUG_MODE, Keys, URLs
 from bot.utils import disambiguate
-
-NAMES_URL = f"{SITE_API_URL}/bot/snake_names"
-SPECIAL_URL = f"{SITE_API_URL}/bot/special_snakes"
 
 
 class Snake(Converter):
@@ -57,7 +54,7 @@ class Snake(Converter):
     @classmethod
     async def build_list(cls):
 
-        headers = {"X-API-KEY": SITE_API_KEY}
+        headers = {"X-API-KEY": Keys.site_api}
 
         # Set up the session
         if DEBUG_MODE:
@@ -78,7 +75,7 @@ class Snake(Converter):
         # Get all the snakes
         if cls.snakes is None:
             response = await http_session.get(
-                NAMES_URL,
+                URLs.site_names_api,
                 params={"get_all": "true"},
                 headers=headers
             )
@@ -87,7 +84,7 @@ class Snake(Converter):
         # Get the special cases
         if cls.special_cases is None:
             response = await http_session.get(
-                SPECIAL_URL,
+                URLs.site_special_api,
                 headers=headers
             )
             special_cases = await response.json()

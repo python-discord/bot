@@ -8,12 +8,12 @@ from discord.ext.commands import (
 )
 
 from bot.constants import (
-    DEBUG_MODE, DEVLOG_CHANNEL, PYTHON_GUILD,
-    SITE_API_KEY, SITE_API_URL,
-    VERIFIED_ROLE)
+    Channels, DEBUG_MODE, Guild,
+    Keys, Roles, URLs
+)
+
 
 log = logging.getLogger(__name__)
-USERS_URL = f"{SITE_API_URL}/bot/users"
 
 
 class Events:
@@ -25,20 +25,20 @@ class Events:
         self.bot = bot
 
     async def send_updated_users(self, *users, replace_all=False):
-        users = filter(lambda user: str(VERIFIED_ROLE) in user["roles"], users)
+        users = filter(lambda user: str(Roles.verified) in user["roles"], users)
 
         try:
             if replace_all:
                 response = await self.bot.http_session.post(
-                    url=USERS_URL,
+                    url=URLs.site_user_api,
                     json=list(users),
-                    headers={"X-API-Key": SITE_API_KEY}
+                    headers={"X-API-Key": Keys.site_api}
                 )
             else:
                 response = await self.bot.http_session.put(
-                    url=USERS_URL,
+                    url=URLs.site_user_api,
                     json=list(users),
-                    headers={"X-API-Key": SITE_API_KEY}
+                    headers={"X-API-Key": Keys.site_api}
                 )
 
             return await response.json()
@@ -49,10 +49,9 @@ class Events:
     async def send_delete_users(self, *users):
         try:
             response = await self.bot.http_session.delete(
-                url=USERS_URL,
-
+                url=URLs.site_user_api,
                 json=list(users),
-                headers={"X-API-Key": SITE_API_KEY}
+                headers={"X-API-Key": Keys.site_api}
             )
 
             return await response.json()
@@ -100,7 +99,7 @@ class Events:
     async def on_ready(self):
         users = []
 
-        for member in self.bot.get_guild(PYTHON_GUILD).members:  # type: Member
+        for member in self.bot.get_guild(Guild.id).members:  # type: Member
             roles = [str(r.id) for r in member.roles]  # type: List[int]
 
             users.append({
@@ -138,7 +137,7 @@ class Events:
                         )
 
                 if not DEBUG_MODE:
-                    await self.bot.get_channel(DEVLOG_CHANNEL).send(
+                    await self.bot.get_channel(Channels.devlog).send(
                         embed=embed
                     )
 
