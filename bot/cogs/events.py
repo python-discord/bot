@@ -8,8 +8,8 @@ from discord.ext.commands import (
 )
 
 from bot.constants import (
-    Channels, DEBUG_MODE,
-    Guild, Keys, URLs
+    Channels, DEBUG_MODE, Guild,
+    Keys, Roles, URLs
 )
 
 
@@ -25,6 +25,8 @@ class Events:
         self.bot = bot
 
     async def send_updated_users(self, *users, replace_all=False):
+        users = filter(lambda user: str(Roles.verified) in user["roles"], users)
+
         try:
             if replace_all:
                 response = await self.bot.http_session.post(
@@ -121,6 +123,12 @@ class Events:
                     if value:
                         if key == "deleted_oauth":
                             key = "Deleted (OAuth)"
+                        elif key == "deleted_jam_profiles":
+                            key = "Deleted (Jammer Profiles)"
+                        elif key == "deleted_responses":
+                            key = "Deleted (Jam Form Responses)"
+                        elif key == "jam_bans":
+                            key = "Ex-Jammer Bans"
                         else:
                             key = key.title()
 
