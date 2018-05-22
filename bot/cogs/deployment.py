@@ -3,9 +3,7 @@ import logging
 from discord import Colour, Embed
 from discord.ext.commands import AutoShardedBot, Context, command
 
-from bot.constants import (
-    Keys, Roles, URLs
-)
+from bot.constants import Keys, Roles, URLs
 from bot.decorators import with_role
 
 log = logging.getLogger(__name__)

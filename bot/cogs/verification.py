@@ -3,10 +3,9 @@ import logging
 from discord import Message, Object
 from discord.ext.commands import AutoShardedBot, Context, command
 
-from bot.constants import (
-    Channels, Roles
-)
+from bot.constants import Channels, Roles
 from bot.decorators import in_channel, without_role
+
 
 log = logging.getLogger(__name__)
 

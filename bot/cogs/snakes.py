@@ -17,12 +17,11 @@ from discord import Colour, Embed, File, Member, Message, Reaction
 from discord.ext.commands import AutoShardedBot, BadArgument, Context, bot_has_permissions, command
 from PIL import Image, ImageDraw, ImageFont
 
-from bot.constants import (
-    ERROR_REPLIES, Keys, URLs
-)
+from bot.constants import ERROR_REPLIES, Keys, URLs
 from bot.converters import Snake
 from bot.decorators import locked
 from bot.utils.snakes import hatching, perlin, perlinsneks, sal
+
 
 log = logging.getLogger(__name__)
 

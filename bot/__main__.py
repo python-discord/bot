@@ -51,7 +51,7 @@ bot.load_extension("bot.cogs.cogs")
 if ClickUp.key is not None:
     bot.load_extension("bot.cogs.clickup")
 else:
-    log.warning("`CLICKUP_KEY` not set in the environment, not loading the ClickUp cog.")
+    log.info("`CLICKUP_KEY` not set in the environment, not loading the ClickUp cog.")
 
 bot.load_extension("bot.cogs.deployment")
 bot.load_extension("bot.cogs.eval")
