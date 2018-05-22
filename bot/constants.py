@@ -152,6 +152,7 @@ class YAMLGetter(type):
         return cls.__getattr__(name)
 
 
+# Dataclasses
 class Bot(metaclass=YAMLGetter):
     section = "bot"
 
