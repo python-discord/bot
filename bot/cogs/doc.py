@@ -28,7 +28,7 @@ logging.getLogger('urllib3').setLevel(logging.WARNING)
 
 
 UNWANTED_SIGNATURE_SYMBOLS = ('[source]', '¶')
-WHITESPACE_AFTER_NEWLINES_RE = re.compile(r"(?<=\n\n)( +)")
+WHITESPACE_AFTER_NEWLINES_RE = re.compile(r"(?<=\n\n)(\s+)")
 
 
 def async_cache(max_size=128, arg_offset=0):
@@ -186,36 +186,36 @@ class Doc:
     async def on_ready(self):
         await self.refresh_inventory()
 
+    async def update_single(
+        self, package_name: str, base_url: str, inventory_url: str, config: SphinxConfiguration
+    ):
+        """
+        Rebuild the inventory for a single package.
+
+        :param package_name: The package name to use, appears in the log.
+        :param base_url: The root documentation URL for the specified package.
+                         Used to build absolute paths that link to specific symbols.
+        :param inventory_url: The absolute URL to the intersphinx inventory.
+                              Fetched by running `intersphinx.fetch_inventory` in an
+                              executor on the bot's event loop.
+        :param config: A `SphinxConfiguration` instance to mock the regular sphinx
+                       project layout. Required for use with intersphinx.
+        """
+
+        self.base_urls[package_name] = base_url
+
+        fetch_func = functools.partial(intersphinx.fetch_inventory, config, '', inventory_url)
+        for _, value in (await self.bot.loop.run_in_executor(None, fetch_func)).items():
+            # Each value has a bunch of information in the form
+            # `(package_name, version, relative_url, ???)`, and we only
+            # need the relative documentation URL.
+            for symbol, (_, _, relative_doc_url, _) in value.items():
+                absolute_doc_url = base_url + relative_doc_url
+                self.inventories[symbol] = absolute_doc_url
+
+        log.trace(f"Fetched inventory for {package_name}.")
+
     async def refresh_inventory(self):
-        async def update_single(
-            package_name: str, base_url: str, inventory_url: str, config: SphinxConfiguration
-        ):
-            """
-            Rebuild the inventory for a single package.
-
-            :param package_name: The package name to use, appears in the log.
-            :param base_url: The root documentation URL for the specified package.
-                             Used to build absolute paths that link to specific symbols.
-            :param inventory_url: The absolute URL to the intersphinx inventory.
-                                  Fetched by running `intersphinx.fetch_inventory` in an
-                                  executor on the bot's event loop.
-            :param config: A `SphinxConfiguration` instance to mock the regular sphinx
-                           project layout. Required for use with intersphinx.
-            """
-
-            self.base_urls[package_name] = base_url
-
-            fetch_func = functools.partial(intersphinx.fetch_inventory, config, '', inventory_url)
-            for _, value in (await self.bot.loop.run_in_executor(None, fetch_func)).items():
-                # Each value has a bunch of information in the form
-                # `(package_name, version, relative_url, ???)`, and we only
-                # need the relative documentation URL.
-                for symbol, (_, _, relative_doc_url, _) in value.items():
-                    absolute_doc_url = base_url + relative_doc_url
-                    self.inventories[symbol] = absolute_doc_url
-
-            log.trace(f"Fetched inventory for {package_name}.")
-
         log.debug("Refreshing documentation inventory...")
 
         # Clear the old base URLS and inventories to ensure
@@ -232,8 +232,9 @@ class Doc:
         # Run all coroutines concurrently - since each of them performs a HTTP
         # request, this speeds up fetching the inventory data heavily.
         coros = [
-            update_single(package["package"], package["base_url"], package["inventory_url"], config)
-            for package in await self.get_all_packages()
+            self._update_single(
+                package["package"], package["base_url"], package["inventory_url"], config
+            ) for package in await self.get_all_packages()
         ]
         await asyncio.gather(*coros)
 
@@ -387,9 +388,9 @@ class Doc:
             'inventory_url': inventory_url
         }
 
-        async with self.bot.http_session.post(
-            self.url, headers=self.headers, json=package_json
-        ) as resp:
+        async with self.bot.http_session.post(self.url,
+                                              headers=self.headers,
+                                              json=package_json) as resp:
             return await resp.json()
 
     async def delete_package(self, name: str) -> bool:
