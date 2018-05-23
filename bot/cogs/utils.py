@@ -6,7 +6,7 @@ from io import StringIO
 from discord import Embed
 from discord.ext.commands import AutoShardedBot, Context, command
 
-from bot.constants import VERIFIED_ROLE
+from bot.constants import Roles
 from bot.decorators import with_role
 
 log = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ class Utils:
         self.base_github_pep_url = "https://raw.githubusercontent.com/python/peps/master/pep-"
 
     @command(name="pep()", aliases=["pep", "get_pep"])
-    @with_role(VERIFIED_ROLE)
+    @with_role(Roles.verified)
     async def pep_search(self, ctx: Context, pep_number: str):
         """
         Fetches information about a PEP and sends it to the user
