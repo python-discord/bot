@@ -308,8 +308,9 @@ class Bot:
                                 content = content[1]
                             else:
                                 content = content[0]
+
                             save_content = self.escape_markdown(content)
-                            
+
                             def shorten_code(code):
                                 space_left = 204
 
