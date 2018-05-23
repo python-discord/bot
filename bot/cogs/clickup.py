@@ -4,9 +4,7 @@ from discord import Colour, Embed
 from discord.ext.commands import AutoShardedBot, Context, command
 from multidict import MultiDict
 
-from bot.constants import (
-    ADMIN_ROLE, CLICKUP_KEY, CLICKUP_SPACE, CLICKUP_TEAM, CONTRIBUTOR_ROLE, DEVOPS_ROLE, MODERATOR_ROLE, OWNER_ROLE
-)
+from bot.constants import ClickUp as ClickUpConfig, Roles
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
 from bot.utils import CaseInsensitiveDict
@@ -19,7 +17,7 @@ SPACES_URL = "https://api.clickup.com/api/v1/team/{team_id}/space"
 TEAM_URL = "https://api.clickup.com/api/v1/team/{team_id}"
 
 HEADERS = {
-    "Authorization": CLICKUP_KEY,
+    "Authorization": ClickUpConfig.key,
     "Content-Type": "application/json"
 }
 
@@ -39,7 +37,7 @@ class ClickUp:
 
     async def on_ready(self):
         response = await self.bot.http_session.get(
-            PROJECTS_URL.format(space_id=CLICKUP_SPACE), headers=HEADERS
+            PROJECTS_URL.format(space_id=ClickUpConfig.space), headers=HEADERS
         )
         result = await response.json()
 
@@ -56,7 +54,7 @@ class ClickUp:
             self.lists.update({v: k for k, v in self.lists.items()})
 
     @command(name="clickup.tasks()", aliases=["clickup.tasks", "tasks", "list_tasks"])
-    @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE, CONTRIBUTOR_ROLE)
+    @with_role(Roles.moderator, Roles.admin, Roles.owner, Roles.devops, Roles.contributor)
     async def tasks_command(self, ctx: Context, status: str = None, task_list: str = None):
         """
         Get a list of tasks, optionally on a specific list or with a specific status
@@ -73,7 +71,7 @@ class ClickUp:
         embed.set_author(
             name="ClickUp Tasks",
             icon_url="https://clickup.com/landing/favicons/favicon-32x32.png",
-            url=f"https://app.clickup.com/{CLICKUP_TEAM}/{CLICKUP_SPACE}/"
+            url=f"https://app.clickup.com/{ClickUpConfig.team}/{ClickUpConfig.space}/"
         )
 
         if task_list:
@@ -89,7 +87,7 @@ class ClickUp:
             params["statuses[]"] = status
 
         response = await self.bot.http_session.get(
-            GET_TASKS_URL.format(team_id=CLICKUP_TEAM), headers=HEADERS, params=params
+            GET_TASKS_URL.format(team_id=ClickUpConfig.team), headers=HEADERS, params=params
         )
         result = await response.json()
 
@@ -112,7 +110,7 @@ class ClickUp:
                 lines = []
 
                 for task in tasks:
-                    task_url = f"http://app.clickup.com/{CLICKUP_TEAM}/{CLICKUP_SPACE}/t/{task['id']}"
+                    task_url = f"http://app.clickup.com/{ClickUpConfig.team}/{ClickUpConfig.space}/t/{task['id']}"
                     id_fragment = f"[`#{task['id']: <5}`]({task_url})"
                     status = f"{task['status']['status'].title()}"
 
@@ -123,7 +121,7 @@ class ClickUp:
         return await ctx.send(embed=embed)
 
     @command(name="clickup.task()", aliases=["clickup.task", "task", "get_task"])
-    @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE, CONTRIBUTOR_ROLE)
+    @with_role(Roles.moderator, Roles.admin, Roles.owner, Roles.devops, Roles.contributor)
     async def task_command(self, ctx: Context, task_id: str):
         """
         Get a task and return information specific to it
@@ -136,7 +134,7 @@ class ClickUp:
         embed.set_author(
             name=f"ClickUp Task: #{task_id}",
             icon_url="https://clickup.com/landing/favicons/favicon-32x32.png",
-            url=f"https://app.clickup.com/{CLICKUP_TEAM}/{CLICKUP_SPACE}/t/{task_id}"
+            url=f"https://app.clickup.com/{ClickUpConfig.team}/{ClickUpConfig.space}/t/{task_id}"
         )
 
         params = MultiDict()
@@ -146,7 +144,7 @@ class ClickUp:
         params.add("statuses[]", "Closed")
 
         response = await self.bot.http_session.get(
-            GET_TASKS_URL.format(team_id=CLICKUP_TEAM), headers=HEADERS, params=params
+            GET_TASKS_URL.format(team_id=ClickUpConfig.team), headers=HEADERS, params=params
         )
         result = await response.json()
 
@@ -199,14 +197,14 @@ class ClickUp:
         return await ctx.send(embed=embed)
 
     @command(name="clickup.team()", aliases=["clickup.team", "team", "list_team"])
-    @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
+    @with_role(Roles.moderator, Roles.admin, Roles.owner, Roles.devops)
     async def team_command(self, ctx: Context):
         """
         Get a list of every member of the team
         """
 
         response = await self.bot.http_session.get(
-            TEAM_URL.format(team_id=CLICKUP_TEAM), headers=HEADERS
+            TEAM_URL.format(team_id=ClickUpConfig.team), headers=HEADERS
         )
         result = await response.json()
 
@@ -233,21 +231,21 @@ class ClickUp:
         embed.set_author(
             name="ClickUp Members",
             icon_url="https://clickup.com/landing/favicons/favicon-32x32.png",
-            url=f"https://app.clickup.com/{CLICKUP_TEAM}/{CLICKUP_SPACE}/"
+            url=f"https://app.clickup.com/{ClickUpConfig.team}/{ClickUpConfig.space}/"
         )
 
         log.debug("List fully prepared, returning list to channel.")
         await ctx.send(embed=embed)
 
     @command(name="clickup.lists()", aliases=["clickup.lists", "lists"])
-    @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE, CONTRIBUTOR_ROLE)
+    @with_role(Roles.moderator, Roles.admin, Roles.owner, Roles.devops, Roles.contributor)
     async def lists_command(self, ctx: Context):
         """
         Get all the lists belonging to the ClickUp space
         """
 
         response = await self.bot.http_session.get(
-            PROJECTS_URL.format(space_id=CLICKUP_SPACE), headers=HEADERS
+            PROJECTS_URL.format(space_id=ClickUpConfig.space), headers=HEADERS
         )
         result = await response.json()
 
@@ -281,14 +279,14 @@ class ClickUp:
         embed.set_author(
             name="ClickUp Projects",
             icon_url="https://clickup.com/landing/favicons/favicon-32x32.png",
-            url=f"https://app.clickup.com/{CLICKUP_TEAM}/{CLICKUP_SPACE}/"
+            url=f"https://app.clickup.com/{ClickUpConfig.team}/{ClickUpConfig.space}/"
         )
 
         log.debug(f"List fully prepared, returning list to channel.")
         await ctx.send(embed=embed)
 
     @command(name="clickup.open()", aliases=["clickup.open", "open", "open_task"])
-    @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE, CONTRIBUTOR_ROLE)
+    @with_role(Roles.moderator, Roles.admin, Roles.owner, Roles.devops, Roles.contributor)
     async def open_command(self, ctx: Context, task_list: str, title: str):
         """
         Open a new task under a specific task list, with a title
@@ -301,7 +299,7 @@ class ClickUp:
         embed.set_author(
             name="ClickUp Tasks",
             icon_url="https://clickup.com/landing/favicons/favicon-32x32.png",
-            url=f"https://app.clickup.com/{CLICKUP_TEAM}/{CLICKUP_SPACE}/"
+            url=f"https://app.clickup.com/{ClickUpConfig.team}/{ClickUpConfig.space}/"
         )
 
         if task_list in self.lists:
@@ -329,7 +327,7 @@ class ClickUp:
             embed.description = f"`{result['ECODE']}`: {result['err']}"
         else:
             task_id = result.get("id")
-            task_url = f"https://app.clickup.com/{CLICKUP_TEAM}/{CLICKUP_SPACE}/t/{task_id}"
+            task_url = f"https://app.clickup.com/{ClickUpConfig.team}/{ClickUpConfig.space}/t/{task_id}"
             project, task_list = self.lists[task_list].split("/", 1)
             task_list = f"{project.title()}/{task_list.title()}"
 
@@ -340,7 +338,7 @@ class ClickUp:
         await ctx.send(embed=embed)
 
     @command(name="clickup.set_status()", aliases=["clickup.set_status", "set_status", "set_task_status"])
-    @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE, CONTRIBUTOR_ROLE)
+    @with_role(Roles.moderator, Roles.admin, Roles.owner, Roles.devops, Roles.contributor)
     async def set_status_command(self, ctx: Context, task_id: str, status: str):
         """
         Update the status of a specific task
@@ -350,7 +348,7 @@ class ClickUp:
         embed.set_author(
             name="ClickUp Tasks",
             icon_url="https://clickup.com/landing/favicons/favicon-32x32.png",
-            url=f"https://app.clickup.com/{CLICKUP_TEAM}/{CLICKUP_SPACE}/"
+            url=f"https://app.clickup.com/{ClickUpConfig.team}/{ClickUpConfig.space}/"
         )
 
         if status.lower() not in STATUSES:
@@ -371,7 +369,7 @@ class ClickUp:
                 embed.colour = Colour.red()
             else:
                 log.debug(f"{ctx.author} updated a task on ClickUp: #{task_id}")
-                task_url = f"https://app.clickup.com/{CLICKUP_TEAM}/{CLICKUP_SPACE}/t/{task_id}"
+                task_url = f"https://app.clickup.com/{ClickUpConfig.team}/{ClickUpConfig.space}/t/{task_id}"
                 embed.description = f"Task updated: [`#{task_id}`]({task_url})"
 
         await ctx.send(embed=embed)

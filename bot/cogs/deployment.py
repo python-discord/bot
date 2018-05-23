@@ -3,7 +3,7 @@ import logging
 from discord import Colour, Embed
 from discord.ext.commands import AutoShardedBot, Context, command
 
-from bot.constants import ADMIN_ROLE, DEPLOY_BOT_KEY, DEPLOY_SITE_KEY, DEPLOY_URL, DEVOPS_ROLE, OWNER_ROLE, STATUS_URL
+from bot.constants import Keys, Roles, URLs
 from bot.decorators import with_role
 
 log = logging.getLogger(__name__)
@@ -18,13 +18,13 @@ class Deployment:
         self.bot = bot
 
     @command(name="redeploy()", aliases=["bot.redeploy", "bot.redeploy()", "redeploy"])
-    @with_role(ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
+    @with_role(Roles.admin, Roles.owner, Roles.devops)
     async def redeploy(self, ctx: Context):
         """
         Trigger bot deployment on the server - will only redeploy if there were changes to deploy
         """
 
-        response = await self.bot.http_session.get(DEPLOY_URL, headers={"token": DEPLOY_BOT_KEY})
+        response = await self.bot.http_session.get(URLs.deploy, headers={"token": Keys.deploy_bot})
         result = await response.text()
 
         if result == "True":
@@ -35,13 +35,13 @@ class Deployment:
             await ctx.send(f"{ctx.author.mention} Bot deployment failed - check the logs!")
 
     @command(name="deploy_site()", aliases=["bot.deploy_site", "bot.deploy_site()", "deploy_site"])
-    @with_role(ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
+    @with_role(Roles.admin, Roles.owner, Roles.devops)
     async def deploy_site(self, ctx: Context):
         """
         Trigger website deployment on the server - will only redeploy if there were changes to deploy
         """
 
-        response = await self.bot.http_session.get(DEPLOY_URL, headers={"token": DEPLOY_SITE_KEY})
+        response = await self.bot.http_session.get(URLs.deploy, headers={"token": Keys.deploy_bot})
         result = await response.text()
 
         if result == "True":
@@ -52,14 +52,14 @@ class Deployment:
             await ctx.send(f"{ctx.author.mention} Site deployment failed - check the logs!")
 
     @command(name="uptimes()", aliases=["bot.uptimes", "bot.uptimes()", "uptimes"])
-    @with_role(ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
+    @with_role(Roles.admin, Roles.owner, Roles.devops)
     async def uptimes(self, ctx: Context):
         """
         Check the various deployment uptimes for each service
         """
 
         log.debug(f"{ctx.author} requested service uptimes.")
-        response = await self.bot.http_session.get(STATUS_URL)
+        response = await self.bot.http_session.get(URLs.status)
         data = await response.json()
 
         embed = Embed(

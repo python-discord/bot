@@ -8,8 +8,6 @@ from logging.handlers import SysLogHandler
 import discord.ext.commands.view
 from logmatic import JsonFormatter
 
-from bot.constants import PAPERTRAIL_ADDRESS, PAPERTRAIL_PORT
-
 logging.TRACE = 5
 logging.addLevelName(logging.TRACE, "TRACE")
 
@@ -32,10 +30,6 @@ Logger.trace = monkeypatch_trace
 # Set up logging
 logging_handlers = []
 
-if PAPERTRAIL_ADDRESS:
-    papertrail_handler = SysLogHandler(address=(PAPERTRAIL_ADDRESS, PAPERTRAIL_PORT))
-    papertrail_handler.setLevel(logging.DEBUG)
-    logging_handlers.append(papertrail_handler)
 
 logging_handlers.append(StreamHandler(stream=sys.stderr))
 
@@ -51,6 +45,16 @@ logging.basicConfig(
 )
 
 log = logging.getLogger(__name__)
+
+# We need to defer the import from `constants.py`
+# because otherwise the logging config would not be applied
+# to any logging done in the module.
+from bot.constants import Papertrail  # noqa
+if Papertrail.address:
+    papertrail_handler = SysLogHandler(address=(Papertrail.address, Papertrail.port))
+    papertrail_handler.setLevel(logging.DEBUG)
+    logging.getLogger('bot').addHandler(papertrail_handler)
+
 
 # Silence discord and websockets
 logging.getLogger("discord.client").setLevel(logging.ERROR)
@@ -192,6 +196,7 @@ def _get_word(self) -> str:
 
         # Args handling
         new_args = []
+
         if args:
             # Force args into container
             if not isinstance(args, tuple):
@@ -217,7 +222,7 @@ def _get_word(self) -> str:
         self.buffer = f"{prefix}{parsed_result}"
 
         if new_args:
-            self.buffer += ' '.join(new_args)
+            self.buffer += (" " + " ".join(new_args))
 
         self.index = len(f"{prefix}{parsed_result}")
         self.end = len(self.buffer)
@@ -227,6 +232,7 @@ def _get_word(self) -> str:
 
     # Iterate through the buffer and determine
     pos = 0
+    current = None
     while not self.eof:
         try:
             current = self.buffer[self.index + pos]

@@ -12,7 +12,11 @@ aiodns = "*"
 logmatic-python = "*"
 aiohttp = "<2.3.0,>=2.0.0"
 websockets = ">=4.0,<5.0"
+pyyaml = "*"
 yarl = "==1.1.1"
+fuzzywuzzy = "*"
+python-levenshtein = "*"
+pillow = "*"
 
 [dev-packages]
 "flake8" = "*"

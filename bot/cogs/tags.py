@@ -4,24 +4,23 @@ import time
 
 from discord import Colour, Embed
 from discord.ext.commands import (
-    AutoShardedBot, BadArgument, Context,
-    Converter, command
+    AutoShardedBot, BadArgument,
+    Context, Converter, command
 )
 
 from bot.constants import (
-    ADMIN_ROLE, BOT_COMMANDS_CHANNEL, DEVTEST_CHANNEL,
-    HELPERS_CHANNEL, MODERATOR_ROLE, OWNER_ROLE,
-    SITE_API_KEY, SITE_API_TAGS_URL, TAG_COOLDOWN
+    Channels, Cooldowns, ERROR_REPLIES, Keys, Roles, URLs
 )
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
 
+
 log = logging.getLogger(__name__)
 
 TEST_CHANNELS = (
-    DEVTEST_CHANNEL,
-    BOT_COMMANDS_CHANNEL,
-    HELPERS_CHANNEL
+    Channels.devtest,
+    Channels.bot,
+    Channels.helpers
 )
 
 
@@ -86,7 +85,7 @@ class Tags:
     def __init__(self, bot: AutoShardedBot):
         self.bot = bot
         self.tag_cooldowns = {}
-        self.headers = {"X-API-KEY": SITE_API_KEY}
+        self.headers = {"X-API-KEY": Keys.site_api}
 
     async def get_tag_data(self, tag_name=None) -> dict:
         """
@@ -103,7 +102,7 @@ class Tags:
         if tag_name:
             params["tag_name"] = tag_name
 
-        response = await self.bot.http_session.get(SITE_API_TAGS_URL, headers=self.headers, params=params)
+        response = await self.bot.http_session.get(URLs.site_tags_api, headers=self.headers, params=params)
         tag_data = await response.json()
 
         return tag_data
@@ -125,7 +124,7 @@ class Tags:
             'tag_content': tag_content
         }
 
-        response = await self.bot.http_session.post(SITE_API_TAGS_URL, headers=self.headers, json=params)
+        response = await self.bot.http_session.post(URLs.site_tags_api, headers=self.headers, json=params)
         tag_data = await response.json()
 
         return tag_data
@@ -146,7 +145,7 @@ class Tags:
         if tag_name:
             params['tag_name'] = tag_name
 
-        response = await self.bot.http_session.delete(SITE_API_TAGS_URL, headers=self.headers, json=params)
+        response = await self.bot.http_session.delete(URLs.site_tags_api, headers=self.headers, json=params)
         tag_data = await response.json()
 
         return tag_data
@@ -188,7 +187,7 @@ class Tags:
             cooldown_conditions = (
                 tag_name
                 and tag_name in self.tag_cooldowns
-                and (now - self.tag_cooldowns[tag_name]["time"]) < TAG_COOLDOWN
+                and (now - self.tag_cooldowns[tag_name]["time"]) < Cooldowns.tags
                 and self.tag_cooldowns[tag_name]["channel"] == ctx.channel.id
             )
 
@@ -197,7 +196,7 @@ class Tags:
             return False
 
         if _command_on_cooldown(tag_name):
-            time_left = TAG_COOLDOWN - (time.time() - self.tag_cooldowns[tag_name]["time"])
+            time_left = Cooldowns.tags - (time.time() - self.tag_cooldowns[tag_name]["time"])
             log.warning(f"{ctx.author} tried to get the '{tag_name}' tag, but the tag is on cooldown. "
                         f"Cooldown ends in {time_left:.1f} seconds.")
             return
@@ -268,7 +267,7 @@ class Tags:
 
         return await ctx.send(embed=embed)
 
-    @with_role(ADMIN_ROLE, OWNER_ROLE, MODERATOR_ROLE)
+    @with_role(Roles.admin, Roles.owner, Roles.moderator)
     @command(name="tags.set()", aliases=["tags.set", "tags.add", "tags.add()", "tags.edit", "tags.edit()", "add_tag"])
     async def set_command(self, ctx: Context, tag_name: TagNameConverter, tag_content: TagContentConverter):
         """
@@ -304,7 +303,7 @@ class Tags:
 
         return await ctx.send(embed=embed)
 
-    @with_role(ADMIN_ROLE, OWNER_ROLE)
+    @with_role(Roles.admin, Roles.owner)
     @command(name="tags.delete()", aliases=["tags.delete", "tags.remove", "tags.remove()", "remove_tag"])
     async def delete_command(self, ctx: Context, tag_name: TagNameConverter):
         """
@@ -349,7 +348,7 @@ class Tags:
             embed = Embed()
             embed.colour = Colour.red()
             embed.description = str(error)
-            embed.title = random.choice(self.FAIL_TITLES)
+            embed.title = random.choice(ERROR_REPLIES)
             await ctx.send(embed=embed)
         else:
             log.error(f"Unhandled tag command error: {error} ({error.original})")

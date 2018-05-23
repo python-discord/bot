@@ -5,9 +5,7 @@ from discord import ClientException, Colour, Embed
 from discord.ext.commands import AutoShardedBot, Context, command
 
 from bot.constants import (
-    ADMIN_ROLE, BOT_AVATAR_URL, DEVOPS_ROLE, GITHUB_URL_BOT,
-    GREEN_CHEVRON, MODERATOR_ROLE, OWNER_ROLE, RED_CHEVRON,
-    WHITE_CHEVRON
+    Emojis, Roles, URLs,
 )
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
@@ -37,7 +35,7 @@ class Cogs:
         self.cogs.update({v: k for k, v in self.cogs.items()})
 
     @command(name="cogs.load()", aliases=["cogs.load", "load_cog"])
-    @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
+    @with_role(Roles.moderator, Roles.admin, Roles.owner, Roles.devops)
     async def load_command(self, ctx: Context, cog: str):
         """
         Load up an unloaded cog, given the module containing it
@@ -53,8 +51,8 @@ class Cogs:
 
         embed.set_author(
             name="Python Bot (Cogs)",
-            url=GITHUB_URL_BOT,
-            icon_url=BOT_AVATAR_URL
+            url=URLs.github_bot_repo,
+            icon_url=URLs.bot_avatar
         )
 
         if cog in self.cogs:
@@ -94,7 +92,7 @@ class Cogs:
         await ctx.send(embed=embed)
 
     @command(name="cogs.unload()", aliases=["cogs.unload", "unload_cog"])
-    @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
+    @with_role(Roles.moderator, Roles.admin, Roles.owner, Roles.devops)
     async def unload_command(self, ctx: Context, cog: str):
         """
         Unload an already-loaded cog, given the module containing it
@@ -110,8 +108,8 @@ class Cogs:
 
         embed.set_author(
             name="Python Bot (Cogs)",
-            url=GITHUB_URL_BOT,
-            icon_url=BOT_AVATAR_URL
+            url=URLs.github_bot_repo,
+            icon_url=URLs.bot_avatar
         )
 
         if cog in self.cogs:
@@ -146,7 +144,7 @@ class Cogs:
         await ctx.send(embed=embed)
 
     @command(name="cogs.reload()", aliases=["cogs.reload", "reload_cog"])
-    @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
+    @with_role(Roles.moderator, Roles.admin, Roles.owner, Roles.devops)
     async def reload_command(self, ctx: Context, cog: str):
         """
         Reload an unloaded cog, given the module containing it
@@ -165,8 +163,8 @@ class Cogs:
 
         embed.set_author(
             name="Python Bot (Cogs)",
-            url=GITHUB_URL_BOT,
-            icon_url=BOT_AVATAR_URL
+            url=URLs.github_bot_repo,
+            icon_url=URLs.bot_avatar
         )
 
         if cog == "*":
@@ -218,13 +216,13 @@ class Cogs:
                     lines.append("\n**Unload failures**")
 
                     for cog, error in failed_unloads:
-                        lines.append(f"`{cog}` {WHITE_CHEVRON} `{error}`")
+                        lines.append(f"`{cog}` {Emojis.white_chevron} `{error}`")
 
                 if failed_loads:
                     lines.append("\n**Load failures**")
 
                     for cog, error in failed_loads:
-                        lines.append(f"`{cog}` {WHITE_CHEVRON} `{error}`")
+                        lines.append(f"`{cog}` {Emojis.white_chevron} `{error}`")
 
                 log.debug(f"{ctx.author} requested we reload all cogs. Here are the results: \n"
                           f"{lines}")
@@ -251,7 +249,7 @@ class Cogs:
         await ctx.send(embed=embed)
 
     @command(name="cogs.list()", aliases=["cogs", "cogs.list", "cogs()"])
-    @with_role(MODERATOR_ROLE, ADMIN_ROLE, OWNER_ROLE, DEVOPS_ROLE)
+    @with_role(Roles.moderator, Roles.admin, Roles.owner, Roles.devops)
     async def list_command(self, ctx: Context):
         """
         Get a list of all cogs, including their loaded status.
@@ -266,8 +264,8 @@ class Cogs:
         embed.colour = Colour.blurple()
         embed.set_author(
             name="Python Bot (Cogs)",
-            url=GITHUB_URL_BOT,
-            icon_url=BOT_AVATAR_URL
+            url=URLs.github_bot_repo,
+            icon_url=URLs.bot_avatar
         )
 
         for key, _value in self.cogs.items():
@@ -288,9 +286,9 @@ class Cogs:
                 cog = self.cogs[cog]
 
             if loaded:
-                chevron = GREEN_CHEVRON
+                chevron = Emojis.green_chevron
             else:
-                chevron = RED_CHEVRON
+                chevron = Emojis.red_chevron
 
             lines.append(f"{chevron}  {cog}")
 
