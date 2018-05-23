@@ -20,7 +20,6 @@ from bot.constants import (
     OWNER_ROLE, SITE_API_KEY, SITE_API_URL
 )
 from bot.decorators import with_role
-from bot.exceptions import CogBadArgument
 
 
 log = logging.getLogger(__name__)
@@ -101,7 +100,7 @@ class ValidPythonIdentifier(commands.Converter):
     This is used to have package names
     that correspond to how you would use
     the package in your code, e.g.
-    `import package`. Raises `CogBadArgument`
+    `import package`. Raises `BadArgument`
     if the argument is not a valid Python
     identifier, and simply passes through
     the given argument otherwise.
@@ -110,7 +109,7 @@ class ValidPythonIdentifier(commands.Converter):
     @staticmethod
     async def convert(ctx, argument: str):
         if not argument.isidentifier():
-            raise CogBadArgument(f"`{argument}` is not a valid Python identifier")
+            raise commands.BadArgument(f"`{argument}` is not a valid Python identifier")
         return argument
 
 
@@ -120,7 +119,7 @@ class DocumentationBaseURL(commands.Converter):
 
     This converter checks whether the given
     URL can be reached and requesting it returns
-    a status code of 200. If not, `CogBadArgument`
+    a status code of 200. If not, `adArgument`
     is raised. Otherwise, it simply passes through the given URL.
     """
 
@@ -129,19 +128,19 @@ class DocumentationBaseURL(commands.Converter):
         try:
             async with ctx.bot.http_session.get(url) as resp:
                 if resp.status != 200:
-                    raise CogBadArgument(
+                    raise commands.BadArgument(
                         f"HTTP GET on `{url}` returned status `{resp.status_code}`, expected 200"
                     )
         except CertificateError:
             if url.startswith('https'):
-                raise CogBadArgument(
+                raise commands.BadArgument(
                     f"Got a `CertificateError` for URL `{url}`. Does it support HTTPS?"
                 )
-            raise CogBadArgument(f"Got a `CertificateError` for URL `{url}`.")
+            raise commands.BadArgument(f"Got a `CertificateError` for URL `{url}`.")
         except ValueError:
-            raise CogBadArgument(f"`{url}` doesn't look like a valid hostname to me.")
+            raise commands.BadArgument(f"`{url}` doesn't look like a valid hostname to me.")
         except ClientConnectorError:
-            raise CogBadArgument(f"Cannot connect to host with URL `{url}`.")
+            raise commands.BadArgument(f"Cannot connect to host with URL `{url}`.")
         return url
 
 
@@ -151,7 +150,7 @@ class InventoryURL(commands.Converter):
 
     This converter checks whether intersphinx
     accepts the given inventory URL, and raises
-    `CogBadArgument` if that is not the case.
+    `BadArgument` if that is not the case.
     Otherwise, it simply passes through the given URL.
     """
 
@@ -160,15 +159,15 @@ class InventoryURL(commands.Converter):
         try:
             intersphinx.fetch_inventory(SphinxConfiguration(), '', url)
         except AttributeError:
-            raise CogBadArgument(f"Failed to fetch Intersphinx inventory from URL `{url}`.")
+            raise commands.BadArgument(f"Failed to fetch Intersphinx inventory from URL `{url}`.")
         except ConnectionError:
             if url.startswith('https'):
-                raise CogBadArgument(
+                raise commands.BadArgument(
                     f"Cannot establish a connection to `{url}`. Does it support HTTPS?"
                 )
-            raise CogBadArgument(f"Cannot connect to host with URL `{url}`.")
+            raise commands.BadArgument(f"Cannot connect to host with URL `{url}`.")
         except ValueError:
-            raise CogBadArgument(
+            raise commands.BadArgument(
                 f"Failed to read Intersphinx inventory from URL `{url}`. "
                 "Are you sure that it's a valid inventory file?"
             )
@@ -527,20 +526,22 @@ class Doc:
     @set_command.error
     async def general_command_error(self, ctx, error: commands.CommandError):
         """
-        Handle the `CogBadArgument` error caused by
+        Handle the `BadArgument` error caused by
         the commands when argument validation fails.
 
         :param ctx: Discord message context of the message creating the error
-        :param error: The error raised, usually `CogBadArgument`
+        :param error: The error raised, usually `BadArgument`
         """
 
-        if isinstance(error, CogBadArgument):
+        if isinstance(error, commands.BadArgument):
             embed = discord.Embed(
                 title=random.choice(ERROR_REPLIES),
                 description=f"Error: {error}",
                 colour=discord.Colour.red()
             )
             await ctx.send(embed=embed)
+        else:
+            log.exception(f"Unhandled error: {error}")
 
 
 def setup(bot):
