@@ -7,7 +7,11 @@ from discord.ext.commands import (
     NoPrivateMessage, UserInputError
 )
 
-from bot.constants import DEVLOG_CHANNEL, PYTHON_GUILD, SITE_API_KEY, SITE_API_USER_URL
+from bot.constants import (
+    Channels, DEBUG_MODE, Guild,
+    Keys, Roles, URLs
+)
+
 
 log = logging.getLogger(__name__)
 
@@ -21,18 +25,20 @@ class Events:
         self.bot = bot
 
     async def send_updated_users(self, *users, replace_all=False):
+        users = filter(lambda user: str(Roles.verified) in user["roles"], users)
+
         try:
             if replace_all:
                 response = await self.bot.http_session.post(
-                    url=SITE_API_USER_URL,
+                    url=URLs.site_user_api,
                     json=list(users),
-                    headers={"X-API-Key": SITE_API_KEY}
+                    headers={"X-API-Key": Keys.site_api}
                 )
             else:
                 response = await self.bot.http_session.put(
-                    url=SITE_API_USER_URL,
+                    url=URLs.site_user_api,
                     json=list(users),
-                    headers={"X-API-Key": SITE_API_KEY}
+                    headers={"X-API-Key": Keys.site_api}
                 )
 
             return await response.json()
@@ -43,9 +49,9 @@ class Events:
     async def send_delete_users(self, *users):
         try:
             response = await self.bot.http_session.delete(
-                url=SITE_API_USER_URL,
+                url=URLs.site_user_api,
                 json=list(users),
-                headers={"X-API-Key": SITE_API_KEY}
+                headers={"X-API-Key": Keys.site_api}
             )
 
             return await response.json()
@@ -88,12 +94,12 @@ class Events:
                 f"Sorry, an unexpected error occurred. Please let us know!\n\n```{e}```"
             )
             raise e.original
-        log.error(f"COMMAND ERROR: '{e}'")
+        raise e
 
     async def on_ready(self):
         users = []
 
-        for member in self.bot.get_guild(PYTHON_GUILD).members:  # type: Member
+        for member in self.bot.get_guild(Guild.id).members:  # type: Member
             roles = [str(r.id) for r in member.roles]  # type: List[int]
 
             users.append({
@@ -117,6 +123,12 @@ class Events:
                     if value:
                         if key == "deleted_oauth":
                             key = "Deleted (OAuth)"
+                        elif key == "deleted_jam_profiles":
+                            key = "Deleted (Jammer Profiles)"
+                        elif key == "deleted_responses":
+                            key = "Deleted (Jam Form Responses)"
+                        elif key == "jam_bans":
+                            key = "Ex-Jammer Bans"
                         else:
                             key = key.title()
 
@@ -124,9 +136,10 @@ class Events:
                             name=key, value=str(value)
                         )
 
-                await self.bot.get_channel(DEVLOG_CHANNEL).send(
-                    embed=embed
-                )
+                if not DEBUG_MODE:
+                    await self.bot.get_channel(Channels.devlog).send(
+                        embed=embed
+                    )
 
     async def on_member_update(self, before: Member, after: Member):
         if before.roles == after.roles and before.name == after.name and before.discriminator == after.discriminator:

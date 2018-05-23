@@ -10,7 +10,7 @@ from inspect import formatargspec, getfullargspec
 
 from discord.ext.commands import Command, HelpFormatter, Paginator
 
-from bot.constants import HELP_PREFIX
+from bot.constants import Bot
 
 log = logging.getLogger(__name__)
 
@@ -31,13 +31,13 @@ class Formatter(HelpFormatter):
                 # skip aliases
                 continue
 
-            entry = "    {0}{1:<{width}} # {2}".format(HELP_PREFIX, name, command.short_doc, width=max_width)
+            entry = "    {0}{1:<{width}} # {2}".format(Bot.help_prefix, name, command.short_doc, width=max_width)
             shortened = self.shorten(entry)
             self._paginator.add_line(shortened)
 
             if name.endswith('get()'):
                 alternate_syntax_entry = "    {0}{1:<{width}} # {2}".format(
-                    HELP_PREFIX, name.split('.')[0] + '[<arg>]',
+                    Bot.help_prefix, name.split('.')[0] + '[<arg>]',
                     f"Alternative syntax for {name}", width=max_width
                 )
                 self._paginator.add_line(self.shorten(alternate_syntax_entry))
@@ -71,7 +71,7 @@ class Formatter(HelpFormatter):
             log.trace(f"Help command is on specific command {self.command.name}{cog_string}.")
 
             # strip the command off bot. and ()
-            stripped_command = self.command.name.replace(HELP_PREFIX, "").replace("()", "")
+            stripped_command = self.command.name.replace(Bot.help_prefix, "").replace("()", "")
 
             # get the args using the handy inspect module
             argspec = getfullargspec(self.command.callback)

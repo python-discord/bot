@@ -8,10 +8,7 @@ from discord.ext.commands import AutoShardedBot, Context, command, group
 from dulwich.repo import Repo
 
 from bot.constants import (
-    ADMIN_ROLE, BOT_AVATAR_URL, BOT_COMMANDS_CHANNEL,
-    DEVTEST_CHANNEL, HELP1_CHANNEL, HELP2_CHANNEL,
-    HELP3_CHANNEL, HELP4_CHANNEL, MODERATOR_ROLE, OWNER_ROLE,
-    PYTHON_CHANNEL, PYTHON_GUILD, VERIFIED_ROLE
+    Channels, Guild, Roles, URLs
 )
 from bot.decorators import with_role
 
@@ -28,21 +25,21 @@ class Bot:
 
         # Stores allowed channels plus epoch time since last call.
         self.channel_cooldowns = {
-            HELP1_CHANNEL: 0,
-            HELP2_CHANNEL: 0,
-            HELP3_CHANNEL: 0,
-            HELP4_CHANNEL: 0,
-            PYTHON_CHANNEL: 0,
+            Channels.help0: 0,
+            Channels.help1: 0,
+            Channels.help2: 0,
+            Channels.help3: 0,
+            Channels.python: 0,
         }
 
         # These channels will also work, but will not be subject to cooldown
         self.channel_whitelist = (
-            BOT_COMMANDS_CHANNEL,
-            DEVTEST_CHANNEL,
+            Channels.bot,
+            Channels.devtest,
         )
 
     @group(invoke_without_command=True, name="bot", hidden=True)
-    @with_role(VERIFIED_ROLE)
+    @with_role(Roles.verified)
     async def bot_group(self, ctx: Context):
         """
         Bot informational commands
@@ -51,7 +48,7 @@ class Bot:
         await ctx.invoke(self.bot.get_command("help"), "bot")
 
     @bot_group.command(aliases=["about"], hidden=True)
-    @with_role(VERIFIED_ROLE)
+    @with_role(Roles.verified)
     async def info(self, ctx: Context):
         """
         Get information about the bot
@@ -65,20 +62,20 @@ class Bot:
         repo = Repo(".")
         sha = repo[repo.head()].sha().hexdigest()
 
-        embed.add_field(name="Total Users", value=str(len(self.bot.get_guild(PYTHON_GUILD).members)))
+        embed.add_field(name="Total Users", value=str(len(self.bot.get_guild(Guild.id).members)))
         embed.add_field(name="Git SHA", value=str(sha)[:7])
 
         embed.set_author(
             name="Python Bot",
             url="https://github.com/discord-python/bot",
-            icon_url=BOT_AVATAR_URL
+            icon_url=URLs.bot_avatar
         )
 
         log.info(f"{ctx.author} called bot.about(). Returning information about the bot.")
         await ctx.send(embed=embed)
 
     @command(name="info()", aliases=["info", "about()", "about"])
-    @with_role(VERIFIED_ROLE)
+    @with_role(Roles.verified)
     async def info_wrapper(self, ctx: Context):
         """
         Get information about the bot
@@ -87,7 +84,7 @@ class Bot:
         await ctx.invoke(self.info)
 
     @command(name="print()", aliases=["print", "echo", "echo()"])
-    @with_role(OWNER_ROLE, ADMIN_ROLE, MODERATOR_ROLE)
+    @with_role(Roles.owner, Roles.admin, Roles.moderator)
     async def echo_command(self, ctx: Context, text: str):
         """
         Send the input verbatim to the current channel
@@ -96,7 +93,7 @@ class Bot:
         await ctx.send(text)
 
     @command(name="embed()", aliases=["embed"])
-    @with_role(OWNER_ROLE, ADMIN_ROLE, MODERATOR_ROLE)
+    @with_role(Roles.owner, Roles.admin, Roles.moderator)
     async def embed_command(self, ctx: Context, text: str):
         """
         Send the input within an embed to the current channel

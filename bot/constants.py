@@ -1,68 +1,208 @@
+"""
+Loads bot configuration from YAML files.
+By default, this simply loads the default
+configuration located at `config-default.yml`.
+If a file called `config.yml` is found in the
+project directory, the default configuration
+is recursively updated with any settings from
+the custom configuration. Any settings left
+out in the custom user configuration will stay
+their default values from `config-default.yml`.
+"""
+
+import logging
 import os
+from collections.abc import Mapping
+from pathlib import Path
+
+import yaml
+
+
+log = logging.getLogger(__name__)
+
+
+def _required_env_var_constructor(loader, node):
+    """
+    Implements a custom YAML tag for loading required environment
+    variables. If the environment variable is set, this function
+    will simply return it. Otherwise, a `CRITICAL` log message is
+    given and the `KeyError` is re-raised.
+
+    Example usage in the YAML configuration:
+
+        bot:
+            token: !REQUIRED_ENV 'BOT_TOKEN'
+    """
+
+    value = loader.construct_scalar(node)
+
+    try:
+        return os.environ[value]
+    except KeyError:
+        log.critical(
+            f"Environment variable `{value}` is required, but was not set. "
+            "Set it in your environment or override the option using it in your `config.yml`."
+        )
+        raise
+
+
+def _env_var_constructor(loader, node):
+    """
+    Implements a custom YAML tag for loading optional environment
+    variables. If the environment variable is set, returns the
+    value of it. Otherwise, returns `None`.
+
+    Example usage in the YAML configuration:
+
+        # Optional app configuration. Set `MY_APP_KEY` in the environment to use it.
+        application:
+            key: !ENV 'MY_APP_KEY'
+    """
+
+    value = loader.construct_scalar(node)
+    return os.getenv(value)
+
+
+yaml.SafeLoader.add_constructor("!REQUIRED_ENV", _required_env_var_constructor)
+yaml.SafeLoader.add_constructor("!ENV", _env_var_constructor)
+
+
+with open("config-default.yml") as f:
+    _CONFIG_YAML = yaml.safe_load(f)
+
+
+def _recursive_update(original, new):
+    """
+    Helper method which implements a recursive `dict.update`
+    method, used for updating the original configuration with
+    configuration specified by the user.
+    """
+
+    for key, value in original.items():
+        if key not in new:
+            continue
+
+        if isinstance(value, Mapping):
+            if not any(isinstance(subvalue, Mapping) for subvalue in value.values()):
+                original[key].update(new[key])
+            _recursive_update(original[key], new[key])
+        else:
+            original[key] = new[key]
+
+
+if Path("config.yml").exists():
+    log.info("Found `config.yml` file, loading constants from it.")
+    with open("config.yml") as f:
+        user_config = yaml.safe_load(f)
+    _recursive_update(_CONFIG_YAML, user_config)
+
+
+class YAMLGetter(type):
+    """
+    Implements a custom metaclass used for accessing
+    configuration data by simply accessing class attributes.
+    Supports getting configuration from up to two levels
+    of nested configuration through `section` and `subsection`.
+
+    `section` specifies the YAML configuration section (or "key")
+    in which the configuration lives, and must be set.
+
+    `subsection` is an optional attribute specifying the section
+    within the section from which configuration should be loaded.
+
+    Example Usage:
+
+        # config.yml
+        bot:
+            prefixes:
+                direct_message: ''
+                guild: '!'
+
+        # config.py
+        class Prefixes(metaclass=YAMLGetter):
+            section = "bot"
+            subsection = "prefixes"
+
+        # Usage in Python code
+        from config import Prefixes
+        def get_prefix(bot, message):
+            if isinstance(message.channel, PrivateChannel):
+                return Prefixes.direct_message
+            return Prefixes.guild
+    """
+
+    subsection = None
+
+    def __getattr__(cls, name):
+        name = name.lower()
+
+        try:
+            if cls.subsection is not None:
+                return _CONFIG_YAML[cls.section][cls.subsection][name]
+            return _CONFIG_YAML[cls.section][name]
+        except KeyError:
+            dotted_path = '.'.join(
+                (cls.section, cls.subsection, name)
+                if cls.subsection is not None else (cls.section, name)
+            )
+            log.critical(f"Tried accessing configuration variable at `{dotted_path}`, but it could not be found.")
+            raise
+
+    def __getitem__(cls, name):
+        return cls.__getattr__(name)
+
+
+# Dataclasses
+class Bot(metaclass=YAMLGetter):
+    section = "bot"
+
+
+class Cooldowns(metaclass=YAMLGetter):
+    section = "bot"
+    subsection = "cooldowns"
+
+
+class Emojis(metaclass=YAMLGetter):
+    section = "bot"
+    subsection = "emojis"
+
+
+class Channels(metaclass=YAMLGetter):
+    section = "guild"
+    subsection = "channels"
+
+
+class Roles(metaclass=YAMLGetter):
+    section = "guild"
+    subsection = "roles"
+
+
+class Guild(metaclass=YAMLGetter):
+    section = "guild"
+
+
+class Keys(metaclass=YAMLGetter):
+    section = "keys"
+
+
+class ClickUp(metaclass=YAMLGetter):
+    section = "clickup"
+
+
+class Papertrail(metaclass=YAMLGetter):
+    section = "papertrail"
+
+
+class URLs(metaclass=YAMLGetter):
+    section = "urls"
+
 
 # Debug mode
 DEBUG_MODE = True if 'local' in os.environ.get("SITE_URL", "local") else False
 
-# Server
-PYTHON_GUILD = 267624335836053506
-
-# Channels
-BOT_COMMANDS_CHANNEL = 267659945086812160
-CHECKPOINT_TEST_CHANNEL = 422077681434099723
-DEVLOG_CHANNEL = 409308876241108992
-DEVTEST_CHANNEL = 414574275865870337
-HELP1_CHANNEL = 303906576991780866
-HELP2_CHANNEL = 303906556754395136
-HELP3_CHANNEL = 303906514266226689
-HELP4_CHANNEL = 439702951246692352
-HELPERS_CHANNEL = 385474242440986624
-MOD_LOG_CHANNEL = 282638479504965634
-PYTHON_CHANNEL = 267624335836053506
-VERIFICATION_CHANNEL = 352442727016693763
-
-# Roles
-ADMIN_ROLE = 267628507062992896
-MODERATOR_ROLE = 267629731250176001
-VERIFIED_ROLE = 352427296948486144
-OWNER_ROLE = 267627879762755584
-DEVOPS_ROLE = 409416496733880320
-CONTRIBUTOR_ROLE = 295488872404484098
-
-# Clickup
-CLICKUP_KEY = os.environ.get("CLICKUP_KEY")
-CLICKUP_SPACE = 757069
-CLICKUP_TEAM = 754996
-
-# URLs
-DEPLOY_URL = os.environ.get("DEPLOY_URL")
-STATUS_URL = os.environ.get("STATUS_URL")
-SITE_URL = os.environ.get("SITE_URL", "pythondiscord.local:8080")
-SITE_PROTOCOL = 'http' if 'local' in SITE_URL else 'https'
-SITE_API_URL = f"{SITE_PROTOCOL}://api.{SITE_URL}"
-SITE_API_USER_URL = f"{SITE_API_URL}/user"
-SITE_API_TAGS_URL = f"{SITE_API_URL}/tags"
-SITE_API_HIPHOPIFY_URL = f"{SITE_API_URL}/hiphopify"
-GITHUB_URL_BOT = "https://github.com/discord-python/bot"
-BOT_AVATAR_URL = "https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle/logo_circle.png"
-
-# Keys
-DEPLOY_BOT_KEY = os.environ.get("DEPLOY_BOT_KEY")
-DEPLOY_SITE_KEY = os.environ.get("DEPLOY_SITE_KEY")
-SITE_API_KEY = os.environ.get("BOT_API_KEY")
-
-# Bot internals
-HELP_PREFIX = "bot."
-TAG_COOLDOWN = 60  # Per channel, per tag
-
-# There are Emoji objects, but they're not usable until the bot is connected,
-# so we're using string constants instead
-GREEN_CHEVRON = "<:greenchevron:418104310329769993>"
-RED_CHEVRON = "<:redchevron:418112778184818698>"
-WHITE_CHEVRON = "<:whitechevron:418110396973711363>"
-
-# PaperTrail logging
-PAPERTRAIL_ADDRESS = os.environ.get("PAPERTRAIL_ADDRESS") or None
-PAPERTRAIL_PORT = int(os.environ.get("PAPERTRAIL_PORT") or 0)
+# Paths
+BOT_DIR = os.path.dirname(__file__)
+PROJECT_ROOT = os.path.abspath(os.path.join(BOT_DIR, os.pardir))
 
 # Bot replies
 NEGATIVE_REPLIES = [
