@@ -3,9 +3,11 @@ import json
 import logging
 import ssl
 
-from discord.ext.commands import AutoShardedBot
-from bot.constants import DEBUG_MODE, Keys, URLs
 import websockets
+
+from bot.constants import DEBUG_MODE, Keys, URLs
+
+from discord.ext.commands import AutoShardedBot
 
 log = logging.getLogger(__name__)
 
