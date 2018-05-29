@@ -4,7 +4,6 @@ import logging
 import ssl
 
 import websockets
-
 from discord.ext.commands import AutoShardedBot
 
 from bot.constants import DEBUG_MODE, Keys, URLs
