@@ -18,7 +18,6 @@ class WS:
     """
 
     ws = None
-    reconnect = True  # type: bool
 
     def __init__(self, bot: AutoShardedBot):
         self.bot = bot
