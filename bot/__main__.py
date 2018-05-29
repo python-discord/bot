@@ -60,6 +60,7 @@ bot.load_extension("bot.cogs.hiphopify")
 bot.load_extension("bot.cogs.snakes")
 bot.load_extension("bot.cogs.tags")
 bot.load_extension("bot.cogs.verification")
+bot.load_extension("bot.cogs.ws")
 
 bot.run(Bot.token)
 
