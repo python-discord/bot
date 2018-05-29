@@ -109,5 +109,5 @@ ENV/
 # JSON logfile
 log.json
 
-# Custom bot configuration
+# Custom user configuration
 config.yml

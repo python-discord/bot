@@ -1,13 +1,13 @@
 import logging
-import os
 import socket
 
 from aiohttp import AsyncResolver, ClientSession, TCPConnector
 from discord import Game
 from discord.ext.commands import AutoShardedBot, when_mentioned_or
 
-from bot.constants import CLICKUP_KEY
+from bot.constants import Bot, ClickUp
 from bot.formatter import Formatter
+
 
 log = logging.getLogger(__name__)
 
@@ -48,10 +48,10 @@ bot.load_extension("bot.cogs.cogs")
 
 # Local setups usually don't have the clickup key set,
 # and loading the cog would simply spam errors in the console.
-if CLICKUP_KEY is not None:
+if ClickUp.key is not None:
     bot.load_extension("bot.cogs.clickup")
 else:
-    log.warning("`CLICKUP_KEY` not set in the environment, not loading the ClickUp cog.")
+    log.info("`CLICKUP_KEY` not set in the environment, not loading the ClickUp cog.")
 
 bot.load_extension("bot.cogs.deployment")
 bot.load_extension("bot.cogs.doc")
@@ -62,6 +62,6 @@ bot.load_extension("bot.cogs.snakes")
 bot.load_extension("bot.cogs.tags")
 bot.load_extension("bot.cogs.verification")
 
-bot.run(os.environ.get("BOT_TOKEN"))
+bot.run(Bot.token)
 
 bot.http_session.close()  # Close the aiohttp session when the bot finishes running

@@ -3,7 +3,8 @@ import logging
 from discord import Embed
 from discord.ext.commands import AutoShardedBot
 
-from bot.constants import DEBUG_MODE, DEVLOG_CHANNEL
+from bot.constants import Channels, DEBUG_MODE
+
 
 log = logging.getLogger(__name__)
 
@@ -27,7 +28,7 @@ class Logging:
         )
 
         if not DEBUG_MODE:
-            await self.bot.get_channel(DEVLOG_CHANNEL).send(embed=embed)
+            await self.bot.get_channel(Channels.devlog).send(embed=embed)
 
 
 def setup(bot):

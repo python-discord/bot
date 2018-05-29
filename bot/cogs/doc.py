@@ -15,10 +15,7 @@ from markdownify import MarkdownConverter
 from requests import ConnectionError
 from sphinx.ext import intersphinx
 
-from bot.constants import (
-    ADMIN_ROLE, ERROR_REPLIES, MODERATOR_ROLE,
-    OWNER_ROLE, SITE_API_KEY, SITE_API_URL
-)
+from bot.constants import ERROR_REPLIES, Keys, Roles, URLs
 from bot.decorators import with_role
 
 
@@ -119,7 +116,7 @@ class DocumentationBaseURL(commands.Converter):
 
     This converter checks whether the given
     URL can be reached and requesting it returns
-    a status code of 200. If not, `adArgument`
+    a status code of 200. If not, `BadArgument`
     is raised. Otherwise, it simply passes through the given URL.
     """
 
@@ -179,8 +176,7 @@ class Doc:
         self.base_urls = {}
         self.bot = bot
         self.inventories = {}
-        self.headers = {"X-API-KEY": SITE_API_KEY}
-        self.url = f"{SITE_API_URL}/bot/doc"
+        self.headers = {"X-API-KEY": Keys.site_api}
 
     async def on_ready(self):
         await self.refresh_inventory()
@@ -231,7 +227,7 @@ class Doc:
         # Run all coroutines concurrently - since each of them performs a HTTP
         # request, this speeds up fetching the inventory data heavily.
         coros = [
-            self._update_single(
+            self.update_single(
                 package["package"], package["base_url"], package["inventory_url"], config
             ) for package in await self.get_all_packages()
         ]
@@ -339,7 +335,7 @@ class Doc:
         `inventory_url` specifies the location of the Intersphinx inventory.
         """
 
-        async with self.bot.http_session.get(self.url, headers=self.headers) as resp:
+        async with self.bot.http_session.get(URLs.site_docs_api, headers=self.headers) as resp:
             return await resp.json()
 
     async def get_package(self, package_name: str) -> Optional[Dict[str, str]]:
@@ -359,9 +355,9 @@ class Doc:
 
         params = {"package": package_name}
 
-        async with self.bot.http_session.get(
-            self.url, headers=self.headers, params=params
-        ) as resp:
+        async with self.bot.http_session.get(URLs.site_docs_api,
+                                             headers=self.headers,
+                                             params=params) as resp:
             package_data = await resp.json()
             if not package_data:
                 return None
@@ -387,7 +383,7 @@ class Doc:
             'inventory_url': inventory_url
         }
 
-        async with self.bot.http_session.post(self.url,
+        async with self.bot.http_session.post(URLs.site_docs_api,
                                               headers=self.headers,
                                               json=package_json) as resp:
             return await resp.json()
@@ -401,13 +397,11 @@ class Doc:
         :return: `True` if successful, `False` if the package is unknown.
         """
 
-        package_json = {
-            'package': name
-        }
+        package_json = {'package': name}
 
-        async with self.bot.http_session.delete(
-            self.url, headers=self.headers, json=package_json
-        ) as resp:
+        async with self.bot.http_session.delete(URLs.site_docs_api,
+                                                headers=self.headers,
+                                                json=package_json) as resp:
             changes = await resp.json()
             return changes["deleted"] == 1  # Did the package delete successfully?
 
@@ -453,7 +447,7 @@ class Doc:
             else:
                 await ctx.send(embed=doc_embed)
 
-    @with_role(ADMIN_ROLE, OWNER_ROLE, MODERATOR_ROLE)
+    @with_role(Roles.admin, Roles.owner, Roles.moderator)
     @commands.command(name='docs.set()', aliases=['docs.set'])
     async def set_command(
         self, ctx, package_name: ValidPythonIdentifier,
@@ -492,7 +486,7 @@ class Doc:
             await self.refresh_inventory()
         await ctx.send(f"Added package `{package_name}` to database and refreshed inventory.")
 
-    @with_role(ADMIN_ROLE, OWNER_ROLE, MODERATOR_ROLE)
+    @with_role(Roles.admin, Roles.owner, Roles.moderator)
     @commands.command(name='docs.delete()', aliases=['docs.delete', 'docs.remove()', 'docs.remove'])
     async def delete_command(self, ctx, package_name: ValidPythonIdentifier):
         """
