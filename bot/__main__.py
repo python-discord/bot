@@ -3,15 +3,15 @@ import socket
 
 from aiohttp import AsyncResolver, ClientSession, TCPConnector
 from discord import Game
-from discord.ext.commands import AutoShardedBot, when_mentioned_or
+from discord.ext.commands import Bot, when_mentioned_or
 
-from bot.constants import Bot, ClickUp
+from bot.constants import Bot as BotConfig, ClickUp
 from bot.formatter import Formatter
 
 
 log = logging.getLogger(__name__)
 
-bot = AutoShardedBot(
+bot = Bot(
     command_prefix=when_mentioned_or(
         "self.", "bot."
     ),
@@ -61,6 +61,6 @@ bot.load_extension("bot.cogs.snakes")
 bot.load_extension("bot.cogs.tags")
 bot.load_extension("bot.cogs.verification")
 
-bot.run(Bot.token)
+bot.run(BotConfig.token)
 
 bot.http_session.close()  # Close the aiohttp session when the bot finishes running
