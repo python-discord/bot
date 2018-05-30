@@ -255,7 +255,7 @@ class Bot:
                 try:
                     not_backticks = [
                         "'''", '"""', "\u00b4\u00b4\u00b4", "\u2018\u2018\u2018", "\u2019\u2019\u2019",
-                        "\u2032\u2032\u2032", "\u201c\u201c\u201c", "\u201d\u201d\u201d","\u2033\u2033\u2033",
+                        "\u2032\u2032\u2032", "\u201c\u201c\u201c", "\u201d\u201d\u201d", "\u2033\u2033\u2033",
                         "\u3003\u3003\u3003"
                     ]
                     bad_ticks = msg.content[:3] in not_backticks
