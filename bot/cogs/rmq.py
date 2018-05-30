@@ -4,7 +4,7 @@ import logging
 import aio_pika
 from discord.ext.commands import AutoShardedBot
 
-from bot.constants import RabbitMQ, Channels
+from bot.constants import Channels, RabbitMQ
 
 log = logging.getLogger(__name__)
 
@@ -36,14 +36,6 @@ class RMQ:
         async for message in self.queue:
             with message.process():
                 await self.handle_message(message, message.body.decode())
-
-    async def send_message(self, data):
-        await self.channel.default_exchange.publish(
-            aio_pika.Message(
-                body=data.encode()
-            ),
-            routing_key=self.queue.name
-        )
 
     async def handle_message(self, message, data):
         log.debug(f"Message: {message}")
