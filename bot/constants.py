@@ -240,6 +240,15 @@ class Papertrail(metaclass=YAMLGetter):
     port: str
 
 
+class RabbitMQ(metaclass=YAMLGetter):
+    section = "rabbitmq"
+
+    host: str
+    port: int
+    username: str
+    password: str
+
+
 class URLs(metaclass=YAMLGetter):
     section = "urls"
 
