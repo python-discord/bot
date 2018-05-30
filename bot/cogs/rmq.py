@@ -1,10 +1,10 @@
+import json
 import logging
 
 import aio_pika
 from discord.ext.commands import AutoShardedBot
 
-from bot.constants import RabbitMQ
-
+from bot.constants import RabbitMQ, Channels
 
 log = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ class RMQ:
             host=RabbitMQ.host, port=RabbitMQ.port, login=RabbitMQ.username, password=RabbitMQ.password
         )
 
-        log.debug("Connected to RabbitMQ")
+        log.info("Connected to RabbitMQ")
 
         self.channel = await self.rmq.channel()
         self.queue = await self.channel.declare_queue("bot_events", durable=True)
@@ -48,6 +48,15 @@ class RMQ:
     async def handle_message(self, message, data):
         log.debug(f"Message: {message}")
         log.debug(f"Data: {data}")
+
+        try:
+            data = json.loads(data)
+            await self.send_test(f"JSON: {data}")
+        except Exception:
+            await self.send_test(f"Non-JSON: {data}")
+
+    async def send_test(self, data):
+        await self.bot.get_channel(Channels.devtest).send(data)
 
 
 def setup(bot):
