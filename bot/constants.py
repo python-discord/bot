@@ -156,45 +156,107 @@ class YAMLGetter(type):
 class Bot(metaclass=YAMLGetter):
     section = "bot"
 
+    help_prefix: str
+    token: str
+
 
 class Cooldowns(metaclass=YAMLGetter):
     section = "bot"
     subsection = "cooldowns"
+
+    tags: int
 
 
 class Emojis(metaclass=YAMLGetter):
     section = "bot"
     subsection = "emojis"
 
+    green_chevron: str
+    red_chevron: str
+    white_chevron: str
+
 
 class Channels(metaclass=YAMLGetter):
     section = "guild"
     subsection = "channels"
+
+    bot: int
+    help0: int
+    help1: int
+    help2: int
+    help3: int
+    help4: int
+    python: int
+    devlog: int
+    devtest: int
+    verification: int
+    checkpoint_test: int
+    helpers: int
+    modlog: int
 
 
 class Roles(metaclass=YAMLGetter):
     section = "guild"
     subsection = "roles"
 
+    admin: int
+    moderator: int
+    verified: int
+    owner: int
+    devops: int
+    contributor: int
+    jammer: int
+    champion: int
+
 
 class Guild(metaclass=YAMLGetter):
     section = "guild"
+
+    id: int
 
 
 class Keys(metaclass=YAMLGetter):
     section = "keys"
 
+    deploy_bot: str
+    deploy_site: str
+    site_api: str
+    youtube: str
+    omdb: str
+
 
 class ClickUp(metaclass=YAMLGetter):
     section = "clickup"
+
+    space: int
+    team: int
+    key: str
 
 
 class Papertrail(metaclass=YAMLGetter):
     section = "papertrail"
 
+    address: str
+    port: str
+
 
 class URLs(metaclass=YAMLGetter):
     section = "urls"
+
+    deploy: str
+    status: str
+    site: str
+    site_hiphopify_api: str
+    site_tags_api: str
+    site_user_api: str
+    site_quiz_api: str
+    site_facts_api: str
+    site_names_api: str
+    site_idioms_api: str
+    site_special_api: str
+    github_bot_repo: str
+    bot_avatar: str
+    omdb: str
 
 
 # Debug mode
