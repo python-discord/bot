@@ -60,6 +60,13 @@ papertrail:
     port: !ENV 'PAPERTRAIL_PORT'
 
 
+rabbitmq:
+    host: "pdrmq"
+    port: 5672
+    username: !ENV "RABBITMQ_DEFAULT_USER"
+    password: !ENV "RABBITMQ_DEFAULT_PASS"
+
+
 urls:
     deploy: !ENV 'DEPLOY_URL'
     status: !ENV 'STATUS_URL'

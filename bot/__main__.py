@@ -38,6 +38,7 @@ bot.http_session = ClientSession(
 
 # Internal/debug
 bot.load_extension("bot.cogs.logging")
+bot.load_extension("bot.cogs.rmq")
 bot.load_extension("bot.cogs.security")
 bot.load_extension("bot.cogs.events")
 
