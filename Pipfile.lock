@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "2599ad9a90ffd20ee43b33582acee7e124146b6de58f648fd3a0175f19b45007"
+            "sha256": "d7bed0d945978eab4e574f8c447cf7ac3be0f163402527952f7abb40e1e386de"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -34,29 +34,38 @@
         },
         "aiohttp": {
             "hashes": [
-                "sha256:129d83dd067760cec3cfd4456b5c6d7ac29f2c639d856884568fd539bed5a51f",
-                "sha256:33c62afd115c456b0cf1e890fe6753055effe0f31a28321efd4f787378d6f4ab",
-                "sha256:666756e1d4cf161ed1486b82f65fdd386ac07dd20fb10f025abf4be54be12746",
-                "sha256:9705ded5a0faa25c8f14c6afb7044002d66c9120ed7eadb4aa9ca4aad32bd00c",
-                "sha256:af5bfdd164256118a0a306b3f7046e63207d1f8cba73a67dcc0bd858dcfcd3bc",
-                "sha256:b80f44b99fa3c9b4530fcfa324a99b84843043c35b084e0b653566049974435d",
-                "sha256:c67e105ec74b85c8cb666b6877569dee6f55b9548f982983b9bee80b3d47e6f3",
-                "sha256:d15c6658de5b7783c2538407278fa062b079a46d5f814a133ae0f09bbb2cfbc4",
-                "sha256:d611ebd1ef48498210b65486306e065fde031040a1f3c455ca1b6baa7bf32ad3",
-                "sha256:dcc7e4dcec6b0012537b9f8a0726f8b111188894ab0f924b680d40b13d3298a0",
-                "sha256:de8ef106e130b94ca143fdfc6f27cda1d8ba439462542377738af4d99d9f5dd2",
-                "sha256:eb6f1405b607fff7e44168e3ceb5d3c8a8c5a2d3effe0a27f843b16ec047a6d7",
-                "sha256:f0e2ac69cb709367400008cebccd5d48161dd146096a009a632a132babe5714c"
+                "sha256:0c4bd9553116254c53077ff79fb80bf4abbadcbec049c7a3d3c145402dca55b4",
+                "sha256:0f117efd1f4cb7c65a879e1763e444e67a6b46a9a6c643a9a39448c5848d8b45",
+                "sha256:1e2fd151d53e203d5269bfd5adae477de3737d970abeae848b3fc9a5da1a8ff0",
+                "sha256:1f6529ebaa5929d5bfe0855861d7eb1e29c7f826cb3a433d6e83d4cea9658f0d",
+                "sha256:26405ca327865dbc6e5b9be19c5286732c0cecb48bf48219b9805c297fe37358",
+                "sha256:281a9fa56b5ce587a2147ec285d18a224942f7e020581afa6cc44d7caecf937b",
+                "sha256:35ecd993db827d59a67e6910ad29ee45e917b6d91e829936525e84e55a6ca9bf",
+                "sha256:5dcbbc6984f50e0df08e7ac179dc4d7dd8e5d7dc7900023da020fbfc60269844",
+                "sha256:71edcf411a0498bfd9ff6d556c00de74b7e6d6d73bafc021fb3f6c086ee7c6c7",
+                "sha256:8b780fc6230c5c412fcb77a1574af370e55f85765fa8fc7fa5450cba4353b29d",
+                "sha256:998fd59943b9f8a84e3097fef71fd1059c3a7c0584c4fd0f3f8f44dabdea2ed4",
+                "sha256:a390b660e1a8b11dcf806468b1d4867808123c57d2c367985b9a1625b7ce2834",
+                "sha256:b7c8ef9fca5d3d017908c699da4f658a163706528bc4e7b03accb15f9021ff59",
+                "sha256:c81dfb439db6273041923d447e809a1260aa5e03ec0f47fdbae6a873fda6af3b",
+                "sha256:eb83473ac6f30413bd2ec5990f91b163fe08a8a65e767ed752da894676dd8fb7"
             ],
             "index": "pypi",
-            "version": "==2.2.5"
+            "version": "==3.0.9"
         },
         "async-timeout": {
             "hashes": [
-                "sha256:474d4bc64cee20603e225eb1ece15e248962958b45a3648a9f5cc29e827a610c",
-                "sha256:b3c0ddc416736619bd4a95ca31de8da6920c3b9a140c64dbef2b2fa7bf521287"
+                "sha256:00cff4d2dce744607335cba84e9929c3165632da2d27970dbc55802a0c7873d0",
+                "sha256:9093db5b8ddbe4b8f6885d1a6e0ad84ae3155464cbf6877c387605244c285f3c"
             ],
-            "version": "==3.0.0"
+            "version": "==2.0.1"
+        },
+        "attrs": {
+            "hashes": [
+                "sha256:4b90b09eeeb9b88c35bc642cbac057e45a5fd85367b985bd2809c62b7b939265",
+                "sha256:e0d0eb91441a3b53dab4d9b743eafc1ac44476296a2053b6ca3af0b139faf87b"
+            ],
+            "version": "==18.1.0"
         },
         "certifi": {
             "hashes": [
@@ -97,6 +106,12 @@
                 "sha256:8c7309c718f94b3a625cb648ace320157ad16ff131ae0af362c9f21b80ef6ec4"
             ],
             "version": "==2.6"
+        },
+        "idna-ssl": {
+            "hashes": [
+                "sha256:1293f030bc608e9aa9cdee72aa93c1521bbb9c7698068c61c9ada6772162b979"
+            ],
+            "version": "==1.0.1"
         },
         "logmatic-python": {
             "hashes": [
