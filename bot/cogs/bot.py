@@ -4,7 +4,7 @@ import re
 import time
 
 from discord import Embed, Message
-from discord.ext.commands import AutoShardedBot, Context, command, group
+from discord.ext.commands import Bot, Context, command, group
 from dulwich.repo import Repo
 
 from bot.constants import (
@@ -20,7 +20,7 @@ class Bot:
     Bot information commands
     """
 
-    def __init__(self, bot: AutoShardedBot):
+    def __init__(self, bot: Bot):
         self.bot = bot
 
         # Stores allowed channels plus epoch time since last call.
