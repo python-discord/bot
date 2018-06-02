@@ -4,6 +4,7 @@ import logging
 import pprint
 
 import aio_pika
+from dateutil import parser as date_parser
 from discord import Colour, Embed
 from discord.ext.commands import Bot
 from discord.utils import get
@@ -101,13 +102,18 @@ class RMQ:
             )
 
     async def do_send_embed(self, target: int, **embed_params):
-        for param in list(embed_params.keys()):  # To keep a full copy
+        for param, value in list(embed_params.items()):  # To keep a full copy
             if param not in EMBED_PARAMS:
                 await self.do_mod_log(
                     "warning", "Warning: Send Embed",
                     f"Unknown embed parameter: {param}"
                 )
                 del embed_params[param]
+
+            if param == "timestamp":
+                embed_params[param] = date_parser.parse(value)
+            elif param == "colour":
+                embed_params[param] = Colour(value)
 
         channel = self.bot.get_channel(target)
 
