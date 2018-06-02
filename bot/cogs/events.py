@@ -2,7 +2,7 @@ import logging
 
 from discord import Embed, Member
 from discord.ext.commands import (
-    AutoShardedBot, BadArgument, BotMissingPermissions,
+    BadArgument, Bot, BotMissingPermissions,
     CommandError, CommandInvokeError, Context,
     NoPrivateMessage, UserInputError
 )
@@ -21,7 +21,7 @@ class Events:
     No commands, just event handlers
     """
 
-    def __init__(self, bot: AutoShardedBot):
+    def __init__(self, bot: Bot):
         self.bot = bot
 
     async def send_updated_users(self, *users, replace_all=False):

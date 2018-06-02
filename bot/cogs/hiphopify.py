@@ -3,7 +3,7 @@ import random
 
 from discord import Colour, Embed, Member
 from discord.errors import Forbidden
-from discord.ext.commands import AutoShardedBot, Context, command
+from discord.ext.commands import Bot, Context, command
 
 from bot.constants import (
     Channels, Keys,
@@ -21,7 +21,7 @@ class Hiphopify:
     A set of commands to moderate terrible nicknames.
     """
 
-    def __init__(self, bot: AutoShardedBot):
+    def __init__(self, bot: Bot):
         self.bot = bot
         self.headers = {"X-API-KEY": Keys.site_api}
 
