@@ -1,6 +1,6 @@
 import logging
 
-from discord.ext.commands import AutoShardedBot, Context
+from discord.ext.commands import Bot, Context
 
 log = logging.getLogger(__name__)
 
@@ -10,7 +10,7 @@ class Security:
     Security-related helpers
     """
 
-    def __init__(self, bot: AutoShardedBot):
+    def __init__(self, bot: Bot):
         self.bot = bot
         self.bot.check(self.check_not_bot)  # Global commands check - no bots can run any commands at all
 

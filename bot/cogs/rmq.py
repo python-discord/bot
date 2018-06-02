@@ -5,7 +5,7 @@ import pprint
 
 import aio_pika
 from discord import Colour, Embed
-from discord.ext.commands import AutoShardedBot
+from discord.ext.commands import Bot
 from discord.utils import get
 
 from bot.constants import Channels, Guild, RabbitMQ
@@ -34,7 +34,7 @@ class RMQ:
     channel = None  # type: aio_pika.Channel
     queue = None  # type: aio_pika.Queue
 
-    def __init__(self, bot: AutoShardedBot):
+    def __init__(self, bot: Bot):
         self.bot = bot
 
     async def on_ready(self):
