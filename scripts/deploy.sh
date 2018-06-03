@@ -12,7 +12,7 @@ if [[ $TRAVIS_BRANCH == 'master' && $TRAVIS_PULL_REQUEST == 'false' ]]; then
     docker push pythondiscord/bot:latest
 
     echo "Deploying container"
-    pipenv run python scripts/deploy.py
+    curl -H "token: $AUTODEPLOY_TOKEN" $AUTODEPLOY_WEBHOOK
 else
     echo "Skipping deploy"
 fi
