@@ -21,6 +21,7 @@ fuzzywuzzy = "*"
 python-levenshtein = "*"
 pillow = "*"
 aio-pika = "*"
+python-dateutil = "*"
 
 [dev-packages]
 "flake8" = "*"

@@ -14,7 +14,7 @@ from typing import Any, Dict
 import aiohttp
 import async_timeout
 from discord import Colour, Embed, File, Member, Message, Reaction
-from discord.ext.commands import AutoShardedBot, BadArgument, Context, bot_has_permissions, command
+from discord.ext.commands import BadArgument, Bot, Context, bot_has_permissions, command
 from PIL import Image, ImageDraw, ImageFont
 
 from bot.constants import ERROR_REPLIES, Keys, URLs
@@ -146,7 +146,7 @@ class Snakes:
     wiki_brief = re.compile(r'(.*?)(=+ (.*?) =+)', flags=re.DOTALL)
     valid_image_extensions = ('gif', 'png', 'jpeg', 'jpg', 'webp')
 
-    def __init__(self, bot: AutoShardedBot):
+    def __init__(self, bot: Bot):
         self.active_sal = {}
         self.bot = bot
         self.headers = {"X-API-KEY": Keys.site_api}
