@@ -4,11 +4,9 @@ import logging
 import random
 import re
 from collections import OrderedDict
-from ssl import CertificateError
 from typing import Dict, List, Optional, Tuple
 
 import discord
-from aiohttp import ClientConnectorError
 from bs4 import BeautifulSoup
 from discord.ext import commands
 from markdownify import MarkdownConverter
@@ -16,6 +14,7 @@ from requests import ConnectionError
 from sphinx.ext import intersphinx
 
 from bot.constants import ERROR_REPLIES, Keys, Roles, URLs
+from bot.converters import ValidPythonIdentifier, ValidURL
 from bot.decorators import with_role
 
 
@@ -88,57 +87,6 @@ class SphinxConfiguration:
     config = DummyObject()
     config.intersphinx_timeout = 3
     config.tls_verify = True
-
-
-class ValidPythonIdentifier(commands.Converter):
-    """
-    A converter that checks whether the given string is a valid Python identifier.
-
-    This is used to have package names
-    that correspond to how you would use
-    the package in your code, e.g.
-    `import package`. Raises `BadArgument`
-    if the argument is not a valid Python
-    identifier, and simply passes through
-    the given argument otherwise.
-    """
-
-    @staticmethod
-    async def convert(ctx, argument: str):
-        if not argument.isidentifier():
-            raise commands.BadArgument(f"`{argument}` is not a valid Python identifier")
-        return argument
-
-
-class DocumentationBaseURL(commands.Converter):
-    """
-    Represents a documentation base URL.
-
-    This converter checks whether the given
-    URL can be reached and requesting it returns
-    a status code of 200. If not, `BadArgument`
-    is raised. Otherwise, it simply passes through the given URL.
-    """
-
-    @staticmethod
-    async def convert(ctx, url: str):
-        try:
-            async with ctx.bot.http_session.get(url) as resp:
-                if resp.status != 200:
-                    raise commands.BadArgument(
-                        f"HTTP GET on `{url}` returned status `{resp.status_code}`, expected 200"
-                    )
-        except CertificateError:
-            if url.startswith('https'):
-                raise commands.BadArgument(
-                    f"Got a `CertificateError` for URL `{url}`. Does it support HTTPS?"
-                )
-            raise commands.BadArgument(f"Got a `CertificateError` for URL `{url}`.")
-        except ValueError:
-            raise commands.BadArgument(f"`{url}` doesn't look like a valid hostname to me.")
-        except ClientConnectorError:
-            raise commands.BadArgument(f"Cannot connect to host with URL `{url}`.")
-        return url
 
 
 class InventoryURL(commands.Converter):
@@ -451,7 +399,7 @@ class Doc:
     @commands.command(name='docs.set()', aliases=['docs.set'])
     async def set_command(
         self, ctx, package_name: ValidPythonIdentifier,
-        base_url: DocumentationBaseURL, inventory_url: InventoryURL
+        base_url: ValidURL, inventory_url: InventoryURL
     ):
         """
         Adds a new documentation metadata object to the site's database.
