@@ -1,6 +1,6 @@
 import logging
 
-from discord import Message, Object
+from discord import Message, NotFound, Object
 from discord.ext.commands import Bot, Context, command
 
 from bot.constants import Channels, Roles
@@ -42,7 +42,11 @@ class Verification:
             )
 
             log.trace(f"Deleting the message posted by {ctx.author}")
-            await ctx.message.delete()
+
+            try:
+                await ctx.message.delete()
+            except NotFound:
+                log.trace("No message found, it must have been deleted by another bot.")
 
     @command(name="accept", hidden=True, aliases=["verify", "verified", "accepted", "accept()"])
     @without_role(Roles.verified)
@@ -56,7 +60,11 @@ class Verification:
         await ctx.author.add_roles(Object(Roles.verified), reason="Accepted the rules")
 
         log.trace(f"Deleting the message posted by {ctx.author}.")
-        await ctx.message.delete()
+
+        try:
+            await ctx.message.delete()
+        except NotFound:
+            log.trace("No message found, it must have been deleted by another bot.")
 
 
 def setup(bot):
