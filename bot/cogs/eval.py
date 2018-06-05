@@ -8,7 +8,7 @@ import traceback
 from io import StringIO
 
 import discord
-from discord.ext.commands import AutoShardedBot, command
+from discord.ext.commands import Bot, command
 
 from bot.constants import Roles
 from bot.decorators import with_role
@@ -23,7 +23,7 @@ class CodeEval:
     and returns the result to the channel.
     """
 
-    def __init__(self, bot: AutoShardedBot):
+    def __init__(self, bot: Bot):
         self.bot = bot
         self.env = {}
         self.ln = 0

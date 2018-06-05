@@ -1,7 +1,7 @@
 import logging
 
 from discord import Message
-from discord.ext.commands import AutoShardedBot
+from discord.ext.commands import Bot
 
 from bot.constants import Channels
 
@@ -19,7 +19,7 @@ class Fun:
     Fun, entirely useless stuff
     """
 
-    def __init__(self, bot: AutoShardedBot):
+    def __init__(self, bot: Bot):
         self.bot = bot
 
     async def on_ready(self):

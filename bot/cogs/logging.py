@@ -1,7 +1,7 @@
 import logging
 
 from discord import Embed
-from discord.ext.commands import AutoShardedBot
+from discord.ext.commands import Bot
 
 from bot.constants import Channels, DEBUG_MODE
 
@@ -14,7 +14,7 @@ class Logging:
     Debug logging module
     """
 
-    def __init__(self, bot: AutoShardedBot):
+    def __init__(self, bot: Bot):
         self.bot = bot
 
     async def on_ready(self):

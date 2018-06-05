@@ -1,7 +1,7 @@
 import logging
 
 from discord import Message, Object
-from discord.ext.commands import AutoShardedBot, Context, command
+from discord.ext.commands import Bot, Context, command
 
 from bot.constants import Channels, Roles
 from bot.decorators import in_channel, without_role
@@ -14,7 +14,7 @@ class Verification:
     """
     User verification
     """
-    def __init__(self, bot: AutoShardedBot):
+    def __init__(self, bot: Bot):
         self.bot = bot
 
     async def on_message(self, message: Message):

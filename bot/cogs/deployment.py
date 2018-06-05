@@ -1,7 +1,7 @@
 import logging
 
 from discord import Colour, Embed
-from discord.ext.commands import AutoShardedBot, Context, command
+from discord.ext.commands import Bot, Context, command
 
 from bot.constants import Keys, Roles, URLs
 from bot.decorators import with_role
@@ -14,7 +14,7 @@ class Deployment:
     Bot information commands
     """
 
-    def __init__(self, bot: AutoShardedBot):
+    def __init__(self, bot: Bot):
         self.bot = bot
 
     @command(name="redeploy()", aliases=["bot.redeploy", "bot.redeploy()", "redeploy"])

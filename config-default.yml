@@ -21,6 +21,7 @@ guild:
         help1: 303906556754395136
         help2: 303906514266226689
         help3: 439702951246692352
+        help4: 451312046647148554
         python: 267624335836053506
         devlog: 409308876241108992
         devtest: 414574275865870337
@@ -36,6 +37,8 @@ guild:
         owner: 267627879762755584
         devops: 409416496733880320
         contributor: 295488872404484098
+        jammer: 423054537079783434
+        champion: 430492892331769857
 
 
 keys:
@@ -55,6 +58,13 @@ clickup:
 papertrail:
     address: !ENV 'PAPERTRAIL_ADDRESS'
     port: !ENV 'PAPERTRAIL_PORT'
+
+
+rabbitmq:
+    host: "pdrmq"
+    port: 5672
+    username: !ENV "RABBITMQ_DEFAULT_USER"
+    password: !ENV "RABBITMQ_DEFAULT_PASS"
 
 
 urls:

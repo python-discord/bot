@@ -4,7 +4,7 @@ import re
 import time
 
 from discord import Embed, Message
-from discord.ext.commands import AutoShardedBot, Context, command, group
+from discord.ext.commands import Bot, Context, command, group
 from dulwich.repo import Repo
 
 from bot.constants import (
@@ -20,7 +20,7 @@ class Bot:
     Bot information commands
     """
 
-    def __init__(self, bot: AutoShardedBot):
+    def __init__(self, bot: Bot):
         self.bot = bot
 
         # Stores allowed channels plus epoch time since last call.
@@ -253,7 +253,12 @@ class Bot:
             on_cooldown = (time.time() - self.channel_cooldowns.get(msg.channel.id, 0)) < 300
             if not on_cooldown:
                 try:
-                    not_backticks = ["'''", '"""', "´´´", "‘‘‘", "’’’", "′′′", "“““", "”””", "″″″", "〃〃〃"]
+                    not_backticks = [
+                        "'''", '"""', "\u00b4\u00b4\u00b4", "\u2018\u2018\u2018", "\u2019\u2019\u2019",
+                        "\u2032\u2032\u2032", "\u201c\u201c\u201c", "\u201d\u201d\u201d", "\u2033\u2033\u2033",
+                        "\u3003\u3003\u3003"
+                    ]
+
                     bad_ticks = msg.content[:3] in not_backticks
                     if bad_ticks:
                         ticks = msg.content[:3]
