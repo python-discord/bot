@@ -4,7 +4,7 @@ import time
 
 from discord import Colour, Embed
 from discord.ext.commands import (
-    AutoShardedBot, BadArgument,
+    BadArgument, Bot,
     Context, Converter, command
 )
 
@@ -82,7 +82,7 @@ class Tags:
     Save new tags and fetch existing tags.
     """
 
-    def __init__(self, bot: AutoShardedBot):
+    def __init__(self, bot: Bot):
         self.bot = bot
         self.tag_cooldowns = {}
         self.headers = {"X-API-KEY": Keys.site_api}

@@ -2,7 +2,7 @@ import logging
 import os
 
 from discord import ClientException, Colour, Embed
-from discord.ext.commands import AutoShardedBot, Context, command
+from discord.ext.commands import Bot, Context, command
 
 from bot.constants import (
     Emojis, Roles, URLs,
@@ -18,7 +18,7 @@ class Cogs:
     Cog management commands
     """
 
-    def __init__(self, bot: AutoShardedBot):
+    def __init__(self, bot: Bot):
         self.bot = bot
         self.cogs = {}
 

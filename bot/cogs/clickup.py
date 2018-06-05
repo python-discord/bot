@@ -1,7 +1,7 @@
 import logging
 
 from discord import Colour, Embed
-from discord.ext.commands import AutoShardedBot, Context, command
+from discord.ext.commands import Bot, Context, command
 from multidict import MultiDict
 
 from bot.constants import ClickUp as ClickUpConfig, Roles
@@ -31,7 +31,7 @@ class ClickUp:
     ClickUp management commands
     """
 
-    def __init__(self, bot: AutoShardedBot):
+    def __init__(self, bot: Bot):
         self.bot = bot
         self.lists = CaseInsensitiveDict()
 
