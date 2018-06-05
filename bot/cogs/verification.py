@@ -1,6 +1,6 @@
 import logging
 
-from discord import Message, Object, NotFound
+from discord import Message, NotFound, Object
 from discord.ext.commands import Bot, Context, command
 
 from bot.constants import Channels, Roles
