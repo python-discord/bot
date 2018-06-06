@@ -1,9 +1,10 @@
 import random
 import socket
+from ssl import CertificateError
 
 import discord
-from aiohttp import AsyncResolver, ClientSession, TCPConnector
-from discord.ext.commands import Converter
+from aiohttp import AsyncResolver, ClientConnectorError, ClientSession, TCPConnector
+from discord.ext.commands import BadArgument, Converter
 from fuzzywuzzy import fuzz
 
 from bot.constants import DEBUG_MODE, Keys, URLs
@@ -105,3 +106,54 @@ class Snake(Converter):
         await cls.build_list()
         names = [snake['scientific'] for snake in cls.snakes]
         return random.choice(names)
+
+
+class ValidPythonIdentifier(Converter):
+    """
+    A converter that checks whether the given string is a valid Python identifier.
+
+    This is used to have package names
+    that correspond to how you would use
+    the package in your code, e.g.
+    `import package`. Raises `BadArgument`
+    if the argument is not a valid Python
+    identifier, and simply passes through
+    the given argument otherwise.
+    """
+
+    @staticmethod
+    async def convert(ctx, argument: str):
+        if not argument.isidentifier():
+            raise BadArgument(f"`{argument}` is not a valid Python identifier")
+        return argument
+
+
+class ValidURL(Converter):
+    """
+    Represents a valid webpage URL.
+
+    This converter checks whether the given
+    URL can be reached and requesting it returns
+    a status code of 200. If not, `BadArgument`
+    is raised. Otherwise, it simply passes through the given URL.
+    """
+
+    @staticmethod
+    async def convert(ctx, url: str):
+        try:
+            async with ctx.bot.http_session.get(url) as resp:
+                if resp.status != 200:
+                    raise BadArgument(
+                        f"HTTP GET on `{url}` returned status `{resp.status_code}`, expected 200"
+                    )
+        except CertificateError:
+            if url.startswith('https'):
+                raise BadArgument(
+                    f"Got a `CertificateError` for URL `{url}`. Does it support HTTPS?"
+                )
+            raise BadArgument(f"Got a `CertificateError` for URL `{url}`.")
+        except ValueError:
+            raise BadArgument(f"`{url}` doesn't look like a valid hostname to me.")
+        except ClientConnectorError:
+            raise BadArgument(f"Cannot connect to host with URL `{url}`.")
+        return url

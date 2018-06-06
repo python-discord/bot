@@ -55,6 +55,7 @@ else:
     log.info("`CLICKUP_KEY` not set in the environment, not loading the ClickUp cog.")
 
 bot.load_extension("bot.cogs.deployment")
+bot.load_extension("bot.cogs.doc")
 bot.load_extension("bot.cogs.eval")
 bot.load_extension("bot.cogs.fun")
 bot.load_extension("bot.cogs.hiphopify")
