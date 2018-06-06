@@ -72,6 +72,7 @@ urls:
     status: !ENV 'STATUS_URL'
     site: 'pythondiscord.com'
     site_hiphopify_api: 'https://api.pythondiscord.com/bot/hiphopify'
+    site_docs_api: 'https://api.pythondiscord.com/bot/docs'
     site_tags_api: 'https://api.pythondiscord.com/bot/tags'
     site_user_api: 'https://api.pythondiscord.com/bot/users'
     site_quiz_api: 'https://api.pythondiscord.com/bot/snake_quiz'
