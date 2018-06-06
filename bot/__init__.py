@@ -1,3 +1,5 @@
+import os
+
 import ast
 import logging
 import re
@@ -30,12 +32,23 @@ Logger.trace = monkeypatch_trace
 # Set up logging
 logging_handlers = []
 
+# We can't import this yet, so we have to define it ourselves
+DEBUG_MODE = True if 'local' in os.environ.get("SITE_URL", "local") else False
 
-logging_handlers.append(StreamHandler(stream=sys.stderr))
 
-json_handler = logging.FileHandler(filename="log.json", mode="w")
-json_handler.formatter = JsonFormatter()
-logging_handlers.append(json_handler)
+if DEBUG_MODE:
+    logging_handlers.append(StreamHandler(stream=sys.stderr))
+
+    json_handler = logging.FileHandler(filename="log.json", mode="w")
+    json_handler.formatter = JsonFormatter()
+    logging_handlers.append(json_handler)
+else:
+    logging_handlers.append(logging.FileHandler(filename="log.txt", mode="w"))
+
+    json_handler = logging.StreamHandler(stream=sys.stderr)
+    json_handler.formatter = JsonFormatter()
+    logging_handlers.append(json_handler)
+
 
 logging.basicConfig(
     format="%(asctime)s pd.beardfist.com Bot: | %(name)30s | %(levelname)8s | %(message)s",
