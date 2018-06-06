@@ -1,6 +1,5 @@
-import os
-
 import ast
+import os
 import logging
 import re
 import sys
