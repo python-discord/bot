@@ -1,0 +1,40 @@
+image: python:3.6-alpine3.7
+
+variables:
+  PIPENV_VENV_IN_PROJECT: 1
+  PIPENV_IGNORE_VIRTUALENVS: 1
+
+
+before_script:
+  - apk add --update tini
+  - apk add --update build-base
+  - apk add --update libffi-dev
+  - apk add --update zlib
+  - apk add --update jpeg-dev
+  - apk add --update libxml2 libxml2-dev libxslt-dev
+  - apk add --update zlib-dev
+  - apk add --update freetype-dev
+
+stages:
+  - test
+  - build
+
+test:
+  stage: test
+  cache:
+    paths:
+      - ".venv"
+
+  script:
+    - pip install pipenv
+    - pipenv sync --dev --three
+    - pipenv run python -m flake8
+
+build:
+  services:
+    - docker:dind
+
+  stage: build
+  script:
+    - apk add docker curl
+    - sh scripts/deploy.sh
