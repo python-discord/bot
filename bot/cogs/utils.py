@@ -27,11 +27,11 @@ class Utils:
     @with_role(Roles.verified)
     async def pep_search(self, ctx: Context, pep_number: str):
         """
-        Fetches information about a PEP and sends it to the user
+        Fetches information about a PEP and sends it to the channel.
         """
 
         # Attempt to fetch the PEP from Github.
-        pep_url = f"{self.base_github_pep_url}{pep_number.zfill(4)}.txt"
+        pep_url = f"{self.base_github_pep_url}{pep_number:04}.txt"
         log.trace(f"Requesting PEP {pep_number} with {pep_url}")
         response = await self.bot.http_session.get(pep_url)
 
@@ -46,7 +46,7 @@ class Utils:
             # Assemble the embed
             pep_embed = Embed(
                 title=f"**PEP {pep_number} - {pep_header['Title']}**",
-                description=f"[Link]({self.base_pep_url+pep_number.zfill(4)})",
+                description=f"[Link]({self.base_pep_url}{pep_number:04})",
             )
 
             pep_embed.set_thumbnail(url="https://www.python.org/static/opengraph-icon-200x200.png")
@@ -68,9 +68,10 @@ class Utils:
             pep_embed.colour = Colour.red()
 
         else:
-            log.trace(f"The user requested PEP {pep_number}, ",
-                      "but the response had an unexpected status code {response.status}.\n{response.text}")
-            error_message = "Unexpected HTTP error during PEP search. Please let us know"
+            log.trace(f"The user requested PEP {pep_number}, but the response had an unexpected status code: "
+                      f"{response.status}.\n{response.text}")
+
+            error_message = "Unexpected HTTP error during PEP search. Please let us know."
             pep_embed = Embed(title="Unexpected error", description=error_message)
             pep_embed.colour = Colour.red()
 
