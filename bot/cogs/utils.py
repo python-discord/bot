@@ -31,7 +31,7 @@ class Utils:
         """
 
         # Attempt to fetch the PEP from Github.
-        pep_url = f"{self.base_github_pep_url}{pep_number:04}.txt"
+        pep_url = f"{self.base_github_pep_url}{pep_number.zfill(4)}.txt"
         log.trace(f"Requesting PEP {pep_number} with {pep_url}")
         response = await self.bot.http_session.get(pep_url)
 
