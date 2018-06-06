@@ -53,7 +53,7 @@ else:
 logging.basicConfig(
     format="%(asctime)s pd.beardfist.com Bot: | %(name)30s | %(levelname)8s | %(message)s",
     datefmt="%b %d %H:%M:%S",
-    level=logging.TRACE,
+    level=logging.TRACE if DEBUG_MODE else logging.info,
     handlers=logging_handlers
 )
 
