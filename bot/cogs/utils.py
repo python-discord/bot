@@ -46,7 +46,7 @@ class Utils:
             # Assemble the embed
             pep_embed = Embed(
                 title=f"**PEP {pep_number} - {pep_header['Title']}**",
-                description=f"[Link]({self.base_pep_url}{pep_number:04})",
+                description=f"[Link]({self.base_pep_url}{pep_number.zfill(4)})",
             )
 
             pep_embed.set_thumbnail(url="https://www.python.org/static/opengraph-icon-200x200.png")
