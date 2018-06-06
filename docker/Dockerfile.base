@@ -5,7 +5,7 @@ RUN apk add --update build-base
 RUN apk add --update libffi-dev
 RUN apk add --update zlib
 RUN apk add --update jpeg-dev
-RUN apk add --update libxml2-dev
+RUN apk add --update libxml2 libxml2-dev libxslt-dev
 RUN apk add --update zlib-dev
 RUN apk add --update freetype-dev
 
