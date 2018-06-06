@@ -163,13 +163,8 @@ class Bot:
                 # Try to apply indentation fixes to the code.
                 content = self.fix_indentation(content)
 
-                # Check if the code contains backticks, if it does ignore the message.
-                if "`" in content:
-                    log.trace("Detected ` inside the code, won't reply")
-                    return None
-                else:
-                    log.trace(f"Returning message.\n\n{content}\n\n")
-                    return (content,), repl_code
+                log.trace(f"Returning message.\n\n{content}\n\n")
+                return (content,), repl_code
 
     def fix_indentation(self, msg: str):
         """
@@ -231,6 +226,12 @@ class Bot:
         else:
             log.trace(f"Found REPL code in \n\n{msg}\n\n")
             return final.rstrip(), True
+
+    def escape_markdown(self, msg: str):
+        """
+        Escapes all possible markdown characters in msg
+        """
+        return msg.replace("*", "\\*").replace("_", "\\_").replace("[", "\\[").replace("~", "\\~").replace("`", "\\`")
 
     async def on_message(self, msg: Message):
         """
@@ -308,21 +309,29 @@ class Bot:
                         # (e.g. words over multiple lines)
                         if not all(isinstance(node, ast.Expr) for node in tree.body) or repl_code:
                             # Shorten the code to 10 lines and/or 204 characters.
-                            space_left = 204
                             if content and repl_code:
                                 content = content[1]
                             else:
                                 content = content[0]
 
-                            if len(content) >= space_left:
-                                current_length = 0
-                                lines_walked = 0
-                                for line in content.splitlines(keepends=True):
-                                    if current_length+len(line) > space_left or lines_walked == 10:
-                                        break
-                                    current_length += len(line)
-                                    lines_walked += 1
-                                content = content[:current_length]+"#..."
+                            save_content = self.escape_markdown(content)
+
+                            def shorten_code(code):
+                                space_left = 204
+
+                                if len(code) >= space_left:
+                                    current_length = 0
+                                    lines_walked = 0
+                                    for line in code.splitlines(keepends=True):
+                                        if current_length+len(line) > space_left or lines_walked == 10:
+                                            break
+                                        current_length += len(line)
+                                        lines_walked += 1
+                                    code = code[:current_length]+"#..."
+                                return code
+
+                            content = shorten_code(content)
+                            save_content = shorten_code(save_content)
 
                             howto += (
                                 "It looks like you're trying to paste code into this channel.\n\n"
@@ -330,7 +339,7 @@ class Bot:
                                 "syntax highlighting. Please use these whenever you paste code, as this "
                                 "helps improve the legibility and makes it easier for us to help you.\n\n"
                                 f"**To do this, use the following method:**\n"
-                                f"\`\`\`python\n{content}\n\`\`\`\n\n**This will result in the following:**\n"
+                                f"\`\`\`python\n{save_content}\n\`\`\`\n\n**This will result in the following:**\n"
                                 f"```python\n{content}\n```"
                             )
 
