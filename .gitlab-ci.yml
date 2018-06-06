@@ -20,6 +20,9 @@ stages:
   - build
 
 test:
+  tags:
+  - docker
+
   stage: test
   cache:
     paths:
@@ -31,6 +34,9 @@ test:
     - pipenv run python -m flake8
 
 build:
+  tags:
+  - docker
+
   services:
     - docker:dind
 
