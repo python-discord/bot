@@ -36,7 +36,7 @@ DEBUG_MODE = True if 'local' in os.environ.get("SITE_URL", "local") else False
 
 
 if DEBUG_MODE:
-    logging_handlers.append(StreamHandler(stream=sys.stderr))
+    logging_handlers.append(StreamHandler(stream=sys.stdout))
 
     json_handler = logging.FileHandler(filename="log.json", mode="w")
     json_handler.formatter = JsonFormatter()
@@ -44,7 +44,7 @@ if DEBUG_MODE:
 else:
     logging_handlers.append(logging.FileHandler(filename="log.txt", mode="w"))
 
-    json_handler = logging.StreamHandler(stream=sys.stderr)
+    json_handler = logging.StreamHandler(stream=sys.stdout)
     json_handler.formatter = JsonFormatter()
     logging_handlers.append(json_handler)
 
