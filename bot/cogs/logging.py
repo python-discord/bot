@@ -23,7 +23,7 @@ class Logging:
         embed = Embed(description="Connected!")
         embed.set_author(
             name="Python Bot",
-            url="https://github.com/discord-python/bot",
+            url="https://gitlab.com/discord-python/projects/bot",
             icon_url="https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle.png"
         )
 

@@ -7,18 +7,17 @@ contributions may be rejected on the basis of a contributor failing to follow th
 ## Rules
 
 1. **No force-pushes** or modifying the Git history in any way.
-1. If you have direct access to the repository, **create a branch for your changes** and create a pull request for that branch.
+1. If you have direct access to the repository, **create a branch for your changes** and create a merge request for that branch.
    If not, fork it and work on a separate branch there.
     * Some repositories require this and will reject any direct pushes to `master`. Make this a habit!
-1. If someone is working on a pull request, **do not open your own pull request for the same task**. Instead, leave some comments
-   on the existing pull request. Communication is key, and there's no point in two separate implementations of the same thing.
+1. If someone is working on a merge request, **do not open your own merge request for the same task**. Instead, leave some comments
+   on the existing merge request. Communication is key, and there's no point in two separate implementations of the same thing.
     * One option is to fork the other contributor's repository, and submit your changes to their branch with your 
-      own pull request. If you do this, we suggest following these guidelines when interacting with their repository 
+      own merge request. If you do this, we suggest following these guidelines when interacting with their repository 
       as well.
 1. **Adhere to the prevailing code style**, which we enforce using [flake8](http://flake8.pycqa.org/en/latest/index.html).
     * Additionally, run `flake8` against your code before you push it. Your commit will be rejected by the build server 
-      if it fails to lint. For an automatic way to do this, check out 
-      [our article on Git hooks](https://github.com/discord-python/site/wiki/Git-Hooks).
+      if it fails to lint.
 1. **Don't fight the framework**. Every framework has its flaws, but the frameworks we've picked out have been carefully 
     chosen for their particular merits. If you can avoid it, please resist reimplementing swathes of framework logic - the
     work has already been done for you!

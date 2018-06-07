@@ -51,7 +51,7 @@ class Cogs:
 
         embed.set_author(
             name="Python Bot (Cogs)",
-            url=URLs.github_bot_repo,
+            url=URLs.gitlab_bot_repo,
             icon_url=URLs.bot_avatar
         )
 
@@ -108,7 +108,7 @@ class Cogs:
 
         embed.set_author(
             name="Python Bot (Cogs)",
-            url=URLs.github_bot_repo,
+            url=URLs.gitlab_bot_repo,
             icon_url=URLs.bot_avatar
         )
 
@@ -163,7 +163,7 @@ class Cogs:
 
         embed.set_author(
             name="Python Bot (Cogs)",
-            url=URLs.github_bot_repo,
+            url=URLs.gitlab_bot_repo,
             icon_url=URLs.bot_avatar
         )
 
@@ -264,7 +264,7 @@ class Cogs:
         embed.colour = Colour.blurple()
         embed.set_author(
             name="Python Bot (Cogs)",
-            url=URLs.github_bot_repo,
+            url=URLs.gitlab_bot_repo,
             icon_url=URLs.bot_avatar
         )
 

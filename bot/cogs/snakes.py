@@ -140,7 +140,7 @@ class Snakes:
 
     More information can be found in the code-jam-1 repo.
 
-    https://github.com/discord-python/code-jam-1
+    https://gitlab_bot_repo.com/discord-python/code-jams/code-jam-1
     """
 
     wiki_brief = re.compile(r'(.*?)(=+ (.*?) =+)', flags=re.DOTALL)
@@ -981,7 +981,7 @@ class Snakes:
             title="About the snake cog",
             description=(
                 "The features in this cog were created by members of the community "
-                "during our first ever [code jam event](https://github.com/discord-python/code-jam-1). \n\n"
+                "during our first ever [code jam event](https://gitlab.com/discord-python/code-jams/code-jam-1). \n\n"
                 "The event saw over 50 participants, who competed to write a discord bot cog with a snake theme over "
                 "48 hours. The staff then selected the best features from all the best teams, and made modifications "
                 "to ensure they would all work together before integrating them into the community bot.\n\n"

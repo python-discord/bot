@@ -256,7 +256,7 @@ class URLs(metaclass=YAMLGetter):
     site_names_api: str
     site_idioms_api: str
     site_special_api: str
-    github_bot_repo: str
+    gitlab_bot_repo: str
     bot_avatar: str
     omdb: str
 
