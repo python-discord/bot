@@ -39,3 +39,4 @@ requests or changes by contributors, where you believe you have something valuab
 ## Footnotes
 
 This document was inspired by the [Glowstone contribution guidelines](https://github.com/GlowstoneMC/Glowstone/blob/dev/docs/CONTRIBUTING.md).
+
