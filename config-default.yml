@@ -55,11 +55,6 @@ clickup:
     key: !ENV 'CLICKUP_KEY'
 
 
-papertrail:
-    address: !ENV 'PAPERTRAIL_ADDRESS'
-    port: !ENV 'PAPERTRAIL_PORT'
-
-
 rabbitmq:
     host: "pdrmq"
     port: 5672

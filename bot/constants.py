@@ -233,13 +233,6 @@ class ClickUp(metaclass=YAMLGetter):
     key: str
 
 
-class Papertrail(metaclass=YAMLGetter):
-    section = "papertrail"
-
-    address: str
-    port: str
-
-
 class RabbitMQ(metaclass=YAMLGetter):
     section = "rabbitmq"
 
