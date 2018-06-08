@@ -75,7 +75,11 @@ for key, value in logging.Logger.manager.loggerDict.items():
     else:
         value.setLevel(logging.INFO)
 
-    value.handlers = logging_handlers
+    for handler in value.handlers.copy():
+        value.removeHandler(handler)
+
+    for handler in logging_handlers:
+        value.addHandler(handler)
 
 
 # Silence discord and websockets
