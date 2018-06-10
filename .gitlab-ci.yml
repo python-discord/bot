@@ -1,19 +1,4 @@
-image: python:3.6-alpine3.7
-
-variables:
-  PIPENV_VENV_IN_PROJECT: 1
-  PIPENV_IGNORE_VIRTUALENVS: 1
-
-
-before_script:
-  - apk add --update tini
-  - apk add --update build-base
-  - apk add --update libffi-dev
-  - apk add --update zlib
-  - apk add --update jpeg-dev
-  - apk add --update libxml2 libxml2-dev libxslt-dev
-  - apk add --update zlib-dev
-  - apk add --update freetype-dev
+image: pythondiscord/bot-ci:latest
 
 stages:
   - test
@@ -29,9 +14,8 @@ test:
       - ".venv"
 
   script:
-    - pip install pipenv
-    - pipenv sync --dev --three
-    - pipenv run python -m flake8
+    - pipenv sync --dev
+    - pipenv run lint
 
 build:
   tags:
@@ -42,5 +26,4 @@ build:
 
   stage: build
   script:
-    - apk add docker curl
     - sh scripts/deploy.sh
