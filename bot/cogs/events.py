@@ -103,7 +103,7 @@ class Events:
             roles = [str(r.id) for r in member.roles]  # type: List[int]
 
             users.append({
-                "avatar": member.avatar_url_as(),
+                "avatar": member.avatar_url_as(format="png"),
                 "user_id": str(member.id),
                 "roles": roles,
                 "username": member.name,
