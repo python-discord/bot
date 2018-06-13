@@ -43,7 +43,7 @@ class Events:
 
             return await response.json()
         except Exception:
-            log.exception(f"Failed to send {len(users)} users")
+            log.exception(f"Failed to send {len(list(users))} users")
             return {}
 
     async def send_delete_users(self, *users):
