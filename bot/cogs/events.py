@@ -103,6 +103,7 @@ class Events:
             roles = [str(r.id) for r in member.roles]  # type: List[int]
 
             users.append({
+                "avatar": member.avatar_url_as(),
                 "user_id": str(member.id),
                 "roles": roles,
                 "username": member.name,
@@ -142,7 +143,11 @@ class Events:
                     )
 
     async def on_member_update(self, before: Member, after: Member):
-        if before.roles == after.roles and before.name == after.name and before.discriminator == after.discriminator:
+        if (
+                before.roles == after.roles and
+                before.name == after.name and
+                before.discriminator == after.discriminator and
+                before.avatar == after.avatar):
             return
 
         before_role_names = [role.name for role in before.roles]  # type: List[str]
@@ -152,6 +157,7 @@ class Events:
         log.debug(f"{before.display_name} roles changing from {before_role_names} to {after_role_names}")
 
         changes = await self.send_updated_users({
+            "avatar": after.avatar_url_as(),
             "user_id": str(after.id),
             "roles": role_ids,
             "username": after.name,
@@ -164,6 +170,7 @@ class Events:
         role_ids = [str(r.id) for r in member.roles]  # type: List[str]
 
         changes = await self.send_updated_users({
+            "avatar": member.avatar_url_as(),
             "user_id": str(member.id),
             "roles": role_ids,
             "username": member.name,

@@ -56,7 +56,7 @@ class Bot:
 
         embed = Embed(
             description="A utility bot designed just for the Python server! Try `bot.help()` for more info.",
-            url="https://github.com/discord-python/bot"
+            url="https://gitlab.com/discord-python/projects/bot"
         )
 
         repo = Repo(".")
@@ -67,7 +67,7 @@ class Bot:
 
         embed.set_author(
             name="Python Bot",
-            url="https://github.com/discord-python/bot",
+            url="https://gitlab.com/discord-python/projects/bot",
             icon_url=URLs.bot_avatar
         )
 

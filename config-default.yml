@@ -55,11 +55,6 @@ clickup:
     key: !ENV 'CLICKUP_KEY'
 
 
-papertrail:
-    address: !ENV 'PAPERTRAIL_ADDRESS'
-    port: !ENV 'PAPERTRAIL_PORT'
-
-
 rabbitmq:
     host: "pdrmq"
     port: 5672
@@ -80,6 +75,6 @@ urls:
     site_names_api: 'https://api.pythondiscord.com/bot/snake_names'
     site_idioms_api: 'https://api.pythondiscord.com/bot/snake_idioms'
     site_special_api: 'https://api.pythondiscord.com/bot/special_snakes'
-    github_bot_repo: 'https://github.com/discord-python/bot'
+    gitlab_bot_repo: 'https://gitlab.com/discord-python/projects/bot'
     bot_avatar: 'https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle/logo_circle.png'
     omdb: 'http://omdbapi.com'

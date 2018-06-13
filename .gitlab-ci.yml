@@ -1,0 +1,29 @@
+image: pythondiscord/bot-ci:latest
+
+stages:
+  - test
+  - build
+
+test:
+  tags:
+  - docker
+
+  stage: test
+  cache:
+    paths:
+      - ".venv"
+
+  script:
+    - pipenv sync --dev
+    - pipenv run lint
+
+build:
+  tags:
+  - docker
+
+  services:
+    - docker:dind
+
+  stage: build
+  script:
+    - sh scripts/deploy.sh

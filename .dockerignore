@@ -5,6 +5,7 @@ __pycache__
 .vagrant
 .pytest_cache
 .github
+.gitlab
 .cache
 Vagrantfile
 .coverage

@@ -106,8 +106,8 @@ ENV/
 # Vagrant
 .vagrant
 
-# JSON logfile
-log.json
+# Logfiles
+log.*
 
 # Custom user configuration
 config.yml

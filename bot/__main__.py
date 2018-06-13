@@ -7,6 +7,7 @@ from discord.ext.commands import Bot, when_mentioned_or
 
 from bot.constants import Bot as BotConfig, ClickUp
 from bot.formatter import Formatter
+from bot.utils.service_discovery import wait_for_rmq
 
 
 log = logging.getLogger(__name__)
@@ -36,12 +37,18 @@ bot.http_session = ClientSession(
     )
 )
 
+log.info("Waiting for RabbitMQ...")
+has_rmq = wait_for_rmq()
+
+if has_rmq:
+    log.info("RabbitMQ found")
+else:
+    log.warning("Timed out while waiting for RabbitMQ")
+
 # Internal/debug
 bot.load_extension("bot.cogs.logging")
-bot.load_extension("bot.cogs.rmq")
 bot.load_extension("bot.cogs.security")
 bot.load_extension("bot.cogs.events")
-
 
 # Commands, etc
 bot.load_extension("bot.cogs.bot")
@@ -63,6 +70,9 @@ bot.load_extension("bot.cogs.snakes")
 bot.load_extension("bot.cogs.tags")
 bot.load_extension("bot.cogs.verification")
 bot.load_extension("bot.cogs.utils")
+
+if has_rmq:
+    bot.load_extension("bot.cogs.rmq")
 
 bot.run(BotConfig.token)
 

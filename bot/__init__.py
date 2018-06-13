@@ -1,9 +1,9 @@
 import ast
 import logging
+import os
 import re
 import sys
 from logging import Logger, StreamHandler
-from logging.handlers import SysLogHandler
 
 import discord.ext.commands.view
 from logmatic import JsonFormatter
@@ -30,30 +30,56 @@ Logger.trace = monkeypatch_trace
 # Set up logging
 logging_handlers = []
 
+# We can't import this yet, so we have to define it ourselves
+DEBUG_MODE = True if 'local' in os.environ.get("SITE_URL", "local") else False
 
-logging_handlers.append(StreamHandler(stream=sys.stderr))
 
-json_handler = logging.FileHandler(filename="log.json", mode="w")
-json_handler.formatter = JsonFormatter()
-logging_handlers.append(json_handler)
+if DEBUG_MODE:
+    logging_handlers.append(StreamHandler(stream=sys.stdout))
+
+    json_handler = logging.FileHandler(filename="log.json", mode="w")
+    json_handler.formatter = JsonFormatter()
+    logging_handlers.append(json_handler)
+else:
+    logging_handlers.append(logging.FileHandler(filename="log.txt", mode="w"))
+
+    json_handler = logging.StreamHandler(stream=sys.stdout)
+    json_handler.formatter = JsonFormatter()
+    logging_handlers.append(json_handler)
+
 
 logging.basicConfig(
     format="%(asctime)s pd.beardfist.com Bot: | %(name)30s | %(levelname)8s | %(message)s",
     datefmt="%b %d %H:%M:%S",
-    level=logging.TRACE,
+    level=logging.TRACE if DEBUG_MODE else logging.INFO,
     handlers=logging_handlers
 )
 
 log = logging.getLogger(__name__)
 
-# We need to defer the import from `constants.py`
-# because otherwise the logging config would not be applied
-# to any logging done in the module.
-from bot.constants import Papertrail  # noqa
-if Papertrail.address:
-    papertrail_handler = SysLogHandler(address=(Papertrail.address, Papertrail.port))
-    papertrail_handler.setLevel(logging.DEBUG)
-    logging.getLogger('bot').addHandler(papertrail_handler)
+
+for key, value in logging.Logger.manager.loggerDict.items():
+    # Force all existing loggers to the correct level and handlers
+    # This happens long before we instantiate our loggers, so
+    # those should still have the expected level
+
+    if key == "bot":
+        continue
+
+    if not isinstance(value, logging.Logger):
+        # There might be some logging.PlaceHolder objects in there
+        continue
+
+    if DEBUG_MODE:
+        value.setLevel(logging.DEBUG)
+    else:
+        value.setLevel(logging.INFO)
+
+    for handler in value.handlers.copy():
+        value.removeHandler(handler)
+
+    for handler in logging_handlers:
+        value.addHandler(handler)
 
 
 # Silence discord and websockets
