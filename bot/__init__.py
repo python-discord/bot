@@ -3,7 +3,7 @@ import logging
 import os
 import re
 import sys
-from logging import Logger, StreamHandler
+from logging import Logger, StreamHandler, handlers
 
 import discord.ext.commands.view
 from logmatic import JsonFormatter
@@ -41,7 +41,16 @@ if DEBUG_MODE:
     json_handler.formatter = JsonFormatter()
     logging_handlers.append(json_handler)
 else:
-    logging_handlers.append(logging.FileHandler(filename="log.txt", mode="w"))
+
+    logdir = "log"
+    logfile = logdir+os.sep+"bot.log"
+    megabyte = 1048576
+
+    if not os.path.exists(logdir):
+        os.makedirs(logdir)
+
+    filehandler = handlers.RotatingFileHandler(logfile, maxBytes=(megabyte*5), backupCount=7)
+    logging_handlers.append(filehandler)
 
     json_handler = logging.StreamHandler(stream=sys.stdout)
     json_handler.formatter = JsonFormatter()
