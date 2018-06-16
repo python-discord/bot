@@ -9,9 +9,6 @@ test:
   - docker
 
   stage: test
-  cache:
-    paths:
-      - ".venv"
 
   script:
     - pipenv sync --dev
