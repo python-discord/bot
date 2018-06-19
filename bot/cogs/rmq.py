@@ -132,7 +132,7 @@ class RMQ:
 
     async def do_add_role(self, target: int, role_id: int, reason: str):
         guild = self.bot.get_guild(Guild.id)
-        member = guild.get_member(target)
+        member = guild.get_member(int(target))
 
         if member is None:
             return await self.do_mod_log(
@@ -163,7 +163,7 @@ class RMQ:
 
     async def do_remove_role(self, target: int, role_id: int, reason: str):
         guild = self.bot.get_guild(Guild.id)
-        member = guild.get_member(target)
+        member = guild.get_member(int(target))
 
         if member is None:
             return await self.do_mod_log(
