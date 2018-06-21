@@ -3,6 +3,7 @@ import functools
 import logging
 import random
 import re
+import textwrap
 from collections import OrderedDict
 from typing import Dict, List, Optional, Tuple
 
@@ -258,6 +259,7 @@ class Doc:
                 description="This appears to be a generic page not tied to a specific symbol."
             )
 
+        signature = textwrap.shorten(signature, 500)
         return discord.Embed(
             title=f'`{symbol}`',
             url=permalink,
