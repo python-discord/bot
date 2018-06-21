@@ -24,7 +24,7 @@ class Logging:
         embed.set_author(
             name="Python Bot",
             url="https://gitlab.com/discord-python/projects/bot",
-            icon_url="https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle.png"
+            icon_url="https://gitlab.com/python-discord/branding/raw/master/logos/logo_circle/logo_circle.png"
         )
 
         if not DEBUG_MODE:
