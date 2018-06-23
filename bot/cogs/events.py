@@ -47,7 +47,7 @@ class Events:
             if not response:
                 log.exception(f"Failed to send {len(users)} users")
             else:
-                log.exception(f"Failed to send {len(users)} users | Body: \n\n{repr(response.body)}")
+                log.exception(f"Failed to send {len(users)} users", extra={"body": response.body})
 
             return {}
 
