@@ -25,25 +25,25 @@ class Events:
         self.bot = bot
 
     async def send_updated_users(self, *users, replace_all=False):
-        users = filter(lambda user: str(Roles.verified) in user["roles"], users)
+        users = list(filter(lambda user: str(Roles.verified) in user["roles"], users))
 
         try:
             if replace_all:
                 response = await self.bot.http_session.post(
                     url=URLs.site_user_api,
-                    json=list(users),
+                    json=users,
                     headers={"X-API-Key": Keys.site_api}
                 )
             else:
                 response = await self.bot.http_session.put(
                     url=URLs.site_user_api,
-                    json=list(users),
+                    json=users,
                     headers={"X-API-Key": Keys.site_api}
                 )
 
             return await response.json()
         except Exception:
-            log.exception(f"Failed to send {len(list(users))} users")
+            log.exception(f"Failed to send {len(users)} users")
             return {}
 
     async def send_delete_users(self, *users):
@@ -111,7 +111,7 @@ class Events:
             })
 
         if users:
-            log.debug(f"{len(users)} user roles to be updated")
+            log.info(f"{len(users)} user roles to be updated")
 
             done = await self.send_updated_users(*users, replace_all=True)
 
