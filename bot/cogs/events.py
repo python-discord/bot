@@ -26,6 +26,7 @@ class Events:
 
     async def send_updated_users(self, *users, replace_all=False):
         users = list(filter(lambda user: str(Roles.verified) in user["roles"], users))
+        response = None
 
         try:
             if replace_all:
@@ -43,7 +44,11 @@ class Events:
 
             return await response.json()
         except Exception:
-            log.exception(f"Failed to send {len(users)} users")
+            if not response:
+                log.exception(f"Failed to send {len(users)} users")
+            else:
+                log.exception(f"Failed to send {len(users)} users | Body: \n\n{repr(response.body)}")
+
             return {}
 
     async def send_delete_users(self, *users):
@@ -56,7 +61,7 @@ class Events:
 
             return await response.json()
         except Exception:
-            log.exception(f"Failed to send {len(users)} users")
+            log.exception(f"Failed to delete {len(users)} users")
             return {}
 
     async def on_command_error(self, ctx: Context, e: CommandError):
