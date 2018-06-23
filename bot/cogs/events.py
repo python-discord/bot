@@ -47,7 +47,8 @@ class Events:
             if not response:
                 log.exception(f"Failed to send {len(users)} users")
             else:
-                log.exception(f"Failed to send {len(users)} users | Body: \n\n{repr(response.body)}")
+                text = await response.text()
+                log.exception(f"Failed to send {len(users)} users | Body: \n\n{text}")
 
             return {}
 
