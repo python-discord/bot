@@ -157,7 +157,7 @@ class Events:
         log.debug(f"{before.display_name} roles changing from {before_role_names} to {after_role_names}")
 
         changes = await self.send_updated_users({
-            "avatar": after.avatar_url_as(),
+            "avatar": after.avatar_url_as(format="png"),
             "user_id": str(after.id),
             "roles": role_ids,
             "username": after.name,
@@ -170,7 +170,7 @@ class Events:
         role_ids = [str(r.id) for r in member.roles]  # type: List[str]
 
         changes = await self.send_updated_users({
-            "avatar": member.avatar_url_as(),
+            "avatar": member.avatar_url_as(format="png"),
             "user_id": str(member.id),
             "roles": role_ids,
             "username": member.name,
