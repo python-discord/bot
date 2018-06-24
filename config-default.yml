@@ -17,64 +17,65 @@ guild:
 
     channels:
         bot: 267659945086812160
+        checkpoint_test: 422077681434099723
+        devlog: 409308876241108992
+        devtest: 414574275865870337
         help0: 303906576991780866
         help1: 303906556754395136
         help2: 303906514266226689
         help3: 439702951246692352
         help4: 451312046647148554
-        python: 267624335836053506
-        devlog: 409308876241108992
-        devtest: 414574275865870337
-        verification: 352442727016693763
-        checkpoint_test: 422077681434099723
         helpers: 385474242440986624
         modlog: 282638479504965634
+        python: 267624335836053506
+        verification: 352442727016693763
 
     roles:
         admin: 267628507062992896
-        moderator: 267629731250176001
-        verified: 352427296948486144
-        owner: 267627879762755584
-        devops: 409416496733880320
-        contributor: 295488872404484098
-        jammer: 423054537079783434
         champion: 430492892331769857
+        contributor: 295488872404484098
+        devops: 409416496733880320
+        jammer: 423054537079783434
+        moderator: 267629731250176001
+        owner: 267627879762755584
+        verified: 352427296948486144
 
 
 keys:
     deploy_bot: !ENV 'DEPLOY_BOT_KEY'
     deploy_site: !ENV 'DEPLOY_SITE'
+    omdb: !ENV 'OMDB_API_KEY'
     site_api: !ENV 'BOT_API_KEY'
     youtube: !ENV 'YOUTUBE_API_KEY'
-    omdb: !ENV 'OMDB_API_KEY'
 
 
 clickup:
+    key: !ENV 'CLICKUP_KEY'
     space: 757069
     team: 754996
-    key: !ENV 'CLICKUP_KEY'
 
 
 rabbitmq:
     host: "pdrmq"
+    password: !ENV "RABBITMQ_DEFAULT_PASS"
     port: 5672
     username: !ENV "RABBITMQ_DEFAULT_USER"
-    password: !ENV "RABBITMQ_DEFAULT_PASS"
 
 
 urls:
+    bot_avatar: 'https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle/logo_circle.png'
     deploy: !ENV 'DEPLOY_URL'
-    status: !ENV 'STATUS_URL'
+    gitlab_bot_repo: 'https://gitlab.com/discord-python/projects/bot'
+    omdb: 'http://omdbapi.com'
     site: 'pythondiscord.com'
-    site_hiphopify_api: 'https://api.pythondiscord.com/bot/hiphopify'
     site_docs_api: 'https://api.pythondiscord.com/bot/docs'
+    site_facts_api: 'https://api.pythondiscord.com/bot/snake_facts'
+    site_hiphopify_api: 'https://api.pythondiscord.com/bot/hiphopify'
+    site_idioms_api: 'https://api.pythondiscord.com/bot/snake_idioms'
+    site_names_api: 'https://api.pythondiscord.com/bot/snake_names'
+    site_quiz_api: 'https://api.pythondiscord.com/bot/snake_quiz'
+    site_special_api: 'https://api.pythondiscord.com/bot/special_snakes'
     site_tags_api: 'https://api.pythondiscord.com/bot/tags'
     site_user_api: 'https://api.pythondiscord.com/bot/users'
-    site_quiz_api: 'https://api.pythondiscord.com/bot/snake_quiz'
-    site_facts_api: 'https://api.pythondiscord.com/bot/snake_facts'
-    site_names_api: 'https://api.pythondiscord.com/bot/snake_names'
-    site_idioms_api: 'https://api.pythondiscord.com/bot/snake_idioms'
-    site_special_api: 'https://api.pythondiscord.com/bot/special_snakes'
-    gitlab_bot_repo: 'https://gitlab.com/discord-python/projects/bot'
-    bot_avatar: 'https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle/logo_circle.png'
-    omdb: 'http://omdbapi.com'
+    site_user_complete_api: 'https://api.pythondiscord.com/bot/users/complete'
+    status: !ENV 'STATUS_URL'

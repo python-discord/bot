@@ -181,18 +181,18 @@ class Channels(metaclass=YAMLGetter):
     subsection = "channels"
 
     bot: int
+    checkpoint_test: int
+    devlog: int
+    devtest: int
     help0: int
     help1: int
     help2: int
     help3: int
     help4: int
-    python: int
-    devlog: int
-    devtest: int
-    verification: int
-    checkpoint_test: int
     helpers: int
     modlog: int
+    python: int
+    verification: int
 
 
 class Roles(metaclass=YAMLGetter):
@@ -200,13 +200,13 @@ class Roles(metaclass=YAMLGetter):
     subsection = "roles"
 
     admin: int
-    moderator: int
-    verified: int
-    owner: int
-    devops: int
-    contributor: int
-    jammer: int
     champion: int
+    contributor: int
+    devops: int
+    jammer: int
+    moderator: int
+    owner: int
+    verified: int
 
 
 class Guild(metaclass=YAMLGetter):
@@ -220,45 +220,46 @@ class Keys(metaclass=YAMLGetter):
 
     deploy_bot: str
     deploy_site: str
+    omdb: str
     site_api: str
     youtube: str
-    omdb: str
 
 
 class ClickUp(metaclass=YAMLGetter):
     section = "clickup"
 
+    key: str
     space: int
     team: int
-    key: str
 
 
 class RabbitMQ(metaclass=YAMLGetter):
     section = "rabbitmq"
 
     host: str
+    password: str
     port: int
     username: str
-    password: str
 
 
 class URLs(metaclass=YAMLGetter):
     section = "urls"
 
+    bot_avatar: str
     deploy: str
-    status: str
+    gitlab_bot_repo: str
+    omdb: str
     site: str
+    site_facts_api: str
     site_hiphopify_api: str
+    site_idioms_api: str
+    site_names_api: str
+    site_quiz_api: str
+    site_special_api: str
     site_tags_api: str
     site_user_api: str
-    site_quiz_api: str
-    site_facts_api: str
-    site_names_api: str
-    site_idioms_api: str
-    site_special_api: str
-    gitlab_bot_repo: str
-    bot_avatar: str
-    omdb: str
+    site_user_complete_api: str
+    status: str
 
 
 # Debug mode
