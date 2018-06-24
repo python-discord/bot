@@ -11,7 +11,7 @@ from bot.constants import (
     Channels, DEBUG_MODE, Guild,
     Keys, Roles, URLs
 )
-
+from bot.utils import chunks
 
 log = logging.getLogger(__name__)
 
@@ -26,31 +26,53 @@ class Events:
 
     async def send_updated_users(self, *users, replace_all=False):
         users = list(filter(lambda user: str(Roles.verified) in user["roles"], users))
-        response = None
 
-        try:
-            if replace_all:
+        for chunk in chunks(users, 1000):
+            response = None
+
+            try:
+                if replace_all:
+                    response = await self.bot.http_session.post(
+                        url=URLs.site_user_api,
+                        json=chunk,
+                        headers={"X-API-Key": Keys.site_api}
+                    )
+                else:
+                    response = await self.bot.http_session.put(
+                        url=URLs.site_user_api,
+                        json=chunk,
+                        headers={"X-API-Key": Keys.site_api}
+                    )
+
+                    await response.json()  # We do this to ensure we got a proper response from the site
+            except Exception:
+                if not response:
+                    log.exception(f"Failed to send {len(chunk)} users")
+                else:
+                    text = await response.text()
+                    log.exception(f"Failed to send {len(chunk)} users", extra={"body": text})
+                break  # Stop right now, thank you very much
+
+        result = {}
+
+        if replace_all:
+            response = None
+
+            try:
                 response = await self.bot.http_session.post(
-                    url=URLs.site_user_api,
-                    json=users,
-                    headers={"X-API-Key": Keys.site_api}
-                )
-            else:
-                response = await self.bot.http_session.put(
-                    url=URLs.site_user_api,
-                    json=users,
+                    url=URLs.site_user_complete_api,
                     headers={"X-API-Key": Keys.site_api}
                 )
 
-            return await response.json()
-        except Exception:
-            if not response:
-                log.exception(f"Failed to send {len(users)} users")
-            else:
-                text = await response.text()
-                log.exception(f"Failed to send {len(users)} users | Body: \n\n{text}")
+                result = await response.json()
+            except Exception:
+                if not response:
+                    log.exception(f"Failed to send {len(chunk)} users")
+                else:
+                    text = await response.text()
+                    log.exception(f"Failed to send {len(chunk)} users", extra={"body": text})
 
-            return {}
+        return result
 
     async def send_delete_users(self, *users):
         try:
