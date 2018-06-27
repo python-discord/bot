@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import json
 import logging
@@ -25,6 +26,8 @@ DEFAULT_LEVEL_COLOUR = Colour.greyple()
 EMBED_PARAMS = (
     "colour", "title", "url", "description", "timestamp"
 )
+
+CONSUME_TIMEOUT = datetime.timedelta(seconds=10)
 
 
 class RMQ:
@@ -65,7 +68,18 @@ class RMQ:
 
     async def consume(self, queue: str, **kwargs):
         queue_obj = await self.channel.declare_queue(queue, **kwargs)
-        return await queue_obj.get(timeout=30)
+
+        result = None
+        start_time = datetime.datetime.now()
+
+        while result is None:
+            if datetime.datetime.now() - start_time >= CONSUME_TIMEOUT:
+                result = "Timed out while waiting for a response."
+            else:
+                result = await queue_obj.get(timeout=5, fail=False)
+                await asyncio.sleep(0.5)
+
+        return result
 
     async def handle_message(self, message, data):
         log.debug(f"Message: {message}")

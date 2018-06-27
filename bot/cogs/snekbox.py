@@ -52,21 +52,23 @@ class Snekbox:
                 snekid=str(ctx.author.id), message=code
             )
 
-            message = await self.rmq.consume(str(ctx.author.id), **RMQ_ARGS)
-            output = message.body.decode()
+            async with ctx.typing():
+                message = await self.rmq.consume(str(ctx.author.id), **RMQ_ARGS)
+                output = message.body.decode().strip(" \n")  # Remove spaces and newlines from the ends
 
-            if "```" in output:
-                output = "Code block escape attempt detected; will not output result"
-            else:
-                output = [f"{i:03d} | {line}" for i, line in enumerate(output.split("\n"), start=1)]
-                output = "\n".join(output)
+                if "```" in output:
+                    output = "Code block escape attempt detected; will not output result"
+                else:
+                    if output.count("\n") > 0:
+                        output = [f"{i:03d} | {line}" for i, line in enumerate(output.split("\n"), start=1)]
+                        output = "\n".join(output)
 
-                if len(output) >= 1900:
-                    output = f"{output[:1900]}... (truncated)"
+                    if len(output) >= 1900:
+                        output = f"{output[:1900]}... (truncated)"
 
-            await ctx.send(
-                f"{ctx.author.mention} Your eval job has completed.\n\n```{output}```"
-            )
+                await ctx.send(
+                    f"{ctx.author.mention} Your eval job has completed.\n\n```{output}```"
+                )
 
             del self.jobs[ctx.author.id]
         except Exception:
