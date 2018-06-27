@@ -4,6 +4,7 @@ import logging
 import pprint
 
 import aio_pika
+from aio_pika import Message
 from dateutil import parser as date_parser
 from discord import Colour, Embed
 from discord.ext.commands import Bot
@@ -53,6 +54,19 @@ class RMQ:
         async for message in self.queue:
             with message.process():
                 await self.handle_message(message, message.body.decode())
+
+    async def send_text(self, queue: str, data: str):
+        message = Message(data.encode("utf-8"))
+        await self.channel.default_exchange.publish(message, queue)
+
+    async def send_json(self, queue: str, **data):
+        message = Message(json.dumps(data).encode("utf-8"))
+        await self.channel.default_exchange.publish(message, queue)
+
+    async def consume(self, queue: str, callback, **kwargs):
+        queue_obj = await self.channel.declare_queue(queue, **kwargs)
+
+        await queue_obj.consume(callback)
 
     async def handle_message(self, message, data):
         log.debug(f"Message: {message}")
