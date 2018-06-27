@@ -55,8 +55,14 @@ class Snekbox:
             )
 
             async def callback(message: Message):
-                embed = Embed(description=f"```{message.body.decode}```", title="Code evaluation")
-                embed.colour = Colour.blurple()
+                output = message.body.decode()
+                colour = Colour.red()
+
+                if "```" in output:
+                    output = "Code block escape attempt detected; will not output result"
+                    colour = Colour.red()
+
+                embed = Embed(description=f"```{output}```", title="Code evaluation", colour=colour)
 
                 await ctx.send(
                     f"{ctx.author.mention} Your eval job has completed.",
