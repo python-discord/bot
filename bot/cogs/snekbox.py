@@ -1,7 +1,6 @@
 import datetime
 import logging
 
-from aio_pika import Message
 from discord.ext.commands import Bot, Context, command
 
 from bot.cogs.rmq import RMQ
