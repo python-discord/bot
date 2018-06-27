@@ -173,7 +173,7 @@ async def func():  # (None,) -> Any
         out, embed = self._format(code, res)
         await ctx.send(f"```py\n{out}```", embed=embed)
 
-    @command(name="eval()", aliases=["eval"])
+    @command(name="internal.eval()", aliases=["internal.eval"])
     @with_role(Roles.admin, Roles.owner)
     async def eval(self, ctx, *, code: str):
         """ Run eval in a REPL-like format. """

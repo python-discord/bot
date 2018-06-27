@@ -2,6 +2,7 @@ import datetime
 import logging
 
 from aio_pika import Message
+from discord import Embed, Colour
 from discord.ext.commands import Bot, Context, command
 
 from bot.cogs.rmq import RMQ
@@ -32,9 +33,16 @@ class Snekbox:
     def rmq(self) -> RMQ:
         return self.bot.get_cog("RMQ")
 
-    @command(name="snekbox.eval()", aliases=["snekbox.eval"])
-    @with_role(Roles.admin, Roles.owner, Roles.devops, Roles.moderator)
+    @command(name="snekbox.eval()", aliases=["snekbox.eval", "eval()", "eval"])
     async def do_eval(self, ctx: Context, code: str):
+        """
+        Run some code. get the result back. We've done our best to make this safe, but do let us know if you
+        manage to find an issue with it!
+
+        Remember, your code must be within some kind of string. Why not surround your code with quotes or put it in
+        a docstring?
+        """
+
         if ctx.author.id in self.jobs:
             await ctx.send(f"{ctx.author.mention} You've already got a job running - please wait for it to finish!")
             return
@@ -49,9 +57,12 @@ class Snekbox:
             )
 
             async def callback(message: Message):
+                embed = Embed(description=f"```{message.body.decode}```", title="Code evaluation")
+                embed.colour = Colour.blurple()
+
                 await ctx.send(
-                    f"{ctx.author.mention}\n\n"
-                    f"```{message.body.decode()}```"
+                    f"{ctx.author.mention} Your eval job has completed.",
+                    embed=embed
                 )
 
                 del self.jobs[ctx.author.id]
