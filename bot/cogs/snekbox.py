@@ -2,7 +2,6 @@ import datetime
 import logging
 
 from aio_pika import Message
-from discord import Colour, Embed
 from discord.ext.commands import Bot, Context, command
 
 from bot.cogs.rmq import RMQ
@@ -56,23 +55,22 @@ class Snekbox:
 
             async def callback(message: Message):
                 output = message.body.decode()
-                colour = Colour.blurple()
 
                 if "```" in output:
                     output = "Code block escape attempt detected; will not output result"
-                    colour = Colour.red()
                 else:
-                    output = [f"{i} | {line}" for i, line in enumerate(output.split("\n"), start=1)]
+                    output = [f"{i:03d} | {line}" for i, line in enumerate(output.split("\n"), start=1)]
                     output = "\n".join(output)
 
-                    if len(output) >= 2040:
-                        output = f"{output[:2000]}... (truncated)"
-
-                embed = Embed(description=f"```{output}```", title="Code evaluation", colour=colour)
+                    if len(output) >= 1900:
+                        output = f"{output[:1900]}... (truncated)"
 
                 await ctx.send(
-                    f"{ctx.author.mention} Your eval job has completed.",
-                    embed=embed
+                    f"{ctx.author.mention} Your eval job has completed.\n\n```{output}```"
+                )
+
+                await ctx.send(
+                    f"{ctx.author.mention} Your eval job has completed."
                 )
 
                 del self.jobs[ctx.author.id]
