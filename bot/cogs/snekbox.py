@@ -13,6 +13,13 @@ RMQ_ARGS = {
     "auto_delete": True
 }
 
+CODE_TEMPLATE = """
+try:
+    {CODE}
+except Exception as e:
+    print(e)
+"""
+
 
 class Snekbox:
     """
@@ -46,6 +53,9 @@ class Snekbox:
         log.info(f"Received code from {ctx.author.name}#{ctx.author.discriminator} for evaluation:\n{code}")
         self.jobs[ctx.author.id] = datetime.datetime.now()
 
+        code = [f"    {line}" for line in code.split("\n")]
+        code = CODE_TEMPLATE.replace("{CODE}", "\n".join(code))
+
         try:
             await self.rmq.send_json(
                 "input",
@@ -67,7 +77,7 @@ class Snekbox:
                         output = f"{output[:1900]}... (truncated)"
 
                 await ctx.send(
-                    f"{ctx.author.mention} Your eval job has completed.\n\n```{output}```"
+                    f"{ctx.author.mention} Your eval job has completed.\n\n```\n{output}\n```"
                 )
 
             del self.jobs[ctx.author.id]
