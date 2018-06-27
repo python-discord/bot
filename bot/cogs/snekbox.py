@@ -2,12 +2,10 @@ import datetime
 import logging
 
 from aio_pika import Message
-from discord import Embed, Colour
+from discord import Colour, Embed
 from discord.ext.commands import Bot, Context, command
 
 from bot.cogs.rmq import RMQ
-from bot.constants import Roles
-from bot.decorators import with_role
 
 log = logging.getLogger(__name__)
 
