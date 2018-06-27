@@ -53,29 +53,27 @@ class Snekbox:
                 snekid=str(ctx.author.id), message=code
             )
 
-            async def callback(message: Message):
-                output = message.body.decode()
+            message = await self.rmq.consume(str(ctx.author.id), **RMQ_ARGS)
+            output = message.body.decode()
 
-                if "```" in output:
-                    output = "Code block escape attempt detected; will not output result"
-                else:
-                    output = [f"{i:03d} | {line}" for i, line in enumerate(output.split("\n"), start=1)]
-                    output = "\n".join(output)
+            if "```" in output:
+                output = "Code block escape attempt detected; will not output result"
+            else:
+                output = [f"{i:03d} | {line}" for i, line in enumerate(output.split("\n"), start=1)]
+                output = "\n".join(output)
 
-                    if len(output) >= 1900:
-                        output = f"{output[:1900]}... (truncated)"
+                if len(output) >= 1900:
+                    output = f"{output[:1900]}... (truncated)"
 
-                await ctx.send(
-                    f"{ctx.author.mention} Your eval job has completed.\n\n```{output}```"
-                )
+            await ctx.send(
+                f"{ctx.author.mention} Your eval job has completed.\n\n```{output}```"
+            )
 
-                await ctx.send(
-                    f"{ctx.author.mention} Your eval job has completed."
-                )
+            await ctx.send(
+                f"{ctx.author.mention} Your eval job has completed."
+            )
 
-                del self.jobs[ctx.author.id]
-
-            await self.rmq.consume(str(ctx.author.id), callback, **RMQ_ARGS)
+            del self.jobs[ctx.author.id]
         except Exception:
             del self.jobs[ctx.author.id]
             raise

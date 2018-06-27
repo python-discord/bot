@@ -63,10 +63,9 @@ class RMQ:
         message = Message(json.dumps(data).encode("utf-8"))
         await self.channel.default_exchange.publish(message, queue)
 
-    async def consume(self, queue: str, callback, **kwargs):
+    async def consume(self, queue: str, **kwargs):
         queue_obj = await self.channel.declare_queue(queue, **kwargs)
-
-        await queue_obj.consume(callback)
+        return await queue_obj.get(timeout=30)
 
     async def handle_message(self, message, data):
         log.debug(f"Message: {message}")
