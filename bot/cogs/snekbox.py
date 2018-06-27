@@ -56,11 +56,17 @@ class Snekbox:
 
             async def callback(message: Message):
                 output = message.body.decode()
-                colour = Colour.red()
+                colour = Colour.blurple()
 
                 if "```" in output:
                     output = "Code block escape attempt detected; will not output result"
                     colour = Colour.red()
+                else:
+                    output = [f"{i} | {line}" for i, line in enumerate(output.split("\n"), start=1)]
+                    output = "\n".join(output)
+
+                    if len(output) >= 2048:
+                        output = f"{output[:2000]}... (truncated)"
 
                 embed = Embed(description=f"```{output}```", title="Code evaluation", colour=colour)
 
