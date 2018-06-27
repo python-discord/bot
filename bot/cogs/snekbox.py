@@ -65,7 +65,7 @@ class Snekbox:
                     output = [f"{i} | {line}" for i, line in enumerate(output.split("\n"), start=1)]
                     output = "\n".join(output)
 
-                    if len(output) >= 2048:
+                    if len(output) >= 2040:
                         output = f"{output[:2000]}... (truncated)"
 
                 embed = Embed(description=f"```{output}```", title="Code evaluation", colour=colour)
