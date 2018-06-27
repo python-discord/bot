@@ -69,10 +69,6 @@ class Snekbox:
                 f"{ctx.author.mention} Your eval job has completed.\n\n```{output}```"
             )
 
-            await ctx.send(
-                f"{ctx.author.mention} Your eval job has completed."
-            )
-
             del self.jobs[ctx.author.id]
         except Exception:
             del self.jobs[ctx.author.id]
