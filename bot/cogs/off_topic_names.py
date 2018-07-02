@@ -81,12 +81,12 @@ class OffTopicNames:
             coro = update_names(self.bot, self.headers)
             self.updater_task = await self.bot.loop.create_task(coro)
 
-    @group(name='otname')
+    @group(invoke_without_command=True, name='otname', hidden=True)
     async def otname_group(self, ctx: Context):
         """Contains subcommands to manage the off-topic category names."""
 
-    @with_role(Roles.owner, Roles.owner, Roles.moderator)
     @otname_group.command(name='add')
+    @with_role(Roles.owner, Roles.admin, Roles.moderator)
     async def otname_add(self, ctx, name: OffTopicName):
         """Adds a new off-topic name to the rotation."""
 
