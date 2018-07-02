@@ -64,7 +64,11 @@ class Snekbox:
 
             async with ctx.typing():
                 message = await self.rmq.consume(str(ctx.author.id), **RMQ_ARGS)
-                output = message.body.decode().strip(" \n")  # Remove spaces and newlines from the ends
+
+                if isinstance(message, str):
+                    output = str.strip(" \n")
+                else:
+                    output = message.body.decode().strip(" \n")
 
                 if "```" in output:
                     output = "Code block escape attempt detected; will not output result"
