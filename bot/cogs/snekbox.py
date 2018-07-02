@@ -73,8 +73,16 @@ class Snekbox:
                         output = [f"{i:03d} | {line}" for i, line in enumerate(output.split("\n"), start=1)]
                         output = "\n".join(output)
 
-                    if len(output) >= 1900:
-                        output = f"{output[:1900]}... (truncated)"
+                    if output.count("\n") > 10:
+                        output = "\n".join(output.split("\n")[:10])
+
+                        if len(output) >= 1900:
+                            output = f"{output[:1900]}\n... (truncated)"
+                        else:
+                            output = f"{output}\n... (truncated)"
+
+                    elif len(output) >= 1900:
+                        output = f"{output[:1900]}\n... (truncated)"
 
                 await ctx.send(
                     f"{ctx.author.mention} Your eval job has completed.\n\n```\n{output}\n```"
