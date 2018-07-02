@@ -76,13 +76,13 @@ class Snekbox:
                     if output.count("\n") > 10:
                         output = "\n".join(output.split("\n")[:10])
 
-                        if len(output) >= 1900:
-                            output = f"{output[:1900]}\n... (truncated)"
+                        if len(output) >= 1000:
+                            output = f"{output[:1000]}\n... (truncated - too long, too many lines)"
                         else:
-                            output = f"{output}\n... (truncated)"
+                            output = f"{output}\n... (truncated - too many lines)"
 
-                    elif len(output) >= 1900:
-                        output = f"{output[:1900]}\n... (truncated)"
+                    elif len(output) >= 1000:
+                        output = f"{output[:1000]}\n... (truncated - too long)"
 
                 await ctx.send(
                     f"{ctx.author.mention} Your eval job has completed.\n\n```\n{output}\n```"
