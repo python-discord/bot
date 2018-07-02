@@ -85,7 +85,7 @@ class Snekbox:
                         output = f"{output[:1000]}\n... (truncated - too long)"
 
                 await ctx.send(
-                    f"{ctx.author.mention} Your eval job has completed.\n\n```\n{output}\n```"
+                    f"{ctx.author.mention} Your eval job has completed.\n\n```py\n{output}\n```"
                 )
 
             del self.jobs[ctx.author.id]
