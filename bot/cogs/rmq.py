@@ -56,6 +56,7 @@ class RMQ:
 
         async for message in self.queue:
             with message.process():
+                message.ack()
                 await self.handle_message(message, message.body.decode())
 
     async def send_text(self, queue: str, data: str):
@@ -78,6 +79,9 @@ class RMQ:
             else:
                 result = await queue_obj.get(timeout=5, fail=False)
                 await asyncio.sleep(0.5)
+
+        if result:
+            result.ack()
 
         return result
 
