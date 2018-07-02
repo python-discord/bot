@@ -29,6 +29,9 @@ guild:
         modlog: 282638479504965634
         python: 267624335836053506
         verification: 352442727016693763
+        off_topic_0: 291284109232308226
+        off_topic_1: 463035241142026251
+        off_topic_2: 463035268514185226
 
     roles:
         admin: 267628507062992896
@@ -73,6 +76,7 @@ urls:
     site_hiphopify_api: 'https://api.pythondiscord.com/bot/hiphopify'
     site_idioms_api: 'https://api.pythondiscord.com/bot/snake_idioms'
     site_names_api: 'https://api.pythondiscord.com/bot/snake_names'
+    site_off_topic_names_api: 'https://api.pythondiscord.com/bot/off-topic-names'
     site_quiz_api: 'https://api.pythondiscord.com/bot/snake_quiz'
     site_special_api: 'https://api.pythondiscord.com/bot/special_snakes'
     site_tags_api: 'https://api.pythondiscord.com/bot/tags'

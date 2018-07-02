@@ -66,11 +66,12 @@ bot.load_extension("bot.cogs.doc")
 bot.load_extension("bot.cogs.eval")
 bot.load_extension("bot.cogs.fun")
 bot.load_extension("bot.cogs.hiphopify")
+bot.load_extension("bot.cogs.off_topic_names")
 bot.load_extension("bot.cogs.snakes")
 bot.load_extension("bot.cogs.snekbox")
 bot.load_extension("bot.cogs.tags")
-bot.load_extension("bot.cogs.verification")
 bot.load_extension("bot.cogs.utils")
+bot.load_extension("bot.cogs.verification")
 
 if has_rmq:
     bot.load_extension("bot.cogs.rmq")
