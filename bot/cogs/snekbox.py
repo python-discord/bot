@@ -1,5 +1,6 @@
 import datetime
 import logging
+import re
 
 from discord.ext.commands import Bot, Context, command
 
@@ -19,6 +20,8 @@ try:
 except Exception as e:
     print(e)
 """
+
+ESCAPE_REGEX = re.compile("[`\u202E\u200B]{3,}")
 
 
 class Snekbox:
@@ -70,7 +73,10 @@ class Snekbox:
                 else:
                     output = message.body.decode().strip(" \n")
 
-                if "```" in output:
+                if "<@" in output:
+                    output = output.replace("<@", "<@\u200B")  # Zero-width space
+
+                if ESCAPE_REGEX.findall(output):
                     output = "Code block escape attempt detected; will not output result"
                 else:
                     if output.count("\n") > 0:
@@ -88,9 +94,14 @@ class Snekbox:
                     elif len(output) >= 1000:
                         output = f"{output[:1000]}\n... (truncated - too long)"
 
-                await ctx.send(
-                    f"{ctx.author.mention} Your eval job has completed.\n\n```py\n{output}\n```"
-                )
+                if output.strip():
+                    await ctx.send(
+                        f"{ctx.author.mention} Your eval job has completed.\n\n```py\n{output}\n```"
+                    )
+                else:
+                    await ctx.send(
+                        f"{ctx.author.mention} Your eval job has completed.\n\n```py\n[No output]\n```"
+                    )
 
             del self.jobs[ctx.author.id]
         except Exception:
