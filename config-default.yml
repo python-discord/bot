@@ -16,6 +16,7 @@ guild:
     id: 267624335836053506
 
     channels:
+        announcements: 354619224620138496
         bot: 267659945086812160
         checkpoint_test: 422077681434099723
         devlog: 409308876241108992
@@ -35,6 +36,7 @@ guild:
 
     roles:
         admin: 267628507062992896
+        announcements: 463658397560995840
         champion: 430492892331769857
         contributor: 295488872404484098
         devops: 409416496733880320

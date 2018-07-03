@@ -180,6 +180,7 @@ class Channels(metaclass=YAMLGetter):
     section = "guild"
     subsection = "channels"
 
+    announcements: int
     bot: int
     checkpoint_test: int
     devlog: int
@@ -200,6 +201,7 @@ class Roles(metaclass=YAMLGetter):
     subsection = "roles"
 
     admin: int
+    announcements: int
     champion: int
     contributor: int
     devops: int

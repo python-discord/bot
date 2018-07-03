@@ -4,16 +4,34 @@ from discord import Message, NotFound, Object
 from discord.ext.commands import Bot, Context, command
 
 from bot.constants import Channels, Roles
-from bot.decorators import in_channel, without_role
-
+from bot.decorators import in_channel, with_role, without_role
 
 log = logging.getLogger(__name__)
+
+WELCOME_MESSAGE = f"""
+Hello! Welcome to the server, and thanks for verifying yourself!
+
+For your records, these are the documents you accepted:
+
+`1)` Our rules, here: <https://pythondiscord.com/about/rules>
+`2)` Our privacy policy, here: <https://pythondiscord.com/about/privacy> - you can find information on how to have \
+your information removed here as well.
+
+Feel free to review them at any point!
+
+Additionally, if you'd like to receive notifications for the announcements we post in <#{Channels.announcements}> \
+from time to time, you can send `self.subscribe()` to <#{Channels.bot}> at any time to assign yourself the \
+**Announcements** role. We'll mention this role every time we make an announcement.
+
+If you'd like to unsubscribe from the announcement notifications, simply send `self.unsubscribe()` to <#{Channels.bot}>.
+"""
 
 
 class Verification:
     """
-    User verification
+    User verification and role self-management
     """
+
     def __init__(self, bot: Bot):
         self.bot = bot
 
@@ -38,7 +56,7 @@ class Verification:
             await ctx.send(
                 f"{ctx.author.mention} Please type `self.accept()` to verify that you accept our rules, "
                 f"and gain access to the rest of the server.",
-                delete_after=10
+                delete_after=20
             )
 
             log.trace(f"Deleting the message posted by {ctx.author}")
@@ -56,8 +74,49 @@ class Verification:
         Accept our rules and gain access to the rest of the server
         """
 
-        log.debug(f"{ctx.author} called self.accept(). Assigning the user 'Developer' role.")
+        log.debug(f"{ctx.author} called self.accept(). Assigning the 'Developer' role.")
         await ctx.author.add_roles(Object(Roles.verified), reason="Accepted the rules")
+        try:
+            await ctx.author.send(WELCOME_MESSAGE)
+        except Exception:
+            # Catch the exception, in case they have DMs off or something
+            log.exception(f"Unable to send welcome message to user {ctx.author}.")
+
+        log.trace(f"Deleting the message posted by {ctx.author}.")
+
+        try:
+            await ctx.message.delete()
+        except NotFound:
+            log.trace("No message found, it must have been deleted by another bot.")
+
+    @command(name="subscribe", aliases=["subscribe()"])
+    @without_role(Roles.announcements)
+    @in_channel(Channels.bot)
+    async def subscribe(self, ctx: Context, *_):  # We don't actually care about the args
+        """
+        Subscribe to announcement notifications by assigning yourself the role
+        """
+
+        log.debug(f"{ctx.author} called self.subscribe(). Assigning the 'Announcements' role.")
+        await ctx.author.add_roles(Object(Roles.announcements), reason="Subscribed to announcements")
+
+        log.trace(f"Deleting the message posted by {ctx.author}.")
+
+        try:
+            await ctx.message.delete()
+        except NotFound:
+            log.trace("No message found, it must have been deleted by another bot.")
+
+    @command(name="unsubscribe", aliases=["unsubscribe()"])
+    @with_role(Roles.announcements)
+    @in_channel(Channels.bot)
+    async def unsubscribe(self, ctx: Context, *_):  # We don't actually care about the args
+        """
+        Unsubscribe from announcement notifications by removing the role from yourself
+        """
+
+        log.debug(f"{ctx.author} called self.unsubscribe(). Removing the 'Announcements' role.")
+        await ctx.author.remove_roles(Object(Roles.announcements), reason="Unsubscribed from announcements")
 
         log.trace(f"Deleting the message posted by {ctx.author}.")
 
