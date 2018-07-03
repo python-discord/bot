@@ -104,9 +104,8 @@ class Verification:
                 break
 
         if has_role:
-            return await ctx.send(
+            await ctx.send(
                 f"{ctx.author.mention} You're already subscribed!",
-                delete_after=5
             )
 
         log.debug(f"{ctx.author} called self.subscribe(). Assigning the 'Announcements' role.")
@@ -114,14 +113,8 @@ class Verification:
 
         log.trace(f"Deleting the message posted by {ctx.author}.")
 
-        try:
-            await ctx.message.delete()
-        except NotFound:
-            log.trace("No message found, it must have been deleted by another bot.")
-
         await ctx.send(
             f"{ctx.author.mention} Subscribed to <#{Channels.announcements}> notifications.",
-            delete_after=5
         )
 
     @command(name="unsubscribe", aliases=["unsubscribe()"])
@@ -140,8 +133,7 @@ class Verification:
 
         if not has_role:
             return await ctx.send(
-                f"{ctx.author.mention} You're already unsubscribed!",
-                delete_after=5
+                f"{ctx.author.mention} You're already unsubscribed!"
             )
 
         log.debug(f"{ctx.author} called self.unsubscribe(). Removing the 'Announcements' role.")
@@ -149,14 +141,8 @@ class Verification:
 
         log.trace(f"Deleting the message posted by {ctx.author}.")
 
-        try:
-            await ctx.message.delete()
-        except NotFound:
-            log.trace("No message found, it must have been deleted by another bot.")
-
         await ctx.send(
-            f"{ctx.author.mention} Unsubscribed from <#{Channels.announcements}> notifications.",
-            delete_after=5
+            f"{ctx.author.mention} Unsubscribed from <#{Channels.announcements}> notifications."
         )
 
 
