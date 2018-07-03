@@ -4,7 +4,7 @@ from discord import Message, NotFound, Object
 from discord.ext.commands import Bot, Context, command
 
 from bot.constants import Channels, Roles
-from bot.decorators import in_channel, with_role, without_role
+from bot.decorators import in_channel, without_role
 
 log = logging.getLogger(__name__)
 
