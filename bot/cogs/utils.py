@@ -30,8 +30,13 @@ class Utils:
         Fetches information about a PEP and sends it to the channel.
         """
 
-        # Attempt to fetch the PEP from Github.
-        pep_url = f"{self.base_github_pep_url}{pep_number.zfill(4)}.txt"
+        # Newer PEPs are written in RST instead of txt
+        if int(pep_number) > 542:
+            pep_url = f"{self.base_github_pep_url}{pep_number.zfill(4)}.rst"
+        else:
+            pep_url = f"{self.base_github_pep_url}{pep_number.zfill(4)}.txt"
+
+        # Attempt to fetch the PEP
         log.trace(f"Requesting PEP {pep_number} with {pep_url}")
         response = await self.bot.http_session.get(pep_url)
 
