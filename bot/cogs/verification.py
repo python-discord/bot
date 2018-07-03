@@ -107,6 +107,11 @@ class Verification:
         except NotFound:
             log.trace("No message found, it must have been deleted by another bot.")
 
+        await ctx.send(
+            f"{ctx.author.mention} Subscribed to <#{Channels.announcements}> notifications.",
+            delete_after=5
+        )
+
     @command(name="unsubscribe", aliases=["unsubscribe()"])
     @with_role(Roles.announcements)
     @in_channel(Channels.bot)
@@ -124,6 +129,11 @@ class Verification:
             await ctx.message.delete()
         except NotFound:
             log.trace("No message found, it must have been deleted by another bot.")
+
+        await ctx.send(
+            f"{ctx.author.mention} Unsubscribed from <#{Channels.announcements}> notifications.",
+            delete_after=5
+        )
 
 
 def setup(bot):
