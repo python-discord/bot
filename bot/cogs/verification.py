@@ -90,12 +90,24 @@ class Verification:
             log.trace("No message found, it must have been deleted by another bot.")
 
     @command(name="subscribe", aliases=["subscribe()"])
-    @without_role(Roles.announcements)
     @in_channel(Channels.bot)
     async def subscribe(self, ctx: Context, *_):  # We don't actually care about the args
         """
         Subscribe to announcement notifications by assigning yourself the role
         """
+
+        has_role = False
+
+        for role in ctx.author.roles:
+            if role.id == Roles.announcements:
+                has_role = True
+                break
+
+        if has_role:
+            return await ctx.send(
+                f"{ctx.author.mention} You're already subscribed!",
+                delete_after=5
+            )
 
         log.debug(f"{ctx.author} called self.subscribe(). Assigning the 'Announcements' role.")
         await ctx.author.add_roles(Object(Roles.announcements), reason="Subscribed to announcements")
@@ -113,12 +125,24 @@ class Verification:
         )
 
     @command(name="unsubscribe", aliases=["unsubscribe()"])
-    @with_role(Roles.announcements)
     @in_channel(Channels.bot)
     async def unsubscribe(self, ctx: Context, *_):  # We don't actually care about the args
         """
         Unsubscribe from announcement notifications by removing the role from yourself
         """
+
+        has_role = False
+
+        for role in ctx.author.roles:
+            if role.id == Roles.announcements:
+                has_role = True
+                break
+
+        if not has_role:
+            return await ctx.send(
+                f"{ctx.author.mention} You're already unsubscribed!",
+                delete_after=5
+            )
 
         log.debug(f"{ctx.author} called self.unsubscribe(). Removing the 'Announcements' role.")
         await ctx.author.remove_roles(Object(Roles.announcements), reason="Unsubscribed from announcements")
