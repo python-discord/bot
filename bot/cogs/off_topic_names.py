@@ -20,10 +20,10 @@ class OffTopicName(Converter):
         if not (2 <= len(argument) <= 96):
             raise BadArgument("Channel name must be between 2 and 96 chars long")
 
-        elif not all(c.isalpha() or c == '-' for c in argument):
+        elif not all(c.isalnum() or c == '-' for c in argument):
             raise BadArgument(
                 "Channel name must only consist of"
-                " alphabetic characters or minus signs"
+                " alphanumeric characters or minus signs"
             )
 
         elif not argument.islower():
