@@ -5,7 +5,7 @@ from aiohttp import AsyncResolver, ClientSession, TCPConnector
 from discord import Game
 from discord.ext.commands import Bot, when_mentioned_or
 
-from bot.constants import Bot as BotConfig, ClickUp
+from bot.constants import Bot as BotConfig  # , ClickUp
 from bot.formatter import Formatter
 from bot.utils.service_discovery import wait_for_rmq
 
