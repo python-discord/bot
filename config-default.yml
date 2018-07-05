@@ -80,6 +80,7 @@ urls:
     site_names_api: 'https://api.pythondiscord.com/bot/snake_names'
     site_off_topic_names_api: 'https://api.pythondiscord.com/bot/off-topic-names'
     site_quiz_api: 'https://api.pythondiscord.com/bot/snake_quiz'
+    site_settings_api: 'https://api.pythondiscord.com/bot/settings'
     site_special_api: 'https://api.pythondiscord.com/bot/special_snakes'
     site_tags_api: 'https://api.pythondiscord.com/bot/tags'
     site_user_api: 'https://api.pythondiscord.com/bot/users'

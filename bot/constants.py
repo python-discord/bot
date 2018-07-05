@@ -257,6 +257,7 @@ class URLs(metaclass=YAMLGetter):
     site_idioms_api: str
     site_names_api: str
     site_quiz_api: str
+    site_settings_api: str
     site_special_api: str
     site_tags_api: str
     site_user_api: str
