@@ -63,7 +63,7 @@ class Defcon:
             now = datetime.utcnow()
 
             if now - member.created_at < self.days:
-                log.info(f"Rejecting user {member}: Account is too old and DEFCON is enabled")
+                log.info(f"Rejecting user {member}: Account is too new and DEFCON is enabled")
 
                 try:
                     await member.send(REJECTION_MESSAGE.format(user=member.mention))
