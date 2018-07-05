@@ -56,12 +56,13 @@ bot.load_extension("bot.cogs.cogs")
 
 # Local setups usually don't have the clickup key set,
 # and loading the cog would simply spam errors in the console.
-if ClickUp.key is not None:
-    bot.load_extension("bot.cogs.clickup")
-else:
-    log.info("`CLICKUP_KEY` not set in the environment, not loading the ClickUp cog.")
+# if ClickUp.key is not None:
+#     bot.load_extension("bot.cogs.clickup")
+# else:
+#     log.info("`CLICKUP_KEY` not set in the environment, not loading the ClickUp cog.")
 
 bot.load_extension("bot.cogs.deployment")
+bot.load_extension("bot.cogs.defcon")
 bot.load_extension("bot.cogs.doc")
 bot.load_extension("bot.cogs.eval")
 bot.load_extension("bot.cogs.fun")
