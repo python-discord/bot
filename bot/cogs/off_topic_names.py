@@ -119,18 +119,13 @@ class OffTopicNames:
             headers=self.headers
         )
         response = await result.json()
+        lines = sorted(f"• {name}" for name in response)
 
         embed = Embed(
             title=f"Known off-topic names (`{len(response)}` total)",
             colour=Colour.blue()
         )
-        await LinePaginator.paginate(
-            sorted(response),
-            ctx,
-            embed,
-            max_size=400,
-            empty=False
-        )
+        await LinePaginator.paginate(lines, ctx, embed, max_size=400, empty=False)
 
 
 def setup(bot: Bot):
