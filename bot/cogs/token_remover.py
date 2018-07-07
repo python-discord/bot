@@ -46,6 +46,9 @@ class TokenRemover:
         self.modlog = self.bot.get_channel(Channels.modlog)
 
     async def on_message(self, msg: Message):
+        if msg.author.bot:
+            return
+
         maybe_match = TOKEN_RE.search(msg.content)
         if maybe_match is None:
             return
