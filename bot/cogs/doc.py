@@ -17,6 +17,7 @@ from sphinx.ext import intersphinx
 from bot.constants import ERROR_REPLIES, Keys, Roles, URLs
 from bot.converters import ValidPythonIdentifier, ValidURL
 from bot.decorators import with_role
+from bot.pagination import LinePaginator
 
 
 log = logging.getLogger(__name__)
@@ -371,15 +372,13 @@ class Doc:
         """
 
         if symbol is None:
-            all_inventories = "\n".join(
-                f"• [`{name}`]({url})" for name, url in self.base_urls.items()
-            )
             inventory_embed = discord.Embed(
-                title="All inventories",
-                description=all_inventories or "*Seems like there's nothing here yet.*",
+                title=f"All inventories (`{len(self.base_urls)}` total)",
                 colour=discord.Colour.blue()
             )
-            await ctx.send(embed=inventory_embed)
+
+            lines = sorted(f"• [`{name}`]({url})" for name, url in self.base_urls.items())
+            await LinePaginator.paginate(lines, ctx, inventory_embed, max_size=400, empty=False)
 
         else:
             # Fetching documentation for a symbol (at least for the first time, since
