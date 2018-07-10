@@ -2,10 +2,12 @@ import asyncio
 import logging
 from datetime import datetime, timedelta
 
+from discord import Colour, Embed
 from discord.ext.commands import BadArgument, Bot, Context, Converter, command
 
 from bot.constants import Channels, Keys, Roles, URLs
 from bot.decorators import with_role
+from bot.pagination import LinePaginator
 
 
 CHANNELS = (Channels.off_topic_0, Channels.off_topic_1, Channels.off_topic_2)
@@ -20,10 +22,10 @@ class OffTopicName(Converter):
         if not (2 <= len(argument) <= 96):
             raise BadArgument("Channel name must be between 2 and 96 chars long")
 
-        elif not all(c.isalpha() or c == '-' for c in argument):
+        elif not all(c.isalnum() or c == '-' for c in argument):
             raise BadArgument(
                 "Channel name must only consist of"
-                " alphabetic characters or minus signs"
+                " alphanumeric characters or minus signs"
             )
 
         elif not argument.islower():
@@ -103,6 +105,27 @@ class OffTopicNames:
         else:
             error_reason = response.get('message', "No reason provided.")
             await ctx.send(f":warning: got non-200 from the API: {error_reason}")
+
+    @command(name='otname.list()', aliases=['otname.list'])
+    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    async def otname_list(self, ctx):
+        """
+        Lists all currently known off-topic channel names in a paginator.
+        Restricted to Moderator and above to not spoil the surprise.
+        """
+
+        result = await self.bot.http_session.get(
+            URLs.site_off_topic_names_api,
+            headers=self.headers
+        )
+        response = await result.json()
+        lines = sorted(f"• {name}" for name in response)
+
+        embed = Embed(
+            title=f"Known off-topic names (`{len(response)}` total)",
+            colour=Colour.blue()
+        )
+        await LinePaginator.paginate(lines, ctx, embed, max_size=400, empty=False)
 
 
 def setup(bot: Bot):

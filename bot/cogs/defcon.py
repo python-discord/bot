@@ -13,7 +13,7 @@ REJECTION_MESSAGE = """
 Hi, {user} - Thanks for your interest in our server!
 
 Due to a current (or detected) cyberattack on our community, we've limited access to the server for new accounts. Since
-your account is relatively now, we're unable to provide access to the server at this time.
+your account is relatively new, we're unable to provide access to the server at this time.
 
 Even so, thanks for joining! We're very excited at the possibility of having you here, and we hope that this situation
 will be resolved soon. In the meantime, please feel free to peruse the resources on our site at
@@ -63,7 +63,7 @@ class Defcon:
             now = datetime.utcnow()
 
             if now - member.created_at < self.days:
-                log.info(f"Rejecting user {member}: Account is too old and DEFCON is enabled")
+                log.info(f"Rejecting user {member}: Account is too new and DEFCON is enabled")
 
                 try:
                     await member.send(REJECTION_MESSAGE.format(user=member.mention))

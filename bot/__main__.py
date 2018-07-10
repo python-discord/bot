@@ -71,6 +71,7 @@ bot.load_extension("bot.cogs.off_topic_names")
 bot.load_extension("bot.cogs.snakes")
 bot.load_extension("bot.cogs.snekbox")
 bot.load_extension("bot.cogs.tags")
+bot.load_extension("bot.cogs.token_remover")
 bot.load_extension("bot.cogs.utils")
 bot.load_extension("bot.cogs.verification")
 
