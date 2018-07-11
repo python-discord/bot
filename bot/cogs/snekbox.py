@@ -15,6 +15,9 @@ RMQ_ARGS = {
 }
 
 CODE_TEMPLATE = """
+venv_file = "/snekbox/.venv/bin/activate_this.py"
+exec(open(venv_file).read(), dict(__file__=venv_file))
+
 try:
     {CODE}
 except Exception as e:
