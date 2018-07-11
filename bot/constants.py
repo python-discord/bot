@@ -263,6 +263,7 @@ class URLs(metaclass=YAMLGetter):
     site_user_api: str
     site_user_complete_api: str
     status: str
+    paste_service: str
 
 
 # Debug mode

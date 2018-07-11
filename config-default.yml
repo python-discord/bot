@@ -86,3 +86,4 @@ urls:
     site_user_api: 'https://api.pythondiscord.com/bot/users'
     site_user_complete_api: 'https://api.pythondiscord.com/bot/users/complete'
     status: !ENV 'STATUS_URL'
+    paste_service: 'https://paste.pydis.com/{key}'

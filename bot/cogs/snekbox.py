@@ -5,6 +5,7 @@ import re
 from discord.ext.commands import Bot, Context, command
 
 from bot.cogs.rmq import RMQ
+from bot.constants import URLs
 
 log = logging.getLogger(__name__)
 
@@ -70,6 +71,7 @@ class Snekbox:
 
             async with ctx.typing():
                 message = await self.rmq.consume(str(ctx.author.id), **RMQ_ARGS)
+                paste_link = None
 
                 if isinstance(message, str):
                     output = str.strip(" \n")
@@ -82,6 +84,9 @@ class Snekbox:
                 if ESCAPE_REGEX.findall(output):
                     output = "Code block escape attempt detected; will not output result"
                 else:
+                    # the original output, to send to a pasting service if needed
+                    full_output = output
+                    truncated = False
                     if output.count("\n") > 0:
                         output = [f"{i:03d} | {line}" for i, line in enumerate(output.split("\n"), start=1)]
                         output = "\n".join(output)
@@ -93,14 +98,32 @@ class Snekbox:
                             output = f"{output[:1000]}\n... (truncated - too long, too many lines)"
                         else:
                             output = f"{output}\n... (truncated - too many lines)"
+                        truncated = True
 
                     elif len(output) >= 1000:
                         output = f"{output[:1000]}\n... (truncated - too long)"
+                        truncated = True
+
+                    if truncated:
+                        try:
+                            response = await self.bot.http_session.post(
+                                URLs.paste_service.format(key="documents"),
+                                data=full_output
+                            )
+                            data = await response.json()
+                            if "key" in data:
+                                paste_link = URLs.paste_service.format(key=data["key"])
+                        except Exception:
+                            log.exception("Failed to upload full output to paste service!")
 
                 if output.strip():
-                    await ctx.send(
-                        f"{ctx.author.mention} Your eval job has completed.\n\n```py\n{output}\n```"
-                    )
+                    if paste_link:
+                        msg = f"{ctx.author.mention} Your eval job has completed.\n\n```py\n{output}\n```" \
+                              f"\nFull output: {paste_link}"
+                    else:
+                        msg = f"{ctx.author.mention} Your eval job has completed.\n\n```py\n{output}\n```"
+
+                    await ctx.send(msg)
                 else:
                     await ctx.send(
                         f"{ctx.author.mention} Your eval job has completed.\n\n```py\n[No output]\n```"
