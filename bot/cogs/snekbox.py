@@ -81,6 +81,9 @@ class Snekbox:
                 if "<@" in output:
                     output = output.replace("<@", "<@\u200B")  # Zero-width space
 
+                if "<!@" in output:
+                    output = output.replace("<!@", "<!@\u200B")  # Zero-width space
+
                 if ESCAPE_REGEX.findall(output):
                     output = "Code block escape attempt detected; will not output result"
                 else:
