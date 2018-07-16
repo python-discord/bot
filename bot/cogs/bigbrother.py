@@ -107,7 +107,7 @@ class BigBrother:
         if channel is not None:
             channel_id = channel.id
         else:
-            channel_id = Channels.message_change_logs
+            channel_id = Channels.big_brother_logs
 
         post_data = {
             'user_id': str(user.id),

@@ -181,17 +181,23 @@ class Channels(metaclass=YAMLGetter):
     subsection = "channels"
 
     announcements: int
+    big_brother_logs: int
     bot: int
     checkpoint_test: int
     devlog: int
     devtest: int
-    help0: int
-    help1: int
-    help2: int
-    help3: int
-    help4: int
+    help_0: int
+    help_1: int
+    help_2: int
+    help_3: int
+    help_4: int
+    help_5: int
     helpers: int
     modlog: int
+    message_change_logs: int
+    off_topic_1: int
+    off_topic_2: int
+    off_topic_3: int
     python: int
     verification: int
 
