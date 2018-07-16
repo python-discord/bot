@@ -10,6 +10,7 @@ bot:
         green_chevron: '<:greenchevron:418104310329769993>'
         red_chevron: '<:redchevron:418112778184818698>'
         white_chevron: '<:whitechevron:418110396973711363>'
+        lemoneye2: '<:lemoneye2:435193765582340098>'
 
 
 guild:
@@ -28,6 +29,7 @@ guild:
         help4: 451312046647148554
         helpers: 385474242440986624
         modlog: 282638479504965634
+        message_change_logs: 467752170159079424
         python: 267624335836053506
         verification: 352442727016693763
         off_topic_0: 291284109232308226
@@ -74,6 +76,7 @@ urls:
     gitlab_bot_repo: 'https://gitlab.com/discord-python/projects/bot'
     omdb: 'http://omdbapi.com'
     site: 'pythondiscord.com'
+    site_bigbrother_api: 'https://api.pythondiscord.com/bot/bigbrother'
     site_docs_api: 'https://api.pythondiscord.com/bot/docs'
     site_facts_api: 'https://api.pythondiscord.com/bot/snake_facts'
     site_hiphopify_api: 'https://api.pythondiscord.com/bot/hiphopify'
