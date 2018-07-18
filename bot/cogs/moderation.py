@@ -20,11 +20,11 @@ class Moderation:
 
     @with_role(Roles.admin, Roles.owner, Roles.moderator)
     @command(name="moderation.warn")
-    async def warn(self, ctx, user: User, *, reason: str):
+    async def warn(self, ctx, user: User, reason: str):
         """
         Create a warning infraction in the database for a user.
         :param user: accepts user mention, ID, etc.
-        :param reason: the reason for the warning.
+        :param reason: the reason for the warning. Wrap in string quotes for multiple words.
         """
 
         try:
