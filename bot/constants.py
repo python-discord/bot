@@ -262,6 +262,10 @@ class URLs(metaclass=YAMLGetter):
     site_tags_api: str
     site_user_api: str
     site_user_complete_api: str
+    site_infractions: str
+    site_infractions_user: str
+    site_infractions_types: str
+    site_infractions_by_id: str
     status: str
     paste_service: str
 
