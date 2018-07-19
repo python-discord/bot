@@ -20,7 +20,7 @@ class Moderation:
 
     @with_role(Roles.admin, Roles.owner, Roles.moderator)
     @command(name="moderation.warn")
-    async def warn(self, ctx, user: User, reason: str):
+    async def warn(self, ctx, user: User, reason: str = None):
         """
         Create a warning infraction in the database for a user.
         :param user: accepts user mention, ID, etc.
@@ -44,7 +44,14 @@ class Moderation:
             await ctx.send("There was an error updating the site.")
             return
 
-        await ctx.send("Warning added.")
+        response_data = await response.json()
+        reason = response_data["infraction"]["reason"]
+        if reason is None:
+            result_message = f":ok_hand: warned {user.mention}."
+        else:
+            result_message = f":ok_hand: warned {user.mention} ({reason})."
+
+        await ctx.send(result_message)
 
     @with_role(Roles.admin, Roles.owner, Roles.moderator)
     @command(name="moderation.ban")
