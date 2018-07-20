@@ -1,7 +1,7 @@
 import logging
 
-from discord import User
-from discord.ext.commands import Bot, command
+from discord import Guild, Member, User
+from discord.ext.commands import Bot, Context, command
 
 from bot.constants import Keys, Roles, URLs
 from bot.decorators import with_role
@@ -20,7 +20,7 @@ class Moderation:
 
     @with_role(Roles.admin, Roles.owner, Roles.moderator)
     @command(name="moderation.warn")
-    async def warn(self, ctx, user: User, reason: str = None):
+    async def warn(self, ctx: Context, user: User, reason: str = None):
         """
         Create a warning infraction in the database for a user.
         :param user: accepts user mention, ID, etc.
@@ -28,7 +28,7 @@ class Moderation:
         """
 
         try:
-            response = await self.bot.http_session.post(
+            await self.bot.http_session.post(
                 URLs.site_infractions,
                 headers=self.headers,
                 json={
@@ -39,13 +39,10 @@ class Moderation:
                 }
             )
         except Exception:
-            # Same as defcon. Probably not the best but may work for now.
             log.exception("There was an error adding an infraction.")
-            await ctx.send("There was an error updating the site.")
+            await ctx.send("There was an error adding the infraction.")
             return
 
-        response_data = await response.json()
-        reason = response_data["infraction"]["reason"]
         if reason is None:
             result_message = f":ok_hand: warned {user.mention}."
         else:
@@ -55,23 +52,71 @@ class Moderation:
 
     @with_role(Roles.admin, Roles.owner, Roles.moderator)
     @command(name="moderation.ban")
-    async def ban(self, ctx, user: User, reason: str, duration: str = None):
+    async def ban(self, ctx: Context, user: User, reason: str = None):
         """
-        Create a banning infraction in the database for a user.
+        Create a permanent ban infraction in the database for a user.
         :param user: Accepts user mention, ID, etc.
         :param reason: Wrap in quotes to make reason larger than one word.
-        :param duration: Accepts #d, #h, #m, and #s.
         """
+        try:
+            await self.bot.http_session.post(
+                URLs.site_infractions,
+                headers=self.headers,
+                json={
+                    "type": "ban",
+                    "reason": reason,
+                    "user_id": str(user.id),
+                    "actor_id": str(ctx.message.author.id)
+                }
+            )
+        except Exception:
+            log.exception("There was an error adding an infraction.")
+            await ctx.send("There was an error adding the infraction.")
+            return
+
+        guild: Guild = ctx.guild
+        await guild.ban(user, reason=reason, delete_message_days=0)
+
+        if reason is None:
+            result_message = f":ok_hand: permanently banned {user.mention}."
+        else:
+            result_message = f":ok_hand: permanently banned {user.mention} ({reason})."
+
+        await ctx.send(result_message)
 
     @with_role(Roles.admin, Roles.owner, Roles.moderator)
     @command(name="moderation.mute")
-    async def mute(self, ctx, user: User, reason: str, duration: str = None):
+    async def mute(self, ctx: Context, user: Member, reason: str):
         """
-        Create a muting infraction in the database for a user.
+        Create a permanent mute infraction in the database for a user.
         :param user: Accepts user mention, ID, etc.
         :param reason: Wrap in quotes to make reason larger than one word.
         :param duration: Accepts #d, #h, #m, and #s.
         """
+        try:
+            await self.bot.http_session.post(
+                URLs.site_infractions,
+                headers=self.headers,
+                json={
+                    "type": "mute",
+                    "reason": reason,
+                    "user_id": str(user.id),
+                    "actor_id": str(ctx.message.author.id)
+                }
+            )
+        except Exception:
+            log.exception("There was an error adding an infraction.")
+            await ctx.send("There was an error adding the infraction.")
+            return
+
+        await user.edit(reason=reason, mute=True)
+
+        if reason is None:
+            result_message = f":ok_hand: permanently muted {user.mention}."
+        else:
+            result_message = f":ok_hand: permanently muted {user.mention} ({reason})."
+
+        await ctx.send(result_message)
 
 
 def setup(bot):
