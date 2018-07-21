@@ -1,21 +1,15 @@
-from io import BytesIO
-
-import aiohttp
-
 import asyncio
-
 import datetime
 import logging
-from typing import Union, List
+from typing import List, Optional, Union
 
 from dateutil.relativedelta import relativedelta
 from deepdiff import DeepDiff
 from discord import (
-    CategoryChannel, Colour, Embed, Guild, Member,
-    NotFound, RawBulkMessageDeleteEvent,
-    RawMessageDeleteEvent, RawMessageUpdateEvent,
-    Role, TextChannel, User, VoiceChannel,
-    Message, File, Attachment)
+    CategoryChannel, Colour, Embed, File, Guild,
+    Member, Message, NotFound, RawBulkMessageDeleteEvent,
+    RawMessageDeleteEvent, RawMessageUpdateEvent, Role,
+    TextChannel, User, VoiceChannel)
 from discord.abc import GuildChannel
 from discord.ext.commands import Bot
 
@@ -54,11 +48,14 @@ class ModLog:
                 self._ignored_deletions.append(message_id)
 
     async def send_log_message(
-            self, icon_url: str, colour: Colour, title: str, text: str, thumbnail: str = None,
+            self, icon_url: Optional[str], colour: Colour, title: Optional[str], text: str, thumbnail: str = None,
             channel_id: int = Channels.modlog, ping_everyone: bool = False, files: List[File] = None
     ):
         embed = Embed(description=text)
-        embed.set_author(name=title, icon_url=icon_url)
+
+        if title and icon_url:
+            embed.set_author(name=title, icon_url=icon_url)
+
         embed.colour = colour
         embed.timestamp = datetime.datetime.utcnow()
 
@@ -517,11 +514,17 @@ class ModLog:
 
         if channel.category:
             response = (
-                f"Message `{event.message_id}` deleted in {channel.category}/#{channel.name} (`{channel.id}`)"
+                f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
+                f"**Message ID:** `{event.message_id}`\n"
+                "\n"
+                "This message was not cached, so the message content cannot be displayed."
             )
         else:
             response = (
-                f"Message `{event.message_id}` deleted in #{channel.name} (`{channel.id}`)"
+                f"**Channel:** #{channel.name} (`{channel.id}`)\n"
+                f"**Message ID:** `{event.message_id}`\n"
+                "\n"
+                "This message was not cached, so the message content cannot be displayed."
             )
 
         await self.send_log_message(
@@ -529,6 +532,61 @@ class ModLog:
             "Message deleted",
             response,
             channel_id=Channels.message_log
+        )
+
+    async def on_message_edit(self, before: Message, after: Message):
+        if before.guild.id != GuildConstant.id or before.channel.id in GuildConstant.ignored or before.author.bot:
+            return
+
+        self._cached_edits.append(before.id)
+
+        if before.content == after.content:
+            return
+
+        author = before.author
+        channel = before.channel
+
+        if channel.category:
+            before_response = (
+                f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
+                f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
+                f"**Message ID:** `{before.id}`\n"
+                f"\n"
+                f"{before.clean_content}"
+            )
+
+            after_response = (
+                f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
+                f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
+                f"**Message ID:** `{before.id}`\n"
+                f"\n"
+                f"{after.clean_content}"
+            )
+        else:
+            before_response = (
+                f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
+                f"**Channel:** #{channel.name} (`{channel.id}`)\n"
+                f"**Message ID:** `{before.id}`\n"
+                f"\n"
+                f"{before.clean_content}"
+            )
+
+            after_response = (
+                f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
+                f"**Channel:** #{channel.name} (`{channel.id}`)\n"
+                f"**Message ID:** `{before.id}`\n"
+                f"\n"
+                f"{after.clean_content}"
+            )
+
+        await self.send_log_message(
+            Icons.message_edit, Colour.blurple(), "Message edited (Before)",
+            before_response, channel_id=Channels.message_log
+        )
+
+        await self.send_log_message(
+            Icons.message_edit, Colour.blurple(), "Message edited (After)",
+            after_response, channel_id=Channels.message_log
         )
 
     async def on_raw_message_edit(self, event: RawMessageUpdateEvent):
@@ -541,24 +599,57 @@ class ModLog:
         if message.guild.id != GuildConstant.id or message.channel.id in GuildConstant.ignored or message.author.bot:
             return
 
-        if message.channel.category:
-            response = (
-                f"{message.author} edited their message (`{message.id}`) "
-                f"in {channel.category}/#{channel.name} "
-                f"(`{channel.id}`):\n\n```{message.content}```"
+        await asyncio.sleep(1)  # Wait here in case the normal event was fired
+
+        if event.message_id in self._cached_edits:
+            # It was in the cache and the normal event was fired, so we can just ignore it
+            self._cached_edits.remove(event.message_id)
+            return
+
+        author = message.author
+        channel = message.channel
+
+        if channel.category:
+            before_response = (
+                f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
+                f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
+                f"**Message ID:** `{message.id}`\n"
+                "\n"
+                "This message was not cached, so the message content cannot be displayed."
+            )
+
+            after_response = (
+                f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
+                f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
+                f"**Message ID:** `{message.id}`\n"
+                "\n"
+                f"{message.clean_content}"
             )
         else:
-            response = (
-                f"{message.author} edited their message (`{message.id}`) "
-                f"in #{channel.name} "
-                f"(`{channel.id}`):\n\n```{message.content}```"
+            before_response = (
+                f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
+                f"**Channel:** #{channel.name} (`{channel.id}`)\n"
+                f"**Message ID:** `{message.id}`\n"
+                "\n"
+                "This message was not cached, so the message content cannot be displayed."
+            )
+
+            after_response = (
+                f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
+                f"**Channel:** #{channel.name} (`{channel.id}`)\n"
+                f"**Message ID:** `{message.id}`\n"
+                "\n"
+                f"{message.clean_content}"
             )
 
         await self.send_log_message(
-            Icons.message_edit, Colour.blurple(),
-            "Message edited",
-            response,
-            channel_id=Channels.message_log
+            Icons.message_edit, Colour.blurple(), "Message edited (Before)",
+            before_response, channel_id=Channels.message_log
+        )
+
+        await self.send_log_message(
+            Icons.message_edit, Colour.blurple(), "Message edited (After)",
+            after_response, channel_id=Channels.message_log
         )
 
 
