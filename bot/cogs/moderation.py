@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 import logging
+from typing import Dict
 
 from discord import Guild, Member, User
 from discord.ext.commands import Bot, Context, command
@@ -20,19 +21,20 @@ class Moderation:
     def __init__(self, bot: Bot):
         self.bot = bot
         self.headers = {"X-API-KEY": Keys.site_api}
+        self.expiration_tasks: Dict[str, asyncio.Task] = {}
 
     async def on_ready(self):
         # Schedule expiration for previous infractions
         response = await self.bot.http_session.get(
             URLs.site_infractions,
-            params={"active": "true"},
+            params={"dangling": "true"},
             headers=self.headers
         )
         infraction_list = await response.json()
         loop = asyncio.get_event_loop()
         for infraction_object in infraction_list:
             if infraction_object["expires_at"] is not None:
-                loop.create_task(self._scheduled_expiration(infraction_object))
+                self.schedule_expiration(loop, infraction_object)
 
     @with_role(Roles.admin, Roles.owner, Roles.moderator)
     @command(name="moderation.warn")
@@ -171,7 +173,7 @@ class Moderation:
         infraction_expiration = infraction_object["expires_at"]
 
         loop = asyncio.get_event_loop()
-        loop.create_task(self._scheduled_expiration(infraction_object))
+        self.schedule_expiration(loop, infraction_object)
 
         if reason is None:
             result_message = f":ok_hand: muted {user.mention} until {infraction_expiration}."
@@ -179,6 +181,14 @@ class Moderation:
             result_message = f":ok_hand: muted {user.mention} until {infraction_expiration} ({reason})."
 
         await ctx.send(result_message)
+
+    def schedule_expiration(self, loop: asyncio.AbstractEventLoop, infraction_object: dict):
+        infraction_id = infraction_object["id"]
+        if infraction_id in self.expiration_tasks:
+            return
+
+        task: asyncio.Task = loop.create_task(self._scheduled_expiration(infraction_object))
+        self.expiration_tasks[infraction_id] = task
 
     async def _scheduled_expiration(self, infraction_object):
         guild: Guild = self.bot.get_guild(constants.Guild.id)
@@ -195,7 +205,6 @@ class Moderation:
             await asyncio.sleep(delay_seconds)
 
         log.debug(f"Marking infraction {infraction_id} as inactive (expired).")
-        log.debug(infraction_object)
         user_id = infraction_object["user"]["user_id"]
 
         if infraction_type == "mute":
