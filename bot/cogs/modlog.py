@@ -472,7 +472,7 @@ class ModLog:
                 f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
                 f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{message.id}`\n"
-                f"\n"
+                "\n"
                 f"{message.clean_content}"
             )
         else:
@@ -480,7 +480,7 @@ class ModLog:
                 f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
                 f"**Channel:** #{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{message.id}`\n"
-                f"\n"
+                "\n"
                 f"{message.clean_content}"
             )
 
@@ -551,7 +551,7 @@ class ModLog:
                 f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
                 f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{before.id}`\n"
-                f"\n"
+                "\n"
                 f"{before.clean_content}"
             )
 
@@ -559,7 +559,7 @@ class ModLog:
                 f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
                 f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{before.id}`\n"
-                f"\n"
+                "\n"
                 f"{after.clean_content}"
             )
         else:
@@ -567,7 +567,7 @@ class ModLog:
                 f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
                 f"**Channel:** #{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{before.id}`\n"
-                f"\n"
+                "\n"
                 f"{before.clean_content}"
             )
 
@@ -575,7 +575,7 @@ class ModLog:
                 f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
                 f"**Channel:** #{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{before.id}`\n"
-                f"\n"
+                "\n"
                 f"{after.clean_content}"
             )
 
