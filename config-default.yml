@@ -1,43 +1,71 @@
 bot:
-    help_prefix: 'bot.'
-    token: !REQUIRED_ENV 'BOT_TOKEN'
+    help_prefix:               "bot."
+    token:       !REQUIRED_ENV "BOT_TOKEN"
 
     cooldowns:
         # Per channel, per tag.
         tags: 60
 
     emojis:
-        green_chevron: '<:greenchevron:418104310329769993>'
-        red_chevron: '<:redchevron:418112778184818698>'
-        white_chevron: '<:whitechevron:418110396973711363>'
-        lemoneye2: '<:lemoneye2:435193765582340098>'
+        green_chevron: "<:greenchevron:418104310329769993>"
+        red_chevron:   "<:redchevron:418112778184818698>"
+        white_chevron: "<:whitechevron:418110396973711363>"
+        lemoneye2:     "<:lemoneye2:435193765582340098>"
+
+        pencil:   "\u270F"
+        new:      "\U0001F195"
+
+    icons:
+        crown_blurple: "https://cdn.discordapp.com/emojis/469964153289965568.png"
+        crown_green:   "https://cdn.discordapp.com/emojis/469964154719961088.png"
+        crown_red:     "https://cdn.discordapp.com/emojis/469964154879344640.png"
+
+        guild_update: "https://cdn.discordapp.com/emojis/469954765141442561.png"
+
+        hash_blurple: "https://cdn.discordapp.com/emojis/469950142942806017.png"
+        hash_green:   "https://cdn.discordapp.com/emojis/469950144918585344.png"
+        hash_red:     "https://cdn.discordapp.com/emojis/469950145413251072.png"
+
+        message_bulk_delete: "https://cdn.discordapp.com/emojis/469952898994929668.png"
+        message_delete:      "https://cdn.discordapp.com/emojis/469952898516779008.png"
+        message_edit:        "https://cdn.discordapp.com/emojis/469952898143485972.png"
+
+        sign_in:  "https://cdn.discordapp.com/emojis/469952898181234698.png"
+        sign_out: "https://cdn.discordapp.com/emojis/469952898089091082.png"
+
+        user_ban:    "https://cdn.discordapp.com/emojis/469952898026045441.png"
+        user_unban:  "https://cdn.discordapp.com/emojis/469952898692808704.png"
+        user_update: "https://cdn.discordapp.com/emojis/469952898684551168.png"
 
 
 guild:
     id: 267624335836053506
 
     channels:
-        announcements: 354619224620138496
-        big_brother_logs: 468507907357409333
-        bot: 267659945086812160
-        checkpoint_test: 422077681434099723
-        devlog: 409308876241108992
-        devtest: 414574275865870337
-        help_0: 303906576991780866
-        help_1: 303906556754395136
-        help_2: 303906514266226689
-        help_3: 439702951246692352
-        help_4: 451312046647148554
-        help_5: 454941769734422538
-        helpers: 385474242440986624
-        modlog: 282638479504965634
-        message_change_logs: 467752170159079424
-        off_topic_0: 291284109232308226
-        off_topic_1: 463035241142026251
-        off_topic_2: 463035268514185226
-        python: 267624335836053506
-        verification: 352442727016693763
+        admins:          &ADMINS      365960823622991872
+        announcements:                354619224620138496
+        big_brother_logs:             468507907357409333
+        bot:                          267659945086812160
+        checkpoint_test:              422077681434099723
+        devalerts:                    460181980097675264
+        devlog:                       409308876241108992
+        devtest:                      414574275865870337
+        help_0:                       303906576991780866
+        help_1:                       303906556754395136
+        help_2:                       303906514266226689
+        help_3:                       439702951246692352
+        help_4:                       451312046647148554
+        help_5:                       454941769734422538
+        helpers:                      385474242440986624
+        message_log:     &MESSAGE_LOG 467752170159079424
+        modlog:          &MODLOG      282638479504965634
+        off_topic_0:                  291284109232308226
+        off_topic_1:                  463035241142026251
+        off_topic_2:                  463035268514185226
+        python:                       267624335836053506
+        verification:                 352442727016693763
 
+    ignored: [*ADMINS, *MESSAGE_LOG, *MODLOG]
 
     roles:
         admin: 267628507062992896
@@ -53,44 +81,50 @@ guild:
 
 
 keys:
-    deploy_bot: !ENV 'DEPLOY_BOT_KEY'
-    deploy_site: !ENV 'DEPLOY_SITE'
-    omdb: !ENV 'OMDB_API_KEY'
-    site_api: !ENV 'BOT_API_KEY'
-    youtube: !ENV 'YOUTUBE_API_KEY'
+    deploy_bot:  !ENV "DEPLOY_BOT_KEY"
+    deploy_site: !ENV "DEPLOY_SITE"
+    omdb:        !ENV "OMDB_API_KEY"
+    site_api:    !ENV "BOT_API_KEY"
+    youtube:     !ENV "YOUTUBE_API_KEY"
 
 
 clickup:
-    key: !ENV 'CLICKUP_KEY'
-    space: 757069
-    team: 754996
+    key:   !ENV "CLICKUP_KEY"
+    space:      757069
+    team:       754996
 
 
 rabbitmq:
-    host: "pdrmq"
-    password: !ENV "RABBITMQ_DEFAULT_PASS"
-    port: 5672
-    username: !ENV "RABBITMQ_DEFAULT_USER"
+    host:          "pdrmq"
+    password: !ENV ["RABBITMQ_DEFAULT_PASS", "guest"]
+    port:          5672
+    username: !ENV ["RABBITMQ_DEFAULT_USER", "guest"]
 
 
 urls:
-    bot_avatar: 'https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle/logo_circle.png'
-    deploy: !ENV 'DEPLOY_URL'
-    gitlab_bot_repo: 'https://gitlab.com/discord-python/projects/bot'
-    omdb: 'http://omdbapi.com'
-    site: 'pythondiscord.com'
-    site_bigbrother_api: 'https://api.pythondiscord.com/bot/bigbrother'
-    site_docs_api: 'https://api.pythondiscord.com/bot/docs'
-    site_facts_api: 'https://api.pythondiscord.com/bot/snake_facts'
-    site_hiphopify_api: 'https://api.pythondiscord.com/bot/hiphopify'
-    site_idioms_api: 'https://api.pythondiscord.com/bot/snake_idioms'
-    site_names_api: 'https://api.pythondiscord.com/bot/snake_names'
-    site_off_topic_names_api: 'https://api.pythondiscord.com/bot/off-topic-names'
-    site_quiz_api: 'https://api.pythondiscord.com/bot/snake_quiz'
-    site_settings_api: 'https://api.pythondiscord.com/bot/settings'
-    site_special_api: 'https://api.pythondiscord.com/bot/special_snakes'
-    site_tags_api: 'https://api.pythondiscord.com/bot/tags'
-    site_user_api: 'https://api.pythondiscord.com/bot/users'
-    site_user_complete_api: 'https://api.pythondiscord.com/bot/users/complete'
-    status: !ENV 'STATUS_URL'
-    paste_service: 'https://paste.pydis.com/{key}'
+    # PyDis site vars
+    site:        &DOMAIN "pythondiscord.com"
+    site_schema: &SCHEMA "https://"
+
+    site_bigbrother_api:      !JOIN [*SCHEMA, *DOMAIN, "/bot/bigbrother"]
+    site_docs_api:            !JOIN [*SCHEMA, *DOMAIN, "/bot/docs"]
+    site_facts_api:           !JOIN [*SCHEMA, *DOMAIN, "/bot/snake_facts"]
+    site_hiphopify_api:       !JOIN [*SCHEMA, *DOMAIN, "/bot/hiphopify"]
+    site_idioms_api:          !JOIN [*SCHEMA, *DOMAIN, "/bot/snake_idioms"]
+    site_names_api:           !JOIN [*SCHEMA, *DOMAIN, "/bot/snake_names"]
+    site_off_topic_names_api: !JOIN [*SCHEMA, *DOMAIN, "/bot/off-topic-names"]
+    site_quiz_api:            !JOIN [*SCHEMA, *DOMAIN, "/bot/snake_quiz"]
+    site_settings_api:        !JOIN [*SCHEMA, *DOMAIN, "/bot/settings"]
+    site_special_api:         !JOIN [*SCHEMA, *DOMAIN, "/bot/special_snakes"]
+    site_tags_api:            !JOIN [*SCHEMA, *DOMAIN, "/bot/tags"]
+    site_user_api:            !JOIN [*SCHEMA, *DOMAIN, "/bot/users"]
+    site_user_complete_api:   !JOIN [*SCHEMA, *DOMAIN, "/bot/users/complete"]
+
+    # Env vars
+    deploy: !ENV "DEPLOY_URL"
+    status: !ENV "STATUS_URL"
+
+    # Misc URLs
+    bot_avatar:      "https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle/logo_circle.png"
+    gitlab_bot_repo: "https://gitlab.com/python-discord/projects/bot"
+    omdb:            "http://omdbapi.com"
