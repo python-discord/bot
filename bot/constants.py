@@ -14,9 +14,10 @@ import logging
 import os
 from collections.abc import Mapping
 from pathlib import Path
+from typing import List
 
 import yaml
-
+from yaml.constructor import ConstructorError
 
 log = logging.getLogger(__name__)
 
@@ -59,12 +60,42 @@ def _env_var_constructor(loader, node):
             key: !ENV 'MY_APP_KEY'
     """
 
-    value = loader.construct_scalar(node)
-    return os.getenv(value)
+    default = None
+
+    try:
+        # Try to construct a list from this YAML node
+        value = loader.construct_sequence(node)
+
+        if len(value) >= 2:
+            # If we have at least two values, then we have both a key and a default value
+            default = value[1]
+            key = value[0]
+        else:
+            # Otherwise, we just have a key
+            key = value[0]
+    except ConstructorError:
+        # This YAML node is a plain value rather than a list, so we just have a key
+        value = loader.construct_scalar(node)
+
+        key = str(value)
+
+    return os.getenv(key, default)
 
 
-yaml.SafeLoader.add_constructor("!REQUIRED_ENV", _required_env_var_constructor)
+def _join_var_constructor(loader, node):
+    """
+    Implements a custom YAML tag for concatenating other tags in
+    the document to strings. This allows for a much more DRY configuration
+    file.
+    """
+
+    fields = loader.construct_sequence(node)
+    return "".join(str(x) for x in fields)
+
+
 yaml.SafeLoader.add_constructor("!ENV", _env_var_constructor)
+yaml.SafeLoader.add_constructor("!JOIN", _join_var_constructor)
+yaml.SafeLoader.add_constructor("!REQUIRED_ENV", _required_env_var_constructor)
 
 
 with open("config-default.yml") as f:
@@ -175,6 +206,35 @@ class Emojis(metaclass=YAMLGetter):
     red_chevron: str
     white_chevron: str
 
+    new: str
+    pencil: str
+
+
+class Icons(metaclass=YAMLGetter):
+    section = "bot"
+    subsection = "icons"
+
+    crown_blurple: str
+    crown_green: str
+    crown_red: str
+
+    guild_update: str
+
+    hash_blurple: str
+    hash_green: str
+    hash_red: str
+
+    message_bulk_delete: str
+    message_delete: str
+    message_edit: str
+
+    sign_in: str
+    sign_out: str
+
+    user_ban: str
+    user_unban: str
+    user_update: str
+
 
 class Clean(metaclass=YAMLGetter):
     section = "bot"
@@ -187,10 +247,12 @@ class Channels(metaclass=YAMLGetter):
     section = "guild"
     subsection = "channels"
 
+    admins: int
     announcements: int
     big_brother_logs: int
     bot: int
     checkpoint_test: int
+    devalerts: int
     devlog: int
     devtest: int
     help_0: int
@@ -200,8 +262,8 @@ class Channels(metaclass=YAMLGetter):
     help_4: int
     help_5: int
     helpers: int
+    message_log: int
     modlog: int
-    message_change_logs: int
     off_topic_1: int
     off_topic_2: int
     off_topic_3: int
@@ -228,6 +290,7 @@ class Guild(metaclass=YAMLGetter):
     section = "guild"
 
     id: int
+    ignored: List[int]
 
 
 class Keys(metaclass=YAMLGetter):
@@ -272,6 +335,7 @@ class URLs(metaclass=YAMLGetter):
     site_idioms_api: str
     site_names_api: str
     site_quiz_api: str
+    site_schema: str
     site_settings_api: str
     site_special_api: str
     site_tags_api: str
