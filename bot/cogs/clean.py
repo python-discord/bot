@@ -1,14 +1,19 @@
-import json
 import logging
 import random
 
-from discord import Embed, Message, User, Colour
+from discord import Colour, Embed, Message, User
 from discord.ext.commands import Bot, Context, group
 
-from bot.constants import Roles, Clean, URLs, Keys, NEGATIVE_REPLIES
+from bot.cogs.modlog import ModLog
+from bot.constants import (
+    Channels, CleanMessages, Icons,
+    Keys, NEGATIVE_REPLIES, Roles, URLs
+)
 from bot.decorators import with_role
 
 log = logging.getLogger(__name__)
+
+COLOUR_RED = Colour(0xcd6d6d)
 
 
 class Clean:
@@ -18,7 +23,11 @@ class Clean:
         self.headers = {"X-API-KEY": Keys.site_api}
         self.cleaning = False
 
-    async def _upload_log(self, log_data):
+    @property
+    def mod_log(self) -> ModLog:
+        return self.bot.get_cog("ModLog")
+
+    async def _upload_log(self, log_data: list) -> str:
         """
         Uploads the log data to the database via
         an API endpoint for uploading logs.
@@ -37,23 +46,33 @@ class Clean:
 
         return f"{URLs.site_clean_logs}/{log_id}"
 
-    async def _clean_messages(self, amount, channel, bots_only: bool=False, user: User=None):
+    async def _clean_messages(
+            self, amount: int, ctx: Context,
+            bots_only: bool=False, user: User=None
+    ):
         """
         A helper function that does the actual message cleaning.
 
         :param bots_only: Set this to True if you only want to delete bot messages.
         :param user: Specify a user and it will only delete messages by this user.
-        :return: Returns an embed
         """
 
+        # Bulk delete checks
+        def predicate_bots_only(message: Message):
+            return message.author.bot
+
+        def predicate_specific_user(message: Message):
+            return message.author == user
+
         # Is this an acceptable amount of messages to clean?
-        if amount > Clean.message_limit:
+        if amount > CleanMessages.message_limit:
             embed = Embed(
                 color=Colour.red(),
                 title=random.choice(NEGATIVE_REPLIES),
-                description=f"You cannot clean more than {Clean.message_limit} messages."
+                description=f"You cannot clean more than {CleanMessages.message_limit} messages."
             )
-            return embed
+            await ctx.send(embed=embed)
+            return
 
         # Are we already performing a clean?
         if self.cleaning:
@@ -62,44 +81,89 @@ class Clean:
                 title=random.choice(NEGATIVE_REPLIES),
                 description="Multiple simultaneous cleaning processes is not allowed."
             )
-            return embed
+            await ctx.send(embed=embed)
+            return
 
-        # Skip the first message, as that will be the invocation
-        history = channel.history(limit=amount)
-        await history.next()
-
+        # Look through the history and retrieve message data
         message_log = []
+        message_ids = []
 
-        async for message in history:
+        self.cleaning = True
 
-            delete_condition = (
+        async for message in ctx.channel.history(limit=amount):
+
+            if not self.cleaning:
+                return
+
+            delete = (
                 bots_only and message.author.bot    # Delete bot messages
                 or user and message.author == user  # Delete user messages
                 or not bots_only and not user       # Delete all messages
             )
 
-            if delete_condition:
-                await message.delete()
+            if delete and message.content or message.embeds:
                 content = message.content or message.embeds[0].description
                 author = f"{message.author.name}#{message.author.discriminator}"
+
+                # Store the message data
+                message_ids.append(message.id)
                 message_log.append({
                     "content": content,
                     "author": author,
                     "timestamp": message.created_at.strftime("%D %H:%M")
                 })
 
+        self.cleaning = False
+
+        # We should ignore the ID's we stored, so we don't get mod-log spam.
+        self.mod_log.ignore_message_deletion(*message_ids)
+
+        # Use bulk delete to actually do the cleaning. It's far faster.
+        if bots_only:
+            await ctx.channel.purge(
+                limit=amount,
+                check=predicate_bots_only,
+            )
+        elif user:
+            await ctx.channel.purge(
+                limit=amount,
+                check=predicate_specific_user,
+            )
+        else:
+            await ctx.channel.purge(
+                limit=amount
+            )
+
+        # Reverse the list to restore chronological order
         if message_log:
-            # Reverse the list to restore chronological order
             message_log = list(reversed(message_log))
             upload_log = await self._upload_log(message_log)
         else:
-            upload_log = "Naw, nothing there!"
+            # Can't build an embed, nothing to clean!
+            embed = Embed(
+                color=Colour.red(),
+                description="No matching messages could be found."
+            )
+            await ctx.send(embed=embed)
+            return
 
-        embed = Embed(
-            description=upload_log
+        # Build the embed and send it
+        message = (
+            f"**{len(message_ids)}** messages deleted in <#{ctx.channel.id}> by **{ctx.author.name}**\n\n"
+            f"A log of the deleted messages can be found [here]({upload_log})."
         )
 
-        return embed
+        embed = Embed(
+            color=COLOUR_RED,
+            description=message
+        )
+
+        embed.set_author(
+            name=f"Bulk message delete",
+            icon_url=Icons.message_bulk_delete
+        )
+
+        await self.bot.get_channel(Channels.modlog).send(embed=embed)
 
     @group(invoke_without_command=True, name="clean", hidden=True)
     @with_role(Roles.moderator, Roles.admin, Roles.owner)
@@ -118,9 +182,7 @@ class Clean:
         and stop cleaning after traversing `amount` messages.
         """
 
-        embed = await self._clean_messages(amount, ctx.channel, user=user)
-
-        await ctx.send(embed=embed)
+        await self._clean_messages(amount, ctx, user=user)
 
     @clean_group.command(aliases=["all"])
     @with_role(Roles.moderator, Roles.admin, Roles.owner)
@@ -130,9 +192,7 @@ class Clean:
         and stop cleaning after traversing `amount` messages.
         """
 
-        embed = await self._clean_messages(amount, ctx.channel)
-
-        await ctx.send(embed=embed)
+        await self._clean_messages(amount, ctx)
 
     @clean_group.command(aliases=["bots"])
     @with_role(Roles.moderator, Roles.admin, Roles.owner)
@@ -142,8 +202,22 @@ class Clean:
         and stop cleaning after traversing `amount` messages.
         """
 
-        embed = await self._clean_messages(amount, ctx.channel, bots_only=True)
+        await self._clean_messages(amount, ctx, bots_only=True)
 
+    @clean_group.command(aliases=["stop", "cancel", "abort"])
+    @with_role(Roles.moderator, Roles.admin, Roles.owner)
+    async def clean_cancel(self, ctx: Context):
+        """
+        If there is an ongoing cleaning process,
+        attempt to immediately cancel it.
+        """
+
+        self.cleaning = False
+
+        embed = Embed(
+            color=Colour.blurple(),
+            description="Clean interrupted."
+        )
         await ctx.send(embed=embed)
 
 

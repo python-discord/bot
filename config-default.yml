@@ -37,6 +37,10 @@ bot:
         user_unban:  "https://cdn.discordapp.com/emojis/469952898692808704.png"
         user_update: "https://cdn.discordapp.com/emojis/469952898684551168.png"
 
+    clean:
+        # Maximum number of messages to traverse for clean commands
+        message_limit: 10000
+
 
 guild:
     id: 267624335836053506

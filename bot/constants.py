@@ -236,7 +236,7 @@ class Icons(metaclass=YAMLGetter):
     user_update: str
 
 
-class Clean(metaclass=YAMLGetter):
+class CleanMessages(metaclass=YAMLGetter):
     section = "bot"
     subsection = "clean"
 
