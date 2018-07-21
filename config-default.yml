@@ -80,6 +80,8 @@ urls:
     omdb: 'http://omdbapi.com'
     site: 'pythondiscord.com'
     site_bigbrother_api: 'https://api.pythondiscord.com/bot/bigbrother'
+    site_clean_api: 'https://api.pythondiscord.com/bot/clean'
+    site_clean_logs: 'https://pythondiscord.com/bot/clean_logs'
     site_docs_api: 'https://api.pythondiscord.com/bot/docs'
     site_facts_api: 'https://api.pythondiscord.com/bot/snake_facts'
     site_hiphopify_api: 'https://api.pythondiscord.com/bot/hiphopify'

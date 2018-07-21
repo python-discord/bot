@@ -53,6 +53,7 @@ bot.load_extension("bot.cogs.events")
 # Commands, etc
 bot.load_extension("bot.cogs.bigbrother")
 bot.load_extension("bot.cogs.bot")
+bot.load_extension("bot.cogs.clean")
 bot.load_extension("bot.cogs.cogs")
 
 # Local setups usually don't have the clickup key set,

@@ -176,6 +176,13 @@ class Emojis(metaclass=YAMLGetter):
     white_chevron: str
 
 
+class Clean(metaclass=YAMLGetter):
+    section = "bot"
+    subsection = "clean"
+
+    message_limit: int
+
+
 class Channels(metaclass=YAMLGetter):
     section = "guild"
     subsection = "channels"
@@ -259,6 +266,8 @@ class URLs(metaclass=YAMLGetter):
     omdb: str
     site: str
     site_facts_api: str
+    site_clean_api: str
+    site_clean_logs: str
     site_hiphopify_api: str
     site_idioms_api: str
     site_names_api: str
