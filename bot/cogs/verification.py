@@ -90,7 +90,7 @@ class Verification:
         log.trace(f"Deleting the message posted by {ctx.author}.")
 
         try:
-            self.modlog.ignored_deletions(ctx.message.id)
+            self.modlog.ignore_message_deletion(ctx.message.id)
             await ctx.message.delete()
         except NotFound:
             log.trace("No message found, it must have been deleted by another bot.")
