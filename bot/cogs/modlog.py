@@ -1,6 +1,12 @@
+from io import BytesIO
+
+import aiohttp
+
+import asyncio
+
 import datetime
 import logging
-from typing import Union
+from typing import Union, List
 
 from dateutil.relativedelta import relativedelta
 from deepdiff import DeepDiff
@@ -8,8 +14,8 @@ from discord import (
     CategoryChannel, Colour, Embed, Guild, Member,
     NotFound, RawBulkMessageDeleteEvent,
     RawMessageDeleteEvent, RawMessageUpdateEvent,
-    Role, TextChannel, User, VoiceChannel
-)
+    Role, TextChannel, User, VoiceChannel,
+    Message, File, Attachment)
 from discord.abc import GuildChannel
 from discord.ext.commands import Bot
 
@@ -37,16 +43,19 @@ class ModLog:
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.ignored_deletions = []
+        self._ignored_deletions = []
+
+        self._cached_deletes = []
+        self._cached_edits = []
 
     def ignore_message_deletion(self, *message_ids: int):
         for message_id in message_ids:
-            if message_id not in self.ignored_deletions:
-                self.ignored_deletions.append(message_id)
+            if message_id not in self._ignored_deletions:
+                self._ignored_deletions.append(message_id)
 
     async def send_log_message(
             self, icon_url: str, colour: Colour, title: str, text: str, thumbnail: str = None,
-            channel_id: int = Channels.modlog, ping_everyone: bool = False
+            channel_id: int = Channels.modlog, ping_everyone: bool = False, files: List[File] = None
     ):
         embed = Embed(description=text)
         embed.set_author(name=title, icon_url=icon_url)
@@ -61,7 +70,7 @@ class ModLog:
         if ping_everyone:
             content = "@everyone"
 
-        await self.bot.get_channel(channel_id).send(content=content, embed=embed)
+        await self.bot.get_channel(channel_id).send(content=content, embed=embed, files=files)
 
     async def on_guild_channel_create(self, channel: GUILD_CHANNEL):
         if channel.guild.id != GuildConstant.id:
@@ -424,8 +433,8 @@ class ModLog:
         ignored_messages = 0
 
         for message_id in event.message_ids:
-            if message_id in self.ignored_deletions:
-                self.ignored_deletions.remove(message_id)
+            if message_id in self._ignored_deletions:
+                self._ignored_deletions.remove(message_id)
                 ignored_messages += 1
 
         if ignored_messages >= len(event.message_ids):
@@ -445,41 +454,75 @@ class ModLog:
             ping_everyone=True
         )
 
+    async def on_message_delete(self, message: Message):
+        channel = message.channel
+        author = message.author
+
+        if message.guild.id != GuildConstant.id or channel.id in GuildConstant.ignored:
+            return
+
+        self._cached_deletes.append(message.id)
+
+        if message.id in self._ignored_deletions:
+            self._ignored_deletions.remove(message.id)
+            return
+
+        if author.bot:
+            return
+
+        if channel.category:
+            response = (
+                f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
+                f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
+                f"**Message ID:** `{message.id}`\n"
+                f"\n"
+                f"{message.clean_content}"
+            )
+        else:
+            response = (
+                f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
+                f"**Channel:** #{channel.name} (`{channel.id}`)\n"
+                f"**Message ID:** `{message.id}`\n"
+                f"\n"
+                f"{message.clean_content}"
+            )
+
+        if message.attachments:
+            # Prepend the message metadata with the number of attachments
+            response = f"**Attachments:** {len(message.attachments)}\n" + response
+
+        await self.send_log_message(
+            Icons.message_delete, COLOUR_RED,
+            "Message deleted",
+            response,
+            channel_id=Channels.message_log
+        )
+
     async def on_raw_message_delete(self, event: RawMessageDeleteEvent):
         if event.guild_id != GuildConstant.id or event.channel_id in GuildConstant.ignored:
             return
 
-        if event.message_id in self.ignored_deletions:
-            self.ignored_deletions.remove(event.message_id)
+        await asyncio.sleep(1)  # Wait here in case the normal event was fired
+
+        if event.message_id in self._cached_deletes:
+            # It was in the cache and the normal event was fired, so we can just ignore it
+            self._cached_deletes.remove(event.message_id)
             return
 
-        # Yeah yeah, I know..
-        message = self.bot._connection._get_message(event.message_id)  # type: discord.Message
+        if event.message_id in self._ignored_deletions:
+            self._ignored_deletions.remove(event.message_id)
+            return
+
         channel = self.bot.get_channel(event.channel_id)
 
-        if message is None:
-            if channel.category:
-                response = (
-                    f"Message `{event.message_id}` deleted in {channel.category}/#{channel.name} (`{channel.id}`)"
-                )
-            else:
-                response = (
-                    f"Message `{event.message_id}` deleted in #{channel.name} (`{channel.id}`)"
-                )
+        if channel.category:
+            response = (
+                f"Message `{event.message_id}` deleted in {channel.category}/#{channel.name} (`{channel.id}`)"
+            )
         else:
-            if message.author.bot:
-                return
-
-            if channel.category:
-                response = (
-                    f"Message `{event.message_id}` deleted in {channel.category}/#{channel.name} (`{channel.id}`)\n\n"
-                    f"```\n{message.clean_content}\n```"
-                )
-            else:
-                response = (
-                    f"Message `{event.message_id}` deleted in #{channel.name} (`{channel.id}`)\n\n"
-                    f"```\n{message.clean_content}\n```"
-                )
+            response = (
+                f"Message `{event.message_id}` deleted in #{channel.name} (`{channel.id}`)"
+            )
 
         await self.send_log_message(
             Icons.message_delete, COLOUR_RED,
