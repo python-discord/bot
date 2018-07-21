@@ -103,7 +103,7 @@ rabbitmq:
 
 urls:
     # PyDis site vars
-    site:        &DOMAIN "pythondiscord.com"
+    site:        &DOMAIN "api.pythondiscord.com"
     site_schema: &SCHEMA "https://"
 
     site_bigbrother_api:      !JOIN [*SCHEMA, *DOMAIN, "/bot/bigbrother"]
