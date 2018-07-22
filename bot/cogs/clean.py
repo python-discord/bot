@@ -6,14 +6,12 @@ from discord.ext.commands import Bot, Context, group
 
 from bot.cogs.modlog import ModLog
 from bot.constants import (
-    Channels, CleanMessages, Icons,
+    Channels, CleanMessages, Colours, Icons,
     Keys, NEGATIVE_REPLIES, Roles, URLs
 )
 from bot.decorators import with_role
 
 log = logging.getLogger(__name__)
-
-COLOUR_RED = Colour(0xcd6d6d)
 
 
 class Clean:
@@ -67,7 +65,7 @@ class Clean:
         # Is this an acceptable amount of messages to clean?
         if amount > CleanMessages.message_limit:
             embed = Embed(
-                color=Colour.red(),
+                color=Colour(Colours.soft_red),
                 title=random.choice(NEGATIVE_REPLIES),
                 description=f"You cannot clean more than {CleanMessages.message_limit} messages."
             )
@@ -77,7 +75,7 @@ class Clean:
         # Are we already performing a clean?
         if self.cleaning:
             embed = Embed(
-                color=Colour.red(),
+                color=Colour(Colours.soft_red),
                 title=random.choice(NEGATIVE_REPLIES),
                 description="Multiple simultaneous cleaning processes is not allowed."
             )
@@ -119,20 +117,17 @@ class Clean:
         self.mod_log.ignore_message_deletion(*message_ids)
 
         # Use bulk delete to actually do the cleaning. It's far faster.
+        predicate = None
+
         if bots_only:
-            await ctx.channel.purge(
-                limit=amount,
-                check=predicate_bots_only,
-            )
+            predicate = predicate_bots_only
         elif user:
-            await ctx.channel.purge(
-                limit=amount,
-                check=predicate_specific_user,
-            )
-        else:
-            await ctx.channel.purge(
-                limit=amount
-            )
+            predicate = predicate_specific_user
+
+        await ctx.channel.purge(
+            limit=amount,
+            check=predicate
+        )
 
         # Reverse the list to restore chronological order
         if message_log:
@@ -141,7 +136,7 @@ class Clean:
         else:
             # Can't build an embed, nothing to clean!
             embed = Embed(
-                color=Colour.red(),
+                color=Colour(Colours.soft_red),
                 description="No matching messages could be found."
             )
             await ctx.send(embed=embed)
@@ -154,7 +149,7 @@ class Clean:
         )
 
         embed = Embed(
-            color=COLOUR_RED,
+            color=Colour(Colours.soft_red),
             description=message
         )
 
@@ -188,7 +183,7 @@ class Clean:
     @with_role(Roles.moderator, Roles.admin, Roles.owner)
     async def clean_all(self, ctx: Context, amount: int = 10):
         """
-        Delete all messages, regardless of posted,
+        Delete all messages, regardless of poster,
         and stop cleaning after traversing `amount` messages.
         """
 

@@ -6,12 +6,23 @@ bot:
         # Per channel, per tag.
         tags: 60
 
+    clean:
+        # Maximum number of messages to traverse for clean commands
+        message_limit: 10000
+
+
+style:
+    colours:
+        soft_red: 0xcd6d6d
+        soft_green: 0x68c290
+
     emojis:
         green_chevron: "<:greenchevron:418104310329769993>"
         red_chevron:   "<:redchevron:418112778184818698>"
         white_chevron: "<:whitechevron:418110396973711363>"
         lemoneye2:     "<:lemoneye2:435193765582340098>"
 
+        bullet:   "\u2022"
         pencil:   "\u270F"
         new:      "\U0001F195"
 
@@ -36,10 +47,6 @@ bot:
         user_ban:    "https://cdn.discordapp.com/emojis/469952898026045441.png"
         user_unban:  "https://cdn.discordapp.com/emojis/469952898692808704.png"
         user_update: "https://cdn.discordapp.com/emojis/469952898684551168.png"
-
-    clean:
-        # Maximum number of messages to traverse for clean commands
-        message_limit: 10000
 
 
 guild:

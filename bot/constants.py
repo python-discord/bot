@@ -198,20 +198,29 @@ class Cooldowns(metaclass=YAMLGetter):
     tags: int
 
 
+class Colours(metaclass=YAMLGetter):
+    section = "style"
+    subsection = "colours"
+
+    soft_red: int
+    soft_green: int
+
+
 class Emojis(metaclass=YAMLGetter):
-    section = "bot"
+    section = "style"
     subsection = "emojis"
 
     green_chevron: str
     red_chevron: str
     white_chevron: str
 
+    bullet: str
     new: str
     pencil: str
 
 
 class Icons(metaclass=YAMLGetter):
-    section = "bot"
+    section = "style"
     subsection = "icons"
 
     crown_blurple: str
