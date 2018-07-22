@@ -102,12 +102,14 @@ class Clean:
             if delete and message.content or message.embeds:
                 content = message.content or message.embeds[0].description
                 author = f"{message.author.name}#{message.author.discriminator}"
+                role = message.author.top_role.name
 
                 # Store the message data
                 message_ids.append(message.id)
                 message_log.append({
                     "content": content,
                     "author": author,
+                    "role": role.lower(),
                     "timestamp": message.created_at.strftime("%D %H:%M")
                 })
 
