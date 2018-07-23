@@ -26,7 +26,7 @@ COLOUR_GREEN = Colour(0x68c290)
 GUILD_CHANNEL = Union[CategoryChannel, TextChannel, VoiceChannel]
 
 CHANNEL_CHANGES_UNSUPPORTED = ("permissions",)
-CHANNEL_CHANGES_SUPPRESSED = ("_overwrites",)
+CHANNEL_CHANGES_SUPPRESSED = ("_overwrites", "position")
 MEMBER_CHANGES_SUPPRESSED = ("activity", "status")
 ROLE_CHANGES_UNSUPPORTED = ("colour", "permissions")
 
