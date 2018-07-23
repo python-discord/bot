@@ -1,10 +1,10 @@
 import logging
-from typing import List
+from typing import List, Union
 
-from discord import Color, Embed, Message, TextChannel, User
+from discord import Color, Embed, Guild, Member, Message, TextChannel, User
 from discord.ext.commands import Bot, Context, command
 
-from bot.constants import Channels, Emojis, Keys, Roles, URLs
+from bot.constants import Channels, Emojis, Guild as GuildConfig, Keys, Roles, URLs
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
 
@@ -47,6 +47,27 @@ class BigBrother:
         async with self.bot.http_session.get(URLs.site_bigbrother_api, headers=self.HEADERS) as response:
             data = await response.json()
             self.update_cache(data)
+
+    async def on_member_ban(self, guild: Guild, user: Union[User, Member]):
+        if guild.id == GuildConfig.id and user.id in self.watched_users:
+            url = f"{URLs.site_bigbrother_api}?user_id={user.id}"
+            channel = self.watched_users[user.id]
+
+            async with self.bot.http_session.delete(url, headers=self.HEADERS) as response:
+                del self.watched_users[user.id]
+                if response.status == 204:
+                    await channel.send(
+                        f"{Emojis.lemoneye2}:hammer: {user} got banned, so "
+                        f"`BigBrother` will no longer relay their messages to {channel}"
+                    )
+
+                else:
+                    data = await response.json()
+                    reason = data.get('error_message', "no message provided")
+                    await channel.send(
+                        f"{Emojis.lemoneye2}:x: {user} got banned, but trying to remove them from"
+                        f"BigBrother's user dictionary on the API returned an error: {reason}"
+                    )
 
     async def on_message(self, msg: Message):
         if msg.author.id in self.watched_users:
