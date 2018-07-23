@@ -45,7 +45,7 @@ def humanize(delta: relativedelta, accuracy: str = "seconds") -> str:
     # Add the time units that are >0, but stop at accuracy.
     time_strings = []
     for unit, value in units.items():
-        if unit:
+        if value:
             time_strings.append(_plural_timestring(value, unit))
 
         if unit == accuracy:
