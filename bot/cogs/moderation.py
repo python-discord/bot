@@ -339,7 +339,7 @@ class Moderation:
     async def search(self, ctx, arg: InfractionSearchQuery):
         """
         Searches for infractions in the database.
-        :param arg: Either a user or a reason string.
+        :param arg: Either a user or a reason string. If a string, you can use the Re2 matching syntax.
         """
         if isinstance(arg, User):
             user: User = arg
@@ -366,20 +366,41 @@ class Moderation:
                 colour=Colour.orange()
             )
 
-            await LinePaginator.paginate(
-                lines=(self.infraction_to_string(infraction_object) for infraction_object in infraction_list),
-                ctx=ctx,
-                embed=embed,
-                empty=True,
-                max_lines=3,
-                max_size=1000
-            )
-
         elif isinstance(arg, str):
             # search by reason
-            return
+            try:
+                response = await self.bot.http_session.get(
+                    URLs.site_infractions,
+                    headers=self.headers,
+                    params={"search": arg}
+                )
+                infraction_list = await response.json()
+            except Exception:
+                log.exception("There was an error fetching infractions.")
+                await ctx.send(":x: There was an error fetching infraction.")
+                return
+
+            if not infraction_list:
+                await ctx.send(f":warning: No infractions matching \"{arg}\".")
+                return
+
+            embed = Embed(
+                title=f"Infractions matching \"{arg}\" ({len(infraction_list)} total)",
+                colour=Colour.orange()
+            )
+
         else:
             await ctx.send(":x: Invalid infraction search query.")
+            return
+
+        await LinePaginator.paginate(
+            lines=(self.infraction_to_string(infraction_object) for infraction_object in infraction_list),
+            ctx=ctx,
+            embed=embed,
+            empty=True,
+            max_lines=3,
+            max_size=1000
+        )
 
     # Utility functions
 
