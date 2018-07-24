@@ -142,12 +142,12 @@ class ModLog:
                 continue
 
             if key in CHANNEL_CHANGES_UNSUPPORTED:
-                changes.append(f"{key.title()} updated")
+                changes.append(f"**{key.title()}** updated")
             else:
                 new = value["new_value"]
                 old = value["old_value"]
 
-                changes.append(f"{key.title()}: `{old}` -> `{new}`")
+                changes.append(f"**{key.title()}:** `{old}` **->** `{new}`")
 
             done.append(key)
 
@@ -162,7 +162,7 @@ class ModLog:
         if after.category:
             message = f"**{after.category}/#{after.name} (`{after.id}`)**\n{message}"
         else:
-            message = f"**#{after.name} (`{after.id}`)**\n{message}"
+            message = f"**#{after.name}** (`{after.id}`)\n{message}"
 
         await self.send_log_message(
             Icons.hash_blurple, Colour.blurple(),
@@ -214,12 +214,12 @@ class ModLog:
                 continue
 
             if key in ROLE_CHANGES_UNSUPPORTED:
-                changes.append(f"{key.title()} updated")
+                changes.append(f"**{key.title()}** updated")
             else:
                 new = value["new_value"]
                 old = value["old_value"]
 
-                changes.append(f"{key.title()}: `{old}` -> `{new}`")
+                changes.append(f"**{key.title()}:** `{old}` **->** `{new}`")
 
             done.append(key)
 
@@ -231,7 +231,7 @@ class ModLog:
         for item in sorted(changes):
             message += f"{BULLET_POINT} {item}\n"
 
-        message = f"**{after.name} (`{after.id}`)**\n{message}"
+        message = f"**{after.name}** (`{after.id}`)\n{message}"
 
         await self.send_log_message(
             Icons.crown_blurple, Colour.blurple(),
@@ -267,7 +267,7 @@ class ModLog:
             new = value["new_value"]
             old = value["old_value"]
 
-            changes.append(f"{key.title()}: `{old}` -> `{new}`")
+            changes.append(f"**{key.title()}:** `{old}` **->** `{new}`")
 
             done.append(key)
 
@@ -279,7 +279,7 @@ class ModLog:
         for item in sorted(changes):
             message += f"{BULLET_POINT} {item}\n"
 
-        message = f"**{after.name} (`{after.id}`)**\n{message}"
+        message = f"**{after.name}** (`{after.id}`)\n{message}"
 
         await self.send_log_message(
             Icons.guild_update, Colour.blurple(),
@@ -345,10 +345,19 @@ class ModLog:
         changes = []
         done = []
 
-        diff_values = diff.get("values_changed", {})
+        diff_values = {}
+
+        diff_values.update(diff.get("values_changed", {}))
         diff_values.update(diff.get("type_changes", {}))
         diff_values.update(diff.get("iterable_item_removed", {}))
         diff_values.update(diff.get("iterable_item_added", {}))
+
+        diff_user = DeepDiff(before._user, after._user)
+
+        diff_values.update(diff_user.get("values_changed", {}))
+        diff_values.update(diff_user.get("type_changes", {}))
+        diff_values.update(diff_user.get("iterable_item_removed", {}))
+        diff_values.update(diff_user.get("iterable_item_added", {}))
 
         for key, value in diff_values.items():
             if not key:  # Not sure why, but it happens
@@ -371,19 +380,29 @@ class ModLog:
 
                 for role in old_roles:
                     if role not in new_roles:
-                        changes.append(f"Role removed: {role.name} (`{role.id}`)")
+                        changes.append(f"**Role removed:** {role.name} (`{role.id}`)")
 
                 for role in new_roles:
                     if role not in old_roles:
-                        changes.append(f"Role added: {role.name} (`{role.id}`)")
+                        changes.append(f"**Role added:** {role.name} (`{role.id}`)")
 
             else:
                 new = value["new_value"]
                 old = value["old_value"]
 
-                changes.append(f"{key.title()}: `{old}` -> `{new}`")
+                changes.append(f"**{key.title()}:** `{old}` **->** `{new}`")
 
             done.append(key)
+
+        if before.name != after.name:
+            changes.append(
+                f"**Username:** `{before.name}` **->** `{after.name}`"
+            )
+
+        if before.discriminator != after.discriminator:
+            changes.append(
+                f"**Discriminator:** `{before.discriminator}` **->** `{after.discriminator}`"
+            )
 
         if not changes:
             return
@@ -393,7 +412,7 @@ class ModLog:
         for item in sorted(changes):
             message += f"{BULLET_POINT} {item}\n"
 
-        message = f"**{after.name}#{after.discriminator} (`{after.id}`)**\n{message}"
+        message = f"**{after.name}#{after.discriminator}** (`{after.id}`)\n{message}"
 
         await self.send_log_message(
             Icons.user_update, Colour.blurple(),
