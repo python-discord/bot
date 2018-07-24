@@ -46,7 +46,7 @@ class Moderation:
         """
 
         try:
-            await self.bot.http_session.post(
+            response = await self.bot.http_session.post(
                 URLs.site_infractions,
                 headers=self.headers,
                 json={
@@ -59,6 +59,12 @@ class Moderation:
         except Exception:
             log.exception("There was an error adding an infraction.")
             await ctx.send(":x: There was an error adding the infraction.")
+            return
+
+        response_object = await response.json()
+        if "error_code" in response_object:
+            # something went wrong
+            await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
             return
 
         if reason is None:
@@ -77,7 +83,7 @@ class Moderation:
         :param reason: Wrap in quotes to make reason larger than one word.
         """
         try:
-            await self.bot.http_session.post(
+            response = await self.bot.http_session.post(
                 URLs.site_infractions,
                 headers=self.headers,
                 json={
@@ -90,6 +96,12 @@ class Moderation:
         except Exception:
             log.exception("There was an error adding an infraction.")
             await ctx.send(":x: There was an error adding the infraction.")
+            return
+
+        response_object = await response.json()
+        if "error_code" in response_object:
+            # something went wrong
+            await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
             return
 
         guild: Guild = ctx.guild
@@ -111,7 +123,7 @@ class Moderation:
         :param reason: Wrap in quotes to make reason larger than one word.
         """
         try:
-            await self.bot.http_session.post(
+            response = await self.bot.http_session.post(
                 URLs.site_infractions,
                 headers=self.headers,
                 json={
@@ -124,6 +136,12 @@ class Moderation:
         except Exception:
             log.exception("There was an error adding an infraction.")
             await ctx.send(":x: There was an error adding the infraction.")
+            return
+
+        response_object = await response.json()
+        if "error_code" in response_object:
+            # something went wrong
+            await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
             return
 
         await user.edit(reason=reason, mute=True)
@@ -182,18 +200,76 @@ class Moderation:
 
         await ctx.send(result_message)
 
+    @with_role(Roles.admin, Roles.owner, Roles.moderator)
+    @command(name="moderation.tempban")
+    async def tempban(self, ctx, user: User, duration: str, reason: str = None):
+        """
+        Create a temporary ban infraction in the database for a user.
+        :param user: Accepts user mention, ID, etc.
+        :param duration: The duration for the temporary ban infraction
+        :param reason: Wrap in quotes to make reason larger than one word.
+        """
+        try:
+            response = await self.bot.http_session.post(
+                URLs.site_infractions,
+                headers=self.headers,
+                json={
+                    "type": "ban",
+                    "reason": reason,
+                    "duration": duration,
+                    "user_id": str(user.id),
+                    "actor_id": str(ctx.message.author.id)
+                }
+            )
+        except Exception:
+            log.exception("There was an error adding an infraction.")
+            await ctx.send(":x: There was an error adding the infraction.")
+            return
+
+        response_object = await response.json()
+        if "error_code" in response_object:
+            # something went wrong
+            await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
+            return
+
+        guild: Guild = ctx.guild
+        await guild.ban(user, reason=reason)
+
+        infraction_object = response_object["infraction"]
+        infraction_expiration = infraction_object["expires_at"]
+
+        loop = asyncio.get_event_loop()
+        self.schedule_expiration(loop, infraction_object)
+
+        if reason is None:
+            result_message = f":ok_hand: banned {user.mention} until {infraction_expiration}."
+        else:
+            result_message = f":ok_hand: banned {user.mention} until {infraction_expiration} ({reason})."
+
+        await ctx.send(result_message)
+
     def schedule_expiration(self, loop: asyncio.AbstractEventLoop, infraction_object: dict):
         infraction_id = infraction_object["id"]
         if infraction_id in self.expiration_tasks:
             return
 
-        task: asyncio.Task = loop.create_task(self._scheduled_expiration(infraction_object))
+        task: asyncio.Task = asyncio.ensure_future(self._scheduled_expiration(infraction_object), loop=loop)
+        # Silently ignore exceptions in a callback (handles the CancelledError nonsense)
+        task.add_done_callback(lambda future: future.exception())
+
         self.expiration_tasks[infraction_id] = task
 
+    def cancel_expiration(self, infraction_id: str):
+        task = self.expiration_tasks.get(infraction_id)
+        if task is None:
+            log.warning(f"Failed to unschedule {infraction_id}: no task found.")
+            return
+        task.cancel()
+        log.debug(f"Unscheduled {infraction_id}.")
+        del self.expiration_tasks[infraction_id]
+
     async def _scheduled_expiration(self, infraction_object):
-        guild: Guild = self.bot.get_guild(constants.Guild.id)
         infraction_id = infraction_object["id"]
-        infraction_type = infraction_object["type"]
 
         # transform expiration to delay in seconds
         expiration_datetime = parse_rfc1123(infraction_object["expires_at"])
@@ -205,7 +281,14 @@ class Moderation:
             await asyncio.sleep(delay_seconds)
 
         log.debug(f"Marking infraction {infraction_id} as inactive (expired).")
+        await self._deactivate_infraction(infraction_object)
+
+        self.cancel_expiration(infraction_object["id"])
+
+    async def _deactivate_infraction(self, infraction_object):
+        guild: Guild = self.bot.get_guild(constants.Guild.id)
         user_id = infraction_object["user"]["user_id"]
+        infraction_type = infraction_object["type"]
 
         if infraction_type == "mute":
             member: Member = guild.get_member(user_id)
@@ -219,7 +302,7 @@ class Moderation:
             URLs.site_infractions,
             headers=self.headers,
             json={
-                "id": infraction_id,
+                "id": infraction_object["id"],
                 "active": False
             }
         )
