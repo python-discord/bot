@@ -3,12 +3,14 @@ import datetime
 import logging
 from typing import Dict
 
-from discord import Guild, Member, User
+from discord import Colour, Embed, Guild, Member, User
 from discord.ext.commands import Bot, Context, command
 
 from bot import constants
 from bot.constants import Keys, Roles, URLs
+from bot.converters import InfractionSearchQuery
 from bot.decorators import with_role
+from bot.pagination import LinePaginator
 
 log = logging.getLogger(__name__)
 
@@ -35,6 +37,8 @@ class Moderation:
         for infraction_object in infraction_list:
             if infraction_object["expires_at"] is not None:
                 self.schedule_expiration(loop, infraction_object)
+
+    # Permanent infractions
 
     @with_role(Roles.admin, Roles.owner, Roles.moderator)
     @command(name="moderation.warn")
@@ -153,6 +157,8 @@ class Moderation:
 
         await ctx.send(result_message)
 
+    # Temporary infractions
+
     @with_role(Roles.admin, Roles.owner, Roles.moderator)
     @command(name="moderation.tempmute")
     async def tempmute(self, ctx: Context, user: Member, duration: str, reason: str = None):
@@ -248,6 +254,8 @@ class Moderation:
 
         await ctx.send(result_message)
 
+    # Remove infractions (un- commands)
+
     @with_role(Roles.admin, Roles.owner, Roles.moderator)
     @command(name="moderation.unmute")
     async def unmute(self, ctx, user: Member):
@@ -324,6 +332,54 @@ class Moderation:
             await ctx.send(":x: There was an error removing the infraction.")
             return
 
+    @with_role(Roles.admin, Roles.owner, Roles.moderator)
+    @command(name="infraction.search")
+    async def search(self, ctx, arg: InfractionSearchQuery):
+        """
+        Searches for infractions in the database.
+        :param arg: Either a user or a reason string.
+        """
+        if isinstance(arg, User):
+            user: User = arg
+            # get infractions for this user
+            try:
+                response = await self.bot.http_session.get(
+                    URLs.site_infractions_user.format(
+                        user_id=user.id
+                    ),
+                    headers=self.headers
+                )
+                infraction_list = await response.json()
+            except Exception:
+                log.exception("There was an error fetching infractions.")
+                await ctx.send(":x: There was an error fetching infraction.")
+                return
+
+            if not infraction_list:
+                await ctx.send(f":warning: No infractions found for {user}.")
+                return
+
+            embed = Embed(
+                title=f"Infractions for {user} ({len(infraction_list)} total)",
+                colour=Colour.orange()
+            )
+
+            await LinePaginator.paginate(
+                lines=(infraction_to_string(infraction_object) for infraction_object in infraction_list),
+                ctx=ctx,
+                embed=embed,
+                empty=True,
+                max_lines=5
+            )
+
+        elif isinstance(arg, str):
+            # search by reason
+            return
+        else:
+            await ctx.send(":x: Invalid infraction search query.")
+
+    # Utility functions
+
     def schedule_expiration(self, loop: asyncio.AbstractEventLoop, infraction_object: dict):
         infraction_id = infraction_object["id"]
         if infraction_id in self.expiration_tasks:
@@ -398,6 +454,17 @@ def _silent_exception(future):
         future.exception()
     except Exception:
         pass
+
+
+def infraction_to_string(infraction_object):
+    return "\n".join((
+        "===============",
+        "Type: **{0}**".format(infraction_object["type"]),
+        "Reason: {0}".format(infraction_object["reason"] or "*None*"),
+        "Created: {0}".format(infraction_object["inserted_at"]),
+        "Expires: {0}".format(infraction_object["expires_at"] or "*Permanent*"),
+        "===============",
+    ))
 
 
 def setup(bot):

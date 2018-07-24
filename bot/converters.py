@@ -4,7 +4,7 @@ from ssl import CertificateError
 
 import discord
 from aiohttp import AsyncResolver, ClientConnectorError, ClientSession, TCPConnector
-from discord.ext.commands import BadArgument, Converter
+from discord.ext.commands import BadArgument, Converter, UserConverter
 from fuzzywuzzy import fuzz
 
 from bot.constants import DEBUG_MODE, Keys, URLs
@@ -157,3 +157,18 @@ class ValidURL(Converter):
         except ClientConnectorError:
             raise BadArgument(f"Cannot connect to host with URL `{url}`.")
         return url
+
+
+class InfractionSearchQuery(Converter):
+    """
+    A converter that checks if the argument is a Discord user, and if not, fall-backs to a string.
+    """
+
+    @staticmethod
+    async def convert(ctx, arg):
+        try:
+            user_converter = UserConverter()
+            user = await user_converter.convert(ctx, arg)
+        except Exception:
+            return arg
+        return user or arg
