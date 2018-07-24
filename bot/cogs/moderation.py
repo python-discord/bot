@@ -3,7 +3,7 @@ import datetime
 import logging
 from typing import Dict
 
-from discord import Colour, Embed, Guild, Member, User
+from discord import Colour, Embed, Guild, Member, Object, User
 from discord.ext.commands import Bot, Context, command
 
 from bot import constants
@@ -24,6 +24,7 @@ class Moderation:
         self.bot = bot
         self.headers = {"X-API-KEY": Keys.site_api}
         self.expiration_tasks: Dict[str, asyncio.Task] = {}
+        self._muted_role = Object(constants.Roles.muted)
 
     async def on_ready(self):
         # Schedule expiration for previous infractions
@@ -148,7 +149,8 @@ class Moderation:
             await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
             return
 
-        await user.edit(reason=reason, mute=True)
+        # add the mute role
+        await user.add_roles(self._muted_role, reason=reason)
 
         if reason is None:
             result_message = f":ok_hand: permanently muted {user.mention}."
@@ -191,7 +193,7 @@ class Moderation:
             await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
             return
 
-        await user.edit(reason=reason, mute=True)
+        await user.add_roles(self._muted_role, reason=reason)
 
         infraction_object = response_object["infraction"]
         infraction_expiration = infraction_object["expires_at"]
@@ -322,7 +324,7 @@ class Moderation:
                 await ctx.send(f":x: There is no active ban infraction for user {user.mention}.")
                 return
 
-            await self._deactivate_infraction(infraction_object, user=user)
+            await self._deactivate_infraction(infraction_object)
             if infraction_object["expires_at"] is not None:
                 self.cancel_expiration(infraction_object["id"])
 
@@ -365,7 +367,7 @@ class Moderation:
             )
 
             await LinePaginator.paginate(
-                lines=(infraction_to_string(infraction_object) for infraction_object in infraction_list),
+                lines=(self.infraction_to_string(infraction_object) for infraction_object in infraction_list),
                 ctx=ctx,
                 embed=embed,
                 empty=True,
@@ -418,18 +420,20 @@ class Moderation:
 
         self.cancel_expiration(infraction_object["id"])
 
-    async def _deactivate_infraction(self, infraction_object, user: User = None):
+    async def _deactivate_infraction(self, infraction_object):
         guild: Guild = self.bot.get_guild(constants.Guild.id)
-        user_id = infraction_object["user"]["user_id"]
+        user_id = int(infraction_object["user"]["user_id"])
         infraction_type = infraction_object["type"]
 
         if infraction_type == "mute":
             member: Member = guild.get_member(user_id)
             if member:
-                await member.edit(mute=False)
+                # remove the mute role
+                await member.remove_roles(self._muted_role)
+            else:
+                log.warning(f"Failed to un-mute user: {user_id} (not found)")
         elif infraction_type == "ban":
-            if user is None:
-                user: User = self.bot.get_user(user_id)
+            user: User = self.bot.get_user(user_id)
             await guild.unban(user)
 
         await self.bot.http_session.patch(
@@ -440,6 +444,21 @@ class Moderation:
                 "active": False
             }
         )
+
+    def infraction_to_string(self, infraction_object):
+        actor_id = int(infraction_object["actor"]["user_id"])
+        guild: Guild = self.bot.get_guild(constants.Guild.id)
+        actor = guild.get_member(actor_id)
+
+        return "\n".join((
+            "===============",
+            "Type: **{0}**".format(infraction_object["type"]),
+            "Reason: {0}".format(infraction_object["reason"] or "*None*"),
+            "Created: {0}".format(infraction_object["inserted_at"]),
+            "Expires: {0}".format(infraction_object["expires_at"] or "*Permanent*"),
+            "Actor: {0}".format(actor.mention if actor else actor_id),
+            "===============",
+        ))
 
 
 RFC1123_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
@@ -454,17 +473,6 @@ def _silent_exception(future):
         future.exception()
     except Exception:
         pass
-
-
-def infraction_to_string(infraction_object):
-    return "\n".join((
-        "===============",
-        "Type: **{0}**".format(infraction_object["type"]),
-        "Reason: {0}".format(infraction_object["reason"] or "*None*"),
-        "Created: {0}".format(infraction_object["inserted_at"]),
-        "Expires: {0}".format(infraction_object["expires_at"] or "*Permanent*"),
-        "===============",
-    ))
 
 
 def setup(bot):
