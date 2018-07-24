@@ -371,7 +371,8 @@ class Moderation:
                 ctx=ctx,
                 embed=embed,
                 empty=True,
-                max_lines=5
+                max_lines=3,
+                max_size=1000
             )
 
         elif isinstance(arg, str):
@@ -449,15 +450,17 @@ class Moderation:
         actor_id = int(infraction_object["actor"]["user_id"])
         guild: Guild = self.bot.get_guild(constants.Guild.id)
         actor = guild.get_member(actor_id)
+        active = infraction_object["active"] is True
 
         return "\n".join((
-            "===============",
+            "**===============**" if active else "===============",
+            "Status: {0}".format("__**Active**__" if active else "Inactive"),
             "Type: **{0}**".format(infraction_object["type"]),
             "Reason: {0}".format(infraction_object["reason"] or "*None*"),
             "Created: {0}".format(infraction_object["inserted_at"]),
             "Expires: {0}".format(infraction_object["expires_at"] or "*Permanent*"),
             "Actor: {0}".format(actor.mention if actor else actor_id),
-            "===============",
+            "**===============**" if active else "==============="
         ))
 
 
