@@ -428,11 +428,11 @@ class Moderation:
                 return
 
             if not infraction_list:
-                await ctx.send(f":warning: No infractions matching \"{arg}\".")
+                await ctx.send(f":warning: No infractions matching `{arg}`.")
                 return
 
             embed = Embed(
-                title=f"Infractions matching \"{arg}\" ({len(infraction_list)} total)",
+                title=f"Infractions matching `{arg}` ({len(infraction_list)} total)",
                 colour=Colour.orange()
             )
 
@@ -559,7 +559,4 @@ def _silent_exception(future):
 
 def setup(bot):
     bot.add_cog(Moderation(bot))
-    # Here we'll need to call a command I haven't made yet
-    # It'll check the expiry queue and automatically set up tasks for
-    # temporary bans, mutes, etc.
     log.info("Cog loaded: Moderation")
