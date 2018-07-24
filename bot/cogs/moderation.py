@@ -394,7 +394,10 @@ class Moderation:
             return
 
         await LinePaginator.paginate(
-            lines=(self.infraction_to_string(infraction_object) for infraction_object in infraction_list),
+            lines=(
+                self.infraction_to_string(infraction_object, show_user=isinstance(arg, str))
+                for infraction_object in infraction_list
+            ),
             ctx=ctx,
             embed=embed,
             empty=True,
@@ -467,13 +470,13 @@ class Moderation:
             }
         )
 
-    def infraction_to_string(self, infraction_object):
+    def infraction_to_string(self, infraction_object, show_user=False):
         actor_id = int(infraction_object["actor"]["user_id"])
         guild: Guild = self.bot.get_guild(constants.Guild.id)
         actor = guild.get_member(actor_id)
         active = infraction_object["active"] is True
 
-        return "\n".join((
+        lines = [
             "**===============**" if active else "===============",
             "Status: {0}".format("__**Active**__" if active else "Inactive"),
             "Type: **{0}**".format(infraction_object["type"]),
@@ -482,7 +485,14 @@ class Moderation:
             "Expires: {0}".format(infraction_object["expires_at"] or "*Permanent*"),
             "Actor: {0}".format(actor.mention if actor else actor_id),
             "**===============**" if active else "==============="
-        ))
+        ]
+
+        if show_user:
+            user_id = int(infraction_object["user"]["user_id"])
+            user = self.bot.get_user(user_id)
+            lines.insert(1, "User: {0}".format(user.mention if user else user_id))
+
+        return "\n".join(lines)
 
 
 RFC1123_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
