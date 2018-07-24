@@ -14,6 +14,8 @@ from bot.pagination import LinePaginator
 
 log = logging.getLogger(__name__)
 
+MODERATION_ROLES = Roles.owner, Roles.admin, Roles.moderator
+
 
 class Moderation:
     """
@@ -41,7 +43,7 @@ class Moderation:
 
     # Permanent infractions
 
-    @with_role(Roles.admin, Roles.owner, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     @command(name="moderation.warn")
     async def warn(self, ctx: Context, user: User, reason: str = None):
         """
@@ -79,7 +81,7 @@ class Moderation:
 
         await ctx.send(result_message)
 
-    @with_role(Roles.admin, Roles.owner, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     @command(name="moderation.ban")
     async def ban(self, ctx: Context, user: User, reason: str = None):
         """
@@ -119,7 +121,7 @@ class Moderation:
 
         await ctx.send(result_message)
 
-    @with_role(Roles.admin, Roles.owner, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     @command(name="moderation.mute")
     async def mute(self, ctx: Context, user: Member, reason: str = None):
         """
@@ -161,7 +163,7 @@ class Moderation:
 
     # Temporary infractions
 
-    @with_role(Roles.admin, Roles.owner, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     @command(name="moderation.tempmute")
     async def tempmute(self, ctx: Context, user: Member, duration: str, reason: str = None):
         """
@@ -208,7 +210,7 @@ class Moderation:
 
         await ctx.send(result_message)
 
-    @with_role(Roles.admin, Roles.owner, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     @command(name="moderation.tempban")
     async def tempban(self, ctx, user: User, duration: str, reason: str = None):
         """
@@ -258,7 +260,7 @@ class Moderation:
 
     # Remove infractions (un- commands)
 
-    @with_role(Roles.admin, Roles.owner, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     @command(name="moderation.unmute")
     async def unmute(self, ctx, user: Member):
         """
@@ -296,7 +298,7 @@ class Moderation:
             await ctx.send(":x: There was an error removing the infraction.")
             return
 
-    @with_role(Roles.admin, Roles.owner, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     @command(name="moderation.unban")
     async def unban(self, ctx, user: User):
         """
@@ -334,7 +336,52 @@ class Moderation:
             await ctx.send(":x: There was an error removing the infraction.")
             return
 
-    @with_role(Roles.admin, Roles.owner, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
+    @command(name="infraction.edit.duration")
+    async def edit_duration(self, ctx, infraction_id: str, duration: str):
+        """
+        Sets the duration of the given infraction, relative to the time of updating.
+        :param infraction_id: the id (UUID) of the infraction
+        :param duration: the new duration of the infraction, relative to the time of updating. Use "permanent" to mark
+        the infraction as permanent.
+        """
+        try:
+            if duration == "permanent":
+                duration = None
+            # check the current active infraction
+            response = await self.bot.http_session.patch(
+                URLs.site_infractions,
+                json={
+                    "id": infraction_id,
+                    "duration": duration
+                },
+                headers=self.headers
+            )
+            response_object = await response.json()
+            if "error_code" in response_object or response_object.get("success") is False:
+                # something went wrong
+                await ctx.send(f":x: There was an error updating the infraction: {response_object['error_message']}")
+                return
+
+            infraction_object = response_object["infraction"]
+            # Re-schedule
+            self.cancel_expiration(infraction_id)
+            loop = asyncio.get_event_loop()
+            self.schedule_expiration(loop, infraction_object)
+
+            if duration is None:
+                await ctx.send(f":ok_hand: Updated infraction: marked as permanent.")
+            else:
+                await ctx.send(f":ok_hand: Updated infraction: set to expire on {infraction_object['expires_at']}.")
+
+        except Exception:
+            log.exception("There was an error updating an infraction.")
+            await ctx.send(":x: There was an error updating the infraction.")
+            return
+
+    # Search infractions
+
+    @with_role(*MODERATION_ROLES)
     @command(name="infraction.search")
     async def search(self, ctx, arg: InfractionSearchQuery):
         """
@@ -484,6 +531,7 @@ class Moderation:
             "Created: {0}".format(infraction_object["inserted_at"]),
             "Expires: {0}".format(infraction_object["expires_at"] or "*Permanent*"),
             "Actor: {0}".format(actor.mention if actor else actor_id),
+            "ID: `{0}`".format(infraction_object["id"]),
             "**===============**" if active else "==============="
         ]
 
