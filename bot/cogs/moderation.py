@@ -248,14 +248,91 @@ class Moderation:
 
         await ctx.send(result_message)
 
+    @with_role(Roles.admin, Roles.owner, Roles.moderator)
+    @command(name="moderation.unmute")
+    async def unmute(self, ctx, user: Member):
+        """
+        Deactivates the active mute infraction for a user.
+        :param user: Accepts user mention, ID, etc.
+        """
+        try:
+            # check the current active infraction
+            response = await self.bot.http_session.get(
+                URLs.site_infractions_user_type_current.format(
+                    user_id=user.id,
+                    infraction_type="mute"
+                ),
+                headers=self.headers
+            )
+            response_object = await response.json()
+            if "error_code" in response_object:
+                # something went wrong
+                await ctx.send(f":x: There was an error removing the infraction: {response_object['error_message']}")
+                return
+
+            infraction_object = response_object["infraction"]
+            if infraction_object is None:
+                # no active infraction
+                await ctx.send(f":x: There is no active mute infraction for user {user.mention}.")
+                return
+
+            await self._deactivate_infraction(infraction_object)
+            if infraction_object["expires_at"] is not None:
+                self.cancel_expiration(infraction_object["id"])
+
+            await ctx.send(f":ok_hand: Un-muted {user.mention}.")
+        except Exception:
+            log.exception("There was an error removing an infraction.")
+            await ctx.send(":x: There was an error removing the infraction.")
+            return
+
+    @with_role(Roles.admin, Roles.owner, Roles.moderator)
+    @command(name="moderation.unban")
+    async def unban(self, ctx, user: User):
+        """
+        Deactivates the active ban infraction for a user.
+        :param user: Accepts user mention, ID, etc.
+        """
+        try:
+            # check the current active infraction
+            response = await self.bot.http_session.get(
+                URLs.site_infractions_user_type_current.format(
+                    user_id=user.id,
+                    infraction_type="ban"
+                ),
+                headers=self.headers
+            )
+            response_object = await response.json()
+            if "error_code" in response_object:
+                # something went wrong
+                await ctx.send(f":x: There was an error removing the infraction: {response_object['error_message']}")
+                return
+
+            infraction_object = response_object["infraction"]
+            if infraction_object is None:
+                # no active infraction
+                await ctx.send(f":x: There is no active ban infraction for user {user.mention}.")
+                return
+
+            await self._deactivate_infraction(infraction_object, user=user)
+            if infraction_object["expires_at"] is not None:
+                self.cancel_expiration(infraction_object["id"])
+
+            await ctx.send(f":ok_hand: Un-banned {user.mention}.")
+        except Exception:
+            log.exception("There was an error removing an infraction.")
+            await ctx.send(":x: There was an error removing the infraction.")
+            return
+
     def schedule_expiration(self, loop: asyncio.AbstractEventLoop, infraction_object: dict):
         infraction_id = infraction_object["id"]
         if infraction_id in self.expiration_tasks:
             return
 
         task: asyncio.Task = asyncio.ensure_future(self._scheduled_expiration(infraction_object), loop=loop)
+
         # Silently ignore exceptions in a callback (handles the CancelledError nonsense)
-        task.add_done_callback(lambda future: future.exception())
+        task.add_done_callback(_silent_exception)
 
         self.expiration_tasks[infraction_id] = task
 
@@ -285,7 +362,7 @@ class Moderation:
 
         self.cancel_expiration(infraction_object["id"])
 
-    async def _deactivate_infraction(self, infraction_object):
+    async def _deactivate_infraction(self, infraction_object, user: User = None):
         guild: Guild = self.bot.get_guild(constants.Guild.id)
         user_id = infraction_object["user"]["user_id"]
         infraction_type = infraction_object["type"]
@@ -295,7 +372,8 @@ class Moderation:
             if member:
                 await member.edit(mute=False)
         elif infraction_type == "ban":
-            user: User = self.bot.get_user(user_id)
+            if user is None:
+                user: User = self.bot.get_user(user_id)
             await guild.unban(user)
 
         await self.bot.http_session.patch(
@@ -313,6 +391,13 @@ RFC1123_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
 
 def parse_rfc1123(time_str):
     return datetime.datetime.strptime(time_str, RFC1123_FORMAT).replace(tzinfo=datetime.timezone.utc)
+
+
+def _silent_exception(future):
+    try:
+        future.exception()
+    except Exception:
+        pass
 
 
 def setup(bot):

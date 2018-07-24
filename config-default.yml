@@ -89,5 +89,6 @@ urls:
     site_infractions_user: 'https://api.pythondiscord.com/bot/infractions/user/{user_id}'
     site_infractions_type: 'https://api.pythondiscord.com/bot/infractions/type/{infraction_type}'
     site_infractions_by_id: 'https://api.pythondiscord.com/bot/infractions/id/{infraction_id}'
+    site_infractions_user_type_current: 'https://api.pythondiscord.com/bot/infractions/user/{user_id}/{infraction_type}/current'
     status: !ENV 'STATUS_URL'
     paste_service: 'https://paste.pydis.com/{key}'

@@ -265,7 +265,8 @@ class URLs(metaclass=YAMLGetter):
     site_infractions: str
     site_infractions_user: str
     site_infractions_type: str
-    site_infractions_by_id: str
+    site_infractions_user_type_current: str
+    site_infractions_user_type: str
     status: str
     paste_service: str
 
