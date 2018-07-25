@@ -17,7 +17,7 @@ bot = Bot(
         "self.", "bot."
     ),
     activity=Game(
-        name="Help: bot.help()"
+        name="Commands: bot.help()"
     ),
     help_attrs={
         "name": "help()",
