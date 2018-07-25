@@ -375,6 +375,8 @@ class Moderation:
             await ctx.send(":x: There was an error removing the infraction.")
             return
 
+    # Edit infraction commands
+
     @with_role(*MODERATION_ROLES)
     @command(name="infraction.edit.duration")
     async def edit_duration(self, ctx, infraction_id: str, duration: str):
@@ -413,6 +415,35 @@ class Moderation:
             else:
                 await ctx.send(f":ok_hand: Updated infraction: set to expire on {infraction_object['expires_at']}.")
 
+        except Exception:
+            log.exception("There was an error updating an infraction.")
+            await ctx.send(":x: There was an error updating the infraction.")
+            return
+
+    @with_role(*MODERATION_ROLES)
+    @command(name="infraction.edit.reason")
+    async def edit_reason(self, ctx, infraction_id: str, reason: str):
+        """
+        Sets the reason of the given infraction.
+        :param infraction_id: the id (UUID) of the infraction
+        :param reason: the new reason of the infraction
+        """
+        try:
+            response = await self.bot.http_session.patch(
+                URLs.site_infractions,
+                json={
+                    "id": infraction_id,
+                    "reason": reason
+                },
+                headers=self.headers
+            )
+            response_object = await response.json()
+            if "error_code" in response_object or response_object.get("success") is False:
+                # something went wrong
+                await ctx.send(f":x: There was an error updating the infraction: {response_object['error_message']}")
+                return
+
+            await ctx.send(f":ok_hand: Updated infraction: set reason to \"{reason}\".")
         except Exception:
             log.exception("There was an error updating an infraction.")
             await ctx.send(":x: There was an error updating the infraction.")
