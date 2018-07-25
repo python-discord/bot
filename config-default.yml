@@ -81,18 +81,19 @@ guild:
         helpers:                          267630620367257601
 
 
-censor:
+filtering:
+
     # What do we filter?
     filter_zalgo:      true
     filter_invites:    true
     filter_domains:    true
-    filter_expression: true
+    watch_expressions: true
 
     # Filter configuration
     domain_blacklist:
         - pornhub.com
 
-    blocked_expressions:
+    watched_expressions:
         - .*ni[g]*er.*
 
     guild_invite_whitelist:
@@ -109,7 +110,7 @@ censor:
         - *DEVLOG
         - *BBLOGS
         - *STAFF_LOUNGE
-#       - *DEVTEST
+        - *DEVTEST
 
     role_whitelist:
         - *ADMIN_ROLE

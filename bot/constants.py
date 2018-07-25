@@ -191,16 +191,16 @@ class Bot(metaclass=YAMLGetter):
     token: str
 
 
-class Censor(metaclass=YAMLGetter):
-    section = "censor"
+class Filtering(metaclass=YAMLGetter):
+    section = "filtering"
 
     filter_zalgo: bool
     filter_invites: bool
     filter_domain: bool
-    filter_expression: bool
+    watch_expressions: bool
 
     domain_blacklist: List[str]
-    blocked_expressions: List[str]
+    watched_expressions: List[str]
     guild_invite_whitelist: List[str]
 
     channel_whitelist: List[int]
