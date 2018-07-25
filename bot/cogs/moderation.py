@@ -3,6 +3,7 @@ import datetime
 import logging
 from typing import Dict
 
+from aiohttp import ClientError
 from discord import Colour, Embed, Guild, Member, Object, User
 from discord.ext.commands import Bot, Context, command
 
@@ -63,7 +64,7 @@ class Moderation:
                     "actor_id": str(ctx.message.author.id)
                 }
             )
-        except Exception:
+        except ClientError:
             log.exception("There was an error adding an infraction.")
             await ctx.send(":x: There was an error adding the infraction.")
             return
@@ -100,7 +101,7 @@ class Moderation:
                     "actor_id": str(ctx.message.author.id)
                 }
             )
-        except Exception:
+        except ClientError:
             log.exception("There was an error adding an infraction.")
             await ctx.send(":x: There was an error adding the infraction.")
             return
@@ -139,7 +140,7 @@ class Moderation:
                     "actor_id": str(ctx.message.author.id)
                 }
             )
-        except Exception:
+        except ClientError:
             log.exception("There was an error adding an infraction.")
             await ctx.send(":x: There was an error adding the infraction.")
             return
@@ -179,7 +180,7 @@ class Moderation:
                     "actor_id": str(ctx.message.author.id)
                 }
             )
-        except Exception:
+        except ClientError:
             log.exception("There was an error adding an infraction.")
             await ctx.send(":x: There was an error adding the infraction.")
             return
@@ -224,7 +225,7 @@ class Moderation:
                     "actor_id": str(ctx.message.author.id)
                 }
             )
-        except Exception:
+        except ClientError:
             log.exception("There was an error adding an infraction.")
             await ctx.send(":x: There was an error adding the infraction.")
             return
@@ -271,7 +272,7 @@ class Moderation:
                     "actor_id": str(ctx.message.author.id)
                 }
             )
-        except Exception:
+        except ClientError:
             log.exception("There was an error adding an infraction.")
             await ctx.send(":x: There was an error adding the infraction.")
             return
@@ -473,7 +474,7 @@ class Moderation:
                     headers=self.headers
                 )
                 infraction_list = await response.json()
-            except Exception:
+            except ClientError:
                 log.exception("There was an error fetching infractions.")
                 await ctx.send(":x: There was an error fetching infraction.")
                 return
@@ -496,7 +497,7 @@ class Moderation:
                     params={"search": arg}
                 )
                 infraction_list = await response.json()
-            except Exception:
+            except ClientError:
                 log.exception("There was an error fetching infractions.")
                 await ctx.send(":x: There was an error fetching infraction.")
                 return
