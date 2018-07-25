@@ -150,8 +150,7 @@ class Moderation:
             await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
             return
 
-        guild: Guild = ctx.guild
-        await guild.ban(user, reason=reason)
+        await ctx.guild.ban(user, reason=reason)
 
         if reason is None:
             result_message = f":ok_hand: permanently banned {user.mention}."
