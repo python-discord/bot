@@ -38,11 +38,6 @@ bot:
         user_update: "https://cdn.discordapp.com/emojis/469952898684551168.png"
 
 
-
-
-
-
-
 guild:
     id: 267624335836053506
 
@@ -87,7 +82,6 @@ guild:
 
 
 censor:
-
     # What do we filter?
     filter_zalgo:      true
     filter_invites:    true
@@ -110,12 +104,12 @@ censor:
     # Censor doesn't apply to these
     channel_whitelist:
         - *ADMINS
-        - *DEVTEST
         - *MODLOG
         - *MESSAGE_LOG
         - *DEVLOG
         - *BBLOGS
         - *STAFF_LOUNGE
+#       - *DEVTEST
 
     role_whitelist:
         - *ADMIN_ROLE

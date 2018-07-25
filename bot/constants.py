@@ -191,6 +191,51 @@ class Bot(metaclass=YAMLGetter):
     token: str
 
 
+class Censor(metaclass=YAMLGetter):
+    section = "censor"
+
+    filter_zalgo: bool
+    filter_invites: bool
+    filter_domain: bool
+    filter_expression: bool
+
+    domain_blacklist: List[str]
+    blocked_expressions: List[str]
+    guild_invite_whitelist: List[str]
+
+    channel_whitelist: List[int]
+    role_whitelist: List[int]
+
+
+class Channels(metaclass=YAMLGetter):
+    section = "guild"
+    subsection = "channels"
+
+    admins: int
+    announcements: int
+    big_brother_logs: int
+    bot: int
+    checkpoint_test: int
+    devalerts: int
+    devlog: int
+    devtest: int
+    help_0: int
+    help_1: int
+    help_2: int
+    help_3: int
+    help_4: int
+    help_5: int
+    helpers: int
+    message_log: int
+    modlog: int
+    off_topic_1: int
+    off_topic_2: int
+    off_topic_3: int
+    python: int
+    staff_lounge: int
+    verification: int
+
+
 class Cooldowns(metaclass=YAMLGetter):
     section = "bot"
     subsection = "cooldowns"
@@ -234,35 +279,6 @@ class Icons(metaclass=YAMLGetter):
     user_ban: str
     user_unban: str
     user_update: str
-
-
-class Channels(metaclass=YAMLGetter):
-    section = "guild"
-    subsection = "channels"
-
-    admins: int
-    announcements: int
-    big_brother_logs: int
-    bot: int
-    checkpoint_test: int
-    devalerts: int
-    devlog: int
-    devtest: int
-    help_0: int
-    help_1: int
-    help_2: int
-    help_3: int
-    help_4: int
-    help_5: int
-    helpers: int
-    message_log: int
-    modlog: int
-    off_topic_1: int
-    off_topic_2: int
-    off_topic_3: int
-    python: int
-    staff_lounge: int
-    verification: int
 
 
 class Roles(metaclass=YAMLGetter):
