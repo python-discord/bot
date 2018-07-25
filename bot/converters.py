@@ -161,7 +161,7 @@ class ValidURL(Converter):
 
 class InfractionSearchQuery(Converter):
     """
-    A converter that checks if the argument is a Discord user, and if not, fall-backs to a string.
+    A converter that checks if the argument is a Discord user, and if not, falls back to a string.
     """
 
     @staticmethod

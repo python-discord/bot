@@ -88,6 +88,7 @@ class Moderation:
         :param user: accepts user mention, ID, etc.
         :param reason: the reason for the kick. Wrap in string quotes for multiple words.
         """
+
         try:
             response = await self.bot.http_session.post(
                 URLs.site_infractions,
@@ -126,6 +127,7 @@ class Moderation:
         :param user: Accepts user mention, ID, etc.
         :param reason: Wrap in quotes to make reason larger than one word.
         """
+
         try:
             response = await self.bot.http_session.post(
                 URLs.site_infractions,
@@ -165,6 +167,7 @@ class Moderation:
         :param user: Accepts user mention, ID, etc.
         :param reason: Wrap in quotes to make reason larger than one word.
         """
+
         try:
             response = await self.bot.http_session.post(
                 URLs.site_infractions,
@@ -208,6 +211,7 @@ class Moderation:
         :param duration: The duration for the temporary mute infraction
         :param reason: Wrap in quotes to make reason larger than one word.
         """
+
         try:
             response = await self.bot.http_session.post(
                 URLs.site_infractions,
@@ -254,6 +258,7 @@ class Moderation:
         :param duration: The duration for the temporary ban infraction
         :param reason: Wrap in quotes to make reason larger than one word.
         """
+
         try:
             response = await self.bot.http_session.post(
                 URLs.site_infractions,
@@ -302,6 +307,7 @@ class Moderation:
         Deactivates the active mute infraction for a user.
         :param user: Accepts user mention, ID, etc.
         """
+
         try:
             # check the current active infraction
             response = await self.bot.http_session.get(
@@ -339,6 +345,7 @@ class Moderation:
         Deactivates the active ban infraction for a user.
         :param user: Accepts user mention, ID, etc.
         """
+
         try:
             # check the current active infraction
             response = await self.bot.http_session.get(
@@ -381,6 +388,7 @@ class Moderation:
         :param duration: the new duration of the infraction, relative to the time of updating. Use "permanent" to mark
         the infraction as permanent.
         """
+
         try:
             if duration == "permanent":
                 duration = None
@@ -422,6 +430,7 @@ class Moderation:
         :param infraction_id: the id (UUID) of the infraction
         :param reason: the new reason of the infraction
         """
+
         try:
             response = await self.bot.http_session.patch(
                 URLs.site_infractions,
@@ -452,6 +461,7 @@ class Moderation:
         Searches for infractions in the database.
         :param arg: Either a user or a reason string. If a string, you can use the Re2 matching syntax.
         """
+
         if isinstance(arg, User):
             user: User = arg
             # get infractions for this user
@@ -506,7 +516,7 @@ class Moderation:
 
         await LinePaginator.paginate(
             lines=(
-                self.infraction_to_string(infraction_object, show_user=isinstance(arg, str))
+                self._infraction_to_string(infraction_object, show_user=isinstance(arg, str))
                 for infraction_object in infraction_list
             ),
             ctx=ctx,
@@ -520,6 +530,12 @@ class Moderation:
     # region: Utility functions
 
     def schedule_expiration(self, loop: asyncio.AbstractEventLoop, infraction_object: dict):
+        """
+        Schedules a task to expire a temporary infraction.
+        :param loop: the asyncio event loop
+        :param infraction_object: the infraction object to expire at the end of the task
+        """
+
         infraction_id = infraction_object["id"]
         if infraction_id in self.expiration_tasks:
             return
@@ -532,6 +548,11 @@ class Moderation:
         self.expiration_tasks[infraction_id] = task
 
     def cancel_expiration(self, infraction_id: str):
+        """
+        Un-schedules a task set to expire a temporary infraction.
+        :param infraction_id: the ID of the infraction in question
+        """
+
         task = self.expiration_tasks.get(infraction_id)
         if task is None:
             log.warning(f"Failed to unschedule {infraction_id}: no task found.")
@@ -541,6 +562,13 @@ class Moderation:
         del self.expiration_tasks[infraction_id]
 
     async def _scheduled_expiration(self, infraction_object):
+        """
+        A co-routine which marks an infraction as expired after the delay from the time of scheduling
+        to the time of expiration. At the time of expiration, the infraction is marked as inactive on the website,
+        and the expiration task is cancelled.
+        :param infraction_object: the infraction in question
+        """
+
         infraction_id = infraction_object["id"]
 
         # transform expiration to delay in seconds
@@ -558,6 +586,11 @@ class Moderation:
         self.cancel_expiration(infraction_object["id"])
 
     async def _deactivate_infraction(self, infraction_object):
+        """
+        A co-routine which marks an infraction as inactive on the website. This co-routine does not cancel or
+        un-schedule an expiration task.
+        :param infraction_object: the infraction in question
+        """
         guild: Guild = self.bot.get_guild(constants.Guild.id)
         user_id = int(infraction_object["user"]["user_id"])
         infraction_type = infraction_object["type"]
@@ -582,7 +615,7 @@ class Moderation:
             }
         )
 
-    def infraction_to_string(self, infraction_object, show_user=False):
+    def _infraction_to_string(self, infraction_object, show_user=False):
         actor_id = int(infraction_object["actor"]["user_id"])
         guild: Guild = self.bot.get_guild(constants.Guild.id)
         actor = guild.get_member(actor_id)
