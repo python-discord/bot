@@ -82,6 +82,45 @@ class Moderation:
         await ctx.send(result_message)
 
     @with_role(*MODERATION_ROLES)
+    @command(name="moderation.kick")
+    async def kick(self, ctx, user: Member, reason: str = None):
+        """
+        Kicks a user.
+        :param user: accepts user mention, ID, etc.
+        :param reason: the reason for the kick. Wrap in string quotes for multiple words.
+        """
+        try:
+            response = await self.bot.http_session.post(
+                URLs.site_infractions,
+                headers=self.headers,
+                json={
+                    "type": "kick",
+                    "reason": reason,
+                    "user_id": str(user.id),
+                    "actor_id": str(ctx.message.author.id)
+                }
+            )
+        except Exception:
+            log.exception("There was an error adding an infraction.")
+            await ctx.send(":x: There was an error adding the infraction.")
+            return
+
+        response_object = await response.json()
+        if "error_code" in response_object:
+            # something went wrong
+            await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
+            return
+
+        await user.kick(reason=reason)
+
+        if reason is None:
+            result_message = f":ok_hand: kicked {user.mention}."
+        else:
+            result_message = f":ok_hand: kicked {user.mention} ({reason})."
+
+        await ctx.send(result_message)
+
+    @with_role(*MODERATION_ROLES)
     @command(name="moderation.ban")
     async def ban(self, ctx: Context, user: User, reason: str = None):
         """
