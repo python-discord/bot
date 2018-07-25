@@ -24,7 +24,8 @@ bot = Bot(
         "aliases": ["help"]
     },
     formatter=Formatter(),
-    case_insensitive=True
+    case_insensitive=True,
+    max_messages=10_000
 )
 
 # Global aiohttp session for all cogs
@@ -47,10 +48,12 @@ else:
 
 # Internal/debug
 bot.load_extension("bot.cogs.logging")
+bot.load_extension("bot.cogs.modlog")
 bot.load_extension("bot.cogs.security")
 bot.load_extension("bot.cogs.events")
 
 # Commands, etc
+bot.load_extension("bot.cogs.bigbrother")
 bot.load_extension("bot.cogs.bot")
 bot.load_extension("bot.cogs.cogs")
 

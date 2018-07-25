@@ -3,6 +3,7 @@ import logging
 from discord import Message, NotFound, Object
 from discord.ext.commands import Bot, Context, command
 
+from bot.cogs.modlog import ModLog
 from bot.constants import Channels, Roles
 from bot.decorators import in_channel, without_role
 
@@ -34,6 +35,10 @@ class Verification:
 
     def __init__(self, bot: Bot):
         self.bot = bot
+
+    @property
+    def modlog(self) -> ModLog:
+        return self.bot.get_cog("ModLog")
 
     async def on_message(self, message: Message):
         if message.author.bot:
@@ -85,6 +90,7 @@ class Verification:
         log.trace(f"Deleting the message posted by {ctx.author}.")
 
         try:
+            self.modlog.ignore_message_deletion(ctx.message.id)
             await ctx.message.delete()
         except NotFound:
             log.trace("No message found, it must have been deleted by another bot.")

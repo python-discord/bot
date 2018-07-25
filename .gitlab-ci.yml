@@ -11,7 +11,7 @@ test:
   stage: test
 
   script:
-    - pipenv sync --dev
+    - pipenv install --dev --deploy
     - pipenv run lint
 
 build:

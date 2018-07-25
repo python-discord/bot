@@ -12,6 +12,8 @@ from bot.pagination import LinePaginator
 
 log = logging.getLogger(__name__)
 
+KEEP_LOADED = ["bot.cogs.cogs", "bot.cogs.modlog"]
+
 
 class Cogs:
     """
@@ -122,9 +124,9 @@ class Cogs:
             embed.description = f"Unknown cog: {cog}"
 
         if full_cog:
-            if full_cog == "bot.cogs.cogs":
-                log.warning(f"{ctx.author} requested we unload the cog management cog, that sneaky pete. We said no.")
-                embed.description = "You may not unload the cog management cog!"
+            if full_cog in KEEP_LOADED:
+                log.warning(f"{ctx.author} requested we unload `{full_cog}`, that sneaky pete. We said no.")
+                embed.description = f"You may not unload `{full_cog}`!"
             elif full_cog in self.bot.extensions:
                 try:
                     self.bot.unload_extension(full_cog)

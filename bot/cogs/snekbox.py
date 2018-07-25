@@ -1,11 +1,16 @@
 import datetime
 import logging
+import random
 import re
 
-from discord.ext.commands import Bot, Context, command
+from discord import Colour, Embed
+from discord.ext.commands import (
+    Bot, CommandError, Context, MissingPermissions,
+    NoPrivateMessage, check, command, guild_only
+)
 
 from bot.cogs.rmq import RMQ
-from bot.constants import URLs
+from bot.constants import Channels, ERROR_REPLIES, NEGATIVE_REPLIES, Roles, URLs
 
 log = logging.getLogger(__name__)
 
@@ -26,6 +31,21 @@ except Exception as e:
 """
 
 ESCAPE_REGEX = re.compile("[`\u202E\u200B]{3,}")
+BYPASS_ROLES = (Roles.owner, Roles.admin, Roles.moderator, Roles.helpers)
+WHITELISTED_CHANNELS = (Channels.bot,)
+WHITELISTED_CHANNELS_STRING = ', '.join(f"<#{channel_id}>" for channel_id in WHITELISTED_CHANNELS)
+
+
+async def channel_is_whitelisted_or_author_can_bypass(ctx: Context):
+    """
+    Checks that the author is either helper or above
+    or the channel is a whitelisted channel.
+    """
+
+    if ctx.channel.id not in WHITELISTED_CHANNELS and ctx.author.top_role.id not in BYPASS_ROLES:
+        raise MissingPermissions("You are not allowed to do that here.")
+
+    return True
 
 
 class Snekbox:
@@ -44,6 +64,8 @@ class Snekbox:
         return self.bot.get_cog("RMQ")
 
     @command(name="snekbox.eval()", aliases=["snekbox.eval", "eval()", "eval"])
+    @guild_only()
+    @check(channel_is_whitelisted_or_author_can_bypass)
     async def do_eval(self, ctx: Context, code: str):
         """
         Run some code. get the result back. We've done our best to make this safe, but do let us know if you
@@ -80,6 +102,9 @@ class Snekbox:
 
                 if "<@" in output:
                     output = output.replace("<@", "<@\u200B")  # Zero-width space
+
+                if "<!@" in output:
+                    output = output.replace("<!@", "<!@\u200B")  # Zero-width space
 
                 if ESCAPE_REGEX.findall(output):
                     output = "Code block escape attempt detected; will not output result"
@@ -133,6 +158,27 @@ class Snekbox:
         except Exception:
             del self.jobs[ctx.author.id]
             raise
+
+    @do_eval.error
+    async def eval_command_error(self, ctx: Context, error: CommandError):
+        embed = Embed(colour=Colour.red())
+
+        if isinstance(error, NoPrivateMessage):
+            embed.title = random.choice(NEGATIVE_REPLIES)
+            embed.description = "You're not allowed to use this command in private messages."
+            await ctx.send(embed=embed)
+
+        elif isinstance(error, MissingPermissions):
+            embed.title = random.choice(NEGATIVE_REPLIES)
+            embed.description = f"Sorry, but you may only use this command within {WHITELISTED_CHANNELS_STRING}."
+            await ctx.send(embed=embed)
+
+        else:
+            original_error = getattr(error, 'original', "no original error")
+            log.error(f"Unhandled error in snekbox eval: {error} ({original_error})")
+            embed.title = random.choice(ERROR_REPLIES)
+            embed.description = "Some unhandled error occurred. Sorry for that!"
+            await ctx.send(embed=embed)
 
 
 def setup(bot):
