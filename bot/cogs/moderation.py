@@ -70,7 +70,6 @@ class Moderation:
 
         response_object = await response.json()
         if "error_code" in response_object:
-            # something went wrong
             await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
             return
 
@@ -107,7 +106,6 @@ class Moderation:
 
         response_object = await response.json()
         if "error_code" in response_object:
-            # something went wrong
             await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
             return
 
@@ -146,7 +144,6 @@ class Moderation:
 
         response_object = await response.json()
         if "error_code" in response_object:
-            # something went wrong
             await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
             return
 
@@ -186,7 +183,6 @@ class Moderation:
 
         response_object = await response.json()
         if "error_code" in response_object:
-            # something went wrong
             await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
             return
 
@@ -231,7 +227,6 @@ class Moderation:
 
         response_object = await response.json()
         if "error_code" in response_object:
-            # something went wrong
             await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
             return
 
@@ -278,7 +273,6 @@ class Moderation:
 
         response_object = await response.json()
         if "error_code" in response_object:
-            # something went wrong
             await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
             return
 
@@ -319,7 +313,6 @@ class Moderation:
             )
             response_object = await response.json()
             if "error_code" in response_object:
-                # something went wrong
                 await ctx.send(f":x: There was an error removing the infraction: {response_object['error_message']}")
                 return
 
@@ -357,7 +350,6 @@ class Moderation:
             )
             response_object = await response.json()
             if "error_code" in response_object:
-                # something went wrong
                 await ctx.send(f":x: There was an error removing the infraction: {response_object['error_message']}")
                 return
 
@@ -403,7 +395,6 @@ class Moderation:
             )
             response_object = await response.json()
             if "error_code" in response_object or response_object.get("success") is False:
-                # something went wrong
                 await ctx.send(f":x: There was an error updating the infraction: {response_object['error_message']}")
                 return
 
@@ -442,7 +433,6 @@ class Moderation:
             )
             response_object = await response.json()
             if "error_code" in response_object or response_object.get("success") is False:
-                # something went wrong
                 await ctx.send(f":x: There was an error updating the infraction: {response_object['error_message']}")
                 return
 
