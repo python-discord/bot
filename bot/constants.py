@@ -202,9 +202,9 @@ class Emojis(metaclass=YAMLGetter):
     section = "bot"
     subsection = "emojis"
 
-    defcon_disabled: str
-    defcon_enabled: str
-    defcon_updated: str
+    defcon_disabled: str  # noqa: E704
+    defcon_enabled: str  # noqa: E704
+    defcon_updated: str  # noqa: E704
 
     green_chevron: str
     red_chevron: str
@@ -222,10 +222,10 @@ class Icons(metaclass=YAMLGetter):
     crown_green: str
     crown_red: str
 
-    defcon_denied: str
-    defcon_disabled: str
-    defcon_enabled: str
-    defcon_updated: str
+    defcon_denied: str  # noqa: E704
+    defcon_disabled: str  # noqa: E704
+    defcon_enabled: str  # noqa: E704
+    defcon_updated: str  # noqa: E704
 
     guild_update: str
 
