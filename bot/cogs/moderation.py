@@ -41,7 +41,7 @@ class Moderation:
             if infraction_object["expires_at"] is not None:
                 self.schedule_expiration(loop, infraction_object)
 
-    # Permanent infractions
+    # region: Permanent infractions
 
     @with_role(*MODERATION_ROLES)
     @command(name="moderation.warn")
@@ -200,7 +200,8 @@ class Moderation:
 
         await ctx.send(result_message)
 
-    # Temporary infractions
+    # endregion
+    # region: Temporary infractions
 
     @with_role(*MODERATION_ROLES)
     @command(name="moderation.tempmute")
@@ -297,7 +298,8 @@ class Moderation:
 
         await ctx.send(result_message)
 
-    # Remove infractions (un- commands)
+    # endregion
+    # region: Remove infractions (un- commands)
 
     @with_role(*MODERATION_ROLES)
     @command(name="moderation.unmute")
@@ -375,7 +377,8 @@ class Moderation:
             await ctx.send(":x: There was an error removing the infraction.")
             return
 
-    # Edit infraction commands
+    # endregion
+    # region: Edit infraction commands
 
     @with_role(*MODERATION_ROLES)
     @command(name="infraction.edit.duration")
@@ -449,7 +452,8 @@ class Moderation:
             await ctx.send(":x: There was an error updating the infraction.")
             return
 
-    # Search infractions
+    # endregion
+    # region: Search infractions
 
     @with_role(*MODERATION_ROLES)
     @command(name="infraction.search")
@@ -522,7 +526,8 @@ class Moderation:
             max_size=1000
         )
 
-    # Utility functions
+    # endregion
+    # region: Utility functions
 
     def schedule_expiration(self, loop: asyncio.AbstractEventLoop, infraction_object: dict):
         infraction_id = infraction_object["id"]
@@ -611,6 +616,8 @@ class Moderation:
             lines.insert(1, "User: {0}".format(user.mention if user else user_id))
 
         return "\n".join(lines)
+
+    # endregion
 
 
 RFC1123_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
