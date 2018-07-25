@@ -45,7 +45,7 @@ class Moderation:
     # region: Permanent infractions
 
     @with_role(*MODERATION_ROLES)
-    @command(name="moderation.warn")
+    @command(name="moderation.warn", aliases=["warn"])
     async def warn(self, ctx: Context, user: User, reason: str = None):
         """
         Create a warning infraction in the database for a user.
@@ -82,7 +82,7 @@ class Moderation:
         await ctx.send(result_message)
 
     @with_role(*MODERATION_ROLES)
-    @command(name="moderation.kick")
+    @command(name="moderation.kick", aliases=["kick"])
     async def kick(self, ctx, user: Member, reason: str = None):
         """
         Kicks a user.
@@ -121,7 +121,7 @@ class Moderation:
         await ctx.send(result_message)
 
     @with_role(*MODERATION_ROLES)
-    @command(name="moderation.ban")
+    @command(name="moderation.ban", aliases=["ban"])
     async def ban(self, ctx: Context, user: User, reason: str = None):
         """
         Create a permanent ban infraction in the database for a user.
@@ -161,7 +161,7 @@ class Moderation:
         await ctx.send(result_message)
 
     @with_role(*MODERATION_ROLES)
-    @command(name="moderation.mute")
+    @command(name="moderation.mute", aliases=["mute"])
     async def mute(self, ctx: Context, user: Member, reason: str = None):
         """
         Create a permanent mute infraction in the database for a user.
@@ -204,7 +204,7 @@ class Moderation:
     # region: Temporary infractions
 
     @with_role(*MODERATION_ROLES)
-    @command(name="moderation.tempmute")
+    @command(name="moderation.tempmute", aliases=["tempmute"])
     async def tempmute(self, ctx: Context, user: Member, duration: str, reason: str = None):
         """
         Create a temporary mute infraction in the database for a user.
@@ -251,7 +251,7 @@ class Moderation:
         await ctx.send(result_message)
 
     @with_role(*MODERATION_ROLES)
-    @command(name="moderation.tempban")
+    @command(name="moderation.tempban", aliases=["tempban"])
     async def tempban(self, ctx, user: User, duration: str, reason: str = None):
         """
         Create a temporary ban infraction in the database for a user.
@@ -302,7 +302,7 @@ class Moderation:
     # region: Remove infractions (un- commands)
 
     @with_role(*MODERATION_ROLES)
-    @command(name="moderation.unmute")
+    @command(name="moderation.unmute", aliases=["unmute"])
     async def unmute(self, ctx, user: Member):
         """
         Deactivates the active mute infraction for a user.
@@ -340,7 +340,7 @@ class Moderation:
             return
 
     @with_role(*MODERATION_ROLES)
-    @command(name="moderation.unban")
+    @command(name="moderation.unban", aliases=["unban"])
     async def unban(self, ctx, user: User):
         """
         Deactivates the active ban infraction for a user.
