@@ -261,6 +261,7 @@ class Channels(metaclass=YAMLGetter):
     off_topic_2: int
     off_topic_3: int
     python: int
+    staff_lounge: int
     verification: int
 
 
