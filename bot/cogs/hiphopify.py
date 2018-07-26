@@ -75,9 +75,9 @@ class Hiphopify:
                     "to DM them, and a discord.errors.Forbidden error was incurred."
                 )
 
+    @command(name='hiphopify', aliases=('force_nick', 'hh'))
     @with_role(Roles.admin, Roles.owner, Roles.moderator)
-    @command(name="hiphopify()", aliases=["hiphopify", "force_nick()", "force_nick"])
-    async def hiphopify(self, ctx: Context, member: Member, duration: str, forced_nick: str = None):
+    async def hiphopify(self, ctx: Context, member: Member, duration: str, *, forced_nick: str = None):
         """
         This command will force a random rapper name (like Lil' Wayne) to be the users
         nickname for a specified duration. If a forced_nick is provided, it will use that instead.
@@ -151,8 +151,8 @@ class Hiphopify:
             await member.edit(nick=forced_nick)
             await ctx.send(embed=embed)
 
+    @command(name='unhiphopify', aliases=('release_nick', 'uhh'))
     @with_role(Roles.admin, Roles.owner, Roles.moderator)
-    @command(name="unhiphopify()", aliases=["unhiphopify", "release_nick()", "release_nick"])
     async def unhiphopify(self, ctx: Context, member: Member):
         """
         This command will remove the entry from our database, allowing the user

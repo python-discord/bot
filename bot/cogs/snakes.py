@@ -14,7 +14,7 @@ from typing import Any, Dict
 import aiohttp
 import async_timeout
 from discord import Colour, Embed, File, Member, Message, Reaction
-from discord.ext.commands import BadArgument, Bot, Context, bot_has_permissions, command
+from discord.ext.commands import BadArgument, Bot, Context, bot_has_permissions, group
 from PIL import Image, ImageDraw, ImageFont
 
 from bot.constants import ERROR_REPLIES, Keys, URLs
@@ -462,10 +462,14 @@ class Snakes:
     # endregion
 
     # region: Commands
+    @group(name='snakes', aliases=('snake',))
+    async def snakes_group(self, ctx: Context):
+        """Commands from our first code jam."""
+
     @bot_has_permissions(manage_messages=True)
-    @command(name="snakes.antidote()", aliases=["snakes.antidote"])
+    @snakes_group.command(name='antidote')
     @locked()
-    async def antidote(self, ctx: Context):
+    async def antidote_command(self, ctx: Context):
         """
         Antidote - Can you create the antivenom before the patient dies?
 
@@ -604,8 +608,8 @@ class Snakes:
         log.debug("Ending pagination and removing all reactions...")
         await board_id.clear_reactions()
 
-    @command(name="snakes.draw()", aliases=["snakes.draw"])
-    async def draw(self, ctx: Context):
+    @snakes_group.command(name='draw')
+    async def draw_command(self, ctx: Context):
         """
         Draws a random snek using Perlin noise
 
@@ -648,10 +652,10 @@ class Snakes:
 
             await ctx.send(file=file)
 
-    @command(name="snakes.get()", aliases=["snakes.get"])
+    @snakes_group.command(name='get')
     @bot_has_permissions(manage_messages=True)
     @locked()
-    async def get(self, ctx: Context, name: Snake = None):
+    async def get_command(self, ctx: Context, *, name: Snake = None):
         """
         Fetches information about a snake from Wikipedia.
         :param ctx: Context object passed from discord.py
@@ -699,9 +703,9 @@ class Snakes:
 
             await ctx.send(embed=embed)
 
-    @command(name="snakes.guess()", aliases=["snakes.guess", "identify"])
+    @snakes_group.command(name='guess', aliases=('identify',))
     @locked()
-    async def guess(self, ctx):
+    async def guess_command(self, ctx):
         """
         Snake identifying game!
 
@@ -733,8 +737,8 @@ class Snakes:
         options = {f"{'abcd'[snakes.index(snake)]}": snake for snake in snakes}
         await self._validate_answer(ctx, guess, answer, options)
 
-    @command(name="snakes.hatch()", aliases=["snakes.hatch", "hatch"])
-    async def hatch(self, ctx: Context):
+    @snakes_group.command(name='hatch')
+    async def hatch_command(self, ctx: Context):
         """
         Hatches your personal snake
 
@@ -765,8 +769,8 @@ class Snakes:
 
         await ctx.channel.send(embed=my_snake_embed)
 
-    @command(name="snakes.movie()", aliases=["snakes.movie"])
-    async def movie(self, ctx: Context):
+    @snakes_group.command(name='movie')
+    async def movie_command(self, ctx: Context):
         """
         Gets a random snake-related movie from OMDB.
 
@@ -835,9 +839,9 @@ class Snakes:
             embed=embed
         )
 
-    @command(name="snakes.quiz()", aliases=["snakes.quiz"])
+    @snakes_group.command(name='quiz')
     @locked()
-    async def quiz(self, ctx: Context):
+    async def quiz_command(self, ctx: Context):
         """
         Asks a snake-related question in the chat and validates the user's guess.
 
@@ -863,8 +867,8 @@ class Snakes:
         quiz = await ctx.channel.send("", embed=embed)
         await self._validate_answer(ctx, quiz, answer, options)
 
-    @command(name="snakes.name()", aliases=["snakes.name", "snakes.name_gen", "snakes.name_gen()"])
-    async def random_snake_name(self, ctx: Context, name: str = None):
+    @snakes_group.command(name='name', aliases=('name_gen',))
+    async def name_command(self, ctx: Context, *, name: str = None):
         """
         Slices the users name at the last vowel (or second last if the name
         ends with a vowel), and then combines it with a random snake name,
@@ -933,9 +937,9 @@ class Snakes:
 
         return await ctx.send(embed=embed)
 
-    @command(name="snakes.sal()", aliases=["snakes.sal"])
+    @snakes_group.command(name='sal')
     @locked()
-    async def sal(self, ctx: Context):
+    async def sal_command(self, ctx: Context):
         """
         Play a game of Snakes and Ladders!
 
@@ -953,8 +957,8 @@ class Snakes:
 
         await game.open_game()
 
-    @command(name="snakes.about()", aliases=["snakes.about"])
-    async def snake_about(self, ctx: Context):
+    @snakes_group.command(name='about')
+    async def about_command(self, ctx: Context):
         """
         A command that shows an embed with information about the event,
         it's participants, and its winners.
@@ -986,8 +990,8 @@ class Snakes:
                 "48 hours. The staff then selected the best features from all the best teams, and made modifications "
                 "to ensure they would all work together before integrating them into the community bot.\n\n"
                 "It was a tight race, but in the end, <@!104749643715387392> and <@!303940835005825024> "
-                "walked away as grand champions. Make sure you check out `bot.snakes.sal()`, `bot.snakes.draw()` "
-                "and `bot.snakes.hatch()` to see what they came up with."
+                "walked away as grand champions. Make sure you check out `!snakes sal`, `!snakes draw` "
+                "and `!snakes hatch` to see what they came up with."
             )
         )
 
@@ -1000,8 +1004,8 @@ class Snakes:
 
         await ctx.channel.send(embed=embed)
 
-    @command(name="snakes.card()", aliases=["snakes.card"])
-    async def snake_card(self, ctx: Context, name: Snake = None):
+    @snakes_group.command(name='card')
+    async def card_command(self, ctx: Context, *, name: Snake = None):
         """
         Create an interesting little card from a snake!
 
@@ -1039,8 +1043,8 @@ class Snakes:
             file=File(final_buffer, filename=content['name'].replace(" ", "") + ".png")
         )
 
-    @command(name="snakes.fact()", aliases=["snakes.fact"])
-    async def snake_fact(self, ctx: Context):
+    @snakes_group.command(name='fact')
+    async def fact_command(self, ctx: Context):
         """
         Gets a snake-related fact
 
@@ -1060,8 +1064,8 @@ class Snakes:
         )
         await ctx.channel.send(embed=embed)
 
-    @command(name="snakes()", aliases=["snakes"])
-    async def snake_help(self, ctx: Context):
+    @snakes_group.command(name='help')
+    async def help_command(self, ctx: Context):
         """
         This just invokes the help command on this cog.
         """
@@ -1069,8 +1073,8 @@ class Snakes:
         log.debug(f"{ctx.author} requested info about the snakes cog")
         return await ctx.invoke(self.bot.get_command("help"), "Snakes")
 
-    @command(name="snakes.snakify()", aliases=["snakes.snakify"])
-    async def snakify(self, ctx: Context, message: str = None):
+    @snakes_group.command(name='snakify')
+    async def snakify_command(self, ctx: Context, *, message: str = None):
         """
         How would I talk if I were a snake?
         :param ctx: context
@@ -1112,8 +1116,8 @@ class Snakes:
 
             await ctx.channel.send(embed=embed)
 
-    @command(name="snakes.video()", aliases=["snakes.video", "snakes.get_video()", "snakes.get_video"])
-    async def video(self, ctx: Context, search: str = None):
+    @snakes_group.command(name='video', aliases=('get_video',))
+    async def video_command(self, ctx: Context, *, search: str = None):
         """
         Gets a YouTube video about snakes
         :param name: Optional, a name of a snake. Used to search for videos with that name
@@ -1153,8 +1157,8 @@ class Snakes:
         else:
             log.warning(f"YouTube API error. Full response looks like {response}")
 
-    @command(name="snakes.zen()", aliases=["zen"])
-    async def zen(self, ctx: Context):
+    @snakes_group.command(name='zen')
+    async def zen_command(self, ctx: Context):
         """
         Gets a random quote from the Zen of Python,
         except as if spoken by a snake.
@@ -1180,9 +1184,9 @@ class Snakes:
     # endregion
 
     # region: Error handlers
-    @get.error
-    @snake_card.error
-    @video.error
+    @get_command.error
+    @card_command.error
+    @video_command.error
     async def command_error(self, ctx, error):
 
         embed = Embed()

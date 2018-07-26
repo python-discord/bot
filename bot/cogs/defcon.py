@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timedelta
 
 from discord import Colour, Embed, Member
-from discord.ext.commands import Bot, Context, command
+from discord.ext.commands import Bot, Context, group
 
 from bot.cogs.modlog import ModLog
 from bot.constants import Channels, Emojis, Icons, Keys, Roles, URLs
@@ -97,13 +97,19 @@ class Defcon:
                     message, member.avatar_url_as(static_format="png")
                 )
 
+    @group(name='defcon', aliases=('dc',), invoke_without_command=True)
+    async def defcon_group(self, ctx: Context):
+        """Check the DEFCON status or run a subcommand."""
+
+        await ctx.invoke(self.status_command)
+
+    @defcon_group.command(name='enable', aliases=('on', 'e'))
     @with_role(Roles.admin, Roles.owner)
-    @command(name="defcon.enable", aliases=["defcon.enable()", "defcon_enable", "defcon_enable()"])
-    async def enable(self, ctx: Context):
+    async def enable_command(self, ctx: Context):
         """
         Enable DEFCON mode. Useful in a pinch, but be sure you know what you're doing!
 
-        Currently, this just adds an account age requirement. Use bot.defcon.days(int) to set how old an account must
+        Currently, this just adds an account age requirement. Use !defcon days <int> to set how old an account must
         be, in days.
         """
 
@@ -143,9 +149,9 @@ class Defcon:
                 f"**Days:** {self.days.days}\n\n"
             )
 
+    @defcon_group.command(name='disable', aliases=('off', 'd'))
     @with_role(Roles.admin, Roles.owner)
-    @command(name="defcon.disable", aliases=["defcon.disable()", "defcon_disable", "defcon_disable()"])
-    async def disable(self, ctx: Context):
+    async def disable_command(self, ctx: Context):
         """
         Disable DEFCON mode. Useful in a pinch, but be sure you know what you're doing!
         """
@@ -184,9 +190,9 @@ class Defcon:
                 f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)"
             )
 
+    @defcon_group.command(name='status', aliases=('s',))
     @with_role(Roles.admin, Roles.owner)
-    @command(name="defcon", aliases=["defcon()", "defcon.status", "defcon.status()"])
-    async def defcon(self, ctx: Context):
+    async def status_command(self, ctx: Context):
         """
         Check the current status of DEFCON mode.
         """
@@ -199,8 +205,8 @@ class Defcon:
 
         await ctx.send(embed=embed)
 
+    @defcon_group.command(name='days')
     @with_role(Roles.admin, Roles.owner)
-    @command(name="defcon.days", aliases=["defcon.days()", "defcon_days", "defcon_days()"])
     async def days_command(self, ctx: Context, days: int):
         """
         Set how old an account must be to join the server, in days, with DEFCON mode enabled.

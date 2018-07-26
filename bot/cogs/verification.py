@@ -21,10 +21,10 @@ your information removed here as well.
 Feel free to review them at any point!
 
 Additionally, if you'd like to receive notifications for the announcements we post in <#{Channels.announcements}> \
-from time to time, you can send `self.subscribe()` to <#{Channels.bot}> at any time to assign yourself the \
+from time to time, you can send `!subscribe` to <#{Channels.bot}> at any time to assign yourself the \
 **Announcements** role. We'll mention this role every time we make an announcement.
 
-If you'd like to unsubscribe from the announcement notifications, simply send `self.unsubscribe()` to <#{Channels.bot}>.
+If you'd like to unsubscribe from the announcement notifications, simply send `!unsubscribe` to <#{Channels.bot}>.
 """
 
 
@@ -59,7 +59,7 @@ class Verification:
             log.debug(f"{ctx.author} posted '{ctx.message.content}' in the verification "
                       "channel. We are providing instructions how to verify.")
             await ctx.send(
-                f"{ctx.author.mention} Please type `self.accept()` to verify that you accept our rules, "
+                f"{ctx.author.mention} Please type `!accept` to verify that you accept our rules, "
                 f"and gain access to the rest of the server.",
                 delete_after=20
             )
@@ -71,15 +71,15 @@ class Verification:
             except NotFound:
                 log.trace("No message found, it must have been deleted by another bot.")
 
-    @command(name="accept", hidden=True, aliases=["verify", "verified", "accepted", "accept()"])
+    @command(name='accept', aliases=('verify', 'verified', 'accepted'), hidden=True)
     @without_role(Roles.verified)
     @in_channel(Channels.verification)
-    async def accept(self, ctx: Context, *_):  # We don't actually care about the args
+    async def accept_command(self, ctx: Context, *_):  # We don't actually care about the args
         """
         Accept our rules and gain access to the rest of the server
         """
 
-        log.debug(f"{ctx.author} called self.accept(). Assigning the 'Developer' role.")
+        log.debug(f"{ctx.author} called !accept. Assigning the 'Developer' role.")
         await ctx.author.add_roles(Object(Roles.verified), reason="Accepted the rules")
         try:
             await ctx.author.send(WELCOME_MESSAGE)
@@ -95,9 +95,9 @@ class Verification:
         except NotFound:
             log.trace("No message found, it must have been deleted by another bot.")
 
-    @command(name="subscribe", aliases=["subscribe()"])
+    @command(name='subscribe')
     @in_channel(Channels.bot)
-    async def subscribe(self, ctx: Context, *_):  # We don't actually care about the args
+    async def subscribe_command(self, ctx: Context, *_):  # We don't actually care about the args
         """
         Subscribe to announcement notifications by assigning yourself the role
         """
@@ -114,7 +114,7 @@ class Verification:
                 f"{ctx.author.mention} You're already subscribed!",
             )
 
-        log.debug(f"{ctx.author} called self.subscribe(). Assigning the 'Announcements' role.")
+        log.debug(f"{ctx.author} called !subscribe. Assigning the 'Announcements' role.")
         await ctx.author.add_roles(Object(Roles.announcements), reason="Subscribed to announcements")
 
         log.trace(f"Deleting the message posted by {ctx.author}.")
@@ -123,9 +123,9 @@ class Verification:
             f"{ctx.author.mention} Subscribed to <#{Channels.announcements}> notifications.",
         )
 
-    @command(name="unsubscribe", aliases=["unsubscribe()"])
+    @command(name='unsubscribe')
     @in_channel(Channels.bot)
-    async def unsubscribe(self, ctx: Context, *_):  # We don't actually care about the args
+    async def unsubscribe_command(self, ctx: Context, *_):  # We don't actually care about the args
         """
         Unsubscribe from announcement notifications by removing the role from yourself
         """
@@ -142,7 +142,7 @@ class Verification:
                 f"{ctx.author.mention} You're already unsubscribed!"
             )
 
-        log.debug(f"{ctx.author} called self.unsubscribe(). Removing the 'Announcements' role.")
+        log.debug(f"{ctx.author} called !unsubscribe. Removing the 'Announcements' role.")
         await ctx.author.remove_roles(Object(Roles.announcements), reason="Unsubscribed from announcements")
 
         log.trace(f"Deleting the message posted by {ctx.author}.")
