@@ -8,7 +8,7 @@ import traceback
 from io import StringIO
 
 import discord
-from discord.ext.commands import Bot, command
+from discord.ext.commands import Bot, group
 
 from bot.constants import Roles
 from bot.decorators import with_role
@@ -173,7 +173,11 @@ async def func():  # (None,) -> Any
         out, embed = self._format(code, res)
         await ctx.send(f"```py\n{out}```", embed=embed)
 
-    @command(name="internal.eval()", aliases=["internal.eval"])
+    @group(name='internal', aliases=('int',))
+    async def internal_group(self, ctx):
+        """Internal commands. Top secret!"""
+
+    @internal_group.command(name='eval', aliases=('e',))
     @with_role(Roles.admin, Roles.owner)
     async def eval(self, ctx, *, code: str):
         """ Run eval in a REPL-like format. """

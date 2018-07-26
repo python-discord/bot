@@ -3,7 +3,7 @@ import logging
 from datetime import datetime, timedelta
 
 from discord import Colour, Embed
-from discord.ext.commands import BadArgument, Bot, Context, Converter, command
+from discord.ext.commands import BadArgument, Bot, Context, Converter, group
 
 from bot.constants import Channels, Keys, Roles, URLs
 from bot.decorators import with_role
@@ -83,9 +83,13 @@ class OffTopicNames:
             coro = update_names(self.bot, self.headers)
             self.updater_task = await self.bot.loop.create_task(coro)
 
-    @command(name='otname.add()', aliases=['otname.add'])
+    @group(name='otname', aliases=('otnames', 'otn'))
+    async def otname_group(self, ctx):
+        """Add or list items from the off-topic channel name rotation."""
+
+    @otname_group.command(name='add', aliases=('a',))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
-    async def otname_add(self, ctx, name: OffTopicName):
+    async def add_command(self, ctx, name: OffTopicName):
         """Adds a new off-topic name to the rotation."""
 
         result = await self.bot.http_session.post(
@@ -106,9 +110,9 @@ class OffTopicNames:
             error_reason = response.get('message', "No reason provided.")
             await ctx.send(f":warning: got non-200 from the API: {error_reason}")
 
-    @command(name='otname.list()', aliases=['otname.list'])
+    @otname_group.command(name='list', aliases=('l',))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
-    async def otname_list(self, ctx):
+    async def list_command(self, ctx):
         """
         Lists all currently known off-topic channel names in a paginator.
         Restricted to Moderator and above to not spoil the surprise.

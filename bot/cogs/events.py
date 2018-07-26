@@ -17,9 +17,7 @@ log = logging.getLogger(__name__)
 
 
 class Events:
-    """
-    No commands, just event handlers
-    """
+    """No commands, just event handlers."""
 
     def __init__(self, bot: Bot):
         self.bot = bot

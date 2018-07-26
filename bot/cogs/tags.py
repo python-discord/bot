@@ -5,7 +5,7 @@ import time
 from discord import Colour, Embed
 from discord.ext.commands import (
     BadArgument, Bot,
-    Context, Converter, command
+    Context, Converter, group
 )
 
 from bot.constants import (
@@ -150,19 +150,14 @@ class Tags:
 
         return tag_data
 
-    @command(name="tags()", aliases=["tags"], hidden=True)
-    async def info_command(self, ctx: Context):
-        """
-        Show available methods for this class.
+    @group(name='tags', aliases=('tag', 't'), hidden=True, invoke_without_command=True)
+    async def tags_group(self, ctx: Context):
+        """Show all known tags, a single tag, or run a subcommand."""
 
-        :param ctx: Discord message context
-        """
+        await ctx.invoke(self.get_command)
 
-        log.debug(f"{ctx.author} requested info about the tags cog")
-        return await ctx.invoke(self.bot.get_command("help"), "Tags")
-
-    @command(name="tags.get()", aliases=["tags.get", "tags.show()", "tags.show", "get_tag"])
-    async def get_command(self, ctx: Context, tag_name: TagNameConverter=None):
+    @tags_group.command(name='get', aliases=('show', 'g'))
+    async def get_command(self, ctx: Context, *, tag_name: TagNameConverter=None):
         """
         Get a list of all tags or a specified tag.
 
@@ -244,32 +239,25 @@ class Tags:
                 embed.description = "**There are no tags in the database!**"
 
             if tag_name:
-                embed.set_footer(text="To show a list of all tags, use bot.tags.get().")
+                embed.set_footer(text="To show a list of all tags, use !tags.")
                 embed.title = "Tag not found."
 
         # Paginate if this is a list of all tags
         if tags:
-            if ctx.invoked_with == "tags.keys()":
-                detail_invocation = "bot.tags[<tagname>]"
-            elif ctx.invoked_with == "tags.get()":
-                detail_invocation = "bot.tags.get(<tagname>)"
-            else:
-                detail_invocation = "bot.tags.get <tagname>"
-
             log.debug(f"Returning a paginated list of all tags.")
             return await LinePaginator.paginate(
                 (lines for lines in tags),
                 ctx, embed,
-                footer_text=f"To show a tag, type {detail_invocation}.",
+                footer_text="To show a tag, type !tags <tagname>.",
                 empty=False,
                 max_lines=15
             )
 
         return await ctx.send(embed=embed)
 
+    @tags_group.command(name='set', aliases=('add', 'edit', 's'))
     @with_role(Roles.admin, Roles.owner, Roles.moderator)
-    @command(name="tags.set()", aliases=["tags.set", "tags.add", "tags.add()", "tags.edit", "tags.edit()", "add_tag"])
-    async def set_command(self, ctx: Context, tag_name: TagNameConverter, tag_content: TagContentConverter):
+    async def set_command(self, ctx: Context, tag_name: TagNameConverter, *, tag_content: TagContentConverter):
         """
         Create a new tag or edit an existing one.
 
@@ -303,9 +291,9 @@ class Tags:
 
         return await ctx.send(embed=embed)
 
+    @tags_group.command(name='delete', aliases=('remove', 'rm', 'd'))
     @with_role(Roles.admin, Roles.owner)
-    @command(name="tags.delete()", aliases=["tags.delete", "tags.remove", "tags.remove()", "remove_tag"])
-    async def delete_command(self, ctx: Context, tag_name: TagNameConverter):
+    async def delete_command(self, ctx: Context, *, tag_name: TagNameConverter):
         """
         Remove a tag from the database.
 
@@ -352,16 +340,6 @@ class Tags:
             await ctx.send(embed=embed)
         else:
             log.error(f"Unhandled tag command error: {error} ({error.original})")
-
-    @command(name="tags.keys()")
-    async def keys_command(self, ctx: Context):
-        """
-        Alias for `tags.get()` with no arguments.
-
-        :param ctx: discord message context
-        """
-
-        return await ctx.invoke(self.get_command)
 
 
 def setup(bot):
