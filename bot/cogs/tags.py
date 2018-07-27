@@ -151,10 +151,10 @@ class Tags:
         return tag_data
 
     @group(name='tags', aliases=('tag', 't'), hidden=True, invoke_without_command=True)
-    async def tags_group(self, ctx: Context):
+    async def tags_group(self, ctx: Context, *, tag_name: TagNameConverter=None):
         """Show all known tags, a single tag, or run a subcommand."""
 
-        await ctx.invoke(self.get_command)
+        await ctx.invoke(self.get_command, tag_name=tag_name)
 
     @tags_group.command(name='get', aliases=('show', 'g'))
     async def get_command(self, ctx: Context, *, tag_name: TagNameConverter=None):
