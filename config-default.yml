@@ -24,10 +24,10 @@ bot:
         crown_green:   "https://cdn.discordapp.com/emojis/469964154719961088.png"
         crown_red:     "https://cdn.discordapp.com/emojis/469964154879344640.png"
 
-        defcon_denied:  "https://cdn.discordapp.com/emojis/470326274217476107.png"
+        defcon_denied:  "https://cdn.discordapp.com/emojis/472475292078964738.png"
         defcon_disabled: "https://cdn.discordapp.com/emojis/470326273952972810.png"
         defcon_enabled:  "https://cdn.discordapp.com/emojis/470326274213150730.png"
-        defcon_updated:  "https://cdn.discordapp.com/emojis/470326274082996224.png"
+        defcon_updated:  "https://cdn.discordapp.com/emojis/472472638342561793.png"
 
         guild_update: "https://cdn.discordapp.com/emojis/469954765141442561.png"
 
@@ -36,8 +36,8 @@ bot:
         hash_red:     "https://cdn.discordapp.com/emojis/469950145413251072.png"
 
         message_bulk_delete: "https://cdn.discordapp.com/emojis/469952898994929668.png"
-        message_delete:      "https://cdn.discordapp.com/emojis/469952898516779008.png"
-        message_edit:        "https://cdn.discordapp.com/emojis/469952898143485972.png"
+        message_delete:      "https://cdn.discordapp.com/emojis/472472641320648704.png"
+        message_edit:        "https://cdn.discordapp.com/emojis/472472638976163870.png"
 
         sign_in:  "https://cdn.discordapp.com/emojis/469952898181234698.png"
         sign_out: "https://cdn.discordapp.com/emojis/469952898089091082.png"
