@@ -85,4 +85,4 @@ class Utils:
 
 def setup(bot):
     bot.add_cog(Utils(bot))
-    log.info("Utils cog loaded")
+    log.info("Cog loaded: Utils")
