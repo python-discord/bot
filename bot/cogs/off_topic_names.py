@@ -84,6 +84,7 @@ class OffTopicNames:
             self.updater_task = await self.bot.loop.create_task(coro)
 
     @group(name='otname', aliases=('otnames', 'otn'))
+    @with_role(Roles.owner, Roles.admin, Roles.moderator)
     async def otname_group(self, ctx):
         """Add or list items from the off-topic channel name rotation."""
 

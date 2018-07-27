@@ -37,6 +37,7 @@ class Cogs:
         self.cogs.update({v: k for k, v in self.cogs.items()})
 
     @group(name='cogs', aliases=('c',))
+    @with_role(Roles.moderator, Roles.admin, Roles.owner, Roles.devops)
     async def cogs_group(self, ctx: Context):
         """Load, unload, reload, and list active cogs."""
 

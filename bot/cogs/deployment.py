@@ -18,6 +18,7 @@ class Deployment:
         self.bot = bot
 
     @group(name='redeploy')
+    @with_role(Roles.owner, Roles.admin, Roles.moderator)
     async def redeploy_group(self, ctx: Context):
         """Redeploy the bot or the site."""
 

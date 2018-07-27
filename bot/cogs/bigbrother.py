@@ -80,6 +80,7 @@ class BigBrother:
             await channel.send(relay_content)
 
     @group(name='bigbrother', aliases=('bb',))
+    @with_role(Roles.owner, Roles.admin, Roles.moderator)
     async def bigbrother_group(self, ctx: Context):
         """Monitor users, NSA-style."""
 

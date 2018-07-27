@@ -174,6 +174,7 @@ async def func():  # (None,) -> Any
         await ctx.send(f"```py\n{out}```", embed=embed)
 
     @group(name='internal', aliases=('int',))
+    @with_role(Roles.owner, Roles.admin)
     async def internal_group(self, ctx):
         """Internal commands. Top secret!"""
 
