@@ -5,7 +5,7 @@ from typing import Dict
 
 from aiohttp import ClientError
 from discord import Colour, Embed, Guild, Member, Object, User
-from discord.ext.commands import Bot, Context, command
+from discord.ext.commands import Bot, Context, command, group
 
 from bot import constants
 from bot.constants import Keys, Roles, URLs
@@ -45,7 +45,7 @@ class Moderation:
     # region: Permanent infractions
 
     @with_role(*MODERATION_ROLES)
-    @command(name="moderation.warn", aliases=["warn"])
+    @command(name="warn")
     async def warn(self, ctx: Context, user: User, reason: str = None):
         """
         Create a warning infraction in the database for a user.
@@ -82,7 +82,7 @@ class Moderation:
         await ctx.send(result_message)
 
     @with_role(*MODERATION_ROLES)
-    @command(name="moderation.kick", aliases=["kick"])
+    @command(name="kick")
     async def kick(self, ctx, user: Member, reason: str = None):
         """
         Kicks a user.
@@ -121,7 +121,7 @@ class Moderation:
         await ctx.send(result_message)
 
     @with_role(*MODERATION_ROLES)
-    @command(name="moderation.ban", aliases=["ban"])
+    @command(name="ban")
     async def ban(self, ctx: Context, user: User, reason: str = None):
         """
         Create a permanent ban infraction in the database for a user.
@@ -160,7 +160,7 @@ class Moderation:
         await ctx.send(result_message)
 
     @with_role(*MODERATION_ROLES)
-    @command(name="moderation.mute", aliases=["mute"])
+    @command(name="mute")
     async def mute(self, ctx: Context, user: Member, reason: str = None):
         """
         Create a permanent mute infraction in the database for a user.
@@ -203,7 +203,7 @@ class Moderation:
     # region: Temporary infractions
 
     @with_role(*MODERATION_ROLES)
-    @command(name="moderation.tempmute", aliases=["tempmute"])
+    @command(name="tempmute")
     async def tempmute(self, ctx: Context, user: Member, duration: str, reason: str = None):
         """
         Create a temporary mute infraction in the database for a user.
@@ -250,7 +250,7 @@ class Moderation:
         await ctx.send(result_message)
 
     @with_role(*MODERATION_ROLES)
-    @command(name="moderation.tempban", aliases=["tempban"])
+    @command(name="tempban")
     async def tempban(self, ctx, user: User, duration: str, reason: str = None):
         """
         Create a temporary ban infraction in the database for a user.
@@ -301,7 +301,7 @@ class Moderation:
     # region: Remove infractions (un- commands)
 
     @with_role(*MODERATION_ROLES)
-    @command(name="moderation.unmute", aliases=["unmute"])
+    @command(name="unmute")
     async def unmute(self, ctx, user: Member):
         """
         Deactivates the active mute infraction for a user.
@@ -339,7 +339,7 @@ class Moderation:
             return
 
     @with_role(*MODERATION_ROLES)
-    @command(name="moderation.unban", aliases=["unban"])
+    @command(name="unban")
     async def unban(self, ctx, user: User):
         """
         Deactivates the active ban infraction for a user.
@@ -380,7 +380,17 @@ class Moderation:
     # region: Edit infraction commands
 
     @with_role(*MODERATION_ROLES)
-    @command(name="infraction.edit.duration")
+    @group(name='infraction', aliases=('infr',))
+    async def infraction_group(self, ctx: Context):
+        """Infraction manipulation commands."""
+
+    @with_role(*MODERATION_ROLES)
+    @infraction_group.group(name='edit')
+    async def infraction_edit_group(self, ctx: Context):
+        """Infraction editing commands."""
+
+    @with_role(*MODERATION_ROLES)
+    @infraction_edit_group.command(name="duration")
     async def edit_duration(self, ctx, infraction_id: str, duration: str):
         """
         Sets the duration of the given infraction, relative to the time of updating.
@@ -423,7 +433,7 @@ class Moderation:
             return
 
     @with_role(*MODERATION_ROLES)
-    @command(name="infraction.edit.reason")
+    @infraction_edit_group.command(name="reason")
     async def edit_reason(self, ctx, infraction_id: str, reason: str):
         """
         Sets the reason of the given infraction.
@@ -455,7 +465,7 @@ class Moderation:
     # region: Search infractions
 
     @with_role(*MODERATION_ROLES)
-    @command(name="infraction.search")
+    @infraction_group.command(name="search")
     async def search(self, ctx, arg: InfractionSearchQuery):
         """
         Searches for infractions in the database.
