@@ -79,6 +79,9 @@ class Snekbox:
         log.info(f"Received code from {ctx.author.name}#{ctx.author.discriminator} for evaluation:\n{code}")
         self.jobs[ctx.author.id] = datetime.datetime.now()
 
+        while code.startswith("\n"):
+            code = code[1:]
+
         if code.startswith("```") and code.endswith("```"):
             code = code[3:-3]
 
