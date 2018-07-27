@@ -4,6 +4,8 @@ import re
 from discord import Message
 from discord.ext.commands import Bot
 
+from bot.constants import Channels
+
 log = logging.getLogger(__name__)
 
 
@@ -16,7 +18,13 @@ class Filtering:
         self.bot = bot
 
     async def on_message(self, msg: Message):
-        self._filter_zalgo(msg.content)
+
+        has_zalgo = await self._filter_zalgo(msg.content)
+
+        if has_zalgo:
+            self.bot.get_channel(Channels.modlog).send(
+                content="ZALGO!"
+            )
 
     @staticmethod
     async def _has_zalgo(text):
