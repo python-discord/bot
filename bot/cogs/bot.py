@@ -49,15 +49,15 @@ class Bot:
 
         await ctx.invoke(self.bot.get_command("help"), "bot")
 
-    @bot_group.command(aliases=["about"], hidden=True)
+    @bot_group.command(name='about', aliases=('info',), hidden=True)
     @with_role(Roles.verified)
-    async def info(self, ctx: Context):
+    async def about_command(self, ctx: Context):
         """
         Get information about the bot
         """
 
         embed = Embed(
-            description="A utility bot designed just for the Python server! Try `bot.help()` for more info.",
+            description="A utility bot designed just for the Python server! Try `!help()` for more info.",
             url="https://gitlab.com/discord-python/projects/bot"
         )
 
@@ -73,30 +73,21 @@ class Bot:
             icon_url=URLs.bot_avatar
         )
 
-        log.info(f"{ctx.author} called bot.about(). Returning information about the bot.")
+        log.info(f"{ctx.author} called !about. Returning information about the bot.")
         await ctx.send(embed=embed)
 
-    @command(name="info()", aliases=["info", "about()", "about"])
-    @with_role(Roles.verified)
-    async def info_wrapper(self, ctx: Context):
-        """
-        Get information about the bot
-        """
-
-        await ctx.invoke(self.info)
-
-    @command(name="print()", aliases=["print", "echo", "echo()"])
+    @command(name='echo', aliases=('print',))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
-    async def echo_command(self, ctx: Context, text: str):
+    async def echo_command(self, ctx: Context, *, text: str):
         """
         Send the input verbatim to the current channel
         """
 
         await ctx.send(text)
 
-    @command(name="embed()", aliases=["embed"])
+    @command(name='embed')
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
-    async def embed_command(self, ctx: Context, text: str):
+    async def embed_command(self, ctx: Context, *, text: str):
         """
         Send the input within an embed to the current channel
         """

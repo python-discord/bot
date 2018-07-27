@@ -23,9 +23,9 @@ class Utils:
         self.base_pep_url = "http://www.python.org/dev/peps/pep-"
         self.base_github_pep_url = "https://raw.githubusercontent.com/python/peps/master/pep-"
 
-    @command(name="pep()", aliases=["pep", "get_pep"])
+    @command(name='pep', aliases=('get_pep', 'p'))
     @with_role(Roles.verified)
-    async def pep_search(self, ctx: Context, pep_number: str):
+    async def pep_command(self, ctx: Context, pep_number: str):
         """
         Fetches information about a PEP and sends it to the channel.
         """
@@ -85,4 +85,4 @@ class Utils:
 
 def setup(bot):
     bot.add_cog(Utils(bot))
-    log.info("Utils cog loaded")
+    log.info("Cog loaded: Utils")

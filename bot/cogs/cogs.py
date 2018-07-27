@@ -2,7 +2,7 @@ import logging
 import os
 
 from discord import ClientException, Colour, Embed
-from discord.ext.commands import Bot, Context, command
+from discord.ext.commands import Bot, Context, group
 
 from bot.constants import (
     Emojis, Roles, URLs,
@@ -36,13 +36,18 @@ class Cogs:
         # Allow reverse lookups by reversing the pairs
         self.cogs.update({v: k for k, v in self.cogs.items()})
 
-    @command(name="cogs.load()", aliases=["cogs.load", "load_cog"])
+    @group(name='cogs', aliases=('c',))
+    @with_role(Roles.moderator, Roles.admin, Roles.owner, Roles.devops)
+    async def cogs_group(self, ctx: Context):
+        """Load, unload, reload, and list active cogs."""
+
+    @cogs_group.command(name='load', aliases=('l',))
     @with_role(Roles.moderator, Roles.admin, Roles.owner, Roles.devops)
     async def load_command(self, ctx: Context, cog: str):
         """
         Load up an unloaded cog, given the module containing it
 
-        You can specify the cog name for any cogs that are placed directly within `bot.cogs`, or specify the
+        You can specify the cog name for any cogs that are placed directly within `!cogs`, or specify the
         entire module directly.
         """
 
@@ -93,13 +98,13 @@ class Cogs:
 
         await ctx.send(embed=embed)
 
-    @command(name="cogs.unload()", aliases=["cogs.unload", "unload_cog"])
+    @cogs_group.command(name='unload', aliases=('ul',))
     @with_role(Roles.moderator, Roles.admin, Roles.owner, Roles.devops)
     async def unload_command(self, ctx: Context, cog: str):
         """
         Unload an already-loaded cog, given the module containing it
 
-        You can specify the cog name for any cogs that are placed directly within `bot.cogs`, or specify the
+        You can specify the cog name for any cogs that are placed directly within `!cogs`, or specify the
         entire module directly.
         """
 
@@ -145,13 +150,13 @@ class Cogs:
 
         await ctx.send(embed=embed)
 
-    @command(name="cogs.reload()", aliases=["cogs.reload", "reload_cog"])
+    @cogs_group.command(name='reload', aliases=('r',))
     @with_role(Roles.moderator, Roles.admin, Roles.owner, Roles.devops)
     async def reload_command(self, ctx: Context, cog: str):
         """
         Reload an unloaded cog, given the module containing it
 
-        You can specify the cog name for any cogs that are placed directly within `bot.cogs`, or specify the
+        You can specify the cog name for any cogs that are placed directly within `!cogs`, or specify the
         entire module directly.
 
         If you specify "*" as the cog, every cog currently loaded will be unloaded, and then every cog present in the
@@ -250,7 +255,7 @@ class Cogs:
 
         await ctx.send(embed=embed)
 
-    @command(name="cogs.list()", aliases=["cogs", "cogs.list", "cogs()"])
+    @cogs_group.command(name='list', aliases=('all',))
     @with_role(Roles.moderator, Roles.admin, Roles.owner, Roles.devops)
     async def list_command(self, ctx: Context):
         """

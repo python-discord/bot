@@ -356,7 +356,13 @@ class Doc:
             changes = await resp.json()
             return changes["deleted"] == 1  # Did the package delete successfully?
 
-    @commands.command(name='docs.get()', aliases=['docs.get'])
+    @commands.group(name='docs', aliases=('doc', 'd'), invoke_without_command=True)
+    async def docs_group(self, ctx, symbol: commands.clean_content = None):
+        """Lookup documentation for Python symbols."""
+
+        await ctx.invoke(self.get_command)
+
+    @docs_group.command(name='get', aliases=('g',))
     async def get_command(self, ctx, symbol: commands.clean_content = None):
         """
         Return a documentation embed for a given symbol.
@@ -367,8 +373,10 @@ class Doc:
                        or nothing to get a list of all inventories
 
         Examples:
-            bot.docs.get('aiohttp')
-            bot.docs['aiohttp']
+            !docs
+            !docs aiohttp
+            !docs aiohttp.ClientSession
+            !docs get aiohttp.ClientSession
         """
 
         if symbol is None:
@@ -396,8 +404,8 @@ class Doc:
             else:
                 await ctx.send(embed=doc_embed)
 
+    @docs_group.command(name='set', aliases=('s',))
     @with_role(Roles.admin, Roles.owner, Roles.moderator)
-    @commands.command(name='docs.set()', aliases=['docs.set'])
     async def set_command(
         self, ctx, package_name: ValidPythonIdentifier,
         base_url: ValidURL, inventory_url: InventoryURL
@@ -413,11 +421,10 @@ class Doc:
         :param inventory_url: The intersphinx inventory URL.
 
         Example:
-            bot.docs.set(
-                'discord',
-                'https://discordpy.readthedocs.io/en/rewrite/',
-                'https://discordpy.readthedocs.io/en/rewrite/objects.inv'
-            )
+            !docs set \
+                    discord \
+                    https://discordpy.readthedocs.io/en/rewrite/ \
+                    https://discordpy.readthedocs.io/en/rewrite/objects.inv
         """
 
         await self.set_package(package_name, base_url, inventory_url)
@@ -435,8 +442,8 @@ class Doc:
             await self.refresh_inventory()
         await ctx.send(f"Added package `{package_name}` to database and refreshed inventory.")
 
+    @docs_group.command(name='delete', aliases=('remove', 'rm', 'd'))
     @with_role(Roles.admin, Roles.owner, Roles.moderator)
-    @commands.command(name='docs.delete()', aliases=['docs.delete', 'docs.remove()', 'docs.remove'])
     async def delete_command(self, ctx, package_name: ValidPythonIdentifier):
         """
         Removes the specified package from the database.
@@ -445,8 +452,7 @@ class Doc:
         :param package_name: The package name, for example `aiohttp`.
 
         Examples:
-            bot.tags.delete('aiohttp')
-            bot.tags['aiohttp'] = None
+            !docs delete aiohttp
         """
 
         success = await self.delete_package(package_name)
