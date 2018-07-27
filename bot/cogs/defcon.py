@@ -98,6 +98,7 @@ class Defcon:
                 )
 
     @group(name='defcon', aliases=('dc',), invoke_without_command=True)
+    @with_role(Roles.admin, Roles.owner)
     async def defcon_group(self, ctx: Context):
         """Check the DEFCON status or run a subcommand."""
 
