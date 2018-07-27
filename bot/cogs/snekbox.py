@@ -79,7 +79,15 @@ class Snekbox:
         log.info(f"Received code from {ctx.author.name}#{ctx.author.discriminator} for evaluation:\n{code}")
         self.jobs[ctx.author.id] = datetime.datetime.now()
 
-        code = [f"    {line}" for line in code.split("\n")]
+        if code.startswith("```") and code.endswith("```"):
+            code = code[3:-3]
+
+        if code.startswith("python"):
+            code = code[6:]
+        elif code.startswith("py"):
+            code = code[2:]
+
+        code = [f"    {line.strip()}" for line in code.split("\n")]
         code = CODE_TEMPLATE.replace("{CODE}", "\n".join(code))
 
         try:
