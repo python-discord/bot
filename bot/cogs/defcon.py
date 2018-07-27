@@ -2,12 +2,16 @@ import logging
 from datetime import datetime, timedelta
 
 from discord import Colour, Embed, Member
-from discord.ext.commands import Bot, Context, command
+from discord.ext.commands import Bot, Context, group
 
-from bot.constants import Channels, Keys, Roles, URLs
+from bot.cogs.modlog import ModLog
+from bot.constants import Channels, Emojis, Icons, Keys, Roles, URLs
 from bot.decorators import with_role
 
 log = logging.getLogger(__name__)
+
+COLOUR_RED = Colour(0xcd6d6d)
+COLOUR_GREEN = Colour(0x68c290)
 
 REJECTION_MESSAGE = """
 Hi, {user} - Thanks for your interest in our server!
@@ -30,6 +34,10 @@ class Defcon:
         self.bot = bot
         self.days = timedelta(days=0)
         self.headers = {"X-API-KEY": Keys.site_api}
+
+    @property
+    def modlog(self) -> ModLog:
+        return self.bot.get_cog("ModLog")
 
     async def on_ready(self):
         try:
@@ -65,20 +73,44 @@ class Defcon:
             if now - member.created_at < self.days:
                 log.info(f"Rejecting user {member}: Account is too new and DEFCON is enabled")
 
+                message_sent = False
+
                 try:
                     await member.send(REJECTION_MESSAGE.format(user=member.mention))
+
+                    message_sent = True
                 except Exception:
                     log.exception(f"Unable to send rejection message to user: {member}")
 
                 await member.kick(reason="DEFCON active, user is too new")
 
+                message = (
+                    f"{member.name}#{member.discriminator} (`{member.id}`) "
+                    f"was denied entry because their account is too new."
+                )
+
+                if not message_sent:
+                    message = f"{message}\n\nUnable to send rejection message via DM; they probably have DMs disabled."
+
+                await self.modlog.send_log_message(
+                    Icons.defcon_denied, COLOUR_RED, "Entry denied",
+                    message, member.avatar_url_as(static_format="png")
+                )
+
+    @group(name='defcon', aliases=('dc',), invoke_without_command=True)
     @with_role(Roles.admin, Roles.owner)
-    @command(name="defcon.enable", aliases=["defcon.enable()", "defcon_enable", "defcon_enable()"])
-    async def enable(self, ctx: Context):
+    async def defcon_group(self, ctx: Context):
+        """Check the DEFCON status or run a subcommand."""
+
+        await ctx.invoke(self.status_command)
+
+    @defcon_group.command(name='enable', aliases=('on', 'e'))
+    @with_role(Roles.admin, Roles.owner)
+    async def enable_command(self, ctx: Context):
         """
         Enable DEFCON mode. Useful in a pinch, but be sure you know what you're doing!
 
-        Currently, this just adds an account age requirement. Use bot.defcon.days(int) to set how old an account must
+        Currently, this just adds an account age requirement. Use !defcon days <int> to set how old an account must
         be, in days.
         """
 
@@ -92,15 +124,35 @@ class Defcon:
             )
 
             await response.json()
-        except Exception:
+        except Exception as e:
             log.exception("Unable to update DEFCON settings.")
-            await ctx.send("DEFCON enabled locally, but there was a problem updating the site.")
-        else:
-            await ctx.send("DEFCON enabled.")
+            await ctx.send(
+                f"{Emojis.defcon_enabled} DEFCON enabled.\n\n"
+                "**There was a problem updating the site** - This setting may be reverted when the bot is "
+                "restarted.\n\n"
+                f"```py\n{e}\n```"
+            )
 
+            await self.modlog.send_log_message(
+                Icons.defcon_enabled, COLOUR_GREEN, "DEFCON enabled",
+                f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)\n"
+                f"**Days:** {self.days.days}\n\n"
+                "**There was a problem updating the site** - This setting may be reverted when the bot is "
+                "restarted.\n\n"
+                f"```py\n{e}\n```"
+            )
+        else:
+            await ctx.send(f"{Emojis.defcon_enabled} DEFCON enabled.")
+
+            await self.modlog.send_log_message(
+                Icons.defcon_enabled, COLOUR_GREEN, "DEFCON enabled",
+                f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)\n"
+                f"**Days:** {self.days.days}\n\n"
+            )
+
+    @defcon_group.command(name='disable', aliases=('off', 'd'))
     @with_role(Roles.admin, Roles.owner)
-    @command(name="defcon.disable", aliases=["defcon.disable()", "defcon_disable", "defcon_disable()"])
-    async def disable(self, ctx: Context):
+    async def disable_command(self, ctx: Context):
         """
         Disable DEFCON mode. Useful in a pinch, but be sure you know what you're doing!
         """
@@ -115,27 +167,47 @@ class Defcon:
             )
 
             await response.json()
-        except Exception:
+        except Exception as e:
             log.exception("Unable to update DEFCON settings.")
-            await ctx.send("DEFCON disabled locally, but there was a problem updating the site.")
-        else:
-            await ctx.send("DEFCON disabled.")
+            await ctx.send(
+                f"{Emojis.defcon_disabled} DEFCON disabled.\n\n"
+                "**There was a problem updating the site** - This setting may be reverted when the bot is "
+                "restarted.\n\n"
+                f"```py\n{e}\n```"
+            )
 
+            await self.modlog.send_log_message(
+                Icons.defcon_disabled, COLOUR_RED, "DEFCON disabled",
+                f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)\n"
+                "**There was a problem updating the site** - This setting may be reverted when the bot is "
+                "restarted.\n\n"
+                f"```py\n{e}\n```"
+            )
+        else:
+            await ctx.send(f"{Emojis.defcon_disabled} DEFCON disabled.")
+
+            await self.modlog.send_log_message(
+                Icons.defcon_disabled, COLOUR_RED, "DEFCON disabled",
+                f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)"
+            )
+
+    @defcon_group.command(name='status', aliases=('s',))
     @with_role(Roles.admin, Roles.owner)
-    @command(name="defcon", aliases=["defcon()", "defcon.status", "defcon.status()"])
-    async def defcon(self, ctx: Context):
+    async def status_command(self, ctx: Context):
         """
         Check the current status of DEFCON mode.
         """
 
-        embed = Embed(colour=Colour.blurple(), title="DEFCON Status")
-        embed.add_field(name="Enabled", value=str(self.enabled), inline=True)
-        embed.add_field(name="Days", value=str(self.days.days), inline=True)
+        embed = Embed(
+            colour=Colour.blurple(), title="DEFCON Status",
+            description=f"**Enabled:** {self.enabled}\n"
+                        f"**Days:** {self.days.days}"
+        )
 
         await ctx.send(embed=embed)
 
+    @defcon_group.command(name='days')
     @with_role(Roles.admin, Roles.owner)
-    @command(name="defcon.days", aliases=["defcon.days()", "defcon_days", "defcon_days()"])
     async def days_command(self, ctx: Context, days: int):
         """
         Set how old an account must be to join the server, in days, with DEFCON mode enabled.
@@ -151,14 +223,34 @@ class Defcon:
             )
 
             await response.json()
-        except Exception:
+        except Exception as e:
             log.exception("Unable to update DEFCON settings.")
             await ctx.send(
-                f"DEFCON days updated; accounts must be {days} days old to join to the server "
-                f"- but there was a problem updating the site."
+                f"{Emojis.defcon_updated} DEFCON days updated; accounts must be {days} "
+                f"days old to join to the server.\n\n"
+                "**There was a problem updating the site** - This setting may be reverted when the bot is "
+                "restarted.\n\n"
+                f"```py\n{e}\n```"
+            )
+
+            await self.modlog.send_log_message(
+                Icons.defcon_updated, Colour.blurple(), "DEFCON updated",
+                f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)\n"
+                f"**Days:** {self.days.days}\n\n"
+                "**There was a problem updating the site** - This setting may be reverted when the bot is "
+                "restarted.\n\n"
+                f"```py\n{e}\n```"
             )
         else:
-            await ctx.send(f"DEFCON days updated; accounts must be {days} days old to join to the server")
+            await ctx.send(
+                f"{Emojis.defcon_updated} DEFCON days updated; accounts must be {days} days old to join to the server"
+            )
+
+            await self.modlog.send_log_message(
+                Icons.defcon_updated, Colour.blurple(), "DEFCON updated",
+                f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)\n"
+                f"**Days:** {self.days.days}"
+            )
 
 
 def setup(bot: Bot):

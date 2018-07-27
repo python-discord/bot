@@ -2,7 +2,7 @@ import logging
 from typing import List, Union
 
 from discord import Color, Embed, Guild, Member, Message, TextChannel, User
-from discord.ext.commands import Bot, Context, command
+from discord.ext.commands import Bot, Context, group
 
 from bot.constants import Channels, Emojis, Guild as GuildConfig, Keys, Roles, URLs
 from bot.decorators import with_role
@@ -79,7 +79,12 @@ class BigBrother:
 
             await channel.send(relay_content)
 
-    @command(name='bigbrother.watched()', aliases=('bigbrother.watched',))
+    @group(name='bigbrother', aliases=('bb',))
+    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    async def bigbrother_group(self, ctx: Context):
+        """Monitor users, NSA-style."""
+
+    @bigbrother_group.command(name='watched', aliases=('all',))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
     async def watched_command(self, ctx: Context, from_cache: bool = True):
         """
@@ -117,7 +122,7 @@ class BigBrother:
                 else:
                     await ctx.send(f":x: got non-200 response from the API")
 
-    @command(name='bigbrother.watch()', aliases=('bigbrother.watch',))
+    @bigbrother_group.command(name='watch', aliases=('w',))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
     async def watch_command(self, ctx: Context, user: User, channel: TextChannel = None):
         """
@@ -156,7 +161,7 @@ class BigBrother:
                 reason = data.get('error_message', "no message provided")
                 await ctx.send(f":x: the API returned an error: {reason}")
 
-    @command(name='bigbrother.unwatch()', aliases=('bigbrother.unwatch',))
+    @bigbrother_group.command(name='unwatch', aliases=('uw',))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
     async def unwatch_command(self, ctx: Context, user: User):
         """Stop relaying messages by the given `user`."""

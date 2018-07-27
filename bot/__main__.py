@@ -6,24 +6,14 @@ from discord import Game
 from discord.ext.commands import Bot, when_mentioned_or
 
 from bot.constants import Bot as BotConfig  # , ClickUp
-from bot.formatter import Formatter
 from bot.utils.service_discovery import wait_for_rmq
 
 
 log = logging.getLogger(__name__)
 
 bot = Bot(
-    command_prefix=when_mentioned_or(
-        "self.", "bot."
-    ),
-    activity=Game(
-        name="Help: bot.help()"
-    ),
-    help_attrs={
-        "name": "help()",
-        "aliases": ["help"]
-    },
-    formatter=Formatter(),
+    command_prefix=when_mentioned_or("!"),
+    activity=Game(name="Commands: !help"),
     case_insensitive=True,
     max_messages=10_000
 )
