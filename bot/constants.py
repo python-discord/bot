@@ -191,8 +191,8 @@ class Bot(metaclass=YAMLGetter):
     token: str
 
 
-class Filtering(metaclass=YAMLGetter):
-    section = "filtering"
+class Filter(metaclass=YAMLGetter):
+    section = "filter"
 
     filter_zalgo: bool
     filter_invites: bool
@@ -202,6 +202,7 @@ class Filtering(metaclass=YAMLGetter):
     domain_blacklist: List[str]
     watched_expressions: List[str]
     guild_invite_whitelist: List[str]
+    vanity_url_whitelist: List[str]
 
     channel_whitelist: List[int]
     role_whitelist: List[int]

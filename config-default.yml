@@ -90,7 +90,7 @@ guild:
         helpers:                          267630620367257601
 
 
-filtering:
+filter:
 
     # What do we filter?
     filter_zalgo:      true
@@ -111,6 +111,9 @@ filtering:
         - 010z0Kw1A9ql5c1Qe  # Programming: Meme Edition
         - XBGetGp            # STEM
 
+    vanity_url_whitelist:
+        - python             # Python Discord
+
     # Censor doesn't apply to these
     channel_whitelist:
         - *ADMINS
@@ -125,7 +128,6 @@ filtering:
         - *ADMIN_ROLE
         - *MOD_ROLE
         - *OWNER_ROLE
-
 
 keys:
     deploy_bot:  !ENV "DEPLOY_BOT_KEY"
