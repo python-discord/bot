@@ -113,29 +113,29 @@ filter:
         - pornhub.com
 
     word_watchlist:
-        - goo+k
+        - goo+ks*
         - ky+s+
-        - g[ae]+y+
-        - ki+ke+
-        - beane?r*
-        - coo+n
-        - nig+lets?
-        - slant-eye
-        - towe?l-?head+
-        - chi*n+k+
-        - spick*
+        - gh?[ae]+y+s*
+        - ki+ke+s*
+        - beane?r*s*
+        - coo+ns*
+        - nig+lets*
+        - slant-eyes*
+        - towe?l-?head+s*
+        - chi*n+k+s*
+        - spick*s*
         - kill* +(?:yo)?urself+
         - jew+s*
         - suicide
         - rape
-        - re+tar+d+
-        - cunt
+        - (?:re+)?tar+d+(?:ed)?
+        - cunts*
 
     token_watchlist:
         - fa+g+s*
         - 卐
         - cuck
-        - nigg+(?:e*r+|a+)s?
+        - nigg+(?:e*r+|a+h+?|u+h+)s?
         - fag+o+t+s*
 
     # Censor doesn't apply to these

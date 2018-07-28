@@ -4,7 +4,8 @@ import re
 from discord import Message
 from discord.ext.commands import Bot
 
-from bot.constants import Channels, Filter
+from bot.cogs.modlog import ModLog
+from bot.constants import Channels, Filter, Icons
 
 log = logging.getLogger(__name__)
 
@@ -14,7 +15,7 @@ INVITE_RE = (
     r"discordapp(?:[\.,]|dot)com(?:\/|slash)invite|"  # or discordapp.com/invite/
     r"discord(?:[\.,]|dot)me|"                        # or discord.me
     r"discord(?:[\.,]|dot)io"                         # or discord.io.
-    r")(?:[\/]|slash)"                                # / or slash
+    r")(?:[\/]|slash)"                                # / or 'slash'
     r"([a-zA-Z0-9]+)"                                 # the invite code itself
 )
 
@@ -25,7 +26,7 @@ ZALGO_RE = r"[\u0300-\u036F\u0489]"
 class Filtering:
     """
     Filtering out invites, blacklisting domains,
-    and preventing certain expressions
+    and warning us of certain regular expressions
     """
 
     def __init__(self, bot: Bot):
@@ -59,6 +60,10 @@ class Filtering:
             },
         }
 
+    @property
+    def modlog(self) -> ModLog:
+        return self.bot.get_cog("ModLog")
+
     async def on_message(self, msg: Message):
         """
         Whenever a message is received,
@@ -67,17 +72,16 @@ class Filtering:
         accordingly.
         """
 
-        # Check if the sender has a role that is whitelisted
+        # Should we filter this message?
         role_whitelisted = False
         for role in msg.author.roles:
             if role.id in Filter.role_whitelist:
                 role_whitelisted = True
 
-        # Is the channel whitelisted or is the sender a bot?
         filter_message = (
-            msg.channel.id not in Filter.channel_whitelist
-            and not role_whitelisted
-            and not msg.author.bot
+            msg.channel.id not in Filter.channel_whitelist  # Channel not in whitelist
+            and not role_whitelisted                        # Role not in whitelist
+            and not msg.author.bot                          # Author not a bot
         )
 
         filter_message = not msg.author.bot and msg.channel.id == Channels.modlog  # for testing
@@ -86,11 +90,12 @@ class Filtering:
         if filter_message:
             for filter_name, _filter in self.filters.items():
 
-                # Is the filter enabled in the config?
+                # Is this specific filter enabled in the config?
                 if _filter["enabled"]:
                     triggered = await _filter["function"](msg.content)
 
                     if triggered:
+
                         # If a filter is triggered, we should automod it.
                         if _filter["type"] == "filter":
                             log.debug(
@@ -106,21 +111,38 @@ class Filtering:
 
                         # If a watchlist triggers, we should send a mod alert.
                         elif _filter["type"] == "watchlist":
-                            log.debug(
-                                f"The {filter_name} watchlist was triggered "
-                                f"by {msg.author.name} in {msg.channel.name} with "
-                                f"the following message:\n{msg.content}."
-                            )
-
-                            # Replace this with actual mod alerts!
-                            await self.bot.get_channel(msg.channel.id).send(
-                                content=f"The **{filter_name}** watchlist was triggered!"
-                            )
+                            await self._mod_alert(filter_name, msg)
 
                         break  # We don't want multiple filters to trigger
 
+    async def _mod_alert(self, watchlist_name: str, msg: Message):
+        """
+        Send a mod alert into the #mod-alert channel.
+
+        Ping staff so they can take action.
+        """
+
+        log.debug(
+            f"The {filter_name} watchlist was triggered "
+            f"by {msg.author.name} in {msg.channel.name} with "
+            f"the following message:\n{msg.content}."
+        )
+
+        # Replace this with actual mod alerts!
+        await self.bot.get_channel(msg.channel.id).send(
+            content=f"The **{filter_name}** watchlist was triggered!"
+        )
+
+        # Send pretty modlog embed to mod-alerts
+        await self.modlog.send_log_message(
+            Icons.token_removed, COLOUR_RED, "Entry denied",
+            message, member.avatar_url_as(static_format="png")
+        )
+
+
+
     @staticmethod
-    async def _has_watchlist_words(text):
+    async def _has_watchlist_words(text: str) -> bool:
         """
         Returns True if the text contains
         one of the regular expressions from the
@@ -137,7 +159,7 @@ class Filtering:
         return False
 
     @staticmethod
-    async def _has_watchlist_tokens(text):
+    async def _has_watchlist_tokens(text: str) -> bool:
         """
         Returns True if the text contains
         one of the regular expressions from the
@@ -154,7 +176,7 @@ class Filtering:
         return False
 
     @staticmethod
-    async def _has_urls(text):
+    async def _has_urls(text: str) -> bool:
         """
         Returns True if the text contains one of
         the blacklisted URLs from the config file.
@@ -170,7 +192,7 @@ class Filtering:
         return False
 
     @staticmethod
-    async def _has_zalgo(text):
+    async def _has_zalgo(text: str) -> bool:
         """
         Returns True if the text contains zalgo characters.
 
@@ -180,7 +202,7 @@ class Filtering:
         return bool(re.search(ZALGO_RE, text))
 
     @staticmethod
-    async def _has_invites(text):
+    async def _has_invites(text: str) -> bool:
         """
         Returns True if the text contains an invite which
         is not on the guild_invite_whitelist in config.yml.
