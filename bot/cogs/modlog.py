@@ -1,20 +1,21 @@
+import asyncio
 import datetime
 import logging
-from typing import Union
+from typing import List, Optional, Union
 
 from dateutil.relativedelta import relativedelta
 from deepdiff import DeepDiff
 from discord import (
-    CategoryChannel, Colour, Embed, Guild, Member,
-    NotFound, RawBulkMessageDeleteEvent,
-    RawMessageDeleteEvent, RawMessageUpdateEvent,
-    Role, TextChannel, User, VoiceChannel
-)
+    CategoryChannel, Colour, Embed, File, Guild,
+    Member, Message, NotFound, RawBulkMessageDeleteEvent,
+    RawMessageDeleteEvent, RawMessageUpdateEvent, Role,
+    TextChannel, User, VoiceChannel)
 from discord.abc import GuildChannel
 from discord.ext.commands import Bot
 
 from bot.constants import Channels, Colours, Emojis, Icons
 from bot.constants import Guild as GuildConstant
+from bot.utils.time import humanize
 
 
 log = logging.getLogger(__name__)
@@ -22,7 +23,7 @@ log = logging.getLogger(__name__)
 GUILD_CHANNEL = Union[CategoryChannel, TextChannel, VoiceChannel]
 
 CHANNEL_CHANGES_UNSUPPORTED = ("permissions",)
-CHANNEL_CHANGES_SUPPRESSED = ("_overwrites",)
+CHANNEL_CHANGES_SUPPRESSED = ("_overwrites", "position")
 MEMBER_CHANGES_SUPPRESSED = ("activity", "status")
 ROLE_CHANGES_UNSUPPORTED = ("colour", "permissions")
 
@@ -34,19 +35,25 @@ class ModLog:
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.ignored_deletions = []
+        self._ignored_deletions = []
+
+        self._cached_deletes = []
+        self._cached_edits = []
 
     def ignore_message_deletion(self, *message_ids: int):
         for message_id in message_ids:
-            if message_id not in self.ignored_deletions:
-                self.ignored_deletions.append(message_id)
+            if message_id not in self._ignored_deletions:
+                self._ignored_deletions.append(message_id)
 
     async def send_log_message(
-            self, icon_url: str, colour: Colour, title: str, text: str, thumbnail: str = None,
-            channel_id: int = Channels.modlog, ping_everyone: bool = False
+            self, icon_url: Optional[str], colour: Colour, title: Optional[str], text: str, thumbnail: str = None,
+            channel_id: int = Channels.modlog, ping_everyone: bool = False, files: List[File] = None
     ):
         embed = Embed(description=text)
-        embed.set_author(name=title, icon_url=icon_url)
+
+        if title and icon_url:
+            embed.set_author(name=title, icon_url=icon_url)
+
         embed.colour = colour
         embed.timestamp = datetime.datetime.utcnow()
 
@@ -58,7 +65,7 @@ class ModLog:
         if ping_everyone:
             content = "@everyone"
 
-        await self.bot.get_channel(channel_id).send(content=content, embed=embed)
+        await self.bot.get_channel(channel_id).send(content=content, embed=embed, files=files)
 
     async def on_guild_channel_create(self, channel: GUILD_CHANNEL):
         if channel.guild.id != GuildConstant.id:
@@ -132,12 +139,12 @@ class ModLog:
                 continue
 
             if key in CHANNEL_CHANGES_UNSUPPORTED:
-                changes.append(f"{key.title()} updated")
+                changes.append(f"**{key.title()}** updated")
             else:
                 new = value["new_value"]
                 old = value["old_value"]
 
-                changes.append(f"{key.title()}: `{old}` -> `{new}`")
+                changes.append(f"**{key.title()}:** `{old}` **->** `{new}`")
 
             done.append(key)
 
@@ -152,7 +159,7 @@ class ModLog:
         if after.category:
             message = f"**{after.category}/#{after.name} (`{after.id}`)**\n{message}"
         else:
-            message = f"**#{after.name} (`{after.id}`)**\n{message}"
+            message = f"**#{after.name}** (`{after.id}`)\n{message}"
 
         await self.send_log_message(
             Icons.hash_blurple, Colour.blurple(),
@@ -204,12 +211,12 @@ class ModLog:
                 continue
 
             if key in ROLE_CHANGES_UNSUPPORTED:
-                changes.append(f"{key.title()} updated")
+                changes.append(f"**{key.title()}** updated")
             else:
                 new = value["new_value"]
                 old = value["old_value"]
 
-                changes.append(f"{key.title()}: `{old}` -> `{new}`")
+                changes.append(f"**{key.title()}:** `{old}` **->** `{new}`")
 
             done.append(key)
 
@@ -221,7 +228,7 @@ class ModLog:
         for item in sorted(changes):
             message += f"{Emojis.bullet} {item}\n"
 
-        message = f"**{after.name} (`{after.id}`)**\n{message}"
+        message = f"**{after.name}** (`{after.id}`)\n{message}"
 
         await self.send_log_message(
             Icons.crown_blurple, Colour.blurple(),
@@ -257,7 +264,7 @@ class ModLog:
             new = value["new_value"]
             old = value["old_value"]
 
-            changes.append(f"{key.title()}: `{old}` -> `{new}`")
+            changes.append(f"**{key.title()}:** `{old}` **->** `{new}`")
 
             done.append(key)
 
@@ -269,7 +276,7 @@ class ModLog:
         for item in sorted(changes):
             message += f"{Emojis.bullet} {item}\n"
 
-        message = f"**{after.name} (`{after.id}`)**\n{message}"
+        message = f"**{after.name}** (`{after.id}`)\n{message}"
 
         await self.send_log_message(
             Icons.guild_update, Colour.blurple(),
@@ -296,27 +303,7 @@ class ModLog:
         now = datetime.datetime.utcnow()
         difference = abs(relativedelta(now, member.created_at))
 
-        values = []
-
-        if difference.years:
-            values.append(f"{difference.years} years")
-
-        if difference.months:
-            values.append(f"{difference.months} months")
-
-        if difference.days:
-            values.append(f"{difference.days} days")
-
-        if difference.hours:
-            values.append(f"{difference.hours} hours")
-
-        if difference.minutes:
-            values.append(f"{difference.minutes} minutes")
-
-        if difference.seconds:
-            values.append(f"{difference.seconds} seconds")
-
-        message += "\n\n**Account age:** " + ", ".join(values)
+        message += "\n\n**Account age:** " + humanize(difference)
 
         if difference.days < 1 and difference.months < 1 and difference.years < 1:  # New user account!
             message = f"{Emojis.new} {message}"
@@ -355,10 +342,19 @@ class ModLog:
         changes = []
         done = []
 
-        diff_values = diff.get("values_changed", {})
+        diff_values = {}
+
+        diff_values.update(diff.get("values_changed", {}))
         diff_values.update(diff.get("type_changes", {}))
         diff_values.update(diff.get("iterable_item_removed", {}))
         diff_values.update(diff.get("iterable_item_added", {}))
+
+        diff_user = DeepDiff(before._user, after._user)
+
+        diff_values.update(diff_user.get("values_changed", {}))
+        diff_values.update(diff_user.get("type_changes", {}))
+        diff_values.update(diff_user.get("iterable_item_removed", {}))
+        diff_values.update(diff_user.get("iterable_item_added", {}))
 
         for key, value in diff_values.items():
             if not key:  # Not sure why, but it happens
@@ -381,19 +377,29 @@ class ModLog:
 
                 for role in old_roles:
                     if role not in new_roles:
-                        changes.append(f"Role removed: {role.name} (`{role.id}`)")
+                        changes.append(f"**Role removed:** {role.name} (`{role.id}`)")
 
                 for role in new_roles:
                     if role not in old_roles:
-                        changes.append(f"Role added: {role.name} (`{role.id}`)")
+                        changes.append(f"**Role added:** {role.name} (`{role.id}`)")
 
             else:
                 new = value["new_value"]
                 old = value["old_value"]
 
-                changes.append(f"{key.title()}: `{old}` -> `{new}`")
+                changes.append(f"**{key.title()}:** `{old}` **->** `{new}`")
 
             done.append(key)
+
+        if before.name != after.name:
+            changes.append(
+                f"**Username:** `{before.name}` **->** `{after.name}`"
+            )
+
+        if before.discriminator != after.discriminator:
+            changes.append(
+                f"**Discriminator:** `{before.discriminator}` **->** `{after.discriminator}`"
+            )
 
         if not changes:
             return
@@ -403,7 +409,7 @@ class ModLog:
         for item in sorted(changes):
             message += f"{Emojis.bullet} {item}\n"
 
-        message = f"**{after.name}#{after.discriminator} (`{after.id}`)**\n{message}"
+        message = f"**{after.name}#{after.discriminator}** (`{after.id}`)\n{message}"
 
         await self.send_log_message(
             Icons.user_update, Colour.blurple(),
@@ -421,8 +427,8 @@ class ModLog:
         ignored_messages = 0
 
         for message_id in event.message_ids:
-            if message_id in self.ignored_deletions:
-                self.ignored_deletions.remove(message_id)
+            if message_id in self._ignored_deletions:
+                self._ignored_deletions.remove(message_id)
                 ignored_messages += 1
 
         if ignored_messages >= len(event.message_ids):
@@ -442,47 +448,142 @@ class ModLog:
             ping_everyone=True
         )
 
+    async def on_message_delete(self, message: Message):
+        channel = message.channel
+        author = message.author
+
+        if message.guild.id != GuildConstant.id or channel.id in GuildConstant.ignored:
+            return
+
+        self._cached_deletes.append(message.id)
+
+        if message.id in self._ignored_deletions:
+            self._ignored_deletions.remove(message.id)
+            return
+
+        if author.bot:
+            return
+
+        if channel.category:
+            response = (
+                f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
+                f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
+                f"**Message ID:** `{message.id}`\n"
+                "\n"
+                f"{message.clean_content}"
+            )
+        else:
+            response = (
+                f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
+                f"**Channel:** #{channel.name} (`{channel.id}`)\n"
+                f"**Message ID:** `{message.id}`\n"
+                "\n"
+                f"{message.clean_content}"
+            )
+
+        if message.attachments:
+            # Prepend the message metadata with the number of attachments
+            response = f"**Attachments:** {len(message.attachments)}\n" + response
+
+        await self.send_log_message(
+            Icons.message_delete, COLOUR_RED,
+            "Message deleted",
+            response,
+            channel_id=Channels.message_log
+        )
+
     async def on_raw_message_delete(self, event: RawMessageDeleteEvent):
         if event.guild_id != GuildConstant.id or event.channel_id in GuildConstant.ignored:
             return
 
-        if event.message_id in self.ignored_deletions:
-            self.ignored_deletions.remove(event.message_id)
+        await asyncio.sleep(1)  # Wait here in case the normal event was fired
+
+        if event.message_id in self._cached_deletes:
+            # It was in the cache and the normal event was fired, so we can just ignore it
+            self._cached_deletes.remove(event.message_id)
             return
 
-        # Yeah yeah, I know..
-        message = self.bot._connection._get_message(event.message_id)  # type: discord.Message
+        if event.message_id in self._ignored_deletions:
+            self._ignored_deletions.remove(event.message_id)
+            return
+
         channel = self.bot.get_channel(event.channel_id)
 
-        if message is None:
-            if channel.category:
-                response = (
-                    f"Message `{event.message_id}` deleted in {channel.category}/#{channel.name} (`{channel.id}`)"
-                )
-            else:
-                response = (
-                    f"Message `{event.message_id}` deleted in #{channel.name} (`{channel.id}`)"
-                )
+        if channel.category:
+            response = (
+                f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
+                f"**Message ID:** `{event.message_id}`\n"
+                "\n"
+                "This message was not cached, so the message content cannot be displayed."
+            )
         else:
-            if message.author.bot:
-                return
-
-            if channel.category:
-                response = (
-                    f"Message `{event.message_id}` deleted in {channel.category}/#{channel.name} (`{channel.id}`)\n\n"
-                    f"```\n{message.clean_content}\n```"
-                )
-            else:
-                response = (
-                    f"Message `{event.message_id}` deleted in #{channel.name} (`{channel.id}`)\n\n"
-                    f"```\n{message.clean_content}\n```"
-                )
+            response = (
+                f"**Channel:** #{channel.name} (`{channel.id}`)\n"
+                f"**Message ID:** `{event.message_id}`\n"
+                "\n"
+                "This message was not cached, so the message content cannot be displayed."
+            )
 
         await self.send_log_message(
             Icons.message_delete, Colour(Colours.soft_red),
             "Message deleted",
             response,
             channel_id=Channels.message_log
+        )
+
+    async def on_message_edit(self, before: Message, after: Message):
+        if before.guild.id != GuildConstant.id or before.channel.id in GuildConstant.ignored or before.author.bot:
+            return
+
+        self._cached_edits.append(before.id)
+
+        if before.content == after.content:
+            return
+
+        author = before.author
+        channel = before.channel
+
+        if channel.category:
+            before_response = (
+                f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
+                f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
+                f"**Message ID:** `{before.id}`\n"
+                "\n"
+                f"{before.clean_content}"
+            )
+
+            after_response = (
+                f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
+                f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
+                f"**Message ID:** `{before.id}`\n"
+                "\n"
+                f"{after.clean_content}"
+            )
+        else:
+            before_response = (
+                f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
+                f"**Channel:** #{channel.name} (`{channel.id}`)\n"
+                f"**Message ID:** `{before.id}`\n"
+                "\n"
+                f"{before.clean_content}"
+            )
+
+            after_response = (
+                f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
+                f"**Channel:** #{channel.name} (`{channel.id}`)\n"
+                f"**Message ID:** `{before.id}`\n"
+                "\n"
+                f"{after.clean_content}"
+            )
+
+        await self.send_log_message(
+            Icons.message_edit, Colour.blurple(), "Message edited (Before)",
+            before_response, channel_id=Channels.message_log
+        )
+
+        await self.send_log_message(
+            Icons.message_edit, Colour.blurple(), "Message edited (After)",
+            after_response, channel_id=Channels.message_log
         )
 
     async def on_raw_message_edit(self, event: RawMessageUpdateEvent):
@@ -495,24 +596,57 @@ class ModLog:
         if message.guild.id != GuildConstant.id or message.channel.id in GuildConstant.ignored or message.author.bot:
             return
 
-        if message.channel.category:
-            response = (
-                f"{message.author} edited their message (`{message.id}`) "
-                f"in {channel.category}/#{channel.name} "
-                f"(`{channel.id}`):\n\n```{message.content}```"
+        await asyncio.sleep(1)  # Wait here in case the normal event was fired
+
+        if event.message_id in self._cached_edits:
+            # It was in the cache and the normal event was fired, so we can just ignore it
+            self._cached_edits.remove(event.message_id)
+            return
+
+        author = message.author
+        channel = message.channel
+
+        if channel.category:
+            before_response = (
+                f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
+                f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
+                f"**Message ID:** `{message.id}`\n"
+                "\n"
+                "This message was not cached, so the message content cannot be displayed."
+            )
+
+            after_response = (
+                f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
+                f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
+                f"**Message ID:** `{message.id}`\n"
+                "\n"
+                f"{message.clean_content}"
             )
         else:
-            response = (
-                f"{message.author} edited their message (`{message.id}`) "
-                f"in #{channel.name} "
-                f"(`{channel.id}`):\n\n```{message.content}```"
+            before_response = (
+                f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
+                f"**Channel:** #{channel.name} (`{channel.id}`)\n"
+                f"**Message ID:** `{message.id}`\n"
+                "\n"
+                "This message was not cached, so the message content cannot be displayed."
+            )
+
+            after_response = (
+                f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
+                f"**Channel:** #{channel.name} (`{channel.id}`)\n"
+                f"**Message ID:** `{message.id}`\n"
+                "\n"
+                f"{message.clean_content}"
             )
 
         await self.send_log_message(
-            Icons.message_edit, Colour.blurple(),
-            "Message edited",
-            response,
-            channel_id=Channels.message_log
+            Icons.message_edit, Colour.blurple(), "Message edited (Before)",
+            before_response, channel_id=Channels.message_log
+        )
+
+        await self.send_log_message(
+            Icons.message_edit, Colour.blurple(), "Message edited (After)",
+            after_response, channel_id=Channels.message_log
         )
 
 

@@ -1,7 +1,7 @@
 import logging
 
 from discord import Colour, Embed
-from discord.ext.commands import Bot, Context, command
+from discord.ext.commands import Bot, Context, command, group
 
 from bot.constants import Keys, Roles, URLs
 from bot.decorators import with_role
@@ -17,9 +17,14 @@ class Deployment:
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @command(name="redeploy()", aliases=["bot.redeploy", "bot.redeploy()", "redeploy"])
+    @group(name='redeploy')
+    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    async def redeploy_group(self, ctx: Context):
+        """Redeploy the bot or the site."""
+
+    @redeploy_group.command(name='bot')
     @with_role(Roles.admin, Roles.owner, Roles.devops)
-    async def redeploy(self, ctx: Context):
+    async def bot_command(self, ctx: Context):
         """
         Trigger bot deployment on the server - will only redeploy if there were changes to deploy
         """
@@ -34,9 +39,9 @@ class Deployment:
             log.error(f"{ctx.author} triggered deployment for bot. Deployment failed to start.")
             await ctx.send(f"{ctx.author.mention} Bot deployment failed - check the logs!")
 
-    @command(name="deploy_site()", aliases=["bot.deploy_site", "bot.deploy_site()", "deploy_site"])
+    @redeploy_group.command(name='site')
     @with_role(Roles.admin, Roles.owner, Roles.devops)
-    async def deploy_site(self, ctx: Context):
+    async def site_command(self, ctx: Context):
         """
         Trigger website deployment on the server - will only redeploy if there were changes to deploy
         """
@@ -51,9 +56,9 @@ class Deployment:
             log.error(f"{ctx.author} triggered deployment for site. Deployment failed to start.")
             await ctx.send(f"{ctx.author.mention} Site deployment failed - check the logs!")
 
-    @command(name="uptimes()", aliases=["bot.uptimes", "bot.uptimes()", "uptimes"])
+    @command(name='uptimes')
     @with_role(Roles.admin, Roles.owner, Roles.devops)
-    async def uptimes(self, ctx: Context):
+    async def uptimes_command(self, ctx: Context):
         """
         Check the various deployment uptimes for each service
         """

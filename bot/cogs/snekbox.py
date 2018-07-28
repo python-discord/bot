@@ -63,16 +63,13 @@ class Snekbox:
     def rmq(self) -> RMQ:
         return self.bot.get_cog("RMQ")
 
-    @command(name="snekbox.eval()", aliases=["snekbox.eval", "eval()", "eval"])
+    @command(name='eval', aliases=('e',))
     @guild_only()
     @check(channel_is_whitelisted_or_author_can_bypass)
-    async def do_eval(self, ctx: Context, code: str):
+    async def eval_command(self, ctx: Context, *, code: str):
         """
         Run some code. get the result back. We've done our best to make this safe, but do let us know if you
         manage to find an issue with it!
-
-        Remember, your code must be within some kind of string. Why not surround your code with quotes or put it in
-        a docstring?
         """
 
         if ctx.author.id in self.jobs:
@@ -82,7 +79,18 @@ class Snekbox:
         log.info(f"Received code from {ctx.author.name}#{ctx.author.discriminator} for evaluation:\n{code}")
         self.jobs[ctx.author.id] = datetime.datetime.now()
 
-        code = [f"    {line}" for line in code.split("\n")]
+        while code.startswith("\n"):
+            code = code[1:]
+
+        if code.startswith("```") and code.endswith("```"):
+            code = code[3:-3]
+
+        if code.startswith("python"):
+            code = code[6:]
+        elif code.startswith("py"):
+            code = code[2:]
+
+        code = [f"    {line.strip()}" for line in code.split("\n")]
         code = CODE_TEMPLATE.replace("{CODE}", "\n".join(code))
 
         try:
@@ -159,7 +167,7 @@ class Snekbox:
             del self.jobs[ctx.author.id]
             raise
 
-    @do_eval.error
+    @eval_command.error
     async def eval_command_error(self, ctx: Context, error: CommandError):
         embed = Embed(colour=Colour.red())
 
