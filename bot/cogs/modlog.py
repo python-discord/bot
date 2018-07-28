@@ -486,7 +486,7 @@ class ModLog:
             response = f"**Attachments:** {len(message.attachments)}\n" + response
 
         await self.send_log_message(
-            Icons.message_delete, COLOUR_RED,
+            Icons.message_delete, Colours.soft_red,
             "Message deleted",
             response,
             channel_id=Channels.message_log
