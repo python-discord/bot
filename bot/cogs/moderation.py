@@ -46,11 +46,11 @@ class Moderation:
 
     @with_role(*MODERATION_ROLES)
     @command(name="warn")
-    async def warn(self, ctx: Context, user: User, reason: str = None):
+    async def warn(self, ctx: Context, user: User, *, reason: str = None):
         """
         Create a warning infraction in the database for a user.
         :param user: accepts user mention, ID, etc.
-        :param reason: the reason for the warning. Wrap in string quotes for multiple words.
+        :param reason: The reason for the warning.
         """
 
         try:
@@ -83,11 +83,11 @@ class Moderation:
 
     @with_role(*MODERATION_ROLES)
     @command(name="kick")
-    async def kick(self, ctx, user: Member, reason: str = None):
+    async def kick(self, ctx, user: Member, *, reason: str = None):
         """
         Kicks a user.
         :param user: accepts user mention, ID, etc.
-        :param reason: the reason for the kick. Wrap in string quotes for multiple words.
+        :param reason: The reason for the kick.
         """
 
         try:
@@ -122,11 +122,11 @@ class Moderation:
 
     @with_role(*MODERATION_ROLES)
     @command(name="ban")
-    async def ban(self, ctx: Context, user: User, reason: str = None):
+    async def ban(self, ctx: Context, user: User, *, reason: str = None):
         """
         Create a permanent ban infraction in the database for a user.
         :param user: Accepts user mention, ID, etc.
-        :param reason: Wrap in quotes to make reason larger than one word.
+        :param reason: The reason for the ban.
         """
 
         try:
@@ -161,11 +161,11 @@ class Moderation:
 
     @with_role(*MODERATION_ROLES)
     @command(name="mute")
-    async def mute(self, ctx: Context, user: Member, reason: str = None):
+    async def mute(self, ctx: Context, user: Member, *, reason: str = None):
         """
         Create a permanent mute infraction in the database for a user.
         :param user: Accepts user mention, ID, etc.
-        :param reason: Wrap in quotes to make reason larger than one word.
+        :param reason: The reason for the mute.
         """
 
         try:
@@ -204,12 +204,12 @@ class Moderation:
 
     @with_role(*MODERATION_ROLES)
     @command(name="tempmute")
-    async def tempmute(self, ctx: Context, user: Member, duration: str, reason: str = None):
+    async def tempmute(self, ctx: Context, user: Member, duration: str, *, reason: str = None):
         """
         Create a temporary mute infraction in the database for a user.
         :param user: Accepts user mention, ID, etc.
         :param duration: The duration for the temporary mute infraction
-        :param reason: Wrap in quotes to make reason larger than one word.
+        :param reason: The reason for the temporary mute.
         """
 
         try:
@@ -251,12 +251,12 @@ class Moderation:
 
     @with_role(*MODERATION_ROLES)
     @command(name="tempban")
-    async def tempban(self, ctx, user: User, duration: str, reason: str = None):
+    async def tempban(self, ctx, user: User, duration: str, *, reason: str = None):
         """
         Create a temporary ban infraction in the database for a user.
         :param user: Accepts user mention, ID, etc.
         :param duration: The duration for the temporary ban infraction
-        :param reason: Wrap in quotes to make reason larger than one word.
+        :param reason: The reason for the temporary ban.
         """
 
         try:
@@ -434,11 +434,11 @@ class Moderation:
 
     @with_role(*MODERATION_ROLES)
     @infraction_edit_group.command(name="reason")
-    async def edit_reason(self, ctx, infraction_id: str, reason: str):
+    async def edit_reason(self, ctx, infraction_id: str, *, reason: str):
         """
         Sets the reason of the given infraction.
         :param infraction_id: the id (UUID) of the infraction
-        :param reason: the new reason of the infraction
+        :param reason: The new reason of the infraction
         """
 
         try:
