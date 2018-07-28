@@ -31,28 +31,127 @@ class Filtering:
     def __init__(self, bot: Bot):
         self.bot = bot
 
+        self.filters = {
+            "filter_zalgo": {
+                "enabled": Filter.filter_zalgo,
+                "function": self._has_zalgo,
+                "type": "filter"
+            },
+            "filter_invites": {
+                "enabled": Filter.filter_invites,
+                "function": self._has_invites,
+                "type": "filter"
+            },
+            "filter_domains": {
+                "enabled": Filter.filter_domains,
+                "function": self._has_urls,
+                "type": "filter"
+            },
+            "watch_words": {
+                "enabled": Filter.watch_words,
+                "function": self._has_watchlist_words,
+                "type": "watchlist"
+            },
+            "watch_tokens": {
+                "enabled": Filter.watch_tokens,
+                "function": self._has_watchlist_tokens,
+                "type": "watchlist"
+            },
+        }
+
     async def on_message(self, msg: Message):
+        """
+        Whenever a message is received,
+        run it through our filters to see if it
+        violates any of our rules, and then respond
+        accordingly.
+        """
 
-        if msg.channel.id == Channels.devtest and not msg.author.bot:
+        # Check if the sender has a role that is whitelisted
+        role_whitelisted = False
+        for role in msg.author.roles:
+            if role.id in Filter.role_whitelist:
+                role_whitelisted = True
 
-            has_zalgo = await self._has_zalgo(msg.content)
-            has_invites = await self._has_invites(msg.content)
-            has_urls = await self._has_urls(msg.content)
+        # Is the channel whitelisted or is the sender a bot?
+        filter_message = (
+            msg.channel.id not in Filter.channel_whitelist
+            and not role_whitelisted
+            and not msg.author.bot
+        )
 
-            if has_zalgo:
-                await self.bot.get_channel(msg.channel.id).send(
-                    content="ZALGO!"
-                )
+        filter_message = not msg.author.bot and msg.channel.id == Channels.modlog  # for testing
 
-            if has_invites:
-                await self.bot.get_channel(msg.channel.id).send(
-                    content="INVITES!"
-                )
+        # If none of the above, we can start filtering.
+        if filter_message:
+            for filter_name, _filter in self.filters.items():
 
-            if has_urls:
-                await self.bot.get_channel(msg.channel.id).send(
-                    content="EVIL ILLEGAL HITLER DOMAINS!"
-                )
+                # Is the filter enabled in the config?
+                if _filter["enabled"]:
+                    triggered = await _filter["function"](msg.content)
+
+                    if triggered:
+                        # If a filter is triggered, we should automod it.
+                        if _filter["type"] == "filter":
+                            log.debug(
+                                f"The {filter_name} filter was triggered "
+                                f"by {msg.author.name} in {msg.channel.name} with "
+                                f"the following message:\n{msg.content}."
+                            )
+
+                            # Replace this with actual automod
+                            await self.bot.get_channel(msg.channel.id).send(
+                                content=f"The **{filter_name}** filter triggered!"
+                            )
+
+                        # If a watchlist triggers, we should send a mod alert.
+                        elif _filter["type"] == "watchlist":
+                            log.debug(
+                                f"The {filter_name} watchlist was triggered "
+                                f"by {msg.author.name} in {msg.channel.name} with "
+                                f"the following message:\n{msg.content}."
+                            )
+
+                            # Replace this with actual mod alerts!
+                            await self.bot.get_channel(msg.channel.id).send(
+                                content=f"The **{filter_name}** watchlist was triggered!"
+                            )
+
+                        break  # We don't want multiple filters to trigger
+
+    @staticmethod
+    async def _has_watchlist_words(text):
+        """
+        Returns True if the text contains
+        one of the regular expressions from the
+        word_watchlist in our filter config.
+
+        Only matches words with boundaries before
+        and after the expression.
+        """
+
+        for expression in Filter.word_watchlist:
+            if re.search(fr"\b{expression}\b", text.lower()):
+                return True
+
+        return False
+
+    @staticmethod
+    async def _has_watchlist_tokens(text):
+        """
+        Returns True if the text contains
+        one of the regular expressions from the
+        token_watchlist in our filter config.
+
+        This will match the expression even if it
+        does not have boundaries before and after
+        """
+
+        for expression in Filter.token_watchlist:
+            if re.search(fr"{expression}", text.lower()):
+                return True
+
+        return False
 
     @staticmethod
     async def _has_urls(text):

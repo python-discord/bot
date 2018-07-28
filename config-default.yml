@@ -82,7 +82,7 @@ guild:
         announcements:                    463658397560995840
         champion:                         430492892331769857
         contributor:                      295488872404484098
-        devops:                           409416496733880320
+        devops:            &DEVOPS_ROLE   409416496733880320
         jammer:                           423054537079783434
         moderator:         &MOD_ROLE      267629731250176001
         owner:             &OWNER_ROLE    267627879762755584
@@ -93,18 +93,13 @@ guild:
 filter:
 
     # What do we filter?
-    filter_zalgo:      true
-    filter_invites:    true
-    filter_domains:    true
-    watch_expressions: true
+    filter_zalgo:   true
+    filter_invites: true
+    filter_domains: true
+    watch_words:    true
+    watch_tokens:   true
 
     # Filter configuration
-    domain_blacklist:
-        - pornhub.com
-
-    watched_expressions:
-        - .*ni[g]*er.*
-
     guild_invite_whitelist:
         - vywQPxd            # Code Monkeys
         - kWJYurV            # Functional Programming
@@ -113,6 +108,35 @@ filter:
 
     vanity_url_whitelist:
         - python             # Python Discord
+
+    domain_blacklist:
+        - pornhub.com
+
+    word_watchlist:
+        - goo+k
+        - ky+s+
+        - g[ae]+y+
+        - ki+ke+
+        - beane?r*
+        - coo+n
+        - nig+lets?
+        - slant-eye
+        - towe?l-?head+
+        - chi*n+k+
+        - spick*
+        - kill* +(?:yo)?urself+
+        - jew+s*
+        - suicide
+        - rape
+        - re+tar+d+
+        - cunt
+
+    token_watchlist:
+        - fa+g+s*
+        - 卐
+        - cuck
+        - nigg+(?:e*r+|a+)s?
+        - fag+o+t+s*
 
     # Censor doesn't apply to these
     channel_whitelist:
@@ -128,6 +152,7 @@ filter:
         - *ADMIN_ROLE
         - *MOD_ROLE
         - *OWNER_ROLE
+        - *DEVOPS_ROLE
 
 keys:
     deploy_bot:  !ENV "DEPLOY_BOT_KEY"

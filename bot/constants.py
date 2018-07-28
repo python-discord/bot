@@ -196,13 +196,15 @@ class Filter(metaclass=YAMLGetter):
 
     filter_zalgo: bool
     filter_invites: bool
-    filter_domain: bool
-    watch_expressions: bool
+    filter_domains: bool
+    watch_words: bool
+    watch_tokens: bool
 
-    domain_blacklist: List[str]
-    watched_expressions: List[str]
     guild_invite_whitelist: List[str]
     vanity_url_whitelist: List[str]
+    domain_blacklist: List[str]
+    word_watchlist: List[str]
+    token_watchlist: List[str]
 
     channel_whitelist: List[int]
     role_whitelist: List[int]
