@@ -1,5 +1,13 @@
 image: pythondiscord/bot-ci:latest
 
+variables:
+  PIPENV_CACHE_DIR: "$CI_PROJECT_DIR/pipenv-cache"
+
+cache:
+  paths:
+    - "$CI_PROJECT_DIR/pipenv-cache"
+    - "$CI_PROJECT_DIR/.venv"
+
 stages:
   - test
   - build

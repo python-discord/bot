@@ -198,8 +198,16 @@ class Cooldowns(metaclass=YAMLGetter):
     tags: int
 
 
+class Colours(metaclass=YAMLGetter):
+    section = "style"
+    subsection = "colours"
+
+    soft_red: int
+    soft_green: int
+
+
 class Emojis(metaclass=YAMLGetter):
-    section = "bot"
+    section = "style"
     subsection = "emojis"
 
     defcon_disabled: str  # noqa: E704
@@ -210,12 +218,13 @@ class Emojis(metaclass=YAMLGetter):
     red_chevron: str
     white_chevron: str
 
+    bullet: str
     new: str
     pencil: str
 
 
 class Icons(metaclass=YAMLGetter):
-    section = "bot"
+    section = "style"
     subsection = "icons"
 
     crown_blurple: str
@@ -243,6 +252,13 @@ class Icons(metaclass=YAMLGetter):
     user_ban: str
     user_unban: str
     user_update: str
+
+
+class CleanMessages(metaclass=YAMLGetter):
+    section = "bot"
+    subsection = "clean"
+
+    message_limit: int
 
 
 class Channels(metaclass=YAMLGetter):
@@ -332,6 +348,8 @@ class URLs(metaclass=YAMLGetter):
     omdb: str
     site: str
     site_facts_api: str
+    site_clean_api: str
+    site_clean_logs: str
     site_hiphopify_api: str
     site_idioms_api: str
     site_names_api: str

@@ -13,16 +13,13 @@ from discord import (
 from discord.abc import GuildChannel
 from discord.ext.commands import Bot
 
-from bot.constants import Channels, Emojis, Icons
+from bot.constants import Channels, Colours, Emojis, Icons
 from bot.constants import Guild as GuildConstant
 from bot.utils.time import humanize
 
 
 log = logging.getLogger(__name__)
 
-BULLET_POINT = "\u2022"
-COLOUR_RED = Colour(0xcd6d6d)
-COLOUR_GREEN = Colour(0x68c290)
 GUILD_CHANNEL = Union[CategoryChannel, TextChannel, VoiceChannel]
 
 CHANNEL_CHANGES_UNSUPPORTED = ("permissions",)
@@ -92,7 +89,7 @@ class ModLog:
             else:
                 message = f"{channel.name} (`{channel.id}`)"
 
-        await self.send_log_message(Icons.hash_green, COLOUR_GREEN, title, message)
+        await self.send_log_message(Icons.hash_green, Colour(Colours.soft_green), title, message)
 
     async def on_guild_channel_delete(self, channel: GUILD_CHANNEL):
         if channel.guild.id != GuildConstant.id:
@@ -111,7 +108,7 @@ class ModLog:
             message = f"{channel.name} (`{channel.id}`)"
 
         await self.send_log_message(
-            Icons.hash_red, COLOUR_RED,
+            Icons.hash_red, Colour(Colours.soft_red),
             title, message
         )
 
@@ -157,7 +154,7 @@ class ModLog:
         message = ""
 
         for item in sorted(changes):
-            message += f"{BULLET_POINT} {item}\n"
+            message += f"{Emojis.bullet} {item}\n"
 
         if after.category:
             message = f"**{after.category}/#{after.name} (`{after.id}`)**\n{message}"
@@ -174,7 +171,7 @@ class ModLog:
             return
 
         await self.send_log_message(
-            Icons.crown_green, COLOUR_GREEN,
+            Icons.crown_green, Colour(Colours.soft_green),
             "Role created", f"`{role.id}`"
         )
 
@@ -183,7 +180,7 @@ class ModLog:
             return
 
         await self.send_log_message(
-            Icons.crown_red, COLOUR_RED,
+            Icons.crown_red, Colour(Colours.soft_red),
             "Role removed", f"{role.name} (`{role.id}`)"
         )
 
@@ -229,7 +226,7 @@ class ModLog:
         message = ""
 
         for item in sorted(changes):
-            message += f"{BULLET_POINT} {item}\n"
+            message += f"{Emojis.bullet} {item}\n"
 
         message = f"**{after.name}** (`{after.id}`)\n{message}"
 
@@ -277,7 +274,7 @@ class ModLog:
         message = ""
 
         for item in sorted(changes):
-            message += f"{BULLET_POINT} {item}\n"
+            message += f"{Emojis.bullet} {item}\n"
 
         message = f"**{after.name}** (`{after.id}`)\n{message}"
 
@@ -292,7 +289,7 @@ class ModLog:
             return
 
         await self.send_log_message(
-            Icons.user_ban, COLOUR_RED,
+            Icons.user_ban, Colour(Colours.soft_red),
             "User banned", f"{member.name}#{member.discriminator} (`{member.id}`)",
             thumbnail=member.avatar_url_as(static_format="png")
         )
@@ -312,7 +309,7 @@ class ModLog:
             message = f"{Emojis.new} {message}"
 
         await self.send_log_message(
-            Icons.sign_in, COLOUR_GREEN,
+            Icons.sign_in, Colour(Colours.soft_green),
             "User joined", message,
             thumbnail=member.avatar_url_as(static_format="png")
         )
@@ -322,7 +319,7 @@ class ModLog:
             return
 
         await self.send_log_message(
-            Icons.sign_out, COLOUR_RED,
+            Icons.sign_out, Colour(Colours.soft_red),
             "User left", f"{member.name}#{member.discriminator} (`{member.id}`)",
             thumbnail=member.avatar_url_as(static_format="png")
         )
@@ -410,7 +407,7 @@ class ModLog:
         message = ""
 
         for item in sorted(changes):
-            message += f"{BULLET_POINT} {item}\n"
+            message += f"{Emojis.bullet} {item}\n"
 
         message = f"**{after.name}#{after.discriminator}** (`{after.id}`)\n{message}"
 
@@ -489,7 +486,7 @@ class ModLog:
             response = f"**Attachments:** {len(message.attachments)}\n" + response
 
         await self.send_log_message(
-            Icons.message_delete, COLOUR_RED,
+            Icons.message_delete, Colours.soft_red,
             "Message deleted",
             response,
             channel_id=Channels.message_log
@@ -528,7 +525,7 @@ class ModLog:
             )
 
         await self.send_log_message(
-            Icons.message_delete, COLOUR_RED,
+            Icons.message_delete, Colour(Colours.soft_red),
             "Message deleted",
             response,
             channel_id=Channels.message_log
