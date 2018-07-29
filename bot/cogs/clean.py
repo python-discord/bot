@@ -18,6 +18,19 @@ log = logging.getLogger(__name__)
 
 
 class Clean:
+    """
+    A cog that allows messages to be deleted in
+    bulk, while applying various filters.
+
+    You can delete messages sent by a specific user,
+    messages sent by bots, all messages, or messages
+    that match a specific regular expression.
+
+    The deleted messages are saved and uploaded
+    to the database via an API endpoint, and a URL is
+    returned which can be used to view the messages
+    in the Discord dark theme style.
+    """
 
     def __init__(self, bot: Bot):
         self.bot = bot
@@ -127,7 +140,7 @@ class Clean:
             embed = Embed(
                 color=Colour(Colours.soft_red),
                 title=random.choice(NEGATIVE_REPLIES),
-                description="Multiple simultaneous cleaning processes is not allowed."
+                description="Please wait for the currently ongoing clean operation to complete."
             )
             await ctx.send(embed=embed)
             return
@@ -163,7 +176,7 @@ class Clean:
             # If the message passes predicate, let's save it.
             if predicate is None or predicate(message):
                 author = f"{message.author.name}#{message.author.discriminator}"
-                role = message.author.top_role.name
+                role_id = message.author.top_role.id
 
                 content = message.content
                 embeds = [embed.to_dict() for embed in message.embeds]
@@ -174,7 +187,7 @@ class Clean:
                     "content": content,
                     "author": author,
                     "user_id": str(message.author.id),
-                    "role": role.lower(),
+                    "role_id": str(role_id),
                     "timestamp": message.created_at.strftime("%D %H:%M"),
                     "attachments": attachments,
                     "embeds": embeds,
@@ -205,22 +218,19 @@ class Clean:
             return
 
         # Build the embed and send it
+        print(upload_log)
         message = (
             f"**{len(message_ids)}** messages deleted in <#{ctx.channel.id}> by **{ctx.author.name}**\n\n"
             f"A log of the deleted messages can be found [here]({upload_log})."
         )
 
-        embed = Embed(
-            color=Colour(Colours.soft_red),
-            description=message
+        await self.mod_log.send_log_message(
+            icon_url=Icons.message_bulk_delete,
+            colour=Colour(Colours.soft_red),
+            title="Bulk message delete",
+            text=message,
+            channel_id=Channels.modlog,
         )
-
-        embed.set_author(
-            name=f"Bulk message delete",
-            icon_url=Icons.message_bulk_delete
-        )
-
-        await self.bot.get_channel(Channels.modlog).send(embed=embed)
 
     @group(invoke_without_command=True, name="clean", hidden=True)
     @with_role(Roles.moderator, Roles.admin, Roles.owner)

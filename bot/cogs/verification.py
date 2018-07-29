@@ -37,7 +37,7 @@ class Verification:
         self.bot = bot
 
     @property
-    def modlog(self) -> ModLog:
+    def mod_log(self) -> ModLog:
         return self.bot.get_cog("ModLog")
 
     async def on_message(self, message: Message):
@@ -90,7 +90,7 @@ class Verification:
         log.trace(f"Deleting the message posted by {ctx.author}.")
 
         try:
-            self.modlog.ignore_message_deletion(ctx.message.id)
+            self.mod_log.ignore_message_deletion(ctx.message.id)
             await ctx.message.delete()
         except NotFound:
             log.trace("No message found, it must have been deleted by another bot.")

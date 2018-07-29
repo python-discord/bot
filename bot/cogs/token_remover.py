@@ -40,10 +40,10 @@ class TokenRemover:
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.modlog = None
+        self.mod_log = None
 
     async def on_ready(self):
-        self.modlog = self.bot.get_channel(Channels.modlog)
+        self.mod_log = self.bot.get_channel(Channels.modlog)
 
     async def on_message(self, msg: Message):
         if msg.author.bot:
@@ -61,7 +61,7 @@ class TokenRemover:
         if self.is_valid_user_id(user_id) and self.is_valid_timestamp(creation_timestamp):
             await msg.delete()
             await msg.channel.send(DELETION_MESSAGE_TEMPLATE.format(mention=msg.author.mention))
-            await self.modlog.send(
+            await self.mod_log.send(
                 ":key2::mute: censored a seemingly valid token sent by "
                 f"{msg.author} (`{msg.author.id}`) in {msg.channel.mention}, token was "
                 f"`{user_id}.{creation_timestamp}.{'x' * len(hmac)}`"

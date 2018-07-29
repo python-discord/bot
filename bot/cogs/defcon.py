@@ -36,7 +36,7 @@ class Defcon:
         self.headers = {"X-API-KEY": Keys.site_api}
 
     @property
-    def modlog(self) -> ModLog:
+    def mod_log(self) -> ModLog:
         return self.bot.get_cog("ModLog")
 
     async def on_ready(self):
@@ -92,7 +92,7 @@ class Defcon:
                 if not message_sent:
                     message = f"{message}\n\nUnable to send rejection message via DM; they probably have DMs disabled."
 
-                await self.modlog.send_log_message(
+                await self.mod_log.send_log_message(
                     Icons.defcon_denied, COLOUR_RED, "Entry denied",
                     message, member.avatar_url_as(static_format="png")
                 )
@@ -133,7 +133,7 @@ class Defcon:
                 f"```py\n{e}\n```"
             )
 
-            await self.modlog.send_log_message(
+            await self.mod_log.send_log_message(
                 Icons.defcon_enabled, COLOUR_GREEN, "DEFCON enabled",
                 f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)\n"
                 f"**Days:** {self.days.days}\n\n"
@@ -144,7 +144,7 @@ class Defcon:
         else:
             await ctx.send(f"{Emojis.defcon_enabled} DEFCON enabled.")
 
-            await self.modlog.send_log_message(
+            await self.mod_log.send_log_message(
                 Icons.defcon_enabled, COLOUR_GREEN, "DEFCON enabled",
                 f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)\n"
                 f"**Days:** {self.days.days}\n\n"
@@ -176,7 +176,7 @@ class Defcon:
                 f"```py\n{e}\n```"
             )
 
-            await self.modlog.send_log_message(
+            await self.mod_log.send_log_message(
                 Icons.defcon_disabled, COLOUR_RED, "DEFCON disabled",
                 f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)\n"
                 "**There was a problem updating the site** - This setting may be reverted when the bot is "
@@ -186,7 +186,7 @@ class Defcon:
         else:
             await ctx.send(f"{Emojis.defcon_disabled} DEFCON disabled.")
 
-            await self.modlog.send_log_message(
+            await self.mod_log.send_log_message(
                 Icons.defcon_disabled, COLOUR_RED, "DEFCON disabled",
                 f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)"
             )
@@ -233,7 +233,7 @@ class Defcon:
                 f"```py\n{e}\n```"
             )
 
-            await self.modlog.send_log_message(
+            await self.mod_log.send_log_message(
                 Icons.defcon_updated, Colour.blurple(), "DEFCON updated",
                 f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)\n"
                 f"**Days:** {self.days.days}\n\n"
@@ -246,7 +246,7 @@ class Defcon:
                 f"{Emojis.defcon_updated} DEFCON days updated; accounts must be {days} days old to join to the server"
             )
 
-            await self.modlog.send_log_message(
+            await self.mod_log.send_log_message(
                 Icons.defcon_updated, Colour.blurple(), "DEFCON updated",
                 f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)\n"
                 f"**Days:** {self.days.days}"
