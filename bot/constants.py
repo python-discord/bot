@@ -301,6 +301,7 @@ class Roles(metaclass=YAMLGetter):
     devops: int
     jammer: int
     moderator: int
+    muted: int
     owner: int
     verified: int
     muted: int
