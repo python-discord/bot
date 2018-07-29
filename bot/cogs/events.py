@@ -1,19 +1,23 @@
 import logging
 
-from discord import Embed, Member
+from discord import Colour, Embed, Member, Object
 from discord.ext.commands import (
     BadArgument, Bot, BotMissingPermissions,
     CommandError, CommandInvokeError, Context,
     NoPrivateMessage, UserInputError
 )
 
+from bot.cogs.modlog import ModLog
 from bot.constants import (
-    Channels, DEBUG_MODE, Guild,
-    Keys, Roles, URLs
+    Channels, Colours, DEBUG_MODE,
+    Guild, Icons, Keys,
+    Roles, URLs
 )
 from bot.utils import chunks
 
 log = logging.getLogger(__name__)
+
+RESTORE_ROLES = (str(Roles.muted), str(Roles.announcements))
 
 
 class Events:
@@ -21,6 +25,10 @@ class Events:
 
     def __init__(self, bot: Bot):
         self.bot = bot
+
+    @property
+    def mod_log(self) -> ModLog:
+        return self.bot.get_cog("ModLog")
 
     async def send_updated_users(self, *users, replace_all=False):
         users = list(filter(lambda user: str(Roles.verified) in user["roles"], users))
@@ -84,6 +92,15 @@ class Events:
         except Exception:
             log.exception(f"Failed to delete {len(users)} users")
             return {}
+
+    async def get_user(self, user_id):
+        response = await self.bot.http_session.get(
+            url=URLs.site_user_api,
+            params={"user_id": user_id},
+            headers={"X-API-Key": Keys.site_api}
+        )
+
+        return await response.json()["data"]
 
     async def on_command_error(self, ctx: Context, e: CommandError):
         command = ctx.command
@@ -194,6 +211,29 @@ class Events:
 
     async def on_member_join(self, member: Member):
         role_ids = [str(r.id) for r in member.roles]  # type: List[str]
+        new_roles = []
+
+        try:
+            user_objs = await self.get_user(str(member.id))
+        except Exception as e:
+            log.exception("Failed to persist roles")
+
+            await self.mod_log.send_log_message(
+                Icons.crown_red, Colour(Colours.soft_red), "Failed to persist roles",
+                f"```py\n{e}\n```",
+                member.avatar_url_as(static_format="png")
+            )
+        else:
+            if user_objs:
+                old_roles = user_objs[0].get("roles", [])
+
+                for role in RESTORE_ROLES:
+                    if role in old_roles:
+                        new_roles.append(Object(int(role)))
+
+                for role in new_roles:
+                    if str(role) not in role_ids:
+                        role_ids.append(str(role.id))
 
         changes = await self.send_updated_users({
             "avatar": member.avatar_url_as(format="png"),
@@ -204,6 +244,18 @@ class Events:
         })
 
         log.debug(f"User {member.id} joined; changes: {changes}")
+
+        if new_roles:
+            await member.add_roles(
+                *new_roles,
+                reason="Roles restored"
+            )
+
+            await self.mod_log.send_log_message(
+                Icons.crown_blurple, Colour.blurple(), "Roles restored",
+                f"Restored {len(new_roles)} roles",
+                member.avatar_url_as(static_format="png")
+            )
 
     async def on_member_remove(self, member: Member):
         changes = await self.send_delete_users({
