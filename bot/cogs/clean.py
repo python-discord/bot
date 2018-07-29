@@ -169,6 +169,7 @@ class Clean:
 
             # Always start by deleting the invocation
             if not invocation_deleted:
+                self.mod_log.ignore_message_deletion(message.id)
                 await message.delete()
                 invocation_deleted = True
                 continue
