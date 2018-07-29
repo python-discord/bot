@@ -115,6 +115,11 @@ class Filtering:
 
                         break  # We don't want multiple filters to trigger
 
+    async def _auto_mod(self, filter_name: str, msg: Message):
+        """
+        Removes a message and sends a
+        """
+
     async def _mod_alert(self, watchlist_name: str, msg: Message):
         """
         Send a mod alert into the #mod-alert channel.
