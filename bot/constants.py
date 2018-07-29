@@ -14,7 +14,7 @@ import logging
 import os
 from collections.abc import Mapping
 from pathlib import Path
-from typing import List
+from typing import Dict, List
 
 import yaml
 from yaml.constructor import ConstructorError
@@ -368,6 +368,13 @@ class URLs(metaclass=YAMLGetter):
     site_infractions_user_type: str
     status: str
     paste_service: str
+
+
+class AntiSpam(metaclass=YAMLGetter):
+    section = 'anti_spam'
+
+    punishment: Dict[str, Dict[str, int]]
+    rules: Dict[str, Dict[str, int]]
 
 
 # Debug mode
