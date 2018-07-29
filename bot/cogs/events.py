@@ -100,7 +100,8 @@ class Events:
             headers={"X-API-Key": Keys.site_api}
         )
 
-        return await response.json()["data"]
+        resp = await response.json()
+        return resp["data"]
 
     async def on_command_error(self, ctx: Context, e: CommandError):
         command = ctx.command
