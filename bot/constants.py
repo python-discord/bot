@@ -210,35 +210,6 @@ class Filter(metaclass=YAMLGetter):
     role_whitelist: List[int]
 
 
-class Channels(metaclass=YAMLGetter):
-    section = "guild"
-    subsection = "channels"
-
-    admins: int
-    announcements: int
-    big_brother_logs: int
-    bot: int
-    checkpoint_test: int
-    devalerts: int
-    devlog: int
-    devtest: int
-    help_0: int
-    help_1: int
-    help_2: int
-    help_3: int
-    help_4: int
-    help_5: int
-    helpers: int
-    message_log: int
-    modlog: int
-    off_topic_1: int
-    off_topic_2: int
-    off_topic_3: int
-    python: int
-    staff_lounge: int
-    verification: int
-
-
 class Cooldowns(metaclass=YAMLGetter):
     section = "bot"
     subsection = "cooldowns"
@@ -246,8 +217,16 @@ class Cooldowns(metaclass=YAMLGetter):
     tags: int
 
 
+class Colours(metaclass=YAMLGetter):
+    section = "style"
+    subsection = "colours"
+
+    soft_red: int
+    soft_green: int
+
+
 class Emojis(metaclass=YAMLGetter):
-    section = "bot"
+    section = "style"
     subsection = "emojis"
 
     defcon_disabled: str  # noqa: E704
@@ -258,12 +237,13 @@ class Emojis(metaclass=YAMLGetter):
     red_chevron: str
     white_chevron: str
 
+    bullet: str
     new: str
     pencil: str
 
 
 class Icons(metaclass=YAMLGetter):
-    section = "bot"
+    section = "style"
     subsection = "icons"
 
     crown_blurple: str
@@ -293,6 +273,41 @@ class Icons(metaclass=YAMLGetter):
     user_update: str
 
 
+class CleanMessages(metaclass=YAMLGetter):
+    section = "bot"
+    subsection = "clean"
+
+    message_limit: int
+
+
+class Channels(metaclass=YAMLGetter):
+    section = "guild"
+    subsection = "channels"
+
+    admins: int
+    announcements: int
+    big_brother_logs: int
+    bot: int
+    checkpoint_test: int
+    devalerts: int
+    devlog: int
+    devtest: int
+    help_0: int
+    help_1: int
+    help_2: int
+    help_3: int
+    help_4: int
+    help_5: int
+    helpers: int
+    message_log: int
+    modlog: int
+    off_topic_1: int
+    off_topic_2: int
+    off_topic_3: int
+    python: int
+    verification: int
+
+
 class Roles(metaclass=YAMLGetter):
     section = "guild"
     subsection = "roles"
@@ -301,11 +316,13 @@ class Roles(metaclass=YAMLGetter):
     announcements: int
     champion: int
     contributor: int
+    developer: int
     devops: int
     jammer: int
     moderator: int
     owner: int
     verified: int
+    muted: int
 
 
 class Guild(metaclass=YAMLGetter):
@@ -351,6 +368,8 @@ class URLs(metaclass=YAMLGetter):
     omdb: str
     site: str
     site_facts_api: str
+    site_clean_api: str
+    site_clean_logs: str
     site_hiphopify_api: str
     site_idioms_api: str
     site_names_api: str
@@ -361,6 +380,11 @@ class URLs(metaclass=YAMLGetter):
     site_tags_api: str
     site_user_api: str
     site_user_complete_api: str
+    site_infractions: str
+    site_infractions_user: str
+    site_infractions_type: str
+    site_infractions_user_type_current: str
+    site_infractions_user_type: str
     status: str
     paste_service: str
 

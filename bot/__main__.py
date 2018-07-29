@@ -46,6 +46,7 @@ bot.load_extension("bot.cogs.filtering")
 # Commands, etc
 bot.load_extension("bot.cogs.bigbrother")
 bot.load_extension("bot.cogs.bot")
+bot.load_extension("bot.cogs.clean")
 bot.load_extension("bot.cogs.cogs")
 
 # Local setups usually don't have the clickup key set,
@@ -61,6 +62,7 @@ bot.load_extension("bot.cogs.doc")
 bot.load_extension("bot.cogs.eval")
 bot.load_extension("bot.cogs.fun")
 bot.load_extension("bot.cogs.hiphopify")
+bot.load_extension("bot.cogs.moderation")
 bot.load_extension("bot.cogs.off_topic_names")
 bot.load_extension("bot.cogs.snakes")
 bot.load_extension("bot.cogs.snekbox")

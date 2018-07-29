@@ -5,7 +5,7 @@ from discord import Message
 from discord.ext.commands import Bot
 
 from bot.cogs.modlog import ModLog
-from bot.constants import Channels, Filter, Icons
+from bot.constants import Channels, Colours, Filter, Icons
 
 log = logging.getLogger(__name__)
 
@@ -122,24 +122,19 @@ class Filtering:
         Ping staff so they can take action.
         """
 
-        log.debug(
-            f"The {filter_name} watchlist was triggered "
+        message = (
+            f"The {watchlist_name} watchlist was triggered "
             f"by {msg.author.name} in {msg.channel.name} with "
             f"the following message:\n{msg.content}."
         )
 
-        # Replace this with actual mod alerts!
-        await self.bot.get_channel(msg.channel.id).send(
-            content=f"The **{filter_name}** watchlist was triggered!"
-        )
+        log.debug(message)
 
         # Send pretty modlog embed to mod-alerts
         await self.modlog.send_log_message(
-            Icons.token_removed, COLOUR_RED, "Entry denied",
-            message, member.avatar_url_as(static_format="png")
+            Icons.token_removed, Colours.soft_red, "Watchlist triggered!",
+            message, msg.author.avatar_url_as(static_format="png")
         )
-
-
 
     @staticmethod
     async def _has_watchlist_words(text: str) -> bool:

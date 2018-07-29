@@ -207,6 +207,8 @@ class LinePaginator(Paginator):
 
                 log.debug(f"Got first page reaction - changing to page 1/{len(paginator.pages)}")
 
+                embed.description = ""
+                await message.edit(embed=embed)
                 embed.description = paginator.pages[current_page]
                 if footer_text:
                     embed.set_footer(text=f"{footer_text} (Page {current_page + 1}/{len(paginator.pages)})")
@@ -220,6 +222,8 @@ class LinePaginator(Paginator):
 
                 log.debug(f"Got last page reaction - changing to page {current_page + 1}/{len(paginator.pages)}")
 
+                embed.description = ""
+                await message.edit(embed=embed)
                 embed.description = paginator.pages[current_page]
                 if footer_text:
                     embed.set_footer(text=f"{footer_text} (Page {current_page + 1}/{len(paginator.pages)})")
@@ -237,6 +241,8 @@ class LinePaginator(Paginator):
                 current_page -= 1
                 log.debug(f"Got previous page reaction - changing to page {current_page + 1}/{len(paginator.pages)}")
 
+                embed.description = ""
+                await message.edit(embed=embed)
                 embed.description = paginator.pages[current_page]
 
                 if footer_text:
@@ -256,6 +262,8 @@ class LinePaginator(Paginator):
                 current_page += 1
                 log.debug(f"Got next page reaction - changing to page {current_page + 1}/{len(paginator.pages)}")
 
+                embed.description = ""
+                await message.edit(embed=embed)
                 embed.description = paginator.pages[current_page]
 
                 if footer_text:
