@@ -110,7 +110,7 @@ class Verification:
                 break
 
         if has_role:
-            await ctx.send(
+            return await ctx.send(
                 f"{ctx.author.mention} You're already subscribed!",
             )
 
