@@ -302,6 +302,7 @@ class Roles(metaclass=YAMLGetter):
     moderator: int
     owner: int
     verified: int
+    muted: int
 
 
 class Guild(metaclass=YAMLGetter):
@@ -359,6 +360,11 @@ class URLs(metaclass=YAMLGetter):
     site_tags_api: str
     site_user_api: str
     site_user_complete_api: str
+    site_infractions: str
+    site_infractions_user: str
+    site_infractions_type: str
+    site_infractions_user_type_current: str
+    site_infractions_user_type: str
     status: str
     paste_service: str
 
