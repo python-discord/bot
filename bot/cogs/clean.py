@@ -176,7 +176,12 @@ class Clean:
             # If the message passes predicate, let's save it.
             if predicate is None or predicate(message):
                 author = f"{message.author.name}#{message.author.discriminator}"
-                role_id = message.author.top_role.id
+
+                # message.author may return either a User or a Member. Users don't have roles.
+                if type(message.author) is User:
+                    role_id = Roles.developer
+                else:
+                    role_id = message.author.top_role.id
 
                 content = message.content
                 embeds = [embed.to_dict() for embed in message.embeds]

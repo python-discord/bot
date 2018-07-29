@@ -297,6 +297,7 @@ class Roles(metaclass=YAMLGetter):
     announcements: int
     champion: int
     contributor: int
+    developer: int
     devops: int
     jammer: int
     moderator: int
