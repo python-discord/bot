@@ -214,7 +214,7 @@ class Clean:
                 color=Colour(Colours.soft_red),
                 description="No matching messages could be found."
             )
-            await ctx.send(embed=embed, delete_after=10.0)
+            await ctx.send(embed=embed, delete_after=10)
             return
 
         # Build the embed and send it
@@ -295,7 +295,7 @@ class Clean:
             color=Colour.blurple(),
             description="Clean interrupted."
         )
-        await ctx.send(embed=embed)
+        await ctx.send(embed=embed, delete_after=10)
 
 
 def setup(bot):
