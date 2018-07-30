@@ -111,6 +111,32 @@ class OffTopicNames:
             error_reason = response.get('message', "No reason provided.")
             await ctx.send(f":warning: got non-200 from the API: {error_reason}")
 
+    @otname_group.command(name='delete', aliases=('remove', 'rm', 'del', 'd'))
+    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    async def delete_command(self, ctx, name: OffTopicName):
+        """Removes a off-topic name from the rotation."""
+
+        result = await self.bot.http_session.delete(
+            URLs.site_off_topic_names_api,
+            headers=self.headers,
+            params={'name': name}
+        )
+
+        response = await result.json()
+
+        if result.status == 200:
+            if response['deleted'] == 0:
+                await ctx.send(f":warning: No name matching `{name}` was found in the database.")
+            else:
+                log.info(
+                    f"{ctx.author.name}#{ctx.author.discriminator}"
+                    f" deleted the off-topic channel name '{name}"
+                )
+                await ctx.send(":ok_hand:")
+        else:
+            error_reason = response.get('message', "No reason provided.")
+            await ctx.send(f":warning: got non-200 from the API: {error_reason}")
+
     @otname_group.command(name='list', aliases=('l',))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
     async def list_command(self, ctx):
