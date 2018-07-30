@@ -1,7 +1,7 @@
 import logging
 import re
 
-from discord import Colour, Message
+from discord import Colour, Member, Message
 from discord.ext.commands import Bot
 
 from bot.cogs.modlog import ModLog
@@ -83,9 +83,11 @@ class Filtering:
 
         # Should we filter this message?
         role_whitelisted = False
-        for role in msg.author.roles:
-            if role.id in Filter.role_whitelist:
-                role_whitelisted = True
+
+        if type(msg.author) is Member:  # Only Member has roles, not User.
+            for role in msg.author.roles:
+                if role.id in Filter.role_whitelist:
+                    role_whitelisted = True
 
         filter_message = (
             msg.channel.id not in Filter.channel_whitelist  # Channel not in whitelist
