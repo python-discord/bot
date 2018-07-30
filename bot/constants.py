@@ -14,7 +14,7 @@ import logging
 import os
 from collections.abc import Mapping
 from pathlib import Path
-from typing import List
+from typing import Dict, List
 
 import yaml
 from yaml.constructor import ConstructorError
@@ -200,6 +200,7 @@ class Filter(metaclass=YAMLGetter):
     watch_words: bool
     watch_tokens: bool
 
+    ping_everyone: bool
     guild_invite_whitelist: List[str]
     vanity_url_whitelist: List[str]
     domain_blacklist: List[str]
@@ -250,10 +251,12 @@ class Icons(metaclass=YAMLGetter):
     crown_green: str
     crown_red: str
 
-    defcon_denied: str  # noqa: E704
+    defcon_denied: str    # noqa: E704
     defcon_disabled: str  # noqa: E704
-    defcon_enabled: str  # noqa: E704
-    defcon_updated: str  # noqa: E704
+    defcon_enabled: str   # noqa: E704
+    defcon_updated: str   # noqa: E704
+
+    filtering: str
 
     guild_update: str
 
@@ -300,6 +303,7 @@ class Channels(metaclass=YAMLGetter):
     help_5: int
     helpers: int
     message_log: int
+    mod_alerts: int
     modlog: int
     off_topic_1: int
     off_topic_2: int
@@ -320,6 +324,7 @@ class Roles(metaclass=YAMLGetter):
     devops: int
     jammer: int
     moderator: int
+    muted: int
     owner: int
     verified: int
     muted: int
@@ -387,6 +392,13 @@ class URLs(metaclass=YAMLGetter):
     site_infractions_user_type: str
     status: str
     paste_service: str
+
+
+class AntiSpam(metaclass=YAMLGetter):
+    section = 'anti_spam'
+
+    punishment: Dict[str, Dict[str, int]]
+    rules: Dict[str, Dict[str, int]]
 
 
 # Debug mode

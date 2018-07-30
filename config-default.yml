@@ -59,6 +59,9 @@ style:
         user_unban:  "https://cdn.discordapp.com/emojis/469952898692808704.png"
         user_update: "https://cdn.discordapp.com/emojis/469952898684551168.png"
 
+        user_mute:   "https://cdn.discordapp.com/emojis/472472640100106250.png"
+        user_unmute: "https://cdn.discordapp.com/emojis/472472640100106250.png"
+
 
 guild:
     id: 267624335836053506
@@ -80,6 +83,7 @@ guild:
         help_5:                           454941769734422538
         helpers:                          385474242440986624
         message_log:       &MESSAGE_LOG   467752170159079424
+        mod_alerts:                       473092532147060736
         modlog:            &MODLOG        282638479504965634
         off_topic_0:                      291284109232308226
         off_topic_1:                      463035241142026251
@@ -99,7 +103,7 @@ guild:
         devops:            &DEVOPS_ROLE   409416496733880320
         jammer:                           423054537079783434
         moderator:         &MOD_ROLE      267629731250176001
-        muted:                            277914926603829249
+        muted:             &MUTED_ROLE    277914926603829249
         owner:             &OWNER_ROLE    267627879762755584
         verified:                         352427296948486144
         helpers:                          267630620367257601
@@ -115,6 +119,8 @@ filter:
     watch_tokens:   true
 
     # Filter configuration
+    ping_everyone: true  # Ping @everyone when we send a mod-alert?
+
     guild_invite_whitelist:
         - vywQPxd            # Code Monkeys
         - kWJYurV            # Functional Programming
@@ -226,3 +232,53 @@ urls:
     gitlab_bot_repo: "https://gitlab.com/python-discord/projects/bot"
     omdb:            "http://omdbapi.com"
     paste_service:   "https://paste.pydis.com/{key}"
+
+
+anti_spam:
+    # Clean messages that violate a rule.
+    clean_offending: true
+
+    punishment:
+        role_id: *MUTED_ROLE
+        remove_after: 600
+
+    rules:
+        attachments:
+            interval: 10
+            max: 3
+
+        burst:
+            interval: 10
+            max: 7
+
+        burst_shared:
+            interval: 10
+            max: 20
+
+        chars:
+            interval: 5
+            max: 3_000
+
+        duplicates:
+            interval: 10
+            max: 3
+
+        discord_emojis:
+            interval: 10
+            max: 6
+
+        links:
+            interval: 10
+            max: 4
+
+        mentions:
+            interval: 10
+            max: 5
+
+        newlines:
+            interval: 10
+            max: 100
+
+        role_mentions:
+            interval: 10
+            max: 3

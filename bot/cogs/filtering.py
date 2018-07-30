@@ -1,11 +1,14 @@
 import logging
 import re
 
-from discord import Message
+from discord import Colour, Message
 from discord.ext.commands import Bot
 
 from bot.cogs.modlog import ModLog
-from bot.constants import Channels, Colours, Filter, Icons
+from bot.constants import (
+    Channels, Colours, DEBUG_MODE,
+    Filter, Icons
+)
 
 log = logging.getLogger(__name__)
 
@@ -84,7 +87,9 @@ class Filtering:
             and not msg.author.bot                          # Author not a bot
         )
 
-        filter_message = not msg.author.bot and msg.channel.id == Channels.modlog  # for testing
+        # If we're running the bot locally, ignore role whitelist and only listen to #dev-test
+        if DEBUG_MODE:
+            filter_message = not msg.author.bot and msg.channel.id == Channels.devtest
 
         # If none of the above, we can start filtering.
         if filter_message:
@@ -95,52 +100,32 @@ class Filtering:
                     triggered = await _filter["function"](msg.content)
 
                     if triggered:
+                        message = (
+                            f"The {filter_name} {_filter['type']} was triggered "
+                            f"by **{msg.author.name}#{msg.author.discriminator}** in "
+                            f"<#{msg.channel.id}> with the following message:\n\n"
+                            f"{msg.content}"
+                        )
 
-                        # If a filter is triggered, we should automod it.
+                        log.debug(message)
+                        log.debug(Channels.mod_alerts)
+
+                        # Send pretty mod log embed to mod-alerts
+                        await self.mod_log.send_log_message(
+                            icon_url=Icons.filtering,
+                            colour=Colour(Colours.soft_red),
+                            title=f"{_filter['type'].title()} triggered!",
+                            text=message,
+                            thumbnail=msg.author.avatar_url_as(static_format="png"),
+                            channel_id=Channels.mod_alerts,
+                            ping_everyone=Filter.ping_everyone,
+                        )
+
+                        # If this is a filter (not a watchlist), we should delete the message.
                         if _filter["type"] == "filter":
-                            log.debug(
-                                f"The {filter_name} filter was triggered "
-                                f"by {msg.author.name} in {msg.channel.name} with "
-                                f"the following message:\n{msg.content}."
-                            )
-
-                            # Replace this with actual automod
-                            await self.bot.get_channel(msg.channel.id).send(
-                                content=f"The **{filter_name}** filter triggered!"
-                            )
-
-                        # If a watchlist triggers, we should send a mod alert.
-                        elif _filter["type"] == "watchlist":
-                            await self._mod_alert(filter_name, msg)
+                            await msg.delete()
 
                         break  # We don't want multiple filters to trigger
-
-    async def _auto_mod(self, filter_name: str, msg: Message):
-        """
-        Removes a message and sends a
-        """
-
-    async def _mod_alert(self, watchlist_name: str, msg: Message):
-        """
-        Send a mod alert into the #mod-alert channel.
-
-        Ping staff so they can take action.
-        """
-
-        message = (
-            f"The {watchlist_name} watchlist was triggered "
-            f"by {msg.author.name} in {msg.channel.name} with "
-            f"the following message:\n{msg.content}."
-        )
-
-        log.debug(message)
-
-        # Send pretty modlog embed to mod-alerts
-        await self.mod_log.send_log_message(
-            Icons., Colours.soft_red, "Watchlist triggered!",
-            message, msg.author.avatar_url_as(static_format="png"),
-            ping_everyone=True
-        )
 
     @staticmethod
     async def _has_watchlist_words(text: str) -> bool:

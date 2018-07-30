@@ -44,6 +44,7 @@ bot.load_extension("bot.cogs.events")
 bot.load_extension("bot.cogs.filtering")
 
 # Commands, etc
+# bot.load_extension("bot.cogs.antispam")
 bot.load_extension("bot.cogs.bigbrother")
 bot.load_extension("bot.cogs.bot")
 bot.load_extension("bot.cogs.clean")
