@@ -132,6 +132,7 @@ filter:
 
     domain_blacklist:
         - pornhub.com
+        - liveleak.com
 
     word_watchlist:
         - goo+ks*
@@ -155,6 +156,7 @@ filter:
     token_watchlist:
         - fa+g+s*
         - 卐
+        - 卍
         - cuck
         - nigg+(?:e*r+|a+h+?|u+h+)s?
         - fag+o+t+s*

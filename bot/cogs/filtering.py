@@ -139,7 +139,7 @@ class Filtering:
         """
 
         for expression in Filter.word_watchlist:
-            if re.search(fr"\b{expression}\b", text.lower()):
+            if re.search(fr"\b{expression}\b", text, re.IGNORECASE):
                 return True
 
         return False
@@ -156,7 +156,7 @@ class Filtering:
         """
 
         for expression in Filter.token_watchlist:
-            if re.search(fr"{expression}", text.lower()):
+            if re.search(fr"{expression}", text, re.IGNORECASE):
                 return True
 
         return False
@@ -168,11 +168,13 @@ class Filtering:
         the blacklisted URLs from the config file.
         """
 
-        if not re.search(URL_RE.lower(), text.lower()):
+        if not re.search(URL_RE, text, re.IGNORECASE):
             return False
 
+        text = text.lower()
+
         for url in Filter.domain_blacklist:
-            if url.lower() in text.lower():
+            if url.lower() in text:
                 return True
 
         return False
@@ -204,7 +206,7 @@ class Filtering:
         # discord\.gg/gdudes-pony-farm
         text = text.replace("\\", "")
 
-        invites = re.findall(INVITE_RE, text)
+        invites = re.findall(INVITE_RE, text, re.IGNORECASE)
         for invite in invites:
 
             filter_invite = (
