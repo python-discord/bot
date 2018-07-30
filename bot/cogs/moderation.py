@@ -663,8 +663,8 @@ def parse_rfc1123(time_str):
 def _silent_exception(future):
     try:
         future.exception()
-    except Exception as e:
-        log.debug(f"_silent_exception silenced the following exception: {e}")
+    except Exception:  # noqa: S110
+        pass
 
 
 def setup(bot):

@@ -26,6 +26,11 @@ style:
         white_chevron: "<:whitechevron:418110396973711363>"
         lemoneye2:     "<:lemoneye2:435193765582340098>"
 
+        status_online:  "<:status_online:470326272351010816>"
+        status_idle:    "<:status_idle:470326266625785866>"
+        status_dnd:     "<:status_dnd:470326272082313216>"
+        status_offline: "<:status_offline:470326266537705472>"
+
         bullet:   "\u2022"
         pencil:   "\u270F"
         new:      "\U0001F195"

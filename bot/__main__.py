@@ -5,7 +5,7 @@ from aiohttp import AsyncResolver, ClientSession, TCPConnector
 from discord import Game
 from discord.ext.commands import Bot, when_mentioned_or
 
-from bot.constants import Bot as BotConfig  # , ClickUp
+from bot.constants import Bot as BotConfig, DEBUG_MODE
 from bot.utils.service_discovery import wait_for_rmq
 
 
@@ -38,7 +38,6 @@ else:
 
 # Internal/debug
 bot.load_extension("bot.cogs.logging")
-bot.load_extension("bot.cogs.modlog")
 bot.load_extension("bot.cogs.security")
 bot.load_extension("bot.cogs.events")
 
@@ -49,19 +48,19 @@ bot.load_extension("bot.cogs.bot")
 bot.load_extension("bot.cogs.clean")
 bot.load_extension("bot.cogs.cogs")
 
-# Local setups usually don't have the clickup key set,
-# and loading the cog would simply spam errors in the console.
-# if ClickUp.key is not None:
-#     bot.load_extension("bot.cogs.clickup")
-# else:
-#     log.info("`CLICKUP_KEY` not set in the environment, not loading the ClickUp cog.")
+# Only load this in production
+if not DEBUG_MODE:
+    bot.load_extension("bot.cogs.modlog")
+    bot.load_extension("bot.cogs.verification")
 
+# Feature cogs
 bot.load_extension("bot.cogs.deployment")
 bot.load_extension("bot.cogs.defcon")
 bot.load_extension("bot.cogs.doc")
 bot.load_extension("bot.cogs.eval")
 bot.load_extension("bot.cogs.fun")
 bot.load_extension("bot.cogs.hiphopify")
+bot.load_extension("bot.cogs.information")
 bot.load_extension("bot.cogs.moderation")
 bot.load_extension("bot.cogs.off_topic_names")
 bot.load_extension("bot.cogs.snakes")
@@ -69,7 +68,6 @@ bot.load_extension("bot.cogs.snekbox")
 bot.load_extension("bot.cogs.tags")
 bot.load_extension("bot.cogs.token_remover")
 bot.load_extension("bot.cogs.utils")
-bot.load_extension("bot.cogs.verification")
 
 if has_rmq:
     bot.load_extension("bot.cogs.rmq")
