@@ -68,8 +68,14 @@ class Filtering:
         return self.bot.get_cog("ModLog")
 
     async def on_message(self, msg: Message):
+        await self._filter_message(msg)
+
+    async def on_message_edit(self, _: Message, after: Message):
+        await self._filter_message(after)
+
+    async def _filter_message(self, msg: Message):
         """
-        Whenever a message is received,
+        Whenever a message is sent or edited,
         run it through our filters to see if it
         violates any of our rules, and then respond
         accordingly.
