@@ -195,7 +195,7 @@ anti_spam:
 
         discord_emojis:
             interval: 10
-            max: 6
+            max: 20
 
         links:
             interval: 10
@@ -208,26 +208,6 @@ anti_spam:
         newlines:
             interval: 10
             max: 100
-
-        role_mentions:
-            interval: 10
-            max: 3
-
-        discord_emojis:
-            interval: 10
-            max: 6
-
-        links:
-            interval: 10
-            max: 4
-
-        mentions:
-            interval: 10
-            max: 5
-
-        newlines:
-            interval: 10
-            max: 20
 
         role_mentions:
             interval: 10
