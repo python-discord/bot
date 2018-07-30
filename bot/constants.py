@@ -217,6 +217,12 @@ class Emojis(metaclass=YAMLGetter):
     green_chevron: str
     red_chevron: str
     white_chevron: str
+    lemoneye2: str
+
+    status_online: str
+    status_offline: str
+    status_idle: str
+    status_dnd: str
 
     bullet: str
     new: str
