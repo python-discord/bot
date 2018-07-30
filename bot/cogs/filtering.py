@@ -168,11 +168,11 @@ class Filtering:
         the blacklisted URLs from the config file.
         """
 
-        if not re.search(URL_RE, text):
+        if not re.search(URL_RE.lower(), text.lower()):
             return False
 
         for url in Filter.domain_blacklist:
-            if url in text:
+            if url.lower() in text.lower():
                 return True
 
         return False
