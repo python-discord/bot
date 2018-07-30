@@ -40,6 +40,8 @@ style:
         defcon_enabled:  "https://cdn.discordapp.com/emojis/470326274213150730.png"
         defcon_updated:  "https://cdn.discordapp.com/emojis/472472638342561793.png"
 
+        filtering: "https://cdn.discordapp.com/emojis/472472638594482195.png"
+
         guild_update: "https://cdn.discordapp.com/emojis/469954765141442561.png"
 
         hash_blurple: "https://cdn.discordapp.com/emojis/469950142942806017.png"

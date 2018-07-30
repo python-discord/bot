@@ -61,7 +61,7 @@ class Filtering:
         }
 
     @property
-    def modlog(self) -> ModLog:
+    def mod_log(self) -> ModLog:
         return self.bot.get_cog("ModLog")
 
     async def on_message(self, msg: Message):
@@ -136,9 +136,10 @@ class Filtering:
         log.debug(message)
 
         # Send pretty modlog embed to mod-alerts
-        await self.modlog.send_log_message(
-            Icons.token_removed, Colours.soft_red, "Watchlist triggered!",
-            message, msg.author.avatar_url_as(static_format="png")
+        await self.mod_log.send_log_message(
+            Icons., Colours.soft_red, "Watchlist triggered!",
+            message, msg.author.avatar_url_as(static_format="png"),
+            ping_everyone=True
         )
 
     @staticmethod
