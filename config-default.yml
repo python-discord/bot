@@ -65,7 +65,9 @@ style:
         user_update: "https://cdn.discordapp.com/emojis/469952898684551168.png"
 
         user_mute:   "https://cdn.discordapp.com/emojis/472472640100106250.png"
-        user_unmute: "https://cdn.discordapp.com/emojis/472472640100106250.png"
+        user_unmute: "https://cdn.discordapp.com/emojis/472472639206719508.png"
+
+        pencil: "https://cdn.discordapp.com/emojis/470326272401211415.png"
 
 
 guild:

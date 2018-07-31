@@ -4,7 +4,7 @@ from discord import Message, NotFound, Object
 from discord.ext.commands import Bot, Context, command
 
 from bot.cogs.modlog import ModLog
-from bot.constants import Channels, Roles
+from bot.constants import Channels, Event, Roles
 from bot.decorators import in_channel, without_role
 
 log = logging.getLogger(__name__)
@@ -90,7 +90,7 @@ class Verification:
         log.trace(f"Deleting the message posted by {ctx.author}.")
 
         try:
-            self.mod_log.ignore_message_deletion(ctx.message.id)
+            self.mod_log.ignore(Event.message_delete, ctx.message.id)
             await ctx.message.delete()
         except NotFound:
             log.trace("No message found, it must have been deleted by another bot.")

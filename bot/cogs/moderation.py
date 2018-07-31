@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 import logging
+import textwrap
 from typing import Dict
 
 from aiohttp import ClientError
@@ -8,7 +9,8 @@ from discord import Colour, Embed, Guild, Member, Object, User
 from discord.ext.commands import Bot, Context, command, group
 
 from bot import constants
-from bot.constants import Keys, Roles, URLs
+from bot.cogs.modlog import ModLog
+from bot.constants import Colours, Event, Icons, Keys, Roles, URLs
 from bot.converters import InfractionSearchQuery
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
@@ -28,6 +30,10 @@ class Moderation:
         self.headers = {"X-API-KEY": Keys.site_api}
         self.expiration_tasks: Dict[str, asyncio.Task] = {}
         self._muted_role = Object(constants.Roles.muted)
+
+    @property
+    def mod_log(self) -> ModLog:
+        return self.bot.get_cog("ModLog")
 
     async def on_ready(self):
         # Schedule expiration for previous infractions
@@ -111,6 +117,7 @@ class Moderation:
             await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
             return
 
+        self.mod_log.ignore(Event.member_remove, user.id)
         await user.kick(reason=reason)
 
         if reason is None:
@@ -119,6 +126,19 @@ class Moderation:
             result_message = f":ok_hand: kicked {user.mention} ({reason})."
 
         await ctx.send(result_message)
+
+        # Send a log message to the mod log
+        await self.mod_log.send_log_message(
+            icon_url=Icons.sign_out,
+            colour=Colour(Colours.soft_red),
+            title="Member kicked",
+            thumbnail=user.avatar_url_as(static_format="png"),
+            text=textwrap.dedent(f"""
+                Member: {user.mention} (`{user.id}`)
+                Actor: {ctx.message.author}
+                Reason: {reason}
+            """)
+        )
 
     @with_role(*MODERATION_ROLES)
     @command(name="ban")
@@ -150,6 +170,8 @@ class Moderation:
             await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
             return
 
+        self.mod_log.ignore(Event.member_ban, user.id)
+        self.mod_log.ignore(Event.member_remove, user.id)
         await ctx.guild.ban(user, reason=reason)
 
         if reason is None:
@@ -158,6 +180,19 @@ class Moderation:
             result_message = f":ok_hand: permanently banned {user.mention} ({reason})."
 
         await ctx.send(result_message)
+
+        # Send a log message to the mod log
+        await self.mod_log.send_log_message(
+            icon_url=Icons.user_ban,
+            colour=Colour(Colours.soft_red),
+            title="Member permanently banned",
+            thumbnail=user.avatar_url_as(static_format="png"),
+            text=textwrap.dedent(f"""
+                Member: {user.mention} (`{user.id}`)
+                Actor: {ctx.message.author}
+                Reason: {reason}
+            """)
+        )
 
     @with_role(*MODERATION_ROLES)
     @command(name="mute")
@@ -190,6 +225,7 @@ class Moderation:
             return
 
         # add the mute role
+        self.mod_log.ignore(Event.member_update, user.id)
         await user.add_roles(self._muted_role, reason=reason)
 
         if reason is None:
@@ -198,6 +234,19 @@ class Moderation:
             result_message = f":ok_hand: permanently muted {user.mention} ({reason})."
 
         await ctx.send(result_message)
+
+        # Send a log message to the mod log
+        await self.mod_log.send_log_message(
+            icon_url=Icons.user_mute,
+            colour=Colour(Colours.soft_red),
+            title="Member permanently muted",
+            thumbnail=user.avatar_url_as(static_format="png"),
+            text=textwrap.dedent(f"""
+                Member: {user.mention} (`{user.id}`)
+                Actor: {ctx.message.author}
+                Reason: {reason}
+            """)
+        )
 
     # endregion
     # region: Temporary infractions
@@ -234,6 +283,7 @@ class Moderation:
             await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
             return
 
+        self.mod_log.ignore(Event.member_update, user.id)
         await user.add_roles(self._muted_role, reason=reason)
 
         infraction_object = response_object["infraction"]
@@ -248,6 +298,21 @@ class Moderation:
             result_message = f":ok_hand: muted {user.mention} until {infraction_expiration} ({reason})."
 
         await ctx.send(result_message)
+
+        # Send a log message to the mod log
+        await self.mod_log.send_log_message(
+            icon_url=Icons.user_mute,
+            colour=Colour(Colours.soft_red),
+            title="Member temporarily muted",
+            thumbnail=user.avatar_url_as(static_format="png"),
+            text=textwrap.dedent(f"""
+                Member: {user.mention} (`{user.id}`)
+                Actor: {ctx.message.author}
+                Reason: {reason}
+                Duration: {duration}
+                Expires: {infraction_expiration}
+            """)
+        )
 
     @with_role(*MODERATION_ROLES)
     @command(name="tempban")
@@ -281,6 +346,8 @@ class Moderation:
             await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
             return
 
+        self.mod_log.ignore(Event.member_ban, user.id)
+        self.mod_log.ignore(Event.member_remove, user.id)
         guild: Guild = ctx.guild
         await guild.ban(user, reason=reason)
 
@@ -296,6 +363,21 @@ class Moderation:
             result_message = f":ok_hand: banned {user.mention} until {infraction_expiration} ({reason})."
 
         await ctx.send(result_message)
+
+        # Send a log message to the mod log
+        await self.mod_log.send_log_message(
+            icon_url=Icons.user_ban,
+            colour=Colour(Colours.soft_red),
+            thumbnail=user.avatar_url_as(static_format="png"),
+            title="Member temporarily banned",
+            text=textwrap.dedent(f"""
+                Member: {user.mention} (`{user.id}`)
+                Actor: {ctx.message.author}
+                Reason: {reason}
+                Duration: {duration}
+                Expires: {infraction_expiration}
+            """)
+        )
 
     # endregion
     # region: Remove infractions (un- commands)
@@ -333,6 +415,19 @@ class Moderation:
                 self.cancel_expiration(infraction_object["id"])
 
             await ctx.send(f":ok_hand: Un-muted {user.mention}.")
+
+            # Send a log message to the mod log
+            await self.mod_log.send_log_message(
+                icon_url=Icons.user_unmute,
+                colour=Colour(Colours.soft_green),
+                title="Member unmuted",
+                thumbnail=user.avatar_url_as(static_format="png"),
+                text=textwrap.dedent(f"""
+                    Member: {user.mention} (`{user.id}`)
+                    Actor: {ctx.message.author}
+                    Intended expiry: {infraction_object['expires_at']}
+                """)
+            )
         except Exception:
             log.exception("There was an error removing an infraction.")
             await ctx.send(":x: There was an error removing the infraction.")
@@ -371,6 +466,19 @@ class Moderation:
                 self.cancel_expiration(infraction_object["id"])
 
             await ctx.send(f":ok_hand: Un-banned {user.mention}.")
+
+            # Send a log message to the mod log
+            await self.mod_log.send_log_message(
+                icon_url=Icons.user_unban,
+                colour=Colour(Colours.soft_green),
+                title="Member unbanned",
+                thumbnail=user.avatar_url_as(static_format="png"),
+                text=textwrap.dedent(f"""
+                    Member: {user.mention} (`{user.id}`)
+                    Actor: {ctx.message.author}
+                    Intended expiry: {infraction_object['expires_at']}
+                """)
+            )
         except Exception:
             log.exception("There was an error removing an infraction.")
             await ctx.send(":x: There was an error removing the infraction.")
@@ -400,6 +508,15 @@ class Moderation:
         """
 
         try:
+            previous = await self.bot.http_session.get(
+                URLs.site_infractions_by_id.format(
+                    infraction_id=infraction_id
+                ),
+                headers=self.headers
+            )
+
+            previous_object = await previous.json()
+
             if duration == "permanent":
                 duration = None
             # check the current active infraction
@@ -432,6 +549,37 @@ class Moderation:
             await ctx.send(":x: There was an error updating the infraction.")
             return
 
+        prev_infraction = previous_object["infraction"]
+
+        # Get information about the infraction's user
+        user_id = int(infraction_object["user"]["user_id"])
+        user = ctx.guild.get_member(user_id)
+
+        if user:
+            member_text = f"{user.mention} (`{user.id}`)"
+            thumbnail = user.avatar_url_as(static_format="png")
+        else:
+            member_text = f"`{user_id}`"
+            thumbnail = None
+
+        # The infraction's actor
+        actor_id = int(infraction_object["actor"]["user_id"])
+        actor = ctx.guild.get_member(actor_id) or f"`{actor_id}`"
+
+        await self.mod_log.send_log_message(
+            icon_url=Icons.pencil,
+            colour=Colour.blurple(),
+            title="Infraction edited",
+            thumbnail=thumbnail,
+            text=textwrap.dedent(f"""
+                Member: {member_text}
+                Actor: {actor}
+                Edited by: {ctx.message.author}
+                Previous expiry: {prev_infraction['expires_at']}
+                New expiry: {infraction_object['expires_at']}
+            """)
+        )
+
     @with_role(*MODERATION_ROLES)
     @infraction_edit_group.command(name="reason")
     async def edit_reason(self, ctx, infraction_id: str, *, reason: str):
@@ -442,6 +590,15 @@ class Moderation:
         """
 
         try:
+            previous = await self.bot.http_session.get(
+                URLs.site_infractions_by_id.format(
+                    infraction_id=infraction_id
+                ),
+                headers=self.headers
+            )
+
+            previous_object = await previous.json()
+
             response = await self.bot.http_session.patch(
                 URLs.site_infractions,
                 json={
@@ -460,6 +617,38 @@ class Moderation:
             log.exception("There was an error updating an infraction.")
             await ctx.send(":x: There was an error updating the infraction.")
             return
+
+        new_infraction = response_object["infraction"]
+        prev_infraction = previous_object["infraction"]
+
+        # Get information about the infraction's user
+        user_id = int(new_infraction["user"]["user_id"])
+        user = ctx.guild.get_member(user_id)
+
+        if user:
+            user_text = f"{user.mention} (`{user.id}`)"
+            thumbnail = user.avatar_url_as(static_format="png")
+        else:
+            user_text = f"`{user_id}`"
+            thumbnail = None
+
+        # The infraction's actor
+        actor_id = int(new_infraction["actor"]["user_id"])
+        actor = ctx.guild.get_member(actor_id) or f"`{actor_id}`"
+
+        await self.mod_log.send_log_message(
+            icon_url=Icons.pencil,
+            colour=Colour.blurple(),
+            title="Infraction edited",
+            thumbnail=thumbnail,
+            text=textwrap.dedent(f"""
+                Member: {user_text}
+                Actor: {actor}
+                Edited by: {ctx.message.author}
+                Previous reason: {prev_infraction['reason']}
+                New reason: {new_infraction['reason']}
+            """)
+        )
 
     # endregion
     # region: Search infractions
@@ -609,6 +798,7 @@ class Moderation:
             member: Member = guild.get_member(user_id)
             if member:
                 # remove the mute role
+                self.mod_log.ignore(Event.member_update, member.id)
                 await member.remove_roles(self._muted_role)
             else:
                 log.warning(f"Failed to un-mute user: {user_id} (not found)")

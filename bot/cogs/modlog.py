@@ -13,7 +13,7 @@ from discord import (
 from discord.abc import GuildChannel
 from discord.ext.commands import Bot
 
-from bot.constants import Channels, Colours, Emojis, Icons
+from bot.constants import Channels, Colours, Emojis, Event, Icons
 from bot.constants import Guild as GuildConstant
 from bot.utils.time import humanize
 
@@ -35,15 +35,15 @@ class ModLog:
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self._ignored_deletions = []
+        self._ignored = {event: [] for event in Event}
 
         self._cached_deletes = []
         self._cached_edits = []
 
-    def ignore_message_deletion(self, *message_ids: int):
-        for message_id in message_ids:
-            if message_id not in self._ignored_deletions:
-                self._ignored_deletions.append(message_id)
+    def ignore(self, event: Event, *items: int):
+        for item in items:
+            if item not in self._ignored[event]:
+                self._ignored[event].append(item)
 
     async def send_log_message(
             self, icon_url: Optional[str], colour: Colour, title: Optional[str], text: str, thumbnail: str = None,
@@ -288,6 +288,10 @@ class ModLog:
         if guild.id != GuildConstant.id:
             return
 
+        if member.id in self._ignored[Event.member_ban]:
+            self._ignored[Event.member_ban].remove(member.id)
+            return
+
         await self.send_log_message(
             Icons.user_ban, Colour(Colours.soft_red),
             "User banned", f"{member.name}#{member.discriminator} (`{member.id}`)",
@@ -318,6 +322,10 @@ class ModLog:
         if member.guild.id != GuildConstant.id:
             return
 
+        if member.id in self._ignored[Event.member_remove]:
+            self._ignored[Event.member_remove].remove(member.id)
+            return
+
         await self.send_log_message(
             Icons.sign_out, Colour(Colours.soft_red),
             "User left", f"{member.name}#{member.discriminator} (`{member.id}`)",
@@ -328,6 +336,10 @@ class ModLog:
         if guild.id != GuildConstant.id:
             return
 
+        if member.id in self._ignored[Event.member_unban]:
+            self._ignored[Event.member_unban].remove(member.id)
+            return
+
         await self.send_log_message(
             Icons.user_unban, Colour.blurple(),
             "User unbanned", f"{member.name}#{member.discriminator} (`{member.id}`)",
@@ -336,6 +348,10 @@ class ModLog:
 
     async def on_member_update(self, before: Member, after: Member):
         if before.guild.id != GuildConstant.id:
+            return
+
+        if before.id in self._ignored[Event.member_update]:
+            self._ignored[Event.member_update].remove(before.id)
             return
 
         diff = DeepDiff(before, after)
@@ -427,8 +443,8 @@ class ModLog:
         ignored_messages = 0
 
         for message_id in event.message_ids:
-            if message_id in self._ignored_deletions:
-                self._ignored_deletions.remove(message_id)
+            if message_id in self._ignored[Event.message_delete]:
+                self._ignored[Event.message_delete].remove(message_id)
                 ignored_messages += 1
 
         if ignored_messages >= len(event.message_ids):
@@ -457,8 +473,8 @@ class ModLog:
 
         self._cached_deletes.append(message.id)
 
-        if message.id in self._ignored_deletions:
-            self._ignored_deletions.remove(message.id)
+        if message.id in self._ignored[Event.message_delete]:
+            self._ignored[Event.message_delete].remove(message.id)
             return
 
         if author.bot:
@@ -503,8 +519,8 @@ class ModLog:
             self._cached_deletes.remove(event.message_id)
             return
 
-        if event.message_id in self._ignored_deletions:
-            self._ignored_deletions.remove(event.message_id)
+        if event.message_id in self._ignored[Event.message_delete]:
+            self._ignored[Event.message_delete].remove(event.message_id)
             return
 
         channel = self.bot.get_channel(event.channel_id)
