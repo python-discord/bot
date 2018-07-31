@@ -96,6 +96,7 @@ guild:
         off_topic_1:                      463035241142026251
         off_topic_2:                      463035268514185226
         python:                           267624335836053506
+        reddit:                           458224812528238616
         staff_lounge:      &STAFF_LOUNGE  464905259261755392
         verification:                     352442727016693763
 
@@ -291,3 +292,9 @@ anti_spam:
         role_mentions:
             interval: 10
             max: 3
+
+
+reddit:
+    request_delay: 60
+    subreddits:
+        - 'r/Python'

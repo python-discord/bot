@@ -321,6 +321,7 @@ class Channels(metaclass=YAMLGetter):
     off_topic_2: int
     off_topic_3: int
     python: int
+    reddit: int
     verification: int
 
 
@@ -405,6 +406,13 @@ class URLs(metaclass=YAMLGetter):
     site_infractions_user_type: str
     status: str
     paste_service: str
+
+
+class Reddit(metaclass=YAMLGetter):
+    section = "reddit"
+
+    request_delay: int
+    subreddits: list
 
 
 class AntiSpam(metaclass=YAMLGetter):
