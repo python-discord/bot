@@ -45,6 +45,8 @@ style:
         defcon_enabled:  "https://cdn.discordapp.com/emojis/470326274213150730.png"
         defcon_updated:  "https://cdn.discordapp.com/emojis/472472638342561793.png"
 
+        filtering: "https://cdn.discordapp.com/emojis/472472638594482195.png"
+
         guild_update: "https://cdn.discordapp.com/emojis/469954765141442561.png"
 
         hash_blurple: "https://cdn.discordapp.com/emojis/469950142942806017.png"
@@ -70,45 +72,115 @@ guild:
     id: 267624335836053506
 
     channels:
-        admins:          &ADMINS      365960823622991872
-        announcements:                354619224620138496
-        big_brother_logs:             468507907357409333
-        bot:                          267659945086812160
-        checkpoint_test:              422077681434099723
-        devalerts:                    460181980097675264
-        devlog:                       409308876241108992
-        devtest:                      414574275865870337
-        help_0:                       303906576991780866
-        help_1:                       303906556754395136
-        help_2:                       303906514266226689
-        help_3:                       439702951246692352
-        help_4:                       451312046647148554
-        help_5:                       454941769734422538
-        helpers:                      385474242440986624
-        message_log:     &MESSAGE_LOG 467752170159079424
-        mod_alerts:                   473092793431097354
-        modlog:          &MODLOG      282638479504965634
-        off_topic_0:                  291284109232308226
-        off_topic_1:                  463035241142026251
-        off_topic_2:                  463035268514185226
-        python:                       267624335836053506
-        verification:                 352442727016693763
+        admins:            &ADMINS        365960823622991872
+        announcements:                    354619224620138496
+        big_brother_logs:  &BBLOGS        468507907357409333
+        bot:                              267659945086812160
+        checkpoint_test:                  422077681434099723
+        devalerts:                        460181980097675264
+        devlog:            &DEVLOG        409308876241108992
+        devtest:           &DEVTEST       414574275865870337
+        help_0:                           303906576991780866
+        help_1:                           303906556754395136
+        help_2:                           303906514266226689
+        help_3:                           439702951246692352
+        help_4:                           451312046647148554
+        help_5:                           454941769734422538
+        helpers:                          385474242440986624
+        message_log:       &MESSAGE_LOG   467752170159079424
+        mod_alerts:                       473092532147060736
+        modlog:            &MODLOG        282638479504965634
+        off_topic_0:                      291284109232308226
+        off_topic_1:                      463035241142026251
+        off_topic_2:                      463035268514185226
+        python:                           267624335836053506
+        staff_lounge:      &STAFF_LOUNGE  464905259261755392
+        verification:                     352442727016693763
 
     ignored: [*ADMINS, *MESSAGE_LOG, *MODLOG]
 
     roles:
-        admin: 267628507062992896
-        announcements: 463658397560995840
-        champion: 430492892331769857
-        contributor: 295488872404484098
-        developer: 352427296948486144
-        devops: 409416496733880320
-        jammer: 423054537079783434
-        moderator: 267629731250176001
-        owner: 267627879762755584
-        verified: 352427296948486144
-        helpers: 267630620367257601
-        muted: &MUTED_ROLE 277914926603829249
+        admin:             &ADMIN_ROLE    267628507062992896
+        announcements:                    463658397560995840
+        champion:                         430492892331769857
+        contributor:                      295488872404484098
+        developer:                        352427296948486144
+        devops:            &DEVOPS_ROLE   409416496733880320
+        jammer:                           423054537079783434
+        moderator:         &MOD_ROLE      267629731250176001
+        muted:             &MUTED_ROLE    277914926603829249
+        owner:             &OWNER_ROLE    267627879762755584
+        verified:                         352427296948486144
+        helpers:                          267630620367257601
+
+
+filter:
+
+    # What do we filter?
+    filter_zalgo:   true
+    filter_invites: true
+    filter_domains: true
+    watch_words:    true
+    watch_tokens:   true
+
+    # Filter configuration
+    ping_everyone: true  # Ping @everyone when we send a mod-alert?
+
+    guild_invite_whitelist:
+        - vywQPxd            # Code Monkeys
+        - kWJYurV            # Functional Programming
+        - 010z0Kw1A9ql5c1Qe  # Programming: Meme Edition
+        - XBGetGp            # STEM
+
+    vanity_url_whitelist:
+        - python             # Python Discord
+
+    domain_blacklist:
+        - pornhub.com
+        - liveleak.com
+
+    word_watchlist:
+        - goo+ks*
+        - ky+s+
+        - gh?[ae]+y+s*
+        - ki+ke+s*
+        - beane?r*s*
+        - coo+ns*
+        - nig+lets*
+        - slant-eyes*
+        - towe?l-?head+s*
+        - chi*n+k+s*
+        - spick*s*
+        - kill* +(?:yo)?urself+
+        - jew+s*
+        - suicide
+        - rape
+        - (?:re+)?tar+d+(?:ed)?
+        - cunts*
+
+    token_watchlist:
+        - fa+g+s*
+        - 卐
+        - 卍
+        - cuck
+        - nigg+(?:e*r+|a+h+?|u+h+)s?
+        - fag+o+t+s*
+
+    # Censor doesn't apply to these
+    channel_whitelist:
+        - *ADMINS
+        - *MODLOG
+        - *MESSAGE_LOG
+        - *DEVLOG
+        - *BBLOGS
+        - *STAFF_LOUNGE
+        - *DEVTEST
+
+    role_whitelist:
+        - *ADMIN_ROLE
+        - *MOD_ROLE
+        - *OWNER_ROLE
+        - *DEVOPS_ROLE
 
 
 keys:

@@ -191,6 +191,26 @@ class Bot(metaclass=YAMLGetter):
     token: str
 
 
+class Filter(metaclass=YAMLGetter):
+    section = "filter"
+
+    filter_zalgo: bool
+    filter_invites: bool
+    filter_domains: bool
+    watch_words: bool
+    watch_tokens: bool
+
+    ping_everyone: bool
+    guild_invite_whitelist: List[str]
+    vanity_url_whitelist: List[str]
+    domain_blacklist: List[str]
+    word_watchlist: List[str]
+    token_watchlist: List[str]
+
+    channel_whitelist: List[int]
+    role_whitelist: List[int]
+
+
 class Cooldowns(metaclass=YAMLGetter):
     section = "bot"
     subsection = "cooldowns"
@@ -237,10 +257,12 @@ class Icons(metaclass=YAMLGetter):
     crown_green: str
     crown_red: str
 
-    defcon_denied: str  # noqa: E704
+    defcon_denied: str    # noqa: E704
     defcon_disabled: str  # noqa: E704
-    defcon_enabled: str  # noqa: E704
-    defcon_updated: str  # noqa: E704
+    defcon_enabled: str   # noqa: E704
+    defcon_updated: str   # noqa: E704
+
+    filtering: str
 
     guild_update: str
 
@@ -287,6 +309,7 @@ class Channels(metaclass=YAMLGetter):
     help_5: int
     helpers: int
     message_log: int
+    mod_alerts: int
     modlog: int
     off_topic_1: int
     off_topic_2: int
