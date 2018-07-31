@@ -172,3 +172,29 @@ class InfractionSearchQuery(Converter):
         except Exception:
             return arg
         return user or arg
+
+
+class Subreddit(Converter):
+    """
+    Forces a string to begin with "r/" and checks if it's a valid subreddit.
+    """
+
+    @staticmethod
+    async def convert(ctx, sub: str):
+        sub = sub.lower()
+
+        if not sub.startswith("r/"):
+            sub = f"r/{sub}"
+
+        resp = await ctx.bot.http_session.get(
+            "https://www.reddit.com/subreddits/search.json",
+            params={"q": sub}
+        )
+
+        json = await resp.json()
+        if not json["data"]["children"]:
+            raise BadArgument(
+                f"The subreddit `{sub}` either doesn't exist, or it has no posts."
+            )
+
+        return sub
