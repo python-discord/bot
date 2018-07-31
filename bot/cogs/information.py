@@ -3,10 +3,10 @@ import textwrap
 from datetime import datetime
 
 from dateutil.relativedelta import relativedelta
-from discord import CategoryChannel, Colour, Embed, TextChannel, VoiceChannel
+from discord import CategoryChannel, Colour, Embed, Member, TextChannel, VoiceChannel
 from discord.ext.commands import Bot, Context, command
 
-from bot.constants import Emojis
+from bot.constants import Emojis, Keys, URLs
 from bot.utils.time import humanize
 
 log = logging.getLogger(__name__)
@@ -21,6 +21,7 @@ class Information:
 
     def __init__(self, bot: Bot):
         self.bot = bot
+        self.headers = {"X-API-Key": Keys.site_api}
 
     @command(name="roles")
     async def roles_info(self, ctx: Context):
@@ -117,6 +118,76 @@ class Information:
         )
 
         embed.set_thumbnail(url=ctx.guild.icon_url)
+
+        await ctx.send(embed=embed)
+
+    @command(name="user", aliases=["user_info", "member", "member_info"])
+    async def user_info(self, ctx: Context, user: Member = None):
+        """
+        Returns info about a user.
+        """
+
+        if user is None:
+            user = ctx.author
+
+        now = datetime.now()
+
+        # User information
+        created_delta = relativedelta(now, user.created_at)
+        created = humanize(created_delta, accuracy="days")
+
+        name = f"{user.name}#{user.discriminator}"
+        if user.nick:
+            name = f"{user.nick} ({name})"
+
+        # Member information
+        joined_delta = relativedelta(now, user.joined_at)
+        joined = humanize(joined_delta, accuracy="days")
+
+        # You're welcome, Volcyyyyyyyyyyyyyyyy
+        roles = ", ".join(
+            role.mention for role in user.roles if role.name != "@everyone"
+        )
+
+        # Infractions
+        api_response = await self.bot.http_session.get(
+            url=URLs.site_infractions_user.format(user_id=user.id),
+            headers=self.headers
+        )
+
+        infractions = await api_response.json()
+
+        infr_total = 0
+        infr_active = 0
+
+        # At least it's readable.
+        for infr in infractions:
+            if infr["active"]:
+                infr_active += 1
+
+            infr_total += 1
+
+        # Let's build the embed now
+        embed = Embed(
+            title=name,
+            description=textwrap.dedent(f"""
+                **User Information**
+                Created: {created} ago
+                Profile: {user.mention}
+                ID: {user.id}
+
+                **Member Information**
+                Joined: {joined} ago
+                Roles: {roles or None}
+
+                **Infractions**
+                Total: {infr_total}
+                Active: {infr_active}
+            """)
+        )
+
+        embed.set_thumbnail(url=user.avatar_url_as(format="png"))
+        embed.colour = user.top_role.colour if roles else Colour.blurple()
 
         await ctx.send(embed=embed)
 
