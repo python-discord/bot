@@ -13,6 +13,7 @@ their default values from `config-default.yml`.
 import logging
 import os
 from collections.abc import Mapping
+from enum import Enum
 from pathlib import Path
 from typing import Dict, List
 
@@ -281,6 +282,11 @@ class Icons(metaclass=YAMLGetter):
     user_unban: str
     user_update: str
 
+    user_mute: str
+    user_unmute: str
+
+    pencil: str
+
 
 class CleanMessages(metaclass=YAMLGetter):
     section = "bot"
@@ -394,6 +400,7 @@ class URLs(metaclass=YAMLGetter):
     site_infractions: str
     site_infractions_user: str
     site_infractions_type: str
+    site_infractions_by_id: str
     site_infractions_user_type_current: str
     site_infractions_user_type: str
     status: str
@@ -464,3 +471,27 @@ ERROR_REPLIES = [
     "Are you trying to kill me?",
     "Noooooo!!"
 ]
+
+
+class Event(Enum):
+    """
+    Event names. This does not include every event (for example, raw
+    events aren't here), but only events used in ModLog for now.
+    """
+
+    guild_channel_create = "guild_channel_create"
+    guild_channel_delete = "guild_channel_delete"
+    guild_channel_update = "guild_channel_update"
+    guild_role_create = "guild_role_create"
+    guild_role_delete = "guild_role_delete"
+    guild_role_update = "guild_role_update"
+    guild_update = "guild_update"
+
+    member_join = "member_join"
+    member_remove = "member_remove"
+    member_ban = "member_ban"
+    member_unban = "member_unban"
+    member_update = "member_update"
+
+    message_delete = "message_delete"
+    message_edit = "message_edit"

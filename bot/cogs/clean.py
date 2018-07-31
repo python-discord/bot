@@ -9,8 +9,8 @@ from discord.ext.commands import Bot, Context, group
 
 from bot.cogs.modlog import ModLog
 from bot.constants import (
-    Channels, CleanMessages, Colours, Icons,
-    Keys, NEGATIVE_REPLIES, Roles, URLs
+    Channels, CleanMessages, Colours, Event,
+    Icons, Keys, NEGATIVE_REPLIES, Roles, URLs
 )
 from bot.decorators import with_role
 
@@ -169,7 +169,7 @@ class Clean:
 
             # Always start by deleting the invocation
             if not invocation_deleted:
-                self.mod_log.ignore_message_deletion(message.id)
+                self.mod_log.ignore(Event.message_delete, message.id)
                 await message.delete()
                 invocation_deleted = True
                 continue
@@ -202,7 +202,7 @@ class Clean:
         self.cleaning = False
 
         # We should ignore the ID's we stored, so we don't get mod-log spam.
-        self.mod_log.ignore_message_deletion(*message_ids)
+        self.mod_log.ignore(Event.message_delete, *message_ids)
 
         # Use bulk delete to actually do the cleaning. It's far faster.
         await ctx.channel.purge(
