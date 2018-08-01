@@ -385,6 +385,7 @@ class URLs(metaclass=YAMLGetter):
     gitlab_bot_repo: str
     omdb: str
     site: str
+    site_api: str
     site_facts_api: str
     site_clean_api: str
     site_clean_logs: str
