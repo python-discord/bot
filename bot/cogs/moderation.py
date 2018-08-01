@@ -172,7 +172,7 @@ class Moderation:
 
         self.mod_log.ignore(Event.member_ban, user.id)
         self.mod_log.ignore(Event.member_remove, user.id)
-        await ctx.guild.ban(user, reason=reason)
+        await ctx.guild.ban(user, reason=reason, delete_message_days=0)
 
         if reason is None:
             result_message = f":ok_hand: permanently banned {user.mention}."
@@ -349,7 +349,7 @@ class Moderation:
         self.mod_log.ignore(Event.member_ban, user.id)
         self.mod_log.ignore(Event.member_remove, user.id)
         guild: Guild = ctx.guild
-        await guild.ban(user, reason=reason)
+        await guild.ban(user, reason=reason, delete_message_days=0)
 
         infraction_object = response_object["infraction"]
         infraction_expiration = infraction_object["expires_at"]
