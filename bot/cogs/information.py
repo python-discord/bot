@@ -6,7 +6,8 @@ from dateutil.relativedelta import relativedelta
 from discord import CategoryChannel, Colour, Embed, Member, TextChannel, VoiceChannel
 from discord.ext.commands import Bot, Context, command
 
-from bot.constants import Emojis, Keys, URLs
+from bot.constants import Emojis, Keys, Roles, URLs
+from bot.decorators import with_role
 from bot.utils.time import humanize
 
 log = logging.getLogger(__name__)
@@ -23,6 +24,7 @@ class Information:
         self.bot = bot
         self.headers = {"X-API-Key": Keys.site_api}
 
+    @with_role(Roles.owner, Roles.admin, Roles.moderator)
     @command(name="roles")
     async def roles_info(self, ctx: Context):
         """
