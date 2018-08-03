@@ -9,7 +9,11 @@ from discord import Member, Message, Object, TextChannel
 from discord.ext.commands import Bot
 
 from bot import rules
-from bot.constants import AntiSpam as AntiSpamConfig, Channels, Colours, Guild as GuildConfig, Icons
+from bot.constants import (
+    AntiSpam as AntiSpamConfig, Channels,
+    Colours, Guild as GuildConfig,
+    Icons, Roles
+)
 from bot.utils.time import humanize as humanize_delta
 
 
@@ -27,6 +31,13 @@ RULE_FUNCTION_MAPPING = {
     'newlines': rules.apply_newlines,
     'role_mentions': rules.apply_role_mentions
 }
+WHITELISTED_CHANNELS = (
+    Channels.admin, Channels.announcements, Channels.big_brother_logs,
+    Channels.devalerts, Channels.devlog, Channels.devtest,
+    Channels.helpers, Channels.message_log,
+    Channels.mod_alerts, Channels.modlog, Channels.staff_lounge
+)
+WHITELISTED_ROLES = (Roles.owner, Roles.admin, Roles.moderator, Roles.helpers)
 
 
 class AntiSpam:
@@ -39,7 +50,12 @@ class AntiSpam:
         self.muted_role = Object(role_id)
 
     async def on_message(self, message: Message):
-        if message.guild.id != GuildConfig.id or message.author.bot:
+        if (
+            message.guild.id != GuildConfig.id
+            or message.author.bot
+            or message.channel.id in WHITELISTED_CHANNELS
+            or message.author.top_role.id in WHITELISTED_ROLES
+        ):
             return
 
         # Fetch the rule configuration with the highest rule interval.
