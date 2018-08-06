@@ -280,7 +280,7 @@ anti_spam:
 
         links:
             interval: 10
-            max: 4
+            max: 20
 
         mentions:
             interval: 10
