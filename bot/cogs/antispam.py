@@ -32,7 +32,7 @@ RULE_FUNCTION_MAPPING = {
     'role_mentions': rules.apply_role_mentions
 }
 WHITELISTED_CHANNELS = (
-    Channels.admin, Channels.announcements, Channels.big_brother_logs,
+    Channels.admins, Channels.announcements, Channels.big_brother_logs,
     Channels.devalerts, Channels.devlog, Channels.devtest,
     Channels.helpers, Channels.message_log,
     Channels.mod_alerts, Channels.modlog, Channels.staff_lounge
