@@ -90,7 +90,8 @@ class Snekbox:
         elif code.startswith("py"):
             code = code[2:]
 
-        code = [f"    {line.strip()}" for line in code.split("\n")]
+        code = code.strip()
+        code = [f"    {line.rstrip()}" for line in code.split("\n")]
         code = CODE_TEMPLATE.replace("{CODE}", "\n".join(code))
 
         try:
