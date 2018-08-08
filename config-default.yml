@@ -165,7 +165,7 @@ filter:
         - fa+g+s*
         - 卐
         - 卍
-        - cuck
+        - cuck(?!oo+)
         - nigg+(?:e*r+|a+h+?|u+h+)s?
         - fag+o+t+s*
 
