@@ -158,7 +158,8 @@ filter:
         - jew+s*
         - suicide
         - rape
-        - (?:re+)?tar+d+(?:ed)?
+        - (re+)tar+(d+|t+)(ed)?
+        - ta+r+d+
         - cunts*
 
     token_watchlist:
