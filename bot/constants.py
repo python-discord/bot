@@ -99,7 +99,7 @@ yaml.SafeLoader.add_constructor("!JOIN", _join_var_constructor)
 yaml.SafeLoader.add_constructor("!REQUIRED_ENV", _required_env_var_constructor)
 
 
-with open("config-default.yml") as f:
+with open("config-default.yml", encoding="UTF-8") as f:
     _CONFIG_YAML = yaml.safe_load(f)
 
 
@@ -124,7 +124,7 @@ def _recursive_update(original, new):
 
 if Path("config.yml").exists():
     log.info("Found `config.yml` file, loading constants from it.")
-    with open("config.yml") as f:
+    with open("config.yml", encoding="UTF-8") as f:
         user_config = yaml.safe_load(f)
     _recursive_update(_CONFIG_YAML, user_config)
 
