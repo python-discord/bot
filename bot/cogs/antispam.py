@@ -5,14 +5,15 @@ from datetime import datetime, timedelta
 from typing import Dict, List
 
 from dateutil.relativedelta import relativedelta
-from discord import Member, Message, Object, TextChannel
+from discord import Colour, Member, Message, Object, TextChannel
 from discord.ext.commands import Bot
 
 from bot import rules
+from bot.cogs.modlog import ModLog
 from bot.constants import (
     AntiSpam as AntiSpamConfig, Channels,
-    Colours, Guild as GuildConfig,
-    Icons, Roles
+    Colours, DEBUG_MODE, Event,
+    Guild as GuildConfig, Icons, Roles,
 )
 from bot.utils.time import humanize as humanize_delta
 
@@ -45,6 +46,10 @@ class AntiSpam:
         self.bot = bot
         self.muted_role = None
 
+    @property
+    def mod_log(self) -> ModLog:
+        return self.bot.get_cog("ModLog")
+
     async def on_ready(self):
         role_id = AntiSpamConfig.punishment['role_id']
         self.muted_role = Object(role_id)
@@ -53,8 +58,8 @@ class AntiSpam:
         if (
             message.guild.id != GuildConfig.id
             or message.author.bot
-            or message.channel.id in WHITELISTED_CHANNELS
-            or message.author.top_role.id in WHITELISTED_ROLES
+            or (message.channel.id in WHITELISTED_CHANNELS and not DEBUG_MODE)
+            or (message.author.top_role.id in WHITELISTED_ROLES and not DEBUG_MODE)
         ):
             return
 
@@ -107,36 +112,40 @@ class AntiSpam:
             duration_delta = relativedelta(seconds=remove_role_after)
             human_duration = humanize_delta(duration_delta)
 
-            mod_alert_channel = self.bot.get_channel(Channels.mod_alerts)
-            if mod_alert_channel is not None:
-                await mod_alert_channel.send(
-                    f"<:messagefiltered:473092874289020929> Spam detected in {msg.channel.mention}. "
-                    f"See the message and mod log for further details."
-                )
-            else:
-                log.warning(
-                    "Tried logging spam event to the mod-alerts channel, but it could not be found."
-                )
+            mod_alert_message = (
+                f"**Triggered by:** {member.display_name}#{member.discriminator} (`{member.id}`)\n"
+                f"**Channel:** {msg.channel.mention}\n"
+                f"**Reason:** {reason}\n"
+                "See the message and mod log for further details."
+            )
+            await self.mod_log.send_log_message(
+                icon_url=Icons.filtering,
+                colour=Colour(Colours.soft_red),
+                title=f"Spam detected!",
+                text=mod_alert_message,
+                thumbnail=msg.author.avatar_url_as(static_format="png"),
+                channel_id=Channels.mod_alerts,
+                ping_everyone=True
+            )
 
             await member.add_roles(self.muted_role, reason=reason)
             description = textwrap.dedent(f"""
-            **Channel**: {msg.channel.mention}
-            **User**: {msg.author.mention} (`{msg.author.id}`)
-            **Reason**: {reason}
-            Role will be removed after {human_duration}.
+                **Channel**: {msg.channel.mention}
+                **User**: {msg.author.mention} (`{msg.author.id}`)
+                **Reason**: {reason}
+                Role will be removed after {human_duration}.
             """)
 
-            modlog = self.bot.get_cog('ModLog')
-            await modlog.send_log_message(
-                icon_url=Icons.user_mute, colour=Colours.soft_red,
+            await self.mod_log.send_log_message(
+                icon_url=Icons.user_mute, colour=Colour(Colours.soft_red),
                 title="User muted", text=description
             )
 
             await asyncio.sleep(remove_role_after)
             await member.remove_roles(self.muted_role, reason="AntiSpam mute expired")
 
-            await modlog.send_log_message(
-                icon_url=Icons.user_mute, colour=Colours.soft_green,
+            await self.mod_log.send_log_message(
+                icon_url=Icons.user_mute, colour=Colour(Colours.soft_green),
                 title="User unmuted",
                 text=f"Was muted by `AntiSpam` cog for {human_duration}."
             )
@@ -147,6 +156,8 @@ class AntiSpam:
 
             # If we have more than one message, we can use bulk delete.
             if len(messages) > 1:
+                message_ids = [message.id for message in messages]
+                self.mod_log.ignore(Event.message_delete, *message_ids)
                 await channel.delete_messages(messages)
 
             # Otherwise, the bulk delete endpoint will throw up.

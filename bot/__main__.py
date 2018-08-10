@@ -41,6 +41,7 @@ bot.load_extension("bot.cogs.logging")
 bot.load_extension("bot.cogs.security")
 bot.load_extension("bot.cogs.events")
 bot.load_extension("bot.cogs.filtering")
+bot.load_extension("bot.cogs.modlog")
 
 # Commands, etc
 bot.load_extension("bot.cogs.antispam")
@@ -49,9 +50,9 @@ bot.load_extension("bot.cogs.bot")
 bot.load_extension("bot.cogs.clean")
 bot.load_extension("bot.cogs.cogs")
 
+
 # Only load this in production
 if not DEBUG_MODE:
-    bot.load_extension("bot.cogs.modlog")
     bot.load_extension("bot.cogs.verification")
 
 # Feature cogs
