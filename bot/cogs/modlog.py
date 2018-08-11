@@ -3,6 +3,7 @@ import datetime
 import logging
 from typing import List, Optional, Union
 
+from aiohttp import ClientResponseError
 from dateutil.relativedelta import relativedelta
 from deepdiff import DeepDiff
 from discord import (
@@ -13,7 +14,7 @@ from discord import (
 from discord.abc import GuildChannel
 from discord.ext.commands import Bot
 
-from bot.constants import Channels, Colours, Emojis, Event, Icons
+from bot.constants import Channels, Colours, Emojis, Event, Icons, Keys, Roles, URLs
 from bot.constants import Guild as GuildConstant
 from bot.utils.time import humanize
 
@@ -35,10 +36,64 @@ class ModLog:
 
     def __init__(self, bot: Bot):
         self.bot = bot
+        self.headers = {"X-API-KEY": Keys.site_api}
         self._ignored = {event: [] for event in Event}
 
         self._cached_deletes = []
         self._cached_edits = []
+
+    async def upload_log(self, messages: List[Message]) -> Optional[str]:
+        """
+        Uploads the log data to the database via
+        an API endpoint for uploading logs.
+
+        Used in several mod log embeds.
+
+        Returns a URL that can be used to view the log.
+        """
+
+        log_data = []
+
+        for message in messages:
+            author = f"{message.author.name}#{message.author.discriminator}"
+
+            # message.author may return either a User or a Member. Users don't have roles.
+            if type(message.author) is User:
+                role_id = Roles.developer
+            else:
+                role_id = message.author.top_role.id
+
+            content = message.content
+            embeds = [embed.to_dict() for embed in message.embeds]
+            attachments = ["<Attachment>" for _ in message.attachments]
+
+            log_data.append({
+                "content": content,
+                "author": author,
+                "user_id": str(message.author.id),
+                "role_id": str(role_id),
+                "timestamp": message.created_at.strftime("%D %H:%M"),
+                "attachments": attachments,
+                "embeds": embeds,
+            })
+
+        response = await self.bot.http_session.post(
+            URLs.site_logs_api,
+            headers=self.headers,
+            json={"log_data": log_data}
+        )
+
+        try:
+            data = await response.json()
+            log_id = data["log_id"]
+        except (KeyError, ClientResponseError):
+            log.debug(
+                "API returned an unexpected result:\n"
+                f"{response.text}"
+            )
+            return
+
+        return f"{URLs.site_logs_view}/{log_id}"
 
     def ignore(self, event: Event, *items: int):
         for item in items:
@@ -486,7 +541,6 @@ class ModLog:
                 f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{message.id}`\n"
                 "\n"
-                f"{message.clean_content}"
             )
         else:
             response = (
@@ -494,8 +548,16 @@ class ModLog:
                 f"**Channel:** #{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{message.id}`\n"
                 "\n"
-                f"{message.clean_content}"
             )
+
+        # Shorten the message content if necessary
+        content = message.clean_content
+        remaining_chars = 2040 - len(response)
+
+        if len(content) > remaining_chars:
+            content = content[:remaining_chars] + "..."
+
+        response += f"{content}"
 
         if message.attachments:
             # Prepend the message metadata with the number of attachments

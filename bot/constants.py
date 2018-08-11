@@ -278,6 +278,8 @@ class Icons(metaclass=YAMLGetter):
     sign_in: str
     sign_out: str
 
+    token_removed: str
+
     user_ban: str
     user_unban: str
     user_update: str
@@ -388,9 +390,10 @@ class URLs(metaclass=YAMLGetter):
     site_api: str
     site_facts_api: str
     site_clean_api: str
-    site_clean_logs: str
     site_hiphopify_api: str
     site_idioms_api: str
+    site_logs_api: str
+    site_logs_view: str
     site_names_api: str
     site_quiz_api: str
     site_schema: str
@@ -418,6 +421,9 @@ class Reddit(metaclass=YAMLGetter):
 
 class AntiSpam(metaclass=YAMLGetter):
     section = 'anti_spam'
+
+    clean_offending: bool
+    ping_everyone: bool
 
     punishment: Dict[str, Dict[str, int]]
     rules: Dict[str, Dict[str, int]]

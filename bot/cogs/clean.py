@@ -3,14 +3,13 @@ import random
 import re
 from typing import Optional
 
-from aiohttp.client_exceptions import ClientResponseError
 from discord import Colour, Embed, Message, User
 from discord.ext.commands import Bot, Context, group
 
 from bot.cogs.modlog import ModLog
 from bot.constants import (
     Channels, CleanMessages, Colours, Event,
-    Icons, Keys, NEGATIVE_REPLIES, Roles, URLs
+    Icons, NEGATIVE_REPLIES, Roles
 )
 from bot.decorators import with_role
 
@@ -34,38 +33,11 @@ class Clean:
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.headers = {"X-API-KEY": Keys.site_api}
         self.cleaning = False
 
     @property
     def mod_log(self) -> ModLog:
         return self.bot.get_cog("ModLog")
-
-    async def _upload_log(self, log_data: list) -> str:
-        """
-        Uploads the log data to the database via
-        an API endpoint for uploading logs.
-
-        Returns a URL that can be used to view the log.
-        """
-
-        response = await self.bot.http_session.post(
-            URLs.site_clean_api,
-            headers=self.headers,
-            json={"log_data": log_data}
-        )
-
-        try:
-            data = await response.json()
-            log_id = data["log_id"]
-        except (KeyError, ClientResponseError):
-            log.debug(
-                "API returned an unexpected result:\n"
-                f"{response.text}"
-            )
-            return
-
-        return f"{URLs.site_clean_logs}/{log_id}"
 
     async def _clean_messages(
             self, amount: int, ctx: Context,
@@ -156,7 +128,7 @@ class Clean:
             predicate = None                     # Delete all messages
 
         # Look through the history and retrieve message data
-        message_log = []
+        messages = []
         message_ids = []
         self.cleaning = True
         invocation_deleted = False
@@ -176,28 +148,8 @@ class Clean:
 
             # If the message passes predicate, let's save it.
             if predicate is None or predicate(message):
-                author = f"{message.author.name}#{message.author.discriminator}"
-
-                # message.author may return either a User or a Member. Users don't have roles.
-                if type(message.author) is User:
-                    role_id = Roles.developer
-                else:
-                    role_id = message.author.top_role.id
-
-                content = message.content
-                embeds = [embed.to_dict() for embed in message.embeds]
-                attachments = ["<Attachment>" for _ in message.attachments]
-
                 message_ids.append(message.id)
-                message_log.append({
-                    "content": content,
-                    "author": author,
-                    "user_id": str(message.author.id),
-                    "role_id": str(role_id),
-                    "timestamp": message.created_at.strftime("%D %H:%M"),
-                    "attachments": attachments,
-                    "embeds": embeds,
-                })
+                messages.append(message)
 
         self.cleaning = False
 
@@ -211,9 +163,9 @@ class Clean:
         )
 
         # Reverse the list to restore chronological order
-        if message_log:
-            message_log = list(reversed(message_log))
-            upload_log = await self._upload_log(message_log)
+        if messages:
+            messages = list(reversed(messages))
+            log_url = await self.mod_log.upload_log(messages)
         else:
             # Can't build an embed, nothing to clean!
             embed = Embed(
@@ -224,10 +176,9 @@ class Clean:
             return
 
         # Build the embed and send it
-        print(upload_log)
         message = (
             f"**{len(message_ids)}** messages deleted in <#{ctx.channel.id}> by **{ctx.author.name}**\n\n"
-            f"A log of the deleted messages can be found [here]({upload_log})."
+            f"A log of the deleted messages can be found [here]({log_url})."
         )
 
         await self.mod_log.send_log_message(

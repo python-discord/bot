@@ -5,12 +5,12 @@ import re
 import struct
 from datetime import datetime
 
-from discord import Message
+from discord import Colour, Message
 from discord.ext.commands import Bot
 from discord.utils import snowflake_time
 
-from bot.constants import Channels
-
+from bot.cogs.modlog import ModLog
+from bot.constants import Channels, Colours, Event, Icons
 
 log = logging.getLogger(__name__)
 
@@ -26,12 +26,12 @@ DISCORD_EPOCH_TIMESTAMP = datetime(2017, 1, 1)
 TOKEN_EPOCH = 1_293_840_000
 TOKEN_RE = re.compile(
     r"(?<=(\"|'))"  # Lookbehind: Only match if there's a double or single quote in front
-    r"[^\W\.]+"  # Matches token part 1: The user ID string, encoded as base64
-    r"\."  # Matches a literal dot between the token parts
-    r"[^\W\.]+"  # Matches token part 2: The creation timestamp, as an integer
-    r"\."  # Matches a literal dot between the token parts
-    r"[^\W\.]+"  # Matches token part 3: The HMAC, unused by us, but check that it isn't empty
-    r"(?=(\"|'))"  # Lookahead: Only match if there's a double or single quote after
+    r"[^\W\.]+"     # Matches token part 1: The user ID string, encoded as base64
+    r"\."           # Matches a literal dot between the token parts
+    r"[^\W\.]+"     # Matches token part 2: The creation timestamp, as an integer
+    r"\."           # Matches a literal dot between the token parts
+    r"[^\W\.]+"     # Matches token part 3: The HMAC, unused by us, but check that it isn't empty
+    r"(?=(\"|'))"   # Lookahead: Only match if there's a double or single quote after
 )
 
 
@@ -40,10 +40,10 @@ class TokenRemover:
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.mod_log = None
 
-    async def on_ready(self):
-        self.mod_log = self.bot.get_channel(Channels.modlog)
+    @property
+    def mod_log(self) -> ModLog:
+        return self.bot.get_cog("ModLog")
 
     async def on_message(self, msg: Message):
         if msg.author.bot:
@@ -59,12 +59,25 @@ class TokenRemover:
             return
 
         if self.is_valid_user_id(user_id) and self.is_valid_timestamp(creation_timestamp):
+            self.mod_log.ignore(Event.message_delete, msg.id)
             await msg.delete()
             await msg.channel.send(DELETION_MESSAGE_TEMPLATE.format(mention=msg.author.mention))
-            await self.mod_log.send(
-                ":key2::mute: censored a seemingly valid token sent by "
+
+            message = (
+                "Censored a seemingly valid token sent by "
                 f"{msg.author} (`{msg.author.id}`) in {msg.channel.mention}, token was "
                 f"`{user_id}.{creation_timestamp}.{'x' * len(hmac)}`"
+            )
+            log.debug(message)
+
+            # Send pretty mod log embed to mod-alerts
+            await self.mod_log.send_log_message(
+                icon_url=Icons.token_removed,
+                colour=Colour(Colours.soft_red),
+                title="Token removed!",
+                text=message,
+                thumbnail=msg.author.avatar_url_as(static_format="png"),
+                channel_id=Channels.mod_alerts,
             )
 
     @staticmethod

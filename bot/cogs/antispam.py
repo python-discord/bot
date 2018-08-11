@@ -2,7 +2,7 @@ import asyncio
 import logging
 import textwrap
 from datetime import datetime, timedelta
-from typing import Dict, List
+from typing import List
 
 from dateutil.relativedelta import relativedelta
 from discord import Colour, Member, Message, Object, TextChannel
@@ -99,13 +99,13 @@ class AntiSpam:
                     # Fire it off as a background task to ensure
                     # that the sleep doesn't block further tasks
                     self.bot.loop.create_task(
-                        self.punish(message, member, rule_config, full_reason)
+                        self.punish(message, member, full_reason, relevant_messages)
                     )
 
                 await self.maybe_delete_messages(message.channel, relevant_messages)
                 break
 
-    async def punish(self, msg: Message, member: Member, rule_config: Dict[str, int], reason: str):
+    async def punish(self, msg: Message, member: Member, reason: str, messages: List[Message]):
         # Sanity check to ensure we're not lagging behind
         if self.muted_role not in member.roles:
             remove_role_after = AntiSpamConfig.punishment['remove_after']
@@ -116,8 +116,22 @@ class AntiSpam:
                 f"**Triggered by:** {member.display_name}#{member.discriminator} (`{member.id}`)\n"
                 f"**Channel:** {msg.channel.mention}\n"
                 f"**Reason:** {reason}\n"
-                "See the message and mod log for further details."
             )
+
+            # For multiple messages, use the logs API
+            if len(messages) > 1:
+                url = await self.mod_log.upload_log(messages)
+                mod_alert_message += f"A complete log of the offending messages can be found [here]({url})"
+            else:
+                mod_alert_message += "Message:\n"
+                content = messages[0].clean_content
+                remaining_chars = 2040 - len(mod_alert_message)
+
+                if len(content) > remaining_chars:
+                    content = content[:remaining_chars] + "..."
+
+                mod_alert_message += f"{content}"
+
             await self.mod_log.send_log_message(
                 icon_url=Icons.filtering,
                 colour=Colour(Colours.soft_red),
@@ -125,7 +139,7 @@ class AntiSpam:
                 text=mod_alert_message,
                 thumbnail=msg.author.avatar_url_as(static_format="png"),
                 channel_id=Channels.mod_alerts,
-                ping_everyone=True
+                ping_everyone=AntiSpamConfig.ping_everyone
             )
 
             await member.add_roles(self.muted_role, reason=reason)
@@ -163,6 +177,7 @@ class AntiSpam:
             # Otherwise, the bulk delete endpoint will throw up.
             # Delete the message directly instead.
             else:
+                self.mod_log.ignore(Event.message_delete, messages[0].id)
                 await messages[0].delete()
 
 
