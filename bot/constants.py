@@ -362,14 +362,6 @@ class Keys(metaclass=YAMLGetter):
     youtube: str
 
 
-class ClickUp(metaclass=YAMLGetter):
-    section = "clickup"
-
-    key: str
-    space: int
-    team: int
-
-
 class RabbitMQ(metaclass=YAMLGetter):
     section = "rabbitmq"
 

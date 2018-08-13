@@ -197,12 +197,6 @@ keys:
     youtube:     !ENV "YOUTUBE_API_KEY"
 
 
-clickup:
-    key:   !ENV "CLICKUP_KEY"
-    space:      757069
-    team:       754996
-
-
 rabbitmq:
     host:          "pdrmq"
     password: !ENV ["RABBITMQ_DEFAULT_PASS", "guest"]
