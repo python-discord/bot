@@ -2,6 +2,7 @@ import datetime
 import logging
 import random
 import re
+import textwrap
 
 from discord import Colour, Embed
 from discord.ext.commands import (
@@ -25,7 +26,7 @@ venv_file = "/snekbox/.venv/bin/activate_this.py"
 exec(open(venv_file).read(), dict(__file__=venv_file))
 
 try:
-    {CODE}
+{CODE}
 except Exception as e:
     print(e)
 """
@@ -90,9 +91,9 @@ class Snekbox:
         elif code.startswith("py"):
             code = code[2:]
 
-        code = code.strip()
-        code = [f"    {line.rstrip()}" for line in code.split("\n")]
-        code = CODE_TEMPLATE.replace("{CODE}", "\n".join(code))
+        code = textwrap.dedent(code.strip())
+        code = textwrap.indent(code, "    ")
+        code = CODE_TEMPLATE.replace("{CODE}", code)
 
         try:
             await self.rmq.send_json(
