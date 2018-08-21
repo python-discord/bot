@@ -32,8 +32,8 @@ class OffTopicName(Converter):
 
         elif not argument.islower():
             raise BadArgument("Channel name must be lowercase")
-	
-	# Replace some unusable apostrophe-like characters with "’".
+
+        # Replace some unusable apostrophe-like characters with "’".
         return argument.replace("'", "’").replace("`", "’")
 
 
