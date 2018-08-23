@@ -1,14 +1,12 @@
 import logging
 import textwrap
-from datetime import datetime
 
-from dateutil.relativedelta import relativedelta
 from discord import CategoryChannel, Colour, Embed, Member, TextChannel, VoiceChannel
 from discord.ext.commands import Bot, Context, command
 
 from bot.constants import Emojis, Keys, Roles, URLs
 from bot.decorators import with_role
-from bot.utils.time import humanize
+from bot.utils.time import time_since
 
 log = logging.getLogger(__name__)
 
@@ -59,9 +57,7 @@ class Information:
         server information.
         """
 
-        now = datetime.now()
-        created_delta = relativedelta(now, ctx.guild.created_at)
-        created = humanize(created_delta, accuracy="days")
+        created = time_since(ctx.guild.created_at, precision="days")
         features = ", ".join(ctx.guild.features)
         region = ctx.guild.region
 
@@ -100,7 +96,7 @@ class Information:
             colour=Colour.blurple(),
             description=textwrap.dedent(f"""
                 **Server information**
-                Created: {created} ago
+                Created: {created}
                 Voice region: {region}
                 Features: {features}
 
@@ -132,19 +128,15 @@ class Information:
         if user is None:
             user = ctx.author
 
-        now = datetime.now()
-
         # User information
-        created_delta = relativedelta(now, user.created_at)
-        created = humanize(created_delta, accuracy="days")
+        created = time_since(user.created_at, max_units=3)
 
         name = f"{user.name}#{user.discriminator}"
         if user.nick:
             name = f"{user.nick} ({name})"
 
         # Member information
-        joined_delta = relativedelta(now, user.joined_at)
-        joined = humanize(joined_delta, accuracy="days")
+        joined = time_since(user.joined_at, precision="days")
 
         # You're welcome, Volcyyyyyyyyyyyyyyyy
         roles = ", ".join(
@@ -174,12 +166,12 @@ class Information:
             title=name,
             description=textwrap.dedent(f"""
                 **User Information**
-                Created: {created} ago
+                Created: {created}
                 Profile: {user.mention}
                 ID: {user.id}
 
                 **Member Information**
-                Joined: {joined} ago
+                Joined: {joined}
                 Roles: {roles or None}
 
                 **Infractions**

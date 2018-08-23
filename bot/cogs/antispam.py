@@ -15,7 +15,7 @@ from bot.constants import (
     Colours, DEBUG_MODE, Event,
     Guild as GuildConfig, Icons, Roles,
 )
-from bot.utils.time import humanize as humanize_delta
+from bot.utils.time import humanize_delta
 
 
 log = logging.getLogger(__name__)
