@@ -16,8 +16,7 @@ from discord.ext.commands import Bot
 
 from bot.constants import Channels, Colours, Emojis, Event, Icons, Keys, Roles, URLs
 from bot.constants import Guild as GuildConstant
-from bot.utils.time import humanize
-
+from bot.utils.time import humanize_delta
 
 log = logging.getLogger(__name__)
 
@@ -358,11 +357,10 @@ class ModLog:
             return
 
         message = f"{member.name}#{member.discriminator} (`{member.id}`)"
-
         now = datetime.datetime.utcnow()
         difference = abs(relativedelta(now, member.created_at))
 
-        message += "\n\n**Account age:** " + humanize(difference)
+        message += "\n\n**Account age:** " + humanize_delta(member.created_at)
 
         if difference.days < 1 and difference.months < 1 and difference.years < 1:  # New user account!
             message = f"{Emojis.new} {message}"
