@@ -132,9 +132,7 @@ filter:
     ping_everyone: true  # Ping @everyone when we send a mod-alert?
 
     guild_invite_whitelist:
-        - vywQPxd            # Code Monkeys
         - kWJYurV            # Functional Programming
-        - 010z0Kw1A9ql5c1Qe  # Programming: Meme Edition
         - XBGetGp            # STEM
 
     vanity_url_whitelist:
