@@ -30,11 +30,16 @@ class Utils:
         Fetches information about a PEP and sends it to the channel.
         """
 
-        # Newer PEPs are written in RST instead of txt
-        if int(pep_number) > 542:
-            pep_url = f"{self.base_github_pep_url}{pep_number.zfill(4)}.rst"
+        if pep_number.isdigit():
+            pep_number = int(pep_number)
         else:
-            pep_url = f"{self.base_github_pep_url}{pep_number.zfill(4)}.txt"
+            return await ctx.invoke(self.bot.get_command("help"), "pep")
+
+        # Newer PEPs are written in RST instead of txt
+        if pep_number > 542:
+            pep_url = f"{self.base_github_pep_url}{pep_number:04}.rst"
+        else:
+            pep_url = f"{self.base_github_pep_url}{pep_number:04}.txt"
 
         # Attempt to fetch the PEP
         log.trace(f"Requesting PEP {pep_number} with {pep_url}")
@@ -51,7 +56,7 @@ class Utils:
             # Assemble the embed
             pep_embed = Embed(
                 title=f"**PEP {pep_number} - {pep_header['Title']}**",
-                description=f"[Link]({self.base_pep_url}{pep_number.zfill(4)})",
+                description=f"[Link]({self.base_pep_url}{pep_number:04})",
             )
 
             pep_embed.set_thumbnail(url="https://www.python.org/static/opengraph-icon-200x200.png")
