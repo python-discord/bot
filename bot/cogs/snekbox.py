@@ -67,15 +67,20 @@ class Snekbox:
     @command(name='eval', aliases=('e',))
     @guild_only()
     @check(channel_is_whitelisted_or_author_can_bypass)
-    async def eval_command(self, ctx: Context, *, code: str):
+    async def eval_command(self, ctx: Context, *, code: str = None):
         """
         Run some code. get the result back. We've done our best to make this safe, but do let us know if you
         manage to find an issue with it!
+
+        This command supports multiple lines of code, including code wrapped inside a formatted code block.
         """
 
         if ctx.author.id in self.jobs:
             await ctx.send(f"{ctx.author.mention} You've already got a job running - please wait for it to finish!")
             return
+
+        if not code:  # None or empty string
+            return await ctx.invoke(self.bot.get_command("help"), "eval")
 
         log.info(f"Received code from {ctx.author.name}#{ctx.author.discriminator} for evaluation:\n{code}")
         self.jobs[ctx.author.id] = datetime.datetime.now()
