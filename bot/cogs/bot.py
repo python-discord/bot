@@ -247,12 +247,12 @@ class Bot:
         """
 
         parse_codeblock = (
-                (
-                        msg.channel.id in self.channel_cooldowns
-                        or msg.channel.id in self.channel_whitelist
-                )
-                and not msg.author.bot
-                and len(msg.content.splitlines()) > 3
+            (
+                msg.channel.id in self.channel_cooldowns
+                or msg.channel.id in self.channel_whitelist
+            )
+            and not msg.author.bot
+            and len(msg.content.splitlines()) > 3
         )
 
         if parse_codeblock:
