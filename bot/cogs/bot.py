@@ -40,6 +40,9 @@ class Bot:
             Channels.devtest,
         )
 
+        # Stores improperly formatted Python codeblock message ids and the corresponding bot message
+        self.py_msg_ids = {}
+
     @group(invoke_without_command=True, name="bot", hidden=True)
     @with_role(Roles.verified)
     async def bot_group(self, ctx: Context):
@@ -168,6 +171,7 @@ class Bot:
         """
         Attempts to fix badly indented code.
         """
+
         def unindent(code, skip_spaces=0):
             """
             Unindents all code down to the number of spaces given ins skip_spaces
@@ -178,7 +182,7 @@ class Bot:
 
             # Get numbers of spaces before code in the first line.
             while current == " ":
-                current = code[leading_spaces+1]
+                current = code[leading_spaces + 1]
                 leading_spaces += 1
             leading_spaces -= skip_spaces
 
@@ -225,6 +229,16 @@ class Bot:
             log.trace(f"Found REPL code in \n\n{msg}\n\n")
             return final.rstrip(), True
 
+    def bad_ticks(self, msg: Message):
+        not_backticks = [
+            "'''", '"""', "\u00b4\u00b4\u00b4", "\u2018\u2018\u2018", "\u2019\u2019\u2019",
+            "\u2032\u2032\u2032", "\u201c\u201c\u201c", "\u201d\u201d\u201d", "\u2033\u2033\u2033",
+            "\u3003\u3003\u3003"
+        ]
+
+        bad_ticks = msg.content[:3] in not_backticks
+        return bad_ticks
+
     async def on_message(self, msg: Message):
         """
         Detect poorly formatted Python code and send the user
@@ -233,26 +247,19 @@ class Bot:
         """
 
         parse_codeblock = (
-            (
-                msg.channel.id in self.channel_cooldowns
-                or msg.channel.id in self.channel_whitelist
-            )
-            and not msg.author.bot
-            and len(msg.content.splitlines()) > 3
+                (
+                        msg.channel.id in self.channel_cooldowns
+                        or msg.channel.id in self.channel_whitelist
+                )
+                and not msg.author.bot
+                and len(msg.content.splitlines()) > 3
         )
 
         if parse_codeblock:
             on_cooldown = (time.time() - self.channel_cooldowns.get(msg.channel.id, 0)) < 300
             if not on_cooldown:
                 try:
-                    not_backticks = [
-                        "'''", '"""', "\u00b4\u00b4\u00b4", "\u2018\u2018\u2018", "\u2019\u2019\u2019",
-                        "\u2032\u2032\u2032", "\u201c\u201c\u201c", "\u201d\u201d\u201d", "\u2033\u2033\u2033",
-                        "\u3003\u3003\u3003"
-                    ]
-
-                    bad_ticks = msg.content[:3] in not_backticks
-                    if bad_ticks:
+                    if self.bad_ticks(msg):
                         ticks = msg.content[:3]
                         content = self.codeblock_stripping(f"```{msg.content[3:-3]}```", True)
                         if content is None:
@@ -270,7 +277,7 @@ class Bot:
                             current_length = 0
                             lines_walked = 0
                             for line in content.splitlines(keepends=True):
-                                if current_length+len(line) > space_left or lines_walked == 10:
+                                if current_length + len(line) > space_left or lines_walked == 10:
                                     break
                                 current_length += len(line)
                                 lines_walked += 1
@@ -311,11 +318,11 @@ class Bot:
                                 current_length = 0
                                 lines_walked = 0
                                 for line in content.splitlines(keepends=True):
-                                    if current_length+len(line) > space_left or lines_walked == 10:
+                                    if current_length + len(line) > space_left or lines_walked == 10:
                                         break
                                     current_length += len(line)
                                     lines_walked += 1
-                                content = content[:current_length]+"#..."
+                                content = content[:current_length] + "#..."
 
                             howto += (
                                 "It looks like you're trying to paste code into this channel.\n\n"
@@ -334,7 +341,8 @@ class Bot:
 
                     if howto != "":
                         howto_embed = Embed(description=howto)
-                        await msg.channel.send(f"Hey {msg.author.mention}!", embed=howto_embed)
+                        bot_msg = await msg.channel.send(f"Hey {msg.author.mention}!", embed=howto_embed)
+                        self.py_msg_ids[msg.id] = bot_msg.id
                     else:
                         return
 
@@ -347,6 +355,15 @@ class Bot:
                         "ast.parse raised a SyntaxError. This probably just means it wasn't Python code. "
                         f"The message that was posted was:\n\n{msg.content}\n\n"
                     )
+
+    async def on_message_edit(self, before: Message, after: Message):
+        if before.id in self.py_msg_ids and self.codeblock_stripping(after.content, self.bad_ticks(after)) is None:
+            bot_msg = await after.channel.get_message(self.py_msg_ids[after.id])
+            await bot_msg.delete()
+
+    async def on_reaction_add(self, reaction, user):
+        if user.id == self.id:
+            return
 
 
 def setup(bot):
