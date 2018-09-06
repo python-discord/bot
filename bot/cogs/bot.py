@@ -343,6 +343,7 @@ class Bot:
                         howto_embed = Embed(description=howto)
                         bot_msg = await msg.channel.send(f"Hey {msg.author.mention}!", embed=howto_embed)
                         self.py_msg_ids[msg.id] = bot_msg.id
+                        await bot_msg.add_reaction("❌")
                     else:
                         return
 
@@ -362,8 +363,23 @@ class Bot:
             await bot_msg.delete()
 
     async def on_reaction_add(self, reaction, user):
-        if user.id == self.id:
+        if user.id == self.id or reaction.message.id not in self.py_msg_ids.values():
             return
+
+        for k, v in self.py_msg_ids.items():
+            if v == reaction.message.id:
+                msg = await reaction.message.channel.get_message(k)
+                bot_msg = await reaction.message.channel.get_message(v)
+                break
+
+        if user == msg.author:
+            await bot_msg.delete()
+            return
+
+        for role in user.roles:
+            if role.id in (Roles.owner, Roles.admin, Roles.moderator):
+                await bot_msg.delete()
+                return
 
 
 def setup(bot):
