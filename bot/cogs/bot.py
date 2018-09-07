@@ -363,7 +363,7 @@ class Bot:
             await bot_msg.delete()
 
     async def on_reaction_add(self, reaction, user):
-        if user.id == self.id or reaction.message.id not in self.py_msg_ids.values():
+        if user.id == self.user.id or reaction.message.id not in self.py_msg_ids.values():
             return
 
         for k, v in self.py_msg_ids.items():
