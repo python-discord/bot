@@ -19,19 +19,22 @@ class OffTopicName(Converter):
 
     @staticmethod
     async def convert(ctx: Context, argument: str):
+        allowed_characters = ("-", "’", "'", "`")
+
         if not (2 <= len(argument) <= 96):
             raise BadArgument("Channel name must be between 2 and 96 chars long")
 
-        elif not all(c.isalnum() or c == '-' for c in argument):
+        elif not all(c.isalnum() or c in allowed_characters for c in argument):
             raise BadArgument(
-                "Channel name must only consist of"
-                " alphanumeric characters or minus signs"
+                "Channel name must only consist of "
+                "alphanumeric characters, minus signs or apostrophes."
             )
 
         elif not argument.islower():
             raise BadArgument("Channel name must be lowercase")
 
-        return argument
+        # Replace some unusable apostrophe-like characters with "’".
+        return argument.replace("'", "’").replace("`", "’")
 
 
 async def update_names(bot: Bot, headers: dict):
