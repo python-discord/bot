@@ -248,6 +248,7 @@ class Emojis(metaclass=YAMLGetter):
     bullet: str
     new: str
     pencil: str
+    x: str
 
 
 class Icons(metaclass=YAMLGetter):
