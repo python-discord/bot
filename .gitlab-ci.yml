@@ -1,12 +1,14 @@
 image: pythondiscord/bot-ci:latest
 
 variables:
-  PIPENV_CACHE_DIR: "$CI_PROJECT_DIR/pipenv-cache"
+  PIPENV_CACHE_DIR: "/root/.cache/pipenv"
+  PIP_CACHE_DIR: "/root/.cache/pip"
 
 cache:
   paths:
-    - "$CI_PROJECT_DIR/pipenv-cache"
-    - "$CI_PROJECT_DIR/.venv"
+    - "/root/.cache/pip/"
+    - "/root/.cache/pipenv/"
+    - "/usr/local/lib/python3.6/site-packages/"
 
 stages:
   - test
@@ -19,8 +21,10 @@ test:
   stage: test
 
   script:
-    - pipenv install --dev --deploy
-    - pipenv run lint
+    - ls /root/.cache/
+    - pipenv install --dev --deploy --system
+    - python -m flake8
+    - ls /root/.cache/
 
 build:
   tags:
