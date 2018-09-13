@@ -343,7 +343,7 @@ class Bot:
                         howto_embed = Embed(description=howto)
                         bot_message = await msg.channel.send(f"Hey {msg.author.mention}!", embed=howto_embed)
                         self.codeblock_message_ids[msg.id] = bot_message.id
-                        await bot_message.add_reaction(Emojis.x)
+                        await bot_message.add_reaction(Emojis.cross_mark)
                     else:
                         return
 
