@@ -5,12 +5,10 @@ ENV PIPENV_IGNORE_VIRTUALENVS=1
 ENV PIPENV_NOSPIN=1
 ENV PIPENV_HIDE_EMOJIS=1
 
-RUN pip install pipenv
-
 COPY . /bot
 WORKDIR /bot
 
-RUN pipenv sync
+RUN pipenv install --deploy --system
 
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["pipenv", "run", "start"]
+CMD ["python", "-m", "bot"]
