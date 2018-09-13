@@ -358,8 +358,13 @@ class Bot:
                     )
 
     async def on_message_edit(self, before: Message, after: Message):
-        if before.id in self.codeblock_message_ids\
-                and self.codeblock_stripping(after.content, self.has_bad_ticks(after)) is None:
+        has_fixed_codeblock = (
+            #  Checks if the original message was previously called out by the bot
+            before.id in self.codeblock_message_ids
+            #  Checks to see if the user has corrected their codeblock
+            and self.codeblock_stripping(after.content, self.has_bad_ticks(after)) is None
+        )
+        if has_fixed_codeblock:
             bot_message = await after.channel.get_message(self.codeblock_message_ids[after.id])
             await bot_message.delete()
 
@@ -369,10 +374,10 @@ class Bot:
             return
 
         #  Finds the appropriate bot message/ user message pair and assigns them to variables
-        for k, v in self.codeblock_message_ids.items():
-            if v == reaction.message.id:
-                user_message = await reaction.message.channel.get_message(k)
-                bot_message = await reaction.message.channel.get_message(v)
+        for user_message_id, bot_message_id in self.codeblock_message_ids.items():
+            if bot_message_id == reaction.message.id:
+                user_message = await reaction.message.channel.get_message(user_message_id)
+                bot_message = await reaction.message.channel.get_message(bot_message_id)
                 break
 
         #  If the reaction was clicked on by the author of the user message, deletes the bot message
