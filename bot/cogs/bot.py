@@ -8,7 +8,7 @@ from discord.ext.commands import Bot, Context, command, group
 from dulwich.repo import Repo
 
 from bot.constants import (
-    Channels, Guild, Roles, URLs
+    Channels, Emojis, Guild, Roles, URLs
 )
 from bot.decorators import with_role
 
@@ -39,6 +39,9 @@ class Bot:
             Channels.bot,
             Channels.devtest,
         )
+
+        # Stores improperly formatted Python codeblock message ids and the corresponding bot message
+        self.codeblock_message_ids = {}
 
     @group(invoke_without_command=True, name="bot", hidden=True)
     @with_role(Roles.verified)
@@ -168,6 +171,7 @@ class Bot:
         """
         Attempts to fix badly indented code.
         """
+
         def unindent(code, skip_spaces=0):
             """
             Unindents all code down to the number of spaces given ins skip_spaces
@@ -178,7 +182,7 @@ class Bot:
 
             # Get numbers of spaces before code in the first line.
             while current == " ":
-                current = code[leading_spaces+1]
+                current = code[leading_spaces + 1]
                 leading_spaces += 1
             leading_spaces -= skip_spaces
 
@@ -225,6 +229,16 @@ class Bot:
             log.trace(f"Found REPL code in \n\n{msg}\n\n")
             return final.rstrip(), True
 
+    def has_bad_ticks(self, msg: Message):
+        not_backticks = [
+            "'''", '"""', "\u00b4\u00b4\u00b4", "\u2018\u2018\u2018", "\u2019\u2019\u2019",
+            "\u2032\u2032\u2032", "\u201c\u201c\u201c", "\u201d\u201d\u201d", "\u2033\u2033\u2033",
+            "\u3003\u3003\u3003"
+        ]
+
+        has_bad_ticks = msg.content[:3] in not_backticks
+        return has_bad_ticks
+
     async def on_message(self, msg: Message):
         """
         Detect poorly formatted Python code and send the user
@@ -245,14 +259,7 @@ class Bot:
             on_cooldown = (time.time() - self.channel_cooldowns.get(msg.channel.id, 0)) < 300
             if not on_cooldown:
                 try:
-                    not_backticks = [
-                        "'''", '"""', "\u00b4\u00b4\u00b4", "\u2018\u2018\u2018", "\u2019\u2019\u2019",
-                        "\u2032\u2032\u2032", "\u201c\u201c\u201c", "\u201d\u201d\u201d", "\u2033\u2033\u2033",
-                        "\u3003\u3003\u3003"
-                    ]
-
-                    bad_ticks = msg.content[:3] in not_backticks
-                    if bad_ticks:
+                    if self.has_bad_ticks(msg):
                         ticks = msg.content[:3]
                         content = self.codeblock_stripping(f"```{msg.content[3:-3]}```", True)
                         if content is None:
@@ -270,7 +277,7 @@ class Bot:
                             current_length = 0
                             lines_walked = 0
                             for line in content.splitlines(keepends=True):
-                                if current_length+len(line) > space_left or lines_walked == 10:
+                                if current_length + len(line) > space_left or lines_walked == 10:
                                     break
                                 current_length += len(line)
                                 lines_walked += 1
@@ -311,11 +318,11 @@ class Bot:
                                 current_length = 0
                                 lines_walked = 0
                                 for line in content.splitlines(keepends=True):
-                                    if current_length+len(line) > space_left or lines_walked == 10:
+                                    if current_length + len(line) > space_left or lines_walked == 10:
                                         break
                                     current_length += len(line)
                                     lines_walked += 1
-                                content = content[:current_length]+"#..."
+                                content = content[:current_length] + "#..."
 
                             howto += (
                                 "It looks like you're trying to paste code into this channel.\n\n"
@@ -334,7 +341,9 @@ class Bot:
 
                     if howto != "":
                         howto_embed = Embed(description=howto)
-                        await msg.channel.send(f"Hey {msg.author.mention}!", embed=howto_embed)
+                        bot_message = await msg.channel.send(f"Hey {msg.author.mention}!", embed=howto_embed)
+                        self.codeblock_message_ids[msg.id] = bot_message.id
+                        await bot_message.add_reaction(Emojis.x)
                     else:
                         return
 
@@ -347,6 +356,40 @@ class Bot:
                         "ast.parse raised a SyntaxError. This probably just means it wasn't Python code. "
                         f"The message that was posted was:\n\n{msg.content}\n\n"
                     )
+
+    async def on_message_edit(self, before: Message, after: Message):
+        has_fixed_codeblock = (
+            #  Checks if the original message was previously called out by the bot
+            before.id in self.codeblock_message_ids
+            #  Checks to see if the user has corrected their codeblock
+            and self.codeblock_stripping(after.content, self.has_bad_ticks(after)) is None
+        )
+        if has_fixed_codeblock:
+            bot_message = await after.channel.get_message(self.codeblock_message_ids[after.id])
+            await bot_message.delete()
+
+    async def on_reaction_add(self, reaction, user):
+        #  Ignores reactions added by the bot or added to non-codeblock correction embed messages
+        if user.id == self.user.id or reaction.message.id not in self.codeblock_message_ids.values():
+            return
+
+        #  Finds the appropriate bot message/ user message pair and assigns them to variables
+        for user_message_id, bot_message_id in self.codeblock_message_ids.items():
+            if bot_message_id == reaction.message.id:
+                user_message = await reaction.message.channel.get_message(user_message_id)
+                bot_message = await reaction.message.channel.get_message(bot_message_id)
+                break
+
+        #  If the reaction was clicked on by the author of the user message, deletes the bot message
+        if user == user_message.author:
+            await bot_message.delete()
+            return
+
+        #  If the reaction was clicked by staff (mod or higher), deletes the bot message
+        for role in user.roles:
+            if role.id in (Roles.owner, Roles.admin, Roles.moderator):
+                await bot_message.delete()
+                return
 
 
 def setup(bot):
