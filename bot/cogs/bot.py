@@ -229,7 +229,7 @@ class Bot:
             log.trace(f"Found REPL code in \n\n{msg}\n\n")
             return final.rstrip(), True
 
-    def bad_ticks(self, msg: Message):
+    def has_bad_ticks(self, msg: Message):
         not_backticks = [
             "'''", '"""', "\u00b4\u00b4\u00b4", "\u2018\u2018\u2018", "\u2019\u2019\u2019",
             "\u2032\u2032\u2032", "\u201c\u201c\u201c", "\u201d\u201d\u201d", "\u2033\u2033\u2033",
@@ -259,7 +259,7 @@ class Bot:
             on_cooldown = (time.time() - self.channel_cooldowns.get(msg.channel.id, 0)) < 300
             if not on_cooldown:
                 try:
-                    if self.bad_ticks(msg):
+                    if self.has_bad_ticks(msg):
                         ticks = msg.content[:3]
                         content = self.codeblock_stripping(f"```{msg.content[3:-3]}```", True)
                         if content is None:
@@ -359,7 +359,7 @@ class Bot:
 
     async def on_message_edit(self, before: Message, after: Message):
         if before.id in self.codeblock_message_ids\
-                and self.codeblock_stripping(after.content, self.bad_ticks(after)) is None:
+                and self.codeblock_stripping(after.content, self.has_bad_ticks(after)) is None:
             bot_message = await after.channel.get_message(self.codeblock_message_ids[after.id])
             await bot_message.delete()
 
