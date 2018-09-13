@@ -8,7 +8,7 @@ from discord.ext.commands import Bot, Context, command, group
 from dulwich.repo import Repo
 
 from bot.constants import (
-    Channels, Guild, Roles, URLs
+    Channels, Emojis, Guild, Roles, URLs
 )
 from bot.decorators import with_role
 
@@ -41,7 +41,7 @@ class Bot:
         )
 
         # Stores improperly formatted Python codeblock message ids and the corresponding bot message
-        self.py_msg_ids = {}
+        self.codeblock_message_ids = {}
 
     @group(invoke_without_command=True, name="bot", hidden=True)
     @with_role(Roles.verified)
@@ -236,8 +236,8 @@ class Bot:
             "\u3003\u3003\u3003"
         ]
 
-        bad_ticks = msg.content[:3] in not_backticks
-        return bad_ticks
+        has_bad_ticks = msg.content[:3] in not_backticks
+        return has_bad_ticks
 
     async def on_message(self, msg: Message):
         """
@@ -341,9 +341,9 @@ class Bot:
 
                     if howto != "":
                         howto_embed = Embed(description=howto)
-                        bot_msg = await msg.channel.send(f"Hey {msg.author.mention}!", embed=howto_embed)
-                        self.py_msg_ids[msg.id] = bot_msg.id
-                        await bot_msg.add_reaction("❌")
+                        bot_message = await msg.channel.send(f"Hey {msg.author.mention}!", embed=howto_embed)
+                        self.codeblock_message_ids[msg.id] = bot_message.id
+                        await bot_message.add_reaction(Emojis.x)
                     else:
                         return
 
@@ -358,27 +358,32 @@ class Bot:
                     )
 
     async def on_message_edit(self, before: Message, after: Message):
-        if before.id in self.py_msg_ids and self.codeblock_stripping(after.content, self.bad_ticks(after)) is None:
-            bot_msg = await after.channel.get_message(self.py_msg_ids[after.id])
-            await bot_msg.delete()
+        if before.id in self.codeblock_message_ids\
+                and self.codeblock_stripping(after.content, self.bad_ticks(after)) is None:
+            bot_message = await after.channel.get_message(self.codeblock_message_ids[after.id])
+            await bot_message.delete()
 
     async def on_reaction_add(self, reaction, user):
-        if user.id == self.user.id or reaction.message.id not in self.py_msg_ids.values():
+        #  Ignores reactions added by the bot or added to non-codeblock correction embed messages
+        if user.id == self.user.id or reaction.message.id not in self.codeblock_message_ids.values():
             return
 
-        for k, v in self.py_msg_ids.items():
+        #  Finds the appropriate bot message/ user message pair and assigns them to variables
+        for k, v in self.codeblock_message_ids.items():
             if v == reaction.message.id:
-                msg = await reaction.message.channel.get_message(k)
-                bot_msg = await reaction.message.channel.get_message(v)
+                user_message = await reaction.message.channel.get_message(k)
+                bot_message = await reaction.message.channel.get_message(v)
                 break
 
-        if user == msg.author:
-            await bot_msg.delete()
+        #  If the reaction was clicked on by the author of the user message, deletes the bot message
+        if user == user_message.author:
+            await bot_message.delete()
             return
 
+        #  If the reaction was clicked by staff (mod or higher), deletes the bot message
         for role in user.roles:
             if role.id in (Roles.owner, Roles.admin, Roles.moderator):
-                await bot_msg.delete()
+                await bot_message.delete()
                 return
 
 
