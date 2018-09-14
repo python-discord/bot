@@ -3,7 +3,7 @@ import logging
 import re
 import time
 
-from discord import Embed, Message
+from discord import Embed, Member, Message, Reaction
 from discord.ext.commands import Bot, Context, command, group
 from dulwich.repo import Repo
 
@@ -368,7 +368,7 @@ class Bot:
             bot_message = await after.channel.get_message(self.codeblock_message_ids[after.id])
             await bot_message.delete()
 
-    async def on_reaction_add(self, reaction, user):
+    async def on_reaction_add(self, reaction: Reaction, user: Member):
         #  Ignores reactions added by the bot or added to non-codeblock correction embed messages
         if user.id == self.user.id or reaction.message.id not in self.codeblock_message_ids.values():
             return
@@ -381,7 +381,7 @@ class Bot:
                 break
 
         #  If the reaction was clicked on by the author of the user message, deletes the bot message
-        if user == user_message.author:
+        if user.id == user_message.author.id:
             await bot_message.delete()
             return
 
