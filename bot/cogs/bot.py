@@ -367,10 +367,11 @@ class Bot:
         if has_fixed_codeblock:
             bot_message = await after.channel.get_message(self.codeblock_message_ids[after.id])
             await bot_message.delete()
+            del self.codeblock_message_ids[after.id]
 
     async def on_reaction_add(self, reaction: Reaction, user: Member):
         #  Ignores reactions added by the bot or added to non-codeblock correction embed messages
-        if user.id == self.user.id or reaction.message.id not in self.codeblock_message_ids.values():
+        if user.bot or reaction.message.id not in self.codeblock_message_ids.values():
             return
 
         #  Finds the appropriate bot message/ user message pair and assigns them to variables
@@ -383,12 +384,14 @@ class Bot:
         #  If the reaction was clicked on by the author of the user message, deletes the bot message
         if user.id == user_message.author.id:
             await bot_message.delete()
+            del self.codeblock_message_ids[user_message_id]
             return
 
         #  If the reaction was clicked by staff (mod or higher), deletes the bot message
         for role in user.roles:
             if role.id in (Roles.owner, Roles.admin, Roles.moderator):
                 await bot_message.delete()
+                del self.codeblock_message_ids[user_message_id]
                 return
 
 
