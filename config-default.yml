@@ -168,7 +168,7 @@ filter:
         - 卐
         - 卍
         - cuck(?!oo+)
-        - nigg+(?:e*r+|a+h+?|u+h+)s?
+        - nigg+(?:e*r+|a+h*?|u+h+)s?
         - fag+o+t+s*
 
     # Censor doesn't apply to these
