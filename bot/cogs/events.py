@@ -1,5 +1,6 @@
 import logging
 
+from aiohttp import ClientResponseError
 from discord import Colour, Embed, Member, Object
 from discord.ext.commands import (
     BadArgument, Bot, BotMissingPermissions,
@@ -134,10 +135,18 @@ class Events:
                 f"Here's what I'm missing: **{e.missing_perms}**"
             )
         elif isinstance(e, CommandInvokeError):
-            await ctx.send(
-                f"Sorry, an unexpected error occurred. Please let us know!\n\n```{e}```"
-            )
-            raise e.original
+            if isinstance(e.original, ClientResponseError):
+                return await ctx.send("There was some response error but I can't put my finger on what exactly.")
+                if e.original.status == 404:
+                    await ctx.send("There does not seem to be anything matching your query.")
+                else:
+                    await ctx.send("BEEP BEEP UNKNOWN API ERROR!=?!??!?!?!?")
+
+            else:
+                await ctx.send(
+                    f"Sorry, an unexpected error occurred. Please let us know!\n\n```{e}```"
+                )
+                raise e.original
         raise e
 
     async def on_ready(self):

@@ -85,7 +85,7 @@ class Tags:
     def __init__(self, bot: Bot):
         self.bot = bot
         self.tag_cooldowns = {}
-        self.headers = {"X-API-KEY": Keys.site_api}
+        self.headers = {"Authorization": f"Token {Keys.site_api}"}
 
     async def get_tag_data(self, tag_name=None) -> dict:
         """
@@ -97,12 +97,13 @@ class Tags:
         if not, returns a list of dicts with all tag data.
 
         """
-        params = {}
 
         if tag_name:
-            params["tag_name"] = tag_name
+            url = f'{URLs.site_tags_api}/{tag_name}'
+        else:
+            url = URLs.site_tags_api
 
-        response = await self.bot.http_session.get(URLs.site_tags_api, headers=self.headers, params=params)
+        response = await self.bot.http_session.get(url, headers=self.headers)
         tag_data = await response.json()
 
         return tag_data
@@ -196,64 +197,32 @@ class Tags:
                         f"Cooldown ends in {time_left:.1f} seconds.")
             return
 
-        tags = []
+        if tag_name is not None:
+            tag = await self.bot.api_client.get(f'/bot/tags/{tag_name}')
+            if ctx.channel.id not in TEST_CHANNELS:
+                self.tag_cooldowns[tag_name] = {
+                    "time": time.time(),
+                    "channel": ctx.channel.id
+                }
+            await ctx.send(embed=Embed.from_data(tag['embed']))
 
-        embed = Embed()
-        embed.colour = Colour.red()
-        tag_data = await self.get_tag_data(tag_name)
-
-        # If we found something, prepare that data
-        if tag_data:
-            embed.colour = Colour.blurple()
-
-            if tag_name:
-                log.debug(f"{ctx.author} requested the tag '{tag_name}'")
-                embed.title = tag_name
-
-                if ctx.channel.id not in TEST_CHANNELS:
-                    self.tag_cooldowns[tag_name] = {
-                        "time": time.time(),
-                        "channel": ctx.channel.id
-                    }
-
-            else:
-                embed.title = "**Current tags**"
-
-            if isinstance(tag_data, list):
-                log.debug(f"{ctx.author} requested a list of all tags")
-                tags = [f"**»**   {tag['tag_name']}" for tag in tag_data]
-                tags = sorted(tags)
-
-            else:
-                embed.description = tag_data['tag_content']
-
-        # If not, prepare an error message.
         else:
-            embed.colour = Colour.red()
-
-            if isinstance(tag_data, dict):
-                log.warning(f"{ctx.author} requested the tag '{tag_name}', but it could not be found.")
-                embed.description = f"**{tag_name}** is an unknown tag name. Please check the spelling and try again."
+            tags = await self.bot.api_client.get('/bot/tags')
+            if not tags:
+                await ctx.send(embed=Embed(
+                    description="**There are no tags in the database!**",
+                    colour=Colour.red()
+                ))
             else:
-                log.warning(f"{ctx.author} requested a list of all tags, but the tags database was empty!")
-                embed.description = "**There are no tags in the database!**"
-
-            if tag_name:
-                embed.set_footer(text="To show a list of all tags, use !tags.")
-                embed.title = "Tag not found."
-
-        # Paginate if this is a list of all tags
-        if tags:
-            log.debug(f"Returning a paginated list of all tags.")
-            return await LinePaginator.paginate(
-                (lines for lines in tags),
-                ctx, embed,
-                footer_text="To show a tag, type !tags <tagname>.",
-                empty=False,
-                max_lines=15
-            )
-
-        return await ctx.send(embed=embed)
+                embed = Embed(title="**Current tags**")
+                await LinePaginator.paginate(
+                    sorted(f"**»**   {tag['title']}" for tag in tags),
+                    ctx,
+                    embed,
+                    footer_text="To show a tag, type !tags <tagname>.",
+                    empty=False,
+                    max_lines=15
+                )
 
     @tags_group.command(name='set', aliases=('add', 'edit', 's'))
     @with_role(Roles.admin, Roles.owner, Roles.moderator)

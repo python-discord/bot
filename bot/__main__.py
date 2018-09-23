@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import socket
 
@@ -5,6 +6,7 @@ from aiohttp import AsyncResolver, ClientSession, TCPConnector
 from discord import Game
 from discord.ext.commands import Bot, when_mentioned_or
 
+from bot.api import APIClient
 from bot.constants import Bot as BotConfig, DEBUG_MODE
 from bot.utils.service_discovery import wait_for_rmq
 
@@ -27,6 +29,7 @@ bot.http_session = ClientSession(
         family=socket.AF_INET,
     )
 )
+bot.api_client = APIClient(loop=asyncio.get_event_loop())
 
 log.info("Waiting for RabbitMQ...")
 has_rmq = wait_for_rmq()
