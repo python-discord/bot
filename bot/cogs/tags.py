@@ -1,6 +1,7 @@
 import logging
 import random
 import time
+from typing import Optional
 
 from discord import Colour, Embed
 from discord.ext.commands import (
@@ -11,6 +12,7 @@ from discord.ext.commands import (
 from bot.constants import (
     Channels, Cooldowns, ERROR_REPLIES, Keys, Roles, URLs
 )
+from bot.converters import ValidURL
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
 
@@ -107,12 +109,13 @@ class Tags:
 
         return tag_data
 
-    async def post_tag_data(self, tag_name: str, tag_content: str) -> dict:
+    async def post_tag_data(self, tag_name: str, tag_content: str, image_url: Optional[str]) -> dict:
         """
         Send some tag_data to our API to have it saved in the database.
 
         :param tag_name: The name of the tag to create or edit.
         :param tag_content: The content of the tag.
+        :param image_url: The image URL of the tag, can be `None`.
         :return: json response from the API in the following format:
         {
             'success': bool
@@ -121,7 +124,8 @@ class Tags:
 
         params = {
             'tag_name': tag_name,
-            'tag_content': tag_content
+            'tag_content': tag_content,
+            'image_url': image_url
         }
 
         response = await self.bot.http_session.post(URLs.site_tags_api, headers=self.headers, json=params)
@@ -226,6 +230,8 @@ class Tags:
 
             else:
                 embed.description = tag_data['tag_content']
+                if tag_data['image_url'] is not None:
+                    embed.set_image(url=tag_data['image_url'])
 
         # If not, prepare an error message.
         else:
@@ -257,13 +263,20 @@ class Tags:
 
     @tags_group.command(name='set', aliases=('add', 'edit', 's'))
     @with_role(Roles.admin, Roles.owner, Roles.moderator)
-    async def set_command(self, ctx: Context, tag_name: TagNameConverter, *, tag_content: TagContentConverter):
+    async def set_command(
+        self,
+        ctx: Context,
+        tag_name: TagNameConverter,
+        tag_content: TagContentConverter,
+        image_url: ValidURL = None
+    ):
         """
         Create a new tag or edit an existing one.
 
         :param ctx: discord message context
         :param tag_name: The name of the tag to create or edit.
         :param tag_content: The content of the tag.
+        :param image_url: An optional image for the tag.
         """
 
         tag_name = tag_name.lower().strip()
@@ -271,12 +284,13 @@ class Tags:
 
         embed = Embed()
         embed.colour = Colour.red()
-        tag_data = await self.post_tag_data(tag_name, tag_content)
+        tag_data = await self.post_tag_data(tag_name, tag_content, image_url)
 
         if tag_data.get("success"):
             log.debug(f"{ctx.author} successfully added the following tag to our database: \n"
                       f"tag_name: {tag_name}\n"
-                      f"tag_content: '{tag_content}'")
+                      f"tag_content: '{tag_content}'\n"
+                      f"image_url: '{image_url}'")
             embed.colour = Colour.blurple()
             embed.title = "Tag successfully added"
             embed.description = f"**{tag_name}** added to tag database."
@@ -284,6 +298,7 @@ class Tags:
             log.error("There was an unexpected database error when trying to add the following tag: \n"
                       f"tag_name: {tag_name}\n"
                       f"tag_content: '{tag_content}'\n"
+                      f"image_url: '{image_url}'\n"
                       f"response: {tag_data}")
             embed.title = "Database error"
             embed.description = ("There was a problem adding the data to the tags database. "
