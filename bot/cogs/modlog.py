@@ -360,7 +360,7 @@ class ModLog:
         now = datetime.datetime.utcnow()
         difference = abs(relativedelta(now, member.created_at))
 
-        message += "\n\n**Account age:** " + humanize_delta(member.created_at)
+        message += "\n\n**Account age:** " + humanize_delta(difference)
 
         if difference.days < 1 and difference.months < 1 and difference.years < 1:  # New user account!
             message = f"{Emojis.new} {message}"
