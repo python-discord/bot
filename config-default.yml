@@ -134,11 +134,10 @@ filter:
     ping_everyone: true  # Ping @everyone when we send a mod-alert?
 
     guild_invite_whitelist:
-        - kWJYurV            # Functional Programming
-        - XBGetGp            # STEM
-
-    vanity_url_whitelist:
-        - python             # Python Discord
+        - 280033776820813825  # Functional Programming
+        - 267624335836053506  # Python Discord
+        - 440186186024222721  # Python Discord: ModLog Emojis
+        - 273944235143593984  # STEM
 
     domain_blacklist:
         - pornhub.com
@@ -147,7 +146,6 @@ filter:
     word_watchlist:
         - goo+ks*
         - ky+s+
-        - gh?[ae]+y+s*
         - ki+ke+s*
         - beaner+s?
         - coo+ns*
@@ -209,6 +207,7 @@ urls:
     # PyDis site vars
     site:        &DOMAIN       "pythondiscord.com"
     site_api:    &API    !JOIN ["api.", *DOMAIN]
+    site_paste:  &PASTE  !JOIN ["paste.", *DOMAIN]
     site_schema: &SCHEMA       "https://"
 
     site_bigbrother_api:                !JOIN [*SCHEMA, *API, "/bot/bigbrother"]
@@ -231,17 +230,20 @@ urls:
     site_tags_api:                      !JOIN [*SCHEMA, *API, "/bot/tags"]
     site_user_api:                      !JOIN [*SCHEMA, *API, "/bot/users"]
     site_user_complete_api:             !JOIN [*SCHEMA, *API, "/bot/users/complete"]
+    paste_service:                      !JOIN [*SCHEMA, *PASTE, "/{key}"]
 
     # Env vars
     deploy: !ENV "DEPLOY_URL"
     status: !ENV "STATUS_URL"
 
+    # Discord API URLs
+    discord_api:        &DISCORD_API "https://discordapp.com/api/v7/"
+    discord_invite_api: !JOIN [*DISCORD_API, "invites"]
+
     # Misc URLs
     bot_avatar:      "https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle/logo_circle.png"
     gitlab_bot_repo: "https://gitlab.com/python-discord/projects/bot"
     omdb:            "http://omdbapi.com"
-    paste_service:   "https://paste.pydis.com/{key}"
-
 
 anti_spam:
     # Clean messages that violate a rule.
