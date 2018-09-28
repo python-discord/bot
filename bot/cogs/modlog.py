@@ -360,7 +360,7 @@ class ModLog:
         now = datetime.datetime.utcnow()
         difference = abs(relativedelta(now, member.created_at))
 
-        message += "\n\n**Account age:** " + humanize_delta(member.created_at)
+        message += "\n\n**Account age:** " + humanize_delta(difference)
 
         if difference.days < 1 and difference.months < 1 and difference.years < 1:  # New user account!
             message = f"{Emojis.new} {message}"
@@ -440,7 +440,7 @@ class ModLog:
             if key in done or key in MEMBER_CHANGES_SUPPRESSED:
                 continue
 
-            if key == "roles":
+            if key == "_roles":
                 new_roles = after.roles
                 old_roles = before.roles
 
@@ -453,10 +453,11 @@ class ModLog:
                         changes.append(f"**Role added:** {role.name} (`{role.id}`)")
 
             else:
-                new = value["new_value"]
-                old = value["old_value"]
+                new = value.get("new_value")
+                old = value.get("old_value")
 
-                changes.append(f"**{key.title()}:** `{old}` **->** `{new}`")
+                if new and old:
+                    changes.append(f"**{key.title()}:** `{old}` **->** `{new}`")
 
             done.append(key)
 

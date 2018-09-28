@@ -7,7 +7,7 @@ from discord.ext.commands import Bot
 from bot.cogs.modlog import ModLog
 from bot.constants import (
     Channels, Colours, DEBUG_MODE,
-    Filter, Icons
+    Filter, Icons, URLs
 )
 
 log = logging.getLogger(__name__)
@@ -24,6 +24,9 @@ INVITE_RE = (
 
 URL_RE = "(https?://[^\s]+)"
 ZALGO_RE = r"[\u0300-\u036F\u0489]"
+RETARDED_RE = r"(re+)tar+(d+|t+)(ed)?"
+SELF_DEPRECATION_RE = fr"((i'?m)|(i am)|(it'?s)|(it is)) (.+? )?{RETARDED_RE}"
+RETARDED_QUESTIONS_RE = fr"{RETARDED_RE} questions?"
 
 
 class Filtering:
@@ -111,8 +114,8 @@ class Filtering:
                         message = (
                             f"The {filter_name} {_filter['type']} was triggered "
                             f"by **{msg.author.name}#{msg.author.discriminator}** "
-                            f"(`{msg.author.id}`) in <#{msg.channel.id}> with the "
-                            f"following message:\n\n"
+                            f"(`{msg.author.id}`) in <#{msg.channel.id}> with [the "
+                            f"following message]({msg.jump_url}):\n\n"
                             f"{msg.content}"
                         )
 
@@ -148,6 +151,18 @@ class Filtering:
 
         for expression in Filter.word_watchlist:
             if re.search(fr"\b{expression}\b", text, re.IGNORECASE):
+
+                # Special handling for `retarded`
+                if expression == RETARDED_RE:
+
+                    # stuff like "I'm just retarded"
+                    if re.search(SELF_DEPRECATION_RE, text, re.IGNORECASE):
+                        return False
+
+                    # stuff like "sorry for all the retarded questions"
+                    elif re.search(RETARDED_QUESTIONS_RE, text, re.IGNORECASE):
+                        return False
+
                 return True
 
         return False
@@ -165,7 +180,10 @@ class Filtering:
 
         for expression in Filter.token_watchlist:
             if re.search(fr"{expression}", text, re.IGNORECASE):
-                return True
+
+                # Make sure it's not a URL
+                if not re.search(URL_RE, text, re.IGNORECASE):
+                    return True
 
         return False
 
@@ -197,8 +215,7 @@ class Filtering:
 
         return bool(re.search(ZALGO_RE, text))
 
-    @staticmethod
-    async def _has_invites(text: str) -> bool:
+    async def _has_invites(self, text: str) -> bool:
         """
         Returns True if the text contains an invite which
         is not on the guild_invite_whitelist in config.yml.
@@ -207,7 +224,7 @@ class Filtering:
         """
 
         # Remove spaces to prevent cases like
-        # d i s c o r d . c o m / i n v i t e / p y t h o n
+        # d i s c o r d . c o m / i n v i t e / s e x y t e e n s
         text = text.replace(" ", "")
 
         # Remove backslashes to prevent escape character aroundfuckery like
@@ -217,12 +234,13 @@ class Filtering:
         invites = re.findall(INVITE_RE, text, re.IGNORECASE)
         for invite in invites:
 
-            filter_invite = (
-                invite not in Filter.guild_invite_whitelist
-                and invite.lower() not in Filter.vanity_url_whitelist
+            response = await self.bot.http_session.get(
+                f"{URLs.discord_invite_api}/{invite}"
             )
+            response = await response.json()
+            guild_id = int(response.get("guild", {}).get("id"))
 
-            if filter_invite:
+            if guild_id not in Filter.guild_invite_whitelist:
                 return True
         return False
 

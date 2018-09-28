@@ -56,7 +56,8 @@ class AntiSpam:
 
     async def on_message(self, message: Message):
         if (
-            message.guild.id != GuildConfig.id
+            not message.guild
+            or message.guild.id != GuildConfig.id
             or message.author.bot
             or (message.channel.id in WHITELISTED_CHANNELS and not DEBUG_MODE)
             or (message.author.top_role.id in WHITELISTED_ROLES and not DEBUG_MODE)

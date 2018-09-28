@@ -202,8 +202,7 @@ class Filter(metaclass=YAMLGetter):
     watch_tokens: bool
 
     ping_everyone: bool
-    guild_invite_whitelist: List[str]
-    vanity_url_whitelist: List[str]
+    guild_invite_whitelist: List[int]
     domain_blacklist: List[str]
     word_watchlist: List[str]
     token_watchlist: List[str]
@@ -375,10 +374,18 @@ class RabbitMQ(metaclass=YAMLGetter):
 class URLs(metaclass=YAMLGetter):
     section = "urls"
 
+    # Discord API endpoints
+    discord_api: str
+    discord_invite_api: str
+
+    # Misc endpoints
     bot_avatar: str
     deploy: str
     gitlab_bot_repo: str
     omdb: str
+    status: str
+
+    # Site endpoints
     site: str
     site_api: str
     site_facts_api: str
@@ -401,7 +408,6 @@ class URLs(metaclass=YAMLGetter):
     site_infractions_by_id: str
     site_infractions_user_type_current: str
     site_infractions_user_type: str
-    status: str
     paste_service: str
 
 

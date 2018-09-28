@@ -88,12 +88,8 @@ for key, value in logging.Logger.manager.loggerDict.items():
         value.addHandler(handler)
 
 
-# Silence aio_pika.pika.{callback,channel}, discord, PIL, and and websockets
-logging.getLogger("aio_pika.pika.callback").setLevel(logging.ERROR)
-logging.getLogger("aio_pika.pika.channel").setLevel(logging.ERROR)
-logging.getLogger("discord.client").setLevel(logging.ERROR)
-logging.getLogger("discord.gateway").setLevel(logging.ERROR)
-logging.getLogger("discord.state").setLevel(logging.ERROR)
-logging.getLogger("discord.http").setLevel(logging.ERROR)
-logging.getLogger("PIL.PngImagePlugin").setLevel(logging.ERROR)
-logging.getLogger("websockets.protocol").setLevel(logging.ERROR)
+# Silence irrelevant loggers
+logging.getLogger("aio_pika").setLevel(logging.ERROR)
+logging.getLogger("discord").setLevel(logging.ERROR)
+logging.getLogger("PIL").setLevel(logging.ERROR)
+logging.getLogger("websockets").setLevel(logging.ERROR)

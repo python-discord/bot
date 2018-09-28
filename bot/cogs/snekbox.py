@@ -32,6 +32,23 @@ except Exception as e:
 """
 
 ESCAPE_REGEX = re.compile("[`\u202E\u200B]{3,}")
+FORMATTED_CODE_REGEX = re.compile(
+    r"^\s*"                                 # any leading whitespace from the beginning of the string
+    r"(?P<delim>(?P<block>```)|``?)"        # code delimiter: 1-3 backticks; (?P=block) only matches if it's a block
+    r"(?(block)(?:(?P<lang>[a-z]+)\n)?)"    # if we're in a block, match optional language (only letters plus newline)
+    r"(?:[ \t]*\n)*"                        # any blank (empty or tabs/spaces only) lines before the code
+    r"(?P<code>.*?)"                        # extract all code inside the markup
+    r"\s*"                                  # any more whitespace before the end of the code markup
+    r"(?P=delim)"                           # match the exact same delimiter from the start again
+    r"\s*$",                                # any trailing whitespace until the end of the string
+    re.DOTALL | re.IGNORECASE               # "." also matches newlines, case insensitive
+)
+RAW_CODE_REGEX = re.compile(
+    r"^(?:[ \t]*\n)*"                       # any blank (empty or tabs/spaces only) lines before the code
+    r"(?P<code>.*?)"                        # extract all the rest as code
+    r"\s*$",                                # any trailing whitespace until the end of the string
+    re.DOTALL                               # "." also matches newlines
+)
 BYPASS_ROLES = (Roles.owner, Roles.admin, Roles.moderator, Roles.helpers)
 WHITELISTED_CHANNELS = (Channels.bot,)
 WHITELISTED_CHANNELS_STRING = ', '.join(f"<#{channel_id}>" for channel_id in WHITELISTED_CHANNELS)
@@ -53,8 +70,6 @@ class Snekbox:
     """
     Safe evaluation using Snekbox
     """
-
-    jobs = None  # type: dict
 
     def __init__(self, bot: Bot):
         self.bot = bot
@@ -85,18 +100,20 @@ class Snekbox:
         log.info(f"Received code from {ctx.author.name}#{ctx.author.discriminator} for evaluation:\n{code}")
         self.jobs[ctx.author.id] = datetime.datetime.now()
 
-        while code.startswith("\n"):
-            code = code[1:]
+        # Strip whitespace and inline or block code markdown and extract the code and some formatting info
+        match = FORMATTED_CODE_REGEX.fullmatch(code)
+        if match:
+            code, block, lang, delim = match.group("code", "block", "lang", "delim")
+            code = textwrap.dedent(code)
+            if block:
+                info = (f"'{lang}' highlighted" if lang else "plain") + " code block"
+            else:
+                info = f"{delim}-enclosed inline code"
+            log.trace(f"Extracted {info} for evaluation:\n{code}")
+        else:
+            code = textwrap.dedent(RAW_CODE_REGEX.fullmatch(code).group("code"))
+            log.trace(f"Eval message contains not or badly formatted code, stripping whitespace only:\n{code}")
 
-        if code.startswith("```") and code.endswith("```"):
-            code = code[3:-3]
-
-        if code.startswith("python"):
-            code = code[6:]
-        elif code.startswith("py"):
-            code = code[2:]
-
-        code = textwrap.dedent(code.strip())
         code = textwrap.indent(code, "    ")
         code = CODE_TEMPLATE.replace("{CODE}", code)
 
