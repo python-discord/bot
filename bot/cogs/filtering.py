@@ -111,8 +111,8 @@ class Filtering:
                         message = (
                             f"The {filter_name} {_filter['type']} was triggered "
                             f"by **{msg.author.name}#{msg.author.discriminator}** "
-                            f"(`{msg.author.id}`) in <#{msg.channel.id}> with the "
-                            f"following message:\n\n"
+                            f"(`{msg.author.id}`) in <#{msg.channel.id}> with [the "
+                            f"following message]({msg.jump_url}):\n\n"
                             f"{msg.content}"
                         )
 
