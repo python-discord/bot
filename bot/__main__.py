@@ -50,15 +50,14 @@ bot.load_extension("bot.cogs.bot")
 bot.load_extension("bot.cogs.clean")
 bot.load_extension("bot.cogs.cogs")
 
-
 # Only load this in production
 if not DEBUG_MODE:
+    bot.load_extension("bot.cogs.doc")
     bot.load_extension("bot.cogs.verification")
 
 # Feature cogs
 bot.load_extension("bot.cogs.deployment")
 bot.load_extension("bot.cogs.defcon")
-bot.load_extension("bot.cogs.doc")
 bot.load_extension("bot.cogs.eval")
 bot.load_extension("bot.cogs.fun")
 bot.load_extension("bot.cogs.hiphopify")
