@@ -3,7 +3,7 @@ import logging
 import re
 import time
 
-from discord import Embed, Member, Message, Reaction
+from discord import Embed, Message, RawReactionActionEvent
 from discord.ext.commands import Bot, Context, command, group
 from dulwich.repo import Repo
 
@@ -369,16 +369,21 @@ class Bot:
             await bot_message.delete()
             del self.codeblock_message_ids[after.id]
 
-    async def on_reaction_add(self, reaction: Reaction, user: Member):
+    async def on_raw_reaction_add(self, payload: RawReactionActionEvent):
         #  Ignores reactions added by the bot or added to non-codeblock correction embed messages
-        if user.bot or reaction.message.id not in self.codeblock_message_ids.values():
+        #  Also ignores the reaction if the user can't be loaded
+        user = self.get_user(payload.user_id)
+        if user is None:
+            return
+        if user.bot or payload.message_id not in self.codeblock_message_ids.values():
             return
 
         #  Finds the appropriate bot message/ user message pair and assigns them to variables
         for user_message_id, bot_message_id in self.codeblock_message_ids.items():
-            if bot_message_id == reaction.message.id:
-                user_message = await reaction.message.channel.get_message(user_message_id)
-                bot_message = await reaction.message.channel.get_message(bot_message_id)
+            if bot_message_id == payload.message_id:
+                channel = self.get_channel(payload.channel_id)
+                user_message = await channel.get_message(user_message_id)
+                bot_message = await channel.get_message(bot_message_id)
                 break
 
         #  If the reaction was clicked on by the author of the user message, deletes the bot message
@@ -387,9 +392,9 @@ class Bot:
             del self.codeblock_message_ids[user_message_id]
             return
 
-        #  If the reaction was clicked by staff (mod or higher), deletes the bot message
+        #  If the reaction was clicked by staff (helper or higher), deletes the bot message
         for role in user.roles:
-            if role.id in (Roles.owner, Roles.admin, Roles.moderator):
+            if role.id in (Roles.owner, Roles.admin, Roles.moderator, Roles.helpers):
                 await bot_message.delete()
                 del self.codeblock_message_ids[user_message_id]
                 return

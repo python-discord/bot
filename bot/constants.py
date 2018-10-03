@@ -343,6 +343,7 @@ class Roles(metaclass=YAMLGetter):
     owner: int
     verified: int
     muted: int
+    helpers: int
 
 
 class Guild(metaclass=YAMLGetter):
