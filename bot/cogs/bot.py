@@ -372,7 +372,7 @@ class Bot:
     async def on_raw_reaction_add(self, payload: RawReactionActionEvent):
         #  Ignores reactions added by the bot or added to non-codeblock correction embed messages
         #  Also ignores the reaction if the user can't be loaded
-        user = self.get_user(payload.user_id)
+        user = self.bot.get_user(payload.user_id)
         if user is None:
             return
         if user.bot or payload.message_id not in self.codeblock_message_ids.values():
@@ -381,7 +381,7 @@ class Bot:
         #  Finds the appropriate bot message/ user message pair and assigns them to variables
         for user_message_id, bot_message_id in self.codeblock_message_ids.items():
             if bot_message_id == payload.message_id:
-                channel = self.get_channel(payload.channel_id)
+                channel = self.bot.get_channel(payload.channel_id)
                 user_message = await channel.get_message(user_message_id)
                 bot_message = await channel.get_message(bot_message_id)
                 break
