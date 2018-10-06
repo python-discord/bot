@@ -1,5 +1,4 @@
 import asyncio
-import datetime
 import logging
 import textwrap
 from typing import Dict
@@ -14,6 +13,8 @@ from bot.constants import Colours, Event, Icons, Keys, Roles, URLs
 from bot.converters import InfractionSearchQuery
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
+from bot.utils.scheduling import create_task
+from bot.utils.time import parse_rfc1123, wait_until
 
 log = logging.getLogger(__name__)
 
@@ -754,10 +755,7 @@ class Moderation:
         if infraction_id in self.expiration_tasks:
             return
 
-        task: asyncio.Task = asyncio.ensure_future(self._scheduled_expiration(infraction_object), loop=loop)
-
-        # Silently ignore exceptions in a callback (handles the CancelledError nonsense)
-        task.add_done_callback(_silent_exception)
+        task: asyncio.Task = create_task(loop, self._scheduled_expiration(infraction_object))
 
         self.expiration_tasks[infraction_id] = task
 
@@ -787,12 +785,7 @@ class Moderation:
 
         # transform expiration to delay in seconds
         expiration_datetime = parse_rfc1123(infraction_object["expires_at"])
-        delay = expiration_datetime - datetime.datetime.now(tz=datetime.timezone.utc)
-        delay_seconds = delay.total_seconds()
-
-        if delay_seconds > 1.0:
-            log.debug(f"Scheduling expiration for infraction {infraction_id} in {delay_seconds} seconds")
-            await asyncio.sleep(delay_seconds)
+        await wait_until(expiration_datetime)
 
         log.debug(f"Marking infraction {infraction_id} as inactive (expired).")
         await self._deactivate_infraction(infraction_object)
@@ -853,20 +846,6 @@ class Moderation:
         return lines.strip()
 
     # endregion
-
-
-RFC1123_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
-
-
-def parse_rfc1123(time_str):
-    return datetime.datetime.strptime(time_str, RFC1123_FORMAT).replace(tzinfo=datetime.timezone.utc)
-
-
-def _silent_exception(future):
-    try:
-        future.exception()
-    except Exception:  # noqa: S110
-        pass
 
 
 def setup(bot):
