@@ -488,7 +488,7 @@ class Moderation:
     # region: Edit infraction commands
 
     @with_role(*MODERATION_ROLES)
-    @group(name='infraction', aliases=('infr',))
+    @group(name='infraction', aliases=('infr', 'infractions', 'inf'))
     async def infraction_group(self, ctx: Context):
         """Infraction manipulation commands."""
 
@@ -654,79 +654,94 @@ class Moderation:
     # region: Search infractions
 
     @with_role(*MODERATION_ROLES)
-    @infraction_group.command(name="search")
-    async def search(self, ctx, arg: InfractionSearchQuery):
+    @infraction_group.group(name="search", invoke_without_command=True)
+    async def infraction_search_group(self, ctx: Context, query: InfractionSearchQuery):
         """
         Searches for infractions in the database.
-        :param arg: Either a user or a reason string. If a string, you can use the Re2 matching syntax.
         """
 
-        if isinstance(arg, User):
-            user: User = arg
-            # get infractions for this user
-            try:
-                response = await self.bot.http_session.get(
-                    URLs.site_infractions_user.format(
-                        user_id=user.id
-                    ),
-                    headers=self.headers
-                )
-                infraction_list = await response.json()
-            except ClientError:
-                log.exception("There was an error fetching infractions.")
-                await ctx.send(":x: There was an error fetching infraction.")
-                return
-
-            if not infraction_list:
-                await ctx.send(f":warning: No infractions found for {user}.")
-                return
-
-            embed = Embed(
-                title=f"Infractions for {user} ({len(infraction_list)} total)",
-                colour=Colour.orange()
-            )
-
-        elif isinstance(arg, str):
-            # search by reason
-            try:
-                response = await self.bot.http_session.get(
-                    URLs.site_infractions,
-                    headers=self.headers,
-                    params={"search": arg}
-                )
-                infraction_list = await response.json()
-            except ClientError:
-                log.exception("There was an error fetching infractions.")
-                await ctx.send(":x: There was an error fetching infraction.")
-                return
-
-            if not infraction_list:
-                await ctx.send(f":warning: No infractions matching `{arg}`.")
-                return
-
-            embed = Embed(
-                title=f"Infractions matching `{arg}` ({len(infraction_list)} total)",
-                colour=Colour.orange()
-            )
+        if isinstance(query, User):
+            await ctx.invoke(self.search_user, query)
 
         else:
-            await ctx.send(":x: Invalid infraction search query.")
+            await ctx.invoke(self.search_reason, query)
+
+    @with_role(*MODERATION_ROLES)
+    @infraction_search_group.command(name="user", aliases=("member", "id"))
+    async def search_user(self, ctx, user: User):
+        """
+        Search for infractions by member.
+        """
+
+        try:
+            response = await self.bot.http_session.get(
+                URLs.site_infractions_user.format(
+                    user_id=user.id
+                ),
+                headers=self.headers
+            )
+            infraction_list = await response.json()
+        except ClientError:
+            log.exception(f"Failed to fetch infractions for user {user} ({user.id}).")
+            await ctx.send(":x: An error occurred while fetching infractions.")
             return
 
+        embed = Embed(
+            title=f"Infractions for {user} ({len(infraction_list)} total)",
+            colour=Colour.orange()
+        )
+
+        await self.send_infraction_list(ctx, embed, infraction_list)
+
+    @with_role(*MODERATION_ROLES)
+    @infraction_search_group.command(name="reason", aliases=("match", "regex", "re"))
+    async def search_reason(self, ctx, reason: str):
+        """
+        Search for infractions by their reason. Use Re2 for matching.
+        """
+
+        try:
+            response = await self.bot.http_session.get(
+                URLs.site_infractions,
+                params={"search": reason},
+                headers=self.headers
+            )
+            infraction_list = await response.json()
+        except ClientError:
+            log.exception(f"Failed to fetch infractions matching reason `{reason}`.")
+            await ctx.send(":x: An error occurred while fetching infractions.")
+            return
+
+        embed = Embed(
+            title=f"Infractions matching `{reason}` ({len(infraction_list)} total)",
+            colour=Colour.orange()
+        )
+
+        await self.send_infraction_list(ctx, embed, infraction_list)
+
+    # endregion
+    # region: Utility functions
+
+    async def send_infraction_list(self, ctx: Context, embed: Embed, infractions: list):
+
+        if not infractions:
+            await ctx.send(f":warning: No infractions could be found for that query.")
+            return
+
+        lines = []
+        for infraction in infractions:
+            lines.append(
+                self._infraction_to_string(infraction)
+            )
+
         await LinePaginator.paginate(
-            lines=(
-                self._infraction_to_string(infraction_object, show_user=isinstance(arg, str))
-                for infraction_object in infraction_list
-            ),
+            lines,
             ctx=ctx,
             embed=embed,
             empty=True,
             max_lines=3,
             max_size=1000
         )
-
-    # endregion
-    # region: Utility functions
 
     def schedule_expiration(self, loop: asyncio.AbstractEventLoop, infraction_object: dict):
         """
@@ -815,30 +830,27 @@ class Moderation:
             }
         )
 
-    def _infraction_to_string(self, infraction_object, show_user=False):
+    def _infraction_to_string(self, infraction_object):
         actor_id = int(infraction_object["actor"]["user_id"])
         guild: Guild = self.bot.get_guild(constants.Guild.id)
         actor = guild.get_member(actor_id)
         active = infraction_object["active"] is True
+        user_id = int(infraction_object["user"]["user_id"])
 
-        lines = [
-            "**===============**" if active else "===============",
-            "Status: {0}".format("__**Active**__" if active else "Inactive"),
-            "Type: **{0}**".format(infraction_object["type"]),
-            "Reason: {0}".format(infraction_object["reason"] or "*None*"),
-            "Created: {0}".format(infraction_object["inserted_at"]),
-            "Expires: {0}".format(infraction_object["expires_at"] or "*Permanent*"),
-            "Actor: {0}".format(actor.mention if actor else actor_id),
-            "ID: `{0}`".format(infraction_object["id"]),
-            "**===============**" if active else "==============="
-        ]
+        lines = textwrap.dedent(f"""
+            {"**===============**" if active else "==============="}
+            Status: {"__**Active**__" if active else "Inactive"}
+            User: {self.bot.get_user(user_id)} (`{user_id}`)
+            Type: **{infraction_object["type"]}**
+            Reason: {infraction_object["reason"] or "*None*"}
+            Created: {infraction_object["inserted_at"]}
+            Expires: {infraction_object["expires_at"] or "*Permanent*"}
+            Actor: {actor.mention if actor else actor_id}
+            ID: `{infraction_object["id"]}`
+            {"**===============**" if active else "==============="}
+        """)
 
-        if show_user:
-            user_id = int(infraction_object["user"]["user_id"])
-            user = self.bot.get_user(user_id)
-            lines.insert(1, "User: {0}".format(user.mention if user else user_id))
-
-        return "\n".join(lines)
+        return lines.strip()
 
     # endregion
 
