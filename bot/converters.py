@@ -4,7 +4,7 @@ from ssl import CertificateError
 
 import discord
 from aiohttp import AsyncResolver, ClientConnectorError, ClientSession, TCPConnector
-from discord.ext.commands import BadArgument, Converter, UserConverter
+from discord.ext.commands import BadArgument, Converter
 from fuzzywuzzy import fuzz
 
 from bot.constants import DEBUG_MODE, Keys, URLs
@@ -167,11 +167,10 @@ class InfractionSearchQuery(Converter):
     @staticmethod
     async def convert(ctx, arg):
         try:
-            user_converter = UserConverter()
-            user = await user_converter.convert(ctx, arg)
-        except Exception:
+            maybe_snowflake = arg.strip("<@!>")
+            return await ctx.bot.get_user_info(maybe_snowflake)
+        except (discord.NotFound, discord.HTTPException):
             return arg
-        return user or arg
 
 
 class Subreddit(Converter):
