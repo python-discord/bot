@@ -289,6 +289,10 @@ class Icons(metaclass=YAMLGetter):
 
     pencil: str
 
+    remind_blurple: str
+    remind_green: str
+    remind_red: str
+
 
 class CleanMessages(metaclass=YAMLGetter):
     section = "bot"
@@ -342,7 +346,6 @@ class Roles(metaclass=YAMLGetter):
     muted: int
     owner: int
     verified: int
-    muted: int
     helpers: int
 
 
@@ -397,6 +400,8 @@ class URLs(metaclass=YAMLGetter):
     site_logs_view: str
     site_names_api: str
     site_quiz_api: str
+    site_reminders_api: str
+    site_reminders_user_api: str
     site_schema: str
     site_settings_api: str
     site_special_api: str

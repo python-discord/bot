@@ -72,6 +72,10 @@ style:
 
         pencil: "https://cdn.discordapp.com/emojis/470326272401211415.png"
 
+        remind_blurple: "https://cdn.discordapp.com/emojis/477907609215827968.png"
+        remind_green:   "https://cdn.discordapp.com/emojis/477907607785570310.png"
+        remind_red:     "https://cdn.discordapp.com/emojis/477907608057937930.png"
+
 
 guild:
     id: 267624335836053506
@@ -225,6 +229,8 @@ urls:
     site_names_api:                     !JOIN [*SCHEMA, *API, "/bot/snake_names"]
     site_off_topic_names_api:           !JOIN [*SCHEMA, *API, "/bot/off-topic-names"]
     site_quiz_api:                      !JOIN [*SCHEMA, *API, "/bot/snake_quiz"]
+    site_reminders_api:                 !JOIN [*SCHEMA, *API, "/bot/reminders"]
+    site_reminders_user_api:            !JOIN [*SCHEMA, *API, "/bot/reminders/user"]
     site_settings_api:                  !JOIN [*SCHEMA, *API, "/bot/settings"]
     site_special_api:                   !JOIN [*SCHEMA, *API, "/bot/special_snakes"]
     site_tags_api:                      !JOIN [*SCHEMA, *API, "/bot/tags"]
