@@ -14,7 +14,7 @@ from bot.constants import (
     POSITIVE_REPLIES, Roles, URLs
 )
 from bot.pagination import LinePaginator
-from bot.utils.scheduling import create_task
+from bot.utils.scheduling import Scheduler
 from bot.utils.time import humanize_delta, parse_rfc1123, wait_until
 
 log = logging.getLogger(__name__)
@@ -24,16 +24,12 @@ WHITELISTED_CHANNELS = (Channels.bot,)
 MAXIMUM_REMINDERS = 5
 
 
-# The scheduling parts of this cog are pretty much directly copied
-# from the moderation cog. I'll be working on making it more
-# webscale:tm: as soon as possible, because this is a mess :D
-class Reminders:
+class Reminders(Scheduler):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-
         self.headers = {"X-API-Key": Keys.site_api}
-        self.reminder_tasks = {}
+        super().__init__()
 
     async def on_ready(self):
         # Get all the current reminders for re-scheduling
@@ -57,7 +53,7 @@ class Reminders:
                 await self.send_reminder(reminder, late)
 
             else:
-                self.schedule_reminder(loop, reminder)
+                self.schedule_task(loop, reminder["id"], reminder)
 
     @staticmethod
     async def _send_confirmation(ctx: Context, response: dict, on_success: str):
@@ -87,24 +83,7 @@ class Reminders:
         await ctx.send(embed=embed)
         return failed
 
-    def schedule_reminder(self, loop: asyncio.AbstractEventLoop, reminder):
-        """
-        Schedule a reminder from the bot at the requested time.
-
-        :param loop: the asyncio event loop
-        :param reminder: the data of the reminder.
-        """
-
-        # Avoid duplicate schedules, just in case.
-        reminder_id = reminder["id"]
-        if reminder_id in self.reminder_tasks:
-            return
-
-        # Make a scheduled task and add it to the list
-        task: asyncio.Task = create_task(loop, self._scheduled_reminder(reminder))
-        self.reminder_tasks[reminder_id] = task
-
-    async def _scheduled_reminder(self, reminder):
+    async def _scheduled_task(self, reminder: dict):
         """
         A coroutine which sends the reminder once the time is reached.
 
@@ -120,27 +99,10 @@ class Reminders:
         await self.send_reminder(reminder)
 
         log.debug(f"Deleting reminder {reminder_id} (the user has been reminded).")
-        await self._delete_reminder(reminder)
+        await self._delete_reminder(reminder_id)
 
         # Now we can begone with it from our schedule list.
-        self.cancel_reminder(reminder_id)
-
-    def cancel_reminder(self, reminder_id: str):
-        """
-        Un-schedules a task to send a reminder.
-
-        :param reminder_id: the ID of the reminder in question
-        """
-
-        task = self.reminder_tasks.get(reminder_id)
-
-        if task is None:
-            log.warning(f"Failed to unschedule {reminder_id}: no task found.")
-            return
-
-        task.cancel()
-        log.debug(f"Unscheduled {reminder_id}.")
-        del self.reminder_tasks[reminder_id]
+        self.cancel_task(reminder_id)
 
     async def _delete_reminder(self, reminder_id: str):
         """
@@ -163,7 +125,7 @@ class Reminders:
         )
 
         # Now we can remove it from the schedule list
-        self.cancel_reminder(reminder_id)
+        self.cancel_task(reminder_id)
 
     async def _reschedule_reminder(self, reminder):
         """
@@ -174,8 +136,8 @@ class Reminders:
 
         loop = asyncio.get_event_loop()
 
-        self.cancel_reminder(reminder["id"])
-        self.schedule_reminder(loop, reminder)
+        self.cancel_task(reminder["id"])
+        self.schedule_task(loop, reminder["id"], reminder)
 
     async def send_reminder(self, reminder, late: relativedelta = None):
         """
@@ -291,7 +253,9 @@ class Reminders:
         # If it worked, schedule the reminder.
         if not failed:
             loop = asyncio.get_event_loop()
-            self.schedule_reminder(loop=loop, reminder=response_data["reminder"])
+            reminder = response_data["reminder"]
+
+            self.schedule_task(loop, reminder["id"], reminder)
 
     @remind_group.command(name="list")
     async def list_reminders(self, ctx: Context):
