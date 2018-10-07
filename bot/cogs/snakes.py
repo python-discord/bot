@@ -462,9 +462,11 @@ class Snakes:
     # endregion
 
     # region: Commands
-    @group(name='snakes', aliases=('snake',))
+    @group(name='snakes', aliases=('snake',), invoke_without_command=True)
     async def snakes_group(self, ctx: Context):
         """Commands from our first code jam."""
+
+        await ctx.invoke(self.bot.get_command("help"), "snake")
 
     @bot_has_permissions(manage_messages=True)
     @snakes_group.command(name='antidote')

@@ -79,10 +79,12 @@ class BigBrother:
 
             await channel.send(relay_content)
 
-    @group(name='bigbrother', aliases=('bb',))
+    @group(name='bigbrother', aliases=('bb',), invoke_without_command=True)
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
     async def bigbrother_group(self, ctx: Context):
         """Monitor users, NSA-style."""
+
+        await ctx.invoke(self.bot.get_command("help"), "bigbrother")
 
     @bigbrother_group.command(name='watched', aliases=('all',))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)

@@ -178,6 +178,8 @@ async def func():  # (None,) -> Any
     async def internal_group(self, ctx):
         """Internal commands. Top secret!"""
 
+        await ctx.invoke(self.bot.get_command("help"), "internal")
+
     @internal_group.command(name='eval', aliases=('e',))
     @with_role(Roles.admin, Roles.owner)
     async def eval(self, ctx, *, code: str):
