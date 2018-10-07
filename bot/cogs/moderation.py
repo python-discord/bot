@@ -489,14 +489,18 @@ class Moderation:
     # region: Edit infraction commands
 
     @with_role(*MODERATION_ROLES)
-    @group(name='infraction', aliases=('infr', 'infractions', 'inf'))
+    @group(name='infraction', aliases=('infr', 'infractions', 'inf'), invoke_without_command=True)
     async def infraction_group(self, ctx: Context):
         """Infraction manipulation commands."""
 
+        await ctx.invoke(self.bot.get_command("help"), "infraction")
+
     @with_role(*MODERATION_ROLES)
-    @infraction_group.group(name='edit')
+    @infraction_group.group(name='edit', invoke_without_command=True)
     async def infraction_edit_group(self, ctx: Context):
         """Infraction editing commands."""
+
+        await ctx.invoke(self.bot.get_command("help"), "infraction", "edit")
 
     @with_role(*MODERATION_ROLES)
     @infraction_edit_group.command(name="duration")

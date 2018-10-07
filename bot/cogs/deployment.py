@@ -17,10 +17,12 @@ class Deployment:
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @group(name='redeploy')
+    @group(name='redeploy', invoke_without_command=True)
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
     async def redeploy_group(self, ctx: Context):
         """Redeploy the bot or the site."""
+
+        await ctx.invoke(self.bot.get_command("help"), "redeploy")
 
     @redeploy_group.command(name='bot')
     @with_role(Roles.admin, Roles.owner, Roles.devops)

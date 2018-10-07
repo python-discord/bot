@@ -36,10 +36,12 @@ class Cogs:
         # Allow reverse lookups by reversing the pairs
         self.cogs.update({v: k for k, v in self.cogs.items()})
 
-    @group(name='cogs', aliases=('c',))
+    @group(name='cogs', aliases=('c',), invoke_without_command=True)
     @with_role(Roles.moderator, Roles.admin, Roles.owner, Roles.devops)
     async def cogs_group(self, ctx: Context):
         """Load, unload, reload, and list active cogs."""
+
+        await ctx.invoke(self.bot.get_command("help"), "cogs")
 
     @cogs_group.command(name='load', aliases=('l',))
     @with_role(Roles.moderator, Roles.admin, Roles.owner, Roles.devops)

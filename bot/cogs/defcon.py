@@ -102,7 +102,7 @@ class Defcon:
     async def defcon_group(self, ctx: Context):
         """Check the DEFCON status or run a subcommand."""
 
-        await ctx.invoke(self.status_command)
+        await ctx.invoke(self.bot.get_command("help"), "defcon")
 
     @defcon_group.command(name='enable', aliases=('on', 'e'))
     @with_role(Roles.admin, Roles.owner)
