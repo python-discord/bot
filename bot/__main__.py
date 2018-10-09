@@ -72,6 +72,7 @@ bot.load_extension("bot.cogs.snekbox")
 bot.load_extension("bot.cogs.tags")
 bot.load_extension("bot.cogs.token_remover")
 bot.load_extension("bot.cogs.utils")
+bot.load_extension("bot.cogs.wolfram")
 
 if has_rmq:
     bot.load_extension("bot.cogs.rmq")

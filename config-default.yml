@@ -15,6 +15,7 @@ style:
     colours:
         soft_red: 0xcd6d6d
         soft_green: 0x68c290
+        soft_orange: 0xf9cb54
 
     emojis:
         defcon_disabled: "<:defcondisabled:470326273952972810>"
@@ -306,3 +307,9 @@ reddit:
     request_delay: 60
     subreddits:
         - 'r/Python'
+
+wolfram:
+    # Max requests per day.
+    user_limit_day: 10
+    guild_limit_day: 67
+    key: !ENV "WOLFRAM_API_KEY"

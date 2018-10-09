@@ -224,6 +224,7 @@ class Colours(metaclass=YAMLGetter):
 
     soft_red: int
     soft_green: int
+    soft_orange: int
 
 
 class Emojis(metaclass=YAMLGetter):
@@ -422,6 +423,14 @@ class Reddit(metaclass=YAMLGetter):
 
     request_delay: int
     subreddits: list
+
+
+class Wolfram(metaclass=YAMLGetter):
+    section = "wolfram"
+
+    user_limit_day: int
+    guild_limit_day: int
+    key: str
 
 
 class AntiSpam(metaclass=YAMLGetter):
