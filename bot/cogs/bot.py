@@ -3,7 +3,7 @@ import logging
 import re
 import time
 
-from discord import Embed, Message, RawReactionActionEvent
+from discord import Embed, Message, RawMessageUpdateEvent, RawReactionActionEvent
 from discord.ext.commands import Bot, Context, command, group
 from dulwich.repo import Repo
 
@@ -357,25 +357,43 @@ class Bot:
                         f"The message that was posted was:\n\n{msg.content}\n\n"
                     )
 
-    async def on_message_edit(self, before: Message, after: Message):
-        has_fixed_codeblock = (
-            #  Checks if the original message was previously called out by the bot
-            before.id in self.codeblock_message_ids
-            #  Checks to see if the user has corrected their codeblock
-            and self.codeblock_stripping(after.content, self.has_bad_ticks(after)) is None
-        )
+    async def on_raw_message_edit(self, payload: RawMessageUpdateEvent):
+        if (
+            # Checks to see if the message was called out by the bot
+            payload.message_id not in self.codeblock_message_ids
+            # Makes sure that there is content in the message
+            or payload.data.get("content") is None
+            # Makes sure there's a channel id in the message payload
+            or payload.data.get("channel_id") is None
+        ):
+            return
+
+        # Retrieve channel and message objects for use later
+        channel = self.bot.get_channel(payload.data.get("channel_id"))
+        user_message = await channel.get_message(payload.message_id)
+
+        #  Checks to see if the user has corrected their codeblock
+        has_fixed_codeblock = self.codeblock_stripping(payload.data.get("content"), self.has_bad_ticks(user_message))
+
+        # If the message is fixed, delete the bot message and the entry from the id dictionary
         if has_fixed_codeblock:
-            bot_message = await after.channel.get_message(self.codeblock_message_ids[after.id])
+            bot_message = await channel.get_message(self.codeblock_message_ids[payload.message_id])
             await bot_message.delete()
-            del self.codeblock_message_ids[after.id]
+            del self.codeblock_message_ids[payload.message_id]
 
     async def on_raw_reaction_add(self, payload: RawReactionActionEvent):
         #  Ignores reactions added by the bot or added to non-codeblock correction embed messages
         #  Also ignores the reaction if the user can't be loaded
-        user = self.bot.get_user(payload.user_id)
-        if user is None:
+        #  Retrieve Member object instead of user in order to compare roles later
+        #  Try except used to catch instances where guild_id not in payload.
+        try:
+            member = self.bot.get_guild(payload.guild_id).get_member(payload.user_id)
+        except AttributeError:
             return
-        if user.bot or payload.message_id not in self.codeblock_message_ids.values():
+
+        if member is None:
+            return
+        if member.bot or payload.message_id not in self.codeblock_message_ids.values():
             return
 
         #  Finds the appropriate bot message/ user message pair and assigns them to variables
@@ -387,13 +405,13 @@ class Bot:
                 break
 
         #  If the reaction was clicked on by the author of the user message, deletes the bot message
-        if user.id == user_message.author.id:
+        if member.id == user_message.author.id:
             await bot_message.delete()
             del self.codeblock_message_ids[user_message_id]
             return
 
         #  If the reaction was clicked by staff (helper or higher), deletes the bot message
-        for role in user.roles:
+        for role in member.roles:
             if role.id in (Roles.owner, Roles.admin, Roles.moderator, Roles.helpers):
                 await bot_message.delete()
                 del self.codeblock_message_ids[user_message_id]
