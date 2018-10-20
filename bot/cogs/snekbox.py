@@ -60,10 +60,11 @@ async def channel_is_whitelisted_or_author_can_bypass(ctx: Context):
     or the channel is a whitelisted channel.
     """
 
-    if ctx.channel.id not in WHITELISTED_CHANNELS and ctx.author.top_role.id not in BYPASS_ROLES:
-        raise MissingPermissions("You are not allowed to do that here.")
-
-    return True
+    if ctx.channel.id in WHITELISTED_CHANNELS:
+        return True
+    if any(r.id in BYPASS_ROLES for r in ctx.author.roles):
+        return True
+    raise MissingPermissions("You are not allowed to do that here.")
 
 
 class Snekbox:
