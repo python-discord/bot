@@ -6,13 +6,13 @@ from typing import Optional
 from discord import Colour, Embed
 from discord.ext.commands import (
     BadArgument, Bot,
-    Context, Converter, group
+    Context, group
 )
 
 from bot.constants import (
     Channels, Cooldowns, ERROR_REPLIES, Keys, Roles, URLs
 )
-from bot.converters import ValidURL
+from bot.converters import TagContentConverter, TagNameConverter, ValidURL
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
 
@@ -24,59 +24,6 @@ TEST_CHANNELS = (
     Channels.bot,
     Channels.helpers
 )
-
-
-class TagNameConverter(Converter):
-    @staticmethod
-    async def convert(ctx: Context, tag_name: str):
-        def is_number(value):
-            try:
-                float(value)
-            except ValueError:
-                return False
-            return True
-
-        tag_name = tag_name.lower().strip()
-
-        # The tag name has at least one invalid character.
-        if ascii(tag_name)[1:-1] != tag_name:
-            log.warning(f"{ctx.author} tried to put an invalid character in a tag name. "
-                        "Rejecting the request.")
-            raise BadArgument("Don't be ridiculous, you can't use that character!")
-
-        # The tag name is either empty, or consists of nothing but whitespace.
-        elif not tag_name:
-            log.warning(f"{ctx.author} tried to create a tag with a name consisting only of whitespace. "
-                        "Rejecting the request.")
-            raise BadArgument("Tag names should not be empty, or filled with whitespace.")
-
-        # The tag name is a number of some kind, we don't allow that.
-        elif is_number(tag_name):
-            log.warning(f"{ctx.author} tried to create a tag with a digit as its name. "
-                        "Rejecting the request.")
-            raise BadArgument("Tag names can't be numbers.")
-
-        # The tag name is longer than 127 characters.
-        elif len(tag_name) > 127:
-            log.warning(f"{ctx.author} tried to request a tag name with over 127 characters. "
-                        "Rejecting the request.")
-            raise BadArgument("Are you insane? That's way too long!")
-
-        return tag_name
-
-
-class TagContentConverter(Converter):
-    @staticmethod
-    async def convert(ctx: Context, tag_content: str):
-        tag_content = tag_content.strip()
-
-        # The tag contents should not be empty, or filled with whitespace.
-        if not tag_content:
-            log.warning(f"{ctx.author} tried to create a tag containing only whitespace. "
-                        "Rejecting the request.")
-            raise BadArgument("Tag contents should not be empty, or filled with whitespace.")
-
-        return tag_content
 
 
 class Tags:
