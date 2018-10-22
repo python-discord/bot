@@ -56,6 +56,7 @@ if not DEBUG_MODE:
     bot.load_extension("bot.cogs.verification")
 
 # Feature cogs
+bot.load_extension("bot.cogs.alias")
 bot.load_extension("bot.cogs.deployment")
 bot.load_extension("bot.cogs.defcon")
 bot.load_extension("bot.cogs.eval")
