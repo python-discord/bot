@@ -103,6 +103,9 @@ ENV/
 # PyCharm
 .idea/
 
+# VSCode
+.vscode/
+
 # Vagrant
 .vagrant
 
