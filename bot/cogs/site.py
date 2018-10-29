@@ -92,6 +92,22 @@ class Site:
 
         await ctx.send(embed=embed)
 
+    @site_group.command(name="rules")
+    async def site_rules(self, ctx: Context):
+        """Info about the server's rules."""
+
+        url = f"{URLs.site_schema}{URLs.site}/about/rules"
+
+        embed = Embed(title="Rules")
+        embed.set_footer(text=url)
+        embed.colour = Colour.blurple()
+        embed.description = (
+            f"The rules and guidelines that apply to this community can be found on our [rules page]({url}). "
+            "We expect all members of the community to have read and understood these."
+        )
+
+        await ctx.send(embed=embed)
+
 
 def setup(bot):
     bot.add_cog(Site(bot))
