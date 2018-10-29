@@ -236,8 +236,7 @@ class Bot:
             "\u3003\u3003\u3003"
         ]
 
-        has_bad_ticks = msg.content[:3] in not_backticks
-        return has_bad_ticks
+        return msg.content[:3] in not_backticks
 
     async def on_message(self, msg: Message):
         """
@@ -372,11 +371,11 @@ class Bot:
         channel = self.bot.get_channel(payload.data.get("channel_id"))
         user_message = await channel.get_message(payload.message_id)
 
-        #  Checks to see if the user has corrected their codeblock
+        #  Checks to see if the user has corrected their codeblock.  If it's fixed, has_fixed_codeblock will be None
         has_fixed_codeblock = self.codeblock_stripping(payload.data.get("content"), self.has_bad_ticks(user_message))
 
         # If the message is fixed, delete the bot message and the entry from the id dictionary
-        if has_fixed_codeblock:
+        if has_fixed_codeblock is None:
             bot_message = await channel.get_message(self.codeblock_message_ids[payload.message_id])
             await bot_message.delete()
             del self.codeblock_message_ids[payload.message_id]
