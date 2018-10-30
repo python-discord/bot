@@ -185,7 +185,7 @@ async def func():  # (None,) -> Any
     async def eval(self, ctx, *, code: str):
         """ Run eval in a REPL-like format. """
         code = code.strip("`")
-        if code.startswith("py\n"):
+        if re.match('py(thon)?\n', code):
             code = "\n".join(code.split("\n")[1:])
 
         if not re.search(  # Check if it's an expression
