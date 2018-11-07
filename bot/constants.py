@@ -18,34 +18,8 @@ from pathlib import Path
 from typing import Dict, List
 
 import yaml
-from yaml.constructor import ConstructorError
 
 log = logging.getLogger(__name__)
-
-
-def _required_env_var_constructor(loader, node):
-    """
-    Implements a custom YAML tag for loading required environment
-    variables. If the environment variable is set, this function
-    will simply return it. Otherwise, a `CRITICAL` log message is
-    given and the `KeyError` is re-raised.
-
-    Example usage in the YAML configuration:
-
-        bot:
-            token: !REQUIRED_ENV 'BOT_TOKEN'
-    """
-
-    value = loader.construct_scalar(node)
-
-    try:
-        return os.environ[value]
-    except KeyError:
-        log.critical(
-            f"Environment variable `{value}` is required, but was not set. "
-            "Set it in your environment or override the option using it in your `config.yml`."
-        )
-        raise
 
 
 def _env_var_constructor(loader, node):
@@ -63,8 +37,12 @@ def _env_var_constructor(loader, node):
 
     default = None
 
-    try:
-        # Try to construct a list from this YAML node
+    # Check if the node is a plain string value
+    if node.id == 'scalar':
+        value = loader.construct_scalar(node)
+        key = str(value)
+    else:
+        # The node value is a list
         value = loader.construct_sequence(node)
 
         if len(value) >= 2:
@@ -74,11 +52,6 @@ def _env_var_constructor(loader, node):
         else:
             # Otherwise, we just have a key
             key = value[0]
-    except ConstructorError:
-        # This YAML node is a plain value rather than a list, so we just have a key
-        value = loader.construct_scalar(node)
-
-        key = str(value)
 
     return os.getenv(key, default)
 
@@ -96,7 +69,9 @@ def _join_var_constructor(loader, node):
 
 yaml.SafeLoader.add_constructor("!ENV", _env_var_constructor)
 yaml.SafeLoader.add_constructor("!JOIN", _join_var_constructor)
-yaml.SafeLoader.add_constructor("!REQUIRED_ENV", _required_env_var_constructor)
+
+# Pointing old tag to !ENV constructor to avoid breaking existing configs
+yaml.SafeLoader.add_constructor("!REQUIRED_ENV", _env_var_constructor)
 
 
 with open("config-default.yml", encoding="UTF-8") as f:
@@ -127,6 +102,34 @@ if Path("config.yml").exists():
     with open("config.yml", encoding="UTF-8") as f:
         user_config = yaml.safe_load(f)
     _recursive_update(_CONFIG_YAML, user_config)
+
+
+def check_required_keys(keys):
+    """
+    Verifies that keys that are set to be required are present in the
+    loaded configuration.
+    """
+    for key_path in keys:
+        lookup = _CONFIG_YAML
+        try:
+            for key in key_path.split('.'):
+                lookup = lookup[key]
+                if lookup is None:
+                    raise KeyError(key)
+        except KeyError:
+            log.critical(
+                f"A configuration for `{key_path}` is required, but was not found. "
+                "Please set it in `config.yml` or setup an environment variable and try again."
+            )
+            raise
+
+
+try:
+    required_keys = _CONFIG_YAML['config']['required_keys']
+except KeyError:
+    pass
+else:
+    check_required_keys(required_keys)
 
 
 class YAMLGetter(type):
