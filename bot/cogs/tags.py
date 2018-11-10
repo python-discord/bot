@@ -181,7 +181,7 @@ class Tags:
             return
 
         if tag_name is not None:
-            tag = await self.bot.api_client.get(f'/bot/tags/{tag_name}')
+            tag = await self.bot.api_client.get(f'bot/tags/{tag_name}')
             if ctx.channel.id not in TEST_CHANNELS:
                 self.tag_cooldowns[tag_name] = {
                     "time": time.time(),
@@ -190,7 +190,7 @@ class Tags:
             await ctx.send(embed=Embed.from_data(tag['embed']))
 
         else:
-            tags = await self.bot.api_client.get('/bot/tags')
+            tags = await self.bot.api_client.get('bot/tags')
             if not tags:
                 await ctx.send(embed=Embed(
                     description="**There are no tags in the database!**",
@@ -207,50 +207,42 @@ class Tags:
                     max_lines=15
                 )
 
-    @tags_group.command(name='set', aliases=('add', 'edit', 's'))
+    @tags_group.command(name='set', aliases=('add', 's'))
     @with_role(Roles.admin, Roles.owner, Roles.moderator)
     async def set_command(
         self,
         ctx: Context,
         tag_name: TagNameConverter,
+        *,
         tag_content: TagContentConverter,
-        image_url: ValidURL = None
     ):
         """
-        Create a new tag or edit an existing one.
+        Create a new tag or update an existing one.
 
         :param ctx: discord message context
         :param tag_name: The name of the tag to create or edit.
         :param tag_content: The content of the tag.
-        :param image_url: An optional image for the tag.
         """
 
-        tag_name = tag_name.lower().strip()
-        tag_content = tag_content.strip()
+        body = {
+            'title': tag_name.lower().strip(),
+            'embed': {
+                'title': tag_name,
+                'description': tag_content
+            }
+        }
 
-        embed = Embed()
-        embed.colour = Colour.red()
-        tag_data = await self.post_tag_data(tag_name, tag_content, image_url)
+        await self.bot.api_client.post('bot/tags', json=body)
 
-        if tag_data.get("success"):
-            log.debug(f"{ctx.author} successfully added the following tag to our database: \n"
-                      f"tag_name: {tag_name}\n"
-                      f"tag_content: '{tag_content}'\n"
-                      f"image_url: '{image_url}'")
-            embed.colour = Colour.blurple()
-            embed.title = "Tag successfully added"
-            embed.description = f"**{tag_name}** added to tag database."
-        else:
-            log.error("There was an unexpected database error when trying to add the following tag: \n"
-                      f"tag_name: {tag_name}\n"
-                      f"tag_content: '{tag_content}'\n"
-                      f"image_url: '{image_url}'\n"
-                      f"response: {tag_data}")
-            embed.title = "Database error"
-            embed.description = ("There was a problem adding the data to the tags database. "
-                                 "Please try again. If the problem persists, see the error logs.")
+        log.debug(f"{ctx.author} successfully added the following tag to our database: \n"
+                  f"tag_name: {tag_name}\n"
+                  f"tag_content: '{tag_content}'\n")
 
-        return await ctx.send(embed=embed)
+        await ctx.send(embed=Embed(
+            title="Tag successfully added",
+            description=f"**{tag_name}** added to tag database.",
+            colour=Colour.blurple()
+        ))
 
     @tags_group.command(name='delete', aliases=('remove', 'rm', 'd'))
     @with_role(Roles.admin, Roles.owner)
@@ -288,19 +280,6 @@ class Tags:
                                  "Please try again. If the problem persists, see the error logs.")
 
         return await ctx.send(embed=embed)
-
-    @get_command.error
-    @set_command.error
-    @delete_command.error
-    async def command_error(self, ctx, error):
-        if isinstance(error, BadArgument):
-            embed = Embed()
-            embed.colour = Colour.red()
-            embed.description = str(error)
-            embed.title = random.choice(ERROR_REPLIES)
-            await ctx.send(embed=embed)
-        else:
-            log.error(f"Unhandled tag command error: {error} ({error.original})")
 
 
 def setup(bot):
