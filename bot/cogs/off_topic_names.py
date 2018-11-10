@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from discord import Colour, Embed
 from discord.ext.commands import BadArgument, Bot, Context, Converter, group
 
-from bot.constants import Channels, Keys, Roles, URLs
+from bot.constants import Channels, Keys, Roles
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
 

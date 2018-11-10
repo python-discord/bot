@@ -1,7 +1,5 @@
 import logging
-import random
 import time
-from typing import Optional
 
 from discord import Colour, Embed
 from discord.ext.commands import (
@@ -9,10 +7,7 @@ from discord.ext.commands import (
     Context, Converter, group
 )
 
-from bot.constants import (
-    Channels, Cooldowns, ERROR_REPLIES, Keys, Roles, URLs
-)
-from bot.converters import ValidURL
+from bot.constants import Channels, Cooldowns, Keys, Roles
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
 
