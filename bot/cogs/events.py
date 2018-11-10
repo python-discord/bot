@@ -136,8 +136,7 @@ class Events:
             )
         elif isinstance(e, CommandInvokeError):
             if isinstance(e.original, ClientResponseError):
-                return await ctx.send("There was some response error but I can't put my finger on what exactly.")
-                if e.original.status == 404:
+                if e.original.code == 404:
                     await ctx.send("There does not seem to be anything matching your query.")
                 else:
                     await ctx.send("BEEP BEEP UNKNOWN API ERROR!=?!??!?!?!?")
