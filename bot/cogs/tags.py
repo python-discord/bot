@@ -89,30 +89,6 @@ class Tags:
         self.tag_cooldowns = {}
         self.headers = {"Authorization": f"Token {Keys.site_api}"}
 
-    async def post_tag_data(self, tag_name: str, tag_content: str, image_url: Optional[str]) -> dict:
-        """
-        Send some tag_data to our API to have it saved in the database.
-
-        :param tag_name: The name of the tag to create or edit.
-        :param tag_content: The content of the tag.
-        :param image_url: The image URL of the tag, can be `None`.
-        :return: json response from the API in the following format:
-        {
-            'success': bool
-        }
-        """
-
-        params = {
-            'tag_name': tag_name,
-            'tag_content': tag_content,
-            'image_url': image_url
-        }
-
-        response = await self.bot.http_session.post(URLs.site_tags_api, headers=self.headers, json=params)
-        tag_data = await response.json()
-
-        return tag_data
-
     async def delete_tag_data(self, tag_name: str) -> dict:
         """
         Delete a tag using our API.
