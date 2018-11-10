@@ -28,3 +28,11 @@ class APIClient:
     async def get(self, endpoint: str, *args, **kwargs):
         async with self.session.get(self._url_for(endpoint), *args, **kwargs) as resp:
             return await resp.json()
+
+    async def post(self, endpoint: str, *args. **kwargs):
+        async with self.session.post(self._url_for(endpoint), *args, **kwargs) as resp:
+            return await resp.json()
+
+    async def delete(self, endpoint: str, *args. **kwargs):
+        async with self.session.delete(self._url_for(endpoint), *args, **kwargs) as resp:
+            return await resp.json()
