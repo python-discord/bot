@@ -89,27 +89,6 @@ class Tags:
         self.tag_cooldowns = {}
         self.headers = {"Authorization": f"Token {Keys.site_api}"}
 
-    async def delete_tag_data(self, tag_name: str) -> dict:
-        """
-        Delete a tag using our API.
-
-        :param tag_name: The name of the tag to delete.
-        :return: json response from the API in the following format:
-        {
-            'success': bool
-        }
-        """
-
-        params = {}
-
-        if tag_name:
-            params['tag_name'] = tag_name
-
-        response = await self.bot.http_session.delete(URLs.site_tags_api, headers=self.headers, json=params)
-        tag_data = await response.json()
-
-        return tag_data
-
     @group(name='tags', aliases=('tag', 't'), hidden=True, invoke_without_command=True)
     async def tags_group(self, ctx: Context, *, tag_name: TagNameConverter=None):
         """Show all known tags, a single tag, or run a subcommand."""
@@ -183,7 +162,7 @@ class Tags:
                     max_lines=15
                 )
 
-    @tags_group.command(name='set', aliases=('add', 's'))
+    @tags_group.command(name='set', aliases=('add', 'edit', 's'))
     @with_role(Roles.admin, Roles.owner, Roles.moderator)
     async def set_command(
         self,
@@ -230,32 +209,14 @@ class Tags:
         :param tag_name: The name of the tag to delete.
         """
 
-        tag_name = tag_name.lower().strip()
-        embed = Embed()
-        embed.colour = Colour.red()
-        tag_data = await self.delete_tag_data(tag_name)
+        await self.bot.api_client.delete(f'bot/tags/{tag_name}')
 
-        if tag_data.get("success") is True:
-            log.debug(f"{ctx.author} successfully deleted the tag called '{tag_name}'")
-            embed.colour = Colour.blurple()
-            embed.title = tag_name
-            embed.description = f"Tag successfully removed: {tag_name}."
-
-        elif tag_data.get("success") is False:
-            log.debug(f"{ctx.author} tried to delete a tag called '{tag_name}', but the tag does not exist.")
-            embed.colour = Colour.red()
-            embed.title = tag_name
-            embed.description = "Tag doesn't appear to exist."
-
-        else:
-            log.error("There was an unexpected database error when trying to delete the following tag: \n"
-                      f"tag_name: {tag_name}\n"
-                      f"response: {tag_data}")
-            embed.title = "Database error"
-            embed.description = ("There was an unexpected error with deleting the data from the tags database. "
-                                 "Please try again. If the problem persists, see the error logs.")
-
-        return await ctx.send(embed=embed)
+        log.debug(f"{ctx.author} successfully deleted the tag called '{tag_name}'")
+        await ctx.send(embed=Embed(
+            title=tag_name,
+            description=f"Tag successfully removed: {tag_name}.",
+            colour=Colour.blurple()
+        ))
 
 
 def setup(bot):
