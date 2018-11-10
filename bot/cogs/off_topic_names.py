@@ -44,7 +44,7 @@ async def update_names(bot: Bot, headers: dict):
     Args:
         bot (Bot):
             The running bot instance, used for fetching data from the
-            website via the bot's `http_session`.
+            website via the bot's `api_client`.
     """
 
     while True:
@@ -53,11 +53,9 @@ async def update_names(bot: Bot, headers: dict):
         seconds_to_sleep = (next_midnight - datetime.utcnow()).seconds
         await asyncio.sleep(seconds_to_sleep)
 
-        response = await bot.http_session.get(
-            f'{URLs.site_off_topic_names_api}?random_items=3',
-            headers=headers
+        channel_0_name, channel_1_name, channel_2_name = await bot.api_client.get(
+            'bot/off-topic-channel-names', params={'random_items': 3}
         )
-        channel_0_name, channel_1_name, channel_2_name = await response.json()
         channel_0, channel_1, channel_2 = (bot.get_channel(channel_id) for channel_id in CHANNELS)
 
         await channel_0.edit(name=f'ot0-{channel_0_name}')
@@ -96,49 +94,24 @@ class OffTopicNames:
     async def add_command(self, ctx, name: OffTopicName):
         """Adds a new off-topic name to the rotation."""
 
-        result = await self.bot.http_session.post(
-            URLs.site_off_topic_names_api,
-            headers=self.headers,
-            params={'name': name}
+        await self.bot.api_client.post(f'bot/off-topic-channel-names', params={'name': name})
+        log.info(
+            f"{ctx.author.name}#{ctx.author.discriminator}"
+            f" added the off-topic channel name '{name}"
         )
-
-        response = await result.json()
-
-        if result.status == 200:
-            log.info(
-                f"{ctx.author.name}#{ctx.author.discriminator}"
-                f" added the off-topic channel name '{name}"
-            )
-            await ctx.send(":ok_hand:")
-        else:
-            error_reason = response.get('message', "No reason provided.")
-            await ctx.send(f":warning: got non-200 from the API: {error_reason}")
+        await ctx.send(":ok_hand:")
 
     @otname_group.command(name='delete', aliases=('remove', 'rm', 'del', 'd'))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
     async def delete_command(self, ctx, name: OffTopicName):
         """Removes a off-topic name from the rotation."""
 
-        result = await self.bot.http_session.delete(
-            URLs.site_off_topic_names_api,
-            headers=self.headers,
-            params={'name': name}
+        await self.bot.api_client.delete(f'bot/off-topic-channel-names/{name}')
+        log.info(
+            f"{ctx.author.name}#{ctx.author.discriminator}"
+            f" deleted the off-topic channel name '{name}"
         )
-
-        response = await result.json()
-
-        if result.status == 200:
-            if response['deleted'] == 0:
-                await ctx.send(f":warning: No name matching `{name}` was found in the database.")
-            else:
-                log.info(
-                    f"{ctx.author.name}#{ctx.author.discriminator}"
-                    f" deleted the off-topic channel name '{name}"
-                )
-                await ctx.send(":ok_hand:")
-        else:
-            error_reason = response.get('message', "No reason provided.")
-            await ctx.send(f":warning: got non-200 from the API: {error_reason}")
+        await ctx.send(":ok_hand:")
 
     @otname_group.command(name='list', aliases=('l',))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
@@ -148,18 +121,17 @@ class OffTopicNames:
         Restricted to Moderator and above to not spoil the surprise.
         """
 
-        result = await self.bot.http_session.get(
-            URLs.site_off_topic_names_api,
-            headers=self.headers
-        )
-        response = await result.json()
-        lines = sorted(f"• {name}" for name in response)
-
+        result = await self.bot.api_client.get('bot/off-topic-channel-names')
+        lines = sorted(f"• {name}" for name in result)
         embed = Embed(
-            title=f"Known off-topic names (`{len(response)}` total)",
+            title=f"Known off-topic names (`{len(result)}` total)",
             colour=Colour.blue()
         )
-        await LinePaginator.paginate(lines, ctx, embed, max_size=400, empty=False)
+        if result:
+            await LinePaginator.paginate(lines, ctx, embed, max_size=400, empty=False)
+        else:
+            embed.description = "Hmmm, seems like there's nothing here yet."
+            await ctx.send(embed=embed)
 
 
 def setup(bot: Bot):
