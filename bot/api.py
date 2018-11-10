@@ -35,4 +35,6 @@ class APIClient:
 
     async def delete(self, endpoint: str, *args, **kwargs):
         async with self.session.delete(self._url_for(endpoint), *args, **kwargs) as resp:
+            if resp.status == 204:
+                return None
             return await resp.json()
