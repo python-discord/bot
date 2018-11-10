@@ -89,27 +89,6 @@ class Tags:
         self.tag_cooldowns = {}
         self.headers = {"Authorization": f"Token {Keys.site_api}"}
 
-    async def get_tag_data(self, tag_name=None) -> dict:
-        """
-        Retrieve the tag_data from our API
-
-        :param tag_name: the tag to retrieve
-        :return:
-        if tag_name was provided, returns a dict with tag data.
-        if not, returns a list of dicts with all tag data.
-
-        """
-
-        if tag_name:
-            url = f'{URLs.site_tags_api}/{tag_name}'
-        else:
-            url = URLs.site_tags_api
-
-        response = await self.bot.http_session.get(url, headers=self.headers)
-        tag_data = await response.json()
-
-        return tag_data
-
     async def post_tag_data(self, tag_name: str, tag_content: str, image_url: Optional[str]) -> dict:
         """
         Send some tag_data to our API to have it saved in the database.
