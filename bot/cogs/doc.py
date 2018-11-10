@@ -1,11 +1,10 @@
 import asyncio
 import functools
 import logging
-import random
 import re
 import textwrap
 from collections import OrderedDict
-from typing import Dict, List, Optional, Tuple
+from typing import Optional, Tuple
 
 import discord
 from bs4 import BeautifulSoup
@@ -14,7 +13,7 @@ from markdownify import MarkdownConverter
 from requests import ConnectionError
 from sphinx.ext import intersphinx
 
-from bot.constants import ERROR_REPLIES, Keys, Roles, URLs
+from bot.constants import Keys, Roles
 from bot.converters import ValidPythonIdentifier, ValidURL
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
@@ -179,7 +178,7 @@ class Doc:
         coros = [
             self.update_single(
                 package["package"], package["base_url"], package["inventory_url"], config
-            ) for package in await self.get_all_packages()
+            ) for package in await self.bot.api_client.get('bot/documentation-links')
         ]
         await asyncio.gather(*coros)
 
@@ -267,95 +266,6 @@ class Doc:
             description=f"```py\n{signature}```{description}"
         )
 
-    async def get_all_packages(self) -> List[Dict[str, str]]:
-        """
-        Performs HTTP GET to get all packages from the website.
-
-        :return:
-        A list of packages, in the following format:
-        [
-            {
-                "package": "example-package",
-                "base_url": "https://example.readthedocs.io",
-                "inventory_url": "https://example.readthedocs.io/objects.inv"
-            },
-            ...
-        ]
-        `package` specifies the package name, for example 'aiohttp'.
-        `base_url` specifies the documentation root URL, used to build absolute links.
-        `inventory_url` specifies the location of the Intersphinx inventory.
-        """
-
-        async with self.bot.http_session.get(URLs.site_docs_api, headers=self.headers) as resp:
-            return await resp.json()
-
-    async def get_package(self, package_name: str) -> Optional[Dict[str, str]]:
-        """
-        Performs HTTP GET to get the specified package from the documentation database.
-
-        :param package_name: The package name for which information should be returned.
-        :return:
-        Either a dictionary with information in the following format:
-        {
-            "package": "example-package",
-            "base_url": "https://example.readthedocs.io",
-            "inventory_url": "https://example.readthedocs.io/objects.inv"
-        }
-        or `None` if the site didn't returned no results for the given name.
-        """
-
-        params = {"package": package_name}
-
-        async with self.bot.http_session.get(URLs.site_docs_api,
-                                             headers=self.headers,
-                                             params=params) as resp:
-            package_data = await resp.json()
-            if not package_data:
-                return None
-            return package_data[0]
-
-    async def set_package(self, name: str, base_url: str, inventory_url: str) -> Dict[str, bool]:
-        """
-        Performs HTTP POST to add a new package to the website's documentation database.
-
-        :param name: The name of the package, for example `aiohttp`.
-        :param base_url: The documentation root URL, used to build absolute links.
-        :param inventory_url: The absolute URl to the intersphinx inventory of the package.
-
-        :return: The JSON response of the server, which is always:
-        {
-            "success": True
-        }
-        """
-
-        package_json = {
-            'package': name,
-            'base_url': base_url,
-            'inventory_url': inventory_url
-        }
-
-        async with self.bot.http_session.post(URLs.site_docs_api,
-                                              headers=self.headers,
-                                              json=package_json) as resp:
-            return await resp.json()
-
-    async def delete_package(self, name: str) -> bool:
-        """
-        Performs HTTP DELETE to delete the specified package from the documentation database.
-
-        :param name: The package to delete.
-
-        :return: `True` if successful, `False` if the package is unknown.
-        """
-
-        package_json = {'package': name}
-
-        async with self.bot.http_session.delete(URLs.site_docs_api,
-                                                headers=self.headers,
-                                                json=package_json) as resp:
-            changes = await resp.json()
-            return changes["deleted"] == 1  # Did the package delete successfully?
-
     @commands.group(name='docs', aliases=('doc', 'd'), invoke_without_command=True)
     async def docs_group(self, ctx, symbol: commands.clean_content = None):
         """Lookup documentation for Python symbols."""
@@ -386,7 +296,12 @@ class Doc:
             )
 
             lines = sorted(f"• [`{name}`]({url})" for name, url in self.base_urls.items())
-            await LinePaginator.paginate(lines, ctx, inventory_embed, max_size=400, empty=False)
+            if self.base_urls:
+                await LinePaginator.paginate(lines, ctx, inventory_embed, max_size=400, empty=False)
+
+            else:
+                inventory_embed.description = "Hmmm, seems like there's nothing here yet."
+                await ctx.send(embed=inventory_embed)
 
         else:
             # Fetching documentation for a symbol (at least for the first time, since
@@ -427,7 +342,13 @@ class Doc:
                     https://discordpy.readthedocs.io/en/rewrite/objects.inv
         """
 
-        await self.set_package(package_name, base_url, inventory_url)
+        body = {
+            'package': package_name,
+            'base_url': base_url,
+            'inventory_url': inventory_url
+        }
+        await self.bot.api_client.post('bot/documentation-links', json=body)
+
         log.info(
             f"User @{ctx.author.name}#{ctx.author.discriminator} ({ctx.author.id}) "
             "added a new documentation package:\n"
@@ -455,42 +376,13 @@ class Doc:
             !docs delete aiohttp
         """
 
-        success = await self.delete_package(package_name)
-        if success:
+        await self.bot.api_client.delete(f'bot/documentation-links/{package_name}')
 
-            async with ctx.typing():
-                # Rebuild the inventory to ensure that everything
-                # that was from this package is properly deleted.
-                await self.refresh_inventory()
-            await ctx.send(f"Successfully deleted `{package_name}` and refreshed inventory.")
-
-        else:
-            await ctx.send(
-                f"Can't find any package named `{package_name}` in the database. "
-                "View all known packages by using `docs.get()`."
-            )
-
-    @get_command.error
-    @delete_command.error
-    @set_command.error
-    async def general_command_error(self, ctx, error: commands.CommandError):
-        """
-        Handle the `BadArgument` error caused by
-        the commands when argument validation fails.
-
-        :param ctx: Discord message context of the message creating the error
-        :param error: The error raised, usually `BadArgument`
-        """
-
-        if isinstance(error, commands.BadArgument):
-            embed = discord.Embed(
-                title=random.choice(ERROR_REPLIES),
-                description=f"Error: {error}",
-                colour=discord.Colour.red()
-            )
-            await ctx.send(embed=embed)
-        else:
-            log.exception(f"Unhandled error: {error}")
+        async with ctx.typing():
+            # Rebuild the inventory to ensure that everything
+            # that was from this package is properly deleted.
+            await self.refresh_inventory()
+        await ctx.send(f"Successfully deleted `{package_name}` and refreshed inventory.")
 
 
 def setup(bot):
