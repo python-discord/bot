@@ -395,7 +395,7 @@ class URLs(metaclass=YAMLGetter):
     site_api: str
     site_facts_api: str
     site_clean_api: str
-    site_hiphopify_api: str
+    site_superstarify_api: str
     site_idioms_api: str
     site_logs_api: str
     site_logs_view: str

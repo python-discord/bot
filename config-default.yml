@@ -218,7 +218,7 @@ urls:
     site_bigbrother_api:                !JOIN [*SCHEMA, *API, "/bot/bigbrother"]
     site_docs_api:                      !JOIN [*SCHEMA, *API, "/bot/docs"]
     site_facts_api:                     !JOIN [*SCHEMA, *API, "/bot/snake_facts"]
-    site_hiphopify_api:                 !JOIN [*SCHEMA, *API, "/bot/hiphopify"]
+    site_superstarify_api:              !JOIN [*SCHEMA, *API, "/bot/superstarify"]
     site_idioms_api:                    !JOIN [*SCHEMA, *API, "/bot/snake_idioms"]
     site_infractions:                   !JOIN [*SCHEMA, *API, "/bot/infractions"]
     site_infractions_user:              !JOIN [*SCHEMA, *API, "/bot/infractions/user/{user_id}"]
