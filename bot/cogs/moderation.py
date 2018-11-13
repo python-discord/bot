@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import textwrap
-from typing import Dict
 
 from aiohttp import ClientError
 from discord import Colour, Embed, Guild, Member, Object, User
@@ -13,7 +12,7 @@ from bot.constants import Colours, Event, Icons, Keys, Roles, URLs
 from bot.converters import InfractionSearchQuery
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
-from bot.utils.scheduling import create_task
+from bot.utils.scheduling import Scheduler
 from bot.utils.time import parse_rfc1123, wait_until
 
 log = logging.getLogger(__name__)
@@ -21,7 +20,7 @@ log = logging.getLogger(__name__)
 MODERATION_ROLES = Roles.owner, Roles.admin, Roles.moderator
 
 
-class Moderation:
+class Moderation(Scheduler):
     """
     Rowboat replacement moderation tools.
     """
@@ -29,8 +28,8 @@ class Moderation:
     def __init__(self, bot: Bot):
         self.bot = bot
         self.headers = {"X-API-KEY": Keys.site_api}
-        self.expiration_tasks: Dict[str, asyncio.Task] = {}
         self._muted_role = Object(constants.Roles.muted)
+        super().__init__()
 
     @property
     def mod_log(self) -> ModLog:
@@ -47,7 +46,7 @@ class Moderation:
         loop = asyncio.get_event_loop()
         for infraction_object in infraction_list:
             if infraction_object["expires_at"] is not None:
-                self.schedule_expiration(loop, infraction_object)
+                self.schedule_task(loop, infraction_object["id"], infraction_object)
 
     # region: Permanent infractions
 
@@ -291,7 +290,7 @@ class Moderation:
         infraction_expiration = infraction_object["expires_at"]
 
         loop = asyncio.get_event_loop()
-        self.schedule_expiration(loop, infraction_object)
+        self.schedule_task(loop, infraction_object["id"], infraction_object)
 
         if reason is None:
             result_message = f":ok_hand: muted {user.mention} until {infraction_expiration}."
@@ -356,7 +355,7 @@ class Moderation:
         infraction_expiration = infraction_object["expires_at"]
 
         loop = asyncio.get_event_loop()
-        self.schedule_expiration(loop, infraction_object)
+        self.schedule_task(loop, infraction_object["id"], infraction_object)
 
         if reason is None:
             result_message = f":ok_hand: banned {user.mention} until {infraction_expiration}."
@@ -540,9 +539,9 @@ class Moderation:
 
             infraction_object = response_object["infraction"]
             # Re-schedule
-            self.cancel_expiration(infraction_id)
+            self.cancel_task(infraction_id)
             loop = asyncio.get_event_loop()
-            self.schedule_expiration(loop, infraction_object)
+            self.schedule_task(loop, infraction_object["id"], infraction_object)
 
             if duration is None:
                 await ctx.send(f":ok_hand: Updated infraction: marked as permanent.")
@@ -748,36 +747,7 @@ class Moderation:
             max_size=1000
         )
 
-    def schedule_expiration(self, loop: asyncio.AbstractEventLoop, infraction_object: dict):
-        """
-        Schedules a task to expire a temporary infraction.
-        :param loop: the asyncio event loop
-        :param infraction_object: the infraction object to expire at the end of the task
-        """
-
-        infraction_id = infraction_object["id"]
-        if infraction_id in self.expiration_tasks:
-            return
-
-        task: asyncio.Task = create_task(loop, self._scheduled_expiration(infraction_object))
-
-        self.expiration_tasks[infraction_id] = task
-
-    def cancel_expiration(self, infraction_id: str):
-        """
-        Un-schedules a task set to expire a temporary infraction.
-        :param infraction_id: the ID of the infraction in question
-        """
-
-        task = self.expiration_tasks.get(infraction_id)
-        if task is None:
-            log.warning(f"Failed to unschedule {infraction_id}: no task found.")
-            return
-        task.cancel()
-        log.debug(f"Unscheduled {infraction_id}.")
-        del self.expiration_tasks[infraction_id]
-
-    async def _scheduled_expiration(self, infraction_object):
+    async def _scheduled_task(self, infraction_object: dict):
         """
         A co-routine which marks an infraction as expired after the delay from the time of scheduling
         to the time of expiration. At the time of expiration, the infraction is marked as inactive on the website,
@@ -794,7 +764,7 @@ class Moderation:
         log.debug(f"Marking infraction {infraction_id} as inactive (expired).")
         await self._deactivate_infraction(infraction_object)
 
-        self.cancel_expiration(infraction_object["id"])
+        self.cancel_task(infraction_object["id"])
 
     async def _deactivate_infraction(self, infraction_object):
         """
