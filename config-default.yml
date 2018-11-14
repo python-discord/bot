@@ -129,7 +129,7 @@ guild:
 filter:
 
     # What do we filter?
-    filter_zalgo:   true
+    filter_zalgo:   false
     filter_invites: true
     filter_domains: true
     watch_words:    true
