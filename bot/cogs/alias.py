@@ -1,11 +1,13 @@
+import inspect
 import logging
 
-from discord import TextChannel, User
+from discord import Colour, Embed, TextChannel, User
 from discord.ext.commands import (
-    Context, clean_content, command, group
+    Command, Context, clean_content, command, group
 )
 
 from bot.converters import TagNameConverter
+from bot.pagination import LinePaginator
 
 log = logging.getLogger(__name__)
 
@@ -40,6 +42,24 @@ class Alias:
             )
 
         await ctx.invoke(cmd, *args, **kwargs)
+
+    @command(name='aliases')
+    async def aliases_command(self, ctx):
+        """Show configured aliases on the bot."""
+
+        embed = Embed(
+            title='Configured aliases',
+            colour=Colour.blue()
+        )
+        await LinePaginator.paginate(
+            (
+                f"• `{ctx.prefix}{value.name}` "
+                f"=> `{ctx.prefix}{name[:-len('_alias')].replace('_', ' ')}`"
+                for name, value in inspect.getmembers(self)
+                if isinstance(value, Command) and name.endswith('_alias')
+            ),
+            ctx, embed, empty=False, max_lines=20
+        )
 
     @command(name="resources", aliases=("resource",), hidden=True)
     async def site_resources_alias(self, ctx):
@@ -94,7 +114,7 @@ class Alias:
         await self.invoke(ctx, "site rules")
 
     @command(name="reload", hidden=True)
-    async def reload_cog_alias(self, ctx, *, cog_name: str):
+    async def cogs_reload_alias(self, ctx, *, cog_name: str):
         """
         Alias for invoking <prefix>cogs reload cog_name.
 
@@ -132,7 +152,7 @@ class Alias:
         pass
 
     @get_group_alias.command(name="tags", aliases=("tag", "t"), hidden=True)
-    async def get_tags_command_alias(
+    async def tags_get_alias(
             self, ctx: Context, *, tag_name: TagNameConverter=None
     ):
         """
@@ -144,7 +164,7 @@ class Alias:
         await self.invoke(ctx, "tags get", tag_name)
 
     @get_group_alias.command(name="docs", aliases=("doc", "d"), hidden=True)
-    async def get_docs_command_alias(
+    async def docs_get_alias(
             self, ctx: Context, symbol: clean_content = None
     ):
         """
