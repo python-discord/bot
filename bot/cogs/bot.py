@@ -60,7 +60,7 @@ class Bot:
         """
 
         embed = Embed(
-            description="A utility bot designed just for the Python server! Try `!help()` for more info.",
+            description="A utility bot designed just for the Python server! Try `!help` for more info.",
             url="https://gitlab.com/discord-python/projects/bot"
         )
 
