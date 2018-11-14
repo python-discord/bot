@@ -12,6 +12,8 @@ from discord.ext.commands import (
 
 from bot.cogs.rmq import RMQ
 from bot.constants import Channels, ERROR_REPLIES, NEGATIVE_REPLIES, Roles, URLs
+from bot.utils.messages import wait_for_deletion
+
 
 log = logging.getLogger(__name__)
 
@@ -181,7 +183,9 @@ class Snekbox:
                     else:
                         msg = f"{ctx.author.mention} Your eval job has completed.\n\n```py\n{output}\n```"
 
-                    await ctx.send(msg)
+                    response = await ctx.send(msg)
+                    await wait_for_deletion(response, user_ids=(ctx.author.id,), client=ctx.bot)
+
                 else:
                     await ctx.send(
                         f"{ctx.author.mention} Your eval job has completed.\n\n```py\n[No output]\n```"
