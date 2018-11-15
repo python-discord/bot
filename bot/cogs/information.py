@@ -10,6 +10,8 @@ from bot.utils.time import time_since
 
 log = logging.getLogger(__name__)
 
+MODERATION_ROLES = Roles.owner, Roles.admin, Roles.moderator
+
 
 class Information:
     """
@@ -22,7 +24,7 @@ class Information:
         self.bot = bot
         self.headers = {"X-API-Key": Keys.site_api}
 
-    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     @command(name="roles")
     async def roles_info(self, ctx: Context):
         """
@@ -119,11 +121,15 @@ class Information:
 
         await ctx.send(embed=embed)
 
+    @with_role(*MODERATION_ROLES)
     @command(name="user", aliases=["user_info", "member", "member_info"])
-    async def user_info(self, ctx: Context, user: Member = None):
+    async def user_info(self, ctx: Context, user: Member = None, hidden: bool = False):
         """
         Returns info about a user.
         """
+
+        # Validates hidden input
+        hidden = str(hidden)
 
         if user is None:
             user = ctx.author
@@ -146,6 +152,7 @@ class Information:
         # Infractions
         api_response = await self.bot.http_session.get(
             url=URLs.site_infractions_user.format(user_id=user.id),
+            params={"hidden": hidden},
             headers=self.headers
         )
 
