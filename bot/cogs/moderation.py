@@ -414,9 +414,9 @@ class Moderation(Scheduler):
             return
 
         if reason is None:
-            result_message = f":ok_hand: warned {user.mention}."
+            result_message = f":ok_hand: note added for {user.mention}."
         else:
-            result_message = f":ok_hand: warned {user.mention} ({reason})."
+            result_message = f":ok_hand: note added for {user.mention} ({reason})."
 
         await ctx.send(result_message)
 
