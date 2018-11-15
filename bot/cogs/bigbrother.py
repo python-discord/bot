@@ -246,7 +246,8 @@ class BigBrother:
 
                 if user.id in self.watched_users:
                     del self.watched_users[user.id]
-                    del self.channel_queues[user.id]
+                    if user.id in self.channel_queues:
+                        del self.channel_queues[user.id]
                 else:
                     log.warning(f"user {user.id} was unwatched but was not found in the cache")
 
