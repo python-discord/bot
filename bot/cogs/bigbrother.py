@@ -1,15 +1,20 @@
+import asyncio
 import logging
+import re
+from collections import defaultdict, deque
 from typing import List, Union
 
 from discord import Color, Embed, Guild, Member, Message, TextChannel, User
 from discord.ext.commands import Bot, Context, group
 
-from bot.constants import Channels, Emojis, Guild as GuildConfig, Keys, Roles, URLs
+from bot.constants import BigBrother as BigBrotherConfig, Channels, Emojis, Guild as GuildConfig, Keys, Roles, URLs
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
-
+from bot.utils import messages
 
 log = logging.getLogger(__name__)
+
+URL_RE = re.compile(r"(https?://[^\s]+)")
 
 
 class BigBrother:
@@ -19,7 +24,11 @@ class BigBrother:
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.watched_users = {}
+        self.watched_users = {}  # { user_id: log_channel_id }
+        self.channel_queues = defaultdict(lambda: defaultdict(deque))  # { user_id: { channel_id: queue(messages) }
+        self.consuming = False
+
+        self.bot.loop.create_task(self.get_watched_users())
 
     def update_cache(self, api_response: List[dict]):
         """
@@ -43,7 +52,10 @@ class BigBrother:
                     "but the given channel could not be found. Ignoring."
                 )
 
-    async def on_ready(self):
+    async def get_watched_users(self):
+        """Retrieves watched users from the API."""
+
+        await self.bot.wait_until_ready()
         async with self.bot.http_session.get(URLs.site_bigbrother_api, headers=self.HEADERS) as response:
             data = await response.json()
             self.update_cache(data)
@@ -55,9 +67,10 @@ class BigBrother:
 
             async with self.bot.http_session.delete(url, headers=self.HEADERS) as response:
                 del self.watched_users[user.id]
+                del self.channel_queues[user.id]
                 if response.status == 204:
                     await channel.send(
-                        f"{Emojis.lemoneye2}:hammer: {user} got banned, so "
+                        f"{Emojis.bb_message}:hammer: {user} got banned, so "
                         f"`BigBrother` will no longer relay their messages to {channel}"
                     )
 
@@ -65,19 +78,77 @@ class BigBrother:
                     data = await response.json()
                     reason = data.get('error_message', "no message provided")
                     await channel.send(
-                        f"{Emojis.lemoneye2}:x: {user} got banned, but trying to remove them from"
+                        f"{Emojis.bb_message}:x: {user} got banned, but trying to remove them from"
                         f"BigBrother's user dictionary on the API returned an error: {reason}"
                     )
 
     async def on_message(self, msg: Message):
-        if msg.author.id in self.watched_users:
-            channel = self.watched_users[msg.author.id]
-            relay_content = (f"{Emojis.lemoneye2} {msg.author} sent the following "
-                             f"in {msg.channel.mention}: {msg.clean_content}")
-            if msg.attachments:
-                relay_content += f" (with {len(msg.attachments)} attachment(s))"
+        """Queues up messages sent by watched users."""
 
-            await channel.send(relay_content)
+        if msg.author.id in self.watched_users:
+            if not self.consuming:
+                self.bot.loop.create_task(self.consume_messages())
+
+            log.trace(f"Received message: {msg.content} ({len(msg.attachments)} attachments)")
+            self.channel_queues[msg.author.id][msg.channel.id].append(msg)
+
+    async def consume_messages(self):
+        """Consumes the message queues to log watched users' messages."""
+
+        if not self.consuming:
+            self.consuming = True
+            log.trace("Sleeping before consuming...")
+            await asyncio.sleep(BigBrotherConfig.log_delay)
+
+        log.trace("Begin consuming messages.")
+        channel_queues = self.channel_queues.copy()
+        self.channel_queues.clear()
+        for user_id, queues in channel_queues.items():
+            for _, queue in queues.items():
+                channel = self.watched_users[user_id]
+
+                if queue:
+                    # Send a header embed before sending all messages in the queue.
+                    msg = queue[0]
+                    embed = Embed(description=f"{msg.author.mention} in [#{msg.channel.name}]({msg.jump_url})")
+                    embed.set_author(name=msg.author.nick or msg.author.name, icon_url=msg.author.avatar_url)
+                    await channel.send(embed=embed)
+
+                while queue:
+                    msg = queue.popleft()
+                    log.trace(f"Consuming message: {msg.clean_content} ({len(msg.attachments)} attachments)")
+                    await self.log_message(msg, channel)
+
+        if self.channel_queues:
+            log.trace("Queue not empty; continue consumption.")
+            self.bot.loop.create_task(self.consume_messages())
+        else:
+            log.trace("Done consuming messages.")
+            self.consuming = False
+
+    @staticmethod
+    async def log_message(message: Message, destination: TextChannel):
+        """
+        Logs a watched user's message in the given channel.
+
+        Attachments are also sent. All non-image or non-video URLs are put in inline code blocks to prevent preview
+        embeds from being automatically generated.
+
+        :param message: the message to log
+        :param destination: the channel in which to log the message
+        """
+
+        content = message.clean_content
+        if content:
+            # Put all non-media URLs in inline code blocks.
+            media_urls = {embed.url for embed in message.embeds if embed.type in ("image", "video")}
+            for url in URL_RE.findall(content):
+                if url not in media_urls:
+                    content = content.replace(url, f"`{url}`")
+
+            await destination.send(content)
+
+        await messages.send_attachments(message, destination)
 
     @group(name='bigbrother', aliases=('bb',), invoke_without_command=True)
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
@@ -175,6 +246,7 @@ class BigBrother:
 
                 if user.id in self.watched_users:
                     del self.watched_users[user.id]
+                    del self.channel_queues[user.id]
                 else:
                     log.warning(f"user {user.id} was unwatched but was not found in the cache")
 

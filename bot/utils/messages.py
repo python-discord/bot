@@ -1,9 +1,13 @@
 import asyncio
 import contextlib
+from io import BytesIO
 from typing import Sequence
 
-from discord import Message
+from discord import Embed, File, Message, TextChannel
 from discord.abc import Snowflake
+from discord.errors import HTTPException
+
+MAX_SIZE = 1024 * 1024 * 8  # 8 Mebibytes
 
 
 async def wait_for_deletion(
@@ -70,3 +74,37 @@ async def wait_for_deletion(
             timeout=timeout
         )
         await message.delete()
+
+
+async def send_attachments(message: Message, destination: TextChannel):
+    """
+    Re-uploads each attachment in a message to the given channel.
+
+    Each attachment is sent as a separate message to more easily comply with the 8 MiB request size limit.
+    If attachments are too large, they are instead grouped into a single embed which links to them.
+
+    :param message: the message whose attachments to re-upload
+    :param destination: the channel in which to re-upload the attachments
+    """
+
+    large = []
+    for attachment in message.attachments:
+        try:
+            # This should avoid most files that are too large, but some may get through hence the try-catch.
+            # Allow 512 bytes of leeway for the rest of the request.
+            if attachment.size <= MAX_SIZE - 512:
+                with BytesIO() as file:
+                    await attachment.save(file)
+                    await destination.send(file=File(file, filename=attachment.filename))
+            else:
+                large.append(attachment)
+        except HTTPException as e:
+            if e.status == 413:
+                large.append(attachment)
+            else:
+                raise
+
+    if large:
+        embed = Embed(description=f"\n".join(f"[{attachment.filename}]({attachment.url})" for attachment in large))
+        embed.set_footer(text="Attachments exceed upload size limit.")
+        await destination.send(embed=embed)
