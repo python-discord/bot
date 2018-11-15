@@ -241,7 +241,7 @@ class Emojis(metaclass=YAMLGetter):
     green_chevron: str
     red_chevron: str
     white_chevron: str
-    lemoneye2: str
+    bb_message: str
 
     status_online: str
     status_offline: str
@@ -444,6 +444,12 @@ class AntiSpam(metaclass=YAMLGetter):
 
     punishment: Dict[str, Dict[str, int]]
     rules: Dict[str, Dict[str, int]]
+
+
+class BigBrother(metaclass=YAMLGetter):
+    section = 'big_brother'
+
+    log_delay: int
 
 
 # Debug mode
