@@ -380,6 +380,344 @@ class Moderation(Scheduler):
         )
 
     # endregion
+    # region: Permanent shadow infractions
+
+    @with_role(*MODERATION_ROLES)
+    @command(name="shadow_warn", hidden=True, aliases=['shadowwarn', 'swarn', 'note'])
+    async def shadow_warn(self, ctx: Context, user: User, *, reason: str = None):
+        """
+        Create a warning infraction in the database for a user.
+        :param user: accepts user mention, ID, etc.
+        :param reason: The reason for the warning.
+        """
+
+        try:
+            response = await self.bot.http_session.post(
+                URLs.site_infractions,
+                headers=self.headers,
+                json={
+                    "type": "warning",
+                    "reason": reason,
+                    "user_id": str(user.id),
+                    "actor_id": str(ctx.message.author.id),
+                    "hidden": True
+                }
+            )
+        except ClientError:
+            log.exception("There was an error adding an infraction.")
+            await ctx.send(":x: There was an error adding the infraction.")
+            return
+
+        response_object = await response.json()
+        if "error_code" in response_object:
+            await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
+            return
+
+        if reason is None:
+            result_message = f":ok_hand: warned {user.mention}."
+        else:
+            result_message = f":ok_hand: warned {user.mention} ({reason})."
+
+        await ctx.send(result_message)
+
+    @with_role(*MODERATION_ROLES)
+    @command(name="shadow_kick", hidden=True, aliases=['shadowkick', 'skick'])
+    async def shadow_kick(self, ctx: Context, user: Member, *, reason: str = None):
+        """
+        Kicks a user.
+        :param user: accepts user mention, ID, etc.
+        :param reason: The reason for the kick.
+        """
+
+        try:
+            response = await self.bot.http_session.post(
+                URLs.site_infractions,
+                headers=self.headers,
+                json={
+                    "type": "kick",
+                    "reason": reason,
+                    "user_id": str(user.id),
+                    "actor_id": str(ctx.message.author.id),
+                    "hidden": True
+                }
+            )
+        except ClientError:
+            log.exception("There was an error adding an infraction.")
+            await ctx.send(":x: There was an error adding the infraction.")
+            return
+
+        response_object = await response.json()
+        if "error_code" in response_object:
+            await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
+            return
+
+        self.mod_log.ignore(Event.member_remove, user.id)
+        await user.kick(reason=reason)
+
+        if reason is None:
+            result_message = f":ok_hand: kicked {user.mention}."
+        else:
+            result_message = f":ok_hand: kicked {user.mention} ({reason})."
+
+        await ctx.send(result_message)
+
+        # Send a log message to the mod log
+        await self.mod_log.send_log_message(
+            icon_url=Icons.sign_out,
+            colour=Colour(Colours.soft_red),
+            title="Member shadow kicked",
+            thumbnail=user.avatar_url_as(static_format="png"),
+            text=textwrap.dedent(f"""
+                Member: {user.mention} (`{user.id}`)
+                Actor: {ctx.message.author}
+                Reason: {reason}
+            """)
+        )
+
+    @with_role(*MODERATION_ROLES)
+    @command(name="shadow_ban", hidden=True, aliases=['shadowban', 'sban'])
+    async def shadow_ban(self, ctx: Context, user: User, *, reason: str = None):
+        """
+        Create a permanent ban infraction in the database for a user.
+        :param user: Accepts user mention, ID, etc.
+        :param reason: The reason for the ban.
+        """
+
+        try:
+            response = await self.bot.http_session.post(
+                URLs.site_infractions,
+                headers=self.headers,
+                json={
+                    "type": "ban",
+                    "reason": reason,
+                    "user_id": str(user.id),
+                    "actor_id": str(ctx.message.author.id),
+                    "hidden": True
+                }
+            )
+        except ClientError:
+            log.exception("There was an error adding an infraction.")
+            await ctx.send(":x: There was an error adding the infraction.")
+            return
+
+        response_object = await response.json()
+        if "error_code" in response_object:
+            await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
+            return
+
+        self.mod_log.ignore(Event.member_ban, user.id)
+        self.mod_log.ignore(Event.member_remove, user.id)
+        await ctx.guild.ban(user, reason=reason, delete_message_days=0)
+
+        if reason is None:
+            result_message = f":ok_hand: permanently banned {user.mention}."
+        else:
+            result_message = f":ok_hand: permanently banned {user.mention} ({reason})."
+
+        await ctx.send(result_message)
+
+        # Send a log message to the mod log
+        await self.mod_log.send_log_message(
+            icon_url=Icons.user_ban,
+            colour=Colour(Colours.soft_red),
+            title="Member permanently banned",
+            thumbnail=user.avatar_url_as(static_format="png"),
+            text=textwrap.dedent(f"""
+                Member: {user.mention} (`{user.id}`)
+                Actor: {ctx.message.author}
+                Reason: {reason}
+            """)
+        )
+
+    @with_role(*MODERATION_ROLES)
+    @command(name="shadow_mute", hidden=True, aliases=['shadowmute', 'smute'])
+    async def shadow_mute(self, ctx: Context, user: Member, *, reason: str = None):
+        """
+        Create a permanent mute infraction in the database for a user.
+        :param user: Accepts user mention, ID, etc.
+        :param reason: The reason for the mute.
+        """
+
+        try:
+            response = await self.bot.http_session.post(
+                URLs.site_infractions,
+                headers=self.headers,
+                json={
+                    "type": "mute",
+                    "reason": reason,
+                    "user_id": str(user.id),
+                    "actor_id": str(ctx.message.author.id),
+                    "hidden": True
+                }
+            )
+        except ClientError:
+            log.exception("There was an error adding an infraction.")
+            await ctx.send(":x: There was an error adding the infraction.")
+            return
+
+        response_object = await response.json()
+        if "error_code" in response_object:
+            await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
+            return
+
+        # add the mute role
+        self.mod_log.ignore(Event.member_update, user.id)
+        await user.add_roles(self._muted_role, reason=reason)
+
+        if reason is None:
+            result_message = f":ok_hand: permanently muted {user.mention}."
+        else:
+            result_message = f":ok_hand: permanently muted {user.mention} ({reason})."
+
+        await ctx.send(result_message)
+
+        # Send a log message to the mod log
+        await self.mod_log.send_log_message(
+            icon_url=Icons.user_mute,
+            colour=Colour(Colours.soft_red),
+            title="Member permanently muted",
+            thumbnail=user.avatar_url_as(static_format="png"),
+            text=textwrap.dedent(f"""
+                Member: {user.mention} (`{user.id}`)
+                Actor: {ctx.message.author}
+                Reason: {reason}
+            """)
+        )
+
+    # endregion
+    # region: Temporary shadow infractions
+
+    @with_role(*MODERATION_ROLES)
+    @command(name="shadow_tempmute", hidden=True, aliases=["shadowtempmute, stempmute"])
+    async def shadow_tempmute(self, ctx: Context, user: Member, duration: str, *, reason: str = None):
+        """
+        Create a temporary mute infraction in the database for a user.
+        :param user: Accepts user mention, ID, etc.
+        :param duration: The duration for the temporary mute infraction
+        :param reason: The reason for the temporary mute.
+        """
+
+        try:
+            response = await self.bot.http_session.post(
+                URLs.site_infractions,
+                headers=self.headers,
+                json={
+                    "type": "mute",
+                    "reason": reason,
+                    "duration": duration,
+                    "user_id": str(user.id),
+                    "actor_id": str(ctx.message.author.id),
+                    "hidden": True
+                }
+            )
+        except ClientError:
+            log.exception("There was an error adding an infraction.")
+            await ctx.send(":x: There was an error adding the infraction.")
+            return
+
+        response_object = await response.json()
+        if "error_code" in response_object:
+            await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
+            return
+
+        self.mod_log.ignore(Event.member_update, user.id)
+        await user.add_roles(self._muted_role, reason=reason)
+
+        infraction_object = response_object["infraction"]
+        infraction_expiration = infraction_object["expires_at"]
+
+        loop = asyncio.get_event_loop()
+        self.schedule_expiration(loop, infraction_object)
+
+        if reason is None:
+            result_message = f":ok_hand: muted {user.mention} until {infraction_expiration}."
+        else:
+            result_message = f":ok_hand: muted {user.mention} until {infraction_expiration} ({reason})."
+
+        await ctx.send(result_message)
+
+        # Send a log message to the mod log
+        await self.mod_log.send_log_message(
+            icon_url=Icons.user_mute,
+            colour=Colour(Colours.soft_red),
+            title="Member temporarily muted",
+            thumbnail=user.avatar_url_as(static_format="png"),
+            text=textwrap.dedent(f"""
+                Member: {user.mention} (`{user.id}`)
+                Actor: {ctx.message.author}
+                Reason: {reason}
+                Duration: {duration}
+                Expires: {infraction_expiration}
+            """)
+        )
+
+    @with_role(*MODERATION_ROLES)
+    @command(name="shadow_tempban", hidden=True, aliases=["shadowtempban, stempban"])
+    async def shadow_tempban(self, ctx, user: User, duration: str, *, reason: str = None):
+        """
+        Create a temporary ban infraction in the database for a user.
+        :param user: Accepts user mention, ID, etc.
+        :param duration: The duration for the temporary ban infraction
+        :param reason: The reason for the temporary ban.
+        """
+
+        try:
+            response = await self.bot.http_session.post(
+                URLs.site_infractions,
+                headers=self.headers,
+                json={
+                    "type": "ban",
+                    "reason": reason,
+                    "duration": duration,
+                    "user_id": str(user.id),
+                    "actor_id": str(ctx.message.author.id),
+                    "hidden": True
+                }
+            )
+        except ClientError:
+            log.exception("There was an error adding an infraction.")
+            await ctx.send(":x: There was an error adding the infraction.")
+            return
+
+        response_object = await response.json()
+        if "error_code" in response_object:
+            await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
+            return
+
+        self.mod_log.ignore(Event.member_ban, user.id)
+        self.mod_log.ignore(Event.member_remove, user.id)
+        guild: Guild = ctx.guild
+        await guild.ban(user, reason=reason, delete_message_days=0)
+
+        infraction_object = response_object["infraction"]
+        infraction_expiration = infraction_object["expires_at"]
+
+        loop = asyncio.get_event_loop()
+        self.schedule_expiration(loop, infraction_object)
+
+        if reason is None:
+            result_message = f":ok_hand: banned {user.mention} until {infraction_expiration}."
+        else:
+            result_message = f":ok_hand: banned {user.mention} until {infraction_expiration} ({reason})."
+
+        await ctx.send(result_message)
+
+        # Send a log message to the mod log
+        await self.mod_log.send_log_message(
+            icon_url=Icons.user_ban,
+            colour=Colour(Colours.soft_red),
+            thumbnail=user.avatar_url_as(static_format="png"),
+            title="Member temporarily banned",
+            text=textwrap.dedent(f"""
+                Member: {user.mention} (`{user.id}`)
+                Actor: {ctx.message.author}
+                Reason: {reason}
+                Duration: {duration}
+                Expires: {infraction_expiration}
+            """)
+        )
+
+    # endregion
     # region: Remove infractions (un- commands)
 
     @with_role(*MODERATION_ROLES)
@@ -682,6 +1020,7 @@ class Moderation(Scheduler):
                 URLs.site_infractions_user.format(
                     user_id=user.id
                 ),
+                params={"hidden": "True"},
                 headers=self.headers
             )
             infraction_list = await response.json()
@@ -707,7 +1046,7 @@ class Moderation(Scheduler):
         try:
             response = await self.bot.http_session.get(
                 URLs.site_infractions,
-                params={"search": reason},
+                params={"search": reason, "hidden": "True"},
                 headers=self.headers
             )
             infraction_list = await response.json()
@@ -803,12 +1142,14 @@ class Moderation(Scheduler):
         actor = guild.get_member(actor_id)
         active = infraction_object["active"] is True
         user_id = int(infraction_object["user"]["user_id"])
+        hidden = infraction_object.get("hidden", False) is True
 
         lines = textwrap.dedent(f"""
             {"**===============**" if active else "==============="}
             Status: {"__**Active**__" if active else "Inactive"}
             User: {self.bot.get_user(user_id)} (`{user_id}`)
             Type: **{infraction_object["type"]}**
+            Shadow: {hidden}
             Reason: {infraction_object["reason"] or "*None*"}
             Created: {infraction_object["inserted_at"]}
             Expires: {infraction_object["expires_at"] or "*Permanent*"}
