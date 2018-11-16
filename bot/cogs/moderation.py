@@ -1,10 +1,13 @@
 import asyncio
 import logging
 import textwrap
+import typing
 
 from aiohttp import ClientError
 from discord import Colour, Embed, Guild, Member, Object, User
-from discord.ext.commands import Bot, Context, command, group
+from discord.ext.commands import (
+    BadArgument, BadUnionArgument, Bot, Context, command, group
+)
 
 from bot import constants
 from bot.cogs.modlog import ModLog
@@ -18,6 +21,17 @@ from bot.utils.time import parse_rfc1123, wait_until
 log = logging.getLogger(__name__)
 
 MODERATION_ROLES = Roles.owner, Roles.admin, Roles.moderator
+
+
+def proxy_user(user_id: str) -> Object:
+    try:
+        user_id = int(user_id)
+    except ValueError:
+        raise BadArgument
+    user = Object(user_id)
+    user.mention = user.id
+    user.avatar_url_as = lambda static_format: None
+    return user
 
 
 class Moderation(Scheduler):
@@ -52,7 +66,7 @@ class Moderation(Scheduler):
 
     @with_role(*MODERATION_ROLES)
     @command(name="warn")
-    async def warn(self, ctx: Context, user: User, *, reason: str = None):
+    async def warn(self, ctx: Context, user: typing.Union[User, proxy_user], *, reason: str = None):
         """
         Create a warning infraction in the database for a user.
         :param user: accepts user mention, ID, etc.
@@ -89,7 +103,7 @@ class Moderation(Scheduler):
 
     @with_role(*MODERATION_ROLES)
     @command(name="kick")
-    async def kick(self, ctx, user: Member, *, reason: str = None):
+    async def kick(self, ctx: Context, user: Member, *, reason: str = None):
         """
         Kicks a user.
         :param user: accepts user mention, ID, etc.
@@ -142,7 +156,7 @@ class Moderation(Scheduler):
 
     @with_role(*MODERATION_ROLES)
     @command(name="ban")
-    async def ban(self, ctx: Context, user: User, *, reason: str = None):
+    async def ban(self, ctx: Context, user: typing.Union[User, proxy_user], *, reason: str = None):
         """
         Create a permanent ban infraction in the database for a user.
         :param user: Accepts user mention, ID, etc.
@@ -316,7 +330,7 @@ class Moderation(Scheduler):
 
     @with_role(*MODERATION_ROLES)
     @command(name="tempban")
-    async def tempban(self, ctx, user: User, duration: str, *, reason: str = None):
+    async def tempban(self, ctx: Context, user: typing.Union[User, proxy_user], duration: str, *, reason: str = None):
         """
         Create a temporary ban infraction in the database for a user.
         :param user: Accepts user mention, ID, etc.
@@ -384,7 +398,7 @@ class Moderation(Scheduler):
 
     @with_role(*MODERATION_ROLES)
     @command(name="shadow_warn", hidden=True, aliases=['shadowwarn', 'swarn', 'note'])
-    async def shadow_warn(self, ctx: Context, user: User, *, reason: str = None):
+    async def shadow_warn(self, ctx: Context, user: typing.Union[User, proxy_user], *, reason: str = None):
         """
         Create a warning infraction in the database for a user.
         :param user: accepts user mention, ID, etc.
@@ -476,7 +490,7 @@ class Moderation(Scheduler):
 
     @with_role(*MODERATION_ROLES)
     @command(name="shadow_ban", hidden=True, aliases=['shadowban', 'sban'])
-    async def shadow_ban(self, ctx: Context, user: User, *, reason: str = None):
+    async def shadow_ban(self, ctx: Context, user: typing.Union[User, proxy_user], *, reason: str = None):
         """
         Create a permanent ban infraction in the database for a user.
         :param user: Accepts user mention, ID, etc.
@@ -653,7 +667,9 @@ class Moderation(Scheduler):
 
     @with_role(*MODERATION_ROLES)
     @command(name="shadow_tempban", hidden=True, aliases=["shadowtempban, stempban"])
-    async def shadow_tempban(self, ctx, user: User, duration: str, *, reason: str = None):
+    async def shadow_tempban(
+            self, ctx: Context, user: typing.Union[User, proxy_user], duration: str, *, reason: str = None
+    ):
         """
         Create a temporary ban infraction in the database for a user.
         :param user: Accepts user mention, ID, etc.
@@ -722,7 +738,7 @@ class Moderation(Scheduler):
 
     @with_role(*MODERATION_ROLES)
     @command(name="unmute")
-    async def unmute(self, ctx, user: Member):
+    async def unmute(self, ctx: Context, user: Member):
         """
         Deactivates the active mute infraction for a user.
         :param user: Accepts user mention, ID, etc.
@@ -773,7 +789,7 @@ class Moderation(Scheduler):
 
     @with_role(*MODERATION_ROLES)
     @command(name="unban")
-    async def unban(self, ctx, user: User):
+    async def unban(self, ctx: Context, user: typing.Union[User, proxy_user]):
         """
         Deactivates the active ban infraction for a user.
         :param user: Accepts user mention, ID, etc.
@@ -841,7 +857,7 @@ class Moderation(Scheduler):
 
     @with_role(*MODERATION_ROLES)
     @infraction_edit_group.command(name="duration")
-    async def edit_duration(self, ctx, infraction_id: str, duration: str):
+    async def edit_duration(self, ctx: Context, infraction_id: str, duration: str):
         """
         Sets the duration of the given infraction, relative to the time of updating.
         :param infraction_id: the id (UUID) of the infraction
@@ -924,7 +940,7 @@ class Moderation(Scheduler):
 
     @with_role(*MODERATION_ROLES)
     @infraction_edit_group.command(name="reason")
-    async def edit_reason(self, ctx, infraction_id: str, *, reason: str):
+    async def edit_reason(self, ctx: Context, infraction_id: str, *, reason: str):
         """
         Sets the reason of the given infraction.
         :param infraction_id: the id (UUID) of the infraction
@@ -1010,7 +1026,7 @@ class Moderation(Scheduler):
 
     @with_role(*MODERATION_ROLES)
     @infraction_search_group.command(name="user", aliases=("member", "id"))
-    async def search_user(self, ctx, user: User):
+    async def search_user(self, ctx: Context, user: typing.Union[User, proxy_user]):
         """
         Search for infractions by member.
         """
@@ -1038,7 +1054,7 @@ class Moderation(Scheduler):
 
     @with_role(*MODERATION_ROLES)
     @infraction_search_group.command(name="reason", aliases=("match", "regex", "re"))
-    async def search_reason(self, ctx, reason: str):
+    async def search_reason(self, ctx: Context, reason: str):
         """
         Search for infractions by their reason. Use Re2 for matching.
         """
@@ -1111,6 +1127,7 @@ class Moderation(Scheduler):
         un-schedule an expiration task.
         :param infraction_object: the infraction in question
         """
+
         guild: Guild = self.bot.get_guild(constants.Guild.id)
         user_id = int(infraction_object["user"]["user_id"])
         infraction_type = infraction_object["type"]
@@ -1124,7 +1141,7 @@ class Moderation(Scheduler):
             else:
                 log.warning(f"Failed to un-mute user: {user_id} (not found)")
         elif infraction_type == "ban":
-            user: User = self.bot.get_user(user_id)
+            user: Object = Object(user_id)
             await guild.unban(user)
 
         await self.bot.http_session.patch(
@@ -1161,6 +1178,11 @@ class Moderation(Scheduler):
         return lines.strip()
 
     # endregion
+
+    async def __error(self, ctx, error):
+        if isinstance(error, BadUnionArgument):
+            if User in error.converters:
+                await ctx.send(str(error.errors[0]))
 
 
 def setup(bot):
