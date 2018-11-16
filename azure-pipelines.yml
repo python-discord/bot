@@ -1,0 +1,40 @@
+# https://aka.ms/yaml
+
+pool:
+  vmImage: 'Ubuntu 16.04'
+
+variables:
+  ENV LIBRARY_PATH: /lib:/usr/lib
+  ENV PIPENV_HIDE_EMOJIS: 1
+  ENV PIPENV_IGNORE_VIRTUALENVS: 1
+  ENV PIPENV_NOSPIN: 1
+  ENV PIPENV_VENV_IN_PROJECT: 1
+
+jobs:
+- job: test
+  displayName: 'Lint and test'
+
+  pool:
+    vmImage: 'Ubuntu 16.04'
+  
+  variables:
+    PIPENV_CACHE_DIR: ".cache/pipenv"
+    PIP_CACHE_DIR: ".cache/pip"
+
+  steps:
+  - script: apt-get install build-essential curl docker libffi-dev libfreetype6-dev libxml2 libxml2-dev libxslt1-dev zlib1g zlib1g-dev
+    displayName: 'Install base dependencies'
+  
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.7.x' 
+      addToPath: true 
+
+  - script: pip install pipenv
+    displayName: 'Install pipenv'
+  
+  - script: pipenv install --dev --deploy --system
+    displayName: 'Install project using pipenv'
+  
+  - script: python -m flake8
+    displayName: 'Run linter'
