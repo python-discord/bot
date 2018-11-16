@@ -23,6 +23,7 @@ jobs:
     displayName: 'Install base dependencies'
   
   - task: UsePythonVersion@0
+    displayName: 'Set Python version'
     inputs:
       versionSpec: '3.7.x' 
       addToPath: true 
@@ -35,3 +36,23 @@ jobs:
   
   - script: python -m flake8
     displayName: 'Run linter'
+
+- job: build
+  displayName: 'Build containers'
+  
+  trigger:
+    branches:
+      include:
+        - master
+  
+  steps:
+  - task: Docker@1
+    displayName: 'Login: Docker Hub'
+
+    inputs:
+      containerregistrytype: 'Container Registry'
+      dockerRegistryEndpoint: 'Docker Hub'
+      command: 'login'
+
+  - bash: sh scripts/deploy-azure.sh
+    displayName: 'Build and deploy containers'
