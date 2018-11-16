@@ -39,6 +39,7 @@ jobs:
 
 - job: build
   displayName: 'Build containers'
+  dependsOn: 'test'
   
   steps:
   - task: Docker@1
