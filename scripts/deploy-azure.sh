@@ -1,7 +1,5 @@
 #!/bin/bash
 
-export SYSTEM_PULLREQUEST_PULLREQUESTID="$(echo -e '${SYSTEM_PULLREQUEST_PULLREQUESTID}' | xargs)"
-
 # Build and deploy on master branch, only if not a pull request
 if [[ ($BUILD_SOURCEBRANCHNAME == 'master') && ($SYSTEM_PULLREQUEST_PULLREQUESTID == '') ]]; then
     changed_lines=$(git diff HEAD~1 HEAD docker/base.Dockerfile | wc -l)
