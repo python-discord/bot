@@ -19,7 +19,7 @@ jobs:
     PIP_CACHE_DIR: ".cache/pip"
 
   steps:
-  - script: apt-get install build-essential curl docker libffi-dev libfreetype6-dev libxml2 libxml2-dev libxslt1-dev zlib1g zlib1g-dev
+  - script: sudo apt-get install build-essential curl docker libffi-dev libfreetype6-dev libxml2 libxml2-dev libxslt1-dev zlib1g zlib1g-dev
     displayName: 'Install base dependencies'
   
   - task: UsePythonVersion@0
@@ -27,7 +27,7 @@ jobs:
       versionSpec: '3.7.x' 
       addToPath: true 
 
-  - script: pip install pipenv
+  - script: sudo pip install pipenv
     displayName: 'Install pipenv'
   
   - script: pipenv install --dev --deploy --system
