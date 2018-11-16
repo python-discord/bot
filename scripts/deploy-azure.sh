@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export SYSTEM_PULLREQUEST_PULLREQUESTID = $SYSTEM_PULLREQUEST_PULLREQUESTID | xargs
+export SYSTEM_PULLREQUEST_PULLREQUESTID="$(echo -e '${SYSTEM_PULLREQUEST_PULLREQUESTID}' | xargs)"
 
 # Build and deploy on master branch, only if not a pull request
 if [[ ($BUILD_SOURCEBRANCHNAME == 'master') && ($SYSTEM_PULLREQUEST_PULLREQUESTID == '') ]]; then
