@@ -23,7 +23,7 @@ if [[ ($BUILD_SOURCEBRANCHNAME == 'master') && ($SYSTEM_PULLREQUEST_PULLREQUESTI
     docker push pythondiscord/bot:latest
 
     echo "Deploying container"
-    curl -H "token: $AUTODEPLOY_TOKEN" $AUTODEPLOY_WEBHOOK
+    curl -H "token: $1" $2
 else
     echo "Skipping deploy"
 fi

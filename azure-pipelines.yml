@@ -55,3 +55,4 @@ jobs:
 
     inputs:
       scriptPath: scripts/deploy-azure.sh
+      args: '$(AUTODEPLOY_TOKEN) $(AUTODEPLOY_WEBHOOK)'
