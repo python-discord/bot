@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Build and deploy on master branch
-if [ $BUILD_SOURCEBRANCHNAME == 'master' ]; then
+if [[ $BUILD_SOURCEBRANCHNAME == 'master' ]]; then
     changed_lines=$(git diff HEAD~1 HEAD docker/base.Dockerfile | wc -l)
 
     if [ $changed_lines != '0' ]; then
