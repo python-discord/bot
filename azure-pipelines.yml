@@ -50,5 +50,8 @@ jobs:
       dockerRegistryEndpoint: 'DockerHub'
       command: 'login'
 
-  - bash: bash scripts/deploy-azure.sh
+  - task: ShellScript@2
     displayName: 'Build and deploy containers'
+
+    inputs:
+      scriptPath: scripts/deploy-azure.sh
