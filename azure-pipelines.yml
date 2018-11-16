@@ -46,7 +46,7 @@ jobs:
 
     inputs:
       containerregistrytype: 'Container Registry'
-      dockerRegistryEndpoint: 'Docker Hub'
+      dockerRegistryEndpoint: 'DockerHub'
       command: 'login'
 
   - bash: sh scripts/deploy-azure.sh
