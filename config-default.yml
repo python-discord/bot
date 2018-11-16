@@ -77,6 +77,7 @@ style:
         remind_green:   "https://cdn.discordapp.com/emojis/477907607785570310.png"
         remind_red:     "https://cdn.discordapp.com/emojis/477907608057937930.png"
 
+        questionmark: "https://cdn.discordapp.com/emojis/512367613339369475.png"
 
 guild:
     id: 267624335836053506
