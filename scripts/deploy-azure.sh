@@ -1,9 +1,9 @@
 #!/bin/bash
 
-echo "PR ID: $SYSTEM_PULLREQUEST_PULLREQUESTID"
+export SYSTEM_PULLREQUEST_PULLREQUESTID = $SYSTEM_PULLREQUEST_PULLREQUESTID | xargs
 
 # Build and deploy on master branch, only if not a pull request
-if [[ ($BUILD_SOURCEBRANCHNAME == 'master') && (-z '$SYSTEM_PULLREQUEST_PULLREQUESTID') ]]; then
+if [[ ($BUILD_SOURCEBRANCHNAME == 'master') && ($SYSTEM_PULLREQUEST_PULLREQUESTID == '') ]]; then
     changed_lines=$(git diff HEAD~1 HEAD docker/base.Dockerfile | wc -l)
 
     if [ $changed_lines != '0' ]; then
