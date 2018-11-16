@@ -40,11 +40,6 @@ jobs:
 - job: build
   displayName: 'Build containers'
   
-  trigger:
-    branches:
-      include:
-        - master
-  
   steps:
   - task: Docker@1
     displayName: 'Login: Docker Hub'
