@@ -297,6 +297,8 @@ class Icons(metaclass=YAMLGetter):
     remind_green: str
     remind_red: str
 
+    questionmark: str
+
 
 class CleanMessages(metaclass=YAMLGetter):
     section = "bot"
