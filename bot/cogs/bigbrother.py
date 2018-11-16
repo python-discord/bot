@@ -26,6 +26,7 @@ class BigBrother:
         self.bot = bot
         self.watched_users = {}  # { user_id: log_channel_id }
         self.channel_queues = defaultdict(lambda: defaultdict(deque))  # { user_id: { channel_id: queue(messages) }
+        self.last_log = [None, None, 0]  # [user_id, channel_id, message_count]
         self.consuming = False
 
         self.bot.loop.create_task(self.get_watched_users())
@@ -106,17 +107,12 @@ class BigBrother:
         for user_id, queues in channel_queues.items():
             for _, queue in queues.items():
                 channel = self.watched_users[user_id]
-
-                if queue:
-                    # Send a header embed before sending all messages in the queue.
-                    msg = queue[0]
-                    embed = Embed(description=f"{msg.author.mention} in [#{msg.channel.name}]({msg.jump_url})")
-                    embed.set_author(name=msg.author.nick or msg.author.name, icon_url=msg.author.avatar_url)
-                    await channel.send(embed=embed)
-
                 while queue:
                     msg = queue.popleft()
                     log.trace(f"Consuming message: {msg.clean_content} ({len(msg.attachments)} attachments)")
+
+                    self.last_log[2] += 1  # Increment message count.
+                    await self.send_header(msg, channel)
                     await self.log_message(msg, channel)
 
         if self.channel_queues:
@@ -125,6 +121,28 @@ class BigBrother:
         else:
             log.trace("Done consuming messages.")
             self.consuming = False
+
+    async def send_header(self, message: Message, destination: TextChannel):
+        """
+        Sends a log message header to the given channel.
+
+        A header is only sent if the user or channel are different than the previous, or if the configured message
+        limit for a single header has been exceeded.
+
+        :param message: the first message in the queue
+        :param destination: the channel in which to send the header
+        """
+
+        last_user, last_channel, msg_count = self.last_log
+        limit = BigBrotherConfig.header_message_limit
+
+        # Send header if user/channel are different or if message limit exceeded.
+        if message.author.id != last_user or message.channel.id != last_channel or msg_count > limit:
+            self.last_log = [message.author.id, message.channel.id, 0]
+
+            embed = Embed(description=f"{message.author.mention} in [#{message.channel.name}]({message.jump_url})")
+            embed.set_author(name=message.author.nick or message.author.name, icon_url=message.author.avatar_url)
+            await destination.send(embed=embed)
 
     @staticmethod
     async def log_message(message: Message, destination: TextChannel):

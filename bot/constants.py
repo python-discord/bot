@@ -452,6 +452,7 @@ class BigBrother(metaclass=YAMLGetter):
     section = 'big_brother'
 
     log_delay: int
+    header_message_limit: int
 
 
 # Debug mode

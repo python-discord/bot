@@ -319,6 +319,7 @@ wolfram:
 
 big_brother:
     log_delay: 15
+    header_message_limit: 15
 
 
 config:
