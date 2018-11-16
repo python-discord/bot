@@ -1,5 +1,5 @@
 bot:
-    help_prefix:      "bot."
+    prefix:      "!"
     token:       !ENV "BOT_TOKEN"
 
     cooldowns:

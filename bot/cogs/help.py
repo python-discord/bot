@@ -424,7 +424,7 @@ class HelpSession:
                         strikeout = '~~'
 
                     signature = self._get_command_params(command)
-                    prefix = constants.Bot.help_prefix
+                    prefix = constants.Bot.prefix
                     info = f"{strikeout}**`{prefix}{signature}`**{strikeout}"
 
                     # handle if the command has no docstring

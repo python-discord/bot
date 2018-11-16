@@ -12,7 +12,7 @@ from bot.utils.service_discovery import wait_for_rmq
 log = logging.getLogger(__name__)
 
 bot = Bot(
-    command_prefix=when_mentioned_or("!"),
+    command_prefix=when_mentioned_or(BotConfig.prefix),
     activity=Game(name="Commands: !help"),
     case_insensitive=True,
     max_messages=10_000

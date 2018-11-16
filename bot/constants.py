@@ -191,7 +191,7 @@ class YAMLGetter(type):
 class Bot(metaclass=YAMLGetter):
     section = "bot"
 
-    help_prefix: str
+    prefix: str
     token: str
 
 
