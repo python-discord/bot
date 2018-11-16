@@ -184,7 +184,7 @@ class Snekbox:
                         msg = f"{ctx.author.mention} Your eval job has completed.\n\n```py\n{output}\n```"
 
                     response = await ctx.send(msg)
-                    await wait_for_deletion(response, user_ids=(ctx.author.id,), client=ctx.bot)
+                    self.bot.loop.create_task(wait_for_deletion(response, user_ids=(ctx.author.id,), client=ctx.bot))
 
                 else:
                     await ctx.send(
