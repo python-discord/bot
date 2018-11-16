@@ -1,7 +1,9 @@
 #!/bin/bash
 
-# Build and deploy on master branch
-if [[ $BUILD_SOURCEBRANCHNAME == 'master' ]]; then
+if [[ ]]
+
+# Build and deploy on master branch, only if not a pull request
+if [[ $BUILD_SOURCEBRANCHNAME == 'master' ]] && [[ -z "${SYSTEM_PULLREQUEST_PULLREQUESTID}" ]]; then
     changed_lines=$(git diff HEAD~1 HEAD docker/base.Dockerfile | wc -l)
 
     if [ $changed_lines != '0' ]; then
@@ -22,8 +24,8 @@ if [[ $BUILD_SOURCEBRANCHNAME == 'master' ]]; then
     echo "Pushing image"
     docker push pythondiscord/bot:latest
 
-    # echo "Deploying container"
-    # curl -H "token: $AUTODEPLOY_TOKEN" $AUTODEPLOY_WEBHOOK
+    echo "Deploying container"
+    curl -H "token: $AUTODEPLOY_TOKEN" $AUTODEPLOY_WEBHOOK
 else
     echo "Skipping deploy"
 fi

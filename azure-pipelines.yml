@@ -9,7 +9,7 @@ variables:
 
 jobs:
 - job: test
-  displayName: 'Lint and test'
+  displayName: 'Lint & Test'
 
   pool:
     vmImage: 'Ubuntu 16.04'
@@ -38,7 +38,7 @@ jobs:
     displayName: 'Run linter'
 
 - job: build
-  displayName: 'Build containers'
+  displayName: 'Build Containers'
   dependsOn: 'test'
   
   steps:

@@ -26,13 +26,3 @@ test:
     - python -m flake8
     - ls /root/.cache/
 
-build:
-  tags:
-  - docker
-
-  services:
-    - docker:dind
-
-  stage: build
-  script:
-    - sh scripts/deploy.sh
