@@ -8,7 +8,7 @@ ENV PIPENV_HIDE_EMOJIS=1
 COPY . /bot
 WORKDIR /bot
 
-RUN pipenv install --deploy --system
+RUN pipenv sync --deploy --system
 
 ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["python", "-m", "bot"]
