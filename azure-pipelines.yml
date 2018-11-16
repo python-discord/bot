@@ -1,8 +1,5 @@
 # https://aka.ms/yaml
 
-pool:
-  vmImage: 'Ubuntu 16.04'
-
 variables:
   ENV LIBRARY_PATH: /lib:/usr/lib
   ENV PIPENV_HIDE_EMOJIS: 1
