@@ -153,7 +153,7 @@ class Alias:
 
     @get_group_alias.command(name="tags", aliases=("tag", "t"), hidden=True)
     async def tags_get_alias(
-            self, ctx: Context, *, tag_name: TagNameConverter=None
+            self, ctx: Context, *, tag_name: TagNameConverter = None
     ):
         """
         Alias for invoking <prefix>tags get [tag_name].

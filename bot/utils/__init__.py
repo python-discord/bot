@@ -35,9 +35,9 @@ async def disambiguate(
     choices = (f'{index}: {entry}' for index, entry in enumerate(entries, start=1))
 
     def check(message):
-        return (message.content.isdigit() and
-                message.author == ctx.author and
-                message.channel == ctx.channel)
+        return (message.content.isdigit()
+                and message.author == ctx.author
+                and message.channel == ctx.channel)
 
     try:
         if embed is None:

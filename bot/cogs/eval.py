@@ -97,8 +97,7 @@ class CodeEval:
             res = (res, out)
 
         else:
-            if (isinstance(out, str) and
-                    out.startswith("Traceback (most recent call last):\n")):
+            if (isinstance(out, str) and out.startswith("Traceback (most recent call last):\n")):
                 # Leave out the traceback message
                 out = "\n" + "\n".join(out.split("\n")[1:])
 
@@ -115,9 +114,9 @@ class CodeEval:
                 # Text too long, shorten
                 li = pretty.split("\n")
 
-                pretty = ("\n".join(li[:3]) +  # First 3 lines
-                          "\n ...\n" +  # Ellipsis to indicate removed lines
-                          "\n".join(li[-3:]))  # last 3 lines
+                pretty = ("\n".join(li[:3])  # First 3 lines
+                          + "\n ...\n"  # Ellipsis to indicate removed lines
+                          + "\n".join(li[-3:]))  # last 3 lines
 
             # Add the output
             res += pretty

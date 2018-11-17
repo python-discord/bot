@@ -285,9 +285,9 @@ class Bot:
                         howto = (
                             "It looks like you are trying to paste code into this channel.\n\n"
                             "You seem to be using the wrong symbols to indicate where the codeblock should start. "
-                            f"The correct symbols would be \`\`\`, not `{ticks}`.\n\n"
+                            f"The correct symbols would be \\`\\`\\`, not `{ticks}`.\n\n"
                             "**Here is an example of how it should look:**\n"
-                            f"\`\`\`python\n{content}\n\`\`\`\n\n**This will result in the following:**\n"
+                            f"\\`\\`\\`python\n{content}\n\\`\\`\\`\n\n**This will result in the following:**\n"
                             f"```python\n{content}\n```"
                         )
 
@@ -329,7 +329,7 @@ class Bot:
                                 "syntax highlighting. Please use these whenever you paste code, as this "
                                 "helps improve the legibility and makes it easier for us to help you.\n\n"
                                 f"**To do this, use the following method:**\n"
-                                f"\`\`\`python\n{content}\n\`\`\`\n\n**This will result in the following:**\n"
+                                f"\\`\\`\\`python\n{content}\n\\`\\`\\`\n\n**This will result in the following:**\n"
                                 f"```python\n{content}\n```"
                             )
 
