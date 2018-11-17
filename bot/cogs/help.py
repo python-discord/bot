@@ -355,10 +355,18 @@ class HelpSession:
         # Use LinePaginator to restrict embed line height
         paginator = LinePaginator(prefix='', suffix='', max_lines=self._max_lines)
 
+        prefix = constants.Bot.prefix
+
         # show signature if query is a command
         if isinstance(self.query, commands.Command):
             signature = self._get_command_params(self.query)
-            paginator.add_line(f'**```{signature}```**')
+            parent = self.query.full_parent_name + ' ' if self.query.parent else ''
+            paginator.add_line(f'**```{prefix}{parent}{signature}```**')
+
+            # show command aliases
+            aliases = ', '.join(f'`{a}`' for a in self.query.aliases)
+            if aliases:
+                paginator.add_line(f'**Can also use:** {aliases}\n')
 
             if not await self.query.can_run(self._ctx):
                 paginator.add_line('***You cannot run this command.***\n')
@@ -392,6 +400,9 @@ class HelpSession:
             elif isinstance(self.query, commands.Command):
                 grouped = (('**Subcommands:**', self.query.commands),)
 
+                # don't show prefix for subcommands
+                prefix = ''
+
             # otherwise sort and organise all commands into categories
             else:
                 cat_sort = sorted(filtered, key=self._category_key)
@@ -424,7 +435,6 @@ class HelpSession:
                         strikeout = '~~'
 
                     signature = self._get_command_params(command)
-                    prefix = constants.Bot.prefix
                     info = f"{strikeout}**`{prefix}{signature}`**{strikeout}"
 
                     # handle if the command has no docstring
