@@ -35,6 +35,7 @@ class Verification:
 
     def __init__(self, bot: Bot):
         self.bot = bot
+        self.bot.add_check(self.block_other_commands)
 
     @property
     def mod_log(self) -> ModLog:
@@ -150,6 +151,17 @@ class Verification:
         await ctx.send(
             f"{ctx.author.mention} Unsubscribed from <#{Channels.announcements}> notifications."
         )
+
+    @staticmethod
+    def block_other_commands(ctx: Context):
+        """
+        Block any command within the verification channel that is not !accept.
+        """
+
+        if ctx.channel.id == Channels.verification:
+            return ctx.command.name == "accept"
+        else:
+            return True
 
 
 def setup(bot):
