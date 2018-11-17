@@ -290,6 +290,7 @@ class Icons(metaclass=YAMLGetter):
 
     user_mute: str
     user_unmute: str
+    user_verified: str
 
     pencil: str
 

@@ -5,6 +5,7 @@ from discord import Colour, Embed, Member
 from discord.errors import Forbidden
 from discord.ext.commands import Bot, Context, command
 
+from bot.cogs.moderation import Moderation
 from bot.constants import (
     Channels, Keys,
     NEGATIVE_REPLIES, POSITIVE_REPLIES,
@@ -14,6 +15,7 @@ from bot.decorators import with_role
 
 
 log = logging.getLogger(__name__)
+NICKNAME_POLICY_URL = "https://pythondiscord.com/about/rules#nickname-policy"
 
 
 class Superstarify:
@@ -24,6 +26,10 @@ class Superstarify:
     def __init__(self, bot: Bot):
         self.bot = bot
         self.headers = {"X-API-KEY": Keys.site_api}
+
+    @property
+    def moderation(self) -> Moderation:
+        return self.bot.get_cog("Moderation")
 
     async def on_member_update(self, before, after):
         """
@@ -133,7 +139,7 @@ class Superstarify:
                 f"Your new nickname will be **{forced_nick}**.\n\n"
                 f"You will be unable to change your nickname until \n**{end_time}**.\n\n"
                 "If you're confused by this, please read our "
-                "[official nickname policy](https://pythondiscord.com/about/rules#nickname-policy)."
+                f"[official nickname policy]({NICKNAME_POLICY_URL})."
             )
             embed.set_image(url=image_url)
 
@@ -144,6 +150,13 @@ class Superstarify:
                 f":middle_finger: {member.name}#{member.discriminator} (`{member.id}`) "
                 f"has been superstarified by **{ctx.author.name}**. Their new nickname is `{forced_nick}`. "
                 f"They will not be able to change their nickname again until **{end_time}**"
+            )
+
+            await self.moderation.notify_infraction(
+                user=member,
+                infr_type="Superstarify",
+                duration=duration,
+                reason=f"Your nickname didn't comply with our [nickname policy]({NICKNAME_POLICY_URL})."
             )
 
             # Change the nick and return the embed
@@ -184,6 +197,13 @@ class Superstarify:
             log.warning(
                 f"Error encountered when trying to unsuperstarify {member.display_name}:\n"
                 f"{response}"
+            )
+
+        else:
+            await self.moderation.notify_pardon(
+                user=member,
+                title="You are no longer superstarified.",
+                content="You may now change your nickname on the server."
             )
 
         log.debug(f"{member.display_name} was successfully released from superstar-prison.")

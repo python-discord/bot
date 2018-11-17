@@ -1,10 +1,12 @@
 import asyncio
 import logging
 import textwrap
-import typing
+from typing import Union
 
 from aiohttp import ClientError
-from discord import Colour, Embed, Guild, Member, Object, User
+from discord import (
+    Colour, Embed, Forbidden, Guild, HTTPException, Member, Object, User
+)
 from discord.ext.commands import (
     BadArgument, BadUnionArgument, Bot, Context, command, group
 )
@@ -15,12 +17,17 @@ from bot.constants import Colours, Event, Icons, Keys, Roles, URLs
 from bot.converters import InfractionSearchQuery
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
-from bot.utils.scheduling import Scheduler
+from bot.utils.scheduling import Scheduler, create_task
 from bot.utils.time import parse_rfc1123, wait_until
 
 log = logging.getLogger(__name__)
 
 MODERATION_ROLES = Roles.owner, Roles.admin, Roles.moderator
+INFRACTION_ICONS = {
+    "Mute": Icons.user_mute,
+    "Kick": Icons.sign_out,
+    "Ban": Icons.user_ban
+}
 
 
 def proxy_user(user_id: str) -> Object:
@@ -66,12 +73,18 @@ class Moderation(Scheduler):
 
     @with_role(*MODERATION_ROLES)
     @command(name="warn")
-    async def warn(self, ctx: Context, user: typing.Union[User, proxy_user], *, reason: str = None):
+    async def warn(self, ctx: Context, user: Union[User, proxy_user], *, reason: str = None):
         """
         Create a warning infraction in the database for a user.
         :param user: accepts user mention, ID, etc.
         :param reason: The reason for the warning.
         """
+
+        await self.notify_infraction(
+            user=user,
+            infr_type="Warning",
+            reason=reason
+        )
 
         try:
             response = await self.bot.http_session.post(
@@ -109,6 +122,12 @@ class Moderation(Scheduler):
         :param user: accepts user mention, ID, etc.
         :param reason: The reason for the kick.
         """
+
+        await self.notify_infraction(
+            user=user,
+            infr_type="Kick",
+            reason=reason
+        )
 
         try:
             response = await self.bot.http_session.post(
@@ -156,12 +175,19 @@ class Moderation(Scheduler):
 
     @with_role(*MODERATION_ROLES)
     @command(name="ban")
-    async def ban(self, ctx: Context, user: typing.Union[User, proxy_user], *, reason: str = None):
+    async def ban(self, ctx: Context, user: Union[User, proxy_user], *, reason: str = None):
         """
         Create a permanent ban infraction in the database for a user.
         :param user: Accepts user mention, ID, etc.
         :param reason: The reason for the ban.
         """
+
+        await self.notify_infraction(
+            user=user,
+            infr_type="Ban",
+            duration="Permanent",
+            reason=reason
+        )
 
         try:
             response = await self.bot.http_session.post(
@@ -216,6 +242,13 @@ class Moderation(Scheduler):
         :param user: Accepts user mention, ID, etc.
         :param reason: The reason for the mute.
         """
+
+        await self.notify_infraction(
+            user=user,
+            infr_type="Mute",
+            duration="Permanent",
+            reason=reason
+        )
 
         try:
             response = await self.bot.http_session.post(
@@ -275,6 +308,13 @@ class Moderation(Scheduler):
         :param reason: The reason for the temporary mute.
         """
 
+        await self.notify_infraction(
+            user=user,
+            infr_type="Mute",
+            duration=duration,
+            reason=reason
+        )
+
         try:
             response = await self.bot.http_session.post(
                 URLs.site_infractions,
@@ -330,13 +370,20 @@ class Moderation(Scheduler):
 
     @with_role(*MODERATION_ROLES)
     @command(name="tempban")
-    async def tempban(self, ctx: Context, user: typing.Union[User, proxy_user], duration: str, *, reason: str = None):
+    async def tempban(self, ctx: Context, user: Union[User, proxy_user], duration: str, *, reason: str = None):
         """
         Create a temporary ban infraction in the database for a user.
         :param user: Accepts user mention, ID, etc.
         :param duration: The duration for the temporary ban infraction
         :param reason: The reason for the temporary ban.
         """
+
+        await self.notify_infraction(
+            user=user,
+            infr_type="Ban",
+            duration=duration,
+            reason=reason
+        )
 
         try:
             response = await self.bot.http_session.post(
@@ -398,7 +445,7 @@ class Moderation(Scheduler):
 
     @with_role(*MODERATION_ROLES)
     @command(name="shadow_warn", hidden=True, aliases=['shadowwarn', 'swarn', 'note'])
-    async def shadow_warn(self, ctx: Context, user: typing.Union[User, proxy_user], *, reason: str = None):
+    async def shadow_warn(self, ctx: Context, user: Union[User, proxy_user], *, reason: str = None):
         """
         Create a warning infraction in the database for a user.
         :param user: accepts user mention, ID, etc.
@@ -490,7 +537,7 @@ class Moderation(Scheduler):
 
     @with_role(*MODERATION_ROLES)
     @command(name="shadow_ban", hidden=True, aliases=['shadowban', 'sban'])
-    async def shadow_ban(self, ctx: Context, user: typing.Union[User, proxy_user], *, reason: str = None):
+    async def shadow_ban(self, ctx: Context, user: Union[User, proxy_user], *, reason: str = None):
         """
         Create a permanent ban infraction in the database for a user.
         :param user: Accepts user mention, ID, etc.
@@ -668,7 +715,7 @@ class Moderation(Scheduler):
     @with_role(*MODERATION_ROLES)
     @command(name="shadow_tempban", hidden=True, aliases=["shadowtempban, stempban"])
     async def shadow_tempban(
-            self, ctx: Context, user: typing.Union[User, proxy_user], duration: str, *, reason: str = None
+            self, ctx: Context, user: Union[User, proxy_user], duration: str, *, reason: str = None
     ):
         """
         Create a temporary ban infraction in the database for a user.
@@ -782,6 +829,13 @@ class Moderation(Scheduler):
                     Intended expiry: {infraction_object['expires_at']}
                 """)
             )
+
+            await self.notify_pardon(
+                user=user,
+                title="You have been unmuted.",
+                content="You may now send messages in the server.",
+                icon_url=Icons.user_unmute
+            )
         except Exception:
             log.exception("There was an error removing an infraction.")
             await ctx.send(":x: There was an error removing the infraction.")
@@ -789,7 +843,7 @@ class Moderation(Scheduler):
 
     @with_role(*MODERATION_ROLES)
     @command(name="unban")
-    async def unban(self, ctx: Context, user: typing.Union[User, proxy_user]):
+    async def unban(self, ctx: Context, user: Union[User, proxy_user]):
         """
         Deactivates the active ban infraction for a user.
         :param user: Accepts user mention, ID, etc.
@@ -1026,7 +1080,7 @@ class Moderation(Scheduler):
 
     @with_role(*MODERATION_ROLES)
     @infraction_search_group.command(name="user", aliases=("member", "id"))
-    async def search_user(self, ctx: Context, user: typing.Union[User, proxy_user]):
+    async def search_user(self, ctx: Context, user: Union[User, proxy_user]):
         """
         Search for infractions by member.
         """
@@ -1102,6 +1156,38 @@ class Moderation(Scheduler):
             max_size=1000
         )
 
+    # endregion
+    # region: Utility functions
+
+    def schedule_expiration(self, loop: asyncio.AbstractEventLoop, infraction_object: dict):
+        """
+        Schedules a task to expire a temporary infraction.
+        :param loop: the asyncio event loop
+        :param infraction_object: the infraction object to expire at the end of the task
+        """
+
+        infraction_id = infraction_object["id"]
+        if infraction_id in self.scheduled_tasks:
+            return
+
+        task: asyncio.Task = create_task(loop, self._scheduled_expiration(infraction_object))
+
+        self.scheduled_tasks[infraction_id] = task
+
+    def cancel_expiration(self, infraction_id: str):
+        """
+        Un-schedules a task set to expire a temporary infraction.
+        :param infraction_id: the ID of the infraction in question
+        """
+
+        task = self.scheduled_tasks.get(infraction_id)
+        if task is None:
+            log.warning(f"Failed to unschedule {infraction_id}: no task found.")
+            return
+        task.cancel()
+        log.debug(f"Unscheduled {infraction_id}.")
+        del self.scheduled_tasks[infraction_id]
+
     async def _scheduled_task(self, infraction_object: dict):
         """
         A co-routine which marks an infraction as expired after the delay from the time of scheduling
@@ -1120,6 +1206,16 @@ class Moderation(Scheduler):
         await self._deactivate_infraction(infraction_object)
 
         self.cancel_task(infraction_object["id"])
+
+        # Notify the user that they've been unmuted.
+        user_id = int(infraction_object["user"]["user_id"])
+        guild = self.bot.get_guild(constants.Guild.id)
+        await self.notify_pardon(
+            user=guild.get_member(user_id),
+            title="You have been unmuted.",
+            content="You may now send messages in the server.",
+            icon_url=Icons.user_unmute
+        )
 
     async def _deactivate_infraction(self, infraction_object):
         """
@@ -1176,6 +1272,79 @@ class Moderation(Scheduler):
         """)
 
         return lines.strip()
+
+    async def notify_infraction(
+            self, user: Union[User, Member], infr_type: str, duration: str = None, reason: str = None
+    ):
+        """
+        Notify a user of their fresh infraction :)
+
+        :param user: The user to send the message to.
+        :param infr_type: The type of infraction, as a string.
+        :param duration: The duration of the infraction.
+        :param reason: The reason for the infraction.
+        """
+
+        if duration is None:
+            duration = "N/A"
+
+        if reason is None:
+            reason = "No reason provided."
+
+        embed = Embed(
+            description=textwrap.dedent(f"""
+                **Type:** {infr_type}
+                **Duration:** {duration}
+                **Reason:** {reason}
+                """),
+            colour=Colour(Colours.soft_red)
+        )
+
+        icon_url = INFRACTION_ICONS.get(infr_type, Icons.token_removed)
+        embed.set_author(name="Infraction Information", icon_url=icon_url)
+        embed.set_footer(text=f"Please review our rules over at https://pythondiscord.com/about/rules")
+
+        await self.send_private_embed(user, embed)
+
+    async def notify_pardon(
+            self, user: Union[User, Member], title: str, content: str, icon_url: str = Icons.user_verified
+    ):
+        """
+        Notify a user that an infraction has been lifted.
+
+        :param user: The user to send the message to.
+        :param title: The title of the embed.
+        :param content: The content of the embed.
+        :param icon_url: URL for the title icon.
+        """
+
+        embed = Embed(
+            description=content,
+            colour=Colour(Colours.soft_green)
+        )
+
+        embed.set_author(name=title, icon_url=icon_url)
+
+        await self.send_private_embed(user, embed)
+
+    async def send_private_embed(self, user: Union[User, Member], embed: Embed):
+        """
+        A helper method for sending an embed to a user's DMs.
+
+        :param user: The user to send the embed to.
+        :param embed: The embed to send.
+        """
+
+        # sometimes `user` is a `discord.Object`, so let's make it a proper user.
+        user = await self.bot.get_user_info(user.id)
+
+        try:
+            await user.send(embed=embed)
+        except (HTTPException, Forbidden):
+            log.debug(
+                f"Infraction-related information could not be sent to user {user} ({user.id}). "
+                "They've probably just disabled private messages."
+            )
 
     # endregion
 
