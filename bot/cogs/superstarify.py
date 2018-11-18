@@ -8,7 +8,7 @@ from discord.ext.commands import Bot, Context, command
 from bot.cogs.moderation import Moderation
 from bot.cogs.modlog import ModLog
 from bot.constants import (
-    Channels, Icons, Keys,
+    Icons, Keys,
     NEGATIVE_REPLIES, POSITIVE_REPLIES,
     Roles, URLs
 )
@@ -147,13 +147,13 @@ class Superstarify:
             log.trace("Logging to the #mod-log channel. This could fail because of channel permissions.")
             mod_log_message = (
                 f"{member.name}#{member.discriminator} (`{member.id}`)\n\n"
-                f"Superstarified by **{ctx.author.name}**\n
+                f"Superstarified by **{ctx.author.name}**\n"
                 f"New nickname:`{forced_nick}`\n"
                 f"Superstardom ends: **{end_time}**"
             )
             await ModLog.send_log_message(
-                Icons.user_update, Colour.gold(), "Member Achieved Superstardom", modlog_message
-                )
+                Icons.user_update, Colour.gold(), "Member Achieved Superstardom", mod_log_message
+            )
 
             await self.moderation.notify_infraction(
                 user=member,
