@@ -35,7 +35,6 @@ class Verification:
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.bot.add_check(self.block_other_commands)
 
     @property
     def mod_log(self) -> ModLog:
@@ -153,7 +152,7 @@ class Verification:
         )
 
     @staticmethod
-    def block_other_commands(ctx: Context):
+    def __global_check(ctx: Context):
         """
         Block any command within the verification channel that is not !accept.
         """
