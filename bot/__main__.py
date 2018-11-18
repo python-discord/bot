@@ -59,8 +59,8 @@ if not DEBUG_MODE:
     bot.load_extension("bot.cogs.verification")
 
 # Feature cogs
-bot.load_extension("bot.cogs.deployment")
 bot.load_extension("bot.cogs.defcon")
+bot.load_extension("bot.cogs.deployment")
 bot.load_extension("bot.cogs.eval")
 bot.load_extension("bot.cogs.fun")
 bot.load_extension("bot.cogs.hiphopify")
@@ -71,6 +71,7 @@ bot.load_extension("bot.cogs.reddit")
 bot.load_extension("bot.cogs.site")
 bot.load_extension("bot.cogs.snakes")
 bot.load_extension("bot.cogs.snekbox")
+bot.load_extension("bot.cogs.sync")
 bot.load_extension("bot.cogs.tags")
 bot.load_extension("bot.cogs.token_remover")
 bot.load_extension("bot.cogs.utils")
