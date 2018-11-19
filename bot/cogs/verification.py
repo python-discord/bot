@@ -151,6 +151,17 @@ class Verification:
             f"{ctx.author.mention} Unsubscribed from <#{Channels.announcements}> notifications."
         )
 
+    @staticmethod
+    def __global_check(ctx: Context):
+        """
+        Block any command within the verification channel that is not !accept.
+        """
+
+        if ctx.channel.id == Channels.verification:
+            return ctx.command.name == "accept"
+        else:
+            return True
+
 
 def setup(bot):
     bot.add_cog(Verification(bot))
