@@ -87,7 +87,9 @@ class Moderation(Scheduler):
             reason=reason
         )
 
-        await post_infraction(ctx, user, type="warning", reason=reason)
+        response_object = await post_infraction(ctx, user, type="warning", reason=reason)
+        if response_object is None:
+            return
 
         if reason is None:
             result_message = f":ok_hand: warned {user.mention}."
@@ -111,7 +113,9 @@ class Moderation(Scheduler):
             reason=reason
         )
 
-        await post_infraction(ctx, user, type="kick", reason=reason)
+        response_object = await post_infraction(ctx, user, type="kick", reason=reason)
+        if response_object is None:
+            return
 
         self.mod_log.ignore(Event.member_remove, user.id)
         await user.kick(reason=reason)
@@ -152,7 +156,9 @@ class Moderation(Scheduler):
             reason=reason
         )
 
-        await post_infraction(ctx, user, type="ban", reason=reason)
+        response_object = await post_infraction(ctx, user, type="ban", reason=reason)
+        if response_object is None:
+            return
 
         self.mod_log.ignore(Event.member_ban, user.id)
         self.mod_log.ignore(Event.member_remove, user.id)
@@ -194,7 +200,9 @@ class Moderation(Scheduler):
             reason=reason
         )
 
-        await post_infraction(ctx, user, type="mute", reason=reason)
+        response_object = await post_infraction(ctx, user, type="mute", reason=reason)
+        if response_object is None:
+            return
 
         # add the mute role
         self.mod_log.ignore(Event.member_update, user.id)
@@ -241,6 +249,8 @@ class Moderation(Scheduler):
         )
 
         response_object = await post_infraction(ctx, user, type="mute", reason=reason, duration=duration)
+        if response_object is None:
+            return
 
         self.mod_log.ignore(Event.member_update, user.id)
         await user.add_roles(self._muted_role, reason=reason)
@@ -291,6 +301,8 @@ class Moderation(Scheduler):
         )
 
         response_object = await post_infraction(ctx, user, type="ban", reason=reason, duration=duration)
+        if response_object is None:
+            return
 
         self.mod_log.ignore(Event.member_ban, user.id)
         self.mod_log.ignore(Event.member_remove, user.id)
@@ -337,7 +349,9 @@ class Moderation(Scheduler):
         :param reason: The reason for the warning.
         """
 
-        await post_infraction(ctx, user, type="warning", reason=reason, hidden=True)
+        response_object = await post_infraction(ctx, user, type="warning", reason=reason, hidden=True)
+        if response_object is None:
+            return
 
         if reason is None:
             result_message = f":ok_hand: note added for {user.mention}."
@@ -355,7 +369,9 @@ class Moderation(Scheduler):
         :param reason: The reason for the kick.
         """
 
-        await post_infraction(ctx, user, type="kick", reason=reason, hidden=True)
+        response_object = await post_infraction(ctx, user, type="kick", reason=reason, hidden=True)
+        if response_object is None:
+            return
 
         self.mod_log.ignore(Event.member_remove, user.id)
         await user.kick(reason=reason)
@@ -389,7 +405,9 @@ class Moderation(Scheduler):
         :param reason: The reason for the ban.
         """
 
-        await post_infraction(ctx, user, type="ban", reason=reason, hidden=True)
+        response_object = await post_infraction(ctx, user, type="ban", reason=reason, hidden=True)
+        if response_object is None:
+            return
 
         self.mod_log.ignore(Event.member_ban, user.id)
         self.mod_log.ignore(Event.member_remove, user.id)
@@ -424,7 +442,9 @@ class Moderation(Scheduler):
         :param reason: The reason for the mute.
         """
 
-        await post_infraction(ctx, user, type="mute", reason=reason, hidden=True)
+        response_object = await post_infraction(ctx, user, type="mute", reason=reason, hidden=True)
+        if response_object is None:
+            return
 
         # add the mute role
         self.mod_log.ignore(Event.member_update, user.id)
@@ -464,6 +484,8 @@ class Moderation(Scheduler):
         """
 
         response_object = await post_infraction(ctx, user, type="mute", reason=reason, duration=duration, hidden=True)
+        if response_object is None:
+            return
 
         self.mod_log.ignore(Event.member_update, user.id)
         await user.add_roles(self._muted_role, reason=reason)
@@ -509,6 +531,8 @@ class Moderation(Scheduler):
         """
 
         response_object = await post_infraction(ctx, user, type="ban", reason=reason, duration=duration, hidden=True)
+        if response_object is None:
+            return
 
         self.mod_log.ignore(Event.member_ban, user.id)
         self.mod_log.ignore(Event.member_remove, user.id)
