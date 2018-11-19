@@ -31,6 +31,10 @@ class Superstarify:
     def moderation(self) -> Moderation:
         return self.bot.get_cog("Moderation")
 
+    @property
+    def modlog(self) -> ModLog:
+        return self.bot.get_cog("ModLog")
+
     async def on_member_update(self, before, after):
         """
         This event will trigger when someone changes their name.
@@ -151,7 +155,7 @@ class Superstarify:
                 f"New nickname:`{forced_nick}`\n"
                 f"Superstardom ends: **{end_time}**"
             )
-            await ModLog.send_log_message(
+            await self.modlog.send_log_message(
                 Icons.user_update, Colour.gold(), "Member Achieved Superstardom", mod_log_message
             )
 
