@@ -6,13 +6,13 @@ from discord.errors import Forbidden
 from discord.ext.commands import Bot, Context, command
 
 from bot.cogs.moderation import Moderation
+from bot.cogs.modlog import ModLog
 from bot.constants import (
-    Channels, Keys,
+    Icons, Keys,
     NEGATIVE_REPLIES, POSITIVE_REPLIES,
     Roles, URLs
 )
 from bot.decorators import with_role
-
 
 log = logging.getLogger(__name__)
 NICKNAME_POLICY_URL = "https://pythondiscord.com/about/rules#nickname-policy"
@@ -30,6 +30,10 @@ class Superstarify:
     @property
     def moderation(self) -> Moderation:
         return self.bot.get_cog("Moderation")
+
+    @property
+    def modlog(self) -> ModLog:
+        return self.bot.get_cog("ModLog")
 
     async def on_member_update(self, before, after):
         """
@@ -81,7 +85,7 @@ class Superstarify:
                     "to DM them, and a discord.errors.Forbidden error was incurred."
                 )
 
-    @command(name='superstarify', aliases=('force_nick', 'ss'))
+    @command(name='superstarify', aliases=('force_nick', 'star'))
     @with_role(Roles.admin, Roles.owner, Roles.moderator)
     async def superstarify(self, ctx: Context, member: Member, duration: str, *, forced_nick: str = None):
         """
@@ -145,11 +149,18 @@ class Superstarify:
 
             # Log to the mod_log channel
             log.trace("Logging to the #mod-log channel. This could fail because of channel permissions.")
-            mod_log = self.bot.get_channel(Channels.modlog)
-            await mod_log.send(
-                f":middle_finger: {member.name}#{member.discriminator} (`{member.id}`) "
-                f"has been superstarified by **{ctx.author.name}**. Their new nickname is `{forced_nick}`. "
-                f"They will not be able to change their nickname again until **{end_time}**"
+            mod_log_message = (
+                f"{member.name}#{member.discriminator} (`{member.id}`)\n\n"
+                f"Superstarified by **{ctx.author.name}**\n"
+                f"New nickname:`{forced_nick}`\n"
+                f"Superstardom ends: **{end_time}**"
+            )
+            await self.modlog.send_log_message(
+                icon_url=Icons.user_update,
+                colour=Colour.gold(),
+                title="Member Achieved Superstardom",
+                text=mod_log_message,
+                thumbnail=member.avatar_url_as(static_format="png")
             )
 
             await self.moderation.notify_infraction(
