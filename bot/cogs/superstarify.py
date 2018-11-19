@@ -156,7 +156,11 @@ class Superstarify:
                 f"Superstardom ends: **{end_time}**"
             )
             await self.modlog.send_log_message(
-                Icons.user_update, Colour.gold(), "Member Achieved Superstardom", mod_log_message
+                icon_url=Icons.user_update, 
+                colour=Colour.gold(), 
+                title="Member Achieved Superstardom", 
+                text=mod_log_message, 
+                thumbnail=member.avatar_url_as(static_format="png")
             )
 
             await self.moderation.notify_infraction(
