@@ -85,7 +85,7 @@ class Superstarify:
                     "to DM them, and a discord.errors.Forbidden error was incurred."
                 )
 
-    @command(name='superstarify', aliases=('force_nick', 'ss'))
+    @command(name='superstarify', aliases=('force_nick', 'star'))
     @with_role(Roles.admin, Roles.owner, Roles.moderator)
     async def superstarify(self, ctx: Context, member: Member, duration: str, *, forced_nick: str = None):
         """
