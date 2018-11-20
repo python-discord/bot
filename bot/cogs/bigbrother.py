@@ -253,6 +253,7 @@ class BigBrother:
 
         # Add a note (shadow warning) if a reason is specified
         if reason:
+            reason = "bb watch: " + reason  # Prepend for situational awareness
             await post_infraction(ctx, user, type="warning", reason=reason, hidden=True)
 
     @bigbrother_group.command(name='unwatch', aliases=('uw',))
