@@ -13,7 +13,7 @@ HEADERS = {"X-API-KEY": Keys.site_api}
 
 
 async def post_infraction(
-    ctx: Context, user: Union[Member, Object, User], type: str, reason: str, duration: str, hidden: bool = False
+    ctx: Context, user: Union[Member, Object, User], type: str, reason: str, duration: str = None, hidden: bool = False
 ):
     try:
         response = await ctx.bot.http_session.post(
