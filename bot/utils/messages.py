@@ -7,13 +7,15 @@ from discord import Embed, File, Message, TextChannel
 from discord.abc import Snowflake
 from discord.errors import HTTPException
 
+from bot.constants import Emojis
+
 MAX_SIZE = 1024 * 1024 * 8  # 8 Mebibytes
 
 
 async def wait_for_deletion(
     message: Message,
     user_ids: Sequence[Snowflake],
-    deletion_emojis: Sequence[str]=("❌",),
+    deletion_emojis: Sequence[str]=(Emojis.cross_mark,),
     timeout: float=60 * 5,
     attach_emojis=True,
     client=None
