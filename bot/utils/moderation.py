@@ -25,7 +25,7 @@ async def post_infraction(
     }
     if duration:
         payload['duration'] = duration
-    
+
     try:
         response = await ctx.bot.http_session.post(
             URLs.site_infractions,
