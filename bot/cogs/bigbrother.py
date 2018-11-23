@@ -11,6 +11,7 @@ from bot.constants import BigBrother as BigBrotherConfig, Channels, Emojis, Guil
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
 from bot.utils import messages
+from bot.utils.moderation import post_infraction
 
 log = logging.getLogger(__name__)
 
@@ -215,16 +216,14 @@ class BigBrother:
 
     @bigbrother_group.command(name='watch', aliases=('w',))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
-    async def watch_command(self, ctx: Context, user: User, channel: TextChannel = None):
+    async def watch_command(self, ctx: Context, user: User, *, reason: str = None):
         """
-        Relay messages sent by the given `user` in the given `channel`.
-        If `channel` is not specified, logs to the mod log channel.
+        Relay messages sent by the given `user` to the `#big-brother-logs` channel
+
+        If a `reason` is specified, a note is added for `user`
         """
 
-        if channel is not None:
-            channel_id = channel.id
-        else:
-            channel_id = Channels.big_brother_logs
+        channel_id = Channels.big_brother_logs
 
         post_data = {
             'user_id': str(user.id),
@@ -251,6 +250,11 @@ class BigBrother:
                 data = await response.json()
                 reason = data.get('error_message', "no message provided")
                 await ctx.send(f":x: the API returned an error: {reason}")
+
+        # Add a note (shadow warning) if a reason is specified
+        if reason:
+            reason = "bb watch: " + reason  # Prepend for situational awareness
+            await post_infraction(ctx, user, type="warning", reason=reason, hidden=True)
 
     @bigbrother_group.command(name='unwatch', aliases=('uw',))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)

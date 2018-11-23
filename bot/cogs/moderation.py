@@ -17,6 +17,7 @@ from bot.constants import Colours, Event, Icons, Keys, Roles, URLs
 from bot.converters import InfractionSearchQuery
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
+from bot.utils.moderation import post_infraction
 from bot.utils.scheduling import Scheduler, create_task
 from bot.utils.time import parse_rfc1123, wait_until
 
@@ -86,25 +87,8 @@ class Moderation(Scheduler):
             reason=reason
         )
 
-        try:
-            response = await self.bot.http_session.post(
-                URLs.site_infractions,
-                headers=self.headers,
-                json={
-                    "type": "warning",
-                    "reason": reason,
-                    "user_id": str(user.id),
-                    "actor_id": str(ctx.message.author.id)
-                }
-            )
-        except ClientError:
-            log.exception("There was an error adding an infraction.")
-            await ctx.send(":x: There was an error adding the infraction.")
-            return
-
-        response_object = await response.json()
-        if "error_code" in response_object:
-            await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
+        response_object = await post_infraction(ctx, user, type="warning", reason=reason)
+        if response_object is None:
             return
 
         if reason is None:
@@ -129,25 +113,8 @@ class Moderation(Scheduler):
             reason=reason
         )
 
-        try:
-            response = await self.bot.http_session.post(
-                URLs.site_infractions,
-                headers=self.headers,
-                json={
-                    "type": "kick",
-                    "reason": reason,
-                    "user_id": str(user.id),
-                    "actor_id": str(ctx.message.author.id)
-                }
-            )
-        except ClientError:
-            log.exception("There was an error adding an infraction.")
-            await ctx.send(":x: There was an error adding the infraction.")
-            return
-
-        response_object = await response.json()
-        if "error_code" in response_object:
-            await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
+        response_object = await post_infraction(ctx, user, type="kick", reason=reason)
+        if response_object is None:
             return
 
         self.mod_log.ignore(Event.member_remove, user.id)
@@ -189,25 +156,8 @@ class Moderation(Scheduler):
             reason=reason
         )
 
-        try:
-            response = await self.bot.http_session.post(
-                URLs.site_infractions,
-                headers=self.headers,
-                json={
-                    "type": "ban",
-                    "reason": reason,
-                    "user_id": str(user.id),
-                    "actor_id": str(ctx.message.author.id)
-                }
-            )
-        except ClientError:
-            log.exception("There was an error adding an infraction.")
-            await ctx.send(":x: There was an error adding the infraction.")
-            return
-
-        response_object = await response.json()
-        if "error_code" in response_object:
-            await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
+        response_object = await post_infraction(ctx, user, type="ban", reason=reason)
+        if response_object is None:
             return
 
         self.mod_log.ignore(Event.member_ban, user.id)
@@ -250,25 +200,8 @@ class Moderation(Scheduler):
             reason=reason
         )
 
-        try:
-            response = await self.bot.http_session.post(
-                URLs.site_infractions,
-                headers=self.headers,
-                json={
-                    "type": "mute",
-                    "reason": reason,
-                    "user_id": str(user.id),
-                    "actor_id": str(ctx.message.author.id)
-                }
-            )
-        except ClientError:
-            log.exception("There was an error adding an infraction.")
-            await ctx.send(":x: There was an error adding the infraction.")
-            return
-
-        response_object = await response.json()
-        if "error_code" in response_object:
-            await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
+        response_object = await post_infraction(ctx, user, type="mute", reason=reason)
+        if response_object is None:
             return
 
         # add the mute role
@@ -315,26 +248,8 @@ class Moderation(Scheduler):
             reason=reason
         )
 
-        try:
-            response = await self.bot.http_session.post(
-                URLs.site_infractions,
-                headers=self.headers,
-                json={
-                    "type": "mute",
-                    "reason": reason,
-                    "duration": duration,
-                    "user_id": str(user.id),
-                    "actor_id": str(ctx.message.author.id)
-                }
-            )
-        except ClientError:
-            log.exception("There was an error adding an infraction.")
-            await ctx.send(":x: There was an error adding the infraction.")
-            return
-
-        response_object = await response.json()
-        if "error_code" in response_object:
-            await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
+        response_object = await post_infraction(ctx, user, type="mute", reason=reason, duration=duration)
+        if response_object is None:
             return
 
         self.mod_log.ignore(Event.member_update, user.id)
@@ -385,26 +300,8 @@ class Moderation(Scheduler):
             reason=reason
         )
 
-        try:
-            response = await self.bot.http_session.post(
-                URLs.site_infractions,
-                headers=self.headers,
-                json={
-                    "type": "ban",
-                    "reason": reason,
-                    "duration": duration,
-                    "user_id": str(user.id),
-                    "actor_id": str(ctx.message.author.id)
-                }
-            )
-        except ClientError:
-            log.exception("There was an error adding an infraction.")
-            await ctx.send(":x: There was an error adding the infraction.")
-            return
-
-        response_object = await response.json()
-        if "error_code" in response_object:
-            await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
+        response_object = await post_infraction(ctx, user, type="ban", reason=reason, duration=duration)
+        if response_object is None:
             return
 
         self.mod_log.ignore(Event.member_ban, user.id)
@@ -452,26 +349,8 @@ class Moderation(Scheduler):
         :param reason: The reason for the warning.
         """
 
-        try:
-            response = await self.bot.http_session.post(
-                URLs.site_infractions,
-                headers=self.headers,
-                json={
-                    "type": "warning",
-                    "reason": reason,
-                    "user_id": str(user.id),
-                    "actor_id": str(ctx.message.author.id),
-                    "hidden": True
-                }
-            )
-        except ClientError:
-            log.exception("There was an error adding an infraction.")
-            await ctx.send(":x: There was an error adding the infraction.")
-            return
-
-        response_object = await response.json()
-        if "error_code" in response_object:
-            await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
+        response_object = await post_infraction(ctx, user, type="warning", reason=reason, hidden=True)
+        if response_object is None:
             return
 
         if reason is None:
@@ -490,26 +369,8 @@ class Moderation(Scheduler):
         :param reason: The reason for the kick.
         """
 
-        try:
-            response = await self.bot.http_session.post(
-                URLs.site_infractions,
-                headers=self.headers,
-                json={
-                    "type": "kick",
-                    "reason": reason,
-                    "user_id": str(user.id),
-                    "actor_id": str(ctx.message.author.id),
-                    "hidden": True
-                }
-            )
-        except ClientError:
-            log.exception("There was an error adding an infraction.")
-            await ctx.send(":x: There was an error adding the infraction.")
-            return
-
-        response_object = await response.json()
-        if "error_code" in response_object:
-            await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
+        response_object = await post_infraction(ctx, user, type="kick", reason=reason, hidden=True)
+        if response_object is None:
             return
 
         self.mod_log.ignore(Event.member_remove, user.id)
@@ -544,26 +405,8 @@ class Moderation(Scheduler):
         :param reason: The reason for the ban.
         """
 
-        try:
-            response = await self.bot.http_session.post(
-                URLs.site_infractions,
-                headers=self.headers,
-                json={
-                    "type": "ban",
-                    "reason": reason,
-                    "user_id": str(user.id),
-                    "actor_id": str(ctx.message.author.id),
-                    "hidden": True
-                }
-            )
-        except ClientError:
-            log.exception("There was an error adding an infraction.")
-            await ctx.send(":x: There was an error adding the infraction.")
-            return
-
-        response_object = await response.json()
-        if "error_code" in response_object:
-            await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
+        response_object = await post_infraction(ctx, user, type="ban", reason=reason, hidden=True)
+        if response_object is None:
             return
 
         self.mod_log.ignore(Event.member_ban, user.id)
@@ -599,26 +442,8 @@ class Moderation(Scheduler):
         :param reason: The reason for the mute.
         """
 
-        try:
-            response = await self.bot.http_session.post(
-                URLs.site_infractions,
-                headers=self.headers,
-                json={
-                    "type": "mute",
-                    "reason": reason,
-                    "user_id": str(user.id),
-                    "actor_id": str(ctx.message.author.id),
-                    "hidden": True
-                }
-            )
-        except ClientError:
-            log.exception("There was an error adding an infraction.")
-            await ctx.send(":x: There was an error adding the infraction.")
-            return
-
-        response_object = await response.json()
-        if "error_code" in response_object:
-            await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
+        response_object = await post_infraction(ctx, user, type="mute", reason=reason, hidden=True)
+        if response_object is None:
             return
 
         # add the mute role
@@ -658,27 +483,8 @@ class Moderation(Scheduler):
         :param reason: The reason for the temporary mute.
         """
 
-        try:
-            response = await self.bot.http_session.post(
-                URLs.site_infractions,
-                headers=self.headers,
-                json={
-                    "type": "mute",
-                    "reason": reason,
-                    "duration": duration,
-                    "user_id": str(user.id),
-                    "actor_id": str(ctx.message.author.id),
-                    "hidden": True
-                }
-            )
-        except ClientError:
-            log.exception("There was an error adding an infraction.")
-            await ctx.send(":x: There was an error adding the infraction.")
-            return
-
-        response_object = await response.json()
-        if "error_code" in response_object:
-            await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
+        response_object = await post_infraction(ctx, user, type="mute", reason=reason, duration=duration, hidden=True)
+        if response_object is None:
             return
 
         self.mod_log.ignore(Event.member_update, user.id)
@@ -724,27 +530,8 @@ class Moderation(Scheduler):
         :param reason: The reason for the temporary ban.
         """
 
-        try:
-            response = await self.bot.http_session.post(
-                URLs.site_infractions,
-                headers=self.headers,
-                json={
-                    "type": "ban",
-                    "reason": reason,
-                    "duration": duration,
-                    "user_id": str(user.id),
-                    "actor_id": str(ctx.message.author.id),
-                    "hidden": True
-                }
-            )
-        except ClientError:
-            log.exception("There was an error adding an infraction.")
-            await ctx.send(":x: There was an error adding the infraction.")
-            return
-
-        response_object = await response.json()
-        if "error_code" in response_object:
-            await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
+        response_object = await post_infraction(ctx, user, type="ban", reason=reason, duration=duration, hidden=True)
+        if response_object is None:
             return
 
         self.mod_log.ignore(Event.member_ban, user.id)
