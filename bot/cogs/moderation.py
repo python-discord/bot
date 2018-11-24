@@ -29,6 +29,7 @@ INFRACTION_ICONS = {
     "Kick": Icons.sign_out,
     "Ban": Icons.user_ban
 }
+RULES_URL = "https://pythondiscord.com/about/rules"
 
 
 def proxy_user(user_id: str) -> Object:
@@ -1088,8 +1089,9 @@ class Moderation(Scheduler):
         )
 
         icon_url = INFRACTION_ICONS.get(infr_type, Icons.token_removed)
-        embed.set_author(name="Infraction Information", icon_url=icon_url)
-        embed.set_footer(text=f"Please review our rules over at https://pythondiscord.com/about/rules")
+        embed.set_author(name="Infraction Information", icon_url=icon_url, url=RULES_URL)
+        embed.title = f"Please review our rules over at {RULES_URL}"
+        embed.url = RULES_URL
 
         await self.send_private_embed(user, embed)
 
