@@ -10,12 +10,16 @@ from discord import (
     CategoryChannel, Colour, Embed, File, Guild,
     Member, Message, NotFound, RawBulkMessageDeleteEvent,
     RawMessageDeleteEvent, RawMessageUpdateEvent, Role,
-    TextChannel, User, VoiceChannel)
+    TextChannel, User, VoiceChannel
+)
 from discord.abc import GuildChannel
 from discord.ext.commands import Bot
 
-from bot.constants import Channels, Colours, Emojis, Event, Icons, Keys, Roles, URLs
-from bot.constants import Guild as GuildConstant
+from bot.constants import (
+    Channels, Colours, Emojis,
+    Event, Guild as GuildConstant, Icons,
+    Keys, Roles, URLs
+)
 from bot.utils.time import humanize_delta
 
 log = logging.getLogger(__name__)
@@ -609,7 +613,12 @@ class ModLog:
         )
 
     async def on_message_edit(self, before: Message, after: Message):
-        if before.guild.id != GuildConstant.id or before.channel.id in GuildConstant.ignored or before.author.bot:
+        if (
+            not before.guild
+            or before.guild.id != GuildConstant.id
+            or before.channel.id in GuildConstant.ignored
+            or before.author.bot
+        ):
             return
 
         self._cached_edits.append(before.id)
@@ -670,7 +679,12 @@ class ModLog:
         except NotFound:  # Was deleted before we got the event
             return
 
-        if message.guild.id != GuildConstant.id or message.channel.id in GuildConstant.ignored or message.author.bot:
+        if (
+            not message.guild
+            or message.guild.id != GuildConstant.id
+            or message.channel.id in GuildConstant.ignored
+            or message.author.bot
+        ):
             return
 
         await asyncio.sleep(1)  # Wait here in case the normal event was fired
