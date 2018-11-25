@@ -614,10 +614,10 @@ class ModLog:
 
     async def on_message_edit(self, before: Message, after: Message):
         if (
-                not before.guild
-                or before.guild.id != GuildConstant.id
-                or before.channel.id in GuildConstant.ignored
-                or before.author.bot
+            not before.guild
+            or before.guild.id != GuildConstant.id
+            or before.channel.id in GuildConstant.ignored
+            or before.author.bot
         ):
             return
 
@@ -680,10 +680,10 @@ class ModLog:
             return
 
         if (
-                not message.guild
-                or message.guild.id != GuildConstant.id
-                or message.channel.id in GuildConstant.ignored
-                or message.author.bot
+            not message.guild
+            or message.guild.id != GuildConstant.id
+            or message.channel.id in GuildConstant.ignored
+            or message.author.bot
         ):
             return
 
