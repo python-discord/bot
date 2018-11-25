@@ -15,6 +15,7 @@ jobs:
   variables:
     PIPENV_CACHE_DIR: ".cache/pipenv"
     PIP_CACHE_DIR: ".cache/pip"
+    PIP_SRC: ".cache/src"
 
   steps:
   - script: sudo apt-get install build-essential curl docker libffi-dev libfreetype6-dev libxml2 libxml2-dev libxslt1-dev zlib1g zlib1g-dev
@@ -29,7 +30,7 @@ jobs:
   - script: sudo pip install pipenv
     displayName: 'Install pipenv'
 
-  - script: pipenv install --dev --deploy --system --verbose
+  - script: pipenv install --dev --deploy --system
     displayName: 'Install project using pipenv'
 
   - script: python -m flake8
