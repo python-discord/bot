@@ -29,7 +29,7 @@ jobs:
   - script: sudo pip install pipenv
     displayName: 'Install pipenv'
 
-  - script: pipenv install --dev --deploy --system
+  - script: pipenv install --dev --deploy --system --verbose
     displayName: 'Install project using pipenv'
 
   - script: python -m flake8
