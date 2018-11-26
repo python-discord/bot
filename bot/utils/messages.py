@@ -13,8 +13,8 @@ MAX_SIZE = 1024 * 1024 * 8  # 8 Mebibytes
 async def wait_for_deletion(
     message: Message,
     user_ids: Sequence[Snowflake],
-    deletion_emojis: Sequence[str]=("❌",),
-    timeout: float=60 * 5,
+    deletion_emojis: Sequence[str] = ("❌",),
+    timeout: float = 60 * 5,
     attach_emojis=True,
     client=None
 ):
@@ -62,9 +62,9 @@ async def wait_for_deletion(
 
     def check(reaction, user):
         return (
-            reaction.message.id == message.id and
-            reaction.emoji in deletion_emojis and
-            user.id in user_ids
+            reaction.message.id == message.id
+            and reaction.emoji in deletion_emojis
+            and user.id in user_ids
         )
 
     with contextlib.suppress(asyncio.TimeoutError):

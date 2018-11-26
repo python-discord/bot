@@ -31,9 +31,9 @@ guildcd = commands.CooldownMapping.from_cooldown(Wolfram.guild_limit_day, 60*60*
 async def send_embed(
         ctx: Context,
         message_txt: str,
-        colour: int=Colours.soft_red,
-        footer: str=None,
-        img_url: str=None,
+        colour: int = Colours.soft_red,
+        footer: str = None,
+        img_url: str = None,
         f: discord.File = None
 ) -> None:
     """

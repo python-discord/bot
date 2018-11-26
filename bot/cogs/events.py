@@ -188,10 +188,10 @@ class Events:
 
     async def on_member_update(self, before: Member, after: Member):
         if (
-                before.roles == after.roles and
-                before.name == after.name and
-                before.discriminator == after.discriminator and
-                before.avatar == after.avatar):
+                before.roles == after.roles
+                and before.name == after.name
+                and before.discriminator == after.discriminator
+                and before.avatar == after.avatar):
             return
 
         before_role_names = [role.name for role in before.roles]  # type: List[str]

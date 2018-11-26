@@ -22,7 +22,7 @@ INVITE_RE = (
     r"([a-zA-Z0-9]+)"                                 # the invite code itself
 )
 
-URL_RE = "(https?://[^\s]+)"
+URL_RE = r"(https?://[^\s]+)"
 ZALGO_RE = r"[\u0300-\u036F\u0489]"
 RETARDED_RE = r"(re+)tar+(d+|t+)(ed)?"
 SELF_DEPRECATION_RE = fr"((i'?m)|(i am)|(it'?s)|(it is)) (.+? )?{RETARDED_RE}"
