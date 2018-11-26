@@ -4,27 +4,24 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-discord = {file = "https://github.com/Rapptz/discord.py/archive/rewrite.zip", egg = "discord.py[voice]"}
+discord-py = {git = "https://github.com/Rapptz/discord.py.git", extras = ["voice"], ref = "860d6a9ace8248dfeec18b8b159e7b757d9f56bb", editable = true}
 dulwich = "*"
-multidict = "*"
-sympy = "*"
 aiodns = "*"
 logmatic-python = "*"
-aiohttp = "<2.3.0,>=2.0.0"
-websockets = ">=4.0,<5.0"
+aiohttp = "*"
 sphinx = "*"
 markdownify = "*"
 lxml = "*"
 pyyaml = "*"
-yarl = "==1.1.1"
 fuzzywuzzy = "*"
 pillow = "*"
 aio-pika = "*"
 python-dateutil = "*"
 deepdiff = "*"
+requests = "*"
 
 [dev-packages]
-"flake8" = "*"
+"flake8" = ">=3.6"
 "flake8-bugbear" = "*"
 "flake8-import-order" = "*"
 "flake8-tidy-imports" = "*"
@@ -32,7 +29,6 @@ deepdiff = "*"
 "flake8-string-format" = "*"
 safety = "*"
 dodgy = "*"
-requests = "*"
 
 [requires]
 python_version = "3.6"

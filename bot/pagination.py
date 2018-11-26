@@ -95,7 +95,7 @@ class LinePaginator(Paginator):
     @classmethod
     async def paginate(cls, lines: Iterable[str], ctx: Context, embed: Embed,
                        prefix: str = "", suffix: str = "", max_lines: Optional[int] = None, max_size: int = 500,
-                       empty: bool = True, restrict_to_user: User = None, timeout: int=300,
+                       empty: bool = True, restrict_to_user: User = None, timeout: int = 300,
                        footer_text: str = None):
         """
         Use a paginator and set of reactions to provide pagination over a set of lines. The reactions are used to
@@ -129,9 +129,9 @@ class LinePaginator(Paginator):
 
             no_restrictions = (
                 # Pagination is not restricted
-                not restrict_to_user or
+                not restrict_to_user
                 # The reaction was by a whitelisted user
-                user_.id == restrict_to_user.id
+                or user_.id == restrict_to_user.id
             )
 
             return (
@@ -291,7 +291,7 @@ class ImagePaginator(Paginator):
         self.images = []
         self._pages = []
 
-    def add_line(self, line: str='', *, empty: bool=False) -> None:
+    def add_line(self, line: str = '', *, empty: bool = False) -> None:
         """
         Adds a line to each page, usually just 1 line in this context
         :param line: str to be page content / title
@@ -305,7 +305,7 @@ class ImagePaginator(Paginator):
         self._current_page.append(line)
         self.close_page()
 
-    def add_image(self, image: str=None) -> None:
+    def add_image(self, image: str = None) -> None:
         """
         Adds an image to a page
         :param image: image url to be appended
@@ -315,7 +315,7 @@ class ImagePaginator(Paginator):
 
     @classmethod
     async def paginate(cls, pages: List[Tuple[str, str]], ctx: Context, embed: Embed,
-                       prefix: str="", suffix: str="", timeout: int=300):
+                       prefix: str = "", suffix: str = "", timeout: int = 300):
         """
         Use a paginator and set of reactions to provide
         pagination over a set of title/image pairs.The reactions are

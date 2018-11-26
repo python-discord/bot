@@ -35,13 +35,12 @@ class Superstarify:
     def modlog(self) -> ModLog:
         return self.bot.get_cog("ModLog")
 
-    async def on_member_update(self, before, after):
+    async def on_member_update(self, before: Member, after: Member):
         """
         This event will trigger when someone changes their name.
         At this point we will look up the user in our database and check
         whether they are allowed to change their names, or if they are in
         superstar-prison. If they are not allowed, we will change it back.
-        :return:
         """
 
         if before.display_name == after.display_name:
@@ -84,6 +83,64 @@ class Superstarify:
                     "but the user had either blocked the bot or disabled DMs, so it was not possible "
                     "to DM them, and a discord.errors.Forbidden error was incurred."
                 )
+
+    async def on_member_join(self, member: Member):
+        """
+        This event will trigger when someone (re)joins the server.
+        At this point we will look up the user in our database and check
+        whether they are in superstar-prison. If so, we will change their name
+        back to the forced nickname.
+        """
+
+        response = await self.bot.http_session.get(
+            URLs.site_superstarify_api,
+            headers=self.headers,
+            params={"user_id": str(member.id)}
+        )
+
+        response = await response.json()
+
+        if response and response.get("end_timestamp") and not response.get("error_code"):
+            forced_nick = response.get("forced_nick")
+            end_timestamp = response.get("end_timestamp")
+            log.debug(
+                f"{member.name} rejoined but is currently in superstar-prison. "
+                f"Changing the nick back to {forced_nick}."
+            )
+
+            await member.edit(nick=forced_nick)
+            try:
+                await member.send(
+                    "You have left and rejoined the **Python Discord** server, effectively resetting "
+                    f"your nickname from **{forced_nick}** to **{member.name}**, "
+                    "but as you are currently in superstar-prison, you do not have permission to do so. "
+                    "Therefore your nickname was automatically changed back. You will be allowed to "
+                    "change your nickname again at the following time:\n\n"
+                    f"**{end_timestamp}**."
+                )
+            except Forbidden:
+                log.warning(
+                    "The user left and rejoined the server while in superstar-prison. "
+                    "This led to the bot trying to DM the user to let them know their name was restored, "
+                    "but the user had either blocked the bot or disabled DMs, so it was not possible "
+                    "to DM them, and a discord.errors.Forbidden error was incurred."
+                )
+
+            # Log to the mod_log channel
+            log.trace("Logging to the #mod-log channel. This could fail because of channel permissions.")
+            mod_log_message = (
+                f"**{member.name}#{member.discriminator}** (`{member.id}`)\n\n"
+                f"Superstarified member potentially tried to escape the prison.\n"
+                f"Restored enforced nickname: `{forced_nick}`\n"
+                f"Superstardom ends: **{end_timestamp}**"
+            )
+            await self.modlog.send_log_message(
+                icon_url=Icons.user_update,
+                colour=Colour.gold(),
+                title="Superstar member rejoined server",
+                text=mod_log_message,
+                thumbnail=member.avatar_url_as(static_format="png")
+            )
 
     @command(name='superstarify', aliases=('force_nick', 'star'))
     @with_role(Roles.admin, Roles.owner, Roles.moderator)
@@ -136,10 +193,11 @@ class Superstarify:
             forced_nick = response.get('forced_nick')
             end_time = response.get("end_timestamp")
             image_url = response.get("image_url")
+            old_nick = member.display_name
 
             embed.title = "Congratulations!"
             embed.description = (
-                f"Your previous nickname, **{member.display_name}**, was so bad that we have decided to change it. "
+                f"Your previous nickname, **{old_nick}**, was so bad that we have decided to change it. "
                 f"Your new nickname will be **{forced_nick}**.\n\n"
                 f"You will be unable to change your nickname until \n**{end_time}**.\n\n"
                 "If you're confused by this, please read our "
@@ -150,9 +208,10 @@ class Superstarify:
             # Log to the mod_log channel
             log.trace("Logging to the #mod-log channel. This could fail because of channel permissions.")
             mod_log_message = (
-                f"{member.name}#{member.discriminator} (`{member.id}`)\n\n"
+                f"**{member.name}#{member.discriminator}** (`{member.id}`)\n\n"
                 f"Superstarified by **{ctx.author.name}**\n"
-                f"New nickname:`{forced_nick}`\n"
+                f"Old nickname: `{old_nick}`\n"
+                f"New nickname: `{forced_nick}`\n"
                 f"Superstardom ends: **{end_time}**"
             )
             await self.modlog.send_log_message(
@@ -175,7 +234,7 @@ class Superstarify:
             await member.edit(nick=forced_nick)
             await ctx.send(embed=embed)
 
-    @command(name='unsuperstarify', aliases=('release_nick', 'uss'))
+    @command(name='unsuperstarify', aliases=('release_nick', 'unstar'))
     @with_role(Roles.admin, Roles.owner, Roles.moderator)
     async def unsuperstarify(self, ctx: Context, member: Member):
         """
