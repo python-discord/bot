@@ -3,14 +3,15 @@ import logging
 import re
 import time
 
-from discord import Embed, Message, RawMessageUpdateEvent, RawReactionActionEvent
+from discord import Embed, Message, RawMessageUpdateEvent
 from discord.ext.commands import Bot, Context, command, group
 from dulwich.repo import Repo
 
 from bot.constants import (
-    Channels, Emojis, Guild, Roles, URLs
+    Channels, Guild, Roles, URLs
 )
 from bot.decorators import with_role
+from bot.utils.messages import wait_for_deletion
 
 log = logging.getLogger(__name__)
 
@@ -342,7 +343,10 @@ class Bot:
                         howto_embed = Embed(description=howto)
                         bot_message = await msg.channel.send(f"Hey {msg.author.mention}!", embed=howto_embed)
                         self.codeblock_message_ids[msg.id] = bot_message.id
-                        await bot_message.add_reaction(Emojis.cross_mark)
+
+                        self.bot.loop.create_task(
+                            wait_for_deletion(bot_message, user_ids=(msg.author.id,), client=self.bot)
+                        )
                     else:
                         return
 
@@ -379,42 +383,6 @@ class Bot:
             bot_message = await channel.get_message(self.codeblock_message_ids[payload.message_id])
             await bot_message.delete()
             del self.codeblock_message_ids[payload.message_id]
-
-    async def on_raw_reaction_add(self, payload: RawReactionActionEvent):
-        #  Ignores reactions added by the bot or added to non-codeblock correction embed messages
-        #  Also ignores the reaction if the user can't be loaded
-        #  Retrieve Member object instead of user in order to compare roles later
-        #  Try except used to catch instances where guild_id not in payload.
-        try:
-            member = self.bot.get_guild(payload.guild_id).get_member(payload.user_id)
-        except AttributeError:
-            return
-
-        if member is None:
-            return
-        if member.bot or payload.message_id not in self.codeblock_message_ids.values():
-            return
-
-        #  Finds the appropriate bot message/ user message pair and assigns them to variables
-        for user_message_id, bot_message_id in self.codeblock_message_ids.items():
-            if bot_message_id == payload.message_id:
-                channel = self.bot.get_channel(payload.channel_id)
-                user_message = await channel.get_message(user_message_id)
-                bot_message = await channel.get_message(bot_message_id)
-                break
-
-        #  If the reaction was clicked on by the author of the user message, deletes the bot message
-        if member.id == user_message.author.id:
-            await bot_message.delete()
-            del self.codeblock_message_ids[user_message_id]
-            return
-
-        #  If the reaction was clicked by staff (helper or higher), deletes the bot message
-        for role in member.roles:
-            if role.id in (Roles.owner, Roles.admin, Roles.moderator, Roles.helpers):
-                await bot_message.delete()
-                del self.codeblock_message_ids[user_message_id]
-                return
 
 
 def setup(bot):
