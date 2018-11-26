@@ -15,7 +15,7 @@ MAX_SIZE = 1024 * 1024 * 8  # 8 Mebibytes
 async def wait_for_deletion(
     message: Message,
     user_ids: Sequence[Snowflake],
-    deletion_emojis: Sequence[str]=(Emojis.cross_mark,),
+    deletion_emojis: Sequence[str] = (Emojis.cross_mark,),
     timeout: float = 60 * 5,
     attach_emojis=True,
     client=None
