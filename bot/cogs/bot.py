@@ -344,7 +344,6 @@ class Bot:
                         bot_message = await msg.channel.send(f"Hey {msg.author.mention}!", embed=howto_embed)
                         self.codeblock_message_ids[msg.id] = bot_message.id
 
-                        # Create
                         self.bot.loop.create_task(
                             wait_for_deletion(bot_message, user_ids=(msg.author.id,), client=self.bot)
                         )
