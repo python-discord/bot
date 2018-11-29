@@ -103,7 +103,7 @@ class Information:
                 Features: {features}
 
                 **Counts**
-                Members: {member_count}
+                Members: {member_count:,}
                 Roles: {roles}
                 Text: {text_channels}
                 Voice: {voice_channels}
