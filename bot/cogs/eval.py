@@ -66,9 +66,9 @@ class CodeEval:
                 # far enough to align them.
                 # we first `str()` the line number
                 # then we get the length
-                # and do a simple {:<LENGTH}
+                # and use `str.rjust()`
                 # to indent it.
-                start = f"{'':<{len(str(self.ln))+2}}...: "
+                start = "...:".rjust(len(self.ln) + 2)
 
             if i == len(lines) - 2:
                 if line.startswith("return"):
