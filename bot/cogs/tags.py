@@ -149,7 +149,7 @@ class Tags:
 
         tags = []
 
-        embed = Embed()
+        embed: Embed = Embed()
         embed.colour = Colour.red()
         tag_data = await self.get_tag_data(tag_name)
 
