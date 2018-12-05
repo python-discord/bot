@@ -8,6 +8,7 @@ RUN apk add --update jpeg-dev
 RUN apk add --update libxml2 libxml2-dev libxslt-dev
 RUN apk add --update zlib-dev
 RUN apk add --update freetype-dev
+RUN apk add --update git
 
 ENV LIBRARY_PATH=/lib:/usr/lib
 ENV PIPENV_VENV_IN_PROJECT=1
