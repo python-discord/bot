@@ -125,7 +125,6 @@ class Doc:
         self.base_urls = {}
         self.bot = bot
         self.inventories = {}
-        self.headers = {"X-API-KEY": Keys.site_api}
 
     async def on_ready(self):
         await self.refresh_inventory()
