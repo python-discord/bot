@@ -133,7 +133,7 @@ class Information:
         # someone other than the caller
         if user and user != ctx.author:
             if not with_role_check(ctx, *MODERATION_ROLES):
-                raise BadArgument("Only mods can do target other users.")
+                raise BadArgument("Only mods can target other users.")
 
         # Non-moderators may only do this in #bot-commands
         if not with_role_check(ctx, *MODERATION_ROLES):
