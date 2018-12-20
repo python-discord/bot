@@ -19,13 +19,13 @@ style:
 
     emojis:
         defcon_disabled: "<:defcondisabled:470326273952972810>"
-        defcon_enabled: "<:defconenabled:470326274213150730>"
-        defcon_updated: "<:defconsettingsupdated:470326274082996224>"
+        defcon_enabled:  "<:defconenabled:470326274213150730>"
+        defcon_updated:  "<:defconsettingsupdated:470326274082996224>"
 
         green_chevron: "<:greenchevron:418104310329769993>"
         red_chevron:   "<:redchevron:418112778184818698>"
         white_chevron: "<:whitechevron:418110396973711363>"
-        bb_message:     "<:bbmessage:472476937504423936>"
+        bb_message:    "<:bbmessage:472476937504423936>"
 
         status_online:  "<:status_online:470326272351010816>"
         status_idle:    "<:status_idle:470326266625785866>"
@@ -42,7 +42,7 @@ style:
         crown_green:   "https://cdn.discordapp.com/emojis/469964154719961088.png"
         crown_red:     "https://cdn.discordapp.com/emojis/469964154879344640.png"
 
-        defcon_denied:  "https://cdn.discordapp.com/emojis/472475292078964738.png"
+        defcon_denied:   "https://cdn.discordapp.com/emojis/472475292078964738.png"
         defcon_disabled: "https://cdn.discordapp.com/emojis/470326273952972810.png"
         defcon_enabled:  "https://cdn.discordapp.com/emojis/470326274213150730.png"
         defcon_updated:  "https://cdn.discordapp.com/emojis/472472638342561793.png"
@@ -68,8 +68,8 @@ style:
         user_unban:  "https://cdn.discordapp.com/emojis/469952898692808704.png"
         user_update: "https://cdn.discordapp.com/emojis/469952898684551168.png"
 
-        user_mute:   "https://cdn.discordapp.com/emojis/472472640100106250.png"
-        user_unmute: "https://cdn.discordapp.com/emojis/472472639206719508.png"
+        user_mute:     "https://cdn.discordapp.com/emojis/472472640100106250.png"
+        user_unmute:   "https://cdn.discordapp.com/emojis/472472639206719508.png"
         user_verified: "https://cdn.discordapp.com/emojis/470326274519334936.png"
 
         pencil: "https://cdn.discordapp.com/emojis/470326272401211415.png"
