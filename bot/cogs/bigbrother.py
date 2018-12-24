@@ -223,6 +223,7 @@ class BigBrother:
         A `reason` for watching is required, which is added for the user to be watched as a
         note (aka: shadow warning)
         """
+
         channel_id = Channels.big_brother_logs
 
         post_data = {
