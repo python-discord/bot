@@ -3,8 +3,8 @@ import logging
 from discord import Colour, Embed, Member, Object
 from discord.ext.commands import (
     BadArgument, Bot, BotMissingPermissions,
-    CommandError, CommandInvokeError, Context,
-    NoPrivateMessage, UserInputError
+    CommandError, CommandInvokeError, CommandNotFound,
+    Context, NoPrivateMessage, UserInputError
 )
 
 from bot.cogs.modlog import ModLog
@@ -121,7 +121,13 @@ class Events:
             log.debug(f"Command {command} has a local error handler, ignoring.")
             return
 
-        if isinstance(e, BadArgument):
+        if isinstance(e, CommandNotFound) and not hasattr(ctx, "invoked_from_error_handler"):
+            tags_get_command = self.bot.get_command("tags get")
+            ctx.invoked_from_error_handler = True
+
+            # Return to not raise the exception
+            return await ctx.invoke(tags_get_command, tag_name=ctx.invoked_with)
+        elif isinstance(e, BadArgument):
             await ctx.send(f"Bad argument: {e}\n")
             await ctx.invoke(*help_command)
         elif isinstance(e, UserInputError):
