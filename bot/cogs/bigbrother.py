@@ -216,18 +216,13 @@ class BigBrother:
 
     @bigbrother_group.command(name='watch', aliases=('w',))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
-    async def watch_command(self, ctx: Context, user: User, *, reason: str = None):
+    async def watch_command(self, ctx: Context, user: User, *, reason: str):
         """
         Relay messages sent by the given `user` to the `#big-brother-logs` channel
 
         A `reason` for watching is required, which is added for the user to be watched as a
         note (aka: shadow warning)
         """
-
-        if not reason:
-            await ctx.send(":x: A reason for watching this user is required")
-            return
-
         channel_id = Channels.big_brother_logs
 
         post_data = {
