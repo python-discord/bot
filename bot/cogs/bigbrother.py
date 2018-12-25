@@ -216,11 +216,12 @@ class BigBrother:
 
     @bigbrother_group.command(name='watch', aliases=('w',))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
-    async def watch_command(self, ctx: Context, user: User, *, reason: str = None):
+    async def watch_command(self, ctx: Context, user: User, *, reason: str):
         """
         Relay messages sent by the given `user` to the `#big-brother-logs` channel
 
-        If a `reason` is specified, a note is added for `user`
+        A `reason` for watching is required, which is added for the user to be watched as a
+        note (aka: shadow warning)
         """
 
         channel_id = Channels.big_brother_logs
@@ -251,10 +252,9 @@ class BigBrother:
                 reason = data.get('error_message', "no message provided")
                 await ctx.send(f":x: the API returned an error: {reason}")
 
-        # Add a note (shadow warning) if a reason is specified
-        if reason:
-            reason = "bb watch: " + reason  # Prepend for situational awareness
-            await post_infraction(ctx, user, type="warning", reason=reason, hidden=True)
+        # Add a note (shadow warning) with the reason for watching
+        reason = "bb watch: " + reason  # Prepend for situational awareness
+        await post_infraction(ctx, user, type="warning", reason=reason, hidden=True)
 
     @bigbrother_group.command(name='unwatch', aliases=('uw',))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
