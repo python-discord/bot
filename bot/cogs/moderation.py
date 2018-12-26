@@ -100,6 +100,9 @@ class Moderation(Scheduler):
         else:
             await ctx.send(f"{action} ({reason}).")
 
+        if not notified:
+            await self.log_notify_failure(user, ctx.author, "warning")
+
     @with_role(*MODERATION_ROLES)
     @command(name="kick")
     async def kick(self, ctx: Context, user: Member, *, reason: str = None):
@@ -129,6 +132,9 @@ class Moderation(Scheduler):
             await ctx.send(f"{action}.")
         else:
             await ctx.send(f"{action} ({reason}).")
+
+        if not notified:
+            await self.log_notify_failure(user, ctx.author, "kick")
 
         # Send a log message to the mod log
         await self.mod_log.send_log_message(
@@ -175,6 +181,9 @@ class Moderation(Scheduler):
         else:
             await ctx.send(f"{action} ({reason}).")
 
+        if not notified:
+            await self.log_notify_failure(user, ctx.author, "ban")
+
         # Send a log message to the mod log
         await self.mod_log.send_log_message(
             icon_url=Icons.user_ban,
@@ -219,6 +228,9 @@ class Moderation(Scheduler):
             await ctx.send(f"{action}.")
         else:
             await ctx.send(f"{action} ({reason}).")
+
+        if not notified:
+            await self.log_notify_failure(user, ctx.author, "mute")
 
         # Send a log message to the mod log
         await self.mod_log.send_log_message(
@@ -274,6 +286,9 @@ class Moderation(Scheduler):
         else:
             await ctx.send(f"{action} ({reason}).")
 
+        if not notified:
+            await self.log_notify_failure(user, ctx.author, "mute")
+
         # Send a log message to the mod log
         await self.mod_log.send_log_message(
             icon_url=Icons.user_mute,
@@ -328,6 +343,9 @@ class Moderation(Scheduler):
             await ctx.send(f"{action}.")
         else:
             await ctx.send(f"{action} ({reason}).")
+
+        if not notified:
+            await self.log_notify_failure(user, ctx.author, "ban")
 
         # Send a log message to the mod log
         await self.mod_log.send_log_message(
@@ -618,6 +636,9 @@ class Moderation(Scheduler):
 
             dm_result = ":incoming_envelope: " if notified else ""
             await ctx.send(f"{dm_result}:ok_hand: Un-muted {user.mention}.")
+
+            if not notified:
+                await self.log_notify_failure(user, ctx.author, "unmute")
 
             # Send a log message to the mod log
             await self.mod_log.send_log_message(
@@ -1143,6 +1164,15 @@ class Moderation(Scheduler):
                 "They've probably just disabled private messages."
             )
             return False
+
+    async def log_notify_failure(self, target: str, actor: Member, infraction_type: str):
+        await self.mod_log.send_log_message(
+            icon_url=Icons.token_removed,
+            content=actor.mention,
+            colour=Colour(Colours.soft_red),
+            title="Notification Failed",
+            text=f"Direct message was unable to be sent.\nUser: {target.mention}\nType: {infraction_type}"
+        )
 
     # endregion
 
