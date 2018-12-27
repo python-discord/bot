@@ -94,7 +94,7 @@ class Utils:
         Shows you information on up to 25 unicode characters.
         """
 
-        match = re.match(r"<(a?):([a-zA-Z0-9\_]+):([0-9]+)>", characters)
+        match = re.match(r"<(a?):(\w+):(\d+)>", characters)
         if match:
             embed = Embed(
                 title="Non-Character Detected",
