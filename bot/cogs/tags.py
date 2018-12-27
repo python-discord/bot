@@ -180,6 +180,9 @@ class Tags:
                 if tag_data['image_url'] is not None:
                     embed.set_image(url=tag_data['image_url'])
 
+        # If its invoked from error handler just ignore it.
+        elif hasattr(ctx, "invoked_from_error_handler"):
+            return
         # If not, prepare an error message.
         else:
             embed.colour = Colour.red()
