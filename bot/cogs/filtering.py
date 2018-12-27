@@ -238,7 +238,15 @@ class Filtering:
                 f"{URLs.discord_invite_api}/{invite}"
             )
             response = await response.json()
-            guild_id = int(response.get("guild", {}).get("id"))
+            if response.get("guild") is None:
+                # If we have a valid invite which is not a guild invite
+                # it might be a DM channel invite
+                if response.get("channel") is not None:
+                    # We don't have whitelisted Group DMs so we can
+                    # go ahead and return a positive for any group DM
+                    return True
+
+            guild_id = int(response.get("guild").get("id"))
 
             if guild_id not in Filter.guild_invite_whitelist:
                 return True
