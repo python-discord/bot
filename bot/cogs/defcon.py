@@ -5,13 +5,11 @@ from discord import Colour, Embed, Member
 from discord.ext.commands import Bot, Context, group
 
 from bot.cogs.modlog import ModLog
-from bot.constants import Channels, Emojis, Icons, Keys, Roles, URLs
+from bot.constants import Channels, Colours, Emojis, Icons, Keys, Roles, URLs
 from bot.decorators import with_role
 
 log = logging.getLogger(__name__)
 
-COLOUR_RED = Colour(0xcd6d6d)
-COLOUR_GREEN = Colour(0x68c290)
 
 REJECTION_MESSAGE = """
 Hi, {user} - Thanks for your interest in our server!
@@ -93,7 +91,7 @@ class Defcon:
                     message = f"{message}\n\nUnable to send rejection message via DM; they probably have DMs disabled."
 
                 await self.mod_log.send_log_message(
-                    Icons.defcon_denied, COLOUR_RED, "Entry denied",
+                    Icons.defcon_denied, Colours.soft_red, "Entry denied",
                     message, member.avatar_url_as(static_format="png")
                 )
 
@@ -134,7 +132,7 @@ class Defcon:
             )
 
             await self.mod_log.send_log_message(
-                Icons.defcon_enabled, COLOUR_GREEN, "DEFCON enabled",
+                Icons.defcon_enabled, Colours.soft_green, "DEFCON enabled",
                 f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)\n"
                 f"**Days:** {self.days.days}\n\n"
                 "**There was a problem updating the site** - This setting may be reverted when the bot is "
@@ -145,7 +143,7 @@ class Defcon:
             await ctx.send(f"{Emojis.defcon_enabled} DEFCON enabled.")
 
             await self.mod_log.send_log_message(
-                Icons.defcon_enabled, COLOUR_GREEN, "DEFCON enabled",
+                Icons.defcon_enabled, Colours.soft_green, "DEFCON enabled",
                 f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)\n"
                 f"**Days:** {self.days.days}\n\n"
             )
@@ -177,7 +175,7 @@ class Defcon:
             )
 
             await self.mod_log.send_log_message(
-                Icons.defcon_disabled, COLOUR_RED, "DEFCON disabled",
+                Icons.defcon_disabled, Colours.soft_red, "DEFCON disabled",
                 f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)\n"
                 "**There was a problem updating the site** - This setting may be reverted when the bot is "
                 "restarted.\n\n"
@@ -187,7 +185,7 @@ class Defcon:
             await ctx.send(f"{Emojis.defcon_disabled} DEFCON disabled.")
 
             await self.mod_log.send_log_message(
-                Icons.defcon_disabled, COLOUR_RED, "DEFCON disabled",
+                Icons.defcon_disabled, Colours.soft_red, "DEFCON disabled",
                 f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)"
             )
 
