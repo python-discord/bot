@@ -265,11 +265,12 @@ class Defcon:
         """
 
         if self.enabled:
-            new_topic = f"{BASE_CHANNEL_TOPIC}\n(Status: Enabled, Threshold: {self.days} days)"
+            day_str = "days" if self.days > 1 else "day"
+            new_topic = f"{BASE_CHANNEL_TOPIC}\n(Status: Enabled, Threshold: {self.days} {day_str})"
         else:
             new_topic = f"{BASE_CHANNEL_TOPIC}\n(Status: Disabled)"
 
-        defcon_channel = await self.bot.guild.get_channel(Channels.defcon)
+        defcon_channel = self.bot.guilds[0].get_channel(Channels.defcon)
         await defcon_channel.edit(topic=new_topic)
 
 
