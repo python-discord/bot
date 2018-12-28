@@ -10,7 +10,6 @@ from bot.decorators import with_role
 
 log = logging.getLogger(__name__)
 
-
 REJECTION_MESSAGE = """
 Hi, {user} - Thanks for your interest in our server!
 
@@ -21,6 +20,8 @@ Even so, thanks for joining! We're very excited at the possibility of having you
 will be resolved soon. In the meantime, please feel free to peruse the resources on our site at
 <https://pythondiscord.com/>, and have a nice day!
 """
+
+BASE_CHANNEL_TOPIC = "Python Discord Defense Mechanism"
 
 
 class Defcon:
@@ -63,6 +64,8 @@ class Defcon:
                 self.enabled = False
                 self.days = timedelta(days=0)
                 log.warning(f"DEFCON disabled")
+
+            self.update_channel_topic()
 
     async def on_member_join(self, member: Member):
         if self.enabled and self.days.days > 0:
@@ -148,6 +151,8 @@ class Defcon:
                 f"**Days:** {self.days.days}\n\n"
             )
 
+        self.update_channel_topic()
+
     @defcon_group.command(name='disable', aliases=('off', 'd'))
     @with_role(Roles.admin, Roles.owner)
     async def disable_command(self, ctx: Context):
@@ -188,6 +193,8 @@ class Defcon:
                 Icons.defcon_disabled, Colours.soft_red, "DEFCON disabled",
                 f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)"
             )
+
+        self.update_channel_topic()
 
     @defcon_group.command(name='status', aliases=('s',))
     @with_role(Roles.admin, Roles.owner)
@@ -249,6 +256,21 @@ class Defcon:
                 f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)\n"
                 f"**Days:** {self.days.days}"
             )
+
+        self.update_channel_topic()
+
+    async def update_channel_topic(self):
+        """
+        Update the #defcon channel topic with the current DEFCON status
+        """
+
+        if self.enabled:
+            new_topic = f"{BASE_CHANNEL_TOPIC}\n(Status: Enabled, Threshold: {self.days} days)"
+        else:
+            new_topic = f"{BASE_CHANNEL_TOPIC}\n(Status: Disabled)"
+
+        defcon_channel = await self.bot.guild.get_channel(Channels.defcon)
+        await defcon_channel.edit(topic=new_topic)
 
 
 def setup(bot: Bot):
