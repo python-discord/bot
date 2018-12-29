@@ -123,7 +123,8 @@ class ModLog:
         if ping_everyone:
             content = "@everyone"
 
-        await self.bot.get_channel(channel_id).send(content=content, embed=embed, files=files)
+        log_message = await self.bot.get_channel(channel_id).send(content=content, embed=embed, files=files)
+        return self.bot.get_context(log_message)  # Optionally return for use with antispam
 
     async def on_guild_channel_create(self, channel: GUILD_CHANNEL):
         if channel.guild.id != GuildConstant.id:
