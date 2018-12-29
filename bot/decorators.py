@@ -1,16 +1,49 @@
 import logging
 import random
+import typing
 from asyncio import Lock
 from functools import wraps
 from weakref import WeakValueDictionary
 
 from discord import Colour, Embed
 from discord.ext import commands
-from discord.ext.commands import Context
+from discord.ext.commands import CheckFailure, Context
 
 from bot.constants import ERROR_REPLIES
 
 log = logging.getLogger(__name__)
+
+
+class InChannelCheckFailure(CheckFailure):
+    pass
+
+
+def in_channel(*channels: int, bypass_roles: typing.Container[int] = None):
+    """
+    Checks that the message is in a whitelisted channel or optionally has a bypass role.
+    """
+    def predicate(ctx: Context):
+        if ctx.channel.id in channels:
+            log.debug(f"{ctx.author} tried to call the '{ctx.command.name}' command. "
+                      f"The command was used in a whitelisted channel.")
+            return True
+
+        if bypass_roles:
+            if any(r.id in bypass_roles for r in ctx.author.roles):
+                log.debug(f"{ctx.author} tried to call the '{ctx.command.name}' command. "
+                          f"The command was not used in a whitelisted channel, "
+                          f"but the author had a role to bypass the in_channel check.")
+                return True
+
+        log.debug(f"{ctx.author} tried to call the '{ctx.command.name}' command. "
+                  f"The in_channel check failed.")
+
+        channels_str = ', '.join(f"<#{c_id}>" for c_id in channels)
+        raise InChannelCheckFailure(
+            f"Sorry, but you may only use this command within {channels_str}."
+        )
+
+    return commands.check(predicate)
 
 
 def with_role(*role_ids: int):
@@ -42,15 +75,6 @@ def without_role(*role_ids: int):
         check = all(role not in author_roles for role in role_ids)
         log.debug(f"{ctx.author} tried to call the '{ctx.command.name}' command. "
                   f"The result of the without_role check was {check}.")
-        return check
-    return commands.check(predicate)
-
-
-def in_channel(channel_id):
-    async def predicate(ctx: Context):
-        check = ctx.channel.id == channel_id
-        log.debug(f"{ctx.author} tried to call the '{ctx.command.name}' command. "
-                  f"The result of the in_channel check was {check}.")
         return check
     return commands.check(predicate)
 
