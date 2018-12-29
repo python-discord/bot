@@ -15,6 +15,7 @@ from bot.constants import (
     Colours, DEBUG_MODE, Event,
     Guild as GuildConfig, Icons, Roles,
 )
+from bot.utils.moderation import post_infraction
 from bot.utils.time import humanize_delta
 
 
@@ -133,7 +134,8 @@ class AntiSpam:
 
                 mod_alert_message += f"{content}"
 
-            await self.mod_log.send_log_message(
+            # Return the mod log message Context that we can use to post the infraction
+            mod_log_message = await self.mod_log.send_log_message(
                 icon_url=Icons.filtering,
                 colour=Colour(Colours.soft_red),
                 title=f"Spam detected!",
@@ -143,26 +145,28 @@ class AntiSpam:
                 ping_everyone=AntiSpamConfig.ping_everyone
             )
 
-            await member.add_roles(self.muted_role, reason=reason)
+            # Post AntiSpam mute as a regular infraction so it can be reversed
+            ctx = await self.bot.get_context(mod_log_message)
+            response_object = await post_infraction(ctx, member, type="mute", reason=reason, duration=remove_role_after)
+            if response_object is None:
+                return  # Appropriate error(s) are already raised by post_infraction
+
+            self.mod_log.ignore(Event.member_update, member.id)
+            await member.add_roles(self._muted_role, reason=reason)
+
+            loop = asyncio.get_event_loop()
+            infraction_object = response_object["infraction"]
+            self.schedule_task(loop, infraction_object["id"], infraction_object)
+
             description = textwrap.dedent(f"""
                 **Channel**: {msg.channel.mention}
                 **User**: {msg.author.mention} (`{msg.author.id}`)
                 **Reason**: {reason}
                 Role will be removed after {human_duration}.
             """)
-
             await self.mod_log.send_log_message(
                 icon_url=Icons.user_mute, colour=Colour(Colours.soft_red),
                 title="User muted", text=description
-            )
-
-            await asyncio.sleep(remove_role_after)
-            await member.remove_roles(self.muted_role, reason="AntiSpam mute expired")
-
-            await self.mod_log.send_log_message(
-                icon_url=Icons.user_mute, colour=Colour(Colours.soft_green),
-                title="User unmuted",
-                text=f"Was muted by `AntiSpam` cog for {human_duration}."
             )
 
     async def maybe_delete_messages(self, channel: TextChannel, messages: List[Message]):
