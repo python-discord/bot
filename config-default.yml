@@ -72,6 +72,8 @@ style:
         user_unmute:   "https://cdn.discordapp.com/emojis/472472639206719508.png"
         user_verified: "https://cdn.discordapp.com/emojis/470326274519334936.png"
 
+        user_warn: "https://cdn.discordapp.com/emojis/470326274238447633.png"
+
         pencil: "https://cdn.discordapp.com/emojis/470326272401211415.png"
 
         remind_blurple: "https://cdn.discordapp.com/emojis/477907609215827968.png"
