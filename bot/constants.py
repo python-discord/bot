@@ -292,6 +292,8 @@ class Icons(metaclass=YAMLGetter):
     user_unmute: str
     user_verified: str
 
+    user_warn: str
+
     pencil: str
 
     remind_blurple: str

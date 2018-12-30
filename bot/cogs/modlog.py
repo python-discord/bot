@@ -104,8 +104,9 @@ class ModLog:
                 self._ignored[event].append(item)
 
     async def send_log_message(
-            self, icon_url: Optional[str], colour: Colour, title: Optional[str], text: str, thumbnail: str = None,
-            channel_id: int = Channels.modlog, ping_everyone: bool = False, files: List[File] = None
+            self, icon_url: Optional[str], colour: Colour, title: Optional[str], text: str,
+            thumbnail: str = None, channel_id: int = Channels.modlog, ping_everyone: bool = False,
+            files: List[File] = None, content: str = None
     ):
         embed = Embed(description=text)
 
@@ -118,10 +119,11 @@ class ModLog:
         if thumbnail is not None:
             embed.set_thumbnail(url=thumbnail)
 
-        content = None
-
         if ping_everyone:
-            content = "@everyone"
+            if content:
+                content = f"@everyone\n{content}"
+            else:
+                content = "@everyone"
 
         await self.bot.get_channel(channel_id).send(content=content, embed=embed, files=files)
 
