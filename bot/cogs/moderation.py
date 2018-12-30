@@ -82,7 +82,7 @@ class Moderation(Scheduler):
         :param reason: The reason for the warning.
         """
 
-        await self.notify_infraction(
+        notified = await self.notify_infraction(
             user=user,
             infr_type="Warning",
             reason=reason
@@ -92,12 +92,16 @@ class Moderation(Scheduler):
         if response_object is None:
             return
 
-        if reason is None:
-            result_message = f":ok_hand: warned {user.mention}."
-        else:
-            result_message = f":ok_hand: warned {user.mention} ({reason})."
+        dm_result = ":incoming_envelope: " if notified else ""
+        action = f"{dm_result}:ok_hand: warned {user.mention}"
 
-        await ctx.send(result_message)
+        if reason is None:
+            await ctx.send(f"{action}.")
+        else:
+            await ctx.send(f"{action} ({reason}).")
+
+        if not notified:
+            await self.log_notify_failure(user, ctx.author, "warning")
 
         # Send a message to the mod log
         await self.mod_log.send_log_message(
@@ -121,7 +125,7 @@ class Moderation(Scheduler):
         :param reason: The reason for the kick.
         """
 
-        await self.notify_infraction(
+        notified = await self.notify_infraction(
             user=user,
             infr_type="Kick",
             reason=reason
@@ -134,12 +138,16 @@ class Moderation(Scheduler):
         self.mod_log.ignore(Event.member_remove, user.id)
         await user.kick(reason=reason)
 
-        if reason is None:
-            result_message = f":ok_hand: kicked {user.mention}."
-        else:
-            result_message = f":ok_hand: kicked {user.mention} ({reason})."
+        dm_result = ":incoming_envelope: " if notified else ""
+        action = f"{dm_result}:ok_hand: kicked {user.mention}"
 
-        await ctx.send(result_message)
+        if reason is None:
+            await ctx.send(f"{action}.")
+        else:
+            await ctx.send(f"{action} ({reason}).")
+
+        if not notified:
+            await self.log_notify_failure(user, ctx.author, "kick")
 
         # Send a log message to the mod log
         await self.mod_log.send_log_message(
@@ -163,7 +171,7 @@ class Moderation(Scheduler):
         :param reason: The reason for the ban.
         """
 
-        await self.notify_infraction(
+        notified = await self.notify_infraction(
             user=user,
             infr_type="Ban",
             duration="Permanent",
@@ -178,12 +186,16 @@ class Moderation(Scheduler):
         self.mod_log.ignore(Event.member_remove, user.id)
         await ctx.guild.ban(user, reason=reason, delete_message_days=0)
 
-        if reason is None:
-            result_message = f":ok_hand: permanently banned {user.mention}."
-        else:
-            result_message = f":ok_hand: permanently banned {user.mention} ({reason})."
+        dm_result = ":incoming_envelope: " if notified else ""
+        action = f"{dm_result}:ok_hand: permanently banned {user.mention}"
 
-        await ctx.send(result_message)
+        if reason is None:
+            await ctx.send(f"{action}.")
+        else:
+            await ctx.send(f"{action} ({reason}).")
+
+        if not notified:
+            await self.log_notify_failure(user, ctx.author, "ban")
 
         # Send a log message to the mod log
         await self.mod_log.send_log_message(
@@ -207,7 +219,7 @@ class Moderation(Scheduler):
         :param reason: The reason for the mute.
         """
 
-        await self.notify_infraction(
+        notified = await self.notify_infraction(
             user=user,
             infr_type="Mute",
             duration="Permanent",
@@ -222,12 +234,16 @@ class Moderation(Scheduler):
         self.mod_log.ignore(Event.member_update, user.id)
         await user.add_roles(self._muted_role, reason=reason)
 
-        if reason is None:
-            result_message = f":ok_hand: permanently muted {user.mention}."
-        else:
-            result_message = f":ok_hand: permanently muted {user.mention} ({reason})."
+        dm_result = ":incoming_envelope: " if notified else ""
+        action = f"{dm_result}:ok_hand: permanently muted {user.mention}"
 
-        await ctx.send(result_message)
+        if reason is None:
+            await ctx.send(f"{action}.")
+        else:
+            await ctx.send(f"{action} ({reason}).")
+
+        if not notified:
+            await self.log_notify_failure(user, ctx.author, "mute")
 
         # Send a log message to the mod log
         await self.mod_log.send_log_message(
@@ -255,7 +271,7 @@ class Moderation(Scheduler):
         :param reason: The reason for the temporary mute.
         """
 
-        await self.notify_infraction(
+        notified = await self.notify_infraction(
             user=user,
             infr_type="Mute",
             duration=duration,
@@ -275,12 +291,16 @@ class Moderation(Scheduler):
         loop = asyncio.get_event_loop()
         self.schedule_task(loop, infraction_object["id"], infraction_object)
 
-        if reason is None:
-            result_message = f":ok_hand: muted {user.mention} until {infraction_expiration}."
-        else:
-            result_message = f":ok_hand: muted {user.mention} until {infraction_expiration} ({reason})."
+        dm_result = ":incoming_envelope: " if notified else ""
+        action = f"{dm_result}:ok_hand: muted {user.mention} until {infraction_expiration}"
 
-        await ctx.send(result_message)
+        if reason is None:
+            await ctx.send(f"{action}.")
+        else:
+            await ctx.send(f"{action} ({reason}).")
+
+        if not notified:
+            await self.log_notify_failure(user, ctx.author, "mute")
 
         # Send a log message to the mod log
         await self.mod_log.send_log_message(
@@ -307,7 +327,7 @@ class Moderation(Scheduler):
         :param reason: The reason for the temporary ban.
         """
 
-        await self.notify_infraction(
+        notified = await self.notify_infraction(
             user=user,
             infr_type="Ban",
             duration=duration,
@@ -329,12 +349,16 @@ class Moderation(Scheduler):
         loop = asyncio.get_event_loop()
         self.schedule_task(loop, infraction_object["id"], infraction_object)
 
-        if reason is None:
-            result_message = f":ok_hand: banned {user.mention} until {infraction_expiration}."
-        else:
-            result_message = f":ok_hand: banned {user.mention} until {infraction_expiration} ({reason})."
+        dm_result = ":incoming_envelope: " if notified else ""
+        action = f"{dm_result}:ok_hand: banned {user.mention} until {infraction_expiration}"
 
-        await ctx.send(result_message)
+        if reason is None:
+            await ctx.send(f"{action}.")
+        else:
+            await ctx.send(f"{action} ({reason}).")
+
+        if not notified:
+            await self.log_notify_failure(user, ctx.author, "ban")
 
         # Send a log message to the mod log
         await self.mod_log.send_log_message(
@@ -629,7 +653,18 @@ class Moderation(Scheduler):
             if infraction_object["expires_at"] is not None:
                 self.cancel_expiration(infraction_object["id"])
 
-            await ctx.send(f":ok_hand: Un-muted {user.mention}.")
+            notified = await self.notify_pardon(
+                user=user,
+                title="You have been unmuted.",
+                content="You may now send messages in the server.",
+                icon_url=Icons.user_unmute
+            )
+
+            dm_result = ":incoming_envelope: " if notified else ""
+            await ctx.send(f"{dm_result}:ok_hand: Un-muted {user.mention}.")
+
+            if not notified:
+                await self.log_notify_failure(user, ctx.author, "unmute")
 
             # Send a log message to the mod log
             await self.mod_log.send_log_message(
@@ -642,13 +677,6 @@ class Moderation(Scheduler):
                     Actor: {ctx.message.author}
                     Intended expiry: {infraction_object['expires_at']}
                 """)
-            )
-
-            await self.notify_pardon(
-                user=user,
-                title="You have been unmuted.",
-                content="You may now send messages in the server.",
-                icon_url=Icons.user_unmute
             )
         except Exception:
             log.exception("There was an error removing an infraction.")
@@ -1119,7 +1147,7 @@ class Moderation(Scheduler):
         embed.title = f"Please review our rules over at {RULES_URL}"
         embed.url = RULES_URL
 
-        await self.send_private_embed(user, embed)
+        return await self.send_private_embed(user, embed)
 
     async def notify_pardon(
             self, user: Union[User, Member], title: str, content: str, icon_url: str = Icons.user_verified
@@ -1140,7 +1168,7 @@ class Moderation(Scheduler):
 
         embed.set_author(name=title, icon_url=icon_url)
 
-        await self.send_private_embed(user, embed)
+        return await self.send_private_embed(user, embed)
 
     async def send_private_embed(self, user: Union[User, Member], embed: Embed):
         """
@@ -1155,11 +1183,22 @@ class Moderation(Scheduler):
 
         try:
             await user.send(embed=embed)
+            return True
         except (HTTPException, Forbidden):
             log.debug(
                 f"Infraction-related information could not be sent to user {user} ({user.id}). "
                 "They've probably just disabled private messages."
             )
+            return False
+
+    async def log_notify_failure(self, target: str, actor: Member, infraction_type: str):
+        await self.mod_log.send_log_message(
+            icon_url=Icons.token_removed,
+            content=actor.mention,
+            colour=Colour(Colours.soft_red),
+            title="Notification Failed",
+            text=f"Direct message was unable to be sent.\nUser: {target.mention}\nType: {infraction_type}"
+        )
 
     # endregion
 
