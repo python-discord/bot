@@ -217,7 +217,7 @@ class Filtering:
 
     async def _has_invites(self, text: str) -> bool:
         """
-        Returns True if the text contains an invite which is not on the guild_invite_whitelist in 
+        Returns True if the text contains an invite which is not on the guild_invite_whitelist in
         config.yml
 
         Attempts to catch some of common ways to try to cheat the system.
@@ -237,7 +237,7 @@ class Filtering:
             guild = response.get("guild")
             if guild is None:
                 # Lack of a "guild" key in the JSON response indicates either an group DM invite, an
-                # expired invite, or an invalid invite. The API does not currently differentiate 
+                # expired invite, or an invalid invite. The API does not currently differentiate
                 # between invalid and expired invites
                 return True
 
