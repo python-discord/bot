@@ -65,7 +65,7 @@ class Defcon:
                 self.days = timedelta(days=0)
                 log.warning(f"DEFCON disabled")
 
-            self.update_channel_topic()
+            await self.update_channel_topic()
 
     async def on_member_join(self, member: Member):
         if self.enabled and self.days.days > 0:
@@ -151,7 +151,7 @@ class Defcon:
                 f"**Days:** {self.days.days}\n\n"
             )
 
-        self.update_channel_topic()
+        await self.update_channel_topic()
 
     @defcon_group.command(name='disable', aliases=('off', 'd'))
     @with_role(Roles.admin, Roles.owner)
@@ -194,7 +194,7 @@ class Defcon:
                 f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)"
             )
 
-        self.update_channel_topic()
+        await self.update_channel_topic()
 
     @defcon_group.command(name='status', aliases=('s',))
     @with_role(Roles.admin, Roles.owner)
@@ -257,7 +257,7 @@ class Defcon:
                 f"**Days:** {self.days.days}"
             )
 
-        self.update_channel_topic()
+        await self.update_channel_topic()
 
     async def update_channel_topic(self):
         """
