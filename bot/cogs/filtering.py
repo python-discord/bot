@@ -217,15 +217,11 @@ class Filtering:
 
     async def _has_invites(self, text: str) -> bool:
         """
-        Returns True if the text contains an invite which
-        is not on the guild_invite_whitelist in config.yml.
+        Returns True if the text contains an invite which is not on the guild_invite_whitelist in 
+        config.yml
 
-        Also catches a lot of common ways to try to cheat the system.
+        Attempts to catch some of common ways to try to cheat the system.
         """
-
-        # Remove spaces to prevent cases like
-        # d i s c o r d . c o m / i n v i t e / s e x y t e e n s
-        text = text.replace(" ", "")
 
         # Remove backslashes to prevent escape character aroundfuckery like
         # discord\.gg/gdudes-pony-farm
@@ -240,8 +236,9 @@ class Filtering:
             response = await response.json()
             guild = response.get("guild")
             if guild is None:
-                # We don't have whitelisted Group DMs so we can
-                # go ahead and return a positive for any group DM
+                # Lack of a "guild" key in the JSON response indicates either an group DM invite, an
+                # expired invite, or an invalid invite. The API does not currently differentiate 
+                # between invalid and expired invites
                 return True
 
             guild_id = int(guild.get("id"))
