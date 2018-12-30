@@ -103,6 +103,19 @@ class Moderation(Scheduler):
         if not notified:
             await self.log_notify_failure(user, ctx.author, "warning")
 
+        # Send a message to the mod log
+        await self.mod_log.send_log_message(
+            icon_url=Icons.user_warn,
+            colour=Colour(Colours.soft_red),
+            title="Member warned",
+            thumbnail=user.avatar_url_as(static_format="png"),
+            text=textwrap.dedent(f"""
+                Member: {user.mention} (`{user.id}`)
+                Actor: {ctx.message.author}
+                Reason: {reason}
+            """)
+        )
+
     @with_role(*MODERATION_ROLES)
     @command(name="kick")
     async def kick(self, ctx: Context, user: Member, *, reason: str = None):
@@ -384,6 +397,19 @@ class Moderation(Scheduler):
             result_message = f":ok_hand: note added for {user.mention} ({reason})."
 
         await ctx.send(result_message)
+
+        # Send a message to the mod log
+        await self.mod_log.send_log_message(
+            icon_url=Icons.user_warn,
+            colour=Colour(Colours.soft_red),
+            title="Member shadow warned",
+            thumbnail=user.avatar_url_as(static_format="png"),
+            text=textwrap.dedent(f"""
+                Member: {user.mention} (`{user.id}`)
+                Actor: {ctx.message.author}
+                Reason: {reason}
+            """)
+        )
 
     @with_role(*MODERATION_ROLES)
     @command(name="shadow_kick", hidden=True, aliases=['shadowkick', 'skick'])
