@@ -83,9 +83,9 @@ class Fun:
             {content}
             
             [Jump to message]({msg_jump})
-            {created_at:%B %d, %Y}
             """
         )
+        embed.timestamp = created_at
         embed.set_author(name=author.display_name, icon_url=author.avatar_url)
         embed.colour = Colour.gold()
 
