@@ -1,4 +1,5 @@
 import logging
+from textwrap import dedent
 
 from discord import Colour, Embed, Message, User
 from discord.ext.commands import Bot
@@ -73,16 +74,23 @@ class Fun:
         content = message.content
         author = message.author
         channel = message.channel
-        msg_id = message.id
+        msg_jump = message.jump_url
         created_at = message.created_at
 
         embed = Embed()
-        embed.description = f"{content}\n{created_at:%B %d, %Y}"
+        embed.description = dedent(
+            f"""
+            {content}
+            
+            [Jump to message]({msg_jump})
+            {created_at:%B %d, %Y}
+            """
+        )
         embed.set_author(name=author.display_name, icon_url=author.avatar_url)
         embed.colour = Colour.gold()
 
         await starboard.send(
-            f"{STAR_EMOJI} {channel.mention} Message ID: {msg_id}",
+            f"{STAR_EMOJI} {channel.mention}",
             embed=embed
         )
 
