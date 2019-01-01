@@ -17,6 +17,7 @@ class Sync:
     # An iterable of callables that are called when the bot is ready.
     ON_READY_SYNCERS: Iterable[Callable[[Bot, Guild], None]] = (
         syncers.sync_roles,
+        syncers.sync_users
     )
 
     def __init__(self, bot):
