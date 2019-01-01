@@ -106,7 +106,7 @@ class ModLog:
     async def send_log_message(
             self, icon_url: Optional[str], colour: Colour, title: Optional[str], text: str,
             thumbnail: str = None, channel_id: int = Channels.modlog, ping_everyone: bool = False,
-            files: List[File] = None, content: str = None
+            files: List[File] = None, content: str = None, footer: str = None
     ):
         embed = Embed(description=text)
 
@@ -124,6 +124,9 @@ class ModLog:
                 content = f"@everyone\n{content}"
             else:
                 content = "@everyone"
+
+        if footer:
+            embed.set_footer(text=footer)
 
         await self.bot.get_channel(channel_id).send(content=content, embed=embed, files=files)
 
