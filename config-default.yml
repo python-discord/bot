@@ -1,6 +1,6 @@
 bot:
-    help_prefix:               "bot."
-    token:       !REQUIRED_ENV "BOT_TOKEN"
+    prefix:      "!"
+    token:       !ENV "BOT_TOKEN"
 
     cooldowns:
         # Per channel, per tag.
@@ -15,16 +15,17 @@ style:
     colours:
         soft_red: 0xcd6d6d
         soft_green: 0x68c290
+        soft_orange: 0xf9cb54
 
     emojis:
         defcon_disabled: "<:defcondisabled:470326273952972810>"
-        defcon_enabled: "<:defconenabled:470326274213150730>"
-        defcon_updated: "<:defconsettingsupdated:470326274082996224>"
+        defcon_enabled:  "<:defconenabled:470326274213150730>"
+        defcon_updated:  "<:defconsettingsupdated:470326274082996224>"
 
         green_chevron: "<:greenchevron:418104310329769993>"
         red_chevron:   "<:redchevron:418112778184818698>"
         white_chevron: "<:whitechevron:418110396973711363>"
-        lemoneye2:     "<:lemoneye2:435193765582340098>"
+        bb_message:    "<:bbmessage:472476937504423936>"
 
         status_online:  "<:status_online:470326272351010816>"
         status_idle:    "<:status_idle:470326266625785866>"
@@ -41,7 +42,7 @@ style:
         crown_green:   "https://cdn.discordapp.com/emojis/469964154719961088.png"
         crown_red:     "https://cdn.discordapp.com/emojis/469964154879344640.png"
 
-        defcon_denied:  "https://cdn.discordapp.com/emojis/472475292078964738.png"
+        defcon_denied:   "https://cdn.discordapp.com/emojis/472475292078964738.png"
         defcon_disabled: "https://cdn.discordapp.com/emojis/470326273952972810.png"
         defcon_enabled:  "https://cdn.discordapp.com/emojis/470326274213150730.png"
         defcon_updated:  "https://cdn.discordapp.com/emojis/472472638342561793.png"
@@ -67,11 +68,19 @@ style:
         user_unban:  "https://cdn.discordapp.com/emojis/469952898692808704.png"
         user_update: "https://cdn.discordapp.com/emojis/469952898684551168.png"
 
-        user_mute:   "https://cdn.discordapp.com/emojis/472472640100106250.png"
-        user_unmute: "https://cdn.discordapp.com/emojis/472472639206719508.png"
+        user_mute:     "https://cdn.discordapp.com/emojis/472472640100106250.png"
+        user_unmute:   "https://cdn.discordapp.com/emojis/472472639206719508.png"
+        user_verified: "https://cdn.discordapp.com/emojis/470326274519334936.png"
+
+        user_warn: "https://cdn.discordapp.com/emojis/470326274238447633.png"
 
         pencil: "https://cdn.discordapp.com/emojis/470326272401211415.png"
 
+        remind_blurple: "https://cdn.discordapp.com/emojis/477907609215827968.png"
+        remind_green:   "https://cdn.discordapp.com/emojis/477907607785570310.png"
+        remind_red:     "https://cdn.discordapp.com/emojis/477907608057937930.png"
+
+        questionmark: "https://cdn.discordapp.com/emojis/512367613339369475.png"
 
 guild:
     id: 267624335836053506
@@ -124,7 +133,7 @@ guild:
 filter:
 
     # What do we filter?
-    filter_zalgo:   true
+    filter_zalgo:   false
     filter_invites: true
     filter_domains: true
     watch_words:    true
@@ -213,7 +222,7 @@ urls:
     site_bigbrother_api:                !JOIN [*SCHEMA, *API, "/bot/bigbrother"]
     site_docs_api:                      !JOIN [*SCHEMA, *API, "/bot/docs"]
     site_facts_api:                     !JOIN [*SCHEMA, *API, "/bot/snake_facts"]
-    site_hiphopify_api:                 !JOIN [*SCHEMA, *API, "/bot/hiphopify"]
+    site_superstarify_api:              !JOIN [*SCHEMA, *API, "/bot/superstarify"]
     site_idioms_api:                    !JOIN [*SCHEMA, *API, "/bot/snake_idioms"]
     site_infractions:                   !JOIN [*SCHEMA, *API, "/bot/infractions"]
     site_infractions_user:              !JOIN [*SCHEMA, *API, "/bot/infractions/user/{user_id}"]
@@ -225,6 +234,8 @@ urls:
     site_names_api:                     !JOIN [*SCHEMA, *API, "/bot/snake_names"]
     site_off_topic_names_api:           !JOIN [*SCHEMA, *API, "/bot/off-topic-names"]
     site_quiz_api:                      !JOIN [*SCHEMA, *API, "/bot/snake_quiz"]
+    site_reminders_api:                 !JOIN [*SCHEMA, *API, "/bot/reminders"]
+    site_reminders_user_api:            !JOIN [*SCHEMA, *API, "/bot/reminders/user"]
     site_settings_api:                  !JOIN [*SCHEMA, *API, "/bot/settings"]
     site_special_api:                   !JOIN [*SCHEMA, *API, "/bot/special_snakes"]
     site_tags_api:                      !JOIN [*SCHEMA, *API, "/bot/tags"]
@@ -281,7 +292,7 @@ anti_spam:
 
         links:
             interval: 10
-            max: 20
+            max: 10
 
         mentions:
             interval: 10
@@ -300,3 +311,19 @@ reddit:
     request_delay: 60
     subreddits:
         - 'r/Python'
+
+
+wolfram:
+    # Max requests per day.
+    user_limit_day: 10
+    guild_limit_day: 67
+    key: !ENV "WOLFRAM_API_KEY"
+
+
+big_brother:
+    log_delay: 15
+    header_message_limit: 15
+
+
+config:
+    required_keys: ['bot.token']

@@ -66,9 +66,9 @@ class CodeEval:
                 # far enough to align them.
                 # we first `str()` the line number
                 # then we get the length
-                # and do a simple {:<LENGTH}
+                # and use `str.rjust()`
                 # to indent it.
-                start = f"{'':<{len(str(self.ln))+2}}...: "
+                start = "...: ".rjust(len(str(self.ln)) + 7)
 
             if i == len(lines) - 2:
                 if line.startswith("return"):
@@ -97,8 +97,7 @@ class CodeEval:
             res = (res, out)
 
         else:
-            if (isinstance(out, str) and
-                    out.startswith("Traceback (most recent call last):\n")):
+            if (isinstance(out, str) and out.startswith("Traceback (most recent call last):\n")):
                 # Leave out the traceback message
                 out = "\n" + "\n".join(out.split("\n")[1:])
 
@@ -115,9 +114,9 @@ class CodeEval:
                 # Text too long, shorten
                 li = pretty.split("\n")
 
-                pretty = ("\n".join(li[:3]) +  # First 3 lines
-                          "\n ...\n" +  # Ellipsis to indicate removed lines
-                          "\n".join(li[-3:]))  # last 3 lines
+                pretty = ("\n".join(li[:3])  # First 3 lines
+                          + "\n ...\n"  # Ellipsis to indicate removed lines
+                          + "\n".join(li[-3:]))  # last 3 lines
 
             # Add the output
             res += pretty
@@ -178,12 +177,15 @@ async def func():  # (None,) -> Any
     async def internal_group(self, ctx):
         """Internal commands. Top secret!"""
 
+        if not ctx.invoked_subcommand:
+            await ctx.invoke(self.bot.get_command("help"), "internal")
+
     @internal_group.command(name='eval', aliases=('e',))
     @with_role(Roles.admin, Roles.owner)
     async def eval(self, ctx, *, code: str):
         """ Run eval in a REPL-like format. """
         code = code.strip("`")
-        if code.startswith("py\n"):
+        if re.match('py(thon)?\n', code):
             code = "\n".join(code.split("\n")[1:])
 
         if not re.search(  # Check if it's an expression

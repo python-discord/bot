@@ -3,14 +3,15 @@ import logging
 import re
 import time
 
-from discord import Embed, Member, Message, Reaction
+from discord import Embed, Message, RawMessageUpdateEvent
 from discord.ext.commands import Bot, Context, command, group
 from dulwich.repo import Repo
 
 from bot.constants import (
-    Channels, Emojis, Guild, Roles, URLs
+    Channels, Guild, Roles, URLs
 )
 from bot.decorators import with_role
+from bot.utils.messages import wait_for_deletion
 
 log = logging.getLogger(__name__)
 
@@ -60,7 +61,7 @@ class Bot:
         """
 
         embed = Embed(
-            description="A utility bot designed just for the Python server! Try `!help()` for more info.",
+            description="A utility bot designed just for the Python server! Try `!help` for more info.",
             url="https://gitlab.com/discord-python/projects/bot"
         )
 
@@ -236,8 +237,7 @@ class Bot:
             "\u3003\u3003\u3003"
         ]
 
-        has_bad_ticks = msg.content[:3] in not_backticks
-        return has_bad_ticks
+        return msg.content[:3] in not_backticks
 
     async def on_message(self, msg: Message):
         """
@@ -286,9 +286,9 @@ class Bot:
                         howto = (
                             "It looks like you are trying to paste code into this channel.\n\n"
                             "You seem to be using the wrong symbols to indicate where the codeblock should start. "
-                            f"The correct symbols would be \`\`\`, not `{ticks}`.\n\n"
+                            f"The correct symbols would be \\`\\`\\`, not `{ticks}`.\n\n"
                             "**Here is an example of how it should look:**\n"
-                            f"\`\`\`python\n{content}\n\`\`\`\n\n**This will result in the following:**\n"
+                            f"\\`\\`\\`python\n{content}\n\\`\\`\\`\n\n**This will result in the following:**\n"
                             f"```python\n{content}\n```"
                         )
 
@@ -330,7 +330,7 @@ class Bot:
                                 "syntax highlighting. Please use these whenever you paste code, as this "
                                 "helps improve the legibility and makes it easier for us to help you.\n\n"
                                 f"**To do this, use the following method:**\n"
-                                f"\`\`\`python\n{content}\n\`\`\`\n\n**This will result in the following:**\n"
+                                f"\\`\\`\\`python\n{content}\n\\`\\`\\`\n\n**This will result in the following:**\n"
                                 f"```python\n{content}\n```"
                             )
 
@@ -343,7 +343,10 @@ class Bot:
                         howto_embed = Embed(description=howto)
                         bot_message = await msg.channel.send(f"Hey {msg.author.mention}!", embed=howto_embed)
                         self.codeblock_message_ids[msg.id] = bot_message.id
-                        await bot_message.add_reaction(Emojis.cross_mark)
+
+                        self.bot.loop.create_task(
+                            wait_for_deletion(bot_message, user_ids=(msg.author.id,), client=self.bot)
+                        )
                     else:
                         return
 
@@ -357,42 +360,29 @@ class Bot:
                         f"The message that was posted was:\n\n{msg.content}\n\n"
                     )
 
-    async def on_message_edit(self, before: Message, after: Message):
-        has_fixed_codeblock = (
-            #  Checks if the original message was previously called out by the bot
-            before.id in self.codeblock_message_ids
-            #  Checks to see if the user has corrected their codeblock
-            and self.codeblock_stripping(after.content, self.has_bad_ticks(after)) is None
-        )
-        if has_fixed_codeblock:
-            bot_message = await after.channel.get_message(self.codeblock_message_ids[after.id])
-            await bot_message.delete()
-            del self.codeblock_message_ids[after.id]
-
-    async def on_reaction_add(self, reaction: Reaction, user: Member):
-        #  Ignores reactions added by the bot or added to non-codeblock correction embed messages
-        if user.bot or reaction.message.id not in self.codeblock_message_ids.values():
+    async def on_raw_message_edit(self, payload: RawMessageUpdateEvent):
+        if (
+            # Checks to see if the message was called out by the bot
+            payload.message_id not in self.codeblock_message_ids
+            # Makes sure that there is content in the message
+            or payload.data.get("content") is None
+            # Makes sure there's a channel id in the message payload
+            or payload.data.get("channel_id") is None
+        ):
             return
 
-        #  Finds the appropriate bot message/ user message pair and assigns them to variables
-        for user_message_id, bot_message_id in self.codeblock_message_ids.items():
-            if bot_message_id == reaction.message.id:
-                user_message = await reaction.message.channel.get_message(user_message_id)
-                bot_message = await reaction.message.channel.get_message(bot_message_id)
-                break
+        # Retrieve channel and message objects for use later
+        channel = self.bot.get_channel(payload.data.get("channel_id"))
+        user_message = await channel.get_message(payload.message_id)
 
-        #  If the reaction was clicked on by the author of the user message, deletes the bot message
-        if user.id == user_message.author.id:
+        #  Checks to see if the user has corrected their codeblock.  If it's fixed, has_fixed_codeblock will be None
+        has_fixed_codeblock = self.codeblock_stripping(payload.data.get("content"), self.has_bad_ticks(user_message))
+
+        # If the message is fixed, delete the bot message and the entry from the id dictionary
+        if has_fixed_codeblock is None:
+            bot_message = await channel.get_message(self.codeblock_message_ids[payload.message_id])
             await bot_message.delete()
-            del self.codeblock_message_ids[user_message_id]
-            return
-
-        #  If the reaction was clicked by staff (mod or higher), deletes the bot message
-        for role in user.roles:
-            if role.id in (Roles.owner, Roles.admin, Roles.moderator):
-                await bot_message.delete()
-                del self.codeblock_message_ids[user_message_id]
-                return
+            del self.codeblock_message_ids[payload.message_id]
 
 
 def setup(bot):

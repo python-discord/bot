@@ -1,7 +1,7 @@
 import logging
 import os
 
-from discord import ClientException, Colour, Embed
+from discord import Colour, Embed
 from discord.ext.commands import Bot, Context, group
 
 from bot.constants import (
@@ -36,10 +36,12 @@ class Cogs:
         # Allow reverse lookups by reversing the pairs
         self.cogs.update({v: k for k, v in self.cogs.items()})
 
-    @group(name='cogs', aliases=('c',))
+    @group(name='cogs', aliases=('c',), invoke_without_command=True)
     @with_role(Roles.moderator, Roles.admin, Roles.owner, Roles.devops)
     async def cogs_group(self, ctx: Context):
         """Load, unload, reload, and list active cogs."""
+
+        await ctx.invoke(self.bot.get_command("help"), "cogs")
 
     @cogs_group.command(name='load', aliases=('l',))
     @with_role(Roles.moderator, Roles.admin, Roles.owner, Roles.devops)
@@ -75,10 +77,6 @@ class Cogs:
             if full_cog not in self.bot.extensions:
                 try:
                     self.bot.load_extension(full_cog)
-                except ClientException:
-                    log.error(f"{ctx.author} requested we load the '{cog}' cog, "
-                              "but that cog doesn't have a 'setup()' function.")
-                    embed.description = f"Invalid cog: {cog}\n\nCog does not have a `setup()` function"
                 except ImportError:
                     log.error(f"{ctx.author} requested we load the '{cog}' cog, "
                               f"but the cog module {full_cog} could not be found!")

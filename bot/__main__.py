@@ -14,7 +14,7 @@ from bot.utils.service_discovery import wait_for_rmq
 log = logging.getLogger(__name__)
 
 bot = Bot(
-    command_prefix=when_mentioned_or("!"),
+    command_prefix=when_mentioned_or(BotConfig.prefix),
     activity=Game(name="Commands: !help"),
     case_insensitive=True,
     max_messages=10_000
@@ -52,6 +52,7 @@ bot.load_extension("bot.cogs.bigbrother")
 bot.load_extension("bot.cogs.bot")
 bot.load_extension("bot.cogs.clean")
 bot.load_extension("bot.cogs.cogs")
+bot.load_extension("bot.cogs.help")
 
 # Only load this in production
 if not DEBUG_MODE:
@@ -59,15 +60,21 @@ if not DEBUG_MODE:
     bot.load_extension("bot.cogs.verification")
 
 # Feature cogs
+<<<<<<< HEAD
+=======
+bot.load_extension("bot.cogs.alias")
+bot.load_extension("bot.cogs.deployment")
+>>>>>>> master
 bot.load_extension("bot.cogs.defcon")
 bot.load_extension("bot.cogs.deployment")
 bot.load_extension("bot.cogs.eval")
 bot.load_extension("bot.cogs.fun")
-bot.load_extension("bot.cogs.hiphopify")
+bot.load_extension("bot.cogs.superstarify")
 bot.load_extension("bot.cogs.information")
 bot.load_extension("bot.cogs.moderation")
 bot.load_extension("bot.cogs.off_topic_names")
 bot.load_extension("bot.cogs.reddit")
+bot.load_extension("bot.cogs.reminders")
 bot.load_extension("bot.cogs.site")
 bot.load_extension("bot.cogs.snakes")
 bot.load_extension("bot.cogs.snekbox")
@@ -75,6 +82,7 @@ bot.load_extension("bot.cogs.sync")
 bot.load_extension("bot.cogs.tags")
 bot.load_extension("bot.cogs.token_remover")
 bot.load_extension("bot.cogs.utils")
+bot.load_extension("bot.cogs.wolfram")
 
 if has_rmq:
     bot.load_extension("bot.cogs.rmq")

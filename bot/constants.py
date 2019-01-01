@@ -18,34 +18,8 @@ from pathlib import Path
 from typing import Dict, List
 
 import yaml
-from yaml.constructor import ConstructorError
 
 log = logging.getLogger(__name__)
-
-
-def _required_env_var_constructor(loader, node):
-    """
-    Implements a custom YAML tag for loading required environment
-    variables. If the environment variable is set, this function
-    will simply return it. Otherwise, a `CRITICAL` log message is
-    given and the `KeyError` is re-raised.
-
-    Example usage in the YAML configuration:
-
-        bot:
-            token: !REQUIRED_ENV 'BOT_TOKEN'
-    """
-
-    value = loader.construct_scalar(node)
-
-    try:
-        return os.environ[value]
-    except KeyError:
-        log.critical(
-            f"Environment variable `{value}` is required, but was not set. "
-            "Set it in your environment or override the option using it in your `config.yml`."
-        )
-        raise
 
 
 def _env_var_constructor(loader, node):
@@ -63,8 +37,12 @@ def _env_var_constructor(loader, node):
 
     default = None
 
-    try:
-        # Try to construct a list from this YAML node
+    # Check if the node is a plain string value
+    if node.id == 'scalar':
+        value = loader.construct_scalar(node)
+        key = str(value)
+    else:
+        # The node value is a list
         value = loader.construct_sequence(node)
 
         if len(value) >= 2:
@@ -74,11 +52,6 @@ def _env_var_constructor(loader, node):
         else:
             # Otherwise, we just have a key
             key = value[0]
-    except ConstructorError:
-        # This YAML node is a plain value rather than a list, so we just have a key
-        value = loader.construct_scalar(node)
-
-        key = str(value)
 
     return os.getenv(key, default)
 
@@ -96,7 +69,9 @@ def _join_var_constructor(loader, node):
 
 yaml.SafeLoader.add_constructor("!ENV", _env_var_constructor)
 yaml.SafeLoader.add_constructor("!JOIN", _join_var_constructor)
-yaml.SafeLoader.add_constructor("!REQUIRED_ENV", _required_env_var_constructor)
+
+# Pointing old tag to !ENV constructor to avoid breaking existing configs
+yaml.SafeLoader.add_constructor("!REQUIRED_ENV", _env_var_constructor)
 
 
 with open("config-default.yml", encoding="UTF-8") as f:
@@ -127,6 +102,34 @@ if Path("config.yml").exists():
     with open("config.yml", encoding="UTF-8") as f:
         user_config = yaml.safe_load(f)
     _recursive_update(_CONFIG_YAML, user_config)
+
+
+def check_required_keys(keys):
+    """
+    Verifies that keys that are set to be required are present in the
+    loaded configuration.
+    """
+    for key_path in keys:
+        lookup = _CONFIG_YAML
+        try:
+            for key in key_path.split('.'):
+                lookup = lookup[key]
+                if lookup is None:
+                    raise KeyError(key)
+        except KeyError:
+            log.critical(
+                f"A configuration for `{key_path}` is required, but was not found. "
+                "Please set it in `config.yml` or setup an environment variable and try again."
+            )
+            raise
+
+
+try:
+    required_keys = _CONFIG_YAML['config']['required_keys']
+except KeyError:
+    pass
+else:
+    check_required_keys(required_keys)
 
 
 class YAMLGetter(type):
@@ -188,7 +191,7 @@ class YAMLGetter(type):
 class Bot(metaclass=YAMLGetter):
     section = "bot"
 
-    help_prefix: str
+    prefix: str
     token: str
 
 
@@ -224,6 +227,7 @@ class Colours(metaclass=YAMLGetter):
 
     soft_red: int
     soft_green: int
+    soft_orange: int
 
 
 class Emojis(metaclass=YAMLGetter):
@@ -237,7 +241,7 @@ class Emojis(metaclass=YAMLGetter):
     green_chevron: str
     red_chevron: str
     white_chevron: str
-    lemoneye2: str
+    bb_message: str
 
     status_online: str
     status_offline: str
@@ -286,8 +290,17 @@ class Icons(metaclass=YAMLGetter):
 
     user_mute: str
     user_unmute: str
+    user_verified: str
+
+    user_warn: str
 
     pencil: str
+
+    remind_blurple: str
+    remind_green: str
+    remind_red: str
+
+    questionmark: str
 
 
 class CleanMessages(metaclass=YAMLGetter):
@@ -342,7 +355,7 @@ class Roles(metaclass=YAMLGetter):
     muted: int
     owner: int
     verified: int
-    muted: int
+    helpers: int
 
 
 class Guild(metaclass=YAMLGetter):
@@ -390,12 +403,14 @@ class URLs(metaclass=YAMLGetter):
     site_api: str
     site_facts_api: str
     site_clean_api: str
-    site_hiphopify_api: str
+    site_superstarify_api: str
     site_idioms_api: str
     site_logs_api: str
     site_logs_view: str
     site_names_api: str
     site_quiz_api: str
+    site_reminders_api: str
+    site_reminders_user_api: str
     site_schema: str
     site_settings_api: str
     site_special_api: str
@@ -418,6 +433,14 @@ class Reddit(metaclass=YAMLGetter):
     subreddits: list
 
 
+class Wolfram(metaclass=YAMLGetter):
+    section = "wolfram"
+
+    user_limit_day: int
+    guild_limit_day: int
+    key: str
+
+
 class AntiSpam(metaclass=YAMLGetter):
     section = 'anti_spam'
 
@@ -426,6 +449,13 @@ class AntiSpam(metaclass=YAMLGetter):
 
     punishment: Dict[str, Dict[str, int]]
     rules: Dict[str, Dict[str, int]]
+
+
+class BigBrother(metaclass=YAMLGetter):
+    section = 'big_brother'
+
+    log_delay: int
+    header_message_limit: int
 
 
 # Debug mode

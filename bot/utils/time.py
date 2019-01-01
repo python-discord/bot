@@ -1,6 +1,9 @@
+import asyncio
 import datetime
 
 from dateutil.relativedelta import relativedelta
+
+RFC1123_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
 
 
 def _stringify_time_unit(value: int, unit: str):
@@ -89,3 +92,22 @@ def time_since(past_datetime: datetime.datetime, precision: str = "seconds", max
     humanized = humanize_delta(delta, precision, max_units)
 
     return f"{humanized} ago"
+
+
+def parse_rfc1123(time_str):
+    return datetime.datetime.strptime(time_str, RFC1123_FORMAT).replace(tzinfo=datetime.timezone.utc)
+
+
+# Hey, this could actually be used in the off_topic_names and reddit cogs :)
+async def wait_until(time: datetime.datetime):
+    """
+    Wait until a given time.
+
+    :param time: A datetime.datetime object to wait until.
+    """
+
+    delay = time - datetime.datetime.now(tz=datetime.timezone.utc)
+    delay_seconds = delay.total_seconds()
+
+    if delay_seconds > 1.0:
+        await asyncio.sleep(delay_seconds)

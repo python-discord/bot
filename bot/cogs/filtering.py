@@ -22,7 +22,7 @@ INVITE_RE = (
     r"([a-zA-Z0-9]+)"                                 # the invite code itself
 )
 
-URL_RE = "(https?://[^\s]+)"
+URL_RE = r"(https?://[^\s]+)"
 ZALGO_RE = r"[\u0300-\u036F\u0489]"
 RETARDED_RE = r"(re+)tar+(d+|t+)(ed)?"
 SELF_DEPRECATION_RE = fr"((i'?m)|(i am)|(it'?s)|(it is)) (.+? )?{RETARDED_RE}"
@@ -217,15 +217,11 @@ class Filtering:
 
     async def _has_invites(self, text: str) -> bool:
         """
-        Returns True if the text contains an invite which
-        is not on the guild_invite_whitelist in config.yml.
+        Returns True if the text contains an invite which is not on the guild_invite_whitelist in
+        config.yml
 
-        Also catches a lot of common ways to try to cheat the system.
+        Attempts to catch some of common ways to try to cheat the system.
         """
-
-        # Remove spaces to prevent cases like
-        # d i s c o r d . c o m / i n v i t e / s e x y t e e n s
-        text = text.replace(" ", "")
 
         # Remove backslashes to prevent escape character aroundfuckery like
         # discord\.gg/gdudes-pony-farm
@@ -238,7 +234,14 @@ class Filtering:
                 f"{URLs.discord_invite_api}/{invite}"
             )
             response = await response.json()
-            guild_id = int(response.get("guild", {}).get("id"))
+            guild = response.get("guild")
+            if guild is None:
+                # Lack of a "guild" key in the JSON response indicates either an group DM invite, an
+                # expired invite, or an invalid invite. The API does not currently differentiate
+                # between invalid and expired invites
+                return True
+
+            guild_id = int(guild.get("id"))
 
             if guild_id not in Filter.guild_invite_whitelist:
                 return True

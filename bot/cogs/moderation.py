@@ -1,12 +1,15 @@
 import asyncio
-import datetime
 import logging
 import textwrap
-from typing import Dict
+from typing import Union
 
 from aiohttp import ClientError
-from discord import Colour, Embed, Guild, Member, Object, User
-from discord.ext.commands import Bot, Context, command, group
+from discord import (
+    Colour, Embed, Forbidden, Guild, HTTPException, Member, Object, User
+)
+from discord.ext.commands import (
+    BadArgument, BadUnionArgument, Bot, Context, command, group
+)
 
 from bot import constants
 from bot.cogs.modlog import ModLog
@@ -14,13 +17,33 @@ from bot.constants import Colours, Event, Icons, Keys, Roles, URLs
 from bot.converters import InfractionSearchQuery
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
+from bot.utils.moderation import post_infraction
+from bot.utils.scheduling import Scheduler, create_task
+from bot.utils.time import parse_rfc1123, wait_until
 
 log = logging.getLogger(__name__)
 
 MODERATION_ROLES = Roles.owner, Roles.admin, Roles.moderator
+INFRACTION_ICONS = {
+    "Mute": Icons.user_mute,
+    "Kick": Icons.sign_out,
+    "Ban": Icons.user_ban
+}
+RULES_URL = "https://pythondiscord.com/about/rules"
 
 
-class Moderation:
+def proxy_user(user_id: str) -> Object:
+    try:
+        user_id = int(user_id)
+    except ValueError:
+        raise BadArgument
+    user = Object(user_id)
+    user.mention = user.id
+    user.avatar_url_as = lambda static_format: None
+    return user
+
+
+class Moderation(Scheduler):
     """
     Rowboat replacement moderation tools.
     """
@@ -28,8 +51,8 @@ class Moderation:
     def __init__(self, bot: Bot):
         self.bot = bot
         self.headers = {"X-API-KEY": Keys.site_api}
-        self.expiration_tasks: Dict[str, asyncio.Task] = {}
         self._muted_role = Object(constants.Roles.muted)
+        super().__init__()
 
     @property
     def mod_log(self) -> ModLog:
@@ -46,86 +69,85 @@ class Moderation:
         loop = asyncio.get_event_loop()
         for infraction_object in infraction_list:
             if infraction_object["expires_at"] is not None:
-                self.schedule_expiration(loop, infraction_object)
+                self.schedule_task(loop, infraction_object["id"], infraction_object)
 
     # region: Permanent infractions
 
     @with_role(*MODERATION_ROLES)
     @command(name="warn")
-    async def warn(self, ctx: Context, user: User, *, reason: str = None):
+    async def warn(self, ctx: Context, user: Union[User, proxy_user], *, reason: str = None):
         """
         Create a warning infraction in the database for a user.
         :param user: accepts user mention, ID, etc.
         :param reason: The reason for the warning.
         """
 
-        try:
-            response = await self.bot.http_session.post(
-                URLs.site_infractions,
-                headers=self.headers,
-                json={
-                    "type": "warning",
-                    "reason": reason,
-                    "user_id": str(user.id),
-                    "actor_id": str(ctx.message.author.id)
-                }
-            )
-        except ClientError:
-            log.exception("There was an error adding an infraction.")
-            await ctx.send(":x: There was an error adding the infraction.")
+        notified = await self.notify_infraction(
+            user=user,
+            infr_type="Warning",
+            reason=reason
+        )
+
+        response_object = await post_infraction(ctx, user, type="warning", reason=reason)
+        if response_object is None:
             return
 
-        response_object = await response.json()
-        if "error_code" in response_object:
-            await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
-            return
+        dm_result = ":incoming_envelope: " if notified else ""
+        action = f"{dm_result}:ok_hand: warned {user.mention}"
 
         if reason is None:
-            result_message = f":ok_hand: warned {user.mention}."
+            await ctx.send(f"{action}.")
         else:
-            result_message = f":ok_hand: warned {user.mention} ({reason})."
+            await ctx.send(f"{action} ({reason}).")
 
-        await ctx.send(result_message)
+        if not notified:
+            await self.log_notify_failure(user, ctx.author, "warning")
+
+        # Send a message to the mod log
+        await self.mod_log.send_log_message(
+            icon_url=Icons.user_warn,
+            colour=Colour(Colours.soft_red),
+            title="Member warned",
+            thumbnail=user.avatar_url_as(static_format="png"),
+            text=textwrap.dedent(f"""
+                Member: {user.mention} (`{user.id}`)
+                Actor: {ctx.message.author}
+                Reason: {reason}
+            """)
+        )
 
     @with_role(*MODERATION_ROLES)
     @command(name="kick")
-    async def kick(self, ctx, user: Member, *, reason: str = None):
+    async def kick(self, ctx: Context, user: Member, *, reason: str = None):
         """
         Kicks a user.
         :param user: accepts user mention, ID, etc.
         :param reason: The reason for the kick.
         """
 
-        try:
-            response = await self.bot.http_session.post(
-                URLs.site_infractions,
-                headers=self.headers,
-                json={
-                    "type": "kick",
-                    "reason": reason,
-                    "user_id": str(user.id),
-                    "actor_id": str(ctx.message.author.id)
-                }
-            )
-        except ClientError:
-            log.exception("There was an error adding an infraction.")
-            await ctx.send(":x: There was an error adding the infraction.")
-            return
+        notified = await self.notify_infraction(
+            user=user,
+            infr_type="Kick",
+            reason=reason
+        )
 
-        response_object = await response.json()
-        if "error_code" in response_object:
-            await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
+        response_object = await post_infraction(ctx, user, type="kick", reason=reason)
+        if response_object is None:
             return
 
         self.mod_log.ignore(Event.member_remove, user.id)
         await user.kick(reason=reason)
 
-        if reason is None:
-            result_message = f":ok_hand: kicked {user.mention}."
-        else:
-            result_message = f":ok_hand: kicked {user.mention} ({reason})."
+        dm_result = ":incoming_envelope: " if notified else ""
+        action = f"{dm_result}:ok_hand: kicked {user.mention}"
 
-        await ctx.send(result_message)
+        if reason is None:
+            await ctx.send(f"{action}.")
+        else:
+            await ctx.send(f"{action} ({reason}).")
+
+        if not notified:
+            await self.log_notify_failure(user, ctx.author, "kick")
 
         # Send a log message to the mod log
         await self.mod_log.send_log_message(
@@ -142,44 +164,38 @@ class Moderation:
 
     @with_role(*MODERATION_ROLES)
     @command(name="ban")
-    async def ban(self, ctx: Context, user: User, *, reason: str = None):
+    async def ban(self, ctx: Context, user: Union[User, proxy_user], *, reason: str = None):
         """
         Create a permanent ban infraction in the database for a user.
         :param user: Accepts user mention, ID, etc.
         :param reason: The reason for the ban.
         """
 
-        try:
-            response = await self.bot.http_session.post(
-                URLs.site_infractions,
-                headers=self.headers,
-                json={
-                    "type": "ban",
-                    "reason": reason,
-                    "user_id": str(user.id),
-                    "actor_id": str(ctx.message.author.id)
-                }
-            )
-        except ClientError:
-            log.exception("There was an error adding an infraction.")
-            await ctx.send(":x: There was an error adding the infraction.")
-            return
+        notified = await self.notify_infraction(
+            user=user,
+            infr_type="Ban",
+            duration="Permanent",
+            reason=reason
+        )
 
-        response_object = await response.json()
-        if "error_code" in response_object:
-            await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
+        response_object = await post_infraction(ctx, user, type="ban", reason=reason)
+        if response_object is None:
             return
 
         self.mod_log.ignore(Event.member_ban, user.id)
         self.mod_log.ignore(Event.member_remove, user.id)
         await ctx.guild.ban(user, reason=reason, delete_message_days=0)
 
-        if reason is None:
-            result_message = f":ok_hand: permanently banned {user.mention}."
-        else:
-            result_message = f":ok_hand: permanently banned {user.mention} ({reason})."
+        dm_result = ":incoming_envelope: " if notified else ""
+        action = f"{dm_result}:ok_hand: permanently banned {user.mention}"
 
-        await ctx.send(result_message)
+        if reason is None:
+            await ctx.send(f"{action}.")
+        else:
+            await ctx.send(f"{action} ({reason}).")
+
+        if not notified:
+            await self.log_notify_failure(user, ctx.author, "ban")
 
         # Send a log message to the mod log
         await self.mod_log.send_log_message(
@@ -203,37 +219,31 @@ class Moderation:
         :param reason: The reason for the mute.
         """
 
-        try:
-            response = await self.bot.http_session.post(
-                URLs.site_infractions,
-                headers=self.headers,
-                json={
-                    "type": "mute",
-                    "reason": reason,
-                    "user_id": str(user.id),
-                    "actor_id": str(ctx.message.author.id)
-                }
-            )
-        except ClientError:
-            log.exception("There was an error adding an infraction.")
-            await ctx.send(":x: There was an error adding the infraction.")
-            return
+        notified = await self.notify_infraction(
+            user=user,
+            infr_type="Mute",
+            duration="Permanent",
+            reason=reason
+        )
 
-        response_object = await response.json()
-        if "error_code" in response_object:
-            await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
+        response_object = await post_infraction(ctx, user, type="mute", reason=reason)
+        if response_object is None:
             return
 
         # add the mute role
         self.mod_log.ignore(Event.member_update, user.id)
         await user.add_roles(self._muted_role, reason=reason)
 
-        if reason is None:
-            result_message = f":ok_hand: permanently muted {user.mention}."
-        else:
-            result_message = f":ok_hand: permanently muted {user.mention} ({reason})."
+        dm_result = ":incoming_envelope: " if notified else ""
+        action = f"{dm_result}:ok_hand: permanently muted {user.mention}"
 
-        await ctx.send(result_message)
+        if reason is None:
+            await ctx.send(f"{action}.")
+        else:
+            await ctx.send(f"{action} ({reason}).")
+
+        if not notified:
+            await self.log_notify_failure(user, ctx.author, "mute")
 
         # Send a log message to the mod log
         await self.mod_log.send_log_message(
@@ -261,26 +271,271 @@ class Moderation:
         :param reason: The reason for the temporary mute.
         """
 
-        try:
-            response = await self.bot.http_session.post(
-                URLs.site_infractions,
-                headers=self.headers,
-                json={
-                    "type": "mute",
-                    "reason": reason,
-                    "duration": duration,
-                    "user_id": str(user.id),
-                    "actor_id": str(ctx.message.author.id)
-                }
-            )
-        except ClientError:
-            log.exception("There was an error adding an infraction.")
-            await ctx.send(":x: There was an error adding the infraction.")
+        notified = await self.notify_infraction(
+            user=user,
+            infr_type="Mute",
+            duration=duration,
+            reason=reason
+        )
+
+        response_object = await post_infraction(ctx, user, type="mute", reason=reason, duration=duration)
+        if response_object is None:
             return
 
-        response_object = await response.json()
-        if "error_code" in response_object:
-            await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
+        self.mod_log.ignore(Event.member_update, user.id)
+        await user.add_roles(self._muted_role, reason=reason)
+
+        infraction_object = response_object["infraction"]
+        infraction_expiration = infraction_object["expires_at"]
+
+        loop = asyncio.get_event_loop()
+        self.schedule_task(loop, infraction_object["id"], infraction_object)
+
+        dm_result = ":incoming_envelope: " if notified else ""
+        action = f"{dm_result}:ok_hand: muted {user.mention} until {infraction_expiration}"
+
+        if reason is None:
+            await ctx.send(f"{action}.")
+        else:
+            await ctx.send(f"{action} ({reason}).")
+
+        if not notified:
+            await self.log_notify_failure(user, ctx.author, "mute")
+
+        # Send a log message to the mod log
+        await self.mod_log.send_log_message(
+            icon_url=Icons.user_mute,
+            colour=Colour(Colours.soft_red),
+            title="Member temporarily muted",
+            thumbnail=user.avatar_url_as(static_format="png"),
+            text=textwrap.dedent(f"""
+                Member: {user.mention} (`{user.id}`)
+                Actor: {ctx.message.author}
+                Reason: {reason}
+                Duration: {duration}
+                Expires: {infraction_expiration}
+            """)
+        )
+
+    @with_role(*MODERATION_ROLES)
+    @command(name="tempban")
+    async def tempban(self, ctx: Context, user: Union[User, proxy_user], duration: str, *, reason: str = None):
+        """
+        Create a temporary ban infraction in the database for a user.
+        :param user: Accepts user mention, ID, etc.
+        :param duration: The duration for the temporary ban infraction
+        :param reason: The reason for the temporary ban.
+        """
+
+        notified = await self.notify_infraction(
+            user=user,
+            infr_type="Ban",
+            duration=duration,
+            reason=reason
+        )
+
+        response_object = await post_infraction(ctx, user, type="ban", reason=reason, duration=duration)
+        if response_object is None:
+            return
+
+        self.mod_log.ignore(Event.member_ban, user.id)
+        self.mod_log.ignore(Event.member_remove, user.id)
+        guild: Guild = ctx.guild
+        await guild.ban(user, reason=reason, delete_message_days=0)
+
+        infraction_object = response_object["infraction"]
+        infraction_expiration = infraction_object["expires_at"]
+
+        loop = asyncio.get_event_loop()
+        self.schedule_task(loop, infraction_object["id"], infraction_object)
+
+        dm_result = ":incoming_envelope: " if notified else ""
+        action = f"{dm_result}:ok_hand: banned {user.mention} until {infraction_expiration}"
+
+        if reason is None:
+            await ctx.send(f"{action}.")
+        else:
+            await ctx.send(f"{action} ({reason}).")
+
+        if not notified:
+            await self.log_notify_failure(user, ctx.author, "ban")
+
+        # Send a log message to the mod log
+        await self.mod_log.send_log_message(
+            icon_url=Icons.user_ban,
+            colour=Colour(Colours.soft_red),
+            thumbnail=user.avatar_url_as(static_format="png"),
+            title="Member temporarily banned",
+            text=textwrap.dedent(f"""
+                Member: {user.mention} (`{user.id}`)
+                Actor: {ctx.message.author}
+                Reason: {reason}
+                Duration: {duration}
+                Expires: {infraction_expiration}
+            """)
+        )
+
+    # endregion
+    # region: Permanent shadow infractions
+
+    @with_role(*MODERATION_ROLES)
+    @command(name="shadow_warn", hidden=True, aliases=['shadowwarn', 'swarn', 'note'])
+    async def shadow_warn(self, ctx: Context, user: Union[User, proxy_user], *, reason: str = None):
+        """
+        Create a warning infraction in the database for a user.
+        :param user: accepts user mention, ID, etc.
+        :param reason: The reason for the warning.
+        """
+
+        response_object = await post_infraction(ctx, user, type="warning", reason=reason, hidden=True)
+        if response_object is None:
+            return
+
+        if reason is None:
+            result_message = f":ok_hand: note added for {user.mention}."
+        else:
+            result_message = f":ok_hand: note added for {user.mention} ({reason})."
+
+        await ctx.send(result_message)
+
+        # Send a message to the mod log
+        await self.mod_log.send_log_message(
+            icon_url=Icons.user_warn,
+            colour=Colour(Colours.soft_red),
+            title="Member shadow warned",
+            thumbnail=user.avatar_url_as(static_format="png"),
+            text=textwrap.dedent(f"""
+                Member: {user.mention} (`{user.id}`)
+                Actor: {ctx.message.author}
+                Reason: {reason}
+            """)
+        )
+
+    @with_role(*MODERATION_ROLES)
+    @command(name="shadow_kick", hidden=True, aliases=['shadowkick', 'skick'])
+    async def shadow_kick(self, ctx: Context, user: Member, *, reason: str = None):
+        """
+        Kicks a user.
+        :param user: accepts user mention, ID, etc.
+        :param reason: The reason for the kick.
+        """
+
+        response_object = await post_infraction(ctx, user, type="kick", reason=reason, hidden=True)
+        if response_object is None:
+            return
+
+        self.mod_log.ignore(Event.member_remove, user.id)
+        await user.kick(reason=reason)
+
+        if reason is None:
+            result_message = f":ok_hand: kicked {user.mention}."
+        else:
+            result_message = f":ok_hand: kicked {user.mention} ({reason})."
+
+        await ctx.send(result_message)
+
+        # Send a log message to the mod log
+        await self.mod_log.send_log_message(
+            icon_url=Icons.sign_out,
+            colour=Colour(Colours.soft_red),
+            title="Member shadow kicked",
+            thumbnail=user.avatar_url_as(static_format="png"),
+            text=textwrap.dedent(f"""
+                Member: {user.mention} (`{user.id}`)
+                Actor: {ctx.message.author}
+                Reason: {reason}
+            """)
+        )
+
+    @with_role(*MODERATION_ROLES)
+    @command(name="shadow_ban", hidden=True, aliases=['shadowban', 'sban'])
+    async def shadow_ban(self, ctx: Context, user: Union[User, proxy_user], *, reason: str = None):
+        """
+        Create a permanent ban infraction in the database for a user.
+        :param user: Accepts user mention, ID, etc.
+        :param reason: The reason for the ban.
+        """
+
+        response_object = await post_infraction(ctx, user, type="ban", reason=reason, hidden=True)
+        if response_object is None:
+            return
+
+        self.mod_log.ignore(Event.member_ban, user.id)
+        self.mod_log.ignore(Event.member_remove, user.id)
+        await ctx.guild.ban(user, reason=reason, delete_message_days=0)
+
+        if reason is None:
+            result_message = f":ok_hand: permanently banned {user.mention}."
+        else:
+            result_message = f":ok_hand: permanently banned {user.mention} ({reason})."
+
+        await ctx.send(result_message)
+
+        # Send a log message to the mod log
+        await self.mod_log.send_log_message(
+            icon_url=Icons.user_ban,
+            colour=Colour(Colours.soft_red),
+            title="Member permanently banned",
+            thumbnail=user.avatar_url_as(static_format="png"),
+            text=textwrap.dedent(f"""
+                Member: {user.mention} (`{user.id}`)
+                Actor: {ctx.message.author}
+                Reason: {reason}
+            """)
+        )
+
+    @with_role(*MODERATION_ROLES)
+    @command(name="shadow_mute", hidden=True, aliases=['shadowmute', 'smute'])
+    async def shadow_mute(self, ctx: Context, user: Member, *, reason: str = None):
+        """
+        Create a permanent mute infraction in the database for a user.
+        :param user: Accepts user mention, ID, etc.
+        :param reason: The reason for the mute.
+        """
+
+        response_object = await post_infraction(ctx, user, type="mute", reason=reason, hidden=True)
+        if response_object is None:
+            return
+
+        # add the mute role
+        self.mod_log.ignore(Event.member_update, user.id)
+        await user.add_roles(self._muted_role, reason=reason)
+
+        if reason is None:
+            result_message = f":ok_hand: permanently muted {user.mention}."
+        else:
+            result_message = f":ok_hand: permanently muted {user.mention} ({reason})."
+
+        await ctx.send(result_message)
+
+        # Send a log message to the mod log
+        await self.mod_log.send_log_message(
+            icon_url=Icons.user_mute,
+            colour=Colour(Colours.soft_red),
+            title="Member permanently muted",
+            thumbnail=user.avatar_url_as(static_format="png"),
+            text=textwrap.dedent(f"""
+                Member: {user.mention} (`{user.id}`)
+                Actor: {ctx.message.author}
+                Reason: {reason}
+            """)
+        )
+
+    # endregion
+    # region: Temporary shadow infractions
+
+    @with_role(*MODERATION_ROLES)
+    @command(name="shadow_tempmute", hidden=True, aliases=["shadowtempmute, stempmute"])
+    async def shadow_tempmute(self, ctx: Context, user: Member, duration: str, *, reason: str = None):
+        """
+        Create a temporary mute infraction in the database for a user.
+        :param user: Accepts user mention, ID, etc.
+        :param duration: The duration for the temporary mute infraction
+        :param reason: The reason for the temporary mute.
+        """
+
+        response_object = await post_infraction(ctx, user, type="mute", reason=reason, duration=duration, hidden=True)
+        if response_object is None:
             return
 
         self.mod_log.ignore(Event.member_update, user.id)
@@ -315,8 +570,10 @@ class Moderation:
         )
 
     @with_role(*MODERATION_ROLES)
-    @command(name="tempban")
-    async def tempban(self, ctx, user: User, duration: str, *, reason: str = None):
+    @command(name="shadow_tempban", hidden=True, aliases=["shadowtempban, stempban"])
+    async def shadow_tempban(
+            self, ctx: Context, user: Union[User, proxy_user], duration: str, *, reason: str = None
+    ):
         """
         Create a temporary ban infraction in the database for a user.
         :param user: Accepts user mention, ID, etc.
@@ -324,26 +581,8 @@ class Moderation:
         :param reason: The reason for the temporary ban.
         """
 
-        try:
-            response = await self.bot.http_session.post(
-                URLs.site_infractions,
-                headers=self.headers,
-                json={
-                    "type": "ban",
-                    "reason": reason,
-                    "duration": duration,
-                    "user_id": str(user.id),
-                    "actor_id": str(ctx.message.author.id)
-                }
-            )
-        except ClientError:
-            log.exception("There was an error adding an infraction.")
-            await ctx.send(":x: There was an error adding the infraction.")
-            return
-
-        response_object = await response.json()
-        if "error_code" in response_object:
-            await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
+        response_object = await post_infraction(ctx, user, type="ban", reason=reason, duration=duration, hidden=True)
+        if response_object is None:
             return
 
         self.mod_log.ignore(Event.member_ban, user.id)
@@ -384,7 +623,7 @@ class Moderation:
 
     @with_role(*MODERATION_ROLES)
     @command(name="unmute")
-    async def unmute(self, ctx, user: Member):
+    async def unmute(self, ctx: Context, user: Member):
         """
         Deactivates the active mute infraction for a user.
         :param user: Accepts user mention, ID, etc.
@@ -414,7 +653,18 @@ class Moderation:
             if infraction_object["expires_at"] is not None:
                 self.cancel_expiration(infraction_object["id"])
 
-            await ctx.send(f":ok_hand: Un-muted {user.mention}.")
+            notified = await self.notify_pardon(
+                user=user,
+                title="You have been unmuted.",
+                content="You may now send messages in the server.",
+                icon_url=Icons.user_unmute
+            )
+
+            dm_result = ":incoming_envelope: " if notified else ""
+            await ctx.send(f"{dm_result}:ok_hand: Un-muted {user.mention}.")
+
+            if not notified:
+                await self.log_notify_failure(user, ctx.author, "unmute")
 
             # Send a log message to the mod log
             await self.mod_log.send_log_message(
@@ -435,7 +685,7 @@ class Moderation:
 
     @with_role(*MODERATION_ROLES)
     @command(name="unban")
-    async def unban(self, ctx, user: User):
+    async def unban(self, ctx: Context, user: Union[User, proxy_user]):
         """
         Deactivates the active ban infraction for a user.
         :param user: Accepts user mention, ID, etc.
@@ -488,18 +738,22 @@ class Moderation:
     # region: Edit infraction commands
 
     @with_role(*MODERATION_ROLES)
-    @group(name='infraction', aliases=('infr',))
+    @group(name='infraction', aliases=('infr', 'infractions', 'inf'), invoke_without_command=True)
     async def infraction_group(self, ctx: Context):
         """Infraction manipulation commands."""
 
+        await ctx.invoke(self.bot.get_command("help"), "infraction")
+
     @with_role(*MODERATION_ROLES)
-    @infraction_group.group(name='edit')
+    @infraction_group.group(name='edit', invoke_without_command=True)
     async def infraction_edit_group(self, ctx: Context):
         """Infraction editing commands."""
 
+        await ctx.invoke(self.bot.get_command("help"), "infraction", "edit")
+
     @with_role(*MODERATION_ROLES)
     @infraction_edit_group.command(name="duration")
-    async def edit_duration(self, ctx, infraction_id: str, duration: str):
+    async def edit_duration(self, ctx: Context, infraction_id: str, duration: str):
         """
         Sets the duration of the given infraction, relative to the time of updating.
         :param infraction_id: the id (UUID) of the infraction
@@ -535,9 +789,9 @@ class Moderation:
 
             infraction_object = response_object["infraction"]
             # Re-schedule
-            self.cancel_expiration(infraction_id)
+            self.cancel_task(infraction_id)
             loop = asyncio.get_event_loop()
-            self.schedule_expiration(loop, infraction_object)
+            self.schedule_task(loop, infraction_object["id"], infraction_object)
 
             if duration is None:
                 await ctx.send(f":ok_hand: Updated infraction: marked as permanent.")
@@ -582,7 +836,7 @@ class Moderation:
 
     @with_role(*MODERATION_ROLES)
     @infraction_edit_group.command(name="reason")
-    async def edit_reason(self, ctx, infraction_id: str, *, reason: str):
+    async def edit_reason(self, ctx: Context, infraction_id: str, *, reason: str):
         """
         Sets the reason of the given infraction.
         :param infraction_id: the id (UUID) of the infraction
@@ -654,70 +908,89 @@ class Moderation:
     # region: Search infractions
 
     @with_role(*MODERATION_ROLES)
-    @infraction_group.command(name="search")
-    async def search(self, ctx, arg: InfractionSearchQuery):
+    @infraction_group.group(name="search", invoke_without_command=True)
+    async def infraction_search_group(self, ctx: Context, query: InfractionSearchQuery):
         """
         Searches for infractions in the database.
-        :param arg: Either a user or a reason string. If a string, you can use the Re2 matching syntax.
         """
 
-        if isinstance(arg, User):
-            user: User = arg
-            # get infractions for this user
-            try:
-                response = await self.bot.http_session.get(
-                    URLs.site_infractions_user.format(
-                        user_id=user.id
-                    ),
-                    headers=self.headers
-                )
-                infraction_list = await response.json()
-            except ClientError:
-                log.exception("There was an error fetching infractions.")
-                await ctx.send(":x: There was an error fetching infraction.")
-                return
-
-            if not infraction_list:
-                await ctx.send(f":warning: No infractions found for {user}.")
-                return
-
-            embed = Embed(
-                title=f"Infractions for {user} ({len(infraction_list)} total)",
-                colour=Colour.orange()
-            )
-
-        elif isinstance(arg, str):
-            # search by reason
-            try:
-                response = await self.bot.http_session.get(
-                    URLs.site_infractions,
-                    headers=self.headers,
-                    params={"search": arg}
-                )
-                infraction_list = await response.json()
-            except ClientError:
-                log.exception("There was an error fetching infractions.")
-                await ctx.send(":x: There was an error fetching infraction.")
-                return
-
-            if not infraction_list:
-                await ctx.send(f":warning: No infractions matching `{arg}`.")
-                return
-
-            embed = Embed(
-                title=f"Infractions matching `{arg}` ({len(infraction_list)} total)",
-                colour=Colour.orange()
-            )
+        if isinstance(query, User):
+            await ctx.invoke(self.search_user, query)
 
         else:
-            await ctx.send(":x: Invalid infraction search query.")
+            await ctx.invoke(self.search_reason, query)
+
+    @with_role(*MODERATION_ROLES)
+    @infraction_search_group.command(name="user", aliases=("member", "id"))
+    async def search_user(self, ctx: Context, user: Union[User, proxy_user]):
+        """
+        Search for infractions by member.
+        """
+
+        try:
+            response = await self.bot.http_session.get(
+                URLs.site_infractions_user.format(
+                    user_id=user.id
+                ),
+                params={"hidden": "True"},
+                headers=self.headers
+            )
+            infraction_list = await response.json()
+        except ClientError:
+            log.exception(f"Failed to fetch infractions for user {user} ({user.id}).")
+            await ctx.send(":x: An error occurred while fetching infractions.")
             return
 
+        embed = Embed(
+            title=f"Infractions for {user} ({len(infraction_list)} total)",
+            colour=Colour.orange()
+        )
+
+        await self.send_infraction_list(ctx, embed, infraction_list)
+
+    @with_role(*MODERATION_ROLES)
+    @infraction_search_group.command(name="reason", aliases=("match", "regex", "re"))
+    async def search_reason(self, ctx: Context, reason: str):
+        """
+        Search for infractions by their reason. Use Re2 for matching.
+        """
+
+        try:
+            response = await self.bot.http_session.get(
+                URLs.site_infractions,
+                params={"search": reason, "hidden": "True"},
+                headers=self.headers
+            )
+            infraction_list = await response.json()
+        except ClientError:
+            log.exception(f"Failed to fetch infractions matching reason `{reason}`.")
+            await ctx.send(":x: An error occurred while fetching infractions.")
+            return
+
+        embed = Embed(
+            title=f"Infractions matching `{reason}` ({len(infraction_list)} total)",
+            colour=Colour.orange()
+        )
+
+        await self.send_infraction_list(ctx, embed, infraction_list)
+
+    # endregion
+    # region: Utility functions
+
+    async def send_infraction_list(self, ctx: Context, embed: Embed, infractions: list):
+
+        if not infractions:
+            await ctx.send(f":warning: No infractions could be found for that query.")
+            return
+
+        lines = []
+        for infraction in infractions:
+            lines.append(
+                self._infraction_to_string(infraction)
+            )
+
         await LinePaginator.paginate(
-            lines=(
-                self._infraction_to_string(infraction_object, show_user=isinstance(arg, str))
-                for infraction_object in infraction_list
-            ),
+            lines,
             ctx=ctx,
             embed=embed,
             empty=True,
@@ -736,15 +1009,12 @@ class Moderation:
         """
 
         infraction_id = infraction_object["id"]
-        if infraction_id in self.expiration_tasks:
+        if infraction_id in self.scheduled_tasks:
             return
 
-        task: asyncio.Task = asyncio.ensure_future(self._scheduled_expiration(infraction_object), loop=loop)
+        task: asyncio.Task = create_task(loop, self._scheduled_expiration(infraction_object))
 
-        # Silently ignore exceptions in a callback (handles the CancelledError nonsense)
-        task.add_done_callback(_silent_exception)
-
-        self.expiration_tasks[infraction_id] = task
+        self.scheduled_tasks[infraction_id] = task
 
     def cancel_expiration(self, infraction_id: str):
         """
@@ -752,15 +1022,15 @@ class Moderation:
         :param infraction_id: the ID of the infraction in question
         """
 
-        task = self.expiration_tasks.get(infraction_id)
+        task = self.scheduled_tasks.get(infraction_id)
         if task is None:
             log.warning(f"Failed to unschedule {infraction_id}: no task found.")
             return
         task.cancel()
         log.debug(f"Unscheduled {infraction_id}.")
-        del self.expiration_tasks[infraction_id]
+        del self.scheduled_tasks[infraction_id]
 
-    async def _scheduled_expiration(self, infraction_object):
+    async def _scheduled_task(self, infraction_object: dict):
         """
         A co-routine which marks an infraction as expired after the delay from the time of scheduling
         to the time of expiration. At the time of expiration, the infraction is marked as inactive on the website,
@@ -772,17 +1042,22 @@ class Moderation:
 
         # transform expiration to delay in seconds
         expiration_datetime = parse_rfc1123(infraction_object["expires_at"])
-        delay = expiration_datetime - datetime.datetime.now(tz=datetime.timezone.utc)
-        delay_seconds = delay.total_seconds()
-
-        if delay_seconds > 1.0:
-            log.debug(f"Scheduling expiration for infraction {infraction_id} in {delay_seconds} seconds")
-            await asyncio.sleep(delay_seconds)
+        await wait_until(expiration_datetime)
 
         log.debug(f"Marking infraction {infraction_id} as inactive (expired).")
         await self._deactivate_infraction(infraction_object)
 
-        self.cancel_expiration(infraction_object["id"])
+        self.cancel_task(infraction_object["id"])
+
+        # Notify the user that they've been unmuted.
+        user_id = int(infraction_object["user"]["user_id"])
+        guild = self.bot.get_guild(constants.Guild.id)
+        await self.notify_pardon(
+            user=guild.get_member(user_id),
+            title="You have been unmuted.",
+            content="You may now send messages in the server.",
+            icon_url=Icons.user_unmute
+        )
 
     async def _deactivate_infraction(self, infraction_object):
         """
@@ -790,6 +1065,7 @@ class Moderation:
         un-schedule an expiration task.
         :param infraction_object: the infraction in question
         """
+
         guild: Guild = self.bot.get_guild(constants.Guild.id)
         user_id = int(infraction_object["user"]["user_id"])
         infraction_type = infraction_object["type"]
@@ -803,7 +1079,7 @@ class Moderation:
             else:
                 log.warning(f"Failed to un-mute user: {user_id} (not found)")
         elif infraction_type == "ban":
-            user: User = self.bot.get_user(user_id)
+            user: Object = Object(user_id)
             await guild.unban(user)
 
         await self.bot.http_session.patch(
@@ -815,46 +1091,121 @@ class Moderation:
             }
         )
 
-    def _infraction_to_string(self, infraction_object, show_user=False):
+    def _infraction_to_string(self, infraction_object):
         actor_id = int(infraction_object["actor"]["user_id"])
         guild: Guild = self.bot.get_guild(constants.Guild.id)
         actor = guild.get_member(actor_id)
         active = infraction_object["active"] is True
+        user_id = int(infraction_object["user"]["user_id"])
+        hidden = infraction_object.get("hidden", False) is True
 
-        lines = [
-            "**===============**" if active else "===============",
-            "Status: {0}".format("__**Active**__" if active else "Inactive"),
-            "Type: **{0}**".format(infraction_object["type"]),
-            "Reason: {0}".format(infraction_object["reason"] or "*None*"),
-            "Created: {0}".format(infraction_object["inserted_at"]),
-            "Expires: {0}".format(infraction_object["expires_at"] or "*Permanent*"),
-            "Actor: {0}".format(actor.mention if actor else actor_id),
-            "ID: `{0}`".format(infraction_object["id"]),
-            "**===============**" if active else "==============="
-        ]
+        lines = textwrap.dedent(f"""
+            {"**===============**" if active else "==============="}
+            Status: {"__**Active**__" if active else "Inactive"}
+            User: {self.bot.get_user(user_id)} (`{user_id}`)
+            Type: **{infraction_object["type"]}**
+            Shadow: {hidden}
+            Reason: {infraction_object["reason"] or "*None*"}
+            Created: {infraction_object["inserted_at"]}
+            Expires: {infraction_object["expires_at"] or "*Permanent*"}
+            Actor: {actor.mention if actor else actor_id}
+            ID: `{infraction_object["id"]}`
+            {"**===============**" if active else "==============="}
+        """)
 
-        if show_user:
-            user_id = int(infraction_object["user"]["user_id"])
-            user = self.bot.get_user(user_id)
-            lines.insert(1, "User: {0}".format(user.mention if user else user_id))
+        return lines.strip()
 
-        return "\n".join(lines)
+    async def notify_infraction(
+            self, user: Union[User, Member], infr_type: str, duration: str = None, reason: str = None
+    ):
+        """
+        Notify a user of their fresh infraction :)
+
+        :param user: The user to send the message to.
+        :param infr_type: The type of infraction, as a string.
+        :param duration: The duration of the infraction.
+        :param reason: The reason for the infraction.
+        """
+
+        if duration is None:
+            duration = "N/A"
+
+        if reason is None:
+            reason = "No reason provided."
+
+        embed = Embed(
+            description=textwrap.dedent(f"""
+                **Type:** {infr_type}
+                **Duration:** {duration}
+                **Reason:** {reason}
+                """),
+            colour=Colour(Colours.soft_red)
+        )
+
+        icon_url = INFRACTION_ICONS.get(infr_type, Icons.token_removed)
+        embed.set_author(name="Infraction Information", icon_url=icon_url, url=RULES_URL)
+        embed.title = f"Please review our rules over at {RULES_URL}"
+        embed.url = RULES_URL
+
+        return await self.send_private_embed(user, embed)
+
+    async def notify_pardon(
+            self, user: Union[User, Member], title: str, content: str, icon_url: str = Icons.user_verified
+    ):
+        """
+        Notify a user that an infraction has been lifted.
+
+        :param user: The user to send the message to.
+        :param title: The title of the embed.
+        :param content: The content of the embed.
+        :param icon_url: URL for the title icon.
+        """
+
+        embed = Embed(
+            description=content,
+            colour=Colour(Colours.soft_green)
+        )
+
+        embed.set_author(name=title, icon_url=icon_url)
+
+        return await self.send_private_embed(user, embed)
+
+    async def send_private_embed(self, user: Union[User, Member], embed: Embed):
+        """
+        A helper method for sending an embed to a user's DMs.
+
+        :param user: The user to send the embed to.
+        :param embed: The embed to send.
+        """
+
+        # sometimes `user` is a `discord.Object`, so let's make it a proper user.
+        user = await self.bot.get_user_info(user.id)
+
+        try:
+            await user.send(embed=embed)
+            return True
+        except (HTTPException, Forbidden):
+            log.debug(
+                f"Infraction-related information could not be sent to user {user} ({user.id}). "
+                "They've probably just disabled private messages."
+            )
+            return False
+
+    async def log_notify_failure(self, target: str, actor: Member, infraction_type: str):
+        await self.mod_log.send_log_message(
+            icon_url=Icons.token_removed,
+            content=actor.mention,
+            colour=Colour(Colours.soft_red),
+            title="Notification Failed",
+            text=f"Direct message was unable to be sent.\nUser: {target.mention}\nType: {infraction_type}"
+        )
 
     # endregion
 
-
-RFC1123_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
-
-
-def parse_rfc1123(time_str):
-    return datetime.datetime.strptime(time_str, RFC1123_FORMAT).replace(tzinfo=datetime.timezone.utc)
-
-
-def _silent_exception(future):
-    try:
-        future.exception()
-    except Exception:  # noqa: S110
-        pass
+    async def __error(self, ctx, error):
+        if isinstance(error, BadUnionArgument):
+            if User in error.converters:
+                await ctx.send(str(error.errors[0]))
 
 
 def setup(bot):
