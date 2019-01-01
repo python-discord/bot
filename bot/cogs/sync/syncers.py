@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 # These objects are declared as namedtuples because tuples are hashable,
 # something that we make use of when diffing site roles against guild roles.
 Role = namedtuple('Role', ('id', 'name', 'colour', 'permissions'))
-User = namedtuple('User', ('id', 'name', 'discriminator', 'avatar', 'roles', 'in_guild'))
+User = namedtuple('User', ('id', 'name', 'discriminator', 'avatar_hash', 'roles', 'in_guild'))
 
 
 def get_roles_for_update(guild_roles: Set[Role], api_roles: Set[Role]) -> Set[Role]:
@@ -51,7 +51,7 @@ async def sync_roles(bot: Bot, guild: Guild):
 
     for role in roles_to_update:
         log.info(f"Updating role `{role.name}` on the site.")
-        await bot.api_client.post(
+        await bot.api_client.put(
             'bot/roles',
             json={
                 'id': role.id,
@@ -110,26 +110,23 @@ async def sync_users(bot: Bot, guild: Guild):
     guild_users = {
         member.id: User(
             id=member.id, name=member.name,
-            discriminator=member.discriminator, avatar=member.avatar,
+            discriminator=member.discriminator, avatar_hash=member.avatar,
             roles={role.id for role in member.roles}, in_guild=True
         )
         for member in guild.members
     }
     users_to_update = get_users_for_update(guild_users, api_users)
     log.info("Updating a total of `%d` users on the site.", len(users_to_update))
-    for chunk in chunk_by(users_to_update, n=250):
-        await bot.api_client.post(
-            'bot/users',
-            json=[
-                {
-                    'avatar': user.avatar,
-                    'discriminator': user.discriminator,
-                    'id': user.id,
-                    'in_guild': user.in_guild,
-                    'name': user.name,
-                    'roles': list(user.roles)
-                }
-                for user in chunk
-            ]
+    for user in users_to_update:
+        await bot.api_client.put(
+            'bot/users/' + str(user.id),
+            json={
+                'avatar': user.avatar_hash,
+                'discriminator': user.discriminator,
+                'id': user.id,
+                'in_guild': user.in_guild,
+                'name': user.name,
+                'roles': list(user.roles)
+            }
         )
     log.info("User update complete.")
