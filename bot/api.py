@@ -33,6 +33,10 @@ class APIClient:
         async with self.session.post(self._url_for(endpoint), *args, **kwargs) as resp:
             return await resp.json()
 
+    async def put(self, endpoint: str, *args, **kwargs):
+        async with self.session.put(self._url_for(endpoint), *args, **kwargs) as resp:
+            return await resp.json()
+
     async def delete(self, endpoint: str, *args, **kwargs):
         async with self.session.delete(self._url_for(endpoint), *args, **kwargs) as resp:
             if resp.status == 204:
