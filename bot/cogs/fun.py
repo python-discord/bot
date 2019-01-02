@@ -1,7 +1,7 @@
 import logging
 from textwrap import dedent
 
-from discord import Colour, Embed, Message, User
+from discord import Colour, Embed, Message, RawReactionActionEvent
 from discord.ext.commands import Bot
 
 from bot.constants import Channels, Guild, Roles
@@ -52,7 +52,7 @@ class Fun:
             log.debug(f"{message.author} said '{message.clean_content}'. Responding with '{response}'.")
             await message.channel.send(response.format(them=message.author.mention))
 
-    async def on_raw_reaction_add(self, payload):
+    async def on_raw_reaction_add(self, payload: RawReactionActionEvent):
         starboard = self.bot.get_channel(Channels.starboard)
         if not starboard:
             return log.warning("Starboard TextChannel was not found.")
@@ -74,11 +74,10 @@ class Fun:
         guild = self.bot.get_guild(payload.guild_id)
         member = guild.get_member(payload.user_id)
 
-        if not any(role == member.top_role.id for role in ALLOWED_TO_STAR):
+        if not member or not any(role == member.top_role.id for role in ALLOWED_TO_STAR):
             return log.debug(
                 f"Star reaction was added by {str(member)} "
                 "but they lack the permissions to post on starboard. "
-                f"Their toprole is {member.top_role.id}"
             )
 
         # TODO: Check if message was stared already.
@@ -90,7 +89,7 @@ class Fun:
         embed.description = dedent(
             f"""
             {message.content}
-            
+
             [Jump to message]({message.jump_url})
             """
         )
