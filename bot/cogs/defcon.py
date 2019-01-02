@@ -265,8 +265,8 @@ class Defcon:
         """
 
         if self.enabled:
-            day_str = "days" if self.days > 1 else "day"
-            new_topic = f"{BASE_CHANNEL_TOPIC}\n(Status: Enabled, Threshold: {self.days} {day_str})"
+            day_str = "days" if self.days.days > 1 else "day"
+            new_topic = f"{BASE_CHANNEL_TOPIC}\n(Status: Enabled, Threshold: {self.days.days} {day_str})"
         else:
             new_topic = f"{BASE_CHANNEL_TOPIC}\n(Status: Disabled)"
 
