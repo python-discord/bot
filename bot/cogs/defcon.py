@@ -5,7 +5,7 @@ from discord import Colour, Embed, Member
 from discord.ext.commands import Bot, Context, group
 
 from bot.cogs.modlog import ModLog
-from bot.constants import Channels, Colours, Emojis, Icons, Keys, Roles, URLs
+from bot.constants import Channels, Colours, Emojis, Event, Icons, Keys, Roles, URLs
 from bot.decorators import with_role
 
 log = logging.getLogger(__name__)
@@ -270,6 +270,7 @@ class Defcon:
         else:
             new_topic = f"{BASE_CHANNEL_TOPIC}\n(Status: Disabled)"
 
+        self.mod_log.ignore(Event.guild_channel_update, Channels.defcon)
         defcon_channel = self.bot.guilds[0].get_channel(Channels.defcon)
         await defcon_channel.edit(topic=new_topic)
 
