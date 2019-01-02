@@ -4,7 +4,7 @@ from textwrap import dedent
 from discord import Colour, Embed, Message, User
 from discord.ext.commands import Bot
 
-from bot.constants import Channels, Roles
+from bot.constants import Channels, Guild, Roles
 
 RESPONSES = {
     "_pokes {us}_": "_Pokes {them}_",
@@ -13,7 +13,8 @@ RESPONSES = {
 }
 
 STAR_EMOJI = "\u2b50"
-ALLOWED_TO_STAR = (Roles.admin, Roles.moderator, Roles.owner, Roles.helpers)
+# TODO: Remove test role id 231157479273267201
+ALLOWED_TO_STAR = (Roles.admin, Roles.moderator, Roles.owner, Roles.helpers, 231157479273267201)
 
 log = logging.getLogger(__name__)
 
@@ -51,41 +52,50 @@ class Fun:
             log.debug(f"{message.author} said '{message.clean_content}'. Responding with '{response}'.")
             await message.channel.send(response.format(them=message.author.mention))
 
-    async def on_reaction_add(self, reaction, user):
+    async def on_raw_reaction_add(self, payload):
         starboard = self.bot.get_channel(Channels.starboard)
         if not starboard:
             return log.warning("Starboard TextChannel was not found.")
 
-        if reaction.emoji != STAR_EMOJI:
+        emoji = payload.emoji
+
+        if emoji.is_custom_emoji():
+            # This might be redundant given the check below.
             return
 
-        if isinstance(user, User):
-            return  # We only do the starboard in the guild, so this would be a member
+        if emoji.name != STAR_EMOJI:
+            log.debug(f"{emoji.name} was reacted")
+            return
 
-        if not any(role == user.top_role.id for role in ALLOWED_TO_STAR):
+        if payload.guild_id != Guild.id:
+            # We only do the starboard in the guild
+            return
+
+        guild = self.bot.get_guild(payload.guild_id)
+        member = guild.get_member(payload.user_id)
+
+        if not any(role == member.top_role.id for role in ALLOWED_TO_STAR):
             return log.debug(
-                f"Star reaction was added by {str(user)} "
-                "but they lack the permissions to post on starboard"
+                f"Star reaction was added by {str(member)} "
+                "but they lack the permissions to post on starboard. "
+                f"Their toprole is {member.top_role.id}"
             )
 
         # TODO: Check if message was stared already
 
-        message = reaction.message
-        content = message.content
-        author = message.author
-        channel = message.channel
-        msg_jump = message.jump_url
-        created_at = message.created_at
+        channel = guild.get_channel(payload.channel_id)
+        message = await channel.get_message(payload.message_id)
 
         embed = Embed()
         embed.description = dedent(
             f"""
-            {content}
+            {message.content}
             
-            [Jump to message]({msg_jump})
+            [Jump to message]({message.jump_url})
             """
         )
-        embed.timestamp = created_at
+        author = message.author
+        embed.timestamp = message.created_at
         embed.set_author(name=author.display_name, icon_url=author.avatar_url)
         embed.colour = Colour.gold()
 
