@@ -81,7 +81,7 @@ class Fun:
                 f"Their toprole is {member.top_role.id}"
             )
 
-        # TODO: Check if message was stared already
+        # TODO: Check if message was stared already.
 
         channel = guild.get_channel(payload.channel_id)
         message = await channel.get_message(payload.message_id)
