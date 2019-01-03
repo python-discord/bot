@@ -1,7 +1,7 @@
 import logging
 import re
 
-from discord import Colour, Member, Message, TextChannel
+from discord import Colour, DMChannel, Member, Message, TextChannel
 import discord.errors
 from discord.ext.commands import Bot
 
@@ -126,10 +126,15 @@ class Filtering:
                     triggered = await _filter["function"](msg.content)
 
                     if triggered:
+                        if isinstance(msg.channel, DMChannel):
+                            channel_str = "via DM"
+                        else:
+                            channel_str = f"in <#{msg.channel.id}>"
+
                         message = (
                             f"The {filter_name} {_filter['type']} was triggered "
                             f"by **{msg.author.name}#{msg.author.discriminator}** "
-                            f"(`{msg.author.id}`) in <#{msg.channel.id}> with [the "
+                            f"(`{msg.author.id}`) {channel_str} with [the "
                             f"following message]({msg.jump_url}):\n\n"
                             f"{msg.content}"
                         )
