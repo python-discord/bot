@@ -2,8 +2,8 @@ import logging
 from textwrap import dedent
 
 from discord import Colour, Embed, Message, RawReactionActionEvent
-from discord.utils import get
 from discord.ext.commands import Bot
+from discord.utils import get
 
 from bot.constants import Channels, Guild, Keys, Roles, URLs
 
@@ -18,8 +18,7 @@ LVL2_STAR = "\U0001f31f"
 LVL3_STAR = "\U0001f4ab"
 LVL4_STAR = "\u2728"
 
-# TODO: Remove test role id 231157479273267201
-ALLOWED_TO_STAR = (Roles.admin, Roles.moderator, Roles.owner, Roles.helpers, 231157479273267201)
+ALLOWED_TO_STAR = (Roles.admin, Roles.moderator, Roles.owner, Roles.helpers)
 
 log = logging.getLogger(__name__)
 
@@ -99,7 +98,7 @@ class Fun:
                 "but they lack the permissions to post on starboard. "
             )
 
-        # TODO: Check if message was stared already.
+        # API part needs testing.
 
         channel = guild.get_channel(payload.channel_id)
         message = await channel.get_message(payload.message_id)
