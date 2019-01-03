@@ -48,8 +48,9 @@ class Fun:
             url=URLs.site_starboard_api,
             headers=self.headers
         )
+        json = await response.json()
+        messages = json["messages"]
 
-        messages = response["messages"]
         for message in messages:
             key = message["bot_message_id"]
             value = message["jump_to_url"]
@@ -70,33 +71,35 @@ class Fun:
             log.debug(f"{message.author} said '{message.clean_content}'. Responding with '{response}'.")
             await message.channel.send(response.format(them=message.author.mention))
 
-    async def on_raw_reaction_add(self, payload: RawReactionActionEvent):
+    async def star_reaction_checks(self, payload: RawReactionActionEvent):
         starboard = self.bot.get_channel(Channels.starboard)
         if not starboard:
-            return log.warning("Starboard TextChannel was not found.")
+            log.warning("Starboard TextChannel was not found.")
+            return False, None
 
         emoji = payload.emoji
 
         if emoji.is_custom_emoji():
             # This might be redundant given the check below.
-            return
+            return False, None
 
         if emoji.name != STAR_EMOJI:
             log.debug(f"{emoji.name} was reacted")
-            return
+            return False, None
 
         if payload.guild_id != Guild.id:
             # We only do the starboard in the guild
-            return
+            return False, None
 
         guild = self.bot.get_guild(payload.guild_id)
         member = guild.get_member(payload.user_id)
 
         if not member or not any(role == member.top_role.id for role in ALLOWED_TO_STAR):
-            return log.debug(
+            log.debug(
                 f"Star reaction was added by {str(member)} "
                 "but they lack the permissions to post on starboard. "
             )
+            return False, None
 
         # API part needs testing.
 
@@ -108,8 +111,22 @@ class Fun:
             # Checks if the id is in the jump to url
             if str(payload.message_id) in url:
                 starboard_msg = await starboard.get_message(starboard_msg_id)
-                count = self.increment_starcount(starboard_msg, message)
-                return log.debug(f"Incremented starboard star count for `{message.id}` to {count}")
+                await self.change_starcount(starboard_msg, message)
+                return True, message
+
+        return True, message
+
+    async def on_raw_reaction_remove(self, payload: RawReactionActionEvent):
+        result, message = await self.star_reaction_checks(payload)
+        if not result:
+            return
+
+    async def on_raw_reaction_add(self, payload: RawReactionActionEvent):
+        result, message = await self.star_reaction_checks(payload)
+        if not result:
+            return
+
+        starboard = self.bot.get_channel(Channels.starboard)
 
         # Message was not starred before, let's add it to the board!
         embed = Embed()
@@ -126,7 +143,7 @@ class Fun:
         embed.colour = Colour.gold()
 
         msg = await starboard.send(
-            f"1 {STAR_EMOJI} {channel.mention}",
+            f"1 {STAR_EMOJI} {message.channel.mention}",
             embed=embed
         )
 
@@ -134,50 +151,77 @@ class Fun:
             url=URLs.site_starboard_api,
             headers=self.headers,
             json={
-                "message_id": message.id,
-                "bot_message_id": msg.id,
-                "guild_id": Guild.id,
-                "channel_id": message.channel.id,
-                "author_id": author.id,
+                "message_id": str(message.id),
+                "bot_message_id": str(msg.id),
+                "guild_id": str(Guild.id),
+                "channel_id": str(message.channel.id),
+                "author_id": str(author.id),
                 "jump_to_url": message.jump_url
             }
         )
+        json = await response.json()
 
-        if response["message"] != "ok":
+        if json.get("message") != "ok":
             # Delete it from the starboard before anyone notices our flaws in life.
             await msg.delete()
             return log.warning(
                 "Failed to post starred message "
-                f"{response['message']}"
+                f"{json.get('error_message')}"
             )
 
         self.star_msg_map[msg.id] = message.jump_url
 
-    async def increment_starcount(self, star: Message, msg: Message):
+    async def change_starcount(self, star: Message, msg: Message):
         reaction = get(msg.reactions, emoji=STAR_EMOJI)
 
         if not reaction:
             log.warning(
-                "increment_starcount was called, but could not find a star reaction"
-                " on the original message"
+                "increment_starcount was called, but could not find a star reaction "
+                "on the original message"
             )
-            return
+            return await self.delete_star(star, msg)
 
         count = reaction.count
+
         if count < 5:
-            star = STAR_EMOJI
+            star_emoji = STAR_EMOJI
         elif 5 >= count < 10:
-            star = LVL2_STAR
+            star_emoji = LVL2_STAR
         elif 10 >= count < 15:
-            star = LVL3_STAR
-        elif count >= 15:
-            star = LVL4_STAR
+            star_emoji = LVL3_STAR
+        else:
+            star_emoji = LVL4_STAR
 
         embed = star.embeds[0]
-        await msg.edit(
-            content=f"{reaction.count} {star} {msg.channel.mention}",
-            embed=embed
+
+        if count > 0:
+            await star.edit(
+                content=f"{reaction.count} {star_emoji} {msg.channel.mention}",
+                embed=embed
+            )
+            log.debug(f"Changed starboard star count for `{msg.id}` to {count}")
+
+        else:
+            # The star count went down to 0, remove it from the board
+            await self.delete_star(star, msg)
+
+    async def delete_star(self, star: Message, msg: Message):
+        try:
+            await star.delete()
+        except Exception as e:
+            log.info(e)
+
+        resp = await self.bot.http_session.delete(
+            url=URLs.site_starboard_api,
+            headers=self.headers,
+            json={"message_id": msg.id}
         )
+        resp_data = await resp.json()
+
+        if not resp_data.get("success"):
+            log.warning(f"Failed to delete {msg.id} from starboard db")
+        else:
+            log.info("Successfully deleted starboard entry")
 
 
 def setup(bot):
