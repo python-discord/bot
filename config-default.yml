@@ -239,6 +239,7 @@ urls:
     site_reminders_user_api:            !JOIN [*SCHEMA, *API, "/bot/reminders/user"]
     site_settings_api:                  !JOIN [*SCHEMA, *API, "/bot/settings"]
     site_special_api:                   !JOIN [*SCHEMA, *API, "/bot/special_snakes"]
+    site_starboard_api:                 !JOIN [*SCHEMA, *API, "/bot/starboard"]
     site_tags_api:                      !JOIN [*SCHEMA, *API, "/bot/tags"]
     site_user_api:                      !JOIN [*SCHEMA, *API, "/bot/users"]
     site_user_complete_api:             !JOIN [*SCHEMA, *API, "/bot/users/complete"]

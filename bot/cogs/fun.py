@@ -2,9 +2,10 @@ import logging
 from textwrap import dedent
 
 from discord import Colour, Embed, Message, RawReactionActionEvent
+from discord.utils import get
 from discord.ext.commands import Bot
 
-from bot.constants import Channels, Guild, Roles
+from bot.constants import Channels, Guild, Keys, Roles, URLs
 
 RESPONSES = {
     "_pokes {us}_": "_Pokes {them}_",
@@ -13,6 +14,10 @@ RESPONSES = {
 }
 
 STAR_EMOJI = "\u2b50"
+LVL2_STAR = "\U0001f31f"
+LVL3_STAR = "\U0001f4ab"
+LVL4_STAR = "\u2728"
+
 # TODO: Remove test role id 231157479273267201
 ALLOWED_TO_STAR = (Roles.admin, Roles.moderator, Roles.owner, Roles.helpers, 231157479273267201)
 
@@ -26,6 +31,8 @@ class Fun:
 
     def __init__(self, bot: Bot):
         self.bot = bot
+        self.headers = {"X-API-Key": Keys.site_api}
+        self.star_msg_map = {}
 
     async def on_ready(self):
         keys = list(RESPONSES.keys())
@@ -36,6 +43,18 @@ class Fun:
             if key != changed_key:
                 RESPONSES[changed_key] = RESPONSES[key]
                 del RESPONSES[key]
+
+        # Get all starred messages to populate star to msg map
+        response = await self.bot.http_session.get(
+            url=URLs.site_starboard_api,
+            headers=self.headers
+        )
+
+        messages = response["messages"]
+        for message in messages:
+            key = message["bot_message_id"]
+            value = message["jump_to_url"]
+            self.star_msg_map[key] = value
 
     async def on_message(self, message: Message):
         if message.channel.id != Channels.bot:
@@ -85,6 +104,15 @@ class Fun:
         channel = guild.get_channel(payload.channel_id)
         message = await channel.get_message(payload.message_id)
 
+        for starboard_msg_id, url in self.star_msg_map.items():
+            # Message is already on the starboard
+            # Checks if the id is in the jump to url
+            if str(payload.message_id) in url:
+                starboard_msg = await starboard.get_message(starboard_msg_id)
+                count = self.increment_starcount(starboard_msg, message)
+                return log.debug(f"Incremented starboard star count for `{message.id}` to {count}")
+
+        # Message was not starred before, let's add it to the board!
         embed = Embed()
         embed.description = dedent(
             f"""
@@ -98,8 +126,57 @@ class Fun:
         embed.set_author(name=author.display_name, icon_url=author.avatar_url)
         embed.colour = Colour.gold()
 
-        await starboard.send(
-            f"{STAR_EMOJI} {channel.mention}",
+        msg = await starboard.send(
+            f"1 {STAR_EMOJI} {channel.mention}",
+            embed=embed
+        )
+
+        response = await self.bot.http_session.post(
+            url=URLs.site_starboard_api,
+            headers=self.headers,
+            json={
+                "message_id": message.id,
+                "bot_message_id": msg.id,
+                "guild_id": Guild.id,
+                "channel_id": message.channel.id,
+                "author_id": author.id,
+                "jump_to_url": message.jump_url
+            }
+        )
+
+        if response["message"] != "ok":
+            # Delete it from the starboard before anyone notices our flaws in life.
+            await msg.delete()
+            return log.warning(
+                "Failed to post starred message "
+                f"{response['message']}"
+            )
+
+        self.star_msg_map[msg.id] = message.jump_url
+
+    async def increment_starcount(self, star: Message, msg: Message):
+        reaction = get(msg.reactions, name=STAR_EMOJI)
+
+        if not reaction:
+            log.warning(
+                "increment_starcount was called, but could not find a star reaction"
+                " on the original message"
+            )
+            return
+
+        count = reaction.count
+        if count < 5:
+            star = STAR_EMOJI
+        elif 5 >= count < 10:
+            star = LVL2_STAR
+        elif 10 >= count < 15:
+            star = LVL3_STAR
+        elif count >= 15:
+            star = LVL4_STAR
+
+        embed = star.embeds[0]
+        await msg.edit(
+            content=f"{reaction.count} {star} {msg.channel.mention}",
             embed=embed
         )
 

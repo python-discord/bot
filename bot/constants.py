@@ -415,6 +415,7 @@ class URLs(metaclass=YAMLGetter):
     site_schema: str
     site_settings_api: str
     site_special_api: str
+    site_starboard_api: str
     site_tags_api: str
     site_user_api: str
     site_user_complete_api: str
