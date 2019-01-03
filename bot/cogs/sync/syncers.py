@@ -14,7 +14,7 @@ Role = namedtuple('Role', ('id', 'name', 'colour', 'permissions'))
 User = namedtuple('User', ('id', 'name', 'discriminator', 'avatar_hash', 'roles', 'in_guild'))
 
 
-def get_roles_for_update(guild_roles: Set[Role], api_roles: Set[Role]) -> Set[Role]:
+def get_roles_for_sync(guild_roles: Set[Role], api_roles: Set[Role]) -> Set[Role]:
     """
     Determine which roles should be updated on the site.
 
@@ -30,7 +30,13 @@ def get_roles_for_update(guild_roles: Set[Role], api_roles: Set[Role]) -> Set[Ro
             Roles to be sent to the site for an update or insert.
     """
 
-    return guild_roles - api_roles
+    guild_role_ids = {role.id for role in guild_roles}
+    api_role_ids = {role.id for role in api_roles}
+    new_role_ids = guild_role_ids - api_role_ids
+
+    roles_to_create = {role for role in guild_roles if role.id in new_role_ids}
+    roles_to_update = guild_roles - api_roles - roles_to_create
+    return roles_to_create, roles_to_update
 
 
 async def sync_roles(bot: Bot, guild: Guild):
@@ -47,12 +53,23 @@ async def sync_roles(bot: Bot, guild: Guild):
         )
         for role in guild.roles
     }
-    roles_to_update = get_roles_for_update(guild_roles, api_roles)
+    roles_to_create, roles_to_update = get_roles_for_sync(guild_roles, api_roles)
+    for role in roles_to_create:
+        log.info(f"Creating role `{role.name}` on the site.")
+        await bot.api_client.post(
+            'bot/roles',
+            json={
+                'id': role.id,
+                'name': role.name,
+                'colour': role.colour,
+                'permissions': role.permissions
+            }
+        )
 
     for role in roles_to_update:
         log.info(f"Updating role `{role.name}` on the site.")
         await bot.api_client.put(
-            'bot/roles',
+            'bot/roles/' + str(role.id),
             json={
                 'id': role.id,
                 'name': role.name,
