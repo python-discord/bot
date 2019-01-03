@@ -82,13 +82,6 @@ def get_users_for_update(
     return users_to_update
 
 
-# Taken from `https://docs.python.org/3.7/library/itertools.html#itertools-recipes`.
-def chunk_by(iterable, n, fillvalue=None):
-    "Collect data into fixed-length chunks or blocks"
-    args = [iter(iterable)] * n
-    return itertools.zip_longest(*args, fillvalue=fillvalue)
-
-
 async def sync_users(bot: Bot, guild: Guild):
     """
     Synchronize users found on the given
