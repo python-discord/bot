@@ -154,7 +154,7 @@ class Fun:
         self.star_msg_map[msg.id] = message.jump_url
 
     async def increment_starcount(self, star: Message, msg: Message):
-        reaction = get(msg.reactions, name=STAR_EMOJI)
+        reaction = get(msg.reactions, emoji=STAR_EMOJI)
 
         if not reaction:
             log.warning(
