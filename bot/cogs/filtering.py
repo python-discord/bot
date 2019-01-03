@@ -44,14 +44,14 @@ class Filtering:
                 "enabled": Filter.filter_zalgo,
                 "function": self._has_zalgo,
                 "type": "filter",
-                "user_notification": False,
+                "user_notification": Filter.notify_user_zalgo,
                 "notification_msg": ""
             },
             "filter_invites": {
                 "enabled": Filter.filter_invites,
                 "function": self._has_invites,
                 "type": "filter",
-                "user_notification": True,
+                "user_notification": Filter.notify_user_invites,
                 "notification_msg": (
                     "Per Rule 10, your invite link has been removed. "
                     "If you believe this was a mistake, please the staff know!\n\n"
@@ -62,21 +62,21 @@ class Filtering:
                 "enabled": Filter.filter_domains,
                 "function": self._has_urls,
                 "type": "filter",
-                "user_notification": False,
+                "user_notification": Filter.notify_user_domains,
                 "notification_msg": ""
             },
             "watch_words": {
                 "enabled": Filter.watch_words,
                 "function": self._has_watchlist_words,
                 "type": "watchlist",
-                "user_notification": False,
+                "user_notification": Filter.notify_user_words,
                 "notification_msg": ""
             },
             "watch_tokens": {
                 "enabled": Filter.watch_tokens,
                 "function": self._has_watchlist_tokens,
                 "type": "watchlist",
-                "user_notification": False,
+                "user_notification": False,  # Hardcode intentional, already in token remover cog
                 "notification_msg": ""
             },
         }

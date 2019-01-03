@@ -139,6 +139,13 @@ filter:
     watch_words:    true
     watch_tokens:   true
 
+    # Notify user on filter?
+    notify_user_zalgo:   false
+    notify_user_invites: true
+    notify_user_domains: false
+    notify_user_words:   false
+    # Token notification intentionally ignored, notification is handled by the token remover cog
+
     # Filter configuration
     ping_everyone: true  # Ping @everyone when we send a mod-alert?
 
