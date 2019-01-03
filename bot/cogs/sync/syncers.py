@@ -1,12 +1,8 @@
-import itertools
-import logging
 from collections import namedtuple
 from typing import Dict, Set, Tuple
 
 from discord import Guild
 from discord.ext.commands import Bot
-
-log = logging.getLogger(__name__)
 
 # These objects are declared as namedtuples because tuples are hashable,
 # something that we make use of when diffing site roles against guild roles.
@@ -59,6 +55,11 @@ async def sync_roles(bot: Bot, guild: Guild):
         guild (discord.Guild):
             The guild instance from the bot's cache
             to synchronize roles with.
+
+    Returns:
+        Tuple[int, int]:
+            A tuple with two integers representing how many roles were created
+            (element `0`) and how many roles were updated (element `1`).
     """
 
     roles = await bot.api_client.get('bot/roles')
@@ -77,7 +78,6 @@ async def sync_roles(bot: Bot, guild: Guild):
     roles_to_create, roles_to_update = get_roles_for_sync(guild_roles, api_roles)
 
     for role in roles_to_create:
-        log.info(f"Creating role `{role.name}` on the site.")
         await bot.api_client.post(
             'bot/roles',
             json={
@@ -89,7 +89,6 @@ async def sync_roles(bot: Bot, guild: Guild):
         )
 
     for role in roles_to_update:
-        log.info(f"Updating role `{role.name}` on the site.")
         await bot.api_client.put(
             'bot/roles/' + str(role.id),
             json={
@@ -99,6 +98,8 @@ async def sync_roles(bot: Bot, guild: Guild):
                 'permissions': role.permissions
             }
         )
+
+    return (len(roles_to_create), len(roles_to_update))
 
 
 def get_users_for_sync(
@@ -167,6 +168,11 @@ async def sync_users(bot: Bot, guild: Guild):
         guild (discord.Guild):
             The guild instance from the bot's cache
             to synchronize roles with.
+
+    Returns:
+        Tuple[int, int]:
+            A tuple with two integers representing how many users were created
+            (element `0`) and how many users were updated (element `1`).
     """
 
     current_users = await bot.api_client.get('bot/users')
@@ -192,7 +198,6 @@ async def sync_users(bot: Bot, guild: Guild):
 
     users_to_create, users_to_update = get_users_for_sync(guild_users, api_users)
 
-    log.info("Creating a total of `%d` users on the site.", len(users_to_create))
     for user in users_to_create:
         await bot.api_client.post(
             'bot/users',
@@ -205,9 +210,7 @@ async def sync_users(bot: Bot, guild: Guild):
                 'roles': list(user.roles)
             }
         )
-    log.info("User creation complete.")
 
-    log.info("Updating a total of `%d` users on the site.", len(users_to_update))
     for user in users_to_update:
         await bot.api_client.put(
             'bot/users/' + str(user.id),
@@ -220,4 +223,5 @@ async def sync_users(bot: Bot, guild: Guild):
                 'roles': list(user.roles)
             }
         )
-    log.info("User update complete.")
+
+    return (len(users_to_create), len(users_to_update))

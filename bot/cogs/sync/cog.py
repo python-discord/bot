@@ -2,6 +2,7 @@ import logging
 from typing import Callable, Iterable
 
 from discord import Guild
+from discord.ext import commands
 from discord.ext.commands import Bot
 
 from . import syncers
@@ -32,5 +33,41 @@ class Sync:
             for syncer in self.ON_READY_SYNCERS:
                 syncer_name = syncer.__name__[5:]  # drop off `sync_`
                 log.info("Starting `%s` syncer.", syncer_name)
-                await syncer(self.bot, guild)
-                log.info("`%s` syncer finished.", syncer_name)
+                total_created, total_updated = await syncer(self.bot, guild)
+                log.info(
+                    "`%s` syncer finished, created `%d`, updated `%d`.",
+                    syncer_name, total_created, total_updated
+                )
+
+    @commands.group(name='sync')
+    @commands.has_permissions(administrator=True)
+    async def sync_group(self, ctx):
+        """Run synchronizations between the bot and site manually."""
+
+    @sync_group.command(name='roles')
+    @commands.has_permissions(administrator=True)
+    async def sync_roles_command(self, ctx):
+        """Manually synchronize the guild's roles with the roles on the site."""
+
+        initial_response = await ctx.send("📊 Synchronizing roles.")
+        total_created, total_updated = await syncers.sync_roles(self.bot, ctx.guild)
+        await initial_response.edit(
+            content=(
+                f"👌 Role synchronization complete, created **{total_created}** "
+                f"and updated **{total_created}** roles."
+            )
+        )
+
+    @sync_group.command(name='users')
+    @commands.has_permissions(administrator=True)
+    async def sync_users_command(self, ctx):
+        """Manually synchronize the guild's users with the users on the site."""
+
+        initial_response = await ctx.send("📊 Synchronizing users.")
+        total_created, total_updated = await syncers.sync_users(self.bot, ctx.guild)
+        await initial_response.edit(
+            content=(
+                f"👌 User synchronization complete, created **{total_created}** "
+                f"and updated **{total_created}** users."
+            )
+        )
