@@ -1,7 +1,8 @@
 import logging
 import re
 
-from discord import Colour, Member, Message
+from discord import Colour, Member, Message, TextChannel
+import discord.errors
 from discord.ext.commands import Bot
 
 from bot.cogs.modlog import ModLog
@@ -42,27 +43,41 @@ class Filtering:
             "filter_zalgo": {
                 "enabled": Filter.filter_zalgo,
                 "function": self._has_zalgo,
-                "type": "filter"
+                "type": "filter",
+                "user_notification": False,
+                "notification_msg": ""
             },
             "filter_invites": {
                 "enabled": Filter.filter_invites,
                 "function": self._has_invites,
-                "type": "filter"
+                "type": "filter",
+                "user_notification": True,
+                "notification_msg": (
+                    "Per Rule 10, your invite link has been removed. "
+                    "If you believe this was a mistake, please the staff know!\n\n"
+                    r"Our server rules can be found here: <https://pythondiscord.com/about/rules>"
+                )
             },
             "filter_domains": {
                 "enabled": Filter.filter_domains,
                 "function": self._has_urls,
-                "type": "filter"
+                "type": "filter",
+                "user_notification": False,
+                "notification_msg": ""
             },
             "watch_words": {
                 "enabled": Filter.watch_words,
                 "function": self._has_watchlist_words,
-                "type": "watchlist"
+                "type": "watchlist",
+                "user_notification": False,
+                "notification_msg": ""
             },
             "watch_tokens": {
                 "enabled": Filter.watch_tokens,
                 "function": self._has_watchlist_tokens,
-                "type": "watchlist"
+                "type": "watchlist",
+                "user_notification": False,
+                "notification_msg": ""
             },
         }
 
@@ -135,6 +150,10 @@ class Filtering:
                         # If this is a filter (not a watchlist), we should delete the message.
                         if _filter["type"] == "filter":
                             await msg.delete()
+
+                        # Notify the user if the filter specifies
+                        if _filter["user_notification"]:
+                            await self.notify_member(msg.author, _filter["notification_msg"], msg.channel)
 
                         break  # We don't want multiple filters to trigger
 
@@ -246,6 +265,18 @@ class Filtering:
             if guild_id not in Filter.guild_invite_whitelist:
                 return True
         return False
+
+    async def notify_member(self, filtered_member: Member, reason: str, channel: TextChannel):
+        """
+        Notify filtered_member about a moderation action with the reason str
+
+        First attempts to DM the user, fall back to in-channel notification if user has DMs disabled
+        """
+
+        try:
+            await filtered_member.send(reason)
+        except discord.errors.Forbidden:
+            await channel.send(f"{filtered_member.mention} {reason}")
 
 
 def setup(bot: Bot):
