@@ -211,10 +211,10 @@ class Fun:
         except Exception as e:
             log.info(e)
 
+        url = f"{URLs.site_starboard_api}?message_id={msg.id}"
         resp = await self.bot.http_session.delete(
-            url=URLs.site_starboard_api,
+            url=url,
             headers=self.headers,
-            json={"message_id": msg.id}
         )
         resp_data = await resp.json()
 
