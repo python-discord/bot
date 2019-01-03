@@ -73,22 +73,14 @@ class Fun:
 
     async def star_reaction_checks(self, payload: RawReactionActionEvent):
         starboard = self.bot.get_channel(Channels.starboard)
+
         if not starboard:
             log.warning("Starboard TextChannel was not found.")
             return False, None
 
         emoji = payload.emoji
 
-        if emoji.is_custom_emoji():
-            # This might be redundant given the check below.
-            return False, None
-
-        if emoji.name != STAR_EMOJI:
-            log.debug(f"{emoji.name} was reacted")
-            return False, None
-
-        if payload.guild_id != Guild.id:
-            # We only do the starboard in the guild
+        if emoji.name != STAR_EMOJI or payload.guild_id != Guild.id:
             return False, None
 
         guild = self.bot.get_guild(payload.guild_id)
@@ -101,25 +93,34 @@ class Fun:
             )
             return False, None
 
-        # API part needs testing.
-
         channel = guild.get_channel(payload.channel_id)
         message = await channel.get_message(payload.message_id)
 
         for starboard_msg_id, url in self.star_msg_map.items():
-            # Message is already on the starboard
             # Checks if the id is in the jump to url
             if str(payload.message_id) in url:
                 starboard_msg = await starboard.get_message(starboard_msg_id)
                 await self.change_starcount(starboard_msg, message)
-                return True, message
+                break
+        else:
+            # Check the api just in case
+            url = f"{URLs.site_starboard_api}?message_id={message.id}"
+            response = await self.bot.http_session.get(
+                url=url,
+                headers=self.headers
+            )
+            json_data = await response.json()
+            entry = json_data.get("message")
+
+            if entry is None:
+                return False, None
+
+            self.star_msg_map[entry["message_id"]] = entry["jump_to_url"]
 
         return True, message
 
     async def on_raw_reaction_remove(self, payload: RawReactionActionEvent):
-        result, message = await self.star_reaction_checks(payload)
-        if not result:
-            return
+        await self.star_reaction_checks(payload)
 
     async def on_raw_reaction_add(self, payload: RawReactionActionEvent):
         result, message = await self.star_reaction_checks(payload)
@@ -137,6 +138,7 @@ class Fun:
             [Jump to message]({message.jump_url})
             """
         )
+
         author = message.author
         embed.timestamp = message.created_at
         embed.set_author(name=author.display_name, icon_url=author.avatar_url)
@@ -172,6 +174,14 @@ class Fun:
         self.star_msg_map[msg.id] = message.jump_url
 
     async def change_starcount(self, star: Message, msg: Message):
+        """
+        Edits the starboard message to show the current amount
+        of stars on the starred message.
+
+        :param star: Starboard message
+        :param msg: Message starboard references
+        """
+
         reaction = get(msg.reactions, emoji=STAR_EMOJI)
 
         if not reaction:
@@ -206,6 +216,13 @@ class Fun:
             await self.delete_star(star, msg)
 
     async def delete_star(self, star: Message, msg: Message):
+        """
+        Delete an entry to the starboard
+
+        :param star: Starboard message
+        :param msg: Message the starboard references
+        """
+
         try:
             await star.delete()
         except Exception as e:
@@ -222,6 +239,10 @@ class Fun:
             log.warning(f"Failed to delete {msg.id} from starboard db")
         else:
             log.info("Successfully deleted starboard entry")
+            try:
+                del self.star_msg_map[msg.id]
+            except KeyError:
+                pass
 
 
 def setup(bot):
