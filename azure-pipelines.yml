@@ -36,6 +36,9 @@ jobs:
   - script: python -m flake8
     displayName: 'Run linter'
 
+  - script: python -m pytest tests
+    displayName: Run tests
+
 - job: build
   displayName: 'Build Containers'
   dependsOn: 'test'
