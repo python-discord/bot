@@ -59,3 +59,10 @@ def test_get_users_for_sync_updates_and_creates_users_as_needed():
         {fake_user(id=63)},
         {fake_user(in_guild=False)}
     )
+
+
+def test_get_users_for_sync_does_not_duplicate_update_users():
+    api_users = {43: fake_user(in_guild=False)}
+    guild_users = {}
+
+    assert get_users_for_sync(guild_users, api_users) == (set(), set())
