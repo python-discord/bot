@@ -151,6 +151,10 @@ class LinePaginator(Paginator):
         paginator = cls(prefix=prefix, suffix=suffix, max_size=max_size, max_lines=max_lines)
         current_page = 0
 
+        if not lines:
+            log.debug("No lines to add to paginator, adding empty line")
+            lines.append("(nothing to display)")
+
         for line in lines:
             try:
                 paginator.add_line(line, empty=empty)
@@ -360,6 +364,10 @@ class ImagePaginator(Paginator):
 
         paginator = cls(prefix=prefix, suffix=suffix)
         current_page = 0
+
+        if not pages:
+            log.debug("No images to add to paginator, adding empty line")
+            pages.append(("(no images to display)", ""))
 
         for text, image_url in pages:
             paginator.add_line(text)
