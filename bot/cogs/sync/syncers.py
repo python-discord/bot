@@ -96,8 +96,8 @@ def get_users_for_sync(
                 users_to_update.add(guild_user)
         else:
             # User left
-            api_user._replace(in_guild=False)
-            users_to_update.add(guild_user)
+            new_api_user = api_user._replace(in_guild=False)
+            users_to_update.add(new_api_user)
 
     new_user_ids = set(guild_users.keys()) - set(api_users.keys())
     for user_id in new_user_ids:
