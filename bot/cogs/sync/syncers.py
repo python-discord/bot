@@ -148,9 +148,6 @@ async def sync_users(bot: Bot, guild: Guild):
 
     log.info("Updating a total of `%d` users on the site.", len(users_to_update))
     for user in users_to_update:
-        if user is None:  # ??
-            continue
-
         await bot.api_client.put(
             'bot/users/' + str(user.id),
             json={
