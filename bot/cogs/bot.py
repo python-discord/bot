@@ -372,7 +372,7 @@ class Bot:
             return
 
         # Retrieve channel and message objects for use later
-        channel = self.bot.get_channel(payload.data.get("channel_id"))
+        channel = self.bot.get_channel(int(payload.data.get("channel_id")))
         user_message = await channel.get_message(payload.message_id)
 
         #  Checks to see if the user has corrected their codeblock.  If it's fixed, has_fixed_codeblock will be None
