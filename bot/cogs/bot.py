@@ -383,6 +383,7 @@ class Bot:
             bot_message = await channel.get_message(self.codeblock_message_ids[payload.message_id])
             await bot_message.delete()
             del self.codeblock_message_ids[payload.message_id]
+            log.trace("User's incorrect code block has been fixed.  Removing bot formatting message.")
 
 
 def setup(bot):
