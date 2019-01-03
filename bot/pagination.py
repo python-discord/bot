@@ -152,7 +152,7 @@ class LinePaginator(Paginator):
         current_page = 0
 
         if not lines:
-            log.debug("No lines to add to paginator, adding empty line")
+            log.debug("No lines to add to paginator, adding '(nothing to display)' message")
             lines.append("(nothing to display)")
 
         for line in lines:
@@ -366,7 +366,7 @@ class ImagePaginator(Paginator):
         current_page = 0
 
         if not pages:
-            log.debug("No images to add to paginator, adding empty line")
+            log.debug("No images to add to paginator, adding '(no images to display)' message")
             pages.append(("(no images to display)", ""))
 
         for text, image_url in pages:
