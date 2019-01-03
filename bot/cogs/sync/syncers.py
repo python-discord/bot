@@ -69,21 +69,17 @@ def get_users_for_update(
     Obtain a set of users to update on the website.
     """
 
-    api_user_ids = set(api_users.keys())
-    guild_user_ids = set(guild_users.keys())
-    left_user_ids = api_user_ids - guild_user_ids
-
-    api_users.update(guild_users)
-    for left_id in left_user_ids:
-        if left_id in api_users:
-            user = api_users[left_id]
-            log.debug(
-                "User `%s#%s` (`%d`) left since the last sync, updating `in_guild` field.",
-                user.name, user.discriminator, user.discriminator
-            )
-            api_users[left_id]._replace(in_guild=False)
-
-    return api_users.values()
+    users_to_update = set()
+    for api_user in api_users.values():
+        guild_user = guild_users.get(api_user.id)
+        if guild_user is not None:
+            if api_user != guild_user:
+                users_to_update.add(guild_user)
+        else:
+            # User left
+            api_user._replace(in_guild=False)
+            users_to_update.add(guild_user)
+    return users_to_update
 
 
 # Taken from `https://docs.python.org/3.7/library/itertools.html#itertools-recipes`.
@@ -102,7 +98,7 @@ async def sync_users(bot: Bot, guild: Guild):
     current_users = await bot.api_client.get('bot/users')
     api_users = {
         user_dict['id']: User(
-            roles=set(user_dict.pop('roles')),
+            roles=tuple(sorted(user_dict.pop('roles'))),
             **user_dict
         )
         for user_dict in current_users
@@ -110,18 +106,21 @@ async def sync_users(bot: Bot, guild: Guild):
     guild_users = {
         member.id: User(
             id=member.id, name=member.name,
-            discriminator=member.discriminator, avatar_hash=member.avatar,
-            roles={role.id for role in member.roles}, in_guild=True
+            discriminator=int(member.discriminator), avatar_hash=member.avatar,
+            roles=tuple(sorted(role.id for role in member.roles)), in_guild=True
         )
         for member in guild.members
     }
     users_to_update = get_users_for_update(guild_users, api_users)
     log.info("Updating a total of `%d` users on the site.", len(users_to_update))
     for user in users_to_update:
+        if user is None:  # ??
+            continue
+
         await bot.api_client.put(
             'bot/users/' + str(user.id),
             json={
-                'avatar': user.avatar_hash,
+                'avatar_hash': user.avatar_hash,
                 'discriminator': user.discriminator,
                 'id': user.id,
                 'in_guild': user.in_guild,

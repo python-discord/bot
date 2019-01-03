@@ -1,9 +1,12 @@
+import logging
 from typing import Callable, Iterable
 
 from discord import Guild
 from discord.ext.commands import Bot
 
 from . import syncers
+
+log = logging.getLogger(__name__)
 
 
 class Sync:
@@ -27,4 +30,7 @@ class Sync:
         guild = self.bot.get_guild(self.SYNC_SERVER_ID)
         if guild is not None:
             for syncer in self.ON_READY_SYNCERS:
+                syncer_name = syncer.__name__[5:]  # drop off `sync_`
+                log.info("Starting `%s` syncer.", syncer_name)
                 await syncer(self.bot, guild)
+                log.info("`%s` syncer finished.", syncer_name)
