@@ -319,6 +319,7 @@ class Channels(metaclass=YAMLGetter):
     big_brother_logs: int
     bot: int
     checkpoint_test: int
+    defcon: int
     devalerts: int
     devlog: int
     devtest: int
