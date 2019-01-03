@@ -1,8 +1,8 @@
 import logging
 import re
 
-from discord import Colour, DMChannel, Member, Message, TextChannel
 import discord.errors
+from discord import Colour, DMChannel, Member, Message, TextChannel
 from discord.ext.commands import Bot
 
 from bot.cogs.modlog import ModLog
