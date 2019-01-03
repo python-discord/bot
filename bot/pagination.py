@@ -17,6 +17,10 @@ PAGINATION_EMOJI = [FIRST_EMOJI, LEFT_EMOJI, RIGHT_EMOJI, LAST_EMOJI, DELETE_EMO
 log = logging.getLogger(__name__)
 
 
+class EmptyPaginatorEmbed(Exception):
+    pass
+
+
 class LinePaginator(Paginator):
     """
     A class that aids in paginating code blocks for Discord messages.
@@ -96,7 +100,8 @@ class LinePaginator(Paginator):
     async def paginate(cls, lines: Iterable[str], ctx: Context, embed: Embed,
                        prefix: str = "", suffix: str = "", max_lines: Optional[int] = None, max_size: int = 500,
                        empty: bool = True, restrict_to_user: User = None, timeout: int = 300,
-                       footer_text: str = None):
+                       footer_text: str = None,
+                       exception_on_empty_embed: bool = False):
         """
         Use a paginator and set of reactions to provide pagination over a set of lines. The reactions are used to
         switch page, or to finish with pagination.
@@ -150,6 +155,14 @@ class LinePaginator(Paginator):
 
         paginator = cls(prefix=prefix, suffix=suffix, max_size=max_size, max_lines=max_lines)
         current_page = 0
+
+        if not lines:
+            if exception_on_empty_embed:
+                log.exception(f"Pagination asked for empty lines iterable")
+                raise EmptyPaginatorEmbed("No lines to paginate")
+
+            log.debug("No lines to add to paginator, adding '(nothing to display)' message")
+            lines.append("(nothing to display)")
 
         for line in lines:
             try:
@@ -315,7 +328,8 @@ class ImagePaginator(Paginator):
 
     @classmethod
     async def paginate(cls, pages: List[Tuple[str, str]], ctx: Context, embed: Embed,
-                       prefix: str = "", suffix: str = "", timeout: int = 300):
+                       prefix: str = "", suffix: str = "", timeout: int = 300,
+                       exception_on_empty_embed: bool = False):
         """
         Use a paginator and set of reactions to provide
         pagination over a set of title/image pairs.The reactions are
@@ -360,6 +374,14 @@ class ImagePaginator(Paginator):
 
         paginator = cls(prefix=prefix, suffix=suffix)
         current_page = 0
+
+        if not pages:
+            if exception_on_empty_embed:
+                log.exception(f"Pagination asked for empty image list")
+                raise EmptyPaginatorEmbed("No images to paginate")
+
+            log.debug("No images to add to paginator, adding '(no images to display)' message")
+            pages.append(("(no images to display)", ""))
 
         for text, image_url in pages:
             paginator.add_line(text)
