@@ -62,14 +62,16 @@ async def sync_roles(bot: Bot, guild: Guild):
         )
 
 
-def get_users_for_update(
+def get_users_for_sync(
         guild_users: Dict[int, User], api_users: Dict[int, User]
 ) -> ValuesView[User]:
     """
     Obtain a set of users to update on the website.
     """
 
+    users_to_create = set()
     users_to_update = set()
+
     for api_user in api_users.values():
         guild_user = guild_users.get(api_user.id)
         if guild_user is not None:
@@ -79,7 +81,14 @@ def get_users_for_update(
             # User left
             api_user._replace(in_guild=False)
             users_to_update.add(guild_user)
-    return users_to_update
+
+    new_user_ids = set(guild_users.keys()) - set(api_users.keys())
+    for user_id in new_user_ids:
+        # User joined
+        new_user = guild_users[user_id]
+        users_to_create.add(new_user)
+
+    return users_to_create, users_to_update
 
 
 async def sync_users(bot: Bot, guild: Guild):
@@ -104,7 +113,22 @@ async def sync_users(bot: Bot, guild: Guild):
         )
         for member in guild.members
     }
-    users_to_update = get_users_for_update(guild_users, api_users)
+    users_to_create, users_to_update = get_users_for_sync(guild_users, api_users)
+    log.info("Creating a total of `%d` users on the site.", len(users_to_create))
+    for user in users_to_create:
+        await bot.api_client.post(
+            'bot/users',
+            json={
+                'avatar_hash': user.avatar_hash,
+                'discriminator': user.discriminator,
+                'id': user.id,
+                'in_guild': user.in_guild,
+                'name': user.name,
+                'roles': list(user.roles)
+            }
+        )
+    log.info("User creation complete.")
+
     log.info("Updating a total of `%d` users on the site.", len(users_to_update))
     for user in users_to_update:
         if user is None:  # ??
