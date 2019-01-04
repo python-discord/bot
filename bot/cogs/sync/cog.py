@@ -1,7 +1,7 @@
 import logging
 from typing import Callable, Iterable
 
-from discord import Guild, Member
+from discord import Guild, Member, Role
 from discord.ext import commands
 from discord.ext.commands import Bot
 
@@ -38,6 +38,22 @@ class Sync:
                     "`%s` syncer finished, created `%d`, updated `%d`.",
                     syncer_name, total_created, total_updated
                 )
+
+    async def on_guild_role_update(self, before: Role, after: Role):
+        if (
+                before.name
+                or before.colour != after.colour
+                or before.permissions != after.permissions
+        ):
+            await self.bot.api_client.put(
+                'bot/roles/' + str(after.id),
+                json={
+                    'colour': after.colour,
+                    'id': after.id,
+                    'name': after.name,
+                    'permissions': after.permissions
+                }
+            )
 
     async def on_member_update(self, before: Member, after: Member):
         if (
