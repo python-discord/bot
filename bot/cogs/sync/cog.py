@@ -50,6 +50,15 @@ class Sync:
             }
         )
 
+    async def on_guild_role_delete(self, role: Role):
+        log.warning(
+            (
+                "Attempted to delete role `%s` (`%d`), but role deletion "
+                "is currently not implementeed."
+            ),
+            role.name, role.id
+        )
+
     async def on_guild_role_update(self, before: Role, after: Role):
         if (
                 before.name
