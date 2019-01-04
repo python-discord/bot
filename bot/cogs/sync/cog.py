@@ -43,10 +43,10 @@ class Sync:
         await self.bot.api_client.post(
             'bot/roles',
             json={
-                'colour': role.colour,
+                'colour': role.colour.value,
                 'id': role.id,
                 'name': role.name,
-                'permissions': role.permissions
+                'permissions': role.permissions.value
             }
         )
 
@@ -61,17 +61,17 @@ class Sync:
 
     async def on_guild_role_update(self, before: Role, after: Role):
         if (
-                before.name
+                before.name != after.name
                 or before.colour != after.colour
                 or before.permissions != after.permissions
         ):
             await self.bot.api_client.put(
                 'bot/roles/' + str(after.id),
                 json={
-                    'colour': after.colour,
+                    'colour': after.colour.value,
                     'id': after.id,
                     'name': after.name,
-                    'permissions': after.permissions
+                    'permissions': after.permissions.value
                 }
             )
 
