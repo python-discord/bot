@@ -39,6 +39,17 @@ class Sync:
                     syncer_name, total_created, total_updated
                 )
 
+    async def on_guild_role_create(self, role: Role):
+        await self.bot.api_client.post(
+            'bot/roles',
+            json={
+                'colour': role.colour,
+                'id': role.id,
+                'name': role.name,
+                'permissions': role.permissions
+            }
+        )
+
     async def on_guild_role_update(self, before: Role, after: Role):
         if (
                 before.name
