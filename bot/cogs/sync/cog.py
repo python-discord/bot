@@ -1,7 +1,7 @@
 import logging
 from typing import Callable, Iterable
 
-from discord import Guild
+from discord import Guild, Member
 from discord.ext import commands
 from discord.ext.commands import Bot
 
@@ -38,6 +38,25 @@ class Sync:
                     "`%s` syncer finished, created `%d`, updated `%d`.",
                     syncer_name, total_created, total_updated
                 )
+
+    async def on_member_update(self, before: Member, after: Member):
+        if (
+                before.name != after.name
+                or before.avatar != after.avatar
+                or before.discriminator != after.discriminator
+                or before.roles != after.roles
+        ):
+            await self.bot.api_client.put(
+                'bot/users/' + str(after.id),
+                json={
+                    'avatar_hash': after.avatar,
+                    'discriminator': int(after.discriminator),
+                    'id': after.id,
+                    'in_guild': True,
+                    'name': after.name,
+                    'roles': sorted(role.id for role in after.roles)
+                }
+            )
 
     @commands.group(name='sync')
     @commands.has_permissions(administrator=True)
