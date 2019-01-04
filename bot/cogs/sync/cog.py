@@ -1,6 +1,7 @@
 import logging
 from typing import Callable, Iterable
 
+import aiohttp
 from discord import Guild, Member, Role
 from discord.ext import commands
 from discord.ext.commands import Bot
@@ -75,6 +76,34 @@ class Sync:
                 }
             )
 
+    async def on_member_join(self, member: Member):
+        packed = {
+            'avatar_hash': member.avatar,
+            'discriminator': int(member.discriminator),
+            'id': member.id,
+            'in_guild': True,
+            'name': member.name,
+            'roles': sorted(role.id for role in member.roles)
+        }
+
+        got_error = False
+
+        try:
+            # First try an update of the user to set the `in_guild` field and other
+            # fields that may have changed since the last time we've seen them.
+            await self.bot.api_client.put('bot/users/' + str(member.id), json=packed)
+
+        except aiohttp.client_exceptions.ClientResponseError as e:
+            # If we didn't get 404, something else broke - propagate it up.
+            if e.status != 404:
+                raise
+
+            got_error = True  # gorgeous
+
+        if got_error:
+            # If we got `404`, the user is new. Create them.
+            await self.bot.api_client.post('bot/users', json=packed)
+
     async def on_member_update(self, before: Member, after: Member):
         if (
                 before.name != after.name
@@ -82,17 +111,26 @@ class Sync:
                 or before.discriminator != after.discriminator
                 or before.roles != after.roles
         ):
-            await self.bot.api_client.put(
-                'bot/users/' + str(after.id),
-                json={
-                    'avatar_hash': after.avatar,
-                    'discriminator': int(after.discriminator),
-                    'id': after.id,
-                    'in_guild': True,
-                    'name': after.name,
-                    'roles': sorted(role.id for role in after.roles)
-                }
-            )
+            try:
+                await self.bot.api_client.put(
+                    'bot/users/' + str(after.id),
+                    json={
+                        'avatar_hash': after.avatar,
+                        'discriminator': int(after.discriminator),
+                        'id': after.id,
+                        'in_guild': True,
+                        'name': after.name,
+                        'roles': sorted(role.id for role in after.roles)
+                    }
+                )
+            except aiohttp.client_exceptions.ClientResponseError as e:
+                if e.status != 404:
+                    raise
+
+                log.warning(
+                    "Unable to update user, got 404. "
+                    "Assuming race condition from join event."
+                )
 
     @commands.group(name='sync')
     @commands.has_permissions(administrator=True)
