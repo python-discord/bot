@@ -6,7 +6,8 @@ from discord import Guild, Member, Role
 from discord.ext import commands
 from discord.ext.commands import Bot
 
-from . import syncers
+from bot import constants
+from bot.cogs.sync import syncers
 
 log = logging.getLogger(__name__)
 
@@ -17,7 +18,7 @@ class Sync:
     # The server to synchronize events on.
     # Note that setting this wrongly will result in things getting deleted
     # that possibly shouldn't be.
-    SYNC_SERVER_ID = 267624335836053506
+    SYNC_SERVER_ID = constants.Guild.id
 
     # An iterable of callables that are called when the bot is ready.
     ON_READY_SYNCERS: Iterable[Callable[[Bot, Guild], None]] = (
@@ -98,7 +99,7 @@ class Sync:
             if e.status != 404:
                 raise
 
-            got_error = True  # gorgeous
+            got_error = True  # yikes
 
         if got_error:
             # If we got `404`, the user is new. Create them.
