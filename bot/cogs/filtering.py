@@ -1,7 +1,8 @@
 import logging
 import re
 
-from discord import Colour, Member, Message
+import discord.errors
+from discord import Colour, DMChannel, Member, Message, TextChannel
 from discord.ext.commands import Bot
 
 from bot.cogs.modlog import ModLog
@@ -38,31 +39,46 @@ class Filtering:
     def __init__(self, bot: Bot):
         self.bot = bot
 
+        _staff_mistake_str = "If you believe this was a mistake, please let staff know!"
         self.filters = {
             "filter_zalgo": {
                 "enabled": Filter.filter_zalgo,
                 "function": self._has_zalgo,
-                "type": "filter"
+                "type": "filter",
+                "user_notification": Filter.notify_user_zalgo,
+                "notification_msg": (
+                    "Your post has been removed for abusing Unicode character rendering (aka Zalgo text). "
+                    f"{_staff_mistake_str}"
+                )
             },
             "filter_invites": {
                 "enabled": Filter.filter_invites,
                 "function": self._has_invites,
-                "type": "filter"
+                "type": "filter",
+                "user_notification": Filter.notify_user_invites,
+                "notification_msg": (
+                    f"Per Rule 10, your invite link has been removed. {_staff_mistake_str}\n\n"
+                    r"Our server rules can be found here: <https://pythondiscord.com/about/rules>"
+                )
             },
             "filter_domains": {
                 "enabled": Filter.filter_domains,
                 "function": self._has_urls,
-                "type": "filter"
+                "type": "filter",
+                "user_notification": Filter.notify_user_domains,
+                "notification_msg": (
+                    f"Your URL has been removed because it matched a blacklisted domain. {_staff_mistake_str}"
+                )
             },
             "watch_words": {
                 "enabled": Filter.watch_words,
                 "function": self._has_watchlist_words,
-                "type": "watchlist"
+                "type": "watchlist",
             },
             "watch_tokens": {
                 "enabled": Filter.watch_tokens,
                 "function": self._has_watchlist_tokens,
-                "type": "watchlist"
+                "type": "watchlist",
             },
         }
 
@@ -111,10 +127,15 @@ class Filtering:
                     triggered = await _filter["function"](msg.content)
 
                     if triggered:
+                        if isinstance(msg.channel, DMChannel):
+                            channel_str = "via DM"
+                        else:
+                            channel_str = f"in {msg.channel.mention}"
+
                         message = (
                             f"The {filter_name} {_filter['type']} was triggered "
                             f"by **{msg.author.name}#{msg.author.discriminator}** "
-                            f"(`{msg.author.id}`) in <#{msg.channel.id}> with [the "
+                            f"(`{msg.author.id}`) {channel_str} with [the "
                             f"following message]({msg.jump_url}):\n\n"
                             f"{msg.content}"
                         )
@@ -135,6 +156,10 @@ class Filtering:
                         # If this is a filter (not a watchlist), we should delete the message.
                         if _filter["type"] == "filter":
                             await msg.delete()
+
+                            # Notify the user if the filter specifies
+                            if _filter["user_notification"]:
+                                await self.notify_member(msg.author, _filter["notification_msg"], msg.channel)
 
                         break  # We don't want multiple filters to trigger
 
@@ -246,6 +271,18 @@ class Filtering:
             if guild_id not in Filter.guild_invite_whitelist:
                 return True
         return False
+
+    async def notify_member(self, filtered_member: Member, reason: str, channel: TextChannel):
+        """
+        Notify filtered_member about a moderation action with the reason str
+
+        First attempts to DM the user, fall back to in-channel notification if user has DMs disabled
+        """
+
+        try:
+            await filtered_member.send(reason)
+        except discord.errors.Forbidden:
+            await channel.send(f"{filtered_member.mention} {reason}")
 
 
 def setup(bot: Bot):
