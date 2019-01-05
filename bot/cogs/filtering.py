@@ -130,7 +130,7 @@ class Filtering:
                         if isinstance(msg.channel, DMChannel):
                             channel_str = "via DM"
                         else:
-                            channel_str = f"in <#{msg.channel.id}>"
+                            channel_str = f"in {msg.channel.mention}"
 
                         message = (
                             f"The {filter_name} {_filter['type']} was triggered "
