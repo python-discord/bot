@@ -29,7 +29,7 @@ exec(open(venv_file).read(), dict(__file__=venv_file))
 
 try:
 {CODE}
-except Exception as e:
+except:
     import traceback
     print(traceback.format_exc(), end='')
 """
