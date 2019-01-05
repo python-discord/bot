@@ -30,7 +30,8 @@ exec(open(venv_file).read(), dict(__file__=venv_file))
 try:
 {CODE}
 except Exception as e:
-    print("{}: {}".format(e.__class__.__name__, e))
+    import traceback
+    print(traceback.format_exc(), end='')
 """
 
 ESCAPE_REGEX = re.compile("[`\u202E\u200B]{3,}")
@@ -85,6 +86,11 @@ class Snekbox:
 
         if not code:  # None or empty string
             return await ctx.invoke(self.bot.get_command("help"), "eval")
+
+        if all([line.startswith('#') for line in code.strip('\n')]):  # Only comments
+            return await ctx.send(
+                f"{ctx.author.mention} Your eval job has completed.\n\n```py\n[No output]\n```"
+            )
 
         log.info(f"Received code from {ctx.author.name}#{ctx.author.discriminator} for evaluation:\n{code}")
         self.jobs[ctx.author.id] = datetime.datetime.now()
