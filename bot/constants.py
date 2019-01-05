@@ -204,11 +204,10 @@ class Filter(metaclass=YAMLGetter):
     watch_words: bool
     watch_tokens: bool
 
+    # Notifications are not expected for "watchlist" type filters
     notify_user_zalgo: bool
     notify_user_invites: bool
     notify_user_domains: bool
-    # Words watch intentionally ignored since it's a watchlist
-    # Token notification intentionally ignored, notification is handled by the token remover cog
 
     ping_everyone: bool
     guild_invite_whitelist: List[int]

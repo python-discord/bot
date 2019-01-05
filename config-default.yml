@@ -141,11 +141,10 @@ filter:
     watch_tokens:   true
 
     # Notify user on filter?
+    # Notifications are not expected for "watchlist" type filters
     notify_user_zalgo:   false
     notify_user_invites: true
     notify_user_domains: false
-    # Words watch intentionally ignored since it's a watchlist
-    # Token notification intentionally ignored, notification is handled by the token remover cog
 
     # Filter configuration
     ping_everyone: true  # Ping @everyone when we send a mod-alert?

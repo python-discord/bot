@@ -74,15 +74,11 @@ class Filtering:
                 "enabled": Filter.watch_words,
                 "function": self._has_watchlist_words,
                 "type": "watchlist",
-                "user_notification": False,  # Hardcode intentional for watchlist filter type
-                "notification_msg": ""
             },
             "watch_tokens": {
                 "enabled": Filter.watch_tokens,
                 "function": self._has_watchlist_tokens,
                 "type": "watchlist",
-                "user_notification": False,  # Hardcode intentional, already in token remover cog
-                "notification_msg": ""
             },
         }
 
@@ -161,9 +157,9 @@ class Filtering:
                         if _filter["type"] == "filter":
                             await msg.delete()
 
-                        # Notify the user if the filter specifies
-                        if _filter["user_notification"]:
-                            await self.notify_member(msg.author, _filter["notification_msg"], msg.channel)
+                            # Notify the user if the filter specifies
+                            if _filter["user_notification"]:
+                                await self.notify_member(msg.author, _filter["notification_msg"], msg.channel)
 
                         break  # We don't want multiple filters to trigger
 
