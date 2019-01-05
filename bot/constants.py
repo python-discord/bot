@@ -207,7 +207,7 @@ class Filter(metaclass=YAMLGetter):
     notify_user_zalgo: bool
     notify_user_invites: bool
     notify_user_domains: bool
-    notify_user_words: bool
+    # Words watch intentionally ignored since it's a watchlist
     # Token notification intentionally ignored, notification is handled by the token remover cog
 
     ping_everyone: bool

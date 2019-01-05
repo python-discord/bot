@@ -144,7 +144,7 @@ filter:
     notify_user_zalgo:   false
     notify_user_invites: true
     notify_user_domains: false
-    notify_user_words:   false
+    # Words watch intentionally ignored since it's a watchlist
     # Token notification intentionally ignored, notification is handled by the token remover cog
 
     # Filter configuration

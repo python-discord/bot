@@ -39,13 +39,17 @@ class Filtering:
     def __init__(self, bot: Bot):
         self.bot = bot
 
+        _staff_mistake_str = "If you believe this was a mistake, please let staff know!"
         self.filters = {
             "filter_zalgo": {
                 "enabled": Filter.filter_zalgo,
                 "function": self._has_zalgo,
                 "type": "filter",
                 "user_notification": Filter.notify_user_zalgo,
-                "notification_msg": ""
+                "notification_msg": (
+                    "Your post has been removed for abusing Unicode character rendering (aka Zalgo text). "
+                    f"{_staff_mistake_str}"
+                )
             },
             "filter_invites": {
                 "enabled": Filter.filter_invites,
@@ -53,8 +57,7 @@ class Filtering:
                 "type": "filter",
                 "user_notification": Filter.notify_user_invites,
                 "notification_msg": (
-                    "Per Rule 10, your invite link has been removed. "
-                    "If you believe this was a mistake, please the staff know!\n\n"
+                    f"Per Rule 10, your invite link has been removed. {_staff_mistake_str}\n\n"
                     r"Our server rules can be found here: <https://pythondiscord.com/about/rules>"
                 )
             },
@@ -63,13 +66,15 @@ class Filtering:
                 "function": self._has_urls,
                 "type": "filter",
                 "user_notification": Filter.notify_user_domains,
-                "notification_msg": ""
+                "notification_msg": (
+                    f"Your URL has been removed because it matched a blacklisted domain. {_staff_mistake_str}"
+                )
             },
             "watch_words": {
                 "enabled": Filter.watch_words,
                 "function": self._has_watchlist_words,
                 "type": "watchlist",
-                "user_notification": Filter.notify_user_words,
+                "user_notification": False,  # Hardcode intentional for watchlist filter type
                 "notification_msg": ""
             },
             "watch_tokens": {
