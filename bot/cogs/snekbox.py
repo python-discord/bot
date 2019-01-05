@@ -30,7 +30,7 @@ exec(open(venv_file).read(), dict(__file__=venv_file))
 try:
 {CODE}
 except Exception as e:
-    print(e)
+    print("{}: {}".format(e.__class__.__name__, e))
 """
 
 ESCAPE_REGEX = re.compile("[`\u202E\u200B]{3,}")
