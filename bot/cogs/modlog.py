@@ -176,6 +176,10 @@ class ModLog:
         if before.guild.id != GuildConstant.id:
             return
 
+        if before.id in self._ignored[Event.guild_channel_update]:
+            self._ignored[Event.guild_channel_update].remove(before.id)
+            return
+
         diff = DeepDiff(before, after)
         changes = []
         done = []
