@@ -29,6 +29,10 @@ class APIClient:
         async with self.session.get(self._url_for(endpoint), *args, **kwargs) as resp:
             return await resp.json()
 
+    async def patch(self, endpoint: str, *args, **kwargs):
+        async with self.session.patch(self._url_for(endpoint), *args, **kwargs) as resp:
+            return await resp.json()
+
     async def post(self, endpoint: str, *args, **kwargs):
         async with self.session.post(self._url_for(endpoint), *args, **kwargs) as resp:
             return await resp.json()

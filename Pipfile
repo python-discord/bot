@@ -19,6 +19,7 @@ aio-pika = "*"
 python-dateutil = "*"
 deepdiff = "*"
 requests = "*"
+dateparser = "*"
 
 [dev-packages]
 "flake8" = ">=3.6"
@@ -32,7 +33,7 @@ dodgy = "*"
 pytest = "*"
 
 [requires]
-python_version = "3.6"
+python_version = "3.7"
 
 [scripts]
 start = "python -m bot"

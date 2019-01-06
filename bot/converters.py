@@ -1,8 +1,10 @@
 import logging
 import random
 import socket
+from datetime import datetime
 from ssl import CertificateError
 
+import dateparser
 import discord
 from aiohttp import AsyncResolver, ClientConnectorError, ClientSession, TCPConnector
 from discord.ext.commands import BadArgument, Context, Converter
@@ -254,3 +256,22 @@ class TagContentConverter(Converter):
             raise BadArgument("Tag contents should not be empty, or filled with whitespace.")
 
         return tag_content
+
+
+class ExpirationDate(Converter):
+    DATEPARSER_SETTINGS = {
+        'PREFER_DATES_FROM': 'future',
+        'TIMEZONE': 'UTC',
+        'TO_TIMEZONE': 'UTC'
+    }
+
+    async def convert(self, ctx, expiration_string: str):
+        expiry = dateparser.parse(expiration_string, settings=self.DATEPARSER_SETTINGS)
+        if expiry is None:
+            raise BadArgument(f"Failed to parse expiration date from `{expiration_string}`")
+
+        now = datetime.utcnow()
+        if expiry < now:
+            expiry = now + (now - expiry)
+
+        return expiry

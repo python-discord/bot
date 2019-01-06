@@ -106,7 +106,7 @@ async def wait_until(time: datetime.datetime):
     :param time: A datetime.datetime object to wait until.
     """
 
-    delay = time - datetime.datetime.now(tz=datetime.timezone.utc)
+    delay = time - datetime.datetime.utcnow()
     delay_seconds = delay.total_seconds()
 
     if delay_seconds > 1.0:

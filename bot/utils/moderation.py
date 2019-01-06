@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from typing import Union
 
 from aiohttp import ClientError
@@ -14,7 +15,7 @@ HEADERS = {"X-API-KEY": Keys.site_api}
 
 async def post_infraction(
     ctx: Context, user: Union[Member, Object, User],
-    type: str, reason: str, duration: str = None, hidden: bool = False
+    type: str, reason: str, expires_at: datetime = None, hidden: bool = False
 ):
 
     payload = {
@@ -24,8 +25,8 @@ async def post_infraction(
         "type": type,
         "user": user.id
     }
-    if duration:
-        payload['duration'] = duration
+    if expires_at:
+        payload['expires_at'] = expires_at.isoformat()
 
     try:
         response = await ctx.bot.api_client.post(
