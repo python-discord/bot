@@ -13,7 +13,7 @@ from discord.ext.commands import (
 
 from bot import constants
 from bot.cogs.modlog import ModLog
-from bot.constants import Colours, Event, Icons, Keys, Roles, URLs
+from bot.constants import Colours, Event, Icons, Roles
 from bot.converters import ExpirationDate, InfractionSearchQuery
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
@@ -50,7 +50,6 @@ class Moderation(Scheduler):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.headers = {"X-API-KEY": Keys.site_api}
         self._muted_role = Object(constants.Roles.muted)
         super().__init__()
 
