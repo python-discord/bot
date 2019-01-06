@@ -308,7 +308,7 @@ class Fun:
 
         try:
             star_msg = await starboard.send(
-                f"1 {LVL1_STAR} {original.channel.mention}",
+                f"{THRESHOLDS[LVL1_STAR]} {LVL1_STAR} {original.channel.mention}",
                 embed=embed
             )
             log.debug(
@@ -350,12 +350,22 @@ class Fun:
 
         if count < THRESHOLDS[LVL2_STAR]:
             star = LVL1_STAR
+            color = Colour.gold()
+
         elif count < THRESHOLDS[LVL3_STAR]:
             star = LVL2_STAR
+            color = Colour.gold()
+
         elif count < THRESHOLDS[LVL4_STAR]:
             star = LVL3_STAR
+            color = Colour.orange()
+
         else:
             star = LVL4_STAR
+            color = Colour.red()
+
+        star_embed.color = color
+
         try:
             await star_msg.edit(
                 content=f"{count} {star} {original.channel.mention}",
@@ -446,7 +456,7 @@ class Fun:
         url = f"{URLs.site_starboard_api}?message_id={original.id}"
         resp = await self.bot.http_session.delete(
             url=url,
-            header=self.headers
+            headers=self.headers
         )
 
         if resp.status != 200:
