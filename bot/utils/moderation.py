@@ -13,33 +13,27 @@ HEADERS = {"X-API-KEY": Keys.site_api}
 
 
 async def post_infraction(
-    ctx: Context, user: Union[Member, Object, User], type: str, reason: str, duration: str = None, hidden: bool = False
+    ctx: Context, user: Union[Member, Object, User],
+    type: str, reason: str, duration: str = None, hidden: bool = False
 ):
 
     payload = {
-        "type": type,
+        "actor": ctx.message.author.id,
+        "hidden": hidden,
         "reason": reason,
-        "user_id": str(user.id),
-        "actor_id": str(ctx.message.author.id),
-        "hidden": hidden
+        "type": type,
+        "user": user.id
     }
     if duration:
         payload['duration'] = duration
 
     try:
-        response = await ctx.bot.http_session.post(
-            URLs.site_infractions,
-            headers=HEADERS,
-            json=payload
+        response = await ctx.bot.api_client.post(
+            'bot/infractions', json=payload
         )
     except ClientError:
         log.exception("There was an error adding an infraction.")
         await ctx.send(":x: There was an error adding the infraction.")
         return
 
-    response_object = await response.json()
-    if "error_code" in response_object:
-        await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
-        return
-
-    return response_object
+    return response

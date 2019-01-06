@@ -87,7 +87,9 @@ class Moderation(Scheduler):
             reason=reason
         )
 
-        response_object = await post_infraction(ctx, user, type="warning", reason=reason)
+        response_object = await post_infraction(
+            ctx, user, type="warning", reason=reason
+        )
         if response_object is None:
             return
 
@@ -386,7 +388,10 @@ class Moderation(Scheduler):
         :param reason: The reason for the warning.
         """
 
-        response_object = await post_infraction(ctx, user, type="warning", reason=reason, hidden=True)
+        response_object = await post_infraction(
+            ctx, user, type="warning", reason=reason, hidden=True
+        )
+
         if response_object is None:
             return
 
