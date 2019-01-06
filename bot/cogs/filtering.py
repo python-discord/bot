@@ -45,6 +45,7 @@ class Filtering:
                 "enabled": Filter.filter_zalgo,
                 "function": self._has_zalgo,
                 "type": "filter",
+                "content_only": True,
                 "user_notification": Filter.notify_user_zalgo,
                 "notification_msg": (
                     "Your post has been removed for abusing Unicode character rendering (aka Zalgo text). "
@@ -55,6 +56,7 @@ class Filtering:
                 "enabled": Filter.filter_invites,
                 "function": self._has_invites,
                 "type": "filter",
+                "content_only": True,
                 "user_notification": Filter.notify_user_invites,
                 "notification_msg": (
                     f"Per Rule 10, your invite link has been removed. {_staff_mistake_str}\n\n"
@@ -65,20 +67,36 @@ class Filtering:
                 "enabled": Filter.filter_domains,
                 "function": self._has_urls,
                 "type": "filter",
+                "content_only": True,
                 "user_notification": Filter.notify_user_domains,
                 "notification_msg": (
                     f"Your URL has been removed because it matched a blacklisted domain. {_staff_mistake_str}"
+                )
+            },
+            "filter_rich_embeds": {
+                "enabled": Filter.filter_rich_embeds,
+                "function": self._has_rich_embed,
+                "type": "filter",
+                "content_only": False,
+                "user_notification": Filter.notify_user_rich_embeds,
+                "notification_msg": (
+                    "Your post has been removed because it contained a rich embed. "
+                    "This indicates that you're either using an unofficial discord client or are using a self-bot, "
+                    "both of which violate Discord's Terms of Service.\n\n"
+                    f"Please don't use a self-bot or an unofficial Discord client on our server. {_staff_mistake_str}"
                 )
             },
             "watch_words": {
                 "enabled": Filter.watch_words,
                 "function": self._has_watchlist_words,
                 "type": "watchlist",
+                "content_only": True,
             },
             "watch_tokens": {
                 "enabled": Filter.watch_tokens,
                 "function": self._has_watchlist_tokens,
                 "type": "watchlist",
+                "content_only": True,
             },
         }
 
@@ -115,18 +133,46 @@ class Filtering:
         )
 
         # If we're running the bot locally, ignore role whitelist and only listen to #dev-test
+        # if DEBUG_MODE:
+        #     filter_message = not msg.author.bot and msg.channel.id == Channels.devtest
+
         if DEBUG_MODE:
-            filter_message = not msg.author.bot and msg.channel.id == Channels.devtest
+            filter_message = msg.author.id != 414020331980980234 and msg.channel.id == Channels.devtest
 
         # If none of the above, we can start filtering.
         if filter_message:
+
             for filter_name, _filter in self.filters.items():
 
                 # Is this specific filter enabled in the config?
                 if _filter["enabled"]:
-                    triggered = await _filter["function"](msg.content)
+                    # Does the filter only need the message content or the full message?
+                    if _filter["content_only"]:
+                        triggered = await _filter["function"](msg.content)
+                    else:
+                        triggered = await _filter["function"](msg)
 
                     if triggered:
+                        # If this is a filter (not a watchlist), we should delete the message.
+                        if _filter["type"] == "filter":
+                            try:
+                                # Embeds (can) trigger both the `on_message` and `on_message_edit`
+                                # event handlers, triggering filtering twice for the same message.
+                                #
+                                # If `on_message`-triggered filtering already deleted the message
+                                # then `on_message_edit`-triggered filtering will raise exception
+                                # since the message no longer exists.
+                                #
+                                # In addition, to avoid sending two notifications to the user, the
+                                # logs, and mod_alert, we return if the message no longer exists.
+                                await msg.delete()
+                            except discord.errors.NotFound:
+                                return
+
+                            # Notify the user if the filter specifies
+                            if _filter["user_notification"]:
+                                await self.notify_member(msg.author, _filter["notification_msg"], msg.channel)
+
                         if isinstance(msg.channel, DMChannel):
                             channel_str = "via DM"
                         else:
@@ -153,13 +199,12 @@ class Filtering:
                             ping_everyone=Filter.ping_everyone,
                         )
 
-                        # If this is a filter (not a watchlist), we should delete the message.
-                        if _filter["type"] == "filter":
-                            await msg.delete()
-
-                            # Notify the user if the filter specifies
-                            if _filter["user_notification"]:
-                                await self.notify_member(msg.author, _filter["notification_msg"], msg.channel)
+                        if filter_name == "filter_rich_embeds":
+                            await self.mod_log.send_log_embeds(
+                                embeds=msg.embeds,
+                                content="The message contained the following embed(s):\n",
+                                channel_id=Channels.mod_alerts,
+                            )
 
                         break  # We don't want multiple filters to trigger
 
@@ -270,6 +315,16 @@ class Filtering:
 
             if guild_id not in Filter.guild_invite_whitelist:
                 return True
+        return False
+
+    @staticmethod
+    async def _has_rich_embed(msg: Message):
+        """
+        Returns True if any of the embeds in the message
+        are of type 'rich', returns False otherwise
+        """
+        if msg.embeds:
+            return any(embed.type == "rich" for embed in msg.embeds)
         return False
 
     async def notify_member(self, filtered_member: Member, reason: str, channel: TextChannel):

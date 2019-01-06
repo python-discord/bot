@@ -127,6 +127,23 @@ class ModLog:
 
         await self.bot.get_channel(channel_id).send(content=content, embed=embed, files=files)
 
+    async def send_log_embeds(
+            self, embeds: List[Embed], content: Optional[str],
+            channel_id: int = Channels.modlog, ping_everyone: bool = False,
+    ):
+
+        if ping_everyone:
+            if content:
+                content = f"@everyone\n{content}"
+            else:
+                content = "@everyone"
+
+        if content:
+            await self.bot.get_channel(channel_id).send(content=content)
+
+        for embed in embeds:
+            await self.bot.get_channel(channel_id).send(embed=embed)
+
     async def on_guild_channel_create(self, channel: GUILD_CHANNEL):
         if channel.guild.id != GuildConstant.id:
             return
