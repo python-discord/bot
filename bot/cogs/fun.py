@@ -53,15 +53,6 @@ class Fun:
         self.headers = {"X-API-Key": Keys.site_api}
         self.star_msg_map = {}
 
-        keys = list(RESPONSES.keys())
-
-        for key in keys:
-            changed_key = key.replace("{us}", self.bot.user.mention)
-
-            if key != changed_key:
-                RESPONSES[changed_key] = RESPONSES[key]
-                del RESPONSES[key]
-
         self.bot.loop.create_task(self.async_init())
 
     async def async_init(self):
@@ -84,6 +75,16 @@ class Fun:
             self.star_msg_map[key] = value
 
         log.debug(f"Populated star_msg_map: {self.star_msg_map}")
+
+        await self.bot.wait_until_ready()
+        keys = list(RESPONSES.keys())
+
+        for key in keys:
+            changed_key = key.replace("{us}", self.bot.user.mention)
+
+            if key != changed_key:
+                RESPONSES[changed_key] = RESPONSES[key]
+                del RESPONSES[key]
 
     async def on_message(self, message: Message):
         if message.channel.id != Channels.bot:
