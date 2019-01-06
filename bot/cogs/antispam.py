@@ -45,7 +45,7 @@ WHITELISTED_ROLES = (Roles.owner, Roles.admin, Roles.moderator, Roles.helpers)
 class AntiSpam:
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.muted_role = None
+        self._muted_role = Object(Roles.muted)
 
     @property
     def mod_log(self) -> ModLog:
@@ -135,7 +135,7 @@ class AntiSpam:
                 mod_alert_message += f"{content}"
 
             # Return the mod log message Context that we can use to post the infraction
-            mod_log_message = await self.mod_log.send_log_message(
+            mod_log_ctx = await self.mod_log.send_log_message(
                 icon_url=Icons.filtering,
                 colour=Colour(Colours.soft_red),
                 title=f"Spam detected!",
@@ -146,17 +146,20 @@ class AntiSpam:
             )
 
             # Post AntiSpam mute as a regular infraction so it can be reversed
-            ctx = await self.bot.get_context(mod_log_message)
-            response_object = await post_infraction(ctx, member, type="mute", reason=reason, duration=remove_role_after)
+            response_object = await post_infraction(
+                mod_log_ctx, member, type="mute", reason=reason, duration=f"{remove_role_after}S"
+            )
             if response_object is None:
                 return  # Appropriate error(s) are already raised by post_infraction
 
             self.mod_log.ignore(Event.member_update, member.id)
             await member.add_roles(self._muted_role, reason=reason)
 
-            loop = asyncio.get_event_loop()
+            # Insert ourselves into the moderation infraction loop
             infraction_object = response_object["infraction"]
-            self.schedule_task(loop, infraction_object["id"], infraction_object)
+            loop = asyncio.get_event_loop()
+            moderation_cog = self.bot.get_cog('Moderation')
+            moderation_cog.schedule_task(loop, infraction_object["id"], infraction_object)
 
             description = textwrap.dedent(f"""
                 **Channel**: {msg.channel.mention}
