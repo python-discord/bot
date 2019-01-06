@@ -1,22 +1,18 @@
-import asyncio
 import logging
-import textwrap
 from datetime import datetime, timedelta
 from typing import List
 
-from dateutil.relativedelta import relativedelta
 from discord import Colour, Member, Message, Object, TextChannel
 from discord.ext.commands import Bot
 
 from bot import rules
+from bot.cogs.moderation import Moderation
 from bot.cogs.modlog import ModLog
 from bot.constants import (
     AntiSpam as AntiSpamConfig, Channels,
     Colours, DEBUG_MODE, Event,
     Guild as GuildConfig, Icons, Roles,
 )
-from bot.utils.moderation import post_infraction
-from bot.utils.time import humanize_delta
 
 
 log = logging.getLogger(__name__)
@@ -111,8 +107,6 @@ class AntiSpam:
         # Sanity check to ensure we're not lagging behind
         if self.muted_role not in member.roles:
             remove_role_after = AntiSpamConfig.punishment['remove_after']
-            duration_delta = relativedelta(seconds=remove_role_after)
-            human_duration = humanize_delta(duration_delta)
 
             mod_alert_message = (
                 f"**Triggered by:** {member.display_name}#{member.discriminator} (`{member.id}`)\n"
@@ -145,32 +139,8 @@ class AntiSpam:
                 ping_everyone=AntiSpamConfig.ping_everyone
             )
 
-            # Post AntiSpam mute as a regular infraction so it can be reversed
-            response_object = await post_infraction(
-                mod_log_ctx, member, type="mute", reason=reason, duration=f"{remove_role_after}S"
-            )
-            if response_object is None:
-                return  # Appropriate error(s) are already raised by post_infraction
-
-            self.mod_log.ignore(Event.member_update, member.id)
-            await member.add_roles(self._muted_role, reason=reason)
-
-            # Insert ourselves into the moderation infraction loop
-            infraction_object = response_object["infraction"]
-            loop = asyncio.get_event_loop()
-            moderation_cog = self.bot.get_cog('Moderation')
-            moderation_cog.schedule_task(loop, infraction_object["id"], infraction_object)
-
-            description = textwrap.dedent(f"""
-                **Channel**: {msg.channel.mention}
-                **User**: {msg.author.mention} (`{msg.author.id}`)
-                **Reason**: {reason}
-                Role will be removed after {human_duration}.
-            """)
-            await self.mod_log.send_log_message(
-                icon_url=Icons.user_mute, colour=Colour(Colours.soft_red),
-                title="User muted", text=description
-            )
+            # Run a tempmute
+            await mod_log_ctx.invoke(Moderation.tempmute, member, f"{remove_role_after}S", reason=reason)
 
     async def maybe_delete_messages(self, channel: TextChannel, messages: List[Message]):
         # Is deletion of offending messages actually enabled?
