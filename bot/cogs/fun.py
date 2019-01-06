@@ -1,14 +1,13 @@
 import asyncio
 import logging
 from textwrap import dedent
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
 from discord import (
     Colour, Embed, Forbidden, HTTPException,
-    Message, PartialEmoji, RawReactionActionEvent,
-    Reaction, TextChannel
+    Message, RawReactionActionEvent, TextChannel
 )
-from discord.ext.commands import Bot, command, CommandError, has_role
+from discord.ext.commands import Bot, CommandError, command
 from discord.utils import get
 
 from bot.constants import Channels, Guild, Keys, Roles, URLs
@@ -29,7 +28,7 @@ YES_EMOJI = "\u2705"
 NO_EMOJI = "\u274e"
 
 THRESHOLDS = {
-    LVL1_STAR: 1,
+    LVL1_STAR: 2,
     LVL2_STAR: 5,
     LVL3_STAR: 10,
     LVL4_STAR: 20
@@ -66,6 +65,11 @@ class Fun:
         self.bot.loop.create_task(self.async_init())
 
     async def async_init(self):
+        """
+        An alternative "init" that is run at the end of __init__, but this
+        one is asynchronous!
+        """
+
         # Get all starred messages to populate star to msg map
         response = await self.bot.http_session.get(
             url=URLs.site_starboard_api,
@@ -100,6 +104,13 @@ class Fun:
     @command(name="deletestarboard")
     @with_role(Roles.owner)
     async def delete_all_star_entries(self, ctx):
+        """
+        Sends a request to the starboard endpoint to delete all database entries.
+        This does *not* delete the starboard messaged in discord as that would either
+        be hit hard by ratelimit, or having to manually set the id of the new channel
+        in constants.  Please manually delete / recreate the starboard to wipe it.
+        """
+
         msg = await ctx.send("This will delete all entries from the starboard, are you sure?")
         await msg.add_reaction(YES_EMOJI)
         await msg.add_reaction(NO_EMOJI)
@@ -152,6 +163,23 @@ class Fun:
         except (KeyError, NoStarboardException) as e:
             return log.exception(e)
 
+        reaction = get(original.reactions, emoji=LVL1_STAR)
+
+        if reaction is None:
+            await self.delete_star(original, star_msg)
+            return log.debug("There was not any reacted stars on the original message.")
+
+        count = reaction.count
+
+        if count < THRESHOLDS[LVL1_STAR]:
+            if star_msg:
+                await self.delete_star(original, star_msg)
+                log.debug("Reaction count did not meet threshold anymore. Deleting entry")
+            return
+
+        await self.change_starcount(starboard, original, star_msg, count)
+        log.debug("Updating existing starboard entry")
+
     async def on_raw_reaction_add(self, payload: RawReactionActionEvent):
         if payload.guild_id != Guild.id:
             return log.debug("Reaction was not added in the correct guild.")
@@ -167,11 +195,12 @@ class Fun:
             return log.exception(e)
 
         reaction = get(original.reactions, emoji=LVL1_STAR)
-        count = reaction.count
 
         if reaction is None:
             await self.delete_star(original, star_msg)
             return log.debug("There was not any reacted stars on the original message.")
+
+        count = reaction.count
 
         if count < THRESHOLDS[LVL1_STAR]:
             return log.debug("Reaction count did not meet threshold.")
@@ -180,7 +209,7 @@ class Fun:
             await self.post_new_entry(original, starboard)
             log.debug("star_msg was None, creating the starboard entry.")
         else:
-            await self.change_starcount(original, star_msg)
+            await self.change_starcount(starboard, original, star_msg, count)
             log.debug("star_msg was given, updating existing starboard entry")
 
     async def get_messages(
@@ -222,7 +251,7 @@ class Fun:
             star_msg_id = self.star_msg_map[payload.message_id]
             star_msg = await starboard.get_message(star_msg_id)
             return original, star_msg
-        except KeyError as e:
+        except KeyError:
             log.debug(
                 "star_msg_map did not have a starred message, checking API...")
 
@@ -236,7 +265,7 @@ class Fun:
 
         try:
             entry = json_data["message"]
-        except KeyError as e:
+        except KeyError:
             log.debug(
                 "Response json from message_id endpoint didn't return a message key.")
             return original, None
@@ -294,6 +323,76 @@ class Fun:
             log.exception(e)
             return
 
+        if await self.post_to_api(original, star_msg):
+            self.star_msg_map[original.id] = star_msg.id
+
+    async def change_starcount(
+            self,
+            starboard: TextChannel,
+            original: Message,
+            star_msg: Message,
+            count: int
+    ):
+        """
+        Message for changing the star counter on the starboard entry
+
+        This method also makes sure the message ids are in cache, and that
+        the api has the entry stored.
+
+        :param original: The original message that was starred
+        :param star_msg: The starboard entry message
+        :param count: The count of stars on original
+        :param starboard: The starboard TextChannel
+        :return: None
+        """
+
+        star_embed = star_msg.embeds[0]
+
+        if count < THRESHOLDS[LVL2_STAR]:
+            star = LVL1_STAR
+        elif count < THRESHOLDS[LVL3_STAR]:
+            star = LVL2_STAR
+        elif count < THRESHOLDS[LVL4_STAR]:
+            star = LVL3_STAR
+        else:
+            star = LVL4_STAR
+        try:
+            await star_msg.edit(
+                content=f"{count} {star} {original.channel.mention}",
+                embed=star_embed
+            )
+            log.debug("Edited starboard entry successfully.")
+        except Forbidden as e:
+            log.warning(
+                f"Bot does not have permission to edit in starboard channel ({starboard.id})")
+            log.exception(e)
+            return
+        except HTTPException as e:
+            log.warning("Something went wrong editing message in starboard")
+            log.exception(e)
+            return
+
+        # Make sure cache and API are up to date.
+        if original.id not in self.star_msg_map:
+            self.star_msg_map[original.id] = star_msg.id
+
+        response = await self.bot.http_session.get(
+            url=f"{URLs.site_starboard_api}?message_id={original.id}",
+            headers=self.headers
+        )
+        json = await response.json()
+        if not json["success"]:
+            await self.post_to_api(original, star_msg)
+
+    async def post_to_api(self, original: Message, star_msg: Message):
+        """
+        Utility method for posting a starboard entry to the api
+
+        :param original: The original message that was starred
+        :param star_msg: The star board entry message
+        :return: True if the post was successful else False
+        """
+
         response = await self.bot.http_session.post(
             url=URLs.site_starboard_api,
             headers=self.headers,
@@ -302,26 +401,27 @@ class Fun:
                 "bot_message_id": star_msg.id,
                 "guild_id": Guild.id,
                 "channel_id": original.channel.id,
-                "author_id": author.id,
+                "author_id": original.author.id,
                 "jump_to_url": original.jump_url
             }
         )
 
-        if response.status != 200:
+        if response.status != 200 and response.status != 400:
             # Delete it from the starboard before anyone notices our flaws in life.
+            # 200 it was stored, 400 it exists already
             json_resp = await response.json()
             await star_msg.delete()
-            return log.warning(
+            log.warning(
                 "Failed to post starred message with "
                 f"status code {response.status} "
                 f"response: {json_resp.get('response')}"
             )
-
-        log.debug("Successfully posted json to endpoint, storing in cache...")
-        self.star_msg_map[original.id] = star_msg.id
-
-    async def change_starcount(self, original: Message, star_msg: Message):
-        pass
+            return False
+        if response.status == 200:
+            log.debug("Successfully posted json to endpoint, storing in cache...")
+        elif response.status == 400:
+            log.debug("Entry is already stored, ignoring.")
+        return True
 
     async def delete_star(self, original: Message, star: Message):
         """
