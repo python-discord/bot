@@ -3,7 +3,6 @@ import logging
 import textwrap
 from typing import Union
 
-from aiohttp import ClientError
 from discord import (
     Colour, Embed, Forbidden, Guild, HTTPException, Member, Object, User
 )
@@ -962,10 +961,10 @@ class Moderation(Scheduler):
             await ctx.send(f":warning: No infractions could be found for that query.")
             return
 
-        lines = [
+        lines = tuple(
             self._infraction_to_string(infraction)
             for infraction in infractions
-        ]
+        )
 
         await LinePaginator.paginate(
             lines,
