@@ -133,11 +133,8 @@ class Filtering:
         )
 
         # If we're running the bot locally, ignore role whitelist and only listen to #dev-test
-        # if DEBUG_MODE:
-        #     filter_message = not msg.author.bot and msg.channel.id == Channels.devtest
-
         if DEBUG_MODE:
-            filter_message = msg.author.id != 414020331980980234 and msg.channel.id == Channels.devtest
+            filter_message = not msg.author.bot and msg.channel.id == Channels.devtest
 
         # If none of the above, we can start filtering.
         if filter_message:
@@ -199,6 +196,7 @@ class Filtering:
                             ping_everyone=Filter.ping_everyone,
                         )
 
+                        # If filtering rich embeds, also send the removed embeds to mod_alerts
                         if filter_name == "filter_rich_embeds":
                             await self.mod_log.send_log_embeds(
                                 embeds=msg.embeds,
