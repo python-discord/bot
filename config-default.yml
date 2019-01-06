@@ -72,6 +72,8 @@ style:
         user_unmute:   "https://cdn.discordapp.com/emojis/472472639206719508.png"
         user_verified: "https://cdn.discordapp.com/emojis/470326274519334936.png"
 
+        user_warn: "https://cdn.discordapp.com/emojis/470326274238447633.png"
+
         pencil: "https://cdn.discordapp.com/emojis/470326272401211415.png"
 
         remind_blurple: "https://cdn.discordapp.com/emojis/477907609215827968.png"
@@ -89,6 +91,7 @@ guild:
         big_brother_logs:  &BBLOGS        468507907357409333
         bot:                              267659945086812160
         checkpoint_test:                  422077681434099723
+        defcon:                           464469101889454091
         devalerts:                        460181980097675264
         devlog:            &DEVLOG        409308876241108992
         devtest:           &DEVTEST       414574275865870337
@@ -136,6 +139,12 @@ filter:
     filter_domains: true
     watch_words:    true
     watch_tokens:   true
+
+    # Notify user on filter?
+    # Notifications are not expected for "watchlist" type filters
+    notify_user_zalgo:   false
+    notify_user_invites: true
+    notify_user_domains: false
 
     # Filter configuration
     ping_everyone: true  # Ping @everyone when we send a mod-alert?

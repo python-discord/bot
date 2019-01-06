@@ -104,8 +104,9 @@ class ModLog:
                 self._ignored[event].append(item)
 
     async def send_log_message(
-            self, icon_url: Optional[str], colour: Colour, title: Optional[str], text: str, thumbnail: str = None,
-            channel_id: int = Channels.modlog, ping_everyone: bool = False, files: List[File] = None
+            self, icon_url: Optional[str], colour: Colour, title: Optional[str], text: str,
+            thumbnail: str = None, channel_id: int = Channels.modlog, ping_everyone: bool = False,
+            files: List[File] = None, content: str = None
     ):
         embed = Embed(description=text)
 
@@ -118,10 +119,11 @@ class ModLog:
         if thumbnail is not None:
             embed.set_thumbnail(url=thumbnail)
 
-        content = None
-
         if ping_everyone:
-            content = "@everyone"
+            if content:
+                content = f"@everyone\n{content}"
+            else:
+                content = "@everyone"
 
         log_message = await self.bot.get_channel(channel_id).send(content=content, embed=embed, files=files)
         return self.bot.get_context(log_message)  # Optionally return for use with antispam
@@ -173,6 +175,10 @@ class ModLog:
 
     async def on_guild_channel_update(self, before: GUILD_CHANNEL, after: GuildChannel):
         if before.guild.id != GuildConstant.id:
+            return
+
+        if before.id in self._ignored[Event.guild_channel_update]:
+            self._ignored[Event.guild_channel_update].remove(before.id)
             return
 
         diff = DeepDiff(before, after)
