@@ -153,7 +153,7 @@ class Filtering:
                         # If this is a filter (not a watchlist), we should delete the message.
                         if _filter["type"] == "filter":
                             try:
-                                # Embeds (can) trigger both the `on_message` and `on_message_edit`
+                                # Embeds (can?) trigger both the `on_message` and `on_message_edit`
                                 # event handlers, triggering filtering twice for the same message.
                                 #
                                 # If `on_message`-triggered filtering already deleted the message
