@@ -927,25 +927,14 @@ class Moderation(Scheduler):
         Search for infractions by member.
         """
 
-        try:
-            response = await self.bot.http_session.get(
-                URLs.site_infractions_user.format(
-                    user_id=user.id
-                ),
-                params={"hidden": "True"},
-                headers=self.headers
-            )
-            infraction_list = await response.json()
-        except ClientError:
-            log.exception(f"Failed to fetch infractions for user {user} ({user.id}).")
-            await ctx.send(":x: An error occurred while fetching infractions.")
-            return
-
+        infraction_list = await self.bot.api_client.get(
+            'bot/infractions',
+            params={'user__id': str(user.id)}
+        )
         embed = Embed(
             title=f"Infractions for {user} ({len(infraction_list)} total)",
             colour=Colour.orange()
         )
-
         await self.send_infraction_list(ctx, embed, infraction_list)
 
     @with_role(*MODERATION_ROLES)
@@ -983,11 +972,10 @@ class Moderation(Scheduler):
             await ctx.send(f":warning: No infractions could be found for that query.")
             return
 
-        lines = []
-        for infraction in infractions:
-            lines.append(
-                self._infraction_to_string(infraction)
-            )
+        lines = [
+            self._infraction_to_string(infraction)
+            for infraction in infractions
+        ]
 
         await LinePaginator.paginate(
             lines,
@@ -1092,12 +1080,12 @@ class Moderation(Scheduler):
         )
 
     def _infraction_to_string(self, infraction_object):
-        actor_id = int(infraction_object["actor"]["user_id"])
+        actor_id = infraction_object["actor"]
         guild: Guild = self.bot.get_guild(constants.Guild.id)
         actor = guild.get_member(actor_id)
-        active = infraction_object["active"] is True
-        user_id = int(infraction_object["user"]["user_id"])
-        hidden = infraction_object.get("hidden", False) is True
+        active = infraction_object["active"]
+        user_id = infraction_object["user"]
+        hidden = infraction_object["hidden"]
 
         lines = textwrap.dedent(f"""
             {"**===============**" if active else "==============="}
