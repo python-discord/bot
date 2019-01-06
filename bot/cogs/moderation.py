@@ -944,23 +944,13 @@ class Moderation(Scheduler):
         Search for infractions by their reason. Use Re2 for matching.
         """
 
-        try:
-            response = await self.bot.http_session.get(
-                URLs.site_infractions,
-                params={"search": reason, "hidden": "True"},
-                headers=self.headers
-            )
-            infraction_list = await response.json()
-        except ClientError:
-            log.exception(f"Failed to fetch infractions matching reason `{reason}`.")
-            await ctx.send(":x: An error occurred while fetching infractions.")
-            return
-
+        infraction_list = await self.bot.api_client.get(
+            'bot/infractions', params={'search': reason}
+        )
         embed = Embed(
             title=f"Infractions matching `{reason}` ({len(infraction_list)} total)",
             colour=Colour.orange()
         )
-
         await self.send_infraction_list(ctx, embed, infraction_list)
 
     # endregion
