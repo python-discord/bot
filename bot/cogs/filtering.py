@@ -82,8 +82,8 @@ class Filtering:
                 "notification_msg": (
                     "Your post has been removed because it contained a rich embed. "
                     "This indicates that you're either using an unofficial discord client or are using a self-bot, "
-                    "both of which violate Discord's Terms of Service.\n\n"
-                    f"Please don't use a self-bot or an unofficial Discord client on our server. {_staff_mistake_str}"
+                    f"both of which violate Discord's Terms of Service. {_staff_mistake_str}\n\n"
+                    "Please don't use a self-bot or an unofficial Discord client on our server."
                 )
             },
             "watch_words": {
@@ -140,7 +140,6 @@ class Filtering:
         if filter_message:
 
             for filter_name, _filter in self.filters.items():
-
                 # Is this specific filter enabled in the config?
                 if _filter["enabled"]:
                     # Does the filter only need the message content or the full message?
@@ -199,7 +198,6 @@ class Filtering:
                             additional_embeds=additional_embeds,
                         )
 
-                        # If filtering rich embeds, also send the removed embeds to mod_alerts
                         break  # We don't want multiple filters to trigger
 
     @staticmethod
