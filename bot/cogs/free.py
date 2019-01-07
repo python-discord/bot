@@ -82,7 +82,7 @@ class Free:
                                  "If all channels are truly busy, please be patient "
                                  "as one will likely be available soon.**")
 
-        return await ctx.send(embed=embed)
+        await ctx.send(embed=embed)
 
 
 def setup(bot):
