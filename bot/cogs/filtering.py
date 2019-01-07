@@ -138,7 +138,6 @@ class Filtering:
 
         # If none of the above, we can start filtering.
         if filter_message:
-
             for filter_name, _filter in self.filters.items():
                 # Is this specific filter enabled in the config?
                 if _filter["enabled"]:
