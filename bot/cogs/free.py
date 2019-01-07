@@ -36,7 +36,7 @@ class Free:
 
         if user is not None and seek == 2:
             seek = 3
-        elif seek > 10:
+        elif not 0 < seek < 10:
             seek = 3
 
         for channel in python_help.channels:
