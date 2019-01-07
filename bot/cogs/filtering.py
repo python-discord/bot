@@ -185,6 +185,8 @@ class Filtering:
 
                         log.debug(message)
 
+                        additional_embeds = msg.embeds if filter_name == "filter_rich_embeds" else None
+
                         # Send pretty mod log embed to mod-alerts
                         await self.mod_log.send_log_message(
                             icon_url=Icons.filtering,
@@ -194,16 +196,10 @@ class Filtering:
                             thumbnail=msg.author.avatar_url_as(static_format="png"),
                             channel_id=Channels.mod_alerts,
                             ping_everyone=Filter.ping_everyone,
+                            additional_embeds=additional_embeds,
                         )
 
                         # If filtering rich embeds, also send the removed embeds to mod_alerts
-                        if filter_name == "filter_rich_embeds":
-                            await self.mod_log.send_log_embeds(
-                                embeds=msg.embeds,
-                                content="The message contained the following embed(s):\n",
-                                channel_id=Channels.mod_alerts,
-                            )
-
                         break  # We don't want multiple filters to trigger
 
     @staticmethod
