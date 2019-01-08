@@ -108,6 +108,7 @@ class Events:
         """
         Check whether a user has any active mute infractions
         """
+
         response = await self.bot.http_session.get(
             URLs.site_infractions_user.format(
                 user_id=user_id
