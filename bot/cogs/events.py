@@ -119,7 +119,7 @@ class Events:
         infraction_list = await response.json()
 
         # Check for active mute infractions
-        if len(infraction_list) == 0:
+        if not infraction_list:
             # Short circuit
             return False
 
@@ -263,6 +263,10 @@ class Events:
                     if role in old_roles:
                         # Check for mute roles that were not able to be removed and skip if present
                         if role == str(Roles.muted) and not await self.has_active_mute(str(member.id)):
+                            log.debug(
+                                f"User {member.id} has no active mute infraction, "
+                                "their leftover muted role will not be persisted"
+                            )
                             continue
 
                         new_roles.append(Object(int(role)))
