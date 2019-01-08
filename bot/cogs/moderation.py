@@ -1207,6 +1207,19 @@ class Moderation(Scheduler):
             if User in error.converters:
                 await ctx.send(str(error.errors[0]))
 
+    async def respect_role_hierarchy(self, guild: Guild, actor: Member, target: Member) -> bool:
+        """
+        Check if the highest role of the invoking member is less than or equal to the target member
+
+        Implement as a method rather than a check in order to avoid having to reimplement parameter
+        checks & conversions in a dedicated check decorater
+        """
+
+        # Build role hierarchy
+        role_hierarchy = {role: rank for rank, role in enumerate(reversed(guild.roles))}
+
+        return role_hierarchy[actor.top_role] <= role_hierarchy[target.top_role]
+
 
 def setup(bot):
     bot.add_cog(Moderation(bot))
