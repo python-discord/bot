@@ -51,14 +51,14 @@ class Free:
 
             inactive = (datetime.utcnow() - msg.created_at).seconds
             if inactive > self.TIME_INACTIVE:
-                free_channels.append((inactive, channel.id))
+                free_channels.append((inactive, channel))
 
         embed = Embed()
         embed.colour = Colour.gold()
         embed.title = "**Looking for a free help channel?**"
 
         if user is not None:
-            embed.description = f"**Hey <@{user.id}>!**\n\n"
+            embed.description = f"**Hey {user.mention}!**\n\n"
         else:
             embed.description = ""
 
@@ -67,14 +67,13 @@ class Free:
                 's' if len(free_channels) > 1 else '',
                 '' if len(free_channels) > 1 else 's')
 
-            for i, channel in enumerate(sorted(free_channels, reverse=True), 1):
-                inactive, ID = channel
+            for i, (inactive, channel) in enumerate(sorted(free_channels, reverse=True), 1):
                 minutes, seconds = divmod(inactive, 60)
                 if minutes > 60:
                     hours, minutes = divmod(minutes, 60)
-                    embed.description += f"{i}. <#{ID}> inactive for {hours}h{minutes}m{seconds}s\n\n"
+                    embed.description += f"{i}. {channel.mention} inactive for {hours}h{minutes}m{seconds}s\n\n"
                 else:
-                    embed.description += f"{i}. <#{ID}> inactive for {minutes}m{seconds}s\n\n"
+                    embed.description += f"{i}. {channel.mention} inactive for {minutes}m{seconds}s\n\n"
 
             embed.description += ("**\nThese channels aren't guaranteed to be free, "
                                   "so use your best judgement and check for yourself.")
