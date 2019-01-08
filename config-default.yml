@@ -154,6 +154,8 @@ filter:
         - 267624335836053506  # Python Discord
         - 440186186024222721  # Python Discord: ModLog Emojis
         - 273944235143593984  # STEM
+        - 348658686962696195  # RLBot
+        - 531221516914917387  # Pallets
 
     domain_blacklist:
         - pornhub.com
