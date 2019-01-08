@@ -124,7 +124,7 @@ class Events:
             return False
 
         muted_check = any(
-            [infraction["active"] for infraction in infraction_list if infraction["type"].lower() == "mute"]
+            infraction["active"] for infraction in infraction_list if infraction["type"].lower() == "mute"
         )
         return muted_check
 
