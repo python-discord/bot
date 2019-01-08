@@ -69,7 +69,7 @@ class Free:
 
             for i, (inactive, channel) in enumerate(sorted(free_channels, reverse=True), 1):
                 minutes, seconds = divmod(inactive, 60)
-                if minutes > 60:
+                if minutes > 59:
                     hours, minutes = divmod(minutes, 60)
                     embed.description += f"{i}. {channel.mention} inactive for {hours}h{minutes}m{seconds}s\n\n"
                 else:
