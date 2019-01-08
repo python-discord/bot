@@ -4,6 +4,8 @@ from datetime import datetime
 from discord import Colour, Embed, Member, utils
 from discord.ext.commands import BucketType, Context, command, cooldown
 
+from bot.constants import Categories
+
 
 log = logging.getLogger(__name__)
 
@@ -11,7 +13,7 @@ log = logging.getLogger(__name__)
 class Free:
     """Tries to figure out which help channels are free."""
 
-    PYTHON_HELP_ID = 356013061213126657
+    PYTHON_HELP_ID = Categories.python_help
     TIME_INACTIVE = 300
 
     @command(name="free", aliases=('f',))

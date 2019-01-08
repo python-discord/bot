@@ -315,6 +315,13 @@ class CleanMessages(metaclass=YAMLGetter):
     message_limit: int
 
 
+class Categories(metaclass=YAMLGetter):
+    section = "guild"
+    subsection = "categories"
+
+    python_help: int
+
+
 class Channels(metaclass=YAMLGetter):
     section = "guild"
     subsection = "channels"
