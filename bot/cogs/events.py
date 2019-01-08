@@ -123,10 +123,9 @@ class Events:
             # Short circuit
             return False
 
-        muted_check = any(
+        return any(
             infraction["active"] for infraction in infraction_list if infraction["type"].lower() == "mute"
         )
-        return muted_check
 
     async def on_command_error(self, ctx: Context, e: CommandError):
         command = ctx.command
