@@ -46,7 +46,7 @@ class Free:
                 messages = await channel.history(limit=seek).flatten()
                 msg = messages[seek-1]
             else:
-                msg = await channel.history(limit=1).next()
+                msg = await channel.history(limit=1).next()   # noqa (False positive)
 
             inactive = (datetime.utcnow() - msg.created_at).seconds
             if inactive > self.TIME_INACTIVE:
