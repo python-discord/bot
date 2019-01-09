@@ -66,7 +66,8 @@ class Free:
         if free_channels:
             embed.description += "**The following channel{0} look{1} free:**\n\n**".format(
                 's' if len(free_channels) > 1 else '',
-                '' if len(free_channels) > 1 else 's')
+                '' if len(free_channels) > 1 else 's'
+            )
 
             for i, (inactive, channel) in enumerate(sorted(free_channels, reverse=True), 1):
                 minutes, seconds = divmod(inactive, 60)
