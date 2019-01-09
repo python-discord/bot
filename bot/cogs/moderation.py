@@ -176,7 +176,8 @@ class Moderation(Scheduler):
         :param reason: The reason for the ban.
         """
 
-        if not await self.respect_role_hierarchy(ctx, user, 'ban'):
+        member = ctx.guild.get_member(user.id)
+        if not await self.respect_role_hierarchy(ctx, member, 'ban'):
             # Ensure ctx author has a higher top role than the target user
             # Warning is sent to ctx by the helper method
             return
@@ -337,7 +338,8 @@ class Moderation(Scheduler):
         :param reason: The reason for the temporary ban.
         """
 
-        if not await self.respect_role_hierarchy(ctx, user, 'tempban'):
+        member = ctx.guild.get_member(user.id)
+        if not await self.respect_role_hierarchy(ctx, member, 'tempban'):
             # Ensure ctx author has a higher top role than the target user
             # Warning is sent to ctx by the helper method
             return
@@ -476,7 +478,8 @@ class Moderation(Scheduler):
         :param reason: The reason for the ban.
         """
 
-        if not await self.respect_role_hierarchy(ctx, user, 'shadowban'):
+        member = ctx.guild.get_member(user.id)
+        if not await self.respect_role_hierarchy(ctx, member, 'shadowban'):
             # Ensure ctx author has a higher top role than the target user
             # Warning is sent to ctx by the helper method
             return
@@ -606,7 +609,8 @@ class Moderation(Scheduler):
         :param reason: The reason for the temporary ban.
         """
 
-        if not await self.respect_role_hierarchy(ctx, user, 'shadowtempban'):
+        member = ctx.guild.get_member(user.id)
+        if not await self.respect_role_hierarchy(ctx, member, 'shadowtempban'):
             # Ensure ctx author has a higher top role than the target user
             # Warning is sent to ctx by the helper method
             return
