@@ -43,10 +43,15 @@ class Free:
         elif not 0 < seek < 10:
             seek = 3
 
+        # Iterate through all the help channels
+        # to check latest activity
         for channel in python_help.channels:
+            # Seek further back in the help channel
+            # the command was invoked in
             if channel.id == ctx.channel.id:
                 messages = await channel.history(limit=seek).flatten()
                 msg = messages[seek-1]
+            # Otherwise get last message
             else:
                 msg = await channel.history(limit=1).next()   # noqa (False positive)
 
@@ -63,12 +68,17 @@ class Free:
         else:
             embed.description = ""
 
+        # Display all potentially inactive channels
+        # in descending order of inactivity
         if free_channels:
             embed.description += "**The following channel{0} look{1} free:**\n\n**".format(
                 's' if len(free_channels) > 1 else '',
                 '' if len(free_channels) > 1 else 's'
             )
 
+            # Sort channels in descending order by seconds
+            # Get position in list, inactivity, and channel object
+            # For each channel, add to embed.description
             for i, (inactive, channel) in enumerate(sorted(free_channels, reverse=True), 1):
                 minutes, seconds = divmod(inactive, 60)
                 if minutes > 59:
