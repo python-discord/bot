@@ -1258,8 +1258,8 @@ class Moderation(Scheduler):
 
         if not hierarchy_check:
             log.info(
-                f"{actor.display_name} ({actor.id}) attempted to {infraction_type} "
-                f"{target.display_name} ({target.id}), who has a higher top role"
+                f"{actor} ({actor.id}) attempted to {infraction_type} "
+                f"{target} ({target.id}), who has a higher top role"
             )
             await ctx.send(f":x: {actor.mention}, you may not {infraction_type} someone with a higher top role")
 
