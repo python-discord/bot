@@ -4,18 +4,17 @@ from datetime import datetime
 from discord import Colour, Embed, Member, utils
 from discord.ext.commands import BucketType, Context, command, cooldown
 
-from bot.constants import Categories
+from bot.constants import Categories, Free
 
 
 log = logging.getLogger(__name__)
 
+PYTHON_HELP_ID = Categories.python_help
+TIMEOUT = Free.activity_timeout
+
 
 class Free:
     """Tries to figure out which help channels are free."""
-
-    PYTHON_HELP_ID = Categories.python_help
-    TIME_INACTIVE = 300
-
     @command(name="free", aliases=('f',))
     @cooldown(1, 60.0, BucketType.channel)
     async def free(self, ctx: Context, user: Member = None, seek: int = 2):
@@ -34,7 +33,7 @@ class Free:
         in an active channel, and we want the message before that happened.
         """
         free_channels = []
-        python_help = utils.get(ctx.guild.categories, id=self.PYTHON_HELP_ID)
+        python_help = utils.get(ctx.guild.categories, id=PYTHON_HELP_ID)
 
         if user is not None and seek == 2:
             seek = 3
@@ -49,7 +48,7 @@ class Free:
                 msg = await channel.history(limit=1).next()   # noqa (False positive)
 
             inactive = (datetime.utcnow() - msg.created_at).seconds
-            if inactive > self.TIME_INACTIVE:
+            if inactive > TIMEOUT:
                 free_channels.append((inactive, channel))
 
         embed = Embed()

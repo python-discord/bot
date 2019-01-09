@@ -471,6 +471,12 @@ class BigBrother(metaclass=YAMLGetter):
     header_message_limit: int
 
 
+class Free(metaclass=YAMLGetter):
+    section = 'free'
+
+    activity_timeout: int
+
+
 # Debug mode
 DEBUG_MODE = True if 'local' in os.environ.get("SITE_URL", "local") else False
 

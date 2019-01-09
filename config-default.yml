@@ -337,5 +337,11 @@ big_brother:
     header_message_limit: 15
 
 
+free:
+    # Seconds to elapse for a channel
+    # to be considered inactive.
+    activity_timeout: 300
+
+
 config:
     required_keys: ['bot.token']
