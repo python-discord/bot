@@ -125,6 +125,11 @@ class Moderation(Scheduler):
         :param reason: The reason for the kick.
         """
 
+        if not self.respect_role_hierarchy(ctx, user, 'kick'):
+            # Ensure ctx author has a higher top role than the target user
+            # Warning is sent to ctx by the helper method
+            return
+
         notified = await self.notify_infraction(
             user=user,
             infr_type="Kick",
@@ -170,6 +175,11 @@ class Moderation(Scheduler):
         :param user: Accepts user mention, ID, etc.
         :param reason: The reason for the ban.
         """
+
+        if not self.respect_role_hierarchy(ctx, user, 'ban'):
+            # Ensure ctx author has a higher top role than the target user
+            # Warning is sent to ctx by the helper method
+            return
 
         notified = await self.notify_infraction(
             user=user,
@@ -327,6 +337,11 @@ class Moderation(Scheduler):
         :param reason: The reason for the temporary ban.
         """
 
+        if not self.respect_role_hierarchy(ctx, user, 'tempban'):
+            # Ensure ctx author has a higher top role than the target user
+            # Warning is sent to ctx by the helper method
+            return
+
         notified = await self.notify_infraction(
             user=user,
             infr_type="Ban",
@@ -420,6 +435,11 @@ class Moderation(Scheduler):
         :param reason: The reason for the kick.
         """
 
+        if not self.respect_role_hierarchy(ctx, user, 'shadowkick'):
+            # Ensure ctx author has a higher top role than the target user
+            # Warning is sent to ctx by the helper method
+            return
+
         response_object = await post_infraction(ctx, user, type="kick", reason=reason, hidden=True)
         if response_object is None:
             return
@@ -455,6 +475,11 @@ class Moderation(Scheduler):
         :param user: Accepts user mention, ID, etc.
         :param reason: The reason for the ban.
         """
+
+        if not self.respect_role_hierarchy(ctx, user, 'shadowban'):
+            # Ensure ctx author has a higher top role than the target user
+            # Warning is sent to ctx by the helper method
+            return
 
         response_object = await post_infraction(ctx, user, type="ban", reason=reason, hidden=True)
         if response_object is None:
@@ -580,6 +605,11 @@ class Moderation(Scheduler):
         :param duration: The duration for the temporary ban infraction
         :param reason: The reason for the temporary ban.
         """
+
+        if not self.respect_role_hierarchy(ctx, user, 'shadowtempban'):
+            # Ensure ctx author has a higher top role than the target user
+            # Warning is sent to ctx by the helper method
+            return
 
         response_object = await post_infraction(ctx, user, type="ban", reason=reason, duration=duration, hidden=True)
         if response_object is None:
@@ -1207,18 +1237,29 @@ class Moderation(Scheduler):
             if User in error.converters:
                 await ctx.send(str(error.errors[0]))
 
-    async def respect_role_hierarchy(self, guild: Guild, actor: Member, target: Member) -> bool:
+    async def respect_role_hierarchy(self, ctx: Context, target: Member, infraction_type: str) -> bool:
         """
         Check if the highest role of the invoking member is less than or equal to the target member
+
+        If this check fails, a warning is sent to the invoking ctx
 
         Implement as a method rather than a check in order to avoid having to reimplement parameter
         checks & conversions in a dedicated check decorater
         """
 
         # Build role hierarchy
-        role_hierarchy = {role: rank for rank, role in enumerate(reversed(guild.roles))}
+        actor = ctx.author
+        role_hierarchy = {role: rank for rank, role in enumerate(reversed(ctx.guild.roles))}
+        hierarchy_check = role_hierarchy[actor.top_role] <= role_hierarchy[target.top_role]
 
-        return role_hierarchy[actor.top_role] <= role_hierarchy[target.top_role]
+        if not hierarchy_check:
+            log.info(
+                f"{actor.display_name} ({actor.id}) attempted to {infraction_type} "
+                f"{target.display_name} ({target.id}), who has a higher top role"
+            )
+            ctx.send(f":x: {actor.mention}, you may not {infraction_type} someone with a higher top role")
+
+        return hierarchy_check
 
 
 def setup(bot):
