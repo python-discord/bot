@@ -340,7 +340,7 @@ big_brother:
 free:
     # Seconds to elapse for a channel
     # to be considered inactive.
-    activity_timeout: 300
+    activity_timeout: 600
 
 
 config:
