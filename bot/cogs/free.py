@@ -10,12 +10,14 @@ from bot.constants import Categories, Free, Roles
 
 log = logging.getLogger(__name__)
 
-PYTHON_HELP_ID = Categories.python_help
 TIMEOUT = Free.activity_timeout
 
 
 class Free:
     """Tries to figure out which help channels are free."""
+
+    PYTHON_HELP_ID = Categories.python_help
+
     @command(name="free", aliases=('f',))
     @cooldown(1, 60.0, BucketType.channel)
     async def free(self, ctx: Context, user: Member = None, seek: int = 2):
@@ -34,7 +36,7 @@ class Free:
         in an active channel, and we want the message before that happened.
         """
         free_channels = []
-        python_help = utils.get(ctx.guild.categories, id=PYTHON_HELP_ID)
+        python_help = utils.get(ctx.guild.categories, id=self.PYTHON_HELP_ID)
 
         if user is not None and seek == 2:
             seek = 3
