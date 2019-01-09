@@ -2,9 +2,10 @@ import logging
 from datetime import datetime
 
 from discord import Colour, Embed, Member, utils
+from discord.ext import commands
 from discord.ext.commands import BucketType, Context, command, cooldown
 
-from bot.constants import Categories, Free
+from bot.constants import Categories, Free, Roles
 
 
 log = logging.getLogger(__name__)
@@ -82,6 +83,26 @@ class Free:
                                  "as one will likely be available soon.**")
 
         await ctx.send(embed=embed)
+
+    @free.error
+    async def free_error(self, ctx: Context, error):
+        """
+        Runs if any error is raised during invocation
+        of !free command. Any error aside from
+        CommandOnCooldown is ignored.
+
+        If error raised is CommandOnCooldown, and the
+        user who invoked has the helper role, reset
+        the cooldown and reinvoke the command.
+        """
+        helpers = ctx.guild.get_role(Roles.helpers)
+
+        if isinstance(error, commands.CommandOnCooldown):
+            if helpers in ctx.author.roles:
+                # reset cooldown so second invocation
+                # doesn't bring us back here.
+                ctx.command.reset_cooldown(ctx)
+                await ctx.invoke(ctx.command)
 
 
 def setup(bot):
