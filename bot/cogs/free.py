@@ -55,7 +55,7 @@ class Free:
                 free_channels.append((inactive, channel))
 
         embed = Embed()
-        embed.colour = Colour.gold()
+        embed.colour = Colour.blurple()
         embed.title = "**Looking for a free help channel?**"
 
         if user is not None:
