@@ -79,7 +79,7 @@ class Free:
             embed.description += ("**\nThese channels aren't guaranteed to be free, "
                                   "so use your best judgement and check for yourself.")
         else:
-            embed.description = ("**Doesn't look like any channels are available to me. "
+            embed.description = ("**Doesn't look like any channels are available right now. "
                                  "You're welcome to check for yourself to be sure. "
                                  "If all channels are truly busy, please be patient "
                                  "as one will likely be available soon.**")
