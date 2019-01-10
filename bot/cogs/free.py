@@ -115,7 +115,10 @@ class Free:
                 # reset cooldown so second invocation
                 # doesn't bring us back here.
                 ctx.command.reset_cooldown(ctx)
-                await ctx.invoke(ctx.command)
+                # return to avoid needlessly logging the error
+                return await ctx.invoke(ctx.command)
+
+        log.error(error) # Don't ignore other errors
 
 
 def setup(bot):
