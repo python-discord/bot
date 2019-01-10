@@ -106,7 +106,7 @@ class ModLog:
     async def send_log_message(
             self, icon_url: Optional[str], colour: Colour, title: Optional[str], text: str,
             thumbnail: str = None, channel_id: int = Channels.modlog, ping_everyone: bool = False,
-            files: List[File] = None, content: str = None
+            files: List[File] = None, content: str = None, additional_embeds: List[Embed] = None,
     ):
         embed = Embed(description=text)
 
@@ -125,7 +125,14 @@ class ModLog:
             else:
                 content = "@everyone"
 
-        await self.bot.get_channel(channel_id).send(content=content, embed=embed, files=files)
+        channel = self.bot.get_channel(channel_id)
+
+        await channel.send(content=content, embed=embed, files=files)
+
+        if additional_embeds:
+            await channel.send("With the following embed(s):")
+            for additional_embed in additional_embeds:
+                await channel.send(embed=additional_embed)
 
     async def on_guild_channel_create(self, channel: GUILD_CHANNEL):
         if channel.guild.id != GuildConstant.id:
