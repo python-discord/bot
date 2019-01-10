@@ -477,6 +477,8 @@ class Free(metaclass=YAMLGetter):
     section = 'free'
 
     activity_timeout: int
+    cooldown_rate: int
+    cooldown_per: float
 
 
 # Debug mode

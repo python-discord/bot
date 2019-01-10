@@ -11,6 +11,8 @@ from bot.constants import Categories, Free, Roles
 log = logging.getLogger(__name__)
 
 TIMEOUT = Free.activity_timeout
+RATE = Free.cooldown_rate
+PER = Free.cooldown_per
 
 
 class Free:
@@ -19,7 +21,7 @@ class Free:
     PYTHON_HELP_ID = Categories.python_help
 
     @command(name="free", aliases=('f',))
-    @cooldown(1, 60.0, BucketType.channel)
+    @cooldown(RATE, PER, BucketType.channel)
     async def free(self, ctx: Context, user: Member = None, seek: int = 2):
         """
         Lists free help channels by likeliness of availability.

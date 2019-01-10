@@ -343,6 +343,8 @@ free:
     # Seconds to elapse for a channel
     # to be considered inactive.
     activity_timeout: 600
+    cooldown_rate: 1
+    cooldown_per: 60.0
 
 
 config:
