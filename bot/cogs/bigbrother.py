@@ -2,7 +2,7 @@ import asyncio
 import logging
 import re
 from collections import defaultdict, deque
-from time import strptime
+from time import strptime, struct_time
 from typing import List, Union
 
 from aiohttp import ClientError
@@ -99,7 +99,7 @@ class BigBrother:
         return "(no reason specified)"
 
     @staticmethod
-    def _parse_time(infraction):
+    def _parse_time(infraction: str) -> struct_time:
         """Takes RFC1123 date_time string and returns time object for sorting purposes"""
 
         date_string = infraction["inserted_at"]
