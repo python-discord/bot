@@ -135,17 +135,19 @@ guild:
 filter:
 
     # What do we filter?
-    filter_zalgo:   false
-    filter_invites: true
-    filter_domains: true
-    watch_words:    true
-    watch_tokens:   true
+    filter_zalgo:       false
+    filter_invites:     true
+    filter_domains:     true
+    filter_rich_embeds: true
+    watch_words:        true
+    watch_tokens:       true
 
     # Notify user on filter?
     # Notifications are not expected for "watchlist" type filters
-    notify_user_zalgo:   false
-    notify_user_invites: true
-    notify_user_domains: false
+    notify_user_zalgo:       false
+    notify_user_invites:     true
+    notify_user_domains:     false
+    notify_user_rich_embeds: true
 
     # Filter configuration
     ping_everyone: true  # Ping @everyone when we send a mod-alert?
@@ -155,6 +157,8 @@ filter:
         - 267624335836053506  # Python Discord
         - 440186186024222721  # Python Discord: ModLog Emojis
         - 273944235143593984  # STEM
+        - 348658686962696195  # RLBot
+        - 531221516914917387  # Pallets
 
     domain_blacklist:
         - pornhub.com
