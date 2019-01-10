@@ -8,7 +8,6 @@ from discord.ext.commands import Bot, when_mentioned_or
 from bot.constants import Bot as BotConfig, DEBUG_MODE
 from bot.utils.service_discovery import wait_for_rmq
 
-
 log = logging.getLogger(__name__)
 
 bot = Bot(
@@ -63,6 +62,7 @@ bot.load_extension("bot.cogs.defcon")
 bot.load_extension("bot.cogs.eval")
 bot.load_extension("bot.cogs.fun")
 bot.load_extension("bot.cogs.superstarify")
+bot.load_extension("bot.cogs.starboard")
 bot.load_extension("bot.cogs.information")
 bot.load_extension("bot.cogs.moderation")
 bot.load_extension("bot.cogs.off_topic_names")
