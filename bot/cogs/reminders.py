@@ -398,7 +398,7 @@ class Reminders(Scheduler):
         )
 
         if not failed:
-            self.cancel_reminder(response_data["reminder_id"])
+            await self._delete_reminder(response_data["reminder_id"])
 
 
 def setup(bot: Bot):
