@@ -103,13 +103,11 @@ class Free:
     @free.error
     async def free_error(self, ctx: Context, error):
         """
-        Runs if any error is raised during invocation
-        of !free command. Any error aside from
-        CommandOnCooldown is ignored.
-
         If error raised is CommandOnCooldown, and the
         user who invoked has the helper role, reset
         the cooldown and reinvoke the command.
+
+        Otherwise log the error.
         """
         helpers = ctx.guild.get_role(Roles.helpers)
 
