@@ -29,6 +29,7 @@ class Free:
         :param seek: How far back to check the last active message.
 
         seek is used only when this command is invoked in a help channel.
+        You cannot override seek without mentioning a user first.
 
         When seek is 2, we are avoiding considering the last active message
         in a channel to be the one that invoked this command.
