@@ -36,7 +36,7 @@ class BigBrother:
 
         self.bot.loop.create_task(self.get_watched_users())
 
-    async def update_cache(self, api_response: List[dict]):
+    def update_cache(self, api_response: List[dict]):
         """
         Updates the internal cache of watched users from the given `api_response`.
         This function will only add (or update) existing keys, it will not delete
@@ -58,16 +58,13 @@ class BigBrother:
                     "but the given channel could not be found. Ignoring."
                 )
 
-            watch_reason = await self.get_watch_reason(user_id)
-            self.watch_reasons[user_id] = watch_reason
-
     async def get_watched_users(self):
         """Retrieves watched users from the API."""
 
         await self.bot.wait_until_ready()
         async with self.bot.http_session.get(URLs.site_bigbrother_api, headers=self.HEADERS) as response:
             data = await response.json()
-            await self.update_cache(data)
+            self.update_cache(data)
 
     async def get_watch_reason(self, user_id: int) -> str:
         """ Fetches and returns the latest watch reason for a user using the infraction API """
@@ -90,8 +87,8 @@ class BigBrother:
             return "(error retrieving bb reason)"
 
         if infraction_list:
-            latest_reason_infraction = max(infraction_list, key=self._parse_time)
-            latest_reason = latest_reason_infraction['reason'][10:]
+            latest_reason_infraction = max(infraction_list, key=self._parse_infraction_time)
+            latest_reason = latest_reason_infraction['reason'][len(self.infraction_watch_prefix):]
             log.trace(f"The latest bb watch reason for {user_id}: {latest_reason}")
             return latest_reason
 
@@ -99,7 +96,7 @@ class BigBrother:
         return "(no reason specified)"
 
     @staticmethod
-    def _parse_time(infraction: str) -> struct_time:
+    def _parse_infraction_time(infraction: str) -> struct_time:
         """Takes RFC1123 date_time string and returns time object for sorting purposes"""
 
         date_string = infraction["inserted_at"]
@@ -183,6 +180,12 @@ class BigBrother:
 
         # Send header if user/channel are different or if message limit exceeded.
         if message.author.id != last_user or message.channel.id != last_channel or msg_count > limit:
+            # Retrieve watch reason from API if it's not already in the cache
+            if message.author.id not in self.watch_reasons:
+                log.trace(f"No watch reason for {message.author.id} found in cache; retrieving from API")
+                user_watch_reason = await self.get_watch_reason(message.author.id)
+                self.watch_reasons[message.author.id] = user_watch_reason
+
             self.last_log = [message.author.id, message.channel.id, 0]
 
             embed = Embed(description=f"{message.author.mention} in [#{message.channel.name}]({message.jump_url})")
@@ -246,7 +249,7 @@ class BigBrother:
             async with self.bot.http_session.get(URLs.site_bigbrother_api, headers=self.HEADERS) as response:
                 if response.status == 200:
                     data = await response.json()
-                    await self.update_cache(data)
+                    self.update_cache(data)
                     lines = tuple(f"• <@{entry['user_id']}> in <#{entry['channel_id']}>" for entry in data)
 
                     await LinePaginator.paginate(
