@@ -126,13 +126,14 @@ class ModLog:
                 content = "@everyone"
 
         channel = self.bot.get_channel(channel_id)
-
-        await channel.send(content=content, embed=embed, files=files)
+        log_message = await channel.send(content=content, embed=embed, files=files)
 
         if additional_embeds:
             await channel.send("With the following embed(s):")
             for additional_embed in additional_embeds:
                 await channel.send(embed=additional_embed)
+
+        return await self.bot.get_context(log_message)  # Optionally return for use with antispam
 
     async def on_guild_channel_create(self, channel: GUILD_CHANNEL):
         if channel.guild.id != GuildConstant.id:
