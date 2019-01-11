@@ -16,8 +16,9 @@ log = logging.getLogger(__name__)
 
 DELETION_MESSAGE_TEMPLATE = (
     "Hey {mention}! I noticed you posted a seemingly valid Discord API "
-    "token in your message and have removed your message to prevent abuse. "
-    "We recommend regenerating your token regardless, which you can do here: "
+    "token in your message and have removed your message. "
+    "We **strongly recommend** regenerating your token as it's probably "
+    "been compromised. You can do that here: "
     "<https://discordapp.com/developers/applications/me>\n"
     "Feel free to re-post it with the token removed. "
     "If you believe this was a mistake, please let us know!"
