@@ -6,10 +6,10 @@ from contextlib import suppress
 
 from discord import Colour, Embed, HTTPException
 from discord.ext import commands
+from discord.ext.commands import CheckFailure
 from fuzzywuzzy import fuzz, process
 
 from bot import constants
-from bot.decorators import InChannelCheckFailure
 from bot.pagination import (
     DELETE_EMOJI, FIRST_EMOJI, LAST_EMOJI,
     LEFT_EMOJI, LinePaginator, RIGHT_EMOJI,
@@ -435,7 +435,7 @@ class HelpSession:
                     # the mean time.
                     try:
                         can_run = await command.can_run(self._ctx)
-                    except InChannelCheckFailure:
+                    except CheckFailure:
                         can_run = False
 
                     if not can_run:
