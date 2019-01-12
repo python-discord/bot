@@ -33,7 +33,7 @@ All projects evolve over time, and this contribution guide is no different. This
 ##  Supplemental Information
 ### Logging levels
 The project currently defines [`logging`](https://docs.python.org/3/library/logging.html) levels as follows:
-* **TRACE:** Use this for tracing every step of a complex process. That way we can see which step of the process failed. Err on the side of verbose.
+* **TRACE:** Use this for tracing every step of a complex process. That way we can see which step of the process failed. Err on the side of verbose. **Note:** This is a PyDis-implemented logging level.
 * **INFO:** Something completely ordinary happened. Like a cog loading during startup.
 * **DEBUG:** Someone is interacting with the application, and the application is behaving as expected.
 * **WARNING:** Someone is interacting with the application in an unexpected way or the application is responding in an unexpected way, but without causing an error.
