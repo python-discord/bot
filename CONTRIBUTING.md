@@ -1,6 +1,6 @@
 # Contributing to one of our projects
 
-Our projects are open-source and are deployed as commits are pushed to the `master` branch on each repository, so we've created a set of guidelines in order to keep everything clean and in working order.
+Our projects are open-source and are automatically deployed whenever commits are pushed to the `master` branch on each repository, so we've created a set of guidelines in order to keep everything clean and in working order.
 
 Note that contributions may be rejected on the basis of a contributor failing to follow these guidelines.
 
