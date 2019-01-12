@@ -1,7 +1,8 @@
 import logging
 import re
 
-from discord import Colour, Member, Message
+import discord.errors
+from discord import Colour, DMChannel, Member, Message, TextChannel
 from discord.ext.commands import Bot
 
 from bot.cogs.modlog import ModLog
@@ -38,31 +39,64 @@ class Filtering:
     def __init__(self, bot: Bot):
         self.bot = bot
 
+        _staff_mistake_str = "If you believe this was a mistake, please let staff know!"
         self.filters = {
             "filter_zalgo": {
                 "enabled": Filter.filter_zalgo,
                 "function": self._has_zalgo,
-                "type": "filter"
+                "type": "filter",
+                "content_only": True,
+                "user_notification": Filter.notify_user_zalgo,
+                "notification_msg": (
+                    "Your post has been removed for abusing Unicode character rendering (aka Zalgo text). "
+                    f"{_staff_mistake_str}"
+                )
             },
             "filter_invites": {
                 "enabled": Filter.filter_invites,
                 "function": self._has_invites,
-                "type": "filter"
+                "type": "filter",
+                "content_only": True,
+                "user_notification": Filter.notify_user_invites,
+                "notification_msg": (
+                    f"Per Rule 10, your invite link has been removed. {_staff_mistake_str}\n\n"
+                    r"Our server rules can be found here: <https://pythondiscord.com/about/rules>"
+                )
             },
             "filter_domains": {
                 "enabled": Filter.filter_domains,
                 "function": self._has_urls,
-                "type": "filter"
+                "type": "filter",
+                "content_only": True,
+                "user_notification": Filter.notify_user_domains,
+                "notification_msg": (
+                    f"Your URL has been removed because it matched a blacklisted domain. {_staff_mistake_str}"
+                )
+            },
+            "filter_rich_embeds": {
+                "enabled": Filter.filter_rich_embeds,
+                "function": self._has_rich_embed,
+                "type": "filter",
+                "content_only": False,
+                "user_notification": Filter.notify_user_rich_embeds,
+                "notification_msg": (
+                    "Your post has been removed because it contained a rich embed. "
+                    "This indicates that you're either using an unofficial discord client or are using a self-bot, "
+                    f"both of which violate Discord's Terms of Service. {_staff_mistake_str}\n\n"
+                    "Please don't use a self-bot or an unofficial Discord client on our server."
+                )
             },
             "watch_words": {
                 "enabled": Filter.watch_words,
                 "function": self._has_watchlist_words,
-                "type": "watchlist"
+                "type": "watchlist",
+                "content_only": True,
             },
             "watch_tokens": {
                 "enabled": Filter.watch_tokens,
                 "function": self._has_watchlist_tokens,
-                "type": "watchlist"
+                "type": "watchlist",
+                "content_only": True,
             },
         }
 
@@ -105,21 +139,51 @@ class Filtering:
         # If none of the above, we can start filtering.
         if filter_message:
             for filter_name, _filter in self.filters.items():
-
                 # Is this specific filter enabled in the config?
                 if _filter["enabled"]:
-                    triggered = await _filter["function"](msg.content)
+                    # Does the filter only need the message content or the full message?
+                    if _filter["content_only"]:
+                        triggered = await _filter["function"](msg.content)
+                    else:
+                        triggered = await _filter["function"](msg)
 
                     if triggered:
+                        # If this is a filter (not a watchlist), we should delete the message.
+                        if _filter["type"] == "filter":
+                            try:
+                                # Embeds (can?) trigger both the `on_message` and `on_message_edit`
+                                # event handlers, triggering filtering twice for the same message.
+                                #
+                                # If `on_message`-triggered filtering already deleted the message
+                                # then `on_message_edit`-triggered filtering will raise exception
+                                # since the message no longer exists.
+                                #
+                                # In addition, to avoid sending two notifications to the user, the
+                                # logs, and mod_alert, we return if the message no longer exists.
+                                await msg.delete()
+                            except discord.errors.NotFound:
+                                return
+
+                            # Notify the user if the filter specifies
+                            if _filter["user_notification"]:
+                                await self.notify_member(msg.author, _filter["notification_msg"], msg.channel)
+
+                        if isinstance(msg.channel, DMChannel):
+                            channel_str = "via DM"
+                        else:
+                            channel_str = f"in {msg.channel.mention}"
+
                         message = (
                             f"The {filter_name} {_filter['type']} was triggered "
                             f"by **{msg.author.name}#{msg.author.discriminator}** "
-                            f"(`{msg.author.id}`) in <#{msg.channel.id}> with [the "
+                            f"(`{msg.author.id}`) {channel_str} with [the "
                             f"following message]({msg.jump_url}):\n\n"
                             f"{msg.content}"
                         )
 
                         log.debug(message)
+
+                        additional_embeds = msg.embeds if filter_name == "filter_rich_embeds" else None
 
                         # Send pretty mod log embed to mod-alerts
                         await self.mod_log.send_log_message(
@@ -130,11 +194,8 @@ class Filtering:
                             thumbnail=msg.author.avatar_url_as(static_format="png"),
                             channel_id=Channels.mod_alerts,
                             ping_everyone=Filter.ping_everyone,
+                            additional_embeds=additional_embeds,
                         )
-
-                        # If this is a filter (not a watchlist), we should delete the message.
-                        if _filter["type"] == "filter":
-                            await msg.delete()
 
                         break  # We don't want multiple filters to trigger
 
@@ -217,15 +278,11 @@ class Filtering:
 
     async def _has_invites(self, text: str) -> bool:
         """
-        Returns True if the text contains an invite which
-        is not on the guild_invite_whitelist in config.yml.
+        Returns True if the text contains an invite which is not on the guild_invite_whitelist in
+        config.yml
 
-        Also catches a lot of common ways to try to cheat the system.
+        Attempts to catch some of common ways to try to cheat the system.
         """
-
-        # Remove spaces to prevent cases like
-        # d i s c o r d . c o m / i n v i t e / s e x y t e e n s
-        text = text.replace(" ", "")
 
         # Remove backslashes to prevent escape character aroundfuckery like
         # discord\.gg/gdudes-pony-farm
@@ -238,19 +295,40 @@ class Filtering:
                 f"{URLs.discord_invite_api}/{invite}"
             )
             response = await response.json()
-            if response.get("guild") is None:
-                # If we have a valid invite which is not a guild invite
-                # it might be a DM channel invite
-                if response.get("channel") is not None:
-                    # We don't have whitelisted Group DMs so we can
-                    # go ahead and return a positive for any group DM
-                    return True
+            guild = response.get("guild")
+            if guild is None:
+                # Lack of a "guild" key in the JSON response indicates either an group DM invite, an
+                # expired invite, or an invalid invite. The API does not currently differentiate
+                # between invalid and expired invites
+                return True
 
-            guild_id = int(response.get("guild").get("id"))
+            guild_id = int(guild.get("id"))
 
             if guild_id not in Filter.guild_invite_whitelist:
                 return True
         return False
+
+    @staticmethod
+    async def _has_rich_embed(msg: Message):
+        """
+        Returns True if any of the embeds in the message
+        are of type 'rich', returns False otherwise
+        """
+        if msg.embeds:
+            return any(embed.type == "rich" for embed in msg.embeds)
+        return False
+
+    async def notify_member(self, filtered_member: Member, reason: str, channel: TextChannel):
+        """
+        Notify filtered_member about a moderation action with the reason str
+
+        First attempts to DM the user, fall back to in-channel notification if user has DMs disabled
+        """
+
+        try:
+            await filtered_member.send(reason)
+        except discord.errors.Forbidden:
+            await channel.send(f"{filtered_member.mention} {reason}")
 
 
 def setup(bot: Bot):

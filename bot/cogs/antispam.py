@@ -1,21 +1,18 @@
-import asyncio
 import logging
-import textwrap
 from datetime import datetime, timedelta
 from typing import List
 
-from dateutil.relativedelta import relativedelta
 from discord import Colour, Member, Message, Object, TextChannel
 from discord.ext.commands import Bot
 
 from bot import rules
+from bot.cogs.moderation import Moderation
 from bot.cogs.modlog import ModLog
 from bot.constants import (
     AntiSpam as AntiSpamConfig, Channels,
     Colours, DEBUG_MODE, Event,
     Guild as GuildConfig, Icons, Roles,
 )
-from bot.utils.time import humanize_delta
 
 
 log = logging.getLogger(__name__)
@@ -44,7 +41,7 @@ WHITELISTED_ROLES = (Roles.owner, Roles.admin, Roles.moderator, Roles.helpers)
 class AntiSpam:
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.muted_role = None
+        self._muted_role = Object(Roles.muted)
 
     @property
     def mod_log(self) -> ModLog:
@@ -110,8 +107,6 @@ class AntiSpam:
         # Sanity check to ensure we're not lagging behind
         if self.muted_role not in member.roles:
             remove_role_after = AntiSpamConfig.punishment['remove_after']
-            duration_delta = relativedelta(seconds=remove_role_after)
-            human_duration = humanize_delta(duration_delta)
 
             mod_alert_message = (
                 f"**Triggered by:** {member.display_name}#{member.discriminator} (`{member.id}`)\n"
@@ -133,7 +128,8 @@ class AntiSpam:
 
                 mod_alert_message += f"{content}"
 
-            await self.mod_log.send_log_message(
+            # Return the mod log message Context that we can use to post the infraction
+            mod_log_ctx = await self.mod_log.send_log_message(
                 icon_url=Icons.filtering,
                 colour=Colour(Colours.soft_red),
                 title=f"Spam detected!",
@@ -143,27 +139,8 @@ class AntiSpam:
                 ping_everyone=AntiSpamConfig.ping_everyone
             )
 
-            await member.add_roles(self.muted_role, reason=reason)
-            description = textwrap.dedent(f"""
-                **Channel**: {msg.channel.mention}
-                **User**: {msg.author.mention} (`{msg.author.id}`)
-                **Reason**: {reason}
-                Role will be removed after {human_duration}.
-            """)
-
-            await self.mod_log.send_log_message(
-                icon_url=Icons.user_mute, colour=Colour(Colours.soft_red),
-                title="User muted", text=description
-            )
-
-            await asyncio.sleep(remove_role_after)
-            await member.remove_roles(self.muted_role, reason="AntiSpam mute expired")
-
-            await self.mod_log.send_log_message(
-                icon_url=Icons.user_mute, colour=Colour(Colours.soft_green),
-                title="User unmuted",
-                text=f"Was muted by `AntiSpam` cog for {human_duration}."
-            )
+            # Run a tempmute
+            await mod_log_ctx.invoke(Moderation.tempmute, member, f"{remove_role_after}S", reason=reason)
 
     async def maybe_delete_messages(self, channel: TextChannel, messages: List[Message]):
         # Is deletion of offending messages actually enabled?

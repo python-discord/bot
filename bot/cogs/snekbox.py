@@ -6,12 +6,12 @@ import textwrap
 
 from discord import Colour, Embed
 from discord.ext.commands import (
-    Bot, CommandError, Context, MissingPermissions,
-    NoPrivateMessage, check, command, guild_only
+    Bot, CommandError, Context, NoPrivateMessage, command, guild_only
 )
 
 from bot.cogs.rmq import RMQ
 from bot.constants import Channels, ERROR_REPLIES, NEGATIVE_REPLIES, Roles, URLs
+from bot.decorators import InChannelCheckFailure, in_channel
 from bot.utils.messages import wait_for_deletion
 
 
@@ -51,22 +51,8 @@ RAW_CODE_REGEX = re.compile(
     r"\s*$",                                # any trailing whitespace until the end of the string
     re.DOTALL                               # "." also matches newlines
 )
+
 BYPASS_ROLES = (Roles.owner, Roles.admin, Roles.moderator, Roles.helpers)
-WHITELISTED_CHANNELS = (Channels.bot,)
-WHITELISTED_CHANNELS_STRING = ', '.join(f"<#{channel_id}>" for channel_id in WHITELISTED_CHANNELS)
-
-
-async def channel_is_whitelisted_or_author_can_bypass(ctx: Context):
-    """
-    Checks that the author is either helper or above
-    or the channel is a whitelisted channel.
-    """
-
-    if ctx.channel.id in WHITELISTED_CHANNELS:
-        return True
-    if any(r.id in BYPASS_ROLES for r in ctx.author.roles):
-        return True
-    raise MissingPermissions("You are not allowed to do that here.")
 
 
 class Snekbox:
@@ -84,7 +70,7 @@ class Snekbox:
 
     @command(name='eval', aliases=('e',))
     @guild_only()
-    @check(channel_is_whitelisted_or_author_can_bypass)
+    @in_channel(Channels.bot, bypass_roles=BYPASS_ROLES)
     async def eval_command(self, ctx: Context, *, code: str = None):
         """
         Run some code. get the result back. We've done our best to make this safe, but do let us know if you
@@ -205,9 +191,9 @@ class Snekbox:
             embed.description = "You're not allowed to use this command in private messages."
             await ctx.send(embed=embed)
 
-        elif isinstance(error, MissingPermissions):
+        elif isinstance(error, InChannelCheckFailure):
             embed.title = random.choice(NEGATIVE_REPLIES)
-            embed.description = f"Sorry, but you may only use this command within {WHITELISTED_CHANNELS_STRING}."
+            embed.description = str(error)
             await ctx.send(embed=embed)
 
         else:
