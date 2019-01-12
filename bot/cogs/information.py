@@ -137,7 +137,7 @@ class Information:
 
         # Non-moderators may only do this in #bot-commands
         if not with_role_check(ctx, *MODERATION_ROLES):
-            if not ctx.channel == Channels.bot:
+            if not ctx.channel.id == Channels.bot:
                 raise MissingPermissions("You can't do that here!")
 
         # Validates hidden input
@@ -205,7 +205,7 @@ class Information:
         await ctx.send(embed=embed)
 
     @user_info.error
-    async def eval_command_error(self, ctx: Context, error: CommandError):
+    async def user_info_command_error(self, ctx: Context, error: CommandError):
         embed = Embed(colour=Colour.red())
 
         if isinstance(error, BadArgument):
@@ -217,6 +217,9 @@ class Information:
             embed.title = random.choice(NEGATIVE_REPLIES)
             embed.description = f"Sorry, but you may only use this command within <#{Channels.bot}>."
             await ctx.send(embed=embed)
+
+        else:
+            log.exception(f"Unhandled error: {error}")
 
 
 def setup(bot):
