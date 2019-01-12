@@ -137,7 +137,7 @@ filter:
     filter_zalgo:       false
     filter_invites:     true
     filter_domains:     true
-    filter_rich_embeds: true
+    filter_rich_embeds: false
     watch_words:        true
     watch_tokens:       true
 
