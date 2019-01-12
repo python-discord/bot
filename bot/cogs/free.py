@@ -119,7 +119,7 @@ class Free:
                 # return to avoid needlessly logging the error
                 return await ctx.reinvoke()
 
-        log.error(error)  # Don't ignore other errors
+        log.exception(error)  # Don't ignore other errors
 
 
 def setup(bot):
