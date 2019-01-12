@@ -125,15 +125,12 @@ class ModLog:
 
         embed.colour = colour
 
-        if timestamp_override:
-            embed.timestamp = timestamp_override
-        else:
-            embed.timestamp = datetime.datetime.utcnow()
+        embed.timestamp = timestamp_override or datetime.datetime.utcnow()
 
         if footer_override:
             embed.set_footer(text=footer_override)
 
-        if thumbnail is not None:
+        if thumbnail:
             embed.set_thumbnail(url=thumbnail)
 
         if ping_everyone:
