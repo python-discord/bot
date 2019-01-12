@@ -104,9 +104,19 @@ class ModLog:
                 self._ignored[event].append(item)
 
     async def send_log_message(
-            self, icon_url: Optional[str], colour: Colour, title: Optional[str], text: str,
-            thumbnail: str = None, channel_id: int = Channels.modlog, ping_everyone: bool = False,
-            files: List[File] = None, content: str = None, additional_embeds: List[Embed] = None,
+            self,
+            icon_url: Optional[str],
+            colour: Colour,
+            title: Optional[str],
+            text: str,
+            thumbnail: str = None,
+            channel_id: int = Channels.modlog,
+            ping_everyone: bool = False,
+            files: List[File] = None,
+            content: str = None,
+            additional_embeds: List[Embed] = None,
+            timestamp_override: datetime.datetime = None,
+            footer_override: str = None,
     ):
         embed = Embed(description=text)
 
@@ -114,7 +124,14 @@ class ModLog:
             embed.set_author(name=title, icon_url=icon_url)
 
         embed.colour = colour
-        embed.timestamp = datetime.datetime.utcnow()
+
+        if timestamp_override:
+            embed.timestamp = timestamp_override
+        else:
+            embed.timestamp = datetime.datetime.utcnow()
+
+        if footer_override:
+            embed.set_footer(text=footer_override)
 
         if thumbnail is not None:
             embed.set_thumbnail(url=thumbnail)
@@ -676,14 +693,28 @@ class ModLog:
                 f"{after.clean_content}"
             )
 
+        if before.edited_at:
+            # Message was previously edited, to assist with self-bot detection, use the edited_at
+            # datetime as the baseline and create a human-readable delta between this edit event
+            # and the last time the message was edited
+            timestamp = before.edited_at
+            delta = humanize_delta(relativedelta(after.edited_at, before.edited_at))
+            footer = f"Last edited {delta} ago"
+        else:
+            # Message was not previously edited, use the created_at datetime as the baseline, no
+            # delta calculation needed
+            timestamp = before.created_at
+            footer = None
+
+        print(timestamp, footer)
         await self.send_log_message(
-            Icons.message_edit, Colour.blurple(), "Message edited (Before)",
-            before_response, channel_id=Channels.message_log
+            Icons.message_edit, Colour.blurple(), "Message edited (Before)", before_response,
+            channel_id=Channels.message_log, timestamp_override=timestamp, footer_override=footer
         )
 
         await self.send_log_message(
-            Icons.message_edit, Colour.blurple(), "Message edited (After)",
-            after_response, channel_id=Channels.message_log
+            Icons.message_edit, Colour.blurple(), "Message edited (After)", after_response,
+            channel_id=Channels.message_log, timestamp_override=after.edited_at
         )
 
     async def on_raw_message_edit(self, event: RawMessageUpdateEvent):
