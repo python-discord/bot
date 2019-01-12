@@ -1,3 +1,4 @@
+import gettext
 import logging
 
 from discord import Colour, Embed
@@ -93,17 +94,42 @@ class Site:
         await ctx.send(embed=embed)
 
     @site_group.command(name="rules")
-    async def site_rules(self, ctx: Context):
+    async def site_rules(self, ctx: Context, *selection: int):
         """Info about the server's rules."""
 
         url = f"{URLs.site_schema}{URLs.site}/about/rules"
+        full_rules = await self.bot.api_client.get(
+            'rules', params={'link_format': 'md'}
+        )
+        if selection:
+            invalid_indices = tuple(
+                pick
+                for pick in selection
+                if pick < 0 or pick >= len(full_rules)
+            )
 
-        embed = Embed(title="Rules")
+            if invalid_indices:
+                return await ctx.send(
+                    embed=Embed(
+                        title='Invalid rule indices',
+                        description=', '.join(map(str, invalid_indices)),
+                        colour=Colour.red()
+                    )
+                )
+            title = (
+                gettext.ngettext("Rule", 'Rules', len(selection))
+                + " " + ", ".join(map(str, selection))
+            )
+        else:
+            title = "Full rules"
+            selection = range(len(full_rules))
+
+        embed = Embed(title=title)
         embed.set_footer(text=url)
         embed.colour = Colour.blurple()
-        embed.description = (
-            f"The rules and guidelines that apply to this community can be found on our [rules page]({url}). "
-            "We expect all members of the community to have read and understood these."
+        embed.description = '\n'.join(
+            f"**{pick}**: {full_rules[pick]}"
+            for pick in selection
         )
 
         await ctx.send(embed=embed)
