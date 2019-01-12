@@ -109,14 +109,14 @@ class ModLog:
             colour: Colour,
             title: Optional[str],
             text: str,
-            thumbnail: str = None,
+            thumbnail: Optional[str] = None,
             channel_id: int = Channels.modlog,
             ping_everyone: bool = False,
-            files: List[File] = None,
-            content: str = None,
-            additional_embeds: List[Embed] = None,
-            timestamp_override: datetime.datetime = None,
-            footer_override: str = None,
+            files: Optional[List[File]] = None,
+            content: Optional[str] = None,
+            additional_embeds: Optional[List[Embed]] = None,
+            timestamp_override: Optional[datetime.datetime] = None,
+            footer_override: Optional[str] = None,
     ):
         embed = Embed(description=text)
 
