@@ -10,7 +10,7 @@ from discord.ext import commands
 from discord.ext.commands import CheckFailure, Context
 
 from bot.constants import ERROR_REPLIES
-from bot.utils.checks import in_channel_check, with_role_check, without_role_check
+from bot.utils.checks import with_role_check, without_role_check
 
 log = logging.getLogger(__name__)
 
