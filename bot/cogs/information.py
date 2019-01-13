@@ -133,7 +133,7 @@ class Information:
         # someone other than the caller
         if user and user != ctx.author:
             if not with_role_check(ctx, *MODERATION_ROLES):
-                raise BadArgument("Only mods can target other users.")
+                raise BadArgument("You do not have permission to use this command on users other than yourself.")
 
         # Non-moderators may only do this in #bot-commands
         if not with_role_check(ctx, *MODERATION_ROLES):
@@ -210,7 +210,7 @@ class Information:
 
         if isinstance(error, BadArgument):
             embed.title = random.choice(NEGATIVE_REPLIES)
-            embed.description = "You do not have permission to use this command on users other than yourself."
+            embed.description = str(error)
             await ctx.send(embed=embed)
 
         elif isinstance(error, MissingPermissions):
