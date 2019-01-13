@@ -69,17 +69,6 @@ def without_role(*role_ids: int):
     return commands.check(predicate)
 
 
-def in_channel(channel_id):
-    """
-    Checks if the command was executed
-    inside of the specified channel.
-    """
-
-    async def predicate(ctx: Context):
-        return in_channel_check(ctx, channel_id)
-    return commands.check(predicate)
-
-
 def locked():
     """
     Allows the user to only run one instance of the decorated command at a time.
