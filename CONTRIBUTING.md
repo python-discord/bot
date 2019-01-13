@@ -7,7 +7,7 @@ Note that contributions may be rejected on the basis of a contributor failing to
 ## Rules
 
 1. **No force-pushes** or modifying the Git history in any way.
-3. If you have direct access to the repository, **create a branch for your changes** and create a merge request for that branch. If not, create a branch on a fork of the repository and create a merge request from there.
+3. If you have direct access to the repository, **create a branch for your changes** and create a pull request for that branch. If not, create a branch on a fork of the repository and create a pull request from there.
     * It's common practice for a repository to reject direct pushes to `master`, so make branching a habit!
 5. **Adhere to the prevailing code style**, which we enforce using [flake8](http://flake8.pycqa.org/en/latest/index.html).
     * Run `flake8` against your code **before** you push it. Your commit will be rejected by the build server if it fails to lint.
@@ -19,8 +19,8 @@ Note that contributions may be rejected on the basis of a contributor failing to
 9. **Avoid frequent pushes to the main repository**. This goes for PRs opened against your fork as well. Our test build pipelines are triggered every time a push to the repository (or PR) is made. Try to batch your commits until you've finished working for that session, or you've reached a point where collaborators need your commits to continue their own work. This also provides you the opportunity to amend commits for minor changes rather than having to commit them on their own because you've already pushed.
     * This includes merging master into your branch. Try to leave merging from master for after your PR passes review; a maintainer will bring your PR up to date before merging. Exceptions to this include: resolving merge conflicts, needing something that was pushed to master for your branch, or something was pushed to master that could potentionally affect the functionality of what you're writing.
 11. **Don't fight the framework**. Every framework has its flaws, but the frameworks we've picked out have been carefully chosen for their particular merits. If you can avoid it, please resist reimplementing swathes of framework logic - the work has already been done for you!
-13. If someone is working on a merge request, **do not open your own merge request for the same task**. Instead, collaborate with the author(s) of the existing merge request. Communication is key, and there's no point in two separate implementations of the same thing.
-    * One option is to fork the other contributor's repository and submit your changes to their branch with your own merge request. We suggest following these guidelines when interacting with their repository as well.
+13. If someone is working on a pull request, **do not open your own pull request for the same task**. Instead, collaborate with the author(s) of the existing pull request. Communication is key, and there's no point in two separate implementations of the same thing.
+    * One option is to fork the other contributor's repository and submit your changes to their branch with your own pull request. We suggest following these guidelines when interacting with their repository as well.
 15. **Work as a team** and collaborate whereever possible. Keep things friendly and help each other out - these are shared projects and nobody likes to have their feet trodden on.
 17. **Internal projects are internal**. As a contributor, you have access to information that the rest of the server does not. With this trust comes responsibility - do not release any information you have learned as a result of your contributor position. We are very strict about announcing things at specific times, and many staff members will not appreciate a disruption of the announcement schedule.
 
@@ -34,8 +34,8 @@ All projects evolve over time, and this contribution guide is no different. This
 ### Logging levels
 The project currently defines [`logging`](https://docs.python.org/3/library/logging.html) levels as follows:
 * **TRACE:** Use this for tracing every step of a complex process. That way we can see which step of the process failed. Err on the side of verbose. **Note:** This is a PyDis-implemented logging level.
-* **INFO:** Something completely ordinary happened. Like a cog loading during startup.
 * **DEBUG:** Someone is interacting with the application, and the application is behaving as expected.
+* **INFO:** Something completely ordinary happened. Like a cog loading during startup.
 * **WARNING:** Someone is interacting with the application in an unexpected way or the application is responding in an unexpected way, but without causing an error.
 * **ERROR:** An error that affects the specific part that is being interacted with
 * **CRITICAL:** An error that affects the whole application.
