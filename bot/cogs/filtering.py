@@ -1,7 +1,9 @@
 import logging
 import re
+from typing import Optional
 
 import discord.errors
+from dateutil.relativedelta import relativedelta
 from discord import Colour, DMChannel, Member, Message, TextChannel
 from discord.ext.commands import Bot
 
@@ -73,18 +75,11 @@ class Filtering:
                     f"Your URL has been removed because it matched a blacklisted domain. {_staff_mistake_str}"
                 )
             },
-            "filter_rich_embeds": {
-                "enabled": Filter.filter_rich_embeds,
+            "watch_rich_embeds": {
+                "enabled": Filter.watch_rich_embeds,
                 "function": self._has_rich_embed,
-                "type": "filter",
+                "type": "watchlist",
                 "content_only": False,
-                "user_notification": Filter.notify_user_rich_embeds,
-                "notification_msg": (
-                    "Your post has been removed because it contained a rich embed. "
-                    "This indicates that you're either using an unofficial discord client or are using a self-bot, "
-                    f"both of which violate Discord's Terms of Service. {_staff_mistake_str}\n\n"
-                    "Please don't use a self-bot or an unofficial Discord client on our server."
-                )
             },
             "watch_words": {
                 "enabled": Filter.watch_words,
@@ -107,10 +102,14 @@ class Filtering:
     async def on_message(self, msg: Message):
         await self._filter_message(msg)
 
-    async def on_message_edit(self, _: Message, after: Message):
-        await self._filter_message(after)
+    async def on_message_edit(self, before: Message, after: Message):
+        if not before.edited_at:
+            delta = relativedelta(after.edited_at, before.created_at).microseconds
+        else:
+            delta = None
+        await self._filter_message(after, delta)
 
-    async def _filter_message(self, msg: Message):
+    async def _filter_message(self, msg: Message, delta: Optional[int] = None):
         """
         Whenever a message is sent or edited,
         run it through our filters to see if it
@@ -141,6 +140,13 @@ class Filtering:
             for filter_name, _filter in self.filters.items():
                 # Is this specific filter enabled in the config?
                 if _filter["enabled"]:
+                    # Double trigger check for the embeds filter
+                    if filter_name == "watch_rich_embeds":
+                        # If the edit delta is less than 0.001 seconds, then we're probably dealing
+                        # with a double filter trigger.
+                        if delta is not None and delta < 100:
+                            return
+
                     # Does the filter only need the message content or the full message?
                     if _filter["content_only"]:
                         triggered = await _filter["function"](msg.content)
@@ -183,7 +189,7 @@ class Filtering:
 
                         log.debug(message)
 
-                        additional_embeds = msg.embeds if filter_name == "filter_rich_embeds" else None
+                        additional_embeds = msg.embeds if filter_name == "watch_rich_embeds" else None
 
                         # Send pretty mod log embed to mod-alerts
                         await self.mod_log.send_log_message(
@@ -311,11 +317,13 @@ class Filtering:
     @staticmethod
     async def _has_rich_embed(msg: Message):
         """
-        Returns True if any of the embeds in the message
-        are of type 'rich', returns False otherwise
+        Returns True if any of the embeds in the message are of type 'rich', but are not twitter
+        embeds. Returns False otherwise.
         """
         if msg.embeds:
-            return any(embed.type == "rich" for embed in msg.embeds)
+            for embed in msg.embeds:
+                if embed.type == "rich" and (not embed.url or "twitter.com" not in embed.url):
+                    return True
         return False
 
     async def notify_member(self, filtered_member: Member, reason: str, channel: TextChannel):

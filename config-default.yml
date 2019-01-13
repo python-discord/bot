@@ -140,7 +140,7 @@ filter:
     filter_zalgo:       false
     filter_invites:     true
     filter_domains:     true
-    filter_rich_embeds: false
+    watch_rich_embeds:  true
     watch_words:        true
     watch_tokens:       true
 
@@ -149,7 +149,6 @@ filter:
     notify_user_zalgo:       false
     notify_user_invites:     true
     notify_user_domains:     false
-    notify_user_rich_embeds: true
 
     # Filter configuration
     ping_everyone: true  # Ping @everyone when we send a mod-alert?
