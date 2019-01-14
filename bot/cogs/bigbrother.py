@@ -379,8 +379,8 @@ class BigBrother:
         """
         Nominates a user for the helper role by adding them to the talent-pool channel
 
-        A `reason` for watching is required, which is added for the user to be watched as a
-        note (aka: shadow warning)
+        A `reason` for the nomination is required and will be added as a note to
+        the user's records.
         """
 
         # Note: This function is called from HelperNomination.nominate_command so that the
