@@ -8,32 +8,25 @@ from discord import (
     Colour, Embed, Forbidden, HTTPException,
     Message, RawReactionActionEvent, TextChannel
 )
-from discord.ext.commands import Bot, CommandError, command
+from discord.ext.commands import Bot, CommandError, group
 from discord.utils import get
 
-from bot.constants import Channels, Colours, Guild, Keys, Roles, URLs
+from bot.constants import (
+    Channels, Colours, Emojis, Filter,
+    Guild, Keys, Roles, URLs
+)
 from bot.decorators import with_role
 
 
-LVL1_STAR = "\u2b50"
-LVL2_STAR = "\U0001f31f"
-LVL3_STAR = "\U0001f4ab"
-LVL4_STAR = "\u2728"
-
-YES_EMOJI = "\u2705"
-NO_EMOJI = "\u274e"
-OK_HAND = "\U0001f44c"
+log = logging.getLogger(__name__)
 
 THRESHOLDS = {
-    LVL1_STAR: 2,
-    LVL2_STAR: 5,
-    LVL3_STAR: 10,
-    LVL4_STAR: 20
+    Emojis.lvl1_star: 5,
+    Emojis.lvl2_star: 8,
+    Emojis.lvl3_star: 15,
+    Emojis.lvl4_star: 25
 }
-
-ALLOWED_TO_STAR = (Roles.admin, Roles.moderator, Roles.owner, Roles.helpers)
-
-log = logging.getLogger(__name__)
+ALLOWED_TO_DELETE = Filter.allowed_to_delete
 
 
 class NoStarboardException(CommandError):
@@ -67,7 +60,13 @@ class Starboard:
 
         log.debug(f"Populated star_msg_map: {self.star_msg_map}")
 
-    @command(name="deletestarboard")
+    @group(name="starboard")
+    @with_role(*Filter.allowed_to_delete)
+    async def starboard_command_group(self, ctx):
+        """Group command for managing starboard"""
+        await ctx.invoke(self.bot.get_command("help"), "starboard")
+
+    @starboard_command_group.command(name="deleteall")
     @with_role(Roles.owner)
     async def delete_all_star_entries(self, ctx):
         """
@@ -80,11 +79,11 @@ class Starboard:
         """
 
         msg = await ctx.send("This will delete all entries from the starboard, are you sure?")
-        await msg.add_reaction(YES_EMOJI)
-        await msg.add_reaction(NO_EMOJI)
+        await msg.add_reaction(Emojis.yes)
+        await msg.add_reaction(Emojis.no)
 
         def check(r, u):
-            if r.emoji != YES_EMOJI and r.emoji != NO_EMOJI:
+            if r.emoji != Emojis.yes and r.emoji != Emojis.no:
                 return False
 
             if not get(u.roles, id=Roles.owner):
@@ -104,11 +103,11 @@ class Starboard:
             log.debug("No reaction to delete all starboard entries were given.")
             return
 
-        if reaction.emoji == NO_EMOJI:
+        if reaction.emoji == Emojis.no:
             log.info("No was selected to deleting all entries from starboard")
             return
 
-        if reaction.emoji == YES_EMOJI:
+        if reaction.emoji == Emojis.yes:
             # Can never be too sure here.
             response = await self.bot.http_session.delete(
                 url=f"{URLs.site_starboard_api}/delete",
@@ -134,11 +133,11 @@ class Starboard:
                 await ctx.send(embed=embed)
             else:
                 log.info("All entries from starboard was deleted from site db.")
-                await msg.add_reaction(OK_HAND)  # ok hand
+                await msg.add_reaction(Emojis.ok_hand)  # ok hand
                 self.star_msg_map = []
 
-    @command()
-    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    @starboard_command_group.command(name="delete")
+    @with_role(Filter.allowed_to_delete)
     async def delete_starboard_entry(self, ctx, msg_id: int):
         """
         Delete an entry from the starboard.
@@ -204,13 +203,36 @@ class Starboard:
         await original_msg.clear_reactions()
         log.info(f"Cleared all reactions of message {original_id}")
 
-        await ctx.message.add_reaction(OK_HAND)
+        await ctx.message.add_reaction(Emojis.ok_hand)
         await asyncio.sleep(3)
         await ctx.message.delete()
 
-    async def on_raw_reaction_remove(self, payload: RawReactionActionEvent):
+    def failed_these_checks(self, payload: RawReactionActionEvent):
         if payload.guild_id != Guild.id:
-            return log.debug("Reaction was not added in the correct guild.")
+            log.debug("Reaction was not added in the correct guild.")
+            return True
+
+        if payload.emoji.name != Emojis.lvl1_star:
+            log.debug("Invalid emoji was reacted")
+            return True
+
+        if payload.channel_id == Channels.starboard:
+            log.debug("Can't star a message on the starboard.")
+            return True
+
+        guild = self.bot.get_guild(payload.guild_id)
+        starrer_member = guild.get_member(payload.user_id)
+
+        if not any(role.id in Filter.allowed_to_star for role in starrer_member.roles):
+            log.debug("Member was not allowed to star a message")
+            return True
+
+        # didn't fail any checks
+        return False
+
+    async def on_raw_reaction_remove(self, payload: RawReactionActionEvent):
+        if self.failed_these_checks(payload):
+            return
 
         starboard = self.bot.get_channel(Channels.starboard)
         try:
@@ -218,7 +240,7 @@ class Starboard:
         except (KeyError, NoStarboardException) as e:
             return log.exception(e)
 
-        reaction = get(original.reactions, emoji=LVL1_STAR)
+        reaction = get(original.reactions, emoji=Emojis.lvl1_star)
 
         if reaction is None:
             await self.delete_star(original, star_msg)
@@ -226,7 +248,7 @@ class Starboard:
 
         count = reaction.count
 
-        if count < THRESHOLDS[LVL1_STAR]:
+        if count < THRESHOLDS[Emojis.lvl1_star]:
             if star_msg:
                 await self.delete_star(original, star_msg)
                 log.debug("Reaction count did not meet threshold anymore. Deleting entry")
@@ -236,14 +258,8 @@ class Starboard:
         log.debug("Updating existing starboard entry")
 
     async def on_raw_reaction_add(self, payload: RawReactionActionEvent):
-        if payload.guild_id != Guild.id:
-            return log.debug("Reaction was not added in the correct guild.")
-
-        if payload.emoji.name != LVL1_STAR:
-            return log.debug("Invalid emoji was reacted")
-
-        if payload.channel_id == Channels.starboard:
-            return log.debug("Can't star a message on the starboard.")
+        if self.failed_these_checks(payload):
+            return
 
         starboard = self.bot.get_channel(Channels.starboard)
 
@@ -252,7 +268,7 @@ class Starboard:
         except (KeyError, NoStarboardException) as e:
             return log.exception(e)
 
-        reaction = get(original.reactions, emoji=LVL1_STAR)
+        reaction = get(original.reactions, emoji=Emojis.lvl1_star)
 
         if reaction is None:
             await self.delete_star(original, star_msg)
@@ -260,7 +276,7 @@ class Starboard:
 
         count = reaction.count
 
-        if count < THRESHOLDS[LVL1_STAR]:
+        if count < THRESHOLDS[Emojis.lvl1_star]:
             return log.debug("Reaction count did not meet threshold.")
 
         if star_msg is None:
@@ -368,7 +384,7 @@ class Starboard:
 
         try:
             star_msg = await starboard.send(
-                f"{THRESHOLDS[LVL1_STAR]} {LVL1_STAR} {original.channel.mention}",
+                f"{THRESHOLDS[Emojis.lvl1_star]} {Emojis.lvl1_star} {original.channel.mention}",
                 embed=embed
             )
             log.debug(
@@ -408,20 +424,20 @@ class Starboard:
 
         star_embed = star_msg.embeds[0]
 
-        if count < THRESHOLDS[LVL2_STAR]:
-            star = LVL1_STAR
+        if count < THRESHOLDS[Emojis.lvl2_star]:
+            star = Emojis.lvl1_star
             color = Colour.gold()
 
-        elif count < THRESHOLDS[LVL3_STAR]:
-            star = LVL2_STAR
+        elif count < THRESHOLDS[Emojis.lvl3_star]:
+            star = Emojis.lvl2_star
             color = Colour.gold()
 
-        elif count < THRESHOLDS[LVL4_STAR]:
-            star = LVL3_STAR
+        elif count < THRESHOLDS[Emojis.lvl4_star]:
+            star = Emojis.lvl3_star
             color = Colour.orange()
 
         else:
-            star = LVL4_STAR
+            star = Emojis.lvl4_star
             color = Colour.red()
 
         star_embed.color = color

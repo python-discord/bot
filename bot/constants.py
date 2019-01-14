@@ -217,6 +217,9 @@ class Filter(metaclass=YAMLGetter):
     word_watchlist: List[str]
     token_watchlist: List[str]
 
+    allowed_to_delete: List[int]
+    allowed_to_star: List[int]
+
     channel_whitelist: List[int]
     role_whitelist: List[int]
 
@@ -259,6 +262,14 @@ class Emojis(metaclass=YAMLGetter):
     new: str
     pencil: str
     cross_mark: str
+    yes: str
+    no: str
+    ok_hand: str
+
+    lvl1_star: str
+    lvl2_star: str
+    lvl3_star: str
+    lvl4_star: str
 
 
 class Icons(metaclass=YAMLGetter):

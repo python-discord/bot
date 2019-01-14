@@ -36,6 +36,14 @@ style:
         pencil:     "\u270F"
         new:        "\U0001F195"
         cross_mark: "\u274C"
+        yes: "\u2705"
+        no: "\u274e"
+        ok_hand: "\U0001f44c"
+
+        lvl1_star : "\u2b50"
+        lvl2_star : "\U0001f31f"
+        lvl3_star : "\U0001f4ab"
+        lvl4_star : "\u2728"
 
     icons:
         crown_blurple: "https://cdn.discordapp.com/emojis/469964153289965568.png"
@@ -128,7 +136,7 @@ guild:
         muted:             &MUTED_ROLE      277914926603829249
         owner:             &OWNER_ROLE      267627879762755584
         verified:                           352427296948486144
-        helpers:                            267630620367257601
+        helpers:           &HELPER_ROLE     267630620367257601
         rockstars:         &ROCKSTARS_ROLE  458226413825294336
 
 
@@ -190,6 +198,20 @@ filter:
         - cuck(?!oo+)
         - nigg+(?:e*r+|a+h*?|u+h+)s?
         - fag+o+t+s*
+
+    # Filters for starboard adding, and deleting
+    allowed_to_delete:
+        - *OWNER_ROLE
+        - *ADMIN_ROLE
+        - *MOD_ROLE
+
+    allowed_to_star:
+        - *ADMIN_ROLE
+        - *MOD_ROLE
+        - *OWNER_ROLE
+        - *DEVOPS_ROLE
+        - *ROCKSTARS_ROLE
+        - *HELPER_ROLE
 
     # Censor doesn't apply to these
     channel_whitelist:
