@@ -93,6 +93,9 @@ style:
 guild:
     id: 267624335836053506
 
+    categories:
+        python_help:                      356013061213126657
+
     channels:
         admins:            &ADMINS        365960823622991872
         announcements:                    354619224620138496
@@ -146,7 +149,7 @@ filter:
     filter_zalgo:       false
     filter_invites:     true
     filter_domains:     true
-    filter_rich_embeds: true
+    filter_rich_embeds: false
     watch_words:        true
     watch_tokens:       true
 
@@ -263,6 +266,7 @@ urls:
     site_infractions_type:              !JOIN [*SCHEMA, *API, "/bot/infractions/type/{infraction_type}"]
     site_infractions_by_id:             !JOIN [*SCHEMA, *API, "/bot/infractions/id/{infraction_id}"]
     site_infractions_user_type_current: !JOIN [*SCHEMA, *API, "/bot/infractions/user/{user_id}/{infraction_type}/current"]
+    site_infractions_user_type:         !JOIN [*SCHEMA, *API, "/bot/infractions/user/{user_id}/{infraction_type}"]
     site_logs_api:                      !JOIN [*SCHEMA, *API, "/bot/logs"]
     site_logs_view:                     !JOIN [*SCHEMA, *DOMAIN, "/bot/logs"]
     site_names_api:                     !JOIN [*SCHEMA, *API, "/bot/snake_names"]
@@ -358,6 +362,14 @@ wolfram:
 big_brother:
     log_delay: 15
     header_message_limit: 15
+
+
+free:
+    # Seconds to elapse for a channel
+    # to be considered inactive.
+    activity_timeout: 600
+    cooldown_rate: 1
+    cooldown_per: 60.0
 
 
 config:

@@ -25,6 +25,7 @@ class Events:
 
     def __init__(self, bot: Bot):
         self.bot = bot
+        self.headers = {"X-API-KEY": Keys.site_api}
 
     @property
     def mod_log(self) -> ModLog:
@@ -102,6 +103,29 @@ class Events:
 
         resp = await response.json()
         return resp["data"]
+
+    async def has_active_mute(self, user_id: str) -> bool:
+        """
+        Check whether a user has any active mute infractions
+        """
+
+        response = await self.bot.http_session.get(
+            URLs.site_infractions_user.format(
+                user_id=user_id
+            ),
+            params={"hidden": "True"},
+            headers=self.headers
+        )
+        infraction_list = await response.json()
+
+        # Check for active mute infractions
+        if not infraction_list:
+            # Short circuit
+            return False
+
+        return any(
+            infraction["active"] for infraction in infraction_list if infraction["type"].lower() == "mute"
+        )
 
     async def on_command_error(self, ctx: Context, e: CommandError):
         command = ctx.command
@@ -236,6 +260,14 @@ class Events:
 
                 for role in RESTORE_ROLES:
                     if role in old_roles:
+                        # Check for mute roles that were not able to be removed and skip if present
+                        if role == str(Roles.muted) and not await self.has_active_mute(str(member.id)):
+                            log.debug(
+                                f"User {member.id} has no active mute infraction, "
+                                "their leftover muted role will not be persisted"
+                            )
+                            continue
+
                         new_roles.append(Object(int(role)))
 
                 for role in new_roles:

@@ -328,6 +328,13 @@ class CleanMessages(metaclass=YAMLGetter):
     message_limit: int
 
 
+class Categories(metaclass=YAMLGetter):
+    section = "guild"
+    subsection = "categories"
+
+    python_help: int
+
+
 class Channels(metaclass=YAMLGetter):
     section = "guild"
     subsection = "channels"
@@ -477,6 +484,14 @@ class BigBrother(metaclass=YAMLGetter):
 
     log_delay: int
     header_message_limit: int
+
+
+class Free(metaclass=YAMLGetter):
+    section = 'free'
+
+    activity_timeout: int
+    cooldown_rate: int
+    cooldown_per: float
 
 
 # Debug mode
