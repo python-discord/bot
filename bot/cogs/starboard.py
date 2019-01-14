@@ -26,7 +26,6 @@ THRESHOLDS = {
     Emojis.lvl3_star: 15,
     Emojis.lvl4_star: 25
 }
-ALLOWED_TO_DELETE = Filter.allowed_to_delete
 
 
 class NoStarboardException(CommandError):
