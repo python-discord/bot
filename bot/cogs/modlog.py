@@ -432,7 +432,7 @@ class ModLog:
             Icons.user_unban, Colour.blurple(),
             "User unbanned", f"{member.name}#{member.discriminator} (`{member.id}`)",
             thumbnail=member.avatar_url_as(static_format="png"),
-            channel_id=Channels.userlog
+            channel_id=Channels.modlog
         )
 
     async def on_member_update(self, before: Member, after: Member):
