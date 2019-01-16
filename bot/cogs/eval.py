@@ -68,7 +68,7 @@ class CodeEval:
                 # then we get the length
                 # and use `str.rjust()`
                 # to indent it.
-                start = "...:".rjust(len(self.ln) + 2)
+                start = "...: ".rjust(len(str(self.ln)) + 7)
 
             if i == len(lines) - 2:
                 if line.startswith("return"):

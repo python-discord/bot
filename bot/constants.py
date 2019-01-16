@@ -201,8 +201,15 @@ class Filter(metaclass=YAMLGetter):
     filter_zalgo: bool
     filter_invites: bool
     filter_domains: bool
+    filter_rich_embeds: bool
     watch_words: bool
     watch_tokens: bool
+
+    # Notifications are not expected for "watchlist" type filters
+    notify_user_zalgo: bool
+    notify_user_invites: bool
+    notify_user_domains: bool
+    notify_user_rich_embeds: bool
 
     ping_everyone: bool
     guild_invite_whitelist: List[int]
@@ -310,6 +317,13 @@ class CleanMessages(metaclass=YAMLGetter):
     message_limit: int
 
 
+class Categories(metaclass=YAMLGetter):
+    section = "guild"
+    subsection = "categories"
+
+    python_help: int
+
+
 class Channels(metaclass=YAMLGetter):
     section = "guild"
     subsection = "channels"
@@ -319,6 +333,7 @@ class Channels(metaclass=YAMLGetter):
     big_brother_logs: int
     bot: int
     checkpoint_test: int
+    defcon: int
     devalerts: int
     devlog: int
     devtest: int
@@ -456,6 +471,14 @@ class BigBrother(metaclass=YAMLGetter):
 
     log_delay: int
     header_message_limit: int
+
+
+class Free(metaclass=YAMLGetter):
+    section = 'free'
+
+    activity_timeout: int
+    cooldown_rate: int
+    cooldown_per: float
 
 
 # Debug mode

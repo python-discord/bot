@@ -2,8 +2,10 @@ import asyncio
 import logging
 import re
 from collections import defaultdict, deque
+from time import strptime, struct_time
 from typing import List, Union
 
+from aiohttp import ClientError
 from discord import Color, Embed, Guild, Member, Message, TextChannel, User
 from discord.ext.commands import Bot, Context, group
 
@@ -26,9 +28,11 @@ class BigBrother:
     def __init__(self, bot: Bot):
         self.bot = bot
         self.watched_users = {}  # { user_id: log_channel_id }
+        self.watch_reasons = {}  # { user_id: watch_reason }
         self.channel_queues = defaultdict(lambda: defaultdict(deque))  # { user_id: { channel_id: queue(messages) }
         self.last_log = [None, None, 0]  # [user_id, channel_id, message_count]
         self.consuming = False
+        self.infraction_watch_prefix = "bb watch: "  # Please do not change or we won't be able to find old reasons
 
         self.bot.loop.create_task(self.get_watched_users())
 
@@ -62,6 +66,42 @@ class BigBrother:
             data = await response.json()
             self.update_cache(data)
 
+    async def get_watch_reason(self, user_id: int) -> str:
+        """ Fetches and returns the latest watch reason for a user using the infraction API """
+
+        re_bb_watch = rf"^{self.infraction_watch_prefix}"
+        user_id = str(user_id)
+
+        try:
+            response = await self.bot.http_session.get(
+                URLs.site_infractions_user_type.format(
+                    user_id=user_id,
+                    infraction_type="note",
+                ),
+                params={"search": re_bb_watch, "hidden": "True", "active": "False"},
+                headers=self.HEADERS
+            )
+            infraction_list = await response.json()
+        except ClientError:
+            log.exception(f"Failed to retrieve bb watch reason for {user_id}.")
+            return "(error retrieving bb reason)"
+
+        if infraction_list:
+            latest_reason_infraction = max(infraction_list, key=self._parse_infraction_time)
+            latest_reason = latest_reason_infraction['reason'][len(self.infraction_watch_prefix):]
+            log.trace(f"The latest bb watch reason for {user_id}: {latest_reason}")
+            return latest_reason
+
+        log.trace(f"No bb watch reason found for {user_id}; returning default string")
+        return "(no reason specified)"
+
+    @staticmethod
+    def _parse_infraction_time(infraction: str) -> struct_time:
+        """Takes RFC1123 date_time string and returns time object for sorting purposes"""
+
+        date_string = infraction["inserted_at"]
+        return strptime(date_string, "%a, %d %b %Y %H:%M:%S %Z")
+
     async def on_member_ban(self, guild: Guild, user: Union[User, Member]):
         if guild.id == GuildConfig.id and user.id in self.watched_users:
             url = f"{URLs.site_bigbrother_api}?user_id={user.id}"
@@ -70,6 +110,7 @@ class BigBrother:
             async with self.bot.http_session.delete(url, headers=self.HEADERS) as response:
                 del self.watched_users[user.id]
                 del self.channel_queues[user.id]
+                del self.watch_reasons[user.id]
                 if response.status == 204:
                     await channel.send(
                         f"{Emojis.bb_message}:hammer: {user} got banned, so "
@@ -139,10 +180,17 @@ class BigBrother:
 
         # Send header if user/channel are different or if message limit exceeded.
         if message.author.id != last_user or message.channel.id != last_channel or msg_count > limit:
+            # Retrieve watch reason from API if it's not already in the cache
+            if message.author.id not in self.watch_reasons:
+                log.trace(f"No watch reason for {message.author.id} found in cache; retrieving from API")
+                user_watch_reason = await self.get_watch_reason(message.author.id)
+                self.watch_reasons[message.author.id] = user_watch_reason
+
             self.last_log = [message.author.id, message.channel.id, 0]
 
             embed = Embed(description=f"{message.author.mention} in [#{message.channel.name}]({message.jump_url})")
             embed.set_author(name=message.author.nick or message.author.name, icon_url=message.author.avatar_url)
+            embed.set_footer(text=f"Watch reason: {self.watch_reasons[message.author.id]}")
             await destination.send(embed=embed)
 
     @staticmethod
@@ -246,15 +294,15 @@ class BigBrother:
                     )
                 else:
                     self.watched_users[user.id] = channel
+                    self.watch_reasons[user.id] = reason
 
+                    # Add a note (shadow warning) with the reason for watching
+                    reason = f"{self.infraction_watch_prefix}{reason}"
+                    await post_infraction(ctx, user, type="warning", reason=reason, hidden=True)
             else:
                 data = await response.json()
-                reason = data.get('error_message', "no message provided")
-                await ctx.send(f":x: the API returned an error: {reason}")
-
-        # Add a note (shadow warning) with the reason for watching
-        reason = "bb watch: " + reason  # Prepend for situational awareness
-        await post_infraction(ctx, user, type="warning", reason=reason, hidden=True)
+                error_reason = data.get('error_message', "no message provided")
+                await ctx.send(f":x: the API returned an error: {error_reason}")
 
     @bigbrother_group.command(name='unwatch', aliases=('uw',))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
@@ -270,6 +318,8 @@ class BigBrother:
                     del self.watched_users[user.id]
                     if user.id in self.channel_queues:
                         del self.channel_queues[user.id]
+                    if user.id in self.watch_reasons:
+                        del self.watch_reasons[user.id]
                 else:
                     log.warning(f"user {user.id} was unwatched but was not found in the cache")
 
