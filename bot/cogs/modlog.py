@@ -705,7 +705,7 @@ class ModLog:
 
         await self.send_log_message(
             Icons.message_edit, Colour.blurple(), "Message edited (Before)", before_response,
-            channel_id=Channels.message_log, timestamp_override=timestamp, footer_override=footer
+            channel_id=Channels.message_log, timestamp_override=timestamp, footer=footer
         )
 
         await self.send_log_message(
