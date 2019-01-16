@@ -113,8 +113,12 @@ class BigBrother:
         return WatchInformation(reason="(no reason specified)", actor_id=None, inserted_at=None)
 
     @staticmethod
-    def _parse_infraction_time(infraction: str) -> struct_time:
-        """Takes RFC1123 date_time string and returns time object for sorting purposes"""
+    def _parse_infraction_time(infraction: dict) -> struct_time:
+        """
+        Helper function that retrieves the insertion time from the infraction dictionary,
+        converts the retrieved RFC1123 date_time string to a time object, and returns it
+        so infractions can be sorted by their insertion time.
+        """
 
         date_string = infraction["inserted_at"]
         return strptime(date_string, "%a, %d %b %Y %H:%M:%S %Z")
