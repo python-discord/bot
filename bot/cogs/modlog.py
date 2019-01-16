@@ -382,7 +382,7 @@ class ModLog:
             Icons.user_ban, Colour(Colours.soft_red),
             "User banned", f"{member.name}#{member.discriminator} (`{member.id}`)",
             thumbnail=member.avatar_url_as(static_format="png"),
-            channel_id=Channels.userlog
+            channel_id=Channels.modlog
         )
 
     async def on_member_join(self, member: Member):
