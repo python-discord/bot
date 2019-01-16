@@ -25,7 +25,7 @@ style:
         green_chevron: "<:greenchevron:418104310329769993>"
         red_chevron:   "<:redchevron:418112778184818698>"
         white_chevron: "<:whitechevron:418110396973711363>"
-        bb_message:    "<:bbmessage:472476937504423936>"
+        bb_message:    "<:bbmessage:476273120999636992>"
 
         status_online:  "<:status_online:470326272351010816>"
         status_idle:    "<:status_idle:470326266625785866>"
@@ -85,6 +85,9 @@ style:
 guild:
     id: 267624335836053506
 
+    categories:
+        python_help:                      356013061213126657
+
     channels:
         admins:            &ADMINS        365960823622991872
         announcements:                    354619224620138496
@@ -134,17 +137,19 @@ guild:
 filter:
 
     # What do we filter?
-    filter_zalgo:   false
-    filter_invites: true
-    filter_domains: true
-    watch_words:    true
-    watch_tokens:   true
+    filter_zalgo:       false
+    filter_invites:     true
+    filter_domains:     true
+    filter_rich_embeds: false
+    watch_words:        true
+    watch_tokens:       true
 
     # Notify user on filter?
     # Notifications are not expected for "watchlist" type filters
-    notify_user_zalgo:   false
-    notify_user_invites: true
-    notify_user_domains: false
+    notify_user_zalgo:       false
+    notify_user_invites:     true
+    notify_user_domains:     false
+    notify_user_rich_embeds: true
 
     # Filter configuration
     ping_everyone: true  # Ping @everyone when we send a mod-alert?
@@ -154,6 +159,8 @@ filter:
         - 267624335836053506  # Python Discord
         - 440186186024222721  # Python Discord: ModLog Emojis
         - 273944235143593984  # STEM
+        - 348658686962696195  # RLBot
+        - 531221516914917387  # Pallets
 
     domain_blacklist:
         - pornhub.com
@@ -236,6 +243,7 @@ urls:
     site_infractions_type:              !JOIN [*SCHEMA, *API, "/bot/infractions/type/{infraction_type}"]
     site_infractions_by_id:             !JOIN [*SCHEMA, *API, "/bot/infractions/id/{infraction_id}"]
     site_infractions_user_type_current: !JOIN [*SCHEMA, *API, "/bot/infractions/user/{user_id}/{infraction_type}/current"]
+    site_infractions_user_type:         !JOIN [*SCHEMA, *API, "/bot/infractions/user/{user_id}/{infraction_type}"]
     site_logs_api:                      !JOIN [*SCHEMA, *API, "/bot/logs"]
     site_logs_view:                     !JOIN [*SCHEMA, *DOMAIN, "/bot/logs"]
     site_names_api:                     !JOIN [*SCHEMA, *API, "/bot/snake_names"]
@@ -330,6 +338,14 @@ wolfram:
 big_brother:
     log_delay: 15
     header_message_limit: 15
+
+
+free:
+    # Seconds to elapse for a channel
+    # to be considered inactive.
+    activity_timeout: 600
+    cooldown_rate: 1
+    cooldown_per: 60.0
 
 
 config:
