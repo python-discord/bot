@@ -104,9 +104,19 @@ class ModLog:
                 self._ignored[event].append(item)
 
     async def send_log_message(
-            self, icon_url: Optional[str], colour: Colour, title: Optional[str], text: str,
-            thumbnail: str = None, channel_id: int = Channels.modlog, ping_everyone: bool = False,
-            files: List[File] = None, content: str = None, additional_embeds: List[Embed] = None,
+            self,
+            icon_url: Optional[str],
+            colour: Colour,
+            title: Optional[str],
+            text: str,
+            thumbnail: Optional[str] = None,
+            channel_id: int = Channels.modlog,
+            ping_everyone: bool = False,
+            files: Optional[List[File]] = None,
+            content: Optional[str] = None,
+            additional_embeds: Optional[List[Embed]] = None,
+            timestamp_override: Optional[datetime.datetime] = None,
+            footer: Optional[str] = None,
     ):
         embed = Embed(description=text)
 
@@ -114,9 +124,13 @@ class ModLog:
             embed.set_author(name=title, icon_url=icon_url)
 
         embed.colour = colour
-        embed.timestamp = datetime.datetime.utcnow()
 
-        if thumbnail is not None:
+        embed.timestamp = timestamp_override or datetime.datetime.utcnow()
+
+        if footer:
+            embed.set_footer(text=footer)
+
+        if thumbnail:
             embed.set_thumbnail(url=thumbnail)
 
         if ping_everyone:
@@ -126,13 +140,14 @@ class ModLog:
                 content = "@everyone"
 
         channel = self.bot.get_channel(channel_id)
-
-        await channel.send(content=content, embed=embed, files=files)
+        log_message = await channel.send(content=content, embed=embed, files=files)
 
         if additional_embeds:
             await channel.send("With the following embed(s):")
             for additional_embed in additional_embeds:
                 await channel.send(embed=additional_embed)
+
+        return await self.bot.get_context(log_message)  # Optionally return for use with antispam
 
     async def on_guild_channel_create(self, channel: GUILD_CHANNEL):
         if channel.guild.id != GuildConstant.id:
@@ -366,7 +381,8 @@ class ModLog:
         await self.send_log_message(
             Icons.user_ban, Colour(Colours.soft_red),
             "User banned", f"{member.name}#{member.discriminator} (`{member.id}`)",
-            thumbnail=member.avatar_url_as(static_format="png")
+            thumbnail=member.avatar_url_as(static_format="png"),
+            channel_id=Channels.modlog
         )
 
     async def on_member_join(self, member: Member):
@@ -385,7 +401,8 @@ class ModLog:
         await self.send_log_message(
             Icons.sign_in, Colour(Colours.soft_green),
             "User joined", message,
-            thumbnail=member.avatar_url_as(static_format="png")
+            thumbnail=member.avatar_url_as(static_format="png"),
+            channel_id=Channels.userlog
         )
 
     async def on_member_remove(self, member: Member):
@@ -399,7 +416,8 @@ class ModLog:
         await self.send_log_message(
             Icons.sign_out, Colour(Colours.soft_red),
             "User left", f"{member.name}#{member.discriminator} (`{member.id}`)",
-            thumbnail=member.avatar_url_as(static_format="png")
+            thumbnail=member.avatar_url_as(static_format="png"),
+            channel_id=Channels.userlog
         )
 
     async def on_member_unban(self, guild: Guild, member: User):
@@ -413,7 +431,8 @@ class ModLog:
         await self.send_log_message(
             Icons.user_unban, Colour.blurple(),
             "User unbanned", f"{member.name}#{member.discriminator} (`{member.id}`)",
-            thumbnail=member.avatar_url_as(static_format="png")
+            thumbnail=member.avatar_url_as(static_format="png"),
+            channel_id=Channels.modlog
         )
 
     async def on_member_update(self, before: Member, after: Member):
@@ -501,7 +520,8 @@ class ModLog:
         await self.send_log_message(
             Icons.user_update, Colour.blurple(),
             "Member updated", message,
-            thumbnail=after.avatar_url_as(static_format="png")
+            thumbnail=after.avatar_url_as(static_format="png"),
+            channel_id=Channels.userlog
         )
 
     async def on_raw_bulk_message_delete(self, event: RawBulkMessageDeleteEvent):
@@ -675,14 +695,27 @@ class ModLog:
                 f"{after.clean_content}"
             )
 
+        if before.edited_at:
+            # Message was previously edited, to assist with self-bot detection, use the edited_at
+            # datetime as the baseline and create a human-readable delta between this edit event
+            # and the last time the message was edited
+            timestamp = before.edited_at
+            delta = humanize_delta(relativedelta(after.edited_at, before.edited_at))
+            footer = f"Last edited {delta} ago"
+        else:
+            # Message was not previously edited, use the created_at datetime as the baseline, no
+            # delta calculation needed
+            timestamp = before.created_at
+            footer = None
+
         await self.send_log_message(
-            Icons.message_edit, Colour.blurple(), "Message edited (Before)",
-            before_response, channel_id=Channels.message_log
+            Icons.message_edit, Colour.blurple(), "Message edited (Before)", before_response,
+            channel_id=Channels.message_log, timestamp_override=timestamp, footer=footer
         )
 
         await self.send_log_message(
-            Icons.message_edit, Colour.blurple(), "Message edited (After)",
-            after_response, channel_id=Channels.message_log
+            Icons.message_edit, Colour.blurple(), "Message edited (After)", after_response,
+            channel_id=Channels.message_log, timestamp_override=after.edited_at
         )
 
     async def on_raw_message_edit(self, event: RawMessageUpdateEvent):
