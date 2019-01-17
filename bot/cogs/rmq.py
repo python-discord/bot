@@ -92,7 +92,7 @@ class RMQ:
         try:
             data = json.loads(data)
         except Exception:
-            await self.do_mod_log("error", "Unable to parse event", data)
+            await self.send_log("error", "Unable to parse event", data)
         else:
             event = data["event"]
             event_data = data["data"]
@@ -101,33 +101,33 @@ class RMQ:
                 func = getattr(self, f"do_{event}")
                 await func(**event_data)
             except Exception as e:
-                await self.do_mod_log(
+                await self.send_log(
                     "error", f"Unable to handle event: {event}",
                     str(e)
                 )
 
-    async def do_mod_log(self, level: str, title: str, message: str):
+    async def send_log(self, level: str, title: str, message: str):
         colour = LEVEL_COLOURS.get(level, DEFAULT_LEVEL_COLOUR)
         embed = Embed(
             title=title, description=f"```\n{message}\n```",
-            colour=colour, timestamp=datetime.datetime.now()
+            colour=colour, timestamp=datetime.datetime.utcnow()
         )
 
-        await self.bot.get_channel(Channels.modlog).send(embed=embed)
+        await self.bot.get_channel(Channels.devlog).send(embed=embed)
         log.log(logging._nameToLevel[level.upper()], f"Modlog: {title} | {message}")
 
     async def do_send_message(self, target: int, message: str):
         channel = self.bot.get_channel(target)
 
         if channel is None:
-            await self.do_mod_log(
+            await self.send_log(
                 "error", "Failed: Send Message",
                 f"Unable to find channel: {target}"
             )
         else:
             await channel.send(message)
 
-            await self.do_mod_log(
+            await self.send_log(
                 "info", "Succeeded: Send Embed",
                 f"Message sent to channel {target}\n\n{message}"
             )
@@ -135,7 +135,7 @@ class RMQ:
     async def do_send_embed(self, target: int, **embed_params):
         for param, value in list(embed_params.items()):  # To keep a full copy
             if param not in EMBED_PARAMS:
-                await self.do_mod_log(
+                await self.send_log(
                     "warning", "Warning: Send Embed",
                     f"Unknown embed parameter: {param}"
                 )
@@ -149,14 +149,14 @@ class RMQ:
         channel = self.bot.get_channel(target)
 
         if channel is None:
-            await self.do_mod_log(
+            await self.send_log(
                 "error", "Failed: Send Embed",
                 f"Unable to find channel: {target}"
             )
         else:
             await channel.send(embed=Embed(**embed_params))
 
-            await self.do_mod_log(
+            await self.send_log(
                 "info", "Succeeded: Send Embed",
                 f"Embed sent to channel {target}\n\n{pprint.pformat(embed_params, 4)}"
             )
@@ -166,7 +166,7 @@ class RMQ:
         member = guild.get_member(int(target))
 
         if member is None:
-            return await self.do_mod_log(
+            return await self.send_log(
                 "error", "Failed: Add Role",
                 f"Unable to find member: {target}"
             )
@@ -174,7 +174,7 @@ class RMQ:
         role = get(guild.roles, id=int(role_id))
 
         if role is None:
-            return await self.do_mod_log(
+            return await self.send_log(
                 "error", "Failed: Add Role",
                 f"Unable to find role: {role_id}"
             )
@@ -182,12 +182,12 @@ class RMQ:
         try:
             await member.add_roles(role, reason=reason)
         except Exception as e:
-            await self.do_mod_log(
+            await self.send_log(
                 "error", "Failed: Add Role",
                 f"Error while adding role {role.name}: {e}"
             )
         else:
-            await self.do_mod_log(
+            await self.send_log(
                 "info", "Succeeded: Add Role",
                 f"Role {role.name} added to member {target}"
             )
@@ -197,7 +197,7 @@ class RMQ:
         member = guild.get_member(int(target))
 
         if member is None:
-            return await self.do_mod_log(
+            return await self.send_log(
                 "error", "Failed: Remove Role",
                 f"Unable to find member: {target}"
             )
@@ -205,7 +205,7 @@ class RMQ:
         role = get(guild.roles, id=int(role_id))
 
         if role is None:
-            return await self.do_mod_log(
+            return await self.send_log(
                 "error", "Failed: Remove Role",
                 f"Unable to find role: {role_id}"
             )
@@ -213,12 +213,12 @@ class RMQ:
         try:
             await member.remove_roles(role, reason=reason)
         except Exception as e:
-            await self.do_mod_log(
+            await self.send_log(
                 "error", "Failed: Remove Role",
                 f"Error while adding role {role.name}: {e}"
             )
         else:
-            await self.do_mod_log(
+            await self.send_log(
                 "info", "Succeeded: Remove Role",
                 f"Role {role.name} removed from member {target}"
             )
