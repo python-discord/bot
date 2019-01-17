@@ -31,6 +31,11 @@ Above all, the needs of our community should come before the wants of an individ
 All projects evolve over time, and this contribution guide is no different. This document is open to pull requests or changes by contributors. If you believe you have something valuable to add or change, please don't hesitate to do so in a PR.
 
 ##  Supplemental Information
+### Developer Environment
+A working environment for the [PyDis site](https://github.com/python-discord/site) is required to develop the bot. Instructions for setting up environments for both the site and the bot can be found on the PyDis Wiki:
+  * [Site](https://wiki.pythondiscord.com/wiki/contributing/project/site)
+  * [Bot](https://wiki.pythondiscord.com/wiki/contributing/project/bot)
+
 ### Logging levels
 The project currently defines [`logging`](https://docs.python.org/3/library/logging.html) levels as follows:
 * **TRACE:** Use this for tracing every step of a complex process. That way we can see which step of the process failed. Err on the side of verbose. **Note:** This is a PyDis-implemented logging level.
