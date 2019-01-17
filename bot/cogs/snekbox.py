@@ -31,7 +31,7 @@ try:
 {CODE}
 except:
     import traceback
-    print(traceback.format_exc(), end='')
+    print(traceback.format_exc())
 """
 
 ESCAPE_REGEX = re.compile("[`\u202E\u200B]{3,}")
