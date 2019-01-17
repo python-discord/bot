@@ -116,7 +116,7 @@ class ModLog:
             content: Optional[str] = None,
             additional_embeds: Optional[List[Embed]] = None,
             timestamp_override: Optional[datetime.datetime] = None,
-            footer_override: Optional[str] = None,
+            footer: Optional[str] = None,
     ):
         embed = Embed(description=text)
 
@@ -127,8 +127,8 @@ class ModLog:
 
         embed.timestamp = timestamp_override or datetime.datetime.utcnow()
 
-        if footer_override:
-            embed.set_footer(text=footer_override)
+        if footer:
+            embed.set_footer(text=footer)
 
         if thumbnail:
             embed.set_thumbnail(url=thumbnail)
@@ -381,7 +381,8 @@ class ModLog:
         await self.send_log_message(
             Icons.user_ban, Colour(Colours.soft_red),
             "User banned", f"{member.name}#{member.discriminator} (`{member.id}`)",
-            thumbnail=member.avatar_url_as(static_format="png")
+            thumbnail=member.avatar_url_as(static_format="png"),
+            channel_id=Channels.modlog
         )
 
     async def on_member_join(self, member: Member):
@@ -400,7 +401,8 @@ class ModLog:
         await self.send_log_message(
             Icons.sign_in, Colour(Colours.soft_green),
             "User joined", message,
-            thumbnail=member.avatar_url_as(static_format="png")
+            thumbnail=member.avatar_url_as(static_format="png"),
+            channel_id=Channels.userlog
         )
 
     async def on_member_remove(self, member: Member):
@@ -414,7 +416,8 @@ class ModLog:
         await self.send_log_message(
             Icons.sign_out, Colour(Colours.soft_red),
             "User left", f"{member.name}#{member.discriminator} (`{member.id}`)",
-            thumbnail=member.avatar_url_as(static_format="png")
+            thumbnail=member.avatar_url_as(static_format="png"),
+            channel_id=Channels.userlog
         )
 
     async def on_member_unban(self, guild: Guild, member: User):
@@ -428,7 +431,8 @@ class ModLog:
         await self.send_log_message(
             Icons.user_unban, Colour.blurple(),
             "User unbanned", f"{member.name}#{member.discriminator} (`{member.id}`)",
-            thumbnail=member.avatar_url_as(static_format="png")
+            thumbnail=member.avatar_url_as(static_format="png"),
+            channel_id=Channels.modlog
         )
 
     async def on_member_update(self, before: Member, after: Member):
@@ -516,7 +520,8 @@ class ModLog:
         await self.send_log_message(
             Icons.user_update, Colour.blurple(),
             "Member updated", message,
-            thumbnail=after.avatar_url_as(static_format="png")
+            thumbnail=after.avatar_url_as(static_format="png"),
+            channel_id=Channels.userlog
         )
 
     async def on_raw_bulk_message_delete(self, event: RawBulkMessageDeleteEvent):
@@ -705,7 +710,7 @@ class ModLog:
 
         await self.send_log_message(
             Icons.message_edit, Colour.blurple(), "Message edited (Before)", before_response,
-            channel_id=Channels.message_log, timestamp_override=timestamp, footer_override=footer
+            channel_id=Channels.message_log, timestamp_override=timestamp, footer=footer
         )
 
         await self.send_log_message(

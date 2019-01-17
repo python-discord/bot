@@ -114,6 +114,7 @@ guild:
         python:                           267624335836053506
         reddit:                           458224812528238616
         staff_lounge:      &STAFF_LOUNGE  464905259261755392
+        userlog:                          528976905546760203
         verification:                     352442727016693763
 
     ignored: [*ADMINS, *MESSAGE_LOG, *MODLOG]
@@ -140,7 +141,7 @@ filter:
     filter_zalgo:       false
     filter_invites:     true
     filter_domains:     true
-    filter_rich_embeds: false
+    watch_rich_embeds:  true
     watch_words:        true
     watch_tokens:       true
 
@@ -149,7 +150,6 @@ filter:
     notify_user_zalgo:       false
     notify_user_invites:     true
     notify_user_domains:     false
-    notify_user_rich_embeds: true
 
     # Filter configuration
     ping_everyone: true  # Ping @everyone when we send a mod-alert?
