@@ -201,7 +201,7 @@ class Filter(metaclass=YAMLGetter):
     filter_zalgo: bool
     filter_invites: bool
     filter_domains: bool
-    filter_rich_embeds: bool
+    watch_rich_embeds: bool
     watch_words: bool
     watch_tokens: bool
 
@@ -209,7 +209,6 @@ class Filter(metaclass=YAMLGetter):
     notify_user_zalgo: bool
     notify_user_invites: bool
     notify_user_domains: bool
-    notify_user_rich_embeds: bool
 
     ping_everyone: bool
     guild_invite_whitelist: List[int]
@@ -352,6 +351,7 @@ class Channels(metaclass=YAMLGetter):
     off_topic_3: int
     python: int
     reddit: int
+    userlog: int
     verification: int
 
 
