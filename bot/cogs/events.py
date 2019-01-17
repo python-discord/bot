@@ -1,4 +1,5 @@
 import logging
+from functools import partial
 
 from discord import Colour, Embed, Member, Object
 from discord.ext.commands import (
@@ -7,7 +8,6 @@ from discord.ext.commands import (
     Context, NoPrivateMessage, UserInputError
 )
 
-from bot.cogs.modlog import ModLog
 from bot.constants import (
     Channels, Colours, DEBUG_MODE,
     Guild, Icons, Keys,
@@ -28,8 +28,9 @@ class Events:
         self.headers = {"X-API-KEY": Keys.site_api}
 
     @property
-    def mod_log(self) -> ModLog:
-        return self.bot.get_cog("ModLog")
+    def send_log(self) -> partial:
+        cog = self.bot.get_cog("ModLog")
+        return partial(cog.send_log_message, channel_id=Channels.userlog)
 
     async def send_updated_users(self, *users, replace_all=False):
         users = list(filter(lambda user: str(Roles.verified) in user["roles"], users))
@@ -249,7 +250,7 @@ class Events:
         except Exception as e:
             log.exception("Failed to persist roles")
 
-            await self.mod_log.send_log_message(
+            await self.send_log(
                 Icons.crown_red, Colour(Colours.soft_red), "Failed to persist roles",
                 f"```py\n{e}\n```",
                 member.avatar_url_as(static_format="png")
@@ -290,7 +291,7 @@ class Events:
                 reason="Roles restored"
             )
 
-            await self.mod_log.send_log_message(
+            await self.send_log(
                 Icons.crown_blurple, Colour.blurple(), "Roles restored",
                 f"Restored {len(new_roles)} roles",
                 member.avatar_url_as(static_format="png")
