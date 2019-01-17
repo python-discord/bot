@@ -114,6 +114,7 @@ guild:
         python:                           267624335836053506
         reddit:                           458224812528238616
         staff_lounge:      &STAFF_LOUNGE  464905259261755392
+        userlog:                          528976905546760203
         verification:                     352442727016693763
 
     ignored: [*ADMINS, *MESSAGE_LOG, *MODLOG]
