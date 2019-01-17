@@ -1243,7 +1243,7 @@ class Moderation(Scheduler):
 
     async def respect_role_hierarchy(self, ctx: Context, target: Member, infraction_type: str) -> bool:
         """
-        Check if the highest role of the invoking member is less than or equal to the target member
+        Check if the highest role of the invoking member is greater than that of the target member
 
         If this check fails, a warning is sent to the invoking ctx
 
@@ -1251,19 +1251,18 @@ class Moderation(Scheduler):
         checks & conversions in a dedicated check decorater
         """
 
-        # Build role hierarchy
         actor = ctx.author
-        role_hierarchy = {role: rank for rank, role in enumerate(reversed(ctx.guild.roles))}
-        hierarchy_check = role_hierarchy[actor.top_role] <= role_hierarchy[target.top_role]
-
-        if not hierarchy_check:
+        target_is_lower = target.top_role < actor.top_role
+        if not target_is_lower:
             log.info(
                 f"{actor} ({actor.id}) attempted to {infraction_type} "
-                f"{target} ({target.id}), who has a higher top role"
+                f"{target} ({target.id}), who has an equal or higher top role"
             )
-            await ctx.send(f":x: {actor.mention}, you may not {infraction_type} someone with a higher top role")
+            await ctx.send(
+                f":x: {actor.mention}, you may not {infraction_type} someone with an equal or higher top role"
+            )
 
-        return hierarchy_check
+        return target_is_lower
 
 
 def setup(bot):
