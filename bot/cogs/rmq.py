@@ -110,10 +110,10 @@ class RMQ:
         colour = LEVEL_COLOURS.get(level, DEFAULT_LEVEL_COLOUR)
         embed = Embed(
             title=title, description=f"```\n{message}\n```",
-            colour=colour, timestamp=datetime.datetime.now()
+            colour=colour, timestamp=datetime.datetime.utcnow()
         )
 
-        await self.bot.get_channel(Channels.modlog).send(embed=embed)
+        await self.bot.get_channel(Channels.devlog).send(embed=embed)
         log.log(logging._nameToLevel[level.upper()], f"Modlog: {title} | {message}")
 
     async def do_send_message(self, target: int, message: str):
