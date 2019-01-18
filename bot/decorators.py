@@ -1,7 +1,7 @@
 import logging
 import random
 import typing
-from asyncio import Lock
+from asyncio import Lock, sleep
 from functools import wraps
 from weakref import WeakValueDictionary
 
@@ -98,5 +98,34 @@ def locked():
 
             async with func.__locks.setdefault(ctx.author.id, Lock()):
                 return await func(self, ctx, *args, **kwargs)
+        return inner
+    return wrap
+
+
+def redirect_output(channel: int, bypass_roles: typing.Container[int] = None):
+    def wrap(func):
+        @wraps(func)
+        async def inner(self, ctx, *args, **kwargs):
+            if ctx.channel.id == channel:
+                return await func(self, ctx, *args, **kwargs)
+
+            if bypass_roles and any(role.id in bypass_roles for role in ctx.author.roles):
+                return await func(self, ctx, *args, **kwargs)
+
+            redirect_channel = ctx.guild.get_channel(channel)
+            old_channel = ctx.channel
+
+            ctx.channel = redirect_channel
+            await ctx.channel.send(f"Here's the output of your command, {ctx.author.mention}")
+            await func(self, ctx, *args, **kwargs)
+
+            message = await old_channel.send(
+                f"Hey, {ctx.author.mention}, you can find the output of your command here: "
+                f"{redirect_channel.mention}"
+            )
+
+            await sleep(15)
+            await message.delete()
+            await ctx.message.delete()
         return inner
     return wrap
