@@ -481,6 +481,13 @@ class Free(metaclass=YAMLGetter):
     cooldown_per: float
 
 
+class RedirectOutput(metaclass=YAMLGetter):
+    section = 'redirect_output'
+
+    delete_invocation: bool
+    delete_delay: int
+
+
 # Debug mode
 DEBUG_MODE = True if 'local' in os.environ.get("SITE_URL", "local") else False
 

@@ -347,6 +347,9 @@ free:
     cooldown_rate: 1
     cooldown_per: 60.0
 
+redirect_output:
+    delete_invocation: true
+    delete_delay: 15
 
 config:
     required_keys: ['bot.token']
