@@ -20,7 +20,9 @@ async def apply(
 
     # Identify groups of newline characters and get group & total counts
     exp = r"(\n+)"
-    newline_counts = [len(group) for group in re.findall(exp, instr)]
+    newline_counts = []
+    for msg in relevant_messages:
+        newline_counts += [len(group) for group in re.findall(exp, msg.content)]
     total_recent_newlines = sum(newline_counts)
 
     # Get maximum newline group size
