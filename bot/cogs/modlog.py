@@ -116,7 +116,7 @@ class ModLog:
             content: Optional[str] = None,
             additional_embeds: Optional[List[Embed]] = None,
             timestamp_override: Optional[datetime.datetime] = None,
-            footer_override: Optional[str] = None,
+            footer: Optional[str] = None,
     ):
         embed = Embed(description=text)
 
@@ -127,8 +127,8 @@ class ModLog:
 
         embed.timestamp = timestamp_override or datetime.datetime.utcnow()
 
-        if footer_override:
-            embed.set_footer(text=footer_override)
+        if footer:
+            embed.set_footer(text=footer)
 
         if thumbnail:
             embed.set_thumbnail(url=thumbnail)
@@ -710,7 +710,7 @@ class ModLog:
 
         await self.send_log_message(
             Icons.message_edit, Colour.blurple(), "Message edited (Before)", before_response,
-            channel_id=Channels.message_log, timestamp_override=timestamp, footer_override=footer
+            channel_id=Channels.message_log, timestamp_override=timestamp, footer=footer
         )
 
         await self.send_log_message(
