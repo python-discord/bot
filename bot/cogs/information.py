@@ -135,10 +135,13 @@ class Information:
             if not with_role_check(ctx, *MODERATION_ROLES):
                 raise BadArgument("You do not have permission to use this command on users other than yourself.")
 
-        # Non-moderators may only do this in #bot-commands
+        # Non-moderators may only do this in #bot-commands and can't see
+        # hidden infractions.
         if not with_role_check(ctx, *MODERATION_ROLES):
             if not ctx.channel.id == Channels.bot:
                 raise MissingPermissions("You can't do that here!")
+            # Hide hidden infractions for users without a moderation role
+            hidden = False
 
         # Validates hidden input
         hidden = str(hidden)
