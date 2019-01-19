@@ -351,6 +351,7 @@ class Channels(metaclass=YAMLGetter):
     off_topic_3: int
     python: int
     reddit: int
+    talent_pool: int
     userlog: int
     verification: int
 
@@ -479,6 +480,13 @@ class Free(metaclass=YAMLGetter):
     activity_timeout: int
     cooldown_rate: int
     cooldown_per: float
+
+
+class RedirectOutput(metaclass=YAMLGetter):
+    section = 'redirect_output'
+
+    delete_invocation: bool
+    delete_delay: int
 
 
 # Debug mode

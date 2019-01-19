@@ -132,6 +132,11 @@ class Moderation(Scheduler):
         **`reason`:** The reason for the kick.
         """
 
+        if not await self.respect_role_hierarchy(ctx, user, 'kick'):
+            # Ensure ctx author has a higher top role than the target user
+            # Warning is sent to ctx by the helper method
+            return
+
         response_object = await post_infraction(ctx, user, type="kick", reason=reason)
         if response_object is None:
             return
@@ -186,6 +191,12 @@ class Moderation(Scheduler):
         **`user`:** Accepts user mention, ID, etc.
         **`reason`:** The reason for the ban.
         """
+
+        member = ctx.guild.get_member(user.id)
+        if not await self.respect_role_hierarchy(ctx, member, 'ban'):
+            # Ensure ctx author has a higher top role than the target user
+            # Warning is sent to ctx by the helper method
+            return
 
         response_object = await post_infraction(ctx, user, type="ban", reason=reason)
         if response_object is None:
@@ -370,6 +381,12 @@ class Moderation(Scheduler):
         **`reason`:** The reason for the temporary ban.
         """
 
+        member = ctx.guild.get_member(user.id)
+        if not await self.respect_role_hierarchy(ctx, member, 'tempban'):
+            # Ensure ctx author has a higher top role than the target user
+            # Warning is sent to ctx by the helper method
+            return
+
         response_object = await post_infraction(
             ctx, user, type="ban", reason=reason, duration=duration
         )
@@ -475,6 +492,11 @@ class Moderation(Scheduler):
         **`reason`:** The reason for the kick.
         """
 
+        if not await self.respect_role_hierarchy(ctx, user, 'shadowkick'):
+            # Ensure ctx author has a higher top role than the target user
+            # Warning is sent to ctx by the helper method
+            return
+
         response_object = await post_infraction(ctx, user, type="kick", reason=reason, hidden=True)
         if response_object is None:
             return
@@ -522,6 +544,12 @@ class Moderation(Scheduler):
         **`user`:** Accepts user mention, ID, etc.
         **`reason`:** The reason for the ban.
         """
+
+        member = ctx.guild.get_member(user.id)
+        if not await self.respect_role_hierarchy(ctx, member, 'shadowban'):
+            # Ensure ctx author has a higher top role than the target user
+            # Warning is sent to ctx by the helper method
+            return
 
         response_object = await post_infraction(ctx, user, type="ban", reason=reason, hidden=True)
         if response_object is None:
@@ -661,6 +689,12 @@ class Moderation(Scheduler):
         **`duration`:** The duration for the temporary ban infraction
         **`reason`:** The reason for the temporary ban.
         """
+
+        member = ctx.guild.get_member(user.id)
+        if not await self.respect_role_hierarchy(ctx, member, 'shadowtempban'):
+            # Ensure ctx author has a higher top role than the target user
+            # Warning is sent to ctx by the helper method
+            return
 
         response_object = await post_infraction(
             ctx, user, type="ban", reason=reason, duration=duration, hidden=True
@@ -1333,6 +1367,29 @@ class Moderation(Scheduler):
         if isinstance(error, BadUnionArgument):
             if User in error.converters:
                 await ctx.send(str(error.errors[0]))
+
+    async def respect_role_hierarchy(self, ctx: Context, target: Member, infraction_type: str) -> bool:
+        """
+        Check if the highest role of the invoking member is greater than that of the target member
+
+        If this check fails, a warning is sent to the invoking ctx
+
+        Implement as a method rather than a check in order to avoid having to reimplement parameter
+        checks & conversions in a dedicated check decorater
+        """
+
+        actor = ctx.author
+        target_is_lower = target.top_role < actor.top_role
+        if not target_is_lower:
+            log.info(
+                f"{actor} ({actor.id}) attempted to {infraction_type} "
+                f"{target} ({target.id}), who has an equal or higher top role"
+            )
+            await ctx.send(
+                f":x: {actor.mention}, you may not {infraction_type} someone with an equal or higher top role"
+            )
+
+        return target_is_lower
 
 
 def setup(bot):
