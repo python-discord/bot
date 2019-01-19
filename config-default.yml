@@ -114,6 +114,7 @@ guild:
         python:                           267624335836053506
         reddit:                           458224812528238616
         staff_lounge:      &STAFF_LOUNGE  464905259261755392
+        talent_pool:       &TALENT_POOL   534321732593647616
         userlog:                          528976905546760203
         verification:                     352442727016693763
 
@@ -202,6 +203,7 @@ filter:
         - *BBLOGS
         - *STAFF_LOUNGE
         - *DEVTEST
+        - *TALENT_POOL
 
     role_whitelist:
         - *ADMIN_ROLE

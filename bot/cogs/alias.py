@@ -71,7 +71,7 @@ class Alias:
 
     @command(name="watch", hidden=True)
     async def bigbrother_watch_alias(
-            self, ctx, user: User, *, reason: str
+            self, ctx: Context, user: User, *, reason: str
     ):
         """
         Alias for invoking <prefix>bigbrother watch user [text_channel].
