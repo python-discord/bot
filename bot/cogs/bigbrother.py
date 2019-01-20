@@ -21,16 +21,12 @@ URL_RE = re.compile(r"(https?://[^\s]+)")
 class BigBrother:
     """User monitoring to assist with moderation."""
 
-    HEADERS = {'X-API-Key': Keys.site_api}
-
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.watched_users = {}  # { user_id: log_channel_id }
+        self.watched_users = set()  # { user_id }
         self.channel_queues = defaultdict(lambda: defaultdict(deque))  # { user_id: { channel_id: queue(messages) }
         self.last_log = [None, None, 0]  # [user_id, channel_id, message_count]
         self.consuming = False
-
-        self.bot.loop.create_task(self.get_watched_users())
 
     def update_cache(self, api_response: List[dict]):
         """
@@ -42,47 +38,46 @@ class BigBrother:
         """
 
         for entry in api_response:
-            user_id = int(entry['user_id'])
-            channel_id = int(entry['channel_id'])
-            channel = self.bot.get_channel(channel_id)
+            user_id = entry['user']
+            self.watched_users.add(user_id)
 
-            if channel is not None:
-                self.watched_users[user_id] = channel
-            else:
-                log.error(
-                    f"Site specified to relay messages by `{user_id}` in `{channel_id}`, "
-                    "but the given channel could not be found. Ignoring."
-                )
-
-    async def get_watched_users(self):
+    async def on_ready(self):
         """Retrieves watched users from the API."""
 
-        await self.bot.wait_until_ready()
-        async with self.bot.http_session.get(URLs.site_bigbrother_api, headers=self.HEADERS) as response:
-            data = await response.json()
+        self.channel = self.bot.get_channel(Channels.big_brother_logs)
+        if self.channel is None:
+            log.error("Cannot find Big Brother channel. Cannot watch users.")
+        else:
+            data = await self.bot.api_client.get(
+                'bot/infractions',
+                params={
+                    'active': 'true',
+                    'type': 'watch'
+                }
+            )
             self.update_cache(data)
 
     async def on_member_ban(self, guild: Guild, user: Union[User, Member]):
         if guild.id == GuildConfig.id and user.id in self.watched_users:
-            url = f"{URLs.site_bigbrother_api}?user_id={user.id}"
-            channel = self.watched_users[user.id]
+            [active_watch] = await self.bot.api_client.get(
+                'bot/infractions',
+                params={
+                    'active': 'true',
+                    'type': 'watch',
+                    'user__id': str(user.id)
+                }
+            )
+            await self.bot.api_client.put(
+                'bot/infractions/' + str(active_watch['id']),
+                json={'active': False}
+            )
+            self.watched_users.remove(user.id)
+            del self.channel_queues[user.id]
+            await channel.send(
+                f"{Emojis.bb_message}:hammer: {user} got banned, so "
+                f"`BigBrother` will no longer relay their messages."
+            )
 
-            async with self.bot.http_session.delete(url, headers=self.HEADERS) as response:
-                del self.watched_users[user.id]
-                del self.channel_queues[user.id]
-                if response.status == 204:
-                    await channel.send(
-                        f"{Emojis.bb_message}:hammer: {user} got banned, so "
-                        f"`BigBrother` will no longer relay their messages to {channel}"
-                    )
-
-                else:
-                    data = await response.json()
-                    reason = data.get('error_message', "no message provided")
-                    await channel.send(
-                        f"{Emojis.bb_message}:x: {user} got banned, but trying to remove them from"
-                        f"BigBrother's user dictionary on the API returned an error: {reason}"
-                    )
 
     async def on_message(self, msg: Message):
         """Queues up messages sent by watched users."""
@@ -106,15 +101,14 @@ class BigBrother:
         channel_queues = self.channel_queues.copy()
         self.channel_queues.clear()
         for user_id, queues in channel_queues.items():
-            for _, queue in queues.items():
-                channel = self.watched_users[user_id]
+            for queue in queues.values():
                 while queue:
                     msg = queue.popleft()
                     log.trace(f"Consuming message: {msg.clean_content} ({len(msg.attachments)} attachments)")
 
                     self.last_log[2] += 1  # Increment message count.
-                    await self.send_header(msg, channel)
-                    await self.log_message(msg, channel)
+                    await self.send_header(msg)
+                    await self.log_message(msg)
 
         if self.channel_queues:
             log.trace("Queue not empty; continue consumption.")
@@ -123,7 +117,7 @@ class BigBrother:
             log.trace("Done consuming messages.")
             self.consuming = False
 
-    async def send_header(self, message: Message, destination: TextChannel):
+    async def send_header(self, message: Message):
         """
         Sends a log message header to the given channel.
 
@@ -131,7 +125,6 @@ class BigBrother:
         limit for a single header has been exceeded.
 
         :param message: the first message in the queue
-        :param destination: the channel in which to send the header
         """
 
         last_user, last_channel, msg_count = self.last_log
@@ -143,10 +136,9 @@ class BigBrother:
 
             embed = Embed(description=f"{message.author.mention} in [#{message.channel.name}]({message.jump_url})")
             embed.set_author(name=message.author.nick or message.author.name, icon_url=message.author.avatar_url)
-            await destination.send(embed=embed)
+            await self.channel.send(embed=embed)
 
-    @staticmethod
-    async def log_message(message: Message, destination: TextChannel):
+    async def log_message(self, message: Message):
         """
         Logs a watched user's message in the given channel.
 
@@ -165,7 +157,7 @@ class BigBrother:
                 if url not in media_urls:
                     content = content.replace(url, f"`{url}`")
 
-            await destination.send(content)
+            await self.channel.send(content)
 
         await messages.send_attachments(message, destination)
 
@@ -186,10 +178,7 @@ class BigBrother:
         """
 
         if from_cache:
-            lines = tuple(
-                f"• <@{user_id}> in <#{self.watched_users[user_id].id}>"
-                for user_id in self.watched_users
-            )
+            lines = tuple(f"• <@{user_id}>" for user_id in self.watched_users)
             await LinePaginator.paginate(
                 lines or ("There's nothing here yet.",),
                 ctx,
@@ -198,21 +187,25 @@ class BigBrother:
             )
 
         else:
-            async with self.bot.http_session.get(URLs.site_bigbrother_api, headers=self.HEADERS) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    self.update_cache(data)
-                    lines = tuple(f"• <@{entry['user_id']}> in <#{entry['channel_id']}>" for entry in data)
+            active_watches = await self.bot.api_client.get(
+                'bot/infractions',
+                params={
+                    'active': 'true',
+                    'type': 'watch'
+                }
+            )
+            self.update_cache(active_watches)
+            lines = tuple(
+                f"• <@{entry['user']}>: {entry['reason'] or '*no reason provided*'}"
+                for entry in active_watches
+            )
 
-                    await LinePaginator.paginate(
-                        lines or ("There's nothing here yet.",),
-                        ctx,
-                        Embed(title="Watched users", color=Color.blue()),
-                        empty=False
-                    )
-
-                else:
-                    await ctx.send(f":x: got non-200 response from the API")
+            await LinePaginator.paginate(
+                lines or ("There's nothing here yet.",),
+                ctx,
+                Embed(title="Watched users", color=Color.blue()),
+                empty=False
+            )
 
     @bigbrother_group.command(name='watch', aliases=('w',))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
@@ -224,59 +217,41 @@ class BigBrother:
         note (aka: shadow warning)
         """
 
-        channel_id = Channels.big_brother_logs
+        if user.id in self.watched_users:
+            return await ctx.send(":x: That user is already watched.")
 
-        post_data = {
-            'user_id': str(user.id),
-            'channel_id': str(channel_id)
-        }
+        created_infraction = await post_infraction(
+            ctx, user, type='watch', reason=reason, hidden=True
+        )
+        self.watched_users.add(user.id)
+        await ctx.send(f":ok_hand: will now relay messages sent by {user}")
 
-        async with self.bot.http_session.post(
-            URLs.site_bigbrother_api,
-            headers=self.HEADERS,
-            json=post_data
-        ) as response:
-            if response.status == 204:
-                await ctx.send(f":ok_hand: will now relay messages sent by {user} in <#{channel_id}>")
-
-                channel = self.bot.get_channel(channel_id)
-                if channel is None:
-                    log.error(
-                        f"could not update internal cache, failed to find a channel with ID {channel_id}"
-                    )
-                else:
-                    self.watched_users[user.id] = channel
-
-            else:
-                data = await response.json()
-                reason = data.get('error_message', "no message provided")
-                await ctx.send(f":x: the API returned an error: {reason}")
-
-        # Add a note (shadow warning) with the reason for watching
-        reason = "bb watch: " + reason  # Prepend for situational awareness
-        await post_infraction(ctx, user, type="warning", reason=reason, hidden=True)
 
     @bigbrother_group.command(name='unwatch', aliases=('uw',))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
     async def unwatch_command(self, ctx: Context, user: User):
         """Stop relaying messages by the given `user`."""
 
-        url = f"{URLs.site_bigbrother_api}?user_id={user.id}"
-        async with self.bot.http_session.delete(url, headers=self.HEADERS) as response:
-            if response.status == 204:
-                await ctx.send(f":ok_hand: will no longer relay messages sent by {user}")
-
-                if user.id in self.watched_users:
-                    del self.watched_users[user.id]
-                    if user.id in self.channel_queues:
-                        del self.channel_queues[user.id]
-                else:
-                    log.warning(f"user {user.id} was unwatched but was not found in the cache")
-
-            else:
-                data = await response.json()
-                reason = data.get('error_message', "no message provided")
-                await ctx.send(f":x: the API returned an error: {reason}")
+        active_watches = await self.bot.api_client.get(
+            'bot/infractions',
+            params={
+                'active': 'true',
+                'type': 'watch',
+                'user__id': str(user.id)
+            }
+        )
+        if active_watches:
+            [infraction] = active_watches
+            await self.bot.api_client.patch(
+                'bot/infractions/' + str(infraction['id']),
+                json={'active': False}
+            )
+            await ctx.send(f":ok_hand: will no longer relay messages sent by {user}")
+            self.watched_users.remove(user.id)
+            if user.id in self.channel_queues:
+                del self.channel_queues[user.id]
+        else:
+            await ctx.send(":x: that user is currently not being watched")
 
 
 def setup(bot: Bot):
