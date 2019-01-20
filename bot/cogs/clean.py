@@ -165,7 +165,7 @@ class Clean:
         # Reverse the list to restore chronological order
         if messages:
             messages = list(reversed(messages))
-            log_url = await self.mod_log.upload_log(messages)
+            log_url = await self.mod_log.upload_log(messages, ctx.author.id)
         else:
             # Can't build an embed, nothing to clean!
             embed = Embed(

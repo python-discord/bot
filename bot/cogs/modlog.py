@@ -1,6 +1,6 @@
 import asyncio
-import datetime
 import logging
+from datetime import datetime
 from typing import List, Optional, Union
 
 from aiohttp import ClientResponseError
@@ -39,13 +39,12 @@ class ModLog:
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.headers = {"X-API-KEY": Keys.site_api}
         self._ignored = {event: [] for event in Event}
 
         self._cached_deletes = []
         self._cached_edits = []
 
-    async def upload_log(self, messages: List[Message]) -> Optional[str]:
+    async def upload_log(self, messages: List[Message], actor_id: int) -> Optional[str]:
         """
         Uploads the log data to the database via
         an API endpoint for uploading logs.
@@ -55,48 +54,25 @@ class ModLog:
         Returns a URL that can be used to view the log.
         """
 
-        log_data = []
-
-        for message in messages:
-            author = f"{message.author.name}#{message.author.discriminator}"
-
-            # message.author may return either a User or a Member. Users don't have roles.
-            if type(message.author) is User:
-                role_id = Roles.developer
-            else:
-                role_id = message.author.top_role.id
-
-            content = message.content
-            embeds = [embed.to_dict() for embed in message.embeds]
-            attachments = ["<Attachment>" for _ in message.attachments]
-
-            log_data.append({
-                "content": content,
-                "author": author,
-                "user_id": str(message.author.id),
-                "role_id": str(role_id),
-                "timestamp": message.created_at.strftime("%D %H:%M"),
-                "attachments": attachments,
-                "embeds": embeds,
-            })
-
-        response = await self.bot.http_session.post(
-            URLs.site_logs_api,
-            headers=self.headers,
-            json={"log_data": log_data}
+        response = await self.bot.api_client.post(
+            'bot/deleted-messages',
+            json={
+                'actor': actor_id,
+                'creation': datetime.utcnow().isoformat(),
+                'deletedmessage_set': [
+                    {
+                        'id': message.id,
+                        'author': message.author.id,
+                        'channel_id': message.channel.id,
+                        'content': message.content,
+                        'embeds': [embed.to_dict() for embed in message.embeds]
+                    }
+                    for message in messages
+                ]
+            }
         )
 
-        try:
-            data = await response.json()
-            log_id = data["log_id"]
-        except (KeyError, ClientResponseError):
-            log.debug(
-                "API returned an unexpected result:\n"
-                f"{response.text}"
-            )
-            return
-
-        return f"{URLs.site_logs_view}/{log_id}"
+        return f"{URLs.site_logs_view}/{response['id']}"
 
     def ignore(self, event: Event, *items: int):
         for item in items:
@@ -114,7 +90,7 @@ class ModLog:
             embed.set_author(name=title, icon_url=icon_url)
 
         embed.colour = colour
-        embed.timestamp = datetime.datetime.utcnow()
+        embed.timestamp = datetime.utcnow()
 
         if thumbnail is not None:
             embed.set_thumbnail(url=thumbnail)

@@ -121,7 +121,7 @@ class AntiSpam:
 
             # For multiple messages, use the logs API
             if len(messages) > 1:
-                url = await self.mod_log.upload_log(messages)
+                url = await self.mod_log.upload_log(messages, msg.guild.me.id)
                 mod_alert_message += f"A complete log of the offending messages can be found [here]({url})"
             else:
                 mod_alert_message += "Message:\n"
