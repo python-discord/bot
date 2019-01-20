@@ -6,7 +6,6 @@ from discord import Game
 from discord.ext.commands import Bot, when_mentioned_or
 
 from bot.constants import Bot as BotConfig, DEBUG_MODE
-from bot.utils.service_discovery import wait_for_rmq
 
 
 log = logging.getLogger(__name__)
@@ -27,14 +26,6 @@ bot.http_session = ClientSession(
         family=socket.AF_INET,
     )
 )
-
-log.info("Waiting for RabbitMQ...")
-has_rmq = wait_for_rmq()
-
-if has_rmq:
-    log.info("RabbitMQ found")
-else:
-    log.warning("Timed out while waiting for RabbitMQ")
 
 # Internal/debug
 bot.load_extension("bot.cogs.logging")
@@ -76,9 +67,6 @@ bot.load_extension("bot.cogs.token_remover")
 bot.load_extension("bot.cogs.utils")
 bot.load_extension("bot.cogs.wolfram")
 bot.load_extension("bot.cogs.free")
-
-if has_rmq:
-    bot.load_extension("bot.cogs.rmq")
 
 bot.run(BotConfig.token)
 

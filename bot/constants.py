@@ -407,6 +407,9 @@ class URLs(metaclass=YAMLGetter):
     discord_api: str
     discord_invite_api: str
 
+    # Snekbox
+    snekbox: str
+
     # Misc endpoints
     bot_avatar: str
     deploy: str

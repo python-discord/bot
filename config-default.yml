@@ -221,13 +221,6 @@ keys:
     youtube:     !ENV "YOUTUBE_API_KEY"
 
 
-rabbitmq:
-    host:          "pdrmq"
-    password: !ENV ["RABBITMQ_DEFAULT_PASS", "guest"]
-    port:          5672
-    username: !ENV ["RABBITMQ_DEFAULT_USER", "guest"]
-
-
 urls:
     # PyDis site vars
     site:        &DOMAIN       "pythondiscord.com"
@@ -267,6 +260,9 @@ urls:
     # Discord API URLs
     discord_api:        &DISCORD_API "https://discordapp.com/api/v7/"
     discord_invite_api: !JOIN [*DISCORD_API, "invites"]
+
+    # Snekbox
+    snekbox: "http://localhost:8060/input"
 
     # Misc URLs
     bot_avatar:      "https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle/logo_circle.png"

@@ -9,19 +9,12 @@ from discord.ext.commands import (
     Bot, CommandError, Context, NoPrivateMessage, command, guild_only
 )
 
-from bot.cogs.rmq import RMQ
 from bot.constants import Channels, ERROR_REPLIES, NEGATIVE_REPLIES, Roles, URLs
 from bot.decorators import InChannelCheckFailure, in_channel
 from bot.utils.messages import wait_for_deletion
 
 
 log = logging.getLogger(__name__)
-
-RMQ_ARGS = {
-    "durable": False,
-    "arguments": {"x-message-ttl": 5000},
-    "auto_delete": True
-}
 
 CODE_TEMPLATE = """
 venv_file = "/snekbox/.venv/bin/activate_this.py"
@@ -36,21 +29,21 @@ except:
 
 ESCAPE_REGEX = re.compile("[`\u202E\u200B]{3,}")
 FORMATTED_CODE_REGEX = re.compile(
-    r"^\s*"                                 # any leading whitespace from the beginning of the string
-    r"(?P<delim>(?P<block>```)|``?)"        # code delimiter: 1-3 backticks; (?P=block) only matches if it's a block
-    r"(?(block)(?:(?P<lang>[a-z]+)\n)?)"    # if we're in a block, match optional language (only letters plus newline)
-    r"(?:[ \t]*\n)*"                        # any blank (empty or tabs/spaces only) lines before the code
-    r"(?P<code>.*?)"                        # extract all code inside the markup
-    r"\s*"                                  # any more whitespace before the end of the code markup
-    r"(?P=delim)"                           # match the exact same delimiter from the start again
-    r"\s*$",                                # any trailing whitespace until the end of the string
-    re.DOTALL | re.IGNORECASE               # "." also matches newlines, case insensitive
+    r"^\s*"                               # any leading whitespace from the beginning of the string
+    r"(?P<delim>(?P<block>```)|``?)"      # code delimiter: 1-3 backticks; (?P=block) only matches if it's a block
+    r"(?(block)(?:(?P<lang>[a-z]+)\n)?)"  # if we're in a block, match optional language (only letters plus newline)
+    r"(?:[ \t]*\n)*"                      # any blank (empty or tabs/spaces only) lines before the code
+    r"(?P<code>.*?)"                      # extract all code inside the markup
+    r"\s*"                                # any more whitespace before the end of the code markup
+    r"(?P=delim)"                         # match the exact same delimiter from the start again
+    r"\s*$",                              # any trailing whitespace until the end of the string
+    re.DOTALL | re.IGNORECASE             # "." also matches newlines, case insensitive
 )
 RAW_CODE_REGEX = re.compile(
-    r"^(?:[ \t]*\n)*"                       # any blank (empty or tabs/spaces only) lines before the code
-    r"(?P<code>.*?)"                        # extract all the rest as code
-    r"\s*$",                                # any trailing whitespace until the end of the string
-    re.DOTALL                               # "." also matches newlines
+    r"^(?:[ \t]*\n)*"                     # any blank (empty or tabs/spaces only) lines before the code
+    r"(?P<code>.*?)"                      # extract all the rest as code
+    r"\s*$",                              # any trailing whitespace until the end of the string
+    re.DOTALL                             # "." also matches newlines
 )
 
 BYPASS_ROLES = (Roles.owner, Roles.admin, Roles.moderator, Roles.helpers)
@@ -65,32 +58,43 @@ class Snekbox:
         self.bot = bot
         self.jobs = {}
 
-    @property
-    def rmq(self) -> RMQ:
-        return self.bot.get_cog("RMQ")
+    async def snekbox_send(self, code):
+        headers = {"Content-Type": "application/json"}
+        data = {"code": code}
+        async with self.bot.http_session.post(URLs.snekbox, headers=headers, json=data) as resp:
+            result = await resp.json()
+        return result
 
     @command(name='eval', aliases=('e',))
     @guild_only()
     @in_channel(Channels.bot, bypass_roles=BYPASS_ROLES)
     async def eval_command(self, ctx: Context, *, code: str = None):
         """
-        Run some code. get the result back. We've done our best to make this safe, but do let us know if you
-        manage to find an issue with it!
+        Run some code. get the result back. We've done our best to make
+        this safe, but do let us know if you manage to find an issue
+        with it!
 
-        This command supports multiple lines of code, including code wrapped inside a formatted code block.
+        This command supports multiple lines of code, including code
+        wrapped inside a formatted code block.
         """
 
         if ctx.author.id in self.jobs:
-            await ctx.send(f"{ctx.author.mention} You've already got a job running - please wait for it to finish!")
-            return
+            return await ctx.send(
+                f"{ctx.author.mention} You've already got a job running "
+                "- please wait for it to finish!"
+            )
 
         if not code:  # None or empty string
             return await ctx.invoke(self.bot.get_command("help"), "eval")
 
-        log.info(f"Received code from {ctx.author.name}#{ctx.author.discriminator} for evaluation:\n{code}")
+        log.info(
+            f"Received code from {ctx.author.name}#{ctx.author.discriminator} "
+            f"for evaluation:\n{code}"
+        )
+
         self.jobs[ctx.author.id] = datetime.datetime.now()
 
-        # Strip whitespace and inline or block code markdown and extract the code and some formatting info
+        # extract and clean the code from markdown
         match = FORMATTED_CODE_REGEX.fullmatch(code)
         if match:
             code, block, lang, delim = match.group("code", "block", "lang", "delim")
@@ -102,7 +106,9 @@ class Snekbox:
             log.trace(f"Extracted {info} for evaluation:\n{code}")
         else:
             code = textwrap.dedent(RAW_CODE_REGEX.fullmatch(code).group("code"))
-            log.trace(f"Eval message contains not or badly formatted code, stripping whitespace only:\n{code}")
+            log.trace(
+                "Eval message contains not or badly formatted code, "
+                f"stripping whitespace only:\n{code}")
 
         try:
             stripped_lines = [ln.strip() for ln in code.split('\n')]
@@ -114,19 +120,10 @@ class Snekbox:
             code = textwrap.indent(code, "    ")
             code = CODE_TEMPLATE.replace("{CODE}", code)
 
-            await self.rmq.send_json(
-                "input",
-                snekid=str(ctx.author.id), message=code
-            )
-
             async with ctx.typing():
-                message = await self.rmq.consume(str(ctx.author.id), **RMQ_ARGS)
+                result = await self.snekbox_send(code)
+                output = result["output"].strip(" \n")
                 paste_link = None
-
-                if isinstance(message, str):
-                    output = str.strip(" \n")
-                else:
-                    output = message.body.decode().strip(" \n")
 
                 if "<@" in output:
                     output = output.replace("<@", "<@\u200B")  # Zero-width space
@@ -141,7 +138,8 @@ class Snekbox:
                     full_output = output
                     truncated = False
                     if output.count("\n") > 0:
-                        output = [f"{i:03d} | {line}" for i, line in enumerate(output.split("\n"), start=1)]
+                        lines = enumerate(output.split("\n"), start=1)
+                        output = [f"{i:03d} | {line}" for i, line in lines]
                         output = "\n".join(output)
 
                     if output.count("\n") > 10:
@@ -171,13 +169,20 @@ class Snekbox:
 
                 if output.strip():
                     if paste_link:
-                        msg = f"{ctx.author.mention} Your eval job has completed.\n\n```py\n{output}\n```" \
-                              f"\nFull output: {paste_link}"
+                        msg = (
+                            f"{ctx.author.mention} Your eval job has completed.\n\n"
+                            f"```py\n{output}\n```\nFull output: {paste_link}"
+                        )
                     else:
-                        msg = f"{ctx.author.mention} Your eval job has completed.\n\n```py\n{output}\n```"
+                        msg = (
+                            f"{ctx.author.mention} Your eval job has completed.\n\n```"
+                            f"py\n{output}\n```"
+                        )
 
                     response = await ctx.send(msg)
-                    self.bot.loop.create_task(wait_for_deletion(response, user_ids=(ctx.author.id,), client=ctx.bot))
+                    self.bot.loop.create_task(
+                        wait_for_deletion(response, user_ids=(ctx.author.id,), client=ctx.bot)
+                    )
 
                 else:
                     await ctx.send(
