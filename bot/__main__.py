@@ -42,7 +42,6 @@ else:
 # Internal/debug
 bot.load_extension("bot.cogs.logging")
 bot.load_extension("bot.cogs.security")
-bot.load_extension("bot.cogs.events")
 bot.load_extension("bot.cogs.filtering")
 bot.load_extension("bot.cogs.modlog")
 
