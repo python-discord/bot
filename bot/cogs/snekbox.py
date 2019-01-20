@@ -29,8 +29,9 @@ exec(open(venv_file).read(), dict(__file__=venv_file))
 
 try:
 {CODE}
-except Exception as e:
-    print(e)
+except:
+    import traceback
+    print(traceback.format_exc())
 """
 
 ESCAPE_REGEX = re.compile("[`\u202E\u200B]{3,}")
@@ -103,10 +104,16 @@ class Snekbox:
             code = textwrap.dedent(RAW_CODE_REGEX.fullmatch(code).group("code"))
             log.trace(f"Eval message contains not or badly formatted code, stripping whitespace only:\n{code}")
 
-        code = textwrap.indent(code, "    ")
-        code = CODE_TEMPLATE.replace("{CODE}", code)
-
         try:
+            stripped_lines = [ln.strip() for ln in code.split('\n')]
+            if all([line.startswith('#') for line in stripped_lines]):
+                return await ctx.send(
+                    f"{ctx.author.mention} Your eval job has completed.\n\n```[No output]```"
+                )
+
+            code = textwrap.indent(code, "    ")
+            code = CODE_TEMPLATE.replace("{CODE}", code)
+
             await self.rmq.send_json(
                 "input",
                 snekid=str(ctx.author.id), message=code
@@ -174,13 +181,10 @@ class Snekbox:
 
                 else:
                     await ctx.send(
-                        f"{ctx.author.mention} Your eval job has completed.\n\n```py\n[No output]\n```"
+                        f"{ctx.author.mention} Your eval job has completed.\n\n```[No output]```"
                     )
-
+        finally:
             del self.jobs[ctx.author.id]
-        except Exception:
-            del self.jobs[ctx.author.id]
-            raise
 
     @eval_command.error
     async def eval_command_error(self, ctx: Context, error: CommandError):
