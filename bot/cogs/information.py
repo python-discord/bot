@@ -150,13 +150,13 @@ class Information:
         )
 
         # Infractions
-        api_response = await self.bot.http_session.get(
-            url=URLs.site_infractions_user.format(user_id=user.id),
-            params={"hidden": hidden},
-            headers=self.headers
+        infractions = await self.bot.api_client.get(
+            'bot/infractions',
+            params={
+                'hidden': hidden,
+                'user__id': str(user.id)
+            }
         )
-
-        infractions = await api_response.json()
 
         infr_total = 0
         infr_active = 0
