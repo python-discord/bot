@@ -29,6 +29,7 @@ bot.http_session = ClientSession(
 )
 
 log.info("Waiting for RabbitMQ...")
+
 has_rmq = wait_for_rmq()
 
 if has_rmq:
