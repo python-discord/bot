@@ -146,7 +146,6 @@ class BigBrother:
         embeds from being automatically generated.
 
         :param message: the message to log
-        :param destination: the channel in which to log the message
         """
 
         content = message.clean_content
@@ -159,7 +158,7 @@ class BigBrother:
 
             await self.channel.send(content)
 
-        await messages.send_attachments(message, destination)
+        await messages.send_attachments(message, self.channel)
 
     @group(name='bigbrother', aliases=('bb',), invoke_without_command=True)
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
