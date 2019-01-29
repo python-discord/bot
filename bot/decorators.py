@@ -122,7 +122,7 @@ def redirect_output(destination_channel: int, bypass_roles: typing.Container[int
             redirect_channel = ctx.guild.get_channel(destination_channel)
             old_channel = ctx.channel
 
-            log.trace(f"Redirecting output of {ctx.author}'s command '{ctx.command.name}'' to {redirect_channel.name}")
+            log.trace(f"Redirecting output of {ctx.author}'s command '{ctx.command.name}' to {redirect_channel.name}")
             ctx.channel = redirect_channel
             await ctx.channel.send(f"Here's the output of your command, {ctx.author.mention}")
             await func(self, ctx, *args, **kwargs)
