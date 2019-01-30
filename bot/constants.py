@@ -496,6 +496,9 @@ DEBUG_MODE = True if 'local' in os.environ.get("SITE_URL", "local") else False
 BOT_DIR = os.path.dirname(__file__)
 PROJECT_ROOT = os.path.abspath(os.path.join(BOT_DIR, os.pardir))
 
+# Default role combinations
+STAFF_ROLES = Roles.helpers, Roles.moderator, Roles.admin, Roles.owner
+
 # Bot replies
 NEGATIVE_REPLIES = [
     "Noooooo!!",

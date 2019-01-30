@@ -10,7 +10,7 @@ from discord.ext.commands import CheckFailure
 from fuzzywuzzy import fuzz, process
 
 from bot import constants
-from bot.constants import Roles
+from bot.constants import Channels, STAFF_ROLES
 from bot.decorators import redirect_output
 from bot.pagination import (
     DELETE_EMOJI, FIRST_EMOJI, LAST_EMOJI,
@@ -25,7 +25,7 @@ REACTIONS = {
     LAST_EMOJI: 'end',
     DELETE_EMOJI: 'stop'
 }
-STAFF_ROLES = Roles.helpers, Roles.moderator, Roles.admin, Roles.owner
+
 Cog = namedtuple('Cog', ['name', 'description', 'commands'])
 
 
@@ -654,7 +654,7 @@ class Help:
     Custom Embed Pagination Help feature
     """
     @commands.command('help')
-    @redirect_output(constants.Channels.bot, STAFF_ROLES)
+    @redirect_output(destination_channel=Channels.bot, bypass_roles=STAFF_ROLES)
     async def new_help(self, ctx, *commands):
         """
         Shows Command Help.
