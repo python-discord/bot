@@ -2,12 +2,14 @@ import logging
 import random
 import typing
 from asyncio import Lock, sleep
-from functools import wraps
+from functools import partial, wraps
+from typing import Union
 from weakref import WeakValueDictionary
 
+import discord
 from discord import Colour, Embed
 from discord.ext import commands
-from discord.ext.commands import CheckFailure, Context
+from discord.ext.commands import check, CheckFailure, Context
 
 from bot.constants import ERROR_REPLIES, RedirectOutput
 from bot.utils.checks import with_role_check, without_role_check
@@ -47,26 +49,45 @@ def in_channel(*channels: int, bypass_roles: typing.Container[int] = None):
     return commands.check(predicate)
 
 
-def with_role(*role_ids: int):
+def predicate(ctx, items, inverted=False):
+    """
+    Predicate for has_any_role or has_neither_role mostly copied directly from
+    discord.has_any_role.
+    """
+
+    if not isinstance(ctx.channel, discord.abc.GuildChannel):
+        return False
+
+    getter = partial(discord.utils.get, ctx.author.roles)
+    result_bool = any(
+        getter(id=item) is not None 
+        if isinstance(item, int) 
+        else getter(name=item) is not None 
+        for item in items
+    )
+    return not result_bool if inverted else result_bool
+
+
+def with_role(*items: Union[int, str]):
     """
     Returns True if the user has any one
-    of the roles in role_ids.
+    of the roles in items.
+
+    :param items: list of role ids or role names to check for.
+    """ 
+
+    return check(predicate, items)
+
+
+def without_role(*items: Union[int, str]):
+    """
+    Returns True if the user as none
+    of the roles in items.
+
+    :param items: list of roles ids or role names to check for
     """
 
-    async def predicate(ctx: Context):
-        return with_role_check(ctx, *role_ids)
-    return commands.check(predicate)
-
-
-def without_role(*role_ids: int):
-    """
-    Returns True if the user does not have any
-    of the roles in role_ids.
-    """
-
-    async def predicate(ctx: Context):
-        return without_role_check(ctx, *role_ids)
-    return commands.check(predicate)
+    return check(predicate, items, inverted=True)
 
 
 def locked():
