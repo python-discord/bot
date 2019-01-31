@@ -4,10 +4,13 @@ import typing
 from asyncio import Lock, sleep
 from functools import partial, wraps
 from typing import Union
+from contextlib import suppress
+from functools import wraps
 from weakref import WeakValueDictionary
 
 import discord
 from discord import Colour, Embed
+from discord.errors import NotFound
 from discord.ext import commands
 from discord.ext.commands import check, CheckFailure, Context
 
@@ -155,7 +158,13 @@ def redirect_output(destination_channel: int, bypass_roles: typing.Container[int
 
             if RedirectOutput.delete_invocation:
                 await sleep(RedirectOutput.delete_delay)
-                await message.delete()
-                await ctx.message.delete()
+
+                with suppress(NotFound):
+                    await message.delete()
+                    log.trace("Redirect output: Deleted user redirection message")
+
+                with suppress(NotFound):
+                    await ctx.message.delete()
+                    log.trace("Redirect output: Deleted invocation message")
         return inner
     return wrap
