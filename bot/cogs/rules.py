@@ -38,7 +38,7 @@ class Rules:
             ),
             (
                 "We will not help you with anything that might break "
-                "a law or the terms of service of any other community, site,"
+                "a law or the terms of service of any other community, site, "
                 "service, or otherwise - No piracy, brute-forcing, captcha "
                 "circumvention, sneaker bots, or anything else of that nature."
             ),
@@ -69,10 +69,10 @@ class Rules:
                 "us directly if you want to discuss a partnership!"
             )
         ]
-        self.default_desc = "The rules and guidelines that apply to this ", \
-                            "community can be found on our [rules page],"\
-                            "(https://pythondiscord.com/about/rules). We "\
-                            "expect all members of the community to have "\
+        self.default_desc = "The rules and guidelines that apply to this " \
+                            "community can be found on our [rules page]" \
+                            "(https://pythondiscord.com/about/rules). We " \
+                            "expect all members of the community to have " \
                             "read and understood these."
 
     @command(
