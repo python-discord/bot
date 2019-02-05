@@ -115,6 +115,7 @@ class ModLog:
             files: Optional[List[File]] = None,
             content: Optional[str] = None,
             additional_embeds: Optional[List[Embed]] = None,
+            additional_embeds_msg: Optional[str] = None,
             timestamp_override: Optional[datetime.datetime] = None,
             footer: Optional[str] = None,
     ):
@@ -143,7 +144,8 @@ class ModLog:
         log_message = await channel.send(content=content, embed=embed, files=files)
 
         if additional_embeds:
-            await channel.send("With the following embed(s):")
+            if additional_embeds_msg:
+                await channel.send(additional_embeds_msg)
             for additional_embed in additional_embeds:
                 await channel.send(embed=additional_embed)
 
