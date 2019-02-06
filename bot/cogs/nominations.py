@@ -70,17 +70,27 @@ class Nominations(BigBrother):
     async def watch_command(self, ctx: Context, user: User, *, reason: str):
         """Talent pool the given `user`."""
 
-        await self.bot.api_client.patch(
-            'bot/nominations',
-            json={
-                'active': True,
-                'author': ctx.author.id,
-                'reason': reason,
-                'user': user.id
-            }
+        active_nominations = await self.bot.api_client.get(
+            'bot/nominations/' + str(user.id),
         )
-        self.watched_users.add(user.id)
-        await ctx.send(":ok_hand: user added to talent pool")
+        if active_nominations:
+            active_nominations = await self.bot.api_client.put(
+                'bot/nominations/' + str(user.id),
+                json={'active': True}
+            )
+            await ctx.send(":ok_hand: user's watch was updated")
+
+        else:
+            active_nominations = await self.bot.api_client.post(
+                'bot/nominations/' + str(user.id),
+                json={
+                    'active': True,
+                    'author': ctx.author.id,
+                    'reason': reason,
+                }
+            )
+            self.watched_users.add(user.id)
+            await ctx.send(":ok_hand: user added to talent pool")
 
     @bigbrother_group.command(name='unnominate', aliases=('un',))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
@@ -95,7 +105,7 @@ class Nominations(BigBrother):
             await ctx.send(":x: the nomination is already inactive")
 
         else:
-            await self.bot.api_client.patch(
+            await self.bot.api_client.put(
                 'bot/nominations/' + str(user.id),
                 json={'active': False}
             )
