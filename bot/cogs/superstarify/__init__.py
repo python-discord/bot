@@ -108,7 +108,7 @@ class Superstarify:
             params={
                 'active': 'true',
                 'type': 'superstarify',
-                'user__id': before.id
+                'user__id': member.id
             }
         )
 
