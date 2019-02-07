@@ -43,6 +43,9 @@ def proxy_user(user_id: str) -> Object:
     return user
 
 
+UserTypes = Union[Member, User, proxy_user]
+
+
 class Moderation(Scheduler):
     """
     Server moderation tools.
@@ -74,7 +77,7 @@ class Moderation(Scheduler):
 
     @with_role(*MODERATION_ROLES)
     @command()
-    async def warn(self, ctx: Context, user: Union[User, proxy_user], *, reason: str = None):
+    async def warn(self, ctx: Context, user: UserTypes, *, reason: str = None):
         """
         Create a warning infraction in the database for a user.
 
@@ -184,7 +187,7 @@ class Moderation(Scheduler):
 
     @with_role(*MODERATION_ROLES)
     @command()
-    async def ban(self, ctx: Context, user: Union[User, proxy_user], *, reason: str = None):
+    async def ban(self, ctx: Context, user: UserTypes, *, reason: str = None):
         """
         Create a permanent ban infraction in the database for a user.
 
@@ -192,8 +195,7 @@ class Moderation(Scheduler):
         **`reason`:** The reason for the ban.
         """
 
-        member = ctx.guild.get_member(user.id)
-        if not await self.respect_role_hierarchy(ctx, member, 'ban'):
+        if not await self.respect_role_hierarchy(ctx, user, 'ban'):
             # Ensure ctx author has a higher top role than the target user
             # Warning is sent to ctx by the helper method
             return
@@ -371,7 +373,7 @@ class Moderation(Scheduler):
     @with_role(*MODERATION_ROLES)
     @command()
     async def tempban(
-        self, ctx: Context, user: Union[User, proxy_user], duration: str, *, reason: str = None
+        self, ctx: Context, user: UserTypes, duration: str, *, reason: str = None
     ):
         """
         Create a temporary ban infraction in the database for a user.
@@ -381,8 +383,7 @@ class Moderation(Scheduler):
         **`reason`:** The reason for the temporary ban.
         """
 
-        member = ctx.guild.get_member(user.id)
-        if not await self.respect_role_hierarchy(ctx, member, 'tempban'):
+        if not await self.respect_role_hierarchy(ctx, user, 'tempban'):
             # Ensure ctx author has a higher top role than the target user
             # Warning is sent to ctx by the helper method
             return
@@ -450,7 +451,7 @@ class Moderation(Scheduler):
 
     @with_role(*MODERATION_ROLES)
     @command(hidden=True, aliases=['shadowwarn', 'swarn', 'shadow_warn'])
-    async def note(self, ctx: Context, user: Union[User, proxy_user], *, reason: str = None):
+    async def note(self, ctx: Context, user: UserTypes, *, reason: str = None):
         """
         Create a private infraction note in the database for a user.
 
@@ -537,7 +538,7 @@ class Moderation(Scheduler):
 
     @with_role(*MODERATION_ROLES)
     @command(hidden=True, aliases=['shadowban', 'sban'])
-    async def shadow_ban(self, ctx: Context, user: Union[User, proxy_user], *, reason: str = None):
+    async def shadow_ban(self, ctx: Context, user: UserTypes, *, reason: str = None):
         """
         Create a permanent ban infraction in the database for a user.
 
@@ -545,8 +546,7 @@ class Moderation(Scheduler):
         **`reason`:** The reason for the ban.
         """
 
-        member = ctx.guild.get_member(user.id)
-        if not await self.respect_role_hierarchy(ctx, member, 'shadowban'):
+        if not await self.respect_role_hierarchy(ctx, user, 'shadowban'):
             # Ensure ctx author has a higher top role than the target user
             # Warning is sent to ctx by the helper method
             return
@@ -680,7 +680,7 @@ class Moderation(Scheduler):
     @with_role(*MODERATION_ROLES)
     @command(hidden=True, aliases=["shadowtempban, stempban"])
     async def shadow_tempban(
-            self, ctx: Context, user: Union[User, proxy_user], duration: str, *, reason: str = None
+            self, ctx: Context, user: UserTypes, duration: str, *, reason: str = None
     ):
         """
         Create a temporary ban infraction in the database for a user.
@@ -690,8 +690,7 @@ class Moderation(Scheduler):
         **`reason`:** The reason for the temporary ban.
         """
 
-        member = ctx.guild.get_member(user.id)
-        if not await self.respect_role_hierarchy(ctx, member, 'shadowtempban'):
+        if not await self.respect_role_hierarchy(ctx, user, 'shadowtempban'):
             # Ensure ctx author has a higher top role than the target user
             # Warning is sent to ctx by the helper method
             return
@@ -827,7 +826,7 @@ class Moderation(Scheduler):
 
     @with_role(*MODERATION_ROLES)
     @command()
-    async def unban(self, ctx: Context, user: Union[User, proxy_user]):
+    async def unban(self, ctx: Context, user: UserTypes):
         """
         Deactivates the active ban infraction for a user.
 
@@ -1368,25 +1367,31 @@ class Moderation(Scheduler):
             if User in error.converters:
                 await ctx.send(str(error.errors[0]))
 
-    async def respect_role_hierarchy(self, ctx: Context, target: Member, infraction_type: str) -> bool:
+    async def respect_role_hierarchy(self, ctx: Context, target: UserTypes, infr_type: str) -> bool:
         """
-        Check if the highest role of the invoking member is greater than that of the target member
+        Check if the highest role of the invoking member is greater than that of the target member.
+        If this check fails, a warning is sent to the invoking ctx.
 
-        If this check fails, a warning is sent to the invoking ctx
+        Returns True always if target is not a discord.Member instance.
 
-        Implement as a method rather than a check in order to avoid having to reimplement parameter
-        checks & conversions in a dedicated check decorater
+        :param ctx: The command context when invoked.
+        :param target: The target of the infraction.
+        :param infr_type: The type of infraction.
         """
+
+        if not isinstance(target, Member):
+            return True
 
         actor = ctx.author
         target_is_lower = target.top_role < actor.top_role
         if not target_is_lower:
             log.info(
-                f"{actor} ({actor.id}) attempted to {infraction_type} "
-                f"{target} ({target.id}), who has an equal or higher top role"
+                f"{actor} ({actor.id}) attempted to {infr_type} "
+                f"{target} ({target.id}), who has an equal or higher top role."
             )
             await ctx.send(
-                f":x: {actor.mention}, you may not {infraction_type} someone with an equal or higher top role"
+                f":x: {actor.mention}, you may not {infr_type} "
+                "someone with an equal or higher top role."
             )
 
         return target_is_lower

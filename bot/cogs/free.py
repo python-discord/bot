@@ -2,10 +2,10 @@ import logging
 from datetime import datetime
 
 from discord import Colour, Embed, Member, utils
-from discord.ext import commands
-from discord.ext.commands import BucketType, Context, command, cooldown
+from discord.ext.commands import Context, command
 
-from bot.constants import Categories, Free, Roles
+from bot.constants import Categories, Channels, Free, STAFF_ROLES
+from bot.decorators import redirect_output
 
 
 log = logging.getLogger(__name__)
@@ -21,7 +21,7 @@ class Free:
     PYTHON_HELP_ID = Categories.python_help
 
     @command(name="free", aliases=('f',))
-    @cooldown(RATE, PER, BucketType.channel)
+    @redirect_output(destination_channel=Channels.bot, bypass_roles=STAFF_ROLES)
     async def free(self, ctx: Context, user: Member = None, seek: int = 2):
         """
         Lists free help channels by likeliness of availability.
@@ -99,27 +99,6 @@ class Free:
                                  "as one will likely be available soon.**")
 
         await ctx.send(embed=embed)
-
-    @free.error
-    async def free_error(self, ctx: Context, error):
-        """
-        If error raised is CommandOnCooldown, and the
-        user who invoked has the helper role, reset
-        the cooldown and reinvoke the command.
-
-        Otherwise log the error.
-        """
-        helpers = ctx.guild.get_role(Roles.helpers)
-
-        if isinstance(error, commands.CommandOnCooldown):
-            if helpers in ctx.author.roles:
-                # reset cooldown so second invocation
-                # doesn't bring us back here.
-                ctx.command.reset_cooldown(ctx)
-                # return to avoid needlessly logging the error
-                return await ctx.reinvoke()
-
-        log.exception(error)  # Don't ignore other errors
 
 
 def setup(bot):
