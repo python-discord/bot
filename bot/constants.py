@@ -515,7 +515,8 @@ NEGATIVE_REPLIES = [
     "Not in a million years.",
     "Fat chance.",
     "Certainly not.",
-    "NEGATORY."
+    "NEGATORY.",
+    "Nuh-uh.",
 ]
 
 POSITIVE_REPLIES = [
