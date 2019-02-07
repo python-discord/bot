@@ -303,8 +303,10 @@ class Filtering:
 
     async def _has_invites(self, text: str) -> Union[dict, bool]:
         """
-        Returns True if the text contains an invite which is not on the guild_invite_whitelist in
-        config.yml
+        Checks if there's any invites in the text content that aren't in the guild whitelist.
+
+        If any are detected, a dictionary of invite data is returned, with a key per invite.
+        If none are detected, False is returned.
 
         Attempts to catch some of common ways to try to cheat the system.
         """
