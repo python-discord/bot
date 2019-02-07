@@ -49,7 +49,7 @@ class Rules:
             (
                 "All discussion should be kept within the relevant "
                 "channels for the subject - See the "
-                f"[channels page](https://pythondiscord.com/about/channels) " 
+                f"[channels page](https://pythondiscord.com/about/channels) "
                 "for more information."
             ),
             (
