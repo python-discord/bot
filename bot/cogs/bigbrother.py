@@ -9,7 +9,10 @@ from aiohttp import ClientError
 from discord import Color, Embed, Guild, Member, Message, TextChannel, User
 from discord.ext.commands import Bot, Context, command, group
 
-from bot.constants import BigBrother as BigBrotherConfig, Channels, Emojis, Guild as GuildConfig, Keys, Roles, URLs
+from bot.constants import (
+    BigBrother as BigBrotherConfig, Channels, Emojis, Guild as GuildConfig,
+    Keys, Roles, STAFF_ROLES, URLs,
+)
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
 from bot.utils import messages
@@ -40,7 +43,7 @@ class BigBrother:
         self.last_log = [None, None, 0]  # [user_id, channel_id, message_count]
         self.consuming = False
         self.infraction_watch_prefix = "bb watch: "  # Please do not change or we won't be able to find old reasons
-        self.nomination_prefix = "Nomination: "
+        self.nomination_prefix = "Helper nomination: "
 
         self.bot.loop.create_task(self.get_watched_users())
 
@@ -421,6 +424,12 @@ class BigBrother:
         # Note: This function is called from HelperNomination.nominate_command so that the
         # !nominate command does not show up under "BigBrother" in the help embed, but under
         # the header HelperNomination for users with the helper role.
+
+        member = ctx.guild.get_member(user.id)
+
+        if member and any(role.id in STAFF_ROLES for role in member.roles):
+            await ctx.send(f":x: {user.mention} is already a staff member!")
+            return
 
         channel_id = Channels.talent_pool
 
