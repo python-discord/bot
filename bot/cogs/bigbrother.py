@@ -246,6 +246,13 @@ class BigBrother:
 
                     # Adding nomination info to author_field
                     author_field = f"{author_field} (nominated {time_delta} by {actor})"
+            else:
+                if inserted_at:
+                    # Get time delta since insertion
+                    date_time = parse_rfc1123(inserted_at).replace(tzinfo=None)
+                    time_delta = time_since(date_time, precision="minutes", max_units=1)
+
+                    author_field = f"{author_field} (added {time_delta})"
 
             embed = Embed(description=f"{message.author.mention} in [#{message.channel.name}]({message.jump_url})")
             embed.set_author(name=author_field, icon_url=message.author.avatar_url)
