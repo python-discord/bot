@@ -355,8 +355,12 @@ class BigBrother:
 
     @bigbrother_group.command(name='unwatch', aliases=('uw',))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
-    async def unwatch_command(self, ctx: Context, user: User):
-        """Stop relaying messages by the given `user`."""
+    async def unwatch_command(self, ctx: Context, user: User, *, reason: str):
+        """
+        Stop relaying messages by the given `user`.
+
+        A `reason` for unwatching is required, which will be added as a note to the user.
+        """
 
         url = f"{URLs.site_bigbrother_api}?user_id={user.id}"
         async with self.bot.http_session.delete(url, headers=self.HEADERS) as response:
@@ -364,13 +368,19 @@ class BigBrother:
                 await ctx.send(f":ok_hand: will no longer relay messages sent by {user}")
 
                 if user.id in self.watched_users:
+                    channel = self.watched_users[user.id]
+
                     del self.watched_users[user.id]
                     if user.id in self.channel_queues:
                         del self.channel_queues[user.id]
                     if user.id in self.watch_reasons:
                         del self.watch_reasons[user.id]
                 else:
+                    channel = None
                     log.warning(f"user {user.id} was unwatched but was not found in the cache")
+
+                reason = f"Unwatched ({channel.name if channel else 'unknown channel'}): {reason}"
+                await post_infraction(ctx, user, type="warning", reason=reason, hidden=True)
 
             else:
                 data = await response.json()
