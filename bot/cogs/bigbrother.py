@@ -328,6 +328,9 @@ class BigBrother:
             if not updated:
                 await ctx.send(f":x: Failed to update cache: non-200 response from the API")
                 return
+            title = "Watched users (updated cache)"
+        else:
+            title = "Watched users (from cache)"
 
         lines = tuple(
             f"• <@{user_id}> in <#{self.watched_users[user_id].id}>"
@@ -336,7 +339,7 @@ class BigBrother:
         await LinePaginator.paginate(
             lines or ("There's nothing here yet.",),
             ctx,
-            Embed(title="Watched users (cached)", color=Color.blue()),
+            Embed(title=title, color=Color.blue()),
             empty=False
         )
 
