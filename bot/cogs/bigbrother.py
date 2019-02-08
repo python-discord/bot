@@ -73,6 +73,16 @@ class BigBrother:
             data = await response.json()
             self.update_cache(data)
 
+    async def update_watched_users(self):
+        async with self.bot.http_session.get(URLs.site_bigbrother_api, headers=self.HEADERS) as response:
+            if response.status == 200:
+                data = await response.json()
+                self.update_cache(data)
+                log.trace("Updated watch list cache")
+                return True
+            else:
+                return False
+
     async def get_watch_information(self, user_id: int) -> WatchInformation:
         """ Fetches and returns the latest watch reason for a user using the infraction API """
 
@@ -309,35 +319,22 @@ class BigBrother:
         By default, the users are returned from the cache.
         If this is not desired, `from_cache` can be given as a falsy value, e.g. e.g. 'no'.
         """
+        if not from_cache:
+            updated = await self.update_watched_users()
+            if not updated:
+                await ctx.send(f":x: Failed to update cache: non-200 response from the API")
+                return
 
-        if from_cache:
-            lines = tuple(
-                f"• <@{user_id}> in <#{self.watched_users[user_id].id}>"
-                for user_id in self.watched_users
-            )
-            await LinePaginator.paginate(
-                lines or ("There's nothing here yet.",),
-                ctx,
-                Embed(title="Watched users (cached)", color=Color.blue()),
-                empty=False
-            )
-
-        else:
-            async with self.bot.http_session.get(URLs.site_bigbrother_api, headers=self.HEADERS) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    self.update_cache(data)
-                    lines = tuple(f"• <@{entry['user_id']}> in <#{entry['channel_id']}>" for entry in data)
-
-                    await LinePaginator.paginate(
-                        lines or ("There's nothing here yet.",),
-                        ctx,
-                        Embed(title="Watched users", color=Color.blue()),
-                        empty=False
-                    )
-
-                else:
-                    await ctx.send(f":x: got non-200 response from the API")
+        lines = tuple(
+            f"• <@{user_id}> in <#{self.watched_users[user_id].id}>"
+            for user_id in self.watched_users
+        )
+        await LinePaginator.paginate(
+            lines or ("There's nothing here yet.",),
+            ctx,
+            Embed(title="Watched users (cached)", color=Color.blue()),
+            empty=False
+        )
 
     @bigbrother_group.command(name='watch', aliases=('w',))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
