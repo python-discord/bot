@@ -1,12 +1,11 @@
 import re
 from typing import Optional
 
+bot.load_extension("bot.cogs.rules")
+
 from bot.constants import Channels, Roles
 from bot.decorators import redirect_output
 from bot.pagination import LinePaginator
-
-from discord import Colour, Embed
-from discord.ext.commands import Bot, Context, command
 
 
 STAFF = Roles.admin, Roles.moderator, Roles.owner
