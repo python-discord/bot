@@ -40,6 +40,7 @@ class BigBrother:
         self.last_log = [None, None, 0]  # [user_id, channel_id, message_count]
         self.consuming = False
         self.infraction_watch_prefix = "bb watch: "  # Please do not change or we won't be able to find old reasons
+        self.nomination_prefix = "Nomination: "
 
         self.bot.loop.create_task(self.get_watched_users())
 
@@ -83,10 +84,10 @@ class BigBrother:
             else:
                 return False
 
-    async def get_watch_information(self, user_id: int) -> WatchInformation:
+    async def get_watch_information(self, user_id: int, prefix: str) -> WatchInformation:
         """ Fetches and returns the latest watch reason for a user using the infraction API """
 
-        re_bb_watch = rf"^{self.infraction_watch_prefix}"
+        re_bb_watch = rf"^{prefix}"
         user_id = str(user_id)
 
         try:
@@ -114,7 +115,7 @@ class BigBrother:
             date = latest_reason_infraction["inserted_at"]
 
             # Get the latest reason without the prefix
-            latest_reason = latest_reason_infraction['reason'][len(self.infraction_watch_prefix):]
+            latest_reason = latest_reason_infraction['reason'][len(prefix):]
 
             log.trace(f"The latest bb watch reason for {user_id}: {latest_reason}")
             return WatchInformation(reason=latest_reason, actor_id=actor_id, inserted_at=date)
@@ -214,7 +215,11 @@ class BigBrother:
             # Retrieve watch reason from API if it's not already in the cache
             if message.author.id not in self.watch_reasons:
                 log.trace(f"No watch information for {message.author.id} found in cache; retrieving from API")
-                user_watch_information = await self.get_watch_information(message.author.id)
+                if destination == self.bot.get_channel(Channels.talent_pool):
+                    prefix = self.nomination_prefix
+                else:
+                    prefix = self.infraction_watch_prefix
+                user_watch_information = await self.get_watch_information(message.author.id, prefix)
                 self.watch_reasons[message.author.id] = user_watch_information
 
             self.last_log = [message.author.id, message.channel.id, 0]
@@ -297,7 +302,6 @@ class BigBrother:
                     self.watched_users[user.id] = channel
 
                     # Add a note (shadow warning) with the reason for watching
-                    reason = f"{self.infraction_watch_prefix}{reason}"
                     await post_infraction(ctx, user, type="warning", reason=reason, hidden=True)
             else:
                 data = await response.json()
@@ -346,7 +350,17 @@ class BigBrother:
         note (aka: shadow warning)
         """
 
+        # Update cache to avoid double watching of a user
+        await self.update_watched_users()
+
+        if user.id in self.watched_users:
+            message = f":x: User is already being watched in {self.watched_users[user.id].name}"
+            await ctx.send(message)
+            return
+
         channel_id = Channels.big_brother_logs
+
+        reason = f"{self.infraction_watch_prefix}{reason}"
 
         await self._watch_user(ctx, user, reason, channel_id)
 
@@ -399,6 +413,21 @@ class BigBrother:
         # the header HelperNomination for users with the helper role.
 
         channel_id = Channels.talent_pool
+
+        # Update watch cache to avoid overwriting active nomination reason
+        await self.update_watched_users()
+
+        if user.id in self.watched_users:
+            if self.watched_users[user.id].id == Channels.talent_pool:
+                prefix = "Additional nomination: "
+            else:
+                # If the user is being watched in big-brother, don't add them to talent-pool
+                await ctx.send(f":x: Can't add {user.mention} to the talent-pool at this moment")
+                return
+        else:
+            prefix = self.nomination_prefix
+
+        reason = f"{prefix}{reason}"
 
         await self._watch_user(ctx, user, reason, channel_id)
 
