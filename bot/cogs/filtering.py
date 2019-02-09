@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import Optional
+from typing import Optional, Union
 
 import discord.errors
 from dateutil.relativedelta import relativedelta
@@ -189,7 +189,25 @@ class Filtering:
 
                         log.debug(message)
 
-                        additional_embeds = msg.embeds if filter_name == "watch_rich_embeds" else None
+                        additional_embeds = None
+                        additional_embeds_msg = None
+
+                        if filter_name == "filter_invites":
+                            additional_embeds = []
+                            for invite, data in triggered.items():
+                                embed = discord.Embed(description=(
+                                    f"**Members:**\n{data['members']}\n"
+                                    f"**Active:**\n{data['active']}"
+                                ))
+                                embed.set_author(name=data["name"])
+                                embed.set_thumbnail(url=data["icon"])
+                                embed.set_footer(text=f"Guild Invite Code: {invite}")
+                                additional_embeds.append(embed)
+                            additional_embeds_msg = "For the following guild(s):"
+
+                        elif filter_name == "watch_rich_embeds":
+                            additional_embeds = msg.embeds
+                            additional_embeds_msg = "With the following embed(s):"
 
                         # Send pretty mod log embed to mod-alerts
                         await self.mod_log.send_log_message(
@@ -201,6 +219,7 @@ class Filtering:
                             channel_id=Channels.mod_alerts,
                             ping_everyone=Filter.ping_everyone,
                             additional_embeds=additional_embeds,
+                            additional_embeds_msg=additional_embeds_msg
                         )
 
                         break  # We don't want multiple filters to trigger
@@ -282,10 +301,12 @@ class Filtering:
 
         return bool(re.search(ZALGO_RE, text))
 
-    async def _has_invites(self, text: str) -> bool:
+    async def _has_invites(self, text: str) -> Union[dict, bool]:
         """
-        Returns True if the text contains an invite which is not on the guild_invite_whitelist in
-        config.yml
+        Checks if there's any invites in the text content that aren't in the guild whitelist.
+
+        If any are detected, a dictionary of invite data is returned, with a key per invite.
+        If none are detected, False is returned.
 
         Attempts to catch some of common ways to try to cheat the system.
         """
@@ -295,10 +316,13 @@ class Filtering:
         text = text.replace("\\", "")
 
         invites = re.findall(INVITE_RE, text, re.IGNORECASE)
+        invite_data = dict()
         for invite in invites:
+            if invite in invite_data:
+                continue
 
             response = await self.bot.http_session.get(
-                f"{URLs.discord_invite_api}/{invite}"
+                f"{URLs.discord_invite_api}/{invite}", params={"with_counts": "true"}
             )
             response = await response.json()
             guild = response.get("guild")
@@ -311,8 +335,20 @@ class Filtering:
             guild_id = int(guild.get("id"))
 
             if guild_id not in Filter.guild_invite_whitelist:
-                return True
-        return False
+                guild_icon_hash = guild["icon"]
+                guild_icon = (
+                    "https://cdn.discordapp.com/icons/"
+                    f"{guild_id}/{guild_icon_hash}.png?size=512"
+                )
+
+                invite_data[invite] = {
+                    "name": guild["name"],
+                    "icon": guild_icon,
+                    "members": response["approximate_member_count"],
+                    "active": response["approximate_presence_count"]
+                }
+
+        return invite_data if invite_data else False
 
     @staticmethod
     async def _has_rich_embed(msg: Message):
