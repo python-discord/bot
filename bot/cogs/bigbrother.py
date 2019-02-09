@@ -441,7 +441,11 @@ class BigBrother:
                 prefix = "Additional nomination: "
             else:
                 # If the user is being watched in big-brother, don't add them to talent-pool
-                await ctx.send(f":x: Can't add {user.mention} to the talent-pool at this moment")
+                message = (
+                    f":x: {user.mention} can't be added to the talent-pool "
+                    "as they are currently being watched in big-brother."
+                )
+                await ctx.send(message)
                 return
         else:
             prefix = self.nomination_prefix
