@@ -515,7 +515,9 @@ NEGATIVE_REPLIES = [
     "Not in a million years.",
     "Fat chance.",
     "Certainly not.",
-    "NEGATORY."
+    "NEGATORY.",
+    "Nuh-uh.",
+    "Not in my house!",
 ]
 
 POSITIVE_REPLIES = [
@@ -535,7 +537,7 @@ POSITIVE_REPLIES = [
     "ROGER THAT",
     "Of course!",
     "Aye aye, cap'n!",
-    "I'll allow it."
+    "I'll allow it.",
 ]
 
 ERROR_REPLIES = [
@@ -547,7 +549,8 @@ ERROR_REPLIES = [
     "You blew it.",
     "You're bad at computers.",
     "Are you trying to kill me?",
-    "Noooooo!!"
+    "Noooooo!!",
+    "I can't believe you've done this",
 ]
 
 

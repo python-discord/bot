@@ -318,6 +318,7 @@ anti_spam:
         newlines:
             interval: 10
             max: 100
+            max_consecutive: 10
 
         role_mentions:
             interval: 10
