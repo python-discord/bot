@@ -51,10 +51,11 @@ class Rules:
             "We do not allow advertisements for communities (including other Discord servers) or "
             "commercial projects - Contact us directly if you want to discuss a partnership!"
         )
-        self.default_desc = ("The rules and guidelines that apply to this community can be found on"
-                             " our [rules page](https://pythondiscord.com/about/rules). We expect"
-                             " all members of the community to have read and understood these."
-                             )
+        self.default_desc = "The rules and guidelines that apply to this " \
+                            "community can be found on our [rules page]" \
+                            "(https://pythondiscord.com/about/rules). We " \
+                            "expect all members of the community to have " \
+                            "read and understood these."
 
     @command(aliases=['r', 'rule'], name='rules')
     @redirect_output(destination_channel=Channels.bot, bypass_roles=STAFF)
@@ -84,7 +85,8 @@ class Rules:
                     continue
                 rule_match = re.search(r'\d?\d[:|-]1?\d', item)
                 if rule_match:
-                    a, b = sorted([int(x)-1 for x in re.split(r'[:-]', rule_match.group())])
+                    a, b = sorted(
+                        [int(x)-1 for x in re.split(r'[:-]', rule_match.group())])
                     rules_to_get.extend(range(a, b+1))
             else:
                 rules_to_get.append(int(item)-1)
