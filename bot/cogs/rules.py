@@ -4,10 +4,9 @@ from typing import Optional
 from discord import Colour, Embed
 from discord.ext.commands import Bot, Context, command
 
-from bot.pagination import LinePaginator
 from bot.constants import Channels, Roles
 from bot.decorators import redirect_output
-
+from bot.pagination import LinePaginator
 
 STAFF = Roles.admin, Roles.moderator, Roles.owner
 
