@@ -49,7 +49,8 @@ class Cogs:
         """
         Load up an unloaded cog, given the module containing it
 
-        You can specify the cog name for any cogs that are placed directly within `!cogs`, or specify the
+        You can specify the cog name for any cogs that are
+        placed directly within `!cogs`, or specify the
         entire module directly.
         """
 
@@ -70,7 +71,9 @@ class Cogs:
             full_cog = cog
         else:
             full_cog = None
-            log.warning(f"{ctx.author} requested we load the '{cog}' cog, but that cog doesn't exist.")
+            log.warning(
+                f"{ctx.author} requested we load the '{cog}' cog, but that cog doesn't exist."
+            )
             embed.description = f"Unknown cog: {cog}"
 
         if full_cog:
@@ -80,7 +83,8 @@ class Cogs:
                 except ImportError:
                     log.error(f"{ctx.author} requested we load the '{cog}' cog, "
                               f"but the cog module {full_cog} could not be found!")
-                    embed.description = f"Invalid cog: {cog}\n\nCould not find cog module {full_cog}"
+                    embed.description = (f"Invalid cog: {cog}\n\n"
+                                         f"Could not find cog module {full_cog}")
                 except Exception as e:
                     log.error(f"{ctx.author} requested we load the '{cog}' cog, "
                               "but the loading failed with the following error: \n"
@@ -91,7 +95,8 @@ class Cogs:
                     embed.description = f"Cog loaded: {cog}"
                     embed.colour = Colour.green()
             else:
-                log.warning(f"{ctx.author} requested we load the '{cog}' cog, but the cog was already loaded!")
+                log.warning(f"{ctx.author} requested we load the '{cog}' cog, "
+                            "but the cog was already loaded!")
                 embed.description = f"Cog {cog} is already loaded"
 
         await ctx.send(embed=embed)
@@ -102,7 +107,8 @@ class Cogs:
         """
         Unload an already-loaded cog, given the module containing it
 
-        You can specify the cog name for any cogs that are placed directly within `!cogs`, or specify the
+        You can specify the cog name for any cogs that are
+        placed directly within `!cogs`, or specify the
         entire module directly.
         """
 
@@ -123,12 +129,16 @@ class Cogs:
             full_cog = cog
         else:
             full_cog = None
-            log.warning(f"{ctx.author} requested we unload the '{cog}' cog, but that cog doesn't exist.")
+            log.warning(
+                f"{ctx.author} requested we unload the '{cog}' cog, but that cog doesn't exist."
+            )
             embed.description = f"Unknown cog: {cog}"
 
         if full_cog:
             if full_cog in KEEP_LOADED:
-                log.warning(f"{ctx.author} requested we unload `{full_cog}`, that sneaky pete. We said no.")
+                log.warning(
+                    f"{ctx.author} requested we unload `{full_cog}`, that sneaky pete. We said no."
+                )
                 embed.description = f"You may not unload `{full_cog}`!"
             elif full_cog in self.bot.extensions:
                 try:
@@ -143,7 +153,9 @@ class Cogs:
                     embed.description = f"Cog unloaded: {cog}"
                     embed.colour = Colour.green()
             else:
-                log.warning(f"{ctx.author} requested we unload the '{cog}' cog, but the cog wasn't loaded!")
+                log.warning(
+                    f"{ctx.author} requested we unload the '{cog}' cog, but the cog wasn't loaded!"
+                )
                 embed.description = f"Cog {cog} is not loaded"
 
         await ctx.send(embed=embed)
@@ -154,10 +166,12 @@ class Cogs:
         """
         Reload an unloaded cog, given the module containing it
 
-        You can specify the cog name for any cogs that are placed directly within `!cogs`, or specify the
+        You can specify the cog name for any cogs that are
+        placed directly within `!cogs`, or specify the
         entire module directly.
 
-        If you specify "*" as the cog, every cog currently loaded will be unloaded, and then every cog present in the
+        If you specify "*" as the cog, every cog currently loaded will be unloaded,
+        and then every cog present in the
         bot/cogs directory will be loaded.
         """
 
@@ -180,7 +194,9 @@ class Cogs:
             full_cog = cog
         else:
             full_cog = None
-            log.warning(f"{ctx.author} requested we reload the '{cog}' cog, but that cog doesn't exist.")
+            log.warning(
+                f"{ctx.author} requested we reload the '{cog}' cog, but that cog doesn't exist."
+            )
             embed.description = f"Unknown cog: {cog}"
 
         if full_cog:
@@ -248,7 +264,9 @@ class Cogs:
                     embed.description = f"Cog reload: {cog}"
                     embed.colour = Colour.green()
             else:
-                log.warning(f"{ctx.author} requested we reload the '{cog}' cog, but the cog wasn't loaded!")
+                log.warning(
+                    f"{ctx.author} requested we reload the '{cog}' cog, but the cog wasn't loaded!"
+                )
                 embed.description = f"Cog {cog} is not loaded"
 
         await ctx.send(embed=embed)
@@ -259,7 +277,8 @@ class Cogs:
         """
         Get a list of all cogs, including their loaded status.
 
-        A red double-chevron indicates that the cog is unloaded. Green indicates that the cog is currently loaded.
+        A red double-chevron indicates that the cog is unloaded.
+        Green indicates that the cog is currently loaded.
         """
 
         embed = Embed()

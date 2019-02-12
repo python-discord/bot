@@ -71,7 +71,8 @@ class AntiSpam:
         )
         max_interval = max_interval_config['interval']
 
-        # Store history messages since `interval` seconds ago in a list to prevent unnecessary API calls.
+        # Store history messages since `interval` seconds
+        # ago in a list to prevent unnecessary API calls.
         earliest_relevant_at = datetime.utcnow() - timedelta(seconds=max_interval)
         relevant_messages = [
             msg async for msg in message.channel.history(after=earliest_relevant_at, reverse=False)
@@ -82,7 +83,9 @@ class AntiSpam:
             rule_function = RULE_FUNCTION_MAPPING[rule_name]
 
             # Create a list of messages that were sent in the interval that the rule cares about.
-            latest_interesting_stamp = datetime.utcnow() - timedelta(seconds=rule_config['interval'])
+            latest_interesting_stamp = (
+                datetime.utcnow() - timedelta(seconds=rule_config['interval'])
+            )
             messages_for_rule = [
                 msg for msg in relevant_messages if msg.created_at > latest_interesting_stamp
             ]
@@ -122,7 +125,9 @@ class AntiSpam:
             # For multiple messages, use the logs API
             if len(messages) > 1:
                 url = await self.mod_log.upload_log(messages)
-                mod_alert_message += f"A complete log of the offending messages can be found [here]({url})"
+                mod_alert_message += (
+                    f"A complete log of the offending messages can be found [here]({url})"
+                )
             else:
                 mod_alert_message += "Message:\n"
                 content = messages[0].clean_content

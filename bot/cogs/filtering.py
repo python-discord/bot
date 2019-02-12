@@ -48,7 +48,8 @@ class Filtering:
                 "content_only": True,
                 "user_notification": Filter.notify_user_zalgo,
                 "notification_msg": (
-                    "Your post has been removed for abusing Unicode character rendering (aka Zalgo text). "
+                    "Your post has been removed for abusing Unicode "
+                    "character rendering (aka Zalgo text). "
                     f"{_staff_mistake_str}"
                 )
             },
@@ -70,7 +71,8 @@ class Filtering:
                 "content_only": True,
                 "user_notification": Filter.notify_user_domains,
                 "notification_msg": (
-                    f"Your URL has been removed because it matched a blacklisted domain. {_staff_mistake_str}"
+                    "Your URL has been removed because it "
+                    f"matched a blacklisted domain. {_staff_mistake_str}"
                 )
             },
             "filter_rich_embeds": {
@@ -81,7 +83,8 @@ class Filtering:
                 "user_notification": Filter.notify_user_rich_embeds,
                 "notification_msg": (
                     "Your post has been removed because it contained a rich embed. "
-                    "This indicates that you're either using an unofficial discord client or are using a self-bot, "
+                    "This indicates that you're either using an "
+                    "unofficial discord client or are using a self-bot, "
                     f"both of which violate Discord's Terms of Service. {_staff_mistake_str}\n\n"
                     "Please don't use a self-bot or an unofficial Discord client on our server."
                 )
@@ -166,7 +169,9 @@ class Filtering:
 
                             # Notify the user if the filter specifies
                             if _filter["user_notification"]:
-                                await self.notify_member(msg.author, _filter["notification_msg"], msg.channel)
+                                await self.notify_member(
+                                    msg.author, _filter["notification_msg"], msg.channel
+                                )
 
                         if isinstance(msg.channel, DMChannel):
                             channel_str = "via DM"
@@ -183,7 +188,9 @@ class Filtering:
 
                         log.debug(message)
 
-                        additional_embeds = msg.embeds if filter_name == "filter_rich_embeds" else None
+                        additional_embeds = (
+                            msg.embeds if filter_name == "filter_rich_embeds" else None
+                        )
 
                         # Send pretty mod log embed to mod-alerts
                         await self.mod_log.send_log_message(

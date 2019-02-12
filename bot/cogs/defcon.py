@@ -13,10 +13,12 @@ log = logging.getLogger(__name__)
 REJECTION_MESSAGE = """
 Hi, {user} - Thanks for your interest in our server!
 
-Due to a current (or detected) cyberattack on our community, we've limited access to the server for new accounts. Since
+Due to a current (or detected) cyberattack on our community, \
+we've limited access to the server for new accounts. Since
 your account is relatively new, we're unable to provide access to the server at this time.
 
-Even so, thanks for joining! We're very excited at the possibility of having you here, and we hope that this situation
+Even so, thanks for joining! We're very excited at the possibility of having you here, \
+and we hope that this situation
 will be resolved soon. In the meantime, please feel free to peruse the resources on our site at
 <https://pythondiscord.com/>, and have a nice day!
 """
@@ -91,7 +93,8 @@ class Defcon:
                 )
 
                 if not message_sent:
-                    message = f"{message}\n\nUnable to send rejection message via DM; they probably have DMs disabled."
+                    message = (f"{message}\n\nUnable to send rejection message via DM; "
+                               "they probably have DMs disabled.")
 
                 await self.mod_log.send_log_message(
                     Icons.defcon_denied, Colours.soft_red, "Entry denied",
@@ -111,7 +114,8 @@ class Defcon:
         """
         Enable DEFCON mode. Useful in a pinch, but be sure you know what you're doing!
 
-        Currently, this just adds an account age requirement. Use !defcon days <int> to set how old an account must
+        Currently, this just adds an account age requirement.
+        Use !defcon days <int> to set how old an account must
         be, in days.
         """
 
@@ -129,7 +133,8 @@ class Defcon:
             log.exception("Unable to update DEFCON settings.")
             await ctx.send(
                 f"{Emojis.defcon_enabled} DEFCON enabled.\n\n"
-                "**There was a problem updating the site** - This setting may be reverted when the bot is "
+                "**There was a problem updating the site** - "
+                "This setting may be reverted when the bot is "
                 "restarted.\n\n"
                 f"```py\n{e}\n```"
             )
@@ -138,7 +143,8 @@ class Defcon:
                 Icons.defcon_enabled, Colours.soft_green, "DEFCON enabled",
                 f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)\n"
                 f"**Days:** {self.days.days}\n\n"
-                "**There was a problem updating the site** - This setting may be reverted when the bot is "
+                "**There was a problem updating the site** - "
+                "This setting may be reverted when the bot is "
                 "restarted.\n\n"
                 f"```py\n{e}\n```"
             )
@@ -174,7 +180,8 @@ class Defcon:
             log.exception("Unable to update DEFCON settings.")
             await ctx.send(
                 f"{Emojis.defcon_disabled} DEFCON disabled.\n\n"
-                "**There was a problem updating the site** - This setting may be reverted when the bot is "
+                "**There was a problem updating the site** - "
+                "This setting may be reverted when the bot is "
                 "restarted.\n\n"
                 f"```py\n{e}\n```"
             )
@@ -182,7 +189,8 @@ class Defcon:
             await self.mod_log.send_log_message(
                 Icons.defcon_disabled, Colours.soft_red, "DEFCON disabled",
                 f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)\n"
-                "**There was a problem updating the site** - This setting may be reverted when the bot is "
+                "**There was a problem updating the site** - "
+                "This setting may be reverted when the bot is "
                 "restarted.\n\n"
                 f"```py\n{e}\n```"
             )
@@ -233,7 +241,8 @@ class Defcon:
             await ctx.send(
                 f"{Emojis.defcon_updated} DEFCON days updated; accounts must be {days} "
                 f"days old to join to the server.\n\n"
-                "**There was a problem updating the site** - This setting may be reverted when the bot is "
+                "**There was a problem updating the site** - "
+                "This setting may be reverted when the bot is "
                 "restarted.\n\n"
                 f"```py\n{e}\n```"
             )
@@ -242,13 +251,15 @@ class Defcon:
                 Icons.defcon_updated, Colour.blurple(), "DEFCON updated",
                 f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)\n"
                 f"**Days:** {self.days.days}\n\n"
-                "**There was a problem updating the site** - This setting may be reverted when the bot is "
+                "**There was a problem updating the site** - "
+                "This setting may be reverted when the bot is "
                 "restarted.\n\n"
                 f"```py\n{e}\n```"
             )
         else:
             await ctx.send(
-                f"{Emojis.defcon_updated} DEFCON days updated; accounts must be {days} days old to join to the server"
+                f"{Emojis.defcon_updated} DEFCON days updated; "
+                f"accounts must be {days} days old to join to the server"
             )
 
             await self.mod_log.send_log_message(
@@ -266,7 +277,8 @@ class Defcon:
 
         if self.enabled:
             day_str = "days" if self.days.days > 1 else "day"
-            new_topic = f"{BASE_CHANNEL_TOPIC}\n(Status: Enabled, Threshold: {self.days.days} {day_str})"
+            new_topic = (f"{BASE_CHANNEL_TOPIC}\n(Status: Enabled, "
+                         f"Threshold: {self.days.days} {day_str})")
         else:
             new_topic = f"{BASE_CHANNEL_TOPIC}\n(Status: Disabled)"
 

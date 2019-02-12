@@ -51,12 +51,16 @@ class Tags:
         if tag_name:
             params["tag_name"] = tag_name
 
-        response = await self.bot.http_session.get(URLs.site_tags_api, headers=self.headers, params=params)
+        response = await self.bot.http_session.get(
+            URLs.site_tags_api, headers=self.headers, params=params
+        )
         tag_data = await response.json()
 
         return tag_data
 
-    async def post_tag_data(self, tag_name: str, tag_content: str, image_url: Optional[str]) -> dict:
+    async def post_tag_data(
+            self, tag_name: str, tag_content: str, image_url: Optional[str]
+    ) -> dict:
         """
         Send some tag_data to our API to have it saved in the database.
 
@@ -75,7 +79,9 @@ class Tags:
             'image_url': image_url
         }
 
-        response = await self.bot.http_session.post(URLs.site_tags_api, headers=self.headers, json=params)
+        response = await self.bot.http_session.post(
+            URLs.site_tags_api, headers=self.headers, json=params
+        )
         tag_data = await response.json()
 
         return tag_data
@@ -96,7 +102,9 @@ class Tags:
         if tag_name:
             params['tag_name'] = tag_name
 
-        response = await self.bot.http_session.delete(URLs.site_tags_api, headers=self.headers, json=params)
+        response = await self.bot.http_session.delete(
+            URLs.site_tags_api, headers=self.headers, json=params
+        )
         tag_data = await response.json()
 
         return tag_data
@@ -143,7 +151,8 @@ class Tags:
 
         if _command_on_cooldown(tag_name):
             time_left = Cooldowns.tags - (time.time() - self.tag_cooldowns[tag_name]["time"])
-            log.warning(f"{ctx.author} tried to get the '{tag_name}' tag, but the tag is on cooldown. "
+            log.warning(f"{ctx.author} tried to get the '{tag_name}' tag, "
+                        "but the tag is on cooldown. "
                         f"Cooldown ends in {time_left:.1f} seconds.")
             return
 
@@ -188,10 +197,17 @@ class Tags:
             embed.colour = Colour.red()
 
             if isinstance(tag_data, dict):
-                log.warning(f"{ctx.author} requested the tag '{tag_name}', but it could not be found.")
-                embed.description = f"**{tag_name}** is an unknown tag name. Please check the spelling and try again."
+                log.warning(
+                    f"{ctx.author} requested the tag '{tag_name}', but it could not be found."
+                )
+                embed.description = (
+                    f"**{tag_name}** is an unknown tag name. "
+                    "Please check the spelling and try again."
+                )
             else:
-                log.warning(f"{ctx.author} requested a list of all tags, but the tags database was empty!")
+                log.warning(
+                    f"{ctx.author} requested a list of all tags, but the tags database was empty!"
+                )
                 embed.description = "**There are no tags in the database!**"
 
             if tag_name:
@@ -245,11 +261,13 @@ class Tags:
             embed.title = "Tag successfully added"
             embed.description = f"**{tag_name}** added to tag database."
         else:
-            log.error("There was an unexpected database error when trying to add the following tag: \n"
-                      f"tag_name: {tag_name}\n"
-                      f"tag_content: '{tag_content}'\n"
-                      f"image_url: '{image_url}'\n"
-                      f"response: {tag_data}")
+            log.error(
+                "There was an unexpected database error when trying to add the following tag: \n"
+                f"tag_name: {tag_name}\n"
+                f"tag_content: '{tag_content}'\n"
+                f"image_url: '{image_url}'\n"
+                f"response: {tag_data}"
+            )
             embed.title = "Database error"
             embed.description = ("There was a problem adding the data to the tags database. "
                                  "Please try again. If the problem persists, see the error logs.")
@@ -278,18 +296,25 @@ class Tags:
             embed.description = f"Tag successfully removed: {tag_name}."
 
         elif tag_data.get("success") is False:
-            log.debug(f"{ctx.author} tried to delete a tag called '{tag_name}', but the tag does not exist.")
+            log.debug(
+                f"{ctx.author} tried to delete a tag called '{tag_name}', "
+                "but the tag does not exist."
+            )
             embed.colour = Colour.red()
             embed.title = tag_name
             embed.description = "Tag doesn't appear to exist."
 
         else:
-            log.error("There was an unexpected database error when trying to delete the following tag: \n"
-                      f"tag_name: {tag_name}\n"
-                      f"response: {tag_data}")
+            log.error(
+                "There was an unexpected database error when trying to delete the following tag: \n"
+                f"tag_name: {tag_name}\n"
+                f"response: {tag_data}"
+            )
             embed.title = "Database error"
-            embed.description = ("There was an unexpected error with deleting the data from the tags database. "
-                                 "Please try again. If the problem persists, see the error logs.")
+            embed.description = (
+                "There was an unexpected error with deleting the data from the tags database. "
+                "Please try again. If the problem persists, see the error logs."
+            )
 
         return await ctx.send(embed=embed)
 

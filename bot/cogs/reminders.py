@@ -240,7 +240,8 @@ class Reminders(Scheduler):
                 "Did you enter a reasonable duration?"
             )
 
-            log.warn(f"User {ctx.author} attempted to create a reminder for {duration}, but failed.")
+            log.warning(f"User {ctx.author} attempted to create a "
+                        f"reminder for {duration}, but failed.")
 
             return await ctx.send(embed=embed)
 

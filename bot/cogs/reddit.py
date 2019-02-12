@@ -54,7 +54,9 @@ class Reddit:
 
         return posts[:amount]
 
-    async def send_top_posts(self, channel: TextChannel, subreddit: Subreddit, content=None, time="all"):
+    async def send_top_posts(
+            self, channel: TextChannel, subreddit: Subreddit, content=None, time="all"
+    ):
         """
         Create an embed for the top posts, then send it in a given TextChannel.
         """
@@ -153,7 +155,9 @@ class Reddit:
 
                         embed_data = {
                             "title": textwrap.shorten(data["title"], width=64, placeholder="..."),
-                            "text": textwrap.shorten(data["selftext"], width=128, placeholder="..."),
+                            "text": textwrap.shorten(
+                                data["selftext"], width=128, placeholder="..."
+                            ),
                             "url": self.URL + data["permalink"],
                             "author": data["author"]
                         }
@@ -174,7 +178,10 @@ class Reddit:
 
                     await self.reddit_channel.send(embed=embed)
 
-                log.trace(f"Sent {len(new_posts)} new {subreddit} posts to channel {self.reddit_channel.id}.")
+                log.trace(
+                    f"Sent {len(new_posts)} new {subreddit} "
+                    f"posts to channel {self.reddit_channel.id}."
+                )
 
     async def poll_top_weekly_posts(self):
         """

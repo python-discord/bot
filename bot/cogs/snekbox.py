@@ -35,21 +35,30 @@ except Exception as e:
 
 ESCAPE_REGEX = re.compile("[`\u202E\u200B]{3,}")
 FORMATTED_CODE_REGEX = re.compile(
-    r"^\s*"                                 # any leading whitespace from the beginning of the string
-    r"(?P<delim>(?P<block>```)|``?)"        # code delimiter: 1-3 backticks; (?P=block) only matches if it's a block
-    r"(?(block)(?:(?P<lang>[a-z]+)\n)?)"    # if we're in a block, match optional language (only letters plus newline)
-    r"(?:[ \t]*\n)*"                        # any blank (empty or tabs/spaces only) lines before the code
-    r"(?P<code>.*?)"                        # extract all code inside the markup
-    r"\s*"                                  # any more whitespace before the end of the code markup
-    r"(?P=delim)"                           # match the exact same delimiter from the start again
-    r"\s*$",                                # any trailing whitespace until the end of the string
-    re.DOTALL | re.IGNORECASE               # "." also matches newlines, case insensitive
+    # any leading whitespace from the beginning of the string
+    r"^\s*"
+    # code delimiter: 1-3 backticks; (?P=block) only matches if it's a block
+    r"(?P<delim>(?P<block>```)|``?)"
+    # if we're in a block, match optional language (only letters plus newline)
+    r"(?(block)(?:(?P<lang>[a-z]+)\n)?)"
+    # any blank (empty or tabs/spaces only) lines before the code
+    r"(?:[ \t]*\n)*"
+    # extract all code inside the markup
+    r"(?P<code>.*?)"
+    # any more whitespace before the end of the code markup
+    r"\s*"
+    # match the exact same delimiter from the start again
+    r"(?P=delim)"
+    # any trailing whitespace until the end of the string
+    r"\s*$",
+    # "." also matches newlines, case insensitive
+    re.DOTALL | re.IGNORECASE
 )
 RAW_CODE_REGEX = re.compile(
-    r"^(?:[ \t]*\n)*"                       # any blank (empty or tabs/spaces only) lines before the code
-    r"(?P<code>.*?)"                        # extract all the rest as code
-    r"\s*$",                                # any trailing whitespace until the end of the string
-    re.DOTALL                               # "." also matches newlines
+    r"^(?:[ \t]*\n)*"                  # any blank (empty or tabs/spaces only) lines before the code
+    r"(?P<code>.*?)"                   # extract all the rest as code
+    r"\s*$",                           # any trailing whitespace until the end of the string
+    re.DOTALL                          # "." also matches newlines
 )
 
 BYPASS_ROLES = (Roles.owner, Roles.admin, Roles.moderator, Roles.helpers)
@@ -73,23 +82,32 @@ class Snekbox:
     @in_channel(Channels.bot, bypass_roles=BYPASS_ROLES)
     async def eval_command(self, ctx: Context, *, code: str = None):
         """
-        Run some code. get the result back. We've done our best to make this safe, but do let us know if you
+        Run some code. get the result back. We've done our best to make this safe,
+        but do let us know if you
         manage to find an issue with it!
 
-        This command supports multiple lines of code, including code wrapped inside a formatted code block.
+        This command supports multiple lines of code,
+        including code wrapped inside a formatted code block.
         """
 
         if ctx.author.id in self.jobs:
-            await ctx.send(f"{ctx.author.mention} You've already got a job running - please wait for it to finish!")
+            await ctx.send(
+                f"{ctx.author.mention} You've already got a job running - "
+                "please wait for it to finish!"
+            )
             return
 
         if not code:  # None or empty string
             return await ctx.invoke(self.bot.get_command("help"), "eval")
 
-        log.info(f"Received code from {ctx.author.name}#{ctx.author.discriminator} for evaluation:\n{code}")
+        log.info(
+            f"Received code from {ctx.author.name}#{ctx.author.discriminator} "
+            f"for evaluation:\n{code}"
+        )
         self.jobs[ctx.author.id] = datetime.datetime.now()
 
-        # Strip whitespace and inline or block code markdown and extract the code and some formatting info
+        # Strip whitespace and inline or block code markdown
+        # and extract the code and some formatting info
         match = FORMATTED_CODE_REGEX.fullmatch(code)
         if match:
             code, block, lang, delim = match.group("code", "block", "lang", "delim")
@@ -101,7 +119,10 @@ class Snekbox:
             log.trace(f"Extracted {info} for evaluation:\n{code}")
         else:
             code = textwrap.dedent(RAW_CODE_REGEX.fullmatch(code).group("code"))
-            log.trace(f"Eval message contains not or badly formatted code, stripping whitespace only:\n{code}")
+            log.trace(
+                "Eval message contains not or badly formatted code,"
+                f" stripping whitespace only:\n{code}"
+            )
 
         code = textwrap.indent(code, "    ")
         code = CODE_TEMPLATE.replace("{CODE}", code)
@@ -134,7 +155,11 @@ class Snekbox:
                     full_output = output
                     truncated = False
                     if output.count("\n") > 0:
-                        output = [f"{i:03d} | {line}" for i, line in enumerate(output.split("\n"), start=1)]
+                        output = [
+                            f"{i:03d} | {line}"
+                            for i, line
+                            in enumerate(output.split("\n"), start=1)
+                        ]
                         output = "\n".join(output)
 
                     if output.count("\n") > 10:
@@ -164,17 +189,26 @@ class Snekbox:
 
                 if output.strip():
                     if paste_link:
-                        msg = f"{ctx.author.mention} Your eval job has completed.\n\n```py\n{output}\n```" \
-                              f"\nFull output: {paste_link}"
+                        msg = (
+                            f"{ctx.author.mention} Your eval job has completed."
+                            f"\n\n```py\n{output}\n```"
+                            f"\nFull output: {paste_link}"
+                        )
                     else:
-                        msg = f"{ctx.author.mention} Your eval job has completed.\n\n```py\n{output}\n```"
+                        msg = (
+                            f"{ctx.author.mention} Your eval job has completed."
+                            f"\n\n```py\n{output}\n```"
+                        )
 
                     response = await ctx.send(msg)
-                    self.bot.loop.create_task(wait_for_deletion(response, user_ids=(ctx.author.id,), client=ctx.bot))
+                    self.bot.loop.create_task(
+                        wait_for_deletion(response, user_ids=(ctx.author.id,), client=ctx.bot)
+                    )
 
                 else:
                     await ctx.send(
-                        f"{ctx.author.mention} Your eval job has completed.\n\n```py\n[No output]\n```"
+                        f"{ctx.author.mention} Your eval job has completed."
+                        "\n\n```py\n[No output]\n```"
                     )
 
             del self.jobs[ctx.author.id]

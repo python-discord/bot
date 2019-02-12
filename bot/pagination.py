@@ -78,7 +78,9 @@ class LinePaginator(Paginator):
             The line was too big for the current :attr:`max_size`.
         """
         if len(line) > self.max_size - len(self.prefix) - 2:
-            raise RuntimeError('Line exceeds maximum page size %s' % (self.max_size - len(self.prefix) - 2))
+            raise RuntimeError(
+                'Line exceeds maximum page size %s' % (self.max_size - len(self.prefix) - 2)
+            )
 
         if self.max_lines is not None:
             if self._linecount >= self.max_lines:
@@ -97,16 +99,19 @@ class LinePaginator(Paginator):
             self._count += 1
 
     @classmethod
-    async def paginate(cls, lines: Iterable[str], ctx: Context, embed: Embed,
-                       prefix: str = "", suffix: str = "", max_lines: Optional[int] = None, max_size: int = 500,
-                       empty: bool = True, restrict_to_user: User = None, timeout: int = 300,
-                       footer_text: str = None,
+    async def paginate(cls, lines: Iterable[str], ctx: Context,
+                       embed: Embed, prefix: str = "", suffix: str = "",
+                       max_lines: Optional[int] = None, max_size: int = 500,
+                       empty: bool = True, restrict_to_user: User = None,
+                       timeout: int = 300, footer_text: str = None,
                        exception_on_empty_embed: bool = False):
         """
-        Use a paginator and set of reactions to provide pagination over a set of lines. The reactions are used to
-        switch page, or to finish with pagination.
-        When used, this will send a message using `ctx.send()` and apply a set of reactions to it. These reactions may
-        be used to change page, or to remove pagination from the message. Pagination will also be removed automatically
+        Use a paginator and set of reactions to provide pagination over a set of lines.
+        The reactions are used to switch page, or to finish with pagination.
+        When used, this will send a message using `ctx.send()` and apply a set
+        of reactions to it. These reactions may
+        be used to change page, or to remove pagination from the message.
+        Pagination will also be removed automatically
         if no reaction is added for five minutes (300 seconds).
         >>> embed = Embed()
         >>> embed.set_author(name="Some Operation", url=url, icon_url=icon)
@@ -122,7 +127,8 @@ class LinePaginator(Paginator):
         :param max_lines: The maximum number of lines on each page
         :param max_size: The maximum number of characters on each page
         :param empty: Whether to place an empty line between each given line
-        :param restrict_to_user: A user to lock pagination operations to for this message, if supplied
+        :param restrict_to_user: A user to lock pagination operations to for this message,
+                                if supplied
         :param timeout: The amount of time in seconds to disable pagination of no reaction is added
         :param footer_text: Text to prefix the page number in the footer with
         """
@@ -182,11 +188,16 @@ class LinePaginator(Paginator):
                 embed.set_footer(text=footer_text)
                 log.trace(f"Setting embed footer to '{footer_text}'")
 
-            log.debug("There's less than two pages, so we won't paginate - sending single page on its own")
+            log.debug(
+                "There's less than two pages, so we won't "
+                "paginate - sending single page on its own"
+            )
             return await ctx.send(embed=embed)
         else:
             if footer_text:
-                embed.set_footer(text=f"{footer_text} (Page {current_page + 1}/{len(paginator.pages)})")
+                embed.set_footer(
+                    text=f"{footer_text} (Page {current_page + 1}/{len(paginator.pages)})"
+                )
             else:
                 embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
 
@@ -204,7 +215,9 @@ class LinePaginator(Paginator):
 
         while True:
             try:
-                reaction, user = await ctx.bot.wait_for("reaction_add", timeout=timeout, check=event_check)
+                reaction, user = await ctx.bot.wait_for(
+                    "reaction_add", timeout=timeout, check=event_check
+                )
                 log.trace(f"Got reaction: {reaction}")
             except asyncio.TimeoutError:
                 log.debug("Timed out waiting for a reaction")
@@ -224,7 +237,9 @@ class LinePaginator(Paginator):
                 await message.edit(embed=embed)
                 embed.description = paginator.pages[current_page]
                 if footer_text:
-                    embed.set_footer(text=f"{footer_text} (Page {current_page + 1}/{len(paginator.pages)})")
+                    embed.set_footer(
+                        text=f"{footer_text} (Page {current_page + 1}/{len(paginator.pages)})"
+                    )
                 else:
                     embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
                 await message.edit(embed=embed)
@@ -233,13 +248,18 @@ class LinePaginator(Paginator):
                 await message.remove_reaction(reaction.emoji, user)
                 current_page = len(paginator.pages) - 1
 
-                log.debug(f"Got last page reaction - changing to page {current_page + 1}/{len(paginator.pages)}")
+                log.debug(
+                    "Got last page reaction - "
+                    f"changing to page {current_page + 1}/{len(paginator.pages)}"
+                )
 
                 embed.description = ""
                 await message.edit(embed=embed)
                 embed.description = paginator.pages[current_page]
                 if footer_text:
-                    embed.set_footer(text=f"{footer_text} (Page {current_page + 1}/{len(paginator.pages)})")
+                    embed.set_footer(
+                        text=f"{footer_text} (Page {current_page + 1}/{len(paginator.pages)})"
+                    )
                 else:
                     embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
                 await message.edit(embed=embed)
@@ -252,14 +272,19 @@ class LinePaginator(Paginator):
                     continue
 
                 current_page -= 1
-                log.debug(f"Got previous page reaction - changing to page {current_page + 1}/{len(paginator.pages)}")
+                log.debug(
+                    "Got previous page reaction - "
+                    f"changing to page {current_page + 1}/{len(paginator.pages)}"
+                )
 
                 embed.description = ""
                 await message.edit(embed=embed)
                 embed.description = paginator.pages[current_page]
 
                 if footer_text:
-                    embed.set_footer(text=f"{footer_text} (Page {current_page + 1}/{len(paginator.pages)})")
+                    embed.set_footer(
+                        text=f"{footer_text} (Page {current_page + 1}/{len(paginator.pages)})"
+                    )
                 else:
                     embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
 
@@ -273,14 +298,19 @@ class LinePaginator(Paginator):
                     continue
 
                 current_page += 1
-                log.debug(f"Got next page reaction - changing to page {current_page + 1}/{len(paginator.pages)}")
+                log.debug(
+                    "Got next page reaction - "
+                    f"changing to page {current_page + 1}/{len(paginator.pages)}"
+                )
 
                 embed.description = ""
                 await message.edit(embed=embed)
                 embed.description = paginator.pages[current_page]
 
                 if footer_text:
-                    embed.set_footer(text=f"{footer_text} (Page {current_page + 1}/{len(paginator.pages)})")
+                    embed.set_footer(
+                        text=f"{footer_text} (Page {current_page + 1}/{len(paginator.pages)})"
+                    )
                 else:
                     embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
 
@@ -405,7 +435,9 @@ class ImagePaginator(Paginator):
         while True:
             # Start waiting for reactions
             try:
-                reaction, user = await ctx.bot.wait_for("reaction_add", timeout=timeout, check=check_event)
+                reaction, user = await ctx.bot.wait_for(
+                    "reaction_add", timeout=timeout, check=check_event
+                )
             except asyncio.TimeoutError:
                 log.debug("Timed out waiting for a reaction")
                 break  # We're done, no reactions for the last 5 minutes
@@ -464,7 +496,10 @@ class ImagePaginator(Paginator):
                 embed.set_image(url=image)
 
             embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
-            log.debug(f"Got {reaction_type} page reaction - changing to page {current_page + 1}/{len(paginator.pages)}")
+            log.debug(
+                f"Got {reaction_type} page reaction - "
+                f"changing to page {current_page + 1}/{len(paginator.pages)}"
+            )
 
             await message.edit(embed=embed)
 

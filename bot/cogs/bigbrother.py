@@ -7,7 +7,10 @@ from typing import List, Union
 from discord import Color, Embed, Guild, Member, Message, TextChannel, User
 from discord.ext.commands import Bot, Context, group
 
-from bot.constants import BigBrother as BigBrotherConfig, Channels, Emojis, Guild as GuildConfig, Keys, Roles, URLs
+from bot.constants import (
+    BigBrother as BigBrotherConfig, Channels, Emojis,
+    Guild as GuildConfig, Keys, Roles, URLs
+)
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
 from bot.utils import messages
@@ -25,9 +28,12 @@ class BigBrother:
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.watched_users = {}  # { user_id: log_channel_id }
-        self.channel_queues = defaultdict(lambda: defaultdict(deque))  # { user_id: { channel_id: queue(messages) }
-        self.last_log = [None, None, 0]  # [user_id, channel_id, message_count]
+        # { user_id: log_channel_id }
+        self.watched_users = {}
+        # { user_id: { channel_id: queue(messages) }
+        self.channel_queues = defaultdict(lambda: defaultdict(deque))
+        # [user_id, channel_id, message_count]
+        self.last_log = [None, None, 0]
         self.consuming = False
 
         self.bot.loop.create_task(self.get_watched_users())
@@ -58,7 +64,9 @@ class BigBrother:
         """Retrieves watched users from the API."""
 
         await self.bot.wait_until_ready()
-        async with self.bot.http_session.get(URLs.site_bigbrother_api, headers=self.HEADERS) as response:
+        async with self.bot.http_session.get(
+                URLs.site_bigbrother_api, headers=self.HEADERS
+        ) as response:
             data = await response.json()
             self.update_cache(data)
 
@@ -110,7 +118,10 @@ class BigBrother:
                 channel = self.watched_users[user_id]
                 while queue:
                     msg = queue.popleft()
-                    log.trace(f"Consuming message: {msg.clean_content} ({len(msg.attachments)} attachments)")
+                    log.trace(
+                        f"Consuming message: {msg.clean_content} "
+                        f"({len(msg.attachments)} attachments)"
+                    )
 
                     self.last_log[2] += 1  # Increment message count.
                     await self.send_header(msg, channel)
@@ -127,7 +138,8 @@ class BigBrother:
         """
         Sends a log message header to the given channel.
 
-        A header is only sent if the user or channel are different than the previous, or if the configured message
+        A header is only sent if the user or channel are different
+        than the previous, or if the configured message
         limit for a single header has been exceeded.
 
         :param message: the first message in the queue
@@ -138,11 +150,22 @@ class BigBrother:
         limit = BigBrotherConfig.header_message_limit
 
         # Send header if user/channel are different or if message limit exceeded.
-        if message.author.id != last_user or message.channel.id != last_channel or msg_count > limit:
+        if (
+            message.author.id != last_user
+            or message.channel.id != last_channel
+            or msg_count > limit
+        ):
             self.last_log = [message.author.id, message.channel.id, 0]
 
-            embed = Embed(description=f"{message.author.mention} in [#{message.channel.name}]({message.jump_url})")
-            embed.set_author(name=message.author.nick or message.author.name, icon_url=message.author.avatar_url)
+            embed = Embed(
+                description=(
+                    f"{message.author.mention} in "
+                    f"[#{message.channel.name}]({message.jump_url})"
+                )
+            )
+            embed.set_author(
+                name=message.author.nick or message.author.name, icon_url=message.author.avatar_url
+            )
             await destination.send(embed=embed)
 
     @staticmethod
@@ -150,7 +173,8 @@ class BigBrother:
         """
         Logs a watched user's message in the given channel.
 
-        Attachments are also sent. All non-image or non-video URLs are put in inline code blocks to prevent preview
+        Attachments are also sent. All non-image or non-video URLs
+        are put in inline code blocks to prevent preview
         embeds from being automatically generated.
 
         :param message: the message to log
@@ -198,11 +222,17 @@ class BigBrother:
             )
 
         else:
-            async with self.bot.http_session.get(URLs.site_bigbrother_api, headers=self.HEADERS) as response:
+            async with self.bot.http_session.get(
+                    URLs.site_bigbrother_api, headers=self.HEADERS
+            ) as response:
                 if response.status == 200:
                     data = await response.json()
                     self.update_cache(data)
-                    lines = tuple(f"• <@{entry['user_id']}> in <#{entry['channel_id']}>" for entry in data)
+                    lines = tuple(
+                        f"• <@{entry['user_id']}> in <#{entry['channel_id']}>"
+                        for entry
+                        in data
+                    )
 
                     await LinePaginator.paginate(
                         lines or ("There's nothing here yet.",),
@@ -237,12 +267,15 @@ class BigBrother:
             json=post_data
         ) as response:
             if response.status == 204:
-                await ctx.send(f":ok_hand: will now relay messages sent by {user} in <#{channel_id}>")
+                await ctx.send(
+                    f":ok_hand: will now relay messages sent by {user} in <#{channel_id}>"
+                )
 
                 channel = self.bot.get_channel(channel_id)
                 if channel is None:
                     log.error(
-                        f"could not update internal cache, failed to find a channel with ID {channel_id}"
+                        "could not update internal cache, "
+                        f"failed to find a channel with ID {channel_id}"
                     )
                 else:
                     self.watched_users[user.id] = channel

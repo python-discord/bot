@@ -68,7 +68,8 @@ class Site:
         embed.colour = Colour.blurple()
         embed.description = (
             "Asking the right question about something that's new to you can sometimes be tricky. "
-            f"To help with this, we've created a [guide to asking good questions]({url}) on our website. "
+            f"To help with this, we've created a "
+            f"[guide to asking good questions]({url}) on our website. "
             "It contains everything you need to get the very best help from our community."
         )
 
@@ -102,7 +103,8 @@ class Site:
         embed.set_footer(text=url)
         embed.colour = Colour.blurple()
         embed.description = (
-            f"The rules and guidelines that apply to this community can be found on our [rules page]({url}). "
+            "The rules and guidelines that apply to this community "
+            f"can be found on our [rules page]({url}). "
             "We expect all members of the community to have read and understood these."
         )
 

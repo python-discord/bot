@@ -10,8 +10,8 @@ log = logging.getLogger(__name__)
 class Scheduler(ABC):
 
     def __init__(self):
-
-        self.cog_name = self.__class__.__name__  # keep track of the child cog's name so the logs are clear.
+        # keep track of the child cog's name so the logs are clear.
+        self.cog_name = self.__class__.__name__
         self.scheduled_tasks: Dict[str, asyncio.Task] = {}
 
     @abstractmethod

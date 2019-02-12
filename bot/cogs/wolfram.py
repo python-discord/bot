@@ -22,10 +22,14 @@ COOLDOWN_IGNORERS = Roles.moderator, Roles.owner, Roles.admin, Roles.helpers
 MAX_PODS = 20
 
 # Allows for 10 wolfram calls pr user pr day
-usercd = commands.CooldownMapping.from_cooldown(Wolfram.user_limit_day, 60*60*24, BucketType.user)
+usercd = commands.CooldownMapping.from_cooldown(
+    Wolfram.user_limit_day, 60*60*24, BucketType.user
+)
 
 # Allows for max api requests / days in month per day for the entire guild (Temporary)
-guildcd = commands.CooldownMapping.from_cooldown(Wolfram.guild_limit_day, 60*60*24, BucketType.guild)
+guildcd = commands.CooldownMapping.from_cooldown(
+    Wolfram.guild_limit_day, 60*60*24, BucketType.guild
+)
 
 
 async def send_embed(
@@ -129,7 +133,9 @@ async def get_pod_pages(ctx, bot, query: str) -> Optional[List[Tuple]]:
 
         if result["error"]:
             message = "Something went wrong internally with your request, please notify staff!"
-            log.warning(f"Something went wrong getting a response from wolfram: {url_str}, Response: {json}")
+            log.warning(
+                f"Something went wrong getting a response from wolfram: {url_str}, Response: {json}"
+            )
             await send_embed(ctx, message)
             return
 

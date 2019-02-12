@@ -50,7 +50,8 @@ class Events:
                         headers={"X-API-Key": Keys.site_api}
                     )
 
-                    await response.json()  # We do this to ensure we got a proper response from the site
+                    # We do this to ensure we got a proper response from the site
+                    await response.json()
             except Exception:
                 if not response:
                     log.exception(f"Failed to send {len(chunk)} users")
@@ -204,7 +205,9 @@ class Events:
         after_role_names = [role.name for role in after.roles]  # type: List[str]
         role_ids = [str(r.id) for r in after.roles]  # type: List[str]
 
-        log.debug(f"{before.display_name} roles changing from {before_role_names} to {after_role_names}")
+        log.debug(
+            f"{before.display_name} roles changing from {before_role_names} to {after_role_names}"
+        )
 
         changes = await self.send_updated_users({
             "avatar": after.avatar_url_as(format="png"),

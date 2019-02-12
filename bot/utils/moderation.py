@@ -13,7 +13,8 @@ HEADERS = {"X-API-KEY": Keys.site_api}
 
 
 async def post_infraction(
-    ctx: Context, user: Union[Member, Object, User], type: str, reason: str, duration: str = None, hidden: bool = False
+    ctx: Context, user: Union[Member, Object, User],
+    type: str, reason: str, duration: str = None, hidden: bool = False
 ):
 
     payload = {
@@ -39,7 +40,9 @@ async def post_infraction(
 
     response_object = await response.json()
     if "error_code" in response_object:
-        await ctx.send(f":x: There was an error adding the infraction: {response_object['error_message']}")
+        await ctx.send(
+            f":x: There was an error adding the infraction: {response_object['error_message']}"
+        )
         return
 
     return response_object

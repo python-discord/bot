@@ -278,7 +278,9 @@ class Moderation(Scheduler):
             reason=reason
         )
 
-        response_object = await post_infraction(ctx, user, type="mute", reason=reason, duration=duration)
+        response_object = await post_infraction(
+            ctx, user, type="mute", reason=reason, duration=duration
+        )
         if response_object is None:
             return
 
@@ -319,7 +321,9 @@ class Moderation(Scheduler):
 
     @with_role(*MODERATION_ROLES)
     @command(name="tempban")
-    async def tempban(self, ctx: Context, user: Union[User, proxy_user], duration: str, *, reason: str = None):
+    async def tempban(
+            self, ctx: Context, user: Union[User, proxy_user], duration: str, *, reason: str = None
+    ):
         """
         Create a temporary ban infraction in the database for a user.
         :param user: Accepts user mention, ID, etc.
@@ -334,7 +338,9 @@ class Moderation(Scheduler):
             reason=reason
         )
 
-        response_object = await post_infraction(ctx, user, type="ban", reason=reason, duration=duration)
+        response_object = await post_infraction(
+            ctx, user, type="ban", reason=reason, duration=duration
+        )
         if response_object is None:
             return
 
@@ -387,7 +393,9 @@ class Moderation(Scheduler):
         :param reason: The reason for the warning.
         """
 
-        response_object = await post_infraction(ctx, user, type="warning", reason=reason, hidden=True)
+        response_object = await post_infraction(
+            ctx, user, type="warning", reason=reason, hidden=True
+        )
         if response_object is None:
             return
 
@@ -526,7 +534,9 @@ class Moderation(Scheduler):
 
     @with_role(*MODERATION_ROLES)
     @command(name="shadow_tempmute", hidden=True, aliases=["shadowtempmute, stempmute"])
-    async def shadow_tempmute(self, ctx: Context, user: Member, duration: str, *, reason: str = None):
+    async def shadow_tempmute(
+            self, ctx: Context, user: Member, duration: str, *, reason: str = None
+    ):
         """
         Create a temporary mute infraction in the database for a user.
         :param user: Accepts user mention, ID, etc.
@@ -534,7 +544,9 @@ class Moderation(Scheduler):
         :param reason: The reason for the temporary mute.
         """
 
-        response_object = await post_infraction(ctx, user, type="mute", reason=reason, duration=duration, hidden=True)
+        response_object = await post_infraction(
+            ctx, user, type="mute", reason=reason, duration=duration, hidden=True
+        )
         if response_object is None:
             return
 
@@ -550,7 +562,9 @@ class Moderation(Scheduler):
         if reason is None:
             result_message = f":ok_hand: muted {user.mention} until {infraction_expiration}."
         else:
-            result_message = f":ok_hand: muted {user.mention} until {infraction_expiration} ({reason})."
+            result_message = (
+                f":ok_hand: muted {user.mention} until {infraction_expiration} ({reason})."
+            )
 
         await ctx.send(result_message)
 
@@ -581,7 +595,9 @@ class Moderation(Scheduler):
         :param reason: The reason for the temporary ban.
         """
 
-        response_object = await post_infraction(ctx, user, type="ban", reason=reason, duration=duration, hidden=True)
+        response_object = await post_infraction(
+            ctx, user, type="ban", reason=reason, duration=duration, hidden=True
+        )
         if response_object is None:
             return
 
@@ -599,7 +615,9 @@ class Moderation(Scheduler):
         if reason is None:
             result_message = f":ok_hand: banned {user.mention} until {infraction_expiration}."
         else:
-            result_message = f":ok_hand: banned {user.mention} until {infraction_expiration} ({reason})."
+            result_message = (
+                f":ok_hand: banned {user.mention} until {infraction_expiration} ({reason})."
+            )
 
         await ctx.send(result_message)
 
@@ -640,7 +658,10 @@ class Moderation(Scheduler):
             )
             response_object = await response.json()
             if "error_code" in response_object:
-                await ctx.send(f":x: There was an error removing the infraction: {response_object['error_message']}")
+                await ctx.send(
+                    ":x: There was an error removing the infraction: "
+                    f"{response_object['error_message']}"
+                )
                 return
 
             infraction_object = response_object["infraction"]
@@ -702,7 +723,10 @@ class Moderation(Scheduler):
             )
             response_object = await response.json()
             if "error_code" in response_object:
-                await ctx.send(f":x: There was an error removing the infraction: {response_object['error_message']}")
+                await ctx.send(
+                    ":x: There was an error removing the infraction: "
+                    f"{response_object['error_message']}"
+                )
                 return
 
             infraction_object = response_object["infraction"]
@@ -757,7 +781,8 @@ class Moderation(Scheduler):
         """
         Sets the duration of the given infraction, relative to the time of updating.
         :param infraction_id: the id (UUID) of the infraction
-        :param duration: the new duration of the infraction, relative to the time of updating. Use "permanent" to mark
+        :param duration: the new duration of the infraction,
+                            relative to the time of updating. Use "permanent" to mark
         the infraction as permanent.
         """
 
@@ -784,7 +809,10 @@ class Moderation(Scheduler):
             )
             response_object = await response.json()
             if "error_code" in response_object or response_object.get("success") is False:
-                await ctx.send(f":x: There was an error updating the infraction: {response_object['error_message']}")
+                await ctx.send(
+                    ":x: There was an error updating the infraction: "
+                    f"{response_object['error_message']}"
+                )
                 return
 
             infraction_object = response_object["infraction"]
@@ -796,7 +824,10 @@ class Moderation(Scheduler):
             if duration is None:
                 await ctx.send(f":ok_hand: Updated infraction: marked as permanent.")
             else:
-                await ctx.send(f":ok_hand: Updated infraction: set to expire on {infraction_object['expires_at']}.")
+                await ctx.send(
+                    ":ok_hand: Updated infraction: set to expire on "
+                    f"{infraction_object['expires_at']}."
+                )
 
         except Exception:
             log.exception("There was an error updating an infraction.")
@@ -863,7 +894,10 @@ class Moderation(Scheduler):
             )
             response_object = await response.json()
             if "error_code" in response_object or response_object.get("success") is False:
-                await ctx.send(f":x: There was an error updating the infraction: {response_object['error_message']}")
+                await ctx.send(
+                    ":x: There was an error updating the infraction: "
+                    f"{response_object['error_message']}"
+                )
                 return
 
             await ctx.send(f":ok_hand: Updated infraction: set reason to \"{reason}\".")
@@ -1032,8 +1066,9 @@ class Moderation(Scheduler):
 
     async def _scheduled_task(self, infraction_object: dict):
         """
-        A co-routine which marks an infraction as expired after the delay from the time of scheduling
-        to the time of expiration. At the time of expiration, the infraction is marked as inactive on the website,
+        A coroutine which marks an infraction as expired after the delay from the time of scheduling
+        to the time of expiration. At the time of expiration,
+        the infraction is marked as inactive on the website,
         and the expiration task is cancelled.
         :param infraction_object: the infraction in question
         """
@@ -1061,7 +1096,8 @@ class Moderation(Scheduler):
 
     async def _deactivate_infraction(self, infraction_object):
         """
-        A co-routine which marks an infraction as inactive on the website. This co-routine does not cancel or
+        A co-routine which marks an infraction as inactive on the website.
+        This coroutine does not cancel or
         un-schedule an expiration task.
         :param infraction_object: the infraction in question
         """
@@ -1116,7 +1152,8 @@ class Moderation(Scheduler):
         return lines.strip()
 
     async def notify_infraction(
-            self, user: Union[User, Member], infr_type: str, duration: str = None, reason: str = None
+            self, user: Union[User, Member], infr_type: str,
+            duration: str = None, reason: str = None
     ):
         """
         Notify a user of their fresh infraction :)
@@ -1150,7 +1187,8 @@ class Moderation(Scheduler):
         return await self.send_private_embed(user, embed)
 
     async def notify_pardon(
-            self, user: Union[User, Member], title: str, content: str, icon_url: str = Icons.user_verified
+            self, user: Union[User, Member], title: str,
+            content: str, icon_url: str = Icons.user_verified
     ):
         """
         Notify a user that an infraction has been lifted.
@@ -1197,7 +1235,10 @@ class Moderation(Scheduler):
             content=actor.mention,
             colour=Colour(Colours.soft_red),
             title="Notification Failed",
-            text=f"Direct message was unable to be sent.\nUser: {target.mention}\nType: {infraction_type}"
+            text=(
+                "Direct message was unable to be sent.\nUser: "
+                f"{target.mention}\nType: {infraction_type}"
+            )
         )
 
     # endregion

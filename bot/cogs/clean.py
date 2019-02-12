@@ -177,7 +177,8 @@ class Clean:
 
         # Build the embed and send it
         message = (
-            f"**{len(message_ids)}** messages deleted in <#{ctx.channel.id}> by **{ctx.author.name}**\n\n"
+            f"**{len(message_ids)}** messages deleted in "
+            f"<#{ctx.channel.id}> by **{ctx.author.name}**\n\n"
             f"A log of the deleted messages can be found [here]({log_url})."
         )
 

@@ -1,8 +1,13 @@
-BOARD_TILE_SIZE = 56         # the size of each board tile
-BOARD_PLAYER_SIZE = 20       # the size of each player icon
-BOARD_MARGIN = (10, 0)       # margins, in pixels (for player icons)
-PLAYER_ICON_IMAGE_SIZE = 32  # the size of the image to download, should a power of 2 and higher than BOARD_PLAYER_SIZE
-MAX_PLAYERS = 4              # depends on the board size/quality, 4 is for the default board
+# the size of each board tile
+BOARD_TILE_SIZE = 56
+# the size of each player icon
+BOARD_PLAYER_SIZE = 20
+# margins, in pixels (for player icons)
+BOARD_MARGIN = (10, 0)
+# the size of the image to download, should a power of 2 and higher than BOARD_PLAYER_SIZE
+PLAYER_ICON_IMAGE_SIZE = 32
+# depends on the board size/quality, 4 is for the default board
+MAX_PLAYERS = 4
 
 # board definition (from, to)
 BOARD = {

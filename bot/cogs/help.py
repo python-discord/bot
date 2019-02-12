@@ -66,7 +66,9 @@ class HelpSession:
         Where the help message is to be sent to.
     """
 
-    def __init__(self, ctx, *command, cleanup=False, only_can_run=True, show_hidden=False, max_lines=15):
+    def __init__(
+            self, ctx, *command, cleanup=False, only_can_run=True, show_hidden=False, max_lines=15
+    ):
         """
         Creates an instance of the HelpSession class.
 

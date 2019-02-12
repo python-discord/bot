@@ -164,7 +164,7 @@ class Starboard:
                     log.debug("Deleted entry from cache by starboard id")
                     break
             else:
-                log.debug("Didn't find entry in cache.")
+                log.trace("Didn't find entry in cache.")
 
         get_response = await self.bot.http_session.get(
             url=f"{URLs.site_starboard_api}?message_id={original_id or msg_id}",
@@ -206,31 +206,31 @@ class Starboard:
         await asyncio.sleep(3)
         await ctx.message.delete()
 
-    def failed_these_checks(self, payload: RawReactionActionEvent):
+    def is_relevant_to_starboard(self, payload: RawReactionActionEvent):
         if payload.guild_id != Guild.id:
-            log.debug("Reaction was not added in the correct guild.")
+            log.trace("Reaction was not added in the correct guild.")
             return True
 
         if payload.emoji.name != Emojis.lvl1_star:
-            log.debug("Invalid emoji was reacted")
+            log.trace("Invalid emoji was reacted")
             return True
 
         if payload.channel_id == Channels.starboard:
-            log.debug("Can't star a message on the starboard.")
+            log.trace("Can't star a message on the starboard.")
             return True
 
         guild = self.bot.get_guild(payload.guild_id)
         starrer_member = guild.get_member(payload.user_id)
 
         if not any(role.id in Filter.allowed_to_star for role in starrer_member.roles):
-            log.debug("Member was not allowed to star a message")
+            log.trace("Member was not allowed to star a message")
             return True
 
         # didn't fail any checks
         return False
 
     async def on_raw_reaction_remove(self, payload: RawReactionActionEvent):
-        if self.failed_these_checks(payload):
+        if not self.is_relevant_to_starboard(payload):
             return
 
         starboard = self.bot.get_channel(Channels.starboard)
@@ -243,7 +243,7 @@ class Starboard:
 
         if reaction is None:
             await self.delete_star(original, star_msg)
-            return log.debug("There was not any reacted stars on the original message.")
+            return log.trace("There was not any reacted stars on the original message.")
 
         count = reaction.count
 
@@ -257,7 +257,7 @@ class Starboard:
         log.debug("Updating existing starboard entry")
 
     async def on_raw_reaction_add(self, payload: RawReactionActionEvent):
-        if self.failed_these_checks(payload):
+        if not self.is_relevant_to_starboard(payload):
             return
 
         starboard = self.bot.get_channel(Channels.starboard)
@@ -271,12 +271,12 @@ class Starboard:
 
         if reaction is None:
             await self.delete_star(original, star_msg)
-            return log.debug("There was not any reacted stars on the original message.")
+            return log.trace("There was not any reacted stars on the original message.")
 
         count = reaction.count
 
         if count < THRESHOLDS[Emojis.lvl1_star]:
-            return log.debug("Reaction count did not meet threshold.")
+            return log.trace("Reaction count did not meet threshold.")
 
         if star_msg is None:
             await self.post_new_entry(original, starboard)
@@ -325,7 +325,7 @@ class Starboard:
             star_msg = await starboard.get_message(star_msg_id)
             return original, star_msg
         except KeyError:
-            log.debug(
+            log.trace(
                 "star_msg_map did not have a starred message, checking API...")
 
         # Message was not in cache, but could be stored online
@@ -386,7 +386,7 @@ class Starboard:
                 f"{THRESHOLDS[Emojis.lvl1_star]} {Emojis.lvl1_star} {original.channel.mention}",
                 embed=embed
             )
-            log.debug(
+            log.trace(
                 "Posted starboard entry embed to the starboard successfully.")
         except Forbidden as e:
             log.warning(
@@ -446,7 +446,7 @@ class Starboard:
                 content=f"{count} {star} {original.channel.mention}",
                 embed=star_embed
             )
-            log.debug("Edited starboard entry successfully.")
+            log.trace("Edited starboard entry successfully.")
         except Forbidden as e:
             log.warning(
                 f"Bot does not have permission to edit in starboard channel ({starboard.id})")
@@ -505,7 +505,7 @@ class Starboard:
         if response.status == 200:
             log.debug("Successfully posted json to endpoint, storing in cache...")
         elif response.status == 400:
-            log.debug("Entry is already stored, ignoring.")
+            log.trace("Entry is already stored, ignoring.")
         return True
 
     async def delete_star(self, original: Message, star: Message):
