@@ -82,7 +82,8 @@ async def send_attachments(message: Message, destination: TextChannel):
     """
     Re-uploads each attachment in a message to the given channel.
 
-    Each attachment is sent as a separate message to more easily comply with the 8 MiB request size limit.
+    Each attachment is sent as a separate message to more easily
+    comply with the 8 MiB request size limit.
     If attachments are too large, they are instead grouped into a single embed which links to them.
 
     :param message: the message whose attachments to re-upload
@@ -92,7 +93,8 @@ async def send_attachments(message: Message, destination: TextChannel):
     large = []
     for attachment in message.attachments:
         try:
-            # This should avoid most files that are too large, but some may get through hence the try-catch.
+            # This should avoid most files that are too large,
+            # but some may get through hence the try-catch.
             # Allow 512 bytes of leeway for the rest of the request.
             if attachment.size <= MAX_SIZE - 512:
                 with BytesIO() as file:
@@ -107,6 +109,10 @@ async def send_attachments(message: Message, destination: TextChannel):
                 raise
 
     if large:
-        embed = Embed(description=f"\n".join(f"[{attachment.filename}]({attachment.url})" for attachment in large))
+        embed = Embed(
+            description=f"\n".join(
+                f"[{attachment.filename}]({attachment.url})" for attachment in large
+            )
+        )
         embed.set_footer(text="Attachments exceed upload size limit.")
         await destination.send(embed=embed)

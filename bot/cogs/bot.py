@@ -61,7 +61,10 @@ class Bot:
         """
 
         embed = Embed(
-            description="A utility bot designed just for the Python server! Try `!help` for more info.",
+            description=(
+                "A utility bot designed just for the "
+                "Python server! Try `!help` for more info."
+            ),
             url="https://gitlab.com/discord-python/projects/bot"
         )
 
@@ -108,7 +111,12 @@ class Bot:
         """
         if msg.count("\n") >= 3:
             # Filtering valid Python codeblocks and exiting if a valid Python codeblock is found.
-            if re.search("```(?:py|python)\n(.*?)```", msg, re.IGNORECASE | re.DOTALL) and not bad_ticks:
+            if re.search(
+                    "```(?:py|python)\n(.*?)```",
+                    msg,
+                    re.IGNORECASE | re.DOTALL
+            ) and not bad_ticks:
+
                 log.trace(
                     "Someone wrote a message that was already a "
                     "valid Python syntax highlighted code block. No action taken."
@@ -285,10 +293,12 @@ class Bot:
 
                         howto = (
                             "It looks like you are trying to paste code into this channel.\n\n"
-                            "You seem to be using the wrong symbols to indicate where the codeblock should start. "
+                            "You seem to be using the wrong symbols to "
+                            "indicate where the codeblock should start. "
                             f"The correct symbols would be \\`\\`\\`, not `{ticks}`.\n\n"
                             "**Here is an example of how it should look:**\n"
-                            f"\\`\\`\\`python\n{content}\n\\`\\`\\`\n\n**This will result in the following:**\n"
+                            f"\\`\\`\\`python\n{content}\n\\`\\`\\`\n\n**"
+                            f"This will result in the following:**\n"
                             f"```python\n{content}\n```"
                         )
 
@@ -318,7 +328,8 @@ class Bot:
                                 current_length = 0
                                 lines_walked = 0
                                 for line in content.splitlines(keepends=True):
-                                    if current_length + len(line) > space_left or lines_walked == 10:
+                                    if (+ len(line) > space_left
+                                            or lines_walked == 10):
                                         break
                                     current_length += len(line)
                                     lines_walked += 1
@@ -326,26 +337,37 @@ class Bot:
 
                             howto += (
                                 "It looks like you're trying to paste code into this channel.\n\n"
-                                "Discord has support for Markdown, which allows you to post code with full "
-                                "syntax highlighting. Please use these whenever you paste code, as this "
-                                "helps improve the legibility and makes it easier for us to help you.\n\n"
+                                "Discord has support for Markdown, which allows you "
+                                "to post code with full "
+                                "syntax highlighting. Please use these "
+                                "whenever you paste code, as this "
+                                "helps improve the legibility and makes it "
+                                "easier for us to help you.\n\n"
                                 f"**To do this, use the following method:**\n"
-                                f"\\`\\`\\`python\n{content}\n\\`\\`\\`\n\n**This will result in the following:**\n"
+                                f"\\`\\`\\`python\n{content}\n\\`\\`\\`\n\n**"
+                                f"This will result in the following:**\n"
                                 f"```python\n{content}\n```"
                             )
 
-                            log.debug(f"{msg.author} posted something that needed to be put inside python code "
+                            log.debug(f"{msg.author} posted something that needed to "
+                                      "be put inside python code "
                                       "blocks. Sending the user some instructions.")
                         else:
-                            log.trace("The code consists only of expressions, not sending instructions")
+                            log.trace("The code consists only of expressions, "
+                                      "not sending instructions")
 
                     if howto != "":
                         howto_embed = Embed(description=howto)
-                        bot_message = await msg.channel.send(f"Hey {msg.author.mention}!", embed=howto_embed)
+                        bot_message = await msg.channel.send(
+                            f"Hey {msg.author.mention}!",
+                            embed=howto_embed
+                        )
                         self.codeblock_message_ids[msg.id] = bot_message.id
 
                         self.bot.loop.create_task(
-                            wait_for_deletion(bot_message, user_ids=(msg.author.id,), client=self.bot)
+                            wait_for_deletion(
+                                bot_message, user_ids=(msg.author.id,), client=self.bot
+                            )
                         )
                     else:
                         return
@@ -355,8 +377,10 @@ class Bot:
 
                 except SyntaxError:
                     log.trace(
-                        f"{msg.author} posted in a help channel, and when we tried to parse it as Python code, "
-                        "ast.parse raised a SyntaxError. This probably just means it wasn't Python code. "
+                        f"{msg.author} posted in a help channel, "
+                        "and when we tried to parse it as Python code, "
+                        "ast.parse raised a SyntaxError. "
+                        "This probably just means it wasn't Python code. "
                         f"The message that was posted was:\n\n{msg.content}\n\n"
                     )
 
@@ -375,15 +399,20 @@ class Bot:
         channel = self.bot.get_channel(int(payload.data.get("channel_id")))
         user_message = await channel.get_message(payload.message_id)
 
-        #  Checks to see if the user has corrected their codeblock.  If it's fixed, has_fixed_codeblock will be None
-        has_fixed_codeblock = self.codeblock_stripping(payload.data.get("content"), self.has_bad_ticks(user_message))
+        #  Checks to see if the user has corrected their codeblock.
+        #  If it's fixed, has_fixed_codeblock will be None
+        has_fixed_codeblock = self.codeblock_stripping(
+            payload.data.get("content"), self.has_bad_ticks(user_message)
+        )
 
         # If the message is fixed, delete the bot message and the entry from the id dictionary
         if has_fixed_codeblock is None:
             bot_message = await channel.get_message(self.codeblock_message_ids[payload.message_id])
             await bot_message.delete()
             del self.codeblock_message_ids[payload.message_id]
-            log.trace("User's incorrect code block has been fixed.  Removing bot formatting message.")
+            log.trace(
+                "User's incorrect code block has been fixed.  Removing bot formatting message."
+            )
 
 
 def setup(bot):

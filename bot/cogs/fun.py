@@ -44,7 +44,9 @@ class Fun:
         response = RESPONSES.get(content)
 
         if response:
-            log.debug(f"{message.author} said '{message.clean_content}'. Responding with '{response}'.")
+            log.debug(
+                f"{message.author} said '{message.clean_content}'. Responding with '{response}'."
+            )
             await message.channel.send(response.format(them=message.author.mention))
 
 

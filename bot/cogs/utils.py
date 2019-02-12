@@ -27,6 +27,10 @@ class Utils:
         self.base_pep_url = "http://www.python.org/dev/peps/pep-"
         self.base_github_pep_url = "https://raw.githubusercontent.com/python/peps/master/pep-"
 
+    @command(name="exit")
+    async def exit_(self, ctx):
+        await self.bot.logout()
+
     @command(name='pep', aliases=('get_pep', 'p'))
     async def pep_command(self, ctx: Context, pep_number: str):
         """
@@ -81,8 +85,11 @@ class Utils:
             pep_embed.colour = Colour.red()
 
         else:
-            log.trace(f"The user requested PEP {pep_number}, but the response had an unexpected status code: "
-                      f"{response.status}.\n{response.text}")
+            log.trace(
+                f"The user requested PEP {pep_number}, "
+                "but the response had an unexpected status code: "
+                f"{response.status}.\n{response.text}"
+            )
 
             error_message = "Unexpected HTTP error during PEP search. Please let us know."
             pep_embed = Embed(title="Unexpected error", description=error_message)

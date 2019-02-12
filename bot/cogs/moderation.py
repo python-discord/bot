@@ -320,6 +320,7 @@ class Moderation(Scheduler):
         response_object = await post_infraction(
             ctx, user, type="mute", reason=reason, duration=duration
         )
+
         if response_object is None:
             return
 
@@ -899,12 +900,20 @@ class Moderation(Scheduler):
     @infraction_edit_group.command(name="duration")
     async def edit_duration(self, ctx: Context, infraction_id: str, duration: str):
         """
+<<<<<<< HEAD
         Sets the duration of the given infraction, relative to the time of
         updating.
 
         **`infraction_id`:** The ID (UUID) of the infraction.
         **`duration`:** The new duration of the infraction, relative to the
           time of updating. Use "permanent" to the infraction as permanent.
+=======
+        Sets the duration of the given infraction, relative to the time of updating.
+        :param infraction_id: the id (UUID) of the infraction
+        :param duration: the new duration of the infraction,
+                            relative to the time of updating. Use "permanent" to mark
+        the infraction as permanent.
+>>>>>>> 529ec4d... Line length modifed to comply with new flake8 rules, changed tox.ini to .flake8
         """
 
         try:
@@ -1185,10 +1194,17 @@ class Moderation(Scheduler):
 
     async def _scheduled_task(self, infraction_object: dict):
         """
+<<<<<<< HEAD
         A co-routine which marks an infraction as expired after the delay from the time of
         scheduling to the time of expiration. At the time of expiration, the infraction is
         marked as inactive on the website, and the expiration task is cancelled.
 
+=======
+        A coroutine which marks an infraction as expired after the delay from the time of scheduling
+        to the time of expiration. At the time of expiration,
+        the infraction is marked as inactive on the website,
+        and the expiration task is cancelled.
+>>>>>>> 529ec4d... Line length modifed to comply with new flake8 rules, changed tox.ini to .flake8
         :param infraction_object: the infraction in question
         """
 
@@ -1215,9 +1231,15 @@ class Moderation(Scheduler):
 
     async def _deactivate_infraction(self, infraction_object):
         """
+<<<<<<< HEAD
         A co-routine which marks an infraction as inactive on the website. This co-routine does
         not cancel or un-schedule an expiration task.
 
+=======
+        A co-routine which marks an infraction as inactive on the website.
+        This coroutine does not cancel or
+        un-schedule an expiration task.
+>>>>>>> 529ec4d... Line length modifed to comply with new flake8 rules, changed tox.ini to .flake8
         :param infraction_object: the infraction in question
         """
 

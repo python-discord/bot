@@ -9,7 +9,10 @@ from aiohttp import ClientError
 from discord import Color, Embed, Guild, Member, Message, TextChannel, User
 from discord.ext.commands import Bot, Context, command, group
 
-from bot.constants import BigBrother as BigBrotherConfig, Channels, Emojis, Guild as GuildConfig, Keys, Roles, URLs
+from bot.constants import (
+    BigBrother as BigBrotherConfig, Channels, Emojis,
+    Guild as GuildConfig, Keys, Roles, URLs
+)
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
 from bot.utils import messages
@@ -36,11 +39,12 @@ class BigBrother:
         self.bot = bot
         self.watched_users = {}  # { user_id: log_channel_id }
         self.watch_reasons = {}  # { user_id: watch_reason }
-        self.channel_queues = defaultdict(lambda: defaultdict(deque))  # { user_id: { channel_id: queue(messages) }
+        # { user_id: { channel_id: queue(messages) }
+        self.channel_queues = defaultdict(lambda: defaultdict(deque))
         self.last_log = [None, None, 0]  # [user_id, channel_id, message_count]
         self.consuming = False
-        self.infraction_watch_prefix = "bb watch: "  # Please do not change or we won't be able to find old reasons
-
+        # Please do not change or we won't be able to find old reasons
+        self.infraction_watch_prefix = "bb watch: "
         self.bot.loop.create_task(self.get_watched_users())
 
     def update_cache(self, api_response: List[dict]):
@@ -69,7 +73,9 @@ class BigBrother:
         """Retrieves watched users from the API."""
 
         await self.bot.wait_until_ready()
-        async with self.bot.http_session.get(URLs.site_bigbrother_api, headers=self.HEADERS) as response:
+        async with self.bot.http_session.get(
+                URLs.site_bigbrother_api, headers=self.HEADERS
+        ) as response:
             data = await response.json()
             self.update_cache(data)
 
@@ -91,7 +97,9 @@ class BigBrother:
             infraction_list = await response.json()
         except ClientError:
             log.exception(f"Failed to retrieve bb watch reason for {user_id}.")
-            return WatchInformation(reason="(error retrieving bb reason)", actor_id=None, inserted_at=None)
+            return WatchInformation(
+                reason="(error retrieving bb reason)", actor_id=None, inserted_at=None
+            )
 
         if infraction_list:
             # Get the latest watch reason
@@ -172,7 +180,10 @@ class BigBrother:
                 channel = self.watched_users[user_id]
                 while queue:
                     msg = queue.popleft()
-                    log.trace(f"Consuming message: {msg.clean_content} ({len(msg.attachments)} attachments)")
+                    log.trace(
+                        f"Consuming message: {msg.clean_content} "
+                        f"({len(msg.attachments)} attachments)"
+                    )
 
                     self.last_log[2] += 1  # Increment message count.
                     await self.send_header(msg, channel)
@@ -189,7 +200,8 @@ class BigBrother:
         """
         Sends a log message header to the given channel.
 
-        A header is only sent if the user or channel are different than the previous, or if the configured message
+        A header is only sent if the user or channel are different
+        than the previous, or if the configured message
         limit for a single header has been exceeded.
 
         :param message: the first message in the queue
@@ -200,10 +212,17 @@ class BigBrother:
         limit = BigBrotherConfig.header_message_limit
 
         # Send header if user/channel are different or if message limit exceeded.
-        if message.author.id != last_user or message.channel.id != last_channel or msg_count > limit:
+        if (
+            message.author.id != last_user
+            or message.channel.id != last_channel
+            or msg_count > limit
+        ):
             # Retrieve watch reason from API if it's not already in the cache
             if message.author.id not in self.watch_reasons:
-                log.trace(f"No watch information for {message.author.id} found in cache; retrieving from API")
+                log.trace(
+                    f"No watch information for {message.author.id} "
+                    f"found in cache; retrieving from API"
+                )
                 user_watch_information = await self.get_watch_information(message.author.id)
                 self.watch_reasons[message.author.id] = user_watch_information
 
@@ -232,7 +251,12 @@ class BigBrother:
                     # Adding nomination info to author_field
                     author_field = f"{author_field} (nominated {time_delta} by {actor})"
 
-            embed = Embed(description=f"{message.author.mention} in [#{message.channel.name}]({message.jump_url})")
+            embed = Embed(
+                description=(
+                    f"{message.author.mention} in "
+                    f"[#{message.channel.name}]({message.jump_url})"
+                )
+            )
             embed.set_author(name=author_field, icon_url=message.author.avatar_url)
             embed.set_footer(text=f"Reason: {reason}")
             await destination.send(embed=embed)
@@ -242,7 +266,8 @@ class BigBrother:
         """
         Logs a watched user's message in the given channel.
 
-        Attachments are also sent. All non-image or non-video URLs are put in inline code blocks to prevent preview
+        Attachments are also sent. All non-image or non-video URLs
+        are put in inline code blocks to prevent preview
         embeds from being automatically generated.
 
         :param message: the message to log
@@ -252,7 +277,12 @@ class BigBrother:
         content = message.clean_content
         if content:
             # Put all non-media URLs in inline code blocks.
-            media_urls = {embed.url for embed in message.embeds if embed.type in ("image", "video")}
+            media_urls = {
+                embed.url
+                for embed
+                in message.embeds
+                if embed.type in ("image", "video")
+            }
             for url in URL_RE.findall(content):
                 if url not in media_urls:
                     content = content.replace(url, f"`{url}`")
@@ -276,12 +306,15 @@ class BigBrother:
                 if channel_id == Channels.talent_pool:
                     await ctx.send(f":ok_hand: added {user} to the <#{channel_id}>!")
                 else:
-                    await ctx.send(f":ok_hand: will now relay messages sent by {user} in <#{channel_id}>")
+                    await ctx.send(
+                        f":ok_hand: will now relay messages sent by {user} in <#{channel_id}>"
+                    )
 
                 channel = self.bot.get_channel(channel_id)
                 if channel is None:
                     log.error(
-                        f"could not update internal cache, failed to find a channel with ID {channel_id}"
+                        "could not update internal cache, "
+                        f"failed to find a channel with ID {channel_id}"
                     )
                 else:
                     self.watched_users[user.id] = channel
@@ -323,11 +356,17 @@ class BigBrother:
             )
 
         else:
-            async with self.bot.http_session.get(URLs.site_bigbrother_api, headers=self.HEADERS) as response:
+            async with self.bot.http_session.get(
+                    URLs.site_bigbrother_api, headers=self.HEADERS
+            ) as response:
                 if response.status == 200:
                     data = await response.json()
                     self.update_cache(data)
-                    lines = tuple(f"• <@{entry['user_id']}> in <#{entry['channel_id']}>" for entry in data)
+                    lines = tuple(
+                        f"• <@{entry['user_id']}> in <#{entry['channel_id']}>"
+                        for entry
+                        in data
+                    )
 
                     await LinePaginator.paginate(
                         lines or ("There's nothing here yet.",),

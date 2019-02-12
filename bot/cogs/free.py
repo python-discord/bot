@@ -86,9 +86,13 @@ class Free:
                 minutes, seconds = divmod(inactive, 60)
                 if minutes > 59:
                     hours, minutes = divmod(minutes, 60)
-                    embed.description += f"{i}. {channel.mention} inactive for {hours}h{minutes}m{seconds}s\n\n"
+                    embed.description += (
+                        f"{i}. {channel.mention} inactive for {hours}h{minutes}m{seconds}s\n\n"
+                    )
                 else:
-                    embed.description += f"{i}. {channel.mention} inactive for {minutes}m{seconds}s\n\n"
+                    embed.description += (
+                        f"{i}. {channel.mention} inactive for {minutes}m{seconds}s\n\n"
+                    )
 
             embed.description += ("**\nThese channels aren't guaranteed to be free, "
                                   "so use your best judgement and check for yourself.")

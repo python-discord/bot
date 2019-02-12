@@ -435,9 +435,12 @@ class Snakes:
             Test if the the answer is valid and can be evaluated.
             """
             return (
-                reaction.message.id == message.id                  # The reaction is attached to the question we asked.
-                and user == ctx.author                             # It's the user who triggered the quiz.
-                and str(reaction.emoji) in ANSWERS_EMOJI.values()  # The reaction is one of the options.
+                # The reaction is attached to the question we asked.
+                reaction.message.id == message.id
+                # It's the user who triggered the quiz.
+                and user == ctx.author
+                # The reaction is one of the options.
+                and str(reaction.emoji) in ANSWERS_EMOJI.values()
             )
 
         for emoji in ANSWERS_EMOJI.values():
@@ -447,12 +450,16 @@ class Snakes:
         try:
             reaction, user = await ctx.bot.wait_for("reaction_add", timeout=45.0, check=predicate)
         except asyncio.TimeoutError:
-            await ctx.channel.send(f"You took too long. The correct answer was **{options[answer]}**.")
+            await ctx.channel.send(
+                f"You took too long. The correct answer was **{options[answer]}**."
+            )
             await message.clear_reactions()
             return
 
         if str(reaction.emoji) == ANSWERS_EMOJI[answer]:
-            await ctx.send(f"{random.choice(CORRECT_GUESS)} The correct answer was **{options[answer]}**.")
+            await ctx.send(
+                f"{random.choice(CORRECT_GUESS)} The correct answer was **{options[answer]}**."
+            )
         else:
             await ctx.send(
                 f"{random.choice(INCORRECT_GUESS)} The correct answer was **{options[answer]}**."
@@ -537,7 +544,9 @@ class Snakes:
         # Begin main game loop
         while not win and antidote_tries < 10:
             try:
-                reaction, user = await ctx.bot.wait_for("reaction_add", timeout=300, check=predicate)
+                reaction, user = await ctx.bot.wait_for(
+                    "reaction_add", timeout=300, check=predicate
+                )
             except asyncio.TimeoutError:
                 log.debug("Antidote timed out waiting for a reaction")
                 break  # We're done, no reactions for the last 5 minutes
@@ -661,7 +670,8 @@ class Snakes:
         """
         Fetches information about a snake from Wikipedia.
         :param ctx: Context object passed from discord.py
-        :param name: Optional, the name of the snake to get information for - omit for a random snake
+        :param name: Optional, the name of the snake to get information for -
+                        omit for a random snake
 
         Created by Ava and eivl.
         """
@@ -700,7 +710,10 @@ class Snakes:
             )
 
             emoji = 'https://emojipedia-us.s3.amazonaws.com/thumbs/60/google/3/snake_1f40d.png'
-            image = next((url for url in data['image_list'] if url.endswith(self.valid_image_extensions)), emoji)
+            image = next(
+                (url for url in data['image_list'] if url.endswith(self.valid_image_extensions)),
+                emoji
+            )
             embed.set_image(url=image)
 
             await ctx.send(embed=embed)
@@ -726,11 +739,21 @@ class Snakes:
 
                 data = await self._get_snek(snake)
 
-                image = next((url for url in data['image_list'] if url.endswith(self.valid_image_extensions)), None)
+                image = next(
+                    (
+                        url
+                        for url
+                        in data['image_list']
+                        if url.endswith(self.valid_image_extensions)
+                    ),
+                    None
+                )
 
             embed = Embed(
                 title='Which of the following is the snake in the image?',
-                description="\n".join(f"{'ABCD'[snakes.index(snake)]}: {snake}" for snake in snakes),
+                description=(
+                    "\n".join(f"{'ABCD'[snakes.index(snake)]}: {snake}" for snake in snakes)
+                ),
                 colour=SNAKE_COLOR
             )
             embed.set_image(url=image)
@@ -763,7 +786,9 @@ class Snakes:
         await message.delete()
 
         # Build and send the embed.
-        my_snake_embed = Embed(description=":tada: Congrats! You hatched: **{0}**".format(snake_name))
+        my_snake_embed = Embed(
+            description=":tada: Congrats! You hatched: **{0}**".format(snake_name)
+        )
         my_snake_embed.set_thumbnail(url=snake_image)
         my_snake_embed.set_footer(
             text=" Owner: {0}#{1}".format(ctx.message.author.name, ctx.message.author.discriminator)
@@ -987,12 +1012,18 @@ class Snakes:
             title="About the snake cog",
             description=(
                 "The features in this cog were created by members of the community "
-                "during our first ever [code jam event](https://gitlab.com/discord-python/code-jams/code-jam-1). \n\n"
-                "The event saw over 50 participants, who competed to write a discord bot cog with a snake theme over "
-                "48 hours. The staff then selected the best features from all the best teams, and made modifications "
-                "to ensure they would all work together before integrating them into the community bot.\n\n"
-                "It was a tight race, but in the end, <@!104749643715387392> and <@!303940835005825024> "
-                "walked away as grand champions. Make sure you check out `!snakes sal`, `!snakes draw` "
+                "during our first ever "
+                "[code jam event](https://gitlab.com/discord-python/code-jams/code-jam-1). \n\n"
+                "The event saw over 50 participants, who competed to write a "
+                "discord bot cog with a snake theme over "
+                "48 hours. The staff then selected the best features "
+                "from all the best teams, and made modifications "
+                "to ensure they would all work together before "
+                "integrating them into the community bot.\n\n"
+                "It was a tight race, but in the end, "
+                "<@!104749643715387392> and <@!303940835005825024> "
+                "walked away as grand champions. "
+                "Make sure you check out `!snakes sal`, `!snakes draw` "
                 "and `!snakes hatch` to see what they came up with."
             )
         )

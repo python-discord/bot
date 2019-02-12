@@ -79,8 +79,10 @@ class Superstarify:
             except Forbidden:
                 log.warning(
                     "The user tried to change their nickname while in superstar-prison. "
-                    "This led to the bot trying to DM the user to let them know they cannot do that, "
-                    "but the user had either blocked the bot or disabled DMs, so it was not possible "
+                    "This led to the bot trying to DM the user to let "
+                    "them know they cannot do that, "
+                    "but the user had either blocked the bot or disabled DMs, "
+                    "so it was not possible "
                     "to DM them, and a discord.errors.Forbidden error was incurred."
                 )
 
@@ -111,23 +113,31 @@ class Superstarify:
             await member.edit(nick=forced_nick)
             try:
                 await member.send(
-                    "You have left and rejoined the **Python Discord** server, effectively resetting "
+                    "You have left and rejoined the **Python Discord** server, "
+                    "effectively resetting "
                     f"your nickname from **{forced_nick}** to **{member.name}**, "
-                    "but as you are currently in superstar-prison, you do not have permission to do so. "
-                    "Therefore your nickname was automatically changed back. You will be allowed to "
+                    "but as you are currently in superstar-prison, "
+                    "you do not have permission to do so. "
+                    "Therefore your nickname was automatically changed back. "
+                    "You will be allowed to "
                     "change your nickname again at the following time:\n\n"
                     f"**{end_timestamp}**."
                 )
             except Forbidden:
                 log.warning(
                     "The user left and rejoined the server while in superstar-prison. "
-                    "This led to the bot trying to DM the user to let them know their name was restored, "
-                    "but the user had either blocked the bot or disabled DMs, so it was not possible "
+                    "This led to the bot trying to DM the user to let"
+                    " them know their name was restored, "
+                    "but the user had either blocked the bot or disabled DMs, "
+                    "so it was not possible "
                     "to DM them, and a discord.errors.Forbidden error was incurred."
                 )
 
             # Log to the mod_log channel
-            log.trace("Logging to the #mod-log channel. This could fail because of channel permissions.")
+            log.trace(
+                "Logging to the #mod-log channel. "
+                "This could fail because of channel permissions."
+            )
             mod_log_message = (
                 f"**{member.name}#{member.discriminator}** (`{member.id}`)\n\n"
                 f"Superstarified member potentially tried to escape the prison.\n"
@@ -144,7 +154,9 @@ class Superstarify:
 
     @command(name='superstarify', aliases=('force_nick', 'star'))
     @with_role(Roles.admin, Roles.owner, Roles.moderator)
-    async def superstarify(self, ctx: Context, member: Member, duration: str, *, forced_nick: str = None):
+    async def superstarify(
+            self, ctx: Context, member: Member, duration: str, *, forced_nick: str = None
+    ):
         """
         This command will force a random superstar name (like Taylor Swift) to be the user's
         nickname for a specified duration. If a forced_nick is provided, it will use that instead.
@@ -197,7 +209,8 @@ class Superstarify:
 
             embed.title = "Congratulations!"
             embed.description = (
-                f"Your previous nickname, **{old_nick}**, was so bad that we have decided to change it. "
+                f"Your previous nickname, **{old_nick}**, "
+                f"was so bad that we have decided to change it. "
                 f"Your new nickname will be **{forced_nick}**.\n\n"
                 f"You will be unable to change your nickname until \n**{end_time}**.\n\n"
                 "If you're confused by this, please read our "
@@ -206,7 +219,10 @@ class Superstarify:
             embed.set_image(url=image_url)
 
             # Log to the mod_log channel
-            log.trace("Logging to the #mod-log channel. This could fail because of channel permissions.")
+            log.trace(
+                "Logging to the #mod-log channel. "
+                "This could fail because of channel permissions."
+            )
             mod_log_message = (
                 f"**{member.name}#{member.discriminator}** (`{member.id}`)\n\n"
                 f"Superstarified by **{ctx.author.name}**\n"
@@ -226,7 +242,10 @@ class Superstarify:
                 user=member,
                 infr_type="Superstarify",
                 duration=duration,
-                reason=f"Your nickname didn't comply with our [nickname policy]({NICKNAME_POLICY_URL})."
+                reason=(
+                    "Your nickname didn't comply with our "
+                    f"[nickname policy]({NICKNAME_POLICY_URL})."
+                )
             )
 
             # Change the nick and return the embed

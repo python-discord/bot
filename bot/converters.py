@@ -50,7 +50,8 @@ class Snake(Converter):
         all_names = names.keys() | names.values()
         timeout = len(all_names) * (3 / 4)
 
-        embed = discord.Embed(title='Found multiple choices. Please choose the correct one.', colour=0x59982F)
+        title_ = 'Found multiple choices. Please choose the correct one.'
+        embed = discord.Embed(title=title_, colour=0x59982F)
         embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
 
         name = await disambiguate(ctx, get_potential(all_names), timeout=timeout, embed=embed)
@@ -223,7 +224,8 @@ class TagNameConverter(Converter):
 
         # The tag name is either empty, or consists of nothing but whitespace.
         elif not tag_name:
-            log.warning(f"{ctx.author} tried to create a tag with a name consisting only of whitespace. "
+            log.warning(f"{ctx.author} tried to create a tag with "
+                        "a name consisting only of whitespace. "
                         "Rejecting the request.")
             raise BadArgument("Tag names should not be empty, or filled with whitespace.")
 

@@ -44,7 +44,8 @@ class RMQ:
 
     async def on_ready(self):
         self.rmq = await aio_pika.connect_robust(
-            host=RabbitMQ.host, port=RabbitMQ.port, login=RabbitMQ.username, password=RabbitMQ.password
+            host=RabbitMQ.host, port=RabbitMQ.port,
+            login=RabbitMQ.username, password=RabbitMQ.password
         )
 
         log.info("Connected to RabbitMQ")

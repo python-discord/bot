@@ -15,16 +15,18 @@ Hello! Welcome to the server, and thanks for verifying yourself!
 For your records, these are the documents you accepted:
 
 `1)` Our rules, here: <https://pythondiscord.com/about/rules>
-`2)` Our privacy policy, here: <https://pythondiscord.com/about/privacy> - you can find information on how to have \
-your information removed here as well.
+`2)` Our privacy policy, here: <https://pythondiscord.com/about/privacy> - \
+you can find information on how to have your information removed here as well.
 
 Feel free to review them at any point!
 
-Additionally, if you'd like to receive notifications for the announcements we post in <#{Channels.announcements}> \
-from time to time, you can send `!subscribe` to <#{Channels.bot}> at any time to assign yourself the \
+Additionally, if you'd like to receive notifications for the announcements \
+we post in <#{Channels.announcements}> from time to time, you can send `!subscribe` to \
+<#{Channels.bot}> at any time to assign yourself the \
 **Announcements** role. We'll mention this role every time we make an announcement.
 
-If you'd like to unsubscribe from the announcement notifications, simply send `!unsubscribe` to <#{Channels.bot}>.
+If you'd like to unsubscribe from the announcement notifications, simply send \
+`!unsubscribe` to <#{Channels.bot}>.
 """
 
 
@@ -97,7 +99,7 @@ class Verification:
 
     @command(name='subscribe')
     @in_channel(Channels.bot)
-    async def subscribe_command(self, ctx: Context, *_):  # We don't actually care about the args
+    async def subscribe_command(self, ctx: Context, *_):  # We don't care about the args
         """
         Subscribe to announcement notifications by assigning yourself the role
         """
@@ -115,7 +117,9 @@ class Verification:
             )
 
         log.debug(f"{ctx.author} called !subscribe. Assigning the 'Announcements' role.")
-        await ctx.author.add_roles(Object(Roles.announcements), reason="Subscribed to announcements")
+        await ctx.author.add_roles(
+            Object(Roles.announcements), reason="Subscribed to announcements"
+        )
 
         log.trace(f"Deleting the message posted by {ctx.author}.")
 
@@ -143,7 +147,9 @@ class Verification:
             )
 
         log.debug(f"{ctx.author} called !unsubscribe. Removing the 'Announcements' role.")
-        await ctx.author.remove_roles(Object(Roles.announcements), reason="Unsubscribed from announcements")
+        await ctx.author.remove_roles(
+            Object(Roles.announcements), reason="Unsubscribed from announcements"
+        )
 
         log.trace(f"Deleting the message posted by {ctx.author}.")
 

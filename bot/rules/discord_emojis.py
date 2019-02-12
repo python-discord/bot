@@ -1,4 +1,5 @@
-"""Detects total Discord emojis (excluding Unicode emojis) exceeding the limit sent by a single user."""
+"""Detects total Discord emojis (excluding Unicode emojis)
+exceeding the limit sent by a single user."""
 
 import re
 from typing import Dict, Iterable, List, Optional, Tuple

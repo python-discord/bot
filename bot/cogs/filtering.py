@@ -50,7 +50,8 @@ class Filtering:
                 "content_only": True,
                 "user_notification": Filter.notify_user_zalgo,
                 "notification_msg": (
-                    "Your post has been removed for abusing Unicode character rendering (aka Zalgo text). "
+                    "Your post has been removed for abusing Unicode "
+                    "character rendering (aka Zalgo text). "
                     f"{_staff_mistake_str}"
                 )
             },
@@ -72,7 +73,8 @@ class Filtering:
                 "content_only": True,
                 "user_notification": Filter.notify_user_domains,
                 "notification_msg": (
-                    f"Your URL has been removed because it matched a blacklisted domain. {_staff_mistake_str}"
+                    "Your URL has been removed because it "
+                    f"matched a blacklisted domain. {_staff_mistake_str}"
                 )
             },
             "watch_rich_embeds": {
@@ -172,7 +174,9 @@ class Filtering:
 
                             # Notify the user if the filter specifies
                             if _filter["user_notification"]:
-                                await self.notify_member(msg.author, _filter["notification_msg"], msg.channel)
+                                await self.notify_member(
+                                    msg.author, _filter["notification_msg"], msg.channel
+                                )
 
                         if isinstance(msg.channel, DMChannel):
                             channel_str = "via DM"

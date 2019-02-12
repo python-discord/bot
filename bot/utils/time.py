@@ -95,7 +95,9 @@ def time_since(past_datetime: datetime.datetime, precision: str = "seconds", max
 
 
 def parse_rfc1123(time_str):
-    return datetime.datetime.strptime(time_str, RFC1123_FORMAT).replace(tzinfo=datetime.timezone.utc)
+    return datetime.datetime.strptime(
+        time_str, RFC1123_FORMAT
+    ).replace(tzinfo=datetime.timezone.utc)
 
 
 # Hey, this could actually be used in the off_topic_names and reddit cogs :)

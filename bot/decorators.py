@@ -92,7 +92,8 @@ def locked():
 
                 log.debug(f"User tried to invoke a locked command.")
                 embed.description = (
-                    "You're already using this command. Please wait until it is done before you use it again."
+                    "You're already using this command. "
+                    "Please wait until it is done before you use it again."
                 )
                 embed.title = random.choice(ERROR_REPLIES)
                 await ctx.send(embed=embed)
@@ -114,7 +115,10 @@ def redirect_output(destination_channel: int, bypass_roles: typing.Container[int
         @wraps(func)
         async def inner(self, ctx, *args, **kwargs):
             if ctx.channel.id == destination_channel:
-                log.trace(f"Command {ctx.command.name} was invoked in destination_channel, not redirecting")
+                log.trace(
+                    f"Command {ctx.command.name} was invoked in destination_channel, "
+                    f"not redirecting"
+                )
                 return await func(self, ctx, *args, **kwargs)
 
             if bypass_roles and any(role.id in bypass_roles for role in ctx.author.roles):
@@ -124,7 +128,10 @@ def redirect_output(destination_channel: int, bypass_roles: typing.Container[int
             redirect_channel = ctx.guild.get_channel(destination_channel)
             old_channel = ctx.channel
 
-            log.trace(f"Redirecting output of {ctx.author}'s command '{ctx.command.name}' to {redirect_channel.name}")
+            log.trace(
+                f"Redirecting output of {ctx.author}'s command '{ctx.command.name}' "
+                f"to {redirect_channel.name}"
+            )
             ctx.channel = redirect_channel
             await ctx.channel.send(f"Here's the output of your command, {ctx.author.mention}")
             await func(self, ctx, *args, **kwargs)

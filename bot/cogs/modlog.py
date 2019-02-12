@@ -397,7 +397,8 @@ class ModLog:
 
         message += "\n\n**Account age:** " + humanize_delta(difference)
 
-        if difference.days < 1 and difference.months < 1 and difference.years < 1:  # New user account!
+        # New user account!
+        if difference.days < 1 and difference.months < 1 and difference.years < 1:
             message = f"{Emojis.new} {message}"
 
         await self.send_log_message(
@@ -546,7 +547,10 @@ class ModLog:
         channel = self.bot.get_channel(event.channel_id)
 
         if channel.category:
-            message = f"{len(event.message_ids)} deleted in {channel.category}/#{channel.name} (`{channel.id}`)"
+            message = (
+                f"{len(event.message_ids)} deleted in "
+                f"{channel.category}/#{channel.name} (`{channel.id}`)"
+            )
         else:
             message = f"{len(event.message_ids)} deleted in #{channel.name} (`{channel.id}`)"
 

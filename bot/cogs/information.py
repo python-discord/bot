@@ -3,7 +3,10 @@ import random
 import textwrap
 
 from discord import CategoryChannel, Colour, Embed, Member, TextChannel, VoiceChannel
-from discord.ext.commands import BadArgument, Bot, CommandError, Context, MissingPermissions, command
+from discord.ext.commands import (
+    BadArgument, Bot, CommandError,
+    Context, MissingPermissions, command
+)
 
 from bot.constants import Channels, Emojis, Keys, NEGATIVE_REPLIES, Roles, URLs
 from bot.decorators import with_role
@@ -133,7 +136,9 @@ class Information:
         # someone other than the caller
         if user and user != ctx.author:
             if not with_role_check(ctx, *MODERATION_ROLES):
-                raise BadArgument("You do not have permission to use this command on users other than yourself.")
+                raise BadArgument(
+                    "You do not have permission to use this command on users other than yourself."
+                )
 
         # Non-moderators may only do this in #bot-commands and can't see
         # hidden infractions.
@@ -218,7 +223,9 @@ class Information:
 
         elif isinstance(error, MissingPermissions):
             embed.title = random.choice(NEGATIVE_REPLIES)
-            embed.description = f"Sorry, but you may only use this command within <#{Channels.bot}>."
+            embed.description = (
+                f"Sorry, but you may only use this command within <#{Channels.bot}>."
+            )
             await ctx.send(embed=embed)
 
         else:

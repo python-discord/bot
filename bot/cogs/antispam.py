@@ -68,7 +68,8 @@ class AntiSpam:
         )
         max_interval = max_interval_config['interval']
 
-        # Store history messages since `interval` seconds ago in a list to prevent unnecessary API calls.
+        # Store history messages since `interval` seconds
+        # ago in a list to prevent unnecessary API calls.
         earliest_relevant_at = datetime.utcnow() - timedelta(seconds=max_interval)
         relevant_messages = [
             msg async for msg in message.channel.history(after=earliest_relevant_at, reverse=False)
@@ -79,7 +80,9 @@ class AntiSpam:
             rule_function = RULE_FUNCTION_MAPPING[rule_name]
 
             # Create a list of messages that were sent in the interval that the rule cares about.
-            latest_interesting_stamp = datetime.utcnow() - timedelta(seconds=rule_config['interval'])
+            latest_interesting_stamp = (
+                datetime.utcnow() - timedelta(seconds=rule_config['interval'])
+            )
             messages_for_rule = [
                 msg for msg in relevant_messages if msg.created_at > latest_interesting_stamp
             ]
@@ -103,7 +106,8 @@ class AntiSpam:
                 await self.maybe_delete_messages(message.channel, relevant_messages)
                 break
 
-    async def punish(self, msg: Message, member: Member, reason: str, messages: List[Message], rule_name: str):
+    async def punish(self, msg: Message, member: Member, reason: str,
+                     messages: List[Message], rule_name: str):
         # Sanity check to ensure we're not lagging behind
         if self.muted_role not in member.roles:
             remove_role_after = AntiSpamConfig.punishment['remove_after']
@@ -117,7 +121,9 @@ class AntiSpam:
             # For multiple messages or those with excessive newlines, use the logs API
             if len(messages) > 1 or rule_name == 'newlines':
                 url = await self.mod_log.upload_log(messages)
-                mod_alert_message += f"A complete log of the offending messages can be found [here]({url})"
+                mod_alert_message += (
+                    f"A complete log of the offending messages can be found [here]({url})"
+                )
             else:
                 mod_alert_message += "Message:\n"
                 content = messages[0].clean_content
@@ -140,7 +146,9 @@ class AntiSpam:
             )
 
             # Run a tempmute
-            await mod_log_ctx.invoke(Moderation.tempmute, member, f"{remove_role_after}S", reason=reason)
+            await mod_log_ctx.invoke(
+                Moderation.tempmute, member, f"{remove_role_after}S", reason=reason
+            )
 
     async def maybe_delete_messages(self, channel: TextChannel, messages: List[Message]):
         # Is deletion of offending messages actually enabled?

@@ -28,12 +28,17 @@ ANGLE_RANGE = math.pi * 2
 
 
 def create_snek_frame(
-        perlin_factory: perlin.PerlinNoiseFactory, perlin_lookup_vertical_shift: float = 0,
-        image_dimensions: Tuple[int] = DEFAULT_IMAGE_DIMENSIONS, image_margins: Tuple[int] = DEFAULT_IMAGE_MARGINS,
+        perlin_factory: perlin.PerlinNoiseFactory,
+        perlin_lookup_vertical_shift: float = 0,
+        image_dimensions: Tuple[int] = DEFAULT_IMAGE_DIMENSIONS,
+        image_margins: Tuple[int] = DEFAULT_IMAGE_MARGINS,
         snake_length: int = DEFAULT_SNAKE_LENGTH,
-        snake_color: int = DEFAULT_SNAKE_COLOR, bg_color: int = DEFAULT_BACKGROUND_COLOR,
-        segment_length_range: Tuple[int] = DEFAULT_SEGMENT_LENGTH_RANGE, snake_width: int = DEFAULT_SNAKE_WIDTH,
-        text: str = DEFAULT_TEXT, text_position: Tuple[int] = DEFAULT_TEXT_POSITION,
+        snake_color: int = DEFAULT_SNAKE_COLOR,
+        bg_color: int = DEFAULT_BACKGROUND_COLOR,
+        segment_length_range: Tuple[int] = DEFAULT_SEGMENT_LENGTH_RANGE,
+        snake_width: int = DEFAULT_SNAKE_WIDTH,
+        text: str = DEFAULT_TEXT,
+        text_position: Tuple[int] = DEFAULT_TEXT_POSITION,
         text_color: Tuple[int] = DEFAULT_TEXT_COLOR
 ) -> Image:
     """
@@ -45,8 +50,8 @@ def create_snek_frame(
     :param snake_length: the length of the snake, in segments.
     :param snake_color: the color of the snake.
     :param bg_color: the background color.
-    :param segment_length_range: the range of the segment length. Values will be generated inside this range, including
-                                 the bounds.
+    :param segment_length_range: the range of the segment length.
+                                Values will be generated inside this range, including the bounds.
     :param snake_width: the width of the snek, in pixels.
     :param text: the text to display with the snek. Set to None for no text.
     :param text_position: the position of the text.
