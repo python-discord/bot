@@ -144,9 +144,9 @@ class Alias:
         """
         Alias for invoking <prefix>tags get traceback.
         """
-        
+
         await self.invoke(ctx, "tags get traceback")
-        
+
     @group(name="get",
            aliases=("show", "g"),
            hidden=True,
