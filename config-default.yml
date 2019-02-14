@@ -162,6 +162,9 @@ filter:
         - 273944235143593984  # STEM
         - 348658686962696195  # RLBot
         - 531221516914917387  # Pallets
+        - 249111029668249601  # Gentoo
+        - 327254708534116352  # Adafruit
+        - 544525886180032552  # kennethreitz.org
 
     domain_blacklist:
         - pornhub.com
