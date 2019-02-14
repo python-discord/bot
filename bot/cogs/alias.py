@@ -139,6 +139,14 @@ class Alias:
 
         await self.invoke(ctx, "defcon disable")
 
+    @command(name="exception", hidden=True)
+    async def tags_get_traceback_alias(self, ctx):
+        """
+        Alias for invoking <prefix>tags get traceback.
+        """
+
+        await self.invoke(ctx, "tags get traceback")
+
     @group(name="get",
            aliases=("show", "g"),
            hidden=True,
