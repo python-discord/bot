@@ -1,13 +1,11 @@
 """
 Loads bot configuration from YAML files.
-By default, this simply loads the default
-configuration located at `config-default.yml`.
-If a file called `config.yml` is found in the
-project directory, the default configuration
-is recursively updated with any settings from
-the custom configuration. Any settings left
-out in the custom user configuration will stay
-their default values from `config-default.yml`.
+
+By default, this simply loads the default configuration located at `config-default.yml`.
+
+If a file called `config.yml` is found in the project directory, the default configuration is
+recursively updated with any settings from the custom configuration. Any settings left out in the
+custom user configuration will stay their default values from `config-default.yml`.
 """
 
 import logging
@@ -24,9 +22,8 @@ log = logging.getLogger(__name__)
 
 def _env_var_constructor(loader, node):
     """
-    Implements a custom YAML tag for loading optional environment
-    variables. If the environment variable is set, returns the
-    value of it. Otherwise, returns `None`.
+    Implements a custom YAML tag for loading optional environment variables. If the environment
+    variable is set, returns the value of it. Otherwise, returns `None`.
 
     Example usage in the YAML configuration:
 
@@ -58,9 +55,8 @@ def _env_var_constructor(loader, node):
 
 def _join_var_constructor(loader, node):
     """
-    Implements a custom YAML tag for concatenating other tags in
-    the document to strings. This allows for a much more DRY configuration
-    file.
+    Implements a custom YAML tag for concatenating other tags in the document to strings. This
+    allows for a much more DRY configuration file.
     """
 
     fields = loader.construct_sequence(node)
@@ -80,9 +76,8 @@ with open("config-default.yml", encoding="UTF-8") as f:
 
 def _recursive_update(original, new):
     """
-    Helper method which implements a recursive `dict.update`
-    method, used for updating the original configuration with
-    configuration specified by the user.
+    Helper method which implements a recursive `dict.update` method, used for updating the original
+    configuration with configuration specified by the user.
     """
 
     for key, value in original.items():
@@ -106,9 +101,9 @@ if Path("config.yml").exists():
 
 def check_required_keys(keys):
     """
-    Verifies that keys that are set to be required are present in the
-    loaded configuration.
+    Verifies that keys that are set to be required are present in the loaded configuration.
     """
+
     for key_path in keys:
         lookup = _CONFIG_YAML
         try:
@@ -134,16 +129,17 @@ else:
 
 class YAMLGetter(type):
     """
-    Implements a custom metaclass used for accessing
-    configuration data by simply accessing class attributes.
-    Supports getting configuration from up to two levels
-    of nested configuration through `section` and `subsection`.
+    Implements a custom metaclass used for accessing configuration data by simply accessing class
+    attributes.
 
-    `section` specifies the YAML configuration section (or "key")
-    in which the configuration lives, and must be set.
+    Supports getting configuration from up to two levels of nested configuration through `section`
+    and `subsection`:
 
-    `subsection` is an optional attribute specifying the section
-    within the section from which configuration should be loaded.
+        `section` specifies the YAML configuration section (or "key") in which the configuration
+        lives, and must be set.
+
+        `subsection` is an optional attribute specifying the section within the section from which
+        configuration should be loaded.
 
     Example Usage:
 
@@ -559,8 +555,8 @@ ERROR_REPLIES = [
 
 class Event(Enum):
     """
-    Event names. This does not include every event (for example, raw
-    events aren't here), but only events used in ModLog for now.
+    Event names. This does not include every event (for example, raw events aren't here), but only
+    events used in ModLog for now.
     """
 
     guild_channel_create = "guild_channel_create"

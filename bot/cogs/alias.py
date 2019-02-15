@@ -145,8 +145,7 @@ class Alias:
            invoke_without_command=True)
     async def get_group_alias(self, ctx):
         """
-        Group for reverse aliases for commands like `tags get`,
-        allowing for `get tags` or `get docs`.
+        Group of reverse aliases for commands like `tags get`, allowing for `get tags` or `get docs`
         """
 
         pass

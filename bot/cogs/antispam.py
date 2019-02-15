@@ -68,8 +68,7 @@ class AntiSpam:
         )
         max_interval = max_interval_config['interval']
 
-        # Store history messages since `interval` seconds
-        # ago in a list to prevent unnecessary API calls.
+        # Store history messages since `interval` seconds ago to limit unnecessary API calls
         earliest_relevant_at = datetime.utcnow() - timedelta(seconds=max_interval)
         relevant_messages = [
             msg async for msg in message.channel.history(after=earliest_relevant_at, reverse=False)
@@ -89,16 +88,16 @@ class AntiSpam:
             result = await rule_function(message, messages_for_rule, rule_config)
 
             # If the rule returns `None`, that means the message didn't violate it.
-            # If it doesn't, it returns a tuple in the form `(str, Iterable[discord.Member])`
-            # which contains the reason for why the message violated the rule and
-            # an iterable of all members that violated the rule.
+            # If it doesn't, it returns a tuple in the form `(str, Iterable[discord.Member])`, which
+            # contains the reason for why the message violated the rule and an iterable of all
+            # members that violated the rule.
             if result is not None:
                 reason, members, relevant_messages = result
                 full_reason = f"`{rule_name}` rule: {reason}"
                 for member in members:
 
-                    # Fire it off as a background task to ensure
-                    # that the sleep doesn't block further tasks
+                    # Fire it off as a background task to ensure that the sleep doesn't block
+                    # further tasks
                     self.bot.loop.create_task(
                         self.punish(message, member, full_reason, relevant_messages, rule_name)
                     )

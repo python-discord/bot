@@ -62,8 +62,7 @@ class Bot:
 
         embed = Embed(
             description=(
-                "A utility bot designed just for the "
-                "Python server! Try `!help` for more info."
+                "A utility bot designed just for the Python server! Try `!help` for more info."
             ),
             url="https://gitlab.com/discord-python/projects/bot"
         )
@@ -106,9 +105,10 @@ class Bot:
         """
         Strip msg in order to find Python code.
 
-        Tries to strip out Python code out of msg and returns the stripped block or
-        None if the block is a valid Python codeblock.
+        Tries to strip out Python code out of msg and returns the stripped block or None if the
+        block is a valid Python codeblock.
         """
+
         if msg.count("\n") >= 3:
             # Filtering valid Python codeblocks and exiting if a valid Python codeblock is found.
             if re.search(
@@ -156,8 +156,8 @@ class Bot:
                     else:
                         content = "".join(content[1:])
 
-                # Strip it again to remove any leading whitespace. This is neccessary
-                # if the first line of the message looked like ```python <code>
+                # Strip it again to remove any leading whitespace. This is neccessary if the first
+                # line of the message looked like ```python <code>
                 old = content.strip()
 
                 # Strips REPL code out of the message if there is any.
@@ -185,6 +185,7 @@ class Bot:
             """
             Unindents all code down to the number of spaces given ins skip_spaces
             """
+
             final = ""
             current = code[0]
             leading_spaces = 0
@@ -226,6 +227,7 @@ class Bot:
 
         Tries to strip out REPL Python code out of msg and returns the stripped msg.
         """
+
         final = ""
         for line in msg.splitlines(keepends=True):
             if line.startswith(">>>") or line.startswith("..."):
@@ -249,9 +251,8 @@ class Bot:
 
     async def on_message(self, msg: Message):
         """
-        Detect poorly formatted Python code and send the user
-        a helpful message explaining how to do properly
-        formatted Python syntax highlighting codeblocks.
+        Detect poorly formatted Python code and send the user a helpful message explaining how to do
+        properly formatted Python syntax highlighting codeblocks.
         """
 
         parse_codeblock = (
@@ -349,12 +350,14 @@ class Bot:
                                 f"```python\n{content}\n```"
                             )
 
-                            log.debug(f"{msg.author} posted something that needed to "
-                                      "be put inside python code "
-                                      "blocks. Sending the user some instructions.")
+                            log.debug(
+                                f"{msg.author} posted something that needed to be put inside "
+                                "Python code blocks. Sending the user some instructions."
+                            )
                         else:
-                            log.trace("The code consists only of expressions, "
-                                      "not sending instructions")
+                            log.trace(
+                                "The code consists only of expressions, not sending instructions"
+                            )
 
                     if howto != "":
                         howto_embed = Embed(description=howto)
@@ -377,10 +380,9 @@ class Bot:
 
                 except SyntaxError:
                     log.trace(
-                        f"{msg.author} posted in a help channel, "
-                        "and when we tried to parse it as Python code, "
-                        "ast.parse raised a SyntaxError. "
-                        "This probably just means it wasn't Python code. "
+                        f"{msg.author} posted in a help channel, and when we tried to parse it as "
+                        "Python code, ast.parse raised a SyntaxError. This probably just means it "
+                        "wasn't Python code. "
                         f"The message that was posted was:\n\n{msg.content}\n\n"
                     )
 

@@ -102,10 +102,8 @@ class Snake(Converter):
     @classmethod
     async def random(cls):
         """
-        This is stupid. We should find a way to
-        somehow get the global session into a
-        global context, so I can get it from here.
-        :return:
+        This is stupid. We should find a way to somehow get the global session into a global
+        context, so I can get it from here.
         """
 
         await cls.build_list()
@@ -117,12 +115,10 @@ class ValidPythonIdentifier(Converter):
     """
     A converter that checks whether the given string is a valid Python identifier.
 
-    This is used to have package names
-    that correspond to how you would use
-    the package in your code, e.g.
-    `import package`. Raises `BadArgument`
-    if the argument is not a valid Python
-    identifier, and simply passes through
+    This is used to have package names that correspond to how you would use the package in your
+    code, e.g. `import package`.
+
+    Raises `BadArgument` if the argument is not a valid Python identifier, and simply passes through
     the given argument otherwise.
     """
 
@@ -137,10 +133,8 @@ class ValidURL(Converter):
     """
     Represents a valid webpage URL.
 
-    This converter checks whether the given
-    URL can be reached and requesting it returns
-    a status code of 200. If not, `BadArgument`
-    is raised. Otherwise, it simply passes through the given URL.
+    This converter checks whether the given URL can be reached and requesting it returns a status
+    code of 200. If not, `BadArgument` is raised. Otherwise, it simply passes through the given URL.
     """
 
     @staticmethod
@@ -197,9 +191,7 @@ class Subreddit(Converter):
 
         json = await resp.json()
         if not json["data"]["children"]:
-            raise BadArgument(
-                f"The subreddit `{sub}` either doesn't exist, or it has no posts."
-            )
+            raise BadArgument(f"The subreddit `{sub}` either doesn't exist, or it has no posts.")
 
         return sub
 

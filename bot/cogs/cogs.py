@@ -49,9 +49,8 @@ class Cogs:
         """
         Load up an unloaded cog, given the module containing it
 
-        You can specify the cog name for any cogs that are
-        placed directly within `!cogs`, or specify the
-        entire module directly.
+        You can specify the cog name for any cogs that are placed directly within `!cogs`, or
+        specify the entire module directly.
         """
 
         cog = cog.lower()
@@ -107,9 +106,8 @@ class Cogs:
         """
         Unload an already-loaded cog, given the module containing it
 
-        You can specify the cog name for any cogs that are
-        placed directly within `!cogs`, or specify the
-        entire module directly.
+        You can specify the cog name for any cogs that are placed directly within `!cogs`, or
+        specify the entire module directly.
         """
 
         cog = cog.lower()
@@ -166,13 +164,11 @@ class Cogs:
         """
         Reload an unloaded cog, given the module containing it
 
-        You can specify the cog name for any cogs that are
-        placed directly within `!cogs`, or specify the
-        entire module directly.
+        You can specify the cog name for any cogs that are placed directly within `!cogs`, or
+        specify the entire module directly.
 
-        If you specify "*" as the cog, every cog currently loaded will be unloaded,
-        and then every cog present in the
-        bot/cogs directory will be loaded.
+        If you specify "*" as the cog, every cog currently loaded will be unloaded, and then every
+        cog present in the bot/cogs directory will be loaded.
         """
 
         cog = cog.lower()

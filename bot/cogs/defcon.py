@@ -13,14 +13,13 @@ log = logging.getLogger(__name__)
 REJECTION_MESSAGE = """
 Hi, {user} - Thanks for your interest in our server!
 
-Due to a current (or detected) cyberattack on our community, \
-we've limited access to the server for new accounts. Since
-your account is relatively new, we're unable to provide access to the server at this time.
+Due to a current (or detected) cyberattack on our community, we've limited access to the server \
+for new accounts. Since your account is relatively new, we're unable to provide access to the \
+server at this time.
 
-Even so, thanks for joining! We're very excited at the possibility of having you here, \
-and we hope that this situation
-will be resolved soon. In the meantime, please feel free to peruse the resources on our site at
-<https://pythondiscord.com/>, and have a nice day!
+Even so, thanks for joining! We're very excited at the possibility of having you here, and we hope \
+that this situation will be resolved soon. In the meantime, please feel free to peruse the \
+resources on our site at <https://pythondiscord.com/>, and have a nice day!
 """
 
 BASE_CHANNEL_TOPIC = "Python Discord Defense Mechanism"
@@ -28,6 +27,7 @@ BASE_CHANNEL_TOPIC = "Python Discord Defense Mechanism"
 
 class Defcon:
     """Time-sensitive server defense mechanisms"""
+
     days = None  # type: timedelta
     enabled = False  # type: bool
 
@@ -115,8 +115,8 @@ class Defcon:
         Enable DEFCON mode. Useful in a pinch, but be sure you know what you're doing!
 
         Currently, this just adds an account age requirement.
-        Use !defcon days <int> to set how old an account must
-        be, in days.
+
+        Use !defcon days <int> to set how old an account must be, in days.
         """
 
         self.enabled = True

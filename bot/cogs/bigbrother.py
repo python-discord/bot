@@ -50,10 +50,12 @@ class BigBrother:
     def update_cache(self, api_response: List[dict]):
         """
         Updates the internal cache of watched users from the given `api_response`.
-        This function will only add (or update) existing keys, it will not delete
-        keys that were not present in the API response.
-        A user is only added if the bot can find a channel
-        with the given `channel_id` in its channel cache.
+
+        This function will only add (or update) existing keys, it will not delete keys that were not
+        present in the API response.
+
+        A user is only added if the bot can find a channel with the given `channel_id` in its
+        channel cache.
         """
 
         for entry in api_response:
@@ -80,7 +82,7 @@ class BigBrother:
             self.update_cache(data)
 
     async def get_watch_information(self, user_id: int) -> WatchInformation:
-        """ Fetches and returns the latest watch reason for a user using the infraction API """
+        """Fetches and returns the latest watch reason for a user using the infraction API"""
 
         re_bb_watch = rf"^{self.infraction_watch_prefix}"
         user_id = str(user_id)
@@ -123,9 +125,9 @@ class BigBrother:
     @staticmethod
     def _parse_infraction_time(infraction: dict) -> struct_time:
         """
-        Helper function that retrieves the insertion time from the infraction dictionary,
-        converts the retrieved RFC1123 date_time string to a time object, and returns it
-        so infractions can be sorted by their insertion time.
+        Helper function that retrieves the insertion time from the infraction dictionary, converts
+        the retrieved RFC1123 date_time string to a time object, and returns it so infractions can
+        be sorted by their insertion time.
         """
 
         date_string = infraction["inserted_at"]
@@ -200,9 +202,8 @@ class BigBrother:
         """
         Sends a log message header to the given channel.
 
-        A header is only sent if the user or channel are different
-        than the previous, or if the configured message
-        limit for a single header has been exceeded.
+        A header is only sent if the user or channel are different than the previous, or if the
+        configured message limit for a single header has been exceeded.
 
         :param message: the first message in the queue
         :param destination: the channel in which to send the header
@@ -266,9 +267,8 @@ class BigBrother:
         """
         Logs a watched user's message in the given channel.
 
-        Attachments are also sent. All non-image or non-video URLs
-        are put in inline code blocks to prevent preview
-        embeds from being automatically generated.
+        Attachments are also sent. All non-image or non-video URLs are put in inline code blocks to
+        prevent preview embeds from being automatically generated.
 
         :param message: the message to log
         :param destination: the channel in which to log the message
@@ -340,7 +340,7 @@ class BigBrother:
         """
         Shows all users that are currently monitored and in which channel.
         By default, the users are returned from the cache.
-        If this is not desired, `from_cache` can be given as a falsy value, e.g. e.g. 'no'.
+        If this is not desired, `from_cache` can be given as a falsy value, e.g. 'no'.
         """
 
         if from_cache:
@@ -384,8 +384,8 @@ class BigBrother:
         """
         Relay messages sent by the given `user` to the `#big-brother-logs` channel
 
-        A `reason` for watching is required, which is added for the user to be watched as a
-        note (aka: shadow warning)
+        A `reason` for watching is required, which is added for the user to be watched as a note
+        (aka: shadow warning)
         """
 
         channel_id = Channels.big_brother_logs
@@ -445,8 +445,7 @@ class HelperNomination:
         """
         Nominates a user for the helper role by adding them to the talent-pool channel
 
-        A `reason` for the nomination is required and will be added as a note to
-        the user's records.
+        A `reason` for the nomination is required and will be added as a note to the user's records.
         """
 
         cmd = self.bot.get_command("bigbrother nominate")

@@ -13,11 +13,11 @@ def monkeypatch_trace(self, msg, *args, **kwargs):
     """
     Log 'msg % args' with severity 'TRACE'.
 
-    To pass exception information, use the keyword argument exc_info with
-    a true value, e.g.
+    To pass exception information, use the keyword argument exc_info with a true value, e.g.
 
     logger.trace("Houston, we have an %s", "interesting problem", exc_info=1)
     """
+
     if self.isEnabledFor(logging.TRACE):
         self._log(logging.TRACE, msg, args, **kwargs)
 
@@ -66,8 +66,7 @@ log = logging.getLogger(__name__)
 
 for key, value in logging.Logger.manager.loggerDict.items():
     # Force all existing loggers to the correct level and handlers
-    # This happens long before we instantiate our loggers, so
-    # those should still have the expected level
+    # This happens before we instantiate our loggers, so those should still have the expected level
 
     if key == "bot":
         continue
