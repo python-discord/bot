@@ -1,12 +1,13 @@
 import logging
 
-from discord import PermissionOverwrite, Member, utils
+from discord import Member, PermissionOverwrite, utils
 from discord.ext import commands
 
-from bot.decorators import with_role
 from bot.constants import Roles
+from bot.decorators import with_role
 
 log = logging.getLogger(__name__)
+
 
 class CodeJams:
     """
@@ -43,7 +44,7 @@ class CodeJams:
                 overwrites=category_overwrites,
                 reason="It's code jam time!"
             )
-        
+
         # First member is always the team leader
         team_channel_overwrites = {
             members[0]: PermissionOverwrite(
