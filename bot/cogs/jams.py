@@ -46,7 +46,11 @@ class CodeJams:
         
         # First member is always the team leader
         team_channel_overwrites = {
-            members[0]: PermissionOverwrite(manage_messages=True, read_messages=True, manage_webhooks=True),
+            members[0]: PermissionOverwrite(
+                manage_messages=True,
+                read_messages=True,
+                manage_webhooks=True
+            ),
             ctx.guild.default_role: PermissionOverwrite(read_messages=False),
             ctx.guild.get_role(Roles.developer): PermissionOverwrite(read_messages=False)
         }
