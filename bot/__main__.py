@@ -51,6 +51,7 @@ bot.load_extension("bot.cogs.bot")
 bot.load_extension("bot.cogs.clean")
 bot.load_extension("bot.cogs.cogs")
 bot.load_extension("bot.cogs.help")
+bot.load_extension("bot.cogs.rules")
 
 # Only load this in production
 if not DEBUG_MODE:

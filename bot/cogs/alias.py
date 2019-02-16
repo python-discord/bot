@@ -105,14 +105,6 @@ class Alias:
 
         await self.invoke(ctx, "site faq")
 
-    @command(name="rules", hidden=True)
-    async def site_rules_alias(self, ctx):
-        """
-        Alias for invoking <prefix>site rules.
-        """
-
-        await self.invoke(ctx, "site rules")
-
     @command(name="reload", hidden=True)
     async def cogs_reload_alias(self, ctx, *, cog_name: str):
         """
