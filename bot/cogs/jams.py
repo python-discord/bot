@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 
 class CodeJams:
     """
-    A cog for managing the code-jam related parts of our server
+    Manages the code-jam related parts of our server
     """
 
     def __init__(self, bot: commands.Bot):
