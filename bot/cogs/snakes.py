@@ -135,8 +135,7 @@ CARD = {
 
 class Snakes:
     """
-    Commands related to snakes. These were created by our
-    community during the first code jam.
+    Commands related to snakes. These were created by our community during the first code jam.
 
     More information can be found in the code-jam-1 repo.
 
@@ -292,10 +291,8 @@ class Snakes:
 
     def _get_random_long_message(self, messages, retries=10):
         """
-        Fetch a message that's at least 3 words long,
-        but only if it is possible to do so in retries
-        attempts. Else, just return whatever the last
-        message is.
+        Fetch a message that's at least 3 words long, but only if it is possible to do so in retries
+        attempts. Else, just return whatever the last message is.
         """
 
         long_message = random.choice(messages)
@@ -309,8 +306,8 @@ class Snakes:
 
     async def _get_snek(self, name: str) -> Dict[str, Any]:
         """
-        Goes online and fetches all the data from a wikipedia article
-        about a snake. Builds a dict that the .get() method can use.
+        Goes online and fetches all the data from a wikipedia article about a snake. Builds a dict
+        that the .get() method can use.
 
         Created by Ava and eivl.
 
@@ -416,6 +413,7 @@ class Snakes:
     async def _get_snake_name(self) -> Dict[str, str]:
         """
         Gets a random snake name.
+
         :return: A random snake name, as a string.
         """
 
@@ -434,6 +432,7 @@ class Snakes:
             """
             Test if the the answer is valid and can be evaluated.
             """
+
             return (
                 # The reaction is attached to the question we asked.
                 reaction.message.id == message.id
@@ -669,6 +668,7 @@ class Snakes:
     async def get_command(self, ctx: Context, *, name: Snake = None):
         """
         Fetches information about a snake from Wikipedia.
+
         :param ctx: Context object passed from discord.py
         :param name: Optional, the name of the snake to get information for -
                         omit for a random snake
@@ -872,8 +872,7 @@ class Snakes:
         """
         Asks a snake-related question in the chat and validates the user's guess.
 
-        This was created by Mushy and Cardium,
-        and modified by Urthas and lemon.
+        This was created by Mushy and Cardium, and modified by Urthas and lemon.
         """
 
         # Prepare a question.
@@ -897,13 +896,11 @@ class Snakes:
     @snakes_group.command(name='name', aliases=('name_gen',))
     async def name_command(self, ctx: Context, *, name: str = None):
         """
-        Slices the users name at the last vowel (or second last if the name
-        ends with a vowel), and then combines it with a random snake name,
-        which is sliced at the first vowel (or second if the name starts with
-        a vowel).
+        Slices the users name at the last vowel (or second last if the name ends with a vowel), and
+        then combines it with a random snake name, which is sliced at the first vowel (or second if
+        the name starts with a vowel).
 
-        If the name contains no vowels, it just appends the snakename
-        to the end of the name.
+        If the name contains no vowels, it just appends the snakename to the end of the name.
 
         Examples:
             lemon + anaconda = lemoconda
@@ -987,8 +984,8 @@ class Snakes:
     @snakes_group.command(name='about')
     async def about_command(self, ctx: Context):
         """
-        A command that shows an embed with information about the event,
-        it's participants, and its winners.
+        A command that shows an embed with information about the event, its participants, and its
+        winners.
         """
 
         contributors = [
@@ -1011,20 +1008,15 @@ class Snakes:
         embed = Embed(
             title="About the snake cog",
             description=(
-                "The features in this cog were created by members of the community "
-                "during our first ever "
-                "[code jam event](https://gitlab.com/discord-python/code-jams/code-jam-1). \n\n"
-                "The event saw over 50 participants, who competed to write a "
-                "discord bot cog with a snake theme over "
-                "48 hours. The staff then selected the best features "
-                "from all the best teams, and made modifications "
-                "to ensure they would all work together before "
-                "integrating them into the community bot.\n\n"
-                "It was a tight race, but in the end, "
-                "<@!104749643715387392> and <@!303940835005825024> "
-                "walked away as grand champions. "
-                "Make sure you check out `!snakes sal`, `!snakes draw` "
-                "and `!snakes hatch` to see what they came up with."
+                "The features in this cog were created by members of the community during our first"
+                "ever [code jam event](https://gitlab.com/discord-python/code-jams/code-jam-1).\n\n"
+                "The event saw over 50 participants, who competed to write a discord bot cog with "
+                "a snake theme over 48 hours. The staff then selected the best features from all "
+                "the best teams, and made modifications to ensure they would all work together "
+                "before integrating them into the community bot.\n\n"
+                "It was a tight race, but in the end, <@!104749643715387392> and "
+                "<@!303940835005825024> walked away as grand champions. Make sure you check out "
+                "`!snakes sal`, `!snakes draw` and `!snakes hatch` to see what they came up with."
             )
         )
 
@@ -1110,10 +1102,10 @@ class Snakes:
     async def snakify_command(self, ctx: Context, *, message: str = None):
         """
         How would I talk if I were a snake?
+
         :param ctx: context
         :param message: If this is passed, it will snakify the message.
-                        If not, it will snakify a random message from
-                        the users history.
+                        If not, it will snakify a random message from the users history.
 
         Written by Momo and kel.
         Modified by lemon.
@@ -1153,6 +1145,7 @@ class Snakes:
     async def video_command(self, ctx: Context, *, search: str = None):
         """
         Gets a YouTube video about snakes
+
         :param name: Optional, a name of a snake. Used to search for videos with that name
         :param ctx: Context object passed from discord.py
 
@@ -1193,8 +1186,7 @@ class Snakes:
     @snakes_group.command(name='zen')
     async def zen_command(self, ctx: Context):
         """
-        Gets a random quote from the Zen of Python,
-        except as if spoken by a snake.
+        Gets a random quote from the Zen of Python, except as if spoken by a snake.
 
         Written by Prithaj and Andrew.
         Modified by lemon.
@@ -1221,7 +1213,6 @@ class Snakes:
     @card_command.error
     @video_command.error
     async def command_error(self, ctx, error):
-
         embed = Embed()
         embed.colour = Colour.red()
 

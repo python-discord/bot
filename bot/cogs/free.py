@@ -31,13 +31,14 @@ class Free:
         seek is used only when this command is invoked in a help channel.
         You cannot override seek without mentioning a user first.
 
-        When seek is 2, we are avoiding considering the last active message
-        in a channel to be the one that invoked this command.
+        When seek is 2, we are avoiding considering the last active message in a channel to be the
+        one that invoked this command.
 
-        When seek is 3 or more, a user has been mentioned on the assumption
-        that they asked if the channel is free or they asked their question
-        in an active channel, and we want the message before that happened.
+        When seek is 3 or more, a user has been mentioned on the assumption that they asked if the
+        channel is free or they asked their question in an active channel, and we want the message
+        before that happened.
         """
+
         free_channels = []
         python_help = utils.get(ctx.guild.categories, id=self.PYTHON_HELP_ID)
 
@@ -49,8 +50,7 @@ class Free:
         # Iterate through all the help channels
         # to check latest activity
         for channel in python_help.channels:
-            # Seek further back in the help channel
-            # the command was invoked in
+            # Seek further back in the help channel the command was invoked in
             if channel.id == ctx.channel.id:
                 messages = await channel.history(limit=seek).flatten()
                 msg = messages[seek-1]
@@ -71,8 +71,7 @@ class Free:
         else:
             embed.description = ""
 
-        # Display all potentially inactive channels
-        # in descending order of inactivity
+        # Display all potentially inactive channels in descending order of inactivity
         if free_channels:
             embed.description += "**The following channel{0} look{1} free:**\n\n**".format(
                 's' if len(free_channels) > 1 else '',

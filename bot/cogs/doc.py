@@ -78,8 +78,8 @@ def markdownify(html):
 
 class DummyObject(object):
     """
-    A dummy object which supports assigning anything,
-    which the builtin `object()` does not support normally.
+    A dummy object which supports assigning anything, which the builtin `object()` does not support
+    normally.
     """
 
 
@@ -95,9 +95,9 @@ class InventoryURL(commands.Converter):
     """
     Represents an Intersphinx inventory URL.
 
-    This converter checks whether intersphinx
-    accepts the given inventory URL, and raises
+    This converter checks whether intersphinx accepts the given inventory URL, and raises
     `BadArgument` if that is not the case.
+
     Otherwise, it simply passes through the given URL.
     """
 
@@ -141,10 +141,10 @@ class Doc:
         :param base_url: The root documentation URL for the specified package.
                          Used to build absolute paths that link to specific symbols.
         :param inventory_url: The absolute URL to the intersphinx inventory.
-                              Fetched by running `intersphinx.fetch_inventory` in an
-                              executor on the bot's event loop.
-        :param config: A `SphinxConfiguration` instance to mock the regular sphinx
-                       project layout. Required for use with intersphinx.
+                              Fetched by running `intersphinx.fetch_inventory` in an executor on the
+                              bot's event loop.
+        :param config: A `SphinxConfiguration` instance to mock the regular sphinx project layout.
+                       Required for use with intersphinx.
         """
 
         self.base_urls[package_name] = base_url
@@ -190,11 +190,10 @@ class Doc:
         :param symbol: The symbol for which HTML data should be returned.
         :return:
         A tuple in the form (str, str), or `None`.
-        The first tuple element is the signature of the given
-        symbol as a markup-free string, and the second tuple
-        element is the description of the given symbol with HTML
-        markup included. If the given symbol could not be found,
-        returns `None`.
+
+        The first tuple element is the signature of the given symbol as a markup-free string, and
+        the second tuple element is the description of the given symbol with HTML markup included.
+        If the given symbol could not be found, returns `None`.
         """
 
         url = self.inventories.get(symbol)
@@ -224,9 +223,8 @@ class Doc:
     @async_cache(arg_offset=1)
     async def get_symbol_embed(self, symbol: str) -> Optional[discord.Embed]:
         """
-        Using `get_symbol_html`, attempt to scrape and
-        fetch the data for the given `symbol`, and build
-        a formatted embed out of its contents.
+        Using `get_symbol_html`, attempt to scrape and fetch the data for the given `symbol`, and
+        build a formatted embed out of its contents.
 
         :param symbol: The symbol for which the embed should be returned
         :return:
@@ -412,8 +410,9 @@ class Doc:
     ):
         """
         Adds a new documentation metadata object to the site's database.
-        The database will update the object, should an existing item
-        with the specified `package_name` already exist.
+
+        The database will update the object, should an existing item with the specified
+        `package_name` already exist.
 
         :param ctx: Discord message context
         :param package_name: The package name, for example `aiohttp`.
@@ -475,8 +474,7 @@ class Doc:
     @set_command.error
     async def general_command_error(self, ctx, error: commands.CommandError):
         """
-        Handle the `BadArgument` error caused by
-        the commands when argument validation fails.
+        Handle the `BadArgument` error caused by the commands when argument validation fails.
 
         :param ctx: Discord message context of the message creating the error
         :param error: The error raised, usually `BadArgument`

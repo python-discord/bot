@@ -35,8 +35,8 @@ def humanize_delta(delta: relativedelta, precision: str = "seconds", max_units: 
     :param precision:  The smallest unit that should be included.
     :param max_units:  The maximum number of time-units to return.
 
-    :return:           A string like `4 days, 12 hours and 1 second`,
-                       `1 minute`, or `less than a minute`.
+    :return:           A string like `4 days, 12 hours and 1 second`, `1 minute`, or
+                       `less than a minute`.
     """
 
     units = (
@@ -82,8 +82,8 @@ def time_since(past_datetime: datetime.datetime, precision: str = "seconds", max
     :param precision:      The smallest unit that should be included.
     :param max_units:      The maximum number of time-units to return.
 
-    :return:               A string like `4 days, 12 hours and 1 second ago`,
-                           `1 minute ago`, or `less than a minute ago`.
+    :return:               A string like `4 days, 12 hours and 1 second ago`, `1 minute ago`, or
+                          `less than a minute ago`.
     """
 
     now = datetime.datetime.utcnow()

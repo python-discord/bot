@@ -83,12 +83,11 @@ class Snekbox:
     @in_channel(Channels.bot, bypass_roles=BYPASS_ROLES)
     async def eval_command(self, ctx: Context, *, code: str = None):
         """
-        Run some code. get the result back. We've done our best to make this safe,
-        but do let us know if you
-        manage to find an issue with it!
+        Run some code. get the result back. We've done our best to make this safe, but do let us
+        know if you manage to find an issue with it!
 
-        This command supports multiple lines of code,
-        including code wrapped inside a formatted code block.
+        This command supports multiple lines of code, including code wrapped inside a formatted
+        code block.
         """
 
         if ctx.author.id in self.jobs:

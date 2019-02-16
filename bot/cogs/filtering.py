@@ -34,8 +34,7 @@ RETARDED_QUESTIONS_RE = fr"{RETARDED_RE} questions?"
 
 class Filtering:
     """
-    Filtering out invites, blacklisting domains,
-    and warning us of certain regular expressions
+    Filtering out invites, blacklisting domains, and warning us of certain regular expressions
     """
 
     def __init__(self, bot: Bot):
@@ -113,10 +112,8 @@ class Filtering:
 
     async def _filter_message(self, msg: Message, delta: Optional[int] = None):
         """
-        Whenever a message is sent or edited,
-        run it through our filters to see if it
-        violates any of our rules, and then respond
-        accordingly.
+        Whenever a message is sent or edited, run it through our filters to see if it violates any
+        of our rules, and then respond accordingly.
         """
 
         # Should we filter this message?
@@ -231,12 +228,10 @@ class Filtering:
     @staticmethod
     async def _has_watchlist_words(text: str) -> bool:
         """
-        Returns True if the text contains
-        one of the regular expressions from the
-        word_watchlist in our filter config.
+        Returns True if the text contains one of the regular expressions from the word_watchlist in
+        our filter config.
 
-        Only matches words with boundaries before
-        and after the expression.
+        Only matches words with boundaries before and after the expression.
         """
 
         for expression in Filter.word_watchlist:
@@ -260,12 +255,10 @@ class Filtering:
     @staticmethod
     async def _has_watchlist_tokens(text: str) -> bool:
         """
-        Returns True if the text contains
-        one of the regular expressions from the
-        token_watchlist in our filter config.
+        Returns True if the text contains one of the regular expressions from the token_watchlist
+        in our filter config.
 
-        This will match the expression even if it
-        does not have boundaries before and after
+        This will match the expression even if it does not have boundaries before and after.
         """
 
         for expression in Filter.token_watchlist:
@@ -280,8 +273,7 @@ class Filtering:
     @staticmethod
     async def _has_urls(text: str) -> bool:
         """
-        Returns True if the text contains one of
-        the blacklisted URLs from the config file.
+        Returns True if the text contains one of the blacklisted URLs from the config file.
         """
 
         if not re.search(URL_RE, text, re.IGNORECASE):

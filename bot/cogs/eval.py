@@ -19,8 +19,7 @@ log = logging.getLogger(__name__)
 
 class CodeEval:
     """
-    Owner and admin feature that evaluates code
-    and returns the result to the channel.
+    Owner and admin feature that evaluates code and returns the result to the channel.
     """
 
     def __init__(self, bot: Bot):
@@ -62,12 +61,9 @@ class CodeEval:
                 #    ...:
                 #
                 # You can see it doesn't look right.
-                # This code simply indents the dots
-                # far enough to align them.
-                # we first `str()` the line number
-                # then we get the length
-                # and use `str.rjust()`
-                # to indent it.
+                # This code simply indents the dots far enough to align them.
+                # We first `str()` the line number then we get the length and use `str.rjust()` to
+                # indent it.
                 start = "...: ".rjust(len(str(self.ln)) + 7)
 
             if i == len(lines) - 2:
@@ -184,6 +180,7 @@ async def func():  # (None,) -> Any
     @with_role(Roles.admin, Roles.owner)
     async def eval(self, ctx, *, code: str):
         """ Run eval in a REPL-like format. """
+
         code = code.strip("`")
         if re.match('py(thon)?\n', code):
             code = "\n".join(code.split("\n")[1:])

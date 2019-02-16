@@ -69,8 +69,8 @@ async def send_embed(
 def custom_cooldown(*ignore: List[int]) -> check:
     """
     Custom cooldown mapping that applies a specific requests per day to users.
-    Staff is ignored by the user cooldown, however the cooldown implements a
-    total amount of uses per day for the entire guild. (Configurable in configs)
+    Staff is ignored by the user cooldown, however the cooldown implements a total amount of uses
+    per day for the entire guild. (Configurable in configs)
 
     :param ignore: List[int] -- list of ids of roles to be ignored by user cooldown
     :return: check

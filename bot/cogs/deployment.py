@@ -45,8 +45,7 @@ class Deployment:
     @with_role(Roles.admin, Roles.owner, Roles.devops)
     async def site_command(self, ctx: Context):
         """
-        Trigger website deployment on the server -
-        will only redeploy if there were changes to deploy
+        Trigger website deployment on the server. Will only redeploy if there were changes to deploy
         """
 
         response = await self.bot.http_session.get(URLs.deploy, headers={"token": Keys.deploy_bot})

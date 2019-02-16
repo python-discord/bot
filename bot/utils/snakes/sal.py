@@ -55,14 +55,14 @@ class SnakeAndLaddersGame:
         """
         Create a new Snakes and Ladders game.
 
-        Listen for reactions until players have joined,
-        and the game has been started.
+        Listen for reactions until players have joined, and the game has been started.
         """
 
         def startup_event_check(reaction_: Reaction, user_: Member):
             """
             Make sure that this reaction is what we want to operate on
             """
+
             return (
                 all((
                     # Reaction is on startup message

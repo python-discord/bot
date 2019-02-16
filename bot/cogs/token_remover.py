@@ -15,13 +15,11 @@ from bot.constants import Channels, Colours, Event, Icons
 log = logging.getLogger(__name__)
 
 DELETION_MESSAGE_TEMPLATE = (
-    "Hey {mention}! I noticed you posted a seemingly valid Discord API "
-    "token in your message and have removed your message. "
-    "This means that your token has been **compromised**. "
-    "Please change your token **immediately** at: "
-    "<https://discordapp.com/developers/applications/me>\n\n"
-    "Feel free to re-post it with the token removed. "
-    "If you believe this was a mistake, please let us know!"
+    "Hey {mention}! I noticed you posted a seemingly valid Discord API token in your message and "
+    "have removed your message. This means that your token has been **compromised**. Please change "
+    "your token **immediately** at: <https://discordapp.com/developers/applications/me>\n\n"
+    "Feel free to re-post it with the token removed. If you believe this was a mistake, please "
+    "let us know!"
 )
 DISCORD_EPOCH_TIMESTAMP = datetime(2017, 1, 1)
 TOKEN_EPOCH = 1_293_840_000

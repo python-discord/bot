@@ -46,6 +46,7 @@ class Tags:
         if not, returns a list of dicts with all tag data.
 
         """
+
         params = {}
 
         if tag_name:

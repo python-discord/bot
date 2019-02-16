@@ -7,8 +7,7 @@ log = logging.getLogger(__name__)
 
 def with_role_check(ctx: Context, *role_ids: int) -> bool:
     """
-    Returns True if the user has any one
-    of the roles in role_ids.
+    Returns True if the user has any one of the roles in role_ids.
     """
 
     if not ctx.guild:  # Return False in a DM
@@ -28,8 +27,7 @@ def with_role_check(ctx: Context, *role_ids: int) -> bool:
 
 def without_role_check(ctx: Context, *role_ids: int) -> bool:
     """
-    Returns True if the user does not have any
-    of the roles in role_ids.
+    Returns True if the user does not have any of the roles in role_ids.
     """
 
     if not ctx.guild:  # Return False in a DM
@@ -46,8 +44,7 @@ def without_role_check(ctx: Context, *role_ids: int) -> bool:
 
 def in_channel_check(ctx: Context, channel_id: int) -> bool:
     """
-    Checks if the command was executed
-    inside of the specified channel.
+    Checks if the command was executed inside of the specified channel.
     """
 
     check = ctx.channel.id == channel_id

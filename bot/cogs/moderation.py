@@ -1231,15 +1231,10 @@ class Moderation(Scheduler):
 
     async def _deactivate_infraction(self, infraction_object):
         """
-<<<<<<< HEAD
-        A co-routine which marks an infraction as inactive on the website. This co-routine does
-        not cancel or un-schedule an expiration task.
-
-=======
         A co-routine which marks an infraction as inactive on the website.
-        This coroutine does not cancel or
-        un-schedule an expiration task.
->>>>>>> 529ec4d... Line length modifed to comply with new flake8 rules, changed tox.ini to .flake8
+
+        This coroutine does not cancel or un-schedule an expiration task.
+
         :param infraction_object: the infraction in question
         """
 

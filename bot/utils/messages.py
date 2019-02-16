@@ -21,36 +21,30 @@ async def wait_for_deletion(
     client=None
 ):
     """
-    Waits for up to `timeout` seconds for a reaction by
-    any of the specified `user_ids` to delete the message.
+    Waits for up to `timeout` seconds for a reaction by any of the specified `user_ids` to delete
+    the message.
 
     Args:
         message (Message):
-            The message that should be monitored for reactions
-            and possibly deleted. Must be a message sent on a
-            guild since access to the bot instance is required.
+            The message that should be monitored for reactions and possibly deleted. Must be a
+            message sent on a guild since access to the bot instance is required.
 
         user_ids (Sequence[Snowflake]):
-            A sequence of users that are allowed to delete
-            this message.
+            A sequence of users that are allowed to delete this message.
 
     Kwargs:
         deletion_emojis (Sequence[str]):
-            A sequence of emojis that are considered deletion
-            emojis.
+            A sequence of emojis that are considered deletion emojis.
 
         timeout (float):
-            A positive float denoting the maximum amount of
-            time to wait for a deletion reaction.
+            A positive float denoting the maximum amount of time to wait for a deletion reaction.
 
         attach_emojis (bool):
-            Whether to attach the given `deletion_emojis`
-            to the message in the given `context`
+            Whether to attach the given `deletion_emojis` to the message in the given `context`
 
         client (Optional[discord.Client]):
             The client instance handling the original command.
-            If not given, will take the client from the guild
-            of the message.
+            If not given, will take the client from the guild of the message.
     """
 
     if message.guild is None and client is None:
@@ -82,8 +76,8 @@ async def send_attachments(message: Message, destination: TextChannel):
     """
     Re-uploads each attachment in a message to the given channel.
 
-    Each attachment is sent as a separate message to more easily
-    comply with the 8 MiB request size limit.
+    Each attachment is sent as a separate message to more easily comply with the 8 MiB request size
+    limit.
     If attachments are too large, they are instead grouped into a single embed which links to them.
 
     :param message: the message whose attachments to re-upload
@@ -93,8 +87,8 @@ async def send_attachments(message: Message, destination: TextChannel):
     large = []
     for attachment in message.attachments:
         try:
-            # This should avoid most files that are too large,
-            # but some may get through hence the try-catch.
+            # This should avoid most files that are too large, but some may get through hence the
+            # try-catch.
             # Allow 512 bytes of leeway for the rest of the request.
             if attachment.size <= MAX_SIZE - 512:
                 with BytesIO() as file:

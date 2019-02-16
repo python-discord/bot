@@ -270,8 +270,7 @@ class HelpSession:
 
     def add_reactions(self):
         """
-        Adds the relevant reactions to the help message based on if
-        pagination is required.
+        Adds the relevant reactions to the help message based on if pagination is required.
         """
 
         # if paginating
@@ -285,11 +284,10 @@ class HelpSession:
 
     def _category_key(self, cmd):
         """
-        Returns a cog name of a given command. Used as a key for
-        ``sorted`` and ``groupby``.
+        Returns a cog name of a given command. Used as a key for ``sorted`` and ``groupby``.
 
-        A zero width space is used as a prefix for results with no cogs
-        to force them last in ordering.
+        A zero width space is used as a prefix for results with no cogs to force them last in
+        ordering.
 
         Parameters
         ----------
@@ -308,8 +306,8 @@ class HelpSession:
         """
         Returns the command usage signature.
 
-        This is a custom implementation of ``command.signature`` in
-        order to format the command signature without aliases.
+        This is a custom implementation of ``command.signature`` in order to format the command
+        signature without aliases.
 
         Parameters
         ----------
@@ -350,8 +348,7 @@ class HelpSession:
 
     async def build_pages(self):
         """
-        Builds the list of content pages to be paginated through in the
-        help message.
+        Builds the list of content pages to be paginated through in the help message.
 
         Returns
         -------
@@ -518,8 +515,7 @@ class HelpSession:
 
     async def update_page(self, page_number=0):
         """
-        Sends the intial message, or changes the existing one to the
-        given page number.
+        Sends the intial message, or changes the existing one to the given page number.
 
         Parameters
         ----------
@@ -538,8 +534,7 @@ class HelpSession:
     @classmethod
     async def start(cls, ctx, *command, **options):
         """
-        Create and begin a help session based on the given command
-        context.
+        Create and begin a help session based on the given command context.
 
         Parameters
         ----------
@@ -557,8 +552,7 @@ class HelpSession:
             Set to ``True`` to include hidden commands.
             Defaults to ``False``.
         max_lines: Optional[int]
-            Sets the max number of lines the paginator will add to a
-            single page.
+            Sets the max number of lines the paginator will add to a single page.
             Defaults to 20.
 
         Returns
@@ -573,8 +567,7 @@ class HelpSession:
 
     async def stop(self):
         """
-        Stops the help session, removes event listeners and attempts to
-        delete the help message.
+        Stops the help session, removes event listeners and attempts to delete the help message.
         """
 
         self._bot.remove_listener(self.on_reaction_add)
@@ -655,6 +648,7 @@ class Help:
     """
     Custom Embed Pagination Help feature
     """
+
     @commands.command('help')
     @redirect_output(destination_channel=Channels.bot, bypass_roles=STAFF_ROLES)
     async def new_help(self, ctx, *commands):
@@ -680,8 +674,7 @@ def unload(bot):
     """
     Reinstates the original help command.
 
-    This is run if the cog raises an exception on load, or if the
-    extension is unloaded.
+    This is run if the cog raises an exception on load, or if the extension is unloaded.
 
     Parameters
     ----------
@@ -699,12 +692,12 @@ def setup(bot):
 
     This is called automatically on `bot.load_extension` being run.
 
-    Stores the original help command instance on the ``bot._old_help``
-    attribute for later reinstatement, before removing it from the
-    command registry so the new help command can be loaded successfully.
+    Stores the original help command instance on the ``bot._old_help`` attribute for later
+    reinstatement, before removing it from the command registry so the new help command can be
+    loaded successfully.
 
-    If an exception is raised during the loading of the cog, ``unload``
-    will be called in order to reinstate the original help command.
+    If an exception is raised during the loading of the cog, ``unload`` will be called in order to
+    reinstate the original help command.
 
     Parameters
     ----------

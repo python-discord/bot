@@ -43,6 +43,7 @@ def create_snek_frame(
 ) -> Image:
     """
     Creates a single random snek frame using Perlin noise.
+
     :param perlin_factory: the perlin noise factory used. Required.
     :param perlin_lookup_vertical_shift: the Perlin noise shift in the Y-dimension for this frame
     :param image_dimensions: the size of the output image.
@@ -51,13 +52,14 @@ def create_snek_frame(
     :param snake_color: the color of the snake.
     :param bg_color: the background color.
     :param segment_length_range: the range of the segment length.
-                                Values will be generated inside this range, including the bounds.
+                                 Values will be generated inside this range, including the bounds.
     :param snake_width: the width of the snek, in pixels.
     :param text: the text to display with the snek. Set to None for no text.
     :param text_position: the position of the text.
     :param text_color: the color of the text.
     :return: a PIL image, representing a single frame.
     """
+
     start_x = random.randint(image_margins[X], image_dimensions[X] - image_margins[X])
     start_y = random.randint(image_margins[Y], image_dimensions[Y] - image_margins[Y])
     points = [(start_x, start_y)]

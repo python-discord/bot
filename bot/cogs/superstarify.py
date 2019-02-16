@@ -38,9 +38,10 @@ class Superstarify:
     async def on_member_update(self, before: Member, after: Member):
         """
         This event will trigger when someone changes their name.
-        At this point we will look up the user in our database and check
-        whether they are allowed to change their names, or if they are in
-        superstar-prison. If they are not allowed, we will change it back.
+
+        At this point we will look up the user in our database and check whether they are allowed to
+        change their names, or if they are in superstar-prison. If they are not allowed, we will
+        change it back.
         """
 
         if before.display_name == after.display_name:
@@ -78,20 +79,18 @@ class Superstarify:
                 )
             except Forbidden:
                 log.warning(
-                    "The user tried to change their nickname while in superstar-prison. "
-                    "This led to the bot trying to DM the user to let "
-                    "them know they cannot do that, "
-                    "but the user had either blocked the bot or disabled DMs, "
-                    "so it was not possible "
+                    "The user tried to change their nickname while in superstar-prison. This led "
+                    "to the bot trying to DM the user to let them know they cannot do that, but "
+                    "the user had either blocked the bot or disabled DMs, so it was not possible "
                     "to DM them, and a discord.errors.Forbidden error was incurred."
                 )
 
     async def on_member_join(self, member: Member):
         """
         This event will trigger when someone (re)joins the server.
-        At this point we will look up the user in our database and check
-        whether they are in superstar-prison. If so, we will change their name
-        back to the forced nickname.
+
+        At this point we will look up the user in our database and check whether they are in
+        superstar-prison. If so, we will change their name back to the forced nickname.
         """
 
         response = await self.bot.http_session.get(
@@ -113,30 +112,24 @@ class Superstarify:
             await member.edit(nick=forced_nick)
             try:
                 await member.send(
-                    "You have left and rejoined the **Python Discord** server, "
-                    "effectively resetting "
-                    f"your nickname from **{forced_nick}** to **{member.name}**, "
-                    "but as you are currently in superstar-prison, "
-                    "you do not have permission to do so. "
-                    "Therefore your nickname was automatically changed back. "
-                    "You will be allowed to "
-                    "change your nickname again at the following time:\n\n"
+                    "You have left and rejoined the **Python Discord** server, effectively "
+                    f"resetting your nickname from **{forced_nick}** to **{member.name}**, but as "
+                    "you are currently in superstar-prison, you do not have permission to do so. "
+                    "Therefore, your nickname was automatically changed back. You will be allowed "
+                    "to change your nickname again at the following time:\n\n"
                     f"**{end_timestamp}**."
                 )
             except Forbidden:
                 log.warning(
-                    "The user left and rejoined the server while in superstar-prison. "
-                    "This led to the bot trying to DM the user to let"
-                    " them know their name was restored, "
-                    "but the user had either blocked the bot or disabled DMs, "
-                    "so it was not possible "
+                    "The user left and rejoined the server while in superstar-prison. This led to "
+                    "the bot trying to DM the user to let them know their name was restored, but "
+                    "the user had either blocked the bot or disabled DMs, so it was not possible "
                     "to DM them, and a discord.errors.Forbidden error was incurred."
                 )
 
             # Log to the mod_log channel
             log.trace(
-                "Logging to the #mod-log channel. "
-                "This could fail because of channel permissions."
+                "Logging to the #mod-log channel. This could fail because of channel permissions."
             )
             mod_log_message = (
                 f"**{member.name}#{member.discriminator}** (`{member.id}`)\n\n"
@@ -209,9 +202,8 @@ class Superstarify:
 
             embed.title = "Congratulations!"
             embed.description = (
-                f"Your previous nickname, **{old_nick}**, "
-                f"was so bad that we have decided to change it. "
-                f"Your new nickname will be **{forced_nick}**.\n\n"
+                f"Your previous nickname, **{old_nick}**, was so bad that we have decided to "
+                f"change it. Your new nickname will be **{forced_nick}**.\n\n"
                 f"You will be unable to change your nickname until \n**{end_time}**.\n\n"
                 "If you're confused by this, please read our "
                 f"[official nickname policy]({NICKNAME_POLICY_URL})."
@@ -220,8 +212,7 @@ class Superstarify:
 
             # Log to the mod_log channel
             log.trace(
-                "Logging to the #mod-log channel. "
-                "This could fail because of channel permissions."
+                "Logging to the #mod-log channel. This could fail because of channel permissions."
             )
             mod_log_message = (
                 f"**{member.name}#{member.discriminator}** (`{member.id}`)\n\n"
@@ -257,8 +248,8 @@ class Superstarify:
     @with_role(Roles.admin, Roles.owner, Roles.moderator)
     async def unsuperstarify(self, ctx: Context, member: Member):
         """
-        This command will remove the entry from our database, allowing the user
-        to once again change their nickname.
+        This command will remove the entry from our database, allowing the user to once again
+        change their nickname.
 
         :param ctx: Discord message context
         :param member: The member to unsuperstarify

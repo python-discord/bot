@@ -47,8 +47,7 @@ class ModLog:
 
     async def upload_log(self, messages: List[Message]) -> Optional[str]:
         """
-        Uploads the log data to the database via
-        an API endpoint for uploading logs.
+        Uploads the log data to the database via an API endpoint for uploading logs.
 
         Used in several mod log embeds.
 

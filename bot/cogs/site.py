@@ -32,10 +32,10 @@ class Site:
         embed.set_footer(text=url)
         embed.colour = Colour.blurple()
         embed.description = (
-            f"[Our official website]({url}) is an open-source community project "
-            "created with Python and Flask. It contains information about the server "
-            "itself, lets you sign up for upcoming events, has its own wiki, contains "
-            "a list of valuable learning resources, and much more."
+            f"[Our official website]({url}) is an open-source community project created with "
+            "Python and Flask. It contains information about the server itself, lets you sign up "
+            "for upcoming events, has its own wiki, contains a list of valuable learning "
+            "resources, and much more."
         )
 
         await ctx.send(embed=embed)
@@ -50,9 +50,8 @@ class Site:
         embed.set_footer(text=url)
         embed.colour = Colour.blurple()
         embed.description = (
-            f"The [Resources page]({url}) on our website contains a "
-            "list of hand-selected goodies that we regularly recommend "
-            "to both beginners and experts."
+            f"The [Resources page]({url}) on our website contains a list of hand-selected goodies "
+            "that we regularly recommend to both beginners and experts."
         )
 
         await ctx.send(embed=embed)
@@ -68,9 +67,8 @@ class Site:
         embed.colour = Colour.blurple()
         embed.description = (
             "Asking the right question about something that's new to you can sometimes be tricky. "
-            f"To help with this, we've created a "
-            f"[guide to asking good questions]({url}) on our website. "
-            "It contains everything you need to get the very best help from our community."
+            f"To help with this, we've created a [guide to asking good questions]({url}) on our "
+            "website. It contains everything you need to get the very best help from our community."
         )
 
         await ctx.send(embed=embed)

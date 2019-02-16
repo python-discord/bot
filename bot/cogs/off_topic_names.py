@@ -43,8 +43,8 @@ async def update_names(bot: Bot, headers: dict):
 
     Args:
         bot (Bot):
-            The running bot instance, used for fetching data from the
-            website via the bot's `http_session`.
+            The running bot instance, used for fetching data from the website via the bot's
+            `http_session`.
     """
 
     while True:

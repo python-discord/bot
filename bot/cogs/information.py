@@ -20,9 +20,8 @@ MODERATION_ROLES = Roles.owner, Roles.admin, Roles.moderator
 
 class Information:
     """
-    A cog with commands for generating embeds with
-    server information, such as server statistics
-    and user information.
+    A cog with commands for generating embeds with server information, such as server statistics and
+    user information.
     """
 
     def __init__(self, bot: Bot):
@@ -33,8 +32,7 @@ class Information:
     @command(name="roles")
     async def roles_info(self, ctx: Context):
         """
-        Returns a list of all roles and their
-        corresponding IDs.
+        Returns a list of all roles and their corresponding IDs.
         """
 
         # Sort the roles alphabetically and remove the @everyone role
@@ -60,8 +58,7 @@ class Information:
     @command(name="server", aliases=["server_info", "guild", "guild_info"])
     async def server_info(self, ctx: Context):
         """
-        Returns an embed full of
-        server information.
+        Returns an embed full of server information.
         """
 
         created = time_since(ctx.guild.created_at, precision="days")
