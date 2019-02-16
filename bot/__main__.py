@@ -78,6 +78,7 @@ bot.load_extension("bot.cogs.token_remover")
 bot.load_extension("bot.cogs.utils")
 bot.load_extension("bot.cogs.wolfram")
 bot.load_extension("bot.cogs.free")
+bot.load_extension("bot.cogs.jams")
 
 if has_rmq:
     bot.load_extension("bot.cogs.rmq")
