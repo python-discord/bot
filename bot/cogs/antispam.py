@@ -97,13 +97,13 @@ class AntiSpam:
                     # Fire it off as a background task to ensure
                     # that the sleep doesn't block further tasks
                     self.bot.loop.create_task(
-                        self.punish(message, member, full_reason, relevant_messages)
+                        self.punish(message, member, full_reason, relevant_messages, rule_name)
                     )
 
                 await self.maybe_delete_messages(message.channel, relevant_messages)
                 break
 
-    async def punish(self, msg: Message, member: Member, reason: str, messages: List[Message]):
+    async def punish(self, msg: Message, member: Member, reason: str, messages: List[Message], rule_name: str):
         # Sanity check to ensure we're not lagging behind
         if self.muted_role not in member.roles:
             remove_role_after = AntiSpamConfig.punishment['remove_after']
@@ -114,8 +114,8 @@ class AntiSpam:
                 f"**Reason:** {reason}\n"
             )
 
-            # For multiple messages, use the logs API
-            if len(messages) > 1:
+            # For multiple messages or those with excessive newlines, use the logs API
+            if len(messages) > 1 or rule_name == 'newlines':
                 url = await self.mod_log.upload_log(messages)
                 mod_alert_message += f"A complete log of the offending messages can be found [here]({url})"
             else:
