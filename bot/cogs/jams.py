@@ -22,6 +22,12 @@ class CodeJams:
         self, ctx: commands.Context,
         team_name: str, members: commands.Greedy[Member]
     ):
+        """
+        Create a team channel in the Code Jams category, assign roles and then add
+        overwrites for the team.
+
+        The first user passed will always be the team leader.
+        """
         code_jam_category = utils.get(ctx.guild.categories, name="Code Jam")
 
         if code_jam_category is None:
