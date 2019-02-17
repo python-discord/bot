@@ -35,9 +35,9 @@ class CodeJams:
         # two members or at some times even 1 member. This fixes that by checking that there
         # are always 3 members in the members list.
         if len(members) < 3:
-            await ctx.send(f":no_entry_sign: One of your arguments was invalid - there must be a "
+            await ctx.send(":no_entry_sign: One of your arguments was invalid - there must be a "
                            f"minimum of 3 valid members in your team. Found: {len(members)} "
-                           f"members")
+                           "members")
             return
 
         code_jam_category = utils.get(ctx.guild.categories, name="Code Jam")
