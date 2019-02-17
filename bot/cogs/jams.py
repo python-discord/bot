@@ -24,11 +24,22 @@ class CodeJams:
         team_name: str, members: commands.Greedy[Member]
     ):
         """
-        Create a team channel in the Code Jams category, assign roles and then add
-        overwrites for the team.
+        Create a team channel (both voice and text) in the Code Jams category, assign roles
+        and then add overwrites for the team.
 
         The first user passed will always be the team leader.
         """
+
+        # We had a little issue during Code Jam 4 here, the greedy converter did it's job
+        # and ignored anything which wasn't a valid argument which left us with teams of
+        # two members or at some times even 1 member. This fixes that by checking that there
+        # are always 3 members in the members list.
+        if len(members) < 3:
+            await ctx.send(":no_entry_sign: One of your arguments was invalid - there must be a "
+                           f"minimum of 3 valid members in your team. Found: {len(members)} "
+                           "members")
+            return
+
         code_jam_category = utils.get(ctx.guild.categories, name="Code Jam")
 
         if code_jam_category is None:
@@ -50,19 +61,35 @@ class CodeJams:
             members[0]: PermissionOverwrite(
                 manage_messages=True,
                 read_messages=True,
-                manage_webhooks=True
+                manage_webhooks=True,
+                connect=True
             ),
-            ctx.guild.default_role: PermissionOverwrite(read_messages=False),
-            ctx.guild.get_role(Roles.developer): PermissionOverwrite(read_messages=False)
+            ctx.guild.default_role: PermissionOverwrite(read_messages=False, connect=False),
+            ctx.guild.get_role(Roles.developer): PermissionOverwrite(
+                read_messages=False,
+                connect=False
+            )
         }
 
         # Rest of members should just have read_messages
         for member in members[1:]:
-            team_channel_overwrites[member] = PermissionOverwrite(read_messages=True)
+            team_channel_overwrites[member] = PermissionOverwrite(
+                read_messages=True,
+                connect=True
+            )
 
-        # Create a channel for the team
+        # Create a text channel for the team
         team_channel = await ctx.guild.create_text_channel(
             team_name,
+            overwrites=team_channel_overwrites,
+            category=code_jam_category
+        )
+
+        # Create a voice channel for the team
+        team_voice_name = " ".join(team_name.split("-")).title()
+
+        await ctx.guild.create_voice_channel(
+            team_voice_name,
             overwrites=team_channel_overwrites,
             category=code_jam_category
         )
