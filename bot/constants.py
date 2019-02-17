@@ -372,6 +372,7 @@ class Roles(metaclass=YAMLGetter):
     owner: int
     verified: int
     helpers: int
+    team_leader: int
 
 
 class Guild(metaclass=YAMLGetter):
