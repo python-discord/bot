@@ -41,13 +41,8 @@ class Defcon:
 
     async def on_ready(self):
         try:
-            response = await self.bot.http_session.get(
-                URLs.site_settings_api,
-                headers=self.headers,
-                params={"keys": "defcon_enabled,defcon_days"}
-            )
-
-            data = await response.json()
+            response = await self.bot.api_client.get('bot/bot-settings/defcon')
+            data = response['data']
 
         except Exception:  # Yikes!
             log.exception("Unable to get DEFCON settings!")
@@ -56,9 +51,9 @@ class Defcon:
             )
 
         else:
-            if data["defcon_enabled"]:
+            if data["enabled"]:
                 self.enabled = True
-                self.days = timedelta(days=data["defcon_days"])
+                self.days = timedelta(days=data["days"])
                 log.warning(f"DEFCON enabled: {self.days.days} days")
 
             else:
@@ -117,13 +112,18 @@ class Defcon:
         self.enabled = True
 
         try:
-            response = await self.bot.http_session.put(
-                URLs.site_settings_api,
-                headers=self.headers,
-                json={"defcon_enabled": True}
+            await self.bot.api_client.put(
+                'bot/bot-settings/defcon',
+                json={
+                    'name': 'defcon',
+                    'data': {
+                        'enabled': True,
+                        # TODO: retrieve old days count
+                        'days': 0
+                    }
+                }
             )
 
-            await response.json()
         except Exception as e:
             log.exception("Unable to update DEFCON settings.")
             await ctx.send(
@@ -141,6 +141,7 @@ class Defcon:
                 "restarted.\n\n"
                 f"```py\n{e}\n```"
             )
+
         else:
             await ctx.send(f"{Emojis.defcon_enabled} DEFCON enabled.")
 
@@ -160,13 +161,16 @@ class Defcon:
         self.enabled = False
 
         try:
-            response = await self.bot.http_session.put(
-                URLs.site_settings_api,
-                headers=self.headers,
-                json={"defcon_enabled": False}
+            await self.bot.api_client.put(
+                'bot/bot-settings/defcon',
+                json={
+                    'data': {
+                        'days': 0,
+                        'enabled': False
+                    },
+                    'name': 'defcon'
+                }
             )
-
-            await response.json()
         except Exception as e:
             log.exception("Unable to update DEFCON settings.")
             await ctx.send(
@@ -216,13 +220,16 @@ class Defcon:
         self.days = timedelta(days=days)
 
         try:
-            response = await self.bot.http_session.put(
-                URLs.site_settings_api,
-                headers=self.headers,
-                json={"defcon_days": days}
+            await self.bot.api_client.put(
+                'bot/bot-settings/defcon',
+                json={
+                    'data': {
+                        'days': days,
+                        'enabled': True
+                    },
+                    'name': 'defcon'
+                }
             )
-
-            await response.json()
         except Exception as e:
             log.exception("Unable to update DEFCON settings.")
             await ctx.send(
