@@ -277,7 +277,7 @@ class Reminders(Scheduler):
         """
 
         # Send the request to update the reminder in the database
-        reminder = await self.bot.http_session.patch(
+        reminder = await self.bot.api_client.patch(
             'bot/reminders/' + str(id_),
             json={'expiration': expiration.isoformat()}
         )
@@ -296,7 +296,7 @@ class Reminders(Scheduler):
         """
 
         # Send the request to update the reminder in the database
-        reminder = await self.bot.http_session.patch(
+        reminder = await self.bot.api_client.patch(
             'bot/reminders/' + str(id_),
             json={'content': content}
         )
