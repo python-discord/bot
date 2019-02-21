@@ -10,8 +10,9 @@ from discord import Color, Embed, Guild, Member, Message, TextChannel, User
 from discord.ext.commands import Bot, Context, command, group
 
 from bot.constants import (
-    BigBrother as BigBrotherConfig, Channels, Emojis, Guild as GuildConfig, Keys,
-    MODERATION_ROLES, URLs, STAFF_ROLES
+    BigBrother as BigBrotherConfig, Channels, Emojis,
+    Guild as GuildConfig, Keys,
+    MODERATION_ROLES, STAFF_ROLES, URLs
 )
 from bot.decorators import with_role
 from bot.pagination import LinePaginator

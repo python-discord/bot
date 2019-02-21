@@ -13,7 +13,7 @@ from discord.ext.commands import (
 
 from bot import constants
 from bot.cogs.modlog import ModLog
-from bot.constants import Colours, Event, Icons, Keys, URLs, MODERATION_ROLES
+from bot.constants import Colours, Event, Icons, Keys, MODERATION_ROLES, URLs
 from bot.converters import InfractionSearchQuery
 from bot.decorators import with_role
 from bot.pagination import LinePaginator

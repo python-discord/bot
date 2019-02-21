@@ -8,8 +8,8 @@ from discord.ext.commands import Bot, Context, command, group
 from dulwich.repo import Repo
 
 from bot.constants import (
-    Channels, Guild, Roles, URLs,
-    MODERATION_ROLES
+    Channels, Guild, MODERATION_ROLES,
+    Roles, URLs,
 )
 from bot.decorators import with_role
 from bot.utils.messages import wait_for_deletion

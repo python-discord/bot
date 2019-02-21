@@ -9,7 +9,7 @@ from discord.ext.commands import Bot, Context, group
 from bot.cogs.modlog import ModLog
 from bot.constants import (
     Channels, CleanMessages, Colours, Event,
-    Icons, NEGATIVE_REPLIES, MODERATION_ROLES
+    Icons, MODERATION_ROLES, NEGATIVE_REPLIES
 )
 from bot.decorators import with_role
 

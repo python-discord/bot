@@ -11,8 +11,8 @@ from bot.cogs.modlog import ModLog
 from bot.constants import (
     AntiSpam as AntiSpamConfig, Channels,
     Colours, DEBUG_MODE, Event,
-    Guild as GuildConfig, Icons, STAFF_ROLES,
-    Roles,
+    Guild as GuildConfig, Icons,
+    Roles, STAFF_ROLES,
 )
 
 
