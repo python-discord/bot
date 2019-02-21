@@ -13,7 +13,7 @@ from discord.ext.commands import (
 
 from bot import constants
 from bot.cogs.modlog import ModLog
-from bot.constants import Colours, Event, Icons, Keys, Roles, URLs
+from bot.constants import Colours, Event, Icons, Keys, URLs, MODERATION_ROLES
 from bot.converters import InfractionSearchQuery
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
@@ -23,7 +23,6 @@ from bot.utils.time import parse_rfc1123, wait_until
 
 log = logging.getLogger(__name__)
 
-MODERATION_ROLES = Roles.owner, Roles.admin, Roles.moderator
 INFRACTION_ICONS = {
     "Mute": Icons.user_mute,
     "Kick": Icons.sign_out,

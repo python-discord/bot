@@ -5,14 +5,12 @@ import textwrap
 from discord import CategoryChannel, Colour, Embed, Member, TextChannel, VoiceChannel
 from discord.ext.commands import BadArgument, Bot, CommandError, Context, MissingPermissions, command
 
-from bot.constants import Channels, Emojis, Keys, NEGATIVE_REPLIES, Roles, URLs
+from bot.constants import Channels, Emojis, Keys, NEGATIVE_REPLIES, STAFF_ROLES, MODERATION_ROLES, URLs
 from bot.decorators import with_role
 from bot.utils.checks import with_role_check
 from bot.utils.time import time_since
 
 log = logging.getLogger(__name__)
-
-MODERATION_ROLES = Roles.owner, Roles.admin, Roles.moderator
 
 
 class Information:
@@ -137,7 +135,7 @@ class Information:
 
         # Non-moderators may only do this in #bot-commands and can't see
         # hidden infractions.
-        if not with_role_check(ctx, *MODERATION_ROLES):
+        if not with_role_check(ctx, *STAFF_ROLES):
             if not ctx.channel.id == Channels.bot:
                 raise MissingPermissions("You can't do that here!")
             # Hide hidden infractions for users without a moderation role

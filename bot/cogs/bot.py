@@ -8,7 +8,8 @@ from discord.ext.commands import Bot, Context, command, group
 from dulwich.repo import Repo
 
 from bot.constants import (
-    Channels, Guild, Roles, URLs
+    Channels, Guild, Roles, URLs,
+    MODERATION_ROLES
 )
 from bot.decorators import with_role
 from bot.utils.messages import wait_for_deletion
@@ -81,7 +82,7 @@ class Bot:
         await ctx.send(embed=embed)
 
     @command(name='echo', aliases=('print',))
-    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     async def echo_command(self, ctx: Context, *, text: str):
         """
         Send the input verbatim to the current channel
@@ -90,7 +91,7 @@ class Bot:
         await ctx.send(text)
 
     @command(name='embed')
-    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     async def embed_command(self, ctx: Context, *, text: str):
         """
         Send the input within an embed to the current channel

@@ -10,7 +10,7 @@ from discord.ext.commands import (
 )
 
 from bot.cogs.rmq import RMQ
-from bot.constants import Channels, ERROR_REPLIES, NEGATIVE_REPLIES, Roles, URLs
+from bot.constants import Channels, ERROR_REPLIES, NEGATIVE_REPLIES, STAFF_ROLES, URLs
 from bot.decorators import InChannelCheckFailure, in_channel
 from bot.utils.messages import wait_for_deletion
 
@@ -53,8 +53,6 @@ RAW_CODE_REGEX = re.compile(
     re.DOTALL                               # "." also matches newlines
 )
 
-BYPASS_ROLES = (Roles.owner, Roles.admin, Roles.moderator, Roles.helpers)
-
 
 class Snekbox:
     """
@@ -71,7 +69,7 @@ class Snekbox:
 
     @command(name='eval', aliases=('e',))
     @guild_only()
-    @in_channel(Channels.bot, bypass_roles=BYPASS_ROLES)
+    @in_channel(Channels.bot, bypass_roles=STAFF_ROLES)
     async def eval_command(self, ctx: Context, *, code: str = None):
         """
         Run some code. get the result back. We've done our best to make this safe, but do let us know if you

@@ -8,7 +8,7 @@ from discord import Embed
 from discord.ext import commands
 from discord.ext.commands import BucketType, Context, check, group
 
-from bot.constants import Colours, Roles, Wolfram
+from bot.constants import Colours, STAFF_ROLES, Wolfram
 from bot.pagination import ImagePaginator
 
 log = logging.getLogger(__name__)
@@ -18,7 +18,6 @@ DEFAULT_OUTPUT_FORMAT = "JSON"
 QUERY = "http://api.wolframalpha.com/v2/{request}?{data}"
 WOLF_IMAGE = "https://www.symbols.com/gi.php?type=1&id=2886&i=1"
 
-COOLDOWN_IGNORERS = Roles.moderator, Roles.owner, Roles.admin, Roles.helpers
 MAX_PODS = 20
 
 # Allows for 10 wolfram calls pr user pr day
@@ -159,7 +158,7 @@ class Wolfram:
         self.bot = bot
 
     @group(name="wolfram", aliases=("wolf", "wa"), invoke_without_command=True)
-    @custom_cooldown(*COOLDOWN_IGNORERS)
+    @custom_cooldown(*STAFF_ROLES)
     async def wolfram_command(self, ctx: Context, *, query: str) -> None:
         """
         Requests all answers on a single image,
@@ -201,7 +200,7 @@ class Wolfram:
             await send_embed(ctx, message, color, footer=footer, img_url=image_url, f=f)
 
     @wolfram_command.command(name="page", aliases=("pa", "p"))
-    @custom_cooldown(*COOLDOWN_IGNORERS)
+    @custom_cooldown(*STAFF_ROLES)
     async def wolfram_page_command(self, ctx: Context, *, query: str) -> None:
         """
         Requests a drawn image of given query
@@ -225,7 +224,7 @@ class Wolfram:
         await ImagePaginator.paginate(pages, ctx, embed)
 
     @wolfram_command.command(name="cut", aliases=("c",))
-    @custom_cooldown(*COOLDOWN_IGNORERS)
+    @custom_cooldown(*STAFF_ROLES)
     async def wolfram_cut_command(self, ctx, *, query: str) -> None:
         """
         Requests a drawn image of given query
@@ -248,7 +247,7 @@ class Wolfram:
         await send_embed(ctx, page[0], colour=Colours.soft_orange, img_url=page[1])
 
     @wolfram_command.command(name="short", aliases=("sh", "s"))
-    @custom_cooldown(*COOLDOWN_IGNORERS)
+    @custom_cooldown(*STAFF_ROLES)
     async def wolfram_short_command(self, ctx: Context, *, query: str) -> None:
         """
             Requests an answer to a simple question
