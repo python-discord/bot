@@ -8,12 +8,10 @@ from io import StringIO
 from discord import Colour, Embed
 from discord.ext.commands import AutoShardedBot, Context, command
 
-from bot.constants import Channels, NEGATIVE_REPLIES, Roles
+from bot.constants import Channels, NEGATIVE_REPLIES, STAFF_ROLES
 from bot.decorators import InChannelCheckFailure, in_channel
 
 log = logging.getLogger(__name__)
-
-BYPASS_ROLES = (Roles.owner, Roles.admin, Roles.moderator, Roles.helpers)
 
 
 class Utils:
@@ -91,7 +89,7 @@ class Utils:
         await ctx.message.channel.send(embed=pep_embed)
 
     @command()
-    @in_channel(Channels.bot, bypass_roles=BYPASS_ROLES)
+    @in_channel(Channels.bot, bypass_roles=STAFF_ROLES)
     async def charinfo(self, ctx, *, characters: str):
         """
         Shows you information on up to 25 unicode characters.

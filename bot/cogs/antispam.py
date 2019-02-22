@@ -11,7 +11,8 @@ from bot.cogs.modlog import ModLog
 from bot.constants import (
     AntiSpam as AntiSpamConfig, Channels,
     Colours, DEBUG_MODE, Event,
-    Guild as GuildConfig, Icons, Roles,
+    Guild as GuildConfig, Icons,
+    Roles, STAFF_ROLES,
 )
 
 
@@ -35,7 +36,6 @@ WHITELISTED_CHANNELS = (
     Channels.helpers, Channels.message_log,
     Channels.mod_alerts, Channels.modlog, Channels.staff_lounge
 )
-WHITELISTED_ROLES = (Roles.owner, Roles.admin, Roles.moderator, Roles.helpers)
 
 
 class AntiSpam:
@@ -57,7 +57,7 @@ class AntiSpam:
             or message.guild.id != GuildConfig.id
             or message.author.bot
             or (message.channel.id in WHITELISTED_CHANNELS and not DEBUG_MODE)
-            or (message.author.top_role.id in WHITELISTED_ROLES and not DEBUG_MODE)
+            or (message.author.top_role.id in STAFF_ROLES and not DEBUG_MODE)
         ):
             return
 

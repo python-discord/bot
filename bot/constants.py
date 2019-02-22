@@ -372,6 +372,7 @@ class Roles(metaclass=YAMLGetter):
     owner: int
     verified: int
     helpers: int
+    team_leader: int
 
 
 class Guild(metaclass=YAMLGetter):
@@ -497,7 +498,9 @@ BOT_DIR = os.path.dirname(__file__)
 PROJECT_ROOT = os.path.abspath(os.path.join(BOT_DIR, os.pardir))
 
 # Default role combinations
+MODERATION_ROLES = Roles.moderator, Roles.admin, Roles.owner
 STAFF_ROLES = Roles.helpers, Roles.moderator, Roles.admin, Roles.owner
+
 
 # Bot replies
 NEGATIVE_REPLIES = [

@@ -3,7 +3,7 @@ import logging
 from discord import Colour, Embed
 from discord.ext.commands import Bot, Context, command, group
 
-from bot.constants import Keys, Roles, URLs
+from bot.constants import Keys, MODERATION_ROLES, Roles, URLs
 from bot.decorators import with_role
 
 log = logging.getLogger(__name__)
@@ -18,7 +18,7 @@ class Deployment:
         self.bot = bot
 
     @group(name='redeploy', invoke_without_command=True)
-    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     async def redeploy_group(self, ctx: Context):
         """Redeploy the bot or the site."""
 
