@@ -9,8 +9,8 @@ from bot.cogs.moderation import Moderation
 from bot.cogs.modlog import ModLog
 from bot.constants import (
     Icons, Keys,
-    NEGATIVE_REPLIES, POSITIVE_REPLIES,
-    Roles, URLs
+    MODERATION_ROLES, NEGATIVE_REPLIES,
+    POSITIVE_REPLIES, URLs
 )
 from bot.decorators import with_role
 
@@ -143,7 +143,7 @@ class Superstarify:
             )
 
     @command(name='superstarify', aliases=('force_nick', 'star'))
-    @with_role(Roles.admin, Roles.owner, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     async def superstarify(self, ctx: Context, member: Member, duration: str, *, forced_nick: str = None):
         """
         This command will force a random superstar name (like Taylor Swift) to be the user's
@@ -235,7 +235,7 @@ class Superstarify:
             await ctx.send(embed=embed)
 
     @command(name='unsuperstarify', aliases=('release_nick', 'unstar'))
-    @with_role(Roles.admin, Roles.owner, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     async def unsuperstarify(self, ctx: Context, member: Member):
         """
         This command will remove the entry from our database, allowing the user
