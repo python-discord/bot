@@ -10,7 +10,8 @@ from discord.ext.commands import (
 )
 
 from bot.constants import (
-    Channels, Cooldowns, ERROR_REPLIES, Keys, Roles, URLs
+    Channels, Cooldowns, ERROR_REPLIES, Keys,
+    MODERATION_ROLES, Roles, URLs
 )
 from bot.converters import TagContentConverter, TagNameConverter, ValidURL
 from bot.decorators import with_role
@@ -212,7 +213,7 @@ class Tags:
         return await ctx.send(embed=embed)
 
     @tags_group.command(name='set', aliases=('add', 'edit', 's'))
-    @with_role(Roles.admin, Roles.owner, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     async def set_command(
         self,
         ctx: Context,

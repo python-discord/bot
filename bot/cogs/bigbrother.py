@@ -10,8 +10,9 @@ from discord import Color, Embed, Guild, Member, Message, TextChannel, User
 from discord.ext.commands import Bot, Context, command, group
 
 from bot.constants import (
-    BigBrother as BigBrotherConfig, Channels, Emojis, Guild as GuildConfig,
-    Keys, Roles, STAFF_ROLES, URLs,
+    BigBrother as BigBrotherConfig, Channels, Emojis,
+    Guild as GuildConfig, Keys,
+    MODERATION_ROLES, STAFF_ROLES, URLs
 )
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
@@ -319,14 +320,14 @@ class BigBrother:
                 await ctx.send(f":x: the API returned an error: {error_reason}")
 
     @group(name='bigbrother', aliases=('bb',), invoke_without_command=True)
-    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     async def bigbrother_group(self, ctx: Context):
         """Monitor users, NSA-style."""
 
         await ctx.invoke(self.bot.get_command("help"), "bigbrother")
 
     @bigbrother_group.command(name='watched', aliases=('all',))
-    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     async def watched_command(self, ctx: Context, from_cache: bool = True):
         """
         Shows all users that are currently monitored and in which channel.
@@ -354,7 +355,7 @@ class BigBrother:
         )
 
     @bigbrother_group.command(name='watch', aliases=('w',))
-    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     async def watch_command(self, ctx: Context, user: User, *, reason: str):
         """
         Relay messages sent by the given `user` to the `#big-brother-logs` channel
@@ -378,7 +379,7 @@ class BigBrother:
         await self._watch_user(ctx, user, reason, channel_id)
 
     @bigbrother_group.command(name='unwatch', aliases=('uw',))
-    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     async def unwatch_command(self, ctx: Context, user: User, *, reason: str):
         """
         Stop relaying messages by the given `user`.
@@ -412,7 +413,7 @@ class BigBrother:
                 await ctx.send(f":x: the API returned an error: {reason}")
 
     @bigbrother_group.command(name='nominate', aliases=('n',))
-    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     async def nominate_command(self, ctx: Context, user: User, *, reason: str):
         """
         Nominates a user for the helper role by adding them to the talent-pool channel
@@ -460,7 +461,7 @@ class HelperNomination:
         self.bot = bot
 
     @command(name='nominate', aliases=('n',))
-    @with_role(Roles.owner, Roles.admin, Roles.moderator, Roles.helpers)
+    @with_role(*STAFF_ROLES)
     async def nominate_command(self, ctx: Context, user: User, *, reason: str):
         """
         Nominates a user for the helper role by adding them to the talent-pool channel
