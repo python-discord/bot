@@ -82,7 +82,7 @@ class BigBrother:
             if response.status == 200:
                 data = await response.json()
                 self.update_cache(data)
-                log.trace("Updated watch list cache")
+                log.trace("Updated Big Brother watchlist cache")
                 return True
             else:
                 return False
