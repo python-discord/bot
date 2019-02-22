@@ -74,7 +74,7 @@ class Alias:
             self, ctx: Context, user: User, *, reason: str
     ):
         """
-        Alias for invoking <prefix>bigbrother watch user [reason].
+        Alias for invoking <prefix>bigbrother watch [user] [reason].
         """
 
         await self.invoke(ctx, "bigbrother watch", user, reason=reason)
@@ -82,7 +82,7 @@ class Alias:
     @command(name="unwatch", hidden=True)
     async def bigbrother_unwatch_alias(self, ctx, user: User, *, reason: str):
         """
-        Alias for invoking <prefix>bigbrother unwatch user [reason].
+        Alias for invoking <prefix>bigbrother unwatch [user] [reason].
         """
 
         await self.invoke(ctx, "bigbrother unwatch", user, reason=reason)
