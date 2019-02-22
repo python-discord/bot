@@ -65,11 +65,11 @@ class Rules:
         **`rules`:** The rules a user wants to get.
         """
         rules_embed = Embed(title='Rules', color=Colour.blurple())
-        rules_embed.set_footer(text=self.footer)
 
         if not rules:
             # Rules were not submitted. Return the default description.
             rules_embed.description = self.default_desc
+            rules_embed.set_footer(text=self.footer)
             return await ctx.send(embed=rules_embed)
 
         # Split the rules input by slash, comma or space
