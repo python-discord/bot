@@ -4,11 +4,9 @@ from typing import Optional
 from discord import Colour, Embed
 from discord.ext.commands import Bot, Context, command
 
-from bot.constants import Channels, Roles
+from bot.constants import Channels, STAFF_ROLES
 from bot.decorators import redirect_output
 from bot.pagination import LinePaginator
-
-STAFF = Roles.admin, Roles.moderator, Roles.owner
 
 
 class Rules:
@@ -54,9 +52,10 @@ class Rules:
                              " our [rules page](https://pythondiscord.com/about/rules). We expect"
                              " all members of the community to have read and understood these."
                              )
+        self.footer = 'https://pythondiscord.com/about/rules'
 
     @command(aliases=['r', 'rule'], name='rules')
-    @redirect_output(destination_channel=Channels.bot, bypass_roles=STAFF)
+    @redirect_output(destination_channel=Channels.bot, bypass_roles=STAFF_ROLES)
     async def rules_command(self, ctx: Context, *, rules: Optional[str] = None):
         """
         Provides a link to the `rules` endpoint of the website, or displays
@@ -66,7 +65,7 @@ class Rules:
         **`rules`:** The rules a user wants to get.
         """
         rules_embed = Embed(title='Rules', color=Colour.blurple())
-        rules_embed.set_footer(text='https://pythondiscord.com/about/rules')
+        rules_embed.set_footer(text=self.footer)
 
         if not rules:
             # Rules were not submitted. Return the default description.
@@ -95,7 +94,8 @@ class Rules:
             # No valid rules in rules input. Return the default description.
             rules_embed.description = self.default_desc
             return await ctx.send(embed=rules_embed)
-        await LinePaginator.paginate(final_rules, ctx, rules_embed, max_lines=3)
+        await LinePaginator.paginate(final_rules, ctx, rules_embed, max_lines=3,
+                                     footer_text=self.footer)
 
 
 def setup(bot):
