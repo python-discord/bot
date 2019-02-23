@@ -4,11 +4,9 @@ from typing import Optional
 from discord import Colour, Embed
 from discord.ext.commands import Bot, Context, command
 
-from bot.constants import Channels, Roles
+from bot.constants import Channels, STAFF_ROLES
 from bot.decorators import redirect_output
 from bot.pagination import LinePaginator
-
-STAFF = Roles.admin, Roles.moderator, Roles.owner
 
 
 class Rules:
@@ -56,7 +54,7 @@ class Rules:
                              )
 
     @command(aliases=['r', 'rule'], name='rules')
-    @redirect_output(destination_channel=Channels.bot, bypass_roles=STAFF)
+    @redirect_output(destination_channel=Channels.bot, bypass_roles=STAFF_ROLES)
     async def rules_command(self, ctx: Context, *, rules: Optional[str] = None):
         """
         Provides a link to the `rules` endpoint of the website, or displays

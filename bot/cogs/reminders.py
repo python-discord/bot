@@ -11,7 +11,7 @@ from discord.ext.commands import Bot, Context, group
 
 from bot.constants import (
     Channels, Icons, Keys, NEGATIVE_REPLIES,
-    POSITIVE_REPLIES, Roles, URLs
+    POSITIVE_REPLIES, STAFF_ROLES, URLs
 )
 from bot.pagination import LinePaginator
 from bot.utils.scheduling import Scheduler
@@ -19,7 +19,6 @@ from bot.utils.time import humanize_delta, parse_rfc1123, wait_until
 
 log = logging.getLogger(__name__)
 
-STAFF_ROLES = (Roles.owner, Roles.admin, Roles.moderator, Roles.helpers)
 WHITELISTED_CHANNELS = (Channels.bot,)
 MAXIMUM_REMINDERS = 5
 
