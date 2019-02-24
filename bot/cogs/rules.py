@@ -52,6 +52,7 @@ class Rules:
                              " our [rules page](https://pythondiscord.com/about/rules). We expect"
                              " all members of the community to have read and understood these."
                              )
+        self.title_link = 'https://pythondiscord.com/about/rules'
 
     @command(aliases=['r', 'rule'], name='rules')
     @redirect_output(destination_channel=Channels.bot, bypass_roles=STAFF_ROLES)
@@ -64,11 +65,11 @@ class Rules:
         **`rules`:** The rules a user wants to get.
         """
         rules_embed = Embed(title='Rules', color=Colour.blurple())
-        rules_embed.set_footer(text='https://pythondiscord.com/about/rules')
 
         if not rules:
             # Rules were not submitted. Return the default description.
             rules_embed.description = self.default_desc
+            rules_embed.url = 'https://pythondiscord.com/about/rules'
             return await ctx.send(embed=rules_embed)
 
         # Split the rules input by slash, comma or space
@@ -93,7 +94,10 @@ class Rules:
             # No valid rules in rules input. Return the default description.
             rules_embed.description = self.default_desc
             return await ctx.send(embed=rules_embed)
-        await LinePaginator.paginate(final_rules, ctx, rules_embed, max_lines=3)
+        await LinePaginator.paginate(
+            final_rules, ctx, rules_embed,
+            max_lines=3, url=self.title_link
+        )
 
 
 def setup(bot):

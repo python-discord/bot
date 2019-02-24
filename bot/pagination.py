@@ -100,8 +100,7 @@ class LinePaginator(Paginator):
     async def paginate(cls, lines: Iterable[str], ctx: Context, embed: Embed,
                        prefix: str = "", suffix: str = "", max_lines: Optional[int] = None, max_size: int = 500,
                        empty: bool = True, restrict_to_user: User = None, timeout: int = 300,
-                       footer_text: str = None,
-                       exception_on_empty_embed: bool = False):
+                       footer_text: str = None, url: str = None, exception_on_empty_embed: bool = False):
         """
         Use a paginator and set of reactions to provide pagination over a set of lines. The reactions are used to
         switch page, or to finish with pagination.
@@ -123,6 +122,8 @@ class LinePaginator(Paginator):
         :param max_size: The maximum number of characters on each page
         :param empty: Whether to place an empty line between each given line
         :param restrict_to_user: A user to lock pagination operations to for this message, if supplied
+        :param exception_on_empty_embed: Should there be an exception if the embed is empty?
+        :param url: the url to use for the embed headline
         :param timeout: The amount of time in seconds to disable pagination of no reaction is added
         :param footer_text: Text to prefix the page number in the footer with
         """
@@ -182,6 +183,10 @@ class LinePaginator(Paginator):
                 embed.set_footer(text=footer_text)
                 log.trace(f"Setting embed footer to '{footer_text}'")
 
+            if url:
+                embed.url = url
+                log.trace(f"Setting embed url to '{url}'")
+
             log.debug("There's less than two pages, so we won't paginate - sending single page on its own")
             return await ctx.send(embed=embed)
         else:
@@ -189,8 +194,11 @@ class LinePaginator(Paginator):
                 embed.set_footer(text=f"{footer_text} (Page {current_page + 1}/{len(paginator.pages)})")
             else:
                 embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
-
             log.trace(f"Setting embed footer to '{embed.footer.text}'")
+
+            if url:
+                embed.url = url
+                log.trace(f"Setting embed url to '{url}'")
 
             log.debug("Sending first page to channel...")
             message = await ctx.send(embed=embed)
