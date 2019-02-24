@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from discord import Colour, Embed, TextChannel
 from discord.ext.commands import Bot, Context, group
 
-from bot.constants import Channels, ERROR_REPLIES, Reddit as RedditConfig, Roles
+from bot.constants import Channels, ERROR_REPLIES, Reddit as RedditConfig, STAFF_ROLES
 from bot.converters import Subreddit
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
@@ -257,7 +257,7 @@ class Reddit:
             time="week"
         )
 
-    @with_role(Roles.owner, Roles.admin, Roles.moderator, Roles.helpers)
+    @with_role(*STAFF_ROLES)
     @reddit_group.command(name="subreddits", aliases=("subs",))
     async def subreddits_command(self, ctx: Context):
         """

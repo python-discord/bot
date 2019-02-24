@@ -9,7 +9,11 @@ from aiohttp import ClientError
 from discord import Color, Embed, Guild, Member, Message, TextChannel, User
 from discord.ext.commands import Bot, Context, command, group
 
-from bot.constants import BigBrother as BigBrotherConfig, Channels, Emojis, Guild as GuildConfig, Keys, Roles, URLs
+from bot.constants import (
+    BigBrother as BigBrotherConfig, Channels, Emojis,
+    Guild as GuildConfig, Keys,
+    MODERATION_ROLES, STAFF_ROLES, URLs
+)
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
 from bot.utils import messages
@@ -40,6 +44,7 @@ class BigBrother:
         self.last_log = [None, None, 0]  # [user_id, channel_id, message_count]
         self.consuming = False
         self.infraction_watch_prefix = "bb watch: "  # Please do not change or we won't be able to find old reasons
+        self.nomination_prefix = "Helper nomination: "
 
         self.bot.loop.create_task(self.get_watched_users())
 
@@ -73,10 +78,20 @@ class BigBrother:
             data = await response.json()
             self.update_cache(data)
 
-    async def get_watch_information(self, user_id: int) -> WatchInformation:
+    async def update_watched_users(self):
+        async with self.bot.http_session.get(URLs.site_bigbrother_api, headers=self.HEADERS) as response:
+            if response.status == 200:
+                data = await response.json()
+                self.update_cache(data)
+                log.trace("Updated Big Brother watchlist cache")
+                return True
+            else:
+                return False
+
+    async def get_watch_information(self, user_id: int, prefix: str) -> WatchInformation:
         """ Fetches and returns the latest watch reason for a user using the infraction API """
 
-        re_bb_watch = rf"^{self.infraction_watch_prefix}"
+        re_bb_watch = rf"^{prefix}"
         user_id = str(user_id)
 
         try:
@@ -104,7 +119,7 @@ class BigBrother:
             date = latest_reason_infraction["inserted_at"]
 
             # Get the latest reason without the prefix
-            latest_reason = latest_reason_infraction['reason'][len(self.infraction_watch_prefix):]
+            latest_reason = latest_reason_infraction['reason'][len(prefix):]
 
             log.trace(f"The latest bb watch reason for {user_id}: {latest_reason}")
             return WatchInformation(reason=latest_reason, actor_id=actor_id, inserted_at=date)
@@ -204,7 +219,11 @@ class BigBrother:
             # Retrieve watch reason from API if it's not already in the cache
             if message.author.id not in self.watch_reasons:
                 log.trace(f"No watch information for {message.author.id} found in cache; retrieving from API")
-                user_watch_information = await self.get_watch_information(message.author.id)
+                if destination == self.bot.get_channel(Channels.talent_pool):
+                    prefix = self.nomination_prefix
+                else:
+                    prefix = self.infraction_watch_prefix
+                user_watch_information = await self.get_watch_information(message.author.id, prefix)
                 self.watch_reasons[message.author.id] = user_watch_information
 
             self.last_log = [message.author.id, message.channel.id, 0]
@@ -231,6 +250,13 @@ class BigBrother:
 
                     # Adding nomination info to author_field
                     author_field = f"{author_field} (nominated {time_delta} by {actor})"
+            else:
+                if inserted_at:
+                    # Get time delta since insertion
+                    date_time = parse_rfc1123(inserted_at).replace(tzinfo=None)
+                    time_delta = time_since(date_time, precision="minutes", max_units=1)
+
+                    author_field = f"{author_field} (added {time_delta})"
 
             embed = Embed(description=f"{message.author.mention} in [#{message.channel.name}]({message.jump_url})")
             embed.set_author(name=author_field, icon_url=message.author.avatar_url)
@@ -287,7 +313,6 @@ class BigBrother:
                     self.watched_users[user.id] = channel
 
                     # Add a note (shadow warning) with the reason for watching
-                    reason = f"{self.infraction_watch_prefix}{reason}"
                     await post_infraction(ctx, user, type="warning", reason=reason, hidden=True)
             else:
                 data = await response.json()
@@ -295,52 +320,42 @@ class BigBrother:
                 await ctx.send(f":x: the API returned an error: {error_reason}")
 
     @group(name='bigbrother', aliases=('bb',), invoke_without_command=True)
-    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     async def bigbrother_group(self, ctx: Context):
         """Monitor users, NSA-style."""
 
         await ctx.invoke(self.bot.get_command("help"), "bigbrother")
 
     @bigbrother_group.command(name='watched', aliases=('all',))
-    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     async def watched_command(self, ctx: Context, from_cache: bool = True):
         """
         Shows all users that are currently monitored and in which channel.
         By default, the users are returned from the cache.
         If this is not desired, `from_cache` can be given as a falsy value, e.g. e.g. 'no'.
         """
-
-        if from_cache:
-            lines = tuple(
-                f"• <@{user_id}> in <#{self.watched_users[user_id].id}>"
-                for user_id in self.watched_users
-            )
-            await LinePaginator.paginate(
-                lines or ("There's nothing here yet.",),
-                ctx,
-                Embed(title="Watched users (cached)", color=Color.blue()),
-                empty=False
-            )
-
+        if not from_cache:
+            updated = await self.update_watched_users()
+            if not updated:
+                await ctx.send(f":x: Failed to update cache: non-200 response from the API")
+                return
+            title = "Watched users (updated cache)"
         else:
-            async with self.bot.http_session.get(URLs.site_bigbrother_api, headers=self.HEADERS) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    self.update_cache(data)
-                    lines = tuple(f"• <@{entry['user_id']}> in <#{entry['channel_id']}>" for entry in data)
+            title = "Watched users (from cache)"
 
-                    await LinePaginator.paginate(
-                        lines or ("There's nothing here yet.",),
-                        ctx,
-                        Embed(title="Watched users", color=Color.blue()),
-                        empty=False
-                    )
-
-                else:
-                    await ctx.send(f":x: got non-200 response from the API")
+        lines = tuple(
+            f"• <@{user_id}> in <#{self.watched_users[user_id].id}>"
+            for user_id in self.watched_users
+        )
+        await LinePaginator.paginate(
+            lines or ("There's nothing here yet.",),
+            ctx,
+            Embed(title=title, color=Color.blue()),
+            empty=False
+        )
 
     @bigbrother_group.command(name='watch', aliases=('w',))
-    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     async def watch_command(self, ctx: Context, user: User, *, reason: str):
         """
         Relay messages sent by the given `user` to the `#big-brother-logs` channel
@@ -349,14 +364,28 @@ class BigBrother:
         note (aka: shadow warning)
         """
 
+        # Update cache to avoid double watching of a user
+        await self.update_watched_users()
+
+        if user.id in self.watched_users:
+            message = f":x: User is already being watched in {self.watched_users[user.id].name}"
+            await ctx.send(message)
+            return
+
         channel_id = Channels.big_brother_logs
+
+        reason = f"{self.infraction_watch_prefix}{reason}"
 
         await self._watch_user(ctx, user, reason, channel_id)
 
     @bigbrother_group.command(name='unwatch', aliases=('uw',))
-    @with_role(Roles.owner, Roles.admin, Roles.moderator)
-    async def unwatch_command(self, ctx: Context, user: User):
-        """Stop relaying messages by the given `user`."""
+    @with_role(*MODERATION_ROLES)
+    async def unwatch_command(self, ctx: Context, user: User, *, reason: str):
+        """
+        Stop relaying messages by the given `user`.
+
+        A `reason` for unwatching is required, which will be added as a note to the user.
+        """
 
         url = f"{URLs.site_bigbrother_api}?user_id={user.id}"
         async with self.bot.http_session.delete(url, headers=self.HEADERS) as response:
@@ -364,13 +393,19 @@ class BigBrother:
                 await ctx.send(f":ok_hand: will no longer relay messages sent by {user}")
 
                 if user.id in self.watched_users:
+                    channel = self.watched_users[user.id]
+
                     del self.watched_users[user.id]
                     if user.id in self.channel_queues:
                         del self.channel_queues[user.id]
                     if user.id in self.watch_reasons:
                         del self.watch_reasons[user.id]
                 else:
+                    channel = None
                     log.warning(f"user {user.id} was unwatched but was not found in the cache")
+
+                reason = f"Unwatched ({channel.name if channel else 'unknown channel'}): {reason}"
+                await post_infraction(ctx, user, type="warning", reason=reason, hidden=True)
 
             else:
                 data = await response.json()
@@ -378,7 +413,7 @@ class BigBrother:
                 await ctx.send(f":x: the API returned an error: {reason}")
 
     @bigbrother_group.command(name='nominate', aliases=('n',))
-    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     async def nominate_command(self, ctx: Context, user: User, *, reason: str):
         """
         Nominates a user for the helper role by adding them to the talent-pool channel
@@ -391,7 +426,32 @@ class BigBrother:
         # !nominate command does not show up under "BigBrother" in the help embed, but under
         # the header HelperNomination for users with the helper role.
 
+        member = ctx.guild.get_member(user.id)
+
+        if member and any(role.id in STAFF_ROLES for role in member.roles):
+            await ctx.send(f":x: {user.mention} is already a staff member!")
+            return
+
         channel_id = Channels.talent_pool
+
+        # Update watch cache to avoid overwriting active nomination reason
+        await self.update_watched_users()
+
+        if user.id in self.watched_users:
+            if self.watched_users[user.id].id == Channels.talent_pool:
+                prefix = "Additional nomination: "
+            else:
+                # If the user is being watched in big-brother, don't add them to talent-pool
+                message = (
+                    f":x: {user.mention} can't be added to the talent-pool "
+                    "as they are currently being watched in big-brother."
+                )
+                await ctx.send(message)
+                return
+        else:
+            prefix = self.nomination_prefix
+
+        reason = f"{prefix}{reason}"
 
         await self._watch_user(ctx, user, reason, channel_id)
 
@@ -401,7 +461,7 @@ class HelperNomination:
         self.bot = bot
 
     @command(name='nominate', aliases=('n',))
-    @with_role(Roles.owner, Roles.admin, Roles.moderator, Roles.helpers)
+    @with_role(*STAFF_ROLES)
     async def nominate_command(self, ctx: Context, user: User, *, reason: str):
         """
         Nominates a user for the helper role by adding them to the talent-pool channel

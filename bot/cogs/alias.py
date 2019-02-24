@@ -74,20 +74,18 @@ class Alias:
             self, ctx: Context, user: User, *, reason: str
     ):
         """
-        Alias for invoking <prefix>bigbrother watch user [text_channel].
+        Alias for invoking <prefix>bigbrother watch [user] [reason].
         """
 
         await self.invoke(ctx, "bigbrother watch", user, reason=reason)
 
     @command(name="unwatch", hidden=True)
-    async def bigbrother_unwatch_alias(self, ctx, user: User):
+    async def bigbrother_unwatch_alias(self, ctx, user: User, *, reason: str):
         """
-        Alias for invoking <prefix>bigbrother unwatch user.
-
-        user: discord.User - A user instance to unwatch
+        Alias for invoking <prefix>bigbrother unwatch [user] [reason].
         """
 
-        await self.invoke(ctx, "bigbrother unwatch", user)
+        await self.invoke(ctx, "bigbrother unwatch", user, reason=reason)
 
     @command(name="home", hidden=True)
     async def site_home_alias(self, ctx):
@@ -105,18 +103,10 @@ class Alias:
 
         await self.invoke(ctx, "site faq")
 
-    @command(name="rules", hidden=True)
-    async def site_rules_alias(self, ctx):
-        """
-        Alias for invoking <prefix>site rules.
-        """
-
-        await self.invoke(ctx, "site rules")
-
     @command(name="reload", hidden=True)
     async def cogs_reload_alias(self, ctx, *, cog_name: str):
         """
-        Alias for invoking <prefix>cogs reload cog_name.
+        Alias for invoking <prefix>cogs reload [cog_name].
 
         cog_name: str - name of the cog to be reloaded.
         """
@@ -138,6 +128,14 @@ class Alias:
         """
 
         await self.invoke(ctx, "defcon disable")
+
+    @command(name="exception", hidden=True)
+    async def tags_get_traceback_alias(self, ctx):
+        """
+        Alias for invoking <prefix>tags get traceback.
+        """
+
+        await self.invoke(ctx, "tags get traceback")
 
     @group(name="get",
            aliases=("show", "g"),
