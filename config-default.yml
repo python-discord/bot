@@ -189,6 +189,8 @@ filter:
         - (re+)tar+(d+|t+)(ed)?
         - ta+r+d+
         - cunts*
+        - trann*y
+        - shemale
 
     token_watchlist:
         - fa+g+s*
