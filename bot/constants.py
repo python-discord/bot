@@ -387,9 +387,7 @@ class Keys(metaclass=YAMLGetter):
 
     deploy_bot: str
     deploy_site: str
-    omdb: str
     site_api: str
-    youtube: str
 
 
 class RabbitMQ(metaclass=YAMLGetter):
@@ -412,25 +410,19 @@ class URLs(metaclass=YAMLGetter):
     bot_avatar: str
     deploy: str
     gitlab_bot_repo: str
-    omdb: str
     status: str
 
     # Site endpoints
     site: str
     site_api: str
-    site_facts_api: str
     site_clean_api: str
     site_superstarify_api: str
-    site_idioms_api: str
     site_logs_api: str
     site_logs_view: str
-    site_names_api: str
-    site_quiz_api: str
     site_reminders_api: str
     site_reminders_user_api: str
     site_schema: str
     site_settings_api: str
-    site_special_api: str
     site_tags_api: str
     site_user_api: str
     site_user_complete_api: str

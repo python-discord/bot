@@ -222,9 +222,7 @@ filter:
 keys:
     deploy_bot:  !ENV "DEPLOY_BOT_KEY"
     deploy_site: !ENV "DEPLOY_SITE"
-    omdb:        !ENV "OMDB_API_KEY"
     site_api:    !ENV "BOT_API_KEY"
-    youtube:     !ENV "YOUTUBE_API_KEY"
 
 
 rabbitmq:
@@ -243,9 +241,7 @@ urls:
 
     site_bigbrother_api:                !JOIN [*SCHEMA, *API, "/bot/bigbrother"]
     site_docs_api:                      !JOIN [*SCHEMA, *API, "/bot/docs"]
-    site_facts_api:                     !JOIN [*SCHEMA, *API, "/bot/snake_facts"]
     site_superstarify_api:              !JOIN [*SCHEMA, *API, "/bot/superstarify"]
-    site_idioms_api:                    !JOIN [*SCHEMA, *API, "/bot/snake_idioms"]
     site_infractions:                   !JOIN [*SCHEMA, *API, "/bot/infractions"]
     site_infractions_user:              !JOIN [*SCHEMA, *API, "/bot/infractions/user/{user_id}"]
     site_infractions_type:              !JOIN [*SCHEMA, *API, "/bot/infractions/type/{infraction_type}"]
@@ -254,13 +250,10 @@ urls:
     site_infractions_user_type:         !JOIN [*SCHEMA, *API, "/bot/infractions/user/{user_id}/{infraction_type}"]
     site_logs_api:                      !JOIN [*SCHEMA, *API, "/bot/logs"]
     site_logs_view:                     !JOIN [*SCHEMA, *DOMAIN, "/bot/logs"]
-    site_names_api:                     !JOIN [*SCHEMA, *API, "/bot/snake_names"]
     site_off_topic_names_api:           !JOIN [*SCHEMA, *API, "/bot/off-topic-names"]
-    site_quiz_api:                      !JOIN [*SCHEMA, *API, "/bot/snake_quiz"]
     site_reminders_api:                 !JOIN [*SCHEMA, *API, "/bot/reminders"]
     site_reminders_user_api:            !JOIN [*SCHEMA, *API, "/bot/reminders/user"]
     site_settings_api:                  !JOIN [*SCHEMA, *API, "/bot/settings"]
-    site_special_api:                   !JOIN [*SCHEMA, *API, "/bot/special_snakes"]
     site_tags_api:                      !JOIN [*SCHEMA, *API, "/bot/tags"]
     site_user_api:                      !JOIN [*SCHEMA, *API, "/bot/users"]
     site_user_complete_api:             !JOIN [*SCHEMA, *API, "/bot/users/complete"]
@@ -277,7 +270,6 @@ urls:
     # Misc URLs
     bot_avatar:      "https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle/logo_circle.png"
     gitlab_bot_repo: "https://gitlab.com/python-discord/projects/bot"
-    omdb:            "http://omdbapi.com"
 
 anti_spam:
     # Clean messages that violate a rule.

@@ -1,5 +1,6 @@
 import logging
 from functools import partial
+from typing import List
 
 from discord import Colour, Embed, Member, Object
 from discord.ext.commands import (
@@ -175,7 +176,7 @@ class Events:
         users = []
 
         for member in self.bot.get_guild(Guild.id).members:  # type: Member
-            roles = [str(r.id) for r in member.roles]  # type: List[int]
+            roles: List[int] = [str(r.id) for r in member.roles]
 
             users.append({
                 "avatar": member.avatar_url_as(format="png"),
@@ -225,9 +226,9 @@ class Events:
                 and before.avatar == after.avatar):
             return
 
-        before_role_names = [role.name for role in before.roles]  # type: List[str]
-        after_role_names = [role.name for role in after.roles]  # type: List[str]
-        role_ids = [str(r.id) for r in after.roles]  # type: List[str]
+        before_role_names: List[str] = [role.name for role in before.roles]
+        after_role_names: List[str] = [role.name for role in after.roles]
+        role_ids: List[str] = [str(r.id) for r in after.roles]
 
         log.debug(f"{before.display_name} roles changing from {before_role_names} to {after_role_names}")
 
@@ -242,7 +243,7 @@ class Events:
         log.debug(f"User {after.id} updated; changes: {changes}")
 
     async def on_member_join(self, member: Member):
-        role_ids = [str(r.id) for r in member.roles]  # type: List[str]
+        role_ids: List[str] = [str(r.id) for r in member.roles]
         new_roles = []
 
         try:
