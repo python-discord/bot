@@ -88,6 +88,13 @@ class Utils:
 
         await ctx.message.channel.send(embed=pep_embed)
 
+    @command(name='src', aliases='source')
+    async def return_source_link(self, ctx: Context):
+        """
+        Returns a link to bot's sources on Github.
+        """
+        await ctx.message.channel.send("The bot's source code can be found at: https://github.com/python-discord/bot/")
+
     @command()
     @in_channel(Channels.bot, bypass_roles=STAFF_ROLES)
     async def charinfo(self, ctx, *, characters: str):
