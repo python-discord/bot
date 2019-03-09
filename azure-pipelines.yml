@@ -7,7 +7,7 @@ variables:
 
 jobs:
 - job: test
-  displayName: 'Lint & Test'
+  displayName: 'Lint'
 
   pool:
     vmImage: ubuntu-16.04
@@ -35,9 +35,6 @@ jobs:
 
   - script: python -m flake8
     displayName: 'Run linter'
-
-  - script: python -m pytest tests
-    displayName: Run tests
 
 - job: build
   displayName: 'Build Containers'
