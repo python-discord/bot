@@ -10,7 +10,7 @@ jobs:
   displayName: 'Lint & Test'
 
   pool:
-    vmImage: 'Ubuntu 16.04'
+    vmImage: 'Ubuntu 18.04'
 
   variables:
     PIPENV_CACHE_DIR: ".cache/pipenv"
