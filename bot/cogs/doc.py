@@ -13,7 +13,7 @@ from markdownify import MarkdownConverter
 from requests import ConnectionError
 from sphinx.ext import intersphinx
 
-from bot.constants import Keys, Roles
+from bot.constants import Roles
 from bot.converters import ValidPythonIdentifier, ValidURL
 from bot.decorators import with_role
 from bot.pagination import LinePaginator

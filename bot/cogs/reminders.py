@@ -5,19 +5,17 @@ import textwrap
 from datetime import datetime
 from operator import itemgetter
 
-from aiohttp import ClientResponseError
 from dateutil.relativedelta import relativedelta
 from discord import Colour, Embed
 from discord.ext.commands import Bot, Context, group
 
 from bot.constants import (
-    Channels, Icons, Keys, NEGATIVE_REPLIES,
-    POSITIVE_REPLIES, Roles, URLs
+    Channels, Icons, NEGATIVE_REPLIES, POSITIVE_REPLIES, Roles
 )
 from bot.converters import ExpirationDate
 from bot.pagination import LinePaginator
 from bot.utils.scheduling import Scheduler
-from bot.utils.time import humanize_delta, parse_rfc1123, wait_until
+from bot.utils.time import humanize_delta, wait_until
 
 log = logging.getLogger(__name__)
 

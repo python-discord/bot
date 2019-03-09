@@ -1,5 +1,6 @@
 from bot.cogs.sync.syncers import User, get_users_for_sync
 
+
 def fake_user(**kwargs):
     kwargs.setdefault('id', 43)
     kwargs.setdefault('name', 'bob the test man')

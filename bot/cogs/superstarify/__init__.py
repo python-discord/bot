@@ -8,14 +8,10 @@ from discord.ext.commands import Bot, Context, command
 
 from bot.cogs.moderation import Moderation
 from bot.cogs.modlog import ModLog
-from bot.constants import (
-    Icons, Keys,
-    NEGATIVE_REPLIES, POSITIVE_REPLIES,
-    Roles, URLs
-)
+from bot.cogs.superstarify.stars import get_nick
+from bot.constants import Icons, POSITIVE_REPLIES, Roles
 from bot.converters import ExpirationDate
 from bot.decorators import with_role
-from bot.cogs.superstarify.stars import get_nick
 from bot.utils.moderation import post_infraction
 
 log = logging.getLogger(__name__)
@@ -117,8 +113,7 @@ class Superstarify:
             forced_nick = get_nick(infraction['id'], member.id)
             await member.edit(nick=forced_nick)
             end_timestamp_human = (
-                datetime.fromisoformat(response['expires_at'][:-1])
-                .strftime('%c')
+                datetime.fromisoformat(infraction['expires_at'][:-1]).strftime('%c')
             )
 
             try:
@@ -157,8 +152,7 @@ class Superstarify:
     @command(name='superstarify', aliases=('force_nick', 'star'))
     @with_role(Roles.admin, Roles.owner, Roles.moderator)
     async def superstarify(
-        self, ctx: Context, member: Member,
-         expiration: ExpirationDate, reason: str = None
+        self, ctx: Context, member: Member, expiration: ExpirationDate, reason: str = None
     ):
         """
         This command will force a random superstar name (like Taylor Swift) to be the user's
@@ -179,7 +173,6 @@ class Superstarify:
                 ":x: According to my records, this user is already superstarified. "
                 f"See infraction **#{active_superstarifies[0]['id']}**."
             )
-
 
         infraction = await post_infraction(
             ctx, member,
@@ -256,7 +249,6 @@ class Superstarify:
                 ":x: There is no active superstarify infraction for this user."
             )
 
-        
         [infraction] = active_superstarifies
         await self.bot.api_client.patch(
             'bot/infractions/' + str(infraction['id']),

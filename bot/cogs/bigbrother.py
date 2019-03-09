@@ -4,10 +4,12 @@ import re
 from collections import defaultdict, deque
 from typing import List, Union
 
-from discord import Color, Embed, Guild, Member, Message, TextChannel, User
+from discord import Color, Embed, Guild, Member, Message, User
 from discord.ext.commands import Bot, Context, group
 
-from bot.constants import BigBrother as BigBrotherConfig, Channels, Emojis, Guild as GuildConfig, Keys, Roles, URLs
+from bot.constants import (
+    BigBrother as BigBrotherConfig, Channels, Emojis, Guild as GuildConfig, Roles
+)
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
 from bot.utils import messages
@@ -73,11 +75,10 @@ class BigBrother:
             )
             self.watched_users.remove(user.id)
             del self.channel_queues[user.id]
-            await channel.send(
+            await self.channel.send(
                 f"{Emojis.bb_message}:hammer: {user} got banned, so "
                 f"`BigBrother` will no longer relay their messages."
             )
-
 
     async def on_message(self, msg: Message):
         """Queues up messages sent by watched users."""
@@ -100,7 +101,7 @@ class BigBrother:
         log.trace("Begin consuming messages.")
         channel_queues = self.channel_queues.copy()
         self.channel_queues.clear()
-        for user_id, queues in channel_queues.items():
+        for _, queues in channel_queues.items():
             for queue in queues.values():
                 while queue:
                     msg = queue.popleft()
@@ -219,12 +220,11 @@ class BigBrother:
         if user.id in self.watched_users:
             return await ctx.send(":x: That user is already watched.")
 
-        created_infraction = await post_infraction(
+        await post_infraction(
             ctx, user, type='watch', reason=reason, hidden=True
         )
         self.watched_users.add(user.id)
         await ctx.send(f":ok_hand: will now relay messages sent by {user}")
-
 
     @bigbrother_group.command(name='unwatch', aliases=('uw',))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)

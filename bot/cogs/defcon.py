@@ -5,7 +5,7 @@ from discord import Colour, Embed, Member
 from discord.ext.commands import Bot, Context, group
 
 from bot.cogs.modlog import ModLog
-from bot.constants import Channels, Emojis, Icons, Keys, Roles, URLs
+from bot.constants import Channels, Emojis, Icons, Keys, Roles
 from bot.decorators import with_role
 
 log = logging.getLogger(__name__)

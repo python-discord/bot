@@ -1,4 +1,4 @@
-from bot.cogs.sync.syncers import get_roles_for_sync, Role
+from bot.cogs.sync.syncers import Role, get_roles_for_sync
 
 
 def test_get_roles_for_sync_empty_return_for_equal_roles():

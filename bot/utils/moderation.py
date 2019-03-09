@@ -6,7 +6,7 @@ from aiohttp import ClientError
 from discord import Member, Object, User
 from discord.ext.commands import Context
 
-from bot.constants import Keys, URLs
+from bot.constants import Keys
 
 log = logging.getLogger(__name__)
 

@@ -3,7 +3,6 @@ import logging
 from datetime import datetime
 from typing import List, Optional, Union
 
-from aiohttp import ClientResponseError
 from dateutil.relativedelta import relativedelta
 from deepdiff import DeepDiff
 from discord import (
@@ -16,9 +15,7 @@ from discord.abc import GuildChannel
 from discord.ext.commands import Bot
 
 from bot.constants import (
-    Channels, Colours, Emojis,
-    Event, Guild as GuildConstant, Icons,
-    Keys, Roles, URLs
+    Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, URLs
 )
 from bot.utils.time import humanize_delta
 

@@ -2,13 +2,10 @@ import logging
 import time
 
 from discord import Colour, Embed
-from discord.ext.commands import (
-    BadArgument, Bot,
-    Context, group
-)
+from discord.ext.commands import Bot, Context, group
 
 from bot.constants import Channels, Cooldowns, Keys, Roles
-from bot.converters import TagContentConverter, TagNameConverter, ValidURL
+from bot.converters import TagContentConverter, TagNameConverter
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
 
