@@ -315,6 +315,10 @@ class Filtering:
         # discord\.gg/gdudes-pony-farm
         text = text.replace("\\", "")
 
+        # Remove pipes to prevent spoiler-escaping, like
+        # discord||.gg/gdudes||-pony-farm
+        text = text.replace("||", "")
+
         invites = re.findall(INVITE_RE, text, re.IGNORECASE)
         invite_data = dict()
         for invite in invites:
