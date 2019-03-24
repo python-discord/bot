@@ -149,7 +149,9 @@ class Filtering:
 
                     # Does the filter only need the message content or the full message?
                     if _filter["content_only"]:
-                        triggered = await _filter["function"](msg.content)
+                        triggered = await _filter["function"](
+                            self.sanitize_text(msg.content)
+                        )
                     else:
                         triggered = await _filter["function"](msg)
 
@@ -311,14 +313,6 @@ class Filtering:
         Attempts to catch some of common ways to try to cheat the system.
         """
 
-        # Remove backslashes to prevent escape character aroundfuckery like
-        # discord\.gg/gdudes-pony-farm
-        text = text.replace("\\", "")
-
-        # Remove pipes to prevent spoiler-escaping, like
-        # discord||.gg/gdudes||-pony-farm
-        text = text.replace("||", "")
-
         invites = re.findall(INVITE_RE, text, re.IGNORECASE)
         invite_data = dict()
         for invite in invites:
@@ -365,6 +359,22 @@ class Filtering:
                 if embed.type == "rich" and (not embed.url or "twitter.com" not in embed.url):
                     return True
         return False
+
+    @staticmethod
+    def sanitize_text(text: str) -> str:
+        """
+        Sanitize a string to be filtered against by removing common evasion patterns.
+        """
+
+        # Remove backslashes to prevent escape character aroundfuckery like
+        # discord\.gg/gdudes-pony-farm
+        text = text.replace("\\", "")
+
+        # Remove pipes to prevent spoiler-escaping, like
+        # discord||.gg/gdudes||-pony-farm
+        text = text.replace("||", "")
+
+        return text
 
     async def notify_member(self, filtered_member: Member, reason: str, channel: TextChannel):
         """
