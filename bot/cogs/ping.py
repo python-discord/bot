@@ -20,7 +20,7 @@ class Ping:
 
     @command()
     @with_role(*MODERATION_ROLES)
-    async def announce(self, ctx: Context, role: Role, message: str):
+    async def announce(self, ctx: Context, role: Role, *, message: str):
         """
         Make an announcement that pings a role
 
