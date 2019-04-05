@@ -28,7 +28,8 @@ class Ping:
         if role.mentionable:
             await ctx.send("That role is already mentionable.")
             return
-
+    
+        await ctx.message.delete()
         await role.edit(mentionable=True)   # make the role ping-able
         await ctx.send(f"{role.mention}")   # fix this message. I'm dumb and don't have the right words. Ping the role
         await role.edit(mentionable=False)  # make the role un-ping-able
