@@ -6,7 +6,7 @@ from time import strptime, struct_time
 from typing import List, NamedTuple, Optional, Union
 
 from aiohttp import ClientError
-from discord import Color, Embed, Guild, Member, Message, TextChannel, User
+from discord import Color, Embed, Guild, Member, Message, TextChannel, User, errors
 from discord.ext.commands import Bot, Context, command, group
 
 from bot.constants import (
@@ -43,6 +43,7 @@ class BigBrother:
         self.channel_queues = defaultdict(lambda: defaultdict(deque))  # { user_id: { channel_id: queue(messages) }
         self.last_log = [None, None, 0]  # [user_id, channel_id, message_count]
         self.consuming = False
+        self.consume_task = None
         self.infraction_watch_prefix = "bb watch: "  # Please do not change or we won't be able to find old reasons
         self.nomination_prefix = "Helper nomination: "
 
@@ -166,7 +167,19 @@ class BigBrother:
 
         if msg.author.id in self.watched_users:
             if not self.consuming:
-                self.bot.loop.create_task(self.consume_messages())
+                self.consume_task = self.bot.loop.create_task(self.consume_messages())
+
+            if self.consuming and self.consume_task.done():
+                # This should never happen, so something went wrong
+
+                log.error("The consume_task has finished, but did not reset the self.consuming boolean")
+                e = self.consume_task.exception()
+                if e:
+                    log.exception("The Exception for the Task:", exc_info=e)
+                else:
+                    log.error("However, an Exception was not found.")
+
+                self.consume_task = self.bot.loop.create_task(self.consume_messages())
 
             log.trace(f"Received message: {msg.content} ({len(msg.attachments)} attachments)")
             self.channel_queues[msg.author.id][msg.channel.id].append(msg)
@@ -195,7 +208,7 @@ class BigBrother:
 
         if self.channel_queues:
             log.trace("Queue not empty; continue consumption.")
-            self.bot.loop.create_task(self.consume_messages())
+            self.consume_task = self.bot.loop.create_task(self.consume_messages())
         else:
             log.trace("Done consuming messages.")
             self.consuming = False
@@ -285,7 +298,14 @@ class BigBrother:
 
             await destination.send(content)
 
-        await messages.send_attachments(message, destination)
+        try:
+            await messages.send_attachments(message, destination)
+        except (errors.Forbidden, errors.NotFound):
+            e = Embed(
+                description=":x: **This message contained an attachment, but it could not be retrieved**",
+                color=Color.red()
+            )
+            await destination.send(embed=e)
 
     async def _watch_user(self, ctx: Context, user: User, reason: str, channel_id: int):
         post_data = {
