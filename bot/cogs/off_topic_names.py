@@ -48,8 +48,11 @@ async def update_names(bot: Bot, headers: dict):
     """
 
     while True:
+        # To prevent the bot from sleeping until one second before midnight, we aim
+        # for one minute past midnight. This should prevent the ot-names cycling bug.
+
         today_at_midnight = datetime.utcnow().replace(microsecond=0, second=0, minute=0, hour=0)
-        next_midnight = today_at_midnight + timedelta(days=1)
+        next_midnight = today_at_midnight + timedelta(days=1, minutes=1)
         seconds_to_sleep = (next_midnight - datetime.utcnow()).seconds
         await asyncio.sleep(seconds_to_sleep)
 
