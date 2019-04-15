@@ -47,14 +47,12 @@ async def update_names(bot: Bot, headers: dict):
             website via the bot's `http_session`.
     """
 
-    # To ensure we only cycle once per day, we increase the reference midnight point
-    # by one day each time the task runs instead of relying on "the most recent"
-    # midnight, since that may fail if the task is triggered early.
-    midnight = midnight = datetime.utcnow().replace(microsecond=0, second=0, minute=0, hour=0)
     while True:
-        midnight += timedelta(days=1)
-        seconds_to_sleep = (midnight - datetime.utcnow()).seconds
-        log.debug(f"update_names: seconds to sleep {seconds_to_sleep}")
+        # Since we truncate the compute timedelta to seconds, we add one second to ensure
+        # we go past midnight in the `seconds_to_sleep` set below.
+        today_at_midnight = datetime.utcnow().replace(microsecond=0, second=0, minute=0, hour=0)
+        next_midnight = today_at_midnight + timedelta(days=1)
+        seconds_to_sleep = (next_midnight - datetime.utcnow()).seconds + 1
         await asyncio.sleep(seconds_to_sleep)
 
         response = await bot.http_session.get(
