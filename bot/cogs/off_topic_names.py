@@ -50,11 +50,8 @@ async def update_names(bot: Bot, headers: dict):
     # To ensure we only cycle once per day, we increase the reference midnight point
     # by one day each time the task runs instead of relying on "the most recent"
     # midnight, since that may fail if the task is triggered early.
-    midnight = None
+    midnight = midnight = datetime.utcnow().replace(microsecond=0, second=0, minute=0, hour=0)
     while True:
-        if midnight is None:
-            midnight = datetime.utcnow().replace(microsecond=0, second=0, minute=0, hour=0)
-
         midnight += timedelta(days=1)
         seconds_to_sleep = (midnight - datetime.utcnow()).seconds
         log.debug(f"update_names: seconds to sleep {seconds_to_sleep}")
