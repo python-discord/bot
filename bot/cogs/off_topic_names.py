@@ -47,13 +47,17 @@ async def update_names(bot: Bot, headers: dict):
             website via the bot's `http_session`.
     """
 
+    # To ensure we only cycle once per day, we increase the reference midnight point
+    # by one day each time the task runs instead of relying on "the most recent"
+    # midnight, since that may fail if the task is triggered early.
+    midnight = None
     while True:
-        # To prevent the bot from sleeping until one second before midnight, we aim
-        # for one minute past midnight. This should prevent the ot-names cycling bug.
+        if midnight is None:
+            midnight = datetime.utcnow().replace(microsecond=0, second=0, minute=0, hour=0)
 
-        today_at_midnight = datetime.utcnow().replace(microsecond=0, second=0, minute=0, hour=0)
-        next_midnight = today_at_midnight + timedelta(days=1, minutes=1)
-        seconds_to_sleep = (next_midnight - datetime.utcnow()).seconds
+        midnight += timedelta(days=1)
+        seconds_to_sleep = (midnight - datetime.utcnow()).seconds
+        log.debug(f"update_names: seconds to sleep {seconds_to_sleep}")
         await asyncio.sleep(seconds_to_sleep)
 
         response = await bot.http_session.get(
