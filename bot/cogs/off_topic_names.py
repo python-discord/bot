@@ -86,7 +86,7 @@ class OffTopicNames:
     async def on_ready(self):
         if self.updater_task is None:
             coro = update_names(self.bot, self.headers)
-            self.updater_task = await self.bot.loop.create_task(coro)
+            self.updater_task = self.bot.loop.create_task(coro)
 
     @group(name='otname', aliases=('otnames', 'otn'), invoke_without_command=True)
     @with_role(*MODERATION_ROLES)

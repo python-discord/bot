@@ -18,6 +18,9 @@ jobs:
     PIP_SRC: ".cache/src"
 
   steps:
+  - script: sudo apt-get update
+    displayName: 'Updating package list'
+
   - script: sudo apt-get install build-essential curl docker libffi-dev libfreetype6-dev libxml2 libxml2-dev libxslt1-dev zlib1g zlib1g-dev
     displayName: 'Install base dependencies'
 
