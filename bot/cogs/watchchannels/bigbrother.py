@@ -2,7 +2,7 @@ import logging
 from collections import ChainMap
 
 from discord import Color, Embed, User
-from discord.ext.commands import Bot, Context, group
+from discord.ext.commands import Context, group
 
 from bot.constants import (
     Channels, Roles
@@ -111,9 +111,3 @@ class BigBrother(WatchChannel):
                 color=Color.red()
             )
             return await ctx.send(embed=e)
-
-    @bigbrother_group.command(name='debug')
-    @with_role(Roles.owner, Roles.admin, Roles.moderator)
-    async def debug(self, ctx):
-        for data in self.watched_users.values():
-            await ctx.send(data)
