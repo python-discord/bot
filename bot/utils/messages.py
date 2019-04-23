@@ -1,9 +1,9 @@
 import asyncio
 import contextlib
 from io import BytesIO
-from typing import Sequence
+from typing import Sequence, Union
 
-from discord import Embed, File, Message, TextChannel
+from discord import Embed, File, Message, TextChannel, Webhook
 from discord.abc import Snowflake
 from discord.errors import HTTPException
 
@@ -78,7 +78,7 @@ async def wait_for_deletion(
         await message.delete()
 
 
-async def send_attachments(message: Message, destination: TextChannel):
+async def send_attachments(message: Message, destination: Union[TextChannel, Webhook]):
     """
     Re-uploads each attachment in a message to the given channel.
 
@@ -97,7 +97,14 @@ async def send_attachments(message: Message, destination: TextChannel):
             if attachment.size <= MAX_SIZE - 512:
                 with BytesIO() as file:
                     await attachment.save(file)
-                    await destination.send(file=File(file, filename=attachment.filename))
+                    if isinstance(destination, TextChannel):
+                        await destination.send(file=File(file, filename=attachment.filename))
+                    else:
+                        await destination.send(
+                            file=File(file, filename=attachment.filename),
+                            username=message.author.display_name,
+                            avatar_url=message.author.avatar_url
+                        )
             else:
                 large.append(attachment)
         except HTTPException as e:
@@ -109,4 +116,11 @@ async def send_attachments(message: Message, destination: TextChannel):
     if large:
         embed = Embed(description=f"\n".join(f"[{attachment.filename}]({attachment.url})" for attachment in large))
         embed.set_footer(text="Attachments exceed upload size limit.")
-        await destination.send(embed=embed)
+        if isinstance(destination, TextChannel):
+            await destination.send(embed=embed)
+        else:
+            await destination.send(
+                embed=embed,
+                username=message.author.display_name,
+                avatar_url=message.author.avatar_url
+            )
