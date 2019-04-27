@@ -34,8 +34,7 @@ RULE_FUNCTION_MAPPING = {
 }
 WHITELISTED_CHANNELS = (
     Channels.admins, Channels.announcements, Channels.big_brother_logs,
-    Channels.devalerts, Channels.devlog, Channels.devtest,
-    Channels.helpers, Channels.message_log,
+    Channels.devlog, Channels.devtest, Channels.helpers, Channels.message_log,
     Channels.mod_alerts, Channels.modlog, Channels.staff_lounge
 )
 WHITELISTED_ROLES = (Roles.owner, Roles.admin, Roles.moderator, Roles.helpers)
