@@ -8,9 +8,8 @@ from dateutil.relativedelta import relativedelta
 from deepdiff import DeepDiff
 from discord import (
     CategoryChannel, Colour, Embed, File, Guild,
-    Member, Message, NotFound, RawBulkMessageDeleteEvent,
-    RawMessageDeleteEvent, RawMessageUpdateEvent, Role,
-    TextChannel, User, VoiceChannel
+    Member, Message, NotFound, RawMessageDeleteEvent,
+    RawMessageUpdateEvent, Role, TextChannel, User, VoiceChannel
 )
 from discord.abc import GuildChannel
 from discord.ext.commands import Bot
