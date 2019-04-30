@@ -8,9 +8,8 @@ from dateutil.relativedelta import relativedelta
 from deepdiff import DeepDiff
 from discord import (
     CategoryChannel, Colour, Embed, File, Guild,
-    Member, Message, NotFound, RawBulkMessageDeleteEvent,
-    RawMessageDeleteEvent, RawMessageUpdateEvent, Role,
-    TextChannel, User, VoiceChannel
+    Member, Message, NotFound, RawMessageDeleteEvent,
+    RawMessageUpdateEvent, Role, TextChannel, User, VoiceChannel
 )
 from discord.abc import GuildChannel
 from discord.ext.commands import Bot
@@ -524,37 +523,6 @@ class ModLog:
             "Member updated", message,
             thumbnail=after.avatar_url_as(static_format="png"),
             channel_id=Channels.userlog
-        )
-
-    async def on_raw_bulk_message_delete(self, event: RawBulkMessageDeleteEvent):
-        if event.guild_id != GuildConstant.id or event.channel_id in GuildConstant.ignored:
-            return
-
-        # Could upload the log to the site - maybe we should store all the messages somewhere?
-        # Currently if messages aren't in the cache, we ain't gonna have 'em.
-
-        ignored_messages = 0
-
-        for message_id in event.message_ids:
-            if message_id in self._ignored[Event.message_delete]:
-                self._ignored[Event.message_delete].remove(message_id)
-                ignored_messages += 1
-
-        if ignored_messages >= len(event.message_ids):
-            return
-
-        channel = self.bot.get_channel(event.channel_id)
-
-        if channel.category:
-            message = f"{len(event.message_ids)} deleted in {channel.category}/#{channel.name} (`{channel.id}`)"
-        else:
-            message = f"{len(event.message_ids)} deleted in #{channel.name} (`{channel.id}`)"
-
-        await self.send_log_message(
-            Icons.message_bulk_delete, Colour.orange(),
-            "Bulk message delete",
-            message, channel_id=Channels.devalerts,
-            ping_everyone=True
         )
 
     async def on_message_delete(self, message: Message):

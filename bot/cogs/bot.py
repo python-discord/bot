@@ -5,7 +5,6 @@ import time
 
 from discord import Embed, Message, RawMessageUpdateEvent
 from discord.ext.commands import Bot, Context, command, group
-from dulwich.repo import Repo
 
 from bot.constants import (
     Channels, Guild, MODERATION_ROLES,
@@ -66,12 +65,7 @@ class Bot:
             url="https://gitlab.com/discord-python/projects/bot"
         )
 
-        repo = Repo(".")
-        sha = repo[repo.head()].sha().hexdigest()
-
         embed.add_field(name="Total Users", value=str(len(self.bot.get_guild(Guild.id).members)))
-        embed.add_field(name="Git SHA", value=str(sha)[:7])
-
         embed.set_author(
             name="Python Bot",
             url="https://gitlab.com/discord-python/projects/bot",

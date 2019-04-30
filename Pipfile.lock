@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "d731c41fe6352ae0bd5a2de66e1436c8ac63088e591367ed1634a22f69d039bb"
+            "sha256": "ab3b63b74dbf35fb960913a91e10282121a2776e935d98f0b4c3d780715f7a6b"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -18,11 +18,11 @@
     "default": {
         "aio-pika": {
             "hashes": [
-                "sha256:eb6daaae400ee1345f971b335cdf5bb941c4b4afaed5cbd6e609f18a1545e3f2",
-                "sha256:f609f9a26ac5cfad4c4d99507b93f4c8648aea3a005f81acbb6c5156aa1f152c"
+                "sha256:300474d8b0e9ccde17b2d1e71c3b4f7ba86559cc0842b9355b9eccb12be4a02a",
+                "sha256:3bc547600344beba8f36edfd1b1ec1c8b30f803ea7c11eaf249683099d07c98b"
             ],
             "index": "pypi",
-            "version": "==5.5.1"
+            "version": "==5.5.2"
         },
         "aiodns": {
             "hashes": [
@@ -62,10 +62,10 @@
         },
         "aiormq": {
             "hashes": [
-                "sha256:19489efae3fedbef68b44ed39103455823e1d3caa098e80595155d25a0f244c1",
-                "sha256:d2eac8f81e56e1e8e7bc2e38b720dd7825318cd299d2155fd03b456241c68789"
+                "sha256:79b41e51481fb7617279414e4428a644a944beb4dea8ea0febd67a8902976250",
+                "sha256:f134cc91ac111b0135c97539272579b1d15b69f25c75a935f6ee39e5194df231"
             ],
-            "version": "==2.5.0"
+            "version": "==2.5.2"
         },
         "alabaster": {
             "hashes": [
@@ -173,13 +173,6 @@
                 "sha256:7a4bd47eaf6596e1295ecb11361139febe29b084a87bf005bf899f9a42edc3c6"
             ],
             "version": "==0.14"
-        },
-        "dulwich": {
-            "hashes": [
-                "sha256:afbe070f6899357e33f63f3f3696e601731fef66c64a489dea1bc9f539f4a725"
-            ],
-            "index": "pypi",
-            "version": "==0.19.11"
         },
         "fuzzywuzzy": {
             "hashes": [
@@ -332,10 +325,9 @@
         },
         "ordered-set": {
             "hashes": [
-                "sha256:41c7ba85e7619cd4c71e38d4cd434f84de8473b826919eb79274b3a11b940b4d",
-                "sha256:f9b703ea9aa9c1db44412c5ba1c16cf8b7ad7ef37a685e4da2fd3754b40f8f6a"
+                "sha256:a7bfa858748c73b096e43db14eb23e2bc714a503f990c89fac8fab9b0ee79724"
             ],
-            "version": "==3.1"
+            "version": "==3.1.1"
         },
         "packaging": {
             "hashes": [
@@ -706,10 +698,10 @@
         },
         "identify": {
             "hashes": [
-                "sha256:244e7864ef59f0c7c50c6db73f58564151d91345cd9b76ed793458953578cadd",
-                "sha256:8ff062f90ad4b09cfe79b5dfb7a12e40f19d2e68a5c9598a49be45f16aba7171"
+                "sha256:443f419ca6160773cbaf22dbb302b1e436a386f23129dbb5482b68a147c2eca9",
+                "sha256:bd7f15fe07112b713fb68fbdde3a34dd774d9062128f2c398104889f783f989d"
             ],
-            "version": "==1.4.1"
+            "version": "==1.4.2"
         },
         "idna": {
             "hashes": [
@@ -831,17 +823,17 @@
         },
         "virtualenv": {
             "hashes": [
-                "sha256:6aebaf4dd2568a0094225ebbca987859e369e3e5c22dc7d52e5406d504890417",
-                "sha256:984d7e607b0a5d1329425dd8845bd971b957424b5ba664729fab51ab8c11bc39"
+                "sha256:15ee248d13e4001a691d9583948ad3947bcb8a289775102e4c4aa98a8b7a6d73",
+                "sha256:bfc98bb9b42a3029ee41b96dc00a34c2f254cbf7716bec824477b2c82741a5c4"
             ],
-            "version": "==16.4.3"
+            "version": "==16.5.0"
         },
         "zipp": {
             "hashes": [
-                "sha256:55ca87266c38af6658b84db8cfb7343cdb0bf275f93c7afaea0d8e7a209c7478",
-                "sha256:682b3e1c62b7026afe24eadf6be579fb45fec54c07ea218bded8092af07a68c4"
+                "sha256:139391b239594fd8b91d856bc530fbd2df0892b17dd8d98a91f018715954185f",
+                "sha256:8047e4575ce8d700370a3301bbfc972896a5845eb62dd535da395b86be95dfad"
             ],
-            "version": "==0.3.3"
+            "version": "==0.4.0"
         }
     }
 }

@@ -95,7 +95,6 @@ guild:
         bot:                              267659945086812160
         checkpoint_test:                  422077681434099723
         defcon:                           464469101889454091
-        devalerts:                        460181980097675264
         devlog:            &DEVLOG        409308876241108992
         devtest:           &DEVTEST       414574275865870337
         help_0:                           303906576991780866

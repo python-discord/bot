@@ -333,7 +333,6 @@ class Channels(metaclass=YAMLGetter):
     bot: int
     checkpoint_test: int
     defcon: int
-    devalerts: int
     devlog: int
     devtest: int
     help_0: int
