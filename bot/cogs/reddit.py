@@ -31,6 +31,9 @@ class Reddit:
         self.prev_lengths = {}
         self.last_ids = {}
 
+        self.new_posts_task = None
+        self.top_weekly_posts_task = None
+
     async def fetch_posts(self, route: str, *, amount: int = 25, params=None):
         """
         A helper method to fetch a certain amount of Reddit posts at a given route.
@@ -280,8 +283,10 @@ class Reddit:
         self.reddit_channel = self.bot.get_channel(Channels.reddit)
 
         if self.reddit_channel is not None:
-            self.bot.loop.create_task(self.poll_new_posts())
-            self.bot.loop.create_task(self.poll_top_weekly_posts())
+            if self.new_posts_task is None:
+                self.new_posts_task = self.bot.loop.create_task(self.poll_new_posts())
+            if self.top_weekly_posts_task is None:
+                self.top_weekly_posts_task = self.bot.loop.create_task(self.poll_top_weekly_posts())
         else:
             log.warning("Couldn't locate a channel for subreddit relaying.")
 
