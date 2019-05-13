@@ -56,7 +56,7 @@ class AntiSpam:
             or message.guild.id != GuildConfig.id
             or message.author.bot
             or (message.channel.id in WHITELISTED_CHANNELS and not DEBUG_MODE)
-            or (message.author.top_role.id in STAFF_ROLES and not DEBUG_MODE)
+            or (any(role.id in STAFF_ROLES for role in message.author.roles) and not DEBUG_MODE)
         ):
             return
 

@@ -14,6 +14,7 @@ from bot.constants import (
     POSITIVE_REPLIES, STAFF_ROLES, URLs
 )
 from bot.pagination import LinePaginator
+from bot.utils.checks import with_role_check
 from bot.utils.scheduling import Scheduler
 from bot.utils.time import humanize_delta, parse_rfc1123, wait_until
 
@@ -188,7 +189,7 @@ class Reminders(Scheduler):
         embed = Embed()
 
         # Make sure the reminder should actually be made.
-        if ctx.author.top_role.id not in STAFF_ROLES:
+        if with_role_check(ctx, *STAFF_ROLES):
 
             # If they don't have permission to set a reminder in this channel
             if ctx.channel.id not in WHITELISTED_CHANNELS:

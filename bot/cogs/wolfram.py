@@ -74,7 +74,7 @@ def custom_cooldown(*ignore: List[int]) -> check:
     async def predicate(ctx: Context) -> bool:
         user_bucket = usercd.get_bucket(ctx.message)
 
-        if ctx.author.top_role.id not in ignore:
+        if all(role.id not in ignore for role in ctx.author.roles):
             user_rate = user_bucket.update_rate_limit()
 
             if user_rate:

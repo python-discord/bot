@@ -104,7 +104,7 @@ class Snekbox:
 
         try:
             stripped_lines = [ln.strip() for ln in code.split('\n')]
-            if all([line.startswith('#') for line in stripped_lines]):
+            if all(line.startswith('#') for line in stripped_lines):
                 return await ctx.send(
                     f"{ctx.author.mention} Your eval job has completed.\n\n```[No output]```"
                 )
