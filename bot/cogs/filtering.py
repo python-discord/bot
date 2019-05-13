@@ -27,9 +27,6 @@ INVITE_RE = (
 
 URL_RE = r"(https?://[^\s]+)"
 ZALGO_RE = r"[\u0300-\u036F\u0489]"
-RETARDED_RE = r"(re+)tar+(d+|t+)(ed)?"
-SELF_DEPRECATION_RE = fr"((i'?m)|(i am)|(it'?s)|(it is)) (.+? )?{RETARDED_RE}"
-RETARDED_QUESTIONS_RE = fr"{RETARDED_RE} questions?"
 
 
 class Filtering:
@@ -237,18 +234,6 @@ class Filtering:
 
         for expression in Filter.word_watchlist:
             if re.search(fr"\b{expression}\b", text, re.IGNORECASE):
-
-                # Special handling for `retarded`
-                if expression == RETARDED_RE:
-
-                    # stuff like "I'm just retarded"
-                    if re.search(SELF_DEPRECATION_RE, text, re.IGNORECASE):
-                        return False
-
-                    # stuff like "sorry for all the retarded questions"
-                    elif re.search(RETARDED_QUESTIONS_RE, text, re.IGNORECASE):
-                        return False
-
                 return True
 
         return False
