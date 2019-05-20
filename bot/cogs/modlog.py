@@ -17,7 +17,7 @@ from discord.ext.commands import Bot
 from bot.constants import (
     Channels, Colours, Emojis,
     Event, Guild as GuildConstant, Icons,
-    Keys, Roles, URLs
+    Keys, URLs
 )
 from bot.utils.time import humanize_delta
 

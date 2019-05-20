@@ -8,7 +8,7 @@ from discord.ext.commands import Bot, Context, command, group
 
 from bot.constants import (
     Channels, Guild, MODERATION_ROLES,
-    Roles, URLs,
+    URLs,
 )
 from bot.decorators import with_role
 from bot.utils.messages import wait_for_deletion
