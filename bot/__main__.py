@@ -56,7 +56,7 @@ bot.load_extension("bot.cogs.help")
 # Only load this in production
 if not DEBUG_MODE:
     bot.load_extension("bot.cogs.doc")
-    bot.load_extension("bot.cogs.verification")
+    bot.load_extension("bot.cogs.user_management")
 
 # Feature cogs
 bot.load_extension("bot.cogs.alias")
