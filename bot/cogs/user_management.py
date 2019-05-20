@@ -10,21 +10,19 @@ from bot.decorators import in_channel, without_role
 log = logging.getLogger(__name__)
 
 WELCOME_MESSAGE = f"""
-Hello! Welcome to the server, and thanks for verifying yourself!
+Welcome to Python Discord!
 
-For your records, these are the documents you accepted:
+If you'd like to be a member of this community, please have a look at the following documents:
+Our rules: <https://pythondiscord.com/about/rules>
+Our privacy policy: <https://pythondiscord.com/about/privacy>
 
-`1)` Our rules, here: <https://pythondiscord.com/about/rules>
-`2)` Our privacy policy, here: <https://pythondiscord.com/about/privacy> - you can find information on how to have \
-your information removed here as well.
-
-Feel free to review them at any point!
-
-Additionally, if you'd like to receive notifications for the announcements we post in <#{Channels.announcements}> \
+If you'd like to receive notifications for the announcements we post in <#{Channels.announcements}> \
 from time to time, you can send `!subscribe` to <#{Channels.bot}> at any time to assign yourself the \
-**Announcements** role. We'll mention this role every time we make an announcement.
+**Announcements** role. We'll mention this role every time we make an important announcement.
 
 If you'd like to unsubscribe from the announcement notifications, simply send `!unsubscribe` to <#{Channels.bot}>.
+
+Thank you for joining our community, and we hope you enjoy your time here. 
 """
 
 
