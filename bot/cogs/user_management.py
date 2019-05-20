@@ -1,11 +1,11 @@
 import logging
 
-from discord import Message, NotFound, Object, Member, DiscordException
+from discord import DiscordException, Member, Object
 from discord.ext.commands import Bot, Context, command
 
 from bot.cogs.modlog import ModLog
-from bot.constants import Channels, Event, Roles
-from bot.decorators import in_channel, without_role
+from bot.constants import Channels, Roles
+from bot.decorators import in_channel
 
 log = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ from time to time, you can send `!subscribe` to <#{Channels.bot}> at any time to
 
 If you'd like to unsubscribe from the announcement notifications, simply send `!unsubscribe` to <#{Channels.bot}>.
 
-Thank you for joining our community, and we hope you enjoy your time here. 
+Thank you for joining our community, and we hope you enjoy your time here.
 """
 
 

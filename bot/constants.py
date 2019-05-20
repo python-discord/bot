@@ -318,7 +318,7 @@ class Channels(metaclass=YAMLGetter):
     announcements: int
     big_brother_logs: int
     bot: int
-    defcon: int
+    defcon: int  # noqa
     devlog: int
     devtest: int
     help_0: int
@@ -338,7 +338,6 @@ class Channels(metaclass=YAMLGetter):
     reddit: int
     talent_pool: int
     userlog: int
-
 
 
 class Roles(metaclass=YAMLGetter):
