@@ -221,13 +221,13 @@ class Cogs:
                     lines.append("\n**Unload failures**")
 
                     for cog, error in failed_unloads:
-                        lines.append(f"`{cog}` {Emojis.white_chevron} `{error}`")
+                        lines.append(f"`{cog}` {Emojis.status_dnd} `{error}`")
 
                 if failed_loads:
                     lines.append("\n**Load failures**")
 
                     for cog, error in failed_loads:
-                        lines.append(f"`{cog}` {Emojis.white_chevron} `{error}`")
+                        lines.append(f"`{cog}` {Emojis.status_dnd} `{error}`")
 
                 log.debug(f"{ctx.author} requested we reload all cogs. Here are the results: \n"
                           f"{lines}")
@@ -259,7 +259,7 @@ class Cogs:
         """
         Get a list of all cogs, including their loaded status.
 
-        A red double-chevron indicates that the cog is unloaded. Green indicates that the cog is currently loaded.
+        Gray indicates that the cog is unloaded. Green indicates that the cog is currently loaded.
         """
 
         embed = Embed()
@@ -291,11 +291,11 @@ class Cogs:
                 cog = self.cogs[cog]
 
             if loaded:
-                chevron = Emojis.green_chevron
+                status = Emojis.status_online
             else:
-                chevron = Emojis.red_chevron
+                status = Emojis.status_offline
 
-            lines.append(f"{chevron}  {cog}")
+            lines.append(f"{status}  {cog}")
 
         log.debug(f"{ctx.author} requested a list of all cogs. Returning a paginated list.")
         await LinePaginator.paginate(lines, ctx, embed, max_size=300, empty=False)
