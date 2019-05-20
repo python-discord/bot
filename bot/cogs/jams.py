@@ -64,11 +64,7 @@ class CodeJams:
                 manage_webhooks=True,
                 connect=True
             ),
-            ctx.guild.default_role: PermissionOverwrite(read_messages=False, connect=False),
-            ctx.guild.get_role(Roles.developer): PermissionOverwrite(
-                read_messages=False,
-                connect=False
-            )
+            ctx.guild.default_role: PermissionOverwrite(read_messages=False, connect=False)
         }
 
         # Rest of members should just have read_messages

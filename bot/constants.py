@@ -331,7 +331,6 @@ class Channels(metaclass=YAMLGetter):
     announcements: int
     big_brother_logs: int
     bot: int
-    checkpoint_test: int
     defcon: int
     devlog: int
     devtest: int
@@ -352,7 +351,6 @@ class Channels(metaclass=YAMLGetter):
     reddit: int
     talent_pool: int
     userlog: int
-    verification: int
 
 
 class Roles(metaclass=YAMLGetter):
@@ -363,13 +361,11 @@ class Roles(metaclass=YAMLGetter):
     announcements: int
     champion: int
     contributor: int
-    developer: int
     devops: int
     jammer: int
     moderator: int
     muted: int
     owner: int
-    verified: int
     helpers: int
     team_leader: int
 

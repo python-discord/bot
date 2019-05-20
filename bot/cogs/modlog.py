@@ -61,7 +61,7 @@ class ModLog:
 
             # message.author may return either a User or a Member. Users don't have roles.
             if type(message.author) is User:
-                role_id = Roles.developer
+                role_id = message.guild.default_role
             else:
                 role_id = message.author.top_role.id
 

@@ -45,7 +45,6 @@ class Bot:
         self.codeblock_message_ids = {}
 
     @group(invoke_without_command=True, name="bot", hidden=True)
-    @with_role(Roles.verified)
     async def bot_group(self, ctx: Context):
         """
         Bot informational commands
@@ -54,7 +53,6 @@ class Bot:
         await ctx.invoke(self.bot.get_command("help"), "bot")
 
     @bot_group.command(name='about', aliases=('info',), hidden=True)
-    @with_role(Roles.verified)
     async def about_command(self, ctx: Context):
         """
         Get information about the bot

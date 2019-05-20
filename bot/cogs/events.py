@@ -34,7 +34,6 @@ class Events:
         return partial(cog.send_log_message, channel_id=Channels.userlog)
 
     async def send_updated_users(self, *users, replace_all=False):
-        users = list(filter(lambda user: str(Roles.verified) in user["roles"], users))
 
         for chunk in chunks(users, 1000):
             response = None

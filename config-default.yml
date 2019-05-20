@@ -93,7 +93,6 @@ guild:
         announcements:                    354619224620138496
         big_brother_logs:  &BBLOGS        468507907357409333
         bot:                              267659945086812160
-        checkpoint_test:                  422077681434099723
         defcon:                           464469101889454091
         devlog:            &DEVLOG        409308876241108992
         devtest:           &DEVTEST       414574275865870337
@@ -115,7 +114,6 @@ guild:
         staff_lounge:      &STAFF_LOUNGE  464905259261755392
         talent_pool:       &TALENT_POOL   534321732593647616
         userlog:                          528976905546760203
-        verification:                     352442727016693763
 
     ignored: [*ADMINS, *MESSAGE_LOG, *MODLOG]
 
@@ -124,13 +122,11 @@ guild:
         announcements:                      463658397560995840
         champion:                           430492892331769857
         contributor:                        295488872404484098
-        developer:                          352427296948486144
         devops:            &DEVOPS_ROLE     409416496733880320
         jammer:                             423054537079783434
         moderator:         &MOD_ROLE        267629731250176001
         muted:             &MUTED_ROLE      277914926603829249
         owner:             &OWNER_ROLE      267627879762755584
-        verified:                           352427296948486144
         helpers:                            267630620367257601
         rockstars:         &ROCKSTARS_ROLE  458226413825294336
         team_leader:                        501324292341104650

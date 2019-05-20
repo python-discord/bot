@@ -1,6 +1,6 @@
 import logging
 
-from discord import Message, NotFound, Object
+from discord import Message, NotFound, Object, Member, DiscordException
 from discord.ext.commands import Bot, Context, command
 
 from bot.cogs.modlog import ModLog
@@ -28,9 +28,9 @@ If you'd like to unsubscribe from the announcement notifications, simply send `!
 """
 
 
-class Verification:
+class UserManagement:
     """
-    User verification and role self-management
+    Assigning roles to users and sending a DM when they join the server.
     """
 
     def __init__(self, bot: Bot):
@@ -40,60 +40,16 @@ class Verification:
     def mod_log(self) -> ModLog:
         return self.bot.get_cog("ModLog")
 
-    async def on_message(self, message: Message):
-        if message.author.bot:
-            return  # They're a bot, ignore
-
-        ctx = await self.bot.get_context(message)  # type: Context
-
-        if ctx.command is not None and ctx.command.name == "accept":
-            return  # They used the accept command
-
-        if ctx.channel.id == Channels.verification:  # We're in the verification channel
-            for role in ctx.author.roles:
-                if role.id == Roles.verified:
-                    log.warning(f"{ctx.author} posted '{ctx.message.content}' "
-                                "in the verification channel, but is already verified.")
-                    return  # They're already verified
-
-            log.debug(f"{ctx.author} posted '{ctx.message.content}' in the verification "
-                      "channel. We are providing instructions how to verify.")
-            await ctx.send(
-                f"{ctx.author.mention} Please type `!accept` to verify that you accept our rules, "
-                f"and gain access to the rest of the server.",
-                delete_after=20
-            )
-
-            log.trace(f"Deleting the message posted by {ctx.author}")
-
-            try:
-                await ctx.message.delete()
-            except NotFound:
-                log.trace("No message found, it must have been deleted by another bot.")
-
-    @command(name='accept', aliases=('verify', 'verified', 'accepted'), hidden=True)
-    @without_role(Roles.verified)
-    @in_channel(Channels.verification)
-    async def accept_command(self, ctx: Context, *_):  # We don't actually care about the args
+    async def on_member_join(self, member: Member):
         """
-        Accept our rules and gain access to the rest of the server
+        Send a welcome DM when members join the community.
         """
 
-        log.debug(f"{ctx.author} called !accept. Assigning the 'Developer' role.")
-        await ctx.author.add_roles(Object(Roles.verified), reason="Accepted the rules")
         try:
-            await ctx.author.send(WELCOME_MESSAGE)
-        except Exception:
+            await member.send(WELCOME_MESSAGE)
+        except DiscordException:
             # Catch the exception, in case they have DMs off or something
-            log.exception(f"Unable to send welcome message to user {ctx.author}.")
-
-        log.trace(f"Deleting the message posted by {ctx.author}.")
-
-        try:
-            self.mod_log.ignore(Event.message_delete, ctx.message.id)
-            await ctx.message.delete()
-        except NotFound:
-            log.trace("No message found, it must have been deleted by another bot.")
+            log.exception(f"Unable to send welcome message to user {member}.")
 
     @command(name='subscribe')
     @in_channel(Channels.bot)
@@ -151,18 +107,7 @@ class Verification:
             f"{ctx.author.mention} Unsubscribed from <#{Channels.announcements}> notifications."
         )
 
-    @staticmethod
-    def __global_check(ctx: Context):
-        """
-        Block any command within the verification channel that is not !accept.
-        """
-
-        if ctx.channel.id == Channels.verification:
-            return ctx.command.name == "accept"
-        else:
-            return True
-
 
 def setup(bot):
-    bot.add_cog(Verification(bot))
-    log.info("Cog loaded: Verification")
+    bot.add_cog(UserManagement(bot))
+    log.info("Cog loaded: UserManagement")
