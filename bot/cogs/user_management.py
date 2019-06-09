@@ -3,7 +3,6 @@ import logging
 from discord import DiscordException, Member, Object
 from discord.ext.commands import Bot, Context, command
 
-from bot.cogs.modlog import ModLog
 from bot.constants import Channels, Roles
 from bot.decorators import in_channel
 
@@ -34,11 +33,8 @@ class UserManagement:
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @property
-    def mod_log(self) -> ModLog:
-        return self.bot.get_cog("ModLog")
-
-    async def on_member_join(self, member: Member):
+    @staticmethod
+    async def on_member_join(member: Member):
         """
         Send a welcome DM when members join the community.
         """
@@ -56,22 +52,12 @@ class UserManagement:
         Subscribe to announcement notifications by assigning yourself the role
         """
 
-        has_role = False
-
-        for role in ctx.author.roles:
-            if role.id == Roles.announcements:
-                has_role = True
-                break
-
+        has_role = any(r.id == Roles.announcements for r in ctx.author.roles)
         if has_role:
-            return await ctx.send(
-                f"{ctx.author.mention} You're already subscribed!",
-            )
+            return await ctx.send(f"{ctx.author.mention} You're already subscribed!")
 
         log.debug(f"{ctx.author} called !subscribe. Assigning the 'Announcements' role.")
         await ctx.author.add_roles(Object(Roles.announcements), reason="Subscribed to announcements")
-
-        log.trace(f"Deleting the message posted by {ctx.author}.")
 
         await ctx.send(
             f"{ctx.author.mention} Subscribed to <#{Channels.announcements}> notifications.",
@@ -84,26 +70,14 @@ class UserManagement:
         Unsubscribe from announcement notifications by removing the role from yourself
         """
 
-        has_role = False
-
-        for role in ctx.author.roles:
-            if role.id == Roles.announcements:
-                has_role = True
-                break
-
+        has_role = any(r.id == Roles.announcements for r in ctx.author.roles)
         if not has_role:
-            return await ctx.send(
-                f"{ctx.author.mention} You're already unsubscribed!"
-            )
+            return await ctx.send(f"{ctx.author.mention} You're already unsubscribed!")
 
         log.debug(f"{ctx.author} called !unsubscribe. Removing the 'Announcements' role.")
         await ctx.author.remove_roles(Object(Roles.announcements), reason="Unsubscribed from announcements")
 
-        log.trace(f"Deleting the message posted by {ctx.author}.")
-
-        await ctx.send(
-            f"{ctx.author.mention} Unsubscribed from <#{Channels.announcements}> notifications."
-        )
+        await ctx.send(f"{ctx.author.mention} Unsubscribed from <#{Channels.announcements}> notifications.")
 
 
 def setup(bot):
