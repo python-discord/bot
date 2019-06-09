@@ -29,6 +29,7 @@ INFRACTION_ICONS = {
     "Ban": Icons.user_ban
 }
 RULES_URL = "https://pythondiscord.com/about/rules"
+APPEALABLE_INFRACTIONS = ("Ban", "Mute")
 
 
 def proxy_user(user_id: str) -> Object:
@@ -1301,6 +1302,9 @@ class Moderation(Scheduler):
         embed.set_author(name="Infraction Information", icon_url=icon_url, url=RULES_URL)
         embed.title = f"Please review our rules over at {RULES_URL}"
         embed.url = RULES_URL
+
+        if infr_type in APPEALABLE_INFRACTIONS:
+            embed.set_footer(text="To appeal this infraction, send an e-mail to appeals@pythondiscord.com")
 
         return await self.send_private_embed(user, embed)
 
