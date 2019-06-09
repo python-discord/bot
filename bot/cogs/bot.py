@@ -6,10 +6,7 @@ import time
 from discord import Embed, Message, RawMessageUpdateEvent
 from discord.ext.commands import Bot, Context, command, group
 
-from bot.constants import (
-    Channels, Guild, MODERATION_ROLES,
-    URLs,
-)
+from bot.constants import Channels, Guild, MODERATION_ROLES, URLs
 from bot.decorators import with_role
 from bot.utils.messages import wait_for_deletion
 

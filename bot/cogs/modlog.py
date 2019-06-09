@@ -14,11 +14,7 @@ from discord import (
 from discord.abc import GuildChannel
 from discord.ext.commands import Bot
 
-from bot.constants import (
-    Channels, Colours, Emojis,
-    Event, Guild as GuildConstant, Icons,
-    Keys, URLs
-)
+from bot.constants import Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, Keys, URLs
 from bot.utils.time import humanize_delta
 
 log = logging.getLogger(__name__)
