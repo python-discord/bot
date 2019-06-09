@@ -13,9 +13,9 @@ from typing import Any, Dict
 
 import aiohttp
 import async_timeout
+from PIL import Image, ImageDraw, ImageFont
 from discord import Colour, Embed, File, Member, Message, Reaction
 from discord.ext.commands import BadArgument, Bot, Context, bot_has_permissions, group
-from PIL import Image, ImageDraw, ImageFont
 
 from bot.constants import ERROR_REPLIES, Keys, URLs
 from bot.converters import Snake
