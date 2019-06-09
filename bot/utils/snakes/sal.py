@@ -6,9 +6,9 @@ import os
 import random
 
 import aiohttp
+from PIL import Image
 from discord import File, Member, Reaction
 from discord.ext.commands import Context
-from PIL import Image
 
 from bot.utils.snakes.sal_board import (
     BOARD, BOARD_MARGIN, BOARD_PLAYER_SIZE,
