@@ -290,7 +290,6 @@ class Icons(metaclass=YAMLGetter):
 
     user_mute: str
     user_unmute: str
-    user_verified: str
 
     user_warn: str
 
@@ -300,6 +299,7 @@ class Icons(metaclass=YAMLGetter):
     remind_green: str
     remind_red: str
 
+    checkmark: str
     questionmark: str
 
 
