@@ -1310,7 +1310,7 @@ class Moderation(Scheduler):
 
     async def notify_pardon(
             self, user: Union[User, Member], title: str, content: str,
-            icon_url: str = Icons.user_verified
+            icon_url: str = Icons.checkmark
     ):
         """
         Notify a user that an infraction has been lifted.
