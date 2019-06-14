@@ -235,6 +235,9 @@ urls:
     site_user_complete_api:             !JOIN [*SCHEMA, *API, "/bot/users/complete"]
     paste_service:                      !JOIN [*SCHEMA, *PASTE, "/{key}"]
 
+    # Snekbox
+    snekbox_eval_api: "http://localhost:8060/eval"
+
     # Env vars
     deploy: !ENV "DEPLOY_URL"
     status: !ENV "STATUS_URL"

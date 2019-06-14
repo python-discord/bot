@@ -377,6 +377,9 @@ class Keys(metaclass=YAMLGetter):
 class URLs(metaclass=YAMLGetter):
     section = "urls"
 
+    # Snekbox endpoints
+    snekbox_eval_api: str
+
     # Discord API endpoints
     discord_api: str
     discord_invite_api: str
