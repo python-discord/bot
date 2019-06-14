@@ -374,15 +374,6 @@ class Keys(metaclass=YAMLGetter):
     youtube: str
 
 
-class RabbitMQ(metaclass=YAMLGetter):
-    section = "rabbitmq"
-
-    host: str
-    password: str
-    port: int
-    username: str
-
-
 class URLs(metaclass=YAMLGetter):
     section = "urls"
 

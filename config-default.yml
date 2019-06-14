@@ -204,13 +204,6 @@ keys:
     youtube:     !ENV "YOUTUBE_API_KEY"
 
 
-rabbitmq:
-    host:          "pdrmq"
-    password: !ENV ["RABBITMQ_DEFAULT_PASS", "guest"]
-    port:          5672
-    username: !ENV ["RABBITMQ_DEFAULT_USER", "guest"]
-
-
 urls:
     # PyDis site vars
     site:        &DOMAIN       "pythondiscord.com"

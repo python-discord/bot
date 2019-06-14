@@ -9,19 +9,12 @@ from discord.ext.commands import (
     Bot, CommandError, Context, NoPrivateMessage, command, guild_only
 )
 
-from bot.cogs.rmq import RMQ
 from bot.constants import Channels, ERROR_REPLIES, NEGATIVE_REPLIES, Roles, URLs
 from bot.decorators import InChannelCheckFailure, in_channel
 from bot.utils.messages import wait_for_deletion
 
 
 log = logging.getLogger(__name__)
-
-RMQ_ARGS = {
-    "durable": False,
-    "arguments": {"x-message-ttl": 5000},
-    "auto_delete": True
-}
 
 CODE_TEMPLATE = """
 venv_file = "/snekbox/.venv/bin/activate_this.py"
@@ -64,10 +57,6 @@ class Snekbox:
         self.bot = bot
         self.jobs = {}
 
-    @property
-    def rmq(self) -> RMQ:
-        return self.bot.get_cog("RMQ")
-
     @command(name='eval', aliases=('e',))
     @guild_only()
     @in_channel(Channels.bot, bypass_roles=BYPASS_ROLES)
@@ -107,13 +96,8 @@ class Snekbox:
         code = CODE_TEMPLATE.replace("{CODE}", code)
 
         try:
-            await self.rmq.send_json(
-                "input",
-                snekid=str(ctx.author.id), message=code
-            )
-
             async with ctx.typing():
-                message = await self.rmq.consume(str(ctx.author.id), **RMQ_ARGS)
+                message = ...  # TODO
                 paste_link = None
 
                 if isinstance(message, str):
