@@ -57,6 +57,13 @@ class Snekbox:
         self.bot = bot
         self.jobs = {}
 
+    async def post_eval(self, code: str) -> dict:
+        """Send a POST request to the Snekbox API to evaluate code and return the results."""
+        url = URLs.snekbox_eval_api
+        data = {"input": code}
+        async with self.bot.http_session.post(url, json=data, raise_for_status=True) as resp:
+            return await resp.json()
+
     @command(name='eval', aliases=('e',))
     @guild_only()
     @in_channel(Channels.bot, bypass_roles=BYPASS_ROLES)
