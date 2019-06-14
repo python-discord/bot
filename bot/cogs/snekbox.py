@@ -148,48 +148,48 @@ class Snekbox:
     @in_channel(Channels.bot, bypass_roles=BYPASS_ROLES)
     async def eval_command(self, ctx: Context, *, code: str = None):
         """
-        Run some code. get the result back. We've done our best to make this safe, but do let us know if you
-        manage to find an issue with it!
+        Run Python code and get the results.
 
-        This command supports multiple lines of code, including code wrapped inside a formatted code block.
+        This command supports multiple lines of code, including code wrapped inside a formatted code
+        block. We've done our best to make this safe, but do let us know if you manage to find an
+        issue with it!
         """
-
         if ctx.author.id in self.jobs:
-            await ctx.send(f"{ctx.author.mention} You've already got a job running - please wait for it to finish!")
-            return
+            return await ctx.send(
+                f"{ctx.author.mention} You've already got a job running - "
+                f"please wait for it to finish!"
+            )
 
         if not code:  # None or empty string
             return await ctx.invoke(self.bot.get_command("help"), "eval")
 
-        log.info(f"Received code from {ctx.author.name}#{ctx.author.discriminator} for evaluation:\n{code}")
-        self.jobs[ctx.author.id] = datetime.datetime.now()
+        log.info(
+            f"Received code from {ctx.author.name}#{ctx.author.discriminator} "
+            f"for evaluation:\n{code}"
+        )
 
+        self.jobs[ctx.author.id] = datetime.datetime.now()
         code = self.prepare_input(code)
 
         try:
             async with ctx.typing():
-                message = ...  # TODO
-                output, paste_link = await self.format_output(message)
+                results = await self.post_eval(code)
+                output, paste_link = await self.format_output(results["stdout"])
 
-                if output:
-                    if paste_link:
-                        msg = f"{ctx.author.mention} Your eval job has completed.\n\n```py\n{output}\n```" \
-                              f"\nFull output: {paste_link}"
-                    else:
-                        msg = f"{ctx.author.mention} Your eval job has completed.\n\n```py\n{output}\n```"
+                if not output:
+                    output = "[No output]"
 
-                    response = await ctx.send(msg)
-                    self.bot.loop.create_task(wait_for_deletion(response, user_ids=(ctx.author.id,), client=ctx.bot))
+                msg = f"{ctx.author.mention} Your eval job has completed.\n\n```py\n{output}\n```"
 
-                else:
-                    await ctx.send(
-                        f"{ctx.author.mention} Your eval job has completed.\n\n```py\n[No output]\n```"
-                    )
+                if paste_link:
+                    msg = f"{msg}\nFull output: {paste_link}"
 
+                response = await ctx.send(msg)
+                self.bot.loop.create_task(
+                    wait_for_deletion(response, user_ids=(ctx.author.id,), client=ctx.bot)
+                )
+        finally:
             del self.jobs[ctx.author.id]
-        except Exception:
-            del self.jobs[ctx.author.id]
-            raise
 
     @eval_command.error
     async def eval_command_error(self, ctx: Context, error: CommandError):
