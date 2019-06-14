@@ -3,6 +3,7 @@ import logging
 import random
 import re
 import textwrap
+from typing import Optional
 
 from discord import Colour, Embed
 from discord.ext.commands import (
@@ -63,6 +64,18 @@ class Snekbox:
         data = {"input": code}
         async with self.bot.http_session.post(url, json=data, raise_for_status=True) as resp:
             return await resp.json()
+
+    async def upload_output(self, output: str) -> Optional[str]:
+        """Upload the eval output to a paste service and return a URL to it if successful."""
+        url = URLs.paste_service.format(key="documents")
+        try:
+            async with self.bot.http_session.post(url, data=output, raise_for_status=True) as resp:
+                data = await resp.json()
+
+            if "key" in data:
+                return URLs.paste_service.format(key=data["key"])
+        except Exception:
+            log.exception("Failed to upload full output to paste service!")
 
     @staticmethod
     def prepare_input(code: str) -> str:
@@ -149,16 +162,7 @@ class Snekbox:
                         truncated = True
 
                     if truncated:
-                        try:
-                            response = await self.bot.http_session.post(
-                                URLs.paste_service.format(key="documents"),
-                                data=full_output
-                            )
-                            data = await response.json()
-                            if "key" in data:
-                                paste_link = URLs.paste_service.format(key=data["key"])
-                        except Exception:
-                            log.exception("Failed to upload full output to paste service!")
+                        paste_link = await self.upload_output(full_output)
 
                 if output.strip():
                     if paste_link:
