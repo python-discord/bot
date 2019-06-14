@@ -3,7 +3,7 @@ import logging
 import random
 import re
 import textwrap
-from typing import Optional
+from typing import Optional, Tuple
 
 from discord import Colour, Embed
 from discord.ext.commands import (
@@ -99,6 +99,50 @@ class Snekbox:
         code = textwrap.indent(code, "    ")
         return CODE_TEMPLATE.replace("{CODE}", code)
 
+    async def format_output(self, output: str) -> Tuple[str, Optional[str]]:
+        """
+        Format the output and return a tuple of the formatted output and a URL to the full output.
+
+        Prepend each line with a line number. Truncate if there are over 10 lines or 1000 characters
+        and upload the full output to a paste service.
+        """
+        output = output.strip(" \n")
+        paste_link = None
+
+        if "<@" in output:
+            output = output.replace("<@", "<@\u200B")  # Zero-width space
+
+        if "<!@" in output:
+            output = output.replace("<!@", "<!@\u200B")  # Zero-width space
+
+        if ESCAPE_REGEX.findall(output):
+            return "Code block escape attempt detected; will not output result", paste_link
+
+        # the original output, to send to a pasting service if needed
+        full_output = output
+        truncated = False
+        if output.count("\n") > 0:
+            output = [f"{i:03d} | {line}" for i, line in enumerate(output.split("\n"), start=1)]
+            output = "\n".join(output)
+
+        if output.count("\n") > 10:
+            output = "\n".join(output.split("\n")[:10])
+
+            if len(output) >= 1000:
+                output = f"{output[:1000]}\n... (truncated - too long, too many lines)"
+            else:
+                output = f"{output}\n... (truncated - too many lines)"
+            truncated = True
+
+        elif len(output) >= 1000:
+            output = f"{output[:1000]}\n... (truncated - too long)"
+            truncated = True
+
+        if truncated:
+            paste_link = await self.upload_output(full_output)
+
+        return output.strip(), paste_link
+
     @command(name='eval', aliases=('e',))
     @guild_only()
     @in_channel(Channels.bot, bypass_roles=BYPASS_ROLES)
@@ -125,46 +169,9 @@ class Snekbox:
         try:
             async with ctx.typing():
                 message = ...  # TODO
-                paste_link = None
+                output, paste_link = await self.format_output(message)
 
-                if isinstance(message, str):
-                    output = str.strip(" \n")
-                else:
-                    output = message.body.decode().strip(" \n")
-
-                if "<@" in output:
-                    output = output.replace("<@", "<@\u200B")  # Zero-width space
-
-                if "<!@" in output:
-                    output = output.replace("<!@", "<!@\u200B")  # Zero-width space
-
-                if ESCAPE_REGEX.findall(output):
-                    output = "Code block escape attempt detected; will not output result"
-                else:
-                    # the original output, to send to a pasting service if needed
-                    full_output = output
-                    truncated = False
-                    if output.count("\n") > 0:
-                        output = [f"{i:03d} | {line}" for i, line in enumerate(output.split("\n"), start=1)]
-                        output = "\n".join(output)
-
-                    if output.count("\n") > 10:
-                        output = "\n".join(output.split("\n")[:10])
-
-                        if len(output) >= 1000:
-                            output = f"{output[:1000]}\n... (truncated - too long, too many lines)"
-                        else:
-                            output = f"{output}\n... (truncated - too many lines)"
-                        truncated = True
-
-                    elif len(output) >= 1000:
-                        output = f"{output[:1000]}\n... (truncated - too long)"
-                        truncated = True
-
-                    if truncated:
-                        paste_link = await self.upload_output(full_output)
-
-                if output.strip():
+                if output:
                     if paste_link:
                         msg = f"{ctx.author.mention} Your eval job has completed.\n\n```py\n{output}\n```" \
                               f"\nFull output: {paste_link}"
