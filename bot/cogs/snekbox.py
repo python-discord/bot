@@ -64,6 +64,28 @@ class Snekbox:
         async with self.bot.http_session.post(url, json=data, raise_for_status=True) as resp:
             return await resp.json()
 
+    @staticmethod
+    def prepare_input(code: str) -> str:
+        """Extract code from the Markdown, format it, and insert it into the code template."""
+        match = FORMATTED_CODE_REGEX.fullmatch(code)
+        if match:
+            code, block, lang, delim = match.group("code", "block", "lang", "delim")
+            code = textwrap.dedent(code)
+            if block:
+                info = (f"'{lang}' highlighted" if lang else "plain") + " code block"
+            else:
+                info = f"{delim}-enclosed inline code"
+            log.trace(f"Extracted {info} for evaluation:\n{code}")
+        else:
+            code = textwrap.dedent(RAW_CODE_REGEX.fullmatch(code).group("code"))
+            log.trace(
+                f"Eval message contains unformatted or badly formatted code, "
+                f"stripping whitespace only:\n{code}"
+            )
+
+        code = textwrap.indent(code, "    ")
+        return CODE_TEMPLATE.replace("{CODE}", code)
+
     @command(name='eval', aliases=('e',))
     @guild_only()
     @in_channel(Channels.bot, bypass_roles=BYPASS_ROLES)
@@ -85,22 +107,7 @@ class Snekbox:
         log.info(f"Received code from {ctx.author.name}#{ctx.author.discriminator} for evaluation:\n{code}")
         self.jobs[ctx.author.id] = datetime.datetime.now()
 
-        # Strip whitespace and inline or block code markdown and extract the code and some formatting info
-        match = FORMATTED_CODE_REGEX.fullmatch(code)
-        if match:
-            code, block, lang, delim = match.group("code", "block", "lang", "delim")
-            code = textwrap.dedent(code)
-            if block:
-                info = (f"'{lang}' highlighted" if lang else "plain") + " code block"
-            else:
-                info = f"{delim}-enclosed inline code"
-            log.trace(f"Extracted {info} for evaluation:\n{code}")
-        else:
-            code = textwrap.dedent(RAW_CODE_REGEX.fullmatch(code).group("code"))
-            log.trace(f"Eval message contains not or badly formatted code, stripping whitespace only:\n{code}")
-
-        code = textwrap.indent(code, "    ")
-        code = CODE_TEMPLATE.replace("{CODE}", code)
+        code = self.prepare_input(code)
 
         try:
             async with ctx.typing():
