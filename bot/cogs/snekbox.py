@@ -72,6 +72,8 @@ class Snekbox:
 
     async def upload_output(self, output: str) -> Optional[str]:
         """Upload the eval output to a paste service and return a URL to it if successful."""
+        log.trace("Uploading full output to paste service...")
+
         url = URLs.paste_service.format(key="documents")
         try:
             async with self.bot.http_session.post(url, data=output, raise_for_status=True) as resp:
@@ -137,6 +139,8 @@ class Snekbox:
         Prepend each line with a line number. Truncate if there are over 10 lines or 1000 characters
         and upload the full output to a paste service.
         """
+        log.trace("Formatting output...")
+
         output = output.strip(" \n")
         original_output = output  # To be uploaded to a pasting service if needed
         paste_link = None
@@ -151,22 +155,22 @@ class Snekbox:
             return "Code block escape attempt detected; will not output result", paste_link
 
         truncated = False
-        if output.count("\n") > 0:
-            output = [f"{i:03d} | {line}" for i, line in enumerate(output.split("\n"), start=1)]
+        lines = output.count("\n")
+
+        if lines > 0:
+            output = output.split("\n")[:10]  # Only first 10 cause the rest is truncated anyway
+            output = (f"{i:03d} | {line}" for i, line in enumerate(output, 1))
             output = "\n".join(output)
 
-        if output.count("\n") > 10:
-            output = "\n".join(output.split("\n")[:10])
-
+        if lines > 10:
+            truncated = True
             if len(output) >= 1000:
                 output = f"{output[:1000]}\n... (truncated - too long, too many lines)"
             else:
                 output = f"{output}\n... (truncated - too many lines)"
-            truncated = True
-
         elif len(output) >= 1000:
-            output = f"{output[:1000]}\n... (truncated - too long)"
             truncated = True
+            output = f"{output[:1000]}\n... (truncated - too long)"
 
         if truncated:
             paste_link = await self.upload_output(original_output)
