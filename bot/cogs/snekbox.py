@@ -21,7 +21,11 @@ CODE_TEMPLATE = """
 venv_file = "/snekbox/.venv/bin/activate_this.py"
 exec(open(venv_file).read(), dict(__file__=venv_file))
 
+import contextlib
+import sys
+
 try:
+    with contextlib.redirect_stderr(sys.stdout):
 {CODE}
 except Exception as e:
     print(e)
@@ -75,6 +79,7 @@ class Snekbox:
             if "key" in data:
                 return URLs.paste_service.format(key=data["key"])
         except Exception:
+            # 400 (Bad Request) means the data is too large
             log.exception("Failed to upload full output to paste service!")
 
     @staticmethod
@@ -96,7 +101,7 @@ class Snekbox:
                 f"stripping whitespace only:\n{code}"
             )
 
-        code = textwrap.indent(code, "    ")
+        code = textwrap.indent(code, "        ")
         return CODE_TEMPLATE.replace("{CODE}", code)
 
     async def format_output(self, output: str) -> Tuple[str, Optional[str]]:
@@ -107,6 +112,7 @@ class Snekbox:
         and upload the full output to a paste service.
         """
         output = output.strip(" \n")
+        original_output = output  # To be uploaded to a pasting service if needed
         paste_link = None
 
         if "<@" in output:
@@ -118,8 +124,6 @@ class Snekbox:
         if ESCAPE_REGEX.findall(output):
             return "Code block escape attempt detected; will not output result", paste_link
 
-        # the original output, to send to a pasting service if needed
-        full_output = output
         truncated = False
         if output.count("\n") > 0:
             output = [f"{i:03d} | {line}" for i, line in enumerate(output.split("\n"), start=1)]
@@ -139,7 +143,7 @@ class Snekbox:
             truncated = True
 
         if truncated:
-            paste_link = await self.upload_output(full_output)
+            paste_link = await self.upload_output(original_output)
 
         return output.strip(), paste_link
 
