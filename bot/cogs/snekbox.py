@@ -3,6 +3,7 @@ import logging
 import random
 import re
 import textwrap
+from signal import Signals
 from typing import Optional, Tuple
 
 from discord import Colour, Embed
@@ -55,7 +56,7 @@ BYPASS_ROLES = (Roles.owner, Roles.admin, Roles.moderator, Roles.helpers)
 
 class Snekbox:
     """
-    Safe evaluation using Snekbox
+    Safe evaluation of Python code using Snekbox
     """
 
     def __init__(self, bot: Bot):
@@ -104,6 +105,31 @@ class Snekbox:
         code = textwrap.indent(code, "        ")
         return CODE_TEMPLATE.replace("{CODE}", code)
 
+    @staticmethod
+    def get_results_message(results: dict) -> Tuple[str, str]:
+        """Return a user-friendly message and error corresponding to the process's return code."""
+        stderr, returncode = results["stderr"], results["returncode"]
+        msg = f"Your eval job has completed with return code {returncode}"
+        error = ""
+
+        if returncode is None:
+            msg = "Your eval job has failed"
+            error = stderr.strip()
+        elif returncode == 128 + Signals.SIGKILL:
+            msg = "Your eval job timed out or ran out of memory"
+        elif returncode == 255:
+            msg = "Your eval job has failed"
+            error = "A fatal NsJail error occurred"
+        else:
+            # Try to append signal's name if one exists
+            try:
+                name = Signals(returncode - 128).name
+                msg = f"{msg} ({name})"
+            except ValueError:
+                pass
+
+        return msg, error
+
     async def format_output(self, output: str) -> Tuple[str, Optional[str]]:
         """
         Format the output and return a tuple of the formatted output and a URL to the full output.
@@ -145,9 +171,13 @@ class Snekbox:
         if truncated:
             paste_link = await self.upload_output(original_output)
 
-        return output.strip(), paste_link
+        output = output.strip()
+        if not output:
+            output = "[No output]"
 
-    @command(name='eval', aliases=('e',))
+        return output, paste_link
+
+    @command(name="eval", aliases=("e",))
     @guild_only()
     @in_channel(Channels.bot, bypass_roles=BYPASS_ROLES)
     async def eval_command(self, ctx: Context, *, code: str = None):
@@ -178,19 +208,25 @@ class Snekbox:
         try:
             async with ctx.typing():
                 results = await self.post_eval(code)
-                output, paste_link = await self.format_output(results["stdout"])
+                msg, error = self.get_results_message(results)
 
-                if not output:
-                    output = "[No output]"
+                if error:
+                    output, paste_link = error, None
+                else:
+                    output, paste_link = await self.format_output(results["stdout"])
 
-                msg = f"{ctx.author.mention} Your eval job has completed.\n\n```py\n{output}\n```"
-
+                msg = f"{ctx.author.mention} {msg}.\n\n```py\n{output}\n```"
                 if paste_link:
                     msg = f"{msg}\nFull output: {paste_link}"
 
                 response = await ctx.send(msg)
                 self.bot.loop.create_task(
                     wait_for_deletion(response, user_ids=(ctx.author.id,), client=ctx.bot)
+                )
+
+                log.info(
+                    f"{ctx.author.name}#{ctx.author.discriminator}'s job had a return code of "
+                    f"{results['returncode']}"
                 )
         finally:
             del self.jobs[ctx.author.id]
