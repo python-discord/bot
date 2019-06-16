@@ -22,11 +22,7 @@ CODE_TEMPLATE = """
 venv_file = "/snekbox/.venv/bin/activate_this.py"
 exec(open(venv_file).read(), dict(__file__=venv_file))
 
-import contextlib
-import sys
-
 try:
-    with contextlib.redirect_stderr(sys.stdout):
 {CODE}
 except Exception as e:
     print(e)
@@ -104,19 +100,19 @@ class Snekbox:
                 f"stripping whitespace only:\n{code}"
             )
 
-        code = textwrap.indent(code, "        ")
+        code = textwrap.indent(code, "    ")
         return CODE_TEMPLATE.replace("{CODE}", code)
 
     @staticmethod
     def get_results_message(results: dict) -> Tuple[str, str]:
         """Return a user-friendly message and error corresponding to the process's return code."""
-        stderr, returncode = results["stderr"], results["returncode"]
+        stdout, returncode = results["stdout"], results["returncode"]
         msg = f"Your eval job has completed with return code {returncode}"
         error = ""
 
         if returncode is None:
             msg = "Your eval job has failed"
-            error = stderr.strip()
+            error = stdout.strip()
         elif returncode == 128 + Signals.SIGKILL:
             msg = "Your eval job timed out or ran out of memory"
         elif returncode == 255:
