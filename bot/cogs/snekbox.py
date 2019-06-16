@@ -18,16 +18,6 @@ from bot.utils.messages import wait_for_deletion
 
 log = logging.getLogger(__name__)
 
-CODE_TEMPLATE = """
-venv_file = "/snekbox/.venv/bin/activate_this.py"
-exec(open(venv_file).read(), dict(__file__=venv_file))
-
-try:
-{CODE}
-except Exception as e:
-    print(e)
-"""
-
 ESCAPE_REGEX = re.compile("[`\u202E\u200B]{3,}")
 FORMATTED_CODE_REGEX = re.compile(
     r"^\s*"                                 # any leading whitespace from the beginning of the string
@@ -100,8 +90,7 @@ class Snekbox:
                 f"stripping whitespace only:\n{code}"
             )
 
-        code = textwrap.indent(code, "    ")
-        return CODE_TEMPLATE.replace("{CODE}", code)
+        return code
 
     @staticmethod
     def get_results_message(results: dict) -> Tuple[str, str]:
