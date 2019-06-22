@@ -165,6 +165,7 @@ filter:
         - 249111029668249601  # Gentoo
         - 327254708534116352  # Adafruit
         - 544525886180032552  # kennethreitz.org
+        - 590806733924859943  # Discord Hack Week
 
     domain_blacklist:
         - pornhub.com
