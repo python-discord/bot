@@ -352,6 +352,7 @@ class Channels(metaclass=YAMLGetter):
     reddit: int
     talent_pool: int
     userlog: int
+    user_event_a: int
     verification: int
 
 
