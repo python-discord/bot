@@ -374,17 +374,11 @@ class Keys(metaclass=YAMLGetter):
     youtube: str
 
 
-class RabbitMQ(metaclass=YAMLGetter):
-    section = "rabbitmq"
-
-    host: str
-    password: str
-    port: int
-    username: str
-
-
 class URLs(metaclass=YAMLGetter):
     section = "urls"
+
+    # Snekbox endpoints
+    snekbox_eval_api: str
 
     # Discord API endpoints
     discord_api: str
