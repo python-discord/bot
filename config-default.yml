@@ -128,6 +128,10 @@ guild:
         helpers:                            267630620367257601
         rockstars:         &ROCKSTARS_ROLE  458226413825294336
 
+    webhooks:
+        talent_pool:                        569145364800602132
+        big_brother:                        569133704568373283
+
 
 filter:
 
