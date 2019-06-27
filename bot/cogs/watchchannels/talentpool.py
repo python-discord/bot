@@ -1,0 +1,267 @@
+import logging
+import textwrap
+from collections import ChainMap
+from typing import Union
+
+from aiohttp.client_exceptions import ClientResponseError
+from discord import Color, Embed, Member, User
+from discord.ext.commands import Context, group
+
+from bot.constants import Channels, Guild, Roles, Webhooks
+from bot.decorators import with_role
+from bot.pagination import LinePaginator
+from .watchchannel import WatchChannel, proxy_user
+
+log = logging.getLogger(__name__)
+STAFF_ROLES = Roles.owner, Roles.admin, Roles.moderator, Roles.helpers    # <- In constants after the merge?
+
+
+class TalentPool(WatchChannel):
+    """A TalentPool for helper nominees"""
+    def __init__(self, bot):
+        super().__init__(bot)
+        self.log = log  # to ensure logs created in the super() get the name of this file
+
+        self.destination = Channels.big_brother_logs
+        self.webhook_id = Webhooks.talent_pool
+        self.api_endpoint = 'bot/nominations'
+        self.api_default_params = {'active': 'true', 'ordering': '-inserted_at'}
+
+    @group(name='talentpool', aliases=('tp', 'talent', 'nomination', 'n'), invoke_without_command=True)
+    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    async def nomination_group(self, ctx: Context) -> None:
+        """Highlights the activity of helper nominees by relaying their messages to TalentPool."""
+
+        await ctx.invoke(self.bot.get_command("help"), "talentpool")
+
+    @nomination_group.command(name='watched', aliases=('all', 'list'))
+    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    async def watched_command(self, ctx: Context, update_cache: bool = True) -> None:
+        """
+        Shows the users that are currently being monitored in BigBrother.
+
+        The optional kwarg `update_cache` can be used to update the user
+        cache using the API before listing the users.
+        """
+        await self.list_watched_users(ctx, update_cache)
+
+    @nomination_group.command(name='watch', aliases=('w', 'add', 'a'))
+    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    async def watch_command(self, ctx: Context, user: Union[Member, User, proxy_user], *, reason: str) -> None:
+        """
+        Relay messages sent by the given `user` to the `#big-brother-logs` channel.
+
+        A `reason` for adding the user to BigBrother is required and will displayed
+        in the header when relaying messages of this user to the watchchannel.
+        """
+        if user.bot:
+            e = Embed(
+                description=f":x: **I'm sorry {ctx.author}, I'm afraid I can't do that. I only watch humans.**",
+                color=Color.red()
+            )
+            return await ctx.send(embed=e)
+
+        if isinstance(user, Member) and any(role.id in STAFF_ROLES for role in user.roles):
+            e = Embed(
+                description=f":x: **Nominating staff members, eh? You cheeky bastard.**",
+                color=Color.red()
+            )
+            return await ctx.send(embed=e)
+
+        if not await self.fetch_user_cache():
+            log.error(f"Failed to update user cache; can't watch user {user}")
+            e = Embed(
+                description=f":x: **Failed to update the user cache; can't add {user}**",
+                color=Color.red()
+            )
+            return await ctx.send(embed=e)
+
+        if user.id in self.watched_users:
+            e = Embed(
+                description=":x: **The specified user is already in the TalentPool**",
+                color=Color.red()
+            )
+            return await ctx.send(embed=e)
+
+        # Manual request with `raise_for_status` as False becausse we want the actual response
+        session = self.bot.api_client.session
+        url = self.bot.api_client._url_for(self.api_endpoint)
+        kwargs = {
+            'json': {
+                'actor': ctx.author.id,
+                'reason': reason,
+                'user': user.id
+            },
+            'raise_for_status': False,
+        }
+        async with session.post(url, **kwargs) as resp:
+            response_data = await resp.json()
+
+            if resp.status == 400 and response_data.get('user', False):
+                e = Embed(
+                    description=":x: **The specified user can't be found in the database tables**",
+                    color=Color.red()
+                )
+                return await ctx.send(embed=e)
+            elif resp.status >= 400:
+                resp.raise_for_status()
+
+        self.watched_users[user.id] = response_data
+        e = Embed(
+            description=f":white_check_mark: **Messages sent by {user} will now be relayed**",
+            color=Color.green()
+        )
+        return await ctx.send(embed=e)
+
+    @nomination_group.command(name='history', aliases=('info', 'search'))
+    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    async def history_command(self, ctx: Context, user: Union[User, proxy_user]) -> None:
+        """Shows the specified user's nomination history"""
+        result = await self.bot.api_client.get(
+            self.api_endpoint,
+            params={
+                'user__id': str(user.id),
+                'ordering': "-active,-inserted_at"
+            }
+        )
+        if not result:
+            e = Embed(
+                description=":warning: **This user has never been nominated**",
+                color=Color.blue()
+            )
+            return await ctx.send(embed=e)
+
+        embed = Embed(
+            title=f"Nominations for {user.display_name} `({user.id})`",
+            color=Color.blue()
+        )
+        lines = [self._nomination_to_string(nomination) for nomination in result]
+        await LinePaginator.paginate(
+            lines,
+            ctx=ctx,
+            embed=embed,
+            empty=True,
+            max_lines=3,
+            max_size=1000
+        )
+
+    @nomination_group.command(name='unwatch', aliases=('end', ))
+    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    async def unwatch_command(self, ctx: Context, user: Union[User, proxy_user], *, reason: str) -> None:
+        """
+        Ends the active nomination of the specified user with the given reason.
+
+        Providing a `reason` is required.
+        """
+        active_nomination = await self.bot.api_client.get(
+            self.api_endpoint,
+            params=ChainMap(
+                self.api_default_params,
+                {"user__id": str(user.id)}
+            )
+        )
+
+        if not active_nomination:
+            e = Embed(
+                description=":x: **The specified user does not have an active Nomination**",
+                color=Color.red()
+            )
+            return await ctx.send(embed=e)
+
+        [nomination] = active_nomination
+        await self.bot.api_client.patch(
+            f"{self.api_endpoint}/{nomination['id']}/end",
+            json={'unnominate_reason': reason}
+        )
+        e = Embed(
+            description=f":white_check_mark: **Messages sent by {user} will no longer be relayed**",
+            color=Color.green()
+        )
+        await ctx.send(embed=e)
+        self._remove_user(user.id)
+
+    @nomination_group.group(name='edit', aliases=('e',), invoke_without_command=True)
+    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    async def nomination_edit_group(self, ctx: Context) -> None:
+        """Highlights the activity of helper nominees by relaying their messages to TalentPool."""
+
+        await ctx.invoke(self.bot.get_command("help"), "talentpool", "edit")
+
+    @nomination_edit_group.command(name='reason')
+    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    async def edit_reason_command(self, ctx: Context, nomination_id: int, *, reason: str) -> None:
+        """
+        Edits the reason/unnominate reason for the nomination with the given `id` depending on the status.
+
+        If the nomination is active, the reason for nominating the user will be edited;
+        If the nomination is no longer active, the reason for ending the nomination will be edited instead.
+        """
+        try:
+            nomination = await self.bot.api_client.get(f"{self.api_endpoint}/{nomination_id}")
+        except ClientResponseError as e:
+            if e.status == 404:
+                self.log.trace(f"Nomination API 404: Can't nomination with id {nomination_id}")
+                e = Embed(
+                    description=f":x: **Can't find a nomination with id `{nomination_id}`**",
+                    color=Color.red()
+                )
+                return await ctx.send(embed=e)
+            else:
+                raise
+
+        field = "reason" if nomination["active"] else "unnominate_reason"
+
+        self.log.trace(f"Changing {field} for nomination with id {nomination_id} to {reason}")
+        await self.bot.api_client.patch(
+            f"{self.api_endpoint}/{nomination_id}",
+            json={field: reason}
+        )
+
+        e = Embed(
+            description=f":white_check_mark: **Updated the {field} of the nomination!**",
+            color=Color.green()
+        )
+        await ctx.send(embed=e)
+
+    def _nomination_to_string(self, nomination_object):
+        """Creates a string representation of a nomination"""
+        guild = self.bot.get_guild(Guild.id)
+
+        actor_id = nomination_object["actor"]
+        actor = guild.get_member(actor_id)
+
+        active = nomination_object["active"]
+        log.debug(active)
+        log.debug(type(nomination_object["inserted_at"]))
+
+        start_date = self._get_human_readable(nomination_object["inserted_at"])
+        if active:
+            lines = textwrap.dedent(
+                f"""
+                ===============
+                Status: **Active**
+                Date: {start_date}
+                Actor: {actor.mention if actor else actor_id}
+                Reason: {nomination_object["reason"]}
+                Nomination ID: `{nomination_object["id"]}`
+                ===============
+                """
+            )
+        else:
+            end_date = self._get_human_readable(nomination_object["unwatched_at"])
+            lines = textwrap.dedent(
+                f"""
+                ===============
+                Status: Inactive
+                Date: {start_date}
+                Actor: {actor.mention if actor else actor_id}
+                Reason: {nomination_object["reason"]}
+
+                End date: {end_date}
+                Unwatch reason: {nomination_object["unnominate_reason"]}
+                Nomination ID: `{nomination_object["id"]}`
+                ===============
+                """
+            )
+
+        return lines.strip()
