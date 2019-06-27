@@ -38,7 +38,6 @@ bot.load_extension("bot.cogs.modlog")
 
 # Commands, etc
 bot.load_extension("bot.cogs.antispam")
-bot.load_extension("bot.cogs.bigbrother")
 bot.load_extension("bot.cogs.bot")
 bot.load_extension("bot.cogs.clean")
 bot.load_extension("bot.cogs.cogs")
@@ -69,6 +68,7 @@ bot.load_extension("bot.cogs.sync")
 bot.load_extension("bot.cogs.tags")
 bot.load_extension("bot.cogs.token_remover")
 bot.load_extension("bot.cogs.utils")
+bot.load_extension("bot.cogs.watchchannels")
 bot.load_extension("bot.cogs.wolfram")
 
 bot.run(BotConfig.token)
