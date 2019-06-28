@@ -60,14 +60,16 @@ class TalentPool(WatchChannel):
                 description=f":x: **I'm sorry {ctx.author}, I'm afraid I can't do that. I only watch humans.**",
                 color=Color.red()
             )
-            return await ctx.send(embed=e)
+            await ctx.send(embed=e)
+            return
 
         if isinstance(user, Member) and any(role.id in STAFF_ROLES for role in user.roles):
             e = Embed(
                 description=f":x: **Nominating staff members, eh? You cheeky bastard.**",
                 color=Color.red()
             )
-            return await ctx.send(embed=e)
+            await ctx.send(embed=e)
+            return
 
         if not await self.fetch_user_cache():
             log.error(f"Failed to update user cache; can't watch user {user}")
@@ -75,14 +77,16 @@ class TalentPool(WatchChannel):
                 description=f":x: **Failed to update the user cache; can't add {user}**",
                 color=Color.red()
             )
-            return await ctx.send(embed=e)
+            await ctx.send(embed=e)
+            return
 
         if user.id in self.watched_users:
             e = Embed(
                 description=":x: **The specified user is already in the TalentPool**",
                 color=Color.red()
             )
-            return await ctx.send(embed=e)
+            await ctx.send(embed=e)
+            return
 
         # Manual request with `raise_for_status` as False because we want the actual response
         session = self.bot.api_client.session
@@ -103,7 +107,8 @@ class TalentPool(WatchChannel):
                     description=":x: **The specified user can't be found in the database tables**",
                     color=Color.red()
                 )
-                return await ctx.send(embed=e)
+                await ctx.send(embed=e)
+                return
 
             resp.raise_for_status()
 
@@ -112,7 +117,7 @@ class TalentPool(WatchChannel):
             description=f":white_check_mark: **Messages sent by {user} will now be relayed to TalentPool**",
             color=Color.green()
         )
-        return await ctx.send(embed=e)
+        await ctx.send(embed=e)
 
     @nomination_group.command(name='history', aliases=('info', 'search'))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
@@ -130,7 +135,8 @@ class TalentPool(WatchChannel):
                 description=":warning: **This user has never been nominated**",
                 color=Color.blue()
             )
-            return await ctx.send(embed=e)
+            await ctx.send(embed=e)
+            return
 
         embed = Embed(
             title=f"Nominations for {user.display_name} `({user.id})`",
@@ -167,12 +173,13 @@ class TalentPool(WatchChannel):
                 description=":x: **The specified user does not have an active Nomination**",
                 color=Color.red()
             )
-            return await ctx.send(embed=e)
+            await ctx.send(embed=e)
+            return
 
         [nomination] = active_nomination
-        await self.bot.api_client.patch(
-            f"{self.api_endpoint}/{nomination['id']}/end",
-            json={'unnominate_reason': reason}
+        await self.bot.api_client.put(
+            f"{self.api_endpoint}/{nomination['id']}",
+            json={'end_reason': reason}
         )
         e = Embed(
             description=f":white_check_mark: **Messages sent by {user} will no longer be relayed**",
@@ -206,11 +213,12 @@ class TalentPool(WatchChannel):
                     description=f":x: **Can't find a nomination with id `{nomination_id}`**",
                     color=Color.red()
                 )
-                return await ctx.send(embed=e)
+                await ctx.send(embed=e)
+                return
             else:
                 raise
 
-        field = "reason" if nomination["active"] else "unnominate_reason"
+        field = "reason" if nomination["active"] else "end_reason"
 
         self.log.trace(f"Changing {field} for nomination with id {nomination_id} to {reason}")
         await self.bot.api_client.patch(
@@ -249,7 +257,7 @@ class TalentPool(WatchChannel):
                 """
             )
         else:
-            end_date = self._get_human_readable(nomination_object["unwatched_at"])
+            end_date = self._get_human_readable(nomination_object["ended_at"])
             lines = textwrap.dedent(
                 f"""
                 ===============
@@ -259,7 +267,7 @@ class TalentPool(WatchChannel):
                 Reason: {nomination_object["reason"]}
 
                 End date: {end_date}
-                Unwatch reason: {nomination_object["unnominate_reason"]}
+                Unwatch reason: {nomination_object["end_reason"]}
                 Nomination ID: `{nomination_object["id"]}`
                 ===============
                 """

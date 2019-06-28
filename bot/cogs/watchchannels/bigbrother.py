@@ -57,7 +57,8 @@ class BigBrother(WatchChannel):
                 description=f":x: **I'm sorry {ctx.author}, I'm afraid I can't do that. I only watch humans.**",
                 color=Color.red()
             )
-            return await ctx.send(embed=e)
+            await ctx.send(embed=e)
+            return
 
         if not await self.fetch_user_cache():
             log.error("Failed to update user cache; can't watch user {user}")
@@ -68,7 +69,8 @@ class BigBrother(WatchChannel):
                 description=":x: **The specified user is already being watched**",
                 color=Color.red()
             )
-            return await ctx.send(embed=e)
+            await ctx.send(embed=e)
+            return
 
         response = await post_infraction(
             ctx, user, type='watch', reason=reason, hidden=True
@@ -79,7 +81,8 @@ class BigBrother(WatchChannel):
                 description=f":white_check_mark: **Messages sent by {user} will now be relayed to BigBrother**",
                 color=Color.green()
             )
-            return await ctx.send(embed=e)
+            await ctx.send(embed=e)
+            return
 
     @bigbrother_group.command(name='unwatch', aliases=('uw',))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
@@ -112,4 +115,4 @@ class BigBrother(WatchChannel):
                 description=":x: **The specified user is currently not being watched**",
                 color=Color.red()
             )
-            return await ctx.send(embed=e)
+            await ctx.send(embed=e)
