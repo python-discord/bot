@@ -336,6 +336,7 @@ class Channels(metaclass=YAMLGetter):
     off_topic_3: int
     python: int
     reddit: int
+    talent_pool: int
     verification: int
 
 
