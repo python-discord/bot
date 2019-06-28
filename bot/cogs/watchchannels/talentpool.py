@@ -18,14 +18,15 @@ STAFF_ROLES = Roles.owner, Roles.admin, Roles.moderator, Roles.helpers    # <- I
 
 class TalentPool(WatchChannel):
     """A TalentPool for helper nominees"""
-    def __init__(self, bot):
-        super().__init__(bot)
-        self.log = log  # to ensure logs created in the super() get the name of this file
-
-        self.destination = Channels.big_brother_logs
-        self.webhook_id = Webhooks.talent_pool
-        self.api_endpoint = 'bot/nominations'
-        self.api_default_params = {'active': 'true', 'ordering': '-inserted_at'}
+    def __init__(self, bot) -> None:
+        super().__init__(
+            bot,
+            destination=Channels.talent_pool,
+            webhook_id=Webhooks.talent_pool,
+            api_endpoint='bot/nominations',
+            api_default_params={'active': 'true', 'ordering': '-inserted_at'},
+            logger=log,
+        )
 
     @group(name='talentpool', aliases=('tp', 'talent', 'nomination', 'n'), invoke_without_command=True)
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
@@ -83,7 +84,7 @@ class TalentPool(WatchChannel):
             )
             return await ctx.send(embed=e)
 
-        # Manual request with `raise_for_status` as False becausse we want the actual response
+        # Manual request with `raise_for_status` as False because we want the actual response
         session = self.bot.api_client.session
         url = self.bot.api_client._url_for(self.api_endpoint)
         kwargs = {
@@ -103,12 +104,12 @@ class TalentPool(WatchChannel):
                     color=Color.red()
                 )
                 return await ctx.send(embed=e)
-            elif resp.status >= 400:
-                resp.raise_for_status()
+
+            resp.raise_for_status()
 
         self.watched_users[user.id] = response_data
         e = Embed(
-            description=f":white_check_mark: **Messages sent by {user} will now be relayed**",
+            description=f":white_check_mark: **Messages sent by {user} will now be relayed to TalentPool**",
             color=Color.green()
         )
         return await ctx.send(embed=e)
@@ -223,7 +224,7 @@ class TalentPool(WatchChannel):
         )
         await ctx.send(embed=e)
 
-    def _nomination_to_string(self, nomination_object):
+    def _nomination_to_string(self, nomination_object: dict) -> str:
         """Creates a string representation of a nomination"""
         guild = self.bot.get_guild(Guild.id)
 

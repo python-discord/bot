@@ -44,7 +44,7 @@ class WatchChannel(ABC):
     """
 
     @abstractmethod
-    def __init__(self, bot: Bot) -> None:
+    def __init__(self, bot: Bot, destination, webhook_id, api_endpoint, api_default_params, logger) -> None:
         """
         abstractmethod for __init__ which should still be called with super().
 
@@ -54,11 +54,11 @@ class WatchChannel(ABC):
         """
         self.bot = bot
 
-        # These attributes need to be overwritten in the child class
-        self.destination = None  # Channels.big_brother_logs
-        self.webhook_id = None  # Webhooks.big_brother
-        self.api_endpoint = None  # 'bot/infractions'
-        self.api_default_params = None  # {'active': 'true', 'type': 'watch'}
+        self.destination = destination  # E.g., Channels.big_brother_logs
+        self.webhook_id = webhook_id  # E.g.,  Webhooks.big_brother
+        self.api_endpoint = api_endpoint  # E.g., 'bot/infractions'
+        self.api_default_params = api_default_params  # E.g., {'active': 'true', 'type': 'watch'}
+        self.log = logger  # Logger of the child cog for a correct name in the logs
 
         # These attributes can be left as they are in the child class
         self._consume_task = None
@@ -98,6 +98,10 @@ class WatchChannel(ABC):
             self.log.trace(f"Started the {self.__class__.__name__} WatchChannel")
         else:
             self.log.error(f"Failed to start the {self.__class__.__name__} WatchChannel")
+
+            # Let's try again in a minute.
+            await asyncio.sleep(60)
+            self._start = self.bot.loop.create_task(self.start_watchchannel())
 
     async def initialize_channel(self) -> bool:
         """
@@ -160,7 +164,7 @@ class WatchChannel(ABC):
 
         return True
 
-    async def on_message(self, msg: Message):
+    async def on_message(self, msg: Message) -> None:
         """Queues up messages sent by watched users."""
         if msg.author.id in self.watched_users:
             if not self.consuming_messages:
@@ -169,11 +173,11 @@ class WatchChannel(ABC):
             self.log.trace(f"Received message: {msg.content} ({len(msg.attachments)} attachments)")
             self.message_queue[msg.author.id][msg.channel.id].append(msg)
 
-    async def consume_messages(self, delay_consumption: bool = True):
+    async def consume_messages(self, delay_consumption: bool = True) -> None:
         """Consumes the message queues to log watched users' messages."""
         if delay_consumption:
             self.log.trace(f"Sleeping {BigBrotherConfig.log_delay} seconds before consuming message queue")
-            await asyncio.sleep(1)
+            await asyncio.sleep(BigBrotherConfig.log_delay)
 
         self.log.trace(f"{self.__class__.__name__} started consuming the message queue")
 
@@ -203,7 +207,7 @@ class WatchChannel(ABC):
     async def webhook_send(
         self, content: Optional[str] = None, username: Optional[str] = None,
         avatar_url: Optional[str] = None, embed: Optional[Embed] = None,
-    ):
+    ) -> None:
         """Sends a message to the webhook with the specified kwargs."""
         try:
             await self.webhook.send(content=content, username=username, avatar_url=avatar_url, embed=embed)
@@ -226,6 +230,7 @@ class WatchChannel(ABC):
         cleaned_content = msg.clean_content
 
         if cleaned_content:
+            # Put all non-media URLs in a codeblock to prevent embeds
             media_urls = {embed.url for embed in msg.embeds if embed.type in ("image", "video")}
             for url in URL_RE.findall(cleaned_content):
                 if url not in media_urls:
@@ -257,8 +262,8 @@ class WatchChannel(ABC):
 
         self.message_history[2] += 1
 
-    async def send_header(self, msg):
-        """Sends an header embed to the WatchChannel"""
+    async def send_header(self, msg) -> None:
+        """Sends a header embed to the WatchChannel"""
         user_id = msg.author.id
 
         guild = self.bot.get_guild(GuildConfig.id)
@@ -266,11 +271,7 @@ class WatchChannel(ABC):
         actor = actor.display_name if actor else self.watched_users[user_id]['actor']
 
         inserted_at = self.watched_users[user_id]['inserted_at']
-        date_time = datetime.datetime.strptime(
-            inserted_at,
-            "%Y-%m-%dT%H:%M:%S.%fZ"
-        ).replace(tzinfo=None)
-        time_delta = time_since(date_time, precision="minutes", max_units=1)
+        time_delta = self._get_time_delta(inserted_at)
 
         reason = self.watched_users[user_id]['reason']
 
@@ -287,22 +288,21 @@ class WatchChannel(ABC):
             avatar_url=msg.author.avatar_url
         )
 
-    async def list_watched_users(self, ctx: Context, update_cache: bool = False) -> None:
+    async def list_watched_users(self, ctx: Context, update_cache: bool = True) -> None:
         """
         Gives an overview of the watched user list for this channel.
 
         The optional kwarg `update_cache` specifies whether the cache should
         be refreshed by polling the API.
         """
-
         if update_cache:
             if not await self.fetch_user_cache():
                 e = Embed(
-                    description=f":x: **Failed to update {self.__class__.__name__} user cache**",
+                    description=f":x: **Failed to update {self.__class__.__name__} user cache, serving from cache**",
                     color=Color.red()
                 )
                 await ctx.send(embed=e)
-                return
+                update_cache = False
 
         lines = []
         for user_id, user_data in self.watched_users.items():
@@ -323,7 +323,6 @@ class WatchChannel(ABC):
     @staticmethod
     def _get_time_delta(time_string: str) -> str:
         """Returns the time in human-readable time delta format"""
-
         date_time = datetime.datetime.strptime(
             time_string,
             "%Y-%m-%dT%H:%M:%S.%fZ"
@@ -342,14 +341,12 @@ class WatchChannel(ABC):
 
     def _remove_user(self, user_id: int) -> None:
         """Removes user from the WatchChannel"""
-
         self.watched_users.pop(user_id, None)
         self.message_queue.pop(user_id, None)
         self.consumption_queue.pop(user_id, None)
 
-    def cog_unload(self):
+    def cog_unload(self) -> None:
         """Takes care of unloading the cog and cancelling the consumption task."""
-
         self.log.trace(f"Unloading {self.__class__._name__} cog")
         if not self._consume_task.done():
             self._consume_task.cancel()

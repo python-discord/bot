@@ -16,16 +16,15 @@ log = logging.getLogger(__name__)
 class BigBrother(WatchChannel):
     """User monitoring to assist with moderation"""
 
-    def __init__(self, bot):
-        super().__init__(bot)
-        self.log = log  # to ensure logs created in the super() get the name of this file
-
-        self.destination = Channels.big_brother_logs
-        self.webhook_id = Webhooks.big_brother
-        self.api_endpoint = 'bot/infractions'
-        self.api_default_params = {
-            'active': 'true', 'type': 'watch', 'ordering': '-inserted_at'
-        }
+    def __init__(self, bot) -> None:
+        super().__init__(
+            bot,
+            destination=Channels.big_brother_logs,
+            webhook_id=Webhooks.big_brother,
+            api_endpoint='bot/infractions',
+            api_default_params={'active': 'true', 'type': 'watch', 'ordering': '-inserted_at'},
+            logger=log
+        )
 
     @group(name='bigbrother', aliases=('bb',), invoke_without_command=True)
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
@@ -77,7 +76,7 @@ class BigBrother(WatchChannel):
         if response is not None:
             self.watched_users[user.id] = response
             e = Embed(
-                description=f":white_check_mark: **Messages sent by {user} will now be relayed**",
+                description=f":white_check_mark: **Messages sent by {user} will now be relayed to BigBrother**",
                 color=Color.green()
             )
             return await ctx.send(embed=e)
