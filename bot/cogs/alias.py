@@ -72,9 +72,7 @@ class Alias:
         await self.invoke(ctx, "site resources")
 
     @command(name="watch", hidden=True)
-    async def bigbrother_watch_alias(
-            self, ctx, user: Union[Member, User, proxy_user], *, reason: str = None
-    ):
+    async def bigbrother_watch_alias(self, ctx, user: Union[Member, User, proxy_user], *, reason: str):
         """
         Alias for invoking <prefix>bigbrother watch [user] [reason].
         """
@@ -82,9 +80,7 @@ class Alias:
         await self.invoke(ctx, "bigbrother watch", user, reason=reason)
 
     @command(name="unwatch", hidden=True)
-    async def bigbrother_unwatch_alias(
-        self, ctx, user: Union[User, proxy_user], *, reason: str = None
-    ):
+    async def bigbrother_unwatch_alias(self, ctx, user: Union[User, proxy_user], *, reason: str):
         """
         Alias for invoking <prefix>bigbrother unwatch [user] [reason].
         """
@@ -178,9 +174,7 @@ class Alias:
         await self.invoke(ctx, "docs get", symbol)
 
     @command(name="nominate", hidden=True)
-    async def nomination_add_alias(
-            self, ctx, user: Union[Member, User, proxy_user], *, reason: str = None
-    ):
+    async def nomination_add_alias(self, ctx, user: Union[Member, User, proxy_user], *, reason: str):
         """
         Alias for invoking <prefix>talentpool add [user] [reason].
         """
@@ -188,9 +182,7 @@ class Alias:
         await self.invoke(ctx, "talentpool add", user, reason=reason)
 
     @command(name="unnominate", hidden=True)
-    async def nomination_end_alias(
-        self, ctx, user: Union[User, proxy_user], *, reason: str = None
-    ):
+    async def nomination_end_alias(self, ctx, user: Union[User, proxy_user], *, reason: str):
         """
         Alias for invoking <prefix>nomination end [user] [reason].
         """
