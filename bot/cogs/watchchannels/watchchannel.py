@@ -2,6 +2,7 @@ import asyncio
 import datetime
 import logging
 import re
+import textwrap
 from abc import ABC, abstractmethod
 from collections import defaultdict, deque
 from typing import Optional
@@ -11,7 +12,8 @@ import discord
 from discord import Color, Embed, Message, Object, errors
 from discord.ext.commands import BadArgument, Bot, Context
 
-from bot.constants import BigBrother as BigBrotherConfig, Guild as GuildConfig
+from bot.cogs.modlog import ModLog
+from bot.constants import BigBrother as BigBrotherConfig, Guild as GuildConfig, Icons
 from bot.pagination import LinePaginator
 from bot.utils import messages
 from bot.utils.time import time_since
@@ -22,36 +24,26 @@ URL_RE = re.compile(r"(https?://[^\s]+)")
 
 
 def proxy_user(user_id: str) -> Object:
+    """A proxy user object that mocks a real User instance for when the later is not available."""
     try:
         user_id = int(user_id)
     except ValueError:
         raise BadArgument
+
     user = Object(user_id)
     user.mention = user.id
     user.display_name = f"<@{user.id}>"
     user.avatar_url_as = lambda static_format: None
     user.bot = False
+
     return user
 
 
 class WatchChannel(ABC):
-    """
-    Base class for WatchChannels
-
-    Abstracts the basic functionality for watchchannels in
-    a granular manner to allow for easy overwritting of
-    methods in the child class.
-    """
+    """ABC that implements watch channel functionality to relay all messages of a user to a watch channel."""
 
     @abstractmethod
     def __init__(self, bot: Bot, destination, webhook_id, api_endpoint, api_default_params, logger) -> None:
-        """
-        abstractmethod for __init__ which should still be called with super().
-
-        Note: Some of the attributes below need to be overwritten in the
-        __init__ of the child after the super().__init__(*args, **kwargs)
-        call.
-        """
         self.bot = bot
 
         self.destination = destination  # E.g., Channels.big_brother_logs
@@ -74,6 +66,11 @@ class WatchChannel(ABC):
         self._start = self.bot.loop.create_task(self.start_watchchannel())
 
     @property
+    def modlog(self) -> ModLog:
+        """Provides access to the ModLog cog for alert purposes."""
+        return self.bot.get_cog("ModLog")
+
+    @property
     def consuming_messages(self) -> bool:
         """Checks if a consumption task is currently running."""
         if self._consume_task is None:
@@ -83,7 +80,7 @@ class WatchChannel(ABC):
             exc = self._consume_task.exception()
             if exc:
                 self.log.exception(
-                    f"{self.__class__.__name__} consume task has failed with:",
+                    f"The message queue consume task has failed with:",
                     exc_info=exc
                 )
             return False
@@ -91,52 +88,58 @@ class WatchChannel(ABC):
         return True
 
     async def start_watchchannel(self) -> None:
-        """Retrieves watched users from the API."""
+        """Starts the watch channel by getting the channel, webhook, and user cache ready."""
         await self.bot.wait_until_ready()
 
-        if await self.initialize_channel() and await self.fetch_user_cache():
-            self.log.trace(f"Started the {self.__class__.__name__} WatchChannel")
-        else:
-            self.log.error(f"Failed to start the {self.__class__.__name__} WatchChannel")
-
-            # Let's try again in a minute.
-            await asyncio.sleep(60)
-            self._start = self.bot.loop.create_task(self.start_watchchannel())
-
-    async def initialize_channel(self) -> bool:
-        """
-        Checks if channel and webhook are set; if not, tries to initialize them.
-
-        Since the internal channel cache may not be available directly after `ready`,
-        this function will retry to get the channel a number of times. If both the
-        channel and webhook were initialized successfully. this function will return
-        `True`.
-        """
-        if self.channel is None:
-            for attempt in range(1, self.retries + 1):
-                self.channel = self.bot.get_channel(self.destination)
-
-                if self.channel is None:
-                    self.log.error(f"Failed to get the {self.__class__.__name__} channel; cannot watch users")
-                    if attempt < self.initialization_retries:
-                        self.log.error(f"Attempt {attempt}/{self.retries}; Retrying in {self.retry_delay} seconds...")
-                        await asyncio.sleep(self.retry_delay)
-                else:
-                    self.log.trace(f"Retrieved the TextChannel for {self.__class__.__name__}")
-                    break
+        # After updating d.py, this block can be replaced by `fetch_channel` with a try-except
+        for attempt in range(1, self.retries+1):
+            self.channel = self.bot.get_channel(self.destination)
+            if self.channel is None:
+                if attempt < self.retries:
+                    await asyncio.sleep(self.retry_delay)
             else:
-                self.log.error(f"Cannot get channel with id `{self.destination}`; cannot watch users")
-                return False
+                break
+        else:
+            self.log.error(f"Failed to retrieve the text channel with id `{self.destination}")
 
-        if self.webhook is None:
-            self.webhook = await self.bot.get_webhook_info(self.webhook_id)  # This is `fetch_webhook` in current
-            if self.webhook is None:
-                self.log.error(f"Cannot get webhook with id `{self.webhook_id}`; cannot watch users")
-                return False
-            self.log.trace(f"Retrieved the webhook for {self.__class__.__name__}")
+        # `get_webhook_info` has been renamed to `fetch_webhook` in newer versions of d.py
+        try:
+            self.webhook = await self.bot.get_webhook_info(self.webhook_id)
+        except (discord.HTTPException, discord.NotFound, discord.Forbidden):
+            self.log.exception(f"Failed to fetch webhook with id `{self.webhook_id}`")
 
-        self.log.trace(f"WatchChannel for {self.__class__.__name__} is fully initialized")
-        return True
+        if self.channel is None or self.webhook is None:
+            self.log.error("Failed to start the watch channel; unloading the cog.")
+
+            message = textwrap.dedent(
+                f"""
+                An error occurred while loading the text channel or webhook.
+
+                TextChannel: {"**Failed to load**" if self.channel is None else "Loaded successfully"}
+                Webhook: {"**Failed to load**" if self.webhook is None else "Loaded successfully"}
+
+                The Cog has been unloaded."""
+            )
+
+            await self.modlog.send_log_message(
+                title=f"Error: Failed to initialize the {self.__class__.__name__} watch channel",
+                text=message,
+                ping_everyone=False,
+                icon_url=Icons.token_removed,
+                colour=Color.red()
+            )
+
+            self.bot.remove_cog(self.__class__.__name__)
+            return
+
+        if not await self.fetch_user_cache():
+            await self.modlog.send_log_message(
+                title=f"Warning: Failed to retrieve user cache for the {self.__class__.__name__} watch channel",
+                text="Could not retrieve the list of watched users from the API and messages will not be relayed.",
+                ping_everyone=True,
+                icon=Icons.token_removed,
+                color=Color.red()
+            )
 
     async def fetch_user_cache(self) -> bool:
         """
@@ -145,15 +148,9 @@ class WatchChannel(ABC):
         This function returns `True` if the update succeeded.
         """
         try:
-            data = await self.bot.api_client.get(
-                self.api_endpoint,
-                params=self.api_default_params
-            )
+            data = await self.bot.api_client.get(self.api_endpoint, params=self.api_default_params)
         except aiohttp.ClientResponseError as e:
-            self.log.exception(
-                f"Failed to fetch {self.__class__.__name__} watched users from API",
-                exc_info=e
-            )
+            self.log.exception(f"Failed to fetch the watched users from the API", exc_info=e)
             return False
 
         self.watched_users = defaultdict(dict)
@@ -181,7 +178,7 @@ class WatchChannel(ABC):
 
         self.log.trace(f"{self.__class__.__name__} started consuming the message queue")
 
-        # Prevent losing a partly processed consumption queue after Task failure
+        # If the previous consumption Task failed, first consume the existing comsumption_queue
         if not self.consumption_queue:
             self.consumption_queue = self.message_queue.copy()
             self.message_queue.clear()
@@ -198,15 +195,16 @@ class WatchChannel(ABC):
 
         if self.message_queue:
             self.log.trace("Channel queue not empty: Continuing consuming queues")
-            self._consume_task = self.bot.loop.create_task(
-                self.consume_messages(delay_consumption=False)
-            )
+            self._consume_task = self.bot.loop.create_task(self.consume_messages(delay_consumption=False))
         else:
             self.log.trace("Done consuming messages.")
 
     async def webhook_send(
-        self, content: Optional[str] = None, username: Optional[str] = None,
-        avatar_url: Optional[str] = None, embed: Optional[Embed] = None,
+        self,
+        content: Optional[str] = None,
+        username: Optional[str] = None,
+        avatar_url: Optional[str] = None,
+        embed: Optional[Embed] = None,
     ) -> None:
         """Sends a message to the webhook with the specified kwargs."""
         try:
@@ -218,7 +216,7 @@ class WatchChannel(ABC):
             )
 
     async def relay_message(self, msg: Message) -> None:
-        """Relays the message to the relevant WatchChannel"""
+        """Relays the message to the relevant watch channel"""
         last_author, last_channel, count = self.message_history
         limit = BigBrotherConfig.header_message_limit
 
@@ -230,7 +228,7 @@ class WatchChannel(ABC):
         cleaned_content = msg.clean_content
 
         if cleaned_content:
-            # Put all non-media URLs in a codeblock to prevent embeds
+            # Put all non-media URLs in a code block to prevent embeds
             media_urls = {embed.url for embed in msg.embeds if embed.type in ("image", "video")}
             for url in URL_RE.findall(cleaned_content):
                 if url not in media_urls:
@@ -263,7 +261,7 @@ class WatchChannel(ABC):
         self.message_history[2] += 1
 
     async def send_header(self, msg) -> None:
-        """Sends a header embed to the WatchChannel"""
+        """Sends a header embed with information about the relayed messages to the watch channel"""
         user_id = msg.author.id
 
         guild = self.bot.get_guild(GuildConfig.id)
@@ -275,18 +273,10 @@ class WatchChannel(ABC):
 
         reason = self.watched_users[user_id]['reason']
 
-        embed = Embed(description=(
-            f"{msg.author.mention} in [#{msg.channel.name}]({msg.jump_url})\n"
-        ))
-        embed.set_footer(text=(
-            f"Added {time_delta} by {actor} | "
-            f"Reason: {reason}"
-        ))
-        await self.webhook_send(
-            embed=embed,
-            username=msg.author.display_name,
-            avatar_url=msg.author.avatar_url
-        )
+        embed = Embed(description=f"{msg.author.mention} in [#{msg.channel.name}]({msg.jump_url})")
+        embed.set_footer(text=f"Added {time_delta} by {actor} | Reason: {reason}")
+
+        await self.webhook_send(embed=embed, username=msg.author.display_name, avatar_url=msg.author.avatar_url)
 
     async def list_watched_users(self, ctx: Context, update_cache: bool = True) -> None:
         """
@@ -310,15 +300,12 @@ class WatchChannel(ABC):
             time_delta = self._get_time_delta(inserted_at)
             lines.append(f"• <@{user_id}> (added {time_delta})")
 
-        await LinePaginator.paginate(
-            lines or ("There's nothing here yet.",),
-            ctx,
-            Embed(
-                title=f"{self.__class__.__name__} watched users ({'updated' if update_cache else 'cached'})",
-                color=Color.blue()
-            ),
-            empty=False
+        lines = lines or ("There's nothing here yet.",)
+        embed = Embed(
+            title=f"{self.__class__.__name__} watched users ({'updated' if update_cache else 'cached'})",
+            color=Color.blue()
         )
+        await LinePaginator.paginate(lines, ctx, embed, empty=False)
 
     @staticmethod
     def _get_time_delta(time_string: str) -> str:
@@ -346,7 +333,7 @@ class WatchChannel(ABC):
         self.consumption_queue.pop(user_id, None)
 
     def cog_unload(self) -> None:
-        """Takes care of unloading the cog and cancelling the consumption task."""
+        """Takes care of unloading the cog and canceling the consumption task."""
         self.log.trace(f"Unloading {self.__class__._name__} cog")
         if not self._consume_task.done():
             self._consume_task.cancel()
@@ -354,6 +341,6 @@ class WatchChannel(ABC):
                 self._consume_task.result()
             except asyncio.CancelledError as e:
                 self.log.exception(
-                    f"The {self.__class__._name__} consume task was cancelled. Messages may be lost.",
+                    f"The {self.__class__._name__} consume task was canceled. Messages may be lost.",
                     exc_info=e
                 )

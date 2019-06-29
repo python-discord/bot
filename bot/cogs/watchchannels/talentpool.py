@@ -17,7 +17,8 @@ STAFF_ROLES = Roles.owner, Roles.admin, Roles.moderator, Roles.helpers    # <- I
 
 
 class TalentPool(WatchChannel):
-    """A TalentPool for helper nominees"""
+    """Relays messages of helper candidates to the talent-pool channel to observe them."""
+
     def __init__(self, bot) -> None:
         super().__init__(
             bot,
@@ -109,8 +110,8 @@ class TalentPool(WatchChannel):
                 )
                 await ctx.send(embed=e)
                 return
-
-            resp.raise_for_status()
+            else:
+                resp.raise_for_status()
 
         self.watched_users[user.id] = response_data
         e = Embed(
@@ -122,7 +123,7 @@ class TalentPool(WatchChannel):
     @nomination_group.command(name='history', aliases=('info', 'search'))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
     async def history_command(self, ctx: Context, user: Union[User, proxy_user]) -> None:
-        """Shows the specified user's nomination history"""
+        """Shows the specified user's nomination history."""
         result = await self.bot.api_client.get(
             self.api_endpoint,
             params={
@@ -233,7 +234,7 @@ class TalentPool(WatchChannel):
         await ctx.send(embed=e)
 
     def _nomination_to_string(self, nomination_object: dict) -> str:
-        """Creates a string representation of a nomination"""
+        """Creates a string representation of a nomination."""
         guild = self.bot.get_guild(Guild.id)
 
         actor_id = nomination_object["actor"]

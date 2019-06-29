@@ -80,7 +80,7 @@ async def wait_for_deletion(
 
 async def send_attachments(message: Message, destination: Union[TextChannel, Webhook]):
     """
-    Re-uploads each attachment in a message to the given channel.
+    Re-uploads each attachment in a message to the given channel or webhook.
 
     Each attachment is sent as a separate message to more easily comply with the 8 MiB request size limit.
     If attachments are too large, they are instead grouped into a single embed which links to them.

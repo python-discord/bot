@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 
 
 class BigBrother(WatchChannel):
-    """User monitoring to assist with moderation"""
+    """Monitors users by relaying their messages to a watch channel to assist with moderation."""
 
     def __init__(self, bot) -> None:
         super().__init__(
@@ -29,7 +29,7 @@ class BigBrother(WatchChannel):
     @group(name='bigbrother', aliases=('bb',), invoke_without_command=True)
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
     async def bigbrother_group(self, ctx: Context) -> None:
-        """Monitors users by relaying their messages to the BigBrother watch channel"""
+        """Monitors users by relaying their messages to the BigBrother watch channel."""
         await ctx.invoke(self.bot.get_command("help"), "bigbrother")
 
     @bigbrother_group.command(name='watched', aliases=('all', 'list'))
@@ -54,7 +54,7 @@ class BigBrother(WatchChannel):
         """
         if user.bot:
             e = Embed(
-                description=f":x: **I'm sorry {ctx.author}, I'm afraid I can't do that. I only watch humans.**",
+                description=f":x: I'm sorry {ctx.author}, I'm afraid I can't do that. I only watch humans.",
                 color=Color.red()
             )
             await ctx.send(embed=e)
@@ -66,7 +66,7 @@ class BigBrother(WatchChannel):
 
         if user.id in self.watched_users:
             e = Embed(
-                description=":x: **The specified user is already being watched**",
+                description=":x: The specified user is already being watched.",
                 color=Color.red()
             )
             await ctx.send(embed=e)
@@ -78,7 +78,7 @@ class BigBrother(WatchChannel):
         if response is not None:
             self.watched_users[user.id] = response
             e = Embed(
-                description=f":white_check_mark: **Messages sent by {user} will now be relayed to BigBrother**",
+                description=f":white_check_mark: Messages sent by {user} will now be relayed to BigBrother.",
                 color=Color.green()
             )
             await ctx.send(embed=e)
@@ -97,22 +97,24 @@ class BigBrother(WatchChannel):
         )
         if active_watches:
             [infraction] = active_watches
+
             await self.bot.api_client.patch(
                 f"{self.api_endpoint}/{infraction['id']}",
                 json={'active': False}
             )
-            await post_infraction(
-                ctx, user, type='watch', reason=f"Unwatched: {reason}", hidden=True, active=False
-            )
+
+            await post_infraction(ctx, user, type='watch', reason=f"Unwatched: {reason}", hidden=True, active=False)
+
             e = Embed(
-                description=f":white_check_mark: **Messages sent by {user} will no longer be relayed**",
+                description=f":white_check_mark: Messages sent by {user} will no longer be relayed.",
                 color=Color.green()
             )
             await ctx.send(embed=e)
+
             self._remove_user(user.id)
         else:
             e = Embed(
-                description=":x: **The specified user is currently not being watched**",
+                description=":x: The specified user is currently not being watched.",
                 color=Color.red()
             )
             await ctx.send(embed=e)
