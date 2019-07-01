@@ -40,7 +40,7 @@ def proxy_user(user_id: str) -> Object:
 
 
 class WatchChannel(ABC):
-    """ABC that implements watch channel functionality to relay all messages of a user to a watch channel."""
+    """ABC with functionality for relaying users' messages to a certain channel."""
 
     @abstractmethod
     def __init__(self, bot: Bot, destination, webhook_id, api_endpoint, api_default_params, logger) -> None:
@@ -100,7 +100,7 @@ class WatchChannel(ABC):
             else:
                 break
         else:
-            self.log.error(f"Failed to retrieve the text channel with id `{self.destination}")
+            self.log.error(f"Failed to retrieve the text channel with id {self.destination}")
 
         # `get_webhook_info` has been renamed to `fetch_webhook` in newer versions of d.py
         try:
