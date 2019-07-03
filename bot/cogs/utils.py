@@ -36,11 +36,8 @@ class Utils:
         else:
             return await ctx.invoke(self.bot.get_command("help"), "pep")
 
-        # Newer PEPs are written in RST instead of txt
-        if pep_number > 542:
-            pep_url = f"{self.base_github_pep_url}{pep_number:04}.rst"
-        else:
-            pep_url = f"{self.base_github_pep_url}{pep_number:04}.txt"
+        # PEPs are now allways in .txt format
+        pep_url = f"{self.base_github_pep_url}{pep_number:04}.txt"
 
         # Attempt to fetch the PEP
         log.trace(f"Requesting PEP {pep_number} with {pep_url}")
