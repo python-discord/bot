@@ -145,13 +145,13 @@ class TalentPool(WatchChannel):
         )
 
         if not active_nomination:
-            await ctx.send(":x: The specified user does not have an active Nomination")
+            await ctx.send(":x: The specified user does not have an active nomination")
             return
 
         [nomination] = active_nomination
-        await self.bot.api_client.put(
+        await self.bot.api_client.patch(
             f"{self.api_endpoint}/{nomination['id']}",
-            json={'end_reason': reason}
+            json={'end_reason': reason, 'active': False}
         )
         await ctx.send(f":white_check_mark: Messages sent by {user} will no longer be relayed")
         self._remove_user(user.id)

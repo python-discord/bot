@@ -57,7 +57,6 @@ class BigBrother(WatchChannel):
             return
 
         if not await self.fetch_user_cache():
-
             await ctx.send(f":x: Updating the user cache failed, can't watch user {user}")
             return
 
