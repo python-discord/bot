@@ -298,11 +298,7 @@ class WatchChannel(ABC):
         """
         if update_cache:
             if not await self.fetch_user_cache():
-                e = Embed(
-                    description=f":x: **Failed to update {self.__class__.__name__} user cache, serving from cache**",
-                    color=Color.red()
-                )
-                await ctx.send(embed=e)
+                await ctx.send(f":x: Failed to update {self.__class__.__name__} user cache, serving from cache")
                 update_cache = False
 
         lines = []

@@ -2,7 +2,7 @@ import logging
 from collections import ChainMap
 from typing import Union
 
-from discord import Color, Embed, User
+from discord import User
 from discord.ext.commands import Context, group
 
 from bot.constants import Channels, Roles, Webhooks

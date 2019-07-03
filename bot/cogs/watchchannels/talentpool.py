@@ -87,11 +87,7 @@ class TalentPool(WatchChannel):
             response_data = await resp.json()
 
             if resp.status == 400 and response_data.get('user', False):
-                e = Embed(
-                    description=":x: The specified user can't be found in the database tables",
-                    color=Color.red()
-                )
-                await ctx.send(embed=e)
+                await ctx.send(":x: The specified user can't be found in the database tables")
                 return
             else:
                 resp.raise_for_status()
