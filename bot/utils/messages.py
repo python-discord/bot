@@ -97,11 +97,13 @@ async def send_attachments(message: Message, destination: Union[TextChannel, Web
             if attachment.size <= MAX_SIZE - 512:
                 with BytesIO() as file:
                     await attachment.save(file)
+                    attachment_file = File(file, filename=attachment.filename)
+
                     if isinstance(destination, TextChannel):
-                        await destination.send(file=File(file, filename=attachment.filename))
+                        await destination.send(file=attachment_file)
                     else:
                         await destination.send(
-                            file=File(file, filename=attachment.filename),
+                            file=attachment_file,
                             username=message.author.display_name,
                             avatar_url=message.author.avatar_url
                         )

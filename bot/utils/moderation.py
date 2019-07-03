@@ -14,8 +14,13 @@ HEADERS = {"X-API-KEY": Keys.site_api}
 
 
 async def post_infraction(
-    ctx: Context, user: Union[Member, Object, User], type: str, reason: str,
-    expires_at: datetime = None, hidden: bool = False, active: bool = True
+    ctx: Context,
+    user: Union[Member, Object, User],
+    type: str,
+    reason: str,
+    expires_at: datetime = None,
+    hidden: bool = False,
+    active: bool = True,
 ):
 
     payload = {

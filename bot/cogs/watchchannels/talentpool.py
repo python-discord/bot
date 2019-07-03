@@ -57,36 +57,19 @@ class TalentPool(WatchChannel):
         in the header when relaying messages of this user to the watchchannel.
         """
         if user.bot:
-            e = Embed(
-                description=f":x: **I'm sorry {ctx.author}, I'm afraid I can't do that. I only watch humans.**",
-                color=Color.red()
-            )
-            await ctx.send(embed=e)
+            await ctx.send(f":x: I'm sorry {ctx.author}, I'm afraid I can't do that. I only watch humans.")
             return
 
         if isinstance(user, Member) and any(role.id in STAFF_ROLES for role in user.roles):
-            e = Embed(
-                description=f":x: **Nominating staff members, eh? You cheeky bastard.**",
-                color=Color.red()
-            )
-            await ctx.send(embed=e)
+            await ctx.send(f":x: Nominating staff members, eh? Here's a cookie :cookie:")
             return
 
         if not await self.fetch_user_cache():
-            log.error(f"Failed to update user cache; can't watch user {user}")
-            e = Embed(
-                description=f":x: **Failed to update the user cache; can't add {user}**",
-                color=Color.red()
-            )
-            await ctx.send(embed=e)
+            await ctx.send(f":x: Failed to update the user cache; can't add {user}")
             return
 
         if user.id in self.watched_users:
-            e = Embed(
-                description=":x: **The specified user is already in the TalentPool**",
-                color=Color.red()
-            )
-            await ctx.send(embed=e)
+            await ctx.send(":x: The specified user is already being watched in the TalentPool")
             return
 
         # Manual request with `raise_for_status` as False because we want the actual response
@@ -105,7 +88,7 @@ class TalentPool(WatchChannel):
 
             if resp.status == 400 and response_data.get('user', False):
                 e = Embed(
-                    description=":x: **The specified user can't be found in the database tables**",
+                    description=":x: The specified user can't be found in the database tables",
                     color=Color.red()
                 )
                 await ctx.send(embed=e)
@@ -114,11 +97,7 @@ class TalentPool(WatchChannel):
                 resp.raise_for_status()
 
         self.watched_users[user.id] = response_data
-        e = Embed(
-            description=f":white_check_mark: **Messages sent by {user} will now be relayed to TalentPool**",
-            color=Color.green()
-        )
-        await ctx.send(embed=e)
+        await ctx.send(f":white_check_mark: Messages sent by {user} will now be relayed to TalentPool")
 
     @nomination_group.command(name='history', aliases=('info', 'search'))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
@@ -132,11 +111,7 @@ class TalentPool(WatchChannel):
             }
         )
         if not result:
-            e = Embed(
-                description=":warning: **This user has never been nominated**",
-                color=Color.blue()
-            )
-            await ctx.send(embed=e)
+            await ctx.send(":warning: This user has never been nominated")
             return
 
         embed = Embed(
@@ -170,11 +145,7 @@ class TalentPool(WatchChannel):
         )
 
         if not active_nomination:
-            e = Embed(
-                description=":x: **The specified user does not have an active Nomination**",
-                color=Color.red()
-            )
-            await ctx.send(embed=e)
+            await ctx.send(":x: The specified user does not have an active Nomination")
             return
 
         [nomination] = active_nomination
@@ -182,11 +153,7 @@ class TalentPool(WatchChannel):
             f"{self.api_endpoint}/{nomination['id']}",
             json={'end_reason': reason}
         )
-        e = Embed(
-            description=f":white_check_mark: **Messages sent by {user} will no longer be relayed**",
-            color=Color.green()
-        )
-        await ctx.send(embed=e)
+        await ctx.send(f":white_check_mark: Messages sent by {user} will no longer be relayed")
         self._remove_user(user.id)
 
     @nomination_group.group(name='edit', aliases=('e',), invoke_without_command=True)
@@ -210,11 +177,7 @@ class TalentPool(WatchChannel):
         except ClientResponseError as e:
             if e.status == 404:
                 self.log.trace(f"Nomination API 404: Can't nomination with id {nomination_id}")
-                e = Embed(
-                    description=f":x: **Can't find a nomination with id `{nomination_id}`**",
-                    color=Color.red()
-                )
-                await ctx.send(embed=e)
+                await ctx.send(f":x: Can't find a nomination with id `{nomination_id}`")
                 return
             else:
                 raise
@@ -222,16 +185,13 @@ class TalentPool(WatchChannel):
         field = "reason" if nomination["active"] else "end_reason"
 
         self.log.trace(f"Changing {field} for nomination with id {nomination_id} to {reason}")
+
         await self.bot.api_client.patch(
             f"{self.api_endpoint}/{nomination_id}",
             json={field: reason}
         )
 
-        e = Embed(
-            description=f":white_check_mark: **Updated the {field} of the nomination!**",
-            color=Color.green()
-        )
-        await ctx.send(embed=e)
+        await ctx.send(f":white_check_mark: Updated the {field} of the nomination!")
 
     def _nomination_to_string(self, nomination_object: dict) -> str:
         """Creates a string representation of a nomination."""

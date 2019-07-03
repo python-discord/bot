@@ -5,7 +5,8 @@ import re
 import textwrap
 from abc import ABC, abstractmethod
 from collections import defaultdict, deque
-from typing import Optional
+from dataclasses import dataclass
+from typing import Iterator, Optional
 
 import aiohttp
 import discord
@@ -39,6 +40,16 @@ def proxy_user(user_id: str) -> Object:
     return user
 
 
+@dataclass
+class MessageHistory:
+    last_author: Optional[int] = None
+    last_channel: Optional[int] = None
+    message_count: int = 0
+
+    def __iter__(self) -> Iterator:
+        return iter((self.last_author, self.last_channel, self.message_count))
+
+
 class WatchChannel(ABC):
     """ABC that implements watch channel functionality to relay all messages of a user to a watch channel."""
 
@@ -52,7 +63,6 @@ class WatchChannel(ABC):
         self.api_default_params = api_default_params  # E.g., {'active': 'true', 'type': 'watch'}
         self.log = logger  # Logger of the child cog for a correct name in the logs
 
-        # These attributes can be left as they are in the child class
         self._consume_task = None
         self.watched_users = defaultdict(dict)
         self.message_queue = defaultdict(lambda: defaultdict(deque))
@@ -61,7 +71,7 @@ class WatchChannel(ABC):
         self.retry_delay = 10
         self.channel = None
         self.webhook = None
-        self.message_history = [None, None, 0]
+        self.message_history = MessageHistory()
 
         self._start = self.bot.loop.create_task(self.start_watchchannel())
 
@@ -118,13 +128,14 @@ class WatchChannel(ABC):
                 TextChannel: {"**Failed to load**" if self.channel is None else "Loaded successfully"}
                 Webhook: {"**Failed to load**" if self.webhook is None else "Loaded successfully"}
 
-                The Cog has been unloaded."""
+                The Cog has been unloaded.
+                """
             )
 
             await self.modlog.send_log_message(
                 title=f"Error: Failed to initialize the {self.__class__.__name__} watch channel",
                 text=message,
-                ping_everyone=False,
+                ping_everyone=True,
                 icon_url=Icons.token_removed,
                 colour=Color.red()
             )
@@ -221,7 +232,7 @@ class WatchChannel(ABC):
         limit = BigBrotherConfig.header_message_limit
 
         if msg.author.id != last_author or msg.channel.id != last_channel or count >= limit:
-            self.message_history = [msg.author.id, msg.channel.id, 0]
+            self.message_history = MessageHistory(last_author=msg.author.id, last_channel=msg.channel.id)
 
             await self.send_header(msg)
 
@@ -258,7 +269,7 @@ class WatchChannel(ABC):
                     exc_info=exc
                 )
 
-        self.message_history[2] += 1
+        self.message_history.message_count += 1
 
     async def send_header(self, msg) -> None:
         """Sends a header embed with information about the relayed messages to the watch channel"""

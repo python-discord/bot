@@ -53,36 +53,25 @@ class BigBrother(WatchChannel):
         in the header when relaying messages of this user to the watchchannel.
         """
         if user.bot:
-            e = Embed(
-                description=f":x: I'm sorry {ctx.author}, I'm afraid I can't do that. I only watch humans.",
-                color=Color.red()
-            )
-            await ctx.send(embed=e)
+            await ctx.send(f":x: I'm sorry {ctx.author}, I'm afraid I can't do that. I only watch humans.")
             return
 
         if not await self.fetch_user_cache():
-            log.error("Failed to update user cache; can't watch user {user}")
+
+            await ctx.send(f":x: Updating the user cache failed, can't watch user {user}")
             return
 
         if user.id in self.watched_users:
-            e = Embed(
-                description=":x: The specified user is already being watched.",
-                color=Color.red()
-            )
-            await ctx.send(embed=e)
+            await ctx.send(":x: The specified user is already being watched.")
             return
 
         response = await post_infraction(
             ctx, user, type='watch', reason=reason, hidden=True
         )
+
         if response is not None:
             self.watched_users[user.id] = response
-            e = Embed(
-                description=f":white_check_mark: Messages sent by {user} will now be relayed to BigBrother.",
-                color=Color.green()
-            )
-            await ctx.send(embed=e)
-            return
+            await ctx.send(f":white_check_mark: Messages sent by {user} will now be relayed to BigBrother.")
 
     @bigbrother_group.command(name='unwatch', aliases=('uw',))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
@@ -105,16 +94,8 @@ class BigBrother(WatchChannel):
 
             await post_infraction(ctx, user, type='watch', reason=f"Unwatched: {reason}", hidden=True, active=False)
 
-            e = Embed(
-                description=f":white_check_mark: Messages sent by {user} will no longer be relayed.",
-                color=Color.green()
-            )
-            await ctx.send(embed=e)
+            await ctx.send(f":white_check_mark: Messages sent by {user} will no longer be relayed.")
 
             self._remove_user(user.id)
         else:
-            e = Embed(
-                description=":x: The specified user is currently not being watched.",
-                color=Color.red()
-            )
-            await ctx.send(embed=e)
+            await ctx.send(":x: The specified user is currently not being watched.")
