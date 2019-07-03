@@ -187,7 +187,7 @@ class WatchChannel(ABC):
             self.log.trace(f"Sleeping {BigBrotherConfig.log_delay} seconds before consuming message queue")
             await asyncio.sleep(BigBrotherConfig.log_delay)
 
-        self.log.trace(f"{self.__class__.__name__} started consuming the message queue")
+        self.log.trace(f"Started consuming the message queue")
 
         # If the previous consumption Task failed, first consume the existing comsumption_queue
         if not self.consumption_queue:
@@ -222,7 +222,7 @@ class WatchChannel(ABC):
             await self.webhook.send(content=content, username=username, avatar_url=avatar_url, embed=embed)
         except discord.HTTPException as exc:
             self.log.exception(
-                f"Failed to send message to {self.__class__.__name__} webhook",
+                f"Failed to send a message to the webhook",
                 exc_info=exc
             )
 
@@ -265,7 +265,7 @@ class WatchChannel(ABC):
                 )
             except discord.HTTPException as exc:
                 self.log.exception(
-                    f"Failed to send an attachment to {self.__class__.__name__} webhook",
+                    f"Failed to send an attachment to the webhook",
                     exc_info=exc
                 )
 
@@ -348,6 +348,6 @@ class WatchChannel(ABC):
                 self._consume_task.result()
             except asyncio.CancelledError as e:
                 self.log.exception(
-                    f"The {self.__class__._name__} consume task was canceled. Messages may be lost.",
+                    f"The consume task was canceled. Messages may be lost.",
                     exc_info=e
                 )
