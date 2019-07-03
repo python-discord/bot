@@ -341,7 +341,7 @@ class WatchChannel(ABC):
 
     def cog_unload(self) -> None:
         """Takes care of unloading the cog and canceling the consumption task."""
-        self.log.trace(f"Unloading {self.__class__._name__} cog")
+        self.log.trace(f"Unloading the cog")
         if not self._consume_task.done():
             self._consume_task.cancel()
             try:
