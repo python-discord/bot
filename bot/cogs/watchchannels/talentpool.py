@@ -155,7 +155,7 @@ class TalentPool(WatchChannel):
     @nomination_group.group(name='edit', aliases=('e',), invoke_without_command=True)
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
     async def nomination_edit_group(self, ctx: Context) -> None:
-        """Highlights the activity of helper nominees by relaying their messages to TalentPool."""
+        """Commands to edit nominations."""
 
         await ctx.invoke(self.bot.get_command("help"), "talentpool", "edit")
 

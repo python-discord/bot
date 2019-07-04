@@ -224,7 +224,7 @@ class WatchChannel(ABC):
             )
 
     async def relay_message(self, msg: Message) -> None:
-        """Relays the message to the relevant watch channel"""
+        """Relays the message to the relevant watch channel."""
         limit = BigBrotherConfig.header_message_limit
 
         if (
@@ -272,7 +272,7 @@ class WatchChannel(ABC):
         self.message_history.message_count += 1
 
     async def send_header(self, msg) -> None:
-        """Sends a header embed with information about the relayed messages to the watch channel"""
+        """Sends a header embed with information about the relayed messages to the watch channel."""
         user_id = msg.author.id
 
         guild = self.bot.get_guild(GuildConfig.id)
@@ -316,7 +316,7 @@ class WatchChannel(ABC):
 
     @staticmethod
     def _get_time_delta(time_string: str) -> str:
-        """Returns the time in human-readable time delta format"""
+        """Returns the time in human-readable time delta format."""
         date_time = datetime.datetime.strptime(
             time_string,
             "%Y-%m-%dT%H:%M:%S.%fZ"
@@ -334,7 +334,7 @@ class WatchChannel(ABC):
         return date_time.strftime(output_format)
 
     def _remove_user(self, user_id: int) -> None:
-        """Removes user from the WatchChannel"""
+        """Removes a user from a watch channel."""
         self.watched_users.pop(user_id, None)
         self.message_queue.pop(user_id, None)
         self.consumption_queue.pop(user_id, None)
