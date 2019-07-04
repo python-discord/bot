@@ -47,7 +47,7 @@ class BigBrother(WatchChannel):
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
     async def watch_command(self, ctx: Context, user: Union[User, proxy_user], *, reason: str) -> None:
         """
-        Relay messages sent by the given `user` to the `#big-brother-logs` channel.
+        Relay messages sent by the given `user` to the `#big-brother` channel.
 
         A `reason` for adding the user to BigBrother is required and will displayed
         in the header when relaying messages of this user to the watchchannel.

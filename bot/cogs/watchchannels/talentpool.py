@@ -40,7 +40,7 @@ class TalentPool(WatchChannel):
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
     async def watched_command(self, ctx: Context, update_cache: bool = True) -> None:
         """
-        Shows the users that are currently being monitored in BigBrother.
+        Shows the users that are currently being monitored in TalentPool.
 
         The optional kwarg `update_cache` can be used to update the user
         cache using the API before listing the users.
@@ -51,9 +51,9 @@ class TalentPool(WatchChannel):
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
     async def watch_command(self, ctx: Context, user: Union[Member, User, proxy_user], *, reason: str) -> None:
         """
-        Relay messages sent by the given `user` to the `#big-brother-logs` channel.
+        Relay messages sent by the given `user` to the `#talent-pool` channel.
 
-        A `reason` for adding the user to BigBrother is required and will displayed
+        A `reason` for adding the user to TalentPool is required and will displayed
         in the header when relaying messages of this user to the watchchannel.
         """
         if user.bot:
