@@ -6,7 +6,7 @@ import textwrap
 from abc import ABC, abstractmethod
 from collections import defaultdict, deque
 from dataclasses import dataclass
-from typing import Iterator, Optional
+from typing import Optional
 
 import aiohttp
 import discord
