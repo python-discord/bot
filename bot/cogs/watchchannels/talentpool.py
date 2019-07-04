@@ -17,7 +17,7 @@ STAFF_ROLES = Roles.owner, Roles.admin, Roles.moderator, Roles.helpers    # <- I
 
 
 class TalentPool(WatchChannel):
-    """Relays messages of helper candidates to the talent-pool channel to observe them."""
+    """Relays messages of helper candidates to a watch channel to observe them."""
 
     def __init__(self, bot) -> None:
         super().__init__(
