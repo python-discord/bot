@@ -32,7 +32,7 @@ class TalentPool(WatchChannel):
     @group(name='talentpool', aliases=('tp', 'talent', 'nomination', 'n'), invoke_without_command=True)
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
     async def nomination_group(self, ctx: Context) -> None:
-        """Highlights the activity of helper nominees by relaying their messages to TalentPool."""
+        """Highlights the activity of helper nominees by relaying their messages to the talent pool channel."""
 
         await ctx.invoke(self.bot.get_command("help"), "talentpool")
 
@@ -40,7 +40,7 @@ class TalentPool(WatchChannel):
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
     async def watched_command(self, ctx: Context, update_cache: bool = True) -> None:
         """
-        Shows the users that are currently being monitored in TalentPool.
+        Shows the users that are currently being monitored in the talent pool.
 
         The optional kwarg `update_cache` can be used to update the user
         cache using the API before listing the users.
@@ -53,7 +53,7 @@ class TalentPool(WatchChannel):
         """
         Relay messages sent by the given `user` to the `#talent-pool` channel.
 
-        A `reason` for adding the user to TalentPool is required and will displayed
+        A `reason` for adding the user to the talent pool is required and will be displayed
         in the header when relaying messages of this user to the watchchannel.
         """
         if user.bot:
@@ -69,7 +69,7 @@ class TalentPool(WatchChannel):
             return
 
         if user.id in self.watched_users:
-            await ctx.send(":x: The specified user is already being watched in the TalentPool")
+            await ctx.send(":x: The specified user is already being watched in the talent pool")
             return
 
         # Manual request with `raise_for_status` as False because we want the actual response

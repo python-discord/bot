@@ -29,14 +29,14 @@ class BigBrother(WatchChannel):
     @group(name='bigbrother', aliases=('bb',), invoke_without_command=True)
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
     async def bigbrother_group(self, ctx: Context) -> None:
-        """Monitors users by relaying their messages to the BigBrother watch channel."""
+        """Monitors users by relaying their messages to the Big Brother watch channel."""
         await ctx.invoke(self.bot.get_command("help"), "bigbrother")
 
     @bigbrother_group.command(name='watched', aliases=('all', 'list'))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
     async def watched_command(self, ctx: Context, update_cache: bool = True) -> None:
         """
-        Shows the users that are currently being monitored in BigBrother.
+        Shows the users that are currently being monitored by Big Brother.
 
         The optional kwarg `update_cache` can be used to update the user
         cache using the API before listing the users.
@@ -49,7 +49,7 @@ class BigBrother(WatchChannel):
         """
         Relay messages sent by the given `user` to the `#big-brother` channel.
 
-        A `reason` for adding the user to BigBrother is required and will displayed
+        A `reason` for adding the user to Big Brother is required and will be displayed
         in the header when relaying messages of this user to the watchchannel.
         """
         if user.bot:
@@ -70,7 +70,7 @@ class BigBrother(WatchChannel):
 
         if response is not None:
             self.watched_users[user.id] = response
-            await ctx.send(f":white_check_mark: Messages sent by {user} will now be relayed to BigBrother.")
+            await ctx.send(f":white_check_mark: Messages sent by {user} will now be relayed to Big Brother.")
 
     @bigbrother_group.command(name='unwatch', aliases=('uw',))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
