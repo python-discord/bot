@@ -46,9 +46,6 @@ class MessageHistory:
     last_channel: Optional[int] = None
     message_count: int = 0
 
-    def __iter__(self) -> Iterator:
-        return iter((self.last_author, self.last_channel, self.message_count))
-
 
 class WatchChannel(ABC):
     """ABC with functionality for relaying users' messages to a certain channel."""
@@ -228,10 +225,13 @@ class WatchChannel(ABC):
 
     async def relay_message(self, msg: Message) -> None:
         """Relays the message to the relevant watch channel"""
-        last_author, last_channel, count = self.message_history
         limit = BigBrotherConfig.header_message_limit
 
-        if msg.author.id != last_author or msg.channel.id != last_channel or count >= limit:
+        if (
+            msg.author.id != self.message_history.last_author
+            or msg.channel.id != self.message_history.last_channel
+            or self.message_history.count >= limit
+        ):
             self.message_history = MessageHistory(last_author=msg.author.id, last_channel=msg.channel.id)
 
             await self.send_header(msg)
