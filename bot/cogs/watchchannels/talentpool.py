@@ -54,7 +54,7 @@ class TalentPool(WatchChannel):
         Relay messages sent by the given `user` to the `#talent-pool` channel.
 
         A `reason` for adding the user to the talent pool is required and will be displayed
-        in the header when relaying messages of this user to the watchchannel.
+        in the header when relaying messages of this user to the channel.
         """
         if user.bot:
             await ctx.send(f":x: I'm sorry {ctx.author}, I'm afraid I can't do that. I only watch humans.")
@@ -93,7 +93,7 @@ class TalentPool(WatchChannel):
                 resp.raise_for_status()
 
         self.watched_users[user.id] = response_data
-        await ctx.send(f":white_check_mark: Messages sent by {user} will now be relayed to TalentPool")
+        await ctx.send(f":white_check_mark: Messages sent by {user} will now be relayed to the talent pool channel")
 
     @nomination_group.command(name='history', aliases=('info', 'search'))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
