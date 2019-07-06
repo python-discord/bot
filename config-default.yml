@@ -146,6 +146,13 @@ filter:
         - 267624335836053506  # Python Discord
         - 440186186024222721  # Python Discord: ModLog Emojis
         - 273944235143593984  # STEM
+        - 348658686962696195  # RLBot
+        - 531221516914917387  # Pallets
+        - 249111029668249601  # Gentoo
+        - 327254708534116352  # Adafruit
+        - 544525886180032552  # kennethreitz.org
+        - 590806733924859943  # Discord Hack Week
+        - 423249981340778496  # Kivy
 
     domain_blacklist:
         - pornhub.com
