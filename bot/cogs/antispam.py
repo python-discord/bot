@@ -10,7 +10,7 @@ from bot.cogs.moderation import Moderation
 from bot.cogs.modlog import ModLog
 from bot.constants import (
     AntiSpam as AntiSpamConfig, Channels,
-    Colours, DEBUG_MODE, Event,
+    Colours, DEBUG_MODE, Event, Filter,
     Guild as GuildConfig, Icons,
     Roles, STAFF_ROLES,
 )
@@ -30,11 +30,6 @@ RULE_FUNCTION_MAPPING = {
     'newlines': rules.apply_newlines,
     'role_mentions': rules.apply_role_mentions
 }
-WHITELISTED_CHANNELS = (
-    Channels.admins, Channels.announcements, Channels.big_brother_logs,
-    Channels.devlog, Channels.devtest, Channels.helpers, Channels.message_log,
-    Channels.mod_alerts, Channels.modlog, Channels.staff_lounge
-)
 
 
 class AntiSpam:
@@ -55,7 +50,7 @@ class AntiSpam:
             not message.guild
             or message.guild.id != GuildConfig.id
             or message.author.bot
-            or (message.channel.id in WHITELISTED_CHANNELS and not DEBUG_MODE)
+            or (message.channel.id in Filter.channel_whitelist and not DEBUG_MODE)
             or (any(role.id in STAFF_ROLES for role in message.author.roles) and not DEBUG_MODE)
         ):
             return
