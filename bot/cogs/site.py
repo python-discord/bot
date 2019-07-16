@@ -1,4 +1,3 @@
-import gettext
 import logging
 
 from discord import Colour, Embed
