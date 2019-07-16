@@ -1,16 +1,20 @@
 import logging
+import random
 import textwrap
 
 from discord import CategoryChannel, Colour, Embed, Member, TextChannel, VoiceChannel
-from discord.ext.commands import Bot, Context, command
+from discord.ext.commands import (
+    BadArgument, Bot, CommandError, Context, MissingPermissions, command
+)
 
-from bot.constants import Emojis, Keys, Roles
+from bot.constants import (
+    Channels, Emojis, Keys, MODERATION_ROLES, NEGATIVE_REPLIES, STAFF_ROLES
+)
 from bot.decorators import with_role
+from bot.utils.checks import with_role_check
 from bot.utils.time import time_since
 
 log = logging.getLogger(__name__)
-
-MODERATION_ROLES = Roles.owner, Roles.admin, Roles.moderator
 
 
 class Information:
@@ -121,12 +125,25 @@ class Information:
 
         await ctx.send(embed=embed)
 
-    @with_role(*MODERATION_ROLES)
     @command(name="user", aliases=["user_info", "member", "member_info"])
     async def user_info(self, ctx: Context, user: Member = None, hidden: bool = False):
         """
         Returns info about a user.
         """
+
+        # Do a role check if this is being executed on
+        # someone other than the caller
+        if user and user != ctx.author:
+            if not with_role_check(ctx, *MODERATION_ROLES):
+                raise BadArgument("You do not have permission to use this command on users other than yourself.")
+
+        # Non-moderators may only do this in #bot-commands and can't see
+        # hidden infractions.
+        if not with_role_check(ctx, *STAFF_ROLES):
+            if not ctx.channel.id == Channels.bot:
+                raise MissingPermissions("You can't do that here!")
+            # Hide hidden infractions for users without a moderation role
+            hidden = False
 
         # Validates hidden input
         hidden = str(hidden)
@@ -191,6 +208,23 @@ class Information:
         embed.colour = user.top_role.colour if roles else Colour.blurple()
 
         await ctx.send(embed=embed)
+
+    @user_info.error
+    async def user_info_command_error(self, ctx: Context, error: CommandError):
+        embed = Embed(colour=Colour.red())
+
+        if isinstance(error, BadArgument):
+            embed.title = random.choice(NEGATIVE_REPLIES)
+            embed.description = str(error)
+            await ctx.send(embed=embed)
+
+        elif isinstance(error, MissingPermissions):
+            embed.title = random.choice(NEGATIVE_REPLIES)
+            embed.description = f"Sorry, but you may only use this command within <#{Channels.bot}>."
+            await ctx.send(embed=embed)
+
+        else:
+            log.exception(f"Unhandled error: {error}")
 
 
 def setup(bot):

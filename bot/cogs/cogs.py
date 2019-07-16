@@ -5,7 +5,7 @@ from discord import Colour, Embed
 from discord.ext.commands import Bot, Context, group
 
 from bot.constants import (
-    Emojis, Roles, URLs,
+    Emojis, MODERATION_ROLES, Roles, URLs
 )
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
@@ -37,14 +37,14 @@ class Cogs:
         self.cogs.update({v: k for k, v in self.cogs.items()})
 
     @group(name='cogs', aliases=('c',), invoke_without_command=True)
-    @with_role(Roles.moderator, Roles.admin, Roles.owner, Roles.devops)
+    @with_role(*MODERATION_ROLES, Roles.devops)
     async def cogs_group(self, ctx: Context):
         """Load, unload, reload, and list active cogs."""
 
         await ctx.invoke(self.bot.get_command("help"), "cogs")
 
     @cogs_group.command(name='load', aliases=('l',))
-    @with_role(Roles.moderator, Roles.admin, Roles.owner, Roles.devops)
+    @with_role(*MODERATION_ROLES, Roles.devops)
     async def load_command(self, ctx: Context, cog: str):
         """
         Load up an unloaded cog, given the module containing it
@@ -97,7 +97,7 @@ class Cogs:
         await ctx.send(embed=embed)
 
     @cogs_group.command(name='unload', aliases=('ul',))
-    @with_role(Roles.moderator, Roles.admin, Roles.owner, Roles.devops)
+    @with_role(*MODERATION_ROLES, Roles.devops)
     async def unload_command(self, ctx: Context, cog: str):
         """
         Unload an already-loaded cog, given the module containing it
@@ -149,7 +149,7 @@ class Cogs:
         await ctx.send(embed=embed)
 
     @cogs_group.command(name='reload', aliases=('r',))
-    @with_role(Roles.moderator, Roles.admin, Roles.owner, Roles.devops)
+    @with_role(*MODERATION_ROLES, Roles.devops)
     async def reload_command(self, ctx: Context, cog: str):
         """
         Reload an unloaded cog, given the module containing it
@@ -254,7 +254,7 @@ class Cogs:
         await ctx.send(embed=embed)
 
     @cogs_group.command(name='list', aliases=('all',))
-    @with_role(Roles.moderator, Roles.admin, Roles.owner, Roles.devops)
+    @with_role(*MODERATION_ROLES, Roles.devops)
     async def list_command(self, ctx: Context):
         """
         Get a list of all cogs, including their loaded status.

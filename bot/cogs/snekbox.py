@@ -10,7 +10,7 @@ from discord.ext.commands import (
 )
 
 from bot.cogs.rmq import RMQ
-from bot.constants import Channels, ERROR_REPLIES, NEGATIVE_REPLIES, Roles, URLs
+from bot.constants import Channels, ERROR_REPLIES, NEGATIVE_REPLIES, STAFF_ROLES, URLs
 from bot.decorators import InChannelCheckFailure, in_channel
 from bot.utils.messages import wait_for_deletion
 
@@ -29,8 +29,9 @@ exec(open(venv_file).read(), dict(__file__=venv_file))
 
 try:
 {CODE}
-except Exception as e:
-    print(e)
+except:
+    import traceback
+    print(traceback.format_exc())
 """
 
 ESCAPE_REGEX = re.compile("[`\u202E\u200B]{3,}")
@@ -52,8 +53,6 @@ RAW_CODE_REGEX = re.compile(
     re.DOTALL                               # "." also matches newlines
 )
 
-BYPASS_ROLES = (Roles.owner, Roles.admin, Roles.moderator, Roles.helpers)
-
 
 class Snekbox:
     """
@@ -70,7 +69,7 @@ class Snekbox:
 
     @command(name='eval', aliases=('e',))
     @guild_only()
-    @in_channel(Channels.bot, bypass_roles=BYPASS_ROLES)
+    @in_channel(Channels.bot, bypass_roles=STAFF_ROLES)
     async def eval_command(self, ctx: Context, *, code: str = None):
         """
         Run some code. get the result back. We've done our best to make this safe, but do let us know if you
@@ -103,10 +102,16 @@ class Snekbox:
             code = textwrap.dedent(RAW_CODE_REGEX.fullmatch(code).group("code"))
             log.trace(f"Eval message contains not or badly formatted code, stripping whitespace only:\n{code}")
 
-        code = textwrap.indent(code, "    ")
-        code = CODE_TEMPLATE.replace("{CODE}", code)
-
         try:
+            stripped_lines = [ln.strip() for ln in code.split('\n')]
+            if all(line.startswith('#') for line in stripped_lines):
+                return await ctx.send(
+                    f"{ctx.author.mention} Your eval job has completed.\n\n```[No output]```"
+                )
+
+            code = textwrap.indent(code, "    ")
+            code = CODE_TEMPLATE.replace("{CODE}", code)
+
             await self.rmq.send_json(
                 "input",
                 snekid=str(ctx.author.id), message=code
@@ -174,13 +179,10 @@ class Snekbox:
 
                 else:
                     await ctx.send(
-                        f"{ctx.author.mention} Your eval job has completed.\n\n```py\n[No output]\n```"
+                        f"{ctx.author.mention} Your eval job has completed.\n\n```[No output]```"
                     )
-
+        finally:
             del self.jobs[ctx.author.id]
-        except Exception:
-            del self.jobs[ctx.author.id]
-            raise
 
     @eval_command.error
     async def eval_command_error(self, ctx: Context, error: CommandError):

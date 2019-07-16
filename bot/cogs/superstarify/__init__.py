@@ -9,7 +9,7 @@ from discord.ext.commands import Bot, Context, command
 from bot.cogs.moderation import Moderation
 from bot.cogs.modlog import ModLog
 from bot.cogs.superstarify.stars import get_nick
-from bot.constants import Icons, POSITIVE_REPLIES, Roles
+from bot.constants import Icons, MODERATION_ROLES, POSITIVE_REPLIES
 from bot.converters import ExpirationDate
 from bot.decorators import with_role
 from bot.utils.moderation import post_infraction
@@ -150,7 +150,7 @@ class Superstarify:
             )
 
     @command(name='superstarify', aliases=('force_nick', 'star'))
-    @with_role(Roles.admin, Roles.owner, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     async def superstarify(
         self, ctx: Context, member: Member, expiration: ExpirationDate, reason: str = None
     ):
@@ -221,7 +221,7 @@ class Superstarify:
         await ctx.send(embed=embed)
 
     @command(name='unsuperstarify', aliases=('release_nick', 'unstar'))
-    @with_role(Roles.admin, Roles.owner, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     async def unsuperstarify(self, ctx: Context, member: Member):
         """
         This command will remove the entry from our database, allowing the user

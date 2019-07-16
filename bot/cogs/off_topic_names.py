@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from discord import Colour, Embed
 from discord.ext.commands import BadArgument, Bot, Context, Converter, group
 
-from bot.constants import Channels, Keys, Roles
+from bot.constants import Channels, Keys, MODERATION_ROLES
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
 
@@ -48,9 +48,11 @@ async def update_names(bot: Bot, headers: dict):
     """
 
     while True:
+        # Since we truncate the compute timedelta to seconds, we add one second to ensure
+        # we go past midnight in the `seconds_to_sleep` set below.
         today_at_midnight = datetime.utcnow().replace(microsecond=0, second=0, minute=0, hour=0)
         next_midnight = today_at_midnight + timedelta(days=1)
-        seconds_to_sleep = (next_midnight - datetime.utcnow()).seconds
+        seconds_to_sleep = (next_midnight - datetime.utcnow()).seconds + 1
         await asyncio.sleep(seconds_to_sleep)
 
         channel_0_name, channel_1_name, channel_2_name = await bot.api_client.get(
@@ -82,17 +84,17 @@ class OffTopicNames:
     async def on_ready(self):
         if self.updater_task is None:
             coro = update_names(self.bot, self.headers)
-            self.updater_task = await self.bot.loop.create_task(coro)
+            self.updater_task = self.bot.loop.create_task(coro)
 
     @group(name='otname', aliases=('otnames', 'otn'), invoke_without_command=True)
-    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     async def otname_group(self, ctx):
         """Add or list items from the off-topic channel name rotation."""
 
         await ctx.invoke(self.bot.get_command("help"), "otname")
 
     @otname_group.command(name='add', aliases=('a',))
-    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     async def add_command(self, ctx, name: OffTopicName):
         """Adds a new off-topic name to the rotation."""
 
@@ -104,7 +106,7 @@ class OffTopicNames:
         await ctx.send(":ok_hand:")
 
     @otname_group.command(name='delete', aliases=('remove', 'rm', 'del', 'd'))
-    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     async def delete_command(self, ctx, name: OffTopicName):
         """Removes a off-topic name from the rotation."""
 
@@ -116,7 +118,7 @@ class OffTopicNames:
         await ctx.send(":ok_hand:")
 
     @otname_group.command(name='list', aliases=('l',))
-    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     async def list_command(self, ctx):
         """
         Lists all currently known off-topic channel names in a paginator.

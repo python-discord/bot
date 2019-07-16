@@ -201,8 +201,14 @@ class Filter(metaclass=YAMLGetter):
     filter_zalgo: bool
     filter_invites: bool
     filter_domains: bool
+    watch_rich_embeds: bool
     watch_words: bool
     watch_tokens: bool
+
+    # Notifications are not expected for "watchlist" type filters
+    notify_user_zalgo: bool
+    notify_user_invites: bool
+    notify_user_domains: bool
 
     ping_everyone: bool
     guild_invite_whitelist: List[int]
@@ -310,6 +316,13 @@ class CleanMessages(metaclass=YAMLGetter):
     message_limit: int
 
 
+class Categories(metaclass=YAMLGetter):
+    section = "guild"
+    subsection = "categories"
+
+    python_help: int
+
+
 class Channels(metaclass=YAMLGetter):
     section = "guild"
     subsection = "channels"
@@ -319,6 +332,7 @@ class Channels(metaclass=YAMLGetter):
     big_brother_logs: int
     bot: int
     checkpoint_test: int
+    defcon: int
     devlog: int
     devtest: int
     help_0: int
@@ -336,6 +350,8 @@ class Channels(metaclass=YAMLGetter):
     off_topic_3: int
     python: int
     reddit: int
+    talent_pool: int
+    userlog: int
     verification: int
 
 
@@ -355,6 +371,7 @@ class Roles(metaclass=YAMLGetter):
     owner: int
     verified: int
     helpers: int
+    team_leader: int
 
 
 class Guild(metaclass=YAMLGetter):
@@ -369,9 +386,7 @@ class Keys(metaclass=YAMLGetter):
 
     deploy_bot: str
     deploy_site: str
-    omdb: str
     site_api: str
-    youtube: str
 
 
 class RabbitMQ(metaclass=YAMLGetter):
@@ -394,25 +409,19 @@ class URLs(metaclass=YAMLGetter):
     bot_avatar: str
     deploy: str
     gitlab_bot_repo: str
-    omdb: str
     status: str
 
     # Site endpoints
     site: str
     site_api: str
-    site_facts_api: str
     site_clean_api: str
     site_superstarify_api: str
-    site_idioms_api: str
     site_logs_api: str
     site_logs_view: str
-    site_names_api: str
-    site_quiz_api: str
     site_reminders_api: str
     site_reminders_user_api: str
     site_schema: str
     site_settings_api: str
-    site_special_api: str
     site_tags_api: str
     site_user_api: str
     site_user_complete_api: str
@@ -457,12 +466,32 @@ class BigBrother(metaclass=YAMLGetter):
     header_message_limit: int
 
 
+class Free(metaclass=YAMLGetter):
+    section = 'free'
+
+    activity_timeout: int
+    cooldown_rate: int
+    cooldown_per: float
+
+
+class RedirectOutput(metaclass=YAMLGetter):
+    section = 'redirect_output'
+
+    delete_invocation: bool
+    delete_delay: int
+
+
 # Debug mode
 DEBUG_MODE = True if 'local' in os.environ.get("SITE_URL", "local") else False
 
 # Paths
 BOT_DIR = os.path.dirname(__file__)
 PROJECT_ROOT = os.path.abspath(os.path.join(BOT_DIR, os.pardir))
+
+# Default role combinations
+MODERATION_ROLES = Roles.moderator, Roles.admin, Roles.owner
+STAFF_ROLES = Roles.helpers, Roles.moderator, Roles.admin, Roles.owner
+
 
 # Bot replies
 NEGATIVE_REPLIES = [
@@ -480,7 +509,9 @@ NEGATIVE_REPLIES = [
     "Not in a million years.",
     "Fat chance.",
     "Certainly not.",
-    "NEGATORY."
+    "NEGATORY.",
+    "Nuh-uh.",
+    "Not in my house!",
 ]
 
 POSITIVE_REPLIES = [
@@ -500,7 +531,7 @@ POSITIVE_REPLIES = [
     "ROGER THAT",
     "Of course!",
     "Aye aye, cap'n!",
-    "I'll allow it."
+    "I'll allow it.",
 ]
 
 ERROR_REPLIES = [
@@ -512,7 +543,8 @@ ERROR_REPLIES = [
     "You blew it.",
     "You're bad at computers.",
     "Are you trying to kill me?",
-    "Noooooo!!"
+    "Noooooo!!",
+    "I can't believe you've done this",
 ]
 
 

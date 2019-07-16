@@ -9,17 +9,15 @@ from dateutil.relativedelta import relativedelta
 from discord import Colour, Embed
 from discord.ext.commands import Bot, Context, group
 
-from bot.constants import (
-    Channels, Icons, NEGATIVE_REPLIES, POSITIVE_REPLIES, Roles
-)
+from bot.constants import Channels, Icons, NEGATIVE_REPLIES, POSITIVE_REPLIES, STAFF_ROLES
 from bot.converters import ExpirationDate
 from bot.pagination import LinePaginator
+from bot.utils.checks import without_role_check
 from bot.utils.scheduling import Scheduler
 from bot.utils.time import humanize_delta, wait_until
 
 log = logging.getLogger(__name__)
 
-STAFF_ROLES = (Roles.owner, Roles.admin, Roles.moderator, Roles.helpers)
 WHITELISTED_CHANNELS = (Channels.bot,)
 MAXIMUM_REMINDERS = 5
 
@@ -157,8 +155,8 @@ class Reminders(Scheduler):
 
         embed = Embed()
 
-        # Make sure the reminder should actually be made.
-        if ctx.author.top_role.id not in STAFF_ROLES:
+        # If the user is not staff, we need to verify whether or not to make a reminder at all.
+        if without_role_check(ctx, *STAFF_ROLES):
 
             # If they don't have permission to set a reminder in this channel
             if ctx.channel.id not in WHITELISTED_CHANNELS:

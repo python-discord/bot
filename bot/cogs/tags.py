@@ -4,7 +4,7 @@ import time
 from discord import Colour, Embed
 from discord.ext.commands import Bot, Context, group
 
-from bot.constants import Channels, Cooldowns, Keys, Roles
+from bot.constants import Channels, Cooldowns, Keys, MODERATION_ROLES, Roles
 from bot.converters import TagContentConverter, TagNameConverter
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
@@ -92,7 +92,7 @@ class Tags:
                     colour=Colour.red()
                 ))
             else:
-                embed = Embed(title="**Current tags**")
+                embed: Embed = Embed(title="**Current tags**")
                 await LinePaginator.paginate(
                     sorted(f"**»**   {tag['title']}" for tag in tags),
                     ctx,
@@ -103,7 +103,7 @@ class Tags:
                 )
 
     @tags_group.command(name='set', aliases=('add', 'edit', 's'))
-    @with_role(Roles.admin, Roles.owner, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     async def set_command(
         self,
         ctx: Context,

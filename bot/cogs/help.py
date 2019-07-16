@@ -6,13 +6,17 @@ from contextlib import suppress
 
 from discord import Colour, Embed, HTTPException
 from discord.ext import commands
+from discord.ext.commands import CheckFailure
 from fuzzywuzzy import fuzz, process
 
 from bot import constants
+from bot.constants import Channels, STAFF_ROLES
+from bot.decorators import redirect_output
 from bot.pagination import (
     DELETE_EMOJI, FIRST_EMOJI, LAST_EMOJI,
     LEFT_EMOJI, LinePaginator, RIGHT_EMOJI,
 )
+
 
 REACTIONS = {
     FIRST_EMOJI: 'first',
@@ -427,7 +431,15 @@ class HelpSession:
 
                     # see if the user can run the command
                     strikeout = ''
-                    can_run = await command.can_run(self._ctx)
+
+                    # Patch to make the !help command work outside of #bot-commands again
+                    # This probably needs a proper rewrite, but this will make it work in
+                    # the mean time.
+                    try:
+                        can_run = await command.can_run(self._ctx)
+                    except CheckFailure:
+                        can_run = False
+
                     if not can_run:
                         # skip if we don't show commands they can't run
                         if self._only_can_run:
@@ -642,6 +654,7 @@ class Help:
     Custom Embed Pagination Help feature
     """
     @commands.command('help')
+    @redirect_output(destination_channel=Channels.bot, bypass_roles=STAFF_ROLES)
     async def new_help(self, ctx, *commands):
         """
         Shows Command Help.
