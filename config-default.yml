@@ -135,6 +135,10 @@ guild:
         rockstars:         &ROCKSTARS_ROLE  458226413825294336
         team_leader:                        501324292341104650
 
+    webhooks:
+        talent_pool:                        569145364800602132
+        big_brother:                        569133704568373283
+
 
 filter:
 
@@ -165,6 +169,8 @@ filter:
         - 249111029668249601  # Gentoo
         - 327254708534116352  # Adafruit
         - 544525886180032552  # kennethreitz.org
+        - 590806733924859943  # Discord Hack Week
+        - 423249981340778496  # Kivy
 
     domain_blacklist:
         - pornhub.com
@@ -224,13 +230,6 @@ keys:
     site_api:    !ENV "BOT_API_KEY"
 
 
-rabbitmq:
-    host:          "pdrmq"
-    password: !ENV ["RABBITMQ_DEFAULT_PASS", "guest"]
-    port:          5672
-    username: !ENV ["RABBITMQ_DEFAULT_USER", "guest"]
-
-
 urls:
     # PyDis site vars
     site:        &DOMAIN       "pythondiscord.com"
@@ -257,6 +256,9 @@ urls:
     site_user_api:                      !JOIN [*SCHEMA, *API, "/bot/users"]
     site_user_complete_api:             !JOIN [*SCHEMA, *API, "/bot/users/complete"]
     paste_service:                      !JOIN [*SCHEMA, *PASTE, "/{key}"]
+
+    # Snekbox
+    snekbox_eval_api: "http://localhost:8060/eval"
 
     # Env vars
     deploy: !ENV "DEPLOY_URL"

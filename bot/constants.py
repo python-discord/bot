@@ -355,6 +355,14 @@ class Channels(metaclass=YAMLGetter):
     verification: int
 
 
+class Webhooks(metaclass=YAMLGetter):
+    section = "guild"
+    subsection = "webhooks"
+
+    talent_pool: int
+    big_brother: int
+
+
 class Roles(metaclass=YAMLGetter):
     section = "guild"
     subsection = "roles"
@@ -389,17 +397,11 @@ class Keys(metaclass=YAMLGetter):
     site_api: str
 
 
-class RabbitMQ(metaclass=YAMLGetter):
-    section = "rabbitmq"
-
-    host: str
-    password: str
-    port: int
-    username: str
-
-
 class URLs(metaclass=YAMLGetter):
     section = "urls"
+
+    # Snekbox endpoints
+    snekbox_eval_api: str
 
     # Discord API endpoints
     discord_api: str
