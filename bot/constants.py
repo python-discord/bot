@@ -336,7 +336,16 @@ class Channels(metaclass=YAMLGetter):
     off_topic_3: int
     python: int
     reddit: int
+    talent_pool: int
     verification: int
+
+
+class Webhooks(metaclass=YAMLGetter):
+    section = "guild"
+    subsection = "webhooks"
+
+    talent_pool: int
+    big_brother: int
 
 
 class Roles(metaclass=YAMLGetter):
