@@ -17,6 +17,10 @@ PAGINATION_EMOJI = [FIRST_EMOJI, LEFT_EMOJI, RIGHT_EMOJI, LAST_EMOJI, DELETE_EMO
 log = logging.getLogger(__name__)
 
 
+class EmptyPaginatorEmbed(Exception):
+    pass
+
+
 class LinePaginator(Paginator):
     """
     A class that aids in paginating code blocks for Discord messages.
@@ -96,7 +100,7 @@ class LinePaginator(Paginator):
     async def paginate(cls, lines: Iterable[str], ctx: Context, embed: Embed,
                        prefix: str = "", suffix: str = "", max_lines: Optional[int] = None, max_size: int = 500,
                        empty: bool = True, restrict_to_user: User = None, timeout: int = 300,
-                       footer_text: str = None):
+                       footer_text: str = None, url: str = None, exception_on_empty_embed: bool = False):
         """
         Use a paginator and set of reactions to provide pagination over a set of lines. The reactions are used to
         switch page, or to finish with pagination.
@@ -118,6 +122,8 @@ class LinePaginator(Paginator):
         :param max_size: The maximum number of characters on each page
         :param empty: Whether to place an empty line between each given line
         :param restrict_to_user: A user to lock pagination operations to for this message, if supplied
+        :param exception_on_empty_embed: Should there be an exception if the embed is empty?
+        :param url: the url to use for the embed headline
         :param timeout: The amount of time in seconds to disable pagination of no reaction is added
         :param footer_text: Text to prefix the page number in the footer with
         """
@@ -151,6 +157,14 @@ class LinePaginator(Paginator):
         paginator = cls(prefix=prefix, suffix=suffix, max_size=max_size, max_lines=max_lines)
         current_page = 0
 
+        if not lines:
+            if exception_on_empty_embed:
+                log.exception(f"Pagination asked for empty lines iterable")
+                raise EmptyPaginatorEmbed("No lines to paginate")
+
+            log.debug("No lines to add to paginator, adding '(nothing to display)' message")
+            lines.append("(nothing to display)")
+
         for line in lines:
             try:
                 paginator.add_line(line, empty=empty)
@@ -169,6 +183,10 @@ class LinePaginator(Paginator):
                 embed.set_footer(text=footer_text)
                 log.trace(f"Setting embed footer to '{footer_text}'")
 
+            if url:
+                embed.url = url
+                log.trace(f"Setting embed url to '{url}'")
+
             log.debug("There's less than two pages, so we won't paginate - sending single page on its own")
             return await ctx.send(embed=embed)
         else:
@@ -176,8 +194,11 @@ class LinePaginator(Paginator):
                 embed.set_footer(text=f"{footer_text} (Page {current_page + 1}/{len(paginator.pages)})")
             else:
                 embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
-
             log.trace(f"Setting embed footer to '{embed.footer.text}'")
+
+            if url:
+                embed.url = url
+                log.trace(f"Setting embed url to '{url}'")
 
             log.debug("Sending first page to channel...")
             message = await ctx.send(embed=embed)
@@ -315,7 +336,8 @@ class ImagePaginator(Paginator):
 
     @classmethod
     async def paginate(cls, pages: List[Tuple[str, str]], ctx: Context, embed: Embed,
-                       prefix: str = "", suffix: str = "", timeout: int = 300):
+                       prefix: str = "", suffix: str = "", timeout: int = 300,
+                       exception_on_empty_embed: bool = False):
         """
         Use a paginator and set of reactions to provide
         pagination over a set of title/image pairs.The reactions are
@@ -360,6 +382,14 @@ class ImagePaginator(Paginator):
 
         paginator = cls(prefix=prefix, suffix=suffix)
         current_page = 0
+
+        if not pages:
+            if exception_on_empty_embed:
+                log.exception(f"Pagination asked for empty image list")
+                raise EmptyPaginatorEmbed("No images to paginate")
+
+            log.debug("No images to add to paginator, adding '(no images to display)' message")
+            pages.append(("(no images to display)", ""))
 
         for text, image_url in pages:
             paginator.add_line(text)

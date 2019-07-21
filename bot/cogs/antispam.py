@@ -1,21 +1,19 @@
-import asyncio
 import logging
-import textwrap
 from datetime import datetime, timedelta
 from typing import List
 
-from dateutil.relativedelta import relativedelta
 from discord import Colour, Member, Message, Object, TextChannel
 from discord.ext.commands import Bot
 
 from bot import rules
+from bot.cogs.moderation import Moderation
 from bot.cogs.modlog import ModLog
 from bot.constants import (
     AntiSpam as AntiSpamConfig, Channels,
-    Colours, DEBUG_MODE, Event,
-    Guild as GuildConfig, Icons, Roles,
+    Colours, DEBUG_MODE, Event, Filter,
+    Guild as GuildConfig, Icons,
+    Roles, STAFF_ROLES,
 )
-from bot.utils.time import humanize_delta
 
 
 log = logging.getLogger(__name__)
@@ -32,18 +30,12 @@ RULE_FUNCTION_MAPPING = {
     'newlines': rules.apply_newlines,
     'role_mentions': rules.apply_role_mentions
 }
-WHITELISTED_CHANNELS = (
-    Channels.admins, Channels.announcements, Channels.big_brother_logs,
-    Channels.devlog, Channels.devtest, Channels.helpers, Channels.message_log,
-    Channels.mod_alerts, Channels.modlog, Channels.staff_lounge
-)
-WHITELISTED_ROLES = (Roles.owner, Roles.admin, Roles.moderator, Roles.helpers)
 
 
 class AntiSpam:
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.muted_role = None
+        self._muted_role = Object(Roles.muted)
 
     @property
     def mod_log(self) -> ModLog:
@@ -58,8 +50,8 @@ class AntiSpam:
             not message.guild
             or message.guild.id != GuildConfig.id
             or message.author.bot
-            or (message.channel.id in WHITELISTED_CHANNELS and not DEBUG_MODE)
-            or (message.author.top_role.id in WHITELISTED_ROLES and not DEBUG_MODE)
+            or (message.channel.id in Filter.channel_whitelist and not DEBUG_MODE)
+            or (any(role.id in STAFF_ROLES for role in message.author.roles) and not DEBUG_MODE)
         ):
             return
 
@@ -99,18 +91,16 @@ class AntiSpam:
                     # Fire it off as a background task to ensure
                     # that the sleep doesn't block further tasks
                     self.bot.loop.create_task(
-                        self.punish(message, member, full_reason, relevant_messages)
+                        self.punish(message, member, full_reason, relevant_messages, rule_name)
                     )
 
                 await self.maybe_delete_messages(message.channel, relevant_messages)
                 break
 
-    async def punish(self, msg: Message, member: Member, reason: str, messages: List[Message]):
+    async def punish(self, msg: Message, member: Member, reason: str, messages: List[Message], rule_name: str):
         # Sanity check to ensure we're not lagging behind
         if self.muted_role not in member.roles:
             remove_role_after = AntiSpamConfig.punishment['remove_after']
-            duration_delta = relativedelta(seconds=remove_role_after)
-            human_duration = humanize_delta(duration_delta)
 
             mod_alert_message = (
                 f"**Triggered by:** {member.display_name}#{member.discriminator} (`{member.id}`)\n"
@@ -118,8 +108,8 @@ class AntiSpam:
                 f"**Reason:** {reason}\n"
             )
 
-            # For multiple messages, use the logs API
-            if len(messages) > 1:
+            # For multiple messages or those with excessive newlines, use the logs API
+            if len(messages) > 1 or rule_name == 'newlines':
                 url = await self.mod_log.upload_log(messages, msg.guild.me.id)
                 mod_alert_message += f"A complete log of the offending messages can be found [here]({url})"
             else:
@@ -132,7 +122,8 @@ class AntiSpam:
 
                 mod_alert_message += f"{content}"
 
-            await self.mod_log.send_log_message(
+            # Return the mod log message Context that we can use to post the infraction
+            mod_log_ctx = await self.mod_log.send_log_message(
                 icon_url=Icons.filtering,
                 colour=Colour(Colours.soft_red),
                 title=f"Spam detected!",
@@ -142,27 +133,8 @@ class AntiSpam:
                 ping_everyone=AntiSpamConfig.ping_everyone
             )
 
-            await member.add_roles(self.muted_role, reason=reason)
-            description = textwrap.dedent(f"""
-                **Channel**: {msg.channel.mention}
-                **User**: {msg.author.mention} (`{msg.author.id}`)
-                **Reason**: {reason}
-                Role will be removed after {human_duration}.
-            """)
-
-            await self.mod_log.send_log_message(
-                icon_url=Icons.user_mute, colour=Colour(Colours.soft_red),
-                title="User muted", text=description
-            )
-
-            await asyncio.sleep(remove_role_after)
-            await member.remove_roles(self.muted_role, reason="AntiSpam mute expired")
-
-            await self.mod_log.send_log_message(
-                icon_url=Icons.user_mute, colour=Colour(Colours.soft_green),
-                title="User unmuted",
-                text=f"Was muted by `AntiSpam` cog for {human_duration}."
-            )
+            # Run a tempmute
+            await mod_log_ctx.invoke(Moderation.tempmute, member, f"{remove_role_after}S", reason=reason)
 
     async def maybe_delete_messages(self, channel: TextChannel, messages: List[Message]):
         # Is deletion of offending messages actually enabled?

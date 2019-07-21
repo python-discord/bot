@@ -9,7 +9,7 @@ from discord.ext.commands import Bot, Context, group
 from bot.cogs.modlog import ModLog
 from bot.constants import (
     Channels, CleanMessages, Colours, Event,
-    Icons, NEGATIVE_REPLIES, Roles
+    Icons, MODERATION_ROLES, NEGATIVE_REPLIES
 )
 from bot.decorators import with_role
 
@@ -190,7 +190,7 @@ class Clean:
         )
 
     @group(invoke_without_command=True, name="clean", hidden=True)
-    @with_role(Roles.moderator, Roles.admin, Roles.owner)
+    @with_role(*MODERATION_ROLES)
     async def clean_group(self, ctx: Context):
         """
         Commands for cleaning messages in channels
@@ -199,7 +199,7 @@ class Clean:
         await ctx.invoke(self.bot.get_command("help"), "clean")
 
     @clean_group.command(name="user", aliases=["users"])
-    @with_role(Roles.moderator, Roles.admin, Roles.owner)
+    @with_role(*MODERATION_ROLES)
     async def clean_user(self, ctx: Context, user: User, amount: int = 10):
         """
         Delete messages posted by the provided user,
@@ -209,7 +209,7 @@ class Clean:
         await self._clean_messages(amount, ctx, user=user)
 
     @clean_group.command(name="all", aliases=["everything"])
-    @with_role(Roles.moderator, Roles.admin, Roles.owner)
+    @with_role(*MODERATION_ROLES)
     async def clean_all(self, ctx: Context, amount: int = 10):
         """
         Delete all messages, regardless of poster,
@@ -219,7 +219,7 @@ class Clean:
         await self._clean_messages(amount, ctx)
 
     @clean_group.command(name="bots", aliases=["bot"])
-    @with_role(Roles.moderator, Roles.admin, Roles.owner)
+    @with_role(*MODERATION_ROLES)
     async def clean_bots(self, ctx: Context, amount: int = 10):
         """
         Delete all messages posted by a bot,
@@ -229,7 +229,7 @@ class Clean:
         await self._clean_messages(amount, ctx, bots_only=True)
 
     @clean_group.command(name="regex", aliases=["word", "expression"])
-    @with_role(Roles.moderator, Roles.admin, Roles.owner)
+    @with_role(*MODERATION_ROLES)
     async def clean_regex(self, ctx: Context, regex, amount: int = 10):
         """
         Delete all messages that match a certain regex,
@@ -239,7 +239,7 @@ class Clean:
         await self._clean_messages(amount, ctx, regex=regex)
 
     @clean_group.command(name="stop", aliases=["cancel", "abort"])
-    @with_role(Roles.moderator, Roles.admin, Roles.owner)
+    @with_role(*MODERATION_ROLES)
     async def clean_cancel(self, ctx: Context):
         """
         If there is an ongoing cleaning process,

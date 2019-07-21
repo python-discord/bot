@@ -1,10 +1,11 @@
-import gettext
 import logging
 
 from discord import Colour, Embed
 from discord.ext.commands import Bot, Context, group
 
-from bot.constants import URLs
+from bot.constants import Channels, STAFF_ROLES, URLs
+from bot.decorators import redirect_output
+from bot.pagination import LinePaginator
 
 log = logging.getLogger(__name__)
 
@@ -93,46 +94,45 @@ class Site:
 
         await ctx.send(embed=embed)
 
-    @site_group.command(name="rules")
-    async def site_rules(self, ctx: Context, *selection: int):
-        """Info about the server's rules."""
+    @site_group.command(aliases=['r', 'rule'], name='rules')
+    @redirect_output(destination_channel=Channels.bot, bypass_roles=STAFF_ROLES)
+    async def site_rules(self, ctx: Context, *rules: int):
+        """
+        Provides a link to the `rules` endpoint of the website, or displays
+        specific rules, if they are requested.
 
-        url = f"{URLs.site_schema}{URLs.site}/about/rules"
-        full_rules = await self.bot.api_client.get(
-            'rules', params={'link_format': 'md'}
-        )
-        if selection:
-            invalid_indices = tuple(
-                pick
-                for pick in selection
-                if pick < 0 or pick >= len(full_rules)
+        **`ctx`:** The Discord message context
+        **`rules`:** The rules a user wants to get.
+        """
+        rules_embed = Embed(title='Rules', color=Colour.blurple())
+        rules_embed.url = f"{URLs.site_schema}{URLs.site}/about/rules"
+
+        if not rules:
+            # Rules were not submitted. Return the default description.
+            rules_embed.description = (
+                "The rules and guidelines that apply to this community can be found on"
+                " our [rules page](https://pythondiscord.com/about/rules). We expect"
+                " all members of the community to have read and understood these."
             )
 
-            if invalid_indices:
-                return await ctx.send(
-                    embed=Embed(
-                        title='Invalid rule indices',
-                        description=', '.join(map(str, invalid_indices)),
-                        colour=Colour.red()
-                    )
-                )
-            title = (
-                gettext.ngettext("Rule", 'Rules', len(selection))
-                + " " + ", ".join(map(str, selection))
-            )
-        else:
-            title = "Full rules"
-            selection = range(len(full_rules))
+            await ctx.send(embed=rules_embed)
+            return
 
-        embed = Embed(title=title)
-        embed.set_footer(text=url)
-        embed.colour = Colour.blurple()
-        embed.description = '\n'.join(
-            f"**{pick}**: {full_rules[pick]}"
-            for pick in selection
+        full_rules = await self.bot.api_client.get('rules', params={'link_format': 'md'})
+        invalid_indices = tuple(
+            pick
+            for pick in rules
+            if pick < 0 or pick >= len(full_rules)
         )
 
-        await ctx.send(embed=embed)
+        if invalid_indices:
+            indices = ', '.join(map(str, invalid_indices))
+            await ctx.send(f":x: Invalid rule indices {indices}")
+            return
+
+        final_rules = tuple(f"**{pick}.** {full_rules[pick]}" for pick in rules)
+
+        await LinePaginator.paginate(final_rules, ctx, rules_embed, max_lines=3)
 
 
 def setup(bot):

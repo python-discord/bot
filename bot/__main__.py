@@ -31,10 +31,10 @@ bot.http_session = ClientSession(
 bot.api_client = APIClient(loop=asyncio.get_event_loop())
 
 # Internal/debug
-bot.load_extension("bot.cogs.logging")
-bot.load_extension("bot.cogs.security")
 bot.load_extension("bot.cogs.filtering")
+bot.load_extension("bot.cogs.logging")
 bot.load_extension("bot.cogs.modlog")
+bot.load_extension("bot.cogs.security")
 
 # Commands, etc
 bot.load_extension("bot.cogs.antispam")
@@ -50,20 +50,20 @@ if not DEBUG_MODE:
 
 # Feature cogs
 bot.load_extension("bot.cogs.alias")
-bot.load_extension("bot.cogs.deployment")
 bot.load_extension("bot.cogs.defcon")
 bot.load_extension("bot.cogs.deployment")
 bot.load_extension("bot.cogs.eval")
+bot.load_extension("bot.cogs.free")
 bot.load_extension("bot.cogs.fun")
-bot.load_extension("bot.cogs.superstarify")
 bot.load_extension("bot.cogs.information")
+bot.load_extension("bot.cogs.jams")
 bot.load_extension("bot.cogs.moderation")
 bot.load_extension("bot.cogs.off_topic_names")
 bot.load_extension("bot.cogs.reddit")
 bot.load_extension("bot.cogs.reminders")
 bot.load_extension("bot.cogs.site")
-bot.load_extension("bot.cogs.snakes")
 bot.load_extension("bot.cogs.snekbox")
+bot.load_extension("bot.cogs.superstarify")
 bot.load_extension("bot.cogs.sync")
 bot.load_extension("bot.cogs.tags")
 bot.load_extension("bot.cogs.token_remover")

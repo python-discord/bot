@@ -7,7 +7,8 @@ from discord import Embed, Message, RawMessageUpdateEvent
 from discord.ext.commands import Bot, Context, command, group
 
 from bot.constants import (
-    Channels, Guild, Roles, URLs
+    Channels, Guild, MODERATION_ROLES,
+    Roles, URLs,
 )
 from bot.decorators import with_role
 from bot.utils.messages import wait_for_deletion
@@ -75,7 +76,7 @@ class Bot:
         await ctx.send(embed=embed)
 
     @command(name='echo', aliases=('print',))
-    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     async def echo_command(self, ctx: Context, *, text: str):
         """
         Send the input verbatim to the current channel
@@ -84,7 +85,7 @@ class Bot:
         await ctx.send(text)
 
     @command(name='embed')
-    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     async def embed_command(self, ctx: Context, *, text: str):
         """
         Send the input within an embed to the current channel
@@ -366,7 +367,7 @@ class Bot:
             return
 
         # Retrieve channel and message objects for use later
-        channel = self.bot.get_channel(payload.data.get("channel_id"))
+        channel = self.bot.get_channel(int(payload.data.get("channel_id")))
         user_message = await channel.get_message(payload.message_id)
 
         #  Checks to see if the user has corrected their codeblock.  If it's fixed, has_fixed_codeblock will be None
@@ -377,6 +378,7 @@ class Bot:
             bot_message = await channel.get_message(self.codeblock_message_ids[payload.message_id])
             await bot_message.delete()
             del self.codeblock_message_ids[payload.message_id]
+            log.trace("User's incorrect code block has been fixed.  Removing bot formatting message.")
 
 
 def setup(bot):

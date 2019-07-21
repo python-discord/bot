@@ -5,13 +5,10 @@ from discord import Colour, Embed, Member
 from discord.ext.commands import Bot, Context, group
 
 from bot.cogs.modlog import ModLog
-from bot.constants import Channels, Emojis, Icons, Keys, Roles
+from bot.constants import Channels, Colours, Emojis, Event, Icons, Keys, Roles
 from bot.decorators import with_role
 
 log = logging.getLogger(__name__)
-
-COLOUR_RED = Colour(0xcd6d6d)
-COLOUR_GREEN = Colour(0x68c290)
 
 REJECTION_MESSAGE = """
 Hi, {user} - Thanks for your interest in our server!
@@ -23,6 +20,8 @@ Even so, thanks for joining! We're very excited at the possibility of having you
 will be resolved soon. In the meantime, please feel free to peruse the resources on our site at
 <https://pythondiscord.com/>, and have a nice day!
 """
+
+BASE_CHANNEL_TOPIC = "Python Discord Defense Mechanism"
 
 
 class Defcon:
@@ -61,6 +60,8 @@ class Defcon:
                 self.days = timedelta(days=0)
                 log.warning(f"DEFCON disabled")
 
+            await self.update_channel_topic()
+
     async def on_member_join(self, member: Member):
         if self.enabled and self.days.days > 0:
             now = datetime.utcnow()
@@ -88,7 +89,7 @@ class Defcon:
                     message = f"{message}\n\nUnable to send rejection message via DM; they probably have DMs disabled."
 
                 await self.mod_log.send_log_message(
-                    Icons.defcon_denied, COLOUR_RED, "Entry denied",
+                    Icons.defcon_denied, Colours.soft_red, "Entry denied",
                     message, member.avatar_url_as(static_format="png")
                 )
 
@@ -134,7 +135,7 @@ class Defcon:
             )
 
             await self.mod_log.send_log_message(
-                Icons.defcon_enabled, COLOUR_GREEN, "DEFCON enabled",
+                Icons.defcon_enabled, Colours.soft_green, "DEFCON enabled",
                 f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)\n"
                 f"**Days:** {self.days.days}\n\n"
                 "**There was a problem updating the site** - This setting may be reverted when the bot is "
@@ -146,10 +147,12 @@ class Defcon:
             await ctx.send(f"{Emojis.defcon_enabled} DEFCON enabled.")
 
             await self.mod_log.send_log_message(
-                Icons.defcon_enabled, COLOUR_GREEN, "DEFCON enabled",
+                Icons.defcon_enabled, Colours.soft_green, "DEFCON enabled",
                 f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)\n"
                 f"**Days:** {self.days.days}\n\n"
             )
+
+        await self.update_channel_topic()
 
     @defcon_group.command(name='disable', aliases=('off', 'd'))
     @with_role(Roles.admin, Roles.owner)
@@ -181,7 +184,7 @@ class Defcon:
             )
 
             await self.mod_log.send_log_message(
-                Icons.defcon_disabled, COLOUR_RED, "DEFCON disabled",
+                Icons.defcon_disabled, Colours.soft_red, "DEFCON disabled",
                 f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)\n"
                 "**There was a problem updating the site** - This setting may be reverted when the bot is "
                 "restarted.\n\n"
@@ -191,9 +194,11 @@ class Defcon:
             await ctx.send(f"{Emojis.defcon_disabled} DEFCON disabled.")
 
             await self.mod_log.send_log_message(
-                Icons.defcon_disabled, COLOUR_RED, "DEFCON disabled",
+                Icons.defcon_disabled, Colours.soft_red, "DEFCON disabled",
                 f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)"
             )
+
+        await self.update_channel_topic()
 
     @defcon_group.command(name='status', aliases=('s',))
     @with_role(Roles.admin, Roles.owner)
@@ -258,6 +263,23 @@ class Defcon:
                 f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)\n"
                 f"**Days:** {self.days.days}"
             )
+
+        await self.update_channel_topic()
+
+    async def update_channel_topic(self):
+        """
+        Update the #defcon channel topic with the current DEFCON status
+        """
+
+        if self.enabled:
+            day_str = "days" if self.days.days > 1 else "day"
+            new_topic = f"{BASE_CHANNEL_TOPIC}\n(Status: Enabled, Threshold: {self.days.days} {day_str})"
+        else:
+            new_topic = f"{BASE_CHANNEL_TOPIC}\n(Status: Disabled)"
+
+        self.mod_log.ignore(Event.guild_channel_update, Channels.defcon)
+        defcon_channel = self.bot.guilds[0].get_channel(Channels.defcon)
+        await defcon_channel.edit(topic=new_topic)
 
 
 def setup(bot: Bot):

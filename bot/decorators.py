@@ -1,15 +1,18 @@
 import logging
 import random
 import typing
-from asyncio import Lock
+from asyncio import Lock, sleep
+from contextlib import suppress
 from functools import wraps
 from weakref import WeakValueDictionary
 
 from discord import Colour, Embed
+from discord.errors import NotFound
 from discord.ext import commands
 from discord.ext.commands import CheckFailure, Context
 
-from bot.constants import ERROR_REPLIES
+from bot.constants import ERROR_REPLIES, RedirectOutput
+from bot.utils.checks import with_role_check, without_role_check
 
 log = logging.getLogger(__name__)
 
@@ -47,35 +50,24 @@ def in_channel(*channels: int, bypass_roles: typing.Container[int] = None):
 
 
 def with_role(*role_ids: int):
+    """
+    Returns True if the user has any one
+    of the roles in role_ids.
+    """
+
     async def predicate(ctx: Context):
-        if not ctx.guild:  # Return False in a DM
-            log.debug(f"{ctx.author} tried to use the '{ctx.command.name}'command from a DM. "
-                      "This command is restricted by the with_role decorator. Rejecting request.")
-            return False
-
-        for role in ctx.author.roles:
-            if role.id in role_ids:
-                log.debug(f"{ctx.author} has the '{role.name}' role, and passes the check.")
-                return True
-
-        log.debug(f"{ctx.author} does not have the required role to use "
-                  f"the '{ctx.command.name}' command, so the request is rejected.")
-        return False
+        return with_role_check(ctx, *role_ids)
     return commands.check(predicate)
 
 
 def without_role(*role_ids: int):
-    async def predicate(ctx: Context):
-        if not ctx.guild:  # Return False in a DM
-            log.debug(f"{ctx.author} tried to use the '{ctx.command.name}' command from a DM. "
-                      "This command is restricted by the without_role decorator. Rejecting request.")
-            return False
+    """
+    Returns True if the user does not have any
+    of the roles in role_ids.
+    """
 
-        author_roles = [role.id for role in ctx.author.roles]
-        check = all(role not in author_roles for role in role_ids)
-        log.debug(f"{ctx.author} tried to call the '{ctx.command.name}' command. "
-                  f"The result of the without_role check was {check}.")
-        return check
+    async def predicate(ctx: Context):
+        return without_role_check(ctx, *role_ids)
     return commands.check(predicate)
 
 
@@ -108,5 +100,49 @@ def locked():
 
             async with func.__locks.setdefault(ctx.author.id, Lock()):
                 return await func(self, ctx, *args, **kwargs)
+        return inner
+    return wrap
+
+
+def redirect_output(destination_channel: int, bypass_roles: typing.Container[int] = None):
+    """
+    Changes the channel in the context of the command to redirect the output
+    to a certain channel, unless the author has a role to bypass redirection
+    """
+
+    def wrap(func):
+        @wraps(func)
+        async def inner(self, ctx, *args, **kwargs):
+            if ctx.channel.id == destination_channel:
+                log.trace(f"Command {ctx.command.name} was invoked in destination_channel, not redirecting")
+                return await func(self, ctx, *args, **kwargs)
+
+            if bypass_roles and any(role.id in bypass_roles for role in ctx.author.roles):
+                log.trace(f"{ctx.author} has role to bypass output redirection")
+                return await func(self, ctx, *args, **kwargs)
+
+            redirect_channel = ctx.guild.get_channel(destination_channel)
+            old_channel = ctx.channel
+
+            log.trace(f"Redirecting output of {ctx.author}'s command '{ctx.command.name}' to {redirect_channel.name}")
+            ctx.channel = redirect_channel
+            await ctx.channel.send(f"Here's the output of your command, {ctx.author.mention}")
+            await func(self, ctx, *args, **kwargs)
+
+            message = await old_channel.send(
+                f"Hey, {ctx.author.mention}, you can find the output of your command here: "
+                f"{redirect_channel.mention}"
+            )
+
+            if RedirectOutput.delete_invocation:
+                await sleep(RedirectOutput.delete_delay)
+
+                with suppress(NotFound):
+                    await message.delete()
+                    log.trace("Redirect output: Deleted user redirection message")
+
+                with suppress(NotFound):
+                    await ctx.message.delete()
+                    log.trace("Redirect output: Deleted invocation message")
         return inner
     return wrap

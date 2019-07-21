@@ -114,7 +114,7 @@ class Alias:
     @command(name="reload", hidden=True)
     async def cogs_reload_alias(self, ctx, *, cog_name: str):
         """
-        Alias for invoking <prefix>cogs reload cog_name.
+        Alias for invoking <prefix>cogs reload [cog_name].
 
         cog_name: str - name of the cog to be reloaded.
         """
@@ -136,6 +136,14 @@ class Alias:
         """
 
         await self.invoke(ctx, "defcon disable")
+
+    @command(name="exception", hidden=True)
+    async def tags_get_traceback_alias(self, ctx):
+        """
+        Alias for invoking <prefix>tags get traceback.
+        """
+
+        await self.invoke(ctx, "tags get traceback")
 
     @group(name="get",
            aliases=("show", "g"),
