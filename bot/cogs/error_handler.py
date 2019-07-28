@@ -62,8 +62,12 @@ class ErrorHandler:
             if isinstance(e.original, ClientResponseError):
                 if e.original.code == 404:
                     await ctx.send("There does not seem to be anything matching your query.")
+                elif e.original.code == 400:
+                    await ctx.send("According to the API, your request is malformed.")
+                elif 500 <= e.original.code < 600:
+                    await ctx.send("Sorry, there seems to be an internal issue with the API.")
                 else:
-                    await ctx.send("BEEP BEEP UNKNOWN API ERROR!=?!??!?!?!?")
+                    await ctx.send(f"Got an unexpected status code from the API (`{e.original.code}`).")
 
             else:
                 await ctx.send(
