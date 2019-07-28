@@ -31,7 +31,7 @@ bot.http_session = ClientSession(
 bot.api_client = APIClient(loop=asyncio.get_event_loop())
 
 # Internal/debug
-bot.load_extension("bot.cogs.events")
+bot.load_extension("bot.cogs.error_handler")
 bot.load_extension("bot.cogs.filtering")
 bot.load_extension("bot.cogs.logging")
 bot.load_extension("bot.cogs.modlog")

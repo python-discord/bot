@@ -1,28 +1,23 @@
 import logging
 
 from aiohttp import ClientResponseError
-from discord import Colour, Embed, Member, Object
+from discord.ext.commands import Bot, Context
 from discord.ext.commands import (
-    BadArgument, Bot, BotMissingPermissions,
-    CommandError, CommandInvokeError, CommandNotFound,
-    Context, NoPrivateMessage, UserInputError
+    BadArgument,
+    BotMissingPermissions,
+    CommandError,
+    CommandInvokeError,
+    CommandNotFound,
+    NoPrivateMessage,
+    UserInputError,
 )
 
-from bot.cogs.modlog import ModLog
-from bot.constants import (
-    Channels, Colours, DEBUG_MODE,
-    Guild, Icons, Keys,
-    Roles, URLs
-)
-from bot.utils import chunks
 
 log = logging.getLogger(__name__)
 
-RESTORE_ROLES = (str(Roles.muted), str(Roles.announcements))
 
-
-class Events:
-    """No commands, just event handlers."""
+class ErrorHandler:
+    """Handles errors emttted from commands."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
@@ -77,6 +72,7 @@ class Events:
                 raise e.original
         raise e
 
-def setup(bot):
-    bot.add_cog(Events(bot))
+
+def setup(bot: Bot):
+    bot.add_cog(ErrorHandler(bot))
     log.info("Cog loaded: Events")
