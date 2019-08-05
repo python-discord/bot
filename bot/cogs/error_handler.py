@@ -67,7 +67,7 @@ class ErrorHandler:
                 if e.original.response.status == 404:
                     await ctx.send("There does not seem to be anything matching your query.")
                 elif e.original.response.status == 400:
-                    content = await e.original.resopnse.json()
+                    content = await e.original.response.json()
                     log.debug("API gave bad request on command. Response: %r.", content)
                     await ctx.send("According to the API, your request is malformed.")
                 elif 500 <= e.original.response.status < 600:
