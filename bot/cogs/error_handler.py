@@ -1,6 +1,5 @@
 import logging
 
-from aiohttp import ClientResponseError
 from discord.ext.commands import Bot, Context
 from discord.ext.commands import (
     BadArgument,
@@ -11,6 +10,8 @@ from discord.ext.commands import (
     NoPrivateMessage,
     UserInputError,
 )
+
+from bot.api import ResponseCodeError
 
 
 log = logging.getLogger(__name__)
@@ -59,15 +60,18 @@ class ErrorHandler:
                 f"Here's what I'm missing: **{e.missing_perms}**"
             )
         elif isinstance(e, CommandInvokeError):
-            if isinstance(e.original, ClientResponseError):
-                if e.original.code == 404:
+            if isinstance(e.original, ResponseCodeError):
+                if e.original.response.status_code == 404:
                     await ctx.send("There does not seem to be anything matching your query.")
-                elif e.original.code == 400:
+                elif e.original.response.status_code == 400:
                     await ctx.send("According to the API, your request is malformed.")
-                elif 500 <= e.original.code < 600:
+                elif 500 <= e.original.response.status_code < 600:
                     await ctx.send("Sorry, there seems to be an internal issue with the API.")
                 else:
-                    await ctx.send(f"Got an unexpected status code from the API (`{e.original.code}`).")
+                    await ctx.send(
+                        "Got an unexpected status code from the "
+                        f"API (`{e.original.response.code}`)."
+                    )
 
             else:
                 await ctx.send(

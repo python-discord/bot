@@ -41,7 +41,7 @@ class APIClient:
             self.maybe_raise_for_status(resp, raise_for_status)
             return await resp.json()
 
-    async def post(self, endpoint: str, *args, raise_for_status: bool = True,**kwargs):
+    async def post(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs):
         async with self.session.post(self._url_for(endpoint), *args, **kwargs) as resp:
             self.maybe_raise_for_status(resp, raise_for_status)
             return await resp.json()

@@ -1,12 +1,12 @@
 import logging
 from typing import Callable, Iterable
 
-import aiohttp
 from discord import Guild, Member, Role
 from discord.ext import commands
 from discord.ext.commands import Bot
 
 from bot import constants
+from bot.api import ResponseCodeError
 from bot.cogs.sync import syncers
 
 log = logging.getLogger(__name__)
@@ -94,9 +94,9 @@ class Sync:
             # fields that may have changed since the last time we've seen them.
             await self.bot.api_client.put('bot/users/' + str(member.id), json=packed)
 
-        except aiohttp.client_exceptions.ClientResponseError as e:
+        except ResponseCodeError as e:
             # If we didn't get 404, something else broke - propagate it up.
-            if e.status != 404:
+            if e.response.status_code != 404:
                 raise
 
             got_error = True  # yikes
@@ -137,8 +137,8 @@ class Sync:
                         'roles': sorted(role.id for role in after.roles)
                     }
                 )
-            except aiohttp.client_exceptions.ClientResponseError as e:
-                if e.status != 404:
+            except ResponseCodeError as e:
+                if e.response.status_code != 404:
                     raise
 
                 log.warning(

@@ -3,10 +3,10 @@ import textwrap
 from collections import ChainMap
 from typing import Union
 
-from aiohttp.client_exceptions import ClientResponseError
 from discord import Color, Embed, Member, User
 from discord.ext.commands import Context, group
 
+from bot.api import ResponseCodeError
 from bot.constants import Channels, Guild, Roles, Webhooks
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
@@ -170,8 +170,8 @@ class TalentPool(WatchChannel):
         """
         try:
             nomination = await self.bot.api_client.get(f"{self.api_endpoint}/{nomination_id}")
-        except ClientResponseError as e:
-            if e.status == 404:
+        except ResponseCodeError as e:
+            if e.response.status_code == 404:
                 self.log.trace(f"Nomination API 404: Can't nomination with id {nomination_id}")
                 await ctx.send(f":x: Can't find a nomination with id `{nomination_id}`")
                 return
