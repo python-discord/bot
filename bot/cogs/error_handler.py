@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 
 
 class ErrorHandler:
-    """Handles errors emttted from commands."""
+    """Handles errors emitted from commands."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
