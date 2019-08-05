@@ -53,6 +53,7 @@ class ErrorHandler:
             await ctx.send(f"Bad argument: {e}\n")
             await ctx.invoke(*help_command)
         elif isinstance(e, UserInputError):
+            await ctx.send("Something about your input seems off. Check the arguments:")
             await ctx.invoke(*help_command)
         elif isinstance(e, NoPrivateMessage):
             await ctx.send("Sorry, this command can't be used in a private message!")
