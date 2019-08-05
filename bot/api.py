@@ -1,4 +1,3 @@
-import typing
 from urllib.parse import quote as quote_url
 
 import aiohttp
@@ -6,8 +5,9 @@ import aiohttp
 from .constants import Keys, URLs
 
 
-class ResponseCodeError(typing.NamedTuple, ValueError):
-    response: aiohttp.ClientResponse
+class ResponseCodeError(ValueError):
+    def __init__(self, response: aiohttp.ClientResponse):
+        self.response = response
 
 
 class APIClient:
@@ -28,7 +28,7 @@ class APIClient:
         return f"{URLs.site_schema}{URLs.site_api}/{quote_url(endpoint)}"
 
     def maybe_raise_for_status(self, response: aiohttp.ClientResponse, should_raise: bool):
-        if should_raise and response.status_code >= 400:
+        if should_raise and response.status >= 400:
             raise ResponseCodeError(response=response)
 
     async def get(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs):

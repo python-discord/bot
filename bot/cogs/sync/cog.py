@@ -96,7 +96,7 @@ class Sync:
 
         except ResponseCodeError as e:
             # If we didn't get 404, something else broke - propagate it up.
-            if e.response.status_code != 404:
+            if e.response.status != 404:
                 raise
 
             got_error = True  # yikes
@@ -138,7 +138,7 @@ class Sync:
                     }
                 )
             except ResponseCodeError as e:
-                if e.response.status_code != 404:
+                if e.response.status != 404:
                     raise
 
                 log.warning(

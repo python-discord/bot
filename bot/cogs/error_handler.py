@@ -1,6 +1,5 @@
 import logging
 
-from discord.ext.commands import Bot, Context
 from discord.ext.commands import (
     BadArgument,
     BotMissingPermissions,
@@ -10,6 +9,7 @@ from discord.ext.commands import (
     NoPrivateMessage,
     UserInputError,
 )
+from discord.ext.commands import Bot, Context
 
 from bot.api import ResponseCodeError
 
@@ -61,11 +61,13 @@ class ErrorHandler:
             )
         elif isinstance(e, CommandInvokeError):
             if isinstance(e.original, ResponseCodeError):
-                if e.original.response.status_code == 404:
+                if e.original.response.status == 404:
                     await ctx.send("There does not seem to be anything matching your query.")
-                elif e.original.response.status_code == 400:
+                elif e.original.response.status == 400:
+                    content = await e.original.resopnse.json()
+                    log.debug("API gave bad request on command. Response: %r.", content)
                     await ctx.send("According to the API, your request is malformed.")
-                elif 500 <= e.original.response.status_code < 600:
+                elif 500 <= e.original.response.status < 600:
                     await ctx.send("Sorry, there seems to be an internal issue with the API.")
                 else:
                     await ctx.send(
@@ -78,7 +80,8 @@ class ErrorHandler:
                     f"Sorry, an unexpected error occurred. Please let us know!\n\n```{e}```"
                 )
                 raise e.original
-        raise e
+        else:
+            raise e
 
 
 def setup(bot: Bot):
