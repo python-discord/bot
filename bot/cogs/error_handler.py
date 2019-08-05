@@ -1,3 +1,4 @@
+import contextlib
 import logging
 
 from discord.ext.commands import (
@@ -46,7 +47,8 @@ class ErrorHandler:
             ctx.invoked_from_error_handler = True
 
             # Return to not raise the exception
-            return await ctx.invoke(tags_get_command, tag_name=ctx.invoked_with)
+            with contextlib.suppress(ResponseCodeError):
+                return await ctx.invoke(tags_get_command, tag_name=ctx.invoked_with)
         elif isinstance(e, BadArgument):
             await ctx.send(f"Bad argument: {e}\n")
             await ctx.invoke(*help_command)
