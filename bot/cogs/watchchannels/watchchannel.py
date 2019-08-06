@@ -8,11 +8,11 @@ from collections import defaultdict, deque
 from dataclasses import dataclass
 from typing import Optional
 
-import aiohttp
 import discord
 from discord import Color, Embed, Message, Object, errors
 from discord.ext.commands import BadArgument, Bot, Context
 
+from bot.api import ResponseCodeError
 from bot.cogs.modlog import ModLog
 from bot.constants import BigBrother as BigBrotherConfig, Guild as GuildConfig, Icons
 from bot.pagination import LinePaginator
@@ -157,8 +157,8 @@ class WatchChannel(ABC):
         """
         try:
             data = await self.bot.api_client.get(self.api_endpoint, params=self.api_default_params)
-        except aiohttp.ClientResponseError as e:
-            self.log.exception(f"Failed to fetch the watched users from the API", exc_info=e)
+        except ResponseCodeError as err:
+            self.log.exception(f"Failed to fetch the watched users from the API", exc_info=err)
             return False
 
         self.watched_users = defaultdict(dict)
