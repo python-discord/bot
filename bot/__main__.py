@@ -6,11 +6,11 @@ from aiohttp import AsyncResolver, ClientSession, TCPConnector
 from discord import Game
 from discord.ext.commands import Bot, when_mentioned_or
 
-from bot.api import APIClient
+from bot.api import APIClient, APILoggingHandler
 from bot.constants import Bot as BotConfig, DEBUG_MODE
 
 
-log = logging.getLogger(__name__)
+log = logging.getLogger('bot')
 
 bot = Bot(
     command_prefix=when_mentioned_or(BotConfig.prefix),
@@ -29,6 +29,7 @@ bot.http_session = ClientSession(
     )
 )
 bot.api_client = APIClient(loop=asyncio.get_event_loop())
+log.addHandler(APILoggingHandler(bot.api_client))
 
 # Internal/debug
 bot.load_extension("bot.cogs.error_handler")
