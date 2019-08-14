@@ -1,8 +1,12 @@
+import asyncio
+import logging
 from urllib.parse import quote as quote_url
 
 import aiohttp
 
 from .constants import Keys, URLs
+
+log = logging.getLogger(__name__)
 
 
 class ResponseCodeError(ValueError):
@@ -58,3 +62,76 @@ class APIClient:
 
             self.maybe_raise_for_status(resp, raise_for_status)
             return await resp.json()
+
+
+def loop_is_running() -> bool:
+    # asyncio does not have a way to say "call this when the event
+    # loop is running", see e.g. `callWhenRunning` from twisted.
+
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return False
+    return True
+
+
+class APILoggingHandler(logging.StreamHandler):
+    def __init__(self, client: APIClient):
+        logging.StreamHandler.__init__(self)
+        self.client = client
+
+        # internal batch of shipoff tasks that must not be scheduled
+        # on the event loop yet - scheduled when the event loop is ready.
+        self.queue = []
+
+    async def ship_off(self, payload: dict):
+        try:
+            await self.client.post('logs', json=payload)
+        except ResponseCodeError as err:
+            log.warning(
+                "Cannot send logging record to the site, got code %d.",
+                err.response.status,
+                extra={'via_handler': True}
+            )
+        except Exception as err:
+            log.warning(
+                "Cannot send logging record to the site: %r",
+                err,
+                extra={'via_handler': True}
+            )
+
+    def emit(self, record: logging.LogRecord):
+        # Ignore logging messages which are sent by this logging handler
+        # itself. This is required because if we were to not ignore
+        # messages emitted by this handler, we would infinitely recurse
+        # back down into this logging handler, making the reactor run
+        # like crazy, and eventually OOM something. Let's not do that...
+        if not record.__dict__.get('via_handler'):
+            payload = {
+                'application': 'bot',
+                'logger_name': record.name,
+                'level': record.levelname.lower(),
+                'module': record.module,
+                'line': record.lineno,
+                'message': self.format(record)
+            }
+
+            task = self.ship_off(payload)
+            if not loop_is_running():
+                self.queue.append(task)
+            else:
+                asyncio.create_task(task)
+                self.schedule_queued_tasks()
+
+    def schedule_queued_tasks(self):
+        for task in self.queue:
+            asyncio.create_task(task)
+
+        if self.queue:
+            log.debug(
+                "Scheduled %d pending logging tasks.",
+                len(self.queue),
+                extra={'via_handler': True}
+            )
+
+        self.queue.clear()
