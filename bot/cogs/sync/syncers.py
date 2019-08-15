@@ -6,13 +6,13 @@ from discord.ext.commands import Bot
 
 # These objects are declared as namedtuples because tuples are hashable,
 # something that we make use of when diffing site roles against guild roles.
-Role = namedtuple('Role', ('id', 'name', 'colour', 'permissions'))
+Role = namedtuple('Role', ('id', 'name', 'colour', 'permissions', 'position'))
 User = namedtuple('User', ('id', 'name', 'discriminator', 'avatar_hash', 'roles', 'in_guild'))
 
 
 def get_roles_for_sync(
         guild_roles: Set[Role], api_roles: Set[Role]
-) -> Tuple[Set[Role], Set[Role]]:
+) -> Tuple[Set[Role], Set[Role], Set[Role]]:
     """
     Determine which roles should be created or updated on the site.
 
@@ -36,12 +36,14 @@ def get_roles_for_sync(
     guild_role_ids = {role.id for role in guild_roles}
     api_role_ids = {role.id for role in api_roles}
     new_role_ids = guild_role_ids - api_role_ids
+    deleted_role_ids = api_role_ids - guild_role_ids
 
     # New roles are those which are on the cached guild but not on the
     # API guild, going by the role ID. We need to send them in for creation.
     roles_to_create = {role for role in guild_roles if role.id in new_role_ids}
     roles_to_update = guild_roles - api_roles - roles_to_create
-    return roles_to_create, roles_to_update
+    roles_to_delete = {role for role in api_roles if role.id in deleted_role_ids}
+    return roles_to_create, roles_to_update, roles_to_delete
 
 
 async def sync_roles(bot: Bot, guild: Guild):
@@ -71,11 +73,12 @@ async def sync_roles(bot: Bot, guild: Guild):
     guild_roles = {
         Role(
             id=role.id, name=role.name,
-            colour=role.colour.value, permissions=role.permissions.value
+            colour=role.colour.value, permissions=role.permissions.value,
+            position=role.position,
         )
         for role in guild.roles
     }
-    roles_to_create, roles_to_update = get_roles_for_sync(guild_roles, api_roles)
+    roles_to_create, roles_to_update, roles_to_delete = get_roles_for_sync(guild_roles, api_roles)
 
     for role in roles_to_create:
         await bot.api_client.post(
@@ -84,7 +87,8 @@ async def sync_roles(bot: Bot, guild: Guild):
                 'id': role.id,
                 'name': role.name,
                 'colour': role.colour,
-                'permissions': role.permissions
+                'permissions': role.permissions,
+                'position': role.position,
             }
         )
 
@@ -95,11 +99,15 @@ async def sync_roles(bot: Bot, guild: Guild):
                 'id': role.id,
                 'name': role.name,
                 'colour': role.colour,
-                'permissions': role.permissions
+                'permissions': role.permissions,
+                'position': role.position,
             }
         )
 
-    return (len(roles_to_create), len(roles_to_update))
+    for role in roles_to_delete:
+        await bot.api_client.delete('bot/roles/' + str(role.id))
+
+    return len(roles_to_create), len(roles_to_update), len(roles_to_delete)
 
 
 def get_users_for_sync(
@@ -224,4 +232,4 @@ async def sync_users(bot: Bot, guild: Guild):
             }
         )
 
-    return (len(users_to_create), len(users_to_update))
+    return len(users_to_create), len(users_to_update), None

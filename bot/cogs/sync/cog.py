@@ -30,42 +30,48 @@ class Sync:
         self.bot = bot
 
     async def on_ready(self):
+        """Syncs the roles/users of the guild with the database."""
         guild = self.bot.get_guild(self.SYNC_SERVER_ID)
         if guild is not None:
             for syncer in self.ON_READY_SYNCERS:
                 syncer_name = syncer.__name__[5:]  # drop off `sync_`
                 log.info("Starting `%s` syncer.", syncer_name)
-                total_created, total_updated = await syncer(self.bot, guild)
-                log.info(
-                    "`%s` syncer finished, created `%d`, updated `%d`.",
-                    syncer_name, total_created, total_updated
-                )
+                total_created, total_updated, total_deleted = await syncer(self.bot, guild)
+                if total_deleted is None:
+                    log.info(
+                        "`%s` syncer finished, created `%d`, updated `%d`.",
+                        syncer_name, total_created, total_updated
+                    )
+                else:
+                    log.info(
+                        "`%s` syncer finished, created `%d`, updated `%d`, `%d` deleted.",
+                        syncer_name, total_created, total_updated, total_deleted
+                    )
 
     async def on_guild_role_create(self, role: Role):
+        """Adds newly create role to the database table over the API."""
         await self.bot.api_client.post(
             'bot/roles',
             json={
                 'colour': role.colour.value,
                 'id': role.id,
                 'name': role.name,
-                'permissions': role.permissions.value
+                'permissions': role.permissions.value,
+                'position': role.position,
             }
         )
 
     async def on_guild_role_delete(self, role: Role):
-        log.warning(
-            (
-                "Attempted to delete role `%s` (`%d`), but role deletion "
-                "is currently not implementeed."
-            ),
-            role.name, role.id
-        )
+        """Deletes role from the database when it's deleted from the guild."""
+        await self.bot.api_client.delete('bot/roles/' + str(role.id))
 
     async def on_guild_role_update(self, before: Role, after: Role):
+        """Syncs role with the database if any of the stored attributes were updated."""
         if (
                 before.name != after.name
                 or before.colour != after.colour
                 or before.permissions != after.permissions
+                or before.position != after.position
         ):
             await self.bot.api_client.put(
                 'bot/roles/' + str(after.id),
@@ -73,11 +79,19 @@ class Sync:
                     'colour': after.colour.value,
                     'id': after.id,
                     'name': after.name,
-                    'permissions': after.permissions.value
+                    'permissions': after.permissions.value,
+                    'position': after.position,
                 }
             )
 
     async def on_member_join(self, member: Member):
+        """
+        Adds a new user or updates existing user to the database when a member joins the guild.
+
+        If the joining member is a user that is already known to the database (i.e., a user that
+        previously left), it will update the user's information. If the user is not yet known by
+        the database, the user is added.
+        """
         packed = {
             'avatar_hash': member.avatar,
             'discriminator': int(member.discriminator),
@@ -106,19 +120,21 @@ class Sync:
             await self.bot.api_client.post('bot/users', json=packed)
 
     async def on_member_leave(self, member: Member):
+        """Updates the user information when a member leaves the guild."""
         await self.bot.api_client.put(
             'bot/users/' + str(member.id),
             json={
                 'avatar_hash': member.avatar,
                 'discriminator': int(member.discriminator),
                 'id': member.id,
-                'in_guild': True,
+                'in_guild': False,
                 'name': member.name,
                 'roles': sorted(role.id for role in member.roles)
             }
         )
 
     async def on_member_update(self, before: Member, after: Member):
+        """Updates the user information if any of relevant attributes have changed."""
         if (
                 before.name != after.name
                 or before.avatar != after.avatar
@@ -157,11 +173,11 @@ class Sync:
         """Manually synchronize the guild's roles with the roles on the site."""
 
         initial_response = await ctx.send("📊 Synchronizing roles.")
-        total_created, total_updated = await syncers.sync_roles(self.bot, ctx.guild)
+        total_created, total_updated, total_deleted = await syncers.sync_roles(self.bot, ctx.guild)
         await initial_response.edit(
             content=(
                 f"👌 Role synchronization complete, created **{total_created}** "
-                f"and updated **{total_created}** roles."
+                f", updated **{total_created}** roles, and deleted **{total_deleted}** roles."
             )
         )
 
@@ -171,7 +187,7 @@ class Sync:
         """Manually synchronize the guild's users with the users on the site."""
 
         initial_response = await ctx.send("📊 Synchronizing users.")
-        total_created, total_updated = await syncers.sync_users(self.bot, ctx.guild)
+        total_created, total_updated, total_deleted = await syncers.sync_users(self.bot, ctx.guild)
         await initial_response.edit(
             content=(
                 f"👌 User synchronization complete, created **{total_created}** "
