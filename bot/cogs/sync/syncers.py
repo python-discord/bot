@@ -94,7 +94,7 @@ async def sync_roles(bot: Bot, guild: Guild) -> Tuple[Set[Role], Set[Role], Set[
 
     for role in roles_to_update:
         await bot.api_client.put(
-            'bot/roles/' + str(role.id),
+            f'bot/roles/{role.id}',
             json={
                 'id': role.id,
                 'name': role.name,
@@ -105,7 +105,7 @@ async def sync_roles(bot: Bot, guild: Guild) -> Tuple[Set[Role], Set[Role], Set[
         )
 
     for role in roles_to_delete:
-        await bot.api_client.delete('bot/roles/' + str(role.id))
+        await bot.api_client.delete(f'bot/roles/{role.id}')
 
     return len(roles_to_create), len(roles_to_update), len(roles_to_delete)
 
@@ -221,7 +221,7 @@ async def sync_users(bot: Bot, guild: Guild) -> Tuple[Set[Role], Set[Role], None
 
     for user in users_to_update:
         await bot.api_client.put(
-            'bot/users/' + str(user.id),
+            f'bot/users/{user.id}',
             json={
                 'avatar_hash': user.avatar_hash,
                 'discriminator': user.discriminator,

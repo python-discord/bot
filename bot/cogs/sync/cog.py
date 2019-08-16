@@ -63,7 +63,7 @@ class Sync:
 
     async def on_guild_role_delete(self, role: Role) -> None:
         """Deletes role from the database when it's deleted from the guild."""
-        await self.bot.api_client.delete('bot/roles/' + str(role.id))
+        await self.bot.api_client.delete(f'bot/roles/{role.id}')
 
     async def on_guild_role_update(self, before: Role, after: Role) -> None:
         """Syncs role with the database if any of the stored attributes were updated."""
@@ -74,7 +74,7 @@ class Sync:
                 or before.position != after.position
         ):
             await self.bot.api_client.put(
-                'bot/roles/' + str(after.id),
+                f'bot/roles/{after.id}',
                 json={
                     'colour': after.colour.value,
                     'id': after.id,
@@ -106,7 +106,7 @@ class Sync:
         try:
             # First try an update of the user to set the `in_guild` field and other
             # fields that may have changed since the last time we've seen them.
-            await self.bot.api_client.put('bot/users/' + str(member.id), json=packed)
+            await self.bot.api_client.put(f'bot/users/{member.id}', json=packed)
 
         except ResponseCodeError as e:
             # If we didn't get 404, something else broke - propagate it up.
@@ -122,7 +122,7 @@ class Sync:
     async def on_member_leave(self, member: Member) -> None:
         """Updates the user information when a member leaves the guild."""
         await self.bot.api_client.put(
-            'bot/users/' + str(member.id),
+            f'bot/users/{member.id}',
             json={
                 'avatar_hash': member.avatar,
                 'discriminator': int(member.discriminator),
