@@ -24,13 +24,15 @@ def get_roles_for_sync(
             Roles that were retrieved from the API at startup.
 
     Returns:
-        Tuple[Set[Role], Set[Role]]:
-            A tuple with two elements. The first element represents
+        Tuple[Set[Role], Set[Role]. Set[Role]]:
+            A tuple with three elements. The first element represents
             roles to be created on the site, meaning that they were
             present on the cached guild but not on the API. The second
             element represents roles to be updated, meaning they were
             present on both the cached guild and the API but non-ID
-            fields have changed inbetween.
+            fields have changed inbetween. The third represents roles
+            to be deleted on the site, meaning the roles are present on
+            the API but not in the cached guild.
     """
 
     guild_role_ids = {role.id for role in guild_roles}
@@ -46,7 +48,7 @@ def get_roles_for_sync(
     return roles_to_create, roles_to_update, roles_to_delete
 
 
-async def sync_roles(bot: Bot, guild: Guild) -> Tuple[Set[Role], Set[Role], Set[Role]]:
+async def sync_roles(bot: Bot, guild: Guild) -> Tuple[int, int, int]:
     """
     Synchronize roles found on the given `guild` with the ones on the API.
 
@@ -59,9 +61,10 @@ async def sync_roles(bot: Bot, guild: Guild) -> Tuple[Set[Role], Set[Role], Set[
             to synchronize roles with.
 
     Returns:
-        Tuple[int, int]:
-            A tuple with two integers representing how many roles were created
-            (element `0`) and how many roles were updated (element `1`).
+        Tuple[int, int, int]:
+            A tuple with three integers representing how many roles were created
+            (element `0`) , how many roles were updated (element `1`), and how many
+            roles were deleted (element `2`) on the API.
     """
 
     roles = await bot.api_client.get('bot/roles')
@@ -164,7 +167,7 @@ def get_users_for_sync(
     return users_to_create, users_to_update
 
 
-async def sync_users(bot: Bot, guild: Guild) -> Tuple[Set[Role], Set[Role], None]:
+async def sync_users(bot: Bot, guild: Guild) -> Tuple[int, int, None]:
     """
     Synchronize users found on the given
     `guild` with the ones on the API.
@@ -178,9 +181,10 @@ async def sync_users(bot: Bot, guild: Guild) -> Tuple[Set[Role], Set[Role], None
             to synchronize roles with.
 
     Returns:
-        Tuple[int, int]:
-            A tuple with two integers representing how many users were created
-            (element `0`) and how many users were updated (element `1`).
+        Tuple[int, int, None]:
+            A tuple with two integers, representing how many users were created
+            (element `0`) and how many users were updated (element `1`), and `None`
+            to indicate that a user sync never deletes entries from the API.
     """
 
     current_users = await bot.api_client.get('bot/users')
