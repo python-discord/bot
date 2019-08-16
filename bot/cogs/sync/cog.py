@@ -3,7 +3,7 @@ from typing import Callable, Iterable
 
 from discord import Guild, Member, Role
 from discord.ext import commands
-from discord.ext.commands import Bot
+from discord.ext.commands import Bot, Context
 
 from bot import constants
 from bot.api import ResponseCodeError
@@ -26,10 +26,10 @@ class Sync:
         syncers.sync_users
     )
 
-    def __init__(self, bot):
+    def __init__(self, bot: Bot) -> None:
         self.bot = bot
 
-    async def on_ready(self):
+    async def on_ready(self) -> None:
         """Syncs the roles/users of the guild with the database."""
         guild = self.bot.get_guild(self.SYNC_SERVER_ID)
         if guild is not None:
@@ -48,7 +48,7 @@ class Sync:
                         syncer_name, total_created, total_updated, total_deleted
                     )
 
-    async def on_guild_role_create(self, role: Role):
+    async def on_guild_role_create(self, role: Role) -> None:
         """Adds newly create role to the database table over the API."""
         await self.bot.api_client.post(
             'bot/roles',
@@ -61,11 +61,11 @@ class Sync:
             }
         )
 
-    async def on_guild_role_delete(self, role: Role):
+    async def on_guild_role_delete(self, role: Role) -> None:
         """Deletes role from the database when it's deleted from the guild."""
         await self.bot.api_client.delete('bot/roles/' + str(role.id))
 
-    async def on_guild_role_update(self, before: Role, after: Role):
+    async def on_guild_role_update(self, before: Role, after: Role) -> None:
         """Syncs role with the database if any of the stored attributes were updated."""
         if (
                 before.name != after.name
@@ -84,7 +84,7 @@ class Sync:
                 }
             )
 
-    async def on_member_join(self, member: Member):
+    async def on_member_join(self, member: Member) -> None:
         """
         Adds a new user or updates existing user to the database when a member joins the guild.
 
@@ -119,7 +119,7 @@ class Sync:
             # If we got `404`, the user is new. Create them.
             await self.bot.api_client.post('bot/users', json=packed)
 
-    async def on_member_leave(self, member: Member):
+    async def on_member_leave(self, member: Member) -> None:
         """Updates the user information when a member leaves the guild."""
         await self.bot.api_client.put(
             'bot/users/' + str(member.id),
@@ -133,7 +133,7 @@ class Sync:
             }
         )
 
-    async def on_member_update(self, before: Member, after: Member):
+    async def on_member_update(self, before: Member, after: Member) -> None:
         """Updates the user information if any of relevant attributes have changed."""
         if (
                 before.name != after.name
@@ -164,12 +164,12 @@ class Sync:
 
     @commands.group(name='sync')
     @commands.has_permissions(administrator=True)
-    async def sync_group(self, ctx):
+    async def sync_group(self, ctx: Context) -> None:
         """Run synchronizations between the bot and site manually."""
 
     @sync_group.command(name='roles')
     @commands.has_permissions(administrator=True)
-    async def sync_roles_command(self, ctx):
+    async def sync_roles_command(self, ctx: Context) -> None:
         """Manually synchronize the guild's roles with the roles on the site."""
 
         initial_response = await ctx.send("📊 Synchronizing roles.")
@@ -183,7 +183,7 @@ class Sync:
 
     @sync_group.command(name='users')
     @commands.has_permissions(administrator=True)
-    async def sync_users_command(self, ctx):
+    async def sync_users_command(self, ctx: Context) -> None:
         """Manually synchronize the guild's users with the users on the site."""
 
         initial_response = await ctx.send("📊 Synchronizing users.")

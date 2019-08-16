@@ -46,7 +46,7 @@ def get_roles_for_sync(
     return roles_to_create, roles_to_update, roles_to_delete
 
 
-async def sync_roles(bot: Bot, guild: Guild):
+async def sync_roles(bot: Bot, guild: Guild) -> Tuple[Set[Role], Set[Role], Set[Role]]:
     """
     Synchronize roles found on the given `guild` with the ones on the API.
 
@@ -164,7 +164,7 @@ def get_users_for_sync(
     return users_to_create, users_to_update
 
 
-async def sync_users(bot: Bot, guild: Guild):
+async def sync_users(bot: Bot, guild: Guild) -> Tuple[Set[Role], Set[Role], None]:
     """
     Synchronize users found on the given
     `guild` with the ones on the API.
