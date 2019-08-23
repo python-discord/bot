@@ -6,13 +6,13 @@ from discord.ext.commands import Bot
 
 # These objects are declared as namedtuples because tuples are hashable,
 # something that we make use of when diffing site roles against guild roles.
-Role = namedtuple('Role', ('id', 'name', 'colour', 'permissions'))
+Role = namedtuple('Role', ('id', 'name', 'colour', 'permissions', 'position'))
 User = namedtuple('User', ('id', 'name', 'discriminator', 'avatar_hash', 'roles', 'in_guild'))
 
 
 def get_roles_for_sync(
         guild_roles: Set[Role], api_roles: Set[Role]
-) -> Tuple[Set[Role], Set[Role]]:
+) -> Tuple[Set[Role], Set[Role], Set[Role]]:
     """
     Determine which roles should be created or updated on the site.
 
@@ -24,27 +24,31 @@ def get_roles_for_sync(
             Roles that were retrieved from the API at startup.
 
     Returns:
-        Tuple[Set[Role], Set[Role]]:
-            A tuple with two elements. The first element represents
+        Tuple[Set[Role], Set[Role]. Set[Role]]:
+            A tuple with three elements. The first element represents
             roles to be created on the site, meaning that they were
             present on the cached guild but not on the API. The second
             element represents roles to be updated, meaning they were
             present on both the cached guild and the API but non-ID
-            fields have changed inbetween.
+            fields have changed inbetween. The third represents roles
+            to be deleted on the site, meaning the roles are present on
+            the API but not in the cached guild.
     """
 
     guild_role_ids = {role.id for role in guild_roles}
     api_role_ids = {role.id for role in api_roles}
     new_role_ids = guild_role_ids - api_role_ids
+    deleted_role_ids = api_role_ids - guild_role_ids
 
     # New roles are those which are on the cached guild but not on the
     # API guild, going by the role ID. We need to send them in for creation.
     roles_to_create = {role for role in guild_roles if role.id in new_role_ids}
     roles_to_update = guild_roles - api_roles - roles_to_create
-    return roles_to_create, roles_to_update
+    roles_to_delete = {role for role in api_roles if role.id in deleted_role_ids}
+    return roles_to_create, roles_to_update, roles_to_delete
 
 
-async def sync_roles(bot: Bot, guild: Guild):
+async def sync_roles(bot: Bot, guild: Guild) -> Tuple[int, int, int]:
     """
     Synchronize roles found on the given `guild` with the ones on the API.
 
@@ -57,9 +61,10 @@ async def sync_roles(bot: Bot, guild: Guild):
             to synchronize roles with.
 
     Returns:
-        Tuple[int, int]:
-            A tuple with two integers representing how many roles were created
-            (element `0`) and how many roles were updated (element `1`).
+        Tuple[int, int, int]:
+            A tuple with three integers representing how many roles were created
+            (element `0`) , how many roles were updated (element `1`), and how many
+            roles were deleted (element `2`) on the API.
     """
 
     roles = await bot.api_client.get('bot/roles')
@@ -71,11 +76,12 @@ async def sync_roles(bot: Bot, guild: Guild):
     guild_roles = {
         Role(
             id=role.id, name=role.name,
-            colour=role.colour.value, permissions=role.permissions.value
+            colour=role.colour.value, permissions=role.permissions.value,
+            position=role.position,
         )
         for role in guild.roles
     }
-    roles_to_create, roles_to_update = get_roles_for_sync(guild_roles, api_roles)
+    roles_to_create, roles_to_update, roles_to_delete = get_roles_for_sync(guild_roles, api_roles)
 
     for role in roles_to_create:
         await bot.api_client.post(
@@ -84,22 +90,27 @@ async def sync_roles(bot: Bot, guild: Guild):
                 'id': role.id,
                 'name': role.name,
                 'colour': role.colour,
-                'permissions': role.permissions
+                'permissions': role.permissions,
+                'position': role.position,
             }
         )
 
     for role in roles_to_update:
         await bot.api_client.put(
-            'bot/roles/' + str(role.id),
+            f'bot/roles/{role.id}',
             json={
                 'id': role.id,
                 'name': role.name,
                 'colour': role.colour,
-                'permissions': role.permissions
+                'permissions': role.permissions,
+                'position': role.position,
             }
         )
 
-    return (len(roles_to_create), len(roles_to_update))
+    for role in roles_to_delete:
+        await bot.api_client.delete(f'bot/roles/{role.id}')
+
+    return len(roles_to_create), len(roles_to_update), len(roles_to_delete)
 
 
 def get_users_for_sync(
@@ -156,7 +167,7 @@ def get_users_for_sync(
     return users_to_create, users_to_update
 
 
-async def sync_users(bot: Bot, guild: Guild):
+async def sync_users(bot: Bot, guild: Guild) -> Tuple[int, int, None]:
     """
     Synchronize users found on the given
     `guild` with the ones on the API.
@@ -170,9 +181,10 @@ async def sync_users(bot: Bot, guild: Guild):
             to synchronize roles with.
 
     Returns:
-        Tuple[int, int]:
-            A tuple with two integers representing how many users were created
-            (element `0`) and how many users were updated (element `1`).
+        Tuple[int, int, None]:
+            A tuple with two integers, representing how many users were created
+            (element `0`) and how many users were updated (element `1`), and `None`
+            to indicate that a user sync never deletes entries from the API.
     """
 
     current_users = await bot.api_client.get('bot/users')
@@ -213,7 +225,7 @@ async def sync_users(bot: Bot, guild: Guild):
 
     for user in users_to_update:
         await bot.api_client.put(
-            'bot/users/' + str(user.id),
+            f'bot/users/{user.id}',
             json={
                 'avatar_hash': user.avatar_hash,
                 'discriminator': user.discriminator,
@@ -224,4 +236,4 @@ async def sync_users(bot: Bot, guild: Guild):
             }
         )
 
-    return (len(users_to_create), len(users_to_update))
+    return len(users_to_create), len(users_to_update), None
