@@ -237,6 +237,7 @@ urls:
     site:        &DOMAIN       "pythondiscord.com"
     site_api:    &API    !JOIN ["api.", *DOMAIN]
     site_paste:  &PASTE  !JOIN ["paste.", *DOMAIN]
+    site_staff:  &STAFF  !JOIN ["staff.", *DOMAIN]
     site_schema: &SCHEMA       "https://"
 
     site_bigbrother_api:                !JOIN [*SCHEMA, *API, "/bot/bigbrother"]
@@ -249,7 +250,7 @@ urls:
     site_infractions_user_type_current: !JOIN [*SCHEMA, *API, "/bot/infractions/user/{user_id}/{infraction_type}/current"]
     site_infractions_user_type:         !JOIN [*SCHEMA, *API, "/bot/infractions/user/{user_id}/{infraction_type}"]
     site_logs_api:                      !JOIN [*SCHEMA, *API, "/bot/logs"]
-    site_logs_view:                     !JOIN [*SCHEMA, *DOMAIN, "/bot/logs"]
+    site_logs_view:                     !JOIN [*SCHEMA, *STAFF, "/bot/logs"]
     site_off_topic_names_api:           !JOIN [*SCHEMA, *API, "/bot/off-topic-names"]
     site_reminders_api:                 !JOIN [*SCHEMA, *API, "/bot/reminders"]
     site_reminders_user_api:            !JOIN [*SCHEMA, *API, "/bot/reminders/user"]
