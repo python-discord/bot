@@ -39,13 +39,12 @@ class Sync:
                 total_created, total_updated, total_deleted = await syncer(self.bot, guild)
                 if total_deleted is None:
                     log.info(
-                        "`%s` syncer finished, created `%d`, updated `%d`.",
-                        syncer_name, total_created, total_updated
+                        f"`{syncer_name}` syncer finished, created `{total_created}`, updated `{total_updated}`."
                     )
                 else:
                     log.info(
-                        "`%s` syncer finished, created `%d`, updated `%d`, `%d` deleted.",
-                        syncer_name, total_created, total_updated, total_deleted
+                        f"`{syncer_name}` syncer finished, created `{total_created}`, updated `{total_updated}`, "
+                        f"deleted `{total_deleted}`."
                     )
 
     async def on_guild_role_create(self, role: Role) -> None:
