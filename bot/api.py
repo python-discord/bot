@@ -101,12 +101,20 @@ class APILoggingHandler(logging.StreamHandler):
             )
 
     def emit(self, record: logging.LogRecord):
-        # Ignore logging messages which are sent by this logging handler
-        # itself. This is required because if we were to not ignore
-        # messages emitted by this handler, we would infinitely recurse
-        # back down into this logging handler, making the reactor run
-        # like crazy, and eventually OOM something. Let's not do that...
-        if not record.__dict__.get('via_handler'):
+        # Two checks are performed here:
+        if (
+                # 1. Do not log anything below `DEBUG`. This is only applicable
+                #    for the monkeypatched `TRACE` logging level, which has a
+                #    lower numeric value than `DEBUG`.
+                record.levelno > logging.DEBUG
+                # 2. Ignore logging messages which are sent by this logging
+                #    handler itself. This is required because if we were to
+                #    not ignore messages emitted by this handler, we would
+                #    infinitely recurse back down into this logging handler,
+                #    making the reactor run like crazy, and eventually OOM
+                #    something. Let's not do that...
+                and not record.__dict__.get('via_handler')
+        ):
             payload = {
                 'application': 'bot',
                 'logger_name': record.name,
