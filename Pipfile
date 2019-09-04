@@ -21,15 +21,15 @@ dateparser = "*"
 urllib3 = ">=1.24.2,<1.25"
 
 [dev-packages]
-"flake8" = ">=3.6"
-"flake8-bugbear" = "*"
-"flake8-import-order" = "*"
-"flake8-tidy-imports" = "*"
-"flake8-todo" = "*"
-"flake8-string-format" = "*"
+flake8 = "~=3.7"
+flake8-bugbear = "~=19.8"
+flake8-import-order = "~=0.18"
+flake8-string-format = "~=0.2"
+flake8-tidy-imports = "~=2.0"
+flake8-todo = "~=0.7"
+pre-commit = "~=1.18"
 safety = "*"
 dodgy = "*"
-pre-commit = "*"
 pytest = "*"
 
 [requires]
