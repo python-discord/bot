@@ -25,7 +25,8 @@ BASE_CHANNEL_TOPIC = "Python Discord Defense Mechanism"
 
 
 class Defcon:
-    """Time-sensitive server defense mechanisms"""
+    """Time-sensitive server defense mechanisms."""
+
     days = None  # type: timedelta
     enabled = False  # type: bool
 
@@ -36,9 +37,11 @@ class Defcon:
 
     @property
     def mod_log(self) -> ModLog:
+        """Get currently loaded ModLog cog instance."""
         return self.bot.get_cog("ModLog")
 
-    async def on_ready(self):
+    async def on_ready(self) -> None:
+        """On cog load, try to synchronize DEFCON settings to the API."""
         try:
             response = await self.bot.api_client.get('bot/bot-settings/defcon')
             data = response['data']
@@ -62,7 +65,8 @@ class Defcon:
 
             await self.update_channel_topic()
 
-    async def on_member_join(self, member: Member):
+    async def on_member_join(self, member: Member) -> None:
+        """If DEFON is enabled, check newly joining users to see if they meet the account age threshold."""
         if self.enabled and self.days.days > 0:
             now = datetime.utcnow()
 
@@ -95,21 +99,19 @@ class Defcon:
 
     @group(name='defcon', aliases=('dc',), invoke_without_command=True)
     @with_role(Roles.admin, Roles.owner)
-    async def defcon_group(self, ctx: Context):
+    async def defcon_group(self, ctx: Context) -> None:
         """Check the DEFCON status or run a subcommand."""
-
         await ctx.invoke(self.bot.get_command("help"), "defcon")
 
     @defcon_group.command(name='enable', aliases=('on', 'e'))
     @with_role(Roles.admin, Roles.owner)
-    async def enable_command(self, ctx: Context):
+    async def enable_command(self, ctx: Context) -> None:
         """
         Enable DEFCON mode. Useful in a pinch, but be sure you know what you're doing!
 
-        Currently, this just adds an account age requirement. Use !defcon days <int> to set how old an account must
-        be, in days.
+        Currently, this just adds an account age requirement. Use !defcon days <int> to set how old an account must be,
+        in days.
         """
-
         self.enabled = True
 
         try:
@@ -156,11 +158,8 @@ class Defcon:
 
     @defcon_group.command(name='disable', aliases=('off', 'd'))
     @with_role(Roles.admin, Roles.owner)
-    async def disable_command(self, ctx: Context):
-        """
-        Disable DEFCON mode. Useful in a pinch, but be sure you know what you're doing!
-        """
-
+    async def disable_command(self, ctx: Context) -> None:
+        """Disable DEFCON mode. Useful in a pinch, but be sure you know what you're doing!"""
         self.enabled = False
 
         try:
@@ -202,11 +201,8 @@ class Defcon:
 
     @defcon_group.command(name='status', aliases=('s',))
     @with_role(Roles.admin, Roles.owner)
-    async def status_command(self, ctx: Context):
-        """
-        Check the current status of DEFCON mode.
-        """
-
+    async def status_command(self, ctx: Context) -> None:
+        """Check the current status of DEFCON mode."""
         embed = Embed(
             colour=Colour.blurple(), title="DEFCON Status",
             description=f"**Enabled:** {self.enabled}\n"
@@ -217,11 +213,8 @@ class Defcon:
 
     @defcon_group.command(name='days')
     @with_role(Roles.admin, Roles.owner)
-    async def days_command(self, ctx: Context, days: int):
-        """
-        Set how old an account must be to join the server, in days, with DEFCON mode enabled.
-        """
-
+    async def days_command(self, ctx: Context, days: int) -> None:
+        """Set how old an account must be to join the server, in days, with DEFCON mode enabled."""
         self.days = timedelta(days=days)
 
         try:
@@ -266,11 +259,8 @@ class Defcon:
 
         await self.update_channel_topic()
 
-    async def update_channel_topic(self):
-        """
-        Update the #defcon channel topic with the current DEFCON status
-        """
-
+    async def update_channel_topic(self) -> None:
+        """Update the #defcon channel topic with the current DEFCON status."""
         if self.enabled:
             day_str = "days" if self.days.days > 1 else "day"
             new_topic = f"{BASE_CHANNEL_TOPIC}\n(Status: Enabled, Threshold: {self.days.days} {day_str})"
@@ -282,6 +272,7 @@ class Defcon:
         await defcon_channel.edit(topic=new_topic)
 
 
-def setup(bot: Bot):
+def setup(bot: Bot) -> None:
+    """DEFCON cog load."""
     bot.add_cog(Defcon(bot))
     log.info("Cog loaded: Defcon")

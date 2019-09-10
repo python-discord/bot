@@ -10,27 +10,27 @@ log = logging.getLogger(__name__)
 
 
 class Logging:
-    """
-    Debug logging module
-    """
+    """Debug logging module."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    async def on_ready(self):
+    async def on_ready(self) -> None:
+        """Announce our presence to the configured devlog channel."""
         log.info("Bot connected!")
 
         embed = Embed(description="Connected!")
         embed.set_author(
             name="Python Bot",
-            url="https://gitlab.com/discord-python/projects/bot",
-            icon_url="https://gitlab.com/python-discord/branding/raw/master/logos/logo_circle/logo_circle.png"
+            url="https://github.com/python-discord/bot",
+            icon_url="https://github.com/python-discord/branding/blob/master/logos/logo_circle/logo_circle_256.png"
         )
 
         if not DEBUG_MODE:
             await self.bot.get_channel(Channels.devlog).send(embed=embed)
 
 
-def setup(bot):
+def setup(bot: Bot) -> None:
+    """Logging cog load."""
     bot.add_cog(Logging(bot))
     log.info("Cog loaded: Logging")

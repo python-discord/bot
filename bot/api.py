@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from typing import Union
 from urllib.parse import quote as quote_url
 
 import aiohttp
@@ -10,11 +11,15 @@ log = logging.getLogger(__name__)
 
 
 class ResponseCodeError(ValueError):
+    """Represent a not-OK response code."""
+
     def __init__(self, response: aiohttp.ClientResponse):
         self.response = response
 
 
 class APIClient:
+    """Django Site API wrapper."""
+
     def __init__(self, **kwargs):
         auth_headers = {
             'Authorization': f"Token {Keys.site_api}"
@@ -28,34 +33,40 @@ class APIClient:
         self.session = aiohttp.ClientSession(**kwargs)
 
     @staticmethod
-    def _url_for(endpoint: str):
+    def _url_for(endpoint: str) -> str:
         return f"{URLs.site_schema}{URLs.site_api}/{quote_url(endpoint)}"
 
-    def maybe_raise_for_status(self, response: aiohttp.ClientResponse, should_raise: bool):
+    def maybe_raise_for_status(self, response: aiohttp.ClientResponse, should_raise: bool) -> None:
+        """Raise ResponseCodeError for non-OK response if an exception should be raised."""
         if should_raise and response.status >= 400:
             raise ResponseCodeError(response=response)
 
-    async def get(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs):
+    async def get(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs) -> dict:
+        """Site API GET."""
         async with self.session.get(self._url_for(endpoint), *args, **kwargs) as resp:
             self.maybe_raise_for_status(resp, raise_for_status)
             return await resp.json()
 
-    async def patch(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs):
+    async def patch(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs) -> dict:
+        """Site API PATCH."""
         async with self.session.patch(self._url_for(endpoint), *args, **kwargs) as resp:
             self.maybe_raise_for_status(resp, raise_for_status)
             return await resp.json()
 
-    async def post(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs):
+    async def post(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs) -> dict:
+        """Site API POST."""
         async with self.session.post(self._url_for(endpoint), *args, **kwargs) as resp:
             self.maybe_raise_for_status(resp, raise_for_status)
             return await resp.json()
 
-    async def put(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs):
+    async def put(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs) -> dict:
+        """Site API PUT."""
         async with self.session.put(self._url_for(endpoint), *args, **kwargs) as resp:
             self.maybe_raise_for_status(resp, raise_for_status)
             return await resp.json()
 
-    async def delete(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs):
+    async def delete(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs) -> Union[dict, None]:
+        """Site API DELETE."""
         async with self.session.delete(self._url_for(endpoint), *args, **kwargs) as resp:
             if resp.status == 204:
                 return None
@@ -65,6 +76,12 @@ class APIClient:
 
 
 def loop_is_running() -> bool:
+    """
+    Determine if there is a running asyncio event loop.
+
+    This helps enable "call this when event loop is running" logic (see: Twisted's `callWhenRunning`),
+    which is currently not provided by asyncio
+    """
     # asyncio does not have a way to say "call this when the event
     # loop is running", see e.g. `callWhenRunning` from twisted.
 
@@ -76,6 +93,8 @@ def loop_is_running() -> bool:
 
 
 class APILoggingHandler(logging.StreamHandler):
+    """Site API logging handler."""
+
     def __init__(self, client: APIClient):
         logging.StreamHandler.__init__(self)
         self.client = client
@@ -84,7 +103,8 @@ class APILoggingHandler(logging.StreamHandler):
         # on the event loop yet - scheduled when the event loop is ready.
         self.queue = []
 
-    async def ship_off(self, payload: dict):
+    async def ship_off(self, payload: dict) -> None:
+        """Ship log payload to the logging API."""
         try:
             await self.client.post('logs', json=payload)
         except ResponseCodeError as err:
@@ -100,7 +120,14 @@ class APILoggingHandler(logging.StreamHandler):
                 extra={'via_handler': True}
             )
 
-    def emit(self, record: logging.LogRecord):
+    def emit(self, record: logging.LogRecord) -> None:
+        """
+        Determine if a log record should be shipped to the logging API.
+
+        The following two conditions are set:
+            1. Do not log anything below DEBUG
+            2. Ignore log records from the logging handler
+        """
         # Two checks are performed here:
         if (
                 # 1. Do not log anything below `DEBUG`. This is only applicable
@@ -131,7 +158,8 @@ class APILoggingHandler(logging.StreamHandler):
                 asyncio.create_task(task)
                 self.schedule_queued_tasks()
 
-    def schedule_queued_tasks(self):
+    def schedule_queued_tasks(self) -> None:
+        """Logging task scheduler."""
         for task in self.queue:
             asyncio.create_task(task)
 

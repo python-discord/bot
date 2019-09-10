@@ -9,7 +9,7 @@ logging.TRACE = 5
 logging.addLevelName(logging.TRACE, "TRACE")
 
 
-def monkeypatch_trace(self, msg, *args, **kwargs):
+def monkeypatch_trace(self: logging.Logger, msg: str, *args, **kwargs) -> None:
     """
     Log 'msg % args' with severity 'TRACE'.
 

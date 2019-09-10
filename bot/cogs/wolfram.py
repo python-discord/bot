@@ -6,7 +6,7 @@ from urllib import parse
 import discord
 from discord import Embed
 from discord.ext import commands
-from discord.ext.commands import BucketType, Context, check, group
+from discord.ext.commands import Bot, BucketType, Context, check, group
 
 from bot.constants import Colours, STAFF_ROLES, Wolfram
 from bot.pagination import ImagePaginator
@@ -35,18 +35,7 @@ async def send_embed(
         img_url: str = None,
         f: discord.File = None
 ) -> None:
-    """
-    Generates an embed with wolfram as the author, with message_txt as description,
-    adds custom colour if specified, a footer and image (could be a file with f param) and sends
-    the embed through ctx
-    :param ctx: Context
-    :param message_txt: str - Message to be sent
-    :param colour: int - Default: Colours.soft_red - Colour of embed
-    :param footer: str - Default: None - Adds a footer to the embed
-    :param img_url:str - Default: None - Adds an image to the embed
-    :param f: discord.File - Default: None - Add a file to the msg, often attached as image to embed
-    """
-
+    """Generate & send a response embed with Wolfram as the author."""
     embed = Embed(colour=colour)
     embed.description = message_txt
     embed.set_author(name="Wolfram Alpha",
@@ -63,14 +52,10 @@ async def send_embed(
 
 def custom_cooldown(*ignore: List[int]) -> check:
     """
-    Custom cooldown mapping that applies a specific requests per day to users.
-    Staff is ignored by the user cooldown, however the cooldown implements a
-    total amount of uses per day for the entire guild. (Configurable in configs)
+    Implement per-user and per-guild cooldowns for requests to the Wolfram API.
 
-    :param ignore: List[int] -- list of ids of roles to be ignored by user cooldown
-    :return: check
+    A list of roles may be provided to ignore the per-user cooldown
     """
-
     async def predicate(ctx: Context) -> bool:
         user_bucket = usercd.get_bucket(ctx.message)
 
@@ -105,8 +90,8 @@ def custom_cooldown(*ignore: List[int]) -> check:
     return check(predicate)
 
 
-async def get_pod_pages(ctx, bot, query: str) -> Optional[List[Tuple]]:
-    # Give feedback that the bot is working.
+async def get_pod_pages(ctx: Context, bot: Bot, query: str) -> Optional[List[Tuple]]:
+    """Give feedback that the bot is working."""
     async with ctx.channel.typing():
         url_str = parse.urlencode({
             "input": query,
@@ -150,9 +135,7 @@ async def get_pod_pages(ctx, bot, query: str) -> Optional[List[Tuple]]:
 
 
 class Wolfram:
-    """
-    Commands for interacting with the Wolfram|Alpha API.
-    """
+    """Commands for interacting with the Wolfram|Alpha API."""
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -160,14 +143,7 @@ class Wolfram:
     @group(name="wolfram", aliases=("wolf", "wa"), invoke_without_command=True)
     @custom_cooldown(*STAFF_ROLES)
     async def wolfram_command(self, ctx: Context, *, query: str) -> None:
-        """
-        Requests all answers on a single image,
-        sends an image of all related pods
-
-        :param ctx: Context
-        :param query: str - string request to api
-        """
-
+        """Requests all answers on a single image, sends an image of all related pods."""
         url_str = parse.urlencode({
             "i": query,
             "appid": APPID,
@@ -203,13 +179,10 @@ class Wolfram:
     @custom_cooldown(*STAFF_ROLES)
     async def wolfram_page_command(self, ctx: Context, *, query: str) -> None:
         """
-        Requests a drawn image of given query
-        Keywords worth noting are, "like curve", "curve", "graph", "pokemon", etc
+        Requests a drawn image of given query.
 
-        :param ctx: Context
-        :param query: str - string request to api
+        Keywords worth noting are, "like curve", "curve", "graph", "pokemon", etc.
         """
-
         pages = await get_pod_pages(ctx, self.bot, query)
 
         if not pages:
@@ -225,15 +198,12 @@ class Wolfram:
 
     @wolfram_command.command(name="cut", aliases=("c",))
     @custom_cooldown(*STAFF_ROLES)
-    async def wolfram_cut_command(self, ctx, *, query: str) -> None:
+    async def wolfram_cut_command(self, ctx: Context, *, query: str) -> None:
         """
-        Requests a drawn image of given query
-        Keywords worth noting are, "like curve", "curve", "graph", "pokemon", etc
+        Requests a drawn image of given query.
 
-        :param ctx: Context
-        :param query: str - string request to api
+        Keywords worth noting are, "like curve", "curve", "graph", "pokemon", etc.
         """
-
         pages = await get_pod_pages(ctx, self.bot, query)
 
         if not pages:
@@ -249,14 +219,7 @@ class Wolfram:
     @wolfram_command.command(name="short", aliases=("sh", "s"))
     @custom_cooldown(*STAFF_ROLES)
     async def wolfram_short_command(self, ctx: Context, *, query: str) -> None:
-        """
-            Requests an answer to a simple question
-            Responds in plaintext
-
-            :param ctx: Context
-            :param query: str - string request to api
-        """
-
+        """Requests an answer to a simple question."""
         url_str = parse.urlencode({
             "i": query,
             "appid": APPID,
@@ -284,5 +247,6 @@ class Wolfram:
 
 
 def setup(bot: commands.Bot) -> None:
+    """Wolfram cog load."""
     bot.add_cog(Wolfram(bot))
     log.info("Cog loaded: Wolfram")

@@ -44,9 +44,15 @@ class TokenRemover:
 
     @property
     def mod_log(self) -> ModLog:
+        """Get currently loaded ModLog cog instance."""
         return self.bot.get_cog("ModLog")
 
-    async def on_message(self, msg: Message):
+    async def on_message(self, msg: Message) -> None:
+        """
+        Check each message for a string that matches Discord's token pattern.
+
+        See: https://discordapp.com/developers/docs/reference#snowflakes
+        """
         if msg.author.bot:
             return
 
@@ -83,6 +89,11 @@ class TokenRemover:
 
     @staticmethod
     def is_valid_user_id(b64_content: str) -> bool:
+        """
+        Check potential token to see if it contains a valid Discord user ID.
+
+        See: https://discordapp.com/developers/docs/reference#snowflakes
+        """
         b64_content += '=' * (-len(b64_content) % 4)
 
         try:
@@ -93,6 +104,11 @@ class TokenRemover:
 
     @staticmethod
     def is_valid_timestamp(b64_content: str) -> bool:
+        """
+        Check potential token to see if it contains a valid timestamp.
+
+        See: https://discordapp.com/developers/docs/reference#snowflakes
+        """
         b64_content += '=' * (-len(b64_content) % 4)
 
         try:
@@ -103,6 +119,7 @@ class TokenRemover:
         return snowflake_time(snowflake + TOKEN_EPOCH) < DISCORD_EPOCH_TIMESTAMP
 
 
-def setup(bot: Bot):
+def setup(bot: Bot) -> None:
+    """Token Remover cog load."""
     bot.add_cog(TokenRemover(bot))
     log.info("Cog loaded: TokenRemover")
