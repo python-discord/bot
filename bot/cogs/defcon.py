@@ -127,30 +127,12 @@ class Defcon:
 
         except Exception as e:
             log.exception("Unable to update DEFCON settings.")
-            await ctx.send(
-                f"{Emojis.defcon_enabled} DEFCON enabled.\n\n"
-                "**There was a problem updating the site** - This setting may be reverted when the bot is "
-                "restarted.\n\n"
-                f"```py\n{e}\n```"
-            )
-
-            await self.mod_log.send_log_message(
-                Icons.defcon_enabled, Colours.soft_green, "DEFCON enabled",
-                f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)\n"
-                f"**Days:** {self.days.days}\n\n"
-                "**There was a problem updating the site** - This setting may be reverted when the bot is "
-                "restarted.\n\n"
-                f"```py\n{e}\n```"
-            )
+            await ctx.send(self.build_defcon_msg("enabled", e))
+            await self.send_defcon_log("enabled", ctx.author, e)
 
         else:
-            await ctx.send(f"{Emojis.defcon_enabled} DEFCON enabled.")
-
-            await self.mod_log.send_log_message(
-                Icons.defcon_enabled, Colours.soft_green, "DEFCON enabled",
-                f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)\n"
-                f"**Days:** {self.days.days}\n\n"
-            )
+            await ctx.send(self.build_defcon_msg("enabled"))
+            await self.send_defcon_log("enabled", ctx.author)
 
         await self.update_channel_topic()
 
@@ -176,27 +158,11 @@ class Defcon:
             )
         except Exception as e:
             log.exception("Unable to update DEFCON settings.")
-            await ctx.send(
-                f"{Emojis.defcon_disabled} DEFCON disabled.\n\n"
-                "**There was a problem updating the site** - This setting may be reverted when the bot is "
-                "restarted.\n\n"
-                f"```py\n{e}\n```"
-            )
-
-            await self.mod_log.send_log_message(
-                Icons.defcon_disabled, Colours.soft_red, "DEFCON disabled",
-                f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)\n"
-                "**There was a problem updating the site** - This setting may be reverted when the bot is "
-                "restarted.\n\n"
-                f"```py\n{e}\n```"
-            )
+            await ctx.send(self.build_defcon_msg("disabled", e))
+            await self.send_defcon_log("disabled", ctx.author, e)
         else:
-            await ctx.send(f"{Emojis.defcon_disabled} DEFCON disabled.")
-
-            await self.mod_log.send_log_message(
-                Icons.defcon_disabled, Colours.soft_red, "DEFCON disabled",
-                f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)"
-            )
+            await ctx.send(self.build_defcon_msg("disabled"))
+            await self.send_defcon_log("disabled", ctx.author)
 
         await self.update_channel_topic()
 
@@ -237,32 +203,15 @@ class Defcon:
             )
         except Exception as e:
             log.exception("Unable to update DEFCON settings.")
-            await ctx.send(
-                f"{Emojis.defcon_updated} DEFCON days updated; accounts must be {days} "
-                f"days old to join to the server.\n\n"
-                "**There was a problem updating the site** - This setting may be reverted when the bot is "
-                "restarted.\n\n"
-                f"```py\n{e}\n```"
-            )
-
-            await self.mod_log.send_log_message(
-                Icons.defcon_updated, Colour.blurple(), "DEFCON updated",
-                f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)\n"
-                f"**Days:** {self.days.days}\n\n"
-                "**There was a problem updating the site** - This setting may be reverted when the bot is "
-                "restarted.\n\n"
-                f"```py\n{e}\n```"
-            )
+            await ctx.send(self.build_defcon_msg("updated", e))
+            await self.send_defcon_log("updated", ctx.author, e)
         else:
-            await ctx.send(
-                f"{Emojis.defcon_updated} DEFCON days updated; accounts must be {days} days old to join to the server"
-            )
+            await ctx.send(self.build_defcon_msg("updated"))
+            await self.send_defcon_log("updated", ctx.author)
 
-            await self.mod_log.send_log_message(
-                Icons.defcon_updated, Colour.blurple(), "DEFCON updated",
-                f"**Staffer:** {ctx.author.name}#{ctx.author.discriminator} (`{ctx.author.id}`)\n"
-                f"**Days:** {self.days.days}"
-            )
+        # Enable DEFCON if it's not already
+        if not self.enabled:
+            self.enabled = True
 
         await self.update_channel_topic()
 
@@ -280,6 +229,59 @@ class Defcon:
         self.mod_log.ignore(Event.guild_channel_update, Channels.defcon)
         defcon_channel = self.bot.guilds[0].get_channel(Channels.defcon)
         await defcon_channel.edit(topic=new_topic)
+
+    def build_defcon_msg(self, change: str, e: Exception = None) -> str:
+        """
+        Build in-channel response string for DEFCON action.
+
+        `change` string may be one of the following: ('enabled', 'disabled', 'updated')
+        """
+        if change.lower() == "enabled":
+            msg = f"{Emojis.defcon_enabled} DEFCON enabled.\n\n"
+        elif change.lower() == "disabled":
+            msg = f"{Emojis.defcon_disabled} DEFCON disabled.\n\n"
+        elif change.lower() == "updated":
+            msg = (
+                f"{Emojis.defcon_updated} DEFCON days updated; accounts must be {self.days} "
+                "days old to join the server.\n\n"
+            )
+
+        if e:
+            msg += (
+                "**There was a problem updating the site** - This setting may be reverted when the bot restarts.\n\n"
+                f"```py\n{e}\n```"
+            )
+
+    async def send_defcon_log(self, change: str, actor: Member, e: Exception = None) -> None:
+        """
+        Send log message for DEFCON action.
+
+        `change` string may be one of the following: ('enabled', 'disabled', 'updated')
+        """
+        log_msg = f"**Staffer:** {actor.name}#{actor.discriminator} (`{actor.id}`)\n"
+
+        if change.lower() == "enabled":
+            icon = Icons.defcon_enabled
+            color = Colours.soft_green
+            status_msg = "DEFCON enabled"
+            log_msg += f"**Days:** {self.days.days}\n\n"
+        elif change.lower() == "disabled":
+            icon = Icons.defcon_disabled
+            color = Colours.soft_red
+            status_msg = "DEFCON enabled"
+        elif change.lower() == "updated":
+            icon = Icons.defcon_updated
+            color = Colour.blurple()
+            status_msg = "DEFCON updated"
+            log_msg += f"**Days:** {self.days.days}\n\n"
+
+        if e:
+            log_msg += (
+                "**There was a problem updating the site** - This setting may be reverted when the bot restarts.\n\n"
+                f"```py\n{e}\n```"
+            )
+
+        await self.mod_log.send_log_message(icon, color, status_msg, log_msg)
 
 
 def setup(bot: Bot):
