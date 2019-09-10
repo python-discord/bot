@@ -24,7 +24,8 @@ class ErrorHandler:
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    async def on_command_error(self, ctx: Context, e: CommandError):
+    async def on_command_error(self, ctx: Context, e: CommandError) -> None:
+        """Provide command error handling."""
         command = ctx.command
         parent = None
 
@@ -87,6 +88,7 @@ class ErrorHandler:
             raise e
 
 
-def setup(bot: Bot):
+def setup(bot: Bot) -> None:
+    """Error handler cog load."""
     bot.add_cog(ErrorHandler(bot))
     log.info("Cog loaded: Events")

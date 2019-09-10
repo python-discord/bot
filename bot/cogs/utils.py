@@ -6,7 +6,7 @@ from email.parser import HeaderParser
 from io import StringIO
 
 from discord import Colour, Embed
-from discord.ext.commands import AutoShardedBot, Context, command
+from discord.ext.commands import Bot, CheckFailure, Context, command
 
 from bot.constants import Channels, NEGATIVE_REPLIES, STAFF_ROLES
 from bot.decorators import InChannelCheckFailure, in_channel
@@ -15,22 +15,17 @@ log = logging.getLogger(__name__)
 
 
 class Utils:
-    """
-    A selection of utilities which don't have a clear category.
-    """
+    """A selection of utilities which don't have a clear category."""
 
-    def __init__(self, bot: AutoShardedBot):
+    def __init__(self, bot: Bot):
         self.bot = bot
 
         self.base_pep_url = "http://www.python.org/dev/peps/pep-"
         self.base_github_pep_url = "https://raw.githubusercontent.com/python/peps/master/pep-"
 
     @command(name='pep', aliases=('get_pep', 'p'))
-    async def pep_command(self, ctx: Context, pep_number: str):
-        """
-        Fetches information about a PEP and sends it to the channel.
-        """
-
+    async def pep_command(self, ctx: Context, pep_number: str) -> None:
+        """Fetches information about a PEP and sends it to the channel."""
         if pep_number.isdigit():
             pep_number = int(pep_number)
         else:
@@ -90,11 +85,8 @@ class Utils:
 
     @command()
     @in_channel(Channels.bot, bypass_roles=STAFF_ROLES)
-    async def charinfo(self, ctx, *, characters: str):
-        """
-        Shows you information on up to 25 unicode characters.
-        """
-
+    async def charinfo(self, ctx: Context, *, characters: str) -> None:
+        """Shows you information on up to 25 unicode characters."""
         match = re.match(r"<(a?):(\w+):(\d+)>", characters)
         if match:
             embed = Embed(
@@ -133,7 +125,8 @@ class Utils:
 
         await ctx.send(embed=embed)
 
-    async def __error(self, ctx, error):
+    async def __error(self, ctx: Context, error: CheckFailure) -> None:
+        """Send Check failure error to invoking context if command is invoked in a blacklisted channel by non-staff."""
         embed = Embed(colour=Colour.red())
         if isinstance(error, InChannelCheckFailure):
             embed.title = random.choice(NEGATIVE_REPLIES)
@@ -141,6 +134,7 @@ class Utils:
             await ctx.send(embed=embed)
 
 
-def setup(bot):
+def setup(bot: Bot) -> None:
+    """Utils cog load."""
     bot.add_cog(Utils(bot))
     log.info("Cog loaded: Utils")

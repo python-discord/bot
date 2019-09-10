@@ -10,9 +10,7 @@ log = logging.getLogger(__name__)
 
 
 class CodeJams:
-    """
-    Manages the code-jam related parts of our server
-    """
+    """Manages the code-jam related parts of our server."""
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -22,14 +20,12 @@ class CodeJams:
     async def createteam(
         self, ctx: commands.Context,
         team_name: str, members: commands.Greedy[Member]
-    ):
+    ) -> None:
         """
-        Create a team channel (both voice and text) in the Code Jams category, assign roles
-        and then add overwrites for the team.
+        Create team channels (voice and text) in the Code Jams category, assign roles, and add overwrites for the team.
 
         The first user passed will always be the team leader.
         """
-
         # We had a little issue during Code Jam 4 here, the greedy converter did it's job
         # and ignored anything which wasn't a valid argument which left us with teams of
         # two members or at some times even 1 member. This fixes that by checking that there
@@ -105,6 +101,7 @@ class CodeJams:
         await ctx.send(f":ok_hand: Team created: {team_channel.mention}")
 
 
-def setup(bot):
+def setup(bot: commands.Bot) -> None:
+    """Code Jams cog load."""
     bot.add_cog(CodeJams(bot))
     log.info("Cog loaded: CodeJams")

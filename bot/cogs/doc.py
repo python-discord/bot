@@ -4,10 +4,11 @@ import logging
 import re
 import textwrap
 from collections import OrderedDict
-from typing import Optional, Tuple
+from typing import Callable, Optional, Tuple
 
 import discord
 from bs4 import BeautifulSoup
+from bs4.element import PageElement
 from discord.ext import commands
 from markdownify import MarkdownConverter
 from requests import ConnectionError
@@ -27,24 +28,22 @@ UNWANTED_SIGNATURE_SYMBOLS = ('[source]', '¶')
 WHITESPACE_AFTER_NEWLINES_RE = re.compile(r"(?<=\n\n)(\s+)")
 
 
-def async_cache(max_size=128, arg_offset=0):
+def async_cache(max_size: int = 128, arg_offset: int = 0) -> Callable:
     """
     LRU cache implementation for coroutines.
 
-    :param max_size:
-    Specifies the maximum size the cache should have.
-    Once it exceeds the maximum size, keys are deleted in FIFO order.
-    :param arg_offset:
-    The offset that should be applied to the coroutine's arguments
-    when creating the cache key. Defaults to `0`.
-    """
+    Once the cache exceeds the maximum size, keys are deleted in FIFO order.
 
+    An offset may be optionally provided to be applied to the coroutine's arguments when creating the cache key.
+    """
     # Assign the cache to the function itself so we can clear it from outside.
     async_cache.cache = OrderedDict()
 
-    def decorator(function):
+    def decorator(function: Callable) -> Callable:
+        """Define the async_cache decorator."""
         @functools.wraps(function)
-        async def wrapper(*args):
+        async def wrapper(*args) -> OrderedDict:
+            """Decorator wrapper for the caching logic."""
             key = ':'.join(args[arg_offset:])
 
             value = async_cache.cache.get(key)
@@ -59,27 +58,25 @@ def async_cache(max_size=128, arg_offset=0):
 
 
 class DocMarkdownConverter(MarkdownConverter):
-    def convert_code(self, el, text):
-        """Undo `markdownify`s underscore escaping."""
+    """Subclass markdownify's MarkdownCoverter to provide custom conversion methods."""
 
+    def convert_code(self, el: PageElement, text: str) -> str:
+        """Undo `markdownify`s underscore escaping."""
         return f"`{text}`".replace('\\', '')
 
-    def convert_pre(self, el, text):
+    def convert_pre(self, el: PageElement, text: str) -> str:
         """Wrap any codeblocks in `py` for syntax highlighting."""
-
         code = ''.join(el.strings)
         return f"```py\n{code}```"
 
 
-def markdownify(html):
+def markdownify(html: str) -> DocMarkdownConverter:
+    """Create a DocMarkdownConverter object from the input html."""
     return DocMarkdownConverter(bullets='•').convert(html)
 
 
 class DummyObject(object):
-    """
-    A dummy object which supports assigning anything,
-    which the builtin `object()` does not support normally.
-    """
+    """A dummy object which supports assigning anything, which the builtin `object()` does not support normally."""
 
 
 class SphinxConfiguration:
@@ -94,14 +91,15 @@ class InventoryURL(commands.Converter):
     """
     Represents an Intersphinx inventory URL.
 
-    This converter checks whether intersphinx
-    accepts the given inventory URL, and raises
+    This converter checks whether intersphinx accepts the given inventory URL, and raises
     `BadArgument` if that is not the case.
+
     Otherwise, it simply passes through the given URL.
     """
 
     @staticmethod
-    async def convert(ctx, url: str):
+    async def convert(ctx: commands.Context, url: str) -> str:
+        """Convert url to Intersphinx inventory URL."""
         try:
             intersphinx.fetch_inventory(SphinxConfiguration(), '', url)
         except AttributeError:
@@ -121,30 +119,32 @@ class InventoryURL(commands.Converter):
 
 
 class Doc:
-    def __init__(self, bot):
+    """A set of commands for querying & displaying documentation."""
+
+    def __init__(self, bot: commands.Bot):
         self.base_urls = {}
         self.bot = bot
         self.inventories = {}
 
-    async def on_ready(self):
+    async def on_ready(self) -> None:
+        """Refresh documentation inventory."""
         await self.refresh_inventory()
 
     async def update_single(
         self, package_name: str, base_url: str, inventory_url: str, config: SphinxConfiguration
-    ):
+    ) -> None:
         """
         Rebuild the inventory for a single package.
 
-        :param package_name: The package name to use, appears in the log.
-        :param base_url: The root documentation URL for the specified package.
-                         Used to build absolute paths that link to specific symbols.
-        :param inventory_url: The absolute URL to the intersphinx inventory.
-                              Fetched by running `intersphinx.fetch_inventory` in an
-                              executor on the bot's event loop.
-        :param config: A `SphinxConfiguration` instance to mock the regular sphinx
-                       project layout. Required for use with intersphinx.
+        Where:
+            * `package_name` is the package name to use, appears in the log
+            * `base_url` is the root documentation URL for the specified package, used to build
+                         absolute paths that link to specific symbols
+            * `inventory_url` is the absolute URL to the intersphinx inventory, fetched by running
+                              `intersphinx.fetch_inventory` in an executor on the bot's event loop
+            * `config` is a `SphinxConfiguration` instance to mock the regular sphinx
+                       project layout, required for use with intersphinx
         """
-
         self.base_urls[package_name] = base_url
 
         fetch_func = functools.partial(intersphinx.fetch_inventory, config, '', inventory_url)
@@ -158,7 +158,8 @@ class Doc:
 
         log.trace(f"Fetched inventory for {package_name}.")
 
-    async def refresh_inventory(self):
+    async def refresh_inventory(self) -> None:
+        """Refresh internal documentation inventory."""
         log.debug("Refreshing documentation inventory...")
 
         # Clear the old base URLS and inventories to ensure
@@ -185,16 +186,13 @@ class Doc:
         """
         Given a Python symbol, return its signature and description.
 
-        :param symbol: The symbol for which HTML data should be returned.
-        :return:
-        A tuple in the form (str, str), or `None`.
-        The first tuple element is the signature of the given
-        symbol as a markup-free string, and the second tuple
-        element is the description of the given symbol with HTML
-        markup included. If the given symbol could not be found,
-        returns `None`.
-        """
+        Returns a tuple in the form (str, str), or `None`.
 
+        The first tuple element is the signature of the given symbol as a markup-free string, and
+        the second tuple element is the description of the given symbol with HTML markup included.
+
+        If the given symbol could not be found, returns `None`.
+        """
         url = self.inventories.get(symbol)
         if url is None:
             return None
@@ -222,16 +220,10 @@ class Doc:
     @async_cache(arg_offset=1)
     async def get_symbol_embed(self, symbol: str) -> Optional[discord.Embed]:
         """
-        Using `get_symbol_html`, attempt to scrape and
-        fetch the data for the given `symbol`, and build
-        a formatted embed out of its contents.
+        Attempt to scrape and fetch the data for the given `symbol`, and build an embed from its contents.
 
-        :param symbol: The symbol for which the embed should be returned
-        :return:
-        If the symbol is known, an Embed with documentation about it.
-        Otherwise, `None`.
+        If the symbol is known, an Embed with documentation about it is returned.
         """
-
         scraped_html = await self.get_symbol_html(symbol)
         if scraped_html is None:
             return None
@@ -266,20 +258,16 @@ class Doc:
         )
 
     @commands.group(name='docs', aliases=('doc', 'd'), invoke_without_command=True)
-    async def docs_group(self, ctx, symbol: commands.clean_content = None):
+    async def docs_group(self, ctx: commands.Context, symbol: commands.clean_content = None) -> None:
         """Lookup documentation for Python symbols."""
-
         await ctx.invoke(self.get_command)
 
     @docs_group.command(name='get', aliases=('g',))
-    async def get_command(self, ctx, symbol: commands.clean_content = None):
+    async def get_command(self, ctx: commands.Context, symbol: commands.clean_content = None) -> None:
         """
         Return a documentation embed for a given symbol.
-        If no symbol is given, return a list of all available inventories.
 
-        :param ctx: Discord message context
-        :param symbol: The symbol for which documentation should be returned,
-                       or nothing to get a list of all inventories
+        If no symbol is given, return a list of all available inventories.
 
         Examples:
             !docs
@@ -287,7 +275,6 @@ class Doc:
             !docs aiohttp.ClientSession
             !docs get aiohttp.ClientSession
         """
-
         if symbol is None:
             inventory_embed = discord.Embed(
                 title=f"All inventories (`{len(self.base_urls)}` total)",
@@ -321,18 +308,13 @@ class Doc:
     @docs_group.command(name='set', aliases=('s',))
     @with_role(*MODERATION_ROLES)
     async def set_command(
-        self, ctx, package_name: ValidPythonIdentifier,
+        self, ctx: commands.Context, package_name: ValidPythonIdentifier,
         base_url: ValidURL, inventory_url: InventoryURL
-    ):
+    ) -> None:
         """
         Adds a new documentation metadata object to the site's database.
-        The database will update the object, should an existing item
-        with the specified `package_name` already exist.
 
-        :param ctx: Discord message context
-        :param package_name: The package name, for example `aiohttp`.
-        :param base_url: The package documentation's root URL, used to build absolute links.
-        :param inventory_url: The intersphinx inventory URL.
+        The database will update the object, should an existing item with the specified `package_name` already exist.
 
         Example:
             !docs set \
@@ -340,7 +322,6 @@ class Doc:
                     https://discordpy.readthedocs.io/en/rewrite/ \
                     https://discordpy.readthedocs.io/en/rewrite/objects.inv
         """
-
         body = {
             'package': package_name,
             'base_url': base_url,
@@ -364,17 +345,13 @@ class Doc:
 
     @docs_group.command(name='delete', aliases=('remove', 'rm', 'd'))
     @with_role(*MODERATION_ROLES)
-    async def delete_command(self, ctx, package_name: ValidPythonIdentifier):
+    async def delete_command(self, ctx: commands.Context, package_name: ValidPythonIdentifier) -> None:
         """
         Removes the specified package from the database.
-
-        :param ctx: Discord message context
-        :param package_name: The package name, for example `aiohttp`.
 
         Examples:
             !docs delete aiohttp
         """
-
         await self.bot.api_client.delete(f'bot/documentation-links/{package_name}')
 
         async with ctx.typing():
@@ -384,5 +361,7 @@ class Doc:
         await ctx.send(f"Successfully deleted `{package_name}` and refreshed inventory.")
 
 
-def setup(bot):
+def setup(bot: commands.Bot) -> None:
+    """Doc cog load."""
     bot.add_cog(Doc(bot))
+    log.info("Cog loaded: Doc")

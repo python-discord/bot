@@ -19,15 +19,13 @@ class Site:
         self.bot = bot
 
     @group(name="site", aliases=("s",), invoke_without_command=True)
-    async def site_group(self, ctx):
+    async def site_group(self, ctx: Context) -> None:
         """Commands for getting info about our website."""
-
         await ctx.invoke(self.bot.get_command("help"), "site")
 
     @site_group.command(name="home", aliases=("about",))
-    async def site_main(self, ctx: Context):
+    async def site_main(self, ctx: Context) -> None:
         """Info about the website itself."""
-
         url = f"{URLs.site_schema}{URLs.site}/"
 
         embed = Embed(title="Python Discord website")
@@ -43,9 +41,8 @@ class Site:
         await ctx.send(embed=embed)
 
     @site_group.command(name="resources")
-    async def site_resources(self, ctx: Context):
+    async def site_resources(self, ctx: Context) -> None:
         """Info about the site's Resources page."""
-
         url = f"{INFO_URL}/resources"
 
         embed = Embed(title="Resources")
@@ -60,9 +57,8 @@ class Site:
         await ctx.send(embed=embed)
 
     @site_group.command(name="help")
-    async def site_help(self, ctx: Context):
+    async def site_help(self, ctx: Context) -> None:
         """Info about the site's Getting Help page."""
-
         url = f"{INFO_URL}/help"
 
         embed = Embed(title="Getting Help")
@@ -77,9 +73,8 @@ class Site:
         await ctx.send(embed=embed)
 
     @site_group.command(name="faq")
-    async def site_faq(self, ctx: Context):
+    async def site_faq(self, ctx: Context) -> None:
         """Info about the site's FAQ page."""
-
         url = f"{INFO_URL}/faq"
 
         embed = Embed(title="FAQ")
@@ -96,14 +91,8 @@ class Site:
 
     @site_group.command(aliases=['r', 'rule'], name='rules')
     @redirect_output(destination_channel=Channels.bot, bypass_roles=STAFF_ROLES)
-    async def site_rules(self, ctx: Context, *rules: int):
-        """
-        Provides a link to the `rules` endpoint of the website, or displays
-        specific rules, if they are requested.
-
-        **`ctx`:** The Discord message context
-        **`rules`:** The rules a user wants to get.
-        """
+    async def site_rules(self, ctx: Context, *rules: int) -> None:
+        """Provides a link to the `rules` endpoint of the website, or displays specific rule(s), if requested."""
         rules_embed = Embed(title='Rules', color=Colour.blurple())
         rules_embed.url = f"{URLs.site_schema}{URLs.site}/about/rules"
 
@@ -135,6 +124,7 @@ class Site:
         await LinePaginator.paginate(final_rules, ctx, rules_embed, max_lines=3)
 
 
-def setup(bot):
+def setup(bot: Bot) -> None:
+    """Site cog load."""
     bot.add_cog(Site(bot))
     log.info("Cog loaded: Site")
