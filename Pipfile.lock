@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "61607e940ea00e1197900c04fe1298e048d1f415db2f1a2a3a157406c6ea2b0c"
+            "sha256": "a953197b27bbc2af413a1ddd465bb95254167e3a0bba525a3ad34ac738dd6ae4"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -18,11 +18,11 @@
     "default": {
         "aio-pika": {
             "hashes": [
-                "sha256:c1424962ef9e28fbda840d76425cdd139605e480a4d68164303cda8d356ba9de",
-                "sha256:dcfe9c11af2ab9ff6c1c5a366d094c2a7542bab534d98a4aea29518672c9d7ac"
+                "sha256:31e08189841a8350db5bec70608b4d2fbacb89c0a555a18ec47511716a9bfc41",
+                "sha256:adfe0acf34356ccd9654a9a1c46f7e8db1dc4497a774c0e54bf2d3af14571bd0"
             ],
             "index": "pypi",
-            "version": "==6.1.0"
+            "version": "==6.1.1"
         },
         "aiodns": {
             "hashes": [
@@ -62,10 +62,10 @@
         },
         "aiormq": {
             "hashes": [
-                "sha256:472734ab3cf18001fb8cedb38ee13008292230a461b6482dbdf65590441ce32c",
-                "sha256:4b6b2b43616b7a6b353ecf9896ae29ac2f74a38c4c53bfe73824ac2807faca5d"
+                "sha256:0b755b748d87d5ec63b4b7f162102333bf0901caf1f8a2bf29467bbdd54e637d",
+                "sha256:f8eef1f98bc331a266404d925745fac589dab30412688564d740754d6d643863"
             ],
-            "version": "==2.7.4"
+            "version": "==2.7.5"
         },
         "alabaster": {
             "hashes": [
@@ -494,9 +494,9 @@
         },
         "snowballstemmer": {
             "hashes": [
-                "sha256:9f3b9ffe0809d174f7047e121431acf99c89a7040f0ca84f94ba53a498e6d0c9"
+                "sha256:713e53b79cbcf97bc5245a06080a33d54a77e7cce2f789c835a143bcdb5c033e"
             ],
-            "version": "==1.9.0"
+            "version": "==1.9.1"
         },
         "soupsieve": {
             "hashes": [
@@ -692,6 +692,14 @@
             "index": "pypi",
             "version": "==3.7.8"
         },
+        "flake8-annotations": {
+            "hashes": [
+                "sha256:1309f2bc9853a2d77d578b089d331b0b832b40c97932641e136e1b49d3650c82",
+                "sha256:3ecdd27054c3eed6484139025698465e3c9f4e68dbd5043d0204fcb2550ee27b"
+            ],
+            "index": "pypi",
+            "version": "==1.0.0"
+        },
         "flake8-bugbear": {
             "hashes": [
                 "sha256:d8c466ea79d5020cb20bf9f11cf349026e09517a42264f313d3f6fddb83e0571",
@@ -699,6 +707,14 @@
             ],
             "index": "pypi",
             "version": "==19.8.0"
+        },
+        "flake8-docstrings": {
+            "hashes": [
+                "sha256:1666dd069c9c457ee57e80af3c1a6b37b00cc1801c6fde88e455131bb2e186cd",
+                "sha256:9c0db5a79a1affd70fdf53b8765c8a26bf968e59e0252d7f2fc546b41c0cda06"
+            ],
+            "index": "pypi",
+            "version": "==1.4.0"
         },
         "flake8-import-order": {
             "hashes": [
@@ -809,6 +825,13 @@
             ],
             "version": "==2.5.0"
         },
+        "pydocstyle": {
+            "hashes": [
+                "sha256:04c84e034ebb56eb6396c820442b8c4499ac5eb94a3bda88951ac3dc519b6058",
+                "sha256:66aff87ffe34b1e49bff2dd03a88ce6843be2f3346b0c9814410d34987fbab59"
+            ],
+            "version": "==4.0.1"
+        },
         "pyflakes": {
             "hashes": [
                 "sha256:17dbeb2e3f4d772725c777fabc446d5634d1038f234e77343108ce445ea69ce0",
@@ -872,6 +895,12 @@
                 "sha256:d16a0141ec1a18405cd4ce8b4613101da75da0e9a7aec5bdd4fa804d0e0eba73"
             ],
             "version": "==1.12.0"
+        },
+        "snowballstemmer": {
+            "hashes": [
+                "sha256:713e53b79cbcf97bc5245a06080a33d54a77e7cce2f789c835a143bcdb5c033e"
+            ],
+            "version": "==1.9.1"
         },
         "toml": {
             "hashes": [
