@@ -2,7 +2,7 @@ import logging
 from datetime import datetime
 
 from discord import Colour, Embed, Member, utils
-from discord.ext.commands import Context, command
+from discord.ext.commands import Bot, Context, command
 
 from bot.constants import Categories, Channels, Free, STAFF_ROLES
 from bot.decorators import redirect_output
@@ -22,11 +22,9 @@ class Free:
 
     @command(name="free", aliases=('f',))
     @redirect_output(destination_channel=Channels.bot, bypass_roles=STAFF_ROLES)
-    async def free(self, ctx: Context, user: Member = None, seek: int = 2):
+    async def free(self, ctx: Context, user: Member = None, seek: int = 2) -> None:
         """
         Lists free help channels by likeliness of availability.
-        :param user: accepts user mention, ID, etc.
-        :param seek: How far back to check the last active message.
 
         seek is used only when this command is invoked in a help channel.
         You cannot override seek without mentioning a user first.
@@ -101,6 +99,7 @@ class Free:
         await ctx.send(embed=embed)
 
 
-def setup(bot):
+def setup(bot: Bot) -> None:
+    """Free cog load."""
     bot.add_cog(Free())
     log.info("Cog loaded: Free")

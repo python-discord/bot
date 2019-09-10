@@ -41,9 +41,7 @@ MAX_PASTE_LEN = 1000
 
 
 class Snekbox:
-    """
-    Safe evaluation of Python code using Snekbox
-    """
+    """Safe evaluation of Python code using Snekbox."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
@@ -173,7 +171,7 @@ class Snekbox:
     @command(name="eval", aliases=("e",))
     @guild_only()
     @in_channel(Channels.bot, bypass_roles=STAFF_ROLES)
-    async def eval_command(self, ctx: Context, *, code: str = None):
+    async def eval_command(self, ctx: Context, *, code: str = None) -> None:
         """
         Run Python code and get the results.
 
@@ -225,7 +223,8 @@ class Snekbox:
             del self.jobs[ctx.author.id]
 
     @eval_command.error
-    async def eval_command_error(self, ctx: Context, error: CommandError):
+    async def eval_command_error(self, ctx: Context, error: CommandError) -> None:
+        """Eval commands error handler."""
         embed = Embed(colour=Colour.red())
 
         if isinstance(error, NoPrivateMessage):
@@ -246,6 +245,7 @@ class Snekbox:
             await ctx.send(embed=embed)
 
 
-def setup(bot):
+def setup(bot: Bot) -> None:
+    """Snekbox cog load."""
     bot.add_cog(Snekbox(bot))
     log.info("Cog loaded: Snekbox")
