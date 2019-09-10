@@ -16,9 +16,7 @@ KEEP_LOADED = ["bot.cogs.cogs", "bot.cogs.modlog"]
 
 
 class Cogs:
-    """
-    Cog management commands
-    """
+    """Cog management commands."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
@@ -38,21 +36,19 @@ class Cogs:
 
     @group(name='cogs', aliases=('c',), invoke_without_command=True)
     @with_role(*MODERATION_ROLES, Roles.devops)
-    async def cogs_group(self, ctx: Context):
+    async def cogs_group(self, ctx: Context) -> None:
         """Load, unload, reload, and list active cogs."""
-
         await ctx.invoke(self.bot.get_command("help"), "cogs")
 
     @cogs_group.command(name='load', aliases=('l',))
     @with_role(*MODERATION_ROLES, Roles.devops)
-    async def load_command(self, ctx: Context, cog: str):
+    async def load_command(self, ctx: Context, cog: str) -> None:
         """
-        Load up an unloaded cog, given the module containing it
+        Load up an unloaded cog, given the module containing it.
 
         You can specify the cog name for any cogs that are placed directly within `!cogs`, or specify the
         entire module directly.
         """
-
         cog = cog.lower()
 
         embed = Embed()
@@ -98,14 +94,13 @@ class Cogs:
 
     @cogs_group.command(name='unload', aliases=('ul',))
     @with_role(*MODERATION_ROLES, Roles.devops)
-    async def unload_command(self, ctx: Context, cog: str):
+    async def unload_command(self, ctx: Context, cog: str) -> None:
         """
-        Unload an already-loaded cog, given the module containing it
+        Unload an already-loaded cog, given the module containing it.
 
         You can specify the cog name for any cogs that are placed directly within `!cogs`, or specify the
         entire module directly.
         """
-
         cog = cog.lower()
 
         embed = Embed()
@@ -150,9 +145,9 @@ class Cogs:
 
     @cogs_group.command(name='reload', aliases=('r',))
     @with_role(*MODERATION_ROLES, Roles.devops)
-    async def reload_command(self, ctx: Context, cog: str):
+    async def reload_command(self, ctx: Context, cog: str) -> None:
         """
-        Reload an unloaded cog, given the module containing it
+        Reload an unloaded cog, given the module containing it.
 
         You can specify the cog name for any cogs that are placed directly within `!cogs`, or specify the
         entire module directly.
@@ -160,7 +155,6 @@ class Cogs:
         If you specify "*" as the cog, every cog currently loaded will be unloaded, and then every cog present in the
         bot/cogs directory will be loaded.
         """
-
         cog = cog.lower()
 
         embed = Embed()
@@ -255,13 +249,12 @@ class Cogs:
 
     @cogs_group.command(name='list', aliases=('all',))
     @with_role(*MODERATION_ROLES, Roles.devops)
-    async def list_command(self, ctx: Context):
+    async def list_command(self, ctx: Context) -> None:
         """
         Get a list of all cogs, including their loaded status.
 
         Gray indicates that the cog is unloaded. Green indicates that the cog is currently loaded.
         """
-
         embed = Embed()
         lines = []
         cogs = {}
@@ -301,6 +294,7 @@ class Cogs:
         await LinePaginator.paginate(lines, ctx, embed, max_size=300, empty=False)
 
 
-def setup(bot):
+def setup(bot: Bot) -> None:
+    """Cogs cog load."""
     bot.add_cog(Cogs(bot))
     log.info("Cog loaded: Cogs")

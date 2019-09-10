@@ -29,18 +29,18 @@ If you'd like to unsubscribe from the announcement notifications, simply send `!
 
 
 class Verification:
-    """
-    User verification and role self-management
-    """
+    """User verification and role self-management."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
 
     @property
     def mod_log(self) -> ModLog:
+        """Get currently loaded ModLog cog instance."""
         return self.bot.get_cog("ModLog")
 
-    async def on_message(self, message: Message):
+    async def on_message(self, message: Message) -> None:
+        """Check new message event for messages to the checkpoint channel & process."""
         if message.author.bot:
             return  # They're a bot, ignore
 
@@ -74,11 +74,8 @@ class Verification:
     @command(name='accept', aliases=('verify', 'verified', 'accepted'), hidden=True)
     @without_role(Roles.verified)
     @in_channel(Channels.verification)
-    async def accept_command(self, ctx: Context, *_):  # We don't actually care about the args
-        """
-        Accept our rules and gain access to the rest of the server
-        """
-
+    async def accept_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
+        """Accept our rules and gain access to the rest of the server."""
         log.debug(f"{ctx.author} called !accept. Assigning the 'Developer' role.")
         await ctx.author.add_roles(Object(Roles.verified), reason="Accepted the rules")
         try:
@@ -97,11 +94,8 @@ class Verification:
 
     @command(name='subscribe')
     @in_channel(Channels.bot)
-    async def subscribe_command(self, ctx: Context, *_):  # We don't actually care about the args
-        """
-        Subscribe to announcement notifications by assigning yourself the role
-        """
-
+    async def subscribe_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
+        """Subscribe to announcement notifications by assigning yourself the role."""
         has_role = False
 
         for role in ctx.author.roles:
@@ -125,11 +119,8 @@ class Verification:
 
     @command(name='unsubscribe')
     @in_channel(Channels.bot)
-    async def unsubscribe_command(self, ctx: Context, *_):  # We don't actually care about the args
-        """
-        Unsubscribe from announcement notifications by removing the role from yourself
-        """
-
+    async def unsubscribe_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
+        """Unsubscribe from announcement notifications by removing the role from yourself."""
         has_role = False
 
         for role in ctx.author.roles:
@@ -152,17 +143,15 @@ class Verification:
         )
 
     @staticmethod
-    def __global_check(ctx: Context):
-        """
-        Block any command within the verification channel that is not !accept.
-        """
-
+    def __global_check(ctx: Context) -> None:
+        """Block any command within the verification channel that is not !accept."""
         if ctx.channel.id == Channels.verification:
             return ctx.command.name == "accept"
         else:
             return True
 
 
-def setup(bot):
+def setup(bot: Bot) -> None:
+    """Verification cog load."""
     bot.add_cog(Verification(bot))
     log.info("Cog loaded: Verification")

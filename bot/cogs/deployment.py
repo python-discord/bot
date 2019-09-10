@@ -10,27 +10,21 @@ log = logging.getLogger(__name__)
 
 
 class Deployment:
-    """
-    Bot information commands
-    """
+    """Bot information commands."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
 
     @group(name='redeploy', invoke_without_command=True)
     @with_role(*MODERATION_ROLES)
-    async def redeploy_group(self, ctx: Context):
+    async def redeploy_group(self, ctx: Context) -> None:
         """Redeploy the bot or the site."""
-
         await ctx.invoke(self.bot.get_command("help"), "redeploy")
 
     @redeploy_group.command(name='bot')
     @with_role(Roles.admin, Roles.owner, Roles.devops)
-    async def bot_command(self, ctx: Context):
-        """
-        Trigger bot deployment on the server - will only redeploy if there were changes to deploy
-        """
-
+    async def bot_command(self, ctx: Context) -> None:
+        """Trigger bot deployment on the server - will only redeploy if there were changes to deploy."""
         response = await self.bot.http_session.get(URLs.deploy, headers={"token": Keys.deploy_bot})
         result = await response.text()
 
@@ -43,11 +37,8 @@ class Deployment:
 
     @redeploy_group.command(name='site')
     @with_role(Roles.admin, Roles.owner, Roles.devops)
-    async def site_command(self, ctx: Context):
-        """
-        Trigger website deployment on the server - will only redeploy if there were changes to deploy
-        """
-
+    async def site_command(self, ctx: Context) -> None:
+        """Trigger website deployment on the server - will only redeploy if there were changes to deploy."""
         response = await self.bot.http_session.get(URLs.deploy, headers={"token": Keys.deploy_bot})
         result = await response.text()
 
@@ -60,11 +51,8 @@ class Deployment:
 
     @command(name='uptimes')
     @with_role(Roles.admin, Roles.owner, Roles.devops)
-    async def uptimes_command(self, ctx: Context):
-        """
-        Check the various deployment uptimes for each service
-        """
-
+    async def uptimes_command(self, ctx: Context) -> None:
+        """Check the various deployment uptimes for each service."""
         log.debug(f"{ctx.author} requested service uptimes.")
         response = await self.bot.http_session.get(URLs.status)
         data = await response.json()
@@ -85,6 +73,7 @@ class Deployment:
         await ctx.send(embed=embed)
 
 
-def setup(bot):
+def setup(bot: Bot) -> None:
+    """Deployment cog load."""
     bot.add_cog(Deployment(bot))
     log.info("Cog loaded: Deployment")
