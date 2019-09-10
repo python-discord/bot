@@ -33,19 +33,24 @@ RULE_FUNCTION_MAPPING = {
 
 
 class AntiSpam:
+    """Spam detection & mitigation measures."""
+
     def __init__(self, bot: Bot):
         self.bot = bot
         self._muted_role = Object(Roles.muted)
 
     @property
     def mod_log(self) -> ModLog:
+        """Get currently loaded ModLog cog instance."""
         return self.bot.get_cog("ModLog")
 
-    async def on_ready(self):
+    async def on_ready(self) -> None:
+        """Instantiate punishment role."""
         role_id = AntiSpamConfig.punishment['role_id']
         self.muted_role = Object(role_id)
 
-    async def on_message(self, message: Message):
+    async def on_message(self, message: Message) -> None:
+        """Monitor incoming messages & match against spam criteria for possible filtering."""
         if (
             not message.guild
             or message.guild.id != GuildConfig.id
@@ -97,7 +102,8 @@ class AntiSpam:
                 await self.maybe_delete_messages(message.channel, relevant_messages)
                 break
 
-    async def punish(self, msg: Message, member: Member, reason: str, messages: List[Message], rule_name: str):
+    async def punish(self, msg: Message, member: Member, reason: str, messages: List[Message], rule_name: str) -> None:
+        """Deal out punishment for author(s) of messages that meet our spam criteria."""
         # Sanity check to ensure we're not lagging behind
         if self.muted_role not in member.roles:
             remove_role_after = AntiSpamConfig.punishment['remove_after']
@@ -136,7 +142,8 @@ class AntiSpam:
             # Run a tempmute
             await mod_log_ctx.invoke(Moderation.tempmute, member, f"{remove_role_after}S", reason=reason)
 
-    async def maybe_delete_messages(self, channel: TextChannel, messages: List[Message]):
+    async def maybe_delete_messages(self, channel: TextChannel, messages: List[Message]) -> None:
+        """Determine whether flagged messages should be disabled & delete them if so."""
         # Is deletion of offending messages actually enabled?
         if AntiSpamConfig.clean_offending:
 
@@ -153,7 +160,8 @@ class AntiSpam:
                 await messages[0].delete()
 
 
-def validate_config():
+def validate_config() -> None:
+    """Validate loaded antispam filter configuration(s)."""
     for name, config in AntiSpamConfig.rules.items():
         if name not in RULE_FUNCTION_MAPPING:
             raise ValueError(
@@ -169,7 +177,8 @@ def validate_config():
                 )
 
 
-def setup(bot: Bot):
+def setup(bot: Bot) -> None:
+    """Antispam cog load."""
     validate_config()
     bot.add_cog(AntiSpam(bot))
     log.info("Cog loaded: AntiSpam")
