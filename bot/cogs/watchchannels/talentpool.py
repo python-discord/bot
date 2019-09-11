@@ -4,7 +4,7 @@ from collections import ChainMap
 from typing import Union
 
 from discord import Color, Embed, Member, User
-from discord.ext.commands import Context, group
+from discord.ext.commands import Bot, Context, group
 
 from bot.api import ResponseCodeError
 from bot.constants import Channels, Guild, Roles, Webhooks
@@ -19,7 +19,7 @@ STAFF_ROLES = Roles.owner, Roles.admin, Roles.moderator, Roles.helpers    # <- I
 class TalentPool(WatchChannel):
     """Relays messages of helper candidates to a watch channel to observe them."""
 
-    def __init__(self, bot) -> None:
+    def __init__(self, bot: Bot) -> None:
         super().__init__(
             bot,
             destination=Channels.talent_pool,
@@ -33,7 +33,6 @@ class TalentPool(WatchChannel):
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
     async def nomination_group(self, ctx: Context) -> None:
         """Highlights the activity of helper nominees by relaying their messages to the talent pool channel."""
-
         await ctx.invoke(self.bot.get_command("help"), "talentpool")
 
     @nomination_group.command(name='watched', aliases=('all', 'list'))
@@ -156,7 +155,6 @@ class TalentPool(WatchChannel):
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
     async def nomination_edit_group(self, ctx: Context) -> None:
         """Commands to edit nominations."""
-
         await ctx.invoke(self.bot.get_command("help"), "talentpool", "edit")
 
     @nomination_edit_group.command(name='reason')

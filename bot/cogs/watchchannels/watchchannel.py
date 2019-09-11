@@ -42,6 +42,8 @@ def proxy_user(user_id: str) -> Object:
 
 @dataclass
 class MessageHistory:
+    """Represent the watch channel's message history."""
+
     last_author: Optional[int] = None
     last_channel: Optional[int] = None
     message_count: int = 0
@@ -51,7 +53,10 @@ class WatchChannel(ABC):
     """ABC with functionality for relaying users' messages to a certain channel."""
 
     @abstractmethod
-    def __init__(self, bot: Bot, destination, webhook_id, api_endpoint, api_default_params, logger) -> None:
+    def __init__(
+        self, bot: Bot, destination: int, webhook_id: int,
+        api_endpoint: str, api_default_params: dict, logger: logging.Logger
+    ) -> None:
         self.bot = bot
 
         self.destination = destination  # E.g., Channels.big_brother_logs
@@ -271,7 +276,7 @@ class WatchChannel(ABC):
 
         self.message_history.message_count += 1
 
-    async def send_header(self, msg) -> None:
+    async def send_header(self, msg: Message) -> None:
         """Sends a header embed with information about the relayed messages to the watch channel."""
         user_id = msg.author.id
 

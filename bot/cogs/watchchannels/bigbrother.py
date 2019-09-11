@@ -3,7 +3,7 @@ from collections import ChainMap
 from typing import Union
 
 from discord import User
-from discord.ext.commands import Context, group
+from discord.ext.commands import Bot, Context, group
 
 from bot.constants import Channels, Roles, Webhooks
 from bot.decorators import with_role
@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 class BigBrother(WatchChannel):
     """Monitors users by relaying their messages to a watch channel to assist with moderation."""
 
-    def __init__(self, bot) -> None:
+    def __init__(self, bot: Bot) -> None:
         super().__init__(
             bot,
             destination=Channels.big_brother_logs,
