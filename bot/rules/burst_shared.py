@@ -10,7 +10,7 @@ async def apply(
     recent_messages: List[Message],
     config: Dict[str, int]
 ) -> Optional[Tuple[str, Iterable[Member], Iterable[Message]]]:
-
+    """Apply burst repeated message spam filter."""
     total_recent = len(recent_messages)
 
     if total_recent > config['max']:

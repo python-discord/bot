@@ -21,8 +21,8 @@ async def post_infraction(
     expires_at: datetime = None,
     hidden: bool = False,
     active: bool = True,
-):
-
+) -> Union[dict, None]:
+    """Post infraction to the API."""
     payload = {
         "actor": ctx.message.author.id,
         "hidden": hidden,
@@ -35,9 +35,7 @@ async def post_infraction(
         payload['expires_at'] = expires_at.isoformat()
 
     try:
-        response = await ctx.bot.api_client.post(
-            'bot/infractions', json=payload
-        )
+        response = await ctx.bot.api_client.post('bot/infractions', json=payload)
     except ClientError:
         log.exception("There was an error adding an infraction.")
         await ctx.send(":x: There was an error adding the infraction.")

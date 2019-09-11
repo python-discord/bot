@@ -14,7 +14,7 @@ async def apply(
     recent_messages: List[Message],
     config: Dict[str, int]
 ) -> Optional[Tuple[str, Iterable[Member], Iterable[Message]]]:
-
+    """Apply link spam detection filter."""
     relevant_messages = tuple(
         msg
         for msg in recent_messages
