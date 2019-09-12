@@ -12,7 +12,7 @@ from bot.constants import (
     AntiSpam as AntiSpamConfig, Channels,
     Colours, DEBUG_MODE, Event, Filter,
     Guild as GuildConfig, Icons,
-    Roles, STAFF_ROLES,
+    STAFF_ROLES,
 )
 
 
@@ -35,15 +35,12 @@ RULE_FUNCTION_MAPPING = {
 class AntiSpam:
     def __init__(self, bot: Bot):
         self.bot = bot
-        self._muted_role = Object(Roles.muted)
+        role_id = AntiSpamConfig.punishment['role_id']
+        self.muted_role = Object(role_id)
 
     @property
     def mod_log(self) -> ModLog:
         return self.bot.get_cog("ModLog")
-
-    async def on_ready(self):
-        role_id = AntiSpamConfig.punishment['role_id']
-        self.muted_role = Object(role_id)
 
     async def on_message(self, message: Message):
         if (
