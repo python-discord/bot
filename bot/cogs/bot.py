@@ -32,6 +32,8 @@ class Bot:
             Channels.help_3: 0,
             Channels.help_4: 0,
             Channels.help_5: 0,
+            Channels.help_6: 0,
+            Channels.help_7: 0,
             Channels.python: 0,
         }
 
@@ -62,13 +64,13 @@ class Bot:
 
         embed = Embed(
             description="A utility bot designed just for the Python server! Try `!help` for more info.",
-            url="https://gitlab.com/discord-python/projects/bot"
+            url="https://github.com/python-discord/bot"
         )
 
         embed.add_field(name="Total Users", value=str(len(self.bot.get_guild(Guild.id).members)))
         embed.set_author(
             name="Python Bot",
-            url="https://gitlab.com/discord-python/projects/bot",
+            url="https://github.com/python-discord/bot",
             icon_url=URLs.bot_avatar
         )
 
