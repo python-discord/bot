@@ -14,6 +14,7 @@ from bot.constants import (
     Guild as GuildConfig, Icons,
     STAFF_ROLES,
 )
+from bot.converters import ExpirationDate
 
 
 log = logging.getLogger(__name__)
@@ -37,6 +38,7 @@ class AntiSpam:
         self.bot = bot
         role_id = AntiSpamConfig.punishment['role_id']
         self.muted_role = Object(role_id)
+        self.expiration_date_converter = ExpirationDate()
 
     @property
     def mod_log(self) -> ModLog:
@@ -130,8 +132,9 @@ class AntiSpam:
                 ping_everyone=AntiSpamConfig.ping_everyone
             )
 
-            # Run a tempmute
-            await mod_log_ctx.invoke(Moderation.tempmute, member, f"{remove_role_after}S", reason=reason)
+            # Since we're going to invoke the tempmute command directly, we need to manually call the converter.
+            dt_remove_role_after = await self.expiration_date_converter.convert(mod_log_ctx, f"{remove_role_after}S")
+            await mod_log_ctx.invoke(Moderation.tempmute, member, dt_remove_role_after, reason=reason)
 
     async def maybe_delete_messages(self, channel: TextChannel, messages: List[Message]):
         # Is deletion of offending messages actually enabled?
