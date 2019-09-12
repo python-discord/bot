@@ -341,6 +341,8 @@ class Channels(metaclass=YAMLGetter):
     help_3: int
     help_4: int
     help_5: int
+    help_6: int
+    help_7: int
     helpers: int
     message_log: int
     mod_alerts: int
