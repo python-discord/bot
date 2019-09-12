@@ -103,7 +103,7 @@ class Superstarify:
             'bot/infractions',
             params={
                 'active': 'true',
-                'type': 'superstarify',
+                'type': 'superstar',
                 'user__id': member.id
             }
         )
