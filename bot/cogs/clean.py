@@ -133,7 +133,8 @@ class Clean:
         self.cleaning = True
         invocation_deleted = False
 
-        async for message in ctx.channel.history(limit=amount):
+        # To account for the invocation message, we index `amount + 1` messages.
+        async for message in ctx.channel.history(limit=amount + 1):
 
             # If at any point the cancel command is invoked, we should stop.
             if not self.cleaning:
