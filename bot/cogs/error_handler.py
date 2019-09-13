@@ -4,9 +4,13 @@ import logging
 from discord.ext.commands import (
     BadArgument,
     BotMissingPermissions,
+    CheckFailure,
     CommandError,
     CommandInvokeError,
     CommandNotFound,
+    CommandOnCooldown,
+    DisabledCommand,
+    MissingPermissions,
     NoPrivateMessage,
     UserInputError,
 )
@@ -58,10 +62,12 @@ class ErrorHandler:
         elif isinstance(e, NoPrivateMessage):
             await ctx.send("Sorry, this command can't be used in a private message!")
         elif isinstance(e, BotMissingPermissions):
-            await ctx.send(
-                f"Sorry, it looks like I don't have the permissions I need to do that.\n\n"
-                f"Here's what I'm missing: **{e.missing_perms}**"
-            )
+            await ctx.send(f"Sorry, it looks like I don't have the permissions I need to do that.")
+            log.warning(f"The bot is missing permissions to execute command {command}: {e.missing_perms}")
+        elif isinstance(e, MissingPermissions):
+            log.debug(f"{ctx.message.author} is missing permissions to invoke command {command}: {e.missing_perms}")
+        elif isinstance(e, (CheckFailure, CommandOnCooldown, DisabledCommand)):
+            log.debug(f"Command {command} invoked by {ctx.message.author} with error {e.__class__.__name__}: {e}")
         elif isinstance(e, CommandInvokeError):
             if isinstance(e.original, ResponseCodeError):
                 if e.original.response.status == 404:
@@ -77,7 +83,6 @@ class ErrorHandler:
                         "Got an unexpected status code from the "
                         f"API (`{e.original.response.code}`)."
                     )
-
             else:
                 await ctx.send(
                     f"Sorry, an unexpected error occurred. Please let us know!\n\n```{e}```"
