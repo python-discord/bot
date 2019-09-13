@@ -44,3 +44,23 @@ async def post_infraction(
         return
 
     return response
+
+
+async def already_has_active_infraction(ctx: Context, user: Union[Member, Object, User], type: str) -> bool:
+    """Checks if a user already has an active infraction of the given type."""
+    active_infractions = await ctx.bot.api_client.get(
+        'bot/infractions',
+        params={
+            'active': 'true',
+            'type': type,
+            'user__id': str(user.id)
+        }
+    )
+    if active_infractions:
+        await ctx.send(
+            f":x: According to my records, this user already has a {type} infraction. "
+            f"See infraction **#{active_infractions[0]['id']}**."
+        )
+        return True
+    else:
+        return False
