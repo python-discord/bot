@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Dict, Union
 
 from discord import (
-    Colour, Embed, Forbidden, Guild, HTTPException, Member, Object, User
+    Colour, Embed, Forbidden, Guild, HTTPException, Member, NotFound, Object, User
 )
 from discord.ext.commands import (
     BadArgument, BadUnionArgument, Bot, Context, command, group
@@ -772,7 +772,7 @@ class Moderation(Scheduler):
 
     @with_role(*MODERATION_ROLES)
     @command()
-    async def unmute(self, ctx: Context, user: Member) -> None:
+    async def unmute(self, ctx: Context, user: UserTypes) -> None:
         """
         Deactivates the active mute infraction for a user.
 
@@ -799,10 +799,10 @@ class Moderation(Scheduler):
                 )
                 return
 
-            infraction = response[0]
-            await self._deactivate_infraction(infraction)
-            if infraction["expires_at"] is not None:
-                self.cancel_expiration(infraction["id"])
+            for infraction in response:
+                await self._deactivate_infraction(infraction)
+                if infraction["expires_at"] is not None:
+                    self.cancel_expiration(infraction["id"])
 
             notified = await self.notify_pardon(
                 user=user,
@@ -822,19 +822,31 @@ class Moderation(Scheduler):
 
             await ctx.send(f"{dm_emoji}:ok_hand: Un-muted {user.mention}.")
 
+            embed_text = textwrap.dedent(
+                f"""
+                    Member: {user.mention} (`{user.id}`)
+                    Actor: {ctx.message.author}
+                    DM: {dm_status}
+                """
+            )
+
+            if len(response) > 1:
+                footer = f"Infraction IDs: {', '.join(str(infr['id']) for infr in response)}"
+                title = "Member unmuted"
+                embed_text += "Note: User had multiple **active** mute infractions in the database."
+            else:
+                infraction = response[0]
+                footer = f"Infraction ID: {infraction['id']}"
+                title = "Member unmuted"
+
             # Send a log message to the mod log
             await self.mod_log.send_log_message(
                 icon_url=Icons.user_unmute,
                 colour=Colour(Colours.soft_green),
-                title="Member unmuted",
+                title=title,
                 thumbnail=user.avatar_url_as(static_format="png"),
-                text=textwrap.dedent(f"""
-                    Member: {user.mention} (`{user.id}`)
-                    Actor: {ctx.message.author}
-                    Intended expiry: {infraction['expires_at']}
-                    DM: {dm_status}
-                """),
-                footer=infraction["id"],
+                text=embed_text,
+                footer=footer,
                 content=log_content
             )
         except Exception:
@@ -873,10 +885,24 @@ class Moderation(Scheduler):
                 )
                 return
 
-            infraction = response[0]
-            await self._deactivate_infraction(infraction)
-            if infraction["expires_at"] is not None:
-                self.cancel_expiration(infraction["id"])
+            for infraction in response:
+                await self._deactivate_infraction(infraction)
+                if infraction["expires_at"] is not None:
+                    self.cancel_expiration(infraction["id"])
+
+            embed_text = textwrap.dedent(
+                f"""
+                    Member: {user.mention} (`{user.id}`)
+                    Actor: {ctx.message.author}
+                """
+            )
+
+            if len(response) > 1:
+                footer = f"Infraction IDs: {', '.join(str(infr['id']) for infr in response)}"
+                embed_text += "Note: User had multiple **active** ban infractions in the database."
+            else:
+                infraction = response[0]
+                footer = f"Infraction ID: {infraction['id']}"
 
             await ctx.send(f":ok_hand: Un-banned {user.mention}.")
 
@@ -886,11 +912,8 @@ class Moderation(Scheduler):
                 colour=Colour(Colours.soft_green),
                 title="Member unbanned",
                 thumbnail=user.avatar_url_as(static_format="png"),
-                text=textwrap.dedent(f"""
-                    Member: {user.mention} (`{user.id}`)
-                    Actor: {ctx.message.author}
-                    Intended expiry: {infraction['expires_at']}
-                """)
+                text=embed_text,
+                footer=footer,
             )
         except Exception:
             log.exception("There was an error removing an infraction.")
@@ -1219,7 +1242,10 @@ class Moderation(Scheduler):
                 log.warning(f"Failed to un-mute user: {user_id} (not found)")
         elif infraction_type == "ban":
             user: Object = Object(user_id)
-            await guild.unban(user)
+            try:
+                await guild.unban(user)
+            except NotFound:
+                log.info(f"Tried to unban user `{user_id}`, but Discord does not have an active ban registered.")
 
         await self.bot.api_client.patch(
             'bot/infractions/' + str(infraction_object['id']),
