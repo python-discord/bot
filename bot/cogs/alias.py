@@ -143,7 +143,7 @@ class Alias:
         Alias for invoking <prefix>tags get traceback.
         """
 
-        await self.invoke(ctx, "tags get traceback")
+        await self.invoke(ctx, "tags get", tag_name="traceback")
 
     @group(name="get",
            aliases=("show", "g"),
@@ -167,7 +167,7 @@ class Alias:
         tag_name: str - tag to be viewed.
         """
 
-        await self.invoke(ctx, "tags get", tag_name)
+        await self.invoke(ctx, "tags get", tag_name=tag_name)
 
     @get_group_alias.command(name="docs", aliases=("doc", "d"), hidden=True)
     async def docs_get_alias(
