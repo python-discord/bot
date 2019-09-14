@@ -374,13 +374,12 @@ class Roles(metaclass=YAMLGetter):
     announcements: int
     champion: int
     contributor: int
-    developer: int
     devops: int
     jammer: int
     moderator: int
     muted: int
     owner: int
-    verified: int
+    verified: int  # This is the Developers role on PyDis, here named verified for readability reasons.
     helpers: int
     team_leader: int
 

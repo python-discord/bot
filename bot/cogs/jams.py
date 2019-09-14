@@ -65,7 +65,7 @@ class CodeJams:
                 connect=True
             ),
             ctx.guild.default_role: PermissionOverwrite(read_messages=False, connect=False),
-            ctx.guild.get_role(Roles.developer): PermissionOverwrite(
+            ctx.guild.get_role(Roles.verified): PermissionOverwrite(
                 read_messages=False,
                 connect=False
             )
