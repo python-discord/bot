@@ -17,7 +17,7 @@ from discord.ext.commands import (
 from discord.ext.commands import Bot, Context
 
 from bot.api import ResponseCodeError
-
+from bot.constants import Channels
 
 log = logging.getLogger(__name__)
 
@@ -47,12 +47,13 @@ class ErrorHandler:
             return
 
         if isinstance(e, CommandNotFound) and not hasattr(ctx, "invoked_from_error_handler"):
-            tags_get_command = self.bot.get_command("tags get")
-            ctx.invoked_from_error_handler = True
+            if not ctx.channel.id == Channels.verification:
+                tags_get_command = self.bot.get_command("tags get")
+                ctx.invoked_from_error_handler = True
 
-            # Return to not raise the exception
-            with contextlib.suppress(ResponseCodeError):
-                return await ctx.invoke(tags_get_command, tag_name=ctx.invoked_with)
+                # Return to not raise the exception
+                with contextlib.suppress(ResponseCodeError):
+                    return await ctx.invoke(tags_get_command, tag_name=ctx.invoked_with)
         elif isinstance(e, BadArgument):
             await ctx.send(f"Bad argument: {e}\n")
             await ctx.invoke(*help_command)
