@@ -197,6 +197,14 @@ class Alias:
 
         await self.invoke(ctx, "nomination end", user, reason=reason)
 
+    @command(name="nominees", hidden=True)
+    async def nominees_alias(self, ctx):
+        """
+        Alias for invoking <prefix>tp watched.
+        """
+
+        await self.invoke(ctx, "talentpool watched")
+
 
 def setup(bot):
     bot.add_cog(Alias(bot))
