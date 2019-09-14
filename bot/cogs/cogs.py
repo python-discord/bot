@@ -84,8 +84,8 @@ class Cogs:
                 except Exception as e:
                     log.error(f"{ctx.author} requested we load the '{cog}' cog, "
                               "but the loading failed with the following error: \n"
-                              f"{e}")
-                    embed.description = f"Failed to load cog: {cog}\n\n```{e}```"
+                              f"**{e.__class__.__name__}: {e}**")
+                    embed.description = f"Failed to load cog: {cog}\n\n{e.__class__.__name__}: {e}"
                 else:
                     log.debug(f"{ctx.author} requested we load the '{cog}' cog. Cog loaded!")
                     embed.description = f"Cog loaded: {cog}"
@@ -200,7 +200,7 @@ class Cogs:
                     try:
                         self.bot.unload_extension(loaded_cog)
                     except Exception as e:
-                        failed_unloads[loaded_cog] = str(e)
+                        failed_unloads[loaded_cog] = f"{e.__class__.__name__}: {e}"
                     else:
                         unloaded += 1
 
@@ -208,7 +208,7 @@ class Cogs:
                     try:
                         self.bot.load_extension(unloaded_cog)
                     except Exception as e:
-                        failed_loads[unloaded_cog] = str(e)
+                        failed_loads[unloaded_cog] = f"{e.__class__.__name__}: {e}"
                     else:
                         loaded += 1
 
@@ -221,13 +221,13 @@ class Cogs:
                     lines.append("\n**Unload failures**")
 
                     for cog, error in failed_unloads:
-                        lines.append(f"`{cog}` {Emojis.status_dnd} `{error}`")
+                        lines.append(f"{Emojis.status_dnd} **{cog}:** `{error}`")
 
                 if failed_loads:
                     lines.append("\n**Load failures**")
 
-                    for cog, error in failed_loads:
-                        lines.append(f"`{cog}` {Emojis.status_dnd} `{error}`")
+                    for cog, error in failed_loads.items():
+                        lines.append(f"{Emojis.status_dnd} **{cog}:** `{error}`")
 
                 log.debug(f"{ctx.author} requested we reload all cogs. Here are the results: \n"
                           f"{lines}")
