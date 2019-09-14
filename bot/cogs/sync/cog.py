@@ -118,7 +118,7 @@ class Sync:
             # If we got `404`, the user is new. Create them.
             await self.bot.api_client.post('bot/users', json=packed)
 
-    async def on_member_leave(self, member: Member) -> None:
+    async def on_member_remove(self, member: Member) -> None:
         """Updates the user information when a member leaves the guild."""
         await self.bot.api_client.put(
             f'bot/users/{member.id}',
