@@ -2,6 +2,7 @@ import logging
 
 from discord import Member, PermissionOverwrite, utils
 from discord.ext import commands
+from more_itertools import unique_everseen
 
 from bot.constants import Roles
 from bot.decorators import with_role
@@ -29,6 +30,8 @@ class CodeJams:
 
         The first user passed will always be the team leader.
         """
+        # Ignore duplicate members
+        members = list(unique_everseen(members))
 
         # We had a little issue during Code Jam 4 here, the greedy converter did it's job
         # and ignored anything which wasn't a valid argument which left us with teams of
