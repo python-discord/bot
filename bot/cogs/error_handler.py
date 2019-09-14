@@ -42,8 +42,8 @@ class ErrorHandler:
         else:
             help_command = (self.bot.get_command("help"),)
 
-        if hasattr(command, "on_error"):
-            log.debug(f"Command {command} has a local error handler, ignoring.")
+        if hasattr(command, "on_error") or hasattr(command.instance, f"_{command.cog_name}__error"):
+            log.debug(f"Command {command} has a local error handler; ignoring.")
             return
 
         if isinstance(e, CommandNotFound) and not hasattr(ctx, "invoked_from_error_handler"):
@@ -64,11 +64,19 @@ class ErrorHandler:
             await ctx.send("Sorry, this command can't be used in a private message!")
         elif isinstance(e, BotMissingPermissions):
             await ctx.send(f"Sorry, it looks like I don't have the permissions I need to do that.")
-            log.warning(f"The bot is missing permissions to execute command {command}: {e.missing_perms}")
+            log.warning(
+                f"The bot is missing permissions to execute command {command}: {e.missing_perms}"
+            )
         elif isinstance(e, MissingPermissions):
-            log.debug(f"{ctx.message.author} is missing permissions to invoke command {command}: {e.missing_perms}")
+            log.debug(
+                f"{ctx.message.author} is missing permissions to invoke command {command}: "
+                f"{e.missing_perms}"
+            )
         elif isinstance(e, (CheckFailure, CommandOnCooldown, DisabledCommand)):
-            log.debug(f"Command {command} invoked by {ctx.message.author} with error {e.__class__.__name__}: {e}")
+            log.debug(
+                f"Command {command} invoked by {ctx.message.author} with error "
+                f"{e.__class__.__name__}: {e}"
+            )
         elif isinstance(e, CommandInvokeError):
             if isinstance(e.original, ResponseCodeError):
                 if e.original.response.status == 404:
