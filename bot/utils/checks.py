@@ -37,7 +37,7 @@ def without_role_check(ctx: Context, *role_ids: int) -> bool:
                   "This command is restricted by the without_role decorator. Rejecting request.")
         return False
 
-    author_roles = (role.id for role in ctx.author.roles)
+    author_roles = [role.id for role in ctx.author.roles]
     check = all(role not in author_roles for role in role_ids)
     log.trace(f"{ctx.author} tried to call the '{ctx.command.name}' command. "
               f"The result of the without_role check was {check}.")
