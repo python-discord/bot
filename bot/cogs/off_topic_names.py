@@ -95,27 +95,31 @@ class OffTopicNames:
 
     @otname_group.command(name='add', aliases=('a',))
     @with_role(*MODERATION_ROLES)
-    async def add_command(self, ctx, name: OffTopicName):
+    async def add_command(self, ctx, *names: OffTopicName):
         """Adds a new off-topic name to the rotation."""
+        # Chain multiple words to a single one
+        name = "-".join(names)
 
         await self.bot.api_client.post(f'bot/off-topic-channel-names', params={'name': name})
         log.info(
             f"{ctx.author.name}#{ctx.author.discriminator}"
             f" added the off-topic channel name '{name}"
         )
-        await ctx.send(":ok_hand:")
+        await ctx.send(f":ok_hand: Added `{name}` to the names list.")
 
     @otname_group.command(name='delete', aliases=('remove', 'rm', 'del', 'd'))
     @with_role(*MODERATION_ROLES)
-    async def delete_command(self, ctx, name: OffTopicName):
+    async def delete_command(self, ctx, *names: OffTopicName):
         """Removes a off-topic name from the rotation."""
+        # Chain multiple words to a single one
+        name = "-".join(names)
 
         await self.bot.api_client.delete(f'bot/off-topic-channel-names/{name}')
         log.info(
             f"{ctx.author.name}#{ctx.author.discriminator}"
             f" deleted the off-topic channel name '{name}"
         )
-        await ctx.send(":ok_hand:")
+        await ctx.send(f":ok_hand: Removed `{name}` from the names list.")
 
     @otname_group.command(name='list', aliases=('l',))
     @with_role(*MODERATION_ROLES)
