@@ -35,9 +35,11 @@ class CodeJams:
         # two members or at some times even 1 member. This fixes that by checking that there
         # are always 3 members in the members list.
         if len(members) < 3:
-            await ctx.send(":no_entry_sign: One of your arguments was invalid - there must be a "
-                           f"minimum of 3 valid members in your team. Found: {len(members)} "
-                           "members")
+            await ctx.send(
+                ":no_entry_sign: One of your arguments was invalid\n"
+                f"There must be a minimum of 3 valid members in your team. Found: {len(members)}"
+                " members"
+            )
             return
 
         code_jam_category = utils.get(ctx.guild.categories, name="Code Jam")
@@ -102,7 +104,11 @@ class CodeJams:
         for member in members:
             await member.add_roles(jammer_role)
 
-        await ctx.send(f":ok_hand: Team created: {team_channel.mention}")
+        await ctx.send(
+            f":ok_hand: Team created: {team_channel.mention}\n"
+            f"**Team Leader:** {members[0].mention}\n"
+            f"**Team Members:** {' '.join(member.mention for member in members[1:])}"
+        )
 
 
 def setup(bot):
