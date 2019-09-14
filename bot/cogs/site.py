@@ -9,7 +9,7 @@ from bot.pagination import LinePaginator
 
 log = logging.getLogger(__name__)
 
-INFO_URL = f"{URLs.site_schema}{URLs.site}/info"
+PAGES_URL = f"{URLs.site_schema}{URLs.site}/pages"
 
 
 class Site:
@@ -46,7 +46,7 @@ class Site:
     async def site_resources(self, ctx: Context):
         """Info about the site's Resources page."""
 
-        url = f"{INFO_URL}/resources"
+        url = f"{PAGES_URL}/resources"
 
         embed = Embed(title="Resources")
         embed.set_footer(text=url)
@@ -63,9 +63,9 @@ class Site:
     async def site_help(self, ctx: Context):
         """Info about the site's Getting Help page."""
 
-        url = f"{INFO_URL}/help"
+        url = f"{PAGES_URL}/asking-good-questions"
 
-        embed = Embed(title="Getting Help")
+        embed = Embed(title="Asking Good Questions")
         embed.set_footer(text=url)
         embed.colour = Colour.blurple()
         embed.description = (
@@ -80,7 +80,7 @@ class Site:
     async def site_faq(self, ctx: Context):
         """Info about the site's FAQ page."""
 
-        url = f"{INFO_URL}/faq"
+        url = f"{PAGES_URL}/frequently-asked-questions"
 
         embed = Embed(title="FAQ")
         embed.set_footer(text=url)
@@ -105,7 +105,7 @@ class Site:
         **`rules`:** The rules a user wants to get.
         """
         rules_embed = Embed(title='Rules', color=Colour.blurple())
-        rules_embed.url = f"{URLs.site_schema}{URLs.site}/about/rules"
+        rules_embed.url = f"{PAGES_URL}/rules"
 
         if not rules:
             # Rules were not submitted. Return the default description.
