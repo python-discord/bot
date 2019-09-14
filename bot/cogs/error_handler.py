@@ -43,7 +43,7 @@ class ErrorHandler:
         else:
             help_command = (self.bot.get_command("help"),)
 
-        if hasattr(command, "on_error") or hasattr(command.instance, f"_{command.cog_name}__error"):
+        if hasattr(command, "on_error") or hasattr(ctx.cog, f"_{command.cog_name}__error"):
             log.debug(f"Command {command} has a local error handler; ignoring.")
             return
 
