@@ -53,7 +53,6 @@ if not DEBUG_MODE:
 # Feature cogs
 bot.load_extension("bot.cogs.alias")
 bot.load_extension("bot.cogs.defcon")
-bot.load_extension("bot.cogs.deployment")
 bot.load_extension("bot.cogs.eval")
 bot.load_extension("bot.cogs.free")
 bot.load_extension("bot.cogs.information")

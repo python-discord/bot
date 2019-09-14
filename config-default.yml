@@ -127,7 +127,7 @@ guild:
         announcements:                      463658397560995840
         champion:                           430492892331769857
         contributor:                        295488872404484098
-        devops:            &DEVOPS_ROLE     409416496733880320
+        core_developer:                     587606783669829632
         jammer:                             423054537079783434
         moderator:         &MOD_ROLE        267629731250176001
         muted:             &MUTED_ROLE      277914926603829249

@@ -37,14 +37,14 @@ class Cogs:
         self.cogs.update({v: k for k, v in self.cogs.items()})
 
     @group(name='cogs', aliases=('c',), invoke_without_command=True)
-    @with_role(*MODERATION_ROLES, Roles.devops)
+    @with_role(*MODERATION_ROLES, Roles.core_developer)
     async def cogs_group(self, ctx: Context):
         """Load, unload, reload, and list active cogs."""
 
         await ctx.invoke(self.bot.get_command("help"), "cogs")
 
     @cogs_group.command(name='load', aliases=('l',))
-    @with_role(*MODERATION_ROLES, Roles.devops)
+    @with_role(*MODERATION_ROLES, Roles.core_developer)
     async def load_command(self, ctx: Context, cog: str):
         """
         Load up an unloaded cog, given the module containing it
@@ -97,7 +97,7 @@ class Cogs:
         await ctx.send(embed=embed)
 
     @cogs_group.command(name='unload', aliases=('ul',))
-    @with_role(*MODERATION_ROLES, Roles.devops)
+    @with_role(*MODERATION_ROLES, Roles.core_developer)
     async def unload_command(self, ctx: Context, cog: str):
         """
         Unload an already-loaded cog, given the module containing it
@@ -149,7 +149,7 @@ class Cogs:
         await ctx.send(embed=embed)
 
     @cogs_group.command(name='reload', aliases=('r',))
-    @with_role(*MODERATION_ROLES, Roles.devops)
+    @with_role(*MODERATION_ROLES, Roles.core_developer)
     async def reload_command(self, ctx: Context, cog: str):
         """
         Reload an unloaded cog, given the module containing it
@@ -254,7 +254,7 @@ class Cogs:
         await ctx.send(embed=embed)
 
     @cogs_group.command(name='list', aliases=('all',))
-    @with_role(*MODERATION_ROLES, Roles.devops)
+    @with_role(*MODERATION_ROLES, Roles.core_developer)
     async def list_command(self, ctx: Context):
         """
         Get a list of all cogs, including their loaded status.
