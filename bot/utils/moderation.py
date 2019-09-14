@@ -37,7 +37,7 @@ async def post_infraction(
     try:
         response = await ctx.bot.api_client.post('bot/infractions', json=payload)
     except ResponseCodeError as exp:
-        if exp.status == 400 and 'user' in exp.response_data:
+        if exp.status == 400 and 'user' in exp.response_json:
             log.info(
                 f"{ctx.author} tried to add a {type} infraction to `{user.id}`, "
                 "but that user id was not found in the database."
