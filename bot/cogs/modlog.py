@@ -528,18 +528,21 @@ class ModLog:
                 "\n"
             )
 
+        if message.attachments:
+            # Prepend the message metadata with the number of attachments
+            response = f"**Attachments:** {len(message.attachments)}\n" + response
+
         # Shorten the message content if necessary
         content = message.clean_content
         remaining_chars = 2040 - len(response)
 
         if len(content) > remaining_chars:
-            content = content[:remaining_chars] + "..."
+            botlog_url = await self.upload_log(messages=[message], actor_id=message.author.id)
+            ending = f"\n\nMessage truncated, [full message here]({botlog_url})."
+            truncation_point = remaining_chars - len(ending)
+            content = f"{content[:truncation_point]}...{ending}"
 
         response += f"{content}"
-
-        if message.attachments:
-            # Prepend the message metadata with the number of attachments
-            response = f"**Attachments:** {len(message.attachments)}\n" + response
 
         await self.send_log_message(
             Icons.message_delete, Colours.soft_red,
