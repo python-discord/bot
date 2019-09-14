@@ -223,7 +223,6 @@ filter:
         - *ADMIN_ROLE
         - *MOD_ROLE
         - *OWNER_ROLE
-        - *DEVOPS_ROLE
         - *ROCKSTARS_ROLE
 
 
