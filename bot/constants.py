@@ -412,7 +412,7 @@ class URLs(metaclass=YAMLGetter):
     # Misc endpoints
     bot_avatar: str
     deploy: str
-    gitlab_bot_repo: str
+    github_bot_repo: str
     status: str
 
     # Site endpoints

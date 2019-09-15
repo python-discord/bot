@@ -273,7 +273,7 @@ urls:
 
     # Misc URLs
     bot_avatar:      "https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle/logo_circle.png"
-    gitlab_bot_repo: "https://gitlab.com/python-discord/projects/bot"
+    github_bot_repo: "https://github.com/python-discord/bot"
 
 anti_spam:
     # Clean messages that violate a rule.
