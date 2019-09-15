@@ -1,5 +1,5 @@
 bot:
-    prefix:      "."
+    prefix:      "!"
     token:       !ENV "BOT_TOKEN"
 
     cooldowns:
@@ -10,6 +10,7 @@ bot:
         # Maximum number of messages to traverse for clean commands
         message_limit: 10000
 
+
 style:
     colours:
         soft_red: 0xcd6d6d
@@ -18,8 +19,8 @@ style:
 
     emojis:
         defcon_disabled: "<:defcondisabled:470326273952972810>"
-        defcon_enabled: "<:defconenabled:470326274213150730>"
-        defcon_updated: "<:defconsettingsupdated:470326274082996224>"
+        defcon_enabled:  "<:defconenabled:470326274213150730>"
+        defcon_updated:  "<:defconsettingsupdated:470326274082996224>"
 
         green_chevron: "<:greenchevron:418104310329769993>"
         red_chevron:   "<:redchevron:418112778184818698>"
@@ -41,7 +42,7 @@ style:
         crown_green:   "https://cdn.discordapp.com/emojis/469964154719961088.png"
         crown_red:     "https://cdn.discordapp.com/emojis/469964154879344640.png"
 
-        defcon_denied:  "https://cdn.discordapp.com/emojis/472475292078964738.png"
+        defcon_denied:   "https://cdn.discordapp.com/emojis/472475292078964738.png"
         defcon_disabled: "https://cdn.discordapp.com/emojis/470326273952972810.png"
         defcon_enabled:  "https://cdn.discordapp.com/emojis/470326274213150730.png"
         defcon_updated:  "https://cdn.discordapp.com/emojis/472472638342561793.png"
@@ -67,8 +68,8 @@ style:
         user_unban:  "https://cdn.discordapp.com/emojis/469952898692808704.png"
         user_update: "https://cdn.discordapp.com/emojis/469952898684551168.png"
 
-        user_mute:   "https://cdn.discordapp.com/emojis/472472640100106250.png"
-        user_unmute: "https://cdn.discordapp.com/emojis/472472639206719508.png"
+        user_mute:     "https://cdn.discordapp.com/emojis/472472640100106250.png"
+        user_unmute:   "https://cdn.discordapp.com/emojis/472472639206719508.png"
         user_verified: "https://cdn.discordapp.com/emojis/470326274519334936.png"
 
         user_warn: "https://cdn.discordapp.com/emojis/470326274238447633.png"
@@ -82,74 +83,74 @@ style:
         questionmark: "https://cdn.discordapp.com/emojis/512367613339369475.png"
 
 guild:
-    id: 476190141161930753
+    id: 267624335836053506
 
     categories:
-        python_help:                      476196174789869577
+        python_help:                      356013061213126657
 
     channels:
-        admins:            &ADMINS        476196003733569547
-        announcements:                    476196024512413698
-        big_brother_logs:  &BBLOGS        476196047631417345
-        bot:                              476196062214750219
-        checkpoint_test:                  476196079562653698
-        defcon:                           476196101284954122
-        devlog:            &DEVLOG        476196115432210443
-        devtest:           &DEVTEST       476196128933543937
-        help_0:                           476196221845897270
-        help_1:                           476196242926469121
-        help_2:                           476196266594926593
-        help_3:                           476196281421660160
-        help_4:                           476196292398153738
-        help_5:                           476196300933824532
-        help_6:                           621711690140221440
-        help_7:                           621711714811117568
-        helpers:                          476196888295505940
-        message_log:       &MESSAGE_LOG   476197264667181057
-        mod_alerts:                       476197283256336385
-        modlog:            &MODLOG        476197299169525780
-        off_topic_0:                      476196547324018688
-        off_topic_1:                      476196563216105472
-        off_topic_2:                      476196574343593985
-        python:                           476190141161930755
-        reddit:                           476197119762366464
-        staff_lounge:      &STAFF_LOUNGE  476197226348019712
-        talent_pool:       &TALENT_POOL   609530835476938757
-        userlog:                          609531966387388446
-        user_event_a:      &USER_EVENT_A  609531030164078613
-        verification:                     476197158928777237
+        admins:            &ADMINS        365960823622991872
+        announcements:                    354619224620138496
+        big_brother_logs:  &BBLOGS        468507907357409333
+        bot:                              267659945086812160
+        checkpoint_test:                  422077681434099723
+        defcon:                           464469101889454091
+        devlog:            &DEVLOG        409308876241108992
+        devtest:           &DEVTEST       414574275865870337
+        help_0:                           303906576991780866
+        help_1:                           303906556754395136
+        help_2:                           303906514266226689
+        help_3:                           439702951246692352
+        help_4:                           451312046647148554
+        help_5:                           454941769734422538
+        help_6:                           587375753306570782
+        help_7:                           587375768556797982
+        helpers:                          385474242440986624
+        message_log:       &MESSAGE_LOG   467752170159079424
+        mod_alerts:                       473092532147060736
+        modlog:            &MODLOG        282638479504965634
+        off_topic_0:                      291284109232308226
+        off_topic_1:                      463035241142026251
+        off_topic_2:                      463035268514185226
+        python:                           267624335836053506
+        reddit:                           458224812528238616
+        staff_lounge:      &STAFF_LOUNGE  464905259261755392
+        talent_pool:       &TALENT_POOL   534321732593647616
+        userlog:                          528976905546760203
+        user_event_a:      &USER_EVENT_A  592000283102674944
+        verification:                     352442727016693763
 
     ignored: [*ADMINS, *MESSAGE_LOG, *MODLOG]
 
     roles:
-        admin:             &ADMIN_ROLE      476190234653229056
-        announcements:                      476190253548306433
-        champion:                           476190284447875086
-        contributor:                        476190302659543061
-        core_developer:                     622459804367061015
-        jammer:                             476190341566038027
-        moderator:         &MOD_ROLE        476190357927886848
-        muted:             &MUTED_ROLE      476190376949186560
-        owner:             &OWNER_ROLE      476190391595433985
-        verified:                           476190408871772171
-        helpers:                            476190429960732672
-        rockstars:         &ROCKSTARS_ROLE  503859559815708682
-        team_leader:                        609532800139264018
+        admin:             &ADMIN_ROLE      267628507062992896
+        announcements:                      463658397560995840
+        champion:                           430492892331769857
+        contributor:                        295488872404484098
+        core_developer:                     587606783669829632
+        jammer:                             423054537079783434
+        moderator:         &MOD_ROLE        267629731250176001
+        muted:             &MUTED_ROLE      277914926603829249
+        owner:             &OWNER_ROLE      267627879762755584
+        verified:                           352427296948486144
+        helpers:                            267630620367257601
+        rockstars:         &ROCKSTARS_ROLE  458226413825294336
+        team_leader:                        501324292341104650
 
     webhooks:
-        talent_pool:                        609534369178189844
-        big_brother:                        609535034474496063
+        talent_pool:                        569145364800602132
+        big_brother:                        569133704568373283
 
 
 filter:
 
     # What do we filter?
-    filter_zalgo:   true
-    filter_invites: true
-    filter_domains: true
+    filter_zalgo:       false
+    filter_invites:     true
+    filter_domains:     true
     watch_rich_embeds:  true
-    watch_words:    true
-    watch_tokens:   true
+    watch_words:        true
+    watch_tokens:       true
 
     # Notify user on filter?
     # Notifications are not expected for "watchlist" type filters
@@ -158,7 +159,7 @@ filter:
     notify_user_domains:     false
 
     # Filter configuration
-    ping_everyone: false  # Ping @everyone when we send a mod-alert?
+    ping_everyone: true  # Ping @everyone when we send a mod-alert?
 
     guild_invite_whitelist:
         - 280033776820813825  # Functional Programming
@@ -233,11 +234,11 @@ keys:
 
 urls:
     # PyDis site vars
-    site:        &DOMAIN       "django.pythondiscord.com"
+    site:        &DOMAIN       "pythondiscord.com"
     site_api:    &API    !JOIN ["api.", *DOMAIN]
-    site_paste:  &PASTE        "https://paste.pythondiscord.com"
-    site_schema: &SCHEMA       "https://"
+    site_paste:  &PASTE  !JOIN ["paste.", *DOMAIN]
     site_staff:  &STAFF  !JOIN ["staff.", *DOMAIN]
+    site_schema: &SCHEMA       "https://"
 
     site_bigbrother_api:                !JOIN [*SCHEMA, *API, "/bot/bigbrother"]
     site_docs_api:                      !JOIN [*SCHEMA, *API, "/bot/docs"]
@@ -257,7 +258,7 @@ urls:
     site_tags_api:                      !JOIN [*SCHEMA, *API, "/bot/tags"]
     site_user_api:                      !JOIN [*SCHEMA, *API, "/bot/users"]
     site_user_complete_api:             !JOIN [*SCHEMA, *API, "/bot/users/complete"]
-    paste_service:                      !JOIN [*PASTE, "/{key}"]
+    paste_service:                      !JOIN [*SCHEMA, *PASTE, "/{key}"]
 
     # Snekbox
     snekbox_eval_api: "https://snekbox.pythondiscord.com/eval"
@@ -277,7 +278,7 @@ urls:
 anti_spam:
     # Clean messages that violate a rule.
     clean_offending: true
-    ping_everyone: false
+    ping_everyone: true
 
     punishment:
         role_id: *MUTED_ROLE
