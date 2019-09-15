@@ -235,7 +235,7 @@ keys:
 urls:
     # PyDis site vars
     site:        &DOMAIN       "django.pythondiscord.com"
-    site_api:    &API    !JOIN ["api", *DOMAIN]
+    site_api:    &API    !JOIN ["api.", *DOMAIN]
     site_paste:  &PASTE  !JOIN ["paste.", *DOMAIN]
     site_staff:  &STAFF  !JOIN ["staff.", *DOMAIN]
     site_schema: &SCHEMA       "https://"
@@ -261,7 +261,7 @@ urls:
     paste_service:                      !JOIN [*SCHEMA, *PASTE, "/{key}"]
 
     # Snekbox
-    snekbox_eval_api: "http://localhost:8060/eval"
+    snekbox_eval_api: "https://snekbox.pythondiscord.com/eval"
 
     # Env vars
     deploy: !ENV "DEPLOY_URL"
