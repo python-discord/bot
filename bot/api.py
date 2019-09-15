@@ -124,7 +124,7 @@ class APILoggingHandler(logging.StreamHandler):
                 # 1. Do not log anything below `DEBUG`. This is only applicable
                 #    for the monkeypatched `TRACE` logging level, which has a
                 #    lower numeric value than `DEBUG`.
-                record.levelno > logging.DEBUG
+                record.levelno >= logging.DEBUG
                 # 2. Ignore logging messages which are sent by this logging
                 #    handler itself. This is required because if we were to
                 #    not ignore messages emitted by this handler, we would
