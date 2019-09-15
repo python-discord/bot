@@ -5,7 +5,7 @@ from discord.ext.commands import Bot, Context, command
 
 from bot.cogs.modlog import ModLog
 from bot.constants import Channels, Event, Roles
-from bot.decorators import in_channel, without_role
+from bot.decorators import InChannelCheckFailure, in_channel, without_role
 
 log = logging.getLogger(__name__)
 
@@ -150,6 +150,12 @@ class Verification:
         await ctx.send(
             f"{ctx.author.mention} Unsubscribed from <#{Channels.announcements}> notifications."
         )
+
+    @staticmethod
+    async def __error(ctx: Context, error):
+        if isinstance(error, InChannelCheckFailure):
+            # Do nothing; just ignore this error
+            error.handled = True
 
     @staticmethod
     def __global_check(ctx: Context):

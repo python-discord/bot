@@ -18,6 +18,7 @@ from discord.ext.commands import Bot, Context
 
 from bot.api import ResponseCodeError
 from bot.constants import Channels
+from bot.decorators import InChannelCheckFailure
 
 log = logging.getLogger(__name__)
 
@@ -78,6 +79,8 @@ class ErrorHandler:
                 f"{ctx.message.author} is missing permissions to invoke command {command}: "
                 f"{e.missing_perms}"
             )
+        elif isinstance(e, InChannelCheckFailure):
+            await ctx.send(e)
         elif isinstance(e, (CheckFailure, CommandOnCooldown, DisabledCommand)):
             log.debug(
                 f"Command {command} invoked by {ctx.message.author} with error "
