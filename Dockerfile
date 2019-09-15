@@ -14,15 +14,7 @@ RUN apk add --no-cache \
     zlib-dev
 
 ENV \
-    LIBRARY_PATH=/lib:/usr/lib \
-    PIPENV_HIDE_EMOJIS=1 \
-    PIPENV_HIDE_EMOJIS=1 \
-    PIPENV_IGNORE_VIRTUALENVS=1 \
-    PIPENV_IGNORE_VIRTUALENVS=1 \
-    PIPENV_NOSPIN=1 \
-    PIPENV_NOSPIN=1 \
-    PIPENV_VENV_IN_PROJECT=1 \
-    PIPENV_VENV_IN_PROJECT=1
+    LIBRARY_PATH=/lib:/usr/lib
 
 RUN pip install -U pipenv
 
@@ -32,4 +24,4 @@ COPY . .
 RUN pipenv install --deploy --system
 
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["pipenv", "run", "start"]
+CMD ["python3", "-m", "bot"]
