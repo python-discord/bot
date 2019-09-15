@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from operator import itemgetter
 from typing import Dict, Iterable, List, Set
 
-from discord import Colour, Member, Message, Object, TextChannel
+from discord import Colour, Member, Message, NotFound, Object, TextChannel
 from discord.ext.commands import Bot
 
 from bot import rules
@@ -74,7 +74,7 @@ class DeletionContext:
         else:
             mod_alert_message += "Message:\n"
             [message] = self.messages.values()
-            content = message[0].clean_content
+            content = message.clean_content
             remaining_chars = 2040 - len(mod_alert_message)
 
             if len(content) > remaining_chars:
@@ -227,7 +227,10 @@ class AntiSpam:
             # Delete the message directly instead.
             else:
                 self.mod_log.ignore(Event.message_delete, messages[0].id)
-                await messages[0].delete()
+                try:
+                    await messages[0].delete()
+                except NotFound:
+                    log.info(f"Tried to delete message `{messages[0].id}`, but message could not be found.")
 
     async def _process_deletion_context(self, context_id: int) -> None:
         """Processes the Deletion Context queue."""
