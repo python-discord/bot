@@ -43,9 +43,8 @@ class ErrorHandler:
         else:
             help_command = (self.bot.get_command("help"),)
 
-        cog_has_handler = command and hasattr(ctx.cog, f"_{command.cog_name}__error")
-        if hasattr(command, "on_error") or cog_has_handler:
-            log.debug(f"Command {command} has a local error handler; ignoring.")
+        if hasattr(e, "handled"):
+            log.trace(f"Command {command} had its error already handled locally; ignoring.")
             return
 
         # Try to look for a tag with the command's name if the command isn't found.

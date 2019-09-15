@@ -1378,6 +1378,7 @@ class Moderation(Scheduler):
         if isinstance(error, BadUnionArgument):
             if User in error.converters:
                 await ctx.send(str(error.errors[0]))
+                error.handled = True
 
     async def respect_role_hierarchy(self, ctx: Context, target: UserTypes, infr_type: str) -> bool:
         """
