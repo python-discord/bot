@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+from typing import Optional
 
 from dateutil.relativedelta import relativedelta
 
@@ -94,19 +95,20 @@ def time_since(past_datetime: datetime.datetime, precision: str = "seconds", max
     return f"{humanized} ago"
 
 
-def parse_rfc1123(time_str):
-    return datetime.datetime.strptime(time_str, RFC1123_FORMAT).replace(tzinfo=datetime.timezone.utc)
+def parse_rfc1123(stamp: str):
+    return datetime.datetime.strptime(stamp, RFC1123_FORMAT).replace(tzinfo=datetime.timezone.utc)
 
 
 # Hey, this could actually be used in the off_topic_names and reddit cogs :)
-async def wait_until(time: datetime.datetime):
+async def wait_until(time: datetime.datetime, start: Optional[datetime.datetime] = None):
     """
     Wait until a given time.
 
     :param time: A datetime.datetime object to wait until.
+    :param start: The start from which to calculate the waiting duration. Defaults to UTC time.
     """
 
-    delay = time - datetime.datetime.utcnow()
+    delay = time - (start or datetime.datetime.utcnow())
     delay_seconds = delay.total_seconds()
 
     if delay_seconds > 1.0:
