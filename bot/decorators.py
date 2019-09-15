@@ -18,7 +18,11 @@ log = logging.getLogger(__name__)
 
 
 class InChannelCheckFailure(CheckFailure):
-    pass
+    def __init__(self, *channels: int):
+        self.channels = channels
+        channels_str = ', '.join(f"<#{c_id}>" for c_id in channels)
+
+        super().__init__(f"Sorry, but you may only use this command within {channels_str}.")
 
 
 def in_channel(*channels: int, bypass_roles: typing.Container[int] = None):
@@ -41,10 +45,7 @@ def in_channel(*channels: int, bypass_roles: typing.Container[int] = None):
         log.debug(f"{ctx.author} tried to call the '{ctx.command.name}' command. "
                   f"The in_channel check failed.")
 
-        channels_str = ', '.join(f"<#{c_id}>" for c_id in channels)
-        raise InChannelCheckFailure(
-            f"Sorry, but you may only use this command within {channels_str}."
-        )
+        raise InChannelCheckFailure(*channels)
 
     return commands.check(predicate)
 
