@@ -246,7 +246,7 @@ class AntiSpam:
         await deletion_context.upload_messages(self.bot.user.id, self.mod_log)
 
 
-def validate_config(rules: Mapping = AntiSpamConfig.rules) -> dict:
+def validate_config(rules: Mapping = AntiSpamConfig.rules) -> Dict[str, str]:
     """Validates the antispam configs."""
     validation_errors = {}
     for name, config in rules.items():
