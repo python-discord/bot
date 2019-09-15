@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from operator import itemgetter
@@ -245,16 +246,17 @@ class AntiSpam:
         await deletion_context.upload_messages(self.bot.user.id, self.mod_log)
 
 
-def validate_config() -> bool:
+def validate_config(rules: Mapping = AntiSpamConfig.rules) -> Dict[str, str]:
     """Validates the antispam configs."""
     validation_errors = {}
-    for name, config in AntiSpamConfig.rules.items():
+    for name, config in rules.items():
         if name not in RULE_FUNCTION_MAPPING:
             log.error(
                 f"Unrecognized antispam rule `{name}`. "
                 f"Valid rules are: {', '.join(RULE_FUNCTION_MAPPING)}"
             )
             validation_errors[name] = f"`{name}` is not recognized as an antispam rule."
+            continue
         for required_key in ('interval', 'max'):
             if required_key not in config:
                 log.error(
