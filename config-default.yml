@@ -1,5 +1,5 @@
 bot:
-    prefix:      "."
+    prefix:      "!"
     token:       !ENV "BOT_TOKEN"
 
     cooldowns:
@@ -234,7 +234,7 @@ keys:
 
 urls:
     # PyDis site vars
-    site:        &DOMAIN       "django.pythondiscord.com"
+    site:        &DOMAIN       "pythondiscord.com"
     site_api:    &API    !JOIN ["api.", *DOMAIN]
     site_paste:  &PASTE  !JOIN ["paste.", *DOMAIN]
     site_staff:  &STAFF  !JOIN ["staff.", *DOMAIN]
