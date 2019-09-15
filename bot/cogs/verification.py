@@ -14,8 +14,8 @@ Hello! Welcome to the server, and thanks for verifying yourself!
 
 For your records, these are the documents you accepted:
 
-`1)` Our rules, here: <https://pythondiscord.com/about/rules>
-`2)` Our privacy policy, here: <https://pythondiscord.com/about/privacy> - you can find information on how to have \
+`1)` Our rules, here: <https://pythondiscord.com/pages/rules>
+`2)` Our privacy policy, here: <https://pythondiscord.com/pages/privacy> - you can find information on how to have \
 your information removed here as well.
 
 Feel free to review them at any point!

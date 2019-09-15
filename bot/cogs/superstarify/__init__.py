@@ -15,7 +15,7 @@ from bot.decorators import with_role
 from bot.utils.moderation import post_infraction
 
 log = logging.getLogger(__name__)
-NICKNAME_POLICY_URL = "https://pythondiscord.com/about/rules#nickname-policy"
+NICKNAME_POLICY_URL = "https://pythondiscord.com/pages/rules/#wiki-toc-nickname-policy"
 
 
 class Superstarify:

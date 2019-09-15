@@ -28,7 +28,7 @@ INFRACTION_ICONS = {
     "Kick": Icons.sign_out,
     "Ban": Icons.user_ban
 }
-RULES_URL = "https://pythondiscord.com/about/rules"
+RULES_URL = "https://pythondiscord.com/pages/rules"
 APPEALABLE_INFRACTIONS = ("Ban", "Mute")
 
 

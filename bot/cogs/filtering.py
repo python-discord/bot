@@ -59,7 +59,7 @@ class Filtering:
                 "user_notification": Filter.notify_user_invites,
                 "notification_msg": (
                     f"Per Rule 10, your invite link has been removed. {_staff_mistake_str}\n\n"
-                    r"Our server rules can be found here: <https://pythondiscord.com/about/rules>"
+                    r"Our server rules can be found here: <https://pythondiscord.com/pages/rules>"
                 )
             },
             "filter_domains": {
