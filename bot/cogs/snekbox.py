@@ -5,7 +5,7 @@ import textwrap
 from signal import Signals
 from typing import Optional, Tuple
 
-from discord.ext.commands import Bot, Context, command, guild_only
+from discord.ext.commands import Bot, Cog, Context, command, guild_only
 
 from bot.constants import Channels, STAFF_ROLES, URLs
 from bot.decorators import in_channel
@@ -36,7 +36,7 @@ RAW_CODE_REGEX = re.compile(
 MAX_PASTE_LEN = 1000
 
 
-class Snekbox:
+class Snekbox(Cog):
     """
     Safe evaluation of Python code using Snekbox
     """

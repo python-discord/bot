@@ -6,7 +6,7 @@ from contextlib import suppress
 
 from discord import Colour, Embed, HTTPException
 from discord.ext import commands
-from discord.ext.commands import CheckFailure
+from discord.ext.commands import CheckFailure, Cog as DiscordCog
 from fuzzywuzzy import fuzz, process
 
 from bot import constants
@@ -107,7 +107,7 @@ class HelpSession:
             self.query = ctx.bot
             self.description = self.query.description
         self.author = ctx.author
-        self.destination = ctx.author if ctx.bot.pm_help else ctx.channel
+        self.destination = ctx.channel
 
         # set the config for the session
         self._cleanup = cleanup
@@ -649,7 +649,7 @@ class HelpSession:
         await self.message.delete()
 
 
-class Help:
+class Help(DiscordCog):
     """
     Custom Embed Pagination Help feature
     """

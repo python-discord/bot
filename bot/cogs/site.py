@@ -1,7 +1,7 @@
 import logging
 
 from discord import Colour, Embed
-from discord.ext.commands import Bot, Context, group
+from discord.ext.commands import Bot, Cog, Context, group
 
 from bot.constants import Channels, STAFF_ROLES, URLs
 from bot.decorators import redirect_output
@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 PAGES_URL = f"{URLs.site_schema}{URLs.site}/pages"
 
 
-class Site:
+class Site(Cog):
     """Commands for linking to different parts of the site."""
 
     def __init__(self, bot: Bot):
@@ -46,15 +46,18 @@ class Site:
     async def site_resources(self, ctx: Context):
         """Info about the site's Resources page."""
 
-        url = f"{PAGES_URL}/resources"
+        learning_url = f"{PAGES_URL}/resources"
+        tools_url = f"{PAGES_URL}/tools"
 
-        embed = Embed(title="Resources")
-        embed.set_footer(text=url)
+        embed = Embed(title="Resources & Tools")
+        embed.set_footer(text=f"{learning_url} | {tools_url}")
         embed.colour = Colour.blurple()
         embed.description = (
-            f"The [Resources page]({url}) on our website contains a "
+            f"The [Resources page]({learning_url}) on our website contains a "
             "list of hand-selected goodies that we regularly recommend "
-            "to both beginners and experts."
+            f"to both beginners and experts. The [Tools page]({tools_url}) "
+            "contains a couple of the most popular tools for programming in "
+            "Python."
         )
 
         await ctx.send(embed=embed)
@@ -111,7 +114,7 @@ class Site:
             # Rules were not submitted. Return the default description.
             rules_embed.description = (
                 "The rules and guidelines that apply to this community can be found on"
-                " our [rules page](https://pythondiscord.com/about/rules). We expect"
+                f" our [rules page]({PAGES_URL}/rules). We expect"
                 " all members of the community to have read and understood these."
             )
 

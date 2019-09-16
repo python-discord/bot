@@ -7,10 +7,9 @@ from operator import itemgetter
 from typing import Dict, Iterable, List, Set
 
 from discord import Colour, Member, Message, NotFound, Object, TextChannel
-from discord.ext.commands import Bot
+from discord.ext.commands import Bot, Cog
 
 from bot import rules
-from bot.cogs.moderation import Moderation
 from bot.cogs.modlog import ModLog
 from bot.constants import (
     AntiSpam as AntiSpamConfig, Channels,
@@ -95,7 +94,7 @@ class DeletionContext:
         )
 
 
-class AntiSpam:
+class AntiSpam(Cog):
     """Cog that controls our anti-spam measures."""
 
     def __init__(self, bot: Bot, validation_errors: bool) -> None:
@@ -113,6 +112,7 @@ class AntiSpam:
         """Allows for easy access of the ModLog cog."""
         return self.bot.get_cog("ModLog")
 
+    @Cog.listener()
     async def on_ready(self):
         """Unloads the cog and alerts admins if configuration validation failed."""
         if self.validation_errors:
@@ -131,6 +131,7 @@ class AntiSpam:
             self.bot.remove_cog(self.__class__.__name__)
             return
 
+    @Cog.listener()
     async def on_message(self, message: Message) -> None:
         """Applies the antispam rules to each received message."""
         if (
@@ -152,7 +153,7 @@ class AntiSpam:
         # Store history messages since `interval` seconds ago in a list to prevent unnecessary API calls.
         earliest_relevant_at = datetime.utcnow() - timedelta(seconds=max_interval)
         relevant_messages = [
-            msg async for msg in message.channel.history(after=earliest_relevant_at, reverse=False)
+            msg async for msg in message.channel.history(after=earliest_relevant_at, oldest_first=False)
             if not msg.author.bot
         ]
 
@@ -211,7 +212,12 @@ class AntiSpam:
 
             # Since we're going to invoke the tempmute command directly, we need to manually call the converter.
             dt_remove_role_after = await self.expiration_date_converter.convert(context, f"{remove_role_after}S")
-            await context.invoke(Moderation.tempmute, member, dt_remove_role_after, reason=reason)
+            await context.invoke(
+                self.bot.get_command('tempmute'),
+                member,
+                dt_remove_role_after,
+                reason=reason
+            )
 
     async def maybe_delete_messages(self, channel: TextChannel, messages: List[Message]) -> None:
         """Cleans the messages if cleaning is configured."""

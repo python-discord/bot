@@ -4,7 +4,7 @@ import re
 import time
 
 from discord import Embed, Message, RawMessageUpdateEvent
-from discord.ext.commands import Bot, Context, command, group
+from discord.ext.commands import Bot, Cog, Context, command, group
 
 from bot.constants import (
     Channels, Guild, MODERATION_ROLES,
@@ -16,7 +16,7 @@ from bot.utils.messages import wait_for_deletion
 log = logging.getLogger(__name__)
 
 
-class Bot:
+class Bot(Cog):
     """
     Bot information commands
     """
@@ -48,14 +48,14 @@ class Bot:
 
     @group(invoke_without_command=True, name="bot", hidden=True)
     @with_role(Roles.verified)
-    async def bot_group(self, ctx: Context):
+    async def botinfo_group(self, ctx: Context):
         """
         Bot informational commands
         """
 
         await ctx.invoke(self.bot.get_command("help"), "bot")
 
-    @bot_group.command(name='about', aliases=('info',), hidden=True)
+    @botinfo_group.command(name='about', aliases=('info',), hidden=True)
     @with_role(Roles.verified)
     async def about_command(self, ctx: Context):
         """
@@ -236,6 +236,7 @@ class Bot:
 
         return msg.content[:3] in not_backticks
 
+    @Cog.listener()
     async def on_message(self, msg: Message):
         """
         Detect poorly formatted Python code and send the user
@@ -357,6 +358,7 @@ class Bot:
                         f"The message that was posted was:\n\n{msg.content}\n\n"
                     )
 
+    @Cog.listener()
     async def on_raw_message_edit(self, payload: RawMessageUpdateEvent):
         if (
             # Checks to see if the message was called out by the bot
@@ -370,14 +372,14 @@ class Bot:
 
         # Retrieve channel and message objects for use later
         channel = self.bot.get_channel(int(payload.data.get("channel_id")))
-        user_message = await channel.get_message(payload.message_id)
+        user_message = await channel.fetch_message(payload.message_id)
 
         #  Checks to see if the user has corrected their codeblock.  If it's fixed, has_fixed_codeblock will be None
         has_fixed_codeblock = self.codeblock_stripping(payload.data.get("content"), self.has_bad_ticks(user_message))
 
         # If the message is fixed, delete the bot message and the entry from the id dictionary
         if has_fixed_codeblock is None:
-            bot_message = await channel.get_message(self.codeblock_message_ids[payload.message_id])
+            bot_message = await channel.fetch_message(self.codeblock_message_ids[payload.message_id])
             await bot_message.delete()
             del self.codeblock_message_ids[payload.message_id]
             log.trace("User's incorrect code block has been fixed.  Removing bot formatting message.")

@@ -1,13 +1,15 @@
 import asyncio
 import contextlib
 import logging
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import Dict
+
+from bot.utils import CogABCMeta
 
 log = logging.getLogger(__name__)
 
 
-class Scheduler(ABC):
+class Scheduler(metaclass=CogABCMeta):
 
     def __init__(self):
 

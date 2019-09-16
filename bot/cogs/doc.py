@@ -120,12 +120,13 @@ class InventoryURL(commands.Converter):
         return url
 
 
-class Doc:
+class Doc(commands.Cog):
     def __init__(self, bot):
         self.base_urls = {}
         self.bot = bot
         self.inventories = {}
 
+    @commands.Cog.listener()
     async def on_ready(self):
         await self.refresh_inventory()
 

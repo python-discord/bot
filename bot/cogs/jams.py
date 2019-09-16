@@ -10,7 +10,7 @@ from bot.decorators import with_role
 log = logging.getLogger(__name__)
 
 
-class CodeJams:
+class CodeJams(commands.Cog):
     """
     Manages the code-jam related parts of our server
     """

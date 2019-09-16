@@ -1,7 +1,7 @@
 import logging
 
 from discord import Message, NotFound, Object
-from discord.ext.commands import Bot, Context, command
+from discord.ext.commands import Bot, Cog, Context, command
 
 from bot.cogs.modlog import ModLog
 from bot.constants import Channels, Event, Roles
@@ -14,8 +14,8 @@ Hello! Welcome to the server, and thanks for verifying yourself!
 
 For your records, these are the documents you accepted:
 
-`1)` Our rules, here: <https://pythondiscord.com/about/rules>
-`2)` Our privacy policy, here: <https://pythondiscord.com/about/privacy> - you can find information on how to have \
+`1)` Our rules, here: <https://pythondiscord.com/pages/rules>
+`2)` Our privacy policy, here: <https://pythondiscord.com/pages/privacy> - you can find information on how to have \
 your information removed here as well.
 
 Feel free to review them at any point!
@@ -28,7 +28,7 @@ If you'd like to unsubscribe from the announcement notifications, simply send `!
 """
 
 
-class Verification:
+class Verification(Cog):
     """
     User verification and role self-management
     """
@@ -40,6 +40,7 @@ class Verification:
     def mod_log(self) -> ModLog:
         return self.bot.get_cog("ModLog")
 
+    @Cog.listener()
     async def on_message(self, message: Message):
         if message.author.bot:
             return  # They're a bot, ignore
@@ -152,13 +153,13 @@ class Verification:
         )
 
     @staticmethod
-    async def __error(ctx: Context, error):
+    async def cog_command_error(ctx: Context, error):
         if isinstance(error, InChannelCheckFailure):
             # Do nothing; just ignore this error
             error.handled = True
 
     @staticmethod
-    def __global_check(ctx: Context):
+    def bot_check(ctx: Context):
         """
         Block any command within the verification channel that is not !accept.
         """

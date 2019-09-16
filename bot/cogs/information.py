@@ -2,11 +2,9 @@ import logging
 import textwrap
 
 from discord import CategoryChannel, Colour, Embed, Member, TextChannel, VoiceChannel
-from discord.ext.commands import Bot, Context, command
+from discord.ext.commands import Bot, Cog, Context, command
 
-from bot.constants import (
-    Channels, Emojis, Keys, MODERATION_ROLES, STAFF_ROLES
-)
+from bot.constants import Channels, Emojis, MODERATION_ROLES, STAFF_ROLES
 from bot.decorators import InChannelCheckFailure, with_role
 from bot.utils.checks import with_role_check
 from bot.utils.time import time_since
@@ -14,7 +12,7 @@ from bot.utils.time import time_since
 log = logging.getLogger(__name__)
 
 
-class Information:
+class Information(Cog):
     """
     A cog with commands for generating embeds with
     server information, such as server statistics
@@ -23,7 +21,6 @@ class Information:
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.headers = {"X-API-Key": Keys.site_api}
 
     @with_role(*MODERATION_ROLES)
     @command(name="roles")

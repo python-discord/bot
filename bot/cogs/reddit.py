@@ -5,7 +5,7 @@ import textwrap
 from datetime import datetime, timedelta
 
 from discord import Colour, Embed, TextChannel
-from discord.ext.commands import Bot, Context, group
+from discord.ext.commands import Bot, Cog, Context, group
 
 from bot.constants import Channels, ERROR_REPLIES, Reddit as RedditConfig, STAFF_ROLES
 from bot.converters import Subreddit
@@ -15,7 +15,7 @@ from bot.pagination import LinePaginator
 log = logging.getLogger(__name__)
 
 
-class Reddit:
+class Reddit(Cog):
     """
     Track subreddit posts and show detailed statistics about them.
     """
@@ -279,8 +279,9 @@ class Reddit:
             max_lines=15
         )
 
+    @Cog.listener()
     async def on_ready(self):
-        self.reddit_channel = self.bot.get_channel(Channels.reddit)
+        self.reddit_channel = await self.bot.fetch_channel(Channels.reddit)
 
         if self.reddit_channel is not None:
             if self.new_posts_task is None:

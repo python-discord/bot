@@ -95,7 +95,7 @@ guild:
         bot:                              267659945086812160
         checkpoint_test:                  422077681434099723
         defcon:                           464469101889454091
-        devlog:            &DEVLOG        409308876241108992
+        devlog:            &DEVLOG        622895325144940554
         devtest:           &DEVTEST       414574275865870337
         help_0:                           303906576991780866
         help_1:                           303906556754395136
@@ -273,7 +273,7 @@ urls:
 
     # Misc URLs
     bot_avatar:      "https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle/logo_circle.png"
-    gitlab_bot_repo: "https://gitlab.com/python-discord/projects/bot"
+    github_bot_repo: "https://github.com/python-discord/bot"
 
 anti_spam:
     # Clean messages that violate a rule.

@@ -6,7 +6,7 @@ import struct
 from datetime import datetime
 
 from discord import Colour, Message
-from discord.ext.commands import Bot
+from discord.ext.commands import Bot, Cog
 from discord.utils import snowflake_time
 
 from bot.cogs.modlog import ModLog
@@ -34,7 +34,7 @@ TOKEN_RE = re.compile(
 )
 
 
-class TokenRemover:
+class TokenRemover(Cog):
     """Scans messages for potential discord.py bot tokens and removes them."""
 
     def __init__(self, bot: Bot):
@@ -44,6 +44,7 @@ class TokenRemover:
     def mod_log(self) -> ModLog:
         return self.bot.get_cog("ModLog")
 
+    @Cog.listener()
     async def on_message(self, msg: Message):
         if msg.author.bot:
             return

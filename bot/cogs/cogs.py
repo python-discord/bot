@@ -2,7 +2,7 @@ import logging
 import os
 
 from discord import Colour, Embed
-from discord.ext.commands import Bot, Context, group
+from discord.ext.commands import Bot, Cog, Context, group
 
 from bot.constants import (
     Emojis, MODERATION_ROLES, Roles, URLs
@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 KEEP_LOADED = ["bot.cogs.cogs", "bot.cogs.modlog"]
 
 
-class Cogs:
+class Cogs(Cog):
     """
     Cog management commands
     """
@@ -60,7 +60,7 @@ class Cogs:
 
         embed.set_author(
             name="Python Bot (Cogs)",
-            url=URLs.gitlab_bot_repo,
+            url=URLs.github_bot_repo,
             icon_url=URLs.bot_avatar
         )
 
@@ -113,7 +113,7 @@ class Cogs:
 
         embed.set_author(
             name="Python Bot (Cogs)",
-            url=URLs.gitlab_bot_repo,
+            url=URLs.github_bot_repo,
             icon_url=URLs.bot_avatar
         )
 
@@ -168,7 +168,7 @@ class Cogs:
 
         embed.set_author(
             name="Python Bot (Cogs)",
-            url=URLs.gitlab_bot_repo,
+            url=URLs.github_bot_repo,
             icon_url=URLs.bot_avatar
         )
 
@@ -269,7 +269,7 @@ class Cogs:
         embed.colour = Colour.blurple()
         embed.set_author(
             name="Python Bot (Cogs)",
-            url=URLs.gitlab_bot_repo,
+            url=URLs.github_bot_repo,
             icon_url=URLs.bot_avatar
         )
 

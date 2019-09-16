@@ -2,10 +2,11 @@ import asyncio
 import logging
 import socket
 
+import discord
 from aiohttp import AsyncResolver, ClientSession, TCPConnector
-from discord import Game
 from discord.ext.commands import Bot, when_mentioned_or
 
+from bot import patches
 from bot.api import APIClient, APILoggingHandler
 from bot.constants import Bot as BotConfig, DEBUG_MODE
 
@@ -14,9 +15,9 @@ log = logging.getLogger('bot')
 
 bot = Bot(
     command_prefix=when_mentioned_or(BotConfig.prefix),
-    activity=Game(name="Commands: !help"),
+    activity=discord.Game(name="Commands: !help"),
     case_insensitive=True,
-    max_messages=10_000
+    max_messages=10_000,
 )
 
 # Global aiohttp session for all cogs
@@ -71,6 +72,11 @@ bot.load_extension("bot.cogs.utils")
 bot.load_extension("bot.cogs.watchchannels")
 bot.load_extension("bot.cogs.wolfram")
 
+# Apply `message_edited_at` patch if discord.py did not yet release a bug fix.
+if not hasattr(discord.message.Message, '_handle_edited_timestamp'):
+    patches.message_edited_at.apply_patch()
+
 bot.run(BotConfig.token)
 
-bot.http_session.close()  # Close the aiohttp session when the bot finishes running
+# This calls a coroutine, so it doesn't do anything at the moment.
+# bot.http_session.close()  # Close the aiohttp session when the bot finishes running
