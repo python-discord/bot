@@ -4,7 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-discord-py = {git = "https://github.com/Rapptz/discord.py.git",extras = ["voice"],ref = "860d6a9ace8248dfeec18b8b159e7b757d9f56bb",editable = true}
+discord-py = "~=1.2"
 aiodns = "*"
 logmatic-python = "*"
 aiohttp = "*"

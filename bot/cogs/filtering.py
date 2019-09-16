@@ -5,7 +5,7 @@ from typing import Optional, Union
 import discord.errors
 from dateutil.relativedelta import relativedelta
 from discord import Colour, DMChannel, Member, Message, TextChannel
-from discord.ext.commands import Bot
+from discord.ext.commands import Bot, Cog
 
 from bot.cogs.modlog import ModLog
 from bot.constants import (
@@ -29,7 +29,7 @@ URL_RE = r"(https?://[^\s]+)"
 ZALGO_RE = r"[\u0300-\u036F\u0489]"
 
 
-class Filtering:
+class Filtering(Cog):
     """
     Filtering out invites, blacklisting domains,
     and warning us of certain regular expressions
@@ -96,14 +96,16 @@ class Filtering:
     def mod_log(self) -> ModLog:
         return self.bot.get_cog("ModLog")
 
+    @Cog.listener()
     async def on_message(self, msg: Message):
         await self._filter_message(msg)
 
+    @Cog.listener()
     async def on_message_edit(self, before: Message, after: Message):
         if not before.edited_at:
             delta = relativedelta(after.edited_at, before.created_at).microseconds
         else:
-            delta = None
+            delta = relativedelta(after.edited_at, before.edited_at).microseconds
         await self._filter_message(after, delta)
 
     async def _filter_message(self, msg: Message, delta: Optional[int] = None):
@@ -142,7 +144,7 @@ class Filtering:
                         # If the edit delta is less than 0.001 seconds, then we're probably dealing
                         # with a double filter trigger.
                         if delta is not None and delta < 100:
-                            return
+                            continue
 
                     # Does the filter only need the message content or the full message?
                     if _filter["content_only"]:

@@ -2,9 +2,9 @@ import logging
 import time
 
 from discord import Colour, Embed
-from discord.ext.commands import Bot, Context, group
+from discord.ext.commands import Bot, Cog, Context, group
 
-from bot.constants import Channels, Cooldowns, Keys, MODERATION_ROLES, Roles
+from bot.constants import Channels, Cooldowns, MODERATION_ROLES, Roles
 from bot.converters import TagContentConverter, TagNameConverter
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
@@ -19,7 +19,7 @@ TEST_CHANNELS = (
 )
 
 
-class Tags:
+class Tags(Cog):
     """
     Save new tags and fetch existing tags.
     """
@@ -27,7 +27,6 @@ class Tags:
     def __init__(self, bot: Bot):
         self.bot = bot
         self.tag_cooldowns = {}
-        self.headers = {"Authorization": f"Token {Keys.site_api}"}
 
     @group(name='tags', aliases=('tag', 't'), hidden=True, invoke_without_command=True)
     async def tags_group(self, ctx: Context, *, tag_name: TagNameConverter = None):
@@ -82,7 +81,7 @@ class Tags:
                     "time": time.time(),
                     "channel": ctx.channel.id
                 }
-            await ctx.send(embed=Embed.from_data(tag['embed']))
+            await ctx.send(embed=Embed.from_dict(tag['embed']))
 
         else:
             tags = await self.bot.api_client.get('bot/tags')

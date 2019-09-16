@@ -3,9 +3,9 @@ import logging
 from datetime import datetime, timedelta
 
 from discord import Colour, Embed
-from discord.ext.commands import BadArgument, Bot, Context, Converter, group
+from discord.ext.commands import BadArgument, Bot, Cog, Context, Converter, group
 
-from bot.constants import Channels, Keys, MODERATION_ROLES
+from bot.constants import Channels, MODERATION_ROLES
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
 
@@ -37,7 +37,7 @@ class OffTopicName(Converter):
         return argument.translate(table)
 
 
-async def update_names(bot: Bot, headers: dict):
+async def update_names(bot: Bot):
     """
     The background updater task that performs a channel name update daily.
 
@@ -69,21 +69,21 @@ async def update_names(bot: Bot, headers: dict):
         )
 
 
-class OffTopicNames:
+class OffTopicNames(Cog):
     """Commands related to managing the off-topic category channel names."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.headers = {"X-API-KEY": Keys.site_api}
         self.updater_task = None
 
     def __cleanup(self):
         if self.updater_task is not None:
             self.updater_task.cancel()
 
+    @Cog.listener()
     async def on_ready(self):
         if self.updater_task is None:
-            coro = update_names(self.bot, self.headers)
+            coro = update_names(self.bot)
             self.updater_task = self.bot.loop.create_task(coro)
 
     @group(name='otname', aliases=('otnames', 'otn'), invoke_without_command=True)

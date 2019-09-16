@@ -3,20 +3,20 @@ import datetime
 import logging
 import re
 import textwrap
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from typing import Optional
 
 import discord
-from discord import Color, Embed, Message, Object, errors
-from discord.ext.commands import BadArgument, Bot, Context
+from discord import Color, Embed, HTTPException, Message, Object, errors
+from discord.ext.commands import BadArgument, Bot, Cog, Context
 
 from bot.api import ResponseCodeError
 from bot.cogs.modlog import ModLog
 from bot.constants import BigBrother as BigBrotherConfig, Guild as GuildConfig, Icons
 from bot.pagination import LinePaginator
-from bot.utils import messages
+from bot.utils import CogABCMeta, messages
 from bot.utils.time import time_since
 
 log = logging.getLogger(__name__)
@@ -47,7 +47,7 @@ class MessageHistory:
     message_count: int = 0
 
 
-class WatchChannel(ABC):
+class WatchChannel(metaclass=CogABCMeta):
     """ABC with functionality for relaying users' messages to a certain channel."""
 
     @abstractmethod
@@ -98,21 +98,14 @@ class WatchChannel(ABC):
         """Starts the watch channel by getting the channel, webhook, and user cache ready."""
         await self.bot.wait_until_ready()
 
-        # After updating d.py, this block can be replaced by `fetch_channel` with a try-except
-        for attempt in range(1, self.retries+1):
-            self.channel = self.bot.get_channel(self.destination)
-            if self.channel is None:
-                if attempt < self.retries:
-                    await asyncio.sleep(self.retry_delay)
-            else:
-                break
-        else:
-            self.log.error(f"Failed to retrieve the text channel with id {self.destination}")
-
-        # `get_webhook_info` has been renamed to `fetch_webhook` in newer versions of d.py
         try:
-            self.webhook = await self.bot.get_webhook_info(self.webhook_id)
-        except (discord.HTTPException, discord.NotFound, discord.Forbidden):
+            self.channel = await self.bot.fetch_channel(self.destination)
+        except HTTPException:
+            self.log.exception(f"Failed to retrieve the text channel with id `{self.destination}`")
+
+        try:
+            self.webhook = await self.bot.fetch_webhook(self.webhook_id)
+        except discord.HTTPException:
             self.log.exception(f"Failed to fetch webhook with id `{self.webhook_id}`")
 
         if self.channel is None or self.webhook is None:
@@ -169,6 +162,7 @@ class WatchChannel(ABC):
 
         return True
 
+    @Cog.listener()
     async def on_message(self, msg: Message) -> None:
         """Queues up messages sent by watched users."""
         if msg.author.id in self.watched_users:

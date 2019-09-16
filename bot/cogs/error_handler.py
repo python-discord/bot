@@ -14,7 +14,7 @@ from discord.ext.commands import (
     NoPrivateMessage,
     UserInputError,
 )
-from discord.ext.commands import Bot, Context
+from discord.ext.commands import Bot, Cog, Context
 
 from bot.api import ResponseCodeError
 from bot.constants import Channels
@@ -23,12 +23,13 @@ from bot.decorators import InChannelCheckFailure
 log = logging.getLogger(__name__)
 
 
-class ErrorHandler:
+class ErrorHandler(Cog):
     """Handles errors emitted from commands."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
 
+    @Cog.listener()
     async def on_command_error(self, ctx: Context, e: CommandError):
         command = ctx.command
         parent = None

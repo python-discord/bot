@@ -5,7 +5,7 @@ from email.parser import HeaderParser
 from io import StringIO
 
 from discord import Colour, Embed
-from discord.ext.commands import AutoShardedBot, Context, command
+from discord.ext.commands import AutoShardedBot, Cog, Context, command
 
 from bot.constants import Channels, STAFF_ROLES
 from bot.decorators import in_channel
@@ -13,7 +13,7 @@ from bot.decorators import in_channel
 log = logging.getLogger(__name__)
 
 
-class Utils:
+class Utils(Cog):
     """
     A selection of utilities which don't have a clear category.
     """

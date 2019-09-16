@@ -8,7 +8,7 @@ from discord import (
     Colour, Embed, Forbidden, Guild, HTTPException, Member, NotFound, Object, User
 )
 from discord.ext.commands import (
-    BadArgument, BadUnionArgument, Bot, Context, command, group
+    BadArgument, BadUnionArgument, Bot, Cog, Context, command, group
 )
 
 from bot import constants
@@ -46,7 +46,7 @@ def proxy_user(user_id: str) -> Object:
 UserTypes = Union[Member, User, proxy_user]
 
 
-class Moderation(Scheduler):
+class Moderation(Scheduler, Cog):
     """
     Server moderation tools.
     """
@@ -60,6 +60,7 @@ class Moderation(Scheduler):
     def mod_log(self) -> ModLog:
         return self.bot.get_cog("ModLog")
 
+    @Cog.listener()
     async def on_ready(self):
         # Schedule expiration for previous infractions
         infractions = await self.bot.api_client.get(
@@ -1348,7 +1349,7 @@ class Moderation(Scheduler):
         """
 
         # sometimes `user` is a `discord.Object`, so let's make it a proper user.
-        user = await self.bot.get_user_info(user.id)
+        user = await self.bot.fetch_user(user.id)
 
         try:
             await user.send(embed=embed)
