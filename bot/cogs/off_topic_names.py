@@ -1,4 +1,5 @@
 import asyncio
+import difflib
 import logging
 from datetime import datetime, timedelta
 
@@ -139,6 +140,27 @@ class OffTopicNames(Cog):
             await LinePaginator.paginate(lines, ctx, embed, max_size=400, empty=False)
         else:
             embed.description = "Hmmm, seems like there's nothing here yet."
+            await ctx.send(embed=embed)
+
+    @otname_group.command(name='search', aliases=('s',))
+    @with_role(*MODERATION_ROLES)
+    async def search_command(self, ctx, *, query: str):
+        """
+        Search for an off-topic name.
+        """
+
+        result = await self.bot.api_client.get('bot/off-topic-channel-names')
+        matches = difflib.get_close_matches(query, result, n=10, cutoff=0.35)
+        lines = sorted(f"• {name}" for name in matches)
+        embed = Embed(
+            title=f"Query results",
+            colour=Colour.blue()
+        )
+
+        if matches:
+            await LinePaginator.paginate(lines, ctx, embed, max_size=400, empty=False)
+        else:
+            embed.description = "Nothing found."
             await ctx.send(embed=embed)
 
 
