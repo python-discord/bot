@@ -4,7 +4,7 @@ from typing import Union
 
 from discord import Colour, Embed, Member, User
 from discord.ext.commands import (
-    Command, Context, clean_content, command, group
+    Cog, Command, Context, clean_content, command, group
 )
 
 from bot.cogs.watchchannels.watchchannel import proxy_user
@@ -14,7 +14,7 @@ from bot.pagination import LinePaginator
 log = logging.getLogger(__name__)
 
 
-class Alias:
+class Alias(Cog):
     """
     Aliases for more used commands
     """

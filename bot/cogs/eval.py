@@ -8,7 +8,7 @@ import traceback
 from io import StringIO
 
 import discord
-from discord.ext.commands import Bot, group
+from discord.ext.commands import Bot, Cog, group
 
 from bot.constants import Roles
 from bot.decorators import with_role
@@ -17,7 +17,7 @@ from bot.interpreter import Interpreter
 log = logging.getLogger(__name__)
 
 
-class CodeEval:
+class CodeEval(Cog):
     """
     Owner and admin feature that evaluates code
     and returns the result to the channel.

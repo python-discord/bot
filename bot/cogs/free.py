@@ -2,7 +2,7 @@ import logging
 from datetime import datetime
 
 from discord import Colour, Embed, Member, utils
-from discord.ext.commands import Context, command
+from discord.ext.commands import Cog, Context, command
 
 from bot.constants import Categories, Channels, Free, STAFF_ROLES
 from bot.decorators import redirect_output
@@ -15,7 +15,7 @@ RATE = Free.cooldown_rate
 PER = Free.cooldown_per
 
 
-class Free:
+class Free(Cog):
     """Tries to figure out which help channels are free."""
 
     PYTHON_HELP_ID = Categories.python_help

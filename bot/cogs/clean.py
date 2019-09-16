@@ -4,7 +4,7 @@ import re
 from typing import Optional
 
 from discord import Colour, Embed, Message, User
-from discord.ext.commands import Bot, Context, group
+from discord.ext.commands import Bot, Cog, Context, group
 
 from bot.cogs.modlog import ModLog
 from bot.constants import (
@@ -16,7 +16,7 @@ from bot.decorators import with_role
 log = logging.getLogger(__name__)
 
 
-class Clean:
+class Clean(Cog):
     """
     A cog that allows messages to be deleted in
     bulk, while applying various filters.

@@ -7,7 +7,7 @@ import discord
 from dateutil.relativedelta import relativedelta
 from discord import Embed
 from discord.ext import commands
-from discord.ext.commands import BucketType, Context, check, group
+from discord.ext.commands import BucketType, Cog, Context, check, group
 
 from bot.constants import Colours, STAFF_ROLES, Wolfram
 from bot.pagination import ImagePaginator
@@ -163,7 +163,7 @@ async def get_pod_pages(ctx, bot, query: str) -> Optional[List[Tuple]]:
         return pages
 
 
-class Wolfram:
+class Wolfram(Cog):
     """
     Commands for interacting with the Wolfram|Alpha API.
     """

@@ -8,7 +8,7 @@ from discord import (
     Colour, Embed, Forbidden, Guild, HTTPException, Member, NotFound, Object, User
 )
 from discord.ext.commands import (
-    BadArgument, BadUnionArgument, Bot, Context, command, group
+    BadArgument, BadUnionArgument, Bot, Cog, Context, command, group
 )
 
 from bot import constants
@@ -46,7 +46,7 @@ def proxy_user(user_id: str) -> Object:
 UserTypes = Union[Member, User, proxy_user]
 
 
-class Moderation(Scheduler):
+class Moderation(Scheduler, Cog):
     """
     Server moderation tools.
     """
@@ -60,6 +60,7 @@ class Moderation(Scheduler):
     def mod_log(self) -> ModLog:
         return self.bot.get_cog("ModLog")
 
+    @Cog.listener()
     async def on_ready(self):
         # Schedule expiration for previous infractions
         infractions = await self.bot.api_client.get(
@@ -1348,7 +1349,7 @@ class Moderation(Scheduler):
         """
 
         # sometimes `user` is a `discord.Object`, so let's make it a proper user.
-        user = await self.bot.get_user_info(user.id)
+        user = await self.bot.fetch_user(user.id)
 
         try:
             await user.send(embed=embed)
@@ -1374,13 +1375,15 @@ class Moderation(Scheduler):
 
     # endregion
 
-    async def __error(self, ctx: Context, error) -> None:
+    @staticmethod
+    async def cog_command_error(ctx: Context, error) -> None:
         if isinstance(error, BadUnionArgument):
             if User in error.converters:
                 await ctx.send(str(error.errors[0]))
                 error.handled = True
 
-    async def respect_role_hierarchy(self, ctx: Context, target: UserTypes, infr_type: str) -> bool:
+    @staticmethod
+    async def respect_role_hierarchy(ctx: Context, target: UserTypes, infr_type: str) -> bool:
         """
         Check if the highest role of the invoking member is greater than that of the target member.
         If this check fails, a warning is sent to the invoking ctx.

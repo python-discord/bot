@@ -1,7 +1,7 @@
 import logging
 
 from discord import Colour, Embed
-from discord.ext.commands import Bot, Context, group
+from discord.ext.commands import Bot, Cog, Context, group
 
 from bot.constants import Channels, STAFF_ROLES, URLs
 from bot.decorators import redirect_output
@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 PAGES_URL = f"{URLs.site_schema}{URLs.site}/pages"
 
 
-class Site:
+class Site(Cog):
     """Commands for linking to different parts of the site."""
 
     def __init__(self, bot: Bot):
