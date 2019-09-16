@@ -153,13 +153,13 @@ class Verification(Cog):
         )
 
     @staticmethod
-    async def __error(ctx: Context, error):
+    async def cog_command_error(ctx: Context, error):
         if isinstance(error, InChannelCheckFailure):
             # Do nothing; just ignore this error
             error.handled = True
 
     @staticmethod
-    def __global_check(ctx: Context):
+    def bot_check(ctx: Context):
         """
         Block any command within the verification channel that is not !accept.
         """

@@ -76,7 +76,7 @@ class OffTopicNames(Cog):
         self.bot = bot
         self.updater_task = None
 
-    def __cleanup(self):
+    def cog_unload(self):
         if self.updater_task is not None:
             self.updater_task.cancel()
 

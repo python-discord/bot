@@ -1375,13 +1375,15 @@ class Moderation(Scheduler, Cog):
 
     # endregion
 
-    async def __error(self, ctx: Context, error) -> None:
+    @staticmethod
+    async def cog_command_error(ctx: Context, error) -> None:
         if isinstance(error, BadUnionArgument):
             if User in error.converters:
                 await ctx.send(str(error.errors[0]))
                 error.handled = True
 
-    async def respect_role_hierarchy(self, ctx: Context, target: UserTypes, infr_type: str) -> bool:
+    @staticmethod
+    async def respect_role_hierarchy(ctx: Context, target: UserTypes, infr_type: str) -> bool:
         """
         Check if the highest role of the invoking member is greater than that of the target member.
         If this check fails, a warning is sent to the invoking ctx.
