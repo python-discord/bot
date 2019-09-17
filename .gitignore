@@ -117,6 +117,3 @@ config.yml
 
 # JUnit XML reports from pytest
 junit.xml
-
-# Coverage XML artifacts
-coverage.xml
