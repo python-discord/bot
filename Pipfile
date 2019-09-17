@@ -32,6 +32,7 @@ pre-commit = "~=1.18"
 safety = "*"
 dodgy = "*"
 pytest = "*"
+pytest-cov = "*"
 
 [requires]
 python_version = "3.7"
