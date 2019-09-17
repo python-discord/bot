@@ -347,9 +347,9 @@ class Channels(metaclass=YAMLGetter):
     message_log: int
     mod_alerts: int
     modlog: int
+    off_topic_0: int
     off_topic_1: int
     off_topic_2: int
-    off_topic_3: int
     python: int
     reddit: int
     talent_pool: int
@@ -394,8 +394,6 @@ class Guild(metaclass=YAMLGetter):
 class Keys(metaclass=YAMLGetter):
     section = "keys"
 
-    deploy_bot: str
-    deploy_site: str
     site_api: str
 
 
@@ -411,14 +409,11 @@ class URLs(metaclass=YAMLGetter):
 
     # Misc endpoints
     bot_avatar: str
-    deploy: str
     github_bot_repo: str
-    status: str
 
     # Site endpoints
     site: str
     site_api: str
-    site_clean_api: str
     site_superstarify_api: str
     site_logs_api: str
     site_logs_view: str

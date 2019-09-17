@@ -38,7 +38,7 @@ jobs:
   - script: python -m flake8
     displayName: 'Run linter'
 
-  - script: BOT_TOKEN=foobar python -m pytest --junitxml=junit.xml --cov=bot --cov-branch --cov-report=term --cov-report=xml tests
+  - script: BOT_API_KEY=foo BOT_TOKEN=bar WOLFRAM_API_KEY=baz python -m pytest --junitxml=junit.xml --cov=bot --cov-branch --cov-report=term --cov-report=xml tests
     displayName: Run tests
 
   - task: PublishCodeCoverageResults@1

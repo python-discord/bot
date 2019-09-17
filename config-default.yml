@@ -227,8 +227,6 @@ filter:
 
 
 keys:
-    deploy_bot:  !ENV "DEPLOY_BOT_KEY"
-    deploy_site: !ENV "DEPLOY_SITE"
     site_api:    !ENV "BOT_API_KEY"
 
 
@@ -262,10 +260,6 @@ urls:
 
     # Snekbox
     snekbox_eval_api: "https://snekbox.pythondiscord.com/eval"
-
-    # Env vars
-    deploy: !ENV "DEPLOY_URL"
-    status: !ENV "STATUS_URL"
 
     # Discord API URLs
     discord_api:        &DISCORD_API "https://discordapp.com/api/v7/"
