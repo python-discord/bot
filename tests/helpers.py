@@ -1,6 +1,5 @@
 import asyncio
 import functools
-
 from unittest.mock import MagicMock
 
 
