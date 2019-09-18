@@ -1260,11 +1260,11 @@ class Moderation(Scheduler, Cog):
         active = infraction_object["active"]
         user_id = infraction_object["user"]
         hidden = infraction_object["hidden"]
-        created = datetime.fromisoformat(infraction_object["inserted_at"].strftime("%c"))
+        created = datetime.fromisoformat(infraction_object["inserted_at"].strftime("%Y-%m-%d %H:%M"))
         if not infraction_object["expires_at"]:
             expires = "*Permanent*"
         else:
-            expires = datetime.fromisoformat(infraction_object["expires_at"].strftime("%c"))
+            expires = datetime.fromisoformat(infraction_object["expires_at"].strftime("%Y-%m-%d %H:%M"))
 
         lines = textwrap.dedent(f"""
             {"**===============**" if active else "==============="}
