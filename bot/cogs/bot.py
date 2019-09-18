@@ -6,14 +6,13 @@ import time
 from discord import Embed, Message, RawMessageUpdateEvent
 from discord.ext.commands import Bot, Cog, Context, command, group
 
-from bot.constants import (
-    Channels, Guild, MODERATION_ROLES,
-    Roles, URLs,
-)
+from bot.constants import Channels, DEBUG_MODE, Guild, MODERATION_ROLES, Roles, URLs
 from bot.decorators import with_role
 from bot.utils.messages import wait_for_deletion
 
 log = logging.getLogger(__name__)
+
+RE_MARKDOWN = re.compile(r'([*_~`|>])')
 
 
 class Bot(Cog):
@@ -255,7 +254,7 @@ class Bot(Cog):
 
         if parse_codeblock:
             on_cooldown = (time.time() - self.channel_cooldowns.get(msg.channel.id, 0)) < 300
-            if not on_cooldown:
+            if not on_cooldown or DEBUG_MODE:
                 try:
                     if self.has_bad_ticks(msg):
                         ticks = msg.content[:3]
@@ -280,13 +279,14 @@ class Bot(Cog):
                                 current_length += len(line)
                                 lines_walked += 1
                             content = content[:current_length] + "#..."
-
+                        content_escaped_markdown = RE_MARKDOWN.sub(r'\\\1', content)
                         howto = (
                             "It looks like you are trying to paste code into this channel.\n\n"
                             "You seem to be using the wrong symbols to indicate where the codeblock should start. "
                             f"The correct symbols would be \\`\\`\\`, not `{ticks}`.\n\n"
                             "**Here is an example of how it should look:**\n"
-                            f"\\`\\`\\`python\n{content}\n\\`\\`\\`\n\n**This will result in the following:**\n"
+                            f"\\`\\`\\`python\n{content_escaped_markdown}\n\\`\\`\\`\n\n"
+                            "**This will result in the following:**\n"
                             f"```python\n{content}\n```"
                         )
 
@@ -322,13 +322,15 @@ class Bot(Cog):
                                     lines_walked += 1
                                 content = content[:current_length] + "#..."
 
+                            content_escaped_markdown = RE_MARKDOWN.sub(r'\\\1', content)
                             howto += (
                                 "It looks like you're trying to paste code into this channel.\n\n"
                                 "Discord has support for Markdown, which allows you to post code with full "
                                 "syntax highlighting. Please use these whenever you paste code, as this "
                                 "helps improve the legibility and makes it easier for us to help you.\n\n"
                                 f"**To do this, use the following method:**\n"
-                                f"\\`\\`\\`python\n{content}\n\\`\\`\\`\n\n**This will result in the following:**\n"
+                                f"\\`\\`\\`python\n{content_escaped_markdown}\n\\`\\`\\`\n\n"
+                                "**This will result in the following:**\n"
                                 f"```python\n{content}\n```"
                             )
 
