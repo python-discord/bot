@@ -6,19 +6,17 @@ from discord import Member, Message
 
 
 async def apply(
-    last_message: Message,
-    recent_messages: List[Message],
-    config: Dict[str, int]
+    last_message: Message, recent_messages: List[Message], config: Dict[str, int]
 ) -> Optional[Tuple[str, Iterable[Member], Iterable[Message]]]:
     """Apply attachment spam detection filter."""
-    relevant_messages = tuple(
+    relevant_messages = [last_message] + [
         msg
         for msg in recent_messages
         if (
             msg.author == last_message.author
             and len(msg.attachments) > 0
         )
-    )
+    ]
     total_recent_attachments = sum(len(msg.attachments) for msg in relevant_messages)
 
     if total_recent_attachments > config['max']:
