@@ -144,20 +144,21 @@ class OffTopicNames(Cog):
 
     @otname_group.command(name='search', aliases=('s',))
     @with_role(*MODERATION_ROLES)
-    async def search_command(self, ctx, *, query: str):
+    async def search_command(self, ctx, *, query: OffTopicName):
         """
         Search for an off-topic name.
         """
 
         result = await self.bot.api_client.get('bot/off-topic-channel-names')
-        matches = difflib.get_close_matches(query, result, n=10, cutoff=0.35)
-        lines = sorted(f"• {name}" for name in matches)
+        in_matches = {name for name in result if query in name}
+        close_matches = difflib.get_close_matches(query, result, n=10, cutoff=0.70)
+        lines = sorted(f"• {name}" for name in in_matches.union(close_matches))
         embed = Embed(
             title=f"Query results",
             colour=Colour.blue()
         )
 
-        if matches:
+        if lines:
             await LinePaginator.paginate(lines, ctx, embed, max_size=400, empty=False)
         else:
             embed.description = "Nothing found."
