@@ -3,7 +3,7 @@ from collections import ChainMap
 from typing import Union
 
 from discord import User
-from discord.ext.commands import Bot, Context, group
+from discord.ext.commands import Bot, Cog, Context, group
 
 from bot.constants import Channels, Roles, Webhooks
 from bot.decorators import with_role
@@ -13,7 +13,7 @@ from .watchchannel import WatchChannel, proxy_user
 log = logging.getLogger(__name__)
 
 
-class BigBrother(WatchChannel):
+class BigBrother(WatchChannel, Cog, name="Big Brother"):
     """Monitors users by relaying their messages to a watch channel to assist with moderation."""
 
     def __init__(self, bot: Bot) -> None:

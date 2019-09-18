@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Union
+from typing import Optional
 from urllib.parse import quote as quote_url
 
 import aiohttp
@@ -11,10 +11,22 @@ log = logging.getLogger(__name__)
 
 
 class ResponseCodeError(ValueError):
-    """Represent a not-OK response code."""
+    """Exception representing a non-OK response code."""
 
-    def __init__(self, response: aiohttp.ClientResponse):
+    def __init__(
+        self,
+        response: aiohttp.ClientResponse,
+        response_json: Optional[dict] = None,
+        response_text: str = ""
+    ):
+        self.status = response.status
+        self.response_json = response_json or {}
+        self.response_text = response_text
         self.response = response
+
+    def __str__(self):
+        response = self.response_json if self.response_json else self.response_text
+        return f"Status: {self.status} Response: {response}"
 
 
 class APIClient:
@@ -36,42 +48,47 @@ class APIClient:
     def _url_for(endpoint: str) -> str:
         return f"{URLs.site_schema}{URLs.site_api}/{quote_url(endpoint)}"
 
-    def maybe_raise_for_status(self, response: aiohttp.ClientResponse, should_raise: bool) -> None:
+    async def maybe_raise_for_status(self, response: aiohttp.ClientResponse, should_raise: bool) -> None:
         """Raise ResponseCodeError for non-OK response if an exception should be raised."""
         if should_raise and response.status >= 400:
-            raise ResponseCodeError(response=response)
+            try:
+                response_json = await response.json()
+                raise ResponseCodeError(response=response, response_json=response_json)
+            except aiohttp.ContentTypeError:
+                response_text = await response.text()
+                raise ResponseCodeError(response=response, response_text=response_text)
 
     async def get(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs) -> dict:
         """Site API GET."""
         async with self.session.get(self._url_for(endpoint), *args, **kwargs) as resp:
-            self.maybe_raise_for_status(resp, raise_for_status)
+            await self.maybe_raise_for_status(resp, raise_for_status)
             return await resp.json()
 
     async def patch(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs) -> dict:
         """Site API PATCH."""
         async with self.session.patch(self._url_for(endpoint), *args, **kwargs) as resp:
-            self.maybe_raise_for_status(resp, raise_for_status)
+            await self.maybe_raise_for_status(resp, raise_for_status)
             return await resp.json()
 
     async def post(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs) -> dict:
         """Site API POST."""
         async with self.session.post(self._url_for(endpoint), *args, **kwargs) as resp:
-            self.maybe_raise_for_status(resp, raise_for_status)
+            await self.maybe_raise_for_status(resp, raise_for_status)
             return await resp.json()
 
     async def put(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs) -> dict:
         """Site API PUT."""
         async with self.session.put(self._url_for(endpoint), *args, **kwargs) as resp:
-            self.maybe_raise_for_status(resp, raise_for_status)
+            await self.maybe_raise_for_status(resp, raise_for_status)
             return await resp.json()
 
-    async def delete(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs) -> Union[dict, None]:
+    async def delete(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs) -> Optional[dict]:
         """Site API DELETE."""
         async with self.session.delete(self._url_for(endpoint), *args, **kwargs) as resp:
             if resp.status == 204:
                 return None
 
-            self.maybe_raise_for_status(resp, raise_for_status)
+            await self.maybe_raise_for_status(resp, raise_for_status)
             return await resp.json()
 
 
@@ -133,7 +150,7 @@ class APILoggingHandler(logging.StreamHandler):
                 # 1. Do not log anything below `DEBUG`. This is only applicable
                 #    for the monkeypatched `TRACE` logging level, which has a
                 #    lower numeric value than `DEBUG`.
-                record.levelno > logging.DEBUG
+                record.levelno >= logging.DEBUG
                 # 2. Ignore logging messages which are sent by this logging
                 #    handler itself. This is required because if we were to
                 #    not ignore messages emitted by this handler, we would

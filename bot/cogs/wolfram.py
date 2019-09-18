@@ -4,12 +4,14 @@ from typing import List, Optional, Tuple
 from urllib import parse
 
 import discord
+from dateutil.relativedelta import relativedelta
 from discord import Embed
 from discord.ext import commands
-from discord.ext.commands import Bot, BucketType, Context, check, group
+from discord.ext.commands import Bot, BucketType, Cog, Context, check, group
 
 from bot.constants import Colours, STAFF_ROLES, Wolfram
 from bot.pagination import ImagePaginator
+from bot.utils.time import humanize_delta
 
 log = logging.getLogger(__name__)
 
@@ -64,9 +66,11 @@ def custom_cooldown(*ignore: List[int]) -> check:
 
             if user_rate:
                 # Can't use api; cause: member limit
+                delta = relativedelta(seconds=int(user_rate))
+                cooldown = humanize_delta(delta)
                 message = (
                     "You've used up your limit for Wolfram|Alpha requests.\n"
-                    f"Cooldown: {int(user_rate)}"
+                    f"Cooldown: {cooldown}"
                 )
                 await send_embed(ctx, message)
                 return False
@@ -106,14 +110,24 @@ async def get_pod_pages(ctx: Context, bot: Bot, query: str) -> Optional[List[Tup
 
         result = json["queryresult"]
 
-        if not result["success"]:
-            message = f"I couldn't find anything for {query}."
+        if result["error"]:
+            # API key not set up correctly
+            if result["error"]["msg"] == "Invalid appid":
+                message = "Wolfram API key is invalid or missing."
+                log.warning(
+                    "API key seems to be missing, or invalid when "
+                    f"processing a wolfram request: {url_str}, Response: {json}"
+                )
+                await send_embed(ctx, message)
+                return
+
+            message = "Something went wrong internally with your request, please notify staff!"
+            log.warning(f"Something went wrong getting a response from wolfram: {url_str}, Response: {json}")
             await send_embed(ctx, message)
             return
 
-        if result["error"]:
-            message = "Something went wrong internally with your request, please notify staff!"
-            log.warning(f"Something went wrong getting a response from wolfram: {url_str}, Response: {json}")
+        if not result["success"]:
+            message = f"I couldn't find anything for {query}."
             await send_embed(ctx, message)
             return
 
@@ -134,7 +148,7 @@ async def get_pod_pages(ctx: Context, bot: Bot, query: str) -> Optional[List[Tup
         return pages
 
 
-class Wolfram:
+class Wolfram(Cog):
     """Commands for interacting with the Wolfram|Alpha API."""
 
     def __init__(self, bot: commands.Bot):
@@ -165,6 +179,10 @@ class Wolfram:
                 color = Colours.soft_red
             elif status == 400:
                 message = "No input found"
+                footer = ""
+                color = Colours.soft_red
+            elif status == 403:
+                message = "Wolfram API key is invalid or missing."
                 footer = ""
                 color = Colours.soft_red
             else:
@@ -235,9 +253,11 @@ class Wolfram:
             if status == 501:
                 message = "Failed to get response"
                 color = Colours.soft_red
-
             elif status == 400:
                 message = "No input found"
+                color = Colours.soft_red
+            elif response_text == "Error 1: Invalid appid":
+                message = "Wolfram API key is invalid or missing."
                 color = Colours.soft_red
             else:
                 message = response_text

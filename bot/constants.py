@@ -341,13 +341,15 @@ class Channels(metaclass=YAMLGetter):
     help_3: int
     help_4: int
     help_5: int
+    help_6: int
+    help_7: int
     helpers: int
     message_log: int
     mod_alerts: int
     modlog: int
+    off_topic_0: int
     off_topic_1: int
     off_topic_2: int
-    off_topic_3: int
     python: int
     reddit: int
     talent_pool: int
@@ -372,13 +374,12 @@ class Roles(metaclass=YAMLGetter):
     announcements: int
     champion: int
     contributor: int
-    developer: int
-    devops: int
+    core_developer: int
     jammer: int
     moderator: int
     muted: int
     owner: int
-    verified: int
+    verified: int  # This is the Developers role on PyDis, here named verified for readability reasons.
     helpers: int
     team_leader: int
 
@@ -393,8 +394,6 @@ class Guild(metaclass=YAMLGetter):
 class Keys(metaclass=YAMLGetter):
     section = "keys"
 
-    deploy_bot: str
-    deploy_site: str
     site_api: str
 
 
@@ -410,14 +409,11 @@ class URLs(metaclass=YAMLGetter):
 
     # Misc endpoints
     bot_avatar: str
-    deploy: str
-    gitlab_bot_repo: str
-    status: str
+    github_bot_repo: str
 
     # Site endpoints
     site: str
     site_api: str
-    site_clean_api: str
     site_superstarify_api: str
     site_logs_api: str
     site_logs_view: str

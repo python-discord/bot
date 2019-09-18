@@ -95,7 +95,7 @@ guild:
         bot:                              267659945086812160
         checkpoint_test:                  422077681434099723
         defcon:                           464469101889454091
-        devlog:            &DEVLOG        409308876241108992
+        devlog:            &DEVLOG        622895325144940554
         devtest:           &DEVTEST       414574275865870337
         help_0:                           303906576991780866
         help_1:                           303906556754395136
@@ -103,6 +103,8 @@ guild:
         help_3:                           439702951246692352
         help_4:                           451312046647148554
         help_5:                           454941769734422538
+        help_6:                           587375753306570782
+        help_7:                           587375768556797982
         helpers:                          385474242440986624
         message_log:       &MESSAGE_LOG   467752170159079424
         mod_alerts:                       473092532147060736
@@ -125,8 +127,7 @@ guild:
         announcements:                      463658397560995840
         champion:                           430492892331769857
         contributor:                        295488872404484098
-        developer:                          352427296948486144
-        devops:            &DEVOPS_ROLE     409416496733880320
+        core_developer:                     587606783669829632
         jammer:                             423054537079783434
         moderator:         &MOD_ROLE        267629731250176001
         muted:             &MUTED_ROLE      277914926603829249
@@ -222,13 +223,10 @@ filter:
         - *ADMIN_ROLE
         - *MOD_ROLE
         - *OWNER_ROLE
-        - *DEVOPS_ROLE
         - *ROCKSTARS_ROLE
 
 
 keys:
-    deploy_bot:  !ENV "DEPLOY_BOT_KEY"
-    deploy_site: !ENV "DEPLOY_SITE"
     site_api:    !ENV "BOT_API_KEY"
 
 
@@ -261,11 +259,7 @@ urls:
     paste_service:                      !JOIN [*SCHEMA, *PASTE, "/{key}"]
 
     # Snekbox
-    snekbox_eval_api: "http://localhost:8060/eval"
-
-    # Env vars
-    deploy: !ENV "DEPLOY_URL"
-    status: !ENV "STATUS_URL"
+    snekbox_eval_api: "https://snekbox.pythondiscord.com/eval"
 
     # Discord API URLs
     discord_api:        &DISCORD_API "https://discordapp.com/api/v7/"
@@ -273,7 +267,7 @@ urls:
 
     # Misc URLs
     bot_avatar:      "https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle/logo_circle.png"
-    gitlab_bot_repo: "https://gitlab.com/python-discord/projects/bot"
+    github_bot_repo: "https://github.com/python-discord/bot"
 
 anti_spam:
     # Clean messages that violate a rule.

@@ -1,4 +1,13 @@
+from abc import ABCMeta
 from typing import Any, Generator, Hashable, Iterable
+
+from discord.ext.commands import CogMeta
+
+
+class CogABCMeta(CogMeta, ABCMeta):
+    """Metaclass for ABCs meant to be implemented as Cogs."""
+
+    pass
 
 
 class CaseInsensitiveDict(dict):

@@ -7,7 +7,7 @@ from operator import itemgetter
 
 from dateutil.relativedelta import relativedelta
 from discord import Colour, Embed
-from discord.ext.commands import Bot, Context, group
+from discord.ext.commands import Bot, Cog, Context, group
 
 from bot.constants import Channels, Icons, NEGATIVE_REPLIES, POSITIVE_REPLIES, STAFF_ROLES
 from bot.converters import ExpirationDate
@@ -22,13 +22,14 @@ WHITELISTED_CHANNELS = (Channels.bot,)
 MAXIMUM_REMINDERS = 5
 
 
-class Reminders(Scheduler):
+class Reminders(Scheduler, Cog):
     """Provide in-channel reminder functionality."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
         super().__init__()
 
+    @Cog.listener()
     async def on_ready(self) -> None:
         """Reschedule all current reminders."""
         response = await self.bot.api_client.get(

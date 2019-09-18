@@ -3,9 +3,7 @@ import logging
 from typing import Union
 
 from discord import Colour, Embed, Member, User
-from discord.ext.commands import (
-    Bot, Command, Context, clean_content, command, group
-)
+from discord.ext.commands import Bot, Cog, Command, Context, clean_content, command, group
 
 from bot.cogs.watchchannels.watchchannel import proxy_user
 from bot.converters import TagNameConverter
@@ -14,7 +12,7 @@ from bot.pagination import LinePaginator
 log = logging.getLogger(__name__)
 
 
-class Alias:
+class Alias (Cog):
     """Aliases for commonly used commands."""
 
     def __init__(self, bot: Bot):
@@ -98,7 +96,7 @@ class Alias:
     @command(name="exception", hidden=True)
     async def tags_get_traceback_alias(self, ctx: Context) -> None:
         """Alias for invoking <prefix>tags get traceback."""
-        await self.invoke(ctx, "tags get traceback")
+        await self.invoke(ctx, "tags get", tag_name="traceback")
 
     @group(name="get",
            aliases=("show", "g"),
@@ -112,8 +110,12 @@ class Alias:
     async def tags_get_alias(
             self, ctx: Context, *, tag_name: TagNameConverter = None
     ) -> None:
-        """Alias for invoking <prefix>tags get [tag_name]."""
-        await self.invoke(ctx, "tags get", tag_name)
+        """
+        Alias for invoking <prefix>tags get [tag_name].
+
+        tag_name: str - tag to be viewed.
+        """
+        await self.invoke(ctx, "tags get", tag_name=tag_name)
 
     @get_group_alias.command(name="docs", aliases=("doc", "d"), hidden=True)
     async def docs_get_alias(
@@ -131,6 +133,11 @@ class Alias:
     async def nomination_end_alias(self, ctx: Context, user: Union[User, proxy_user], *, reason: str) -> None:
         """Alias for invoking <prefix>nomination end [user] [reason]."""
         await self.invoke(ctx, "nomination end", user, reason=reason)
+
+    @command(name="nominees", hidden=True)
+    async def nominees_alias(self, ctx: Context) -> None:
+        """Alias for invoking <prefix>tp watched."""
+        await self.invoke(ctx, "talentpool watched")
 
 
 def setup(bot: Bot) -> None:

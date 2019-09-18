@@ -1,18 +1,14 @@
 import datetime
 import logging
-import random
 import re
 import textwrap
 from signal import Signals
 from typing import Optional, Tuple
 
-from discord import Colour, Embed
-from discord.ext.commands import (
-    Bot, CommandError, Context, NoPrivateMessage, command, guild_only
-)
+from discord.ext.commands import Bot, Cog, Context, command, guild_only
 
-from bot.constants import Channels, ERROR_REPLIES, NEGATIVE_REPLIES, STAFF_ROLES, URLs
-from bot.decorators import InChannelCheckFailure, in_channel
+from bot.constants import Channels, STAFF_ROLES, URLs
+from bot.decorators import in_channel
 from bot.utils.messages import wait_for_deletion
 
 
@@ -40,7 +36,7 @@ RAW_CODE_REGEX = re.compile(
 MAX_PASTE_LEN = 1000
 
 
-class Snekbox:
+class Snekbox(Cog):
     """Safe evaluation of Python code using Snekbox."""
 
     def __init__(self, bot: Bot):
@@ -221,28 +217,6 @@ class Snekbox:
                 )
         finally:
             del self.jobs[ctx.author.id]
-
-    @eval_command.error
-    async def eval_command_error(self, ctx: Context, error: CommandError) -> None:
-        """Eval commands error handler."""
-        embed = Embed(colour=Colour.red())
-
-        if isinstance(error, NoPrivateMessage):
-            embed.title = random.choice(NEGATIVE_REPLIES)
-            embed.description = "You're not allowed to use this command in private messages."
-            await ctx.send(embed=embed)
-
-        elif isinstance(error, InChannelCheckFailure):
-            embed.title = random.choice(NEGATIVE_REPLIES)
-            embed.description = str(error)
-            await ctx.send(embed=embed)
-
-        else:
-            original_error = getattr(error, 'original', "no original error")
-            log.error(f"Unhandled error in snekbox eval: {error} ({original_error})")
-            embed.title = random.choice(ERROR_REPLIES)
-            embed.description = "Some unhandled error occurred. Sorry for that!"
-            await ctx.send(embed=embed)
 
 
 def setup(bot: Bot) -> None:

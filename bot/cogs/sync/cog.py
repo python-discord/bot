@@ -3,7 +3,7 @@ from typing import Callable, Iterable
 
 from discord import Guild, Member, Role
 from discord.ext import commands
-from discord.ext.commands import Bot, Context
+from discord.ext.commands import Bot, Cog, Context
 
 from bot import constants
 from bot.api import ResponseCodeError
@@ -12,7 +12,7 @@ from bot.cogs.sync import syncers
 log = logging.getLogger(__name__)
 
 
-class Sync:
+class Sync(Cog):
     """Captures relevant events and sends them to the site."""
 
     # The server to synchronize events on.
@@ -29,6 +29,7 @@ class Sync:
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
 
+    @Cog.listener()
     async def on_ready(self) -> None:
         """Syncs the roles/users of the guild with the database."""
         guild = self.bot.get_guild(self.SYNC_SERVER_ID)
@@ -47,6 +48,7 @@ class Sync:
                         f"deleted `{total_deleted}`."
                     )
 
+    @Cog.listener()
     async def on_guild_role_create(self, role: Role) -> None:
         """Adds newly create role to the database table over the API."""
         await self.bot.api_client.post(
@@ -60,10 +62,12 @@ class Sync:
             }
         )
 
+    @Cog.listener()
     async def on_guild_role_delete(self, role: Role) -> None:
         """Deletes role from the database when it's deleted from the guild."""
         await self.bot.api_client.delete(f'bot/roles/{role.id}')
 
+    @Cog.listener()
     async def on_guild_role_update(self, before: Role, after: Role) -> None:
         """Syncs role with the database if any of the stored attributes were updated."""
         if (
@@ -83,6 +87,7 @@ class Sync:
                 }
             )
 
+    @Cog.listener()
     async def on_member_join(self, member: Member) -> None:
         """
         Adds a new user or updates existing user to the database when a member joins the guild.
@@ -118,7 +123,8 @@ class Sync:
             # If we got `404`, the user is new. Create them.
             await self.bot.api_client.post('bot/users', json=packed)
 
-    async def on_member_leave(self, member: Member) -> None:
+    @Cog.listener()
+    async def on_member_remove(self, member: Member) -> None:
         """Updates the user information when a member leaves the guild."""
         await self.bot.api_client.put(
             f'bot/users/{member.id}',
@@ -132,6 +138,7 @@ class Sync:
             }
         )
 
+    @Cog.listener()
     async def on_member_update(self, before: Member, after: Member) -> None:
         """Updates the user information if any of relevant attributes have changed."""
         if (

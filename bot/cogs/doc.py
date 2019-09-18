@@ -118,7 +118,7 @@ class InventoryURL(commands.Converter):
         return url
 
 
-class Doc:
+class Doc(commands.Cog):
     """A set of commands for querying & displaying documentation."""
 
     def __init__(self, bot: commands.Bot):
@@ -126,6 +126,7 @@ class Doc:
         self.bot = bot
         self.inventories = {}
 
+    @commands.Cog.listener()
     async def on_ready(self) -> None:
         """Refresh documentation inventory."""
         await self.refresh_inventory()

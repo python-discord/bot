@@ -4,7 +4,7 @@ from collections import ChainMap
 from typing import Union
 
 from discord import Color, Embed, Member, User
-from discord.ext.commands import Bot, Context, group
+from discord.ext.commands import Bot, Cog, Context, group
 
 from bot.api import ResponseCodeError
 from bot.constants import Channels, Guild, Roles, Webhooks
@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 STAFF_ROLES = Roles.owner, Roles.admin, Roles.moderator, Roles.helpers    # <- In constants after the merge?
 
 
-class TalentPool(WatchChannel):
+class TalentPool(WatchChannel, Cog, name="Talentpool"):
     """Relays messages of helper candidates to a watch channel to observe them."""
 
     def __init__(self, bot: Bot) -> None:
