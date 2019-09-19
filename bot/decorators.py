@@ -3,7 +3,7 @@ import random
 from asyncio import Lock, sleep
 from contextlib import suppress
 from functools import wraps
-from typing import Callable, Container, Union
+from typing import Any, Callable, Container, Optional, Union
 from weakref import WeakValueDictionary
 
 from discord import Colour, Embed
@@ -66,7 +66,7 @@ def without_role(*role_ids: int) -> Callable:
     return commands.check(predicate)
 
 
-def locked() -> Union[Callable, None]:
+def locked() -> Callable:
     """
     Allows the user to only run one instance of the decorated command at a time.
 
@@ -74,11 +74,11 @@ def locked() -> Union[Callable, None]:
 
     This decorator has to go before (below) the `command` decorator.
     """
-    def wrap(func: Callable) -> Union[Callable, None]:
+    def wrap(func: Callable) -> Callable:
         func.__locks = WeakValueDictionary()
 
         @wraps(func)
-        async def inner(self: Callable, ctx: Context, *args, **kwargs) -> Union[Callable, None]:
+        async def inner(self: Callable, ctx: Context, *args, **kwargs) -> Optional[Any]:
             lock = func.__locks.setdefault(ctx.author.id, Lock())
             if lock.locked():
                 embed = Embed()
@@ -106,7 +106,7 @@ def redirect_output(destination_channel: int, bypass_roles: Container[int] = Non
     """
     def wrap(func: Callable) -> Callable:
         @wraps(func)
-        async def inner(self: Callable, ctx: Context, *args, **kwargs) -> Callable:
+        async def inner(self: Callable, ctx: Context, *args, **kwargs) -> None:
             if ctx.channel.id == destination_channel:
                 log.trace(f"Command {ctx.command.name} was invoked in destination_channel, not redirecting")
                 return await func(self, ctx, *args, **kwargs)

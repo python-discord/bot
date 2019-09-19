@@ -303,7 +303,7 @@ class ImagePaginator(Paginator):
     @classmethod
     async def paginate(cls, pages: List[Tuple[str, str]], ctx: Context, embed: Embed,
                        prefix: str = "", suffix: str = "", timeout: int = 300,
-                       exception_on_empty_embed: bool = False):
+                       exception_on_empty_embed: bool = False) -> Optional[Message]:
         """
         Use a paginator and set of reactions to provide pagination over a set of title/image pairs.
 
