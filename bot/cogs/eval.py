@@ -6,7 +6,7 @@ import re
 import textwrap
 import traceback
 from io import StringIO
-from typing import Any, Tuple, Union
+from typing import Any, Optional, Tuple
 
 import discord
 from discord.ext.commands import Bot, Cog, group
@@ -29,7 +29,7 @@ class CodeEval(Cog):
 
         self.interpreter = Interpreter(bot)
 
-    def _format(self, inp: str, out: Any) -> Tuple[str, Union[discord.embed, None]]:
+    def _format(self, inp: str, out: Any) -> Tuple[str, Optional[discord.embed]]:
         """Format the eval output into a string & attempt to format it into an Embed."""
         self._ = out
 

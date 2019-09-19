@@ -1,5 +1,5 @@
 import logging
-from typing import Union
+from typing import Optional
 
 from discord.ext.commands import Bot, Cog, Context, NoPrivateMessage
 
@@ -18,7 +18,7 @@ class Security(Cog):
         """Check if Context instance author is not a bot."""
         return not ctx.author.bot
 
-    def check_on_guild(self, ctx: Context) -> Union[bool, None]:
+    def check_on_guild(self, ctx: Context) -> Optional[bool]:
         """Check if Context instance has a guild attribute."""
         if ctx.guild is None:
             raise NoPrivateMessage("This command cannot be used in private messages.")

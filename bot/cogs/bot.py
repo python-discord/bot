@@ -2,7 +2,7 @@ import ast
 import logging
 import re
 import time
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple
 
 from discord import Embed, Message, RawMessageUpdateEvent
 from discord.ext.commands import Bot, Cog, Context, command, group
@@ -82,7 +82,7 @@ class Bot(Cog):
         embed = Embed(description=text)
         await ctx.send(embed=embed)
 
-    def codeblock_stripping(self, msg: str, bad_ticks: bool) -> Union[Tuple[Tuple[str, Optional[str]], str], None]:
+    def codeblock_stripping(self, msg: str, bad_ticks: bool) -> Optional[Tuple[Tuple[str, Optional[str]], str]]:
         """
         Strip msg in order to find Python code.
 
