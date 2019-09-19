@@ -3,7 +3,7 @@ import logging
 import random
 import textwrap
 from datetime import datetime, timedelta
-from typing import List, Optional
+from typing import List
 
 from discord import Colour, Embed, Message, TextChannel
 from discord.ext.commands import Bot, Cog, Context, group

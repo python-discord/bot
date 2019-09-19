@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 from discord.ext.commands import Bot, Cog, Context, NoPrivateMessage
 

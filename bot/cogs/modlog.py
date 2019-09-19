@@ -11,7 +11,7 @@ from discord import (
     RawMessageUpdateEvent, Role, TextChannel, User, VoiceChannel
 )
 from discord.abc import GuildChannel
-from discord.ext.commands import Bot, Cog
+from discord.ext.commands import Bot, Cog, Context
 
 from bot.constants import (
     Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, URLs

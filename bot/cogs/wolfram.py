@@ -1,6 +1,6 @@
 import logging
 from io import BytesIO
-from typing import List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple
 from urllib import parse
 
 import discord
