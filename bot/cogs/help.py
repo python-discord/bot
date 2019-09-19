@@ -78,7 +78,7 @@ class HelpSession:
 
         Parameters
         ----------
-        ctx: :class:`discord.Context`
+        ctx: :class:`discord.ext.commands.Context`
             The context of the invoked help command.
         *command: str
             A variable argument of the command being queried.
