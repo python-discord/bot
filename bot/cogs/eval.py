@@ -9,7 +9,7 @@ from io import StringIO
 from typing import Any, Optional, Tuple
 
 import discord
-from discord.ext.commands import Bot, Cog, group
+from discord.ext.commands import Bot, Cog, Context, group
 
 from bot.constants import Roles
 from bot.decorators import with_role
@@ -29,7 +29,7 @@ class CodeEval(Cog):
 
         self.interpreter = Interpreter(bot)
 
-    def _format(self, inp: str, out: Any) -> Tuple[str, Optional[discord.embed]]:
+    def _format(self, inp: str, out: Any) -> Tuple[str, Optional[discord.Embed]]:
         """Format the eval output into a string & attempt to format it into an Embed."""
         self._ = out
 
@@ -174,14 +174,14 @@ async def func():  # (None,) -> Any
 
     @group(name='internal', aliases=('int',))
     @with_role(Roles.owner, Roles.admin)
-    async def internal_group(self, ctx: discord.Context) -> None:
+    async def internal_group(self, ctx: Context) -> None:
         """Internal commands. Top secret!"""
         if not ctx.invoked_subcommand:
             await ctx.invoke(self.bot.get_command("help"), "internal")
 
     @internal_group.command(name='eval', aliases=('e',))
     @with_role(Roles.admin, Roles.owner)
-    async def eval(self, ctx: discord.Context, *, code: str) -> None:
+    async def eval(self, ctx: Context, *, code: str) -> None:
         """Run eval in a REPL-like format."""
         code = code.strip("`")
         if re.match('py(thon)?\n', code):
