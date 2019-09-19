@@ -19,7 +19,7 @@ class OffTopicName(Converter):
     """A converter that ensures an added off-topic name is valid."""
 
     @staticmethod
-    async def convert(ctx: Context, argument: str) -> None:
+    async def convert(ctx: Context, argument: str) -> str:
         """Attempt to replace any invalid characters with their approximate unicode equivalent."""
         allowed_characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ!?'`-"
 

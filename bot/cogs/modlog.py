@@ -38,7 +38,7 @@ class ModLog(Cog, name="ModLog"):
         self._cached_deletes = []
         self._cached_edits = []
 
-    async def upload_log(self, messages: List[Message], actor_id: int) -> Optional[str]:
+    async def upload_log(self, messages: List[Message], actor_id: int) -> str:
         """
         Uploads the log data to the database via an API endpoint for uploading logs.
 
@@ -87,7 +87,7 @@ class ModLog(Cog, name="ModLog"):
             additional_embeds_msg: Optional[str] = None,
             timestamp_override: Optional[datetime] = None,
             footer: Optional[str] = None,
-    ) -> Optional[Message]:
+    ) -> Context:
         """Generate log embed and send to logging channel."""
         embed = Embed(description=text)
 

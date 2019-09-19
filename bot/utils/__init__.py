@@ -18,7 +18,7 @@ class CaseInsensitiveDict(dict):
     """
 
     @classmethod
-    def _k(cls, key: Hashable) -> Any:
+    def _k(cls, key: Hashable) -> Hashable:
         """Return lowered key if a string-like is passed, otherwise pass key straight through."""
         return key.lower() if isinstance(key, str) else key
 

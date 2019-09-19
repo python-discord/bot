@@ -24,7 +24,7 @@ class Utils(Cog):
         self.base_github_pep_url = "https://raw.githubusercontent.com/python/peps/master/pep-"
 
     @command(name='pep', aliases=('get_pep', 'p'))
-    async def pep_command(self, ctx: Context, pep_number: str) -> Optional[Message]:
+    async def pep_command(self, ctx: Context, pep_number: str) -> None:
         """Fetches information about a PEP and sends it to the channel."""
         if pep_number.isdigit():
             pep_number = int(pep_number)

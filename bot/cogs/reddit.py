@@ -3,7 +3,7 @@ import logging
 import random
 import textwrap
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import List, Optional
 
 from discord import Colour, Embed, Message, TextChannel
 from discord.ext.commands import Bot, Cog, Context, group
@@ -33,7 +33,7 @@ class Reddit(Cog):
         self.new_posts_task = None
         self.top_weekly_posts_task = None
 
-    async def fetch_posts(self, route: str, *, amount: int = 25, params: dict = None) -> dict:
+    async def fetch_posts(self, route: str, *, amount: int = 25, params: dict = None) -> List[dict]:
         """A helper method to fetch a certain amount of Reddit posts at a given route."""
         # Reddit's JSON responses only provide 25 posts at most.
         if not 25 >= amount > 0:
@@ -55,7 +55,7 @@ class Reddit(Cog):
 
     async def send_top_posts(
         self, channel: TextChannel, subreddit: Subreddit, content: str = None, time: str = "all"
-    ) -> Optional[Message]:
+    ) -> Message:
         """Create an embed for the top posts, then send it in a given TextChannel."""
         # Create the new spicy embed.
         embed = Embed()

@@ -4,7 +4,7 @@ import logging
 import re
 import textwrap
 from collections import OrderedDict
-from typing import Callable, Optional, Tuple
+from typing import Any, Callable, Optional, Tuple
 
 import discord
 from bs4 import BeautifulSoup
@@ -42,7 +42,7 @@ def async_cache(max_size: int = 128, arg_offset: int = 0) -> Callable:
     def decorator(function: Callable) -> Callable:
         """Define the async_cache decorator."""
         @functools.wraps(function)
-        async def wrapper(*args) -> OrderedDict:
+        async def wrapper(*args) -> Any:
             """Decorator wrapper for the caching logic."""
             key = ':'.join(args[arg_offset:])
 

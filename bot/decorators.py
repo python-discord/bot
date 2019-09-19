@@ -106,7 +106,7 @@ def redirect_output(destination_channel: int, bypass_roles: Container[int] = Non
     """
     def wrap(func: Callable) -> Callable:
         @wraps(func)
-        async def inner(self: Callable, ctx: Context, *args, **kwargs) -> None:
+        async def inner(self: Callable, ctx: Context, *args, **kwargs) -> Any:
             if ctx.channel.id == destination_channel:
                 log.trace(f"Command {ctx.command.name} was invoked in destination_channel, not redirecting")
                 return await func(self, ctx, *args, **kwargs)
