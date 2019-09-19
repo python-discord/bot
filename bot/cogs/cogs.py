@@ -1,7 +1,8 @@
 import logging
 import os
+from typing import Optional
 
-from discord import Colour, Embed
+from discord import Colour, Embed, Message
 from discord.ext.commands import Bot, Cog, Context, group
 
 from bot.constants import (
@@ -145,7 +146,7 @@ class Cogs(Cog):
 
     @cogs_group.command(name='reload', aliases=('r',))
     @with_role(*MODERATION_ROLES, Roles.core_developer)
-    async def reload_command(self, ctx: Context, cog: str) -> None:
+    async def reload_command(self, ctx: Context, cog: str) -> Optional[Message]:
         """
         Reload an unloaded cog, given the module containing it.
 

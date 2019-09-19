@@ -5,6 +5,7 @@ import textwrap
 from signal import Signals
 from typing import Optional, Tuple
 
+from discord import Message
 from discord.ext.commands import Bot, Cog, Context, command, guild_only
 
 from bot.constants import Channels, STAFF_ROLES, URLs
@@ -167,7 +168,7 @@ class Snekbox(Cog):
     @command(name="eval", aliases=("e",))
     @guild_only()
     @in_channel(Channels.bot, bypass_roles=STAFF_ROLES)
-    async def eval_command(self, ctx: Context, *, code: str = None) -> None:
+    async def eval_command(self, ctx: Context, *, code: str = None) -> Optional[Message]:
         """
         Run Python code and get the results.
 

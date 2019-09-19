@@ -3,8 +3,9 @@ import re
 import unicodedata
 from email.parser import HeaderParser
 from io import StringIO
+from typing import Optional
 
-from discord import Colour, Embed
+from discord import Colour, Embed, Message
 from discord.ext.commands import Bot, Cog, Context, command
 
 from bot.constants import Channels, STAFF_ROLES
@@ -23,7 +24,7 @@ class Utils(Cog):
         self.base_github_pep_url = "https://raw.githubusercontent.com/python/peps/master/pep-"
 
     @command(name='pep', aliases=('get_pep', 'p'))
-    async def pep_command(self, ctx: Context, pep_number: str) -> None:
+    async def pep_command(self, ctx: Context, pep_number: str) -> Optional[Message]:
         """Fetches information about a PEP and sends it to the channel."""
         if pep_number.isdigit():
             pep_number = int(pep_number)
@@ -84,7 +85,7 @@ class Utils(Cog):
 
     @command()
     @in_channel(Channels.bot, bypass_roles=STAFF_ROLES)
-    async def charinfo(self, ctx: Context, *, characters: str) -> None:
+    async def charinfo(self, ctx: Context, *, characters: str) -> Optional[Message]:
         """Shows you information on up to 25 unicode characters."""
         match = re.match(r"<(a?):(\w+):(\d+)>", characters)
         if match:

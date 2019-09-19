@@ -123,7 +123,7 @@ class CodeEval(Cog):
 
         return res  # Return (text, embed)
 
-    async def _eval(self, ctx: discord.Context, code: str) -> None:
+    async def _eval(self, ctx: discord.Context, code: str) -> Optional[discord.Message]:
         """Eval the input code string & send an embed to the invoking context."""
         self.ln += 1
 

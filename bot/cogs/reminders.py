@@ -4,9 +4,10 @@ import random
 import textwrap
 from datetime import datetime
 from operator import itemgetter
+from typing import Optional
 
 from dateutil.relativedelta import relativedelta
-from discord import Colour, Embed
+from discord import Colour, Embed, Message
 from discord.ext.commands import Bot, Cog, Context, group
 
 from bot.constants import Channels, Icons, NEGATIVE_REPLIES, POSITIVE_REPLIES, STAFF_ROLES
@@ -122,7 +123,7 @@ class Reminders(Scheduler, Cog):
         await ctx.invoke(self.new_reminder, expiration=expiration, content=content)
 
     @remind_group.command(name="new", aliases=("add", "create"))
-    async def new_reminder(self, ctx: Context, expiration: ExpirationDate, *, content: str) -> None:
+    async def new_reminder(self, ctx: Context, expiration: ExpirationDate, *, content: str) -> Optional[Message]:
         """
         Set yourself a simple reminder.
 
@@ -178,7 +179,7 @@ class Reminders(Scheduler, Cog):
         self.schedule_task(loop, reminder["id"], reminder)
 
     @remind_group.command(name="list")
-    async def list_reminders(self, ctx: Context) -> None:
+    async def list_reminders(self, ctx: Context) -> Optional[Message]:
         """View a paginated embed of all reminders for your user."""
         # Get all the user's reminders from the database.
         data = await self.bot.api_client.get(

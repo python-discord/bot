@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 from discord import Message, NotFound, Object
 from discord.ext.commands import Bot, Cog, Context, command
@@ -95,7 +96,7 @@ class Verification(Cog):
 
     @command(name='subscribe')
     @in_channel(Channels.bot)
-    async def subscribe_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
+    async def subscribe_command(self, ctx: Context, *_) -> Optional[Message]:  # We don't actually care about the args
         """Subscribe to announcement notifications by assigning yourself the role."""
         has_role = False
 
@@ -120,7 +121,7 @@ class Verification(Cog):
 
     @command(name='unsubscribe')
     @in_channel(Channels.bot)
-    async def unsubscribe_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
+    async def unsubscribe_command(self, ctx: Context, *_) -> Optional[Message]:  # We don't actually care about the args
         """Unsubscribe from announcement notifications by removing the role from yourself."""
         has_role = False
 

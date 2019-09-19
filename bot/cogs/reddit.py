@@ -3,8 +3,9 @@ import logging
 import random
 import textwrap
 from datetime import datetime, timedelta
+from typing import Optional
 
-from discord import Colour, Embed, TextChannel
+from discord import Colour, Embed, Message, TextChannel
 from discord.ext.commands import Bot, Cog, Context, group
 
 from bot.constants import Channels, ERROR_REPLIES, Reddit as RedditConfig, STAFF_ROLES
@@ -54,7 +55,7 @@ class Reddit(Cog):
 
     async def send_top_posts(
         self, channel: TextChannel, subreddit: Subreddit, content: str = None, time: str = "all"
-    ) -> None:
+    ) -> Optional[Message]:
         """Create an embed for the top posts, then send it in a given TextChannel."""
         # Create the new spicy embed.
         embed = Embed()
