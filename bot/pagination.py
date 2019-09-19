@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import Iterable, List, Optional, Tuple
 
-from discord import Embed, Member, Reaction
+from discord import Embed, Member, Message, Reaction
 from discord.abc import User
 from discord.ext.commands import Context, Paginator
 
@@ -86,10 +86,12 @@ class LinePaginator(Paginator):
             self._count += 1
 
     @classmethod
-    async def paginate(cls, lines: Iterable[str], ctx: Context, embed: Embed,
-                       prefix: str = "", suffix: str = "", max_lines: Optional[int] = None, max_size: int = 500,
-                       empty: bool = True, restrict_to_user: User = None, timeout: int = 300,
-                       footer_text: str = None, url: str = None, exception_on_empty_embed: bool = False) -> None:
+    async def paginate(
+        cls, lines: Iterable[str], ctx: Context, embed: Embed,
+        prefix: str = "", suffix: str = "", max_lines: Optional[int] = None, max_size: int = 500,
+        empty: bool = True, restrict_to_user: User = None, timeout: int = 300,
+        footer_text: str = None, url: str = None, exception_on_empty_embed: bool = False
+    ) -> Optional[Message]:
         """
         Use a paginator and set of reactions to provide pagination over a set of lines.
 
@@ -301,9 +303,11 @@ class ImagePaginator(Paginator):
         self.images.append(image)
 
     @classmethod
-    async def paginate(cls, pages: List[Tuple[str, str]], ctx: Context, embed: Embed,
-                       prefix: str = "", suffix: str = "", timeout: int = 300,
-                       exception_on_empty_embed: bool = False) -> Optional[Message]:
+    async def paginate(
+        cls, pages: List[Tuple[str, str]], ctx: Context, embed: Embed,
+        prefix: str = "", suffix: str = "", timeout: int = 300,
+        exception_on_empty_embed: bool = False
+    ) -> Optional[Message]:
         """
         Use a paginator and set of reactions to provide pagination over a set of title/image pairs.
 

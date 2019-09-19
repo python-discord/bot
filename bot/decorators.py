@@ -3,7 +3,7 @@ import random
 from asyncio import Lock, sleep
 from contextlib import suppress
 from functools import wraps
-from typing import Any, Callable, Container, Optional, Union
+from typing import Any, Callable, Container, Optional
 from weakref import WeakValueDictionary
 
 from discord import Colour, Embed
