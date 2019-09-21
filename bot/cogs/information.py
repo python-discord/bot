@@ -1,8 +1,9 @@
+import colorsys
 import logging
 import textwrap
 
-from discord import CategoryChannel, Colour, Embed, Member, TextChannel, VoiceChannel
-from discord.ext.commands import Bot, Cog, Context, command
+from discord import CategoryChannel, Colour, Embed, Member, Role, TextChannel, VoiceChannel
+from discord.ext.commands import Bot, Cog, Context, Greedy, command
 
 from bot.constants import Channels, Emojis, MODERATION_ROLES, STAFF_ROLES
 from bot.decorators import InChannelCheckFailure, with_role
@@ -49,6 +50,36 @@ class Information(Cog):
         embed.set_footer(text=f"Total roles: {len(roles)}")
 
         await ctx.send(embed=embed)
+
+    @with_role(*MODERATION_ROLES)
+    @command(name="role")
+    async def role_info(self, ctx: Context, roles: Greedy[Role]):
+        """
+        Return information on a role or list of roles.
+
+        To specify multiple roles just add to the arguments, delimit roles with spaces in them using quotation marks.
+        """
+        for role in roles:
+            embed = Embed(
+                title=f"{role.name} info",
+                colour=role.colour,
+            )
+
+            embed.add_field(name="ID", value=role.id, inline=True)
+
+            embed.add_field(name="Colour (RGB)", value=f"#{role.colour.value:0>6x}", inline=True)
+
+            h, s, v = colorsys.rgb_to_hsv(*role.colour.to_rgb())
+
+            embed.add_field(name="Colour (HSV)", value=f"{h:.2f} {s:.2f} {v:.2f}", inline=True)
+
+            embed.add_field(name="Member count", value=len(role.members), inline=True)
+
+            embed.add_field(name="Position", value=role.position)
+
+            embed.add_field(name="Permission code", value=role.permissions.value, inline=True)
+
+            await ctx.send(embed=embed)
 
     @command(name="server", aliases=["server_info", "guild", "guild_info"])
     async def server_info(self, ctx: Context):
