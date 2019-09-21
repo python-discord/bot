@@ -71,7 +71,7 @@ class Information(Cog):
 
             h, s, v = colorsys.rgb_to_hsv(*role.colour.to_rgb())
 
-            embed.add_field(name="Colour (HSV)", value=f"{h:.2f} {s:.2f} {v:.2f}", inline=True)
+            embed.add_field(name="Colour (HSV)", value=f"{h:.2f} {s:.2f} {v}", inline=True)
 
             embed.add_field(name="Member count", value=len(role.members), inline=True)
 
