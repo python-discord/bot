@@ -226,7 +226,7 @@ class Superstarify(Cog):
     @command(name='unsuperstarify', aliases=('release_nick', 'unstar'))
     @with_role(*MODERATION_ROLES)
     async def unsuperstarify(self, ctx: Context, member: Member) -> Optional[Message]:
-        """This command will remove the superstarify entry from our database, allowing the user to change their nickname."""
+        """Remove the superstarify entry from our database, allowing the user to change their nickname."""
         log.debug(f"Attempting to unsuperstarify the following user: {member.display_name}")
 
         embed = Embed()
