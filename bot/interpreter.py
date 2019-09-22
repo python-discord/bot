@@ -14,7 +14,7 @@ class Interpreter(InteractiveInterpreter):
     """
     Subclass InteractiveInterpreter to specify custom run functionality.
 
-    Helper class for internal eval
+    Helper class for internal eval.
     """
 
     write_callable = None

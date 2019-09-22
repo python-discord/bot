@@ -21,7 +21,7 @@ async def wait_for_deletion(
     client: Optional[Client] = None
 ) -> None:
     """
-    Waits for up to `timeout` seconds for a reaction by any of the specified `user_ids` to delete the message.
+    Wait for up to `timeout` seconds for a reaction by any of the specified `user_ids` to delete the message.
 
     An `attach_emojis` bool may be specified to determine whether to attach the given
     `deletion_emojis` to the message in the given `context`
