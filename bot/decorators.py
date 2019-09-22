@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 
 
 class InChannelCheckFailure(CheckFailure):
-    """In channel check failure exception."""
+    """Raised when a check fails for a message being sent in a whitelisted channel."""
 
     def __init__(self, *channels: int):
         self.channels = channels

@@ -69,7 +69,7 @@ class Defcon(Cog):
 
     @Cog.listener()
     async def on_member_join(self, member: Member) -> None:
-        """If DEFON is enabled, check newly joining users to see if they meet the account age threshold."""
+        """If DEFCON is enabled, check newly joining users to see if they meet the account age threshold."""
         if self.enabled and self.days.days > 0:
             now = datetime.utcnow()
 

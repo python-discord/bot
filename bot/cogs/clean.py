@@ -43,7 +43,7 @@ class Clean(Cog):
     ) -> None:
         """A helper function that does the actual message cleaning."""
         def predicate_bots_only(message: Message) -> bool:
-            """Returns true if the message was sent by a bot."""
+            """Return True if the message was sent by a bot."""
             return message.author.bot
 
         def predicate_specific_user(message: Message) -> bool:

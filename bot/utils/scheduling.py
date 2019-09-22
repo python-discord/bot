@@ -65,6 +65,6 @@ def create_task(loop: asyncio.AbstractEventLoop, coro_or_future: Union[Coroutine
 
 
 def _silent_exception(future: asyncio.Future) -> None:
-    """Suppress future exception."""
+    """Suppress future's exception."""
     with contextlib.suppress(Exception):
         future.exception()

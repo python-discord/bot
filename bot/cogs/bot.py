@@ -82,7 +82,7 @@ class Bot(Cog):
         embed = Embed(description=text)
         await ctx.send(embed=embed)
 
-    def codeblock_stripping(self, msg: str, bad_ticks: bool) -> Optional[Tuple[Tuple[str, Optional[str]], str]]:
+    def codeblock_stripping(self, msg: str, bad_ticks: bool) -> Optional[Tuple[Tuple[str, ...], str]]:
         """
         Strip msg in order to find Python code.
 
@@ -196,7 +196,7 @@ class Bot(Cog):
 
         Tries to strip out REPL Python code out of msg and returns the stripped msg.
 
-        Returns a second boolean output if REPL code was found in the input msg.
+        Returns True for the boolean if REPL code was found in the input msg.
         """
         final = ""
         for line in msg.splitlines(keepends=True):

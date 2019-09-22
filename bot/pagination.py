@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 
 
 class EmptyPaginatorEmbed(Exception):
-    """Empty paginator embed exception."""
+    """Raised when attempting to paginate with empty contents."""
 
     pass
 

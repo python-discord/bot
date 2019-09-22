@@ -32,7 +32,7 @@ class Reminders(Scheduler, Cog):
 
     @Cog.listener()
     async def on_ready(self) -> None:
-        """Reschedule all current reminders."""
+        """Get all current reminders from the API and reschedule them."""
         response = await self.bot.api_client.get(
             'bot/reminders',
             params={'active': 'true'}
@@ -77,7 +77,7 @@ class Reminders(Scheduler, Cog):
         self.cancel_task(reminder_id)
 
     async def _delete_reminder(self, reminder_id: str) -> None:
-        """Delete a reminder from the database, given its ID, and cancels the running task."""
+        """Delete a reminder from the database, given its ID, and cancel the running task."""
         await self.bot.api_client.delete('bot/reminders/' + str(reminder_id))
 
         # Now we can remove it from the schedule list
@@ -239,7 +239,7 @@ class Reminders(Scheduler, Cog):
     @edit_reminder_group.command(name="duration", aliases=("time",))
     async def edit_reminder_duration(self, ctx: Context, id_: int, expiration: ExpirationDate) -> None:
         """
-        Edit one of your reminders' expiration.
+         Edit one of your reminder's expiration.
 
         Expiration is parsed per: http://strftime.org/
         """
@@ -258,7 +258,7 @@ class Reminders(Scheduler, Cog):
 
     @edit_reminder_group.command(name="content", aliases=("reason",))
     async def edit_reminder_content(self, ctx: Context, id_: int, *, content: str) -> None:
-        """Edit one of your reminders' content."""
+        """Edit one of your reminder's content."""
         # Send the request to update the reminder in the database
         reminder = await self.bot.api_client.patch(
             'bot/reminders/' + str(id_),

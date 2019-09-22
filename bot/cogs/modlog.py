@@ -67,7 +67,7 @@ class ModLog(Cog, name="ModLog"):
         return f"{URLs.site_logs_view}/{response['id']}"
 
     def ignore(self, event: Event, *items: int) -> None:
-        """Add event to ignored events to suppress log emitting."""
+        """Add event to ignored events to suppress log emission."""
         for item in items:
             if item not in self._ignored[event]:
                 self._ignored[event].append(item)

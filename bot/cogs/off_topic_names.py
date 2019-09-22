@@ -20,7 +20,7 @@ class OffTopicName(Converter):
 
     @staticmethod
     async def convert(ctx: Context, argument: str) -> str:
-        """Attempt to replace any invalid characters with their approximate unicode equivalent."""
+        """Attempt to replace any invalid characters with their approximate Unicode equivalent."""
         allowed_characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ!?'`-"
 
         if not (2 <= len(argument) <= 96):

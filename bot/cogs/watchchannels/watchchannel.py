@@ -42,7 +42,7 @@ def proxy_user(user_id: str) -> Object:
 
 @dataclass
 class MessageHistory:
-    """Represent the watch channel's message history."""
+    """Represents a watch channel's message history."""
 
     last_author: Optional[int] = None
     last_channel: Optional[int] = None

@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 
 
 class ResponseCodeError(ValueError):
-    """Exception representing a non-OK response code."""
+    """Raised when a non-OK HTTP response is received."""
 
     def __init__(
         self,
@@ -97,10 +97,8 @@ def loop_is_running() -> bool:
     Determine if there is a running asyncio event loop.
 
     This helps enable "call this when event loop is running" logic (see: Twisted's `callWhenRunning`),
-    which is currently not provided by asyncio
+    which is currently not provided by asyncio.
     """
-    # asyncio does not have a way to say "call this when the event
-    # loop is running", see e.g. `callWhenRunning` from twisted.
 
     try:
         asyncio.get_running_loop()
@@ -140,10 +138,13 @@ class APILoggingHandler(logging.StreamHandler):
     def emit(self, record: logging.LogRecord) -> None:
         """
         Determine if a log record should be shipped to the logging API.
+        
+        If the asyncio event loop is not yet running, log records will instead be put in a queue
+        which will be consumed once the event loop is running.
 
         The following two conditions are set:
-            1. Do not log anything below DEBUG
-            2. Ignore log records from the logging handler
+            1. Do not log anything below DEBUG (only applies to the monkeypatched `TRACE` level)
+            2. Ignore log records originating from this logging handler itself to prevent infinite recursion
         """
         # Two checks are performed here:
         if (
@@ -176,7 +177,7 @@ class APILoggingHandler(logging.StreamHandler):
                 self.schedule_queued_tasks()
 
     def schedule_queued_tasks(self) -> None:
-        """Logging task scheduler."""
+        """Consume the queue and schedule the logging of each queued record."""
         for task in self.queue:
             asyncio.create_task(task)
 

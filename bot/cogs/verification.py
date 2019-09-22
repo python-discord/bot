@@ -148,7 +148,6 @@ class Verification(Cog):
     async def cog_command_error(ctx: Context, error: Exception) -> None:
         """Check for & ignore any InChannelCheckFailure."""
         if isinstance(error, InChannelCheckFailure):
-            # Do nothing; just ignore this error
             error.handled = True
 
     @staticmethod

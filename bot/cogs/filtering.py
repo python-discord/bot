@@ -104,7 +104,7 @@ class Filtering(Cog):
         """
         Invoke message filter for message edits.
 
-        If there have been multiple edits, calculate the time delta from the previous edit
+        If there have been multiple edits, calculate the time delta from the previous edit.
         """
         if not before.edited_at:
             delta = relativedelta(after.edited_at, before.created_at).microseconds

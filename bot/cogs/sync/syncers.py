@@ -166,7 +166,7 @@ def get_users_for_sync(
 
 async def sync_users(bot: Bot, guild: Guild) -> Tuple[int, int, None]:
     """
-    Synchronize users found on the given `guild` with the ones on the API.
+    Synchronize users found in the given `guild` with the ones in the API.
 
     Arguments:
         bot (discord.ext.commands.Bot):
