@@ -254,6 +254,8 @@ class Defcon(Cog):
                 f"```py\n{e}\n```"
             )
 
+        return msg
+
     async def send_defcon_log(self, change: str, actor: Member, e: Exception = None) -> None:
         """
         Send log message for DEFCON action.
