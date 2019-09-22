@@ -1,20 +1,19 @@
 import logging
-import random
 import re
 import unicodedata
 from email.parser import HeaderParser
 from io import StringIO
 
 from discord import Colour, Embed
-from discord.ext.commands import AutoShardedBot, Context, command
+from discord.ext.commands import AutoShardedBot, Cog, Context, command
 
-from bot.constants import Channels, NEGATIVE_REPLIES, STAFF_ROLES
-from bot.decorators import InChannelCheckFailure, in_channel
+from bot.constants import Channels, STAFF_ROLES
+from bot.decorators import in_channel
 
 log = logging.getLogger(__name__)
 
 
-class Utils:
+class Utils(Cog):
     """
     A selection of utilities which don't have a clear category.
     """
@@ -132,13 +131,6 @@ class Utils:
             embed.add_field(name='Raw', value=f"`{''.join(rawlist)}`", inline=False)
 
         await ctx.send(embed=embed)
-
-    async def __error(self, ctx, error):
-        embed = Embed(colour=Colour.red())
-        if isinstance(error, InChannelCheckFailure):
-            embed.title = random.choice(NEGATIVE_REPLIES)
-            embed.description = str(error)
-            await ctx.send(embed=embed)
 
 
 def setup(bot):

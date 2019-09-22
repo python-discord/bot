@@ -71,7 +71,7 @@ class InfractionSearchQuery(Converter):
     async def convert(ctx, arg):
         try:
             maybe_snowflake = arg.strip("<@!>")
-            return await ctx.bot.get_user_info(maybe_snowflake)
+            return await ctx.bot.fetch_user(maybe_snowflake)
         except (discord.NotFound, discord.HTTPException):
             return arg
 

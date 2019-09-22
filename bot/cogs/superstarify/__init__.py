@@ -4,7 +4,7 @@ from datetime import datetime
 
 from discord import Colour, Embed, Member
 from discord.errors import Forbidden
-from discord.ext.commands import Bot, Context, command
+from discord.ext.commands import Bot, Cog, Context, command
 
 from bot.cogs.moderation import Moderation
 from bot.cogs.modlog import ModLog
@@ -15,10 +15,10 @@ from bot.decorators import with_role
 from bot.utils.moderation import post_infraction
 
 log = logging.getLogger(__name__)
-NICKNAME_POLICY_URL = "https://pythondiscord.com/about/rules#nickname-policy"
+NICKNAME_POLICY_URL = "https://pythondiscord.com/pages/rules/#wiki-toc-nickname-policy"
 
 
-class Superstarify:
+class Superstarify(Cog):
     """
     A set of commands to moderate terrible nicknames.
     """
@@ -34,6 +34,7 @@ class Superstarify:
     def modlog(self) -> ModLog:
         return self.bot.get_cog("ModLog")
 
+    @Cog.listener()
     async def on_member_update(self, before: Member, after: Member):
         """
         This event will trigger when someone changes their name.
@@ -91,6 +92,7 @@ class Superstarify:
                     "to DM them, and a discord.errors.Forbidden error was incurred."
                 )
 
+    @Cog.listener()
     async def on_member_join(self, member: Member):
         """
         This event will trigger when someone (re)joins the server.
@@ -103,7 +105,7 @@ class Superstarify:
             'bot/infractions',
             params={
                 'active': 'true',
-                'type': 'superstarify',
+                'type': 'superstar',
                 'user__id': member.id
             }
         )

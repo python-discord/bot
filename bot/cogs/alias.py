@@ -4,7 +4,7 @@ from typing import Union
 
 from discord import Colour, Embed, Member, User
 from discord.ext.commands import (
-    Command, Context, clean_content, command, group
+    Cog, Command, Context, clean_content, command, group
 )
 
 from bot.cogs.watchchannels.watchchannel import proxy_user
@@ -14,7 +14,7 @@ from bot.pagination import LinePaginator
 log = logging.getLogger(__name__)
 
 
-class Alias:
+class Alias(Cog):
     """
     Aliases for more used commands
     """
@@ -143,7 +143,7 @@ class Alias:
         Alias for invoking <prefix>tags get traceback.
         """
 
-        await self.invoke(ctx, "tags get traceback")
+        await self.invoke(ctx, "tags get", tag_name="traceback")
 
     @group(name="get",
            aliases=("show", "g"),
@@ -167,7 +167,7 @@ class Alias:
         tag_name: str - tag to be viewed.
         """
 
-        await self.invoke(ctx, "tags get", tag_name)
+        await self.invoke(ctx, "tags get", tag_name=tag_name)
 
     @get_group_alias.command(name="docs", aliases=("doc", "d"), hidden=True)
     async def docs_get_alias(
@@ -196,6 +196,14 @@ class Alias:
         """
 
         await self.invoke(ctx, "nomination end", user, reason=reason)
+
+    @command(name="nominees", hidden=True)
+    async def nominees_alias(self, ctx):
+        """
+        Alias for invoking <prefix>tp watched.
+        """
+
+        await self.invoke(ctx, "talentpool watched")
 
 
 def setup(bot):

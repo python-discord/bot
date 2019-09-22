@@ -2,10 +2,10 @@ import logging
 from datetime import datetime, timedelta
 
 from discord import Colour, Embed, Member
-from discord.ext.commands import Bot, Context, group
+from discord.ext.commands import Bot, Cog, Context, group
 
 from bot.cogs.modlog import ModLog
-from bot.constants import Channels, Colours, Emojis, Event, Icons, Keys, Roles
+from bot.constants import Channels, Colours, Emojis, Event, Icons, Roles
 from bot.decorators import with_role
 
 log = logging.getLogger(__name__)
@@ -24,21 +24,23 @@ will be resolved soon. In the meantime, please feel free to peruse the resources
 BASE_CHANNEL_TOPIC = "Python Discord Defense Mechanism"
 
 
-class Defcon:
+class Defcon(Cog):
     """Time-sensitive server defense mechanisms"""
     days = None  # type: timedelta
     enabled = False  # type: bool
 
     def __init__(self, bot: Bot):
         self.bot = bot
+        self.channel = None
         self.days = timedelta(days=0)
-        self.headers = {"X-API-KEY": Keys.site_api}
 
     @property
     def mod_log(self) -> ModLog:
         return self.bot.get_cog("ModLog")
 
+    @Cog.listener()
     async def on_ready(self):
+        self.channel = await self.bot.fetch_channel(Channels.defcon)
         try:
             response = await self.bot.api_client.get('bot/bot-settings/defcon')
             data = response['data']
@@ -62,6 +64,7 @@ class Defcon:
 
             await self.update_channel_topic()
 
+    @Cog.listener()
     async def on_member_join(self, member: Member):
         if self.enabled and self.days.days > 0:
             now = datetime.utcnow()
@@ -227,8 +230,7 @@ class Defcon:
             new_topic = f"{BASE_CHANNEL_TOPIC}\n(Status: Disabled)"
 
         self.mod_log.ignore(Event.guild_channel_update, Channels.defcon)
-        defcon_channel = self.bot.guilds[0].get_channel(Channels.defcon)
-        await defcon_channel.edit(topic=new_topic)
+        await self.channel.edit(topic=new_topic)
 
     def build_defcon_msg(self, change: str, e: Exception = None) -> str:
         """

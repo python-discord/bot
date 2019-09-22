@@ -38,8 +38,22 @@ jobs:
   - script: python -m flake8
     displayName: 'Run linter'
 
-  - script: BOT_TOKEN=foobar python -m pytest tests
+  - script: BOT_API_KEY=foo BOT_TOKEN=bar WOLFRAM_API_KEY=baz python -m pytest --junitxml=junit.xml --cov=bot --cov-branch --cov-report=term --cov-report=xml tests
     displayName: Run tests
+
+  - task: PublishCodeCoverageResults@1
+    displayName: 'Publish Coverage Results'
+    condition: succeededOrFailed()
+    inputs:
+      codeCoverageTool: Cobertura
+      summaryFileLocation: coverage.xml
+
+  - task: PublishTestResults@2
+    displayName: 'Publish Test Results'
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFiles: junit.xml
+      testRunTitle: 'Bot Test results'
 
 - job: build
   displayName: 'Build Containers'

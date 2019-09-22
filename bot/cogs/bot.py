@@ -4,19 +4,18 @@ import re
 import time
 
 from discord import Embed, Message, RawMessageUpdateEvent
-from discord.ext.commands import Bot, Context, command, group
+from discord.ext.commands import Bot, Cog, Context, command, group
 
-from bot.constants import (
-    Channels, Guild, MODERATION_ROLES,
-    Roles, URLs,
-)
+from bot.constants import Channels, DEBUG_MODE, Guild, MODERATION_ROLES, Roles, URLs
 from bot.decorators import with_role
 from bot.utils.messages import wait_for_deletion
 
 log = logging.getLogger(__name__)
 
+RE_MARKDOWN = re.compile(r'([*_~`|>])')
 
-class Bot:
+
+class Bot(Cog):
     """
     Bot information commands
     """
@@ -32,6 +31,8 @@ class Bot:
             Channels.help_3: 0,
             Channels.help_4: 0,
             Channels.help_5: 0,
+            Channels.help_6: 0,
+            Channels.help_7: 0,
             Channels.python: 0,
         }
 
@@ -46,14 +47,14 @@ class Bot:
 
     @group(invoke_without_command=True, name="bot", hidden=True)
     @with_role(Roles.verified)
-    async def bot_group(self, ctx: Context):
+    async def botinfo_group(self, ctx: Context):
         """
         Bot informational commands
         """
 
         await ctx.invoke(self.bot.get_command("help"), "bot")
 
-    @bot_group.command(name='about', aliases=('info',), hidden=True)
+    @botinfo_group.command(name='about', aliases=('info',), hidden=True)
     @with_role(Roles.verified)
     async def about_command(self, ctx: Context):
         """
@@ -62,13 +63,13 @@ class Bot:
 
         embed = Embed(
             description="A utility bot designed just for the Python server! Try `!help` for more info.",
-            url="https://gitlab.com/discord-python/projects/bot"
+            url="https://github.com/python-discord/bot"
         )
 
         embed.add_field(name="Total Users", value=str(len(self.bot.get_guild(Guild.id).members)))
         embed.set_author(
             name="Python Bot",
-            url="https://gitlab.com/discord-python/projects/bot",
+            url="https://github.com/python-discord/bot",
             icon_url=URLs.bot_avatar
         )
 
@@ -234,6 +235,7 @@ class Bot:
 
         return msg.content[:3] in not_backticks
 
+    @Cog.listener()
     async def on_message(self, msg: Message):
         """
         Detect poorly formatted Python code and send the user
@@ -252,7 +254,7 @@ class Bot:
 
         if parse_codeblock:
             on_cooldown = (time.time() - self.channel_cooldowns.get(msg.channel.id, 0)) < 300
-            if not on_cooldown:
+            if not on_cooldown or DEBUG_MODE:
                 try:
                     if self.has_bad_ticks(msg):
                         ticks = msg.content[:3]
@@ -277,13 +279,14 @@ class Bot:
                                 current_length += len(line)
                                 lines_walked += 1
                             content = content[:current_length] + "#..."
-
+                        content_escaped_markdown = RE_MARKDOWN.sub(r'\\\1', content)
                         howto = (
                             "It looks like you are trying to paste code into this channel.\n\n"
                             "You seem to be using the wrong symbols to indicate where the codeblock should start. "
                             f"The correct symbols would be \\`\\`\\`, not `{ticks}`.\n\n"
                             "**Here is an example of how it should look:**\n"
-                            f"\\`\\`\\`python\n{content}\n\\`\\`\\`\n\n**This will result in the following:**\n"
+                            f"\\`\\`\\`python\n{content_escaped_markdown}\n\\`\\`\\`\n\n"
+                            "**This will result in the following:**\n"
                             f"```python\n{content}\n```"
                         )
 
@@ -319,13 +322,15 @@ class Bot:
                                     lines_walked += 1
                                 content = content[:current_length] + "#..."
 
+                            content_escaped_markdown = RE_MARKDOWN.sub(r'\\\1', content)
                             howto += (
                                 "It looks like you're trying to paste code into this channel.\n\n"
                                 "Discord has support for Markdown, which allows you to post code with full "
                                 "syntax highlighting. Please use these whenever you paste code, as this "
                                 "helps improve the legibility and makes it easier for us to help you.\n\n"
                                 f"**To do this, use the following method:**\n"
-                                f"\\`\\`\\`python\n{content}\n\\`\\`\\`\n\n**This will result in the following:**\n"
+                                f"\\`\\`\\`python\n{content_escaped_markdown}\n\\`\\`\\`\n\n"
+                                "**This will result in the following:**\n"
                                 f"```python\n{content}\n```"
                             )
 
@@ -355,6 +360,7 @@ class Bot:
                         f"The message that was posted was:\n\n{msg.content}\n\n"
                     )
 
+    @Cog.listener()
     async def on_raw_message_edit(self, payload: RawMessageUpdateEvent):
         if (
             # Checks to see if the message was called out by the bot
@@ -368,14 +374,14 @@ class Bot:
 
         # Retrieve channel and message objects for use later
         channel = self.bot.get_channel(int(payload.data.get("channel_id")))
-        user_message = await channel.get_message(payload.message_id)
+        user_message = await channel.fetch_message(payload.message_id)
 
         #  Checks to see if the user has corrected their codeblock.  If it's fixed, has_fixed_codeblock will be None
         has_fixed_codeblock = self.codeblock_stripping(payload.data.get("content"), self.has_bad_ticks(user_message))
 
         # If the message is fixed, delete the bot message and the entry from the id dictionary
         if has_fixed_codeblock is None:
-            bot_message = await channel.get_message(self.codeblock_message_ids[payload.message_id])
+            bot_message = await channel.fetch_message(self.codeblock_message_ids[payload.message_id])
             await bot_message.delete()
             del self.codeblock_message_ids[payload.message_id]
             log.trace("User's incorrect code block has been fixed.  Removing bot formatting message.")

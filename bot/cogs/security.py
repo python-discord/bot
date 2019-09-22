@@ -1,11 +1,11 @@
 import logging
 
-from discord.ext.commands import Bot, Context
+from discord.ext.commands import Bot, Cog, Context, NoPrivateMessage
 
 log = logging.getLogger(__name__)
 
 
-class Security:
+class Security(Cog):
     """
     Security-related helpers
     """
@@ -19,7 +19,9 @@ class Security:
         return not ctx.author.bot
 
     def check_on_guild(self, ctx: Context):
-        return ctx.guild is not None
+        if ctx.guild is None:
+            raise NoPrivateMessage("This command cannot be used in private messages.")
+        return True
 
 
 def setup(bot):
