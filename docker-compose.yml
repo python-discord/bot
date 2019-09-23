@@ -1,0 +1,28 @@
+# This docker compose is used for quick setups of the site and database which
+# the bot project relies on for testing. Use it if you haven't got a
+# ready-to-use site environment already setup.
+
+version: "3.7"
+
+services:
+  postgres:
+    image: postgres:11-alpine
+    ports:
+      - "127.0.0.1:7777:5432"
+    environment:
+      POSTGRES_DB: pysite
+      POSTGRES_PASSWORD: pysite
+      POSTGRES_USER: pysite
+
+  web:
+    image: pythondiscord/site:latest
+    command: "./manage.py runserver 0.0.0.0:8000"
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgres://pysite:pysite@postgres:5432/pysite
+      DEBUG: "true"
+      SECRET_KEY: suitable-for-development-only
+      STATIC_ROOT: /var/www/static
