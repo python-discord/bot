@@ -19,30 +19,30 @@ NICKNAME_POLICY_URL = "https://pythondiscord.com/pages/rules/#wiki-toc-nickname-
 
 
 class Superstarify(Cog):
-    """
-    A set of commands to moderate terrible nicknames.
-    """
+    """A set of commands to moderate terrible nicknames."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
 
     @property
     def moderation(self) -> Moderation:
+        """Get currently loaded Moderation cog instance."""
         return self.bot.get_cog("Moderation")
 
     @property
     def modlog(self) -> ModLog:
+        """Get currently loaded ModLog cog instance."""
         return self.bot.get_cog("ModLog")
 
     @Cog.listener()
-    async def on_member_update(self, before: Member, after: Member):
+    async def on_member_update(self, before: Member, after: Member) -> None:
         """
         This event will trigger when someone changes their name.
-        At this point we will look up the user in our database and check
-        whether they are allowed to change their names, or if they are in
-        superstar-prison. If they are not allowed, we will change it back.
-        """
 
+        At this point we will look up the user in our database and check whether they are allowed to
+        change their names, or if they are in superstar-prison. If they are not allowed, we will
+        change it back.
+        """
         if before.display_name == after.display_name:
             return  # User didn't change their nickname. Abort!
 
@@ -93,14 +93,13 @@ class Superstarify(Cog):
                 )
 
     @Cog.listener()
-    async def on_member_join(self, member: Member):
+    async def on_member_join(self, member: Member) -> None:
         """
         This event will trigger when someone (re)joins the server.
-        At this point we will look up the user in our database and check
-        whether they are in superstar-prison. If so, we will change their name
-        back to the forced nickname.
-        """
 
+        At this point we will look up the user in our database and check whether they are in
+        superstar-prison. If so, we will change their name back to the forced nickname.
+        """
         active_superstarifies = await self.bot.api_client.get(
             'bot/infractions',
             params={
@@ -155,13 +154,14 @@ class Superstarify(Cog):
     @with_role(*MODERATION_ROLES)
     async def superstarify(
         self, ctx: Context, member: Member, expiration: ExpirationDate, reason: str = None
-    ):
+    ) -> None:
         """
-        This command will force a random superstar name (like Taylor Swift) to be the user's
-        nickname for a specified duration. An optional reason can be provided.
+        Force a random superstar name (like Taylor Swift) to be the user's nickname for a specified duration.
+
+        An optional reason can be provided.
+
         If no reason is given, the original name will be shown in a generated reason.
         """
-
         active_superstarifies = await self.bot.api_client.get(
             'bot/infractions',
             params={
@@ -171,10 +171,11 @@ class Superstarify(Cog):
             }
         )
         if active_superstarifies:
-            return await ctx.send(
+            await ctx.send(
                 ":x: According to my records, this user is already superstarified. "
                 f"See infraction **#{active_superstarifies[0]['id']}**."
             )
+            return
 
         infraction = await post_infraction(
             ctx, member,
@@ -224,15 +225,8 @@ class Superstarify(Cog):
 
     @command(name='unsuperstarify', aliases=('release_nick', 'unstar'))
     @with_role(*MODERATION_ROLES)
-    async def unsuperstarify(self, ctx: Context, member: Member):
-        """
-        This command will remove the entry from our database, allowing the user
-        to once again change their nickname.
-
-        :param ctx: Discord message context
-        :param member: The member to unsuperstarify
-        """
-
+    async def unsuperstarify(self, ctx: Context, member: Member) -> None:
+        """Remove the superstarify entry from our database, allowing the user to change their nickname."""
         log.debug(f"Attempting to unsuperstarify the following user: {member.display_name}")
 
         embed = Embed()
@@ -247,9 +241,8 @@ class Superstarify(Cog):
             }
         )
         if not active_superstarifies:
-            return await ctx.send(
-                ":x: There is no active superstarify infraction for this user."
-            )
+            await ctx.send(":x: There is no active superstarify infraction for this user.")
+            return
 
         [infraction] = active_superstarifies
         await self.bot.api_client.patch(
@@ -270,6 +263,7 @@ class Superstarify(Cog):
         await ctx.send(embed=embed)
 
 
-def setup(bot):
+def setup(bot: Bot) -> None:
+    """Superstarify cog load."""
     bot.add_cog(Superstarify(bot))
     log.info("Cog loaded: Superstarify")

@@ -177,7 +177,6 @@ class Sync(Cog):
     @commands.has_permissions(administrator=True)
     async def sync_roles_command(self, ctx: Context) -> None:
         """Manually synchronize the guild's roles with the roles on the site."""
-
         initial_response = await ctx.send("📊 Synchronizing roles.")
         total_created, total_updated, total_deleted = await syncers.sync_roles(self.bot, ctx.guild)
         await initial_response.edit(
@@ -191,7 +190,6 @@ class Sync(Cog):
     @commands.has_permissions(administrator=True)
     async def sync_users_command(self, ctx: Context) -> None:
         """Manually synchronize the guild's users with the users on the site."""
-
         initial_response = await ctx.send("📊 Synchronizing users.")
         total_created, total_updated, total_deleted = await syncers.sync_users(self.bot, ctx.guild)
         await initial_response.edit(

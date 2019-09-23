@@ -6,11 +6,7 @@ log = logging.getLogger(__name__)
 
 
 def with_role_check(ctx: Context, *role_ids: int) -> bool:
-    """
-    Returns True if the user has any one
-    of the roles in role_ids.
-    """
-
+    """Returns True if the user has any one of the roles in role_ids."""
     if not ctx.guild:  # Return False in a DM
         log.trace(f"{ctx.author} tried to use the '{ctx.command.name}'command from a DM. "
                   "This command is restricted by the with_role decorator. Rejecting request.")
@@ -27,11 +23,7 @@ def with_role_check(ctx: Context, *role_ids: int) -> bool:
 
 
 def without_role_check(ctx: Context, *role_ids: int) -> bool:
-    """
-    Returns True if the user does not have any
-    of the roles in role_ids.
-    """
-
+    """Returns True if the user does not have any of the roles in role_ids."""
     if not ctx.guild:  # Return False in a DM
         log.trace(f"{ctx.author} tried to use the '{ctx.command.name}' command from a DM. "
                   "This command is restricted by the without_role decorator. Rejecting request.")
@@ -45,11 +37,7 @@ def without_role_check(ctx: Context, *role_ids: int) -> bool:
 
 
 def in_channel_check(ctx: Context, channel_id: int) -> bool:
-    """
-    Checks if the command was executed
-    inside of the specified channel.
-    """
-
+    """Checks if the command was executed inside of the specified channel."""
     check = ctx.channel.id == channel_id
     log.trace(f"{ctx.author} tried to call the '{ctx.command.name}' command. "
               f"The result of the in_channel check was {check}.")

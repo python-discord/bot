@@ -1,5 +1,8 @@
 from code import InteractiveInterpreter
 from io import StringIO
+from typing import Any
+
+from discord.ext.commands import Bot, Context
 
 CODE_TEMPLATE = """
 async def _func():
@@ -8,13 +11,20 @@ async def _func():
 
 
 class Interpreter(InteractiveInterpreter):
+    """
+    Subclass InteractiveInterpreter to specify custom run functionality.
+
+    Helper class for internal eval.
+    """
+
     write_callable = None
 
-    def __init__(self, bot):
+    def __init__(self, bot: Bot):
         _locals = {"bot": bot}
         super().__init__(_locals)
 
-    async def run(self, code, ctx, io, *args, **kwargs):
+    async def run(self, code: str, ctx: Context, io: StringIO, *args, **kwargs) -> Any:
+        """Execute the provided source code as the bot & return the output."""
         self.locals["_rvalue"] = []
         self.locals["ctx"] = ctx
         self.locals["print"] = lambda x: io.write(f"{x}\n")
