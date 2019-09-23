@@ -17,7 +17,7 @@ from bot.constants import (
     Guild as GuildConfig, Icons,
     STAFF_ROLES,
 )
-from bot.converters import ExpirationDate
+from bot.converters import Duration
 
 
 log = logging.getLogger(__name__)
@@ -102,7 +102,7 @@ class AntiSpam(Cog):
         self.validation_errors = validation_errors
         role_id = AntiSpamConfig.punishment['role_id']
         self.muted_role = Object(role_id)
-        self.expiration_date_converter = ExpirationDate()
+        self.expiration_date_converter = Duration()
 
         self.message_deletion_queue = dict()
         self.queue_consumption_tasks = dict()
