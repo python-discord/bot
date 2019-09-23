@@ -1,27 +1,20 @@
-FROM python:3.7-alpine3.7
+FROM python:3.7-slim
 
-RUN apk add --no-cache \
-    build-base \
-    freetype-dev \
-    git \
-    jpeg-dev \
-    libffi-dev \
-    libxml2 \
-    libxml2-dev \
-    libxslt-dev \
-    tini \
-    zlib \
-    zlib-dev
+# Set pip to have cleaner logs and no saved cache
+ENV PIP_NO_CACHE_DIR=false \
+    PIPENV_HIDE_EMOJIS=1 \
+    PIPENV_IGNORE_VIRTUALENVS=1 \
+    PIPENV_NOSPIN=1
 
-ENV \
-    LIBRARY_PATH=/lib:/usr/lib
-
+# Install pipenv
 RUN pip install -U pipenv
 
+# Copy project files into working directory
 WORKDIR /bot
-COPY . .
+COPY docker .
 
-RUN pipenv install --deploy --system
+# Install project dependencies
+RUN pipenv install --system --deploy
 
-ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["python3", "-m", "bot"]
+ENTRYPOINT ["python3"]
+CMD ["-m", "bot"]

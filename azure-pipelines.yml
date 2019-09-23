@@ -8,21 +8,13 @@ variables:
 jobs:
   - job: test
     displayName: 'Lint & Test'
-
     pool:
       vmImage: ubuntu-16.04
 
     variables:
-      PIPENV_CACHE_DIR: ".cache/pipenv"
       PIP_CACHE_DIR: ".cache/pip"
-      PIP_SRC: ".cache/src"
 
     steps:
-      - script: |
-          sudo apt-get update
-          sudo apt-get install build-essential curl docker libffi-dev libfreetype6-dev libxml2 libxml2-dev libxslt1-dev zlib1g zlib1g-dev
-        displayName: 'Install base dependencies'
-
       - task: UsePythonVersion@0
         displayName: 'Set Python version'
         inputs:
