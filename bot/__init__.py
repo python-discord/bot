@@ -9,7 +9,7 @@ logging.TRACE = 5
 logging.addLevelName(logging.TRACE, "TRACE")
 
 
-def monkeypatch_trace(self, msg, *args, **kwargs):
+def monkeypatch_trace(self: logging.Logger, msg: str, *args, **kwargs) -> None:
     """
     Log 'msg % args' with severity 'TRACE'.
 
@@ -55,7 +55,7 @@ else:
 
 
 logging.basicConfig(
-    format="%(asctime)s pd.beardfist.com Bot: | %(name)30s | %(levelname)8s | %(message)s",
+    format="%(asctime)s pd.beardfist.com Bot: | %(name)33s | %(levelname)8s | %(message)s",
     datefmt="%b %d %H:%M:%S",
     level=logging.TRACE if DEBUG_MODE else logging.INFO,
     handlers=logging_handlers

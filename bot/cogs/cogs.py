@@ -2,7 +2,7 @@ import logging
 import os
 
 from discord import Colour, Embed
-from discord.ext.commands import Bot, Context, group
+from discord.ext.commands import Bot, Cog, Context, group
 
 from bot.constants import (
     Emojis, MODERATION_ROLES, Roles, URLs
@@ -15,10 +15,8 @@ log = logging.getLogger(__name__)
 KEEP_LOADED = ["bot.cogs.cogs", "bot.cogs.modlog"]
 
 
-class Cogs:
-    """
-    Cog management commands
-    """
+class Cogs(Cog):
+    """Cog management commands."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
@@ -37,22 +35,20 @@ class Cogs:
         self.cogs.update({v: k for k, v in self.cogs.items()})
 
     @group(name='cogs', aliases=('c',), invoke_without_command=True)
-    @with_role(*MODERATION_ROLES, Roles.devops)
-    async def cogs_group(self, ctx: Context):
+    @with_role(*MODERATION_ROLES, Roles.core_developer)
+    async def cogs_group(self, ctx: Context) -> None:
         """Load, unload, reload, and list active cogs."""
-
         await ctx.invoke(self.bot.get_command("help"), "cogs")
 
     @cogs_group.command(name='load', aliases=('l',))
-    @with_role(*MODERATION_ROLES, Roles.devops)
-    async def load_command(self, ctx: Context, cog: str):
+    @with_role(*MODERATION_ROLES, Roles.core_developer)
+    async def load_command(self, ctx: Context, cog: str) -> None:
         """
-        Load up an unloaded cog, given the module containing it
+        Load up an unloaded cog, given the module containing it.
 
         You can specify the cog name for any cogs that are placed directly within `!cogs`, or specify the
         entire module directly.
         """
-
         cog = cog.lower()
 
         embed = Embed()
@@ -60,7 +56,7 @@ class Cogs:
 
         embed.set_author(
             name="Python Bot (Cogs)",
-            url=URLs.gitlab_bot_repo,
+            url=URLs.github_bot_repo,
             icon_url=URLs.bot_avatar
         )
 
@@ -84,7 +80,7 @@ class Cogs:
                 except Exception as e:
                     log.exception(f"{ctx.author} requested we load the '{cog}' cog, "
                               "but the loading failed")
-                    embed.description = f"Failed to load cog: {cog}\n\n```{e}```"
+                    embed.description = f"Failed to load cog: {cog}\n\n{e.__class__.__name__}: {e}"
                 else:
                     log.debug(f"{ctx.author} requested we load the '{cog}' cog. Cog loaded!")
                     embed.description = f"Cog loaded: {cog}"
@@ -96,15 +92,14 @@ class Cogs:
         await ctx.send(embed=embed)
 
     @cogs_group.command(name='unload', aliases=('ul',))
-    @with_role(*MODERATION_ROLES, Roles.devops)
-    async def unload_command(self, ctx: Context, cog: str):
+    @with_role(*MODERATION_ROLES, Roles.core_developer)
+    async def unload_command(self, ctx: Context, cog: str) -> None:
         """
-        Unload an already-loaded cog, given the module containing it
+        Unload an already-loaded cog, given the module containing it.
 
         You can specify the cog name for any cogs that are placed directly within `!cogs`, or specify the
         entire module directly.
         """
-
         cog = cog.lower()
 
         embed = Embed()
@@ -112,7 +107,7 @@ class Cogs:
 
         embed.set_author(
             name="Python Bot (Cogs)",
-            url=URLs.gitlab_bot_repo,
+            url=URLs.github_bot_repo,
             icon_url=URLs.bot_avatar
         )
 
@@ -147,10 +142,10 @@ class Cogs:
         await ctx.send(embed=embed)
 
     @cogs_group.command(name='reload', aliases=('r',))
-    @with_role(*MODERATION_ROLES, Roles.devops)
-    async def reload_command(self, ctx: Context, cog: str):
+    @with_role(*MODERATION_ROLES, Roles.core_developer)
+    async def reload_command(self, ctx: Context, cog: str) -> None:
         """
-        Reload an unloaded cog, given the module containing it
+        Reload an unloaded cog, given the module containing it.
 
         You can specify the cog name for any cogs that are placed directly within `!cogs`, or specify the
         entire module directly.
@@ -158,7 +153,6 @@ class Cogs:
         If you specify "*" as the cog, every cog currently loaded will be unloaded, and then every cog present in the
         bot/cogs directory will be loaded.
         """
-
         cog = cog.lower()
 
         embed = Embed()
@@ -166,7 +160,7 @@ class Cogs:
 
         embed.set_author(
             name="Python Bot (Cogs)",
-            url=URLs.gitlab_bot_repo,
+            url=URLs.github_bot_repo,
             icon_url=URLs.bot_avatar
         )
 
@@ -198,7 +192,7 @@ class Cogs:
                     try:
                         self.bot.unload_extension(loaded_cog)
                     except Exception as e:
-                        failed_unloads[loaded_cog] = str(e)
+                        failed_unloads[loaded_cog] = f"{e.__class__.__name__}: {e}"
                     else:
                         unloaded += 1
 
@@ -206,7 +200,7 @@ class Cogs:
                     try:
                         self.bot.load_extension(unloaded_cog)
                     except Exception as e:
-                        failed_loads[unloaded_cog] = str(e)
+                        failed_loads[unloaded_cog] = f"{e.__class__.__name__}: {e}"
                     else:
                         loaded += 1
 
@@ -219,18 +213,19 @@ class Cogs:
                     lines.append("\n**Unload failures**")
 
                     for cog, error in failed_unloads:
-                        lines.append(f"`{cog}` {Emojis.status_dnd} `{error}`")
+                        lines.append(f"{Emojis.status_dnd} **{cog}:** `{error}`")
 
                 if failed_loads:
                     lines.append("\n**Load failures**")
 
-                    for cog, error in failed_loads:
-                        lines.append(f"`{cog}` {Emojis.status_dnd} `{error}`")
+                    for cog, error in failed_loads.items():
+                        lines.append(f"{Emojis.status_dnd} **{cog}:** `{error}`")
 
                 log.debug(f"{ctx.author} requested we reload all cogs. Here are the results: \n"
                           f"{lines}")
 
-                return await LinePaginator.paginate(lines, ctx, embed, empty=False)
+                await LinePaginator.paginate(lines, ctx, embed, empty=False)
+                return
 
             elif full_cog in self.bot.extensions:
                 try:
@@ -251,14 +246,13 @@ class Cogs:
         await ctx.send(embed=embed)
 
     @cogs_group.command(name='list', aliases=('all',))
-    @with_role(*MODERATION_ROLES, Roles.devops)
-    async def list_command(self, ctx: Context):
+    @with_role(*MODERATION_ROLES, Roles.core_developer)
+    async def list_command(self, ctx: Context) -> None:
         """
         Get a list of all cogs, including their loaded status.
 
         Gray indicates that the cog is unloaded. Green indicates that the cog is currently loaded.
         """
-
         embed = Embed()
         lines = []
         cogs = {}
@@ -266,7 +260,7 @@ class Cogs:
         embed.colour = Colour.blurple()
         embed.set_author(
             name="Python Bot (Cogs)",
-            url=URLs.gitlab_bot_repo,
+            url=URLs.github_bot_repo,
             icon_url=URLs.bot_avatar
         )
 
@@ -298,6 +292,7 @@ class Cogs:
         await LinePaginator.paginate(lines, ctx, embed, max_size=300, empty=False)
 
 
-def setup(bot):
+def setup(bot: Bot) -> None:
+    """Cogs cog load."""
     bot.add_cog(Cogs(bot))
     log.info("Cog loaded: Cogs")

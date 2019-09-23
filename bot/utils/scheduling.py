@@ -1,13 +1,16 @@
 import asyncio
 import contextlib
 import logging
-from abc import ABC, abstractmethod
-from typing import Dict
+from abc import abstractmethod
+from typing import Coroutine, Dict, Union
+
+from bot.utils import CogABCMeta
 
 log = logging.getLogger(__name__)
 
 
-class Scheduler(ABC):
+class Scheduler(metaclass=CogABCMeta):
+    """Task scheduler."""
 
     def __init__(self):
 
@@ -15,24 +18,23 @@ class Scheduler(ABC):
         self.scheduled_tasks: Dict[str, asyncio.Task] = {}
 
     @abstractmethod
-    async def _scheduled_task(self, task_object: dict):
+    async def _scheduled_task(self, task_object: dict) -> None:
         """
-        A coroutine which handles the scheduling. This is added to the scheduled tasks,
-        and should wait the task duration, execute the desired code, and clean up the task.
+        A coroutine which handles the scheduling.
+
+        This is added to the scheduled tasks, and should wait the task duration, execute the desired
+        code, then clean up the task.
+
         For example, in Reminders this will wait for the reminder duration, send the reminder,
         then make a site API request to delete the reminder from the database.
-
-        :param task_object:
         """
 
-    def schedule_task(self, loop: asyncio.AbstractEventLoop, task_id: str, task_data: dict):
+    def schedule_task(self, loop: asyncio.AbstractEventLoop, task_id: str, task_data: dict) -> None:
         """
         Schedules a task.
-        :param loop: the asyncio event loop
-        :param task_id: the ID of the task.
-        :param task_data: the data of the task, passed to `Scheduler._scheduled_expiration`.
-        """
 
+        `task_data` is passed to `Scheduler._scheduled_expiration`
+        """
         if task_id in self.scheduled_tasks:
             return
 
@@ -40,12 +42,8 @@ class Scheduler(ABC):
 
         self.scheduled_tasks[task_id] = task
 
-    def cancel_task(self, task_id: str):
-        """
-        Un-schedules a task.
-        :param task_id: the ID of the infraction in question
-        """
-
+    def cancel_task(self, task_id: str) -> None:
+        """Un-schedules a task."""
         task = self.scheduled_tasks.get(task_id)
 
         if task is None:
@@ -57,14 +55,8 @@ class Scheduler(ABC):
         del self.scheduled_tasks[task_id]
 
 
-def create_task(loop: asyncio.AbstractEventLoop, coro_or_future):
-    """
-    Creates an asyncio.Task object from a coroutine or future object.
-
-    :param loop: the asyncio event loop.
-    :param coro_or_future: the coroutine or future object to be scheduled.
-    """
-
+def create_task(loop: asyncio.AbstractEventLoop, coro_or_future: Union[Coroutine, asyncio.Future]) -> asyncio.Task:
+    """Creates an asyncio.Task object from a coroutine or future object."""
     task: asyncio.Task = asyncio.ensure_future(coro_or_future, loop=loop)
 
     # Silently ignore exceptions in a callback (handles the CancelledError nonsense)
@@ -72,6 +64,7 @@ def create_task(loop: asyncio.AbstractEventLoop, coro_or_future):
     return task
 
 
-def _silent_exception(future):
+def _silent_exception(future: asyncio.Future) -> None:
+    """Suppress future's exception."""
     with contextlib.suppress(Exception):
         future.exception()

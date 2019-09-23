@@ -3,10 +3,11 @@ import inspect
 import itertools
 from collections import namedtuple
 from contextlib import suppress
+from typing import Union
 
-from discord import Colour, Embed, HTTPException
+from discord import Colour, Embed, HTTPException, Message, Reaction, User
 from discord.ext import commands
-from discord.ext.commands import CheckFailure
+from discord.ext.commands import Bot, CheckFailure, Cog as DiscordCog, Command, Context
 from fuzzywuzzy import fuzz, process
 
 from bot import constants
@@ -35,15 +36,11 @@ class HelpQueryNotFound(ValueError):
 
     Contains the custom attribute of ``possible_matches``.
 
-    Attributes
-    ----------
-    possible_matches: dict
-        Any commands that were close to matching the Query.
-        The possible matched command names are the keys.
-        The likeness match scores are the values.
+    Instances of this object contain a dictionary of any command(s) that were close to matching the
+    query, where keys are the possible matched command names and values are the likeness match scores.
     """
 
-    def __init__(self, arg, possible_matches=None):
+    def __init__(self, arg: str, possible_matches: dict = None):
         super().__init__(arg)
         self.possible_matches = possible_matches
 
@@ -52,48 +49,30 @@ class HelpSession:
     """
     An interactive session for bot and command help output.
 
-    Attributes
-    ----------
-    title: str
-        The title of the help message.
-    query: Union[:class:`discord.ext.commands.Bot`,
-                 :class:`discord.ext.commands.Command]
-    description: str
-        The description of the query.
-    pages: list[str]
-        A list of the help content split into manageable pages.
-    message: :class:`discord.Message`
-        The message object that's showing the help contents.
-    destination: :class:`discord.abc.Messageable`
-        Where the help message is to be sent to.
+    Expected attributes include:
+        * title: str
+            The title of the help message.
+        * query: Union[discord.ext.commands.Bot, discord.ext.commands.Command]
+        * description: str
+            The description of the query.
+        * pages: list[str]
+            A list of the help content split into manageable pages.
+        * message: `discord.Message`
+            The message object that's showing the help contents.
+        * destination: `discord.abc.Messageable`
+            Where the help message is to be sent to.
     """
 
-    def __init__(self, ctx, *command, cleanup=False, only_can_run=True, show_hidden=False, max_lines=15):
-        """
-        Creates an instance of the HelpSession class.
-
-        Parameters
-        ----------
-        ctx: :class:`discord.Context`
-            The context of the invoked help command.
-        *command: str
-            A variable argument of the command being queried.
-        cleanup: Optional[bool]
-            Set to ``True`` to have the message deleted on timeout.
-            If ``False``, it will clear all reactions on timeout.
-            Defaults to ``False``.
-        only_can_run: Optional[bool]
-            Set to ``True`` to hide commands the user can't run.
-            Defaults to ``False``.
-        show_hidden: Optional[bool]
-            Set to ``True`` to include hidden commands.
-            Defaults to ``False``.
-        max_lines: Optional[int]
-            Sets the max number of lines the paginator will add to a
-            single page.
-            Defaults to 20.
-        """
-
+    def __init__(
+        self,
+        ctx: Context,
+        *command,
+        cleanup: bool = False,
+        only_can_run: bool = True,
+        show_hidden: bool = False,
+        max_lines: int = 15
+    ):
+        """Creates an instance of the HelpSession class."""
         self._ctx = ctx
         self._bot = ctx.bot
         self.title = "Command Help"
@@ -107,7 +86,7 @@ class HelpSession:
             self.query = ctx.bot
             self.description = self.query.description
         self.author = ctx.author
-        self.destination = ctx.author if ctx.bot.pm_help else ctx.channel
+        self.destination = ctx.channel
 
         # set the config for the session
         self._cleanup = cleanup
@@ -122,20 +101,8 @@ class HelpSession:
         self._timeout_task = None
         self.reset_timeout()
 
-    def _get_query(self, query):
-        """
-        Attempts to match the provided query with a valid command or cog.
-
-        Parameters
-        ----------
-        query: str
-            The joined string representing the session query.
-
-        Returns
-        -------
-        Union[:class:`discord.ext.commands.Command`, :class:`Cog`]
-        """
-
+    def _get_query(self, query: str) -> Union[Command, Cog]:
+        """Attempts to match the provided query with a valid command or cog."""
         command = self._bot.get_command(query)
         if command:
             return command
@@ -150,48 +117,26 @@ class HelpSession:
 
         self._handle_not_found(query)
 
-    def _handle_not_found(self, query):
+    def _handle_not_found(self, query: str) -> None:
         """
         Handles when a query does not match a valid command or cog.
 
-        Will pass on possible close matches along with the
-        ``HelpQueryNotFound`` exception.
-
-        Parameters
-        ----------
-        query: str
-            The full query that was requested.
-
-        Raises
-        ------
-        HelpQueryNotFound
+        Will pass on possible close matches along with the `HelpQueryNotFound` exception.
         """
-
-        # combine command and cog names
+        # Combine command and cog names
         choices = list(self._bot.all_commands) + list(self._bot.cogs)
 
         result = process.extractBests(query, choices, scorer=fuzz.ratio, score_cutoff=90)
 
         raise HelpQueryNotFound(f'Query "{query}" not found.', dict(result))
 
-    async def timeout(self, seconds=30):
-        """
-        Waits for a set number of seconds, then stops the help session.
-
-        Parameters
-        ----------
-        seconds: int
-            Number of seconds to wait.
-        """
-
+    async def timeout(self, seconds: int = 30) -> None:
+        """Waits for a set number of seconds, then stops the help session."""
         await asyncio.sleep(seconds)
         await self.stop()
 
-    def reset_timeout(self):
-        """
-        Cancels the original timeout task and sets it again from the start.
-        """
-
+    def reset_timeout(self) -> None:
+        """Cancels the original timeout task and sets it again from the start."""
         # cancel original if it exists
         if self._timeout_task:
             if not self._timeout_task.cancelled():
@@ -200,18 +145,8 @@ class HelpSession:
         # recreate the timeout task
         self._timeout_task = self._bot.loop.create_task(self.timeout())
 
-    async def on_reaction_add(self, reaction, user):
-        """
-        Event handler for when reactions are added on the help message.
-
-        Parameters
-        ----------
-        reaction: :class:`discord.Reaction`
-            The reaction that was added.
-        user: :class:`discord.User`
-            The user who added the reaction.
-        """
-
+    async def on_reaction_add(self, reaction: Reaction, user: User) -> None:
+        """Event handler for when reactions are added on the help message."""
         # ensure it was the relevant session message
         if reaction.message.id != self.message.id:
             return
@@ -237,24 +172,13 @@ class HelpSession:
         with suppress(HTTPException):
             await self.message.remove_reaction(reaction, user)
 
-    async def on_message_delete(self, message):
-        """
-        Closes the help session when the help message is deleted.
-
-        Parameters
-        ----------
-        message: :class:`discord.Message`
-            The message that was deleted.
-        """
-
+    async def on_message_delete(self, message: Message) -> None:
+        """Closes the help session when the help message is deleted."""
         if message.id == self.message.id:
             await self.stop()
 
-    async def prepare(self):
-        """
-        Sets up the help session pages, events, message and reactions.
-        """
-
+    async def prepare(self) -> None:
+        """Sets up the help session pages, events, message and reactions."""
         # create paginated content
         await self.build_pages()
 
@@ -266,12 +190,8 @@ class HelpSession:
         await self.update_page()
         self.add_reactions()
 
-    def add_reactions(self):
-        """
-        Adds the relevant reactions to the help message based on if
-        pagination is required.
-        """
-
+    def add_reactions(self) -> None:
+        """Adds the relevant reactions to the help message based on if pagination is required."""
         # if paginating
         if len(self._pages) > 1:
             for reaction in REACTIONS:
@@ -281,44 +201,22 @@ class HelpSession:
         else:
             self._bot.loop.create_task(self.message.add_reaction(DELETE_EMOJI))
 
-    def _category_key(self, cmd):
+    def _category_key(self, cmd: Command) -> str:
         """
-        Returns a cog name of a given command. Used as a key for
-        ``sorted`` and ``groupby``.
+        Returns a cog name of a given command for use as a key for `sorted` and `groupby`.
 
-        A zero width space is used as a prefix for results with no cogs
-        to force them last in ordering.
-
-        Parameters
-        ----------
-        cmd: :class:`discord.ext.commands.Command`
-            The command object being checked.
-
-        Returns
-        -------
-        str
+        A zero width space is used as a prefix for results with no cogs to force them last in ordering.
         """
-
         cog = cmd.cog_name
         return f'**{cog}**' if cog else f'**\u200bNo Category:**'
 
-    def _get_command_params(self, cmd):
+    def _get_command_params(self, cmd: Command) -> str:
         """
         Returns the command usage signature.
 
-        This is a custom implementation of ``command.signature`` in
-        order to format the command signature without aliases.
-
-        Parameters
-        ----------
-        cmd: :class:`discord.ext.commands.Command`
-            The command object to get the parameters of.
-
-        Returns
-        -------
-        str
+        This is a custom implementation of `command.signature` in order to format the command
+        signature without aliases.
         """
-
         results = []
         for name, param in cmd.clean_params.items():
 
@@ -346,16 +244,8 @@ class HelpSession:
 
         return f"{cmd.name} {' '.join(results)}"
 
-    async def build_pages(self):
-        """
-        Builds the list of content pages to be paginated through in the
-        help message.
-
-        Returns
-        -------
-        list[str]
-        """
-
+    async def build_pages(self) -> None:
+        """Builds the list of content pages to be paginated through in the help message, as a list of str."""
         # Use LinePaginator to restrict embed line height
         paginator = LinePaginator(prefix='', suffix='', max_lines=self._max_lines)
 
@@ -482,20 +372,8 @@ class HelpSession:
         # save organised pages to session
         self._pages = paginator.pages
 
-    def embed_page(self, page_number=0):
-        """
-        Returns an Embed with the requested page formatted within.
-
-        Parameters
-        ----------
-        page_number: int
-            The page to be retrieved. Zero indexed.
-
-        Returns
-        -------
-        :class:`discord.Embed`
-        """
-
+    def embed_page(self, page_number: int = 0) -> Embed:
+        """Returns an Embed with the requested page formatted within."""
         embed = Embed()
 
         # if command or cog, add query to title for pages other than first
@@ -514,17 +392,8 @@ class HelpSession:
 
         return embed
 
-    async def update_page(self, page_number=0):
-        """
-        Sends the intial message, or changes the existing one to the
-        given page number.
-
-        Parameters
-        ----------
-        page_number: int
-            The page number to show in the help message.
-        """
-
+    async def update_page(self, page_number: int = 0) -> None:
+        """Sends the intial message, or changes the existing one to the given page number."""
         self._current_page = page_number
         embed_page = self.embed_page(page_number)
 
@@ -534,47 +403,27 @@ class HelpSession:
             await self.message.edit(embed=embed_page)
 
     @classmethod
-    async def start(cls, ctx, *command, **options):
+    async def start(cls, ctx: Context, *command, **options) -> "HelpSession":
         """
-        Create and begin a help session based on the given command
-        context.
+        Create and begin a help session based on the given command context.
 
-        Parameters
-        ----------
-        ctx: :class:`discord.ext.commands.Context`
-        The context of the invoked help command.
-        *command: str
-            A variable argument of the command being queried.
-        cleanup: Optional[bool]
-            Set to ``True`` to have the message deleted on session end.
-            Defaults to ``False``.
-        only_can_run: Optional[bool]
-            Set to ``True`` to hide commands the user can't run.
-            Defaults to ``False``.
-        show_hidden: Optional[bool]
-            Set to ``True`` to include hidden commands.
-            Defaults to ``False``.
-        max_lines: Optional[int]
-            Sets the max number of lines the paginator will add to a
-            single page.
-            Defaults to 20.
-
-        Returns
-        -------
-        :class:`HelpSession`
+        Available options kwargs:
+            * cleanup: Optional[bool]
+                Set to `True` to have the message deleted on session end. Defaults to `False`.
+            * only_can_run: Optional[bool]
+                Set to `True` to hide commands the user can't run. Defaults to `False`.
+            * show_hidden: Optional[bool]
+                Set to `True` to include hidden commands. Defaults to `False`.
+            * max_lines: Optional[int]
+                Sets the max number of lines the paginator will add to a single page. Defaults to 20.
         """
-
         session = cls(ctx, *command, **options)
         await session.prepare()
 
         return session
 
-    async def stop(self):
-        """
-        Stops the help session, removes event listeners and attempts to
-        delete the help message.
-        """
-
+    async def stop(self) -> None:
+        """Stops the help session, removes event listeners and attempts to delete the help message."""
         self._bot.remove_listener(self.on_reaction_add)
         self._bot.remove_listener(self.on_message_delete)
 
@@ -586,80 +435,47 @@ class HelpSession:
                 await self.message.clear_reactions()
 
     @property
-    def is_first_page(self):
-        """
-        A bool reflecting if session is currently showing the first page.
-
-        Returns
-        -------
-        bool
-        """
-
+    def is_first_page(self) -> bool:
+        """Check if session is currently showing the first page."""
         return self._current_page == 0
 
     @property
-    def is_last_page(self):
-        """
-        A bool reflecting if the session is currently showing the last page.
-
-        Returns
-        -------
-        bool
-        """
-
+    def is_last_page(self) -> bool:
+        """Check if the session is currently showing the last page."""
         return self._current_page == (len(self._pages)-1)
 
-    async def do_first(self):
-        """
-        Event that is called when the user requests the first page.
-        """
-
+    async def do_first(self) -> None:
+        """Event that is called when the user requests the first page."""
         if not self.is_first_page:
             await self.update_page(0)
 
-    async def do_back(self):
-        """
-        Event that is called when the user requests the previous page.
-        """
-
+    async def do_back(self) -> None:
+        """Event that is called when the user requests the previous page."""
         if not self.is_first_page:
             await self.update_page(self._current_page-1)
 
-    async def do_next(self):
-        """
-        Event that is called when the user requests the next page.
-        """
-
+    async def do_next(self) -> None:
+        """Event that is called when the user requests the next page."""
         if not self.is_last_page:
             await self.update_page(self._current_page+1)
 
-    async def do_end(self):
-        """
-        Event that is called when the user requests the last page.
-        """
-
+    async def do_end(self) -> None:
+        """Event that is called when the user requests the last page."""
         if not self.is_last_page:
             await self.update_page(len(self._pages)-1)
 
-    async def do_stop(self):
-        """
-        Event that is called when the user requests to stop the help session.
-        """
-
+    async def do_stop(self) -> None:
+        """Event that is called when the user requests to stop the help session."""
         await self.message.delete()
 
 
-class Help:
-    """
-    Custom Embed Pagination Help feature
-    """
+class Help(DiscordCog):
+    """Custom Embed Pagination Help feature."""
+
     @commands.command('help')
     @redirect_output(destination_channel=Channels.bot, bypass_roles=STAFF_ROLES)
-    async def new_help(self, ctx, *commands):
-        """
-        Shows Command Help.
-        """
-
+    async def new_help(self, ctx: Context, *commands) -> None:
+        """Shows Command Help."""
         try:
             await HelpSession.start(ctx, *commands)
         except HelpQueryNotFound as error:
@@ -674,42 +490,29 @@ class Help:
             await ctx.send(embed=embed)
 
 
-def unload(bot):
+def unload(bot: Bot) -> None:
     """
     Reinstates the original help command.
 
-    This is run if the cog raises an exception on load, or if the
-    extension is unloaded.
-
-    Parameters
-    ----------
-    bot: :class:`discord.ext.commands.Bot`
-        The discord bot client.
+    This is run if the cog raises an exception on load, or if the extension is unloaded.
     """
-
     bot.remove_command('help')
     bot.add_command(bot._old_help)
 
 
-def setup(bot):
+def setup(bot: Bot) -> None:
     """
     The setup for the help extension.
 
     This is called automatically on `bot.load_extension` being run.
 
-    Stores the original help command instance on the ``bot._old_help``
-    attribute for later reinstatement, before removing it from the
-    command registry so the new help command can be loaded successfully.
+    Stores the original help command instance on the `bot._old_help` attribute for later
+    reinstatement, before removing it from the command registry so the new help command can be
+    loaded successfully.
 
-    If an exception is raised during the loading of the cog, ``unload``
-    will be called in order to reinstate the original help command.
-
-    Parameters
-    ----------
-    bot: `discord.ext.commands.Bot`
-        The discord bot client.
+    If an exception is raised during the loading of the cog, `unload` will be called in order to
+    reinstate the original help command.
     """
-
     bot._old_help = bot.get_command('help')
     bot.remove_command('help')
 
@@ -720,18 +523,12 @@ def setup(bot):
         raise
 
 
-def teardown(bot):
+def teardown(bot: Bot) -> None:
     """
     The teardown for the help extension.
 
     This is called automatically on `bot.unload_extension` being run.
 
-    Calls ``unload`` in order to reinstate the original help command.
-
-    Parameters
-    ----------
-    bot: `discord.ext.commands.Bot`
-        The discord bot client.
+    Calls `unload` in order to reinstate the original help command.
     """
-
     unload(bot)

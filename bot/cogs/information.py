@@ -1,40 +1,27 @@
 import logging
-import random
 import textwrap
 
 from discord import CategoryChannel, Colour, Embed, Member, TextChannel, VoiceChannel
-from discord.ext.commands import BadArgument, Bot, CommandError, Context, MissingPermissions, command
+from discord.ext.commands import Bot, Cog, Context, command
 
-from bot.constants import (
-    Channels, Emojis, Keys, MODERATION_ROLES,
-    NEGATIVE_REPLIES, STAFF_ROLES, URLs
-)
-from bot.decorators import with_role
+from bot.constants import Channels, Emojis, MODERATION_ROLES, STAFF_ROLES
+from bot.decorators import InChannelCheckFailure, with_role
 from bot.utils.checks import with_role_check
 from bot.utils.time import time_since
 
 log = logging.getLogger(__name__)
 
 
-class Information:
-    """
-    A cog with commands for generating embeds with
-    server information, such as server statistics
-    and user information.
-    """
+class Information(Cog):
+    """A cog with commands for generating embeds with server info, such as server stats and user info."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.headers = {"X-API-Key": Keys.site_api}
 
     @with_role(*MODERATION_ROLES)
     @command(name="roles")
-    async def roles_info(self, ctx: Context):
-        """
-        Returns a list of all roles and their
-        corresponding IDs.
-        """
-
+    async def roles_info(self, ctx: Context) -> None:
+        """Returns a list of all roles and their corresponding IDs."""
         # Sort the roles alphabetically and remove the @everyone role
         roles = sorted(ctx.guild.roles, key=lambda role: role.name)
         roles = [role for role in roles if role.name != "@everyone"]
@@ -56,12 +43,8 @@ class Information:
         await ctx.send(embed=embed)
 
     @command(name="server", aliases=["server_info", "guild", "guild_info"])
-    async def server_info(self, ctx: Context):
-        """
-        Returns an embed full of
-        server information.
-        """
-
+    async def server_info(self, ctx: Context) -> None:
+        """Returns an embed full of server information."""
         created = time_since(ctx.guild.created_at, precision="days")
         features = ", ".join(ctx.guild.features)
         region = ctx.guild.region
@@ -125,35 +108,27 @@ class Information:
         await ctx.send(embed=embed)
 
     @command(name="user", aliases=["user_info", "member", "member_info"])
-    async def user_info(self, ctx: Context, user: Member = None, hidden: bool = False):
-        """
-        Returns info about a user.
-        """
-
-        # Do a role check if this is being executed on
-        # someone other than the caller
-        if user and user != ctx.author:
-            if not with_role_check(ctx, *MODERATION_ROLES):
-                raise BadArgument("You do not have permission to use this command on users other than yourself.")
-
-        # Non-moderators may only do this in #bot-commands and can't see
-        # hidden infractions.
-        if not with_role_check(ctx, *STAFF_ROLES):
-            if not ctx.channel.id == Channels.bot:
-                raise MissingPermissions("You can't do that here!")
-            # Hide hidden infractions for users without a moderation role
-            hidden = False
-
-        # Validates hidden input
-        hidden = str(hidden)
-
+    async def user_info(self, ctx: Context, user: Member = None, hidden: bool = False) -> None:
+        """Returns info about a user."""
         if user is None:
             user = ctx.author
+
+        # Do a role check if this is being executed on someone other than the caller
+        if user != ctx.author and not with_role_check(ctx, *MODERATION_ROLES):
+            await ctx.send("You may not use this command on users other than yourself.")
+            return
+
+        # Non-moderators may only do this in #bot-commands and can't see hidden infractions.
+        if not with_role_check(ctx, *STAFF_ROLES):
+            if not ctx.channel.id == Channels.bot:
+                raise InChannelCheckFailure(Channels.bot)
+            # Hide hidden infractions for users without a moderation role
+            hidden = False
 
         # User information
         created = time_since(user.created_at, max_units=3)
 
-        name = f"{user.name}#{user.discriminator}"
+        name = str(user)
         if user.nick:
             name = f"{user.nick} ({name})"
 
@@ -161,18 +136,16 @@ class Information:
         joined = time_since(user.joined_at, precision="days")
 
         # You're welcome, Volcyyyyyyyyyyyyyyyy
-        roles = ", ".join(
-            role.mention for role in user.roles if role.name != "@everyone"
-        )
+        roles = ", ".join(role.mention for role in user.roles if role.name != "@everyone")
 
         # Infractions
-        api_response = await self.bot.http_session.get(
-            url=URLs.site_infractions_user.format(user_id=user.id),
-            params={"hidden": hidden},
-            headers=self.headers
+        infractions = await self.bot.api_client.get(
+            'bot/infractions',
+            params={
+                'hidden': str(hidden),
+                'user__id': str(user.id)
+            }
         )
-
-        infractions = await api_response.json()
 
         infr_total = 0
         infr_active = 0
@@ -208,24 +181,8 @@ class Information:
 
         await ctx.send(embed=embed)
 
-    @user_info.error
-    async def user_info_command_error(self, ctx: Context, error: CommandError):
-        embed = Embed(colour=Colour.red())
 
-        if isinstance(error, BadArgument):
-            embed.title = random.choice(NEGATIVE_REPLIES)
-            embed.description = str(error)
-            await ctx.send(embed=embed)
-
-        elif isinstance(error, MissingPermissions):
-            embed.title = random.choice(NEGATIVE_REPLIES)
-            embed.description = f"Sorry, but you may only use this command within <#{Channels.bot}>."
-            await ctx.send(embed=embed)
-
-        else:
-            log.exception(f"Unhandled error: {error}")
-
-
-def setup(bot):
+def setup(bot: Bot) -> None:
+    """Information cog load."""
     bot.add_cog(Information(bot))
     log.info("Cog loaded: Information")
