@@ -11,7 +11,7 @@ RUN pip install -U pipenv
 
 # Copy project files into working directory
 WORKDIR /bot
-COPY docker .
+COPY . .
 
 # Install project dependencies
 RUN pipenv install --system --deploy
