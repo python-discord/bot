@@ -49,9 +49,12 @@ async def update_names(bot: Bot) -> None:
         seconds_to_sleep = (next_midnight - datetime.utcnow()).seconds + 1
         await asyncio.sleep(seconds_to_sleep)
 
-        channel_0_name, channel_1_name, channel_2_name = await bot.api_client.get(
-            'bot/off-topic-channel-names', params={'random_items': 3}
-        )
+        try:
+            channel_0_name, channel_1_name, channel_2_name = await bot.api_client.get(
+                'bot/off-topic-channel-names', params={'random_items': 3}
+            )
+        except bot.api.ResponseCodeError as e:
+            log.error(f"Failed to get new off topic channel names: code {e.response.status}")
         channel_0, channel_1, channel_2 = (bot.get_channel(channel_id) for channel_id in CHANNELS)
 
         await channel_0.edit(name=f'ot0-{channel_0_name}')
