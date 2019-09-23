@@ -195,10 +195,16 @@ class Duration(Converter):
         """
         Converts a `duration` string to a datetime object that's `duration` in the future.
 
-        The converter supports years (symbols: `years`, `year, `Y`, `y`), months (`months`, `month`,
-        `m`), weeks (`weeks`, `week`, `W`, `w`), days (`days`, `day`, `D`, `d`), hours (`hours`,
-        `hour`, `H`, `h`), minutes (`minutes`, `minute`, `M`), and seconds (`seconds`, `second`,
-        `S`, `s`), The units must be provided in descending order of magnitude.
+        The converter supports the following symbols for each unit of time:
+        - years: `Y`, `y`, `year`, `years`
+        - months: `m`, `month`, `months`
+        - weeks: `w`, `W`, `week`, `weeks`
+        - days: `d`, `D`, `day`, `days`
+        - hours: `H`, `h`, `hour`, `hours`
+        - minutes: `M`, `minute`, `minutes`
+        - seconds: `S`, `s`, `second`, `seconds`
+
+        The units need to be provided in descending order of magnitude.
         """
         match = self.duration_parser.fullmatch(duration)
         if not match:
