@@ -10,7 +10,7 @@ jobs:
   displayName: 'Lint & Test'
 
   pool:
-    vmImage: 'Ubuntu 16.04'
+    vmImage: ubuntu-16.04
 
   variables:
     PIPENV_CACHE_DIR: ".cache/pipenv"
@@ -18,10 +18,9 @@ jobs:
     PIP_SRC: ".cache/src"
 
   steps:
-  - script: sudo apt-get update
-    displayName: 'Updating package list'
-
-  - script: sudo apt-get install build-essential curl docker libffi-dev libfreetype6-dev libxml2 libxml2-dev libxslt1-dev zlib1g zlib1g-dev
+  - script: |
+      sudo apt-get update
+      sudo apt-get install build-essential curl docker libffi-dev libfreetype6-dev libxml2 libxml2-dev libxslt1-dev zlib1g zlib1g-dev
     displayName: 'Install base dependencies'
 
   - task: UsePythonVersion@0
@@ -39,6 +38,23 @@ jobs:
   - script: python -m flake8
     displayName: 'Run linter'
 
+  - script: BOT_API_KEY=foo BOT_TOKEN=bar WOLFRAM_API_KEY=baz python -m pytest --junitxml=junit.xml --cov=bot --cov-branch --cov-report=term --cov-report=xml tests
+    displayName: Run tests
+
+  - task: PublishCodeCoverageResults@1
+    displayName: 'Publish Coverage Results'
+    condition: succeededOrFailed()
+    inputs:
+      codeCoverageTool: Cobertura
+      summaryFileLocation: coverage.xml
+
+  - task: PublishTestResults@2
+    displayName: 'Publish Test Results'
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFiles: junit.xml
+      testRunTitle: 'Bot Test results'
+
 - job: build
   displayName: 'Build Containers'
   dependsOn: 'test'
@@ -54,7 +70,5 @@ jobs:
 
   - task: ShellScript@2
     displayName: 'Build and deploy containers'
-
     inputs:
       scriptPath: scripts/deploy-azure.sh
-      args: '$(AUTODEPLOY_TOKEN) $(AUTODEPLOY_WEBHOOK)'

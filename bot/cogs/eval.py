@@ -6,9 +6,10 @@ import re
 import textwrap
 import traceback
 from io import StringIO
+from typing import Any, Optional, Tuple
 
 import discord
-from discord.ext.commands import Bot, group
+from discord.ext.commands import Bot, Cog, Context, group
 
 from bot.constants import Roles
 from bot.decorators import with_role
@@ -17,11 +18,8 @@ from bot.interpreter import Interpreter
 log = logging.getLogger(__name__)
 
 
-class CodeEval:
-    """
-    Owner and admin feature that evaluates code
-    and returns the result to the channel.
-    """
+class CodeEval(Cog):
+    """Owner and admin feature that evaluates code and returns the result to the channel."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
@@ -31,7 +29,8 @@ class CodeEval:
 
         self.interpreter = Interpreter(bot)
 
-    def _format(self, inp, out):  # (str, Any) -> (str, discord.Embed)
+    def _format(self, inp: str, out: Any) -> Tuple[str, Optional[discord.Embed]]:
+        """Format the eval output into a string & attempt to format it into an Embed."""
         self._ = out
 
         res = ""
@@ -124,7 +123,8 @@ class CodeEval:
 
         return res  # Return (text, embed)
 
-    async def _eval(self, ctx, code):  # (discord.Context, str) -> None
+    async def _eval(self, ctx: Context, code: str) -> Optional[discord.Message]:
+        """Eval the input code string & send an embed to the invoking context."""
         self.ln += 1
 
         if code.startswith("exit"):
@@ -174,16 +174,15 @@ async def func():  # (None,) -> Any
 
     @group(name='internal', aliases=('int',))
     @with_role(Roles.owner, Roles.admin)
-    async def internal_group(self, ctx):
+    async def internal_group(self, ctx: Context) -> None:
         """Internal commands. Top secret!"""
-
         if not ctx.invoked_subcommand:
             await ctx.invoke(self.bot.get_command("help"), "internal")
 
     @internal_group.command(name='eval', aliases=('e',))
     @with_role(Roles.admin, Roles.owner)
-    async def eval(self, ctx, *, code: str):
-        """ Run eval in a REPL-like format. """
+    async def eval(self, ctx: Context, *, code: str) -> None:
+        """Run eval in a REPL-like format."""
         code = code.strip("`")
         if re.match('py(thon)?\n', code):
             code = "\n".join(code.split("\n")[1:])
@@ -197,6 +196,7 @@ async def func():  # (None,) -> Any
         await self._eval(ctx, code)
 
 
-def setup(bot):
+def setup(bot: Bot) -> None:
+    """Code eval cog load."""
     bot.add_cog(CodeEval(bot))
     log.info("Cog loaded: Eval")

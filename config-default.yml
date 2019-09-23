@@ -95,7 +95,7 @@ guild:
         bot:                              267659945086812160
         checkpoint_test:                  422077681434099723
         defcon:                           464469101889454091
-        devlog:            &DEVLOG        409308876241108992
+        devlog:            &DEVLOG        622895325144940554
         devtest:           &DEVTEST       414574275865870337
         help_0:                           303906576991780866
         help_1:                           303906556754395136
@@ -103,6 +103,8 @@ guild:
         help_3:                           439702951246692352
         help_4:                           451312046647148554
         help_5:                           454941769734422538
+        help_6:                           587375753306570782
+        help_7:                           587375768556797982
         helpers:                          385474242440986624
         message_log:       &MESSAGE_LOG   467752170159079424
         mod_alerts:                       473092532147060736
@@ -125,8 +127,7 @@ guild:
         announcements:                      463658397560995840
         champion:                           430492892331769857
         contributor:                        295488872404484098
-        developer:                          352427296948486144
-        devops:            &DEVOPS_ROLE     409416496733880320
+        core_developer:                     587606783669829632
         jammer:                             423054537079783434
         moderator:         &MOD_ROLE        267629731250176001
         muted:             &MUTED_ROLE      277914926603829249
@@ -135,6 +136,10 @@ guild:
         helpers:                            267630620367257601
         rockstars:         &ROCKSTARS_ROLE  458226413825294336
         team_leader:                        501324292341104650
+
+    webhooks:
+        talent_pool:                        569145364800602132
+        big_brother:                        569133704568373283
 
 
 filter:
@@ -167,6 +172,7 @@ filter:
         - 327254708534116352  # Adafruit
         - 544525886180032552  # kennethreitz.org
         - 590806733924859943  # Discord Hack Week
+        - 423249981340778496  # Kivy
 
     domain_blacklist:
         - pornhub.com
@@ -217,21 +223,11 @@ filter:
         - *ADMIN_ROLE
         - *MOD_ROLE
         - *OWNER_ROLE
-        - *DEVOPS_ROLE
         - *ROCKSTARS_ROLE
 
 
 keys:
-    deploy_bot:  !ENV "DEPLOY_BOT_KEY"
-    deploy_site: !ENV "DEPLOY_SITE"
     site_api:    !ENV "BOT_API_KEY"
-
-
-rabbitmq:
-    host:          "pdrmq"
-    password: !ENV ["RABBITMQ_DEFAULT_PASS", "guest"]
-    port:          5672
-    username: !ENV ["RABBITMQ_DEFAULT_USER", "guest"]
 
 
 urls:
@@ -239,6 +235,7 @@ urls:
     site:        &DOMAIN       "pythondiscord.com"
     site_api:    &API    !JOIN ["api.", *DOMAIN]
     site_paste:  &PASTE  !JOIN ["paste.", *DOMAIN]
+    site_staff:  &STAFF  !JOIN ["staff.", *DOMAIN]
     site_schema: &SCHEMA       "https://"
 
     site_bigbrother_api:                !JOIN [*SCHEMA, *API, "/bot/bigbrother"]
@@ -251,7 +248,7 @@ urls:
     site_infractions_user_type_current: !JOIN [*SCHEMA, *API, "/bot/infractions/user/{user_id}/{infraction_type}/current"]
     site_infractions_user_type:         !JOIN [*SCHEMA, *API, "/bot/infractions/user/{user_id}/{infraction_type}"]
     site_logs_api:                      !JOIN [*SCHEMA, *API, "/bot/logs"]
-    site_logs_view:                     !JOIN [*SCHEMA, *DOMAIN, "/bot/logs"]
+    site_logs_view:                     !JOIN [*SCHEMA, *STAFF, "/bot/logs"]
     site_off_topic_names_api:           !JOIN [*SCHEMA, *API, "/bot/off-topic-names"]
     site_reminders_api:                 !JOIN [*SCHEMA, *API, "/bot/reminders"]
     site_reminders_user_api:            !JOIN [*SCHEMA, *API, "/bot/reminders/user"]
@@ -261,9 +258,8 @@ urls:
     site_user_complete_api:             !JOIN [*SCHEMA, *API, "/bot/users/complete"]
     paste_service:                      !JOIN [*SCHEMA, *PASTE, "/{key}"]
 
-    # Env vars
-    deploy: !ENV "DEPLOY_URL"
-    status: !ENV "STATUS_URL"
+    # Snekbox
+    snekbox_eval_api: "https://snekbox.pythondiscord.com/eval"
 
     # Discord API URLs
     discord_api:        &DISCORD_API "https://discordapp.com/api/v7/"
@@ -271,7 +267,7 @@ urls:
 
     # Misc URLs
     bot_avatar:      "https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle/logo_circle.png"
-    gitlab_bot_repo: "https://gitlab.com/python-discord/projects/bot"
+    github_bot_repo: "https://github.com/python-discord/bot"
 
 anti_spam:
     # Clean messages that violate a rule.

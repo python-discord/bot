@@ -1,9 +1,8 @@
 import asyncio
-import datetime
 import logging
+from datetime import datetime
 from typing import List, Optional, Union
 
-from aiohttp import ClientResponseError
 from dateutil.relativedelta import relativedelta
 from deepdiff import DeepDiff
 from discord import (
@@ -12,12 +11,10 @@ from discord import (
     RawMessageUpdateEvent, Role, TextChannel, User, VoiceChannel
 )
 from discord.abc import GuildChannel
-from discord.ext.commands import Bot
+from discord.ext.commands import Bot, Cog, Context
 
 from bot.constants import (
-    Channels, Colours, Emojis,
-    Event, Guild as GuildConstant, Icons,
-    Keys, Roles, URLs
+    Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, URLs
 )
 from bot.utils.time import humanize_delta
 
@@ -27,77 +24,50 @@ GUILD_CHANNEL = Union[CategoryChannel, TextChannel, VoiceChannel]
 
 CHANNEL_CHANGES_UNSUPPORTED = ("permissions",)
 CHANNEL_CHANGES_SUPPRESSED = ("_overwrites", "position")
-MEMBER_CHANGES_SUPPRESSED = ("activity", "status")
+MEMBER_CHANGES_SUPPRESSED = ("status", "activities", "_client_status")
 ROLE_CHANGES_UNSUPPORTED = ("colour", "permissions")
 
 
-class ModLog:
-    """
-    Logging for server events and staff actions
-    """
+class ModLog(Cog, name="ModLog"):
+    """Logging for server events and staff actions."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.headers = {"X-API-KEY": Keys.site_api}
         self._ignored = {event: [] for event in Event}
 
         self._cached_deletes = []
         self._cached_edits = []
 
-    async def upload_log(self, messages: List[Message]) -> Optional[str]:
+    async def upload_log(self, messages: List[Message], actor_id: int) -> str:
         """
-        Uploads the log data to the database via
-        an API endpoint for uploading logs.
+        Uploads the log data to the database via an API endpoint for uploading logs.
 
         Used in several mod log embeds.
 
         Returns a URL that can be used to view the log.
         """
-
-        log_data = []
-
-        for message in messages:
-            author = f"{message.author.name}#{message.author.discriminator}"
-
-            # message.author may return either a User or a Member. Users don't have roles.
-            if type(message.author) is User:
-                role_id = Roles.developer
-            else:
-                role_id = message.author.top_role.id
-
-            content = message.content
-            embeds = [embed.to_dict() for embed in message.embeds]
-            attachments = ["<Attachment>" for _ in message.attachments]
-
-            log_data.append({
-                "content": content,
-                "author": author,
-                "user_id": str(message.author.id),
-                "role_id": str(role_id),
-                "timestamp": message.created_at.strftime("%D %H:%M"),
-                "attachments": attachments,
-                "embeds": embeds,
-            })
-
-        response = await self.bot.http_session.post(
-            URLs.site_logs_api,
-            headers=self.headers,
-            json={"log_data": log_data}
+        response = await self.bot.api_client.post(
+            'bot/deleted-messages',
+            json={
+                'actor': actor_id,
+                'creation': datetime.utcnow().isoformat(),
+                'deletedmessage_set': [
+                    {
+                        'id': message.id,
+                        'author': message.author.id,
+                        'channel_id': message.channel.id,
+                        'content': message.content,
+                        'embeds': [embed.to_dict() for embed in message.embeds]
+                    }
+                    for message in messages
+                ]
+            }
         )
 
-        try:
-            data = await response.json()
-            log_id = data["log_id"]
-        except (KeyError, ClientResponseError):
-            log.debug(
-                "API returned an unexpected result:\n"
-                f"{response.text}"
-            )
-            return
+        return f"{URLs.site_logs_view}/{response['id']}"
 
-        return f"{URLs.site_logs_view}/{log_id}"
-
-    def ignore(self, event: Event, *items: int):
+    def ignore(self, event: Event, *items: int) -> None:
+        """Add event to ignored events to suppress log emission."""
         for item in items:
             if item not in self._ignored[event]:
                 self._ignored[event].append(item)
@@ -115,17 +85,17 @@ class ModLog:
             content: Optional[str] = None,
             additional_embeds: Optional[List[Embed]] = None,
             additional_embeds_msg: Optional[str] = None,
-            timestamp_override: Optional[datetime.datetime] = None,
+            timestamp_override: Optional[datetime] = None,
             footer: Optional[str] = None,
-    ):
+    ) -> Context:
+        """Generate log embed and send to logging channel."""
         embed = Embed(description=text)
 
         if title and icon_url:
             embed.set_author(name=title, icon_url=icon_url)
 
         embed.colour = colour
-
-        embed.timestamp = timestamp_override or datetime.datetime.utcnow()
+        embed.timestamp = timestamp_override or datetime.utcnow()
 
         if footer:
             embed.set_footer(text=footer)
@@ -150,7 +120,9 @@ class ModLog:
 
         return await self.bot.get_context(log_message)  # Optionally return for use with antispam
 
-    async def on_guild_channel_create(self, channel: GUILD_CHANNEL):
+    @Cog.listener()
+    async def on_guild_channel_create(self, channel: GUILD_CHANNEL) -> None:
+        """Log channel create event to mod log."""
         if channel.guild.id != GuildConstant.id:
             return
 
@@ -174,7 +146,9 @@ class ModLog:
 
         await self.send_log_message(Icons.hash_green, Colour(Colours.soft_green), title, message)
 
-    async def on_guild_channel_delete(self, channel: GUILD_CHANNEL):
+    @Cog.listener()
+    async def on_guild_channel_delete(self, channel: GUILD_CHANNEL) -> None:
+        """Log channel delete event to mod log."""
         if channel.guild.id != GuildConstant.id:
             return
 
@@ -195,7 +169,9 @@ class ModLog:
             title, message
         )
 
-    async def on_guild_channel_update(self, before: GUILD_CHANNEL, after: GuildChannel):
+    @Cog.listener()
+    async def on_guild_channel_update(self, before: GUILD_CHANNEL, after: GuildChannel) -> None:
+        """Log channel update event to mod log."""
         if before.guild.id != GuildConstant.id:
             return
 
@@ -253,7 +229,9 @@ class ModLog:
             "Channel updated", message
         )
 
-    async def on_guild_role_create(self, role: Role):
+    @Cog.listener()
+    async def on_guild_role_create(self, role: Role) -> None:
+        """Log role create event to mod log."""
         if role.guild.id != GuildConstant.id:
             return
 
@@ -262,7 +240,9 @@ class ModLog:
             "Role created", f"`{role.id}`"
         )
 
-    async def on_guild_role_delete(self, role: Role):
+    @Cog.listener()
+    async def on_guild_role_delete(self, role: Role) -> None:
+        """Log role delete event to mod log."""
         if role.guild.id != GuildConstant.id:
             return
 
@@ -271,7 +251,9 @@ class ModLog:
             "Role removed", f"{role.name} (`{role.id}`)"
         )
 
-    async def on_guild_role_update(self, before: Role, after: Role):
+    @Cog.listener()
+    async def on_guild_role_update(self, before: Role, after: Role) -> None:
+        """Log role update event to mod log."""
         if before.guild.id != GuildConstant.id:
             return
 
@@ -322,7 +304,9 @@ class ModLog:
             "Role updated", message
         )
 
-    async def on_guild_update(self, before: Guild, after: Guild):
+    @Cog.listener()
+    async def on_guild_update(self, before: Guild, after: Guild) -> None:
+        """Log guild update event to mod log."""
         if before.id != GuildConstant.id:
             return
 
@@ -371,7 +355,9 @@ class ModLog:
             thumbnail=after.icon_url_as(format="png")
         )
 
-    async def on_member_ban(self, guild: Guild, member: Union[Member, User]):
+    @Cog.listener()
+    async def on_member_ban(self, guild: Guild, member: Union[Member, User]) -> None:
+        """Log ban event to mod log."""
         if guild.id != GuildConstant.id:
             return
 
@@ -386,12 +372,14 @@ class ModLog:
             channel_id=Channels.modlog
         )
 
-    async def on_member_join(self, member: Member):
+    @Cog.listener()
+    async def on_member_join(self, member: Member) -> None:
+        """Log member join event to user log."""
         if member.guild.id != GuildConstant.id:
             return
 
         message = f"{member.name}#{member.discriminator} (`{member.id}`)"
-        now = datetime.datetime.utcnow()
+        now = datetime.utcnow()
         difference = abs(relativedelta(now, member.created_at))
 
         message += "\n\n**Account age:** " + humanize_delta(difference)
@@ -406,7 +394,9 @@ class ModLog:
             channel_id=Channels.userlog
         )
 
-    async def on_member_remove(self, member: Member):
+    @Cog.listener()
+    async def on_member_remove(self, member: Member) -> None:
+        """Log member leave event to user log."""
         if member.guild.id != GuildConstant.id:
             return
 
@@ -421,7 +411,9 @@ class ModLog:
             channel_id=Channels.userlog
         )
 
-    async def on_member_unban(self, guild: Guild, member: User):
+    @Cog.listener()
+    async def on_member_unban(self, guild: Guild, member: User) -> None:
+        """Log member unban event to mod log."""
         if guild.id != GuildConstant.id:
             return
 
@@ -436,7 +428,9 @@ class ModLog:
             channel_id=Channels.modlog
         )
 
-    async def on_member_update(self, before: Member, after: Member):
+    @Cog.listener()
+    async def on_member_update(self, before: Member, after: Member) -> None:
+        """Log member update event to user log."""
         if before.guild.id != GuildConstant.id:
             return
 
@@ -525,7 +519,9 @@ class ModLog:
             channel_id=Channels.userlog
         )
 
-    async def on_message_delete(self, message: Message):
+    @Cog.listener()
+    async def on_message_delete(self, message: Message) -> None:
+        """Log message delete event to message change log."""
         channel = message.channel
         author = message.author
 
@@ -556,18 +552,21 @@ class ModLog:
                 "\n"
             )
 
+        if message.attachments:
+            # Prepend the message metadata with the number of attachments
+            response = f"**Attachments:** {len(message.attachments)}\n" + response
+
         # Shorten the message content if necessary
         content = message.clean_content
         remaining_chars = 2040 - len(response)
 
         if len(content) > remaining_chars:
-            content = content[:remaining_chars] + "..."
+            botlog_url = await self.upload_log(messages=[message], actor_id=message.author.id)
+            ending = f"\n\nMessage truncated, [full message here]({botlog_url})."
+            truncation_point = remaining_chars - len(ending)
+            content = f"{content[:truncation_point]}...{ending}"
 
         response += f"{content}"
-
-        if message.attachments:
-            # Prepend the message metadata with the number of attachments
-            response = f"**Attachments:** {len(message.attachments)}\n" + response
 
         await self.send_log_message(
             Icons.message_delete, Colours.soft_red,
@@ -576,7 +575,9 @@ class ModLog:
             channel_id=Channels.message_log
         )
 
-    async def on_raw_message_delete(self, event: RawMessageDeleteEvent):
+    @Cog.listener()
+    async def on_raw_message_delete(self, event: RawMessageDeleteEvent) -> None:
+        """Log raw message delete event to message change log."""
         if event.guild_id != GuildConstant.id or event.channel_id in GuildConstant.ignored:
             return
 
@@ -615,7 +616,9 @@ class ModLog:
             channel_id=Channels.message_log
         )
 
-    async def on_message_edit(self, before: Message, after: Message):
+    @Cog.listener()
+    async def on_message_edit(self, before: Message, after: Message) -> None:
+        """Log message edit event to message change log."""
         if (
             not before.guild
             or before.guild.id != GuildConstant.id
@@ -688,10 +691,12 @@ class ModLog:
             channel_id=Channels.message_log, timestamp_override=after.edited_at
         )
 
-    async def on_raw_message_edit(self, event: RawMessageUpdateEvent):
+    @Cog.listener()
+    async def on_raw_message_edit(self, event: RawMessageUpdateEvent) -> None:
+        """Log raw message edit event to message change log."""
         try:
             channel = self.bot.get_channel(int(event.data["channel_id"]))
-            message = await channel.get_message(event.message_id)
+            message = await channel.fetch_message(event.message_id)
         except NotFound:  # Was deleted before we got the event
             return
 
@@ -757,6 +762,7 @@ class ModLog:
         )
 
 
-def setup(bot):
+def setup(bot: Bot) -> None:
+    """Mod log cog load."""
     bot.add_cog(ModLog(bot))
     log.info("Cog loaded: ModLog")
