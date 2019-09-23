@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 from discord import Message, NotFound, Object
 from discord.ext.commands import Bot, Cog, Context, command
@@ -96,7 +95,7 @@ class Verification(Cog):
 
     @command(name='subscribe')
     @in_channel(Channels.bot)
-    async def subscribe_command(self, ctx: Context, *_) -> Optional[Message]:  # We don't actually care about the args
+    async def subscribe_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
         """Subscribe to announcement notifications by assigning yourself the role."""
         has_role = False
 
@@ -106,9 +105,8 @@ class Verification(Cog):
                 break
 
         if has_role:
-            return await ctx.send(
-                f"{ctx.author.mention} You're already subscribed!",
-            )
+            await ctx.send(f"{ctx.author.mention} You're already subscribed!")
+            return
 
         log.debug(f"{ctx.author} called !subscribe. Assigning the 'Announcements' role.")
         await ctx.author.add_roles(Object(Roles.announcements), reason="Subscribed to announcements")
@@ -121,7 +119,7 @@ class Verification(Cog):
 
     @command(name='unsubscribe')
     @in_channel(Channels.bot)
-    async def unsubscribe_command(self, ctx: Context, *_) -> Optional[Message]:  # We don't actually care about the args
+    async def unsubscribe_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
         """Unsubscribe from announcement notifications by removing the role from yourself."""
         has_role = False
 
@@ -131,9 +129,8 @@ class Verification(Cog):
                 break
 
         if not has_role:
-            return await ctx.send(
-                f"{ctx.author.mention} You're already unsubscribed!"
-            )
+            await ctx.send(f"{ctx.author.mention} You're already unsubscribed!")
+            return
 
         log.debug(f"{ctx.author} called !unsubscribe. Removing the 'Announcements' role.")
         await ctx.author.remove_roles(Object(Roles.announcements), reason="Unsubscribed from announcements")

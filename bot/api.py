@@ -99,7 +99,6 @@ def loop_is_running() -> bool:
     This helps enable "call this when event loop is running" logic (see: Twisted's `callWhenRunning`),
     which is currently not provided by asyncio.
     """
-
     try:
         asyncio.get_running_loop()
     except RuntimeError:
@@ -138,7 +137,7 @@ class APILoggingHandler(logging.StreamHandler):
     def emit(self, record: logging.LogRecord) -> None:
         """
         Determine if a log record should be shipped to the logging API.
-        
+
         If the asyncio event loop is not yet running, log records will instead be put in a queue
         which will be consumed once the event loop is running.
 
@@ -146,18 +145,8 @@ class APILoggingHandler(logging.StreamHandler):
             1. Do not log anything below DEBUG (only applies to the monkeypatched `TRACE` level)
             2. Ignore log records originating from this logging handler itself to prevent infinite recursion
         """
-        # Two checks are performed here:
         if (
-                # 1. Do not log anything below `DEBUG`. This is only applicable
-                #    for the monkeypatched `TRACE` logging level, which has a
-                #    lower numeric value than `DEBUG`.
                 record.levelno >= logging.DEBUG
-                # 2. Ignore logging messages which are sent by this logging
-                #    handler itself. This is required because if we were to
-                #    not ignore messages emitted by this handler, we would
-                #    infinitely recurse back down into this logging handler,
-                #    making the reactor run like crazy, and eventually OOM
-                #    something. Let's not do that...
                 and not record.__dict__.get('via_handler')
         ):
             payload = {

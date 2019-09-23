@@ -54,8 +54,13 @@ class WatchChannel(metaclass=CogABCMeta):
 
     @abstractmethod
     def __init__(
-        self, bot: Bot, destination: int, webhook_id: int,
-        api_endpoint: str, api_default_params: dict, logger: logging.Logger
+        self,
+        bot: Bot,
+        destination: int,
+        webhook_id: int,
+        api_endpoint: str,
+        api_default_params: dict,
+        logger: logging.Logger
     ) -> None:
         self.bot = bot
 

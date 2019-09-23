@@ -36,12 +36,8 @@ class HelpQueryNotFound(ValueError):
 
     Contains the custom attribute of ``possible_matches``.
 
-    Attributes
-    ----------
-    possible_matches: dict
-        Any commands that were close to matching the Query.
-        The possible matched command names are the keys.
-        The likeness match scores are the values.
+    Instances of this object contain a dictionary of any command(s) that were close to matching the
+    query, where keys are the possible matched command names and values are the likeness match scores.
     """
 
     def __init__(self, arg: str, possible_matches: dict = None):
@@ -53,50 +49,30 @@ class HelpSession:
     """
     An interactive session for bot and command help output.
 
-    Attributes
-    ----------
-    title: str
-        The title of the help message.
-    query: Union[:class:`discord.ext.commands.Bot`,
-                 :class:`discord.ext.commands.Command]
-    description: str
-        The description of the query.
-    pages: list[str]
-        A list of the help content split into manageable pages.
-    message: :class:`discord.Message`
-        The message object that's showing the help contents.
-    destination: :class:`discord.abc.Messageable`
-        Where the help message is to be sent to.
+    Expected attributes include:
+        * title: str
+            The title of the help message.
+        * query: Union[discord.ext.commands.Bot, discord.ext.commands.Command]
+        * description: str
+            The description of the query.
+        * pages: list[str]
+            A list of the help content split into manageable pages.
+        * message: `discord.Message`
+            The message object that's showing the help contents.
+        * destination: `discord.abc.Messageable`
+            Where the help message is to be sent to.
     """
 
     def __init__(
-        self, ctx: Context, *command, cleanup: bool = False, only_can_run: bool = True,
-        show_hidden: bool = False, max_lines: int = 15
+        self,
+        ctx: Context,
+        *command,
+        cleanup: bool = False,
+        only_can_run: bool = True,
+        show_hidden: bool = False,
+        max_lines: int = 15
     ):
-        """
-        Creates an instance of the HelpSession class.
-
-        Parameters
-        ----------
-        ctx: :class:`discord.ext.commands.Context`
-            The context of the invoked help command.
-        *command: str
-            A variable argument of the command being queried.
-        cleanup: Optional[bool]
-            Set to ``True`` to have the message deleted on timeout.
-            If ``False``, it will clear all reactions on timeout.
-            Defaults to ``False``.
-        only_can_run: Optional[bool]
-            Set to ``True`` to hide commands the user can't run.
-            Defaults to ``False``.
-        show_hidden: Optional[bool]
-            Set to ``True`` to include hidden commands.
-            Defaults to ``False``.
-        max_lines: Optional[int]
-            Sets the max number of lines the paginator will add to a
-            single page.
-            Defaults to 20.
-        """
+        """Creates an instance of the HelpSession class."""
         self._ctx = ctx
         self._bot = ctx.bot
         self.title = "Command Help"
@@ -145,18 +121,9 @@ class HelpSession:
         """
         Handles when a query does not match a valid command or cog.
 
-        Will pass on possible close matches along with the ``HelpQueryNotFound`` exception.
-
-        Parameters
-        ----------
-        query: str
-            The full query that was requested.
-
-        Raises
-        ------
-        HelpQueryNotFound
+        Will pass on possible close matches along with the `HelpQueryNotFound` exception.
         """
-        # combine command and cog names
+        # Combine command and cog names
         choices = list(self._bot.all_commands) + list(self._bot.cogs)
 
         result = process.extractBests(query, choices, scorer=fuzz.ratio, score_cutoff=90)
@@ -164,14 +131,7 @@ class HelpSession:
         raise HelpQueryNotFound(f'Query "{query}" not found.', dict(result))
 
     async def timeout(self, seconds: int = 30) -> None:
-        """
-        Waits for a set number of seconds, then stops the help session.
-
-        Parameters
-        ----------
-        seconds: int
-            Number of seconds to wait.
-        """
+        """Waits for a set number of seconds, then stops the help session."""
         await asyncio.sleep(seconds)
         await self.stop()
 
@@ -186,16 +146,7 @@ class HelpSession:
         self._timeout_task = self._bot.loop.create_task(self.timeout())
 
     async def on_reaction_add(self, reaction: Reaction, user: User) -> None:
-        """
-        Event handler for when reactions are added on the help message.
-
-        Parameters
-        ----------
-        reaction: :class:`discord.Reaction`
-            The reaction that was added.
-        user: :class:`discord.User`
-            The user who added the reaction.
-        """
+        """Event handler for when reactions are added on the help message."""
         # ensure it was the relevant session message
         if reaction.message.id != self.message.id:
             return
@@ -252,7 +203,7 @@ class HelpSession:
 
     def _category_key(self, cmd: Command) -> str:
         """
-        Returns a cog name of a given command for use as a key for ``sorted`` and ``groupby``.
+        Returns a cog name of a given command for use as a key for `sorted` and `groupby`.
 
         A zero width space is used as a prefix for results with no cogs to force them last in ordering.
         """
@@ -263,7 +214,7 @@ class HelpSession:
         """
         Returns the command usage signature.
 
-        This is a custom implementation of ``command.signature`` in order to format the command
+        This is a custom implementation of `command.signature` in order to format the command
         signature without aliases.
         """
         results = []
@@ -456,25 +407,15 @@ class HelpSession:
         """
         Create and begin a help session based on the given command context.
 
-        Parameters
-        ----------
-        ctx: :class:`discord.ext.commands.Context`
-        The context of the invoked help command.
-        *command: str
-            A variable argument of the command being queried.
-        cleanup: Optional[bool]
-            Set to ``True`` to have the message deleted on session end.
-            Defaults to ``False``.
-        only_can_run: Optional[bool]
-            Set to ``True`` to hide commands the user can't run.
-            Defaults to ``False``.
-        show_hidden: Optional[bool]
-            Set to ``True`` to include hidden commands.
-            Defaults to ``False``.
-        max_lines: Optional[int]
-            Sets the max number of lines the paginator will add to a
-            single page.
-            Defaults to 20.
+        Available options kwargs:
+            * cleanup: Optional[bool]
+                Set to `True` to have the message deleted on session end. Defaults to `False`.
+            * only_can_run: Optional[bool]
+                Set to `True` to hide commands the user can't run. Defaults to `False`.
+            * show_hidden: Optional[bool]
+                Set to `True` to include hidden commands. Defaults to `False`.
+            * max_lines: Optional[int]
+                Sets the max number of lines the paginator will add to a single page. Defaults to 20.
         """
         session = cls(ctx, *command, **options)
         await session.prepare()
@@ -565,12 +506,12 @@ def setup(bot: Bot) -> None:
 
     This is called automatically on `bot.load_extension` being run.
 
-    Stores the original help command instance on the ``bot._old_help``
-    attribute for later reinstatement, before removing it from the
-    command registry so the new help command can be loaded successfully.
+    Stores the original help command instance on the `bot._old_help` attribute for later
+    reinstatement, before removing it from the command registry so the new help command can be
+    loaded successfully.
 
-    If an exception is raised during the loading of the cog, ``unload``
-    will be called in order to reinstate the original help command.
+    If an exception is raised during the loading of the cog, `unload` will be called in order to
+    reinstate the original help command.
     """
     bot._old_help = bot.get_command('help')
     bot.remove_command('help')
@@ -588,6 +529,6 @@ def teardown(bot: Bot) -> None:
 
     This is called automatically on `bot.unload_extension` being run.
 
-    Calls ``unload`` in order to reinstate the original help command.
+    Calls `unload` in order to reinstate the original help command.
     """
     unload(bot)

@@ -1,5 +1,3 @@
-"""Detects total links exceeding the limit sent by a single user."""
-
 import re
 from typing import Dict, Iterable, List, Optional, Tuple
 
@@ -10,11 +8,9 @@ LINK_RE = re.compile(r"(https?://[^\s]+)")
 
 
 async def apply(
-    last_message: Message,
-    recent_messages: List[Message],
-    config: Dict[str, int]
+    last_message: Message, recent_messages: List[Message], config: Dict[str, int]
 ) -> Optional[Tuple[str, Iterable[Member], Iterable[Message]]]:
-    """Apply link spam detection filter."""
+    """Detects total links exceeding the limit sent by a single user."""
     relevant_messages = tuple(
         msg
         for msg in recent_messages

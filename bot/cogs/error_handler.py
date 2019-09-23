@@ -31,7 +31,26 @@ class ErrorHandler(Cog):
 
     @Cog.listener()
     async def on_command_error(self, ctx: Context, e: CommandError) -> None:
-        """Provide command error handling."""
+        """
+        Provide generic command error handling.
+
+        Error handling is deferred to any local error handler, if present.
+
+        Error handling emits a single error response, prioritized as follows:
+            1. If the name fails to match a command but matches a tag, the tag is invoked
+            2. Send a BadArgument error message to the invoking context & invoke the command's help
+            3. Send a UserInputError error message to the invoking context & invoke the command's help
+            4. Send a NoPrivateMessage error message to the invoking context
+            5. Send a BotMissingPermissions error message to the invoking context
+            6. Log a MissingPermissions error, no message is sent
+            7. Send a InChannelCheckFailure error message to the invoking context
+            8. Log CheckFailure, CommandOnCooldown, and DisabledCommand errors, no message is sent
+            9. For CommandInvokeErrors, response is based on the type of error:
+                * 404: Error message is sent to the invoking context
+                * 400: Log the resopnse JSON, no message is sent
+                * 500 <= status <= 600: Error message is sent to the invoking context
+            10. Otherwise, handling is deferred to `handle_unexpected_error`
+        """
         command = ctx.command
         parent = None
 
@@ -58,7 +77,8 @@ class ErrorHandler(Cog):
 
                 # Return to not raise the exception
                 with contextlib.suppress(ResponseCodeError):
-                    return await ctx.invoke(tags_get_command, tag_name=ctx.invoked_with)
+                    await ctx.invoke(tags_get_command, tag_name=ctx.invoked_with)
+                    return
         elif isinstance(e, BadArgument):
             await ctx.send(f"Bad argument: {e}\n")
             await ctx.invoke(*help_command)

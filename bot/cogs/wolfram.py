@@ -95,7 +95,7 @@ def custom_cooldown(*ignore: List[int]) -> Callable:
 
 
 async def get_pod_pages(ctx: Context, bot: Bot, query: str) -> Optional[List[Tuple]]:
-    """Give feedback that the bot is working."""
+    """Get the Wolfram API pod pages for the provided query."""
     async with ctx.channel.typing():
         url_str = parse.urlencode({
             "input": query,

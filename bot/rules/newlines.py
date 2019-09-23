@@ -1,5 +1,3 @@
-"""Detects total newlines exceeding the set limit sent by a single user."""
-
 import re
 from typing import Dict, Iterable, List, Optional, Tuple
 
@@ -7,11 +5,9 @@ from discord import Member, Message
 
 
 async def apply(
-    last_message: Message,
-    recent_messages: List[Message],
-    config: Dict[str, int]
+    last_message: Message, recent_messages: List[Message], config: Dict[str, int]
 ) -> Optional[Tuple[str, Iterable[Member], Iterable[Message]]]:
-    """Apply newline spam detection filter."""
+    """Detects total newlines exceeding the set limit sent by a single user."""
     relevant_messages = tuple(
         msg
         for msg in recent_messages

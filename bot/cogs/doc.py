@@ -140,11 +140,11 @@ class Doc(commands.Cog):
         Where:
             * `package_name` is the package name to use, appears in the log
             * `base_url` is the root documentation URL for the specified package, used to build
-                         absolute paths that link to specific symbols
+                absolute paths that link to specific symbols
             * `inventory_url` is the absolute URL to the intersphinx inventory, fetched by running
-                              `intersphinx.fetch_inventory` in an executor on the bot's event loop
+                `intersphinx.fetch_inventory` in an executor on the bot's event loop
             * `config` is a `SphinxConfiguration` instance to mock the regular sphinx
-                       project layout, required for use with intersphinx
+                project layout, required for use with intersphinx
         """
         self.base_urls[package_name] = base_url
 

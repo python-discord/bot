@@ -40,14 +40,7 @@ class OffTopicName(Converter):
 
 
 async def update_names(bot: Bot) -> None:
-    """
-    The background updater task that performs a channel name update daily.
-
-    Args:
-        bot (Bot):
-            The running bot instance, used for fetching data from the
-            website via the bot's `api_client`.
-    """
+    """Background updater task that performs the daily channel name update."""
     while True:
         # Since we truncate the compute timedelta to seconds, we add one second to ensure
         # we go past midnight in the `seconds_to_sleep` set below.

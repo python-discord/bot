@@ -1,9 +1,8 @@
 import logging
 import random
 from datetime import datetime
-from typing import Optional
 
-from discord import Colour, Embed, Member, Message
+from discord import Colour, Embed, Member
 from discord.errors import Forbidden
 from discord.ext.commands import Bot, Cog, Context, command
 
@@ -155,7 +154,7 @@ class Superstarify(Cog):
     @with_role(*MODERATION_ROLES)
     async def superstarify(
         self, ctx: Context, member: Member, expiration: ExpirationDate, reason: str = None
-    ) -> Optional[Message]:
+    ) -> None:
         """
         Force a random superstar name (like Taylor Swift) to be the user's nickname for a specified duration.
 
@@ -172,10 +171,11 @@ class Superstarify(Cog):
             }
         )
         if active_superstarifies:
-            return await ctx.send(
+            await ctx.send(
                 ":x: According to my records, this user is already superstarified. "
                 f"See infraction **#{active_superstarifies[0]['id']}**."
             )
+            return
 
         infraction = await post_infraction(
             ctx, member,
@@ -225,7 +225,7 @@ class Superstarify(Cog):
 
     @command(name='unsuperstarify', aliases=('release_nick', 'unstar'))
     @with_role(*MODERATION_ROLES)
-    async def unsuperstarify(self, ctx: Context, member: Member) -> Optional[Message]:
+    async def unsuperstarify(self, ctx: Context, member: Member) -> None:
         """Remove the superstarify entry from our database, allowing the user to change their nickname."""
         log.debug(f"Attempting to unsuperstarify the following user: {member.display_name}")
 
@@ -241,9 +241,8 @@ class Superstarify(Cog):
             }
         )
         if not active_superstarifies:
-            return await ctx.send(
-                ":x: There is no active superstarify infraction for this user."
-            )
+            await ctx.send(":x: There is no active superstarify infraction for this user.")
+            return
 
         [infraction] = active_superstarifies
         await self.bot.api_client.patch(

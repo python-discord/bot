@@ -3,9 +3,8 @@ import re
 import unicodedata
 from email.parser import HeaderParser
 from io import StringIO
-from typing import Optional
 
-from discord import Colour, Embed, Message
+from discord import Colour, Embed
 from discord.ext.commands import Bot, Cog, Context, command
 
 from bot.constants import Channels, STAFF_ROLES
@@ -29,7 +28,8 @@ class Utils(Cog):
         if pep_number.isdigit():
             pep_number = int(pep_number)
         else:
-            return await ctx.invoke(self.bot.get_command("help"), "pep")
+            await ctx.invoke(self.bot.get_command("help"), "pep")
+            return
 
         # Newer PEPs are written in RST instead of txt
         if pep_number > 542:
@@ -85,7 +85,7 @@ class Utils(Cog):
 
     @command()
     @in_channel(Channels.bot, bypass_roles=STAFF_ROLES)
-    async def charinfo(self, ctx: Context, *, characters: str) -> Optional[Message]:
+    async def charinfo(self, ctx: Context, *, characters: str) -> None:
         """Shows you information on up to 25 unicode characters."""
         match = re.match(r"<(a?):(\w+):(\d+)>", characters)
         if match:
@@ -97,12 +97,14 @@ class Utils(Cog):
                 )
             )
             embed.colour = Colour.red()
-            return await ctx.send(embed=embed)
+            await ctx.send(embed=embed)
+            return
 
         if len(characters) > 25:
             embed = Embed(title=f"Too many characters ({len(characters)}/25)")
             embed.colour = Colour.red()
-            return await ctx.send(embed=embed)
+            await ctx.send(embed=embed)
+            return
 
         def get_info(char):
             digit = f"{ord(char):x}"

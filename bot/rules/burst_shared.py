@@ -1,16 +1,12 @@
-"""Detects repeated messages sent by multiple users."""
-
 from typing import Dict, Iterable, List, Optional, Tuple
 
 from discord import Member, Message
 
 
 async def apply(
-    last_message: Message,
-    recent_messages: List[Message],
-    config: Dict[str, int]
+    last_message: Message, recent_messages: List[Message], config: Dict[str, int]
 ) -> Optional[Tuple[str, Iterable[Member], Iterable[Message]]]:
-    """Apply burst repeated message spam filter."""
+    """Detects repeated messages sent by multiple users."""
     total_recent = len(recent_messages)
 
     if total_recent > config['max']:

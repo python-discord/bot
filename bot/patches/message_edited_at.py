@@ -1,6 +1,5 @@
-# flake8: noqa
 """
-# message_edited_at patch
+# message_edited_at patch.
 
 Date: 2019-09-16
 Author: Scragly
@@ -17,7 +16,7 @@ from discord import message, utils
 log = logging.getLogger(__name__)
 
 
-def _handle_edited_timestamp(self, value) -> None:
+def _handle_edited_timestamp(self: message.Message, value: str) -> None:
     """Helper function that takes care of parsing the edited timestamp."""
     self._edited_timestamp = utils.parse_time(value)
 

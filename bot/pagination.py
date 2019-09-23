@@ -27,15 +27,14 @@ class LinePaginator(Paginator):
     """
     A class that aids in paginating code blocks for Discord messages.
 
-    Attributes
-    -----------
-    prefix: :class:`str`
+    Available attributes include:
+    * prefix: `str`
         The prefix inserted to every page. e.g. three backticks.
-    suffix: :class:`str`
+    * suffix: `str`
         The suffix appended at the end of every page. e.g. three backticks.
-    max_size: :class:`int`
+    * max_size: `int`
         The maximum amount of codepoints allowed in a page.
-    max_lines: :class:`int`
+    * max_lines: `int`
         The maximum amount of lines allowed in a page.
     """
 
@@ -87,10 +86,20 @@ class LinePaginator(Paginator):
 
     @classmethod
     async def paginate(
-        cls, lines: Iterable[str], ctx: Context, embed: Embed,
-        prefix: str = "", suffix: str = "", max_lines: Optional[int] = None, max_size: int = 500,
-        empty: bool = True, restrict_to_user: User = None, timeout: int = 300,
-        footer_text: str = None, url: str = None, exception_on_empty_embed: bool = False
+        cls,
+        lines: Iterable[str],
+        ctx: Context,
+        embed: Embed,
+        prefix: str = "",
+        suffix: str = "",
+        max_lines: Optional[int] = None,
+        max_size: int = 500,
+        empty: bool = True,
+        restrict_to_user: User = None,
+        timeout: int = 300,
+        footer_text: str = None,
+        url: str = None,
+        exception_on_empty_embed: bool = False
     ) -> Optional[Message]:
         """
         Use a paginator and set of reactions to provide pagination over a set of lines.
@@ -304,8 +313,12 @@ class ImagePaginator(Paginator):
 
     @classmethod
     async def paginate(
-        cls, pages: List[Tuple[str, str]], ctx: Context, embed: Embed,
-        prefix: str = "", suffix: str = "", timeout: int = 300,
+        cls,
+        pages: List[Tuple[str, str]],
+        ctx: Context, embed: Embed,
+        prefix: str = "",
+        suffix: str = "",
+        timeout: int = 300,
         exception_on_empty_embed: bool = False
     ) -> Optional[Message]:
         """

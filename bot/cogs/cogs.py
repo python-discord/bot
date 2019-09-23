@@ -1,8 +1,7 @@
 import logging
 import os
-from typing import Optional
 
-from discord import Colour, Embed, Message
+from discord import Colour, Embed
 from discord.ext.commands import Bot, Cog, Context, group
 
 from bot.constants import (
@@ -146,7 +145,7 @@ class Cogs(Cog):
 
     @cogs_group.command(name='reload', aliases=('r',))
     @with_role(*MODERATION_ROLES, Roles.core_developer)
-    async def reload_command(self, ctx: Context, cog: str) -> Optional[Message]:
+    async def reload_command(self, ctx: Context, cog: str) -> None:
         """
         Reload an unloaded cog, given the module containing it.
 
@@ -227,7 +226,8 @@ class Cogs(Cog):
                 log.debug(f"{ctx.author} requested we reload all cogs. Here are the results: \n"
                           f"{lines}")
 
-                return await LinePaginator.paginate(lines, ctx, embed, empty=False)
+                await LinePaginator.paginate(lines, ctx, embed, empty=False)
+                return
 
             elif full_cog in self.bot.extensions:
                 try:
