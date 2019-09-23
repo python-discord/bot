@@ -4,7 +4,6 @@ from datetime import datetime
 from ssl import CertificateError
 from typing import Union
 
-import dateparser
 import discord
 from aiohttp import ClientConnectorError
 from dateutil.relativedelta import relativedelta
@@ -179,39 +178,17 @@ class TagContentConverter(Converter):
         return tag_content
 
 
-class ExpirationDate(Converter):
-    """Convert relative expiration date into UTC datetime using dateparser."""
-
-    DATEPARSER_SETTINGS = {
-        'PREFER_DATES_FROM': 'future',
-        'TIMEZONE': 'UTC',
-        'TO_TIMEZONE': 'UTC'
-    }
-
-    async def convert(self, ctx: Context, expiration_string: str) -> datetime:
-        """Convert relative expiration date into UTC datetime."""
-        expiry = dateparser.parse(expiration_string, settings=self.DATEPARSER_SETTINGS)
-        if expiry is None:
-            raise BadArgument(f"Failed to parse expiration date from `{expiration_string}`")
-
-        now = datetime.utcnow()
-        if expiry < now:
-            expiry = now + (now - expiry)
-
-        return expiry
-
-
 class Duration(Converter):
     """Convert duration strings into UTC datetime.datetime objects."""
 
     duration_parser = re.compile(
-        r"((?P<years>\d+?)(years|year|Y|y))?"
-        r"((?P<months>\d+?)(months|month|m))?"
-        r"((?P<weeks>\d+?)(weeks|week|W|w))?"
-        r"((?P<days>\d+?)(days|day|D|d))?"
-        r"((?P<hours>\d+?)(hours|hour|H|h))?"
-        r"((?P<minutes>\d+?)(minutes|minute|M))?"
-        r"((?P<seconds>\d+?)(seconds|second|S|s))?"
+        r"((?P<years>\d+?) ?(years|year|Y|y) ?)?"
+        r"((?P<months>\d+?) ?(months|month|m) ?)?"
+        r"((?P<weeks>\d+?) ?(weeks|week|W|w) ?)?"
+        r"((?P<days>\d+?) ?(days|day|D|d) ?)?"
+        r"((?P<hours>\d+?) ?(hours|hour|H|h) ?)?"
+        r"((?P<minutes>\d+?) ?(minutes|minute|M) ?)?"
+        r"((?P<seconds>\d+?) ?(seconds|second|S|s))?"
     )
 
     async def convert(self, ctx: Context, duration: str) -> datetime:
@@ -227,7 +204,7 @@ class Duration(Converter):
         if not match:
             raise BadArgument(f"`{duration}` is not a valid duration string.")
 
-        duration_dict = {unit: int(amount) for unit, amount in match.groupdict().items() if amount}
+        duration_dict = {unit: int(amount) for unit, amount in match.groupdict(default=0).items()}
         delta = relativedelta(**duration_dict)
         now = datetime.utcnow()
 
