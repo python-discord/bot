@@ -30,10 +30,7 @@ ZALGO_RE = r"[\u0300-\u036F\u0489]"
 
 
 class Filtering(Cog):
-    """
-    Filtering out invites, blacklisting domains,
-    and warning us of certain regular expressions
-    """
+    """Filtering out invites, blacklisting domains, and warning us of certain regular expressions."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
@@ -94,28 +91,29 @@ class Filtering(Cog):
 
     @property
     def mod_log(self) -> ModLog:
+        """Get currently loaded ModLog cog instance."""
         return self.bot.get_cog("ModLog")
 
     @Cog.listener()
-    async def on_message(self, msg: Message):
+    async def on_message(self, msg: Message) -> None:
+        """Invoke message filter for new messages."""
         await self._filter_message(msg)
 
     @Cog.listener()
-    async def on_message_edit(self, before: Message, after: Message):
+    async def on_message_edit(self, before: Message, after: Message) -> None:
+        """
+        Invoke message filter for message edits.
+
+        If there have been multiple edits, calculate the time delta from the previous edit.
+        """
         if not before.edited_at:
             delta = relativedelta(after.edited_at, before.created_at).microseconds
         else:
             delta = relativedelta(after.edited_at, before.edited_at).microseconds
         await self._filter_message(after, delta)
 
-    async def _filter_message(self, msg: Message, delta: Optional[int] = None):
-        """
-        Whenever a message is sent or edited,
-        run it through our filters to see if it
-        violates any of our rules, and then respond
-        accordingly.
-        """
-
+    async def _filter_message(self, msg: Message, delta: Optional[int] = None) -> None:
+        """Filter the input message to see if it violates any of our rules, and then respond accordingly."""
         # Should we filter this message?
         role_whitelisted = False
 
@@ -226,14 +224,10 @@ class Filtering(Cog):
     @staticmethod
     async def _has_watchlist_words(text: str) -> bool:
         """
-        Returns True if the text contains
-        one of the regular expressions from the
-        word_watchlist in our filter config.
+        Returns True if the text contains one of the regular expressions from the word_watchlist in our filter config.
 
-        Only matches words with boundaries before
-        and after the expression.
+        Only matches words with boundaries before and after the expression.
         """
-
         for expression in Filter.word_watchlist:
             if re.search(fr"\b{expression}\b", text, re.IGNORECASE):
                 return True
@@ -243,14 +237,10 @@ class Filtering(Cog):
     @staticmethod
     async def _has_watchlist_tokens(text: str) -> bool:
         """
-        Returns True if the text contains
-        one of the regular expressions from the
-        token_watchlist in our filter config.
+        Returns True if the text contains one of the regular expressions from the token_watchlist in our filter config.
 
-        This will match the expression even if it
-        does not have boundaries before and after
+        This will match the expression even if it does not have boundaries before and after.
         """
-
         for expression in Filter.token_watchlist:
             if re.search(fr"{expression}", text, re.IGNORECASE):
 
@@ -262,11 +252,7 @@ class Filtering(Cog):
 
     @staticmethod
     async def _has_urls(text: str) -> bool:
-        """
-        Returns True if the text contains one of
-        the blacklisted URLs from the config file.
-        """
-
+        """Returns True if the text contains one of the blacklisted URLs from the config file."""
         if not re.search(URL_RE, text, re.IGNORECASE):
             return False
 
@@ -285,7 +271,6 @@ class Filtering(Cog):
 
         Zalgo range is \u0300 – \u036F and \u0489.
         """
-
         return bool(re.search(ZALGO_RE, text))
 
     async def _has_invites(self, text: str) -> Union[dict, bool]:
@@ -297,7 +282,6 @@ class Filtering(Cog):
 
         Attempts to catch some of common ways to try to cheat the system.
         """
-
         # Remove backslashes to prevent escape character aroundfuckery like
         # discord\.gg/gdudes-pony-farm
         text = text.replace("\\", "")
@@ -338,30 +322,27 @@ class Filtering(Cog):
         return invite_data if invite_data else False
 
     @staticmethod
-    async def _has_rich_embed(msg: Message):
-        """
-        Returns True if any of the embeds in the message are of type 'rich', but are not twitter
-        embeds. Returns False otherwise.
-        """
+    async def _has_rich_embed(msg: Message) -> bool:
+        """Returns True if any of the embeds in the message are of type 'rich', but are not twitter embeds."""
         if msg.embeds:
             for embed in msg.embeds:
                 if embed.type == "rich" and (not embed.url or "twitter.com" not in embed.url):
                     return True
         return False
 
-    async def notify_member(self, filtered_member: Member, reason: str, channel: TextChannel):
+    async def notify_member(self, filtered_member: Member, reason: str, channel: TextChannel) -> None:
         """
-        Notify filtered_member about a moderation action with the reason str
+        Notify filtered_member about a moderation action with the reason str.
 
         First attempts to DM the user, fall back to in-channel notification if user has DMs disabled
         """
-
         try:
             await filtered_member.send(reason)
         except discord.errors.Forbidden:
             await channel.send(f"{filtered_member.mention} {reason}")
 
 
-def setup(bot: Bot):
+def setup(bot: Bot) -> None:
+    """Filtering cog load."""
     bot.add_cog(Filtering(bot))
     log.info("Cog loaded: Filtering")

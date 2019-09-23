@@ -1,4 +1,4 @@
-"""Subpackage that contains patches for discord.py"""
+"""Subpackage that contains patches for discord.py."""
 from . import message_edited_at
 
 __all__ = [

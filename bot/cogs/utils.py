@@ -5,7 +5,7 @@ from email.parser import HeaderParser
 from io import StringIO
 
 from discord import Colour, Embed
-from discord.ext.commands import AutoShardedBot, Cog, Context, command
+from discord.ext.commands import Bot, Cog, Context, command
 
 from bot.constants import Channels, STAFF_ROLES
 from bot.decorators import in_channel
@@ -14,26 +14,22 @@ log = logging.getLogger(__name__)
 
 
 class Utils(Cog):
-    """
-    A selection of utilities which don't have a clear category.
-    """
+    """A selection of utilities which don't have a clear category."""
 
-    def __init__(self, bot: AutoShardedBot):
+    def __init__(self, bot: Bot):
         self.bot = bot
 
         self.base_pep_url = "http://www.python.org/dev/peps/pep-"
         self.base_github_pep_url = "https://raw.githubusercontent.com/python/peps/master/pep-"
 
     @command(name='pep', aliases=('get_pep', 'p'))
-    async def pep_command(self, ctx: Context, pep_number: str):
-        """
-        Fetches information about a PEP and sends it to the channel.
-        """
-
+    async def pep_command(self, ctx: Context, pep_number: str) -> None:
+        """Fetches information about a PEP and sends it to the channel."""
         if pep_number.isdigit():
             pep_number = int(pep_number)
         else:
-            return await ctx.invoke(self.bot.get_command("help"), "pep")
+            await ctx.invoke(self.bot.get_command("help"), "pep")
+            return
 
         # Newer PEPs are written in RST instead of txt
         if pep_number > 542:
@@ -89,11 +85,8 @@ class Utils(Cog):
 
     @command()
     @in_channel(Channels.bot, bypass_roles=STAFF_ROLES)
-    async def charinfo(self, ctx, *, characters: str):
-        """
-        Shows you information on up to 25 unicode characters.
-        """
-
+    async def charinfo(self, ctx: Context, *, characters: str) -> None:
+        """Shows you information on up to 25 unicode characters."""
         match = re.match(r"<(a?):(\w+):(\d+)>", characters)
         if match:
             embed = Embed(
@@ -104,12 +97,14 @@ class Utils(Cog):
                 )
             )
             embed.colour = Colour.red()
-            return await ctx.send(embed=embed)
+            await ctx.send(embed=embed)
+            return
 
         if len(characters) > 25:
             embed = Embed(title=f"Too many characters ({len(characters)}/25)")
             embed.colour = Colour.red()
-            return await ctx.send(embed=embed)
+            await ctx.send(embed=embed)
+            return
 
         def get_info(char):
             digit = f"{ord(char):x}"
@@ -133,6 +128,7 @@ class Utils(Cog):
         await ctx.send(embed=embed)
 
 
-def setup(bot):
+def setup(bot: Bot) -> None:
+    """Utils cog load."""
     bot.add_cog(Utils(bot))
     log.info("Cog loaded: Utils")

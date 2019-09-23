@@ -4,9 +4,10 @@ import random
 import textwrap
 from datetime import datetime
 from operator import itemgetter
+from typing import Optional
 
 from dateutil.relativedelta import relativedelta
-from discord import Colour, Embed
+from discord import Colour, Embed, Message
 from discord.ext.commands import Bot, Cog, Context, group
 
 from bot.constants import Channels, Icons, NEGATIVE_REPLIES, POSITIVE_REPLIES, STAFF_ROLES
@@ -23,14 +24,15 @@ MAXIMUM_REMINDERS = 5
 
 
 class Reminders(Scheduler, Cog):
+    """Provide in-channel reminder functionality."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
         super().__init__()
 
     @Cog.listener()
-    async def on_ready(self):
-        # Get all the current reminders for re-scheduling
+    async def on_ready(self) -> None:
+        """Get all current reminders from the API and reschedule them."""
         response = await self.bot.api_client.get(
             'bot/reminders',
             params={'active': 'true'}
@@ -51,25 +53,16 @@ class Reminders(Scheduler, Cog):
                 self.schedule_task(loop, reminder["id"], reminder)
 
     @staticmethod
-    async def _send_confirmation(ctx: Context, on_success: str):
-        """
-        Send an embed confirming the change was made successfully.
-        """
-
+    async def _send_confirmation(ctx: Context, on_success: str) -> None:
+        """Send an embed confirming the reminder change was made successfully."""
         embed = Embed()
         embed.colour = Colour.green()
         embed.title = random.choice(POSITIVE_REPLIES)
         embed.description = on_success
         await ctx.send(embed=embed)
 
-    async def _scheduled_task(self, reminder: dict):
-        """
-        A coroutine which sends the reminder once the time is reached.
-
-        :param reminder: the data of the reminder.
-        :return:
-        """
-
+    async def _scheduled_task(self, reminder: dict) -> None:
+        """A coroutine which sends the reminder once the time is reached, and cancels the running task."""
         reminder_id = reminder["id"]
         reminder_datetime = datetime.fromisoformat(reminder['expiration'][:-1])
 
@@ -83,38 +76,22 @@ class Reminders(Scheduler, Cog):
         # Now we can begone with it from our schedule list.
         self.cancel_task(reminder_id)
 
-    async def _delete_reminder(self, reminder_id: str):
-        """
-        Delete a reminder from the database, given its ID.
-
-        :param reminder_id: The ID of the reminder.
-        """
-
+    async def _delete_reminder(self, reminder_id: str) -> None:
+        """Delete a reminder from the database, given its ID, and cancel the running task."""
         await self.bot.api_client.delete('bot/reminders/' + str(reminder_id))
 
         # Now we can remove it from the schedule list
         self.cancel_task(reminder_id)
 
-    async def _reschedule_reminder(self, reminder):
-        """
-        Reschedule a reminder object.
-
-        :param reminder: The reminder to be rescheduled.
-        """
-
+    async def _reschedule_reminder(self, reminder: dict) -> None:
+        """Reschedule a reminder object."""
         loop = asyncio.get_event_loop()
 
         self.cancel_task(reminder["id"])
         self.schedule_task(loop, reminder["id"], reminder)
 
-    async def send_reminder(self, reminder, late: relativedelta = None):
-        """
-        Send the reminder.
-
-        :param reminder: The data about the reminder.
-        :param late: How late the reminder is (if at all)
-        """
-
+    async def send_reminder(self, reminder: dict, late: relativedelta = None) -> None:
+        """Send the reminder."""
         channel = self.bot.get_channel(reminder["channel_id"])
         user = self.bot.get_user(reminder["author"])
 
@@ -141,19 +118,17 @@ class Reminders(Scheduler, Cog):
         await self._delete_reminder(reminder["id"])
 
     @group(name="remind", aliases=("reminder", "reminders"), invoke_without_command=True)
-    async def remind_group(self, ctx: Context, expiration: ExpirationDate, *, content: str):
-        """
-        Commands for managing your reminders.
-        """
-
+    async def remind_group(self, ctx: Context, expiration: ExpirationDate, *, content: str) -> None:
+        """Commands for managing your reminders."""
         await ctx.invoke(self.new_reminder, expiration=expiration, content=content)
 
     @remind_group.command(name="new", aliases=("add", "create"))
-    async def new_reminder(self, ctx: Context, expiration: ExpirationDate, *, content: str):
+    async def new_reminder(self, ctx: Context, expiration: ExpirationDate, *, content: str) -> Optional[Message]:
         """
         Set yourself a simple reminder.
-        """
 
+        Expiration is parsed per: http://strftime.org/
+        """
         embed = Embed()
 
         # If the user is not staff, we need to verify whether or not to make a reminder at all.
@@ -204,11 +179,8 @@ class Reminders(Scheduler, Cog):
         self.schedule_task(loop, reminder["id"], reminder)
 
     @remind_group.command(name="list")
-    async def list_reminders(self, ctx: Context):
-        """
-        View a paginated embed of all reminders for your user.
-        """
-
+    async def list_reminders(self, ctx: Context) -> Optional[Message]:
+        """View a paginated embed of all reminders for your user."""
         # Get all the user's reminders from the database.
         data = await self.bot.api_client.get(
             'bot/reminders',
@@ -260,19 +232,17 @@ class Reminders(Scheduler, Cog):
         )
 
     @remind_group.group(name="edit", aliases=("change", "modify"), invoke_without_command=True)
-    async def edit_reminder_group(self, ctx: Context):
-        """
-        Commands for modifying your current reminders.
-        """
-
+    async def edit_reminder_group(self, ctx: Context) -> None:
+        """Commands for modifying your current reminders."""
         await ctx.invoke(self.bot.get_command("help"), "reminders", "edit")
 
     @edit_reminder_group.command(name="duration", aliases=("time",))
-    async def edit_reminder_duration(self, ctx: Context, id_: int, expiration: ExpirationDate):
+    async def edit_reminder_duration(self, ctx: Context, id_: int, expiration: ExpirationDate) -> None:
         """
-        Edit one of your reminders' expiration.
-        """
+         Edit one of your reminder's expiration.
 
+        Expiration is parsed per: http://strftime.org/
+        """
         # Send the request to update the reminder in the database
         reminder = await self.bot.api_client.patch(
             'bot/reminders/' + str(id_),
@@ -287,11 +257,8 @@ class Reminders(Scheduler, Cog):
         await self._reschedule_reminder(reminder)
 
     @edit_reminder_group.command(name="content", aliases=("reason",))
-    async def edit_reminder_content(self, ctx: Context, id_: int, *, content: str):
-        """
-        Edit one of your reminders' content.
-        """
-
+    async def edit_reminder_content(self, ctx: Context, id_: int, *, content: str) -> None:
+        """Edit one of your reminder's content."""
         # Send the request to update the reminder in the database
         reminder = await self.bot.api_client.patch(
             'bot/reminders/' + str(id_),
@@ -305,17 +272,15 @@ class Reminders(Scheduler, Cog):
         await self._reschedule_reminder(reminder)
 
     @remind_group.command("delete", aliases=("remove",))
-    async def delete_reminder(self, ctx: Context, id_: int):
-        """
-        Delete one of your active reminders.
-        """
-
+    async def delete_reminder(self, ctx: Context, id_: int) -> None:
+        """Delete one of your active reminders."""
         await self._delete_reminder(id_)
         await self._send_confirmation(
             ctx, on_success="That reminder has been deleted successfully!"
         )
 
 
-def setup(bot: Bot):
+def setup(bot: Bot) -> None:
+    """Reminders cog load."""
     bot.add_cog(Reminders(bot))
     log.info("Cog loaded: Reminders")

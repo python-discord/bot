@@ -11,22 +11,16 @@ log = logging.getLogger(__name__)
 
 
 class CodeJams(commands.Cog):
-    """
-    Manages the code-jam related parts of our server
-    """
+    """Manages the code-jam related parts of our server."""
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
     @commands.command()
     @with_role(Roles.admin)
-    async def createteam(
-        self, ctx: commands.Context,
-        team_name: str, members: commands.Greedy[Member]
-    ):
+    async def createteam(self, ctx: commands.Context, team_name: str, members: commands.Greedy[Member]) -> None:
         """
-        Create a team channel (both voice and text) in the Code Jams category, assign roles
-        and then add overwrites for the team.
+        Create team channels (voice and text) in the Code Jams category, assign roles, and add overwrites for the team.
 
         The first user passed will always be the team leader.
         """
@@ -114,6 +108,7 @@ class CodeJams(commands.Cog):
         )
 
 
-def setup(bot):
+def setup(bot: commands.Bot) -> None:
+    """Code Jams cog load."""
     bot.add_cog(CodeJams(bot))
     log.info("Cog loaded: CodeJams")
