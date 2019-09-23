@@ -50,6 +50,7 @@ jobs:
   - job: build
     displayName: 'Build & Push Container'
     dependsOn: 'test'
+    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
 
     steps:
       - task: Docker@2
