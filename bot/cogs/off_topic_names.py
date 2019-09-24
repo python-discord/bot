@@ -55,6 +55,7 @@ async def update_names(bot: Bot) -> None:
             )
         except bot.api.ResponseCodeError as e:
             log.error(f"Failed to get new off topic channel names: code {e.response.status}")
+            continue
         channel_0, channel_1, channel_2 = (bot.get_channel(channel_id) for channel_id in CHANNELS)
 
         await channel_0.edit(name=f'ot0-{channel_0_name}')
