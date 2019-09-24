@@ -9,6 +9,7 @@ from discord.ext.commands import BadArgument, Bot, Cog, Context, Converter, grou
 from bot.constants import Channels, MODERATION_ROLES
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
+from bot.api import ResponseCodeError
 
 
 CHANNELS = (Channels.off_topic_0, Channels.off_topic_1, Channels.off_topic_2)
@@ -53,7 +54,7 @@ async def update_names(bot: Bot) -> None:
             channel_0_name, channel_1_name, channel_2_name = await bot.api_client.get(
                 'bot/off-topic-channel-names', params={'random_items': 3}
             )
-        except bot.api.ResponseCodeError as e:
+        except ResponseCodeError as e:
             log.error(f"Failed to get new off topic channel names: code {e.response.status}")
             continue
         channel_0, channel_1, channel_2 = (bot.get_channel(channel_id) for channel_id in CHANNELS)
