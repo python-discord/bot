@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from discord import Colour, Embed
 from discord.ext.commands import BadArgument, Bot, Cog, Context, Converter, group
 
+from bot.api import ResponseCodeError
 from bot.constants import Channels, MODERATION_ROLES
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
@@ -49,9 +50,13 @@ async def update_names(bot: Bot) -> None:
         seconds_to_sleep = (next_midnight - datetime.utcnow()).seconds + 1
         await asyncio.sleep(seconds_to_sleep)
 
-        channel_0_name, channel_1_name, channel_2_name = await bot.api_client.get(
-            'bot/off-topic-channel-names', params={'random_items': 3}
-        )
+        try:
+            channel_0_name, channel_1_name, channel_2_name = await bot.api_client.get(
+                'bot/off-topic-channel-names', params={'random_items': 3}
+            )
+        except ResponseCodeError as e:
+            log.error(f"Failed to get new off topic channel names: code {e.response.status}")
+            continue
         channel_0, channel_1, channel_2 = (bot.get_channel(channel_id) for channel_id in CHANNELS)
 
         await channel_0.edit(name=f'ot0-{channel_0_name}')
