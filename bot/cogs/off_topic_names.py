@@ -6,10 +6,10 @@ from datetime import datetime, timedelta
 from discord import Colour, Embed
 from discord.ext.commands import BadArgument, Bot, Cog, Context, Converter, group
 
+from bot.api import ResponseCodeError
 from bot.constants import Channels, MODERATION_ROLES
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
-from bot.api import ResponseCodeError
 
 
 CHANNELS = (Channels.off_topic_0, Channels.off_topic_1, Channels.off_topic_2)
