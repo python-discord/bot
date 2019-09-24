@@ -74,13 +74,12 @@ class Cogs(Cog):
                 try:
                     self.bot.load_extension(full_cog)
                 except ImportError:
-                    log.error(f"{ctx.author} requested we load the '{cog}' cog, "
-                              f"but the cog module {full_cog} could not be found!")
+                    log.exception(f"{ctx.author} requested we load the '{cog}' cog, "
+                                  f"but the cog module {full_cog} could not be found!")
                     embed.description = f"Invalid cog: {cog}\n\nCould not find cog module {full_cog}"
                 except Exception as e:
-                    log.error(f"{ctx.author} requested we load the '{cog}' cog, "
-                              "but the loading failed with the following error: \n"
-                              f"**{e.__class__.__name__}: {e}**")
+                    log.exception(f"{ctx.author} requested we load the '{cog}' cog, "
+                                  "but the loading failed")
                     embed.description = f"Failed to load cog: {cog}\n\n{e.__class__.__name__}: {e}"
                 else:
                     log.debug(f"{ctx.author} requested we load the '{cog}' cog. Cog loaded!")
@@ -129,9 +128,8 @@ class Cogs(Cog):
                 try:
                     self.bot.unload_extension(full_cog)
                 except Exception as e:
-                    log.error(f"{ctx.author} requested we unload the '{cog}' cog, "
-                              "but the unloading failed with the following error: \n"
-                              f"{e}")
+                    log.exception(f"{ctx.author} requested we unload the '{cog}' cog, "
+                                  "but the unloading failed")
                     embed.description = f"Failed to unload cog: {cog}\n\n```{e}```"
                 else:
                     log.debug(f"{ctx.author} requested we unload the '{cog}' cog. Cog unloaded!")
@@ -234,9 +232,8 @@ class Cogs(Cog):
                     self.bot.unload_extension(full_cog)
                     self.bot.load_extension(full_cog)
                 except Exception as e:
-                    log.error(f"{ctx.author} requested we reload the '{cog}' cog, "
-                              "but the unloading failed with the following error: \n"
-                              f"{e}")
+                    log.exception(f"{ctx.author} requested we reload the '{cog}' cog, "
+                                  "but the unloading failed")
                     embed.description = f"Failed to reload cog: {cog}\n\n```{e}```"
                 else:
                     log.debug(f"{ctx.author} requested we reload the '{cog}' cog. Cog reloaded!")

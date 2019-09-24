@@ -146,7 +146,7 @@ class Reminders(Scheduler, Cog):
             active_reminders = await self.bot.api_client.get(
                 'bot/reminders',
                 params={
-                    'user__id': str(ctx.author.id)
+                    'author__id': str(ctx.author.id)
                 }
             )
 
@@ -184,7 +184,7 @@ class Reminders(Scheduler, Cog):
         # Get all the user's reminders from the database.
         data = await self.bot.api_client.get(
             'bot/reminders',
-            params={'user__id': str(ctx.author.id)}
+            params={'author__id': str(ctx.author.id)}
         )
 
         now = datetime.utcnow()
