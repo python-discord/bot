@@ -11,7 +11,7 @@ from discord import Colour, Embed, Message
 from discord.ext.commands import Bot, Cog, Context, group
 
 from bot.constants import Channels, Icons, NEGATIVE_REPLIES, POSITIVE_REPLIES, STAFF_ROLES
-from bot.converters import ExpirationDate
+from bot.converters import Duration
 from bot.pagination import LinePaginator
 from bot.utils.checks import without_role_check
 from bot.utils.scheduling import Scheduler
@@ -118,12 +118,12 @@ class Reminders(Scheduler, Cog):
         await self._delete_reminder(reminder["id"])
 
     @group(name="remind", aliases=("reminder", "reminders"), invoke_without_command=True)
-    async def remind_group(self, ctx: Context, expiration: ExpirationDate, *, content: str) -> None:
+    async def remind_group(self, ctx: Context, expiration: Duration, *, content: str) -> None:
         """Commands for managing your reminders."""
         await ctx.invoke(self.new_reminder, expiration=expiration, content=content)
 
     @remind_group.command(name="new", aliases=("add", "create"))
-    async def new_reminder(self, ctx: Context, expiration: ExpirationDate, *, content: str) -> Optional[Message]:
+    async def new_reminder(self, ctx: Context, expiration: Duration, *, content: str) -> Optional[Message]:
         """
         Set yourself a simple reminder.
 
@@ -146,7 +146,7 @@ class Reminders(Scheduler, Cog):
             active_reminders = await self.bot.api_client.get(
                 'bot/reminders',
                 params={
-                    'user__id': str(ctx.author.id)
+                    'author__id': str(ctx.author.id)
                 }
             )
 
@@ -184,7 +184,7 @@ class Reminders(Scheduler, Cog):
         # Get all the user's reminders from the database.
         data = await self.bot.api_client.get(
             'bot/reminders',
-            params={'user__id': str(ctx.author.id)}
+            params={'author__id': str(ctx.author.id)}
         )
 
         now = datetime.utcnow()
@@ -237,7 +237,7 @@ class Reminders(Scheduler, Cog):
         await ctx.invoke(self.bot.get_command("help"), "reminders", "edit")
 
     @edit_reminder_group.command(name="duration", aliases=("time",))
-    async def edit_reminder_duration(self, ctx: Context, id_: int, expiration: ExpirationDate) -> None:
+    async def edit_reminder_duration(self, ctx: Context, id_: int, expiration: Duration) -> None:
         """
          Edit one of your reminder's expiration.
 
