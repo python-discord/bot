@@ -10,7 +10,7 @@ from bot.cogs.moderation import Moderation
 from bot.cogs.modlog import ModLog
 from bot.cogs.superstarify.stars import get_nick
 from bot.constants import Icons, MODERATION_ROLES, POSITIVE_REPLIES
-from bot.converters import ExpirationDate
+from bot.converters import Duration
 from bot.decorators import with_role
 from bot.utils.moderation import post_infraction
 
@@ -153,7 +153,7 @@ class Superstarify(Cog):
     @command(name='superstarify', aliases=('force_nick', 'star'))
     @with_role(*MODERATION_ROLES)
     async def superstarify(
-        self, ctx: Context, member: Member, expiration: ExpirationDate, reason: str = None
+        self, ctx: Context, member: Member, expiration: Duration, reason: str = None
     ) -> None:
         """
         Force a random superstar name (like Taylor Swift) to be the user's nickname for a specified duration.

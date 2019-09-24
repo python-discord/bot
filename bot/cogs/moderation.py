@@ -14,7 +14,7 @@ from discord.ext.commands import (
 from bot import constants
 from bot.cogs.modlog import ModLog
 from bot.constants import Colours, Event, Icons, MODERATION_ROLES
-from bot.converters import ExpirationDate, InfractionSearchQuery
+from bot.converters import Duration, InfractionSearchQuery
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
 from bot.utils.moderation import already_has_active_infraction, post_infraction
@@ -279,7 +279,7 @@ class Moderation(Scheduler, Cog):
 
     @with_role(*MODERATION_ROLES)
     @command()
-    async def tempmute(self, ctx: Context, user: Member, duration: ExpirationDate, *, reason: str = None) -> None:
+    async def tempmute(self, ctx: Context, user: Member, duration: Duration, *, reason: str = None) -> None:
         """
         Create a temporary mute infraction for a user with the provided expiration and reason.
 
@@ -345,7 +345,7 @@ class Moderation(Scheduler, Cog):
 
     @with_role(*MODERATION_ROLES)
     @command()
-    async def tempban(self, ctx: Context, user: UserTypes, duration: ExpirationDate, *, reason: str = None) -> None:
+    async def tempban(self, ctx: Context, user: UserTypes, duration: Duration, *, reason: str = None) -> None:
         """
         Create a temporary ban infraction for a user with the provided expiration and reason.
 
@@ -600,7 +600,7 @@ class Moderation(Scheduler, Cog):
     @with_role(*MODERATION_ROLES)
     @command(hidden=True, aliases=["shadowtempmute, stempmute"])
     async def shadow_tempmute(
-        self, ctx: Context, user: Member, duration: ExpirationDate, *, reason: str = None
+        self, ctx: Context, user: Member, duration: Duration, *, reason: str = None
     ) -> None:
         """
         Create a temporary mute infraction for a user with the provided reason.
@@ -653,7 +653,7 @@ class Moderation(Scheduler, Cog):
     @with_role(*MODERATION_ROLES)
     @command(hidden=True, aliases=["shadowtempban, stempban"])
     async def shadow_tempban(
-        self, ctx: Context, user: UserTypes, duration: ExpirationDate, *, reason: str = None
+        self, ctx: Context, user: UserTypes, duration: Duration, *, reason: str = None
     ) -> None:
         """
         Create a temporary ban infraction for a user with the provided reason.
@@ -884,7 +884,7 @@ class Moderation(Scheduler, Cog):
     @infraction_edit_group.command(name="duration")
     async def edit_duration(
             self, ctx: Context,
-            infraction_id: int, expires_at: Union[ExpirationDate, str]
+            infraction_id: int, expires_at: Union[Duration, str]
     ) -> None:
         """
         Sets the duration of the given infraction, relative to the time of updating.
