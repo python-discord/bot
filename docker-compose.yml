@@ -16,7 +16,9 @@ services:
 
   web:
     image: pythondiscord/site:latest
-    command: "./manage.py runserver 0.0.0.0:8000"
+    command: >
+      bash -c "echo \"from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.create_superuser('admin', 'admin', 'admin') if not User.objects.filter(username='admin').exists() else print('Admin user already exists')\" | python manage.py shell
+      && ./manage.py runserver 0.0.0.0:8000"
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
