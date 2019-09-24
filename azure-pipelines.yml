@@ -21,7 +21,7 @@ jobs:
           versionSpec: '3.7.x'
           addToPath: true
 
-      - script: sudo pip install pipenv
+      - script: pip install pipenv
         displayName: 'Install pipenv'
 
       - script: pipenv install --dev --deploy --system
