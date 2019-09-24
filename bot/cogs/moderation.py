@@ -430,7 +430,7 @@ class Moderation(Scheduler, Cog):
 
         This does not send the user a notification
         """
-        infraction = await post_infraction(ctx, user, type="warning", reason=reason, hidden=True)
+        infraction = await post_infraction(ctx, user, type="note", reason=reason, hidden=True)
         if infraction is None:
             return
 
