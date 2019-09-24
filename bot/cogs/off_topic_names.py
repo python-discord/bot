@@ -42,13 +42,15 @@ class OffTopicName(Converter):
 
 async def update_names(bot: Bot) -> None:
     """Background updater task that performs the daily channel name update."""
+    skip_sleep = False
     while True:
         # Since we truncate the compute timedelta to seconds, we add one second to ensure
         # we go past midnight in the `seconds_to_sleep` set below.
         today_at_midnight = datetime.utcnow().replace(microsecond=0, second=0, minute=0, hour=0)
         next_midnight = today_at_midnight + timedelta(days=1)
         seconds_to_sleep = (next_midnight - datetime.utcnow()).seconds + 1
-        await asyncio.sleep(seconds_to_sleep)
+        if skip_sleep is False:
+            await asyncio.sleep(seconds_to_sleep)
 
         try:
             channel_0_name, channel_1_name, channel_2_name = await bot.api_client.get(
@@ -56,6 +58,8 @@ async def update_names(bot: Bot) -> None:
             )
         except ResponseCodeError as e:
             log.error(f"Failed to get new off topic channel names: code {e.response.status}")
+            skip_sleep = True
+            await asyncio.sleep(1800)
             continue
         channel_0, channel_1, channel_2 = (bot.get_channel(channel_id) for channel_id in CHANNELS)
 
@@ -66,6 +70,7 @@ async def update_names(bot: Bot) -> None:
             "Updated off-topic channel names to"
             f" {channel_0_name}, {channel_1_name} and {channel_2_name}"
         )
+        skip_sleep = False
 
 
 class OffTopicNames(Cog):
