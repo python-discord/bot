@@ -223,62 +223,11 @@ class Moderation(Scheduler, Cog):
             footer=f"ID {infraction['id']}"
         )
 
-    @with_role(*MODERATION_ROLES)
-    @command()
-    async def mute(self, ctx: Context, user: Member, *, reason: str = None) -> None:
-        """Create a permanent mute infraction for a user with the provided reason."""
-        if await already_has_active_infraction(ctx=ctx, user=user, type="mute"):
-            return
-
-        infraction = await post_infraction(ctx, user, type="mute", reason=reason)
-        if infraction is None:
-            return
-
-        self.mod_log.ignore(Event.member_update, user.id)
-        await user.add_roles(self._muted_role, reason=reason)
-
-        notified = await self.notify_infraction(
-            user=user,
-            infr_type="Mute",
-            expires_at="Permanent",
-            reason=reason
-        )
-
-        dm_result = ":incoming_envelope: " if notified else ""
-        action = f"{dm_result}:ok_hand: permanently muted {user.mention}"
-
-        if reason is None:
-            await ctx.send(f"{action}.")
-        else:
-            await ctx.send(f"{action} ({reason}).")
-
-        if notified:
-            dm_status = "Sent"
-            log_content = None
-        else:
-            dm_status = "**Failed**"
-            log_content = ctx.author.mention
-
-        await self.mod_log.send_log_message(
-            icon_url=Icons.user_mute,
-            colour=Colour(Colours.soft_red),
-            title="Member permanently muted",
-            thumbnail=user.avatar_url_as(static_format="png"),
-            text=textwrap.dedent(f"""
-                Member: {user.mention} (`{user.id}`)
-                Actor: {ctx.message.author}
-                DM: {dm_status}
-                Reason: {reason}
-            """),
-            content=log_content,
-            footer=f"ID {infraction['id']}"
-        )
-
     # endregion
     # region: Temporary infractions
 
     @with_role(*MODERATION_ROLES)
-    @command()
+    @command(aliases=('mute',))
     async def tempmute(self, ctx: Context, user: Member, duration: Duration, *, reason: str = None) -> None:
         """
         Create a temporary mute infraction for a user with the provided expiration and reason.
@@ -558,47 +507,11 @@ class Moderation(Scheduler, Cog):
             footer=f"ID {infraction['id']}"
         )
 
-    @with_role(*MODERATION_ROLES)
-    @command(hidden=True, aliases=['shadowmute', 'smute'])
-    async def shadow_mute(self, ctx: Context, user: Member, *, reason: str = None) -> None:
-        """
-        Create a permanent mute infraction for a user with the provided reason.
-
-        This does not send the user a notification.
-        """
-        if await already_has_active_infraction(ctx=ctx, user=user, type="mute"):
-            return
-
-        infraction = await post_infraction(ctx, user, type="mute", reason=reason, hidden=True)
-        if infraction is None:
-            return
-
-        self.mod_log.ignore(Event.member_update, user.id)
-        await user.add_roles(self._muted_role, reason=reason)
-
-        if reason is None:
-            await ctx.send(f":ok_hand: permanently muted {user.mention}.")
-        else:
-            await ctx.send(f":ok_hand: permanently muted {user.mention} ({reason}).")
-
-        await self.mod_log.send_log_message(
-            icon_url=Icons.user_mute,
-            colour=Colour(Colours.soft_red),
-            title="Member permanently muted",
-            thumbnail=user.avatar_url_as(static_format="png"),
-            text=textwrap.dedent(f"""
-                Member: {user.mention} (`{user.id}`)
-                Actor: {ctx.message.author}
-                Reason: {reason}
-            """),
-            footer=f"ID {infraction['id']}"
-        )
-
     # endregion
     # region: Temporary shadow infractions
 
     @with_role(*MODERATION_ROLES)
-    @command(hidden=True, aliases=["shadowtempmute, stempmute"])
+    @command(hidden=True, aliases=["shadowtempmute, stempmute", "shadowmute", "smute"])
     async def shadow_tempmute(
         self, ctx: Context, user: Member, duration: Duration, *, reason: str = None
     ) -> None:
