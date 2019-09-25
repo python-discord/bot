@@ -79,8 +79,8 @@ class Free(Cog):
             # Sort channels in descending order by seconds
             # Get position in list, inactivity, and channel object
             # For each channel, add to embed.description
-            for i, (inactive, channel) in enumerate(
-                    sorted(free_channels, key=lambda free_channel: free_channel[0], reverse=True), 1):
+            sorted_channels = sorted(free_channels, key=lambda free_channel: free_channel[0], reverse=True)
+            for i, (inactive, channel) in enumerate(sorted_channels, 1):
                 minutes, seconds = divmod(inactive, 60)
                 if minutes > 59:
                     hours, minutes = divmod(minutes, 60)
