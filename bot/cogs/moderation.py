@@ -85,11 +85,7 @@ class Moderation(Scheduler, Cog):
 
         dm_result = ":incoming_envelope: " if notified else ""
         action = f"{dm_result}:ok_hand: warned {user.mention}"
-
-        if reason is None:
-            await ctx.send(f"{action}.")
-        else:
-            await ctx.send(f"{action} ({reason}).")
+        await ctx.send(f"{action}.")
 
         if notified:
             dm_status = "Sent"
@@ -138,11 +134,7 @@ class Moderation(Scheduler, Cog):
 
         dm_result = ":incoming_envelope: " if notified else ""
         action = f"{dm_result}:ok_hand: kicked {user.mention}"
-
-        if reason is None:
-            await ctx.send(f"{action}.")
-        else:
-            await ctx.send(f"{action} ({reason}).")
+        await ctx.send(f"{action}.")
 
         dm_status = "Sent" if notified else "**Failed**"
         title = "Member kicked" if action_result else "Member kicked (Failed)"
@@ -196,11 +188,7 @@ class Moderation(Scheduler, Cog):
 
         dm_result = ":incoming_envelope: " if notified else ""
         action = f"{dm_result}:ok_hand: permanently banned {user.mention}"
-
-        if reason is None:
-            await ctx.send(f"{action}.")
-        else:
-            await ctx.send(f"{action} ({reason}).")
+        await ctx.send(f"{action}.")
 
         dm_status = "Sent" if notified else "**Failed**"
         log_content = None if all((notified, action_result)) else ctx.author.mention
@@ -263,11 +251,7 @@ class Moderation(Scheduler, Cog):
 
         dm_result = ":incoming_envelope: " if notified else ""
         action = f"{dm_result}:ok_hand: muted {user.mention} until {infraction_expiration}"
-
-        if reason is None:
-            await ctx.send(f"{action}.")
-        else:
-            await ctx.send(f"{action} ({reason}).")
+        await ctx.send(f"{action}.")
 
         if notified:
             dm_status = "Sent"
@@ -340,11 +324,7 @@ class Moderation(Scheduler, Cog):
 
         dm_result = ":incoming_envelope: " if notified else ""
         action = f"{dm_result}:ok_hand: banned {user.mention} until {infraction_expiration}"
-
-        if reason is None:
-            await ctx.send(f"{action}.")
-        else:
-            await ctx.send(f"{action} ({reason}).")
+        await ctx.send(f"{action}.")
 
         dm_status = "Sent" if notified else "**Failed**"
         log_content = None if all((notified, action_result)) else ctx.author.mention
@@ -383,10 +363,7 @@ class Moderation(Scheduler, Cog):
         if infraction is None:
             return
 
-        if reason is None:
-            await ctx.send(f":ok_hand: note added for {user.mention}.")
-        else:
-            await ctx.send(f":ok_hand: note added for {user.mention} ({reason}).")
+        await ctx.send(f":ok_hand: note added for {user.mention}.")
 
         await self.mod_log.send_log_message(
             icon_url=Icons.user_warn,
@@ -426,10 +403,7 @@ class Moderation(Scheduler, Cog):
         except Forbidden:
             action_result = False
 
-        if reason is None:
-            await ctx.send(f":ok_hand: kicked {user.mention}.")
-        else:
-            await ctx.send(f":ok_hand: kicked {user.mention} ({reason}).")
+        await ctx.send(f":ok_hand: kicked {user.mention}.")
 
         title = "Member shadow kicked"
         if action_result:
@@ -481,10 +455,7 @@ class Moderation(Scheduler, Cog):
         except Forbidden:
             action_result = False
 
-        if reason is None:
-            await ctx.send(f":ok_hand: permanently banned {user.mention}.")
-        else:
-            await ctx.send(f":ok_hand: permanently banned {user.mention} ({reason}).")
+        await ctx.send(f":ok_hand: permanently banned {user.mention}.")
 
         title = "Member permanently banned"
         if action_result:
@@ -539,15 +510,8 @@ class Moderation(Scheduler, Cog):
             .fromisoformat(infraction["expires_at"][:-1])
             .strftime('%c')
         )
-
         self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
-
-        if reason is None:
-            await ctx.send(f":ok_hand: muted {user.mention} until {infraction_expiration}.")
-        else:
-            await ctx.send(
-                f":ok_hand: muted {user.mention} until {infraction_expiration} ({reason})."
-            )
+        await ctx.send(f":ok_hand: muted {user.mention} until {infraction_expiration}.")
 
         await self.mod_log.send_log_message(
             icon_url=Icons.user_mute,
@@ -603,15 +567,8 @@ class Moderation(Scheduler, Cog):
             .fromisoformat(infraction["expires_at"][:-1])
             .strftime('%c')
         )
-
         self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
-
-        if reason is None:
-            await ctx.send(f":ok_hand: banned {user.mention} until {infraction_expiration}.")
-        else:
-            await ctx.send(
-                f":ok_hand: banned {user.mention} until {infraction_expiration} ({reason})."
-            )
+        await ctx.send(f":ok_hand: banned {user.mention} until {infraction_expiration}.")
 
         title = "Member temporarily banned"
         if action_result:
