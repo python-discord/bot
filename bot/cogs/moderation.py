@@ -372,7 +372,7 @@ class Moderation(Scheduler, Cog):
     # region: Permanent shadow infractions
 
     @with_role(*MODERATION_ROLES)
-    @command(hidden=True, aliases=['shadowwarn', 'swarn', 'shadow_warn'])
+    @command(hidden=True)
     async def note(self, ctx: Context, user: UserTypes, *, reason: str = None) -> None:
         """
         Create a private infraction note in the database for a user with the provided reason.
