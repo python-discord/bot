@@ -26,7 +26,7 @@ class Tags(Cog):
         self.bot = bot
         self.tag_cooldowns = {}
 
-    @group(name='tags', aliases=('tag', 't'), hidden=True, invoke_without_command=True)
+    @group(name='tags', aliases=('tag', 't'), invoke_without_command=True)
     async def tags_group(self, ctx: Context, *, tag_name: TagNameConverter = None) -> None:
         """Show all known tags, a single tag, or run a subcommand."""
         await ctx.invoke(self.get_command, tag_name=tag_name)
