@@ -4,6 +4,7 @@ import datetime
 from dateutil.relativedelta import relativedelta
 
 RFC1123_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
+INFRACTION_FORMAT = "%Y-%m-%d %H:%M"
 
 
 def _stringify_time_unit(value: int, unit: str) -> str:
@@ -95,3 +96,8 @@ async def wait_until(time: datetime.datetime) -> None:
     # Incorporate a small delay so we don't rapid-fire the event due to time precision errors
     if delay_seconds > 1.0:
         await asyncio.sleep(delay_seconds)
+
+
+def format_infraction(timestamp: str) -> str:
+    """Format an infraction timestamp to a more readable ISO 8601 format."""
+    return datetime.datetime.fromisoformat(timestamp[:-1]).strftime(INFRACTION_FORMAT)

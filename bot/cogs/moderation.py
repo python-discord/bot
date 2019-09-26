@@ -19,7 +19,7 @@ from bot.decorators import with_role
 from bot.pagination import LinePaginator
 from bot.utils.moderation import already_has_active_infraction, post_infraction
 from bot.utils.scheduling import Scheduler, create_task
-from bot.utils.time import wait_until
+from bot.utils.time import INFRACTION_FORMAT, format_infraction, wait_until
 
 log = logging.getLogger(__name__)
 
@@ -313,11 +313,7 @@ class Moderation(Scheduler, Cog):
             reason=reason
         )
 
-        infraction_expiration = (
-            datetime
-            .fromisoformat(infraction["expires_at"][:-1])
-            .strftime('%c')
-        )
+        infraction_expiration = format_infraction(infraction["expires_at"])
 
         self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
 
@@ -390,11 +386,7 @@ class Moderation(Scheduler, Cog):
         except Forbidden:
             action_result = False
 
-        infraction_expiration = (
-            datetime
-            .fromisoformat(infraction["expires_at"][:-1])
-            .strftime('%c')
-        )
+        infraction_expiration = format_infraction(infraction["expires_at"])
 
         self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
 
@@ -630,11 +622,7 @@ class Moderation(Scheduler, Cog):
         self.mod_log.ignore(Event.member_update, user.id)
         await user.add_roles(self._muted_role, reason=reason)
 
-        infraction_expiration = (
-            datetime
-            .fromisoformat(infraction["expires_at"][:-1])
-            .strftime('%c')
-        )
+        infraction_expiration = format_infraction(infraction["expires_at"])
 
         self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
 
@@ -694,11 +682,7 @@ class Moderation(Scheduler, Cog):
         except Forbidden:
             action_result = False
 
-        infraction_expiration = (
-            datetime
-            .fromisoformat(infraction["expires_at"][:-1])
-            .strftime('%c')
-        )
+        infraction_expiration = format_infraction(infraction["expires_at"])
 
         self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
 
@@ -915,7 +899,7 @@ class Moderation(Scheduler, Cog):
             confirm_messages.append("marked as permanent")
         elif expires_at is not None:
             request_data['expires_at'] = expires_at.isoformat()
-            confirm_messages.append(f"set to expire on {expires_at.strftime('%c')}")
+            confirm_messages.append(f"set to expire on {expires_at.strftime(INFRACTION_FORMAT)}")
         else:
             confirm_messages.append("expiry unchanged")
 
@@ -1129,11 +1113,11 @@ class Moderation(Scheduler, Cog):
         active = infraction_object["active"]
         user_id = infraction_object["user"]
         hidden = infraction_object["hidden"]
-        created = datetime.fromisoformat(infraction_object["inserted_at"][:-1]).strftime("%Y-%m-%d %H:%M")
+        created = format_infraction(infraction_object["inserted_at"])
         if infraction_object["expires_at"] is None:
             expires = "*Permanent*"
         else:
-            expires = datetime.fromisoformat(infraction_object["expires_at"][:-1]).strftime("%Y-%m-%d %H:%M")
+            expires = format_infraction(infraction_object["expires_at"])
 
         lines = textwrap.dedent(f"""
             {"**===============**" if active else "==============="}
@@ -1164,7 +1148,7 @@ class Moderation(Scheduler, Cog):
         Returns a boolean indicator of whether the DM was successful.
         """
         if isinstance(expires_at, datetime):
-            expires_at = expires_at.strftime('%c')
+            expires_at = expires_at.strftime(INFRACTION_FORMAT)
 
         embed = Embed(
             description=textwrap.dedent(f"""
