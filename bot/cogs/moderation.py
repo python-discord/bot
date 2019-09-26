@@ -938,8 +938,8 @@ class Moderation(Scheduler, Cog):
             self.schedule_task(loop, new_infraction['id'], new_infraction)
 
             log_text += f"""
-                Previous expiry: {old_infraction['expires_at']}
-                New expiry: {new_infraction['expires_at']}
+                Previous expiry: {old_infraction['expires_at'] or "Permanent"}
+                New expiry: {new_infraction['expires_at'] or "Permanent"}
             """.rstrip()
 
         await ctx.send(f":ok_hand: Updated infraction: {' & '.join(confirm_messages)}")
