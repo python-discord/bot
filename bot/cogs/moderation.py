@@ -18,7 +18,7 @@ from bot.converters import Duration, InfractionSearchQuery
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
 from bot.utils.moderation import already_has_active_infraction, post_infraction
-from bot.utils.scheduling import Scheduler, create_task
+from bot.utils.scheduling import Scheduler
 from bot.utils.time import INFRACTION_FORMAT, format_infraction, wait_until
 
 log = logging.getLogger(__name__)
@@ -892,21 +892,6 @@ class Moderation(Scheduler, Cog):
             max_size=1000
         )
 
-    # endregion
-    # region: Utility functions
-
-    def schedule_expiration(
-        self, loop: asyncio.AbstractEventLoop, infraction_object: Dict[str, Union[str, int, bool]]
-    ) -> None:
-        """Schedules a task to expire a temporary infraction."""
-        infraction_id = infraction_object["id"]
-        if infraction_id in self.scheduled_tasks:
-            return
-
-        task: asyncio.Task = create_task(loop, self._scheduled_expiration(infraction_object))
-
-        self.scheduled_tasks[infraction_id] = task
-
     def cancel_expiration(self, infraction_id: str) -> None:
         """Un-schedules a task set to expire a temporary infraction."""
         task = self.scheduled_tasks.get(infraction_id)
@@ -1078,19 +1063,6 @@ class Moderation(Scheduler, Cog):
                 "They've probably just disabled private messages."
             )
             return False
-
-    async def log_notify_failure(self, target: str, actor: Member, infraction_type: str) -> None:
-        """Send a mod log entry if an attempt to DM the target user has failed."""
-        await self.mod_log.send_log_message(
-            icon_url=Icons.token_removed,
-            content=actor.mention,
-            colour=Colour(Colours.soft_red),
-            title="Notification Failed",
-            text=(
-                f"Direct message was unable to be sent.\nUser: {target.mention}\n"
-                f"Type: {infraction_type}"
-            )
-        )
 
     # endregion
 
