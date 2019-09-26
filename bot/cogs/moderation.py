@@ -916,6 +916,8 @@ class Moderation(Scheduler, Cog):
         elif expires_at is not None:
             request_data['expires_at'] = expires_at.isoformat()
             confirm_messages.append(f"set to expire on {expires_at.strftime('%c')}")
+        else:
+            confirm_messages.append("expiry unchanged")
 
         if reason:
             request_data['reason'] = reason
@@ -924,6 +926,8 @@ class Moderation(Scheduler, Cog):
                 Previous reason: {old_infraction['reason']}
                 New reason: {reason}
             """.rstrip()
+        else:
+            confirm_messages.append("reason unchanged")
 
         # Update the infraction
         new_infraction = await self.bot.api_client.patch(
