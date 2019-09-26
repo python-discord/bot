@@ -1282,8 +1282,8 @@ class Moderation(Scheduler, Cog):
 
     # endregion
 
-    @staticmethod
-    async def cog_command_error(ctx: Context, error: Exception) -> None:
+    # This cannot be static (must have a __func__ attribute).
+    async def cog_command_error(self, ctx: Context, error: Exception) -> None:
         """Send a notification to the invoking context on a Union failure."""
         if isinstance(error, BadUnionArgument):
             if User in error.converters:
