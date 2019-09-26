@@ -329,14 +329,6 @@ class WatchChannel(metaclass=CogABCMeta):
 
         return time_delta
 
-    @staticmethod
-    def _get_human_readable(time_string: str, output_format: str = "%Y-%m-%d %H:%M:%S") -> str:
-        date_time = datetime.datetime.strptime(
-            time_string,
-            "%Y-%m-%dT%H:%M:%S.%fZ"
-        ).replace(tzinfo=None)
-        return date_time.strftime(output_format)
-
     def _remove_user(self, user_id: int) -> None:
         """Removes a user from a watch channel."""
         self.watched_users.pop(user_id, None)
