@@ -1,12 +1,12 @@
 import logging
 from datetime import datetime
+from operator import itemgetter
 
 from discord import Colour, Embed, Member, utils
 from discord.ext.commands import Bot, Cog, Context, command
 
 from bot.constants import Categories, Channels, Free, STAFF_ROLES
 from bot.decorators import redirect_output
-
 
 log = logging.getLogger(__name__)
 
@@ -51,10 +51,10 @@ class Free(Cog):
             # the command was invoked in
             if channel.id == ctx.channel.id:
                 messages = await channel.history(limit=seek).flatten()
-                msg = messages[seek-1]
+                msg = messages[seek - 1]
             # Otherwise get last message
             else:
-                msg = await channel.history(limit=1).next()   # noqa (False positive)
+                msg = await channel.history(limit=1).next()  # noqa (False positive)
 
             inactive = (datetime.utcnow() - msg.created_at).seconds
             if inactive > TIMEOUT:
@@ -80,7 +80,8 @@ class Free(Cog):
             # Sort channels in descending order by seconds
             # Get position in list, inactivity, and channel object
             # For each channel, add to embed.description
-            for i, (inactive, channel) in enumerate(sorted(free_channels, reverse=True), 1):
+            sorted_channels = sorted(free_channels, key=itemgetter(0), reverse=True)
+            for i, (inactive, channel) in enumerate(sorted_channels, 1):
                 minutes, seconds = divmod(inactive, 60)
                 if minutes > 59:
                     hours, minutes = divmod(minutes, 60)
