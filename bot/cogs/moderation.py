@@ -94,11 +94,7 @@ class Moderation(Scheduler, Cog):
 
         dm_result = ":incoming_envelope: " if notified else ""
         action = f"{dm_result}:ok_hand: warned {user.mention}"
-
-        if reason is None:
-            await ctx.send(f"{action}.")
-        else:
-            await ctx.send(f"{action} ({reason}).")
+        await ctx.send(f"{action}.")
 
         if notified:
             dm_status = "Sent"
@@ -147,11 +143,7 @@ class Moderation(Scheduler, Cog):
 
         dm_result = ":incoming_envelope: " if notified else ""
         action = f"{dm_result}:ok_hand: kicked {user.mention}"
-
-        if reason is None:
-            await ctx.send(f"{action}.")
-        else:
-            await ctx.send(f"{action} ({reason}).")
+        await ctx.send(f"{action}.")
 
         dm_status = "Sent" if notified else "**Failed**"
         title = "Member kicked" if action_result else "Member kicked (Failed)"
@@ -205,11 +197,7 @@ class Moderation(Scheduler, Cog):
 
         dm_result = ":incoming_envelope: " if notified else ""
         action = f"{dm_result}:ok_hand: permanently banned {user.mention}"
-
-        if reason is None:
-            await ctx.send(f"{action}.")
-        else:
-            await ctx.send(f"{action} ({reason}).")
+        await ctx.send(f"{action}.")
 
         dm_status = "Sent" if notified else "**Failed**"
         log_content = None if all((notified, action_result)) else ctx.author.mention
@@ -232,62 +220,11 @@ class Moderation(Scheduler, Cog):
             footer=f"ID {infraction['id']}"
         )
 
-    @with_role(*MODERATION_ROLES)
-    @command()
-    async def mute(self, ctx: Context, user: Member, *, reason: str = None) -> None:
-        """Create a permanent mute infraction for a user with the provided reason."""
-        if await already_has_active_infraction(ctx=ctx, user=user, type="mute"):
-            return
-
-        infraction = await post_infraction(ctx, user, type="mute", reason=reason)
-        if infraction is None:
-            return
-
-        self.mod_log.ignore(Event.member_update, user.id)
-        await user.add_roles(self._muted_role, reason=reason)
-
-        notified = await self.notify_infraction(
-            user=user,
-            infr_type="Mute",
-            expires_at="Permanent",
-            reason=reason
-        )
-
-        dm_result = ":incoming_envelope: " if notified else ""
-        action = f"{dm_result}:ok_hand: permanently muted {user.mention}"
-
-        if reason is None:
-            await ctx.send(f"{action}.")
-        else:
-            await ctx.send(f"{action} ({reason}).")
-
-        if notified:
-            dm_status = "Sent"
-            log_content = None
-        else:
-            dm_status = "**Failed**"
-            log_content = ctx.author.mention
-
-        await self.mod_log.send_log_message(
-            icon_url=Icons.user_mute,
-            colour=Colour(Colours.soft_red),
-            title="Member permanently muted",
-            thumbnail=user.avatar_url_as(static_format="png"),
-            text=textwrap.dedent(f"""
-                Member: {user.mention} (`{user.id}`)
-                Actor: {ctx.message.author}
-                DM: {dm_status}
-                Reason: {reason}
-            """),
-            content=log_content,
-            footer=f"ID {infraction['id']}"
-        )
-
     # endregion
     # region: Temporary infractions
 
     @with_role(*MODERATION_ROLES)
-    @command()
+    @command(aliases=('mute',))
     async def tempmute(self, ctx: Context, user: Member, duration: Duration, *, reason: str = None) -> None:
         """
         Create a temporary mute infraction for a user with the provided expiration and reason.
@@ -319,11 +256,7 @@ class Moderation(Scheduler, Cog):
 
         dm_result = ":incoming_envelope: " if notified else ""
         action = f"{dm_result}:ok_hand: muted {user.mention} until {infraction_expiration}"
-
-        if reason is None:
-            await ctx.send(f"{action}.")
-        else:
-            await ctx.send(f"{action} ({reason}).")
+        await ctx.send(f"{action}.")
 
         if notified:
             dm_status = "Sent"
@@ -392,11 +325,7 @@ class Moderation(Scheduler, Cog):
 
         dm_result = ":incoming_envelope: " if notified else ""
         action = f"{dm_result}:ok_hand: banned {user.mention} until {infraction_expiration}"
-
-        if reason is None:
-            await ctx.send(f"{action}.")
-        else:
-            await ctx.send(f"{action} ({reason}).")
+        await ctx.send(f"{action}.")
 
         dm_status = "Sent" if notified else "**Failed**"
         log_content = None if all((notified, action_result)) else ctx.author.mention
@@ -424,7 +353,7 @@ class Moderation(Scheduler, Cog):
     # region: Permanent shadow infractions
 
     @with_role(*MODERATION_ROLES)
-    @command(hidden=True, aliases=['shadowwarn', 'swarn', 'shadow_warn'])
+    @command(hidden=True)
     async def note(self, ctx: Context, user: UserTypes, *, reason: str = None) -> None:
         """
         Create a private infraction note in the database for a user with the provided reason.
@@ -435,10 +364,7 @@ class Moderation(Scheduler, Cog):
         if infraction is None:
             return
 
-        if reason is None:
-            await ctx.send(f":ok_hand: note added for {user.mention}.")
-        else:
-            await ctx.send(f":ok_hand: note added for {user.mention} ({reason}).")
+        await ctx.send(f":ok_hand: note added for {user.mention}.")
 
         await self.mod_log.send_log_message(
             icon_url=Icons.user_warn,
@@ -478,10 +404,7 @@ class Moderation(Scheduler, Cog):
         except Forbidden:
             action_result = False
 
-        if reason is None:
-            await ctx.send(f":ok_hand: kicked {user.mention}.")
-        else:
-            await ctx.send(f":ok_hand: kicked {user.mention} ({reason}).")
+        await ctx.send(f":ok_hand: kicked {user.mention}.")
 
         title = "Member shadow kicked"
         if action_result:
@@ -533,10 +456,7 @@ class Moderation(Scheduler, Cog):
         except Forbidden:
             action_result = False
 
-        if reason is None:
-            await ctx.send(f":ok_hand: permanently banned {user.mention}.")
-        else:
-            await ctx.send(f":ok_hand: permanently banned {user.mention} ({reason}).")
+        await ctx.send(f":ok_hand: permanently banned {user.mention}.")
 
         title = "Member permanently banned"
         if action_result:
@@ -559,47 +479,11 @@ class Moderation(Scheduler, Cog):
             footer=f"ID {infraction['id']}"
         )
 
-    @with_role(*MODERATION_ROLES)
-    @command(hidden=True, aliases=['shadowmute', 'smute'])
-    async def shadow_mute(self, ctx: Context, user: Member, *, reason: str = None) -> None:
-        """
-        Create a permanent mute infraction for a user with the provided reason.
-
-        This does not send the user a notification.
-        """
-        if await already_has_active_infraction(ctx=ctx, user=user, type="mute"):
-            return
-
-        infraction = await post_infraction(ctx, user, type="mute", reason=reason, hidden=True)
-        if infraction is None:
-            return
-
-        self.mod_log.ignore(Event.member_update, user.id)
-        await user.add_roles(self._muted_role, reason=reason)
-
-        if reason is None:
-            await ctx.send(f":ok_hand: permanently muted {user.mention}.")
-        else:
-            await ctx.send(f":ok_hand: permanently muted {user.mention} ({reason}).")
-
-        await self.mod_log.send_log_message(
-            icon_url=Icons.user_mute,
-            colour=Colour(Colours.soft_red),
-            title="Member permanently muted",
-            thumbnail=user.avatar_url_as(static_format="png"),
-            text=textwrap.dedent(f"""
-                Member: {user.mention} (`{user.id}`)
-                Actor: {ctx.message.author}
-                Reason: {reason}
-            """),
-            footer=f"ID {infraction['id']}"
-        )
-
     # endregion
     # region: Temporary shadow infractions
 
     @with_role(*MODERATION_ROLES)
-    @command(hidden=True, aliases=["shadowtempmute, stempmute"])
+    @command(hidden=True, aliases=["shadowtempmute, stempmute", "shadowmute", "smute"])
     async def shadow_tempmute(
         self, ctx: Context, user: Member, duration: Duration, *, reason: str = None
     ) -> None:
@@ -623,15 +507,8 @@ class Moderation(Scheduler, Cog):
         await user.add_roles(self._muted_role, reason=reason)
 
         infraction_expiration = format_infraction(infraction["expires_at"])
-
         self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
-
-        if reason is None:
-            await ctx.send(f":ok_hand: muted {user.mention} until {infraction_expiration}.")
-        else:
-            await ctx.send(
-                f":ok_hand: muted {user.mention} until {infraction_expiration} ({reason})."
-            )
+        await ctx.send(f":ok_hand: muted {user.mention} until {infraction_expiration}.")
 
         await self.mod_log.send_log_message(
             icon_url=Icons.user_mute,
@@ -683,15 +560,8 @@ class Moderation(Scheduler, Cog):
             action_result = False
 
         infraction_expiration = format_infraction(infraction["expires_at"])
-
         self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
-
-        if reason is None:
-            await ctx.send(f":ok_hand: banned {user.mention} until {infraction_expiration}.")
-        else:
-            await ctx.send(
-                f":ok_hand: banned {user.mention} until {infraction_expiration} ({reason})."
-            )
+        await ctx.send(f":ok_hand: banned {user.mention} until {infraction_expiration}.")
 
         title = "Member temporarily banned"
         if action_result:
