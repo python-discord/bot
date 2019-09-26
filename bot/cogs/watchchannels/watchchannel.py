@@ -1,5 +1,4 @@
 import asyncio
-import datetime
 import logging
 import re
 import textwrap
@@ -8,6 +7,7 @@ from collections import defaultdict, deque
 from dataclasses import dataclass
 from typing import Optional
 
+import dateutil.parser
 import discord
 from discord import Color, Embed, HTTPException, Message, Object, errors
 from discord.ext.commands import BadArgument, Bot, Cog, Context
@@ -321,10 +321,7 @@ class WatchChannel(metaclass=CogABCMeta):
     @staticmethod
     def _get_time_delta(time_string: str) -> str:
         """Returns the time in human-readable time delta format."""
-        date_time = datetime.datetime.strptime(
-            time_string,
-            "%Y-%m-%dT%H:%M:%S.%fZ"
-        ).replace(tzinfo=None)
+        date_time = dateutil.parser.isoparse(time_string).replace(tzinfo=None)
         time_delta = time_since(date_time, precision="minutes", max_units=1)
 
         return time_delta
