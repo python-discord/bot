@@ -7,7 +7,7 @@ from typing import Optional, Tuple
 
 from discord.ext.commands import Bot, Cog, Context, command, guild_only
 
-from bot.constants import Channels, URLs, Roles
+from bot.constants import Channels, Roles, URLs
 from bot.decorators import in_channel
 from bot.utils.messages import wait_for_deletion
 
