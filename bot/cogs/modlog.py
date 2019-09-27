@@ -6,7 +6,7 @@ from typing import List, Optional, Union
 from dateutil.relativedelta import relativedelta
 from deepdiff import DeepDiff
 from discord import (
-    CategoryChannel, Colour, Embed, File, Guild,
+    Asset, CategoryChannel, Colour, Embed, File, Guild,
     Member, Message, NotFound, RawMessageDeleteEvent,
     RawMessageUpdateEvent, Role, TextChannel, User, VoiceChannel
 )
@@ -73,20 +73,20 @@ class ModLog(Cog, name="ModLog"):
                 self._ignored[event].append(item)
 
     async def send_log_message(
-            self,
-            icon_url: Optional[str],
-            colour: Colour,
-            title: Optional[str],
-            text: str,
-            thumbnail: Optional[str] = None,
-            channel_id: int = Channels.modlog,
-            ping_everyone: bool = False,
-            files: Optional[List[File]] = None,
-            content: Optional[str] = None,
-            additional_embeds: Optional[List[Embed]] = None,
-            additional_embeds_msg: Optional[str] = None,
-            timestamp_override: Optional[datetime] = None,
-            footer: Optional[str] = None,
+        self,
+        icon_url: Optional[str],
+        colour: Colour,
+        title: Optional[str],
+        text: str,
+        thumbnail: Optional[Union[str, Asset]] = None,
+        channel_id: int = Channels.modlog,
+        ping_everyone: bool = False,
+        files: Optional[List[File]] = None,
+        content: Optional[str] = None,
+        additional_embeds: Optional[List[Embed]] = None,
+        additional_embeds_msg: Optional[str] = None,
+        timestamp_override: Optional[datetime] = None,
+        footer: Optional[str] = None,
     ) -> Context:
         """Generate log embed and send to logging channel."""
         embed = Embed(description=text)
