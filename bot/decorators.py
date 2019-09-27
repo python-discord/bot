@@ -6,7 +6,7 @@ from functools import wraps
 from typing import Any, Callable, Container, Optional
 from weakref import WeakValueDictionary
 
-from discord import Colour, Embed
+from discord import Colour, Embed, Member
 from discord.errors import NotFound
 from discord.ext import commands
 from discord.ext.commands import CheckFailure, Context
@@ -72,7 +72,7 @@ def locked() -> Callable:
 
     Subsequent calls to the command from the same author are ignored until the command has completed invocation.
 
-    This decorator has to go before (below) the `command` decorator.
+    This decorator must go before (below) the `command` decorator.
     """
     def wrap(func: Callable) -> Callable:
         func.__locks = WeakValueDictionary()
@@ -103,6 +103,8 @@ def redirect_output(destination_channel: int, bypass_roles: Container[int] = Non
     Changes the channel in the context of the command to redirect the output to a certain channel.
 
     Redirect is bypassed if the author has a role to bypass redirection.
+
+    This decorator must go before (below) the `command` decorator.
     """
     def wrap(func: Callable) -> Callable:
         @wraps(func)
@@ -138,5 +140,38 @@ def redirect_output(destination_channel: int, bypass_roles: Container[int] = Non
                 with suppress(NotFound):
                     await ctx.message.delete()
                     log.trace("Redirect output: Deleted invocation message")
+        return inner
+    return wrap
+
+
+def respect_role_hierarchy(target_arg_name: str = "user") -> Callable:
+    """
+    Ensure the highest role of the invoking member is greater than that of the target member.
+
+    If the condition fails, a warning is sent to the invoking context. A target which is not an
+    instance of discord.Member will always pass.
+
+    This decorator must go before (below) the `command` decorator.
+    """
+    def wrap(func: Callable) -> Callable:
+        @wraps(func)
+        async def inner(self: Callable, ctx: Context, *args, **kwargs) -> Any:
+            target = kwargs[target_arg_name]
+            if not isinstance(target, Member):
+                return await func(self, ctx, *args, **kwargs)
+
+            cmd = ctx.command.name
+            actor = ctx.author
+            if target.top_role >= actor.top_role:
+                log.info(
+                    f"{actor} ({actor.id}) attempted to {cmd} "
+                    f"{target} ({target.id}), who has an equal or higher top role."
+                )
+                await ctx.send(
+                    f":x: {actor.mention}, you may not {cmd} "
+                    "someone with an equal or higher top role."
+                )
+            else:
+                return await func(self, ctx, *args, **kwargs)
         return inner
     return wrap

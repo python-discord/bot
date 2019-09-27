@@ -15,7 +15,7 @@ from bot import constants
 from bot.cogs.modlog import ModLog
 from bot.constants import Colours, Event, Icons, MODERATION_ROLES
 from bot.converters import Duration, InfractionSearchQuery
-from bot.decorators import with_role
+from bot.decorators import respect_role_hierarchy, with_role
 from bot.pagination import LinePaginator
 from bot.utils.moderation import already_has_active_infraction, post_infraction
 from bot.utils.scheduling import Scheduler
@@ -120,13 +120,9 @@ class Moderation(Scheduler, Cog):
 
     @with_role(*MODERATION_ROLES)
     @command()
+    @respect_role_hierarchy()
     async def kick(self, ctx: Context, user: Member, *, reason: str = None) -> None:
         """Kicks a user with the provided reason."""
-        if not await self.respect_role_hierarchy(ctx, user, 'kick'):
-            # Ensure ctx author has a higher top role than the target user
-            # Warning is sent to ctx by the helper method
-            return
-
         infraction = await post_infraction(ctx, user, type="kick", reason=reason)
         if infraction is None:
             return
@@ -166,13 +162,9 @@ class Moderation(Scheduler, Cog):
 
     @with_role(*MODERATION_ROLES)
     @command()
+    @respect_role_hierarchy()
     async def ban(self, ctx: Context, user: UserTypes, *, reason: str = None) -> None:
         """Create a permanent ban infraction for a user with the provided reason."""
-        if not await self.respect_role_hierarchy(ctx, user, 'ban'):
-            # Ensure ctx author has a higher top role than the target user
-            # Warning is sent to ctx by the helper method
-            return
-
         if await already_has_active_infraction(ctx=ctx, user=user, type="ban"):
             return
 
@@ -283,6 +275,7 @@ class Moderation(Scheduler, Cog):
 
     @with_role(*MODERATION_ROLES)
     @command()
+    @respect_role_hierarchy()
     async def tempban(self, ctx: Context, user: UserTypes, duration: Duration, *, reason: str = None) -> None:
         """
         Create a temporary ban infraction for a user with the provided expiration and reason.
@@ -290,11 +283,6 @@ class Moderation(Scheduler, Cog):
         Duration strings are parsed per: http://strftime.org/
         """
         expiration = duration
-
-        if not await self.respect_role_hierarchy(ctx, user, 'tempban'):
-            # Ensure ctx author has a higher top role than the target user
-            # Warning is sent to ctx by the helper method
-            return
 
         if await already_has_active_infraction(ctx=ctx, user=user, type="ban"):
             return
@@ -381,17 +369,13 @@ class Moderation(Scheduler, Cog):
 
     @with_role(*MODERATION_ROLES)
     @command(hidden=True, aliases=['shadowkick', 'skick'])
+    @respect_role_hierarchy()
     async def shadow_kick(self, ctx: Context, user: Member, *, reason: str = None) -> None:
         """
         Kick a user for the provided reason.
 
         This does not send the user a notification.
         """
-        if not await self.respect_role_hierarchy(ctx, user, 'shadowkick'):
-            # Ensure ctx author has a higher top role than the target user
-            # Warning is sent to ctx by the helper method
-            return
-
         infraction = await post_infraction(ctx, user, type="kick", reason=reason, hidden=True)
         if infraction is None:
             return
@@ -429,17 +413,13 @@ class Moderation(Scheduler, Cog):
 
     @with_role(*MODERATION_ROLES)
     @command(hidden=True, aliases=['shadowban', 'sban'])
+    @respect_role_hierarchy()
     async def shadow_ban(self, ctx: Context, user: UserTypes, *, reason: str = None) -> None:
         """
         Create a permanent ban infraction for a user with the provided reason.
 
         This does not send the user a notification.
         """
-        if not await self.respect_role_hierarchy(ctx, user, 'shadowban'):
-            # Ensure ctx author has a higher top role than the target user
-            # Warning is sent to ctx by the helper method
-            return
-
         if await already_has_active_infraction(ctx=ctx, user=user, type="ban"):
             return
 
@@ -526,6 +506,7 @@ class Moderation(Scheduler, Cog):
 
     @with_role(*MODERATION_ROLES)
     @command(hidden=True, aliases=["shadowtempban, stempban"])
+    @respect_role_hierarchy()
     async def shadow_tempban(
         self, ctx: Context, user: UserTypes, duration: Duration, *, reason: str = None
     ) -> None:
@@ -537,11 +518,6 @@ class Moderation(Scheduler, Cog):
         This does not send the user a notification.
         """
         expiration = duration
-
-        if not await self.respect_role_hierarchy(ctx, user, 'shadowtempban'):
-            # Ensure ctx author has a higher top role than the target user
-            # Warning is sent to ctx by the helper method
-            return
 
         if await already_has_active_infraction(ctx=ctx, user=user, type="ban"):
             return
@@ -1073,32 +1049,6 @@ class Moderation(Scheduler, Cog):
             if User in error.converters:
                 await ctx.send(str(error.errors[0]))
                 error.handled = True
-
-    @staticmethod
-    async def respect_role_hierarchy(ctx: Context, target: UserTypes, infr_type: str) -> bool:
-        """
-        Check if the highest role of the invoking member is greater than that of the target member.
-
-        If this check fails, a warning is sent to the invoking ctx.
-
-        Returns True always if target is not a discord.Member instance.
-        """
-        if not isinstance(target, Member):
-            return True
-
-        actor = ctx.author
-        target_is_lower = target.top_role < actor.top_role
-        if not target_is_lower:
-            log.info(
-                f"{actor} ({actor.id}) attempted to {infr_type} "
-                f"{target} ({target.id}), who has an equal or higher top role."
-            )
-            await ctx.send(
-                f":x: {actor.mention}, you may not {infr_type} "
-                "someone with an equal or higher top role."
-            )
-
-        return target_is_lower
 
 
 def setup(bot: Bot) -> None:
