@@ -2,7 +2,7 @@ import asyncio
 import logging
 import textwrap
 from datetime import datetime
-from typing import Dict, Iterable, Optional, Union
+from typing import Awaitable, Dict, Iterable, Optional, Union
 
 from discord import (
     Colour, Embed, Forbidden, Guild, HTTPException, Member, NotFound, Object, User
@@ -94,8 +94,7 @@ class Moderation(Scheduler, Cog):
         if infraction is None:
             return
 
-        dm_result = await self.send_messages(ctx, infraction, user, "warned")
-        await ctx.send(f"{dm_result}:ok_hand: warned {user.mention}.")
+        await self.apply_infraction(ctx, infraction, user)
 
     @with_role(*MODERATION_ROLES)
     @command()
@@ -108,14 +107,8 @@ class Moderation(Scheduler, Cog):
 
         self.mod_log.ignore(Event.member_remove, user.id)
 
-        try:
-            await user.kick(reason=reason)
-            action_result = True
-        except Forbidden:
-            action_result = False
-
-        dm_result = await self.send_messages(ctx, infraction, user, "kicked", action_result)
-        await ctx.send(f"{dm_result}:ok_hand: kicked {user.mention}.")
+        action = user.kick(reason=reason)
+        await self.apply_infraction(ctx, infraction, user, action)
 
     @with_role(*MODERATION_ROLES)
     @command()
@@ -132,14 +125,8 @@ class Moderation(Scheduler, Cog):
         self.mod_log.ignore(Event.member_ban, user.id)
         self.mod_log.ignore(Event.member_remove, user.id)
 
-        try:
-            await ctx.guild.ban(user, reason=reason, delete_message_days=0)
-            action_result = True
-        except Forbidden:
-            action_result = False
-
-        dm_result = await self.send_messages(ctx, infraction, user, "permanently banned", action_result)
-        await ctx.send(f"{dm_result}:ok_hand: permanently banned {user.mention}.")
+        action = ctx.guild.ban(user, reason=reason, delete_message_days=0)
+        await self.apply_infraction(ctx, infraction, user, action)
 
     # endregion
     # region: Temporary infractions
@@ -160,13 +147,9 @@ class Moderation(Scheduler, Cog):
             return
 
         self.mod_log.ignore(Event.member_update, user.id)
-        await user.add_roles(self._muted_role, reason=reason)
 
-        self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
-
-        dm_result = await self.send_messages(ctx, infraction, user, "temporarily muted")
-        expiry = format_infraction(infraction["expires_at"])
-        await ctx.send(f"{dm_result}:ok_hand: muted {user.mention} until {expiry}.")
+        action = user.add_roles(self._muted_role, reason=reason)
+        await self.apply_infraction(ctx, infraction, user, action)
 
     @with_role(*MODERATION_ROLES)
     @command()
@@ -187,17 +170,8 @@ class Moderation(Scheduler, Cog):
         self.mod_log.ignore(Event.member_ban, user.id)
         self.mod_log.ignore(Event.member_remove, user.id)
 
-        try:
-            await ctx.guild.ban(user, reason=reason, delete_message_days=0)
-            action_result = True
-        except Forbidden:
-            action_result = False
-
-        self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
-
-        dm_result = await self.send_messages(ctx, infraction, user, "temporarily banned", action_result)
-        expiry = format_infraction(infraction["expires_at"])
-        await ctx.send(f"{dm_result}:ok_hand: banned {user.mention} until {expiry}.")
+        action = ctx.guild.ban(user, reason=reason, delete_message_days=0)
+        await self.apply_infraction(ctx, infraction, user, action)
 
     # endregion
     # region: Permanent shadow infractions
@@ -214,8 +188,7 @@ class Moderation(Scheduler, Cog):
         if infraction is None:
             return
 
-        await self.send_messages(ctx, infraction, user, "note added")
-        await ctx.send(f":ok_hand: note added for {user.mention}.")
+        await self.apply_infraction(ctx, infraction, user)
 
     @with_role(*MODERATION_ROLES)
     @command(hidden=True, aliases=['shadowkick', 'skick'])
@@ -232,14 +205,8 @@ class Moderation(Scheduler, Cog):
 
         self.mod_log.ignore(Event.member_remove, user.id)
 
-        try:
-            await user.kick(reason=reason)
-            action_result = True
-        except Forbidden:
-            action_result = False
-
-        await self.send_messages(ctx, infraction, user, "shadow kicked", action_result)
-        await ctx.send(f":ok_hand: kicked {user.mention}.")
+        action = user.kick(reason=reason)
+        await self.apply_infraction(ctx, infraction, user, action)
 
     @with_role(*MODERATION_ROLES)
     @command(hidden=True, aliases=['shadowban', 'sban'])
@@ -260,14 +227,8 @@ class Moderation(Scheduler, Cog):
         self.mod_log.ignore(Event.member_ban, user.id)
         self.mod_log.ignore(Event.member_remove, user.id)
 
-        try:
-            await ctx.guild.ban(user, reason=reason, delete_message_days=0)
-            action_result = True
-        except Forbidden:
-            action_result = False
-
-        await self.send_messages(ctx, infraction, user, "permanently banned", action_result)
-        await ctx.send(f":ok_hand: permanently banned {user.mention}.")
+        action = ctx.guild.ban(user, reason=reason, delete_message_days=0)
+        await self.apply_infraction(ctx, infraction, user, action)
 
     # endregion
     # region: Temporary shadow infractions
@@ -292,13 +253,9 @@ class Moderation(Scheduler, Cog):
             return
 
         self.mod_log.ignore(Event.member_update, user.id)
-        await user.add_roles(self._muted_role, reason=reason)
 
-        self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
-
-        await self.send_messages(ctx, infraction, user, "temporarily muted")
-        expiry = format_infraction(infraction["expires_at"])
-        await ctx.send(f":ok_hand: muted {user.mention} until {expiry}.")
+        action = await user.add_roles(self._muted_role, reason=reason)
+        await self.apply_infraction(ctx, infraction, user, action)
 
     @with_role(*MODERATION_ROLES)
     @command(hidden=True, aliases=["shadowtempban, stempban"])
@@ -323,17 +280,8 @@ class Moderation(Scheduler, Cog):
         self.mod_log.ignore(Event.member_ban, user.id)
         self.mod_log.ignore(Event.member_remove, user.id)
 
-        try:
-            await ctx.guild.ban(user, reason=reason, delete_message_days=0)
-            action_result = True
-        except Forbidden:
-            action_result = False
-
-        self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
-
-        await self.send_messages(ctx, infraction, user, "temporarily banned", action_result)
-        expiry = format_infraction(infraction["expires_at"])
-        await ctx.send(f":ok_hand: banned {user.mention} until {expiry}.")
+        action = ctx.guild.ban(user, reason=reason, delete_message_days=0)
+        await self.apply_infraction(ctx, infraction, user, action)
 
     # endregion
     # region: Remove infractions (un- commands)
@@ -815,20 +763,14 @@ class Moderation(Scheduler, Cog):
             )
             return False
 
-    async def send_messages(
+    async def apply_infraction(
         self,
         ctx: Context,
         infraction: Infraction,
         user: UserObject,
-        title: str,
-        action_result: Optional[bool] = None
-    ) -> str:
-        """
-        Send a mod log, notify the user, and return a non-empty string if notification succeeds.
-
-        The returned string contains the emoji to prepend to the confirmation message to send to
-        the actor and indicates that user was successfully notified of the infraction via DM.
-        """
+        action_coro: Optional[Awaitable] = None
+    ) -> None:
+        """Apply an infraction to the user, log the infraction, and optionally notify the user."""
         infr_type = infraction["type"]
         icon = INFRACTION_ICONS[infr_type]
         reason = infraction["reason"]
@@ -837,9 +779,14 @@ class Moderation(Scheduler, Cog):
         if expiry:
             expiry = format_infraction(expiry)
 
+        confirm_msg = f":ok_hand: applied"
+        expiry_msg = f" until {expiry}" if expiry else " permanently"
         dm_result = ""
         dm_log_text = ""
+        expiry_log_text = f"Expires: {expiry}" if expiry else ""
+        log_title = "applied"
         log_content = None
+
         if not infraction["hidden"]:
             if await self.notify_infraction(user, infr_type, expiry, reason):
                 dm_result = ":incoming_envelope: "
@@ -848,16 +795,23 @@ class Moderation(Scheduler, Cog):
                 dm_log_text = "\nDM: **Failed**"
                 log_content = ctx.author.mention
 
-        if action_result is False:
-            log_content = ctx.author.mention
-            title += " (Failed)"
+        if action_coro:
+            try:
+                await action_coro
+                if expiry:
+                    self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
+            except Forbidden:
+                confirm_msg = f":x: failed to apply"
+                expiry_msg = ""
+                log_content = ctx.author.mention
+                log_title = "failed to apply"
 
-        expiry_log_text = f"Expires: {expiry}" if expiry else ""
+        await ctx.send(f"{dm_result}{confirm_msg} **{infr_type}** to {user.mention}{expiry_msg}.")
 
         await self.mod_log.send_log_message(
             icon_url=icon,
             colour=Colour(Colours.soft_red),
-            title=f"Member {title}",
+            title=f"Infraction {log_title}: {infr_type}",
             thumbnail=user.avatar_url_as(static_format="png"),
             text=textwrap.dedent(f"""
                 Member: {user.mention} (`{user.id}`)
@@ -868,8 +822,6 @@ class Moderation(Scheduler, Cog):
             content=log_content,
             footer=f"ID {infraction['id']}"
         )
-
-        return dm_result
 
     # endregion
 
