@@ -50,7 +50,7 @@ jobs:
   - job: build
     displayName: 'Build & Push Container'
     dependsOn: 'test'
-    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
 
     steps:
       - task: Docker@2
