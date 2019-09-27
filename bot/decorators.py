@@ -165,9 +165,9 @@ def respect_role_hierarchy(target_arg: Union[int, str] = 0) -> Callable:
                 try:
                     target = args[target_arg]
                 except IndexError:
-                    log.error(f"Could not find target member argument at position {target_arg}")
+                    raise ValueError(f"Could not find target argument at position {target_arg}")
                 except TypeError:
-                    log.error(f"Could not find target member kwarg with key {target_arg!r}")
+                    raise ValueError(f"Could not find target kwarg with key {target_arg!r}")
 
             if not isinstance(target, Member):
                 log.trace("The target is not a discord.Member; skipping role hierarchy check.")
