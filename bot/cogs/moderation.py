@@ -756,12 +756,10 @@ class Moderation(Scheduler, Cog):
 
         Returns a boolean indicator of whether the DM was successful.
         """
-        expires_at = format_infraction(expires_at) if expires_at else "N/A"
-
         embed = Embed(
             description=textwrap.dedent(f"""
                 **Type:** {infr_type.capitalize()}
-                **Expires:** {expires_at}
+                **Expires:** {expires_at or "N/A"}
                 **Reason:** {reason or "No reason provided."}
                 """),
             colour=Colour(Colours.soft_red)
@@ -835,6 +833,9 @@ class Moderation(Scheduler, Cog):
         icon = INFRACTION_ICONS[infr_type]
         reason = infraction["reason"]
         expiry = infraction["expires_at"]
+
+        if expiry:
+            expiry = format_infraction(expiry)
 
         dm_result = ""
         dm_log_text = ""
