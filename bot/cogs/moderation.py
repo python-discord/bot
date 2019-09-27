@@ -53,7 +53,8 @@ def permanent_duration(expires_at: str) -> str:
         return expires_at
 
 
-UserTypes = Union[Member, User, proxy_user]
+UserConverter = Union[Member, User, proxy_user]
+UserObject = Union[Member, User, Object]
 Infraction = Dict[str, Union[str, int, bool]]
 
 
@@ -85,7 +86,7 @@ class Moderation(Scheduler, Cog):
 
     @with_role(*MODERATION_ROLES)
     @command()
-    async def warn(self, ctx: Context, user: UserTypes, *, reason: str = None) -> None:
+    async def warn(self, ctx: Context, user: UserConverter, *, reason: str = None) -> None:
         """Create a warning infraction in the database for a user."""
         infraction = await post_infraction(ctx, user, type="warning", reason=reason)
         if infraction is None:
@@ -164,7 +165,7 @@ class Moderation(Scheduler, Cog):
     @with_role(*MODERATION_ROLES)
     @command()
     @respect_role_hierarchy()
-    async def ban(self, ctx: Context, user: UserTypes, *, reason: str = None) -> None:
+    async def ban(self, ctx: Context, user: UserConverter, *, reason: str = None) -> None:
         """Create a permanent ban infraction for a user with the provided reason."""
         if await already_has_active_infraction(ctx=ctx, user=user, type="ban"):
             return
@@ -277,7 +278,7 @@ class Moderation(Scheduler, Cog):
     @with_role(*MODERATION_ROLES)
     @command()
     @respect_role_hierarchy()
-    async def tempban(self, ctx: Context, user: UserTypes, duration: Duration, *, reason: str = None) -> None:
+    async def tempban(self, ctx: Context, user: UserConverter, duration: Duration, *, reason: str = None) -> None:
         """
         Create a temporary ban infraction for a user with the provided expiration and reason.
 
@@ -343,7 +344,7 @@ class Moderation(Scheduler, Cog):
 
     @with_role(*MODERATION_ROLES)
     @command(hidden=True)
-    async def note(self, ctx: Context, user: UserTypes, *, reason: str = None) -> None:
+    async def note(self, ctx: Context, user: UserConverter, *, reason: str = None) -> None:
         """
         Create a private infraction note in the database for a user with the provided reason.
 
@@ -415,7 +416,7 @@ class Moderation(Scheduler, Cog):
     @with_role(*MODERATION_ROLES)
     @command(hidden=True, aliases=['shadowban', 'sban'])
     @respect_role_hierarchy()
-    async def shadow_ban(self, ctx: Context, user: UserTypes, *, reason: str = None) -> None:
+    async def shadow_ban(self, ctx: Context, user: UserConverter, *, reason: str = None) -> None:
         """
         Create a permanent ban infraction for a user with the provided reason.
 
@@ -509,7 +510,7 @@ class Moderation(Scheduler, Cog):
     @command(hidden=True, aliases=["shadowtempban, stempban"])
     @respect_role_hierarchy()
     async def shadow_tempban(
-        self, ctx: Context, user: UserTypes, duration: Duration, *, reason: str = None
+        self, ctx: Context, user: UserConverter, duration: Duration, *, reason: str = None
     ) -> None:
         """
         Create a temporary ban infraction for a user with the provided reason.
@@ -568,7 +569,7 @@ class Moderation(Scheduler, Cog):
 
     @with_role(*MODERATION_ROLES)
     @command()
-    async def unmute(self, ctx: Context, user: UserTypes) -> None:
+    async def unmute(self, ctx: Context, user: UserConverter) -> None:
         """Deactivates the active mute infraction for a user."""
         try:
             # check the current active infraction
@@ -646,7 +647,7 @@ class Moderation(Scheduler, Cog):
 
     @with_role(*MODERATION_ROLES)
     @command()
-    async def unban(self, ctx: Context, user: UserTypes) -> None:
+    async def unban(self, ctx: Context, user: UserConverter) -> None:
         """Deactivates the active ban infraction for a user."""
         try:
             # check the current active infraction
@@ -974,7 +975,7 @@ class Moderation(Scheduler, Cog):
 
     async def notify_infraction(
             self,
-            user: Union[User, Member],
+            user: UserObject,
             infr_type: str,
             expires_at: Optional[str] = None,
             reason: Optional[str] = None
@@ -1007,7 +1008,7 @@ class Moderation(Scheduler, Cog):
 
     async def notify_pardon(
         self,
-        user: Union[User, Member],
+        user: UserObject,
         title: str,
         content: str,
         icon_url: str = Icons.user_verified
@@ -1026,7 +1027,7 @@ class Moderation(Scheduler, Cog):
 
         return await self.send_private_embed(user, embed)
 
-    async def send_private_embed(self, user: Union[User, Member], embed: Embed) -> bool:
+    async def send_private_embed(self, user: UserObject, embed: Embed) -> bool:
         """
         A helper method for sending an embed to a user's DMs.
 
