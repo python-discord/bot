@@ -148,8 +148,8 @@ class WatchChannel(metaclass=CogABCMeta):
                 title=f"Warning: Failed to retrieve user cache for the {self.__class__.__name__} watch channel",
                 text="Could not retrieve the list of watched users from the API and messages will not be relayed.",
                 ping_everyone=True,
-                icon=Icons.token_removed,
-                color=Color.red()
+                icon_url=Icons.token_removed,
+                colour=Color.red()
             )
 
     async def fetch_user_cache(self) -> bool:
