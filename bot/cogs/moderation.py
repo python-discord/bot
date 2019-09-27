@@ -2,7 +2,7 @@ import asyncio
 import logging
 import textwrap
 from datetime import datetime
-from typing import Dict, Iterable, Union
+from typing import Dict, Iterable, Optional, Union
 
 from discord import (
     Colour, Embed, Forbidden, Guild, HTTPException, Member, NotFound, Object, User
@@ -976,22 +976,21 @@ class Moderation(Scheduler, Cog):
             self,
             user: Union[User, Member],
             infr_type: str,
-            expires_at: Union[datetime, str] = 'N/A',
-            reason: str = "No reason provided."
+            expires_at: Optional[str] = None,
+            reason: Optional[str] = None
     ) -> bool:
         """
         Attempt to notify a user, via DM, of their fresh infraction.
 
         Returns a boolean indicator of whether the DM was successful.
         """
-        if isinstance(expires_at, datetime):
-            expires_at = expires_at.strftime(INFRACTION_FORMAT)
+        expires_at = format_infraction(expires_at) if expires_at else "N/A"
 
         embed = Embed(
             description=textwrap.dedent(f"""
                 **Type:** {infr_type}
                 **Expires:** {expires_at}
-                **Reason:** {reason}
+                **Reason:** {reason or "No reason provided."}
                 """),
             colour=Colour(Colours.soft_red)
         )
