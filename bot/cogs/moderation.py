@@ -19,7 +19,7 @@ from bot.decorators import with_role
 from bot.pagination import LinePaginator
 from bot.utils.moderation import already_has_active_infraction, post_infraction
 from bot.utils.scheduling import Scheduler, create_task
-from bot.utils.time import wait_until
+from bot.utils.time import INFRACTION_FORMAT, format_infraction, wait_until
 
 log = logging.getLogger(__name__)
 
@@ -42,6 +42,15 @@ def proxy_user(user_id: str) -> Object:
     user.mention = user.id
     user.avatar_url_as = lambda static_format: None
     return user
+
+
+def permanent_duration(expires_at: str) -> str:
+    """Only allow an expiration to be 'permanent' if it is a string."""
+    expires_at = expires_at.lower()
+    if expires_at != "permanent":
+        raise BadArgument
+    else:
+        return expires_at
 
 
 UserTypes = Union[Member, User, proxy_user]
@@ -241,11 +250,7 @@ class Moderation(Scheduler, Cog):
             reason=reason
         )
 
-        infraction_expiration = (
-            datetime
-            .fromisoformat(infraction["expires_at"][:-1])
-            .strftime('%c')
-        )
+        infraction_expiration = format_infraction(infraction["expires_at"])
 
         self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
 
@@ -314,11 +319,7 @@ class Moderation(Scheduler, Cog):
         except Forbidden:
             action_result = False
 
-        infraction_expiration = (
-            datetime
-            .fromisoformat(infraction["expires_at"][:-1])
-            .strftime('%c')
-        )
+        infraction_expiration = format_infraction(infraction["expires_at"])
 
         self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
 
@@ -505,11 +506,7 @@ class Moderation(Scheduler, Cog):
         self.mod_log.ignore(Event.member_update, user.id)
         await user.add_roles(self._muted_role, reason=reason)
 
-        infraction_expiration = (
-            datetime
-            .fromisoformat(infraction["expires_at"][:-1])
-            .strftime('%c')
-        )
+        infraction_expiration = format_infraction(infraction["expires_at"])
         self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
         await ctx.send(f":ok_hand: muted {user.mention} until {infraction_expiration}.")
 
@@ -562,11 +559,7 @@ class Moderation(Scheduler, Cog):
         except Forbidden:
             action_result = False
 
-        infraction_expiration = (
-            datetime
-            .fromisoformat(infraction["expires_at"][:-1])
-            .strftime('%c')
-        )
+        infraction_expiration = format_infraction(infraction["expires_at"])
         self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
         await ctx.send(f":ok_hand: banned {user.mention} until {infraction_expiration}.")
 
@@ -745,121 +738,72 @@ class Moderation(Scheduler, Cog):
         await ctx.invoke(self.bot.get_command("help"), "infraction")
 
     @with_role(*MODERATION_ROLES)
-    @infraction_group.group(name='edit', invoke_without_command=True)
-    async def infraction_edit_group(self, ctx: Context) -> None:
-        """Infraction editing commands."""
-        await ctx.invoke(self.bot.get_command("help"), "infraction", "edit")
-
-    @with_role(*MODERATION_ROLES)
-    @infraction_edit_group.command(name="duration")
-    async def edit_duration(
-            self, ctx: Context,
-            infraction_id: int, expires_at: Union[Duration, str]
+    @infraction_group.command(name='edit')
+    async def infraction_edit(
+        self,
+        ctx: Context,
+        infraction_id: int,
+        expires_at: Union[Duration, permanent_duration, None],
+        *,
+        reason: str = None
     ) -> None:
         """
-        Sets the duration of the given infraction, relative to the time of updating.
+        Edit the duration and/or the reason of an infraction.
 
-        Duration strings are parsed per: http://strftime.org/, use "permanent" to mark the infraction as permanent.
+        Durations are relative to the time of updating.
+        Use "permanent" to mark the infraction as permanent.
         """
-        if isinstance(expires_at, str) and expires_at != 'permanent':
-            raise BadArgument(
-                "If `expires_at` is given as a non-datetime, "
-                "it must be `permanent`."
-            )
-        if expires_at == 'permanent':
-            expires_at = None
+        if expires_at is None and reason is None:
+            # Unlike UserInputError, the error handler will show a specified message for BadArgument
+            raise BadArgument("Neither a new expiry nor a new reason was specified.")
 
-        try:
-            previous_infraction = await self.bot.api_client.get(
-                'bot/infractions/' + str(infraction_id)
-            )
+        # Retrieve the previous infraction for its information.
+        old_infraction = await self.bot.api_client.get(f'bot/infractions/{infraction_id}')
 
-            # check the current active infraction
-            infraction = await self.bot.api_client.patch(
-                'bot/infractions/' + str(infraction_id),
-                json={
-                    'expires_at': (
-                        expires_at.isoformat()
-                        if expires_at is not None
-                        else None
-                    )
-                }
-            )
+        request_data = {}
+        confirm_messages = []
+        log_text = ""
 
-            # Re-schedule
-            self.cancel_task(infraction['id'])
-            loop = asyncio.get_event_loop()
-            self.schedule_task(loop, infraction['id'], infraction)
-
-            if expires_at is None:
-                await ctx.send(f":ok_hand: Updated infraction: marked as permanent.")
-            else:
-                human_expiry = (
-                    datetime
-                    .fromisoformat(infraction['expires_at'][:-1])
-                    .strftime('%c')
-                )
-                await ctx.send(
-                    ":ok_hand: Updated infraction: set to expire on "
-                    f"{human_expiry}."
-                )
-
-        except Exception:
-            log.exception("There was an error updating an infraction.")
-            await ctx.send(":x: There was an error updating the infraction.")
-            return
-
-        # Get information about the infraction's user
-        user_id = infraction["user"]
-        user = ctx.guild.get_member(user_id)
-
-        if user:
-            member_text = f"{user.mention} (`{user.id}`)"
-            thumbnail = user.avatar_url_as(static_format="png")
+        if expires_at == "permanent":
+            request_data['expires_at'] = None
+            confirm_messages.append("marked as permanent")
+        elif expires_at is not None:
+            request_data['expires_at'] = expires_at.isoformat()
+            confirm_messages.append(f"set to expire on {expires_at.strftime(INFRACTION_FORMAT)}")
         else:
-            member_text = f"`{user_id}`"
-            thumbnail = None
+            confirm_messages.append("expiry unchanged")
 
-        # The infraction's actor
-        actor_id = infraction["actor"]
-        actor = ctx.guild.get_member(actor_id) or f"`{actor_id}`"
+        if reason:
+            request_data['reason'] = reason
+            confirm_messages.append("set a new reason")
+            log_text += f"""
+                Previous reason: {old_infraction['reason']}
+                New reason: {reason}
+            """.rstrip()
+        else:
+            confirm_messages.append("reason unchanged")
 
-        await self.mod_log.send_log_message(
-            icon_url=Icons.pencil,
-            colour=Colour.blurple(),
-            title="Infraction edited",
-            thumbnail=thumbnail,
-            text=textwrap.dedent(f"""
-                Member: {member_text}
-                Actor: {actor}
-                Edited by: {ctx.message.author}
-                Previous expiry: {previous_infraction['expires_at']}
-                New expiry: {infraction['expires_at']}
-            """)
+        # Update the infraction
+        new_infraction = await self.bot.api_client.patch(
+            f'bot/infractions/{infraction_id}',
+            json=request_data,
         )
 
-    @with_role(*MODERATION_ROLES)
-    @infraction_edit_group.command(name="reason")
-    async def edit_reason(self, ctx: Context, infraction_id: int, *, reason: str) -> None:
-        """Edit the reason of the given infraction."""
-        try:
-            old_infraction = await self.bot.api_client.get(
-                'bot/infractions/' + str(infraction_id)
-            )
+        # Re-schedule infraction if the expiration has been updated
+        if 'expires_at' in request_data:
+            self.cancel_task(new_infraction['id'])
+            loop = asyncio.get_event_loop()
+            self.schedule_task(loop, new_infraction['id'], new_infraction)
 
-            updated_infraction = await self.bot.api_client.patch(
-                'bot/infractions/' + str(infraction_id),
-                json={'reason': reason}
-            )
-            await ctx.send(f":ok_hand: Updated infraction: set reason to \"{reason}\".")
+            log_text += f"""
+                Previous expiry: {old_infraction['expires_at'] or "Permanent"}
+                New expiry: {new_infraction['expires_at'] or "Permanent"}
+            """.rstrip()
 
-        except Exception:
-            log.exception("There was an error updating an infraction.")
-            await ctx.send(":x: There was an error updating the infraction.")
-            return
+        await ctx.send(f":ok_hand: Updated infraction: {' & '.join(confirm_messages)}")
 
         # Get information about the infraction's user
-        user_id = updated_infraction['user']
+        user_id = new_infraction['user']
         user = ctx.guild.get_member(user_id)
 
         if user:
@@ -870,7 +814,7 @@ class Moderation(Scheduler, Cog):
             thumbnail = None
 
         # The infraction's actor
-        actor_id = updated_infraction['actor']
+        actor_id = new_infraction['actor']
         actor = ctx.guild.get_member(actor_id) or f"`{actor_id}`"
 
         await self.mod_log.send_log_message(
@@ -881,9 +825,7 @@ class Moderation(Scheduler, Cog):
             text=textwrap.dedent(f"""
                 Member: {user_text}
                 Actor: {actor}
-                Edited by: {ctx.message.author}
-                Previous reason: {old_infraction['reason']}
-                New reason: {updated_infraction['reason']}
+                Edited by: {ctx.message.author}{log_text}
             """)
         )
 
@@ -1041,11 +983,11 @@ class Moderation(Scheduler, Cog):
         active = infraction_object["active"]
         user_id = infraction_object["user"]
         hidden = infraction_object["hidden"]
-        created = datetime.fromisoformat(infraction_object["inserted_at"][:-1]).strftime("%Y-%m-%d %H:%M")
+        created = format_infraction(infraction_object["inserted_at"])
         if infraction_object["expires_at"] is None:
             expires = "*Permanent*"
         else:
-            expires = datetime.fromisoformat(infraction_object["expires_at"][:-1]).strftime("%Y-%m-%d %H:%M")
+            expires = format_infraction(infraction_object["expires_at"])
 
         lines = textwrap.dedent(f"""
             {"**===============**" if active else "==============="}
@@ -1076,7 +1018,7 @@ class Moderation(Scheduler, Cog):
         Returns a boolean indicator of whether the DM was successful.
         """
         if isinstance(expires_at, datetime):
-            expires_at = expires_at.strftime('%c')
+            expires_at = expires_at.strftime(INFRACTION_FORMAT)
 
         embed = Embed(
             description=textwrap.dedent(f"""
@@ -1152,8 +1094,8 @@ class Moderation(Scheduler, Cog):
 
     # endregion
 
-    @staticmethod
-    async def cog_command_error(ctx: Context, error: Exception) -> None:
+    # This cannot be static (must have a __func__ attribute).
+    async def cog_command_error(self, ctx: Context, error: Exception) -> None:
         """Send a notification to the invoking context on a Union failure."""
         if isinstance(error, BadUnionArgument):
             if User in error.converters:

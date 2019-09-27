@@ -10,6 +10,7 @@ from bot.api import ResponseCodeError
 from bot.constants import Channels, Guild, Roles, Webhooks
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
+from bot.utils import time
 from .watchchannel import WatchChannel, proxy_user
 
 log = logging.getLogger(__name__)
@@ -198,7 +199,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         log.debug(active)
         log.debug(type(nomination_object["inserted_at"]))
 
-        start_date = self._get_human_readable(nomination_object["inserted_at"])
+        start_date = time.format_infraction(nomination_object["inserted_at"])
         if active:
             lines = textwrap.dedent(
                 f"""
@@ -212,7 +213,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
                 """
             )
         else:
-            end_date = self._get_human_readable(nomination_object["ended_at"])
+            end_date = time.format_infraction(nomination_object["ended_at"])
             lines = textwrap.dedent(
                 f"""
                 ===============

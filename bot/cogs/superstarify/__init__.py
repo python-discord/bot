@@ -1,6 +1,5 @@
 import logging
 import random
-from datetime import datetime
 
 from discord import Colour, Embed, Member
 from discord.errors import Forbidden
@@ -13,6 +12,7 @@ from bot.constants import Icons, MODERATION_ROLES, POSITIVE_REPLIES
 from bot.converters import Duration
 from bot.decorators import with_role
 from bot.utils.moderation import post_infraction
+from bot.utils.time import format_infraction
 
 log = logging.getLogger(__name__)
 NICKNAME_POLICY_URL = "https://pythondiscord.com/pages/rules/#wiki-toc-nickname-policy"
@@ -71,10 +71,7 @@ class Superstarify(Cog):
                 f"Changing the nick back to {before.display_name}."
             )
             await after.edit(nick=forced_nick)
-            end_timestamp_human = (
-                datetime.fromisoformat(infraction['expires_at'][:-1])
-                .strftime('%c')
-            )
+            end_timestamp_human = format_infraction(infraction['expires_at'])
 
             try:
                 await after.send(
@@ -113,9 +110,7 @@ class Superstarify(Cog):
             [infraction] = active_superstarifies
             forced_nick = get_nick(infraction['id'], member.id)
             await member.edit(nick=forced_nick)
-            end_timestamp_human = (
-                datetime.fromisoformat(infraction['expires_at'][:-1]).strftime('%c')
-            )
+            end_timestamp_human = format_infraction(infraction['expires_at'])
 
             try:
                 await member.send(

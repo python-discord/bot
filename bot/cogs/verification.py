@@ -141,8 +141,8 @@ class Verification(Cog):
             f"{ctx.author.mention} Unsubscribed from <#{Channels.announcements}> notifications."
         )
 
-    @staticmethod
-    async def cog_command_error(ctx: Context, error: Exception) -> None:
+    # This cannot be static (must have a __func__ attribute).
+    async def cog_command_error(self, ctx: Context, error: Exception) -> None:
         """Check for & ignore any InChannelCheckFailure."""
         if isinstance(error, InChannelCheckFailure):
             error.handled = True
