@@ -7,10 +7,9 @@ from typing import Optional, Tuple
 
 from discord.ext.commands import Bot, Cog, Context, command, guild_only
 
-from bot.constants import Channels, STAFF_ROLES, URLs
+from bot.constants import Channels, URLs, Roles
 from bot.decorators import in_channel
 from bot.utils.messages import wait_for_deletion
-
 
 log = logging.getLogger(__name__)
 
@@ -34,6 +33,7 @@ RAW_CODE_REGEX = re.compile(
 )
 
 MAX_PASTE_LEN = 1000
+EVAL_ROLES = (Roles.helpers, Roles.moderator, Roles.admin, Roles.owner, Roles.rockstars, Roles.partners)
 
 
 class Snekbox(Cog):
@@ -166,7 +166,7 @@ class Snekbox(Cog):
 
     @command(name="eval", aliases=("e",))
     @guild_only()
-    @in_channel(Channels.bot, bypass_roles=STAFF_ROLES)
+    @in_channel(Channels.bot, bypass_roles=EVAL_ROLES)
     async def eval_command(self, ctx: Context, *, code: str = None) -> None:
         """
         Run Python code and get the results.

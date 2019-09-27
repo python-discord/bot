@@ -375,13 +375,15 @@ class Roles(metaclass=YAMLGetter):
     champion: int
     contributor: int
     core_developer: int
+    helpers: int
     jammer: int
     moderator: int
     muted: int
     owner: int
-    verified: int  # This is the Developers role on PyDis, here named verified for readability reasons.
-    helpers: int
+    partners: int
+    rockstars: int
     team_leader: int
+    verified: int  # This is the Developers role on PyDis, here named verified for readability reasons.
 
 
 class Guild(metaclass=YAMLGetter):
