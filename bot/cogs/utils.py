@@ -3,6 +3,7 @@ import re
 import unicodedata
 from email.parser import HeaderParser
 from io import StringIO
+from typing import Tuple
 
 from discord import Colour, Embed
 from discord.ext.commands import Bot, Cog, Context, command
@@ -106,7 +107,7 @@ class Utils(Cog):
             await ctx.send(embed=embed)
             return
 
-        def get_info(char):
+        def get_info(char: str) -> Tuple[str, str]:
             digit = f"{ord(char):x}"
             if len(digit) <= 4:
                 u_code = f"\\u{digit:>04}"
