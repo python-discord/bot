@@ -94,33 +94,8 @@ class Moderation(Scheduler, Cog):
         if infraction is None:
             return
 
-        notified = await self.notify_infraction(user=user, infr_type="Warning", reason=reason)
-
-        dm_result = ":incoming_envelope: " if notified else ""
-        action = f"{dm_result}:ok_hand: warned {user.mention}"
-        await ctx.send(f"{action}.")
-
-        if notified:
-            dm_status = "Sent"
-            log_content = None
-        else:
-            dm_status = "**Failed**"
-            log_content = ctx.author.mention
-
-        await self.mod_log.send_log_message(
-            icon_url=Icons.user_warn,
-            colour=Colour(Colours.soft_red),
-            title="Member warned",
-            thumbnail=user.avatar_url_as(static_format="png"),
-            text=textwrap.dedent(f"""
-                Member: {user.mention} (`{user.id}`)
-                Actor: {ctx.author}
-                DM: {dm_status}
-                Reason: {reason}
-            """),
-            content=log_content,
-            footer=f"ID {infraction['id']}"
-        )
+        dm_result = await self.send_messages(ctx, infraction, user, "warned")
+        await ctx.send(f"{dm_result}:ok_hand: warned {user.mention}.")
 
     @with_role(*MODERATION_ROLES)
     @command()
@@ -131,8 +106,6 @@ class Moderation(Scheduler, Cog):
         if infraction is None:
             return
 
-        notified = await self.notify_infraction(user=user, infr_type="Kick", reason=reason)
-
         self.mod_log.ignore(Event.member_remove, user.id)
 
         try:
@@ -141,28 +114,8 @@ class Moderation(Scheduler, Cog):
         except Forbidden:
             action_result = False
 
-        dm_result = ":incoming_envelope: " if notified else ""
-        action = f"{dm_result}:ok_hand: kicked {user.mention}"
-        await ctx.send(f"{action}.")
-
-        dm_status = "Sent" if notified else "**Failed**"
-        title = "Member kicked" if action_result else "Member kicked (Failed)"
-        log_content = None if all((notified, action_result)) else ctx.author.mention
-
-        await self.mod_log.send_log_message(
-            icon_url=Icons.sign_out,
-            colour=Colour(Colours.soft_red),
-            title=title,
-            thumbnail=user.avatar_url_as(static_format="png"),
-            text=textwrap.dedent(f"""
-                Member: {user.mention} (`{user.id}`)
-                Actor: {ctx.message.author}
-                DM: {dm_status}
-                Reason: {reason}
-            """),
-            content=log_content,
-            footer=f"ID {infraction['id']}"
-        )
+        dm_result = await self.send_messages(ctx, infraction, user, "kicked", action_result)
+        await ctx.send(f"{dm_result}:ok_hand: kicked {user.mention}.")
 
     @with_role(*MODERATION_ROLES)
     @command()
@@ -176,12 +129,6 @@ class Moderation(Scheduler, Cog):
         if infraction is None:
             return
 
-        notified = await self.notify_infraction(
-            user=user,
-            infr_type="Ban",
-            reason=reason
-        )
-
         self.mod_log.ignore(Event.member_ban, user.id)
         self.mod_log.ignore(Event.member_remove, user.id)
 
@@ -191,30 +138,8 @@ class Moderation(Scheduler, Cog):
         except Forbidden:
             action_result = False
 
-        dm_result = ":incoming_envelope: " if notified else ""
-        action = f"{dm_result}:ok_hand: permanently banned {user.mention}"
-        await ctx.send(f"{action}.")
-
-        dm_status = "Sent" if notified else "**Failed**"
-        log_content = None if all((notified, action_result)) else ctx.author.mention
-        title = "Member permanently banned"
-        if not action_result:
-            title += " (Failed)"
-
-        await self.mod_log.send_log_message(
-            icon_url=Icons.user_ban,
-            colour=Colour(Colours.soft_red),
-            title=title,
-            thumbnail=user.avatar_url_as(static_format="png"),
-            text=textwrap.dedent(f"""
-                Member: {user.mention} (`{user.id}`)
-                Actor: {ctx.message.author}
-                DM: {dm_status}
-                Reason: {reason}
-            """),
-            content=log_content,
-            footer=f"ID {infraction['id']}"
-        )
+        dm_result = await self.send_messages(ctx, infraction, user, "permanently banned", action_result)
+        await ctx.send(f"{dm_result}:ok_hand: permanently banned {user.mention}.")
 
     # endregion
     # region: Temporary infractions
@@ -227,55 +152,21 @@ class Moderation(Scheduler, Cog):
 
         Duration strings are parsed per: http://strftime.org/
         """
-        expiration = duration
-
         if await already_has_active_infraction(ctx=ctx, user=user, type="mute"):
             return
 
-        infraction = await post_infraction(ctx, user, type="mute", reason=reason, expires_at=expiration)
+        infraction = await post_infraction(ctx, user, type="mute", reason=reason, expires_at=duration)
         if infraction is None:
             return
 
         self.mod_log.ignore(Event.member_update, user.id)
         await user.add_roles(self._muted_role, reason=reason)
 
-        notified = await self.notify_infraction(
-            user=user,
-            infr_type="Mute",
-            expires_at=expiration,
-            reason=reason
-        )
-
-        infraction_expiration = format_infraction(infraction["expires_at"])
-
         self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
 
-        dm_result = ":incoming_envelope: " if notified else ""
-        action = f"{dm_result}:ok_hand: muted {user.mention} until {infraction_expiration}"
-        await ctx.send(f"{action}.")
-
-        if notified:
-            dm_status = "Sent"
-            log_content = None
-        else:
-            dm_status = "**Failed**"
-            log_content = ctx.author.mention
-
-        await self.mod_log.send_log_message(
-            icon_url=Icons.user_mute,
-            colour=Colour(Colours.soft_red),
-            title="Member temporarily muted",
-            thumbnail=user.avatar_url_as(static_format="png"),
-            text=textwrap.dedent(f"""
-                Member: {user.mention} (`{user.id}`)
-                Actor: {ctx.message.author}
-                DM: {dm_status}
-                Reason: {reason}
-                Expires: {infraction_expiration}
-            """),
-            content=log_content,
-            footer=f"ID {infraction['id']}"
-        )
+        dm_result = await self.send_messages(ctx, infraction, user, "temporarily muted")
+        expiry = format_infraction(infraction["expires_at"])
+        await ctx.send(f"{dm_result}:ok_hand: muted {user.mention} until {expiry}.")
 
     @with_role(*MODERATION_ROLES)
     @command()
@@ -286,21 +177,12 @@ class Moderation(Scheduler, Cog):
 
         Duration strings are parsed per: http://strftime.org/
         """
-        expiration = duration
-
         if await already_has_active_infraction(ctx=ctx, user=user, type="ban"):
             return
 
-        infraction = await post_infraction(ctx, user, type="ban", reason=reason, expires_at=expiration)
+        infraction = await post_infraction(ctx, user, type="ban", reason=reason, expires_at=duration)
         if infraction is None:
             return
-
-        notified = await self.notify_infraction(
-            user=user,
-            infr_type="Ban",
-            expires_at=expiration,
-            reason=reason
-        )
 
         self.mod_log.ignore(Event.member_ban, user.id)
         self.mod_log.ignore(Event.member_remove, user.id)
@@ -311,35 +193,11 @@ class Moderation(Scheduler, Cog):
         except Forbidden:
             action_result = False
 
-        infraction_expiration = format_infraction(infraction["expires_at"])
-
         self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
 
-        dm_result = ":incoming_envelope: " if notified else ""
-        action = f"{dm_result}:ok_hand: banned {user.mention} until {infraction_expiration}"
-        await ctx.send(f"{action}.")
-
-        dm_status = "Sent" if notified else "**Failed**"
-        log_content = None if all((notified, action_result)) else ctx.author.mention
-        title = "Member temporarily banned"
-        if not action_result:
-            title += " (Failed)"
-
-        await self.mod_log.send_log_message(
-            icon_url=Icons.user_ban,
-            colour=Colour(Colours.soft_red),
-            thumbnail=user.avatar_url_as(static_format="png"),
-            title=title,
-            text=textwrap.dedent(f"""
-                Member: {user.mention} (`{user.id}`)
-                Actor: {ctx.message.author}
-                DM: {dm_status}
-                Reason: {reason}
-                Expires: {infraction_expiration}
-            """),
-            content=log_content,
-            footer=f"ID {infraction['id']}"
-        )
+        dm_result = await self.send_messages(ctx, infraction, user, "temporarily banned", action_result)
+        expiry = format_infraction(infraction["expires_at"])
+        await ctx.send(f"{dm_result}:ok_hand: banned {user.mention} until {expiry}.")
 
     # endregion
     # region: Permanent shadow infractions
@@ -356,20 +214,8 @@ class Moderation(Scheduler, Cog):
         if infraction is None:
             return
 
+        await self.send_messages(ctx, infraction, user, "note added")
         await ctx.send(f":ok_hand: note added for {user.mention}.")
-
-        await self.mod_log.send_log_message(
-            icon_url=Icons.user_warn,
-            colour=Colour(Colours.soft_red),
-            title="Member note added",
-            thumbnail=user.avatar_url_as(static_format="png"),
-            text=textwrap.dedent(f"""
-                Member: {user.mention} (`{user.id}`)
-                Actor: {ctx.message.author}
-                Reason: {reason}
-            """),
-            footer=f"ID {infraction['id']}"
-        )
 
     @with_role(*MODERATION_ROLES)
     @command(hidden=True, aliases=['shadowkick', 'skick'])
@@ -392,28 +238,8 @@ class Moderation(Scheduler, Cog):
         except Forbidden:
             action_result = False
 
+        await self.send_messages(ctx, infraction, user, "shadow kicked", action_result)
         await ctx.send(f":ok_hand: kicked {user.mention}.")
-
-        title = "Member shadow kicked"
-        if action_result:
-            log_content = None
-        else:
-            log_content = ctx.author.mention
-            title += " (Failed)"
-
-        await self.mod_log.send_log_message(
-            icon_url=Icons.sign_out,
-            colour=Colour(Colours.soft_red),
-            title=title,
-            thumbnail=user.avatar_url_as(static_format="png"),
-            text=textwrap.dedent(f"""
-                Member: {user.mention} (`{user.id}`)
-                Actor: {ctx.message.author}
-                Reason: {reason}
-            """),
-            content=log_content,
-            footer=f"ID {infraction['id']}"
-        )
 
     @with_role(*MODERATION_ROLES)
     @command(hidden=True, aliases=['shadowban', 'sban'])
@@ -440,28 +266,8 @@ class Moderation(Scheduler, Cog):
         except Forbidden:
             action_result = False
 
+        await self.send_messages(ctx, infraction, user, "permanently banned", action_result)
         await ctx.send(f":ok_hand: permanently banned {user.mention}.")
-
-        title = "Member permanently banned"
-        if action_result:
-            log_content = None
-        else:
-            log_content = ctx.author.mention
-            title += " (Failed)"
-
-        await self.mod_log.send_log_message(
-            icon_url=Icons.user_ban,
-            colour=Colour(Colours.soft_red),
-            title=title,
-            thumbnail=user.avatar_url_as(static_format="png"),
-            text=textwrap.dedent(f"""
-                Member: {user.mention} (`{user.id}`)
-                Actor: {ctx.message.author}
-                Reason: {reason}
-            """),
-            content=log_content,
-            footer=f"ID {infraction['id']}"
-        )
 
     # endregion
     # region: Temporary shadow infractions
@@ -478,35 +284,21 @@ class Moderation(Scheduler, Cog):
 
         This does not send the user a notification.
         """
-        expiration = duration
-
         if await already_has_active_infraction(ctx=ctx, user=user, type="mute"):
             return
 
-        infraction = await post_infraction(ctx, user, type="mute", reason=reason, expires_at=expiration, hidden=True)
+        infraction = await post_infraction(ctx, user, type="mute", reason=reason, expires_at=duration, hidden=True)
         if infraction is None:
             return
 
         self.mod_log.ignore(Event.member_update, user.id)
         await user.add_roles(self._muted_role, reason=reason)
 
-        infraction_expiration = format_infraction(infraction["expires_at"])
         self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
-        await ctx.send(f":ok_hand: muted {user.mention} until {infraction_expiration}.")
 
-        await self.mod_log.send_log_message(
-            icon_url=Icons.user_mute,
-            colour=Colour(Colours.soft_red),
-            title="Member temporarily muted",
-            thumbnail=user.avatar_url_as(static_format="png"),
-            text=textwrap.dedent(f"""
-                Member: {user.mention} (`{user.id}`)
-                Actor: {ctx.message.author}
-                Reason: {reason}
-                Expires: {infraction_expiration}
-            """),
-            footer=f"ID {infraction['id']}"
-        )
+        await self.send_messages(ctx, infraction, user, "temporarily muted")
+        expiry = format_infraction(infraction["expires_at"])
+        await ctx.send(f":ok_hand: muted {user.mention} until {expiry}.")
 
     @with_role(*MODERATION_ROLES)
     @command(hidden=True, aliases=["shadowtempban, stempban"])
@@ -521,12 +313,10 @@ class Moderation(Scheduler, Cog):
 
         This does not send the user a notification.
         """
-        expiration = duration
-
         if await already_has_active_infraction(ctx=ctx, user=user, type="ban"):
             return
 
-        infraction = await post_infraction(ctx, user, type="ban", reason=reason, expires_at=expiration, hidden=True)
+        infraction = await post_infraction(ctx, user, type="ban", reason=reason, expires_at=duration, hidden=True)
         if infraction is None:
             return
 
@@ -539,32 +329,11 @@ class Moderation(Scheduler, Cog):
         except Forbidden:
             action_result = False
 
-        infraction_expiration = format_infraction(infraction["expires_at"])
         self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
-        await ctx.send(f":ok_hand: banned {user.mention} until {infraction_expiration}.")
 
-        title = "Member temporarily banned"
-        if action_result:
-            log_content = None
-        else:
-            log_content = ctx.author.mention
-            title += " (Failed)"
-
-        # Send a log message to the mod log
-        await self.mod_log.send_log_message(
-            icon_url=Icons.user_ban,
-            colour=Colour(Colours.soft_red),
-            thumbnail=user.avatar_url_as(static_format="png"),
-            title=title,
-            text=textwrap.dedent(f"""
-                Member: {user.mention} (`{user.id}`)
-                Actor: {ctx.message.author}
-                Reason: {reason}
-                Expires: {infraction_expiration}
-            """),
-            content=log_content,
-            footer=f"ID {infraction['id']}"
-        )
+        await self.send_messages(ctx, infraction, user, "temporarily banned", action_result)
+        expiry = format_infraction(infraction["expires_at"])
+        await ctx.send(f":ok_hand: banned {user.mention} until {expiry}.")
 
     # endregion
     # region: Remove infractions (un- commands)
@@ -1087,7 +856,7 @@ class Moderation(Scheduler, Cog):
         await self.mod_log.send_log_message(
             icon_url=icon,
             colour=Colour(Colours.soft_red),
-            title=title,
+            title=f"Member {title}",
             thumbnail=user.avatar_url_as(static_format="png"),
             text=textwrap.dedent(f"""
                 Member: {user.mention} (`{user.id}`)
