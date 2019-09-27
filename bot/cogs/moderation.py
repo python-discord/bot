@@ -1033,16 +1033,16 @@ class Moderation(Scheduler, Cog):
 
         Returns a boolean indicator of DM success.
         """
-        # sometimes `user` is a `discord.Object`, so let's make it a proper user.
-        user = await self.bot.fetch_user(user.id)
-
         try:
+            # sometimes `user` is a `discord.Object`, so let's make it a proper user.
+            user = await self.bot.fetch_user(user.id)
+
             await user.send(embed=embed)
             return True
-        except (HTTPException, Forbidden):
+        except (HTTPException, Forbidden, NotFound):
             log.debug(
                 f"Infraction-related information could not be sent to user {user} ({user.id}). "
-                "They've probably just disabled private messages."
+                "The user either could not be retrieved or probably disabled their DMs."
             )
             return False
 
