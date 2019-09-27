@@ -2,7 +2,7 @@ import asyncio
 import logging
 import textwrap
 from datetime import datetime
-from typing import Dict, Union
+from typing import Dict, Iterable, Union
 
 from discord import (
     Colour, Embed, Forbidden, Guild, HTTPException, Member, NotFound, Object, User
@@ -54,6 +54,7 @@ def permanent_duration(expires_at: str) -> str:
 
 
 UserTypes = Union[Member, User, proxy_user]
+Infraction = Dict[str, Union[str, int, bool]]
 
 
 class Moderation(Scheduler, Cog):
@@ -848,7 +849,12 @@ class Moderation(Scheduler, Cog):
     # endregion
     # region: Utility functions
 
-    async def send_infraction_list(self, ctx: Context, embed: Embed, infractions: list) -> None:
+    async def send_infraction_list(
+        self,
+        ctx: Context,
+        embed: Embed,
+        infractions: Iterable[Infraction]
+    ) -> None:
         """Send a paginated embed of infractions for the specified user."""
         if not infractions:
             await ctx.send(f":warning: No infractions could be found for that query.")
@@ -878,7 +884,7 @@ class Moderation(Scheduler, Cog):
         log.debug(f"Unscheduled {infraction_id}.")
         del self.scheduled_tasks[infraction_id]
 
-    async def _scheduled_task(self, infraction_object: Dict[str, Union[str, int, bool]]) -> None:
+    async def _scheduled_task(self, infraction_object: Infraction) -> None:
         """
         Marks an infraction expired after the delay from time of scheduling to time of expiration.
 
@@ -906,7 +912,7 @@ class Moderation(Scheduler, Cog):
             icon_url=Icons.user_unmute
         )
 
-    async def _deactivate_infraction(self, infraction_object: Dict[str, Union[str, int, bool]]) -> None:
+    async def _deactivate_infraction(self, infraction_object: Infraction) -> None:
         """
         A co-routine which marks an infraction as inactive on the website.
 
@@ -936,7 +942,7 @@ class Moderation(Scheduler, Cog):
             json={"active": False}
         )
 
-    def _infraction_to_string(self, infraction_object: Dict[str, Union[str, int, bool]]) -> str:
+    def _infraction_to_string(self, infraction_object: Infraction) -> str:
         """Convert the infraction object to a string representation."""
         actor_id = infraction_object["actor"]
         guild: Guild = self.bot.get_guild(constants.Guild.id)
