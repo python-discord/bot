@@ -26,7 +26,9 @@ log = logging.getLogger(__name__)
 INFRACTION_ICONS = {
     "Mute": Icons.user_mute,
     "Kick": Icons.sign_out,
-    "Ban": Icons.user_ban
+    "Ban": Icons.user_ban,
+    "Warning": Icons.user_warn,
+    "Note": Icons.user_warn,
 }
 RULES_URL = "https://pythondiscord.com/pages/rules"
 APPEALABLE_INFRACTIONS = ("Ban", "Mute")
@@ -1045,6 +1047,59 @@ class Moderation(Scheduler, Cog):
                 "The user either could not be retrieved or probably disabled their DMs."
             )
             return False
+
+    async def send_messages(
+        self,
+        ctx: Context,
+        infraction: Infraction,
+        user: UserObject,
+        title: str,
+        action_result: Optional[bool] = None
+    ) -> str:
+        """
+        Send a mod log, notify the user, and return a non-empty string if notification succeeds.
+
+        The returned string contains the emoji to prepend to the confirmation message to send to
+        the actor and indicates that user was successfully notified of the infraction via DM.
+        """
+        infr_type = infraction["type"].capitalize()
+        icon = INFRACTION_ICONS[infr_type]
+        reason = infraction["reason"]
+        expiry = infraction["expires_at"]
+
+        dm_result = ""
+        dm_log_text = ""
+        log_content = None
+        if not infraction["hidden"]:
+            if await self.notify_infraction(user, infr_type, expiry, reason):
+                dm_result = ":incoming_envelope: "
+                dm_log_text = "\nDM: Sent"
+            else:
+                dm_log_text = "\nDM: **Failed**"
+                log_content = ctx.author.mention
+
+        if action_result is False:
+            log_content = ctx.author.mention
+            title += " (Failed)"
+
+        expiry_log_text = f"Expires: {expiry}" if expiry else ""
+
+        await self.mod_log.send_log_message(
+            icon_url=icon,
+            colour=Colour(Colours.soft_red),
+            title=title,
+            thumbnail=user.avatar_url_as(static_format="png"),
+            text=textwrap.dedent(f"""
+                Member: {user.mention} (`{user.id}`)
+                Actor: {ctx.message.author}{dm_log_text}
+                Reason: {reason}
+                {expiry_log_text}
+            """),
+            content=log_content,
+            footer=f"ID {infraction['id']}"
+        )
+
+        return dm_result
 
     # endregion
 
