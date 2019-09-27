@@ -3,7 +3,7 @@ import random
 from asyncio import Lock, sleep
 from contextlib import suppress
 from functools import wraps
-from typing import Any, Callable, Container, Optional
+from typing import Any, Callable, Container, Optional, Union
 from weakref import WeakValueDictionary
 
 from discord import Colour, Embed, Member
@@ -144,20 +144,33 @@ def redirect_output(destination_channel: int, bypass_roles: Container[int] = Non
     return wrap
 
 
-def respect_role_hierarchy(target_arg_name: str = "user") -> Callable:
+def respect_role_hierarchy(target_arg: Union[int, str] = 0) -> Callable:
     """
     Ensure the highest role of the invoking member is greater than that of the target member.
 
     If the condition fails, a warning is sent to the invoking context. A target which is not an
     instance of discord.Member will always pass.
 
+    A value of 0 (i.e. position 0) for `target_arg` corresponds to the argument which comes after
+    `ctx`. If the target argument is a kwarg, its name can instead be given.
+
     This decorator must go before (below) the `command` decorator.
     """
     def wrap(func: Callable) -> Callable:
         @wraps(func)
         async def inner(self: Callable, ctx: Context, *args, **kwargs) -> Any:
-            target = kwargs[target_arg_name]
+            try:
+                target = kwargs[target_arg]
+            except KeyError:
+                try:
+                    target = args[target_arg]
+                except IndexError:
+                    log.error(f"Could not find target member argument at position {target_arg}")
+                except TypeError:
+                    log.error(f"Could not find target member kwarg with key {target_arg!r}")
+
             if not isinstance(target, Member):
+                log.trace("The target is not a discord.Member; skipping role hierarchy check.")
                 return await func(self, ctx, *args, **kwargs)
 
             cmd = ctx.command.name
