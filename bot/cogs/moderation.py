@@ -24,14 +24,14 @@ from bot.utils.time import INFRACTION_FORMAT, format_infraction, wait_until
 log = logging.getLogger(__name__)
 
 INFRACTION_ICONS = {
-    "Mute": Icons.user_mute,
-    "Kick": Icons.sign_out,
-    "Ban": Icons.user_ban,
-    "Warning": Icons.user_warn,
-    "Note": Icons.user_warn,
+    "mute": Icons.user_mute,
+    "kick": Icons.sign_out,
+    "ban": Icons.user_ban,
+    "warning": Icons.user_warn,
+    "note": Icons.user_warn,
 }
 RULES_URL = "https://pythondiscord.com/pages/rules"
-APPEALABLE_INFRACTIONS = ("Ban", "Mute")
+APPEALABLE_INFRACTIONS = ("ban", "mute")
 
 
 def proxy_user(user_id: str) -> Object:
@@ -760,7 +760,7 @@ class Moderation(Scheduler, Cog):
 
         embed = Embed(
             description=textwrap.dedent(f"""
-                **Type:** {infr_type}
+                **Type:** {infr_type.capitalize()}
                 **Expires:** {expires_at}
                 **Reason:** {reason or "No reason provided."}
                 """),
@@ -831,7 +831,7 @@ class Moderation(Scheduler, Cog):
         The returned string contains the emoji to prepend to the confirmation message to send to
         the actor and indicates that user was successfully notified of the infraction via DM.
         """
-        infr_type = infraction["type"].capitalize()
+        infr_type = infraction["type"]
         icon = INFRACTION_ICONS[infr_type]
         reason = infraction["reason"]
         expiry = infraction["expires_at"]
