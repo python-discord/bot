@@ -3,13 +3,13 @@ import random
 from asyncio import Lock, sleep
 from contextlib import suppress
 from functools import wraps
-from typing import Any, Callable, Container, Optional, Union
+from typing import Callable, Container, Union
 from weakref import WeakValueDictionary
 
 from discord import Colour, Embed, Member
 from discord.errors import NotFound
 from discord.ext import commands
-from discord.ext.commands import CheckFailure, Context
+from discord.ext.commands import CheckFailure, Cog, Context
 
 from bot.constants import ERROR_REPLIES, RedirectOutput
 from bot.utils.checks import with_role_check, without_role_check
@@ -78,7 +78,7 @@ def locked() -> Callable:
         func.__locks = WeakValueDictionary()
 
         @wraps(func)
-        async def inner(self: Callable, ctx: Context, *args, **kwargs) -> Optional[Any]:
+        async def inner(self: Cog, ctx: Context, *args, **kwargs) -> None:
             lock = func.__locks.setdefault(ctx.author.id, Lock())
             if lock.locked():
                 embed = Embed()
@@ -93,7 +93,7 @@ def locked() -> Callable:
                 return
 
             async with func.__locks.setdefault(ctx.author.id, Lock()):
-                return await func(self, ctx, *args, **kwargs)
+                await func(self, ctx, *args, **kwargs)
         return inner
     return wrap
 
@@ -108,14 +108,16 @@ def redirect_output(destination_channel: int, bypass_roles: Container[int] = Non
     """
     def wrap(func: Callable) -> Callable:
         @wraps(func)
-        async def inner(self: Callable, ctx: Context, *args, **kwargs) -> Any:
+        async def inner(self: Cog, ctx: Context, *args, **kwargs) -> None:
             if ctx.channel.id == destination_channel:
                 log.trace(f"Command {ctx.command.name} was invoked in destination_channel, not redirecting")
-                return await func(self, ctx, *args, **kwargs)
+                await func(self, ctx, *args, **kwargs)
+                return
 
             if bypass_roles and any(role.id in bypass_roles for role in ctx.author.roles):
                 log.trace(f"{ctx.author} has role to bypass output redirection")
-                return await func(self, ctx, *args, **kwargs)
+                await func(self, ctx, *args, **kwargs)
+                return
 
             redirect_channel = ctx.guild.get_channel(destination_channel)
             old_channel = ctx.channel
@@ -158,7 +160,7 @@ def respect_role_hierarchy(target_arg: Union[int, str] = 0) -> Callable:
     """
     def wrap(func: Callable) -> Callable:
         @wraps(func)
-        async def inner(self: Callable, ctx: Context, *args, **kwargs) -> Any:
+        async def inner(self: Cog, ctx: Context, *args, **kwargs) -> None:
             try:
                 target = kwargs[target_arg]
             except KeyError:
@@ -171,7 +173,8 @@ def respect_role_hierarchy(target_arg: Union[int, str] = 0) -> Callable:
 
             if not isinstance(target, Member):
                 log.trace("The target is not a discord.Member; skipping role hierarchy check.")
-                return await func(self, ctx, *args, **kwargs)
+                await func(self, ctx, *args, **kwargs)
+                return
 
             cmd = ctx.command.name
             actor = ctx.author
@@ -185,6 +188,6 @@ def respect_role_hierarchy(target_arg: Union[int, str] = 0) -> Callable:
                     "someone with an equal or higher top role."
                 )
             else:
-                return await func(self, ctx, *args, **kwargs)
+                await func(self, ctx, *args, **kwargs)
         return inner
     return wrap
