@@ -153,7 +153,7 @@ class Bot(Cog):
 
     def fix_indentation(self, msg: str) -> str:
         """Attempts to fix badly indented code."""
-        def unindent(code, skip_spaces: int = 0) -> str:
+        def unindent(code: str, skip_spaces: int = 0) -> str:
             """Unindents all code down to the number of spaces given in skip_spaces."""
             final = ""
             current = code[0]
