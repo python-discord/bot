@@ -9,3 +9,31 @@
 
 This project is a Discord bot specifically for use with the Python Discord server. It provides numerous utilities
 and other tools to help keep the server running like a well-oiled machine.
+
+## Requirements
+
+- [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
+- [Docker](https://docs.docker.com/install/)
+- [Docker-Compose](https://docs.docker.com/compose/install/)
+  - `pip install docker-compose`
+- [Pipenv](https://pipenv.kennethreitz.org/en/latest/install/#installing-pipenv)
+  - `pip install pipenv`
+
+## Setup Reference (temporary)
+
+1. Read the [Contributing](CONTRIBUTING.md) guidelines.
+2. Clone the repository to a suitable working project directory using [`git clone`](https://git-scm.com/docs/git-clone).
+   - If you are not a core developer, you will need to [`fork`](https://help.github.com/en/articles/fork-a-repo) [pythondiscord/bot](https://github.com/python-discord/bot).
+3. Create a copy of `config-default.yml` named `config.yml` and edit the configuration options.
+   - This is to be replaced with different instructions in future due to upcoming config updates.
+4. Create an empty `.env` in the same top-level project directory and add:
+   - `BOT_TOKEN=yourdiscordbottoken`
+   - If you have a development site setup already, get the docker project name and add in `.env`:
+     - `COMPOSE_PROJECT_NAME=site`, adjusting `site` to match the other project name.
+5. Install development dependancies for your IDE/editor/linting:
+   - `pipenv sync --dev`
+5. Run the compose:
+   - If you're running a full development site setup already, run:
+     - `docker-compose up bot`
+   - Otherwise, run:
+     - `docker-compose up`
