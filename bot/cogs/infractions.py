@@ -65,7 +65,9 @@ class Infractions(commands.Cog):
         """
         Edit the duration and/or the reason of an infraction.
 
-        Durations are relative to the time of updating.
+        Durations are relative to the time of updating and should be appended with a unit of time:
+        y (years), m (months), w (weeks), d (days), h (hours), M (minutes), s (seconds)
+
         Use "permanent" to mark the infraction as permanent.
         """
         if expires_at is None and reason is None:

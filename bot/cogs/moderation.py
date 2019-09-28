@@ -64,7 +64,7 @@ class Moderation(Scheduler, Cog):
 
     @command()
     async def warn(self, ctx: Context, user: MemberConverter, *, reason: str = None) -> None:
-        """Create a warning infraction in the database for a user."""
+        """Warn a user for the given reason."""
         infraction = await post_infraction(ctx, user, reason, "warning")
         if infraction is None:
             return
@@ -73,12 +73,12 @@ class Moderation(Scheduler, Cog):
 
     @command()
     async def kick(self, ctx: Context, user: Member, *, reason: str = None) -> None:
-        """Kicks a user with the provided reason."""
+        """Kick a user for the given reason."""
         await self.apply_kick(ctx, user, reason)
 
     @command()
     async def ban(self, ctx: Context, user: MemberConverter, *, reason: str = None) -> None:
-        """Create a permanent ban infraction for a user with the provided reason."""
+        """Permanently ban a user for the given reason."""
         await self.apply_ban(ctx, user, reason)
 
     # endregion
@@ -87,18 +87,20 @@ class Moderation(Scheduler, Cog):
     @command(aliases=('mute',))
     async def tempmute(self, ctx: Context, user: Member, duration: Duration, *, reason: str = None) -> None:
         """
-        Create a temporary mute infraction for a user with the provided expiration and reason.
+        Temporarily mute a user for the given reason and duration.
 
-        Duration strings are parsed per: http://strftime.org/
+        A unit of time should be appended to the duration:
+        y (years), m (months), w (weeks), d (days), h (hours), M (minutes), s (seconds)
         """
         await self.apply_mute(ctx, user, reason, expires_at=duration)
 
     @command()
     async def tempban(self, ctx: Context, user: MemberConverter, duration: Duration, *, reason: str = None) -> None:
         """
-        Create a temporary ban infraction for a user with the provided expiration and reason.
+        Temporarily ban a user for the given reason and duration.
 
-        Duration strings are parsed per: http://strftime.org/
+        A unit of time should be appended to the duration:
+        y (years), m (months), w (weeks), d (days), h (hours), M (minutes), s (seconds)
         """
         await self.apply_ban(ctx, user, reason, expires_at=duration)
 
@@ -107,11 +109,7 @@ class Moderation(Scheduler, Cog):
 
     @command(hidden=True)
     async def note(self, ctx: Context, user: MemberConverter, *, reason: str = None) -> None:
-        """
-        Create a private infraction note in the database for a user with the provided reason.
-
-        This does not send the user a notification
-        """
+        """Create a private note for a user with the given reason without notifying the user."""
         infraction = await post_infraction(ctx, user, reason, "note", hidden=True)
         if infraction is None:
             return
@@ -120,20 +118,12 @@ class Moderation(Scheduler, Cog):
 
     @command(hidden=True, aliases=['shadowkick', 'skick'])
     async def shadow_kick(self, ctx: Context, user: Member, *, reason: str = None) -> None:
-        """
-        Kick a user for the provided reason.
-
-        This does not send the user a notification.
-        """
+        """Kick a user for the given reason without notifying the user."""
         await self.apply_kick(ctx, user, reason, hidden=True)
 
     @command(hidden=True, aliases=['shadowban', 'sban'])
     async def shadow_ban(self, ctx: Context, user: MemberConverter, *, reason: str = None) -> None:
-        """
-        Create a permanent ban infraction for a user with the provided reason.
-
-        This does not send the user a notification.
-        """
+        """Permanently ban a user for the given reason without notifying the user."""
         await self.apply_ban(ctx, user, reason, hidden=True)
 
     # endregion
@@ -144,11 +134,10 @@ class Moderation(Scheduler, Cog):
         self, ctx: Context, user: Member, duration: Duration, *, reason: str = None
     ) -> None:
         """
-        Create a temporary mute infraction for a user with the provided reason.
+        Temporarily mute a user for the given reason and duration without notifying the user.
 
-        Duration strings are parsed per: http://strftime.org/
-
-        This does not send the user a notification.
+        A unit of time should be appended to the duration:
+        y (years), m (months), w (weeks), d (days), h (hours), M (minutes), s (seconds)
         """
         await self.apply_mute(ctx, user, reason, expires_at=duration, hidden=True)
 
@@ -157,11 +146,10 @@ class Moderation(Scheduler, Cog):
         self, ctx: Context, user: MemberConverter, duration: Duration, *, reason: str = None
     ) -> None:
         """
-        Create a temporary ban infraction for a user with the provided reason.
+        Temporarily ban a user for the given reason and duration without notifying the user.
 
-        Duration strings are parsed per: http://strftime.org/
-
-        This does not send the user a notification.
+        A unit of time should be appended to the duration:
+        y (years), m (months), w (weeks), d (days), h (hours), M (minutes), s (seconds)
         """
         await self.apply_ban(ctx, user, reason, expires_at=duration, hidden=True)
 
