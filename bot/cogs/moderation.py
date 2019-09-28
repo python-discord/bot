@@ -10,9 +10,10 @@ from discord.ext.commands import BadUnionArgument, Bot, Cog, Context, command
 
 from bot import constants
 from bot.cogs.modlog import ModLog
-from bot.constants import Colours, Event, Icons, MODERATION_ROLES
+from bot.constants import Colours, Event, Icons
 from bot.converters import Duration
-from bot.decorators import respect_role_hierarchy, with_role
+from bot.decorators import respect_role_hierarchy
+from bot.utils.checks import with_role_check
 from bot.utils.moderation import (
     Infraction, MemberObject, already_has_active_infraction, post_infraction, proxy_user
 )
@@ -61,7 +62,6 @@ class Moderation(Scheduler, Cog):
 
     # region: Permanent infractions
 
-    @with_role(*MODERATION_ROLES)
     @command()
     async def warn(self, ctx: Context, user: MemberConverter, *, reason: str = None) -> None:
         """Create a warning infraction in the database for a user."""
@@ -71,7 +71,6 @@ class Moderation(Scheduler, Cog):
 
         await self.apply_infraction(ctx, infraction, user)
 
-    @with_role(*MODERATION_ROLES)
     @command()
     @respect_role_hierarchy()
     async def kick(self, ctx: Context, user: Member, *, reason: str = None) -> None:
@@ -85,7 +84,6 @@ class Moderation(Scheduler, Cog):
         action = user.kick(reason=reason)
         await self.apply_infraction(ctx, infraction, user, action)
 
-    @with_role(*MODERATION_ROLES)
     @command()
     @respect_role_hierarchy()
     async def ban(self, ctx: Context, user: MemberConverter, *, reason: str = None) -> None:
@@ -106,7 +104,6 @@ class Moderation(Scheduler, Cog):
     # endregion
     # region: Temporary infractions
 
-    @with_role(*MODERATION_ROLES)
     @command(aliases=('mute',))
     async def tempmute(self, ctx: Context, user: Member, duration: Duration, *, reason: str = None) -> None:
         """
@@ -126,7 +123,6 @@ class Moderation(Scheduler, Cog):
         action = user.add_roles(self._muted_role, reason=reason)
         await self.apply_infraction(ctx, infraction, user, action)
 
-    @with_role(*MODERATION_ROLES)
     @command()
     @respect_role_hierarchy()
     async def tempban(self, ctx: Context, user: MemberConverter, duration: Duration, *, reason: str = None) -> None:
@@ -151,7 +147,6 @@ class Moderation(Scheduler, Cog):
     # endregion
     # region: Permanent shadow infractions
 
-    @with_role(*MODERATION_ROLES)
     @command(hidden=True)
     async def note(self, ctx: Context, user: MemberConverter, *, reason: str = None) -> None:
         """
@@ -165,7 +160,6 @@ class Moderation(Scheduler, Cog):
 
         await self.apply_infraction(ctx, infraction, user)
 
-    @with_role(*MODERATION_ROLES)
     @command(hidden=True, aliases=['shadowkick', 'skick'])
     @respect_role_hierarchy()
     async def shadow_kick(self, ctx: Context, user: Member, *, reason: str = None) -> None:
@@ -183,7 +177,6 @@ class Moderation(Scheduler, Cog):
         action = user.kick(reason=reason)
         await self.apply_infraction(ctx, infraction, user, action)
 
-    @with_role(*MODERATION_ROLES)
     @command(hidden=True, aliases=['shadowban', 'sban'])
     @respect_role_hierarchy()
     async def shadow_ban(self, ctx: Context, user: MemberConverter, *, reason: str = None) -> None:
@@ -208,7 +201,6 @@ class Moderation(Scheduler, Cog):
     # endregion
     # region: Temporary shadow infractions
 
-    @with_role(*MODERATION_ROLES)
     @command(hidden=True, aliases=["shadowtempmute, stempmute", "shadowmute", "smute"])
     async def shadow_tempmute(
         self, ctx: Context, user: Member, duration: Duration, *, reason: str = None
@@ -232,7 +224,6 @@ class Moderation(Scheduler, Cog):
         action = await user.add_roles(self._muted_role, reason=reason)
         await self.apply_infraction(ctx, infraction, user, action)
 
-    @with_role(*MODERATION_ROLES)
     @command(hidden=True, aliases=["shadowtempban, stempban"])
     @respect_role_hierarchy()
     async def shadow_tempban(
@@ -261,7 +252,6 @@ class Moderation(Scheduler, Cog):
     # endregion
     # region: Remove infractions (un- commands)
 
-    @with_role(*MODERATION_ROLES)
     @command()
     async def unmute(self, ctx: Context, user: MemberConverter) -> None:
         """Deactivates the active mute infraction for a user."""
@@ -339,7 +329,6 @@ class Moderation(Scheduler, Cog):
             log.exception("There was an error removing an infraction.")
             await ctx.send(":x: There was an error removing the infraction.")
 
-    @with_role(*MODERATION_ROLES)
     @command()
     async def unban(self, ctx: Context, user: MemberConverter) -> None:
         """Deactivates the active ban infraction for a user."""
@@ -604,6 +593,11 @@ class Moderation(Scheduler, Cog):
         )
 
     # endregion
+
+    # This cannot be static (must have a __func__ attribute).
+    def cog_check(self, ctx: Context) -> bool:
+        """Only allow moderators to invoke the commands in this cog."""
+        return with_role_check(ctx, *constants.MODERATION_ROLES)
 
     # This cannot be static (must have a __func__ attribute).
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:
