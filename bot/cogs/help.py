@@ -110,9 +110,9 @@ class HelpSession:
         cog = self._bot.cogs.get(query)
         if cog:
             return Cog(
-                name=cog.__class__.__name__,
+                name=cog.qualified_name,
                 description=inspect.getdoc(cog),
-                commands=[c for c in self._bot.commands if c.instance is cog]
+                commands=[c for c in self._bot.commands if c.cog is cog]
             )
 
         self._handle_not_found(query)
