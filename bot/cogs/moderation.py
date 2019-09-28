@@ -65,41 +65,21 @@ class Moderation(Scheduler, Cog):
     @command()
     async def warn(self, ctx: Context, user: MemberConverter, *, reason: str = None) -> None:
         """Create a warning infraction in the database for a user."""
-        infraction = await post_infraction(ctx, user, type="warning", reason=reason)
+        infraction = await post_infraction(ctx, user, reason, "warning")
         if infraction is None:
             return
 
         await self.apply_infraction(ctx, infraction, user)
 
     @command()
-    @respect_role_hierarchy()
     async def kick(self, ctx: Context, user: Member, *, reason: str = None) -> None:
         """Kicks a user with the provided reason."""
-        infraction = await post_infraction(ctx, user, type="kick", reason=reason)
-        if infraction is None:
-            return
-
-        self.mod_log.ignore(Event.member_remove, user.id)
-
-        action = user.kick(reason=reason)
-        await self.apply_infraction(ctx, infraction, user, action)
+        await self.apply_kick(ctx, user, reason)
 
     @command()
-    @respect_role_hierarchy()
     async def ban(self, ctx: Context, user: MemberConverter, *, reason: str = None) -> None:
         """Create a permanent ban infraction for a user with the provided reason."""
-        if await already_has_active_infraction(ctx=ctx, user=user, type="ban"):
-            return
-
-        infraction = await post_infraction(ctx, user, type="ban", reason=reason)
-        if infraction is None:
-            return
-
-        self.mod_log.ignore(Event.member_ban, user.id)
-        self.mod_log.ignore(Event.member_remove, user.id)
-
-        action = ctx.guild.ban(user, reason=reason, delete_message_days=0)
-        await self.apply_infraction(ctx, infraction, user, action)
+        await self.apply_ban(ctx, user, reason)
 
     # endregion
     # region: Temporary infractions
@@ -111,38 +91,16 @@ class Moderation(Scheduler, Cog):
 
         Duration strings are parsed per: http://strftime.org/
         """
-        if await already_has_active_infraction(ctx=ctx, user=user, type="mute"):
-            return
-
-        infraction = await post_infraction(ctx, user, type="mute", reason=reason, expires_at=duration)
-        if infraction is None:
-            return
-
-        self.mod_log.ignore(Event.member_update, user.id)
-
-        action = user.add_roles(self._muted_role, reason=reason)
-        await self.apply_infraction(ctx, infraction, user, action)
+        await self.apply_mute(ctx, user, reason, expires_at=duration)
 
     @command()
-    @respect_role_hierarchy()
     async def tempban(self, ctx: Context, user: MemberConverter, duration: Duration, *, reason: str = None) -> None:
         """
         Create a temporary ban infraction for a user with the provided expiration and reason.
 
         Duration strings are parsed per: http://strftime.org/
         """
-        if await already_has_active_infraction(ctx=ctx, user=user, type="ban"):
-            return
-
-        infraction = await post_infraction(ctx, user, type="ban", reason=reason, expires_at=duration)
-        if infraction is None:
-            return
-
-        self.mod_log.ignore(Event.member_ban, user.id)
-        self.mod_log.ignore(Event.member_remove, user.id)
-
-        action = ctx.guild.ban(user, reason=reason, delete_message_days=0)
-        await self.apply_infraction(ctx, infraction, user, action)
+        await self.apply_ban(ctx, user, reason, expires_at=duration)
 
     # endregion
     # region: Permanent shadow infractions
@@ -154,49 +112,29 @@ class Moderation(Scheduler, Cog):
 
         This does not send the user a notification
         """
-        infraction = await post_infraction(ctx, user, type="note", reason=reason, hidden=True)
+        infraction = await post_infraction(ctx, user, reason, "note", hidden=True)
         if infraction is None:
             return
 
         await self.apply_infraction(ctx, infraction, user)
 
     @command(hidden=True, aliases=['shadowkick', 'skick'])
-    @respect_role_hierarchy()
     async def shadow_kick(self, ctx: Context, user: Member, *, reason: str = None) -> None:
         """
         Kick a user for the provided reason.
 
         This does not send the user a notification.
         """
-        infraction = await post_infraction(ctx, user, type="kick", reason=reason, hidden=True)
-        if infraction is None:
-            return
-
-        self.mod_log.ignore(Event.member_remove, user.id)
-
-        action = user.kick(reason=reason)
-        await self.apply_infraction(ctx, infraction, user, action)
+        await self.apply_kick(ctx, user, reason, hidden=True)
 
     @command(hidden=True, aliases=['shadowban', 'sban'])
-    @respect_role_hierarchy()
     async def shadow_ban(self, ctx: Context, user: MemberConverter, *, reason: str = None) -> None:
         """
         Create a permanent ban infraction for a user with the provided reason.
 
         This does not send the user a notification.
         """
-        if await already_has_active_infraction(ctx=ctx, user=user, type="ban"):
-            return
-
-        infraction = await post_infraction(ctx, user, type="ban", reason=reason, hidden=True)
-        if infraction is None:
-            return
-
-        self.mod_log.ignore(Event.member_ban, user.id)
-        self.mod_log.ignore(Event.member_remove, user.id)
-
-        action = ctx.guild.ban(user, reason=reason, delete_message_days=0)
-        await self.apply_infraction(ctx, infraction, user, action)
+        await self.apply_ban(ctx, user, reason, hidden=True)
 
     # endregion
     # region: Temporary shadow infractions
@@ -212,20 +150,9 @@ class Moderation(Scheduler, Cog):
 
         This does not send the user a notification.
         """
-        if await already_has_active_infraction(ctx=ctx, user=user, type="mute"):
-            return
-
-        infraction = await post_infraction(ctx, user, type="mute", reason=reason, expires_at=duration, hidden=True)
-        if infraction is None:
-            return
-
-        self.mod_log.ignore(Event.member_update, user.id)
-
-        action = await user.add_roles(self._muted_role, reason=reason)
-        await self.apply_infraction(ctx, infraction, user, action)
+        await self.apply_mute(ctx, user, reason, expires_at=duration, hidden=True)
 
     @command(hidden=True, aliases=["shadowtempban, stempban"])
-    @respect_role_hierarchy()
     async def shadow_tempban(
         self, ctx: Context, user: MemberConverter, duration: Duration, *, reason: str = None
     ) -> None:
@@ -236,18 +163,7 @@ class Moderation(Scheduler, Cog):
 
         This does not send the user a notification.
         """
-        if await already_has_active_infraction(ctx=ctx, user=user, type="ban"):
-            return
-
-        infraction = await post_infraction(ctx, user, type="ban", reason=reason, expires_at=duration, hidden=True)
-        if infraction is None:
-            return
-
-        self.mod_log.ignore(Event.member_ban, user.id)
-        self.mod_log.ignore(Event.member_remove, user.id)
-
-        action = ctx.guild.ban(user, reason=reason, delete_message_days=0)
-        await self.apply_infraction(ctx, infraction, user, action)
+        await self.apply_ban(ctx, user, reason, expires_at=duration, hidden=True)
 
     # endregion
     # region: Remove infractions (un- commands)
@@ -390,7 +306,51 @@ class Moderation(Scheduler, Cog):
             await ctx.send(":x: There was an error removing the infraction.")
 
     # endregion
+    # region: Base infraction functions
 
+    async def apply_mute(self, ctx: Context, user: Member, reason: str, **kwargs) -> None:
+        """Apply a mute infraction with kwargs passed to `post_infraction`."""
+        if await already_has_active_infraction(ctx, user, "mute"):
+            return
+
+        infraction = await post_infraction(ctx, user, "mute", reason, **kwargs)
+        if infraction is None:
+            return
+
+        self.mod_log.ignore(Event.member_update, user.id)
+
+        action = user.add_roles(self._muted_role, reason=reason)
+        await self.apply_infraction(ctx, infraction, user, action)
+
+    @respect_role_hierarchy()
+    async def apply_kick(self, ctx: Context, user: Member, reason: str, **kwargs) -> None:
+        """Apply a kick infraction with kwargs passed to `post_infraction`."""
+        infraction = await post_infraction(ctx, user, type="kick", **kwargs)
+        if infraction is None:
+            return
+
+        self.mod_log.ignore(Event.member_remove, user.id)
+
+        action = user.kick(reason=reason)
+        await self.apply_infraction(ctx, infraction, user, action)
+
+    @respect_role_hierarchy()
+    async def apply_ban(self, ctx: Context, user: MemberObject, reason: str, **kwargs) -> None:
+        """Apply a ban infraction with kwargs passed to `post_infraction`."""
+        if await already_has_active_infraction(ctx, user, "ban"):
+            return
+
+        infraction = await post_infraction(ctx, user, reason, "ban", **kwargs)
+        if infraction is None:
+            return
+
+        self.mod_log.ignore(Event.member_ban, user.id)
+        self.mod_log.ignore(Event.member_remove, user.id)
+
+        action = ctx.guild.ban(user, reason=reason, delete_message_days=0)
+        await self.apply_infraction(ctx, infraction, user, action)
+
+    # endregion
     # region: Utility functions
 
     def cancel_expiration(self, infraction_id: str) -> None:
