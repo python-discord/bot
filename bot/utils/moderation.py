@@ -1,27 +1,42 @@
 import logging
+import typing as t
 from datetime import datetime
-from typing import Optional, Union
 
-from discord import Member, Object, User
+import discord
+from discord.ext import commands
 from discord.ext.commands import Context
 
 from bot.api import ResponseCodeError
-from bot.constants import Keys
 
 log = logging.getLogger(__name__)
 
-HEADERS = {"X-API-KEY": Keys.site_api}
+MemberObject = t.Union[discord.Member, discord.User, discord.Object]
+Infraction = t.Dict[str, t.Union[str, int, bool]]
+
+
+def proxy_user(user_id: str) -> discord.Object:
+    """Create a proxy user for the provided user_id for situations where a Member or User object cannot be resolved."""
+    try:
+        user_id = int(user_id)
+    except ValueError:
+        raise commands.BadArgument
+
+    user = discord.Object(user_id)
+    user.mention = user.id
+    user.avatar_url_as = lambda static_format: None
+
+    return user
 
 
 async def post_infraction(
     ctx: Context,
-    user: Union[Member, Object, User],
+    user: MemberObject,
     type: str,
     reason: str,
     expires_at: datetime = None,
     hidden: bool = False,
     active: bool = True,
-) -> Optional[dict]:
+) -> t.Optional[dict]:
     """Posts an infraction to the API."""
     payload = {
         "actor": ctx.message.author.id,
@@ -52,7 +67,7 @@ async def post_infraction(
     return response
 
 
-async def already_has_active_infraction(ctx: Context, user: Union[Member, Object, User], type: str) -> bool:
+async def already_has_active_infraction(ctx: Context, user: MemberObject, type: str) -> bool:
     """Checks if a user already has an active infraction of the given type."""
     active_infractions = await ctx.bot.api_client.get(
         'bot/infractions',
