@@ -170,9 +170,12 @@ class Reminders(Scheduler, Cog):
             }
         )
 
+        now = datetime.utcnow()
+
         # Confirm to the user that it worked.
         await self._send_confirmation(
-            ctx, on_success="Your reminder has been created successfully!"
+            ctx,
+            on_success=f"Your reminder `{content}` will arrive in {humanize_delta(relativedelta(expiration, now))}!"
         )
 
         loop = asyncio.get_event_loop()
