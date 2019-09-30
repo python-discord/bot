@@ -7,8 +7,6 @@ version: "3.7"
 services:
   postgres:
     image: postgres:11-alpine
-    ports:
-      - "127.0.0.1:7777:5432"
     environment:
       POSTGRES_DB: pysite
       POSTGRES_PASSWORD: pysite
@@ -16,15 +14,31 @@ services:
 
   web:
     image: pythondiscord/site:latest
-    command: >
-      bash -c "echo \"from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.create_superuser('admin', 'admin', 'admin') if not User.objects.filter(username='admin').exists() else print('Admin user already exists')\" | python manage.py shell
-      && ./manage.py runserver 0.0.0.0:8000"
+    command: ["run", "--debug"]
+    networks:
+      default:
+        aliases:
+          - api.web
+          - admin.web
+          - staff.web
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
       - postgres
     environment:
       DATABASE_URL: postgres://pysite:pysite@postgres:5432/pysite
-      DEBUG: "true"
       SECRET_KEY: suitable-for-development-only
       STATIC_ROOT: /var/www/static
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./logs:/bot/logs
+      - .:/bot:ro
+    depends_on:
+      - web
+    environment:
+      BOT_TOKEN: ${BOT_TOKEN}
+      BOT_API_KEY: badbot13m0n8f570f942013fc818f234916ca531

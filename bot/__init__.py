@@ -2,6 +2,7 @@ import logging
 import os
 import sys
 from logging import Logger, StreamHandler, handlers
+from pathlib import Path
 
 from logmatic import JsonFormatter
 
@@ -30,21 +31,19 @@ logging_handlers = []
 # We can't import this yet, so we have to define it ourselves
 DEBUG_MODE = True if 'local' in os.environ.get("SITE_URL", "local") else False
 
+LOG_DIR = Path("logs")
+LOG_DIR.mkdir(exist_ok=True)
 
 if DEBUG_MODE:
     logging_handlers.append(StreamHandler(stream=sys.stdout))
 
-    json_handler = logging.FileHandler(filename="log.json", mode="w")
+    json_handler = logging.FileHandler(filename=Path(LOG_DIR, "log.json"), mode="w")
     json_handler.formatter = JsonFormatter()
     logging_handlers.append(json_handler)
 else:
 
-    logdir = "log"
-    logfile = logdir+os.sep+"bot.log"
+    logfile = Path(LOG_DIR, "bot.log")
     megabyte = 1048576
-
-    if not os.path.exists(logdir):
-        os.makedirs(logdir)
 
     filehandler = handlers.RotatingFileHandler(logfile, maxBytes=(megabyte*5), backupCount=7)
     logging_handlers.append(filehandler)
@@ -55,7 +54,7 @@ else:
 
 
 logging.basicConfig(
-    format="%(asctime)s pd.beardfist.com Bot: | %(name)33s | %(levelname)8s | %(message)s",
+    format="%(asctime)s Bot: | %(name)33s | %(levelname)8s | %(message)s",
     datefmt="%b %d %H:%M:%S",
     level=logging.TRACE if DEBUG_MODE else logging.INFO,
     handlers=logging_handlers
