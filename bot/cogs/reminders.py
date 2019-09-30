@@ -100,9 +100,11 @@ class Reminders(Scheduler, Cog):
         embed.set_author(
             icon_url=Icons.remind_blurple,
             name="It has arrived!"
-        )
-
-        embed.description = f"Here's your reminder: `{reminder['content']}`"
+       
+        if "jump_url" in reminder: # keep backward compatibility
+            embed.description = f"Here's your reminder: `{reminder['content']}`. Jump back when you created the reminder : {jump_url}"
+        else:
+            embed.description = f"Here's your reminder: `{reminder['content']}`"
 
         if late:
             embed.colour = Colour.red()
@@ -165,6 +167,7 @@ class Reminders(Scheduler, Cog):
             json={
                 'author': ctx.author.id,
                 'channel_id': ctx.message.channel.id,
+                'jump_url': ctx.message.jump_url,
                 'content': content,
                 'expiration': expiration.isoformat()
             }
