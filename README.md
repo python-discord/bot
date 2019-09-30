@@ -9,3 +9,5 @@
 
 This project is a Discord bot specifically for use with the Python Discord server. It provides numerous utilities
 and other tools to help keep the server running like a well-oiled machine.
+
+Read the [Contributing Guide](https://pythondiscord.com/pages/contributing/bot/) on our website if you're interested in helping out.
