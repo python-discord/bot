@@ -13,7 +13,7 @@ services:
       POSTGRES_USER: pysite
 
   web:
-    image: pythondiscord/site:dev
+    image: pythondiscord/site:latest
     command: ["run", "--debug"]
     networks:
       default:
@@ -37,7 +37,8 @@ services:
     volumes:
       - ./logs:/bot/logs
       - .:/bot:ro
+    depends_on:
+      - web
     environment:
       BOT_TOKEN: ${BOT_TOKEN}
       BOT_API_KEY: badbot13m0n8f570f942013fc818f234916ca531
-      DATABASE_URL: postgres://pysite:pysite@postgres:5432/pysite
