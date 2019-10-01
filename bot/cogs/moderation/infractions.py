@@ -22,12 +22,13 @@ from .utils import (
 
 log = logging.getLogger(__name__)
 
+# apply icon, pardon icon
 INFRACTION_ICONS = {
-    "mute": Icons.user_mute,
-    "kick": Icons.sign_out,
-    "ban": Icons.user_ban,
-    "warning": Icons.user_warn,
-    "note": Icons.user_warn,
+    "mute": (Icons.user_mute, Icons.user_unmute),
+    "kick": (Icons.sign_out, None),
+    "ban": (Icons.user_ban, Icons.user_unban),
+    "warning": (Icons.user_warn, None),
+    "note": (Icons.user_warn, None),
 }
 RULES_URL = "https://pythondiscord.com/pages/rules"
 APPEALABLE_INFRACTIONS = ("ban", "mute")
@@ -430,7 +431,7 @@ class Infractions(Scheduler, Cog):
             colour=Colour(Colours.soft_red)
         )
 
-        icon_url = INFRACTION_ICONS.get(infr_type, Icons.token_removed)
+        icon_url = INFRACTION_ICONS[infr_type][0]
         embed.set_author(name="Infraction Information", icon_url=icon_url, url=RULES_URL)
         embed.title = f"Please review our rules over at {RULES_URL}"
         embed.url = RULES_URL
@@ -489,7 +490,7 @@ class Infractions(Scheduler, Cog):
     ) -> None:
         """Apply an infraction to the user, log the infraction, and optionally notify the user."""
         infr_type = infraction["type"]
-        icon = INFRACTION_ICONS[infr_type]
+        icon = INFRACTION_ICONS[infr_type][0]
         reason = infraction["reason"]
         expiry = infraction["expires_at"]
 
