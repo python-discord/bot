@@ -4,12 +4,13 @@ from collections import ChainMap
 from typing import Union
 
 from discord import Color, Embed, Member, User
-from discord.ext.commands import Cog, Context, group
+from discord.ext.commands import Bot, Cog, Context, group
 
 from bot.api import ResponseCodeError
 from bot.constants import Channels, Guild, Roles, Webhooks
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
+from bot.utils import time
 from .watchchannel import WatchChannel, proxy_user
 
 log = logging.getLogger(__name__)
@@ -19,7 +20,7 @@ STAFF_ROLES = Roles.owner, Roles.admin, Roles.moderator, Roles.helpers    # <- I
 class TalentPool(WatchChannel, Cog, name="Talentpool"):
     """Relays messages of helper candidates to a watch channel to observe them."""
 
-    def __init__(self, bot) -> None:
+    def __init__(self, bot: Bot) -> None:
         super().__init__(
             bot,
             destination=Channels.talent_pool,
@@ -33,7 +34,6 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
     async def nomination_group(self, ctx: Context) -> None:
         """Highlights the activity of helper nominees by relaying their messages to the talent pool channel."""
-
         await ctx.invoke(self.bot.get_command("help"), "talentpool")
 
     @nomination_group.command(name='watched', aliases=('all', 'list'))
@@ -156,7 +156,6 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
     async def nomination_edit_group(self, ctx: Context) -> None:
         """Commands to edit nominations."""
-
         await ctx.invoke(self.bot.get_command("help"), "talentpool", "edit")
 
     @nomination_edit_group.command(name='reason')
@@ -200,7 +199,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         log.debug(active)
         log.debug(type(nomination_object["inserted_at"]))
 
-        start_date = self._get_human_readable(nomination_object["inserted_at"])
+        start_date = time.format_infraction(nomination_object["inserted_at"])
         if active:
             lines = textwrap.dedent(
                 f"""
@@ -214,7 +213,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
                 """
             )
         else:
-            end_date = self._get_human_readable(nomination_object["ended_at"])
+            end_date = time.format_infraction(nomination_object["ended_at"])
             lines = textwrap.dedent(
                 f"""
                 ===============

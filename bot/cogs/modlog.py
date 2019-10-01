@@ -11,7 +11,7 @@ from discord import (
     RawMessageUpdateEvent, Role, TextChannel, User, VoiceChannel
 )
 from discord.abc import GuildChannel
-from discord.ext.commands import Bot, Cog
+from discord.ext.commands import Bot, Cog, Context
 
 from bot.constants import (
     Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, URLs
@@ -29,9 +29,7 @@ ROLE_CHANGES_UNSUPPORTED = ("colour", "permissions")
 
 
 class ModLog(Cog, name="ModLog"):
-    """
-    Logging for server events and staff actions
-    """
+    """Logging for server events and staff actions."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
@@ -40,16 +38,14 @@ class ModLog(Cog, name="ModLog"):
         self._cached_deletes = []
         self._cached_edits = []
 
-    async def upload_log(self, messages: List[Message], actor_id: int) -> Optional[str]:
+    async def upload_log(self, messages: List[Message], actor_id: int) -> str:
         """
-        Uploads the log data to the database via
-        an API endpoint for uploading logs.
+        Uploads the log data to the database via an API endpoint for uploading logs.
 
         Used in several mod log embeds.
 
         Returns a URL that can be used to view the log.
         """
-
         response = await self.bot.api_client.post(
             'bot/deleted-messages',
             json={
@@ -70,7 +66,8 @@ class ModLog(Cog, name="ModLog"):
 
         return f"{URLs.site_logs_view}/{response['id']}"
 
-    def ignore(self, event: Event, *items: int):
+    def ignore(self, event: Event, *items: int) -> None:
+        """Add event to ignored events to suppress log emission."""
         for item in items:
             if item not in self._ignored[event]:
                 self._ignored[event].append(item)
@@ -90,7 +87,8 @@ class ModLog(Cog, name="ModLog"):
             additional_embeds_msg: Optional[str] = None,
             timestamp_override: Optional[datetime] = None,
             footer: Optional[str] = None,
-    ):
+    ) -> Context:
+        """Generate log embed and send to logging channel."""
         embed = Embed(description=text)
 
         if title and icon_url:
@@ -123,7 +121,8 @@ class ModLog(Cog, name="ModLog"):
         return await self.bot.get_context(log_message)  # Optionally return for use with antispam
 
     @Cog.listener()
-    async def on_guild_channel_create(self, channel: GUILD_CHANNEL):
+    async def on_guild_channel_create(self, channel: GUILD_CHANNEL) -> None:
+        """Log channel create event to mod log."""
         if channel.guild.id != GuildConstant.id:
             return
 
@@ -148,7 +147,8 @@ class ModLog(Cog, name="ModLog"):
         await self.send_log_message(Icons.hash_green, Colour(Colours.soft_green), title, message)
 
     @Cog.listener()
-    async def on_guild_channel_delete(self, channel: GUILD_CHANNEL):
+    async def on_guild_channel_delete(self, channel: GUILD_CHANNEL) -> None:
+        """Log channel delete event to mod log."""
         if channel.guild.id != GuildConstant.id:
             return
 
@@ -170,7 +170,8 @@ class ModLog(Cog, name="ModLog"):
         )
 
     @Cog.listener()
-    async def on_guild_channel_update(self, before: GUILD_CHANNEL, after: GuildChannel):
+    async def on_guild_channel_update(self, before: GUILD_CHANNEL, after: GuildChannel) -> None:
+        """Log channel update event to mod log."""
         if before.guild.id != GuildConstant.id:
             return
 
@@ -229,7 +230,8 @@ class ModLog(Cog, name="ModLog"):
         )
 
     @Cog.listener()
-    async def on_guild_role_create(self, role: Role):
+    async def on_guild_role_create(self, role: Role) -> None:
+        """Log role create event to mod log."""
         if role.guild.id != GuildConstant.id:
             return
 
@@ -239,7 +241,8 @@ class ModLog(Cog, name="ModLog"):
         )
 
     @Cog.listener()
-    async def on_guild_role_delete(self, role: Role):
+    async def on_guild_role_delete(self, role: Role) -> None:
+        """Log role delete event to mod log."""
         if role.guild.id != GuildConstant.id:
             return
 
@@ -249,7 +252,8 @@ class ModLog(Cog, name="ModLog"):
         )
 
     @Cog.listener()
-    async def on_guild_role_update(self, before: Role, after: Role):
+    async def on_guild_role_update(self, before: Role, after: Role) -> None:
+        """Log role update event to mod log."""
         if before.guild.id != GuildConstant.id:
             return
 
@@ -301,7 +305,8 @@ class ModLog(Cog, name="ModLog"):
         )
 
     @Cog.listener()
-    async def on_guild_update(self, before: Guild, after: Guild):
+    async def on_guild_update(self, before: Guild, after: Guild) -> None:
+        """Log guild update event to mod log."""
         if before.id != GuildConstant.id:
             return
 
@@ -351,7 +356,8 @@ class ModLog(Cog, name="ModLog"):
         )
 
     @Cog.listener()
-    async def on_member_ban(self, guild: Guild, member: Union[Member, User]):
+    async def on_member_ban(self, guild: Guild, member: Union[Member, User]) -> None:
+        """Log ban event to mod log."""
         if guild.id != GuildConstant.id:
             return
 
@@ -367,7 +373,8 @@ class ModLog(Cog, name="ModLog"):
         )
 
     @Cog.listener()
-    async def on_member_join(self, member: Member):
+    async def on_member_join(self, member: Member) -> None:
+        """Log member join event to user log."""
         if member.guild.id != GuildConstant.id:
             return
 
@@ -388,7 +395,8 @@ class ModLog(Cog, name="ModLog"):
         )
 
     @Cog.listener()
-    async def on_member_remove(self, member: Member):
+    async def on_member_remove(self, member: Member) -> None:
+        """Log member leave event to user log."""
         if member.guild.id != GuildConstant.id:
             return
 
@@ -404,7 +412,8 @@ class ModLog(Cog, name="ModLog"):
         )
 
     @Cog.listener()
-    async def on_member_unban(self, guild: Guild, member: User):
+    async def on_member_unban(self, guild: Guild, member: User) -> None:
+        """Log member unban event to mod log."""
         if guild.id != GuildConstant.id:
             return
 
@@ -420,7 +429,8 @@ class ModLog(Cog, name="ModLog"):
         )
 
     @Cog.listener()
-    async def on_member_update(self, before: Member, after: Member):
+    async def on_member_update(self, before: Member, after: Member) -> None:
+        """Log member update event to user log."""
         if before.guild.id != GuildConstant.id:
             return
 
@@ -510,7 +520,8 @@ class ModLog(Cog, name="ModLog"):
         )
 
     @Cog.listener()
-    async def on_message_delete(self, message: Message):
+    async def on_message_delete(self, message: Message) -> None:
+        """Log message delete event to message change log."""
         channel = message.channel
         author = message.author
 
@@ -565,7 +576,8 @@ class ModLog(Cog, name="ModLog"):
         )
 
     @Cog.listener()
-    async def on_raw_message_delete(self, event: RawMessageDeleteEvent):
+    async def on_raw_message_delete(self, event: RawMessageDeleteEvent) -> None:
+        """Log raw message delete event to message change log."""
         if event.guild_id != GuildConstant.id or event.channel_id in GuildConstant.ignored:
             return
 
@@ -605,7 +617,8 @@ class ModLog(Cog, name="ModLog"):
         )
 
     @Cog.listener()
-    async def on_message_edit(self, before: Message, after: Message):
+    async def on_message_edit(self, before: Message, after: Message) -> None:
+        """Log message edit event to message change log."""
         if (
             not before.guild
             or before.guild.id != GuildConstant.id
@@ -679,7 +692,8 @@ class ModLog(Cog, name="ModLog"):
         )
 
     @Cog.listener()
-    async def on_raw_message_edit(self, event: RawMessageUpdateEvent):
+    async def on_raw_message_edit(self, event: RawMessageUpdateEvent) -> None:
+        """Log raw message edit event to message change log."""
         try:
             channel = self.bot.get_channel(int(event.data["channel_id"]))
             message = await channel.fetch_message(event.message_id)
@@ -748,6 +762,7 @@ class ModLog(Cog, name="ModLog"):
         )
 
 
-def setup(bot):
+def setup(bot: Bot) -> None:
+    """Mod log cog load."""
     bot.add_cog(ModLog(bot))
     log.info("Cog loaded: ModLog")

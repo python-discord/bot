@@ -17,7 +17,7 @@ from bot.constants import (
     Guild as GuildConfig, Icons,
     STAFF_ROLES,
 )
-from bot.converters import ExpirationDate
+from bot.converters import Duration
 
 
 log = logging.getLogger(__name__)
@@ -102,7 +102,7 @@ class AntiSpam(Cog):
         self.validation_errors = validation_errors
         role_id = AntiSpamConfig.punishment['role_id']
         self.muted_role = Object(role_id)
-        self.expiration_date_converter = ExpirationDate()
+        self.expiration_date_converter = Duration()
 
         self.message_deletion_queue = dict()
         self.queue_consumption_tasks = dict()
@@ -113,7 +113,7 @@ class AntiSpam(Cog):
         return self.bot.get_cog("ModLog")
 
     @Cog.listener()
-    async def on_ready(self):
+    async def on_ready(self) -> None:
         """Unloads the cog and alerts admins if configuration validation failed."""
         if self.validation_errors:
             body = "**The following errors were encountered:**\n"
@@ -221,9 +221,7 @@ class AntiSpam(Cog):
 
     async def maybe_delete_messages(self, channel: TextChannel, messages: List[Message]) -> None:
         """Cleans the messages if cleaning is configured."""
-
         if AntiSpamConfig.clean_offending:
-
             # If we have more than one message, we can use bulk delete.
             if len(messages) > 1:
                 message_ids = [message.id for message in messages]
@@ -274,7 +272,7 @@ def validate_config(rules: Mapping = AntiSpamConfig.rules) -> Dict[str, str]:
 
 
 def setup(bot: Bot) -> None:
-    """Setup for the cog."""
+    """Antispam cog load."""
     validation_errors = validate_config()
     bot.add_cog(AntiSpam(bot, validation_errors))
     log.info("Cog loaded: AntiSpam")

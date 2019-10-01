@@ -34,7 +34,6 @@ def get_roles_for_sync(
             to be deleted on the site, meaning the roles are present on
             the API but not in the cached guild.
     """
-
     guild_role_ids = {role.id for role in guild_roles}
     api_role_ids = {role.id for role in api_roles}
     new_role_ids = guild_role_ids - api_role_ids
@@ -66,7 +65,6 @@ async def sync_roles(bot: Bot, guild: Guild) -> Tuple[int, int, int]:
             (element `0`) , how many roles were updated (element `1`), and how many
             roles were deleted (element `2`) on the API.
     """
-
     roles = await bot.api_client.get('bot/roles')
 
     # Pack API roles and guild roles into one common format,
@@ -138,7 +136,6 @@ def get_users_for_sync(
             guild, but where the attribute of a user on the API is not
             equal to the attribute of the user on the guild.
     """
-
     users_to_create = set()
     users_to_update = set()
 
@@ -169,8 +166,7 @@ def get_users_for_sync(
 
 async def sync_users(bot: Bot, guild: Guild) -> Tuple[int, int, None]:
     """
-    Synchronize users found on the given
-    `guild` with the ones on the API.
+    Synchronize users found in the given `guild` with the ones in the API.
 
     Arguments:
         bot (discord.ext.commands.Bot):
@@ -186,7 +182,6 @@ async def sync_users(bot: Bot, guild: Guild) -> Tuple[int, int, None]:
             (element `0`) and how many users were updated (element `1`), and `None`
             to indicate that a user sync never deletes entries from the API.
     """
-
     current_users = await bot.api_client.get('bot/users')
 
     # Pack API users and guild users into one common format,

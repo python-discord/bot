@@ -16,9 +16,7 @@ KEEP_LOADED = ["bot.cogs.cogs", "bot.cogs.modlog"]
 
 
 class Cogs(Cog):
-    """
-    Cog management commands
-    """
+    """Cog management commands."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
@@ -38,21 +36,19 @@ class Cogs(Cog):
 
     @group(name='cogs', aliases=('c',), invoke_without_command=True)
     @with_role(*MODERATION_ROLES, Roles.core_developer)
-    async def cogs_group(self, ctx: Context):
+    async def cogs_group(self, ctx: Context) -> None:
         """Load, unload, reload, and list active cogs."""
-
         await ctx.invoke(self.bot.get_command("help"), "cogs")
 
     @cogs_group.command(name='load', aliases=('l',))
     @with_role(*MODERATION_ROLES, Roles.core_developer)
-    async def load_command(self, ctx: Context, cog: str):
+    async def load_command(self, ctx: Context, cog: str) -> None:
         """
-        Load up an unloaded cog, given the module containing it
+        Load up an unloaded cog, given the module containing it.
 
         You can specify the cog name for any cogs that are placed directly within `!cogs`, or specify the
         entire module directly.
         """
-
         cog = cog.lower()
 
         embed = Embed()
@@ -78,13 +74,12 @@ class Cogs(Cog):
                 try:
                     self.bot.load_extension(full_cog)
                 except ImportError:
-                    log.error(f"{ctx.author} requested we load the '{cog}' cog, "
-                              f"but the cog module {full_cog} could not be found!")
+                    log.exception(f"{ctx.author} requested we load the '{cog}' cog, "
+                                  f"but the cog module {full_cog} could not be found!")
                     embed.description = f"Invalid cog: {cog}\n\nCould not find cog module {full_cog}"
                 except Exception as e:
-                    log.error(f"{ctx.author} requested we load the '{cog}' cog, "
-                              "but the loading failed with the following error: \n"
-                              f"**{e.__class__.__name__}: {e}**")
+                    log.exception(f"{ctx.author} requested we load the '{cog}' cog, "
+                                  "but the loading failed")
                     embed.description = f"Failed to load cog: {cog}\n\n{e.__class__.__name__}: {e}"
                 else:
                     log.debug(f"{ctx.author} requested we load the '{cog}' cog. Cog loaded!")
@@ -98,14 +93,13 @@ class Cogs(Cog):
 
     @cogs_group.command(name='unload', aliases=('ul',))
     @with_role(*MODERATION_ROLES, Roles.core_developer)
-    async def unload_command(self, ctx: Context, cog: str):
+    async def unload_command(self, ctx: Context, cog: str) -> None:
         """
-        Unload an already-loaded cog, given the module containing it
+        Unload an already-loaded cog, given the module containing it.
 
         You can specify the cog name for any cogs that are placed directly within `!cogs`, or specify the
         entire module directly.
         """
-
         cog = cog.lower()
 
         embed = Embed()
@@ -134,9 +128,8 @@ class Cogs(Cog):
                 try:
                     self.bot.unload_extension(full_cog)
                 except Exception as e:
-                    log.error(f"{ctx.author} requested we unload the '{cog}' cog, "
-                              "but the unloading failed with the following error: \n"
-                              f"{e}")
+                    log.exception(f"{ctx.author} requested we unload the '{cog}' cog, "
+                                  "but the unloading failed")
                     embed.description = f"Failed to unload cog: {cog}\n\n```{e}```"
                 else:
                     log.debug(f"{ctx.author} requested we unload the '{cog}' cog. Cog unloaded!")
@@ -150,9 +143,9 @@ class Cogs(Cog):
 
     @cogs_group.command(name='reload', aliases=('r',))
     @with_role(*MODERATION_ROLES, Roles.core_developer)
-    async def reload_command(self, ctx: Context, cog: str):
+    async def reload_command(self, ctx: Context, cog: str) -> None:
         """
-        Reload an unloaded cog, given the module containing it
+        Reload an unloaded cog, given the module containing it.
 
         You can specify the cog name for any cogs that are placed directly within `!cogs`, or specify the
         entire module directly.
@@ -160,7 +153,6 @@ class Cogs(Cog):
         If you specify "*" as the cog, every cog currently loaded will be unloaded, and then every cog present in the
         bot/cogs directory will be loaded.
         """
-
         cog = cog.lower()
 
         embed = Embed()
@@ -232,16 +224,16 @@ class Cogs(Cog):
                 log.debug(f"{ctx.author} requested we reload all cogs. Here are the results: \n"
                           f"{lines}")
 
-                return await LinePaginator.paginate(lines, ctx, embed, empty=False)
+                await LinePaginator.paginate(lines, ctx, embed, empty=False)
+                return
 
             elif full_cog in self.bot.extensions:
                 try:
                     self.bot.unload_extension(full_cog)
                     self.bot.load_extension(full_cog)
                 except Exception as e:
-                    log.error(f"{ctx.author} requested we reload the '{cog}' cog, "
-                              "but the unloading failed with the following error: \n"
-                              f"{e}")
+                    log.exception(f"{ctx.author} requested we reload the '{cog}' cog, "
+                                  "but the unloading failed")
                     embed.description = f"Failed to reload cog: {cog}\n\n```{e}```"
                 else:
                     log.debug(f"{ctx.author} requested we reload the '{cog}' cog. Cog reloaded!")
@@ -255,13 +247,12 @@ class Cogs(Cog):
 
     @cogs_group.command(name='list', aliases=('all',))
     @with_role(*MODERATION_ROLES, Roles.core_developer)
-    async def list_command(self, ctx: Context):
+    async def list_command(self, ctx: Context) -> None:
         """
         Get a list of all cogs, including their loaded status.
 
         Gray indicates that the cog is unloaded. Green indicates that the cog is currently loaded.
         """
-
         embed = Embed()
         lines = []
         cogs = {}
@@ -301,6 +292,7 @@ class Cogs(Cog):
         await LinePaginator.paginate(lines, ctx, embed, max_size=300, empty=False)
 
 
-def setup(bot):
+def setup(bot: Bot) -> None:
+    """Cogs cog load."""
     bot.add_cog(Cogs(bot))
     log.info("Cog loaded: Cogs")

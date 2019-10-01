@@ -1,9 +1,9 @@
 import logging
 import random
-import typing
 from asyncio import Lock, sleep
 from contextlib import suppress
 from functools import wraps
+from typing import Any, Callable, Container, Optional
 from weakref import WeakValueDictionary
 
 from discord import Colour, Embed
@@ -18,6 +18,8 @@ log = logging.getLogger(__name__)
 
 
 class InChannelCheckFailure(CheckFailure):
+    """Raised when a check fails for a message being sent in a whitelisted channel."""
+
     def __init__(self, *channels: int):
         self.channels = channels
         channels_str = ', '.join(f"<#{c_id}>" for c_id in channels)
@@ -25,11 +27,10 @@ class InChannelCheckFailure(CheckFailure):
         super().__init__(f"Sorry, but you may only use this command within {channels_str}.")
 
 
-def in_channel(*channels: int, bypass_roles: typing.Container[int] = None):
-    """
-    Checks that the message is in a whitelisted channel or optionally has a bypass role.
-    """
-    def predicate(ctx: Context):
+def in_channel(*channels: int, bypass_roles: Container[int] = None) -> Callable:
+    """Checks that the message is in a whitelisted channel or optionally has a bypass role."""
+    def predicate(ctx: Context) -> bool:
+        """In-channel checker predicate."""
         if ctx.channel.id in channels:
             log.debug(f"{ctx.author} tried to call the '{ctx.command.name}' command. "
                       f"The command was used in a whitelisted channel.")
@@ -50,42 +51,34 @@ def in_channel(*channels: int, bypass_roles: typing.Container[int] = None):
     return commands.check(predicate)
 
 
-def with_role(*role_ids: int):
-    """
-    Returns True if the user has any one
-    of the roles in role_ids.
-    """
-
-    async def predicate(ctx: Context):
+def with_role(*role_ids: int) -> Callable:
+    """Returns True if the user has any one of the roles in role_ids."""
+    async def predicate(ctx: Context) -> bool:
+        """With role checker predicate."""
         return with_role_check(ctx, *role_ids)
     return commands.check(predicate)
 
 
-def without_role(*role_ids: int):
-    """
-    Returns True if the user does not have any
-    of the roles in role_ids.
-    """
-
-    async def predicate(ctx: Context):
+def without_role(*role_ids: int) -> Callable:
+    """Returns True if the user does not have any of the roles in role_ids."""
+    async def predicate(ctx: Context) -> bool:
         return without_role_check(ctx, *role_ids)
     return commands.check(predicate)
 
 
-def locked():
+def locked() -> Callable:
     """
     Allows the user to only run one instance of the decorated command at a time.
-    Subsequent calls to the command from the same author are
-    ignored until the command has completed invocation.
+
+    Subsequent calls to the command from the same author are ignored until the command has completed invocation.
 
     This decorator has to go before (below) the `command` decorator.
     """
-
-    def wrap(func):
+    def wrap(func: Callable) -> Callable:
         func.__locks = WeakValueDictionary()
 
         @wraps(func)
-        async def inner(self, ctx, *args, **kwargs):
+        async def inner(self: Callable, ctx: Context, *args, **kwargs) -> Optional[Any]:
             lock = func.__locks.setdefault(ctx.author.id, Lock())
             if lock.locked():
                 embed = Embed()
@@ -105,15 +98,15 @@ def locked():
     return wrap
 
 
-def redirect_output(destination_channel: int, bypass_roles: typing.Container[int] = None):
+def redirect_output(destination_channel: int, bypass_roles: Container[int] = None) -> Callable:
     """
-    Changes the channel in the context of the command to redirect the output
-    to a certain channel, unless the author has a role to bypass redirection
-    """
+    Changes the channel in the context of the command to redirect the output to a certain channel.
 
-    def wrap(func):
+    Redirect is bypassed if the author has a role to bypass redirection.
+    """
+    def wrap(func: Callable) -> Callable:
         @wraps(func)
-        async def inner(self, ctx, *args, **kwargs):
+        async def inner(self: Callable, ctx: Context, *args, **kwargs) -> Any:
             if ctx.channel.id == destination_channel:
                 log.trace(f"Command {ctx.command.name} was invoked in destination_channel, not redirecting")
                 return await func(self, ctx, *args, **kwargs)
