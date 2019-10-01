@@ -1,8 +1,8 @@
 import logging
 import textwrap
-from datetime import datetime
 from typing import Awaitable, Dict, Optional, Union
 
+import dateutil.parser
 from discord import (
     Colour, Embed, Forbidden, HTTPException, Member, NotFound, Object, User
 )
@@ -226,33 +226,21 @@ class Infractions(Scheduler, Cog):
         log.debug(f"Unscheduled {infraction_id}.")
         del self.scheduled_tasks[infraction_id]
 
-    async def _scheduled_task(self, infraction_object: Infraction) -> None:
+    async def _scheduled_task(self, infraction: Infraction) -> None:
         """
         Marks an infraction expired after the delay from time of scheduling to time of expiration.
 
-        At the time of expiration, the infraction is marked as inactive on the website, and the
-        expiration task is cancelled. The user is then notified via DM.
+        At the time of expiration, the infraction is marked as inactive on the website and the
+        expiration task is cancelled.
         """
-        infraction_id = infraction_object["id"]
+        _id = infraction["id"]
 
-        # transform expiration to delay in seconds
-        expiration_datetime = datetime.fromisoformat(infraction_object["expires_at"][:-1])
-        await wait_until(expiration_datetime)
+        expiry = dateutil.parser.isoparse(infraction["expires_at"]).replace(tzinfo=None)
+        await wait_until(expiry)
 
-        log.debug(f"Marking infraction {infraction_id} as inactive (expired).")
-        await self.deactivate_infraction(infraction_object)
-
-        self.cancel_task(infraction_object["id"])
-
-        # Notify the user that they've been unmuted.
-        user_id = infraction_object["user"]
-        guild = self.bot.get_guild(constants.Guild.id)
-        await self.notify_pardon(
-            user=guild.get_member(user_id),
-            title="You have been unmuted.",
-            content="You may now send messages in the server.",
-            icon_url=Icons.user_unmute
-        )
+        log.debug(f"Marking infraction {_id} as inactive (expired).")
+        await self.deactivate_infraction(infraction)
+        self.cancel_task(_id)
 
     async def deactivate_infraction(
         self,
