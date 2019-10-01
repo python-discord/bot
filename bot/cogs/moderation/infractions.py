@@ -265,7 +265,7 @@ class Infractions(Scheduler, Cog):
 
         log_text = {
             "Member": str(user_id),
-            "Actor": str(self.bot)
+            "Actor": str(self.bot.user)
         }
 
         try:
