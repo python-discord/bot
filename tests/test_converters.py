@@ -8,6 +8,7 @@ from discord.ext.commands import BadArgument
 
 from bot.converters import (
     Duration,
+    ISODateTime,
     TagContentConverter,
     TagNameConverter,
     ValidPythonIdentifier,
@@ -184,3 +185,57 @@ def test_duration_converter_for_invalid(duration: str):
     converter = Duration()
     with pytest.raises(BadArgument, match=f'`{duration}` is not a valid duration string.'):
         asyncio.run(converter.convert(None, duration))
+
+
+@pytest.mark.parametrize(
+    ("datetime_string", "expected_dt"),
+    (
+        # `YYYY-mm-ddTHH:MM:SS` | `YYYY-mm-dd HH:MM:SS`
+        ('2019-09-02T02:03:05', datetime.datetime(2019, 9, 2, 2, 3, 5)),
+        ('2019-09-02 02:03:05', datetime.datetime(2019, 9, 2, 2, 3, 5)),
+
+        # `YYYY-mm-ddTHH:MM` | `YYYY-mm-dd HH:MM`
+        ('2019-11-12T09:15', datetime.datetime(2019, 11, 12, 9, 15)),
+        ('2019-11-12 09:15', datetime.datetime(2019, 11, 12, 9, 15)),
+
+        # `YYYY-mm-dd`
+        ('2019-04-01', datetime.datetime(2019, 4, 1)),
+
+        # `YYYY-mm`
+        ('2019-02-01', datetime.datetime(2019, 2, 1)),
+
+        # `YYYY`
+        ('2025', datetime.datetime(2025, 1, 1)),
+    ),
+)
+def test_isodatetime_converter_for_valid(datetime_string: str, expected_dt: datetime.datetime):
+    converter = ISODateTime()
+    assert asyncio.run(converter.convert(None, datetime_string)) == expected_dt
+
+
+@pytest.mark.parametrize(
+    ("datetime_string"),
+    (
+        # Make sure it doesn't interfere with the Duration converation
+        ('1Y'),
+        ('1d'),
+        ('1H'),
+
+        # Check if it fails when only providing the optional time part
+        ('10:10:10'),
+        ('10:00'),
+
+        # Invalid date format
+        ('19-01-01'),
+
+        # Other non-valid strings
+        ('fisk the tag master'),
+    ),
+)
+def test_isodatetime_converter_for_invalid(datetime_string: str):
+    converter = ISODateTime()
+    with pytest.raises(
+        BadArgument,
+        match=f"`{datetime_string}` is not a valid ISO-8601 datetime string",
+    ):
+        asyncio.run(converter.convert(None, datetime_string))
