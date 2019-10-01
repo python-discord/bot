@@ -54,11 +54,8 @@ class Alias (Cog):
         await self.invoke(ctx, "site resources")
 
     @command(name="tools", hidden=True)
-    async def site_tools_alias(self, ctx):
-        """
-        Alias for invoking <prefix>site tools.
-        """
-
+    async def site_tools_alias(self, ctx: Context) -> None:
+        """Alias for invoking <prefix>site tools."""
         await self.invoke(ctx, "site tools")
 
     @command(name="watch", hidden=True)

@@ -57,9 +57,8 @@ class Site(Cog):
         await ctx.send(embed=embed)
 
     @site_group.command(name="tools")
-    async def site_tools(self, ctx: Context):
+    async def site_tools(self, ctx: Context) -> None:
         """Info about the site's Tools page."""
-
         tools_url = f"{PAGES_URL}/tools"
 
         embed = Embed(title="Tools")
