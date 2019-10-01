@@ -284,6 +284,7 @@ class Infractions(Scheduler, Cog):
                         icon_url=INFRACTION_ICONS["mute"][1]
                     )
 
+                    log_text["Member"] = f"{user.mention}(`{user.id}`)"
                     log_text["DM"] = "Sent" if notified else "**Failed**"
                 else:
                     log.info(f"Failed to unmute user {user_id}: user not found")
