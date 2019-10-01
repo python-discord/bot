@@ -7,12 +7,13 @@ from discord import Colour, Embed, Member
 from discord.errors import Forbidden
 from discord.ext.commands import Bot, Cog, Context, command
 
-from bot.cogs.moderation import Infractions, ModLog
-from bot.cogs.moderation.utils import post_infraction
 from bot.constants import Icons, MODERATION_ROLES, POSITIVE_REPLIES
 from bot.converters import Duration
 from bot.decorators import with_role
 from bot.utils.time import format_infraction
+from .infractions import Infractions
+from .modlog import ModLog
+from .utils import post_infraction
 
 log = logging.getLogger(__name__)
 NICKNAME_POLICY_URL = "https://pythondiscord.com/pages/rules/#wiki-toc-nickname-policy"

@@ -9,16 +9,16 @@ from discord import (
 from discord.ext.commands import BadUnionArgument, Bot, Cog, Context, command
 
 from bot import constants
-from bot.cogs.moderation import ModLog
-from bot.cogs.moderation.utils import (
-    Infraction, MemberObject, already_has_active_infraction, post_infraction, proxy_user
-)
 from bot.constants import Colours, Event, Icons
 from bot.converters import Duration
 from bot.decorators import respect_role_hierarchy
 from bot.utils.checks import with_role_check
 from bot.utils.scheduling import Scheduler
 from bot.utils.time import format_infraction, wait_until
+from .modlog import ModLog
+from .utils import (
+    Infraction, MemberObject, already_has_active_infraction, post_infraction, proxy_user
+)
 
 log = logging.getLogger(__name__)
 

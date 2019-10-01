@@ -8,12 +8,13 @@ from discord.ext import commands
 from discord.ext.commands import Context
 
 from bot import constants
-from bot.cogs.moderation import Infractions, ModLog
-from bot.cogs.moderation.utils import Infraction, proxy_user
 from bot.converters import Duration, InfractionSearchQuery
 from bot.pagination import LinePaginator
 from bot.utils import time
 from bot.utils.checks import with_role_check
+from .infractions import Infractions
+from .modlog import ModLog
+from .utils import Infraction, proxy_user
 
 log = logging.getLogger(__name__)
 
