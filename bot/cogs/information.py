@@ -75,7 +75,6 @@ class Information(Cog):
                 continue
 
             parsed_roles.append(role)
-            
 
         for role in parsed_roles:
             embed = Embed(
