@@ -8,13 +8,12 @@ from discord.ext import commands
 from discord.ext.commands import Context
 
 from bot import constants
-from bot.cogs.moderation import Moderation
-from bot.cogs.modlog import ModLog
+from bot.cogs.moderation import Infractions, ModLog
+from bot.cogs.moderation.utils import Infraction, proxy_user
 from bot.converters import Duration, InfractionSearchQuery
 from bot.pagination import LinePaginator
 from bot.utils import time
 from bot.utils.checks import with_role_check
-from bot.utils.moderation import Infraction, proxy_user
 
 log = logging.getLogger(__name__)
 
@@ -30,7 +29,7 @@ def permanent_duration(expires_at: str) -> str:
         return expires_at
 
 
-class Infractions(commands.Cog):
+class ModManagement(commands.Cog):
     """Management of infractions."""
 
     def __init__(self, bot: commands.Bot):
@@ -42,9 +41,9 @@ class Infractions(commands.Cog):
         return self.bot.get_cog("ModLog")
 
     @property
-    def mod_cog(self) -> Moderation:
-        """Get currently loaded Moderation cog instance."""
-        return self.bot.get_cog("Moderation")
+    def infractions_cog(self) -> Infractions:
+        """Get currently loaded Infractions cog instance."""
+        return self.bot.get_cog("Infractions")
 
     # region: Edit infraction commands
 
@@ -109,9 +108,9 @@ class Infractions(commands.Cog):
 
         # Re-schedule infraction if the expiration has been updated
         if 'expires_at' in request_data:
-            self.mod_cog.cancel_task(new_infraction['id'])
+            self.infractions_cog.cancel_task(new_infraction['id'])
             loop = asyncio.get_event_loop()
-            self.mod_cog.schedule_task(loop, new_infraction['id'], new_infraction)
+            self.infractions_cog.schedule_task(loop, new_infraction['id'], new_infraction)
 
             log_text += f"""
                 Previous expiry: {old_infraction['expires_at'] or "Permanent"}
@@ -260,5 +259,5 @@ class Infractions(commands.Cog):
 
 def setup(bot: commands.Bot) -> None:
     """Load the Infractions cog."""
-    bot.add_cog(Infractions(bot))
+    bot.add_cog(ModManagement(bot))
     log.info("Cog loaded: Infractions")

@@ -9,14 +9,14 @@ from discord import (
 from discord.ext.commands import BadUnionArgument, Bot, Cog, Context, command
 
 from bot import constants
-from bot.cogs.modlog import ModLog
+from bot.cogs.moderation import ModLog
+from bot.cogs.moderation.utils import (
+    Infraction, MemberObject, already_has_active_infraction, post_infraction, proxy_user
+)
 from bot.constants import Colours, Event, Icons
 from bot.converters import Duration
 from bot.decorators import respect_role_hierarchy
 from bot.utils.checks import with_role_check
-from bot.utils.moderation import (
-    Infraction, MemberObject, already_has_active_infraction, post_infraction, proxy_user
-)
 from bot.utils.scheduling import Scheduler
 from bot.utils.time import format_infraction, wait_until
 
@@ -36,7 +36,7 @@ APPEALABLE_INFRACTIONS = ("ban", "mute")
 MemberConverter = Union[Member, User, proxy_user]
 
 
-class Moderation(Scheduler, Cog):
+class Infractions(Scheduler, Cog):
     """Server moderation tools."""
 
     def __init__(self, bot: Bot):
@@ -558,5 +558,5 @@ class Moderation(Scheduler, Cog):
 
 def setup(bot: Bot) -> None:
     """Moderation cog load."""
-    bot.add_cog(Moderation(bot))
+    bot.add_cog(Infractions(bot))
     log.info("Cog loaded: Moderation")

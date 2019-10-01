@@ -5,13 +5,12 @@ from discord import Colour, Embed, Member
 from discord.errors import Forbidden
 from discord.ext.commands import Bot, Cog, Context, command
 
-from bot.cogs.moderation import Moderation
-from bot.cogs.modlog import ModLog
+from bot.cogs.moderation import Infractions, ModLog
+from bot.cogs.moderation.utils import post_infraction
 from bot.cogs.superstarify.stars import get_nick
 from bot.constants import Icons, MODERATION_ROLES, POSITIVE_REPLIES
 from bot.converters import Duration
 from bot.decorators import with_role
-from bot.utils.moderation import post_infraction
 from bot.utils.time import format_infraction
 
 log = logging.getLogger(__name__)
@@ -25,9 +24,9 @@ class Superstarify(Cog):
         self.bot = bot
 
     @property
-    def moderation(self) -> Moderation:
-        """Get currently loaded Moderation cog instance."""
-        return self.bot.get_cog("Moderation")
+    def infractions_cog(self) -> Infractions:
+        """Get currently loaded Infractions cog instance."""
+        return self.bot.get_cog("Infractions")
 
     @property
     def modlog(self) -> ModLog:
@@ -206,7 +205,7 @@ class Superstarify(Cog):
             thumbnail=member.avatar_url_as(static_format="png")
         )
 
-        await self.moderation.notify_infraction(
+        await self.infractions_cog.notify_infraction(
             user=member,
             infr_type="Superstarify",
             expires_at=expiration,
@@ -249,7 +248,7 @@ class Superstarify(Cog):
         embed.description = "User has been released from superstar-prison."
         embed.title = random.choice(POSITIVE_REPLIES)
 
-        await self.moderation.notify_pardon(
+        await self.infractions_cog.notify_pardon(
             user=member,
             title="You are no longer superstarified.",
             content="You may now change your nickname on the server."

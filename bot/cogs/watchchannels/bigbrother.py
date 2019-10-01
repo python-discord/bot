@@ -5,9 +5,9 @@ from typing import Union
 from discord import User
 from discord.ext.commands import Bot, Cog, Context, group
 
+from bot.cogs.moderation.utils import post_infraction
 from bot.constants import Channels, Roles, Webhooks
 from bot.decorators import with_role
-from bot.utils.moderation import post_infraction
 from .watchchannel import WatchChannel, proxy_user
 
 log = logging.getLogger(__name__)
