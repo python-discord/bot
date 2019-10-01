@@ -1,5 +1,7 @@
+import json
 import logging
 import random
+from pathlib import Path
 
 from discord import Colour, Embed, Member
 from discord.errors import Forbidden
@@ -7,7 +9,6 @@ from discord.ext.commands import Bot, Cog, Context, command
 
 from bot.cogs.moderation import Infractions, ModLog
 from bot.cogs.moderation.utils import post_infraction
-from bot.cogs.superstarify.stars import get_nick
 from bot.constants import Icons, MODERATION_ROLES, POSITIVE_REPLIES
 from bot.converters import Duration
 from bot.decorators import with_role
@@ -15,6 +16,9 @@ from bot.utils.time import format_infraction
 
 log = logging.getLogger(__name__)
 NICKNAME_POLICY_URL = "https://pythondiscord.com/pages/rules/#wiki-toc-nickname-policy"
+
+with Path("resources/stars.json").open(encoding="utf-8") as stars_file:
+    STAR_NAMES = json.load(stars_file)
 
 
 class Superstarify(Cog):
@@ -61,7 +65,7 @@ class Superstarify(Cog):
 
         if active_superstarifies:
             [infraction] = active_superstarifies
-            forced_nick = get_nick(infraction['id'], before.id)
+            forced_nick = self.get_nick(infraction['id'], before.id)
             if after.display_name == forced_nick:
                 return  # Nick change was triggered by this event. Ignore.
 
@@ -107,7 +111,7 @@ class Superstarify(Cog):
 
         if active_superstarifies:
             [infraction] = active_superstarifies
-            forced_nick = get_nick(infraction['id'], member.id)
+            forced_nick = self.get_nick(infraction['id'], member.id)
             await member.edit(nick=forced_nick)
             end_timestamp_human = format_infraction(infraction['expires_at'])
 
@@ -176,7 +180,7 @@ class Superstarify(Cog):
             type='superstar', reason=reason or ('old nick: ' + member.display_name),
             expires_at=expiration
         )
-        forced_nick = get_nick(infraction['id'], member.id)
+        forced_nick = self.get_nick(infraction['id'], member.id)
 
         embed = Embed()
         embed.title = "Congratulations!"
@@ -255,6 +259,12 @@ class Superstarify(Cog):
         )
         log.trace(f"{member.display_name} was successfully released from superstar-prison.")
         await ctx.send(embed=embed)
+
+    @staticmethod
+    def get_nick(infraction_id: int, member_id: int) -> str:
+        """Randomly select a nickname from the Superstarify nickname list."""
+        rng = random.Random(str(infraction_id) + str(member_id))
+        return rng.choice(STAR_NAMES)
 
 
 def setup(bot: Bot) -> None:
