@@ -1,14 +1,15 @@
 import logging
 import textwrap
 from datetime import datetime
-from typing import Awaitable, Optional, Union
+from typing import Awaitable, Dict, Optional, Union
 
 from discord import (
-    Colour, Embed, Forbidden, Guild, HTTPException, Member, NotFound, Object, User
+    Colour, Embed, Forbidden, HTTPException, Member, NotFound, Object, User
 )
 from discord.ext.commands import BadUnionArgument, Bot, Cog, Context, command
 
 from bot import constants
+from bot.api import ResponseCodeError
 from bot.constants import Colours, Event, Icons
 from bot.converters import Duration
 from bot.decorators import respect_role_hierarchy
@@ -181,7 +182,7 @@ class Infractions(Scheduler, Cog):
                 return
 
             for infraction in response:
-                await self._deactivate_infraction(infraction)
+                await self.deactivate_infraction(infraction)
                 if infraction["expires_at"] is not None:
                     self.cancel_expiration(infraction["id"])
 
@@ -261,7 +262,7 @@ class Infractions(Scheduler, Cog):
                 return
 
             for infraction in response:
-                await self._deactivate_infraction(infraction)
+                await self.deactivate_infraction(infraction)
                 if infraction["expires_at"] is not None:
                     self.cancel_expiration(infraction["id"])
 
@@ -366,7 +367,7 @@ class Infractions(Scheduler, Cog):
         await wait_until(expiration_datetime)
 
         log.debug(f"Marking infraction {infraction_id} as inactive (expired).")
-        await self._deactivate_infraction(infraction_object)
+        await self.deactivate_infraction(infraction_object)
 
         self.cancel_task(infraction_object["id"])
 
@@ -380,35 +381,98 @@ class Infractions(Scheduler, Cog):
             icon_url=Icons.user_unmute
         )
 
-    async def _deactivate_infraction(self, infraction_object: Infraction) -> None:
+    async def deactivate_infraction(
+        self,
+        infraction: Infraction,
+        send_log: bool = True
+    ) -> Dict[str, str]:
         """
-        A co-routine which marks an infraction as inactive on the website.
+        Deactivate an active infraction and return a dictionary of lines to send in a mod log.
 
-        This co-routine does not cancel or un-schedule an expiration task.
+        The infraction is removed from Discord and then marked as inactive in the database.
+        Any scheduled expiration tasks for the infractions are NOT cancelled or unscheduled.
+
+        If `send_log` is True, a mod log is sent for the deactivation of the infraction.
+
+        Supported infraction types are mute and ban. Other types will raise a ValueError.
         """
-        guild: Guild = self.bot.get_guild(constants.Guild.id)
-        user_id = infraction_object["user"]
-        infraction_type = infraction_object["type"]
+        guild = self.bot.get_guild(constants.Guild.id)
+        user_id = infraction["user"]
+        _type = infraction["type"]
+        _id = infraction["id"]
 
-        if infraction_type == "mute":
-            member: Member = guild.get_member(user_id)
-            if member:
-                # remove the mute role
-                self.mod_log.ignore(Event.member_update, member.id)
-                await member.remove_roles(self._muted_role)
+        log_text = {
+            "Member": str(user_id),
+            "Actor": str(self.bot)
+        }
+
+        try:
+            if _type == "mute":
+                user = guild.get_member(user_id)
+                if user:
+                    # Remove the muted role.
+                    self.mod_log.ignore(Event.member_update, user.id)
+                    await user.remove_roles(self._muted_role)
+
+                    # DM the user about the expiration.
+                    notified = await self.notify_pardon(
+                        user=user,
+                        title="You have been unmuted.",
+                        content="You may now send messages in the server.",
+                        icon_url=INFRACTION_ICONS["mute"][1]
+                    )
+
+                    log_text["DM"] = "Sent" if notified else "Failed"
+                else:
+                    log.info(f"Failed to unmute user {user_id}: user not found")
+                    log_text["Failure"] = "User was not found in the guild."
+            elif _type == "ban":
+                user = Object(user_id)
+                try:
+                    await guild.unban(user)
+                except NotFound:
+                    log.info(f"Failed to unban user {user_id}: no active ban found on Discord")
+                    log_text["Failure"] = "No active ban found on Discord."
             else:
-                log.warning(f"Failed to un-mute user: {user_id} (not found)")
-        elif infraction_type == "ban":
-            user: Object = Object(user_id)
-            try:
-                await guild.unban(user)
-            except NotFound:
-                log.info(f"Tried to unban user `{user_id}`, but Discord does not have an active ban registered.")
+                raise ValueError(
+                    f"Attempted to deactivate an unsupported infraction #{_id} ({_type})!"
+                )
+        except Forbidden:
+            log.warning(f"Failed to deactivate infraction #{_id} ({_type}): bot lacks permissions")
+            log_text["Failure"] = f"The bot lacks permissions to do this (role hierarchy?)"
+        except HTTPException as e:
+            log.exception(f"Failed to deactivate infraction #{_id} ({_type})")
+            log_text["Failure"] = f"HTTPException with code {e.code}."
 
-        await self.bot.api_client.patch(
-            'bot/infractions/' + str(infraction_object['id']),
-            json={"active": False}
-        )
+        try:
+            # Mark infraction as inactive in the database.
+            await self.bot.api_client.patch(
+                f"bot/infractions/{_id}",
+                json={"active": False}
+            )
+        except ResponseCodeError as e:
+            log.exception(f"Failed to deactivate infraction #{_id} ({_type})")
+            log_line = f"API request failed with code {e.status}."
+
+            # Append to an existing failure message if possible
+            if "Failure" in log_text:
+                log_text["Failure"] += f" {log_line}"
+            else:
+                log_text["Failure"] = log_line
+
+        # Send a log message to the mod log.
+        if send_log:
+            log_title = f"expiration failed" if "Failure" in log_text else "expired"
+
+            await self.mod_log.send_log_message(
+                icon_url=INFRACTION_ICONS[_type][1],
+                colour=Colour(Colours.soft_green),
+                title=f"Infraction {log_title}: {_type}",
+                text="\n".join(f"{k}: {v}" for k, v in log_text),
+                footer=f"Infraction ID: {_id}",
+            )
+
+        return log_text
 
     async def notify_infraction(
         self,
