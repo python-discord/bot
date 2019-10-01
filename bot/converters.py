@@ -219,7 +219,7 @@ class Duration(Converter):
 
 
 class ISODateTime(Converter):
-    """"Converts an ISO-8601 datetime string into a datetime.datetime."""
+    """Converts an ISO-8601 datetime string into a datetime.datetime."""
 
     async def convert(self, ctx: Context, datetime_string: str) -> datetime:
         """
