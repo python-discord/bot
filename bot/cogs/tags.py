@@ -86,7 +86,7 @@ class Tags(Cog):
                     max_lines=15
                 )
 
-    @tags_group.command(name='set', aliases=('add', 'edit', 's'))
+    @tags_group.command(name='set', aliases=('add', 's'))
     @with_role(*MODERATION_ROLES)
     async def set_command(
         self,
@@ -95,7 +95,7 @@ class Tags(Cog):
         *,
         tag_content: TagContentConverter,
     ) -> None:
-        """Create a new tag or update an existing one."""
+        """Create a new tag."""
         body = {
             'title': tag_name.lower().strip(),
             'embed': {
@@ -113,6 +113,35 @@ class Tags(Cog):
         await ctx.send(embed=Embed(
             title="Tag successfully added",
             description=f"**{tag_name}** added to tag database.",
+            colour=Colour.blurple()
+        ))
+
+    @tags_group.command(name='edit', aliases=('e', ))
+    @with_role(*MODERATION_ROLES)
+    async def edit_command(
+        self,
+        ctx: Context,
+        tag_name: TagNameConverter,
+        *,
+        tag_content: TagContentConverter,
+    ) -> None:
+        """Edit an existing tag."""
+        body = {
+            'embed': {
+                'title': tag_name,
+                'description': tag_content
+            }
+        }
+
+        await self.bot.api_client.patch(f'bot/tags/{tag_name}', json=body)
+
+        log.debug(f"{ctx.author} successfully edited the following tag in our database: \n"
+                  f"tag_name: {tag_name}\n"
+                  f"tag_content: '{tag_content}'\n")
+
+        await ctx.send(embed=Embed(
+            title="Tag successfully edited",
+            description=f"**{tag_name}** edited in the database.",
             colour=Colour.blurple()
         ))
 
