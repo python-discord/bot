@@ -342,7 +342,7 @@ class Infractions(Scheduler, Cog):
                 icon_url=INFRACTION_ICONS[_type][1],
                 colour=Colour(Colours.soft_green),
                 title=f"Infraction {log_title}: {_type}",
-                text="\n".join(f"{k}: {v}" for k, v in log_text),
+                text="\n".join(f"{k}: {v}" for k, v in log_text.items()),
                 footer=f"Infraction ID: {_id}",
             )
 
@@ -562,7 +562,7 @@ class Infractions(Scheduler, Cog):
             colour=Colour(Colours.soft_green),
             title=f"Infraction {log_title}: {infr_type}",
             thumbnail=user.avatar_url_as(static_format="png"),
-            text="\n".join(f"{k}: {v}" for k, v in log_text),
+            text="\n".join(f"{k}: {v}" for k, v in log_text.items()),
             footer=footer,
             content=log_content,
         )
