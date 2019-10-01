@@ -18,7 +18,7 @@ from .utils import post_infraction
 log = logging.getLogger(__name__)
 NICKNAME_POLICY_URL = "https://pythondiscord.com/pages/rules/#wiki-toc-nickname-policy"
 
-with Path("resources/stars.json").open(encoding="utf-8") as stars_file:
+with Path("bot/resources/stars.json").open(encoding="utf-8") as stars_file:
     STAR_NAMES = json.load(stars_file)
 
 
