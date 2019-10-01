@@ -273,6 +273,7 @@ class Infractions(Scheduler, Cog):
         user_id = infraction["user"]
         _type = infraction["type"]
         _id = infraction["id"]
+        reason = f"Infraction #{_id} expired or was pardoned."
 
         log_text = {
             "Member": str(user_id),
@@ -285,7 +286,7 @@ class Infractions(Scheduler, Cog):
                 if user:
                     # Remove the muted role.
                     self.mod_log.ignore(Event.member_update, user.id)
-                    await user.remove_roles(self._muted_role)
+                    await user.remove_roles(self._muted_role, reason=reason)
 
                     # DM the user about the expiration.
                     notified = await self.notify_pardon(
@@ -302,7 +303,7 @@ class Infractions(Scheduler, Cog):
             elif _type == "ban":
                 user = Object(user_id)
                 try:
-                    await guild.unban(user)
+                    await guild.unban(user, reason=reason)
                 except NotFound:
                     log.info(f"Failed to unban user {user_id}: no active ban found on Discord")
                     log_text["Failure"] = "No active ban found on Discord."
