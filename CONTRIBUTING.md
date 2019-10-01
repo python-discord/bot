@@ -36,8 +36,7 @@ All projects evolve over time, and this contribution guide is no different. This
 
 ##  Supplemental Information
 ### Developer Environment
-Instructions for setting the bot developer environment can be found on the PyDis site:
-  * [Bot](https://pythondiscord.com/pages/contributing/bot/)
+Instructions for setting the bot developer environment can be found on the [PyDis wiki](https://pythondiscord.com/pages/contributing/bot/)
 
 To provide a standalone development environment for this project, docker compose is utilized to pull the current version of the [site backend](https://github.com/python-discord/site). While appropriate for bot-only contributions, any contributions that necessitate backend changes will require the site repository to be appropriately configured as well. Instructions for setting up the site environment can be found on the [PyDis site](https://pythondiscord.com/pages/contributing/site/).
 
