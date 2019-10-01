@@ -266,9 +266,3 @@ class Superstarify(Cog):
         """Randomly select a nickname from the Superstarify nickname list."""
         rng = random.Random(str(infraction_id) + str(member_id))
         return rng.choice(STAR_NAMES)
-
-
-def setup(bot: Bot) -> None:
-    """Superstarify cog load."""
-    bot.add_cog(Superstarify(bot))
-    log.info("Cog loaded: Superstarify")

@@ -760,9 +760,3 @@ class ModLog(Cog, name="ModLog"):
             Icons.message_edit, Colour.blurple(), "Message edited (After)",
             after_response, channel_id=Channels.message_log
         )
-
-
-def setup(bot: Bot) -> None:
-    """Mod log cog load."""
-    bot.add_cog(ModLog(bot))
-    log.info("Cog loaded: ModLog")

@@ -256,9 +256,3 @@ class ModManagement(commands.Cog):
             if discord.User in error.converters:
                 await ctx.send(str(error.errors[0]))
                 error.handled = True
-
-
-def setup(bot: commands.Bot) -> None:
-    """Load the Infractions cog."""
-    bot.add_cog(ModManagement(bot))
-    log.info("Cog loaded: Infractions")

@@ -52,9 +52,9 @@ class Infractions(Scheduler, Cog):
     @Cog.listener()
     async def on_ready(self) -> None:
         """Schedule expiration for previous infractions."""
-        # Schedule expiration for previous infractions
         infractions = await self.bot.api_client.get(
-            'bot/infractions', params={'active': 'true'}
+            'bot/infractions',
+            params={'active': 'true'}
         )
         for infraction in infractions:
             if infraction["expires_at"] is not None:
@@ -554,9 +554,3 @@ class Infractions(Scheduler, Cog):
             if User in error.converters:
                 await ctx.send(str(error.errors[0]))
                 error.handled = True
-
-
-def setup(bot: Bot) -> None:
-    """Moderation cog load."""
-    bot.add_cog(Infractions(bot))
-    log.info("Cog loaded: Moderation")
