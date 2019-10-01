@@ -291,6 +291,7 @@ class Infractions(Scheduler, Cog):
                     log_text["Failure"] = "User was not found in the guild."
             elif _type == "ban":
                 user = Object(user_id)
+                self.mod_log.ignore(Event.member_unban, user_id)
                 try:
                     await guild.unban(user, reason=reason)
                 except NotFound:
@@ -332,7 +333,7 @@ class Infractions(Scheduler, Cog):
                 colour=Colour(Colours.soft_green),
                 title=f"Infraction {log_title}: {_type}",
                 text="\n".join(f"{k}: {v}" for k, v in log_text.items()),
-                footer=f"Infraction ID: {_id}",
+                footer=f"ID: {_id}",
             )
 
         return log_text
@@ -492,7 +493,7 @@ class Infractions(Scheduler, Cog):
         log_text["Member"] = f"{user.mention}(`{user.id}`)"
         log_text["Actor"] = str(ctx.message.author)
         log_content = None
-        footer = f"Infraction ID: {response[0]['id']}"
+        footer = f"ID: {response[0]['id']}"
 
         # If multiple active infractions were found, mark them as inactive in the database
         # and cancel their expiration tasks.
