@@ -1,12 +1,12 @@
 import logging
 from datetime import datetime
+from operator import itemgetter
 
 from discord import Colour, Embed, Member, utils
-from discord.ext.commands import Cog, Context, command
+from discord.ext.commands import Bot, Cog, Context, command
 
 from bot.constants import Categories, Channels, Free, STAFF_ROLES
 from bot.decorators import redirect_output
-
 
 log = logging.getLogger(__name__)
 
@@ -22,11 +22,9 @@ class Free(Cog):
 
     @command(name="free", aliases=('f',))
     @redirect_output(destination_channel=Channels.bot, bypass_roles=STAFF_ROLES)
-    async def free(self, ctx: Context, user: Member = None, seek: int = 2):
+    async def free(self, ctx: Context, user: Member = None, seek: int = 2) -> None:
         """
         Lists free help channels by likeliness of availability.
-        :param user: accepts user mention, ID, etc.
-        :param seek: How far back to check the last active message.
 
         seek is used only when this command is invoked in a help channel.
         You cannot override seek without mentioning a user first.
@@ -53,10 +51,10 @@ class Free(Cog):
             # the command was invoked in
             if channel.id == ctx.channel.id:
                 messages = await channel.history(limit=seek).flatten()
-                msg = messages[seek-1]
+                msg = messages[seek - 1]
             # Otherwise get last message
             else:
-                msg = await channel.history(limit=1).next()   # noqa (False positive)
+                msg = await channel.history(limit=1).next()  # noqa (False positive)
 
             inactive = (datetime.utcnow() - msg.created_at).seconds
             if inactive > TIMEOUT:
@@ -82,7 +80,8 @@ class Free(Cog):
             # Sort channels in descending order by seconds
             # Get position in list, inactivity, and channel object
             # For each channel, add to embed.description
-            for i, (inactive, channel) in enumerate(sorted(free_channels, reverse=True), 1):
+            sorted_channels = sorted(free_channels, key=itemgetter(0), reverse=True)
+            for i, (inactive, channel) in enumerate(sorted_channels, 1):
                 minutes, seconds = divmod(inactive, 60)
                 if minutes > 59:
                     hours, minutes = divmod(minutes, 60)
@@ -101,6 +100,7 @@ class Free(Cog):
         await ctx.send(embed=embed)
 
 
-def setup(bot):
+def setup(bot: Bot) -> None:
+    """Free cog load."""
     bot.add_cog(Free())
     log.info("Cog loaded: Free")

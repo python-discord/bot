@@ -7,10 +7,9 @@ from typing import Optional, Tuple
 
 from discord.ext.commands import Bot, Cog, Context, command, guild_only
 
-from bot.constants import Channels, STAFF_ROLES, URLs
+from bot.constants import Channels, Roles, URLs
 from bot.decorators import in_channel
 from bot.utils.messages import wait_for_deletion
-
 
 log = logging.getLogger(__name__)
 
@@ -34,12 +33,11 @@ RAW_CODE_REGEX = re.compile(
 )
 
 MAX_PASTE_LEN = 1000
+EVAL_ROLES = (Roles.helpers, Roles.moderator, Roles.admin, Roles.owner, Roles.rockstars, Roles.partners)
 
 
 class Snekbox(Cog):
-    """
-    Safe evaluation of Python code using Snekbox
-    """
+    """Safe evaluation of Python code using Snekbox."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
@@ -168,8 +166,8 @@ class Snekbox(Cog):
 
     @command(name="eval", aliases=("e",))
     @guild_only()
-    @in_channel(Channels.bot, bypass_roles=STAFF_ROLES)
-    async def eval_command(self, ctx: Context, *, code: str = None):
+    @in_channel(Channels.bot, bypass_roles=EVAL_ROLES)
+    async def eval_command(self, ctx: Context, *, code: str = None) -> None:
         """
         Run Python code and get the results.
 
@@ -178,13 +176,15 @@ class Snekbox(Cog):
         issue with it!
         """
         if ctx.author.id in self.jobs:
-            return await ctx.send(
+            await ctx.send(
                 f"{ctx.author.mention} You've already got a job running - "
                 f"please wait for it to finish!"
             )
+            return
 
         if not code:  # None or empty string
-            return await ctx.invoke(self.bot.get_command("help"), "eval")
+            await ctx.invoke(self.bot.get_command("help"), "eval")
+            return
 
         log.info(
             f"Received code from {ctx.author.name}#{ctx.author.discriminator} "
@@ -221,6 +221,7 @@ class Snekbox(Cog):
             del self.jobs[ctx.author.id]
 
 
-def setup(bot):
+def setup(bot: Bot) -> None:
+    """Snekbox cog load."""
     bot.add_cog(Snekbox(bot))
     log.info("Cog loaded: Snekbox")

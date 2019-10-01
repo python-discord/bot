@@ -81,6 +81,7 @@ STAR_NAMES = (
 )
 
 
-def get_nick(infraction_id, member_id):
+def get_nick(infraction_id: int, member_id: int) -> str:
+    """Randomly select a nickname from the Superstarify nickname list."""
     rng = random.Random(str(infraction_id) + str(member_id))
     return rng.choice(STAR_NAMES)

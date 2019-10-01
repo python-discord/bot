@@ -1,15 +1,16 @@
 import asyncio
 import datetime
 
+import dateutil.parser
 from dateutil.relativedelta import relativedelta
 
 RFC1123_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
+INFRACTION_FORMAT = "%Y-%m-%d %H:%M"
 
 
-def _stringify_time_unit(value: int, unit: str):
+def _stringify_time_unit(value: int, unit: str) -> str:
     """
-    Returns a string to represent a value and time unit,
-    ensuring that it uses the right plural form of the unit.
+    Returns a string to represent a value and time unit, ensuring that it uses the right plural form of the unit.
 
     >>> _stringify_time_unit(1, "seconds")
     "1 second"
@@ -18,7 +19,6 @@ def _stringify_time_unit(value: int, unit: str):
     >>> _stringify_time_unit(0, "minutes")
     "less than a minute"
     """
-
     if value == 1:
         return f"{value} {unit[:-1]}"
     elif value == 0:
@@ -27,18 +27,13 @@ def _stringify_time_unit(value: int, unit: str):
         return f"{value} {unit}"
 
 
-def humanize_delta(delta: relativedelta, precision: str = "seconds", max_units: int = 6):
+def humanize_delta(delta: relativedelta, precision: str = "seconds", max_units: int = 6) -> str:
     """
     Returns a human-readable version of the relativedelta.
 
-    :param delta:      A dateutil.relativedelta.relativedelta object
-    :param precision:  The smallest unit that should be included.
-    :param max_units:  The maximum number of time-units to return.
-
-    :return:           A string like `4 days, 12 hours and 1 second`,
-                       `1 minute`, or `less than a minute`.
+    precision specifies the smallest unit of time to include (e.g. "seconds", "minutes").
+    max_units specifies the maximum number of units of time to include (e.g. 1 may include days but not hours).
     """
-
     units = (
         ("years", delta.years),
         ("months", delta.months),
@@ -73,19 +68,13 @@ def humanize_delta(delta: relativedelta, precision: str = "seconds", max_units: 
     return humanized
 
 
-def time_since(past_datetime: datetime.datetime, precision: str = "seconds", max_units: int = 6):
+def time_since(past_datetime: datetime.datetime, precision: str = "seconds", max_units: int = 6) -> str:
     """
-    Takes a datetime and returns a human-readable string that
-    describes how long ago that datetime was.
+    Takes a datetime and returns a human-readable string that describes how long ago that datetime was.
 
-    :param past_datetime:  A datetime.datetime object
-    :param precision:      The smallest unit that should be included.
-    :param max_units:      The maximum number of time-units to return.
-
-    :return:               A string like `4 days, 12 hours and 1 second ago`,
-                           `1 minute ago`, or `less than a minute ago`.
+    precision specifies the smallest unit of time to include (e.g. "seconds", "minutes").
+    max_units specifies the maximum number of units of time to include (e.g. 1 may include days but not hours).
     """
-
     now = datetime.datetime.utcnow()
     delta = abs(relativedelta(now, past_datetime))
 
@@ -94,20 +83,22 @@ def time_since(past_datetime: datetime.datetime, precision: str = "seconds", max
     return f"{humanized} ago"
 
 
-def parse_rfc1123(time_str):
+def parse_rfc1123(time_str: str) -> datetime.datetime:
+    """Parse RFC1123 time string into datetime."""
     return datetime.datetime.strptime(time_str, RFC1123_FORMAT).replace(tzinfo=datetime.timezone.utc)
 
 
 # Hey, this could actually be used in the off_topic_names and reddit cogs :)
-async def wait_until(time: datetime.datetime):
-    """
-    Wait until a given time.
-
-    :param time: A datetime.datetime object to wait until.
-    """
-
+async def wait_until(time: datetime.datetime) -> None:
+    """Wait until a given time."""
     delay = time - datetime.datetime.utcnow()
     delay_seconds = delay.total_seconds()
 
+    # Incorporate a small delay so we don't rapid-fire the event due to time precision errors
     if delay_seconds > 1.0:
         await asyncio.sleep(delay_seconds)
+
+
+def format_infraction(timestamp: str) -> str:
+    """Format an infraction timestamp to a more readable ISO 8601 format."""
+    return dateutil.parser.isoparse(timestamp).strftime(INFRACTION_FORMAT)

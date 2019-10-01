@@ -10,15 +10,14 @@ log = logging.getLogger(__name__)
 
 
 class Logging(Cog):
-    """
-    Debug logging module
-    """
+    """Debug logging module."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
 
     @Cog.listener()
-    async def on_ready(self):
+    async def on_ready(self) -> None:
+        """Announce our presence to the configured devlog channel."""
         log.info("Bot connected!")
 
         embed = Embed(description="Connected!")
@@ -35,6 +34,7 @@ class Logging(Cog):
             await self.bot.get_channel(Channels.devlog).send(embed=embed)
 
 
-def setup(bot):
+def setup(bot: Bot) -> None:
+    """Logging cog load."""
     bot.add_cog(Logging(bot))
     log.info("Cog loaded: Logging")

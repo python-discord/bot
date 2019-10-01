@@ -1,5 +1,7 @@
 import logging
 
+from discord.ext.commands import Bot
+
 from .bigbrother import BigBrother
 from .talentpool import TalentPool
 
@@ -7,7 +9,8 @@ from .talentpool import TalentPool
 log = logging.getLogger(__name__)
 
 
-def setup(bot):
+def setup(bot: Bot) -> None:
+    """Monitoring cogs load."""
     bot.add_cog(BigBrother(bot))
     log.info("Cog loaded: BigBrother")
 

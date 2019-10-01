@@ -128,14 +128,15 @@ guild:
         champion:                           430492892331769857
         contributor:                        295488872404484098
         core_developer:                     587606783669829632
+        helpers:                            267630620367257601
         jammer:                             423054537079783434
         moderator:         &MOD_ROLE        267629731250176001
         muted:             &MUTED_ROLE      277914926603829249
         owner:             &OWNER_ROLE      267627879762755584
-        verified:                           352427296948486144
-        helpers:                            267630620367257601
+        partners:                           323426753857191936
         rockstars:         &ROCKSTARS_ROLE  458226413825294336
         team_leader:                        501324292341104650
+        verified:                           352427296948486144
 
     webhooks:
         talent_pool:                        569145364800602132

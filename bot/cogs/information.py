@@ -15,23 +15,15 @@ log = logging.getLogger(__name__)
 
 
 class Information(Cog):
-    """
-    A cog with commands for generating embeds with
-    server information, such as server statistics
-    and user information.
-    """
+    """A cog with commands for generating embeds with server info, such as server stats and user info."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
 
     @with_role(*MODERATION_ROLES)
     @command(name="roles")
-    async def roles_info(self, ctx: Context):
-        """
-        Returns a list of all roles and their
-        corresponding IDs.
-        """
-
+    async def roles_info(self, ctx: Context) -> None:
+        """Returns a list of all roles and their corresponding IDs."""
         # Sort the roles alphabetically and remove the @everyone role
         roles = sorted(ctx.guild.roles, key=lambda role: role.name)
         roles = [role for role in roles if role.name != "@everyone"]
@@ -54,7 +46,7 @@ class Information(Cog):
 
     @with_role(*MODERATION_ROLES)
     @command(name="role")
-    async def role_info(self, ctx: Context, *roles: typing.Union[Role, str]):
+    async def role_info(self, ctx: Context, *roles: typing.Union[Role, str]) -> None:
         """
         Return information on a role or list of roles.
 
@@ -99,12 +91,8 @@ class Information(Cog):
             await ctx.send(embed=embed)
 
     @command(name="server", aliases=["server_info", "guild", "guild_info"])
-    async def server_info(self, ctx: Context):
-        """
-        Returns an embed full of
-        server information.
-        """
-
+    async def server_info(self, ctx: Context) -> None:
+        """Returns an embed full of server information."""
         created = time_since(ctx.guild.created_at, precision="days")
         features = ", ".join(ctx.guild.features)
         region = ctx.guild.region
@@ -168,11 +156,8 @@ class Information(Cog):
         await ctx.send(embed=embed)
 
     @command(name="user", aliases=["user_info", "member", "member_info"])
-    async def user_info(self, ctx: Context, user: Member = None, hidden: bool = False):
-        """
-        Returns info about a user.
-        """
-
+    async def user_info(self, ctx: Context, user: Member = None, hidden: bool = False) -> None:
+        """Returns info about a user."""
         if user is None:
             user = ctx.author
 
@@ -245,6 +230,7 @@ class Information(Cog):
         await ctx.send(embed=embed)
 
 
-def setup(bot):
+def setup(bot: Bot) -> None:
+    """Information cog load."""
     bot.add_cog(Information(bot))
     log.info("Cog loaded: Information")
