@@ -319,9 +319,9 @@ class Doc(commands.Cog):
 
         Example:
             !docs set \
-                    discord \
-                    https://discordpy.readthedocs.io/en/rewrite/ \
-                    https://discordpy.readthedocs.io/en/rewrite/objects.inv
+                    python \
+                    https://docs.python.org/3/ \
+                    https://docs.python.org/3/objects.inv
         """
         body = {
             'package': package_name,
