@@ -188,7 +188,7 @@ class Infractions(Scheduler, Cog):
     @respect_role_hierarchy()
     async def apply_kick(self, ctx: Context, user: Member, reason: str, **kwargs) -> None:
         """Apply a kick infraction with kwargs passed to `post_infraction`."""
-        infraction = await post_infraction(ctx, user, type="kick", **kwargs)
+        infraction = await post_infraction(ctx, user, "kick", reason, **kwargs)
         if infraction is None:
             return
 
@@ -203,7 +203,7 @@ class Infractions(Scheduler, Cog):
         if await already_has_active_infraction(ctx, user, "ban"):
             return
 
-        infraction = await post_infraction(ctx, user, reason, "ban", **kwargs)
+        infraction = await post_infraction(ctx, user, "ban", reason, **kwargs)
         if infraction is None:
             return
 
