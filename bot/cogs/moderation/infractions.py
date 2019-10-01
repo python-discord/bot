@@ -216,16 +216,6 @@ class Infractions(Scheduler, Cog):
     # endregion
     # region: Utility functions
 
-    def cancel_expiration(self, infraction_id: str) -> None:
-        """Un-schedules a task set to expire a temporary infraction."""
-        task = self.scheduled_tasks.get(infraction_id)
-        if task is None:
-            log.warning(f"Failed to unschedule {infraction_id}: no task found.")
-            return
-        task.cancel()
-        log.debug(f"Unscheduled {infraction_id}.")
-        del self.scheduled_tasks[infraction_id]
-
     async def _scheduled_task(self, infraction: Infraction) -> None:
         """
         Marks an infraction expired after the delay from time of scheduling to time of expiration.
@@ -240,7 +230,6 @@ class Infractions(Scheduler, Cog):
 
         log.debug(f"Marking infraction {_id} as inactive (expired).")
         await self.deactivate_infraction(infraction)
-        self.cancel_task(_id)
 
     async def deactivate_infraction(
         self,
@@ -250,10 +239,9 @@ class Infractions(Scheduler, Cog):
         """
         Deactivate an active infraction and return a dictionary of lines to send in a mod log.
 
-        The infraction is removed from Discord and then marked as inactive in the database.
-        Any scheduled expiration tasks for the infractions are NOT cancelled or unscheduled.
-
-        If `send_log` is True, a mod log is sent for the deactivation of the infraction.
+        The infraction is removed from Discord, marked as inactive in the database, and has its
+        expiration task cancelled. If `send_log` is True, a mod log is sent for the
+        deactivation of the infraction.
 
         Supported infraction types are mute and ban. Other types will raise a ValueError.
         """
@@ -323,6 +311,10 @@ class Infractions(Scheduler, Cog):
                 log_text["Failure"] += f" {log_line}"
             else:
                 log_text["Failure"] = log_line
+
+        # Cancel the expiration task.
+        if infraction["expires_at"] is not None:
+            self.cancel_task(infraction["id"])
 
         # Send a log message to the mod log.
         if send_log:
@@ -487,8 +479,6 @@ class Infractions(Scheduler, Cog):
 
         # Deactivate the infraction and cancel its scheduled expiration task.
         log_text = await self.deactivate_infraction(response[0], send_log=False)
-        if response[0]["expires_at"] is not None:
-            self.cancel_expiration(response[0]["id"])
 
         log_text["Member"] = f"{user.mention}(`{user.id}`)"
         log_text["Actor"] = str(ctx.message.author)
@@ -519,9 +509,9 @@ class Infractions(Scheduler, Cog):
                     # This is simpler and cleaner than trying to concatenate all the errors.
                     log_text["Failure"] = "See bot's logs for details."
 
-                # Cancel pending expiration tasks.
+                # Cancel pending expiration task.
                 if infraction["expires_at"] is not None:
-                    self.cancel_expiration(infraction["id"])
+                    self.cancel_task(infraction["id"])
 
         # Accordingly display whether the user was successfully notified via DM.
         dm_emoji = ""
