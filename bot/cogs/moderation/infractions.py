@@ -30,6 +30,7 @@ class Infractions(Scheduler, commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.category = "Moderation"
         self._muted_role = discord.Object(constants.Roles.muted)
         super().__init__()
 

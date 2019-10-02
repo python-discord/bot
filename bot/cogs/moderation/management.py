@@ -35,6 +35,7 @@ class ModManagement(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.category = "Moderation"
 
     @property
     def mod_log(self) -> ModLog:

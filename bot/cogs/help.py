@@ -1,5 +1,4 @@
 import asyncio
-import inspect
 import itertools
 from collections import namedtuple
 from contextlib import suppress
@@ -107,12 +106,26 @@ class HelpSession:
         if command:
             return command
 
-        cog = self._bot.cogs.get(query)
-        if cog:
+        # Find all cog categories that match.
+        cogs = self._bot.cogs.values()
+        cog_matches = [cog for cog in cogs if hasattr(cog, "category") and cog.category == query]
+
+        # Try to search by cog name if no categories match.
+        if not cog_matches:
+            cog = self._bot.cogs.get(query)
+
+            # Don't consider it a match if the cog has a category.
+            if cog and not hasattr(cog, "category"):
+                cog_matches = [cog]
+
+        if cog_matches:
+            cog = cog_matches[0]
+            cmds = (cog.get_commands() for cog in cog_matches)  # Commands of all cogs
+
             return Cog(
-                name=cog.qualified_name,
-                description=inspect.getdoc(cog),
-                commands=[c for c in self._bot.commands if c.cog is cog]
+                name=cog.category if hasattr(cog, "category") else cog.qualified_name,
+                description=cog.description,
+                commands=tuple(itertools.chain.from_iterable(cmds))  # Flatten the list
             )
 
         self._handle_not_found(query)
@@ -207,8 +220,16 @@ class HelpSession:
 
         A zero width space is used as a prefix for results with no cogs to force them last in ordering.
         """
-        cog = cmd.cog_name
-        return f'**{cog}**' if cog else f'**\u200bNo Category:**'
+        if cmd.cog:
+            try:
+                if cmd.cog.category:
+                    return f'**{cmd.cog.category}**'
+            except AttributeError:
+                pass
+
+            return f'**{cmd.cog_name}**'
+        else:
+            return "**\u200bNo Category:**"
 
     def _get_command_params(self, cmd: Command) -> str:
         """
