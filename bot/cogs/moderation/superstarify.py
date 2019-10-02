@@ -11,9 +11,8 @@ from bot.constants import Icons, MODERATION_ROLES, POSITIVE_REPLIES
 from bot.converters import Duration
 from bot.decorators import with_role
 from bot.utils.time import format_infraction
-from .infractions import Infractions
+from . import utils
 from .modlog import ModLog
-from .utils import post_infraction
 
 log = logging.getLogger(__name__)
 NICKNAME_POLICY_URL = "https://pythondiscord.com/pages/rules/#wiki-toc-nickname-policy"
@@ -27,11 +26,6 @@ class Superstarify(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-
-    @property
-    def infractions_cog(self) -> Infractions:
-        """Get currently loaded Infractions cog instance."""
-        return self.bot.get_cog("Infractions")
 
     @property
     def modlog(self) -> ModLog:
@@ -176,7 +170,7 @@ class Superstarify(Cog):
             )
             return
 
-        infraction = await post_infraction(
+        infraction = await utils.post_infraction(
             ctx, member,
             type='superstar', reason=reason or ('old nick: ' + member.display_name),
             expires_at=expiration
@@ -210,7 +204,7 @@ class Superstarify(Cog):
             thumbnail=member.avatar_url_as(static_format="png")
         )
 
-        await self.infractions_cog.notify_infraction(
+        await utils.notify_infraction(
             user=member,
             infr_type="Superstarify",
             expires_at=expiration,
@@ -253,7 +247,7 @@ class Superstarify(Cog):
         embed.description = "User has been released from superstar-prison."
         embed.title = random.choice(POSITIVE_REPLIES)
 
-        await self.infractions_cog.notify_pardon(
+        await utils.notify_pardon(
             user=member,
             title="You are no longer superstarified.",
             content="You may now change your nickname on the server."

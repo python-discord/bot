@@ -3,39 +3,24 @@ import textwrap
 from typing import Awaitable, Dict, Optional, Union
 
 import dateutil.parser
-from discord import (
-    Colour, Embed, Forbidden, HTTPException, Member, NotFound, Object, User
-)
+from discord import Colour, Forbidden, HTTPException, Member, NotFound, Object, User
 from discord.ext.commands import BadUnionArgument, Bot, Cog, Context, command
 
 from bot import constants
 from bot.api import ResponseCodeError
-from bot.constants import Colours, Event, Icons
+from bot.constants import Colours, Event
 from bot.converters import Duration
 from bot.decorators import respect_role_hierarchy
 from bot.utils.checks import with_role_check
 from bot.utils.scheduling import Scheduler
 from bot.utils.time import format_infraction, wait_until
+from . import utils
 from .modlog import ModLog
-from .utils import (
-    Infraction, MemberObject, already_has_active_infraction, post_infraction, proxy_user
-)
+from .utils import MemberObject
 
 log = logging.getLogger(__name__)
 
-# apply icon, pardon icon
-INFRACTION_ICONS = {
-    "mute": (Icons.user_mute, Icons.user_unmute),
-    "kick": (Icons.sign_out, None),
-    "ban": (Icons.user_ban, Icons.user_unban),
-    "warning": (Icons.user_warn, None),
-    "note": (Icons.user_warn, None),
-}
-RULES_URL = "https://pythondiscord.com/pages/rules"
-APPEALABLE_INFRACTIONS = ("ban", "mute")
-
-
-MemberConverter = Union[Member, User, proxy_user]
+MemberConverter = Union[Member, User, utils.proxy_user]
 
 
 class Infractions(Scheduler, Cog):
@@ -67,7 +52,7 @@ class Infractions(Scheduler, Cog):
     @command()
     async def warn(self, ctx: Context, user: MemberConverter, *, reason: str = None) -> None:
         """Warn a user for the given reason."""
-        infraction = await post_infraction(ctx, user, reason, "warning")
+        infraction = await utils.post_infraction(ctx, user, reason, "warning")
         if infraction is None:
             return
 
@@ -112,7 +97,7 @@ class Infractions(Scheduler, Cog):
     @command(hidden=True)
     async def note(self, ctx: Context, user: MemberConverter, *, reason: str = None) -> None:
         """Create a private note for a user with the given reason without notifying the user."""
-        infraction = await post_infraction(ctx, user, reason, "note", hidden=True)
+        infraction = await utils.post_infraction(ctx, user, reason, "note", hidden=True)
         if infraction is None:
             return
 
@@ -173,10 +158,10 @@ class Infractions(Scheduler, Cog):
 
     async def apply_mute(self, ctx: Context, user: Member, reason: str, **kwargs) -> None:
         """Apply a mute infraction with kwargs passed to `post_infraction`."""
-        if await already_has_active_infraction(ctx, user, "mute"):
+        if await utils.already_has_active_infraction(ctx, user, "mute"):
             return
 
-        infraction = await post_infraction(ctx, user, "mute", reason, **kwargs)
+        infraction = await utils.post_infraction(ctx, user, "mute", reason, **kwargs)
         if infraction is None:
             return
 
@@ -188,7 +173,7 @@ class Infractions(Scheduler, Cog):
     @respect_role_hierarchy()
     async def apply_kick(self, ctx: Context, user: Member, reason: str, **kwargs) -> None:
         """Apply a kick infraction with kwargs passed to `post_infraction`."""
-        infraction = await post_infraction(ctx, user, "kick", reason, **kwargs)
+        infraction = await utils.post_infraction(ctx, user, "kick", reason, **kwargs)
         if infraction is None:
             return
 
@@ -200,10 +185,10 @@ class Infractions(Scheduler, Cog):
     @respect_role_hierarchy()
     async def apply_ban(self, ctx: Context, user: MemberObject, reason: str, **kwargs) -> None:
         """Apply a ban infraction with kwargs passed to `post_infraction`."""
-        if await already_has_active_infraction(ctx, user, "ban"):
+        if await utils.already_has_active_infraction(ctx, user, "ban"):
             return
 
-        infraction = await post_infraction(ctx, user, "ban", reason, **kwargs)
+        infraction = await utils.post_infraction(ctx, user, "ban", reason, **kwargs)
         if infraction is None:
             return
 
@@ -216,7 +201,7 @@ class Infractions(Scheduler, Cog):
     # endregion
     # region: Utility functions
 
-    async def _scheduled_task(self, infraction: Infraction) -> None:
+    async def _scheduled_task(self, infraction: utils.Infraction) -> None:
         """
         Marks an infraction expired after the delay from time of scheduling to time of expiration.
 
@@ -233,7 +218,7 @@ class Infractions(Scheduler, Cog):
 
     async def deactivate_infraction(
         self,
-        infraction: Infraction,
+        infraction: utils.Infraction,
         send_log: bool = True
     ) -> Dict[str, str]:
         """
@@ -265,11 +250,11 @@ class Infractions(Scheduler, Cog):
                     await user.remove_roles(self._muted_role, reason=reason)
 
                     # DM the user about the expiration.
-                    notified = await self.notify_pardon(
+                    notified = await utils.notify_pardon(
                         user=user,
                         title="You have been unmuted.",
                         content="You may now send messages in the server.",
-                        icon_url=INFRACTION_ICONS["mute"][1]
+                        icon_url=utils.INFRACTION_ICONS["mute"][1]
                     )
 
                     log_text["Member"] = f"{user.mention}(`{user.id}`)"
@@ -321,7 +306,7 @@ class Infractions(Scheduler, Cog):
             log_title = f"expiration failed" if "Failure" in log_text else "expired"
 
             await self.mod_log.send_log_message(
-                icon_url=INFRACTION_ICONS[_type][1],
+                icon_url=utils.INFRACTION_ICONS[_type][1],
                 colour=Colour(Colours.soft_green),
                 title=f"Infraction {log_title}: {_type}",
                 text="\n".join(f"{k}: {v}" for k, v in log_text.items()),
@@ -330,79 +315,16 @@ class Infractions(Scheduler, Cog):
 
         return log_text
 
-    async def notify_infraction(
-        self,
-        user: MemberObject,
-        infr_type: str,
-        expires_at: Optional[str] = None,
-        reason: Optional[str] = None
-    ) -> bool:
-        """DM a user about their new infraction and return True if the DM is successful."""
-        embed = Embed(
-            description=textwrap.dedent(f"""
-                **Type:** {infr_type.capitalize()}
-                **Expires:** {expires_at or "N/A"}
-                **Reason:** {reason or "No reason provided."}
-                """),
-            colour=Colour(Colours.soft_red)
-        )
-
-        icon_url = INFRACTION_ICONS[infr_type][0]
-        embed.set_author(name="Infraction Information", icon_url=icon_url, url=RULES_URL)
-        embed.title = f"Please review our rules over at {RULES_URL}"
-        embed.url = RULES_URL
-
-        if infr_type in APPEALABLE_INFRACTIONS:
-            embed.set_footer(text="To appeal this infraction, send an e-mail to appeals@pythondiscord.com")
-
-        return await self.send_private_embed(user, embed)
-
-    async def notify_pardon(
-        self,
-        user: MemberObject,
-        title: str,
-        content: str,
-        icon_url: str = Icons.user_verified
-    ) -> bool:
-        """DM a user about their pardoned infraction and return True if the DM is successful."""
-        embed = Embed(
-            description=content,
-            colour=Colour(Colours.soft_green)
-        )
-
-        embed.set_author(name=title, icon_url=icon_url)
-
-        return await self.send_private_embed(user, embed)
-
-    async def send_private_embed(self, user: MemberObject, embed: Embed) -> bool:
-        """
-        A helper method for sending an embed to a user's DMs.
-
-        Returns a boolean indicator of DM success.
-        """
-        try:
-            # sometimes `user` is a `discord.Object`, so let's make it a proper user.
-            user = await self.bot.fetch_user(user.id)
-
-            await user.send(embed=embed)
-            return True
-        except (HTTPException, Forbidden, NotFound):
-            log.debug(
-                f"Infraction-related information could not be sent to user {user} ({user.id}). "
-                "The user either could not be retrieved or probably disabled their DMs."
-            )
-            return False
-
     async def apply_infraction(
         self,
         ctx: Context,
-        infraction: Infraction,
+        infraction: utils.Infraction,
         user: MemberObject,
         action_coro: Optional[Awaitable] = None
     ) -> None:
         """Apply an infraction to the user, log the infraction, and optionally notify the user."""
         infr_type = infraction["type"]
-        icon = INFRACTION_ICONS[infr_type][0]
+        icon = utils.INFRACTION_ICONS[infr_type][0]
         reason = infraction["reason"]
         expiry = infraction["expires_at"]
 
@@ -420,8 +342,11 @@ class Infractions(Scheduler, Cog):
 
         # DM the user about the infraction if it's not a shadow/hidden infraction.
         if not infraction["hidden"]:
+            # Sometimes user is a discord.Object; make it a proper user.
+            await self.bot.fetch_user(user.id)
+
             # Accordingly display whether the user was successfully notified via DM.
-            if await self.notify_infraction(user, infr_type, expiry, reason):
+            if await utils.notify_infraction(user, infr_type, expiry, reason):
                 dm_result = ":incoming_envelope: "
                 dm_log_text = "\nDM: Sent"
             else:
@@ -538,7 +463,7 @@ class Infractions(Scheduler, Cog):
 
         # Send a log message to the mod log.
         await self.mod_log.send_log_message(
-            icon_url=INFRACTION_ICONS[infr_type][1],
+            icon_url=utils.INFRACTION_ICONS[infr_type][1],
             colour=Colour(Colours.soft_green),
             title=f"Infraction {log_title}: {infr_type}",
             thumbnail=user.avatar_url_as(static_format="png"),
