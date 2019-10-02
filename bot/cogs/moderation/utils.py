@@ -114,7 +114,7 @@ async def notify_infraction(
             **Expires:** {expires_at or "N/A"}
             **Reason:** {reason or "No reason provided."}
             """),
-        colour=discord.Colour(Colours.soft_red)
+        colour=Colours.soft_red
     )
 
     icon_url = INFRACTION_ICONS[infr_type][0]
@@ -137,7 +137,7 @@ async def notify_pardon(
     """DM a user about their pardoned infraction and return True if the DM is successful."""
     embed = discord.Embed(
         description=content,
-        colour=discord.Colour(Colours.soft_green)
+        colour=Colours.soft_green
     )
 
     embed.set_author(name=title, icon_url=icon_url)

@@ -7,9 +7,9 @@ from discord import Colour, Embed, Member
 from discord.errors import Forbidden
 from discord.ext.commands import Bot, Cog, Context, command
 
-from bot.constants import Icons, MODERATION_ROLES, POSITIVE_REPLIES
+from bot import constants
 from bot.converters import Duration
-from bot.decorators import with_role
+from bot.utils.checks import with_role_check
 from bot.utils.time import format_infraction
 from . import utils
 from .modlog import ModLog
@@ -136,7 +136,7 @@ class Superstarify(Cog):
                 f"Superstardom ends: **{end_timestamp_human}**"
             )
             await self.modlog.send_log_message(
-                icon_url=Icons.user_update,
+                icon_url=constants.Icons.user_update,
                 colour=Colour.gold(),
                 title="Superstar member rejoined server",
                 text=mod_log_message,
@@ -144,7 +144,6 @@ class Superstarify(Cog):
             )
 
     @command(name='superstarify', aliases=('force_nick', 'star'))
-    @with_role(*MODERATION_ROLES)
     async def superstarify(
         self, ctx: Context, member: Member, expiration: Duration, reason: str = None
     ) -> None:
@@ -198,7 +197,7 @@ class Superstarify(Cog):
             f"Superstardom ends: **{expiry_str}**"
         )
         await self.modlog.send_log_message(
-            icon_url=Icons.user_update,
+            icon_url=constants.Icons.user_update,
             colour=Colour.gold(),
             title="Member Achieved Superstardom",
             text=mod_log_message,
@@ -218,7 +217,6 @@ class Superstarify(Cog):
         await ctx.send(embed=embed)
 
     @command(name='unsuperstarify', aliases=('release_nick', 'unstar'))
-    @with_role(*MODERATION_ROLES)
     async def unsuperstarify(self, ctx: Context, member: Member) -> None:
         """Remove the superstarify entry from our database, allowing the user to change their nickname."""
         log.debug(f"Attempting to unsuperstarify the following user: {member.display_name}")
@@ -246,7 +244,7 @@ class Superstarify(Cog):
 
         embed = Embed()
         embed.description = "User has been released from superstar-prison."
-        embed.title = random.choice(POSITIVE_REPLIES)
+        embed.title = random.choice(constants.POSITIVE_REPLIES)
 
         await utils.notify_pardon(
             user=member,
@@ -261,3 +259,8 @@ class Superstarify(Cog):
         """Randomly select a nickname from the Superstarify nickname list."""
         rng = random.Random(str(infraction_id) + str(member_id))
         return rng.choice(STAR_NAMES)
+
+    # This cannot be static (must have a __func__ attribute).
+    def cog_check(self, ctx: Context) -> bool:
+        """Only allow moderators to invoke the commands in this cog."""
+        return with_role_check(ctx, *constants.MODERATION_ROLES)

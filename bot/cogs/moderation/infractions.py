@@ -1,34 +1,36 @@
 import logging
 import textwrap
-from typing import Awaitable, Dict, Optional, Union
+import typing as t
 
 import dateutil.parser
-from discord import Colour, Forbidden, HTTPException, Member, NotFound, Object, User
-from discord.ext.commands import BadUnionArgument, Bot, Cog, Context, command
+import discord
+from discord import Member
+from discord.ext import commands
+from discord.ext.commands import Context, command
 
 from bot import constants
 from bot.api import ResponseCodeError
 from bot.constants import Colours, Event
 from bot.converters import Duration
 from bot.decorators import respect_role_hierarchy
+from bot.utils import time
 from bot.utils.checks import with_role_check
 from bot.utils.scheduling import Scheduler
-from bot.utils.time import format_infraction, wait_until
 from . import utils
 from .modlog import ModLog
 from .utils import MemberObject
 
 log = logging.getLogger(__name__)
 
-MemberConverter = Union[Member, User, utils.proxy_user]
+MemberConverter = t.Union[utils.UserTypes, utils.proxy_user]
 
 
-class Infractions(Scheduler, Cog):
+class Infractions(Scheduler, commands.Cog):
     """Server moderation tools."""
 
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self._muted_role = Object(constants.Roles.muted)
+        self._muted_role = discord.Object(constants.Roles.muted)
         super().__init__()
 
     @property
@@ -36,7 +38,7 @@ class Infractions(Scheduler, Cog):
         """Get currently loaded ModLog cog instance."""
         return self.bot.get_cog("ModLog")
 
-    @Cog.listener()
+    @commands.Cog.listener()
     async def on_ready(self) -> None:
         """Schedule expiration for previous infractions."""
         infractions = await self.bot.api_client.get(
@@ -211,7 +213,7 @@ class Infractions(Scheduler, Cog):
         _id = infraction["id"]
 
         expiry = dateutil.parser.isoparse(infraction["expires_at"]).replace(tzinfo=None)
-        await wait_until(expiry)
+        await time.wait_until(expiry)
 
         log.debug(f"Marking infraction {_id} as inactive (expired).")
         await self.deactivate_infraction(infraction)
@@ -220,7 +222,7 @@ class Infractions(Scheduler, Cog):
         self,
         infraction: utils.Infraction,
         send_log: bool = True
-    ) -> Dict[str, str]:
+    ) -> t.Dict[str, str]:
         """
         Deactivate an active infraction and return a dictionary of lines to send in a mod log.
 
@@ -263,21 +265,21 @@ class Infractions(Scheduler, Cog):
                     log.info(f"Failed to unmute user {user_id}: user not found")
                     log_text["Failure"] = "User was not found in the guild."
             elif _type == "ban":
-                user = Object(user_id)
+                user = discord.Object(user_id)
                 self.mod_log.ignore(Event.member_unban, user_id)
                 try:
                     await guild.unban(user, reason=reason)
-                except NotFound:
+                except discord.NotFound:
                     log.info(f"Failed to unban user {user_id}: no active ban found on Discord")
                     log_text["Failure"] = "No active ban found on Discord."
             else:
                 raise ValueError(
                     f"Attempted to deactivate an unsupported infraction #{_id} ({_type})!"
                 )
-        except Forbidden:
+        except discord.Forbidden:
             log.warning(f"Failed to deactivate infraction #{_id} ({_type}): bot lacks permissions")
             log_text["Failure"] = f"The bot lacks permissions to do this (role hierarchy?)"
-        except HTTPException as e:
+        except discord.HTTPException as e:
             log.exception(f"Failed to deactivate infraction #{_id} ({_type})")
             log_text["Failure"] = f"HTTPException with code {e.code}."
 
@@ -307,7 +309,7 @@ class Infractions(Scheduler, Cog):
 
             await self.mod_log.send_log_message(
                 icon_url=utils.INFRACTION_ICONS[_type][1],
-                colour=Colour(Colours.soft_green),
+                colour=Colours.soft_green,
                 title=f"Infraction {log_title}: {_type}",
                 text="\n".join(f"{k}: {v}" for k, v in log_text.items()),
                 footer=f"ID: {_id}",
@@ -320,7 +322,7 @@ class Infractions(Scheduler, Cog):
         ctx: Context,
         infraction: utils.Infraction,
         user: MemberObject,
-        action_coro: Optional[Awaitable] = None
+        action_coro: t.Optional[t.Awaitable] = None
     ) -> None:
         """Apply an infraction to the user, log the infraction, and optionally notify the user."""
         infr_type = infraction["type"]
@@ -329,7 +331,7 @@ class Infractions(Scheduler, Cog):
         expiry = infraction["expires_at"]
 
         if expiry:
-            expiry = format_infraction(expiry)
+            expiry = time.format_infraction(expiry)
 
         # Default values for the confirmation message and mod log.
         confirm_msg = f":ok_hand: applied"
@@ -360,7 +362,7 @@ class Infractions(Scheduler, Cog):
                 if expiry:
                     # Schedule the expiration of the infraction.
                     self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
-            except Forbidden:
+            except discord.Forbidden:
                 # Accordingly display that applying the infraction failed.
                 confirm_msg = f":x: failed to apply"
                 expiry_msg = ""
@@ -373,7 +375,7 @@ class Infractions(Scheduler, Cog):
         # Send a log message to the mod log.
         await self.mod_log.send_log_message(
             icon_url=icon,
-            colour=Colour(Colours.soft_red),
+            colour=Colours.soft_red,
             title=f"Infraction {log_title}: {infr_type}",
             thumbnail=user.avatar_url_as(static_format="png"),
             text=textwrap.dedent(f"""
@@ -464,7 +466,7 @@ class Infractions(Scheduler, Cog):
         # Send a log message to the mod log.
         await self.mod_log.send_log_message(
             icon_url=utils.INFRACTION_ICONS[infr_type][1],
-            colour=Colour(Colours.soft_green),
+            colour=Colours.soft_green,
             title=f"Infraction {log_title}: {infr_type}",
             thumbnail=user.avatar_url_as(static_format="png"),
             text="\n".join(f"{k}: {v}" for k, v in log_text.items()),
@@ -482,7 +484,7 @@ class Infractions(Scheduler, Cog):
     # This cannot be static (must have a __func__ attribute).
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:
         """Send a notification to the invoking context on a Union failure."""
-        if isinstance(error, BadUnionArgument):
-            if User in error.converters:
+        if isinstance(error, commands.BadUnionArgument):
+            if discord.User in error.converters:
                 await ctx.send(str(error.errors[0]))
                 error.handled = True

@@ -12,13 +12,13 @@ from bot.converters import Duration, InfractionSearchQuery
 from bot.pagination import LinePaginator
 from bot.utils import time
 from bot.utils.checks import with_role_check
+from . import utils
 from .infractions import Infractions
 from .modlog import ModLog
-from .utils import Infraction, proxy_user
 
 log = logging.getLogger(__name__)
 
-UserConverter = t.Union[discord.User, proxy_user]
+UserConverter = t.Union[discord.User, utils.proxy_user]
 
 
 def permanent_duration(expires_at: str) -> str:
@@ -191,7 +191,7 @@ class ModManagement(commands.Cog):
         self,
         ctx: Context,
         embed: discord.Embed,
-        infractions: t.Iterable[Infraction]
+        infractions: t.Iterable[utils.Infraction]
     ) -> None:
         """Send a paginated embed of infractions for the specified user."""
         if not infractions:
@@ -212,31 +212,31 @@ class ModManagement(commands.Cog):
             max_size=1000
         )
 
-    def infraction_to_string(self, infraction_object: Infraction) -> str:
+    def infraction_to_string(self, infraction: utils.Infraction) -> str:
         """Convert the infraction object to a string representation."""
-        actor_id = infraction_object["actor"]
+        actor_id = infraction["actor"]
         guild = self.bot.get_guild(constants.Guild.id)
         actor = guild.get_member(actor_id)
-        active = infraction_object["active"]
-        user_id = infraction_object["user"]
-        hidden = infraction_object["hidden"]
-        created = time.format_infraction(infraction_object["inserted_at"])
-        if infraction_object["expires_at"] is None:
+        active = infraction["active"]
+        user_id = infraction["user"]
+        hidden = infraction["hidden"]
+        created = time.format_infraction(infraction["inserted_at"])
+        if infraction["expires_at"] is None:
             expires = "*Permanent*"
         else:
-            expires = time.format_infraction(infraction_object["expires_at"])
+            expires = time.format_infraction(infraction["expires_at"])
 
         lines = textwrap.dedent(f"""
             {"**===============**" if active else "==============="}
             Status: {"__**Active**__" if active else "Inactive"}
             User: {self.bot.get_user(user_id)} (`{user_id}`)
-            Type: **{infraction_object["type"]}**
+            Type: **{infraction["type"]}**
             Shadow: {hidden}
-            Reason: {infraction_object["reason"] or "*None*"}
+            Reason: {infraction["reason"] or "*None*"}
             Created: {created}
             Expires: {expires}
             Actor: {actor.mention if actor else actor_id}
-            ID: `{infraction_object["id"]}`
+            ID: `{infraction["id"]}`
             {"**===============**" if active else "==============="}
         """)
 
