@@ -229,7 +229,7 @@ class ISODateTime(Converter):
         `dateutil.parser`. In general, it accepts datetime strings that start with a date,
         optionally followed by a time.
 
-        See: <https://dateutil.readthedocs.io/en/stable/parser.html#dateutil.parser.isoparse>
+        See: https://dateutil.readthedocs.io/en/stable/parser.html#dateutil.parser.isoparse
 
         Formats that are guaranteed to be valid by our tests are:
 
