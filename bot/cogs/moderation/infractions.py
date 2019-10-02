@@ -74,13 +74,20 @@ class Infractions(Scheduler, commands.Cog):
     # endregion
     # region: Temporary infractions
 
-    @command(aliases=('mute',))
+    @command(aliases=["mute"])
     async def tempmute(self, ctx: Context, user: Member, duration: Duration, *, reason: str = None) -> None:
         """
         Temporarily mute a user for the given reason and duration.
 
-        A unit of time should be appended to the duration:
-        y (years), m (months), w (weeks), d (days), h (hours), M (minutes), s (seconds)
+        A unit of time should be appended to the duration.
+        Units (∗case-sensitive):
+        \u2003`y` - years
+        \u2003`m` - months∗
+        \u2003`w` - weeks
+        \u2003`d` - days
+        \u2003`h` - hours
+        \u2003`M` - minutes∗
+        \u2003`s` - seconds
         """
         await self.apply_mute(ctx, user, reason, expires_at=duration)
 
@@ -89,8 +96,15 @@ class Infractions(Scheduler, commands.Cog):
         """
         Temporarily ban a user for the given reason and duration.
 
-        A unit of time should be appended to the duration:
-        y (years), m (months), w (weeks), d (days), h (hours), M (minutes), s (seconds)
+        A unit of time should be appended to the duration.
+        Units (∗case-sensitive):
+        \u2003`y` - years
+        \u2003`m` - months∗
+        \u2003`w` - weeks
+        \u2003`d` - days
+        \u2003`h` - hours
+        \u2003`M` - minutes∗
+        \u2003`s` - seconds
         """
         await self.apply_ban(ctx, user, reason, expires_at=duration)
 
@@ -126,8 +140,15 @@ class Infractions(Scheduler, commands.Cog):
         """
         Temporarily mute a user for the given reason and duration without notifying the user.
 
-        A unit of time should be appended to the duration:
-        y (years), m (months), w (weeks), d (days), h (hours), M (minutes), s (seconds)
+        A unit of time should be appended to the duration.
+        Units (∗case-sensitive):
+        \u2003`y` - years
+        \u2003`m` - months∗
+        \u2003`w` - weeks
+        \u2003`d` - days
+        \u2003`h` - hours
+        \u2003`M` - minutes∗
+        \u2003`s` - seconds
         """
         await self.apply_mute(ctx, user, reason, expires_at=duration, hidden=True)
 
@@ -138,8 +159,15 @@ class Infractions(Scheduler, commands.Cog):
         """
         Temporarily ban a user for the given reason and duration without notifying the user.
 
-        A unit of time should be appended to the duration:
-        y (years), m (months), w (weeks), d (days), h (hours), M (minutes), s (seconds)
+        A unit of time should be appended to the duration.
+        Units (∗case-sensitive):
+        \u2003`y` - years
+        \u2003`m` - months∗
+        \u2003`w` - weeks
+        \u2003`d` - days
+        \u2003`h` - hours
+        \u2003`M` - minutes∗
+        \u2003`s` - seconds
         """
         await self.apply_ban(ctx, user, reason, expires_at=duration, hidden=True)
 
