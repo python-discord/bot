@@ -12,11 +12,11 @@ from bot.pagination import LinePaginator
 
 log = logging.getLogger(__name__)
 
-KEEP_LOADED = ["bot.cogs.cogs", "bot.cogs.modlog"]
+KEEP_LOADED = ["bot.cogs.extensions", "bot.cogs.modlog"]
 
 
-class Cogs(Cog):
-    """Cog management commands."""
+class Extensions(Cog):
+    """Extension management commands."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
@@ -34,13 +34,13 @@ class Cogs(Cog):
         # Allow reverse lookups by reversing the pairs
         self.cogs.update({v: k for k, v in self.cogs.items()})
 
-    @group(name='cogs', aliases=('c',), invoke_without_command=True)
+    @group(name='extensions', aliases=('c', 'ext', 'exts'), invoke_without_command=True)
     @with_role(*MODERATION_ROLES, Roles.core_developer)
-    async def cogs_group(self, ctx: Context) -> None:
+    async def extensions_group(self, ctx: Context) -> None:
         """Load, unload, reload, and list active cogs."""
-        await ctx.invoke(self.bot.get_command("help"), "cogs")
+        await ctx.invoke(self.bot.get_command("help"), "extensions")
 
-    @cogs_group.command(name='load', aliases=('l',))
+    @extensions_group.command(name='load', aliases=('l',))
     @with_role(*MODERATION_ROLES, Roles.core_developer)
     async def load_command(self, ctx: Context, cog: str) -> None:
         """
@@ -91,7 +91,7 @@ class Cogs(Cog):
 
         await ctx.send(embed=embed)
 
-    @cogs_group.command(name='unload', aliases=('ul',))
+    @extensions_group.command(name='unload', aliases=('ul',))
     @with_role(*MODERATION_ROLES, Roles.core_developer)
     async def unload_command(self, ctx: Context, cog: str) -> None:
         """
@@ -141,7 +141,7 @@ class Cogs(Cog):
 
         await ctx.send(embed=embed)
 
-    @cogs_group.command(name='reload', aliases=('r',))
+    @extensions_group.command(name='reload', aliases=('r',))
     @with_role(*MODERATION_ROLES, Roles.core_developer)
     async def reload_command(self, ctx: Context, cog: str) -> None:
         """
@@ -245,7 +245,7 @@ class Cogs(Cog):
 
         await ctx.send(embed=embed)
 
-    @cogs_group.command(name='list', aliases=('all',))
+    @extensions_group.command(name='list', aliases=('all',))
     @with_role(*MODERATION_ROLES, Roles.core_developer)
     async def list_command(self, ctx: Context) -> None:
         """
@@ -293,6 +293,6 @@ class Cogs(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Cogs cog load."""
-    bot.add_cog(Cogs(bot))
-    log.info("Cog loaded: Cogs")
+    """Load the Extensions cog."""
+    bot.add_cog(Extensions(bot))
+    log.info("Cog loaded: Extensions")
