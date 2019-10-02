@@ -2,13 +2,10 @@ import logging
 
 from discord.ext.commands import Bot
 
-from . import utils
 from .infractions import Infractions
 from .management import ModManagement
 from .modlog import ModLog
 from .superstarify import Superstarify
-
-__all__ = ("utils", "Infractions", "ModManagement", "ModLog", "Superstarify")
 
 log = logging.getLogger(__name__)
 
