@@ -216,7 +216,7 @@ def test_isodatetime_converter_for_valid(datetime_string: str, expected_dt: date
 @pytest.mark.parametrize(
     ("datetime_string"),
     (
-        # Make sure it doesn't interfere with the Duration converation
+        # Make sure it doesn't interfere with the Duration converter
         ('1Y'),
         ('1d'),
         ('1H'),
