@@ -55,7 +55,7 @@ class Infractions(Scheduler, commands.Cog):
     @command()
     async def warn(self, ctx: Context, user: MemberConverter, *, reason: str = None) -> None:
         """Warn a user for the given reason."""
-        infraction = await utils.post_infraction(ctx, user,  "warning", reason)
+        infraction = await utils.post_infraction(ctx, user, "warning", reason)
         if infraction is None:
             return
 
@@ -262,11 +262,13 @@ class Infractions(Scheduler, commands.Cog):
         Supported infraction types are mute and ban. Other types will raise a ValueError.
         """
         guild = self.bot.get_guild(constants.Guild.id)
+        mod_role = guild.get_role(constants.Roles.moderator)
         user_id = infraction["user"]
         _type = infraction["type"]
         _id = infraction["id"]
         reason = f"Infraction #{_id} expired or was pardoned."
 
+        log_content = None
         log_text = {
             "Member": str(user_id),
             "Actor": str(self.bot.user)
@@ -308,9 +310,11 @@ class Infractions(Scheduler, commands.Cog):
         except discord.Forbidden:
             log.warning(f"Failed to deactivate infraction #{_id} ({_type}): bot lacks permissions")
             log_text["Failure"] = f"The bot lacks permissions to do this (role hierarchy?)"
+            log_content = mod_role.mention
         except discord.HTTPException as e:
             log.exception(f"Failed to deactivate infraction #{_id} ({_type})")
             log_text["Failure"] = f"HTTPException with code {e.code}."
+            log_content = mod_role.mention
 
         try:
             # Mark infraction as inactive in the database.
@@ -321,6 +325,7 @@ class Infractions(Scheduler, commands.Cog):
         except ResponseCodeError as e:
             log.exception(f"Failed to deactivate infraction #{_id} ({_type})")
             log_line = f"API request failed with code {e.status}."
+            log_content = mod_role.mention
 
             # Append to an existing failure message if possible
             if "Failure" in log_text:
@@ -342,6 +347,7 @@ class Infractions(Scheduler, commands.Cog):
                 title=f"Infraction {log_title}: {_type}",
                 text="\n".join(f"{k}: {v}" for k, v in log_text.items()),
                 footer=f"ID: {_id}",
+                content=log_content,
             )
 
         return log_text
