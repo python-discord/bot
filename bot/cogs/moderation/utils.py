@@ -29,7 +29,11 @@ Infraction = t.Dict[str, t.Union[str, int, bool]]
 
 
 def proxy_user(user_id: str) -> discord.Object:
-    """Create a proxy user for the provided user_id for situations where a Member or User object cannot be resolved."""
+    """
+    Create a proxy user object from the given id.
+
+    Used when a Member or User object cannot be resolved.
+    """
     try:
         user_id = int(user_id)
     except ValueError:
@@ -71,7 +75,9 @@ async def post_infraction(
                 f"{ctx.author} tried to add a {type} infraction to `{user.id}`, "
                 "but that user id was not found in the database."
             )
-            await ctx.send(f":x: Cannot add infraction, the specified user is not known to the database.")
+            await ctx.send(
+                f":x: Cannot add infraction, the specified user is not known to the database."
+            )
             return
         else:
             log.exception("An unexpected ResponseCodeError occurred while adding an infraction:")
@@ -81,7 +87,7 @@ async def post_infraction(
     return response
 
 
-async def already_has_active_infraction(ctx: Context, user: MemberObject, type: str) -> bool:
+async def has_active_infraction(ctx: Context, user: MemberObject, type: str) -> bool:
     """Checks if a user already has an active infraction of the given type."""
     active_infractions = await ctx.bot.api_client.get(
         'bot/infractions',
@@ -123,7 +129,9 @@ async def notify_infraction(
     embed.url = RULES_URL
 
     if infr_type in APPEALABLE_INFRACTIONS:
-        embed.set_footer(text="To appeal this infraction, send an e-mail to appeals@pythondiscord.com")
+        embed.set_footer(
+            text="To appeal this infraction, send an e-mail to appeals@pythondiscord.com"
+        )
 
     return await send_private_embed(user, embed)
 

@@ -154,19 +154,7 @@ class Superstarify(Cog):
 
         If no reason is given, the original name will be shown in a generated reason.
         """
-        active_superstarifies = await self.bot.api_client.get(
-            'bot/infractions',
-            params={
-                'active': 'true',
-                'type': 'superstar',
-                'user__id': str(member.id)
-            }
-        )
-        if active_superstarifies:
-            await ctx.send(
-                ":x: According to my records, this user is already superstarified. "
-                f"See infraction **#{active_superstarifies[0]['id']}**."
-            )
+        if await utils.has_active_infraction(ctx, member, "superstar"):
             return
 
         infraction = await utils.post_infraction(

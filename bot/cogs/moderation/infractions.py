@@ -160,7 +160,7 @@ class Infractions(Scheduler, commands.Cog):
 
     async def apply_mute(self, ctx: Context, user: Member, reason: str, **kwargs) -> None:
         """Apply a mute infraction with kwargs passed to `post_infraction`."""
-        if await utils.already_has_active_infraction(ctx, user, "mute"):
+        if await utils.has_active_infraction(ctx, user, "mute"):
             return
 
         infraction = await utils.post_infraction(ctx, user, "mute", reason, **kwargs)
@@ -187,7 +187,7 @@ class Infractions(Scheduler, commands.Cog):
     @respect_role_hierarchy()
     async def apply_ban(self, ctx: Context, user: MemberObject, reason: str, **kwargs) -> None:
         """Apply a ban infraction with kwargs passed to `post_infraction`."""
-        if await utils.already_has_active_infraction(ctx, user, "ban"):
+        if await utils.has_active_infraction(ctx, user, "ban"):
             return
 
         infraction = await utils.post_infraction(ctx, user, "ban", reason, **kwargs)
