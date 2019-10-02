@@ -44,17 +44,29 @@ class Site(Cog):
     async def site_resources(self, ctx: Context) -> None:
         """Info about the site's Resources page."""
         learning_url = f"{PAGES_URL}/resources"
-        tools_url = f"{PAGES_URL}/tools"
 
-        embed = Embed(title="Resources & Tools")
-        embed.set_footer(text=f"{learning_url} | {tools_url}")
+        embed = Embed(title="Resources")
+        embed.set_footer(text=f"{learning_url}")
         embed.colour = Colour.blurple()
         embed.description = (
             f"The [Resources page]({learning_url}) on our website contains a "
-            "list of hand-selected goodies that we regularly recommend "
-            f"to both beginners and experts. The [Tools page]({tools_url}) "
-            "contains a couple of the most popular tools for programming in "
-            "Python."
+            "list of hand-selected learning resources that we regularly recommend "
+            f"to both beginners and experts."
+        )
+
+        await ctx.send(embed=embed)
+
+    @site_group.command(name="tools")
+    async def site_tools(self, ctx: Context) -> None:
+        """Info about the site's Tools page."""
+        tools_url = f"{PAGES_URL}/tools"
+
+        embed = Embed(title="Tools")
+        embed.set_footer(text=f"{tools_url}")
+        embed.colour = Colour.blurple()
+        embed.description = (
+            f"The [Tools page]({tools_url}) on our website contains a "
+            f"couple of the most popular tools for programming in Python."
         )
 
         await ctx.send(embed=embed)
