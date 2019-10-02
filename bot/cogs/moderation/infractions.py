@@ -55,7 +55,7 @@ class Infractions(Scheduler, commands.Cog):
     @command()
     async def warn(self, ctx: Context, user: MemberConverter, *, reason: str = None) -> None:
         """Warn a user for the given reason."""
-        infraction = await utils.post_infraction(ctx, user, reason, "warning")
+        infraction = await utils.post_infraction(ctx, user,  "warning", reason)
         if infraction is None:
             return
 
@@ -114,7 +114,7 @@ class Infractions(Scheduler, commands.Cog):
     @command(hidden=True)
     async def note(self, ctx: Context, user: MemberConverter, *, reason: str = None) -> None:
         """Create a private note for a user with the given reason without notifying the user."""
-        infraction = await utils.post_infraction(ctx, user, reason, "note", hidden=True)
+        infraction = await utils.post_infraction(ctx, user, "note", reason, hidden=True)
         if infraction is None:
             return
 
