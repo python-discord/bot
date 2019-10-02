@@ -105,7 +105,8 @@ async def notify_infraction(
     user: UserTypes,
     infr_type: str,
     expires_at: t.Optional[str] = None,
-    reason: t.Optional[str] = None
+    reason: t.Optional[str] = None,
+    icon_url: str = Icons.token_removed
 ) -> bool:
     """DM a user about their new infraction and return True if the DM is successful."""
     embed = discord.Embed(
@@ -117,7 +118,6 @@ async def notify_infraction(
         colour=Colours.soft_red
     )
 
-    icon_url = INFRACTION_ICONS[infr_type][0]
     embed.set_author(name="Infraction Information", icon_url=icon_url, url=RULES_URL)
     embed.title = f"Please review our rules over at {RULES_URL}"
     embed.url = RULES_URL

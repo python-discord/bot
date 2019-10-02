@@ -348,7 +348,7 @@ class Infractions(Scheduler, commands.Cog):
             await self.bot.fetch_user(user.id)
 
             # Accordingly display whether the user was successfully notified via DM.
-            if await utils.notify_infraction(user, infr_type, expiry, reason):
+            if await utils.notify_infraction(user, infr_type, expiry, reason, icon):
                 dm_result = ":incoming_envelope: "
                 dm_log_text = "\nDM: Sent"
             else:
