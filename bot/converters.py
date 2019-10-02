@@ -5,6 +5,7 @@ from ssl import CertificateError
 from typing import Union
 
 import dateutil.parser
+import dateutil.tz
 import discord
 from aiohttp import ClientConnectorError
 from dateutil.relativedelta import relativedelta
@@ -227,12 +228,18 @@ class ISODateTime(Converter):
 
         The converter is flexible in the formats it accepts, as it uses the `isoparse` method of
         `dateutil.parser`. In general, it accepts datetime strings that start with a date,
-        optionally followed by a time.
+        optionally followed by a time. Specifying a timezone offset in the datetime string is
+        supported, but the `datetime` object will be converted to UTC and will be returned without
+        `tzinfo` as a timezone-unaware `datetime` object.
 
         See: https://dateutil.readthedocs.io/en/stable/parser.html#dateutil.parser.isoparse
 
         Formats that are guaranteed to be valid by our tests are:
 
+        - `YYYY-mm-ddTHH:MM:SSZ` | `YYYY-mm-dd HH:MM:SSZ`
+        - `YYYY-mm-ddTHH:MM:SS±HH:MM` | `YYYY-mm-dd HH:MM:SS±HH:MM`
+        - `YYYY-mm-ddTHH:MM:SS±HHMM` | `YYYY-mm-dd HH:MM:SS±HHMM`
+        - `YYYY-mm-ddTHH:MM:SS±HH` | `YYYY-mm-dd HH:MM:SS±HH`
         - `YYYY-mm-ddTHH:MM:SS` | `YYYY-mm-dd HH:MM:SS`
         - `YYYY-mm-ddTHH:MM` | `YYYY-mm-dd HH:MM`
         - `YYYY-mm-dd`
@@ -246,5 +253,9 @@ class ISODateTime(Converter):
             dt = dateutil.parser.isoparse(datetime_string)
         except ValueError:
             raise BadArgument(f"`{datetime_string}` is not a valid ISO-8601 datetime string")
+
+        if dt.tzinfo:
+            dt = dt.astimezone(dateutil.tz.UTC)
+            dt = dt.replace(tzinfo=None)
 
         return dt

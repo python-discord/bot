@@ -190,6 +190,27 @@ def test_duration_converter_for_invalid(duration: str):
 @pytest.mark.parametrize(
     ("datetime_string", "expected_dt"),
     (
+
+        # `YYYY-mm-ddTHH:MM:SSZ` | `YYYY-mm-dd HH:MM:SSZ`
+        ('2019-09-02T02:03:05Z', datetime.datetime(2019, 9, 2, 2, 3, 5)),
+        ('2019-09-02 02:03:05Z', datetime.datetime(2019, 9, 2, 2, 3, 5)),
+
+        # `YYYY-mm-ddTHH:MM:SS±HH:MM` | `YYYY-mm-dd HH:MM:SS±HH:MM`
+        ('2019-09-02T03:18:05+01:15', datetime.datetime(2019, 9, 2, 2, 3, 5)),
+        ('2019-09-02 03:18:05+01:15', datetime.datetime(2019, 9, 2, 2, 3, 5)),
+        ('2019-09-02T00:48:05-01:15', datetime.datetime(2019, 9, 2, 2, 3, 5)),
+        ('2019-09-02 00:48:05-01:15', datetime.datetime(2019, 9, 2, 2, 3, 5)),
+
+        # `YYYY-mm-ddTHH:MM:SS±HHMM` | `YYYY-mm-dd HH:MM:SS±HHMM`
+        ('2019-09-02T03:18:05+0115', datetime.datetime(2019, 9, 2, 2, 3, 5)),
+        ('2019-09-02 03:18:05+0115', datetime.datetime(2019, 9, 2, 2, 3, 5)),
+        ('2019-09-02T00:48:05-0115', datetime.datetime(2019, 9, 2, 2, 3, 5)),
+        ('2019-09-02 00:48:05-0115', datetime.datetime(2019, 9, 2, 2, 3, 5)),
+
+        # `YYYY-mm-ddTHH:MM:SS±HH` | `YYYY-mm-dd HH:MM:SS±HH`
+        ('2019-09-02 03:03:05+01', datetime.datetime(2019, 9, 2, 2, 3, 5)),
+        ('2019-09-02T01:03:05-01', datetime.datetime(2019, 9, 2, 2, 3, 5)),
+
         # `YYYY-mm-ddTHH:MM:SS` | `YYYY-mm-dd HH:MM:SS`
         ('2019-09-02T02:03:05', datetime.datetime(2019, 9, 2, 2, 3, 5)),
         ('2019-09-02 02:03:05', datetime.datetime(2019, 9, 2, 2, 3, 5)),
