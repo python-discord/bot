@@ -176,13 +176,14 @@ class Superstarify(Cog):
             expires_at=expiration
         )
         forced_nick = self.get_nick(infraction['id'], member.id)
+        expiry_str = format_infraction(infraction["expires_at"])
 
         embed = Embed()
         embed.title = "Congratulations!"
         embed.description = (
             f"Your previous nickname, **{member.display_name}**, was so bad that we have decided to change it. "
             f"Your new nickname will be **{forced_nick}**.\n\n"
-            f"You will be unable to change your nickname until \n**{expiration}**.\n\n"
+            f"You will be unable to change your nickname until \n**{expiry_str}**.\n\n"
             "If you're confused by this, please read our "
             f"[official nickname policy]({NICKNAME_POLICY_URL})."
         )
@@ -194,7 +195,7 @@ class Superstarify(Cog):
             f"Superstarified by **{ctx.author.name}**\n"
             f"Old nickname: `{member.display_name}`\n"
             f"New nickname: `{forced_nick}`\n"
-            f"Superstardom ends: **{expiration}**"
+            f"Superstardom ends: **{expiry_str}**"
         )
         await self.modlog.send_log_message(
             icon_url=Icons.user_update,
@@ -207,7 +208,7 @@ class Superstarify(Cog):
         await utils.notify_infraction(
             user=member,
             infr_type="Superstarify",
-            expires_at=expiration,
+            expires_at=expiry_str,
             reason=f"Your nickname didn't comply with our [nickname policy]({NICKNAME_POLICY_URL})."
         )
 
