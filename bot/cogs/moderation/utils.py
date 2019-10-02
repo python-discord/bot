@@ -49,7 +49,7 @@ def proxy_user(user_id: str) -> discord.Object:
 async def post_infraction(
     ctx: Context,
     user: MemberObject,
-    type: str,
+    infr_type: str,
     reason: str,
     expires_at: datetime = None,
     hidden: bool = False,
@@ -60,7 +60,7 @@ async def post_infraction(
         "actor": ctx.message.author.id,
         "hidden": hidden,
         "reason": reason,
-        "type": type,
+        "type": infr_type,
         "user": user.id,
         "active": active
     }
@@ -72,7 +72,7 @@ async def post_infraction(
     except ResponseCodeError as exp:
         if exp.status == 400 and 'user' in exp.response_json:
             log.info(
-                f"{ctx.author} tried to add a {type} infraction to `{user.id}`, "
+                f"{ctx.author} tried to add a {infr_type} infraction to `{user.id}`, "
                 "but that user id was not found in the database."
             )
             await ctx.send(
@@ -87,19 +87,19 @@ async def post_infraction(
     return response
 
 
-async def has_active_infraction(ctx: Context, user: MemberObject, type: str) -> bool:
+async def has_active_infraction(ctx: Context, user: MemberObject, infr_type: str) -> bool:
     """Checks if a user already has an active infraction of the given type."""
     active_infractions = await ctx.bot.api_client.get(
         'bot/infractions',
         params={
             'active': 'true',
-            'type': type,
+            'type': infr_type,
             'user__id': str(user.id)
         }
     )
     if active_infractions:
         await ctx.send(
-            f":x: According to my records, this user already has a {type} infraction. "
+            f":x: According to my records, this user already has a {infr_type} infraction. "
             f"See infraction **#{active_infractions[0]['id']}**."
         )
         return True

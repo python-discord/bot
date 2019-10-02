@@ -157,11 +157,8 @@ class Superstarify(Cog):
         if await utils.has_active_infraction(ctx, member, "superstar"):
             return
 
-        infraction = await utils.post_infraction(
-            ctx, member,
-            type='superstar', reason=reason or ('old nick: ' + member.display_name),
-            expires_at=expiration
-        )
+        reason = reason or ('old nick: ' + member.display_name)
+        infraction = await utils.post_infraction(ctx, member, 'superstar', reason, expires_at=expiration)
         forced_nick = self.get_nick(infraction['id'], member.id)
         expiry_str = format_infraction(infraction["expires_at"])
 

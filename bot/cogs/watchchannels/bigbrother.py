@@ -64,9 +64,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
             await ctx.send(":x: The specified user is already being watched.")
             return
 
-        response = await post_infraction(
-            ctx, user, type='watch', reason=reason, hidden=True
-        )
+        response = await post_infraction(ctx, user, 'watch', reason, hidden=True)
 
         if response is not None:
             self.watched_users[user.id] = response
@@ -91,7 +89,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
                 json={'active': False}
             )
 
-            await post_infraction(ctx, user, type='watch', reason=f"Unwatched: {reason}", hidden=True, active=False)
+            await post_infraction(ctx, user, 'watch', f"Unwatched: {reason}", hidden=True, active=False)
 
             await ctx.send(f":white_check_mark: Messages sent by {user} will no longer be relayed.")
 
