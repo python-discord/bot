@@ -66,8 +66,15 @@ class ModManagement(commands.Cog):
         """
         Edit the duration and/or the reason of an infraction.
 
-        Durations are relative to the time of updating and should be appended with a unit of time:
-        y (years), m (months), w (weeks), d (days), h (hours), M (minutes), s (seconds)
+        Durations are relative to the time of updating and should be appended with a unit of time.
+        Units (∗case-sensitive):
+        \u2003`y` - years
+        \u2003`m` - months∗
+        \u2003`w` - weeks
+        \u2003`d` - days
+        \u2003`h` - hours
+        \u2003`M` - minutes∗
+        \u2003`s` - seconds
 
         Use "permanent" to mark the infraction as permanent.
         """
