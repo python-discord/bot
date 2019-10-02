@@ -160,12 +160,12 @@ class Infractions(Scheduler, Cog):
 
     @command()
     async def unmute(self, ctx: Context, user: MemberConverter) -> None:
-        """Deactivates the active mute infraction for a user."""
+        """Prematurely end the active mute infraction for the user."""
         await self.pardon_infraction(ctx, "mute", user)
 
     @command()
     async def unban(self, ctx: Context, user: MemberConverter) -> None:
-        """Deactivates the active ban infraction for a user."""
+        """Prematurely end the active ban infraction for the user."""
         await self.pardon_infraction(ctx, "ban", user)
 
     # endregion
@@ -337,11 +337,7 @@ class Infractions(Scheduler, Cog):
         expires_at: Optional[str] = None,
         reason: Optional[str] = None
     ) -> bool:
-        """
-        Attempt to notify a user, via DM, of their fresh infraction.
-
-        Returns a boolean indicator of whether the DM was successful.
-        """
+        """DM a user about their new infraction and return True if the DM is successful."""
         embed = Embed(
             description=textwrap.dedent(f"""
                 **Type:** {infr_type.capitalize()}
@@ -368,11 +364,7 @@ class Infractions(Scheduler, Cog):
         content: str,
         icon_url: str = Icons.user_verified
     ) -> bool:
-        """
-        Attempt to notify a user, via DM, of their expired infraction.
-
-        Optionally returns a boolean indicator of whether the DM was successful.
-        """
+        """DM a user about their pardoned infraction and return True if the DM is successful."""
         embed = Embed(
             description=content,
             colour=Colour(Colours.soft_green)
@@ -417,6 +409,7 @@ class Infractions(Scheduler, Cog):
         if expiry:
             expiry = format_infraction(expiry)
 
+        # Default values for the confirmation message and mod log.
         confirm_msg = f":ok_hand: applied"
         expiry_msg = f" until {expiry}" if expiry else " permanently"
         dm_result = ""
@@ -425,7 +418,9 @@ class Infractions(Scheduler, Cog):
         log_title = "applied"
         log_content = None
 
+        # DM the user about the infraction if it's not a shadow/hidden infraction.
         if not infraction["hidden"]:
+            # Accordingly display whether the user was successfully notified via DM.
             if await self.notify_infraction(user, infr_type, expiry, reason):
                 dm_result = ":incoming_envelope: "
                 dm_log_text = "\nDM: Sent"
@@ -433,19 +428,24 @@ class Infractions(Scheduler, Cog):
                 dm_log_text = "\nDM: **Failed**"
                 log_content = ctx.author.mention
 
+        # Execute the necessary actions to apply the infraction on Discord.
         if action_coro:
             try:
                 await action_coro
                 if expiry:
+                    # Schedule the expiration of the infraction.
                     self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
             except Forbidden:
+                # Accordingly display that applying the infraction failed.
                 confirm_msg = f":x: failed to apply"
                 expiry_msg = ""
                 log_content = ctx.author.mention
                 log_title = "failed to apply"
 
+        # Send a confirmation message to the invoking context.
         await ctx.send(f"{dm_result}{confirm_msg} **{infr_type}** to {user.mention}{expiry_msg}.")
 
+        # Send a log message to the mod log.
         await self.mod_log.send_log_message(
             icon_url=icon,
             colour=Colour(Colours.soft_red),
@@ -530,7 +530,7 @@ class Infractions(Scheduler, Cog):
             confirm_msg = f":ok_hand: pardoned"
             log_title = "pardoned"
 
-        # Send the confirmation message to the invoking context.
+        # Send a confirmation message to the invoking context.
         await ctx.send(
             f"{dm_emoji}{confirm_msg} infraction **{infr_type}** for {user.mention}. "
             f"{log_text.get('Failure', '')}"
