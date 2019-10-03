@@ -5,7 +5,8 @@
 [![Tests](https://img.shields.io/azure-devops/tests/python-discord/Python%20Discord/1?compact_message)](https://dev.azure.com/python-discord/Python%20Discord/_apis/build/status/Bot?branchName=master)
 [![Coverage](https://img.shields.io/azure-devops/coverage/python-discord/Python%20Discord/1/master)](https://dev.azure.com/python-discord/Python%20Discord/_apis/build/status/Bot?branchName=master)
 [![License](https://img.shields.io/github/license/python-discord/bot)](LICENSE)
-[![Website](https://img.shields.io/badge/website-visit-brightgreen)](https://pythondiscord.com)
+[![Website](https://img.shields.io/badge/website-visit-brightgreen)](https://pythondiscord.com) 
+[![GitHub stars](https://img.shields.io/github/stars/python-discord/bot.svg?style=social&label=Star&maxAge=2592000)](https://github.com/python-discord/bot/stargazers/)
 
 This project is a Discord bot specifically for use with the Python Discord server. It provides numerous utilities
 and other tools to help keep the server running like a well-oiled machine.
