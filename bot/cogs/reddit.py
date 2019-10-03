@@ -55,6 +55,7 @@ class Reddit(Cog):
                 content = await response.json()
                 posts = content["data"]["children"]
                 return posts[:amount]
+
             await asyncio.sleep(3)
 
         log.debug(f"Invalid response from: {url} - status code {response.status}, mimetype {response.content_type}")
