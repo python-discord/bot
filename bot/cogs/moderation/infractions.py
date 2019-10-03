@@ -30,18 +30,20 @@ class Infractions(Scheduler, commands.Cog):
     """Server moderation tools."""
 
     def __init__(self, bot: commands.Bot):
+        super().__init__()
+
         self.bot = bot
         self.category = "Moderation"
         self._muted_role = discord.Object(constants.Roles.muted)
-        super().__init__()
+
+        self.bot.loop.create_task(self.reschedule_infractions())
 
     @property
     def mod_log(self) -> ModLog:
         """Get currently loaded ModLog cog instance."""
         return self.bot.get_cog("ModLog")
 
-    @commands.Cog.listener()
-    async def on_ready(self) -> None:
+    async def reschedule_infractions(self) -> None:
         """Schedule expiration for previous infractions."""
         infractions = await self.bot.api_client.get(
             'bot/infractions',
