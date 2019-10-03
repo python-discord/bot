@@ -231,7 +231,9 @@ def test_duration_converter_for_invalid(duration: str):
 )
 def test_isodatetime_converter_for_valid(datetime_string: str, expected_dt: datetime.datetime):
     converter = ISODateTime()
-    assert asyncio.run(converter.convert(None, datetime_string)) == expected_dt
+    converted_dt = asyncio.run(converter.convert(None, datetime_string))
+    assert converted_dt.tzinfo is None
+    assert converted_dt == expected_dt
 
 
 @pytest.mark.parametrize(
