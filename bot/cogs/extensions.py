@@ -1,5 +1,6 @@
 import logging
 import os
+import typing as t
 from enum import Enum
 from pkgutil import iter_modules
 
@@ -284,6 +285,36 @@ class Extensions(Cog):
 
         log.debug(f"{ctx.author} requested a list of all cogs. Returning a paginated list.")
         await LinePaginator.paginate(lines, ctx, embed, max_size=300, empty=False)
+
+    def manage(self, ext: str, action: Action) -> t.Tuple[str, t.Optional[str]]:
+        """Apply an action to an extension and return the status message and any error message."""
+        verb = action.name.lower()
+        error_msg = None
+
+        if ext not in self.cogs:
+            return f":x: Extension {ext} does not exist.", None
+
+        if (
+            (action is Action.LOAD and ext not in self.bot.extensions)
+            or (action is Action.UNLOAD and ext in self.bot.extensions)
+            or action is Action.RELOAD
+        ):
+            try:
+                for func in action.value:
+                    func(self.bot, ext)
+            except Exception as e:
+                log.exception(f"Extension '{ext}' failed to {verb}.")
+
+                error_msg = f"{e.__class__.__name__}: {e}"
+                msg = f":x: Failed to {verb} extension `{ext}`:\n```{error_msg}```"
+            else:
+                msg = f":ok_hand: Extension successfully {verb}ed: `{ext}`."
+                log.debug(msg[10:])
+        else:
+            msg = f":x: Extension `{ext}` is already {verb}ed."
+            log.debug(msg[4:])
+
+        return msg, error_msg
 
     # This cannot be static (must have a __func__ attribute).
     def cog_check(self, ctx: Context) -> bool:
