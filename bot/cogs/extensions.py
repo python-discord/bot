@@ -1,5 +1,6 @@
 import logging
 import os
+from enum import Enum
 
 from discord import Colour, Embed
 from discord.ext.commands import Bot, Cog, Context, group
@@ -13,6 +14,14 @@ from bot.pagination import LinePaginator
 log = logging.getLogger(__name__)
 
 KEEP_LOADED = ["bot.cogs.extensions", "bot.cogs.modlog"]
+
+
+class Action(Enum):
+    """Represents an action to perform on an extension."""
+
+    LOAD = (Bot.load_extension,)
+    UNLOAD = (Bot.unload_extension,)
+    RELOAD = (Bot.unload_extension, Bot.load_extension)
 
 
 class Extensions(Cog):
