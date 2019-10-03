@@ -53,6 +53,11 @@ class Alias (Cog):
         """Alias for invoking <prefix>site resources."""
         await self.invoke(ctx, "site resources")
 
+    @command(name="tools", hidden=True)
+    async def site_tools_alias(self, ctx: Context) -> None:
+        """Alias for invoking <prefix>site tools."""
+        await self.invoke(ctx, "site tools")
+
     @command(name="watch", hidden=True)
     async def bigbrother_watch_alias(self, ctx: Context, user: Union[Member, User, proxy_user], *, reason: str) -> None:
         """Alias for invoking <prefix>bigbrother watch [user] [reason]."""
