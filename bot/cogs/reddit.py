@@ -43,9 +43,10 @@ class Reddit(Cog):
         if params is None:
             params = {}
 
+        url = f"{self.URL}/{route}.json"
         for _ in range(self.MAX_FETCH_RETRIES):
             response = await self.bot.http_session.get(
-                url=f"{self.URL}/{route}.json",
+                url=url,
                 headers=self.HEADERS,
                 params=params
             )
@@ -55,6 +56,7 @@ class Reddit(Cog):
                 posts = content["data"]["children"]
                 return posts[:amount]
 
+        log.debug(f"Invalid response from: {url} - status code {response.status}, mimetype {response.content_type}")
         return list()  # Failed to get appropriate response within allowed number of retries.
 
     async def send_top_posts(
