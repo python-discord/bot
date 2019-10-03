@@ -7,8 +7,8 @@ from discord import Colour, Embed
 from discord.ext.commands import Bot, Cog, Context, group
 
 from bot.constants import Emojis, MODERATION_ROLES, Roles, URLs
-from bot.decorators import with_role
 from bot.pagination import LinePaginator
+from bot.utils.checks import with_role_check
 
 log = logging.getLogger(__name__)
 
@@ -34,13 +34,11 @@ class Extensions(Cog):
         self.cogs = set(ext for ext in modules if ext.name[-1] != "_")
 
     @group(name='extensions', aliases=('c', 'ext', 'exts'), invoke_without_command=True)
-    @with_role(*MODERATION_ROLES, Roles.core_developer)
     async def extensions_group(self, ctx: Context) -> None:
         """Load, unload, reload, and list active cogs."""
         await ctx.invoke(self.bot.get_command("help"), "extensions")
 
     @extensions_group.command(name='load', aliases=('l',))
-    @with_role(*MODERATION_ROLES, Roles.core_developer)
     async def load_command(self, ctx: Context, cog: str) -> None:
         """
         Load up an unloaded cog, given the module containing it.
@@ -91,7 +89,6 @@ class Extensions(Cog):
         await ctx.send(embed=embed)
 
     @extensions_group.command(name='unload', aliases=('ul',))
-    @with_role(*MODERATION_ROLES, Roles.core_developer)
     async def unload_command(self, ctx: Context, cog: str) -> None:
         """
         Unload an already-loaded cog, given the module containing it.
@@ -141,7 +138,6 @@ class Extensions(Cog):
         await ctx.send(embed=embed)
 
     @extensions_group.command(name='reload', aliases=('r',))
-    @with_role(*MODERATION_ROLES, Roles.core_developer)
     async def reload_command(self, ctx: Context, cog: str) -> None:
         """
         Reload an unloaded cog, given the module containing it.
@@ -245,7 +241,6 @@ class Extensions(Cog):
         await ctx.send(embed=embed)
 
     @extensions_group.command(name='list', aliases=('all',))
-    @with_role(*MODERATION_ROLES, Roles.core_developer)
     async def list_command(self, ctx: Context) -> None:
         """
         Get a list of all cogs, including their loaded status.
@@ -289,6 +284,11 @@ class Extensions(Cog):
 
         log.debug(f"{ctx.author} requested a list of all cogs. Returning a paginated list.")
         await LinePaginator.paginate(lines, ctx, embed, max_size=300, empty=False)
+
+    # This cannot be static (must have a __func__ attribute).
+    def cog_check(self, ctx: Context) -> bool:
+        """Only allow moderators and core developers to invoke the commands in this cog."""
+        return with_role_check(ctx, *MODERATION_ROLES, Roles.core_developer)
 
 
 def setup(bot: Bot) -> None:
