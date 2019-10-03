@@ -5,7 +5,7 @@ import discord
 from discord.ext import commands
 
 from bot import constants
-
+from bot.decorators import in_channel
 
 logger = logging.getLogger(__name__)
 
@@ -16,15 +16,23 @@ class Source(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
 
+    @in_channel(constants.Channels.bot)
     @commands.command(name="source")
-    async def command_source(self, ctx: commands.Context, command_name: str = None) -> None:
+    async def command_source(self, ctx: commands.Context, command_name: str = None, sub_command: str = None) -> None:
         """View the source of a command."""
         if command_name is None:
-            return await ctx.send("> https://github.com/python-discord/bot")
+            await ctx.send("> https://github.com/python-discord/bot")
+            return
 
-        command = self.bot.get_command(command_name)
+        if sub_command:
+            await ctx.send(sub_command)
+            command = self.bot.get_command(f"{command_name} {sub_command}")
+        else:
+            command = self.bot.get_command(command_name)
+
         if command is None:
-            return await ctx.send("No such command found.")
+            await ctx.send("No such command found.")
+            return
 
         url = self.get_command_url(command)
 
@@ -42,19 +50,26 @@ class Source(commands.Cog):
         """Make up the url for the source of the command."""
         # Get the source code
         src_code_object = command.callback.__code__
-
-        # Get module name and replace . with /
-        module_name = command.callback.__module__
-        module_name = module_name.replace(".", "/") + ".py"
+        file_path = src_code_object.co_filename[5:]
 
         # Get line number and set last line number
         lines_list, starting_line_no = inspect.getsourcelines(src_code_object)
         lines = len(lines_list)
+
+        # Get module
+        module_name = command.callback.__module__
+        module_name = module_name.replace(".", "/") + ".py"
+
         last_line_no = starting_line_no + lines - 1
 
         # Make up the url and return
         base_url = "https://github.com/python-discord/bot/tree/master/"
-        final_url = f"<{base_url}{module_name}#L{starting_line_no}-L{last_line_no}>"
+
+        # use the module name if the file path goes into the decorators.
+        if file_path == "bot/decorators.py":
+            final_url = f"{base_url}{module_name}#L{starting_line_no}-L{last_line_no}"
+        else:
+            final_url = f"{base_url}{file_path}#L{starting_line_no}-L{last_line_no}"
 
         return final_url
 
