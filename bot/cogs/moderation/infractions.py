@@ -335,7 +335,7 @@ class Infractions(Scheduler, commands.Cog):
                     await guild.unban(user, reason=reason)
                 except discord.NotFound:
                     log.info(f"Failed to unban user {user_id}: no active ban found on Discord")
-                    log_text["Failure"] = "No active ban found on Discord."
+                    log_text["Note"] = "No active ban found on Discord."
             else:
                 raise ValueError(
                     f"Attempted to deactivate an unsupported infraction #{_id} ({_type})!"
@@ -486,7 +486,12 @@ class Infractions(Scheduler, commands.Cog):
             log.warning(f"Found more than one active {infr_type} infraction for user {user.id}")
 
             footer = f"Infraction IDs: {', '.join(str(infr['id']) for infr in response)}"
-            log_text["Note"] = f"Found multiple **active** {infr_type} infractions in the database."
+
+            log_note = f"Found multiple **active** {infr_type} infractions in the database."
+            if "Note" in log_text:
+                log_text["Note"] = f" {log_note}"
+            else:
+                log_text["Note"] = log_note
 
             # deactivate_infraction() is not called again because:
             #     1. Discord cannot store multiple active bans or assign multiples of the same role
