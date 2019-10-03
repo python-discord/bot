@@ -34,7 +34,9 @@ class Reddit(Cog):
         self.new_posts_task = None
         self.top_weekly_posts_task = None
 
-    async def fetch_posts(self, route: str, *, amount: int = 25, params: dict = None) -> List[dict]:
+    async def fetch_posts(
+            self, channel: TextChannel, route: str, *, amount: int = 25, params: dict = None
+    ) -> List[dict]:
         """A helper method to fetch a certain amount of Reddit posts at a given route."""
         # Reddit's JSON responses only provide 25 posts at most.
         if not 25 >= amount > 0:
@@ -55,6 +57,8 @@ class Reddit(Cog):
                 content = await response.json()
                 posts = content["data"]["children"]
                 return posts[:amount]
+            async with channel.typing():
+                await asyncio.sleep(3)
 
         log.debug(f"Invalid response from: {url} - status code {response.status}, mimetype {response.content_type}")
         return list()  # Failed to get appropriate response within allowed number of retries.
@@ -69,6 +73,7 @@ class Reddit(Cog):
 
         # Get the posts
         posts = await self.fetch_posts(
+            channel=channel,
             route=f"{subreddit}/top",
             amount=5,
             params={
@@ -116,7 +121,7 @@ class Reddit(Cog):
             embed=embed
         )
 
-    async def poll_new_posts(self) -> None:
+    async def poll_new_posts(self, channel: TextChannel) -> None:
         """Periodically search for new subreddit posts."""
         while True:
             await asyncio.sleep(RedditConfig.request_delay)
@@ -137,7 +142,7 @@ class Reddit(Cog):
                 self.prev_lengths[subreddit] = content_length
 
                 # Now we can actually fetch the new data
-                posts = await self.fetch_posts(f"{subreddit}/new")
+                posts = await self.fetch_posts(channel, f"{subreddit}/new")
                 new_posts = []
 
                 # Only show new posts if we've checked before.
@@ -266,7 +271,7 @@ class Reddit(Cog):
 
         if self.reddit_channel is not None:
             if self.new_posts_task is None:
-                self.new_posts_task = self.bot.loop.create_task(self.poll_new_posts())
+                self.new_posts_task = self.bot.loop.create_task(self.poll_new_posts(self.reddit_channel))
             if self.top_weekly_posts_task is None:
                 self.top_weekly_posts_task = self.bot.loop.create_task(self.poll_top_weekly_posts())
         else:
