@@ -1,13 +1,12 @@
 import logging
 import os
 from enum import Enum
+from pkgutil import iter_modules
 
 from discord import Colour, Embed
 from discord.ext.commands import Bot, Cog, Context, group
 
-from bot.constants import (
-    Emojis, MODERATION_ROLES, Roles, URLs
-)
+from bot.constants import Emojis, MODERATION_ROLES, Roles, URLs
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
 
@@ -29,19 +28,10 @@ class Extensions(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.cogs = {}
 
-        # Load up the cog names
-        log.info("Initializing cog names...")
-        for filename in os.listdir("bot/cogs"):
-            if filename.endswith(".py") and "_" not in filename:
-                if os.path.isfile(f"bot/cogs/{filename}"):
-                    cog = filename[:-3]
-
-                    self.cogs[cog] = f"bot.cogs.{cog}"
-
-        # Allow reverse lookups by reversing the pairs
-        self.cogs.update({v: k for k, v in self.cogs.items()})
+        log.info("Initialising extension names...")
+        modules = iter_modules(("bot/cogs", "bot.cogs"))
+        self.cogs = set(ext for ext in modules if ext.name[-1] != "_")
 
     @group(name='extensions', aliases=('c', 'ext', 'exts'), invoke_without_command=True)
     @with_role(*MODERATION_ROLES, Roles.core_developer)
