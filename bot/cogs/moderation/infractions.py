@@ -86,7 +86,7 @@ class Infractions(Scheduler, commands.Cog):
     @command()
     async def warn(self, ctx: Context, user: MemberConverter, *, reason: str = None) -> None:
         """Warn a user for the given reason."""
-        infraction = await utils.post_infraction(ctx, user, "warning", reason)
+        infraction = await utils.post_infraction(ctx, user, "warning", reason, active=False)
         if infraction is None:
             return
 
@@ -95,7 +95,7 @@ class Infractions(Scheduler, commands.Cog):
     @command()
     async def kick(self, ctx: Context, user: Member, *, reason: str = None) -> None:
         """Kick a user for the given reason."""
-        await self.apply_kick(ctx, user, reason)
+        await self.apply_kick(ctx, user, reason, active=False)
 
     @command()
     async def ban(self, ctx: Context, user: MemberConverter, *, reason: str = None) -> None:
@@ -145,7 +145,7 @@ class Infractions(Scheduler, commands.Cog):
     @command(hidden=True)
     async def note(self, ctx: Context, user: MemberConverter, *, reason: str = None) -> None:
         """Create a private note for a user with the given reason without notifying the user."""
-        infraction = await utils.post_infraction(ctx, user, "note", reason, hidden=True)
+        infraction = await utils.post_infraction(ctx, user, "note", reason, hidden=True, active=False)
         if infraction is None:
             return
 
@@ -154,7 +154,7 @@ class Infractions(Scheduler, commands.Cog):
     @command(hidden=True, aliases=['shadowkick', 'skick'])
     async def shadow_kick(self, ctx: Context, user: Member, *, reason: str = None) -> None:
         """Kick a user for the given reason without notifying the user."""
-        await self.apply_kick(ctx, user, reason, hidden=True)
+        await self.apply_kick(ctx, user, reason, hidden=True, active=False)
 
     @command(hidden=True, aliases=['shadowban', 'sban'])
     async def shadow_ban(self, ctx: Context, user: MemberConverter, *, reason: str = None) -> None:
