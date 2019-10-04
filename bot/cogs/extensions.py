@@ -92,6 +92,10 @@ class Extensions(commands.Cog):
         If `*` is given as the name, all currently loaded extensions will be reloaded.
         If `**` is given as the name, all extensions, including unloaded ones, will be reloaded.
         """
+        if not extensions:
+            await ctx.invoke(self.bot.get_command("help"), "extensions reload")
+            return
+
         if len(extensions) > 1:
             msg = await self.batch_reload(*extensions)
         else:
