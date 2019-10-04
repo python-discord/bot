@@ -106,44 +106,29 @@ class Extensions(commands.Cog):
     @extensions_group.command(name="list", aliases=("all",))
     async def list_command(self, ctx: Context) -> None:
         """
-        Get a list of all cogs, including their loaded status.
+        Get a list of all extensions, including their loaded status.
 
-        Gray indicates that the cog is unloaded. Green indicates that the cog is currently loaded.
+        Grey indicates that the extension is unloaded.
+        Green indicates that the extension is currently loaded.
         """
         embed = Embed()
         lines = []
-        cogs = {}
 
         embed.colour = Colour.blurple()
         embed.set_author(
-            name="Python Bot (Cogs)",
+            name="Extensions List",
             url=URLs.github_bot_repo,
             icon_url=URLs.bot_avatar
         )
 
-        for key, _value in self.cogs.items():
-            if "." not in key:
-                continue
-
-            if key in self.bot.extensions:
-                cogs[key] = True
-            else:
-                cogs[key] = False
-
-        for key in self.bot.extensions.keys():
-            if key not in self.cogs:
-                cogs[key] = True
-
-        for cog, loaded in sorted(cogs.items(), key=lambda x: x[0]):
-            if cog in self.cogs:
-                cog = self.cogs[cog]
-
-            if loaded:
+        for ext in sorted(list(EXTENSIONS)):
+            if ext in self.bot.extensions:
                 status = Emojis.status_online
             else:
                 status = Emojis.status_offline
 
-            lines.append(f"{status}  {cog}")
+            ext = ext.rsplit(".", 1)[1]
+            lines.append(f"{status}  {ext}")
 
         log.debug(f"{ctx.author} requested a list of all cogs. Returning a paginated list.")
         await LinePaginator.paginate(lines, ctx, embed, max_size=300, empty=False)
