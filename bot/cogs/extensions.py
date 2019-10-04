@@ -81,19 +81,19 @@ class Extensions(Cog):
         await ctx.send(msg)
 
     @extensions_group.command(name="reload", aliases=("r",))
-    async def reload_command(self, ctx: Context, extension: Extension) -> None:
+    async def reload_command(self, ctx: Context, *extensions: Extension) -> None:
         """
-        Reload an extension given its fully qualified or unqualified name.
+        Reload extensions given their fully qualified or unqualified names.
 
         If `*` is given as the name, all currently loaded extensions will be reloaded.
         If `**` is given as the name, all extensions, including unloaded ones, will be reloaded.
         """
-        if extension == "*":
-            msg = await self.reload_all()
-        elif extension == "**":
-            msg = await self.reload_all(True)
+        if "**" in extensions:
+            msg = await self.batch_reload(reload_unloaded=True)
+        elif "*" in extensions or len(extensions) > 1:
+            msg = await self.batch_reload(*extensions)
         else:
-            msg, _ = self.manage(extension, Action.RELOAD)
+            msg, _ = self.manage(extensions[0], Action.RELOAD)
 
         await ctx.send(msg)
 
@@ -142,13 +142,20 @@ class Extensions(Cog):
         log.debug(f"{ctx.author} requested a list of all cogs. Returning a paginated list.")
         await LinePaginator.paginate(lines, ctx, embed, max_size=300, empty=False)
 
-    async def reload_all(self, reload_unloaded: bool = False) -> str:
-        """Reload all loaded (and optionally unloaded) extensions and return an output message."""
+    async def batch_reload(self, *extensions: str, reload_unloaded: bool = False) -> str:
+        """Reload given extensions or all loaded ones and return a message with the results."""
         unloaded = []
         unload_failures = {}
         load_failures = {}
 
-        to_unload = self.bot.extensions.copy().keys()
+        if "*" in extensions:
+            to_unload = set(self.bot.extensions.keys()) | set(extensions)
+            to_unload.remove("*")
+        elif extensions:
+            to_unload = extensions
+        else:
+            to_unload = self.bot.extensions.copy().keys()
+
         for extension in to_unload:
             _, error = self.manage(extension, Action.UNLOAD)
             if error:
