@@ -171,11 +171,11 @@ class Extensions(Cog):
         """).strip()
 
         if unload_failures:
-            failures = '\n'.join(f'{ext}\n    {err}' for ext, err in unload_failures)
+            failures = '\n'.join(f'{ext}\n    {err}' for ext, err in unload_failures.items())
             msg += f'\nUnload failures:```{failures}```'
 
         if load_failures:
-            failures = '\n'.join(f'{ext}\n    {err}' for ext, err in load_failures)
+            failures = '\n'.join(f'{ext}\n    {err}' for ext, err in load_failures.items())
             msg += f'\nLoad failures:```{failures}```'
 
         log.debug(f'Reloaded all extensions.')
