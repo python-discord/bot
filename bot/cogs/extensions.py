@@ -196,6 +196,9 @@ class Extensions(Cog):
                 for func in action.value:
                     func(self.bot, ext)
             except Exception as e:
+                if hasattr(e, "original"):
+                    e = e.original
+
                 log.exception(f"Extension '{ext}' failed to {verb}.")
 
                 error_msg = f"{e.__class__.__name__}: {e}"
