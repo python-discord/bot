@@ -83,7 +83,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
             )
 
             if len(history) > 1:
-                total = f"({len(history) // 2} infractions total)"
+                total = f"({len(history) // 2} previous infractions in total)"
                 end_reason = history[0]["reason"]
                 start_reason = f"Watched: {history[1]['reason']}"
                 msg += f"\n\nUser's previous watch reasons {total}:```{start_reason}\n\n{end_reason}```"
