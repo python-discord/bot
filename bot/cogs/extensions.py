@@ -14,7 +14,11 @@ from bot.utils.checks import with_role_check
 log = logging.getLogger(__name__)
 
 KEEP_LOADED = ["bot.cogs.extensions", "bot.cogs.modlog"]
-EXTENSIONS = frozenset(ext for ext in iter_modules(("bot/cogs", "bot.cogs")) if ext.name[-1] != "_")
+EXTENSIONS = frozenset(
+    ext.name
+    for ext in iter_modules(("bot/cogs",), "bot.cogs.")
+    if ext.name[-1] != "_"
+)
 
 
 class Action(Enum):
