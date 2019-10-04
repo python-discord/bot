@@ -45,6 +45,8 @@ class Infractions(Scheduler, commands.Cog):
 
     async def reschedule_infractions(self) -> None:
         """Schedule expiration for previous infractions."""
+        await self.bot.wait_until_ready()
+
         infractions = await self.bot.api_client.get(
             'bot/infractions',
             params={'active': 'true'}
