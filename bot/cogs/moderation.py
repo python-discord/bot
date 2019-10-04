@@ -80,6 +80,43 @@ class Moderation(Scheduler, Cog):
             if infraction["expires_at"] is not None:
                 self.schedule_task(self.bot.loop, infraction["id"], infraction)
 
+    @Cog.listener()
+    async def on_member_join(self, member: Member) -> None:
+        """Reapply active mute infractions for returning members."""
+        active_mutes = await self.bot.api_client.get(
+            'bot/infractions',
+            params={'user__id': str(member.id), 'type': 'mute', 'active': 'true'}
+        )
+        if not active_mutes:
+            return
+
+        # assume a single mute because of restrictions elsewhere
+        mute = active_mutes[0]
+
+        # transform expiration to delay in seconds
+        expiration_datetime = datetime.fromisoformat(mute["expires_at"][:-1])
+        delay = expiration_datetime - datetime.utcnow()
+        delay_seconds = delay.total_seconds()
+
+        # if under a minute or in the past
+        if delay_seconds < 60:
+            log.debug(f"Marking infraction {mute['id']} as inactive (expired).")
+            await self._deactivate_infraction(mute)
+            self.cancel_task(mute["id"])
+
+            # Notify the user that they've been unmuted.
+            await self.notify_pardon(
+                user=member,
+                title="You have been unmuted.",
+                content="You may now send messages in the server.",
+                icon_url=Icons.user_unmute
+            )
+            return
+
+        # allowing modlog since this is a passive action that should be logged
+        await member.add_roles(self._muted_role, reason=f"Re-applying active mute: {mute['id']}")
+        log.debug(f"User {member.id} has been re-muted on rejoin.")
+
     # region: Permanent infractions
 
     @with_role(*MODERATION_ROLES)
@@ -955,6 +992,11 @@ class Moderation(Scheduler, Cog):
         user_id = infraction_object["user"]
         infraction_type = infraction_object["type"]
 
+        await self.bot.api_client.patch(
+            'bot/infractions/' + str(infraction_object['id']),
+            json={"active": False}
+        )
+
         if infraction_type == "mute":
             member: Member = guild.get_member(user_id)
             if member:
@@ -969,11 +1011,6 @@ class Moderation(Scheduler, Cog):
                 await guild.unban(user)
             except NotFound:
                 log.info(f"Tried to unban user `{user_id}`, but Discord does not have an active ban registered.")
-
-        await self.bot.api_client.patch(
-            'bot/infractions/' + str(infraction_object['id']),
-            json={"active": False}
-        )
 
     def _infraction_to_string(self, infraction_object: Dict[str, Union[str, int, bool]]) -> str:
         """Convert the infraction object to a string representation."""

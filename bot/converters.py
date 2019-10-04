@@ -51,7 +51,7 @@ class ValidURL(Converter):
             async with ctx.bot.http_session.get(url) as resp:
                 if resp.status != 200:
                     raise BadArgument(
-                        f"HTTP GET on `{url}` returned status `{resp.status_code}`, expected 200"
+                        f"HTTP GET on `{url}` returned status `{resp.status}`, expected 200"
                     )
         except CertificateError:
             if url.startswith('https'):
