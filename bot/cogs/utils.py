@@ -2,12 +2,13 @@ import logging
 import re
 import unicodedata
 from asyncio import TimeoutError, sleep
+from contextlib import suppress
 from email.parser import HeaderParser
 from io import StringIO
 from typing import Tuple
 
-from discord import Colour, Embed, Message
-from discord.ext.commands import Bot, Cog, Context, RoleConverter, command
+from discord import Colour, Embed, Message, Role
+from discord.ext.commands import Bot, Cog, Context, command
 
 from bot.constants import Channels, MODERATION_ROLES, Mention, STAFF_ROLES
 from bot.decorators import in_channel, with_role
@@ -129,33 +130,45 @@ class Utils(Cog):
 
         await ctx.send(embed=embed)
 
+    @staticmethod
+    def readable_time(seconds: int) -> str:
+        minutes, seconds = divmod(seconds, 60)
+
+        if minutes:
+            fmt = '{m}min {s}sec'
+        else:
+            fmt = '{s}sec'
+
+        return fmt.format(m=minutes, s=seconds)
+
     @command()
     @with_role(*MODERATION_ROLES)
-    async def mention(self, ctx: Context, *, role: RoleConverter) -> None:
+    async def mention(self, ctx: Context, *, role: Role) -> None:
         """Set a role to be mentionable for a limited time."""
         if role.mentionable:
-            await ctx.send(f'{role} (ID: {role.id}) is already mentionable!')
+            await ctx.send(f"{role} is already mentionable!")
             return
 
-        await role.edit(mentionable=True, reason=f'!mention done by {ctx.author} '
-                                                 f'(ID: {ctx.author.id})')
+        await role.edit(reason=f"Role unlocked by {ctx.author}", mentionable=True)
 
-        await ctx.send(f'{role} (ID: {role.id}) has been made mentionable. '
-                       f'I will reset it in {Mention.message_timeout} seconds,'
-                       f' or when you send a message mentioning this role.')
+        await ctx.send(
+            f"{role} has been made mentionable. I will reset it in "
+            f"{self.readable_time(Mention.message_timeout)} seconds, or when a staff member mentions this role."
+        )
 
         def check(m: Message) -> bool:
+            if not any(m.id in MODERATION_ROLES for m in m.author.roles):
+                await ctx.send(f"{ctx.author.mention}, {m.author} has mentioned the role you set to mentionable.")
+                return False
+
             return role in m.role_mentions
 
-        try:
-            await self.bot.wait_for('message', check=check, timeout=Mention.message_timeout)
+        with suppress(TimeoutError):
+            await self.bot.wait_for("message", check=check, timeout=Mention.message_timeout)
             await sleep(Mention.reset_delay)
-        except TimeoutError:
-            pass
 
         await role.edit(mentionable=False)
-        await ctx.send(f'{ctx.author.mention}, '
-                       f'I have reset {role} (ID: {role.id}) to be unmentionable.')
+        await ctx.send(f"{ctx.author.mention}, I have reset {role} to be unmentionable.")
 
 
 def setup(bot: Bot) -> None:
