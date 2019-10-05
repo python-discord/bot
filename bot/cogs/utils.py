@@ -1,7 +1,7 @@
 import logging
 import re
 import unicodedata
-from asyncio import TimeoutError, sleep, run
+from asyncio import TimeoutError, run, sleep
 from contextlib import suppress
 from email.parser import HeaderParser
 from io import StringIO
@@ -132,6 +132,7 @@ class Utils(Cog):
 
     @staticmethod
     def readable_time(seconds: int) -> str:
+        """Returns a number of seconds into a human-readable minutes/seconds combination."""
         minutes, seconds = divmod(seconds, 60)
 
         if minutes:
