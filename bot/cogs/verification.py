@@ -29,8 +29,9 @@ from time to time, you can send `!subscribe` to <#{Channels.bot}> at any time to
 If you'd like to unsubscribe from the announcement notifications, simply send `!unsubscribe` to <#{Channels.bot}>.
 """
 
-PERIODIC_PING = (f"@everyone To verify that you have read our rules, please type `!accept`."
-                 f" Ping <@&{Roles.admin}> if you encounter any problems during the verification process.")
+PERIODIC_PING = (
+    "@everyone To verify that you have read our rules, please type `!accept`."
+    f" Ping <@&{Roles.admin}> if you encounter any problems during the verification process.")
 
 
 class Verification(Cog):
@@ -161,14 +162,20 @@ class Verification(Cog):
         else:
             return True
 
-    @tasks.loop(hours=1.0)
+    @tasks.loop(hours=12)
     async def periodic_ping(self) -> None:
         """Post a recap message every week with an @everyone."""
-        message = await self.bot.get_channel(Channels.verification).history(limit=1).flatten()  # check last message
-        delta = datetime.utcnow() - message[0].created_at  # time since last periodic ping
-        if delta.days >= 7:  # if the message is older than a week
-            await message[0].delete()
+        messages = await self.bot.get_channel(Channels.verification).history(limit=5).flatten()  # check lasts messages
+        messages_content = [i.content for i in messages]
+        if PERIODIC_PING not in messages_content:  # if the bot did not posted yet
             await self.bot.get_channel(Channels.verification).send(PERIODIC_PING)
+        else:
+            for message in messages:
+                if message.content == PERIODIC_PING:  # to be sure to measure timelaps between two identical messages
+                    delta = datetime.utcnow() - message.created_at  # time since last periodic ping
+                    if delta.days >= 7:  # if the message is older than a week
+                        await message.delete()
+                        await self.bot.get_channel(Channels.verification).send(PERIODIC_PING)
 
     @periodic_ping.before_loop
     async def before_ping(self) -> None:
