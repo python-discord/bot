@@ -1,15 +1,16 @@
 import logging
 import re
 import unicodedata
+from asyncio import TimeoutError, sleep
 from email.parser import HeaderParser
 from io import StringIO
 from typing import Tuple
 
-from discord import Colour, Embed
-from discord.ext.commands import Bot, Cog, Context, command
+from discord import Colour, Embed, Message
+from discord.ext.commands import Bot, Cog, Context, RoleConverter, command
 
-from bot.constants import Channels, STAFF_ROLES
-from bot.decorators import in_channel
+from bot.constants import Channels, MODERATION_ROLES, Mention, STAFF_ROLES
+from bot.decorators import in_channel, with_role
 
 log = logging.getLogger(__name__)
 
@@ -127,6 +128,34 @@ class Utils(Cog):
             embed.add_field(name='Raw', value=f"`{''.join(rawlist)}`", inline=False)
 
         await ctx.send(embed=embed)
+
+    @command()
+    @with_role(*MODERATION_ROLES)
+    async def mention(self, ctx: Context, *, role: RoleConverter) -> None:
+        """Set a role to be mentionable for a limited time."""
+        if role.mentionable:
+            await ctx.send(f'{role} (ID: {role.id}) is already mentionable!')
+            return
+
+        await role.edit(mentionable=True, reason=f'!mention done by {ctx.author} '
+                                                 f'(ID: {ctx.author.id})')
+
+        await ctx.send(f'{role} (ID: {role.id}) has been made mentionable. '
+                       f'I will reset it in {Mention.message_timeout} seconds,'
+                       f' or when you send a message mentioning this role.')
+
+        def check(m: Message) -> bool:
+            return role in m.role_mentions
+
+        try:
+            await self.bot.wait_for('message', check=check, timeout=Mention.message_timeout)
+            await sleep(Mention.reset_delay)
+        except TimeoutError:
+            pass
+
+        await role.edit(mentionable=False)
+        await ctx.send(f'{ctx.author.mention}, '
+                       f'I have reset {role} (ID: {role.id}) to be unmentionable.')
 
 
 def setup(bot: Bot) -> None:

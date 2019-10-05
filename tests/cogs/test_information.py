@@ -9,7 +9,6 @@ from discord import (
     CategoryChannel,
     Colour,
     Permissions,
-    Role,
     TextChannel,
     VoiceChannel,
 )
@@ -69,7 +68,7 @@ def test_roles_info_command(cog, ctx):
 
 
 def test_role_info_command(cog, ctx):
-    dummy_role = MagicMock(spec=Role)
+    dummy_role = MagicMock()
     dummy_role.name = "Dummy"
     dummy_role.colour = Colour.blurple()
     dummy_role.id = 112233445566778899
@@ -77,7 +76,7 @@ def test_role_info_command(cog, ctx):
     dummy_role.permissions = Permissions(0)
     dummy_role.members = [ctx.author]
 
-    admin_role = MagicMock(spec=Role)
+    admin_role = MagicMock()
     admin_role.name = "Admin"
     admin_role.colour = Colour.red()
     admin_role.id = 998877665544332211
@@ -90,7 +89,7 @@ def test_role_info_command(cog, ctx):
     cog.role_info.can_run = AsyncMock()
     cog.role_info.can_run.return_value = True
 
-    coroutine = cog.role_info.callback(cog, ctx, dummy_role, admin_role)
+    coroutine = cog.role_info.callback(cog, ctx, [dummy_role, admin_role])
 
     assert asyncio.run(coroutine) is None
 
