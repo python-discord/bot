@@ -35,14 +35,14 @@ class Defcon(Cog):
         self.channel = None
         self.days = timedelta(days=0)
 
-        bot.loop.create_task(self.prepare_cog())
+        bot.loop.create_task(self.sync_settings())
 
     @property
     def mod_log(self) -> ModLog:
         """Get currently loaded ModLog cog instance."""
         return self.bot.get_cog("ModLog")
 
-    async def prepare_cog(self) -> None:
+    async def sync_settings(self) -> None:
         """On cog load, try to synchronize DEFCON settings to the API."""
         self.bot.wait_until_ready()
         self.channel = await self.bot.fetch_channel(Channels.defcon)

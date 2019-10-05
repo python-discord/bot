@@ -15,9 +15,9 @@ class Logging(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-        bot.loop.create_task(self.prepare_cog())
+        bot.loop.create_task(self.startup_greeting())
 
-    async def prepare_cog(self) -> None:
+    async def startup_greeting(self) -> None:
         """Announce our presence to the configured devlog channel."""
         await self.bot.wait_until_ready()
         log.info("Bot connected!")

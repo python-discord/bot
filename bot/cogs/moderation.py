@@ -64,14 +64,14 @@ class Moderation(Scheduler, Cog):
         self._muted_role = Object(constants.Roles.muted)
         super().__init__()
 
-        bot.loop.create_task(self.prepare_cog())
+        bot.loop.create_task(self.schedule_infractions())
 
     @property
     def mod_log(self) -> ModLog:
         """Get currently loaded ModLog cog instance."""
         return self.bot.get_cog("ModLog")
 
-    async def prepare_cog(self) -> None:
+    async def schedule_infractions(self) -> None:
         """Schedule expiration for previous infractions."""
         await self.bot.wait_until_ready()
         # Schedule expiration for previous infractions

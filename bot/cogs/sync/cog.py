@@ -29,9 +29,9 @@ class Sync(Cog):
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
 
-        bot.loop.create_task(self.prepare_cog())
+        bot.loop.create_task(self.sync_guild())
 
-    async def prepare_cog(self) -> None:
+    async def sync_guild(self) -> None:
         """Syncs the roles/users of the guild with the database."""
         self.bot.wait_until_ready()
         guild = self.bot.get_guild(self.SYNC_SERVER_ID)

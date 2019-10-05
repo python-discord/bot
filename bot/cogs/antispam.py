@@ -107,14 +107,14 @@ class AntiSpam(Cog):
         self.message_deletion_queue = dict()
         self.queue_consumption_tasks = dict()
 
-        bot.loop.create_task(self.prepare_cog())
+        bot.loop.create_task(self.alert_on_validation_error())
 
     @property
     def mod_log(self) -> ModLog:
         """Allows for easy access of the ModLog cog."""
         return self.bot.get_cog("ModLog")
 
-    async def prepare_cog(self) -> None:
+    async def alert_on_validation_error(self) -> None:
         """Unloads the cog and alerts admins if configuration validation failed."""
         await self.bot.wait_until_ready()
         if self.validation_errors:

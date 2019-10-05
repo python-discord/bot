@@ -75,14 +75,14 @@ class OffTopicNames(Cog):
         self.bot = bot
         self.updater_task = None
 
-        bot.loop.create_task(self.prepare_cog())
+        bot.loop.create_task(self.init_offtopic_updater())
 
     def cog_unload(self) -> None:
         """Cancel any running updater tasks on cog unload."""
         if self.updater_task is not None:
             self.updater_task.cancel()
 
-    async def prepare_cog(self) -> None:
+    async def init_offtopic_updater(self) -> None:
         """Start off-topic channel updating event loop if it hasn't already started."""
         self.bot.wait_until_ready()
         if self.updater_task is None:
