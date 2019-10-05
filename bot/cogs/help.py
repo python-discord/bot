@@ -60,6 +60,12 @@ class HelpSession:
             The message object that's showing the help contents.
         * destination: `discord.abc.Messageable`
             Where the help message is to be sent to.
+
+    Cogs can be grouped into custom categories. All cogs with the same category will be displayed
+    under a single category name in the help output. Custom categories are defined inside the cogs
+    as a class attribute named `category`. A description can also be specified with the attribute
+    `category_description`. If a description is not found in at least one cog, the default will be
+    the regular description (class docstring) of the first cog found in the category.
     """
 
     def __init__(
@@ -107,8 +113,13 @@ class HelpSession:
             return command
 
         # Find all cog categories that match.
-        cogs = self._bot.cogs.values()
-        cog_matches = [cog for cog in cogs if hasattr(cog, "category") and cog.category == query]
+        cog_matches = []
+        description = None
+        for cog in self._bot.cogs.values():
+            if hasattr(cog, "category") and cog.category == query:
+                cog_matches.append(cog)
+                if hasattr(cog, "category_description"):
+                    description = cog.category_description
 
         # Try to search by cog name if no categories match.
         if not cog_matches:
@@ -124,7 +135,7 @@ class HelpSession:
 
             return Cog(
                 name=cog.category if hasattr(cog, "category") else cog.qualified_name,
-                description=cog.description,
+                description=description or cog.description,
                 commands=tuple(itertools.chain.from_iterable(cmds))  # Flatten the list
             )
 

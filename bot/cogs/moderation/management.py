@@ -33,9 +33,10 @@ def permanent_duration(expires_at: str) -> str:
 class ModManagement(commands.Cog):
     """Management of infractions."""
 
+    category = "Moderation"
+
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.category = "Moderation"
 
     @property
     def mod_log(self) -> ModLog:

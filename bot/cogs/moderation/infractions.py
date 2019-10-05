@@ -27,7 +27,10 @@ MemberConverter = t.Union[utils.UserTypes, utils.proxy_user]
 
 
 class Infractions(Scheduler, commands.Cog):
-    """Server moderation tools."""
+    """Apply and pardon infractions on users for moderation purposes."""
+
+    category = "Moderation"
+    category_description = "Server moderation tools."
 
     def __init__(self, bot: commands.Bot):
         super().__init__()
