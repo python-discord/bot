@@ -1,6 +1,8 @@
 import logging
+from datetime import datetime
 
 from discord import Message, NotFound, Object
+from discord.ext import tasks
 from discord.ext.commands import Bot, Cog, Context, command
 
 from bot.cogs.modlog import ModLog
@@ -27,12 +29,16 @@ from time to time, you can send `!subscribe` to <#{Channels.bot}> at any time to
 If you'd like to unsubscribe from the announcement notifications, simply send `!unsubscribe` to <#{Channels.bot}>.
 """
 
+PERIODIC_PING = (f"@everyone To verify that you have read our rules, please type `!accept`."
+                 f" Ping <@&{Roles.admin}> if you encounter any problems during the verification process.")
+
 
 class Verification(Cog):
     """User verification and role self-management."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
+        self.periodic_ping.start()
 
     @property
     def mod_log(self) -> ModLog:
@@ -154,6 +160,20 @@ class Verification(Cog):
             return ctx.command.name == "accept"
         else:
             return True
+
+    @tasks.loop(hours=1.0)
+    async def periodic_ping(self) -> None:
+        """Post a recap message every week with an @everyone."""
+        message = await self.bot.get_channel(Channels.verification).history(limit=1).flatten()  # check last message
+        delta = datetime.utcnow() - message[0].created_at  # time since last periodic ping
+        if delta.days >= 7:  # if the message is older than a week
+            await message[0].delete()
+            await self.bot.get_channel(Channels.verification).send(PERIODIC_PING)
+
+    @periodic_ping.before_loop
+    async def before_ping(self) -> None:
+        """Only start the loop when the bot is ready."""
+        await self.bot.wait_until_ready()
 
 
 def setup(bot: Bot) -> None:
