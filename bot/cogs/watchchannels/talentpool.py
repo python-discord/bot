@@ -93,7 +93,24 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
                 resp.raise_for_status()
 
         self.watched_users[user.id] = response_data
-        await ctx.send(f":white_check_mark: Messages sent by {user} will now be relayed to the talent pool channel")
+        msg = f":white_check_mark: Messages sent by {user} will now be relayed to the talent pool channel"
+
+        history = await self.bot.api_client.get(
+            self.api_endpoint,
+            params={
+                "user__id": str(user.id),
+                "active": "false",
+                "ordering": "-inserted_at"
+            }
+        )
+
+        if history:
+            total = f"({len(history)} previous nominations in total)"
+            start_reason = f"Watched: {history[0]['reason']}"
+            end_reason = f"Unwatched: {history[0]['end_reason']}"
+            msg += f"\n\nUser's previous watch reasons {total}:```{start_reason}\n\n{end_reason}```"
+
+        await ctx.send(msg)
 
     @nomination_group.command(name='history', aliases=('info', 'search'))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
