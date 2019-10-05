@@ -261,7 +261,7 @@ class Doc(commands.Cog):
     @commands.group(name='docs', aliases=('doc', 'd'), invoke_without_command=True)
     async def docs_group(self, ctx: commands.Context, symbol: commands.clean_content = None) -> None:
         """Lookup documentation for Python symbols."""
-        await ctx.invoke(self.get_command)
+        await ctx.invoke(self.get_command, symbol)
 
     @docs_group.command(name='get', aliases=('g',))
     async def get_command(self, ctx: commands.Context, symbol: commands.clean_content = None) -> None:
@@ -319,9 +319,9 @@ class Doc(commands.Cog):
 
         Example:
             !docs set \
-                    discord \
-                    https://discordpy.readthedocs.io/en/rewrite/ \
-                    https://discordpy.readthedocs.io/en/rewrite/objects.inv
+                    python \
+                    https://docs.python.org/3/ \
+                    https://docs.python.org/3/objects.inv
         """
         body = {
             'package': package_name,
