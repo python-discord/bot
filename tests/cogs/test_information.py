@@ -48,7 +48,7 @@ def ctx(moderator_role, simple_ctx):
 
 
 def test_roles_info_command(cog, ctx):
-    everyone_role = MagicMock(spec=Role)
+    everyone_role = MagicMock()
     everyone_role.name = '@everyone'  # should be excluded in the output
     ctx.author.roles.append(everyone_role)
     ctx.guild.roles = ctx.author.roles
@@ -69,7 +69,7 @@ def test_roles_info_command(cog, ctx):
 
 
 def test_role_info_command(cog, ctx):
-    dummy_role = MagicMock()
+    dummy_role = MagicMock(spec=Role)
     dummy_role.name = "Dummy"
     dummy_role.colour = Colour.blurple()
     dummy_role.id = 112233445566778899
