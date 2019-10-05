@@ -1,7 +1,7 @@
 import logging
 import re
 import unicodedata
-from asyncio import TimeoutError, sleep
+from asyncio import TimeoutError, sleep, run
 from contextlib import suppress
 from email.parser import HeaderParser
 from io import StringIO
@@ -157,8 +157,12 @@ class Utils(Cog):
         )
 
         def check(m: Message) -> bool:
-            if not any(m.id in MODERATION_ROLES for m in m.author.roles):
-                await ctx.send(f"{ctx.author.mention}, {m.author} has mentioned the role you set to mentionable.")
+            """Checks that the message contains the role mention and the user is a staff member."""
+            if not any(m.id in MODERATION_ROLES for m in m.author.roles) and role in m.role_mentions:
+                run(ctx.send(
+                    f"{ctx.author.mention}, {m.author} has mentioned the role you set to mentionable."
+                )
+                )
                 return False
 
             return role in m.role_mentions
