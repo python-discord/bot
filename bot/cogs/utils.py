@@ -1,8 +1,7 @@
 import logging
 import re
 import unicodedata
-from asyncio import TimeoutError, run, sleep
-from contextlib import suppress
+from asyncio import TimeoutError, sleep
 from email.parser import HeaderParser
 from io import StringIO
 from typing import Tuple
@@ -158,22 +157,30 @@ class Utils(Cog):
         )
 
         def check(m: Message) -> bool:
-            """Checks that the message contains the role mention and the user is a staff member."""
-            if not any(m.id in MODERATION_ROLES for m in m.author.roles) and role in m.role_mentions:
-                run(ctx.send(
-                    f"{ctx.author.mention}, {m.author} has mentioned the role you set to mentionable."
-                )
-                )
-                return False
-
+            """Checks that the message contains the role mention."""
             return role in m.role_mentions
 
-        with suppress(TimeoutError):
-            await self.bot.wait_for("message", check=check, timeout=Mention.message_timeout)
-            await sleep(Mention.reset_delay)
+        try:
+            msg = await self.bot.wait_for("message", check=check, timeout=Mention.message_timeout)
+        except TimeoutError:
+            await role.edit(mentionable=False, reason=f"Automatic role lock - timeout.")
+            await ctx.send(f"{ctx.author.mention}, you took too long. I have reset {role} to be unmentionable.")
+            return
 
-        await role.edit(mentionable=False)
-        await ctx.send(f"{ctx.author.mention}, I have reset {role} to be unmentionable.")
+        if any(r.id in MODERATION_ROLES for r in msg.author.roles):
+            await sleep(Mention.reset_delay)
+            await role.edit(mentionable=False, reason=f"Automatic role lock by {msg.author}")
+            await ctx.send(
+                f"{ctx.author.mention}, I have reset {role} to be unmentionable as "
+                f"{msg.author if msg.author != ctx.author else 'you'} sent a message mentioning it."
+            )
+            return
+
+        await role.edit(mentionable=False, reason=f"Automatic role lock - unauthorised use by {msg.author}")
+        await ctx.send(
+            f"{ctx.author.mention}, I have reset {role} to be unmentionable "
+            f"as I detected unauthorised use by {msg.author} (ID: {msg.author.id})."
+        )
 
 
 def setup(bot: Bot) -> None:
