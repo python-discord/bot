@@ -207,6 +207,9 @@ class Doc(commands.Cog):
         symbol_heading = soup.find(id=symbol_id)
         signature_buffer = []
 
+        if symbol_heading is None:
+            return None
+
         # Traverse the tags of the signature header and ignore any
         # unwanted symbols from it. Add all of it to a temporary buffer.
         for tag in symbol_heading.strings:
