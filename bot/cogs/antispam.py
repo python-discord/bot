@@ -107,7 +107,7 @@ class AntiSpam(Cog):
         self.message_deletion_queue = dict()
         self.queue_consumption_tasks = dict()
 
-        bot.loop.create_task(self.alert_on_validation_error())
+        self.bot.loop.create_task(self.alert_on_validation_error())
 
     @property
     def mod_log(self) -> ModLog:

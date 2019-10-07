@@ -64,7 +64,7 @@ class Moderation(Scheduler, Cog):
         self._muted_role = Object(constants.Roles.muted)
         super().__init__()
 
-        bot.loop.create_task(self.schedule_infractions())
+        self.bot.loop.create_task(self.schedule_infractions())
 
     @property
     def mod_log(self) -> ModLog:

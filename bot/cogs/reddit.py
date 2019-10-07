@@ -33,7 +33,7 @@ class Reddit(Cog):
         self.new_posts_task = None
         self.top_weekly_posts_task = None
 
-        bot.loop.create_task(self.init_reddit_polling())
+        self.bot.loop.create_task(self.init_reddit_polling())
 
     async def fetch_posts(self, route: str, *, amount: int = 25, params: dict = None) -> List[dict]:
         """A helper method to fetch a certain amount of Reddit posts at a given route."""
@@ -257,7 +257,7 @@ class Reddit(Cog):
 
     async def init_reddit_polling(self) -> None:
         """Initiate reddit post event loop."""
-        self.bot.wait_until_ready()
+        await self.bot.wait_until_ready()
         self.reddit_channel = await self.bot.fetch_channel(Channels.reddit)
 
         if self.reddit_channel is not None:
