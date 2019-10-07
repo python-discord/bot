@@ -103,7 +103,7 @@ class Reminders(Scheduler, Cog):
 
         if "jump_url" in reminder:  # keep backward compatibility
             embed.description = (f"Here's your reminder: `{reminder['content']}`.\n"
-                                 f"Jump back when you created the reminder : {reminder['jump_url']}")
+                                 f"Jump back to when you created the reminder : {reminder['jump_url']}")
         else:
             embed.description = f"Here's your reminder: `{reminder['content']}`"
 
