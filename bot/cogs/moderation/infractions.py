@@ -91,7 +91,7 @@ class Infractions(Scheduler, commands.Cog):
     # region: Permanent infractions
 
     @command()
-    async def warn(self, ctx: Context, user: MemberConverter, *, reason: str = None) -> None:
+    async def warn(self, ctx: Context, user: Member, *, reason: str = None) -> None:
         """Warn a user for the given reason."""
         infraction = await utils.post_infraction(ctx, user, "warning", reason, active=False)
         if infraction is None:
