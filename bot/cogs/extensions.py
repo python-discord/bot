@@ -89,8 +89,8 @@ class Extensions(commands.Cog):
 
         If an extension fails to be reloaded, it will be rolled-back to the prior working state.
 
-        If `*` is given as the name, all currently loaded extensions will be reloaded.
-        If `**` is given as the name, all extensions, including unloaded ones, will be reloaded.
+        If '*' is given as the name, all currently loaded extensions will be reloaded.
+        If '**' is given as the name, all extensions, including unloaded ones, will be reloaded.
         """
         if not extensions:
             await ctx.invoke(self.bot.get_command("help"), "extensions reload")
@@ -137,8 +137,8 @@ class Extensions(commands.Cog):
         """
         Reload given extensions and return a message with the results.
 
-        If `*` is given, all currently loaded extensions will be reloaded along with any other
-        specified extensions. If `**` is given, all extensions, including unloaded ones, will be
+        If '*' is given, all currently loaded extensions will be reloaded along with any other
+        specified extensions. If '**' is given, all extensions, including unloaded ones, will be
         reloaded.
         """
         failures = {}
