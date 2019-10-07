@@ -71,8 +71,8 @@ class Extensions(commands.Cog):
         """
         Load extensions given their fully qualified or unqualified names.
 
-        If '*' or '**' is given as the name, all unloaded extensions will be loaded.
-        """
+        If '\*' or '\*\*' is given as the name, all unloaded extensions will be loaded.
+        """  # noqa: W605
         if "*" in extensions or "**" in extensions:
             extensions = set(EXTENSIONS) - set(self.bot.extensions.keys())
 
@@ -84,8 +84,8 @@ class Extensions(commands.Cog):
         """
         Unload currently loaded extensions given their fully qualified or unqualified names.
 
-        If '*' or '**' is given as the name, all loaded extensions will be unloaded.
-        """
+        If '\*' or '\*\*' is given as the name, all loaded extensions will be unloaded.
+        """  # noqa: W605
         blacklisted = "\n".join(UNLOAD_BLACKLIST & set(extensions))
 
         if blacklisted:
@@ -105,9 +105,9 @@ class Extensions(commands.Cog):
 
         If an extension fails to be reloaded, it will be rolled-back to the prior working state.
 
-        If '*' is given as the name, all currently loaded extensions will be reloaded.
-        If '**' is given as the name, all extensions, including unloaded ones, will be reloaded.
-        """
+        If '\*' is given as the name, all currently loaded extensions will be reloaded.
+        If '\*\*' is given as the name, all extensions, including unloaded ones, will be reloaded.
+        """  # noqa: W605
         if not extensions:
             await ctx.invoke(self.bot.get_command("help"), "extensions reload")
             return
