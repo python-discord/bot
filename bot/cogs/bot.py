@@ -7,6 +7,7 @@ from typing import Optional, Tuple
 from discord import Embed, Message, RawMessageUpdateEvent
 from discord.ext.commands import Bot, Cog, Context, command, group
 
+from bot.cogs.token_remover import TokenRemover
 from bot.constants import Channels, DEBUG_MODE, Guild, MODERATION_ROLES, Roles, URLs
 from bot.decorators import with_role
 from bot.utils.messages import wait_for_deletion
@@ -237,7 +238,7 @@ class Bot(Cog):
             and len(msg.content.splitlines()) > 3
         )
 
-        if parse_codeblock:
+        if parse_codeblock and not TokenRemover.is_token_in_message:  # if there is no token in the code
             on_cooldown = (time.time() - self.channel_cooldowns.get(msg.channel.id, 0)) < 300
             if not on_cooldown or DEBUG_MODE:
                 try:

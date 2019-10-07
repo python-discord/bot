@@ -52,19 +52,8 @@ class TokenRemover(Cog):
 
         See: https://discordapp.com/developers/docs/reference#snowflakes
         """
-        if msg.author.bot:
-            return
-
-        maybe_match = TOKEN_RE.search(msg.content)
-        if maybe_match is None:
-            return
-
-        try:
-            user_id, creation_timestamp, hmac = maybe_match.group(0).split('.')
-        except ValueError:
-            return
-
-        if self.is_valid_user_id(user_id) and self.is_valid_timestamp(creation_timestamp):
+        if self.is_token_in_message(msg):
+            user_id, creation_timestamp, hmac = TOKEN_RE.search(msg.content).group(0).split('.')
             self.mod_log.ignore(Event.message_delete, msg.id)
             await msg.delete()
             await msg.channel.send(DELETION_MESSAGE_TEMPLATE.format(mention=msg.author.mention))
@@ -85,6 +74,23 @@ class TokenRemover(Cog):
                 thumbnail=msg.author.avatar_url_as(static_format="png"),
                 channel_id=Channels.mod_alerts,
             )
+
+    def is_token_in_message(self, msg: Message) -> bool:
+        """Check if `msg` contains a seemly valid token."""
+        if msg.author.bot:
+            return False
+
+        maybe_match = TOKEN_RE.search(msg.content)
+        if maybe_match is None:
+            return False
+
+        try:
+            user_id, creation_timestamp, hmac = maybe_match.group(0).split('.')
+        except ValueError:
+            return False
+
+        if self.is_valid_user_id(user_id) and self.is_valid_timestamp(creation_timestamp):
+            return True
 
     @staticmethod
     def is_valid_user_id(b64_content: str) -> bool:
