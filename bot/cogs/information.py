@@ -3,7 +3,7 @@ import logging
 import pprint
 import textwrap
 import typing
-from typing import Any, Optional, Mapping
+from typing import Any, Mapping, Optional
 
 import discord
 from discord import CategoryChannel, Colour, Embed, Member, TextChannel, VoiceChannel
@@ -12,7 +12,7 @@ from discord.ext import commands
 from discord.ext.commands import Bot, Cog, Context, command, group
 
 from bot.constants import Channels, Emojis, MODERATION_ROLES, STAFF_ROLES
-from bot.decorators import InChannelCheckFailure, with_role, in_channel
+from bot.decorators import InChannelCheckFailure, in_channel, with_role
 from bot.utils.checks import with_role_check
 from bot.utils.time import time_since
 
@@ -234,7 +234,8 @@ class Information(Cog):
 
         await ctx.send(embed=embed)
 
-    def format_fields(self, mapping: Mapping[str, Any], field_width: Optional[int] = None):
+    def format_fields(self, mapping: Mapping[str, Any], field_width: Optional[int] = None) -> str:
+        """Format a mapping to be readable to a human."""
         # sorting is technically superfluous but nice if you want to look for a specific field
         fields = sorted(mapping.items(), key=lambda item: item[0])
 
@@ -270,16 +271,15 @@ class Information(Cog):
 
     @group(invoke_without_command=True)
     @in_channel(Channels.bot, bypass_roles=STAFF_ROLES)
-    async def raw(self, ctx: Context, *, message: discord.Message, json: bool = False):
+    async def raw(self, ctx: Context, *, message: discord.Message, json: bool = False) -> None:
         """Shows information about the raw API response."""
-
         # I *guess* it could be deleted right as the command is invoked but I felt like it wasn't worth handling
         # doing this extra request is also much easier than trying to convert everything back into a dictionary again
         raw_data = await ctx.bot.http.get_message(message.channel.id, message.id)
 
         paginator = commands.Paginator()
 
-        def add_content(title, content):
+        def add_content(title: str, content: str) -> None:
             paginator.add_line(f'== {title} ==\n')
             # replace backticks as it breaks out of code blocks. Spaces seemed to be the most reasonable solution.
             # we hope it's not close to 2000
@@ -305,7 +305,8 @@ class Information(Cog):
             await ctx.send(page)
 
     @raw.command()
-    async def json(self, ctx: Context, message: discord.Message):
+    async def json(self, ctx: Context, message: discord.Message) -> None:
+        """Shows information about the raw API response in a copy-pasteable Python format."""
         await ctx.invoke(self.raw, message=message, json=True)
 
 
