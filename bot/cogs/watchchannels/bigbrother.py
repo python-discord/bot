@@ -68,7 +68,27 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
 
         if response is not None:
             self.watched_users[user.id] = response
-            await ctx.send(f":white_check_mark: Messages sent by {user} will now be relayed to Big Brother.")
+            msg = f":white_check_mark: Messages sent by {user} will now be relayed to Big Brother."
+
+            history = await self.bot.api_client.get(
+                self.api_endpoint,
+                params={
+                    "user__id": str(user.id),
+                    "active": "false",
+                    'type': 'watch',
+                    'ordering': '-inserted_at'
+                }
+            )
+
+            if len(history) > 1:
+                total = f"({len(history) // 2} previous infractions in total)"
+                end_reason = history[0]["reason"]
+                start_reason = f"Watched: {history[1]['reason']}"
+                msg += f"\n\nUser's previous watch reasons {total}:```{start_reason}\n\n{end_reason}```"
+        else:
+            msg = ":x: Failed to post the infraction: response was empty."
+
+        await ctx.send(msg)
 
     @bigbrother_group.command(name='unwatch', aliases=('uw',))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
