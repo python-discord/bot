@@ -207,8 +207,10 @@ class AntiSpam(Cog):
         if not any(role.id == self.muted_role.id for role in member.roles):
             remove_role_after = AntiSpamConfig.punishment['remove_after']
 
-            # We need context, let's get it
+            # Get context and make sure the bot becomes the actor of infraction by patching the `author` attributes
             context = await self.bot.get_context(msg)
+            context.author = self.bot.user
+            context.message.author = self.bot.user
 
             # Since we're going to invoke the tempmute command directly, we need to manually call the converter.
             dt_remove_role_after = await self.expiration_date_converter.convert(context, f"{remove_role_after}S")
