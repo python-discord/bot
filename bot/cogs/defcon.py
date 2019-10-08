@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from discord import Colour, Embed, Member
 from discord.ext.commands import Bot, Cog, Context, group
 
-from bot.cogs.modlog import ModLog
+from bot.cogs.moderation import ModLog
 from bot.constants import Channels, Colours, Emojis, Event, Icons, Roles
 from bot.decorators import with_role
 

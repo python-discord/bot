@@ -9,7 +9,7 @@ from discord import Colour, Message
 from discord.ext.commands import Bot, Cog
 from discord.utils import snowflake_time
 
-from bot.cogs.modlog import ModLog
+from bot.cogs.moderation import ModLog
 from bot.constants import Channels, Colours, Event, Icons
 
 log = logging.getLogger(__name__)

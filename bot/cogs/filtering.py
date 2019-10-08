@@ -7,7 +7,7 @@ from dateutil.relativedelta import relativedelta
 from discord import Colour, DMChannel, Member, Message, TextChannel
 from discord.ext.commands import Bot, Cog
 
-from bot.cogs.modlog import ModLog
+from bot.cogs.moderation import ModLog
 from bot.constants import (
     Channels, Colours, DEBUG_MODE,
     Filter, Icons, URLs

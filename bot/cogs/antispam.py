@@ -10,7 +10,7 @@ from discord import Colour, Member, Message, NotFound, Object, TextChannel
 from discord.ext.commands import Bot, Cog
 
 from bot import rules
-from bot.cogs.modlog import ModLog
+from bot.cogs.moderation import ModLog
 from bot.constants import (
     AntiSpam as AntiSpamConfig, Channels,
     Colours, DEBUG_MODE, Event, Filter,
