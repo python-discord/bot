@@ -3,8 +3,7 @@ import logging
 import pprint
 import textwrap
 import typing
-from collections import Mapping
-from typing import Any, Optional
+from typing import Any, Optional, Mapping
 
 import discord
 from discord import CategoryChannel, Colour, Embed, Member, TextChannel, VoiceChannel
