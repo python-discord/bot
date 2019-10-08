@@ -20,7 +20,7 @@ GUILD_CHANNEL = t.Union[discord.CategoryChannel, discord.TextChannel, discord.Vo
 
 CHANNEL_CHANGES_UNSUPPORTED = ("permissions",)
 CHANNEL_CHANGES_SUPPRESSED = ("_overwrites", "position")
-MEMBER_CHANGES_SUPPRESSED = ("status", "activities", "_client_status")
+MEMBER_CHANGES_SUPPRESSED = ("status", "activities", "_client_status", "nick")
 ROLE_CHANGES_UNSUPPORTED = ("colour", "permissions")
 
 
@@ -496,6 +496,11 @@ class ModLog(Cog, name="ModLog"):
         if before.discriminator != after.discriminator:
             changes.append(
                 f"**Discriminator:** `{before.discriminator}` **->** `{after.discriminator}`"
+            )
+
+        if before.display_name != after.display_name:
+            changes.append(
+                f"**Display name:** `{before.display_name}` **->** `{after.display_name}`"
             )
 
         if not changes:
