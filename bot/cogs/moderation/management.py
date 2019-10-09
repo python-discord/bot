@@ -228,7 +228,10 @@ class ModManagement(commands.Cog):
         actor = guild.get_member(actor_id)
         active = infraction["active"]
         user_id = infraction["user"]
-        user_nickname = guild.get_member(user_id).nick  # If nickname different from username show nickname
+        if guild.get_member(user_id) is not None:  # If the user is still in the server
+            user_nickname = guild.get_member(user_id).nick  # If nickname different from username show nickname
+        else:
+            user_nickname = None
         hidden = infraction["hidden"]
         created = time.format_infraction(infraction["inserted_at"])
         if infraction["expires_at"] is None:
