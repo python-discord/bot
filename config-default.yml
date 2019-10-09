@@ -326,6 +326,8 @@ reddit:
     request_delay: 60
     subreddits:
         - 'r/Python'
+    client_id: !ENV "REDDIT_CLIENT_ID"
+    secret:    !ENV "REDDIT_SECRET"
 
 
 wolfram:
