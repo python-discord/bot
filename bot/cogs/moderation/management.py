@@ -228,6 +228,7 @@ class ModManagement(commands.Cog):
         actor = guild.get_member(actor_id)
         active = infraction["active"]
         user_id = infraction["user"]
+        user_nickname = guild.get_member(user_id).nick  # If nickname different from username show nickname
         hidden = infraction["hidden"]
         created = time.format_infraction(infraction["inserted_at"])
         if infraction["expires_at"] is None:
@@ -238,8 +239,7 @@ class ModManagement(commands.Cog):
         lines = textwrap.dedent(f"""
             {"**===============**" if active else "==============="}
             Status: {"__**Active**__" if active else "Inactive"}
-            User: {self.bot.get_user(user_id)} (`{user_id}`)
-            Nickname: {actor.nick or "*None*"}
+            User: {user_nickname or self.bot.get_user(user_id)} (`{user_id}`)
             Type: **{infraction["type"]}**
             Shadow: {hidden}
             Reason: {infraction["reason"] or "*None*"}
