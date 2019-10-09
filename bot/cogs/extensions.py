@@ -73,6 +73,10 @@ class Extensions(commands.Cog):
 
         If '\*' or '\*\*' is given as the name, all unloaded extensions will be loaded.
         """  # noqa: W605
+        if not extensions:
+            await ctx.invoke(self.bot.get_command("help"), "extensions load")
+            return
+
         if "*" in extensions or "**" in extensions:
             extensions = set(EXTENSIONS) - set(self.bot.extensions.keys())
 
@@ -86,6 +90,10 @@ class Extensions(commands.Cog):
 
         If '\*' or '\*\*' is given as the name, all loaded extensions will be unloaded.
         """  # noqa: W605
+        if not extensions:
+            await ctx.invoke(self.bot.get_command("help"), "extensions unload")
+            return
+
         blacklisted = "\n".join(UNLOAD_BLACKLIST & set(extensions))
 
         if blacklisted:
