@@ -239,6 +239,7 @@ class ModManagement(commands.Cog):
             {"**===============**" if active else "==============="}
             Status: {"__**Active**__" if active else "Inactive"}
             User: {self.bot.get_user(user_id)} (`{user_id}`)
+            Nickname: {actor.nick or "*None*"}
             Type: **{infraction["type"]}**
             Shadow: {hidden}
             Reason: {infraction["reason"] or "*None*"}
