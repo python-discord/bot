@@ -440,6 +440,8 @@ class Reddit(metaclass=YAMLGetter):
 
     request_delay: int
     subreddits: list
+    client_id: str
+    secret: str
 
 
 class Wolfram(metaclass=YAMLGetter):
