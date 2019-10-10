@@ -416,7 +416,6 @@ class Infractions(Scheduler, commands.Cog):
         expiry_log_text = f"Expires: {expiry}" if expiry else ""
         log_title = "applied"
         log_content = None
-        reason_msg = ""
 
         # DM the user about the infraction if it's not a shadow/hidden infraction.
         if not infraction["hidden"]:
@@ -432,7 +431,13 @@ class Infractions(Scheduler, commands.Cog):
                 log_content = ctx.author.mention
 
         if infraction["actor"] == self.bot.user.id:
-            reason_msg = f" (reason: {infraction['reason']})"
+            end_msg = f" (reason: {infraction['reason']})"
+        else:
+            infractions = await self.bot.api_client.get(
+                "bot/infractions",
+                params={"user__id": str(user.id)}
+            )
+            end_msg = f" ({len(infractions)} infractions total)"
 
         # Execute the necessary actions to apply the infraction on Discord.
         if action_coro:
@@ -449,7 +454,9 @@ class Infractions(Scheduler, commands.Cog):
                 log_title = "failed to apply"
 
         # Send a confirmation message to the invoking context.
-        await ctx.send(f"{dm_result}{confirm_msg} **{infr_type}** to {user.mention}{expiry_msg}{reason_msg}.")
+        await ctx.send(
+            f"{dm_result}{confirm_msg} **{infr_type}** to {user.mention}{expiry_msg}{end_msg}."
+        )
 
         # Send a log message to the mod log.
         await self.mod_log.send_log_message(
