@@ -21,6 +21,7 @@ class Reddit(Cog):
 
     HEADERS = {"User-Agent": "Discord Bot: PythonDiscord (https://pythondiscord.com/)"}
     URL = "https://www.reddit.com"
+    MAX_FETCH_RETRIES = 3
 
     def __init__(self, bot: Bot):
         self.bot = bot
@@ -44,16 +45,23 @@ class Reddit(Cog):
         if params is None:
             params = {}
 
-        response = await self.bot.http_session.get(
-            url=f"{self.URL}/{route}.json",
-            headers=self.HEADERS,
-            params=params
-        )
+        url = f"{self.URL}/{route}.json"
+        for _ in range(self.MAX_FETCH_RETRIES):
+            response = await self.bot.http_session.get(
+                url=url,
+                headers=self.HEADERS,
+                params=params
+            )
+            if response.status == 200 and response.content_type == 'application/json':
+                # Got appropriate response - process and return.
+                content = await response.json()
+                posts = content["data"]["children"]
+                return posts[:amount]
 
-        content = await response.json()
-        posts = content["data"]["children"]
+            await asyncio.sleep(3)
 
-        return posts[:amount]
+        log.debug(f"Invalid response from: {url} - status code {response.status}, mimetype {response.content_type}")
+        return list()  # Failed to get appropriate response within allowed number of retries.
 
     async def send_top_posts(
         self, channel: TextChannel, subreddit: Subreddit, content: str = None, time: str = "all"
@@ -64,13 +72,14 @@ class Reddit(Cog):
         embed.description = ""
 
         # Get the posts
-        posts = await self.fetch_posts(
-            route=f"{subreddit}/top",
-            amount=5,
-            params={
-                "t": time
-            }
-        )
+        async with channel.typing():
+            posts = await self.fetch_posts(
+                route=f"{subreddit}/top",
+                amount=5,
+                params={
+                    "t": time
+                }
+            )
 
         if not posts:
             embed.title = random.choice(ERROR_REPLIES)

@@ -4,6 +4,8 @@ from datetime import datetime
 from ssl import CertificateError
 from typing import Union
 
+import dateutil.parser
+import dateutil.tz
 import discord
 from aiohttp import ClientConnectorError
 from dateutil.relativedelta import relativedelta
@@ -49,7 +51,7 @@ class ValidURL(Converter):
             async with ctx.bot.http_session.get(url) as resp:
                 if resp.status != 200:
                     raise BadArgument(
-                        f"HTTP GET on `{url}` returned status `{resp.status_code}`, expected 200"
+                        f"HTTP GET on `{url}` returned status `{resp.status}`, expected 200"
                     )
         except CertificateError:
             if url.startswith('https'):
@@ -215,3 +217,45 @@ class Duration(Converter):
         now = datetime.utcnow()
 
         return now + delta
+
+
+class ISODateTime(Converter):
+    """Converts an ISO-8601 datetime string into a datetime.datetime."""
+
+    async def convert(self, ctx: Context, datetime_string: str) -> datetime:
+        """
+        Converts a ISO-8601 `datetime_string` into a `datetime.datetime` object.
+
+        The converter is flexible in the formats it accepts, as it uses the `isoparse` method of
+        `dateutil.parser`. In general, it accepts datetime strings that start with a date,
+        optionally followed by a time. Specifying a timezone offset in the datetime string is
+        supported, but the `datetime` object will be converted to UTC and will be returned without
+        `tzinfo` as a timezone-unaware `datetime` object.
+
+        See: https://dateutil.readthedocs.io/en/stable/parser.html#dateutil.parser.isoparse
+
+        Formats that are guaranteed to be valid by our tests are:
+
+        - `YYYY-mm-ddTHH:MM:SSZ` | `YYYY-mm-dd HH:MM:SSZ`
+        - `YYYY-mm-ddTHH:MM:SS±HH:MM` | `YYYY-mm-dd HH:MM:SS±HH:MM`
+        - `YYYY-mm-ddTHH:MM:SS±HHMM` | `YYYY-mm-dd HH:MM:SS±HHMM`
+        - `YYYY-mm-ddTHH:MM:SS±HH` | `YYYY-mm-dd HH:MM:SS±HH`
+        - `YYYY-mm-ddTHH:MM:SS` | `YYYY-mm-dd HH:MM:SS`
+        - `YYYY-mm-ddTHH:MM` | `YYYY-mm-dd HH:MM`
+        - `YYYY-mm-dd`
+        - `YYYY-mm`
+        - `YYYY`
+
+        Note: ISO-8601 specifies a `T` as the separator between the date and the time part of the
+        datetime string. The converter accepts both a `T` and a single space character.
+        """
+        try:
+            dt = dateutil.parser.isoparse(datetime_string)
+        except ValueError:
+            raise BadArgument(f"`{datetime_string}` is not a valid ISO-8601 datetime string")
+
+        if dt.tzinfo:
+            dt = dt.astimezone(dateutil.tz.UTC)
+            dt = dt.replace(tzinfo=None)
+
+        return dt
