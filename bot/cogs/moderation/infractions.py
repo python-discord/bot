@@ -12,7 +12,6 @@ from discord.ext.commands import Context, command
 from bot import constants
 from bot.api import ResponseCodeError
 from bot.constants import Colours, Event
-from bot.converters import Duration
 from bot.decorators import respect_role_hierarchy
 from bot.utils import time
 from bot.utils.checks import with_role_check
@@ -113,7 +112,7 @@ class Infractions(Scheduler, commands.Cog):
     # region: Temporary infractions
 
     @command(aliases=["mute"])
-    async def tempmute(self, ctx: Context, user: Member, duration: Duration, *, reason: str = None) -> None:
+    async def tempmute(self, ctx: Context, user: Member, duration: utils.Expiry, *, reason: str = None) -> None:
         """
         Temporarily mute a user for the given reason and duration.
 
@@ -126,11 +125,13 @@ class Infractions(Scheduler, commands.Cog):
         \u2003`h` - hours
         \u2003`M` - minutes∗
         \u2003`s` - seconds
+
+        Alternatively, an ISO 8601 timestamp can be provided for the duration.
         """
         await self.apply_mute(ctx, user, reason, expires_at=duration)
 
     @command()
-    async def tempban(self, ctx: Context, user: MemberConverter, duration: Duration, *, reason: str = None) -> None:
+    async def tempban(self, ctx: Context, user: MemberConverter, duration: utils.Expiry, *, reason: str = None) -> None:
         """
         Temporarily ban a user for the given reason and duration.
 
@@ -143,6 +144,8 @@ class Infractions(Scheduler, commands.Cog):
         \u2003`h` - hours
         \u2003`M` - minutes∗
         \u2003`s` - seconds
+
+        Alternatively, an ISO 8601 timestamp can be provided for the duration.
         """
         await self.apply_ban(ctx, user, reason, expires_at=duration)
 
@@ -172,9 +175,7 @@ class Infractions(Scheduler, commands.Cog):
     # region: Temporary shadow infractions
 
     @command(hidden=True, aliases=["shadowtempmute, stempmute", "shadowmute", "smute"])
-    async def shadow_tempmute(
-        self, ctx: Context, user: Member, duration: Duration, *, reason: str = None
-    ) -> None:
+    async def shadow_tempmute(self, ctx: Context, user: Member, duration: utils.Expiry, *, reason: str = None) -> None:
         """
         Temporarily mute a user for the given reason and duration without notifying the user.
 
@@ -187,12 +188,19 @@ class Infractions(Scheduler, commands.Cog):
         \u2003`h` - hours
         \u2003`M` - minutes∗
         \u2003`s` - seconds
+
+        Alternatively, an ISO 8601 timestamp can be provided for the duration.
         """
         await self.apply_mute(ctx, user, reason, expires_at=duration, hidden=True)
 
     @command(hidden=True, aliases=["shadowtempban, stempban"])
     async def shadow_tempban(
-        self, ctx: Context, user: MemberConverter, duration: Duration, *, reason: str = None
+        self,
+        ctx: Context,
+        user: MemberConverter,
+        duration: utils.Expiry,
+        *,
+        reason: str = None
     ) -> None:
         """
         Temporarily ban a user for the given reason and duration without notifying the user.
@@ -206,6 +214,8 @@ class Infractions(Scheduler, commands.Cog):
         \u2003`h` - hours
         \u2003`M` - minutes∗
         \u2003`s` - seconds
+
+        Alternatively, an ISO 8601 timestamp can be provided for the duration.
         """
         await self.apply_ban(ctx, user, reason, expires_at=duration, hidden=True)
 
