@@ -224,14 +224,8 @@ class ModManagement(commands.Cog):
     def infraction_to_string(self, infraction: utils.Infraction) -> str:
         """Convert the infraction object to a string representation."""
         actor_id = infraction["actor"]
-        guild = self.bot.get_guild(constants.Guild.id)
-        actor = guild.get_member(actor_id)
         active = infraction["active"]
         user_id = infraction["user"]
-        if guild.get_member(user_id) is not None:  # If the user is still in the server
-            user_nickname = guild.get_member(user_id).nick  # If nickname different from username show nickname
-        else:
-            user_nickname = None
         hidden = infraction["hidden"]
         created = time.format_infraction(infraction["inserted_at"])
         if infraction["expires_at"] is None:
@@ -242,13 +236,13 @@ class ModManagement(commands.Cog):
         lines = textwrap.dedent(f"""
             {"**===============**" if active else "==============="}
             Status: {"__**Active**__" if active else "Inactive"}
-            User: {user_nickname or self.bot.get_user(user_id)} (`{user_id}`)
+            User: <@{user_id}> (`{user_id}`)
             Type: **{infraction["type"]}**
             Shadow: {hidden}
             Reason: {infraction["reason"] or "*None*"}
             Created: {created}
             Expires: {expires}
-            Actor: {actor.mention if actor else actor_id}
+            Actor: <@{actor_id}>
             ID: `{infraction["id"]}`
             {"**===============**" if active else "==============="}
         """)
