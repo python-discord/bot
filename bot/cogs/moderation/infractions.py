@@ -311,7 +311,8 @@ class Infractions(Scheduler, commands.Cog):
         log_content = None
         log_text = {
             "Member": str(user_id),
-            "Actor": str(self.bot.user)
+            "Actor": str(self.bot.user),
+            "Reason": infraction["reason"]
         }
 
         try:
@@ -355,6 +356,22 @@ class Infractions(Scheduler, commands.Cog):
             log.exception(f"Failed to deactivate infraction #{_id} ({_type})")
             log_text["Failure"] = f"HTTPException with code {e.code}."
             log_content = mod_role.mention
+
+        # Check if the user is currently being watched by Big Brother.
+        try:
+            active_watch = await self.bot.api_client.get(
+                "bot/infractions",
+                params={
+                    "active": "true",
+                    "type": "watch",
+                    "user__id": user_id
+                }
+            )
+
+            log_text["Watching"] = "Yes" if active_watch else "No"
+        except ResponseCodeError:
+            log.exception(f"Failed to fetch watch status for user {user_id}")
+            log_text["Watching"] = "Unknown - failed to fetch watch status."
 
         try:
             # Mark infraction as inactive in the database.
