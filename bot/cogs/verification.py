@@ -6,7 +6,7 @@ from discord.ext import tasks
 from discord.ext.commands import Bot, Cog, Context, command
 
 from bot.cogs.modlog import ModLog
-from bot.constants import Channels, Event, Roles
+from bot.constants import Bot as BotConfig, Channels, Event, Roles
 from bot.decorators import InChannelCheckFailure, in_channel, without_role
 
 log = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ If you'd like to unsubscribe from the announcement notifications, simply send `!
 """
 
 PERIODIC_PING = (
-    "@everyone To verify that you have read our rules, please type `!accept`."
+    f"@everyone To verify that you have read our rules, please type `{BotConfig.prefix}accept`."
     f" Ping <@&{Roles.admin}> if you encounter any problems during the verification process."
 )
 
