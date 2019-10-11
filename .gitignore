@@ -114,5 +114,5 @@ log.*
 # Custom user configuration
 config.yml
 
-# JUnit XML reports from pytest
-junit.xml
+# xmlrunner unittest XML reports
+TEST-**.xml

@@ -50,7 +50,7 @@ class HashableMixin(discord.mixins.EqualityComparable):
 
 
 class ColourMixin:
-    """A mixin of Mocks that provides the aliasing of color->colour like discord.py does."""
+    """A mixin for Mocks that provides the aliasing of color->colour like discord.py does."""
 
     @property
     def color(self) -> discord.Colour:
@@ -159,14 +159,9 @@ class MockRole(AttributeMock, unittest.mock.Mock, ColourMixin, HashableMixin):
 
     attribute_mocktype = unittest.mock.MagicMock
 
-    def __init__(
-        self,
-        name: str = "role",
-        role_id: int = 1,
-        position: int = 1,
-        **kwargs,
-    ) -> None:
+    def __init__(self, name: str = "role", role_id: int = 1, position: int = 1, **kwargs) -> None:
         super().__init__(spec=role_instance, **kwargs)
+
         self.name = name
         self.id = role_id
         self.position = position
@@ -201,11 +196,14 @@ class MockMember(AttributeMock, unittest.mock.Mock, ColourMixin, HashableMixin):
         **kwargs,
     ) -> None:
         super().__init__(spec=member_instance, **kwargs)
+
         self.name = name
         self.id = user_id
+
         self.roles = [MockRole("@everyone", 1)]
         if roles:
             self.roles.extend(roles)
+
         self.mention = f"@{self.name}"
         self.send = AsyncMock()
 

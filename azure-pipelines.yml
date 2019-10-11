@@ -30,11 +30,11 @@ jobs:
       - script: python -m flake8
         displayName: 'Run linter'
 
-      - script: BOT_API_KEY=foo BOT_TOKEN=bar WOLFRAM_API_KEY=baz coverage run -m unittest
+      - script: BOT_API_KEY=foo BOT_TOKEN=bar WOLFRAM_API_KEY=baz coverage run -m xmlrunner
         displayName: Run tests
 
-      - script: coverage xml -o coverage.xml
-        displayName: Create test coverage report
+      - script: coverage report -m && coverage xml -o coverage.xml
+        displayName: Generate test coverage report
 
       - task: PublishCodeCoverageResults@1
         displayName: 'Publish Coverage Results'
@@ -42,6 +42,13 @@ jobs:
         inputs:
           codeCoverageTool: Cobertura
           summaryFileLocation: coverage.xml
+
+      - task: PublishTestResults@2
+        condition: succeededOrFailed()
+        displayName: 'Publish Test Results'
+        inputs:
+          testResultsFiles: '**/TEST-*.xml'
+          testRunTitle: 'Bot Test Results'
 
   - job: build
     displayName: 'Build & Push Container'

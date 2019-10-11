@@ -1,8 +1,8 @@
 # Testing our Bot
 
-Our bot is one of the most important tools we have to help us run our community. To make sure that tool doesn't break, we decided to start testing it using unit tests. It is our goal to provide it with 100% test coverage in the future. This guide will help you get started with writing the tests needed to achieve that.
+Our bot is one of the most important tools we have to help us run our community. To make sure that tool doesn't break, we've decided to start writing unit tests for it. It is our goal to provide it with 100% test coverage in the future. This guide will help you get started with writing the tests needed to achieve that.
 
-_**Note:** This is a practical guide to getting started with writing tests for our bot, not a general introduction to writing unit tests in Python. If you're looking for a more general introduction, you may like Corey Schafer's [Python Tutorial: Unit Testing Your Code with the unittest Module](https://www.youtube.com/watch?v=6tNS--WetLI) or Ned Batchelder's PyCon talk [Getting Started Testing](https://www.youtube.com/watch?v=FxSsnHeWQBY).
+_**Note:** This is a practical guide to getting started with writing tests for our bot, not a general introduction to writing unit tests in Python. If you're looking for a more general introduction, you may like Corey Schafer's [Python Tutorial: Unit Testing Your Code with the unittest Module](https://www.youtube.com/watch?v=6tNS--WetLI) or Ned Batchelder's PyCon talk [Getting Started Testing](https://www.youtube.com/watch?v=FxSsnHeWQBY)._
 
 ## Tools
 
@@ -43,7 +43,7 @@ Since it's important to make sure all of our tests are independent from each oth
 
 By using the `subTest` context manager, we can perform multiple independent subtests within one test method (e.g., by having a loop for the various inputs we want to test). Using this context manager ensures the test will be run independently and that, if one of them fails, the rest of the subtests are still executed. (Normally, a test function stops once the first exception, including `AssertionError`, is raised.)
 
-An example (taken from [`test_converters.py`])(/tests/bot/test_converters.py):
+An example (taken from [`test_converters.py`](/tests/bot/test_converters.py)):
 
 ```py
     def test_tag_content_converter_for_valid(self):
