@@ -12,7 +12,6 @@ from discord.ext.commands import Context, command
 from bot import constants
 from bot.api import ResponseCodeError
 from bot.constants import Colours, Event
-from bot.converters import Duration
 from bot.decorators import respect_role_hierarchy
 from bot.utils import time
 from bot.utils.checks import with_role_check
@@ -113,7 +112,7 @@ class Infractions(Scheduler, commands.Cog):
     # region: Temporary infractions
 
     @command(aliases=["mute"])
-    async def tempmute(self, ctx: Context, user: Member, duration: Duration, *, reason: str = None) -> None:
+    async def tempmute(self, ctx: Context, user: Member, duration: utils.Expiry, *, reason: str = None) -> None:
         """
         Temporarily mute a user for the given reason and duration.
 
@@ -126,11 +125,13 @@ class Infractions(Scheduler, commands.Cog):
         \u2003`h` - hours
         \u2003`M` - minutes∗
         \u2003`s` - seconds
+
+        Alternatively, an ISO 8601 timestamp can be provided for the duration.
         """
         await self.apply_mute(ctx, user, reason, expires_at=duration)
 
     @command()
-    async def tempban(self, ctx: Context, user: MemberConverter, duration: Duration, *, reason: str = None) -> None:
+    async def tempban(self, ctx: Context, user: MemberConverter, duration: utils.Expiry, *, reason: str = None) -> None:
         """
         Temporarily ban a user for the given reason and duration.
 
@@ -143,6 +144,8 @@ class Infractions(Scheduler, commands.Cog):
         \u2003`h` - hours
         \u2003`M` - minutes∗
         \u2003`s` - seconds
+
+        Alternatively, an ISO 8601 timestamp can be provided for the duration.
         """
         await self.apply_ban(ctx, user, reason, expires_at=duration)
 
@@ -172,9 +175,7 @@ class Infractions(Scheduler, commands.Cog):
     # region: Temporary shadow infractions
 
     @command(hidden=True, aliases=["shadowtempmute, stempmute", "shadowmute", "smute"])
-    async def shadow_tempmute(
-        self, ctx: Context, user: Member, duration: Duration, *, reason: str = None
-    ) -> None:
+    async def shadow_tempmute(self, ctx: Context, user: Member, duration: utils.Expiry, *, reason: str = None) -> None:
         """
         Temporarily mute a user for the given reason and duration without notifying the user.
 
@@ -187,12 +188,19 @@ class Infractions(Scheduler, commands.Cog):
         \u2003`h` - hours
         \u2003`M` - minutes∗
         \u2003`s` - seconds
+
+        Alternatively, an ISO 8601 timestamp can be provided for the duration.
         """
         await self.apply_mute(ctx, user, reason, expires_at=duration, hidden=True)
 
     @command(hidden=True, aliases=["shadowtempban, stempban"])
     async def shadow_tempban(
-        self, ctx: Context, user: MemberConverter, duration: Duration, *, reason: str = None
+        self,
+        ctx: Context,
+        user: MemberConverter,
+        duration: utils.Expiry,
+        *,
+        reason: str = None
     ) -> None:
         """
         Temporarily ban a user for the given reason and duration without notifying the user.
@@ -206,6 +214,8 @@ class Infractions(Scheduler, commands.Cog):
         \u2003`h` - hours
         \u2003`M` - minutes∗
         \u2003`s` - seconds
+
+        Alternatively, an ISO 8601 timestamp can be provided for the duration.
         """
         await self.apply_ban(ctx, user, reason, expires_at=duration, hidden=True)
 
@@ -310,7 +320,8 @@ class Infractions(Scheduler, commands.Cog):
         log_content = None
         log_text = {
             "Member": str(user_id),
-            "Actor": str(self.bot.user)
+            "Actor": str(self.bot.user),
+            "Reason": infraction["reason"]
         }
 
         try:
@@ -354,6 +365,22 @@ class Infractions(Scheduler, commands.Cog):
             log.exception(f"Failed to deactivate infraction #{_id} ({_type})")
             log_text["Failure"] = f"HTTPException with code {e.code}."
             log_content = mod_role.mention
+
+        # Check if the user is currently being watched by Big Brother.
+        try:
+            active_watch = await self.bot.api_client.get(
+                "bot/infractions",
+                params={
+                    "active": "true",
+                    "type": "watch",
+                    "user__id": user_id
+                }
+            )
+
+            log_text["Watching"] = "Yes" if active_watch else "No"
+        except ResponseCodeError:
+            log.exception(f"Failed to fetch watch status for user {user_id}")
+            log_text["Watching"] = "Unknown - failed to fetch watch status."
 
         try:
             # Mark infraction as inactive in the database.
@@ -415,7 +442,6 @@ class Infractions(Scheduler, commands.Cog):
         expiry_log_text = f"Expires: {expiry}" if expiry else ""
         log_title = "applied"
         log_content = None
-        reason_msg = ""
 
         # DM the user about the infraction if it's not a shadow/hidden infraction.
         if not infraction["hidden"]:
@@ -431,7 +457,13 @@ class Infractions(Scheduler, commands.Cog):
                 log_content = ctx.author.mention
 
         if infraction["actor"] == self.bot.user.id:
-            reason_msg = f" (reason: {infraction['reason']})"
+            end_msg = f" (reason: {infraction['reason']})"
+        else:
+            infractions = await self.bot.api_client.get(
+                "bot/infractions",
+                params={"user__id": str(user.id)}
+            )
+            end_msg = f" ({len(infractions)} infractions total)"
 
         # Execute the necessary actions to apply the infraction on Discord.
         if action_coro:
@@ -448,7 +480,9 @@ class Infractions(Scheduler, commands.Cog):
                 log_title = "failed to apply"
 
         # Send a confirmation message to the invoking context.
-        await ctx.send(f"{dm_result}{confirm_msg} **{infr_type}** to {user.mention}{expiry_msg}{reason_msg}.")
+        await ctx.send(
+            f"{dm_result}{confirm_msg} **{infr_type}** to {user.mention}{expiry_msg}{end_msg}."
+        )
 
         # Send a log message to the mod log.
         await self.mod_log.send_log_message(
