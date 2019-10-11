@@ -3,8 +3,9 @@ import logging
 import random
 import textwrap
 from datetime import datetime, timedelta
+from typing import List
 
-from discord import Colour, Embed, TextChannel
+from discord import Colour, Embed, Message, TextChannel
 from discord.ext.commands import Bot, Cog, Context, group
 
 from bot.constants import Channels, ERROR_REPLIES, Reddit as RedditConfig, STAFF_ROLES
@@ -16,12 +17,11 @@ log = logging.getLogger(__name__)
 
 
 class Reddit(Cog):
-    """
-    Track subreddit posts and show detailed statistics about them.
-    """
+    """Track subreddit posts and show detailed statistics about them."""
 
     HEADERS = {"User-Agent": "Discord Bot: PythonDiscord (https://pythondiscord.com/)"}
     URL = "https://www.reddit.com"
+    MAX_FETCH_RETRIES = 3
 
     def __init__(self, bot: Bot):
         self.bot = bot
@@ -34,11 +34,8 @@ class Reddit(Cog):
         self.new_posts_task = None
         self.top_weekly_posts_task = None
 
-    async def fetch_posts(self, route: str, *, amount: int = 25, params=None):
-        """
-        A helper method to fetch a certain amount of Reddit posts at a given route.
-        """
-
+    async def fetch_posts(self, route: str, *, amount: int = 25, params: dict = None) -> List[dict]:
+        """A helper method to fetch a certain amount of Reddit posts at a given route."""
         # Reddit's JSON responses only provide 25 posts at most.
         if not 25 >= amount > 0:
             raise ValueError("Invalid amount of subreddit posts requested.")
@@ -46,34 +43,41 @@ class Reddit(Cog):
         if params is None:
             params = {}
 
-        response = await self.bot.http_session.get(
-            url=f"{self.URL}/{route}.json",
-            headers=self.HEADERS,
-            params=params
-        )
+        url = f"{self.URL}/{route}.json"
+        for _ in range(self.MAX_FETCH_RETRIES):
+            response = await self.bot.http_session.get(
+                url=url,
+                headers=self.HEADERS,
+                params=params
+            )
+            if response.status == 200 and response.content_type == 'application/json':
+                # Got appropriate response - process and return.
+                content = await response.json()
+                posts = content["data"]["children"]
+                return posts[:amount]
 
-        content = await response.json()
-        posts = content["data"]["children"]
+            await asyncio.sleep(3)
 
-        return posts[:amount]
+        log.debug(f"Invalid response from: {url} - status code {response.status}, mimetype {response.content_type}")
+        return list()  # Failed to get appropriate response within allowed number of retries.
 
-    async def send_top_posts(self, channel: TextChannel, subreddit: Subreddit, content=None, time="all"):
-        """
-        Create an embed for the top posts, then send it in a given TextChannel.
-        """
-
+    async def send_top_posts(
+        self, channel: TextChannel, subreddit: Subreddit, content: str = None, time: str = "all"
+    ) -> Message:
+        """Create an embed for the top posts, then send it in a given TextChannel."""
         # Create the new spicy embed.
         embed = Embed()
         embed.description = ""
 
         # Get the posts
-        posts = await self.fetch_posts(
-            route=f"{subreddit}/top",
-            amount=5,
-            params={
-                "t": time
-            }
-        )
+        async with channel.typing():
+            posts = await self.fetch_posts(
+                route=f"{subreddit}/top",
+                amount=5,
+                params={
+                    "t": time
+                }
+            )
 
         if not posts:
             embed.title = random.choice(ERROR_REPLIES)
@@ -115,11 +119,8 @@ class Reddit(Cog):
             embed=embed
         )
 
-    async def poll_new_posts(self):
-        """
-        Periodically search for new subreddit posts.
-        """
-
+    async def poll_new_posts(self) -> None:
+        """Periodically search for new subreddit posts."""
         while True:
             await asyncio.sleep(RedditConfig.request_delay)
 
@@ -179,11 +180,8 @@ class Reddit(Cog):
 
                 log.trace(f"Sent {len(new_posts)} new {subreddit} posts to channel {self.reddit_channel.id}.")
 
-    async def poll_top_weekly_posts(self):
-        """
-        Post a summary of the top posts every week.
-        """
-
+    async def poll_top_weekly_posts(self) -> None:
+        """Post a summary of the top posts every week."""
         while True:
             now = datetime.utcnow()
 
@@ -214,19 +212,13 @@ class Reddit(Cog):
                     await message.pin()
 
     @group(name="reddit", invoke_without_command=True)
-    async def reddit_group(self, ctx: Context):
-        """
-        View the top posts from various subreddits.
-        """
-
+    async def reddit_group(self, ctx: Context) -> None:
+        """View the top posts from various subreddits."""
         await ctx.invoke(self.bot.get_command("help"), "reddit")
 
     @reddit_group.command(name="top")
-    async def top_command(self, ctx: Context, subreddit: Subreddit = "r/Python"):
-        """
-        Send the top posts of all time from a given subreddit.
-        """
-
+    async def top_command(self, ctx: Context, subreddit: Subreddit = "r/Python") -> None:
+        """Send the top posts of all time from a given subreddit."""
         await self.send_top_posts(
             channel=ctx.channel,
             subreddit=subreddit,
@@ -235,11 +227,8 @@ class Reddit(Cog):
         )
 
     @reddit_group.command(name="daily")
-    async def daily_command(self, ctx: Context, subreddit: Subreddit = "r/Python"):
-        """
-        Send the top posts of today from a given subreddit.
-        """
-
+    async def daily_command(self, ctx: Context, subreddit: Subreddit = "r/Python") -> None:
+        """Send the top posts of today from a given subreddit."""
         await self.send_top_posts(
             channel=ctx.channel,
             subreddit=subreddit,
@@ -248,11 +237,8 @@ class Reddit(Cog):
         )
 
     @reddit_group.command(name="weekly")
-    async def weekly_command(self, ctx: Context, subreddit: Subreddit = "r/Python"):
-        """
-        Send the top posts of this week from a given subreddit.
-        """
-
+    async def weekly_command(self, ctx: Context, subreddit: Subreddit = "r/Python") -> None:
+        """Send the top posts of this week from a given subreddit."""
         await self.send_top_posts(
             channel=ctx.channel,
             subreddit=subreddit,
@@ -262,11 +248,8 @@ class Reddit(Cog):
 
     @with_role(*STAFF_ROLES)
     @reddit_group.command(name="subreddits", aliases=("subs",))
-    async def subreddits_command(self, ctx: Context):
-        """
-        Send a paginated embed of all the subreddits we're relaying.
-        """
-
+    async def subreddits_command(self, ctx: Context) -> None:
+        """Send a paginated embed of all the subreddits we're relaying."""
         embed = Embed()
         embed.title = "Relayed subreddits."
         embed.colour = Colour.blurple()
@@ -280,7 +263,8 @@ class Reddit(Cog):
         )
 
     @Cog.listener()
-    async def on_ready(self):
+    async def on_ready(self) -> None:
+        """Initiate reddit post event loop."""
         self.reddit_channel = await self.bot.fetch_channel(Channels.reddit)
 
         if self.reddit_channel is not None:
@@ -292,6 +276,7 @@ class Reddit(Cog):
             log.warning("Couldn't locate a channel for subreddit relaying.")
 
 
-def setup(bot):
+def setup(bot: Bot) -> None:
+    """Reddit cog load."""
     bot.add_cog(Reddit(bot))
     log.info("Cog loaded: Reddit")

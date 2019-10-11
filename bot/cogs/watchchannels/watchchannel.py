@@ -1,5 +1,4 @@
 import asyncio
-import datetime
 import logging
 import re
 import textwrap
@@ -8,12 +7,13 @@ from collections import defaultdict, deque
 from dataclasses import dataclass
 from typing import Optional
 
+import dateutil.parser
 import discord
 from discord import Color, Embed, HTTPException, Message, Object, errors
 from discord.ext.commands import BadArgument, Bot, Cog, Context
 
 from bot.api import ResponseCodeError
-from bot.cogs.modlog import ModLog
+from bot.cogs.moderation import ModLog
 from bot.constants import BigBrother as BigBrotherConfig, Guild as GuildConfig, Icons
 from bot.pagination import LinePaginator
 from bot.utils import CogABCMeta, messages
@@ -42,6 +42,8 @@ def proxy_user(user_id: str) -> Object:
 
 @dataclass
 class MessageHistory:
+    """Represents a watch channel's message history."""
+
     last_author: Optional[int] = None
     last_channel: Optional[int] = None
     message_count: int = 0
@@ -51,7 +53,15 @@ class WatchChannel(metaclass=CogABCMeta):
     """ABC with functionality for relaying users' messages to a certain channel."""
 
     @abstractmethod
-    def __init__(self, bot: Bot, destination, webhook_id, api_endpoint, api_default_params, logger) -> None:
+    def __init__(
+        self,
+        bot: Bot,
+        destination: int,
+        webhook_id: int,
+        api_endpoint: str,
+        api_default_params: dict,
+        logger: logging.Logger
+    ) -> None:
         self.bot = bot
 
         self.destination = destination  # E.g., Channels.big_brother_logs
@@ -138,8 +148,8 @@ class WatchChannel(metaclass=CogABCMeta):
                 title=f"Warning: Failed to retrieve user cache for the {self.__class__.__name__} watch channel",
                 text="Could not retrieve the list of watched users from the API and messages will not be relayed.",
                 ping_everyone=True,
-                icon=Icons.token_removed,
-                color=Color.red()
+                icon_url=Icons.token_removed,
+                colour=Color.red()
             )
 
     async def fetch_user_cache(self) -> bool:
@@ -265,7 +275,7 @@ class WatchChannel(metaclass=CogABCMeta):
 
         self.message_history.message_count += 1
 
-    async def send_header(self, msg) -> None:
+    async def send_header(self, msg: Message) -> None:
         """Sends a header embed with information about the relayed messages to the watch channel."""
         user_id = msg.author.id
 
@@ -311,21 +321,10 @@ class WatchChannel(metaclass=CogABCMeta):
     @staticmethod
     def _get_time_delta(time_string: str) -> str:
         """Returns the time in human-readable time delta format."""
-        date_time = datetime.datetime.strptime(
-            time_string,
-            "%Y-%m-%dT%H:%M:%S.%fZ"
-        ).replace(tzinfo=None)
+        date_time = dateutil.parser.isoparse(time_string).replace(tzinfo=None)
         time_delta = time_since(date_time, precision="minutes", max_units=1)
 
         return time_delta
-
-    @staticmethod
-    def _get_human_readable(time_string: str, output_format: str = "%Y-%m-%d %H:%M:%S") -> str:
-        date_time = datetime.datetime.strptime(
-            time_string,
-            "%Y-%m-%dT%H:%M:%S.%fZ"
-        ).replace(tzinfo=None)
-        return date_time.strftime(output_format)
 
     def _remove_user(self, user_id: int) -> None:
         """Removes a user from a watch channel."""
@@ -336,7 +335,7 @@ class WatchChannel(metaclass=CogABCMeta):
     def cog_unload(self) -> None:
         """Takes care of unloading the cog and canceling the consumption task."""
         self.log.trace(f"Unloading the cog")
-        if not self._consume_task.done():
+        if self._consume_task and not self._consume_task.done():
             self._consume_task.cancel()
             try:
                 self._consume_task.result()

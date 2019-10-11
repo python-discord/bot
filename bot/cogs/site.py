@@ -19,15 +19,13 @@ class Site(Cog):
         self.bot = bot
 
     @group(name="site", aliases=("s",), invoke_without_command=True)
-    async def site_group(self, ctx):
+    async def site_group(self, ctx: Context) -> None:
         """Commands for getting info about our website."""
-
         await ctx.invoke(self.bot.get_command("help"), "site")
 
     @site_group.command(name="home", aliases=("about",))
-    async def site_main(self, ctx: Context):
+    async def site_main(self, ctx: Context) -> None:
         """Info about the website itself."""
-
         url = f"{URLs.site_schema}{URLs.site}/"
 
         embed = Embed(title="Python Discord website")
@@ -43,29 +41,39 @@ class Site(Cog):
         await ctx.send(embed=embed)
 
     @site_group.command(name="resources")
-    async def site_resources(self, ctx: Context):
+    async def site_resources(self, ctx: Context) -> None:
         """Info about the site's Resources page."""
-
         learning_url = f"{PAGES_URL}/resources"
-        tools_url = f"{PAGES_URL}/tools"
 
-        embed = Embed(title="Resources & Tools")
-        embed.set_footer(text=f"{learning_url} | {tools_url}")
+        embed = Embed(title="Resources")
+        embed.set_footer(text=f"{learning_url}")
         embed.colour = Colour.blurple()
         embed.description = (
             f"The [Resources page]({learning_url}) on our website contains a "
-            "list of hand-selected goodies that we regularly recommend "
-            f"to both beginners and experts. The [Tools page]({tools_url}) "
-            "contains a couple of the most popular tools for programming in "
-            "Python."
+            "list of hand-selected learning resources that we regularly recommend "
+            f"to both beginners and experts."
+        )
+
+        await ctx.send(embed=embed)
+
+    @site_group.command(name="tools")
+    async def site_tools(self, ctx: Context) -> None:
+        """Info about the site's Tools page."""
+        tools_url = f"{PAGES_URL}/tools"
+
+        embed = Embed(title="Tools")
+        embed.set_footer(text=f"{tools_url}")
+        embed.colour = Colour.blurple()
+        embed.description = (
+            f"The [Tools page]({tools_url}) on our website contains a "
+            f"couple of the most popular tools for programming in Python."
         )
 
         await ctx.send(embed=embed)
 
     @site_group.command(name="help")
-    async def site_help(self, ctx: Context):
+    async def site_help(self, ctx: Context) -> None:
         """Info about the site's Getting Help page."""
-
         url = f"{PAGES_URL}/asking-good-questions"
 
         embed = Embed(title="Asking Good Questions")
@@ -80,9 +88,8 @@ class Site(Cog):
         await ctx.send(embed=embed)
 
     @site_group.command(name="faq")
-    async def site_faq(self, ctx: Context):
+    async def site_faq(self, ctx: Context) -> None:
         """Info about the site's FAQ page."""
-
         url = f"{PAGES_URL}/frequently-asked-questions"
 
         embed = Embed(title="FAQ")
@@ -99,14 +106,8 @@ class Site(Cog):
 
     @site_group.command(aliases=['r', 'rule'], name='rules')
     @redirect_output(destination_channel=Channels.bot, bypass_roles=STAFF_ROLES)
-    async def site_rules(self, ctx: Context, *rules: int):
-        """
-        Provides a link to the `rules` endpoint of the website, or displays
-        specific rules, if they are requested.
-
-        **`ctx`:** The Discord message context
-        **`rules`:** The rules a user wants to get.
-        """
+    async def site_rules(self, ctx: Context, *rules: int) -> None:
+        """Provides a link to all rules or, if specified, displays specific rule(s)."""
         rules_embed = Embed(title='Rules', color=Colour.blurple())
         rules_embed.url = f"{PAGES_URL}/rules"
 
@@ -138,6 +139,7 @@ class Site(Cog):
         await LinePaginator.paginate(final_rules, ctx, rules_embed, max_lines=3)
 
 
-def setup(bot):
+def setup(bot: Bot) -> None:
+    """Site cog load."""
     bot.add_cog(Site(bot))
     log.info("Cog loaded: Site")

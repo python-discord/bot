@@ -3,7 +3,7 @@ import logging
 from discord import Message, NotFound, Object
 from discord.ext.commands import Bot, Cog, Context, command
 
-from bot.cogs.modlog import ModLog
+from bot.cogs.moderation import ModLog
 from bot.constants import Channels, Event, Roles
 from bot.decorators import InChannelCheckFailure, in_channel, without_role
 
@@ -29,19 +29,19 @@ If you'd like to unsubscribe from the announcement notifications, simply send `!
 
 
 class Verification(Cog):
-    """
-    User verification and role self-management
-    """
+    """User verification and role self-management."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
 
     @property
     def mod_log(self) -> ModLog:
+        """Get currently loaded ModLog cog instance."""
         return self.bot.get_cog("ModLog")
 
     @Cog.listener()
-    async def on_message(self, message: Message):
+    async def on_message(self, message: Message) -> None:
+        """Check new message event for messages to the checkpoint channel & process."""
         if message.author.bot:
             return  # They're a bot, ignore
 
@@ -75,11 +75,8 @@ class Verification(Cog):
     @command(name='accept', aliases=('verify', 'verified', 'accepted'), hidden=True)
     @without_role(Roles.verified)
     @in_channel(Channels.verification)
-    async def accept_command(self, ctx: Context, *_):  # We don't actually care about the args
-        """
-        Accept our rules and gain access to the rest of the server
-        """
-
+    async def accept_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
+        """Accept our rules and gain access to the rest of the server."""
         log.debug(f"{ctx.author} called !accept. Assigning the 'Developer' role.")
         await ctx.author.add_roles(Object(Roles.verified), reason="Accepted the rules")
         try:
@@ -98,11 +95,8 @@ class Verification(Cog):
 
     @command(name='subscribe')
     @in_channel(Channels.bot)
-    async def subscribe_command(self, ctx: Context, *_):  # We don't actually care about the args
-        """
-        Subscribe to announcement notifications by assigning yourself the role
-        """
-
+    async def subscribe_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
+        """Subscribe to announcement notifications by assigning yourself the role."""
         has_role = False
 
         for role in ctx.author.roles:
@@ -111,9 +105,8 @@ class Verification(Cog):
                 break
 
         if has_role:
-            return await ctx.send(
-                f"{ctx.author.mention} You're already subscribed!",
-            )
+            await ctx.send(f"{ctx.author.mention} You're already subscribed!")
+            return
 
         log.debug(f"{ctx.author} called !subscribe. Assigning the 'Announcements' role.")
         await ctx.author.add_roles(Object(Roles.announcements), reason="Subscribed to announcements")
@@ -126,11 +119,8 @@ class Verification(Cog):
 
     @command(name='unsubscribe')
     @in_channel(Channels.bot)
-    async def unsubscribe_command(self, ctx: Context, *_):  # We don't actually care about the args
-        """
-        Unsubscribe from announcement notifications by removing the role from yourself
-        """
-
+    async def unsubscribe_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
+        """Unsubscribe from announcement notifications by removing the role from yourself."""
         has_role = False
 
         for role in ctx.author.roles:
@@ -139,9 +129,8 @@ class Verification(Cog):
                 break
 
         if not has_role:
-            return await ctx.send(
-                f"{ctx.author.mention} You're already unsubscribed!"
-            )
+            await ctx.send(f"{ctx.author.mention} You're already unsubscribed!")
+            return
 
         log.debug(f"{ctx.author} called !unsubscribe. Removing the 'Announcements' role.")
         await ctx.author.remove_roles(Object(Roles.announcements), reason="Unsubscribed from announcements")
@@ -152,24 +141,22 @@ class Verification(Cog):
             f"{ctx.author.mention} Unsubscribed from <#{Channels.announcements}> notifications."
         )
 
-    @staticmethod
-    async def cog_command_error(ctx: Context, error):
+    # This cannot be static (must have a __func__ attribute).
+    async def cog_command_error(self, ctx: Context, error: Exception) -> None:
+        """Check for & ignore any InChannelCheckFailure."""
         if isinstance(error, InChannelCheckFailure):
-            # Do nothing; just ignore this error
             error.handled = True
 
     @staticmethod
-    def bot_check(ctx: Context):
-        """
-        Block any command within the verification channel that is not !accept.
-        """
-
+    def bot_check(ctx: Context) -> bool:
+        """Block any command within the verification channel that is not !accept."""
         if ctx.channel.id == Channels.verification:
             return ctx.command.name == "accept"
         else:
             return True
 
 
-def setup(bot):
+def setup(bot: Bot) -> None:
+    """Verification cog load."""
     bot.add_cog(Verification(bot))
     log.info("Cog loaded: Verification")
