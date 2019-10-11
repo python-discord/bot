@@ -165,18 +165,21 @@ class Verification(Cog):
 
     @tasks.loop(hours=12)
     async def periodic_ping(self) -> None:
-        """Post a recap message every week with an @everyone."""
-        messages = self.bot.get_channel(Channels.verification).history(limit=10)  # check lasts messages
-        need_to_post = True  # if the bot has to post a new message in the channel
+        """Every week, mention @everyone to remind them to verify."""
+        messages = self.bot.get_channel(Channels.verification).history(limit=10)
+        need_to_post = True  # True if a new message needs to be sent.
+
         async for message in messages:
-            if message.content == PERIODIC_PING:  # to be sure to measure timelaps between two identical messages
-                delta = datetime.utcnow() - message.created_at  # time since last periodic ping
-                if delta.days >= 7:  # if the message is older than a week
+            if message.content == PERIODIC_PING:
+                delta = datetime.utcnow() - message.created_at  # Time since last message.
+                if delta.days >= 7:  # Message is older than a week.
                     await message.delete()
                 else:
                     need_to_post = False
+
                 break
-        if need_to_post:  # if the bot did not posted yet
+
+        if need_to_post:
             await self.bot.get_channel(Channels.verification).send(PERIODIC_PING)
 
     @periodic_ping.before_loop
