@@ -170,7 +170,7 @@ class Verification(Cog):
         need_to_post = True  # True if a new message needs to be sent.
 
         async for message in messages:
-            if message.content == PERIODIC_PING:
+            if message.author == self.bot.user and message.content == PERIODIC_PING:
                 delta = datetime.utcnow() - message.created_at  # Time since last message.
                 if delta.days >= 7:  # Message is older than a week.
                     await message.delete()
