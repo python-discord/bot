@@ -6,8 +6,7 @@ import typing
 from typing import Any, Mapping, Optional
 
 import discord
-from discord import CategoryChannel, Colour, Embed, Member, TextChannel, VoiceChannel
-from discord import Role, utils
+from discord import CategoryChannel, Colour, Embed, Member, Role, TextChannel, VoiceChannel, utils
 from discord.ext import commands
 from discord.ext.commands import Bot, Cog, Context, command, group
 
@@ -290,7 +289,7 @@ class Information(Cog):
             add_content('Raw message', message.content)
 
         transformer = pprint.pformat if json else self.format_fields
-        for field_name in 'embeds attachments'.split():
+        for field_name in ('embeds', 'attachments'):
             data = raw_data[field_name]
 
             if not data:
