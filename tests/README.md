@@ -1,6 +1,6 @@
 # Testing our Bot
 
-Our bot is one of the most important tools we have for running our community. As we don't want that tool tool break, we decided that we wanted to write unit tests for it. We hope that in the future, we'll have a 100% test coverage for the bot. This guide will help you get started with writing the tests needed to achieve that.
+Our bot is one of the most important tools we have for running our community. As we don't want that tool break, we decided that we wanted to write unit tests for it. We hope that in the future, we'll have a 100% test coverage for the bot. This guide will help you get started with writing the tests needed to achieve that.
 
 _**Note:** This is a practical guide to getting started with writing tests for our bot, not a general introduction to writing unit tests in Python. If you're looking for a more general introduction, you may like Corey Schafer's [Python Tutorial: Unit Testing Your Code with the unittest Module](https://www.youtube.com/watch?v=6tNS--WetLI) or Ned Batchelder's PyCon talk [Getting Started Testing](https://www.youtube.com/watch?v=FxSsnHeWQBY)._
 
@@ -31,7 +31,7 @@ All files containing tests should have a filename starting with `test_` to make 
 
 ### Writing independent tests
 
-When writing unit tests, it's really important to make sure each test that you write runs independently from all of the other tests. This both means that the code you write for one test shouldn't influence the result of another test and that if one tests fails, the other tests should still run.
+When writing unit tests, it's really important to make sure that each test that you write runs independently from all of the other tests. This both means that the code you write for one test shouldn't influence the result of another test and that if one tests fails, the other tests should still run.
 
 The basis for this is that when you write a test method, it should really only test a single aspect of the thing you're testing. This often means that you do not write one large test that tests "everything" that can be tested for a function, but rather that you write multiple smaller tests that each test a specific branch/path/condition of the function under scrutiny.
 
@@ -39,7 +39,7 @@ To make sure you're not repeating the same set-up steps in all these smaller tes
 
 #### Method names and docstrings
 
-As you can probably imagine, writing smaller, independent tests also means that the number of tests will be large. This means that it is incredibly import to use good method names to identify what each test is doing. A general guideline is that the name should capture the goal of your test: What is this test method trying to assert?
+As you can probably imagine, writing smaller, independent tests also results in a large number of tests. To make sure that it's easy to see which test does what, it is incredibly important to use good method names to identify what each test is doing. A general guideline is that the name should capture the goal of your test: What is this test method trying to assert?
 
 In addition to good method names, it's also really important to write a good *single-line* docstring. The `unittest` module will print such a single-line docstring along with the method name in the output it gives when a test fails. This means that a good docstring that really captures the purpose of the test makes it much easier to quickly make sense of output.
 
@@ -47,8 +47,7 @@ In addition to good method names, it's also really important to write a good *si
 
 Another thing that you will probably encounter is that you want to test a function against a list of input and output values. Given the section on writing independent tests, you may now be tempted to copy-paste the same test method over and over again, once for each unique value that you want to test. However, that would result in a lot of duplicate code that is hard to maintain.
 
-
-Luckily, `unittest` provides a good alternative to that: the [`subTest`](https://docs.python.org/3/library/unittest.html#distinguishing-test-iterations-using-subtests) context manager. It is often used in conjunction with a `for`-loop iterating of a collection of values you want to test your function against and it provides two important features. First, it will make sure that if an assertion statements fails on of the iterations, the other iterations are still run. The other important feature it provides is that it will distinguish your iterations from each other in the output.
+Luckily, `unittest` provides a good alternative to that: the [`subTest`](https://docs.python.org/3/library/unittest.html#distinguishing-test-iterations-using-subtests) context manager. This method is often used in conjunction with a `for`-loop iterating of a collection of values that we want to test a function against and it provides two important features. First, it will make sure that if an assertion statements fails on one of the iterations, the other iterations are still run. The other important feature it provides is that it will distinguish the iterations from each other in the output.
 
 This is an example of `TestCase.subTest` in action (taken from [`test_converters.py`](/tests/bot/test_converters.py)):
 
@@ -80,12 +79,12 @@ TagContentConverter should return correct values for valid input.
 
 ## Mocking
 
-As we are trying to test our "units" of code independently, we want to make sure that we do not rely objects and data generated by "external" code. If we we did, then we wouldn't know if the failure we're observing was caused by the code we are actually trying to test or an external piece of code. 
+As we are trying to test our "units" of code independently, we want to make sure that we do not rely objects and data generated by "external" code. If we we did, then we wouldn't know if the failure we're observing was caused by the code we are actually trying to test or something external to it.
 
 
-However, the features that we are trying to test often depend on those objects generated by other pieces of code. It would be difficult to test a bot command, without having access to a `Context` instance. Fortunately, there's a solution for that: we use fake objects that act like the true object. We call these fake objects "mocks". 
+However, the features that we are trying to test often depend on those objects generated by external pieces of code. It would be difficult to test a bot command without having access to a `Context` instance. Fortunately, there's a solution for that: we use fake objects that act like the true object. We call these fake objects "mocks". 
 
-To create these mock object, we mainly use the [`unittest.mock`](https://docs.python.org/3/library/unittest.mock.html) module. In addition, we also defined a couple of specialized mock objects that mock specific `discord.py` types (see the section on the below.).
+To create these mock object, we mainly use the [`unittest.mock`](https://docs.python.org/3/library/unittest.mock.html) module. In addition, we have also defined a couple of specialized mock objects that mock specific `discord.py` types (see the section on the below.).
 
 An example of mocking is when we provide a command with a mocked version of `discord.ext.commands.Context` object instead of a real `Context` object. This makes sure we can then check (_assert_) if the `send` method of the mocked Context object was called with the correct message content (without having to send a real message to the Discord API!):
 
