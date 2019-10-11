@@ -30,9 +30,11 @@ class Reminders(Scheduler, Cog):
         self.bot = bot
         super().__init__()
 
-    @Cog.listener()
-    async def on_ready(self) -> None:
+        self.bot.loop.create_task(self.reschedule_reminders())
+
+    async def reschedule_reminders(self) -> None:
         """Get all current reminders from the API and reschedule them."""
+        await self.bot.wait_until_ready()
         response = await self.bot.api_client.get(
             'bot/reminders',
             params={'active': 'true'}
