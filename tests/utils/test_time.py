@@ -16,6 +16,17 @@ from tests.helpers import AsyncMock
         (relativedelta(days=2, hours=2), 'seconds', 2, '2 days and 2 hours'),
         (relativedelta(days=2, hours=2), 'seconds', 1, '2 days'),
         (relativedelta(days=2, hours=2), 'days', 2, '2 days'),
+
+        # Does not abort for unknown units, as the unit name is checked
+        # against the attribute of the relativedelta instance.
+        (relativedelta(days=2, hours=2), 'elephants', 2, '2 days and 2 hours'),
+
+        # Very high maximum units, but it only ever iterates over
+        # each value the relativedelta might have.
+        (relativedelta(days=2, hours=2), 'hours', 20, '2 days and 2 hours'),
+
+        # Negative maximum units.
+        (relativedelta(days=2, hours=2), 'hours', -1, 'less than a hour'),
     )
 )
 def test_humanize_delta(
