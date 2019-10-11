@@ -96,14 +96,36 @@ class OffTopicNames(Cog):
     @otname_group.command(name='add', aliases=('a',))
     @with_role(*MODERATION_ROLES)
     async def add_command(self, ctx: Context, *names: OffTopicName) -> None:
-        """Adds a new off-topic name to the rotation."""
+        """
+        Adds a new off-topic name to the rotation.
+
+        The name is not added if it is too similar to an existing name.
+        """
         # Chain multiple words to a single one
         name = "-".join(names)
 
+        existing_names = await self.bot.api_client.get('bot/off-topic-channel-names')
+        close_match = difflib.get_close_matches(name, existing_names, n=1, cutoff=0.8)
+
+        if close_match:
+            match = close_match[0]
+            log.info(
+                f"{ctx.author.name}#{ctx.author.discriminator}"
+                f" tried to add channel name '{name}' but it was too similar to '{match}'"
+            )
+            await ctx.send(
+                f":x: The channel name `{name}` is too similar to `{match}`, and thus was not added. "
+                f"Use `!otn forceadd` to override this check."
+            )
+        else:
+            await self._add_name(ctx, name)
+
+    async def _add_name(self, ctx: Context, name: str) -> None:
+        """Adds an off-topic channel name to the site storage."""
         await self.bot.api_client.post(f'bot/off-topic-channel-names', params={'name': name})
         log.info(
             f"{ctx.author.name}#{ctx.author.discriminator}"
-            f" added the off-topic channel name '{name}"
+            f" added the off-topic channel name '{name}'"
         )
         await ctx.send(f":ok_hand: Added `{name}` to the names list.")
 
