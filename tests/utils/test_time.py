@@ -24,9 +24,6 @@ from tests.helpers import AsyncMock
         # Very high maximum units, but it only ever iterates over
         # each value the relativedelta might have.
         (relativedelta(days=2, hours=2), 'hours', 20, '2 days and 2 hours'),
-
-        # Negative maximum units.
-        (relativedelta(days=2, hours=2), 'hours', -1, 'less than a hour'),
     )
 )
 def test_humanize_delta(
@@ -36,6 +33,12 @@ def test_humanize_delta(
         expected: str
 ):
     assert time.humanize_delta(delta, precision, max_units) == expected
+
+
+@pytest.mark.parametrize('max_units', (-1, 0))
+def test_humanize_delta_raises_for_invalid_max_units(max_units: int):
+    with pytest.raises(ValueError, match='max_units must be positive'):
+        time.humanize_delta(relativedelta(days=2, hours=2), 'hours', max_units)
 
 
 @pytest.mark.parametrize(

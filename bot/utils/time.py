@@ -35,6 +35,9 @@ def humanize_delta(delta: relativedelta, precision: str = "seconds", max_units: 
     precision specifies the smallest unit of time to include (e.g. "seconds", "minutes").
     max_units specifies the maximum number of units of time to include (e.g. 1 may include days but not hours).
     """
+    if max_units <= 0:
+        raise ValueError("max_units must be positive")
+
     units = (
         ("years", delta.years),
         ("months", delta.months),
