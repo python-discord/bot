@@ -43,13 +43,6 @@ jobs:
           codeCoverageTool: Cobertura
           summaryFileLocation: coverage.xml
 
-      - task: PublishTestResults@2
-        displayName: 'Publish Test Results'
-        condition: succeededOrFailed()
-        inputs:
-          testResultsFiles: junit.xml
-          testRunTitle: 'Bot Test results'
-
   - job: build
     displayName: 'Build & Push Container'
     dependsOn: 'test'

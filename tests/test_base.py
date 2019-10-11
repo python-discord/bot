@@ -3,7 +3,7 @@ import unittest
 import unittest.mock
 
 
-from tests.base import LoggingTestCase
+from tests.base import LoggingTestCase, _CaptureLogHandler
 
 
 class LoggingTestCaseTests(unittest.TestCase):
@@ -59,3 +59,33 @@ class LoggingTestCaseTests(unittest.TestCase):
         self.assertEqual(self.log.handlers, old_handlers)
         self.assertEqual(self.log.level, old_level)
         self.assertEqual(self.log.propagate, old_propagate)
+
+    def test_logging_test_case_works_with_logger_instance(self):
+        """Test if the LoggingTestCase captures logging for provided logger."""
+        log = logging.getLogger("new_logger")
+        with self.assertRaises(AssertionError):
+            with LoggingTestCase.assertNotLogs(self, logger=log):
+                log.info("Hello, this should raise an AssertionError")
+
+    def test_logging_test_case_respects_alternative_logger(self):
+        """Test if LoggingTestCase only checks the provided logger."""
+        log_one = logging.getLogger("log one")
+        log_two = logging.getLogger("log two")
+        with LoggingTestCase.assertNotLogs(self, logger=log_one):
+            log_two.info("Hello, this should not raise an AssertionError")
+
+    def test_logging_test_case_respects_logging_level(self):
+        """Test if LoggingTestCase does not raise for a logging level lower than provided."""
+        with LoggingTestCase.assertNotLogs(self, level=logging.CRITICAL):
+            self.log.info("Hello, this should raise an AssertionError")
+
+    def test_capture_log_handler_default_initialization(self):
+        """Test if the _CaptureLogHandler is initialized properly."""
+        handler = _CaptureLogHandler()
+        self.assertFalse(handler.records)
+
+    def test_capture_log_handler_saves_record_on_emit(self):
+        """Test if the _CaptureLogHandler saves the log record when it's emitted."""
+        handler = _CaptureLogHandler()
+        handler.emit("Log message")
+        self.assertIn("Log message", handler.records)

@@ -12,9 +12,6 @@ class _CaptureLogHandler(logging.Handler):
         super().__init__()
         self.records = []
 
-    def flush(self):
-        pass
-
     def emit(self, record):
         self.records.append(record)
 
