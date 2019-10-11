@@ -7,6 +7,10 @@ __all__ = ('AsyncMock', 'async_test')
 
 
 # TODO: Remove me on 3.8
+# Allows you to mock a coroutine. Since the default `__call__` of `MagicMock`
+# is not a coroutine, trying to mock a coroutine with it will result in errors
+# as the default `__call__` is not awaitable. Use this class for monkeypatching
+# coroutines instead.
 class AsyncMock(MagicMock):
     async def __call__(self, *args, **kwargs):
         return super(AsyncMock, self).__call__(*args, **kwargs)
