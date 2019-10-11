@@ -261,7 +261,6 @@ class Infractions(Scheduler, commands.Cog):
         if infraction is None:
             return
 
-        self.mod_log.ignore(Event.member_ban, user.id)
         self.mod_log.ignore(Event.member_remove, user.id)
 
         action = ctx.guild.ban(user, reason=reason, delete_message_days=0)

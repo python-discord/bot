@@ -353,7 +353,7 @@ class ModLog(Cog, name="ModLog"):
 
     @Cog.listener()
     async def on_member_ban(self, guild: discord.Guild, member: UserTypes) -> None:
-        """Log ban event to mod log."""
+        """Log ban event to user log."""
         if guild.id != GuildConstant.id:
             return
 
@@ -365,7 +365,7 @@ class ModLog(Cog, name="ModLog"):
             Icons.user_ban, Colours.soft_red,
             "User banned", f"{member.name}#{member.discriminator} (`{member.id}`)",
             thumbnail=member.avatar_url_as(static_format="png"),
-            channel_id=Channels.modlog
+            channel_id=Channels.userlog
         )
 
     @Cog.listener()
