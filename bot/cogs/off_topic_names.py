@@ -120,6 +120,14 @@ class OffTopicNames(Cog):
         else:
             await self._add_name(ctx, name)
 
+    @otname_group.command(name='forceadd', aliases=('fa',))
+    @with_role(*MODERATION_ROLES)
+    async def force_add_command(self, ctx: Context, *names: OffTopicName) -> None:
+        """Forcefully adds a new off-topic name to the rotation."""
+        # Chain multiple words to a single one
+        name = "-".join(names)
+        await self._add_name(ctx, name)
+
     async def _add_name(self, ctx: Context, name: str) -> None:
         """Adds an off-topic channel name to the site storage."""
         await self.bot.api_client.post(f'bot/off-topic-channel-names', params={'name': name})
