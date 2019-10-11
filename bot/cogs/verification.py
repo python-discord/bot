@@ -5,7 +5,7 @@ from discord import Message, NotFound, Object
 from discord.ext import tasks
 from discord.ext.commands import Bot, Cog, Context, command
 
-from bot.cogs.modlog import ModLog
+from bot.cogs.moderation import ModLog
 from bot.constants import Bot as BotConfig, Channels, Event, Roles
 from bot.decorators import InChannelCheckFailure, in_channel, without_role
 

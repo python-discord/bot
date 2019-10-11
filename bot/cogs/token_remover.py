@@ -9,7 +9,7 @@ from discord import Colour, Message
 from discord.ext.commands import Bot, Cog
 from discord.utils import snowflake_time
 
-from bot.cogs.modlog import ModLog
+from bot.cogs.moderation import ModLog
 from bot.constants import Channels, Colours, Event, Icons
 
 log = logging.getLogger(__name__)
@@ -26,11 +26,11 @@ DELETION_MESSAGE_TEMPLATE = (
 DISCORD_EPOCH_TIMESTAMP = datetime(2017, 1, 1)
 TOKEN_EPOCH = 1_293_840_000
 TOKEN_RE = re.compile(
-    r"[^\s\.]+"     # Matches token part 1: The user ID string, encoded as base64
-    r"\."           # Matches a literal dot between the token parts
-    r"[^\s\.]+"     # Matches token part 2: The creation timestamp, as an integer
-    r"\."           # Matches a literal dot between the token parts
-    r"[^\s\.]+"     # Matches token part 3: The HMAC, unused by us, but check that it isn't empty
+    r"[^\s\.()\"']+"  # Matches token part 1: The user ID string, encoded as base64
+    r"\."             # Matches a literal dot between the token parts
+    r"[^\s\.()\"']+"  # Matches token part 2: The creation timestamp, as an integer
+    r"\."             # Matches a literal dot between the token parts
+    r"[^\s\.()\"']+"  # Matches token part 3: The HMAC, unused by us, but check that it isn't empty
 )
 
 

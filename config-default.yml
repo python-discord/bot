@@ -282,7 +282,7 @@ anti_spam:
     rules:
         attachments:
             interval: 10
-            max: 3
+            max: 9
 
         burst:
             interval: 10

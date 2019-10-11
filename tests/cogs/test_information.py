@@ -8,6 +8,8 @@ import pytest
 from discord import (
     CategoryChannel,
     Colour,
+    Permissions,
+    Role,
     TextChannel,
     VoiceChannel,
 )
@@ -65,6 +67,52 @@ def test_roles_info_command(cog, ctx):
     assert embed.description == f"`{ctx.guild.roles[0].id}` - {ctx.guild.roles[0].mention}\n"
     assert embed.footer.text == "Total roles: 1"
 
+
+def test_role_info_command(cog, ctx):
+    dummy_role = MagicMock(spec=Role)
+    dummy_role.name = "Dummy"
+    dummy_role.colour = Colour.blurple()
+    dummy_role.id = 112233445566778899
+    dummy_role.position = 10
+    dummy_role.permissions = Permissions(0)
+    dummy_role.members = [ctx.author]
+
+    admin_role = MagicMock(spec=Role)
+    admin_role.name = "Admin"
+    admin_role.colour = Colour.red()
+    admin_role.id = 998877665544332211
+    admin_role.position = 3
+    admin_role.permissions = Permissions(0)
+    admin_role.members = [ctx.author]
+
+    ctx.guild.roles = [dummy_role, admin_role]
+
+    cog.role_info.can_run = AsyncMock()
+    cog.role_info.can_run.return_value = True
+
+    coroutine = cog.role_info.callback(cog, ctx, dummy_role, admin_role)
+
+    assert asyncio.run(coroutine) is None
+
+    assert ctx.send.call_count == 2
+
+    (_, dummy_kwargs), (_, admin_kwargs) = ctx.send.call_args_list
+
+    dummy_embed = dummy_kwargs["embed"]
+    admin_embed = admin_kwargs["embed"]
+
+    assert dummy_embed.title == "Dummy info"
+    assert dummy_embed.colour == Colour.blurple()
+
+    assert dummy_embed.fields[0].value == str(dummy_role.id)
+    assert dummy_embed.fields[1].value == f"#{dummy_role.colour.value:0>6x}"
+    assert dummy_embed.fields[2].value == "0.63 0.48 218"
+    assert dummy_embed.fields[3].value == "1"
+    assert dummy_embed.fields[4].value == "10"
+    assert dummy_embed.fields[5].value == "0"
+
+    assert admin_embed.title == "Admin info"
+    assert admin_embed.colour == Colour.red()
 
 # There is no argument passed in here that we can use to test,
 # so the return value would change constantly.
