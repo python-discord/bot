@@ -126,9 +126,11 @@ class Doc(commands.Cog):
         self.bot = bot
         self.inventories = {}
 
-    @commands.Cog.listener()
-    async def on_ready(self) -> None:
-        """Refresh documentation inventory."""
+        self.bot.loop.create_task(self.init_refresh_inventory())
+
+    async def init_refresh_inventory(self) -> None:
+        """Refresh documentation inventory on cog initialization."""
+        await self.bot.wait_until_ready()
         await self.refresh_inventory()
 
     async def update_single(
