@@ -8,7 +8,6 @@ from discord.errors import Forbidden
 from discord.ext.commands import Bot, Cog, Context, command
 
 from bot import constants
-from bot.converters import Duration
 from bot.utils.checks import with_role_check
 from bot.utils.time import format_infraction
 from . import utils
@@ -144,21 +143,30 @@ class Superstarify(Cog):
             )
 
     @command(name='superstarify', aliases=('force_nick', 'star'))
-    async def superstarify(
-        self, ctx: Context, member: Member, expiration: Duration, reason: str = None
-    ) -> None:
+    async def superstarify(self, ctx: Context, member: Member, duration: utils.Expiry, reason: str = None) -> None:
         """
         Force a random superstar name (like Taylor Swift) to be the user's nickname for a specified duration.
 
-        An optional reason can be provided.
+        A unit of time should be appended to the duration.
+        Units (∗case-sensitive):
+        \u2003`y` - years
+        \u2003`m` - months∗
+        \u2003`w` - weeks
+        \u2003`d` - days
+        \u2003`h` - hours
+        \u2003`M` - minutes∗
+        \u2003`s` - seconds
 
-        If no reason is given, the original name will be shown in a generated reason.
+        Alternatively, an ISO 8601 timestamp can be provided for the duration.
+
+        An optional reason can be provided. If no reason is given, the original name will be shown
+        in a generated reason.
         """
         if await utils.has_active_infraction(ctx, member, "superstar"):
             return
 
         reason = reason or ('old nick: ' + member.display_name)
-        infraction = await utils.post_infraction(ctx, member, 'superstar', reason, expires_at=expiration)
+        infraction = await utils.post_infraction(ctx, member, 'superstar', reason, expires_at=duration)
         forced_nick = self.get_nick(infraction['id'], member.id)
         expiry_str = format_infraction(infraction["expires_at"])
 

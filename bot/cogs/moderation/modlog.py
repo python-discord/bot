@@ -20,7 +20,7 @@ GUILD_CHANNEL = t.Union[discord.CategoryChannel, discord.TextChannel, discord.Vo
 
 CHANNEL_CHANGES_UNSUPPORTED = ("permissions",)
 CHANNEL_CHANGES_SUPPRESSED = ("_overwrites", "position")
-MEMBER_CHANGES_SUPPRESSED = ("status", "activities", "_client_status")
+MEMBER_CHANGES_SUPPRESSED = ("status", "activities", "_client_status", "nick")
 ROLE_CHANGES_UNSUPPORTED = ("colour", "permissions")
 
 
@@ -353,7 +353,7 @@ class ModLog(Cog, name="ModLog"):
 
     @Cog.listener()
     async def on_member_ban(self, guild: discord.Guild, member: UserTypes) -> None:
-        """Log ban event to mod log."""
+        """Log ban event to user log."""
         if guild.id != GuildConstant.id:
             return
 
@@ -365,7 +365,7 @@ class ModLog(Cog, name="ModLog"):
             Icons.user_ban, Colours.soft_red,
             "User banned", f"{member.name}#{member.discriminator} (`{member.id}`)",
             thumbnail=member.avatar_url_as(static_format="png"),
-            channel_id=Channels.modlog
+            channel_id=Channels.userlog
         )
 
     @Cog.listener()
@@ -496,6 +496,11 @@ class ModLog(Cog, name="ModLog"):
         if before.discriminator != after.discriminator:
             changes.append(
                 f"**Discriminator:** `{before.discriminator}` **->** `{after.discriminator}`"
+            )
+
+        if before.display_name != after.display_name:
+            changes.append(
+                f"**Display name:** `{before.display_name}` **->** `{after.display_name}`"
             )
 
         if not changes:

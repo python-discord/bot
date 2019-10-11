@@ -5,6 +5,7 @@ from typing import Union
 from discord import Colour, Embed, Member, User
 from discord.ext.commands import Bot, Cog, Command, Context, clean_content, command, group
 
+from bot.cogs.extensions import Extension
 from bot.cogs.watchchannels.watchchannel import proxy_user
 from bot.converters import TagNameConverter
 from bot.pagination import LinePaginator
@@ -84,9 +85,9 @@ class Alias (Cog):
         await self.invoke(ctx, "site rules")
 
     @command(name="reload", hidden=True)
-    async def cogs_reload_alias(self, ctx: Context, *, cog_name: str) -> None:
-        """Alias for invoking <prefix>cogs reload [cog_name]."""
-        await self.invoke(ctx, "cogs reload", cog_name)
+    async def extensions_reload_alias(self, ctx: Context, *extensions: Extension) -> None:
+        """Alias for invoking <prefix>extensions reload [extensions...]."""
+        await self.invoke(ctx, "extensions reload", *extensions)
 
     @command(name="defon", hidden=True)
     async def defcon_enable_alias(self, ctx: Context) -> None:
