@@ -132,7 +132,7 @@ class Superstarify(Cog):
             # Log to the mod_log channel
             log.trace("Logging to the #mod-log channel. This could fail because of channel permissions.")
             mod_log_message = (
-                f"**{member.name}#{member.discriminator}** (`{member.id}`)\n\n"
+                f"**{member}** (`{member.id}`)\n\n"
                 f"Superstarified member potentially tried to escape the prison.\n"
                 f"Restored enforced nickname: `{forced_nick}`\n"
                 f"Superstardom ends: **{end_timestamp_human}**"
@@ -192,7 +192,7 @@ class Superstarify(Cog):
         # Log to the mod_log channel
         log.trace("Logging to the #mod-log channel. This could fail because of channel permissions.")
         mod_log_message = (
-            f"**{member.name}#{member.discriminator}** (`{member.id}`)\n\n"
+            f"**{member}** (`{member.id}`)\n\n"
             f"Superstarified by **{ctx.author.name}**\n"
             f"Old nickname: `{member.display_name}`\n"
             f"New nickname: `{forced_nick}`\n"

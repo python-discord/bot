@@ -59,7 +59,7 @@ class DeletionContext:
 
     async def upload_messages(self, actor_id: int, modlog: ModLog) -> None:
         """Method that takes care of uploading the queue and posting modlog alert."""
-        triggered_by_users = ", ".join(f"{m.display_name}#{m.discriminator} (`{m.id}`)" for m in self.members.values())
+        triggered_by_users = ", ".join(f"{m} (`{m.id}`)" for m in self.members.values())
 
         mod_alert_message = (
             f"**Triggered by:** {triggered_by_users}\n"
