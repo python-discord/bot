@@ -190,7 +190,7 @@ class CustomHelpCommand(HelpCommand):
 
         # check if the user is allowed to run this command
         if not await command.can_run(self.context):
-            fmt += "**You cannot run this command.**"
+            fmt += "***You cannot run this command.***\n\n"
 
         fmt += f"*{command.help or 'No details provided.'}*\n"
         embed.description = fmt
@@ -239,7 +239,7 @@ class CustomHelpCommand(HelpCommand):
 
         lines = [
             f"`{PREFIX}{c.qualified_name}{f' {c.signature}' if c.signature else ''}`"
-            f"\n*{c.short_doc or 'No details provided.'}*\n" for c in _commands
+            f"\n*{c.short_doc or 'No details provided.'}*" for c in _commands
         ]
         embed.description += "\n".join(n for n in lines)
 
