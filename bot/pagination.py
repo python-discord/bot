@@ -1,8 +1,9 @@
 import asyncio
 import logging
+from contextlib import suppress
 from typing import Iterable, List, Optional, Tuple
 
-from discord import Embed, Member, Message, Reaction
+from discord import Embed, HTTPException, Member, Message, Reaction
 from discord.abc import User
 from discord.ext.commands import Context, Paginator
 
@@ -99,7 +100,9 @@ class LinePaginator(Paginator):
         timeout: int = 300,
         footer_text: str = None,
         url: str = None,
-        exception_on_empty_embed: bool = False
+        exception_on_empty_embed: bool = False,
+        description: str = '',
+        cleanup: bool = False
     ) -> Optional[Message]:
         """
         Use a paginator and set of reactions to provide pagination over a set of lines.
@@ -110,6 +113,9 @@ class LinePaginator(Paginator):
         be used to change page, or to remove pagination from the message.
 
         Pagination will also be removed automatically if no reaction is added for five minutes (300 seconds).
+
+        The description is a string that should appear at the top of every page.
+        If cleanup is True, the paginated message will be deleted when :x: reaction is added.
 
         Example:
         >>> embed = Embed()
@@ -161,7 +167,7 @@ class LinePaginator(Paginator):
 
         log.debug(f"Paginator created with {len(paginator.pages)} pages")
 
-        embed.description = paginator.pages[current_page]
+        embed.description = description + paginator.pages[current_page]
 
         if len(paginator.pages) <= 1:
             if footer_text:
@@ -205,6 +211,11 @@ class LinePaginator(Paginator):
 
             if reaction.emoji == DELETE_EMOJI:
                 log.debug("Got delete reaction")
+                if cleanup:
+                    with suppress(HTTPException, AttributeError):
+                        log.debug("Deleting help message")
+                        await message.delete()
+                        return
                 break
 
             if reaction.emoji == FIRST_EMOJI:
@@ -215,7 +226,7 @@ class LinePaginator(Paginator):
 
                 embed.description = ""
                 await message.edit(embed=embed)
-                embed.description = paginator.pages[current_page]
+                embed.description = description + paginator.pages[current_page]
                 if footer_text:
                     embed.set_footer(text=f"{footer_text} (Page {current_page + 1}/{len(paginator.pages)})")
                 else:
@@ -230,7 +241,7 @@ class LinePaginator(Paginator):
 
                 embed.description = ""
                 await message.edit(embed=embed)
-                embed.description = paginator.pages[current_page]
+                embed.description = description + paginator.pages[current_page]
                 if footer_text:
                     embed.set_footer(text=f"{footer_text} (Page {current_page + 1}/{len(paginator.pages)})")
                 else:
@@ -249,7 +260,7 @@ class LinePaginator(Paginator):
 
                 embed.description = ""
                 await message.edit(embed=embed)
-                embed.description = paginator.pages[current_page]
+                embed.description = description + paginator.pages[current_page]
 
                 if footer_text:
                     embed.set_footer(text=f"{footer_text} (Page {current_page + 1}/{len(paginator.pages)})")
@@ -270,7 +281,7 @@ class LinePaginator(Paginator):
 
                 embed.description = ""
                 await message.edit(embed=embed)
-                embed.description = paginator.pages[current_page]
+                embed.description = description + paginator.pages[current_page]
 
                 if footer_text:
                     embed.set_footer(text=f"{footer_text} (Page {current_page + 1}/{len(paginator.pages)})")
