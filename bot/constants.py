@@ -463,7 +463,7 @@ class AntiSpam(metaclass=YAMLGetter):
 class AntiMalware(metaclass=YAMLGetter):
     section = "anti_malware"
 
-    whitelist: tuple
+    whitelist: list
 
 
 class BigBrother(metaclass=YAMLGetter):
