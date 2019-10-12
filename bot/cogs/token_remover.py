@@ -75,6 +75,7 @@ class TokenRemover(Cog):
                 channel_id=Channels.mod_alerts,
             )
 
+    @classmethod
     def is_token_in_message(self, msg: Message) -> bool:
         """Check if `msg` contains a seemly valid token."""
         if msg.author.bot:
