@@ -6,11 +6,13 @@ from email.parser import HeaderParser
 from io import StringIO
 from typing import Tuple
 
+from dateutil import relativedelta
 from discord import Colour, Embed, Message, Role
 from discord.ext.commands import Bot, Cog, Context, command
 
 from bot.constants import Channels, MODERATION_ROLES, Mention, STAFF_ROLES
 from bot.decorators import in_channel, with_role
+from bot.utils.time import humanize_delta
 
 log = logging.getLogger(__name__)
 
@@ -129,18 +131,6 @@ class Utils(Cog):
 
         await ctx.send(embed=embed)
 
-    @staticmethod
-    def readable_time(seconds: int) -> str:
-        """Returns a number of seconds into a human-readable minutes/seconds combination."""
-        minutes, seconds = divmod(seconds, 60)
-
-        if minutes:
-            fmt = '{m}min {s}sec'
-        else:
-            fmt = '{s}sec'
-
-        return fmt.format(m=minutes, s=seconds)
-
     @command()
     @with_role(*MODERATION_ROLES)
     async def mention(self, ctx: Context, *, role: Role) -> None:
@@ -151,9 +141,9 @@ class Utils(Cog):
 
         await role.edit(reason=f"Role unlocked by {ctx.author}", mentionable=True)
 
+        human_time = humanize_delta(relativedelta.relativedelta(seconds=Mention.message_timeout))
         await ctx.send(
-            f"{role} has been made mentionable. I will reset it in "
-            f"{self.readable_time(Mention.message_timeout)} seconds, or when a staff member mentions this role."
+            f"{role} has been made mentionable. I will reset it in {human_time}, or when someone mentions this role."
         )
 
         def check(m: Message) -> bool:
@@ -163,7 +153,7 @@ class Utils(Cog):
         try:
             msg = await self.bot.wait_for("message", check=check, timeout=Mention.message_timeout)
         except TimeoutError:
-            await role.edit(mentionable=False, reason=f"Automatic role lock - timeout.")
+            await role.edit(mentionable=False, reason="Automatic role lock - timeout.")
             await ctx.send(f"{ctx.author.mention}, you took too long. I have reset {role} to be unmentionable.")
             return
 
