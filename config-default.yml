@@ -107,6 +107,7 @@ guild:
         help_7:                           587375768556797982
         helpers:                          385474242440986624
         message_log:       &MESSAGE_LOG   467752170159079424
+        meta:                             429409067623251969
         mod_alerts:                       473092532147060736
         modlog:            &MODLOG        282638479504965634
         off_topic_0:                      291284109232308226
@@ -320,6 +321,11 @@ anti_spam:
         role_mentions:
             interval: 10
             max: 3
+
+
+anti_malware:
+    whitelist: ['.bmp', '.gif', '.jpg', '.jpeg', '.png', '.tiff', # Images
+                '.3gp', '.3g2', '.avi', '.h264', '.m4v', '.mkv', '.mov', '.mp4', '.mpeg', '.mpg', '.wmv' ] # Videos
 
 
 reddit:

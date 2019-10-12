@@ -460,6 +460,12 @@ class AntiSpam(metaclass=YAMLGetter):
     rules: Dict[str, Dict[str, int]]
 
 
+class AntiMalware(metaclass=YAMLGetter):
+    section = "anti_malware"
+
+    whitelist: tuple
+
+
 class BigBrother(metaclass=YAMLGetter):
     section = 'big_brother'
 
