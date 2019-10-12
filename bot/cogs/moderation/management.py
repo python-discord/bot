@@ -207,10 +207,9 @@ class ModManagement(commands.Cog):
             await ctx.send(f":warning: No infractions could be found for that query.")
             return
 
-        lines = tuple(
-            self.infraction_to_string(infraction)
-            for infraction in infractions
-        )
+        lines = []
+        for infraction in infractions:
+            lines.append(await self.infraction_to_string(infraction))
 
         await LinePaginator.paginate(
             lines,
@@ -221,11 +220,14 @@ class ModManagement(commands.Cog):
             max_size=1000
         )
 
-    def infraction_to_string(self, infraction: utils.Infraction) -> str:
+    async def infraction_to_string(self, infraction: utils.Infraction) -> str:
         """Convert the infraction object to a string representation."""
         actor_id = infraction["actor"]
+        guild = self.bot.get_guild(constants.Guild.id)
+        actor = guild.get_member(actor_id) or await self.bot.fetch_user(actor_id)
         active = infraction["active"]
         user_id = infraction["user"]
+        user_nickname = self.bot.get_user(user_id) or await self.bot.fetch_user(user_id)
         hidden = infraction["hidden"]
         created = time.format_infraction(infraction["inserted_at"])
         if infraction["expires_at"] is None:
@@ -236,13 +238,13 @@ class ModManagement(commands.Cog):
         lines = textwrap.dedent(f"""
             {"**===============**" if active else "==============="}
             Status: {"__**Active**__" if active else "Inactive"}
-            User: <@{user_id}> (`{user_id}`)
+            User: {user_nickname.mention} (`{user_id}`)
             Type: **{infraction["type"]}**
             Shadow: {hidden}
             Reason: {infraction["reason"] or "*None*"}
             Created: {created}
             Expires: {expires}
-            Actor: <@{actor_id}>
+            Actor: {actor.mention}
             ID: `{infraction["id"]}`
             {"**===============**" if active else "==============="}
         """)
