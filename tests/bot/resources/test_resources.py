@@ -13,4 +13,5 @@ class ResourceValidationTests(unittest.TestCase):
 
         self.assertIsInstance(data, list)
         for name in data:
-            self.assertIsInstance(name, str)
+            with self.subTest(name=name):
+                self.assertIsInstance(name, str)
