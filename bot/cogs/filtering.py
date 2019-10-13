@@ -26,6 +26,7 @@ INVITE_RE = re.compile(
     flags=re.IGNORECASE
 )
 
+SPOILER_RE = re.compile(r"(\|\|.+?\|\|)")
 URL_RE = re.compile(r"(https?://[^\s]+)", flags=re.IGNORECASE)
 ZALGO_RE = re.compile(r"[\u0300-\u036F\u0489]")
 
@@ -237,7 +238,7 @@ class Filtering(Cog):
         Only matches words with boundaries before and after the expression.
         """
         for regex_pattern in WORD_WATCHLIST_PATTERNS:
-            if regex_pattern.search(text):
+            if regex_pattern.search(text + SPOILER_RE.sub('', text)):
                 return True
 
         return False
