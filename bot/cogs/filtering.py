@@ -184,12 +184,25 @@ class Filtering(Cog):
                         else:
                             channel_str = f"in {msg.channel.mention}"
 
+                        # Word and match stats for watch_words and watch_tokens
+                        if filter_name in ("watch_words", "watch_tokens"):
+                            m = triggered
+                            match = m[0]
+                            surroundings = m.string[max(m.start() - 10, 0): m.end() + 10]
+                            message_content = (
+                                f"**Match:** '{match}'\n"
+                                f"**Location:** '...{surroundings}...'\n"
+                                f"\n**Original Message:**\n{msg.content}"
+                            )
+                        else:  # Use content of discord Message
+                            message_content = msg.content
+
                         message = (
                             f"The {filter_name} {_filter['type']} was triggered "
                             f"by **{msg.author.name}#{msg.author.discriminator}** "
                             f"(`{msg.author.id}`) {channel_str} with [the "
                             f"following message]({msg.jump_url}):\n\n"
-                            f"{msg.content}"
+                            f"{message_content}"
                         )
 
                         log.debug(message)
@@ -237,8 +250,9 @@ class Filtering(Cog):
         Only matches words with boundaries before and after the expression.
         """
         for regex_pattern in WORD_WATCHLIST_PATTERNS:
-            if regex_pattern.search(text):
-                return True
+            match = regex_pattern.search(text)
+            if match:
+                return match  # match objects always have a boolean value of True
 
         return False
 
@@ -250,11 +264,12 @@ class Filtering(Cog):
         This will match the expression even if it does not have boundaries before and after.
         """
         for regex_pattern in TOKEN_WATCHLIST_PATTERNS:
-            if regex_pattern.search(text):
+            match = regex_pattern.search(text)
+            if match:
 
                 # Make sure it's not a URL
                 if not URL_RE.search(text):
-                    return True
+                    return match  # match objects always have a boolean value of True
 
         return False
 
