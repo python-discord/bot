@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 from discord.ext.commands import NoPrivateMessage
 
 from bot.cogs import security
+from tests.helpers import MockBot, MockContext
 
 
 class SecurityCogTests(unittest.TestCase):
@@ -12,10 +13,9 @@ class SecurityCogTests(unittest.TestCase):
 
     def setUp(self):
         """Attach an instance of the cog to the class for tests."""
-        self.bot = MagicMock()
+        self.bot = MockBot()
         self.cog = security.Security(self.bot)
-        self.ctx = MagicMock()
-        self.ctx.author = MagicMock()
+        self.ctx = MockContext()
 
     def test_check_additions(self):
         """The cog should add its checks after initialization."""
