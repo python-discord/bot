@@ -38,7 +38,7 @@ class Utils:
         else:
             return await ctx.invoke(self.bot.get_command("help"), "pep")
 
-        possible_extensions = ['.rst', '.txt']
+        possible_extensions = ['.txt', '.rst']
         found_pep = False
         for extension in possible_extensions:
             # Attempt to fetch the PEP
