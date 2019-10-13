@@ -224,10 +224,10 @@ class ModManagement(commands.Cog):
         """Convert the infraction object to a string representation."""
         actor_id = infraction["actor"]
         guild = self.bot.get_guild(constants.Guild.id)
-        actor = guild.get_member(actor_id) or await self.bot.fetch_user(actor_id)
+        actor = guild.get_member(actor_id)
         active = infraction["active"]
         user_id = infraction["user"]
-        user_nickname = self.bot.get_user(user_id) or await self.bot.fetch_user(user_id)
+        user = guild.get_member(user_id)
         hidden = infraction["hidden"]
         created = time.format_infraction(infraction["inserted_at"])
         if infraction["expires_at"] is None:
@@ -235,16 +235,26 @@ class ModManagement(commands.Cog):
         else:
             expires = time.format_infraction(infraction["expires_at"])
 
+        if user is None:  # if user not in cache
+            user = self.bot.get_user(user_id) or await self.bot.fetch_user(user_id)
+        if user.nick is not None:  # if nickname different from username
+            user = user.nick
+
+        if actor is None:
+            actor = self.bot.get_user(actor_id) or await self.bot.fetch_user(actor_id)
+        if actor.nick is not None:
+            actor = actor.nick
+
         lines = textwrap.dedent(f"""
             {"**===============**" if active else "==============="}
             Status: {"__**Active**__" if active else "Inactive"}
-            User: {user_nickname.mention} (`{user_id}`)
+            User: {user} (`{user_id}`)
             Type: **{infraction["type"]}**
             Shadow: {hidden}
             Reason: {infraction["reason"] or "*None*"}
             Created: {created}
             Expires: {expires}
-            Actor: {actor.mention}
+            Actor: {actor}
             ID: `{infraction["id"]}`
             {"**===============**" if active else "==============="}
         """)
