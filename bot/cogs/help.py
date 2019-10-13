@@ -165,7 +165,7 @@ class CustomHelpCommand(HelpCommand):
 
         if getattr(error, "possible_matches", None):
             matches = "\n".join(f"`{n}`" for n in error.possible_matches.keys())
-            embed.add_field(name="Did you mean:", value=matches)
+            embed.description = f"**Did you mean:**\n{matches}"
 
         await self.context.send(embed=embed)
 
@@ -224,7 +224,9 @@ class CustomHelpCommand(HelpCommand):
             f"**`{PREFIX}{c.qualified_name}{f' {c.signature}' if c.signature else ''}`**"
             f"\n*{c.short_doc or 'No details provided.'}*" for c in _commands
         )
-        embed.description += f"\n**Subcommands:**\n{fmt}"
+        if fmt:
+            embed.description += f"\n**Subcommands:**\n{fmt}"
+
         message = await self.context.send(embed=embed)
         await help_cleanup(self.context.bot, self.context.author, message)
 
@@ -235,13 +237,15 @@ class CustomHelpCommand(HelpCommand):
 
         embed = Embed()
         embed.set_author(name="Command Help", icon_url=constants.Icons.questionmark)
-        embed.description = f"**{cog.qualified_name}**\n*{cog.description}*\n\n**Commands:**\n"
+        embed.description = f"**{cog.qualified_name}**\n*{cog.description}*"
 
         lines = [
             f"`{PREFIX}{c.qualified_name}{f' {c.signature}' if c.signature else ''}`"
             f"\n*{c.short_doc or 'No details provided.'}*" for c in _commands
         ]
-        embed.description += "\n".join(n for n in lines)
+        if lines:
+            embed.description += "\n\n**Commands:**\n"
+            embed.description += "\n".join(n for n in lines)
 
         message = await self.context.send(embed=embed)
         await help_cleanup(self.context.bot, self.context.author, message)
@@ -281,7 +285,10 @@ class CustomHelpCommand(HelpCommand):
             f"\n*{c.short_doc or 'No details provided.'}*" for c in filtered_commands
         ]
 
-        description = f"**{category.name}**\n*{category.description}*\n\n**Commands:**"
+        description = f"**{category.name}**\n*{category.description}*"
+
+        if lines:
+            description += "\n\n**Commands:**"
 
         await LinePaginator.paginate(
             lines, self.context, embed, max_lines=COMMANDS_PER_PAGE,
@@ -338,6 +345,10 @@ class CustomHelpCommand(HelpCommand):
                 formatted = f"{fmt}\n\n"
                 continue
             formatted += f"{fmt}\n\n"
+
+        if formatted:
+            # add any remaining command help that didn't get added in the last iteration above.
+            pages.append(formatted)
 
         await LinePaginator.paginate(pages, self.context, embed=embed, max_lines=1, max_size=2040, cleanup=True)
 
