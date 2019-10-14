@@ -345,6 +345,7 @@ class Channels(metaclass=YAMLGetter):
     help_7: int
     helpers: int
     message_log: int
+    meta: int
     mod_alerts: int
     modlog: int
     off_topic_0: int

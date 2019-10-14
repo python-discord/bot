@@ -324,8 +324,24 @@ anti_spam:
 
 
 anti_malware:
-    whitelist: ['.bmp', '.gif', '.jpg', '.jpeg', '.png', '.tiff', # Images
-                '.3gp', '.3g2', '.avi', '.h264', '.m4v', '.mkv', '.mov', '.mp4', '.mpeg', '.mpg', '.wmv' ] # Videos
+    whitelist:
+        - '.3gp'
+        - '.3g2'
+        - '.avi'
+        - '.bmp'
+        - '.gif'
+        - '.h264'
+        - '.jpg'
+        - '.jpeg'
+        - '.m4v'
+        - '.mkv'
+        - '.mov'
+        - '.mp4'
+        - '.mpeg'
+        - '.mpg'
+        - '.png'
+        - '.tiff'
+        - '.wmv'
 
 
 reddit:
