@@ -8,11 +8,11 @@ from typing import Any, Mapping, Optional
 import discord
 from discord import CategoryChannel, Colour, Embed, Member, Role, TextChannel, VoiceChannel, utils
 from discord.ext import commands
-from discord.ext.commands import Bot, Cog, Context, command, group
+from discord.ext.commands import Bot, BucketType, Cog, Context, command, group
 
 from bot.constants import Channels, Emojis, MODERATION_ROLES, STAFF_ROLES
 from bot.decorators import InChannelCheckFailure, in_channel, with_role
-from bot.utils.checks import with_role_check
+from bot.utils.checks import cooldown_with_role_bypass, with_role_check
 from bot.utils.time import time_since
 
 log = logging.getLogger(__name__)
@@ -268,6 +268,7 @@ class Information(Cog):
         # remove trailing whitespace
         return out.rstrip()
 
+    @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=STAFF_ROLES)
     @group(invoke_without_command=True)
     @in_channel(Channels.bot, bypass_roles=STAFF_ROLES)
     async def raw(self, ctx: Context, *, message: discord.Message, json: bool = False) -> None:
