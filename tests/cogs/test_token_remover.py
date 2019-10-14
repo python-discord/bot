@@ -11,7 +11,7 @@ from bot.cogs.token_remover import (
     setup as setup_cog,
 )
 from bot.constants import Channels, Colours, Event, Icons
-from tests.helpers import AsyncMock
+from tests.helpers import AsyncMock, MockBot
 
 
 class TokenRemoverTests(unittest.TestCase):
@@ -19,7 +19,7 @@ class TokenRemoverTests(unittest.TestCase):
 
     def setUp(self):
         """Adds the cog, a bot, and a message to the instance for usage in tests."""
-        self.bot = MagicMock()
+        self.bot = MockBot()
         self.bot.get_cog.return_value = MagicMock()
         self.bot.get_cog.return_value.send_log_message = AsyncMock()
         self.cog = TokenRemover(bot=self.bot)
@@ -130,7 +130,7 @@ class TokenRemoverSetupTests(unittest.TestCase):
 
     def test_setup(self):
         """Setup of the cog should log a message at `INFO` level."""
-        bot = MagicMock()
+        bot = MockBot()
         with self.assertLogs(logger='bot.cogs.token_remover', level=logging.INFO) as cm:
             setup_cog(bot)
 
