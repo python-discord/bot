@@ -415,6 +415,7 @@ class MockMessage(AttributeMock, unittest.mock.MagicMock):
     def __init__(self, **kwargs) -> None:
         super().__init__(spec=message_instance, **kwargs)
         self.author = MockMember()
+        self.channel = MockTextChannel()
 
         # `discord.Message` coroutines
         self.ack = AsyncMock()
