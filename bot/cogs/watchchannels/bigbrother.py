@@ -5,9 +5,9 @@ from typing import Union
 from discord import User
 from discord.ext.commands import Bot, Cog, Context, group
 
+from bot.cogs.moderation.utils import post_infraction
 from bot.constants import Channels, Roles, Webhooks
 from bot.decorators import with_role
-from bot.utils.moderation import post_infraction
 from .watchchannel import WatchChannel, proxy_user
 
 log = logging.getLogger(__name__)
@@ -64,9 +64,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
             await ctx.send(":x: The specified user is already being watched.")
             return
 
-        response = await post_infraction(
-            ctx, user, type='watch', reason=reason, hidden=True
-        )
+        response = await post_infraction(ctx, user, 'watch', reason, hidden=True)
 
         if response is not None:
             self.watched_users[user.id] = response
@@ -111,7 +109,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
                 json={'active': False}
             )
 
-            await post_infraction(ctx, user, type='watch', reason=f"Unwatched: {reason}", hidden=True, active=False)
+            await post_infraction(ctx, user, 'watch', f"Unwatched: {reason}", hidden=True, active=False)
 
             await ctx.send(f":white_check_mark: Messages sent by {user} will no longer be relayed.")
 

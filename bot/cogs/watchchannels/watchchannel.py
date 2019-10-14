@@ -13,7 +13,7 @@ from discord import Color, Embed, HTTPException, Message, Object, errors
 from discord.ext.commands import BadArgument, Bot, Cog, Context
 
 from bot.api import ResponseCodeError
-from bot.cogs.modlog import ModLog
+from bot.cogs.moderation import ModLog
 from bot.constants import BigBrother as BigBrotherConfig, Guild as GuildConfig, Icons
 from bot.pagination import LinePaginator
 from bot.utils import CogABCMeta, messages
