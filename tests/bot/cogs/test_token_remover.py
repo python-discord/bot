@@ -11,7 +11,7 @@ from bot.cogs.token_remover import (
     setup as setup_cog,
 )
 from bot.constants import Channels, Colours, Event, Icons
-from tests.helpers import AsyncMock, MockBot
+from tests.helpers import AsyncMock, MockBot, MockMessage
 
 
 class TokenRemoverTests(unittest.TestCase):
@@ -24,18 +24,14 @@ class TokenRemoverTests(unittest.TestCase):
         self.bot.get_cog.return_value.send_log_message = AsyncMock()
         self.cog = TokenRemover(bot=self.bot)
 
-        self.msg = MagicMock()
-        self.msg.author = MagicMock()
+        self.msg = MockMessage(message_id=555, content='')
+        self.msg.author.__str__ = MagicMock()
         self.msg.author.__str__.return_value = 'lemon'
         self.msg.author.bot = False
         self.msg.author.avatar_url_as.return_value = 'picture-lemon.png'
         self.msg.author.id = 42
         self.msg.author.mention = '@lemon'
-        self.msg.channel.send = AsyncMock()
-        self.msg.channel.mention = '#lemonade-stand'
-        self.msg.content = ''
-        self.msg.delete = AsyncMock()
-        self.msg.id = 555
+        self.msg.channel.mention = "#lemonade-stand"
 
     def test_is_valid_user_id_is_true_for_numeric_content(self):
         """A string decoding to numeric characters is a valid user ID."""
