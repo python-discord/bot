@@ -347,6 +347,10 @@ free:
     cooldown_rate: 1
     cooldown_per: 60.0
 
+mention:
+    message_timeout: 300
+    reset_delay: 5
+
 redirect_output:
     delete_invocation: true
     delete_delay: 15
