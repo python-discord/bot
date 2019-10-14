@@ -143,6 +143,32 @@ class MockGuild(AttributeMock, unittest.mock.Mock, HashableMixin):
         if members:
             self.members.extend(members)
 
+        # `discord.Guild` coroutines
+        self.create_category_channel = AsyncMock()
+        self.ban = AsyncMock()
+        self.bans = AsyncMock()
+        self.create_category = AsyncMock()
+        self.create_custom_emoji = AsyncMock()
+        self.create_role = AsyncMock()
+        self.create_text_channel = AsyncMock()
+        self.create_voice_channel = AsyncMock()
+        self.delete = AsyncMock()
+        self.edit = AsyncMock()
+        self.estimate_pruned_members = AsyncMock()
+        self.fetch_ban = AsyncMock()
+        self.fetch_channels = AsyncMock()
+        self.fetch_emoji = AsyncMock()
+        self.fetch_emojis = AsyncMock()
+        self.fetch_member = AsyncMock()
+        self.invites = AsyncMock()
+        self.kick = AsyncMock()
+        self.leave = AsyncMock()
+        self.prune_members = AsyncMock()
+        self.unban = AsyncMock()
+        self.vanity_invite = AsyncMock()
+        self.webhooks = AsyncMock()
+        self.widget = AsyncMock()
+
 
 # Create a Role instance to get a realistic Mock of `discord.Role`
 role_data = {'name': 'role', 'id': 1}
@@ -166,6 +192,10 @@ class MockRole(AttributeMock, unittest.mock.Mock, ColourMixin, HashableMixin):
         self.id = role_id
         self.position = position
         self.mention = f'&{self.name}'
+
+        # 'discord.Role' coroutines
+        self.delete = AsyncMock()
+        self.edit = AsyncMock()
 
     def __lt__(self, other):
         """Simplified position-based comparisons similar to those of `discord.Role`."""
@@ -205,7 +235,19 @@ class MockMember(AttributeMock, unittest.mock.Mock, ColourMixin, HashableMixin):
             self.roles.extend(roles)
 
         self.mention = f"@{self.name}"
+
+        # `discord.Member` coroutines
+        self.add_roles = AsyncMock()
+        self.ban = AsyncMock()
+        self.edit = AsyncMock()
+        self.fetch_message = AsyncMock()
+        self.kick = AsyncMock()
+        self.move_to = AsyncMock()
+        self.pins = AsyncMock()
+        self.remove_roles = AsyncMock()
         self.send = AsyncMock()
+        self.trigger_typing = AsyncMock()
+        self.unban = AsyncMock()
 
 
 # Create a Bot instance to get a realistic MagicMock of `discord.ext.commands.Bot`
@@ -224,9 +266,37 @@ class MockBot(AttributeMock, unittest.mock.MagicMock):
 
     def __init__(self, **kwargs) -> None:
         super().__init__(spec=bot_instance, **kwargs)
+
+        # `discord.ext.commands.Bot` coroutines
         self._before_invoke = AsyncMock()
         self._after_invoke = AsyncMock()
-        self.user = MockMember(name="Python", user_id=123456789)
+        self.application_info = AsyncMock()
+        self.change_presence = AsyncMock()
+        self.connect = AsyncMock()
+        self.close = AsyncMock()
+        self.create_guild = AsyncMock()
+        self.delete_invite = AsyncMock()
+        self.fetch_channel = AsyncMock()
+        self.fetch_guild = AsyncMock()
+        self.fetch_guilds = AsyncMock()
+        self.fetch_invite = AsyncMock()
+        self.fetch_user = AsyncMock()
+        self.fetch_user_profile = AsyncMock()
+        self.fetch_webhook = AsyncMock()
+        self.fetch_widget = AsyncMock()
+        self.get_context = AsyncMock()
+        self.get_prefix = AsyncMock()
+        self.invoke = AsyncMock()
+        self.is_owner = AsyncMock()
+        self.login = AsyncMock()
+        self.logout = AsyncMock()
+        self.on_command_error = AsyncMock()
+        self.on_error = AsyncMock()
+        self.process_commands = AsyncMock()
+        self.request_offline_members = AsyncMock()
+        self.start = AsyncMock()
+        self.wait_until_ready = AsyncMock()
+        self.wait_for = AsyncMock()
 
 
 # Create a Context instance to get a realistic MagicMock of `discord.ext.commands.Context`
@@ -246,7 +316,112 @@ class MockContext(AttributeMock, unittest.mock.MagicMock):
     def __init__(self, **kwargs) -> None:
         super().__init__(spec=context_instance, **kwargs)
         self.bot = MockBot()
-        self.send = AsyncMock()
         self.guild = MockGuild()
         self.author = MockMember()
         self.command = unittest.mock.MagicMock()
+
+        # `discord.ext.commands.Context` coroutines
+        self.fetch_message = AsyncMock()
+        self.invoke = AsyncMock()
+        self.pins = AsyncMock()
+        self.reinvoke = AsyncMock()
+        self.send = AsyncMock()
+        self.send_help = AsyncMock()
+        self.trigger_typing = AsyncMock()
+
+
+# Create a TextChannel instance to get a realistic MagicMock of `discord.TextChannel`
+channel_data = {
+    'id': 1,
+    'type': 'TextChannel',
+    'name': 'channel',
+    'parent_id': 1234567890,
+    'topic': 'topic',
+    'position': 1,
+    'nsfw': False,
+    'last_message_id': 1,
+}
+state = unittest.mock.MagicMock()
+guild = unittest.mock.MagicMock()
+channel_instance = discord.TextChannel(state=state, guild=guild, data=channel_data)
+
+
+class MockTextChannel(AttributeMock, unittest.mock.Mock, HashableMixin):
+    """
+    A MagicMock subclass to mock TextChannel objects.
+
+    Instances of this class will follow the specifications of `discord.TextChannel` instances. For
+    more information, see the `MockGuild` docstring.
+    """
+
+    attribute_mocktype = unittest.mock.MagicMock
+
+    def __init__(self, name: str = 'channel', channel_id: int = 1, **kwargs) -> None:
+        super().__init__(spec=channel_instance, **kwargs)
+        self.id = channel_id
+        self.name = name
+        self.guild = MockGuild()
+        self.mention = f"#{self.name}"
+
+        # `discord.TextChannel` coroutines
+        self.clone = AsyncMock()
+        self.create_invite = AsyncMock()
+        self.create_webhook = AsyncMock()
+        self.delete = AsyncMock()
+        self.delete_messages = AsyncMock()
+        self.edit = AsyncMock()
+        self.fetch_message = AsyncMock()
+        self.invites = AsyncMock()
+        self.pins = AsyncMock()
+        self.purge = AsyncMock()
+        self.send = AsyncMock()
+        self.set_permissions = AsyncMock()
+        self.trigger_typing = AsyncMock()
+        self.webhooks = AsyncMock()
+
+
+# Create a Message instance to get a realistic MagicMock of `discord.Message`
+message_data = {
+    'id': 1,
+    'webhook_id': 431341013479718912,
+    'attachments': [],
+    'embeds': [],
+    'application': 'Python Discord',
+    'activity': 'mocking',
+    'channel': unittest.mock.MagicMock(),
+    'edited_timestamp': '2019-10-14T15:33:48+00:00',
+    'type': 'message',
+    'pinned': False,
+    'mention_everyone': False,
+    'tts': None,
+    'content': 'content',
+    'nonce': None,
+}
+state = unittest.mock.MagicMock()
+channel = unittest.mock.MagicMock()
+message_instance = discord.Message(state=state, channel=channel, data=message_data)
+
+
+class MockMessage(AttributeMock, unittest.mock.MagicMock):
+    """
+    A MagicMock subclass to mock Message objects.
+
+    Instances of this class will follow the specifications of `discord.Message` instances. For more
+    information, see the `MockGuild` docstring.
+    """
+
+    attribute_mocktype = unittest.mock.MagicMock
+
+    def __init__(self, **kwargs) -> None:
+        super().__init__(spec=message_instance, **kwargs)
+        self.author = MockMember()
+
+        # `discord.Message` coroutines
+        self.ack = AsyncMock()
+        self.add_reaction = AsyncMock()
+        self.clear_reactions = AsyncMock()
+        self.delete = AsyncMock()
+        self.edit = AsyncMock()
+        self.pin = AsyncMock()
+        self.remove_reaction = AsyncMock()
+        self.unpin = AsyncMock()

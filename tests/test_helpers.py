@@ -8,8 +8,239 @@ import discord
 from tests import helpers
 
 
+class DiscordMocksTests(unittest.TestCase):
+    """Tests for our specialized discord.py mocks."""
+
+    def test_mock_role_default_initialization(self):
+        """Test if the default initialization of MockRole results in the correct object."""
+        role = helpers.MockRole()
+
+        # The `spec` argument makes sure `isistance` checks with `discord.Role` pass
+        self.assertIsInstance(role, discord.Role)
+
+        self.assertEqual(role.name, "role")
+        self.assertEqual(role.id, 1)
+        self.assertEqual(role.position, 1)
+        self.assertEqual(role.mention, "&role")
+
+    def test_mock_role_alternative_arguments(self):
+        """Test if MockRole initializes with the arguments provided."""
+        role = helpers.MockRole(
+            name="Admins",
+            role_id=90210,
+            position=10,
+        )
+
+        self.assertEqual(role.name, "Admins")
+        self.assertEqual(role.id, 90210)
+        self.assertEqual(role.position, 10)
+        self.assertEqual(role.mention, "&Admins")
+
+    def test_mock_role_accepts_dynamic_arguments(self):
+        """Test if MockRole accepts and sets abitrary keyword arguments."""
+        role = helpers.MockRole(
+            guild="Dino Man",
+            hoist=True,
+        )
+
+        self.assertEqual(role.guild, "Dino Man")
+        self.assertTrue(role.hoist)
+
+    def test_mock_role_uses_position_for_less_than_greater_than(self):
+        """Test if `<` and `>` comparisons for MockRole are based on its position attribute."""
+        role_one = helpers.MockRole(position=1)
+        role_two = helpers.MockRole(position=2)
+        role_three = helpers.MockRole(position=3)
+
+        self.assertLess(role_one, role_two)
+        self.assertLess(role_one, role_three)
+        self.assertLess(role_two, role_three)
+        self.assertGreater(role_three, role_two)
+        self.assertGreater(role_three, role_one)
+        self.assertGreater(role_two, role_one)
+
+    def test_mock_member_default_initialization(self):
+        """Test if the default initialization of Mockmember results in the correct object."""
+        member = helpers.MockMember()
+
+        # The `spec` argument makes sure `isistance` checks with `discord.Member` pass
+        self.assertIsInstance(member, discord.Member)
+
+        self.assertEqual(member.name, "member")
+        self.assertEqual(member.id, 1)
+        self.assertListEqual(member.roles, [helpers.MockRole("@everyone", 1)])
+        self.assertEqual(member.mention, "@member")
+
+    def test_mock_member_alternative_arguments(self):
+        """Test if MockMember initializes with the arguments provided."""
+        core_developer = helpers.MockRole("Core Developer", 2)
+        member = helpers.MockMember(
+            name="Mark",
+            user_id=12345,
+            roles=[core_developer]
+        )
+
+        self.assertEqual(member.name, "Mark")
+        self.assertEqual(member.id, 12345)
+        self.assertListEqual(member.roles, [helpers.MockRole("@everyone", 1), core_developer])
+        self.assertEqual(member.mention, "@Mark")
+
+    def test_mock_member_accepts_dynamic_arguments(self):
+        """Test if MockMember accepts and sets abitrary keyword arguments."""
+        member = helpers.MockMember(
+            nick="Dino Man",
+            colour=discord.Colour.default(),
+        )
+
+        self.assertEqual(member.nick, "Dino Man")
+        self.assertEqual(member.colour, discord.Colour.default())
+
+    def test_mock_guild_default_initialization(self):
+        """Test if the default initialization of Mockguild results in the correct object."""
+        guild = helpers.MockGuild()
+
+        # The `spec` argument makes sure `isistance` checks with `discord.Guild` pass
+        self.assertIsInstance(guild, discord.Guild)
+
+        self.assertListEqual(guild.roles, [helpers.MockRole("@everyone", 1)])
+        self.assertListEqual(guild.members, [])
+
+    def test_mock_guild_alternative_arguments(self):
+        """Test if MockGuild initializes with the arguments provided."""
+        core_developer = helpers.MockRole("Core Developer", 2)
+        guild = helpers.MockGuild(
+            roles=[core_developer],
+            members=[helpers.MockMember(user_id=54321)],
+        )
+
+        self.assertListEqual(guild.roles, [helpers.MockRole("@everyone", 1), core_developer])
+        self.assertListEqual(guild.members, [helpers.MockMember(user_id=54321)])
+
+    def test_mock_guild_accepts_dynamic_arguments(self):
+        """Test if MockGuild accepts and sets abitrary keyword arguments."""
+        guild = helpers.MockGuild(
+            emojis=(":hyperjoseph:", ":pensive_ela:"),
+            premium_subscription_count=15,
+        )
+
+        self.assertTupleEqual(guild.emojis, (":hyperjoseph:", ":pensive_ela:"))
+        self.assertEqual(guild.premium_subscription_count, 15)
+
+    def test_mock_bot_default_initialization(self):
+        """Tests if MockBot initializes with the correct values."""
+        bot = helpers.MockBot()
+
+        # The `spec` argument makes sure `isistance` checks with `discord.ext.commands.Bot` pass
+        self.assertIsInstance(bot, discord.ext.commands.Bot)
+
+    def test_mock_context_default_initialization(self):
+        """Tests if MockContext initializes with the correct values."""
+        context = helpers.MockContext()
+
+        # The `spec` argument makes sure `isistance` checks with `discord.ext.commands.Context` pass
+        self.assertIsInstance(context, discord.ext.commands.Context)
+
+        self.assertIsInstance(context.bot, helpers.MockBot)
+        self.assertIsInstance(context.guild, helpers.MockGuild)
+        self.assertIsInstance(context.author, helpers.MockMember)
+
+    def test_mocks_allows_access_to_attributes_part_of_spec(self):
+        """Accessing attributes that are valid for the objects they mock should succeed."""
+        mocks = (
+            (helpers.MockGuild(), 'name'),
+            (helpers.MockRole(), 'hoist'),
+            (helpers.MockMember(), 'display_name'),
+            (helpers.MockBot(), 'user'),
+            (helpers.MockContext(), 'invoked_with'),
+            (helpers.MockTextChannel(), 'last_message'),
+            (helpers.MockMessage(), 'mention_everyone'),
+        )
+
+        for mock, valid_attribute in mocks:
+            with self.subTest(mock=mock):
+                try:
+                    getattr(mock, valid_attribute)
+                except AttributeError:
+                    msg = f"accessing valid attribute `{valid_attribute}` raised an AttributeError"
+                    self.fail(msg)
+
+    @unittest.mock.patch(f'{__name__}.DiscordMocksTests.subTest')
+    @unittest.mock.patch(f'{__name__}.getattr')
+    def test_mock_allows_access_to_attributes_test(self, mock_getattr, mock_subtest):
+        """The valid attribute test should raise an AssertionError after an AttributeError."""
+        mock_getattr.side_effect = AttributeError
+
+        msg = "accessing valid attribute `name` raised an AttributeError"
+        with self.assertRaises(AssertionError, msg=msg):
+            self.test_mocks_allows_access_to_attributes_part_of_spec()
+
+    def test_mocks_rejects_access_to_attributes_not_part_of_spec(self):
+        """Accessing attributes that are invalid for the objects they mock should fail."""
+        mocks = (
+            helpers.MockGuild(),
+            helpers.MockRole(),
+            helpers.MockMember(),
+            helpers.MockBot(),
+            helpers.MockContext(),
+            helpers.MockTextChannel(),
+            helpers.MockMessage(),
+        )
+
+        for mock in mocks:
+            with self.subTest(mock=mock):
+                with self.assertRaises(AttributeError):
+                    mock.the_cake_is_a_lie
+
+    def test_custom_mock_methods_are_valid_discord_object_methods(self):
+        """The `AsyncMock` attributes of the mocks should be valid for the class they're mocking."""
+        mocks = (
+            (helpers.MockGuild, helpers.guild_instance),
+            (helpers.MockRole, helpers.role_instance),
+            (helpers.MockMember, helpers.member_instance),
+            (helpers.MockBot, helpers.bot_instance),
+            (helpers.MockContext, helpers.context_instance),
+            (helpers.MockTextChannel, helpers.channel_instance),
+            (helpers.MockMessage, helpers.message_instance),
+        )
+
+        for mock_class, instance in mocks:
+            mock = mock_class()
+            async_methods = (
+                attr for attr in dir(mock) if isinstance(getattr(mock, attr), helpers.AsyncMock)
+            )
+
+            # spec_mock = unittest.mock.MagicMock(spec=instance)
+            for method in async_methods:
+                with self.subTest(mock_class=mock_class, method=method):
+                    try:
+                        getattr(instance, method)
+                    except AttributeError:
+                        msg = f"method {method} is not a method attribute of {instance.__class__}"
+                        self.fail(msg)
+
+    @unittest.mock.patch(f'{__name__}.DiscordMocksTests.subTest')
+    def test_the_custom_mock_methods_test(self, subtest_mock):
+        """The custom method test should raise AssertionError for invalid methods."""
+        class FakeMockBot(helpers.AttributeMock, unittest.mock.MagicMock):
+            """Fake MockBot class with invalid attribute/method `release_the_walrus`."""
+
+            attribute_mocktype = unittest.mock.MagicMock
+
+            def __init__(self, **kwargs):
+                super().__init__(spec=helpers.bot_instance, **kwargs)
+
+                # Fake attribute
+                self.release_the_walrus = helpers.AsyncMock()
+
+        with unittest.mock.patch("tests.helpers.MockBot", new=FakeMockBot):
+            msg = "method release_the_walrus is not a valid method of <class 'discord.ext.commands.bot.Bot'>"
+            with self.assertRaises(AssertionError, msg=msg):
+                self.test_custom_mock_methods_are_valid_discord_object_methods()
+
+
 class MockObjectTests(unittest.TestCase):
     """Tests the mock objects and mixins we've defined."""
+
     @classmethod
     def setUpClass(cls):
         cls.hashable_mocks = (helpers.MockRole, helpers.MockMember, helpers.MockGuild)
@@ -116,210 +347,6 @@ class MockObjectTests(unittest.TestCase):
                 self.assertTrue(isinstance(mock, mock_type))
                 attribute = getattr(mock, valid_attribute)
                 self.assertTrue(isinstance(attribute, mock_type.attribute_mocktype))
-
-    def test_mock_role_default_initialization(self):
-        """Test if the default initialization of MockRole results in the correct object."""
-        role = helpers.MockRole()
-
-        # The `spec` argument makes sure `isistance` checks with `discord.Role` pass
-        self.assertIsInstance(role, discord.Role)
-
-        self.assertEqual(role.name, "role")
-        self.assertEqual(role.id, 1)
-        self.assertEqual(role.position, 1)
-        self.assertEqual(role.mention, "&role")
-
-    def test_mock_role_alternative_arguments(self):
-        """Test if MockRole initializes with the arguments provided."""
-        role = helpers.MockRole(
-            name="Admins",
-            role_id=90210,
-            position=10,
-        )
-
-        self.assertEqual(role.name, "Admins")
-        self.assertEqual(role.id, 90210)
-        self.assertEqual(role.position, 10)
-        self.assertEqual(role.mention, "&Admins")
-
-    def test_mock_role_accepts_dynamic_arguments(self):
-        """Test if MockRole accepts and sets abitrary keyword arguments."""
-        role = helpers.MockRole(
-            guild="Dino Man",
-            hoist=True,
-        )
-
-        self.assertEqual(role.guild, "Dino Man")
-        self.assertTrue(role.hoist)
-
-    def test_mock_role_rejects_accessing_attributes_not_following_spec(self):
-        """Test if MockRole throws AttributeError for attribute not existing in discord.Role."""
-        with self.assertRaises(AttributeError):
-            role = helpers.MockRole()
-            role.joseph
-
-    def test_mock_role_rejects_accessing_methods_not_following_spec(self):
-        """Test if MockRole throws AttributeError for method not existing in discord.Role."""
-        with self.assertRaises(AttributeError):
-            role = helpers.MockRole()
-            role.lemon()
-
-    def test_mock_role_accepts_accessing_attributes_following_spec(self):
-        """Test if MockRole accepts attribute access for valid attributes of discord.Role."""
-        role = helpers.MockRole()
-        role.hoist
-
-    def test_mock_role_accepts_accessing_methods_following_spec(self):
-        """Test if MockRole accepts method calls for valid methods of discord.Role."""
-        role = helpers.MockRole()
-        role.edit()
-
-    def test_mock_role_uses_position_for_less_than_greater_than(self):
-        """Test if `<` and `>` comparisons for MockRole are based on its position attribute."""
-        role_one = helpers.MockRole(position=1)
-        role_two = helpers.MockRole(position=2)
-        role_three = helpers.MockRole(position=3)
-
-        self.assertLess(role_one, role_two)
-        self.assertLess(role_one, role_three)
-        self.assertLess(role_two, role_three)
-        self.assertGreater(role_three, role_two)
-        self.assertGreater(role_three, role_one)
-        self.assertGreater(role_two, role_one)
-
-    def test_mock_member_default_initialization(self):
-        """Test if the default initialization of Mockmember results in the correct object."""
-        member = helpers.MockMember()
-
-        # The `spec` argument makes sure `isistance` checks with `discord.Member` pass
-        self.assertIsInstance(member, discord.Member)
-
-        self.assertEqual(member.name, "member")
-        self.assertEqual(member.id, 1)
-        self.assertListEqual(member.roles, [helpers.MockRole("@everyone", 1)])
-        self.assertEqual(member.mention, "@member")
-
-    def test_mock_member_alternative_arguments(self):
-        """Test if MockMember initializes with the arguments provided."""
-        core_developer = helpers.MockRole("Core Developer", 2)
-        member = helpers.MockMember(
-            name="Mark",
-            user_id=12345,
-            roles=[core_developer]
-        )
-
-        self.assertEqual(member.name, "Mark")
-        self.assertEqual(member.id, 12345)
-        self.assertListEqual(member.roles, [helpers.MockRole("@everyone", 1), core_developer])
-        self.assertEqual(member.mention, "@Mark")
-
-    def test_mock_member_accepts_dynamic_arguments(self):
-        """Test if MockMember accepts and sets abitrary keyword arguments."""
-        member = helpers.MockMember(
-            nick="Dino Man",
-            colour=discord.Colour.default(),
-        )
-
-        self.assertEqual(member.nick, "Dino Man")
-        self.assertEqual(member.colour, discord.Colour.default())
-
-    def test_mock_member_rejects_accessing_attributes_not_following_spec(self):
-        """Test if MockMember throws AttributeError for attribute not existing in spec discord.Member."""
-        with self.assertRaises(AttributeError):
-            member = helpers.MockMember()
-            member.joseph
-
-    def test_mock_member_rejects_accessing_methods_not_following_spec(self):
-        """Test if MockMember throws AttributeError for method not existing in spec discord.Member."""
-        with self.assertRaises(AttributeError):
-            member = helpers.MockMember()
-            member.lemon()
-
-    def test_mock_member_accepts_accessing_attributes_following_spec(self):
-        """Test if MockMember accepts attribute access for valid attributes of discord.Member."""
-        member = helpers.MockMember()
-        member.display_name
-
-    def test_mock_member_accepts_accessing_methods_following_spec(self):
-        """Test if MockMember accepts method calls for valid methods of discord.Member."""
-        member = helpers.MockMember()
-        member.mentioned_in()
-
-    def test_mock_guild_default_initialization(self):
-        """Test if the default initialization of Mockguild results in the correct object."""
-        guild = helpers.MockGuild()
-
-        # The `spec` argument makes sure `isistance` checks with `discord.Guild` pass
-        self.assertIsInstance(guild, discord.Guild)
-
-        self.assertListEqual(guild.roles, [helpers.MockRole("@everyone", 1)])
-        self.assertListEqual(guild.members, [])
-
-    def test_mock_guild_alternative_arguments(self):
-        """Test if MockGuild initializes with the arguments provided."""
-        core_developer = helpers.MockRole("Core Developer", 2)
-        guild = helpers.MockGuild(
-            roles=[core_developer],
-            members=[helpers.MockMember(user_id=54321)],
-        )
-
-        self.assertListEqual(guild.roles, [helpers.MockRole("@everyone", 1), core_developer])
-        self.assertListEqual(guild.members, [helpers.MockMember(user_id=54321)])
-
-    def test_mock_guild_accepts_dynamic_arguments(self):
-        """Test if MockGuild accepts and sets abitrary keyword arguments."""
-        guild = helpers.MockGuild(
-            emojis=(":hyperjoseph:", ":pensive_ela:"),
-            premium_subscription_count=15,
-        )
-
-        self.assertTupleEqual(guild.emojis, (":hyperjoseph:", ":pensive_ela:"))
-        self.assertEqual(guild.premium_subscription_count, 15)
-
-    def test_mock_guild_rejects_accessing_attributes_not_following_spec(self):
-        """Test if MockGuild throws AttributeError for attribute not existing in spec discord.Guild."""
-        with self.assertRaises(AttributeError):
-            guild = helpers.MockGuild()
-            guild.aperture
-
-    def test_mock_guild_rejects_accessing_methods_not_following_spec(self):
-        """Test if MockGuild throws AttributeError for method not existing in spec discord.Guild."""
-        with self.assertRaises(AttributeError):
-            guild = helpers.MockGuild()
-            guild.volcyyy()
-
-    def test_mock_guild_accepts_accessing_attributes_following_spec(self):
-        """Test if MockGuild accepts attribute access for valid attributes of discord.Guild."""
-        guild = helpers.MockGuild()
-        guild.name
-
-    def test_mock_guild_accepts_accessing_methods_following_spec(self):
-        """Test if MockGuild accepts method calls for valid methods of discord.Guild."""
-        guild = helpers.MockGuild()
-        guild.by_category()
-
-    def test_mock_bot_default_initialization(self):
-        """Tests if MockBot initializes with the correct values."""
-        bot = helpers.MockBot()
-
-        # The `spec` argument makes sure `isistance` checks with `discord.ext.commands.Bot` pass
-        self.assertIsInstance(bot, discord.ext.commands.Bot)
-
-        self.assertIsInstance(bot._before_invoke, helpers.AsyncMock)
-        self.assertIsInstance(bot._after_invoke, helpers.AsyncMock)
-        self.assertEqual(bot.user, helpers.MockMember(name="Python", user_id=123456789))
-
-    def test_mock_context_default_initialization(self):
-        """Tests if MockContext initializes with the correct values."""
-        context = helpers.MockContext()
-
-        # The `spec` argument makes sure `isistance` checks with `discord.ext.commands.Context` pass
-        self.assertIsInstance(context, discord.ext.commands.Context)
-
-        self.assertIsInstance(context.bot, helpers.MockBot)
-        self.assertIsInstance(context.send, helpers.AsyncMock)
-        self.assertIsInstance(context.guild, helpers.MockGuild)
-        self.assertIsInstance(context.author, helpers.MockMember)
 
     def test_async_mock_provides_coroutine_for_dunder_call(self):
         """Test if AsyncMock objects have a coroutine for their __call__ method."""
