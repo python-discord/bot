@@ -141,6 +141,7 @@ guild:
     webhooks:
         talent_pool:                        569145364800602132
         big_brother:                        569133704568373283
+        reddit:                             123456789
 
 
 filter:
@@ -323,7 +324,6 @@ anti_spam:
 
 
 reddit:
-    request_delay: 60
     subreddits:
         - 'r/Python'
 

@@ -364,6 +364,7 @@ class Webhooks(metaclass=YAMLGetter):
 
     talent_pool: int
     big_brother: int
+    reddit: int
 
 
 class Roles(metaclass=YAMLGetter):
@@ -438,7 +439,6 @@ class URLs(metaclass=YAMLGetter):
 class Reddit(metaclass=YAMLGetter):
     section = "reddit"
 
-    request_delay: int
     subreddits: list
 
 
