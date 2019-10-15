@@ -5,9 +5,9 @@ from typing import Union
 from discord import User
 from discord.ext.commands import Bot, Cog, Context, group
 
+from bot.cogs.moderation.utils import post_infraction
 from bot.constants import Channels, Roles, Webhooks
 from bot.decorators import with_role
-from bot.utils.moderation import post_infraction
 from .watchchannel import WatchChannel, proxy_user
 
 log = logging.getLogger(__name__)
@@ -64,13 +64,31 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
             await ctx.send(":x: The specified user is already being watched.")
             return
 
-        response = await post_infraction(
-            ctx, user, type='watch', reason=reason, hidden=True
-        )
+        response = await post_infraction(ctx, user, 'watch', reason, hidden=True)
 
         if response is not None:
             self.watched_users[user.id] = response
-            await ctx.send(f":white_check_mark: Messages sent by {user} will now be relayed to Big Brother.")
+            msg = f":white_check_mark: Messages sent by {user} will now be relayed to Big Brother."
+
+            history = await self.bot.api_client.get(
+                self.api_endpoint,
+                params={
+                    "user__id": str(user.id),
+                    "active": "false",
+                    'type': 'watch',
+                    'ordering': '-inserted_at'
+                }
+            )
+
+            if len(history) > 1:
+                total = f"({len(history) // 2} previous infractions in total)"
+                end_reason = history[0]["reason"]
+                start_reason = f"Watched: {history[1]['reason']}"
+                msg += f"\n\nUser's previous watch reasons {total}:```{start_reason}\n\n{end_reason}```"
+        else:
+            msg = ":x: Failed to post the infraction: response was empty."
+
+        await ctx.send(msg)
 
     @bigbrother_group.command(name='unwatch', aliases=('uw',))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
@@ -91,7 +109,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
                 json={'active': False}
             )
 
-            await post_infraction(ctx, user, type='watch', reason=f"Unwatched: {reason}", hidden=True, active=False)
+            await post_infraction(ctx, user, 'watch', f"Unwatched: {reason}", hidden=True, active=False)
 
             await ctx.send(f":white_check_mark: Messages sent by {user} will no longer be relayed.")
 

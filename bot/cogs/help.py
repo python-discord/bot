@@ -1,5 +1,4 @@
 import asyncio
-import inspect
 import itertools
 from collections import namedtuple
 from contextlib import suppress
@@ -61,6 +60,12 @@ class HelpSession:
             The message object that's showing the help contents.
         * destination: `discord.abc.Messageable`
             Where the help message is to be sent to.
+
+    Cogs can be grouped into custom categories. All cogs with the same category will be displayed
+    under a single category name in the help output. Custom categories are defined inside the cogs
+    as a class attribute named `category`. A description can also be specified with the attribute
+    `category_description`. If a description is not found in at least one cog, the default will be
+    the regular description (class docstring) of the first cog found in the category.
     """
 
     def __init__(
@@ -107,12 +112,31 @@ class HelpSession:
         if command:
             return command
 
-        cog = self._bot.cogs.get(query)
-        if cog:
+        # Find all cog categories that match.
+        cog_matches = []
+        description = None
+        for cog in self._bot.cogs.values():
+            if hasattr(cog, "category") and cog.category == query:
+                cog_matches.append(cog)
+                if hasattr(cog, "category_description"):
+                    description = cog.category_description
+
+        # Try to search by cog name if no categories match.
+        if not cog_matches:
+            cog = self._bot.cogs.get(query)
+
+            # Don't consider it a match if the cog has a category.
+            if cog and not hasattr(cog, "category"):
+                cog_matches = [cog]
+
+        if cog_matches:
+            cog = cog_matches[0]
+            cmds = (cog.get_commands() for cog in cog_matches)  # Commands of all cogs
+
             return Cog(
-                name=cog.qualified_name,
-                description=inspect.getdoc(cog),
-                commands=[c for c in self._bot.commands if c.cog is cog]
+                name=cog.category if hasattr(cog, "category") else cog.qualified_name,
+                description=description or cog.description,
+                commands=tuple(itertools.chain.from_iterable(cmds))  # Flatten the list
             )
 
         self._handle_not_found(query)
@@ -207,8 +231,16 @@ class HelpSession:
 
         A zero width space is used as a prefix for results with no cogs to force them last in ordering.
         """
-        cog = cmd.cog_name
-        return f'**{cog}**' if cog else f'**\u200bNo Category:**'
+        if cmd.cog:
+            try:
+                if cmd.cog.category:
+                    return f'**{cmd.cog.category}**'
+            except AttributeError:
+                pass
+
+            return f'**{cmd.cog_name}**'
+        else:
+            return "**\u200bNo Category:**"
 
     def _get_command_params(self, cmd: Command) -> str:
         """

@@ -13,7 +13,7 @@ from discord import Color, Embed, HTTPException, Message, Object, errors
 from discord.ext.commands import BadArgument, Bot, Cog, Context
 
 from bot.api import ResponseCodeError
-from bot.cogs.modlog import ModLog
+from bot.cogs.moderation import ModLog
 from bot.constants import BigBrother as BigBrotherConfig, Guild as GuildConfig, Icons
 from bot.pagination import LinePaginator
 from bot.utils import CogABCMeta, messages
@@ -335,7 +335,7 @@ class WatchChannel(metaclass=CogABCMeta):
     def cog_unload(self) -> None:
         """Takes care of unloading the cog and canceling the consumption task."""
         self.log.trace(f"Unloading the cog")
-        if not self._consume_task.done():
+        if self._consume_task and not self._consume_task.done():
             self._consume_task.cancel()
             try:
                 self._consume_task.result()
