@@ -154,11 +154,11 @@ class Filtering(Cog):
 
                     # Does the filter only need the message content or the full message?
                     if _filter["content_only"]:
-                        triggered = await _filter["function"](msg.content)
+                        match = await _filter["function"](msg.content)
                     else:
-                        triggered = await _filter["function"](msg)
+                        match = await _filter["function"](msg)
 
-                    if triggered:
+                    if match:
                         # If this is a filter (not a watchlist), we should delete the message.
                         if _filter["type"] == "filter":
                             try:
@@ -186,11 +186,9 @@ class Filtering(Cog):
 
                         # Word and match stats for watch_words and watch_tokens
                         if filter_name in ("watch_words", "watch_tokens"):
-                            m = triggered
-                            match = m[0]
-                            surroundings = m.string[max(m.start() - 10, 0): m.end() + 10]
+                            surroundings = match.string[max(match.start() - 10, 0): match.end() + 10]
                             message_content = (
-                                f"**Match:** '{match}'\n"
+                                f"**Match:** '{match[0]}'\n"
                                 f"**Location:** '...{surroundings}...'\n"
                                 f"\n**Original Message:**\n{msg.content}"
                             )
@@ -212,7 +210,7 @@ class Filtering(Cog):
 
                         if filter_name == "filter_invites":
                             additional_embeds = []
-                            for invite, data in triggered.items():
+                            for invite, data in match.items():
                                 embed = discord.Embed(description=(
                                     f"**Members:**\n{data['members']}\n"
                                     f"**Active:**\n{data['active']}"
