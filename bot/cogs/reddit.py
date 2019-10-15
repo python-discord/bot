@@ -42,7 +42,6 @@ class Reddit(Cog):
         self.top_weekly_posts_task = None
 
         self.bot.loop.create_task(self.init_reddit_polling())
-        self.refresh_access_token.start()
 
     @tasks.loop(hours=0.99)  # access tokens are valid for one hour
     async def refresh_access_token(self) -> None:
@@ -69,8 +68,6 @@ class Reddit(Cog):
     @refresh_access_token.before_loop
     async def get_tokens(self) -> None:
         """Get Reddit access and refresh tokens."""
-        await self.bot.wait_until_ready()
-
         headers = {"User-Agent": self.USER_AGENT}
         data = {
             "grant_type": "client_credentials",
@@ -120,7 +117,7 @@ class Reddit(Cog):
                 content = await response.json()
                 posts = content["data"]["children"]
                 return posts[:amount]
-
+            
             await asyncio.sleep(3)
 
         log.debug(f"Invalid response from: {url} - status code {response.status}, mimetype {response.content_type}")
@@ -331,6 +328,7 @@ class Reddit(Cog):
         """Initiate reddit post event loop."""
         await self.bot.wait_until_ready()
         self.reddit_channel = await self.bot.fetch_channel(Channels.reddit)
+        self.refresh_access_token.start()
 
         if self.reddit_channel is not None:
             if self.new_posts_task is None:
