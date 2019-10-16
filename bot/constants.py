@@ -477,6 +477,13 @@ class Free(metaclass=YAMLGetter):
     cooldown_per: float
 
 
+class Mention(metaclass=YAMLGetter):
+    section = 'mention'
+
+    message_timeout: int
+    reset_delay: int
+
+
 class RedirectOutput(metaclass=YAMLGetter):
     section = 'redirect_output'
 
