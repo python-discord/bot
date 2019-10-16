@@ -90,8 +90,7 @@ class Defcon(Cog):
                 await member.kick(reason="DEFCON active, user is too new")
 
                 message = (
-                    f"{member.name}#{member.discriminator} (`{member.id}`) "
-                    f"was denied entry because their account is too new."
+                    f"{member} (`{member.id}`) was denied entry because their account is too new."
                 )
 
                 if not message_sent:
@@ -254,7 +253,7 @@ class Defcon(Cog):
 
         `change` string may be one of the following: ('enabled', 'disabled', 'updated')
         """
-        log_msg = f"**Staffer:** {actor.name}#{actor.discriminator} (`{actor.id}`)\n"
+        log_msg = f"**Staffer:** {actor} (`{actor.id}`)\n"
 
         if change.lower() == "enabled":
             icon = Icons.defcon_enabled
