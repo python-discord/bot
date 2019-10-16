@@ -126,15 +126,15 @@ class Site(Cog):
         invalid_indices = tuple(
             pick
             for pick in rules
-            if pick < 0 or pick >= len(full_rules)
+            if pick < 1 or pick > len(full_rules)
         )
 
         if invalid_indices:
             indices = ', '.join(map(str, invalid_indices))
-            await ctx.send(f":x: Invalid rule indices {indices}")
+            await ctx.send(f":x: Invalid rule indices: {indices}")
             return
 
-        final_rules = tuple(f"**{pick}.** {full_rules[pick]}" for pick in rules)
+        final_rules = tuple(f"**{pick}.** {full_rules[pick - 1]}" for pick in rules)
 
         await LinePaginator.paginate(final_rules, ctx, rules_embed, max_lines=3)
 

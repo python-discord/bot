@@ -79,10 +79,10 @@ class Alias (Cog):
         """Alias for invoking <prefix>site faq."""
         await self.invoke(ctx, "site faq")
 
-    @command(name="rules", hidden=True)
-    async def site_rules_alias(self, ctx: Context) -> None:
+    @command(name="rules", aliases=("rule",), hidden=True)
+    async def site_rules_alias(self, ctx: Context, *rules: int) -> None:
         """Alias for invoking <prefix>site rules."""
-        await self.invoke(ctx, "site rules")
+        await self.invoke(ctx, "site rules", *rules)
 
     @command(name="reload", hidden=True)
     async def extensions_reload_alias(self, ctx: Context, *extensions: Extension) -> None:
