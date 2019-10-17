@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime, timedelta
+from typing import Awaitable, Dict, Tuple
 
 from discord import Colour, Embed, Member
 from discord.ext.commands import Bot, Cog, Context, group
@@ -30,6 +31,12 @@ class Defcon(Cog):
     days = None  # type: timedelta
     enabled = False  # type: bool
 
+    _defcon_log_info: Dict[str, Tuple] = {
+        'enabled': (Icons.defcon_enabled, Colours.soft_green, "**Days:** {days}\n\n"),
+        'disabled': (Icons.defcon_disabled, Colours.soft_red, ""),
+        'updated': (Icons.defcon_updated, Colour.blurple(), "**Days:** {days}\n\n"),
+    }
+
     def __init__(self, bot: Bot):
         self.bot = bot
         self.channel = None
@@ -46,6 +53,7 @@ class Defcon(Cog):
         """On cog load, try to synchronize DEFCON settings to the API."""
         await self.bot.wait_until_ready()
         self.channel = await self.bot.fetch_channel(Channels.defcon)
+
         try:
             response = await self.bot.api_client.get('bot/bot-settings/defcon')
             data = response['data']
@@ -107,6 +115,18 @@ class Defcon(Cog):
         """Check the DEFCON status or run a subcommand."""
         await ctx.invoke(self.bot.get_command("help"), "defcon")
 
+    async def _defcon_action(self, ctx: Context, action: Awaitable[None], action_type: str) -> None:
+        """Providing a structured way to do an defcon actions - enabled / disabled / updated."""
+        error = None
+        try:
+            await action
+        except Exception as err:
+            log.exception("Unable to update DEFCON settings.")
+            error = err
+        finally:
+            await ctx.send(self.build_defcon_msg(action_type, error))
+            await self.send_defcon_log(action_type, ctx.author, error)
+
     @defcon_group.command(name='enable', aliases=('on', 'e'))
     @with_role(Roles.admin, Roles.owner)
     async def enable_command(self, ctx: Context) -> None:
@@ -118,8 +138,9 @@ class Defcon(Cog):
         """
         self.enabled = True
 
-        try:
-            await self.bot.api_client.put(
+        await self._defcon_action(
+            ctx,
+            action=self.bot.api_client.put(
                 'bot/bot-settings/defcon',
                 json={
                     'name': 'defcon',
@@ -129,16 +150,9 @@ class Defcon(Cog):
                         'days': 0
                     }
                 }
-            )
-
-        except Exception as e:
-            log.exception("Unable to update DEFCON settings.")
-            await ctx.send(self.build_defcon_msg("enabled", e))
-            await self.send_defcon_log("enabled", ctx.author, e)
-
-        else:
-            await ctx.send(self.build_defcon_msg("enabled"))
-            await self.send_defcon_log("enabled", ctx.author)
+            ),
+            action_type='enabled'
+        )
 
         await self.update_channel_topic()
 
@@ -148,8 +162,9 @@ class Defcon(Cog):
         """Disable DEFCON mode. Useful in a pinch, but be sure you know what you're doing!"""
         self.enabled = False
 
-        try:
-            await self.bot.api_client.put(
+        await self._defcon_action(
+            ctx,
+            action=self.bot.api_client.put(
                 'bot/bot-settings/defcon',
                 json={
                     'data': {
@@ -158,14 +173,8 @@ class Defcon(Cog):
                     },
                     'name': 'defcon'
                 }
-            )
-        except Exception as e:
-            log.exception("Unable to update DEFCON settings.")
-            await ctx.send(self.build_defcon_msg("disabled", e))
-            await self.send_defcon_log("disabled", ctx.author, e)
-        else:
-            await ctx.send(self.build_defcon_msg("disabled"))
-            await self.send_defcon_log("disabled", ctx.author)
+            ),
+            action_type='disabled')
 
         await self.update_channel_topic()
 
@@ -187,8 +196,9 @@ class Defcon(Cog):
         """Set how old an account must be to join the server, in days, with DEFCON mode enabled."""
         self.days = timedelta(days=days)
 
-        try:
-            await self.bot.api_client.put(
+        await self._defcon_action(
+            ctx,
+            action=self.bot.api_client.put(
                 'bot/bot-settings/defcon',
                 json={
                     'data': {
@@ -197,18 +207,14 @@ class Defcon(Cog):
                     },
                     'name': 'defcon'
                 }
-            )
-        except Exception as e:
-            log.exception("Unable to update DEFCON settings.")
-            await ctx.send(self.build_defcon_msg("updated", e))
-            await self.send_defcon_log("updated", ctx.author, e)
-        else:
-            await ctx.send(self.build_defcon_msg("updated"))
-            await self.send_defcon_log("updated", ctx.author)
+            ),
+            action_type="updated"
+        )
 
         # Enable DEFCON if it's not already
-        if not self.enabled:
-            self.enabled = True
+        # seems redundant to check if False, can directly set to True
+        # if not self.enabled:
+        self.enabled = True
 
         await self.update_channel_topic()
 
@@ -253,22 +259,12 @@ class Defcon(Cog):
 
         `change` string may be one of the following: ('enabled', 'disabled', 'updated')
         """
-        log_msg = f"**Staffer:** {actor} (`{actor.id}`)\n"
-
-        if change.lower() == "enabled":
-            icon = Icons.defcon_enabled
-            color = Colours.soft_green
-            status_msg = "DEFCON enabled"
-            log_msg += f"**Days:** {self.days.days}\n\n"
-        elif change.lower() == "disabled":
-            icon = Icons.defcon_disabled
-            color = Colours.soft_red
-            status_msg = "DEFCON enabled"
-        elif change.lower() == "updated":
-            icon = Icons.defcon_updated
-            color = Colour.blurple()
-            status_msg = "DEFCON updated"
-            log_msg += f"**Days:** {self.days.days}\n\n"
+        icon, color, info_template = self._defcon_log_info[change.lower()]
+        log_msg: str = (
+            f"**Staffer:** {actor.mention} {actor} (`{actor.id}`)\n"
+            f"{info_template.format(days=self.days.days)}"
+        )
+        status_msg = f"DEFCON {change.lower()}"
 
         if e:
             log_msg += (
