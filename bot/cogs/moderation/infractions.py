@@ -2,6 +2,7 @@ import logging
 import textwrap
 import typing as t
 from datetime import datetime
+from gettext import ngettext
 
 import dateutil.parser
 import discord
@@ -463,7 +464,8 @@ class Infractions(Scheduler, commands.Cog):
                 "bot/infractions",
                 params={"user__id": str(user.id)}
             )
-            end_msg = f" ({len(infractions)} infractions total)"
+            total = len(infractions)
+            end_msg = f" ({total} infraction{ngettext('', 's', total)} total)"
 
         # Execute the necessary actions to apply the infraction on Discord.
         if action_coro:
