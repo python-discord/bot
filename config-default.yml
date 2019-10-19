@@ -109,6 +109,8 @@ guild:
         message_log:       &MESSAGE_LOG   467752170159079424
         mod_alerts:                       473092532147060736
         modlog:            &MODLOG        282638479504965634
+        mods:                             305126844661760000
+        mod_spam:                         620607373828030464
         off_topic_0:                      291284109232308226
         off_topic_1:                      463035241142026251
         off_topic_2:                      463035268514185226
