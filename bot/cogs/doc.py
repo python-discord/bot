@@ -126,9 +126,11 @@ class Doc(commands.Cog):
         self.bot = bot
         self.inventories = {}
 
-    @commands.Cog.listener()
-    async def on_ready(self) -> None:
-        """Refresh documentation inventory."""
+        self.bot.loop.create_task(self.init_refresh_inventory())
+
+    async def init_refresh_inventory(self) -> None:
+        """Refresh documentation inventory on cog initialization."""
+        await self.bot.wait_until_ready()
         await self.refresh_inventory()
 
     async def update_single(
@@ -206,6 +208,9 @@ class Doc(commands.Cog):
         soup = BeautifulSoup(html, 'lxml')
         symbol_heading = soup.find(id=symbol_id)
         signature_buffer = []
+
+        if symbol_heading is None:
+            return None
 
         # Traverse the tags of the signature header and ignore any
         # unwanted symbols from it. Add all of it to a temporary buffer.
@@ -331,8 +336,7 @@ class Doc(commands.Cog):
         await self.bot.api_client.post('bot/documentation-links', json=body)
 
         log.info(
-            f"User @{ctx.author.name}#{ctx.author.discriminator} ({ctx.author.id}) "
-            "added a new documentation package:\n"
+            f"User @{ctx.author} ({ctx.author.id}) added a new documentation package:\n"
             f"Package name: {package_name}\n"
             f"Base url: {base_url}\n"
             f"Inventory URL: {inventory_url}"

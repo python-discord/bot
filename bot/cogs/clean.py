@@ -6,7 +6,7 @@ from typing import Optional
 from discord import Colour, Embed, Message, User
 from discord.ext.commands import Bot, Cog, Context, group
 
-from bot.cogs.modlog import ModLog
+from bot.cogs.moderation import ModLog
 from bot.constants import (
     Channels, CleanMessages, Colours, Event,
     Icons, MODERATION_ROLES, NEGATIVE_REPLIES

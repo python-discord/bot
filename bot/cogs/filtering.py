@@ -7,7 +7,7 @@ from dateutil.relativedelta import relativedelta
 from discord import Colour, DMChannel, Member, Message, TextChannel
 from discord.ext.commands import Bot, Cog
 
-from bot.cogs.modlog import ModLog
+from bot.cogs.moderation import ModLog
 from bot.constants import (
     Channels, Colours, DEBUG_MODE,
     Filter, Icons, URLs
@@ -186,7 +186,7 @@ class Filtering(Cog):
 
                         message = (
                             f"The {filter_name} {_filter['type']} was triggered "
-                            f"by **{msg.author.name}#{msg.author.discriminator}** "
+                            f"by **{msg.author}** "
                             f"(`{msg.author.id}`) {channel_str} with [the "
                             f"following message]({msg.jump_url}):\n\n"
                             f"{msg.content}"
