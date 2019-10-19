@@ -1,0 +1,76 @@
+# Python Utility Bot
+
+> Auto-generated documentation index.
+
+[![Discord](https://img.shields.io/discord/267624335836053506?color=%237289DA&label=Python%20Discord&logo=discord&logoColor=white)](https://discord.gg/2B963hn)
+[![Build Status](https://dev.azure.com/python-discord/Python%20Discord/_apis/build/status/Bot?branchName=master)](https://dev.azure.com/python-discord/Python%20Discord/_build/latest?definitionId=1&branchName=master)
+[![Tests](https://img.shields.io/azure-devops/tests/python-discord/Python%20Discord/1?compact_message)](https://dev.azure.com/python-discord/Python%20Discord/_apis/build/status/Bot?branchName=master)
+[![Coverage](https://img.shields.io/azure-devops/coverage/python-discord/Python%20Discord/1/master)](https://dev.azure.com/python-discord/Python%20Discord/_apis/build/status/Bot?branchName=master)
+[![License](https://img.shields.io/github/license/python-discord/bot)](LICENSE)
+[![Website](https://img.shields.io/badge/website-visit-brightgreen)](https://pythondiscord.com)
+
+- [Python Utility Bot](#python-utility-bot)
+  - [Modules](#modules)
+
+This project is a Discord bot specifically for use with the Python Discord server. It provides numerous utilities
+and other tools to help keep the server running like a well-oiled machine.
+
+Read the [Contributing Guide](https://pythondiscord.com/pages/contributing/bot/) on our website if you're interested in helping out.
+
+## Modules
+
+- [Bot](bot/index.md#bot)
+  - [Api](bot/api.md#api)
+  - Cogs
+    - [Alias](bot/cogs/alias.md#alias)
+    - [AntiSpam](bot/cogs/antispam.md#antispam)
+    - [Bot](bot/cogs/bot.md#bot)
+    - [Clean](bot/cogs/clean.md#clean)
+    - [Defcon](bot/cogs/defcon.md#defcon)
+    - [Doc](bot/cogs/doc.md#doc)
+    - [ErrorHandler](bot/cogs/error_handler.md#errorhandler)
+    - [Eval](bot/cogs/eval.md#eval)
+    - [Extensions](bot/cogs/extensions.md#extensions)
+    - [Filtering](bot/cogs/filtering.md#filtering)
+    - [Free](bot/cogs/free.md#free)
+    - [Help](bot/cogs/help.md#help)
+    - [Information](bot/cogs/information.md#information)
+    - [Jams](bot/cogs/jams.md#jams)
+    - [Logging](bot/cogs/logging.md#logging)
+    - [Moderation](bot/cogs/moderation/index.md#moderation)
+    - [OffTopicNames](bot/cogs/off_topic_names.md#offtopicnames)
+    - [Reddit](bot/cogs/reddit.md#reddit)
+    - [Reminders](bot/cogs/reminders.md#reminders)
+    - [Security](bot/cogs/security.md#security)
+    - [Site](bot/cogs/site.md#site)
+    - [Snekbox](bot/cogs/snekbox.md#snekbox)
+    - [Sync](bot/cogs/sync/index.md#sync)
+    - [Tags](bot/cogs/tags.md#tags)
+    - [TokenRemover](bot/cogs/token_remover.md#tokenremover)
+    - [Utils](bot/cogs/utils.md#utils)
+    - [Verification](bot/cogs/verification.md#verification)
+    - [Watchchannels](bot/cogs/watchchannels/index.md#watchchannels)
+    - [Wolfram](bot/cogs/wolfram.md#wolfram)
+  - [Constants](bot/constants.md#constants)
+  - [Converters](bot/converters.md#converters)
+  - [Decorators](bot/decorators.md#decorators)
+  - [Interpreter](bot/interpreter.md#interpreter)
+  - [Pagination](bot/pagination.md#pagination)
+  - [Patches](bot/patches/index.md#patches)
+    - [message_edited_at patch.](bot/patches/message_edited_at.md#message_edited_at-patch)
+  - [Rules](bot/rules/index.md#rules)
+    - [Attachments](bot/rules/attachments.md#attachments)
+    - [Burst](bot/rules/burst.md#burst)
+    - [Burst Shared](bot/rules/burst_shared.md#burst-shared)
+    - [Chars](bot/rules/chars.md#chars)
+    - [Discord Emojis](bot/rules/discord_emojis.md#discord-emojis)
+    - [Duplicates](bot/rules/duplicates.md#duplicates)
+    - [Links](bot/rules/links.md#links)
+    - [Mentions](bot/rules/mentions.md#mentions)
+    - [Newlines](bot/rules/newlines.md#newlines)
+    - [Role Mentions](bot/rules/role_mentions.md#role-mentions)
+  - [Utils](bot/utils/index.md#utils)
+    - [Checks](bot/utils/checks.md#checks)
+    - [Messages](bot/utils/messages.md#messages)
+    - [Scheduling](bot/utils/scheduling.md#scheduling)
+    - [Time](bot/utils/time.md#time)
