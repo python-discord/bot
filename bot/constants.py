@@ -347,6 +347,8 @@ class Channels(metaclass=YAMLGetter):
     message_log: int
     mod_alerts: int
     modlog: int
+    mods: int
+    mod_spam: int
     off_topic_0: int
     off_topic_1: int
     off_topic_2: int
@@ -499,6 +501,9 @@ PROJECT_ROOT = os.path.abspath(os.path.join(BOT_DIR, os.pardir))
 # Default role combinations
 MODERATION_ROLES = Roles.moderator, Roles.admin, Roles.owner
 STAFF_ROLES = Roles.helpers, Roles.moderator, Roles.admin, Roles.owner
+
+# Default Channel combinations
+MODERATION_CHANNELS = Channels.admins, Channels.mod_alerts, Channels.mods, Channels.mod_spam
 
 
 # Bot replies

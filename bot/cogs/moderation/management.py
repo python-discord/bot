@@ -11,7 +11,7 @@ from bot import constants
 from bot.converters import InfractionSearchQuery
 from bot.pagination import LinePaginator
 from bot.utils import time
-from bot.utils.checks import with_role_check
+from bot.utils.checks import in_channel_check, with_role_check
 from . import utils
 from .infractions import Infractions
 from .modlog import ModLog
@@ -257,7 +257,11 @@ class ModManagement(commands.Cog):
     # This cannot be static (must have a __func__ attribute).
     def cog_check(self, ctx: Context) -> bool:
         """Only allow moderators to invoke the commands in this cog."""
-        return with_role_check(ctx, *constants.MODERATION_ROLES)
+        checks = [
+            with_role_check(ctx, *constants.MODERATION_ROLES),
+            in_channel_check(ctx, *constants.MODERATION_CHANNELS)
+        ]
+        return all(checks)
 
     # This cannot be static (must have a __func__ attribute).
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:
