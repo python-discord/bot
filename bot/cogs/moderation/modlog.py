@@ -363,7 +363,7 @@ class ModLog(Cog, name="ModLog"):
 
         await self.send_log_message(
             Icons.user_ban, Colours.soft_red,
-            "User banned", f"{member.name}#{member.discriminator} (`{member.id}`)",
+            "User banned", f"{member} (`{member.id}`)",
             thumbnail=member.avatar_url_as(static_format="png"),
             channel_id=Channels.userlog
         )
@@ -374,7 +374,7 @@ class ModLog(Cog, name="ModLog"):
         if member.guild.id != GuildConstant.id:
             return
 
-        message = f"{member.name}#{member.discriminator} (`{member.id}`)"
+        message = f"{member} (`{member.id}`)"
         now = datetime.utcnow()
         difference = abs(relativedelta(now, member.created_at))
 
@@ -402,7 +402,7 @@ class ModLog(Cog, name="ModLog"):
 
         await self.send_log_message(
             Icons.sign_out, Colours.soft_red,
-            "User left", f"{member.name}#{member.discriminator} (`{member.id}`)",
+            "User left", f"{member} (`{member.id}`)",
             thumbnail=member.avatar_url_as(static_format="png"),
             channel_id=Channels.userlog
         )
@@ -419,7 +419,7 @@ class ModLog(Cog, name="ModLog"):
 
         await self.send_log_message(
             Icons.user_unban, Colour.blurple(),
-            "User unbanned", f"{member.name}#{member.discriminator} (`{member.id}`)",
+            "User unbanned", f"{member} (`{member.id}`)",
             thumbnail=member.avatar_url_as(static_format="png"),
             channel_id=Channels.modlog
         )
@@ -511,7 +511,7 @@ class ModLog(Cog, name="ModLog"):
         for item in sorted(changes):
             message += f"{Emojis.bullet} {item}\n"
 
-        message = f"**{after.name}#{after.discriminator}** (`{after.id}`)\n{message}"
+        message = f"**{after}** (`{after.id}`)\n{message}"
 
         await self.send_log_message(
             Icons.user_update, Colour.blurple(),
@@ -540,14 +540,14 @@ class ModLog(Cog, name="ModLog"):
 
         if channel.category:
             response = (
-                f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
+                f"**Author:** {author} (`{author.id}`)\n"
                 f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{message.id}`\n"
                 "\n"
             )
         else:
             response = (
-                f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
+                f"**Author:** {author} (`{author.id}`)\n"
                 f"**Channel:** #{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{message.id}`\n"
                 "\n"
@@ -638,7 +638,7 @@ class ModLog(Cog, name="ModLog"):
 
         if channel.category:
             before_response = (
-                f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
+                f"**Author:** {author} (`{author.id}`)\n"
                 f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{before.id}`\n"
                 "\n"
@@ -646,7 +646,7 @@ class ModLog(Cog, name="ModLog"):
             )
 
             after_response = (
-                f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
+                f"**Author:** {author} (`{author.id}`)\n"
                 f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{before.id}`\n"
                 "\n"
@@ -654,7 +654,7 @@ class ModLog(Cog, name="ModLog"):
             )
         else:
             before_response = (
-                f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
+                f"**Author:** {author} (`{author.id}`)\n"
                 f"**Channel:** #{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{before.id}`\n"
                 "\n"
@@ -662,7 +662,7 @@ class ModLog(Cog, name="ModLog"):
             )
 
             after_response = (
-                f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
+                f"**Author:** {author} (`{author.id}`)\n"
                 f"**Channel:** #{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{before.id}`\n"
                 "\n"
@@ -721,7 +721,7 @@ class ModLog(Cog, name="ModLog"):
 
         if channel.category:
             before_response = (
-                f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
+                f"**Author:** {author} (`{author.id}`)\n"
                 f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{message.id}`\n"
                 "\n"
@@ -729,7 +729,7 @@ class ModLog(Cog, name="ModLog"):
             )
 
             after_response = (
-                f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
+                f"**Author:** {author} (`{author.id}`)\n"
                 f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{message.id}`\n"
                 "\n"
@@ -737,7 +737,7 @@ class ModLog(Cog, name="ModLog"):
             )
         else:
             before_response = (
-                f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
+                f"**Author:** {author} (`{author.id}`)\n"
                 f"**Channel:** #{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{message.id}`\n"
                 "\n"
@@ -745,7 +745,7 @@ class ModLog(Cog, name="ModLog"):
             )
 
             after_response = (
-                f"**Author:** {author.name}#{author.discriminator} (`{author.id}`)\n"
+                f"**Author:** {author} (`{author.id}`)\n"
                 f"**Channel:** #{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{message.id}`\n"
                 "\n"

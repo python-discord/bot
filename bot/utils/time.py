@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+from typing import Optional
 
 import dateutil.parser
 from dateutil.relativedelta import relativedelta
@@ -34,6 +35,9 @@ def humanize_delta(delta: relativedelta, precision: str = "seconds", max_units: 
     precision specifies the smallest unit of time to include (e.g. "seconds", "minutes").
     max_units specifies the maximum number of units of time to include (e.g. 1 may include days but not hours).
     """
+    if max_units <= 0:
+        raise ValueError("max_units must be positive")
+
     units = (
         ("years", delta.years),
         ("months", delta.months),
@@ -83,15 +87,20 @@ def time_since(past_datetime: datetime.datetime, precision: str = "seconds", max
     return f"{humanized} ago"
 
 
-def parse_rfc1123(time_str: str) -> datetime.datetime:
+def parse_rfc1123(stamp: str) -> datetime.datetime:
     """Parse RFC1123 time string into datetime."""
-    return datetime.datetime.strptime(time_str, RFC1123_FORMAT).replace(tzinfo=datetime.timezone.utc)
+    return datetime.datetime.strptime(stamp, RFC1123_FORMAT).replace(tzinfo=datetime.timezone.utc)
 
 
 # Hey, this could actually be used in the off_topic_names and reddit cogs :)
-async def wait_until(time: datetime.datetime) -> None:
-    """Wait until a given time."""
-    delay = time - datetime.datetime.utcnow()
+async def wait_until(time: datetime.datetime, start: Optional[datetime.datetime] = None) -> None:
+    """
+    Wait until a given time.
+
+    :param time: A datetime.datetime object to wait until.
+    :param start: The start from which to calculate the waiting duration. Defaults to UTC time.
+    """
+    delay = time - (start or datetime.datetime.utcnow())
     delay_seconds = delay.total_seconds()
 
     # Incorporate a small delay so we don't rapid-fire the event due to time precision errors
