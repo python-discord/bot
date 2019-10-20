@@ -44,7 +44,7 @@ class Reddit(Cog):
 
     @property
     def channel(self) -> TextChannel:
-        """Returns the #reddit channel object from the bot's cache."""
+        """Get the #reddit channel object from the bot's cache."""
         return self.bot.get_channel(Channels.reddit)
 
     async def fetch_posts(self, route: str, *, amount: int = 25, params: dict = None) -> List[dict]:
@@ -74,17 +74,21 @@ class Reddit(Cog):
         log.debug(f"Invalid response from: {url} - status code {response.status}, mimetype {response.content_type}")
         return list()  # Failed to get appropriate response within allowed number of retries.
 
-    async def get_top_posts(self, subreddit: Subreddit, time: str = "all") -> Embed:
-        """Returns an embed for the top posts of the given subreddit."""
-        # Create the new spicy embed.
+    async def get_top_posts(self, subreddit: Subreddit, time: str = "all", amount: int = 5) -> Embed:
+        """
+        Get the top amount of posts for a given subreddit within a specified timeframe.
+
+        A time of "all" will get posts from all time, "day" will get top daily posts and "week" will get the top
+        weekly posts.
+
+        The amount should be between 0 and 25 as Reddit's JSON requests only provide 25 posts at most.
+        """
         embed = Embed(description="")
 
         posts = await self.fetch_posts(
             route=f"{subreddit}/top",
-            amount=5,
-            params={
-                "t": time
-            }
+            amount=amount,
+            params={"t": time}
         )
 
         if not posts:
@@ -156,10 +160,10 @@ class Reddit(Cog):
                     log.warning("Failed to get #reddit channel to remove pins in the weekly loop.")
                     return
 
-                # Remove the oldest pins so that only 5 remain at most.
+                # Remove the oldest pins so that only 12 remain at most.
                 pins = await self.channel.pins()
 
-                while len(pins) >= 5:
+                while len(pins) >= 12:
                     await pins[-1].unpin()
                     del pins[-1]
 
