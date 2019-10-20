@@ -4,17 +4,19 @@ import logging
 import re
 import textwrap
 from collections import OrderedDict
+from contextlib import suppress
 from typing import Any, Callable, Optional, Tuple
 
 import discord
 from bs4 import BeautifulSoup
 from bs4.element import PageElement
+from discord.errors import NotFound
 from discord.ext import commands
 from markdownify import MarkdownConverter
 from requests import ConnectionError
 from sphinx.ext import intersphinx
 
-from bot.constants import MODERATION_ROLES
+from bot.constants import MODERATION_ROLES, RedirectOutput
 from bot.converters import ValidPythonIdentifier, ValidURL
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
@@ -23,6 +25,7 @@ from bot.pagination import LinePaginator
 log = logging.getLogger(__name__)
 logging.getLogger('urllib3').setLevel(logging.WARNING)
 
+NOT_FOUND_DELETE_DELAY = RedirectOutput.delete_delay
 NO_OVERRIDE_GROUPS = (
     "2to3fixer",
     "token",
@@ -343,7 +346,10 @@ class Doc(commands.Cog):
                     description=f"Sorry, I could not find any documentation for `{symbol}`.",
                     colour=discord.Colour.red()
                 )
-                await ctx.send(embed=error_embed)
+                error_message = await ctx.send(embed=error_embed)
+                with suppress(NotFound):
+                    await error_message.delete(delay=NOT_FOUND_DELETE_DELAY)
+                    await ctx.message.delete(delay=NOT_FOUND_DELETE_DELAY)
             else:
                 await ctx.send(embed=doc_embed)
 
