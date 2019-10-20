@@ -53,30 +53,44 @@ class TokenRemover(Cog):
         See: https://discordapp.com/developers/docs/reference#snowflakes
         """
         if self.is_token_in_message(msg):
-            user_id, creation_timestamp, hmac = TOKEN_RE.search(msg.content).group(0).split('.')
-            self.mod_log.ignore(Event.message_delete, msg.id)
-            await msg.delete()
-            await msg.channel.send(DELETION_MESSAGE_TEMPLATE.format(mention=msg.author.mention))
+            await self.take_action(msg)
 
-            message = (
-                "Censored a seemingly valid token sent by "
-                f"{msg.author} (`{msg.author.id}`) in {msg.channel.mention}, token was "
-                f"`{user_id}.{creation_timestamp}.{'x' * len(hmac)}`"
-            )
-            log.debug(message)
+    @Cog.listener()
+    async def on_message_edit(self, before: Message, after: Message) -> None:
+        """
+        Check each edit for a string that matches Discord's token pattern.
 
-            # Send pretty mod log embed to mod-alerts
-            await self.mod_log.send_log_message(
-                icon_url=Icons.token_removed,
-                colour=Colour(Colours.soft_red),
-                title="Token removed!",
-                text=message,
-                thumbnail=msg.author.avatar_url_as(static_format="png"),
-                channel_id=Channels.mod_alerts,
-            )
+        See: https://discordapp.com/developers/docs/reference#snowflakes
+        """
+        if self.is_token_in_message(after):
+            await self.take_action(after)
+
+    async def take_action(self, msg: Message) -> None:
+        """Remove the `msg` containing a token an send a mod_log message."""
+        user_id, creation_timestamp, hmac = TOKEN_RE.search(msg.content).group(0).split('.')
+        self.mod_log.ignore(Event.message_delete, msg.id)
+        await msg.delete()
+        await msg.channel.send(DELETION_MESSAGE_TEMPLATE.format(mention=msg.author.mention))
+
+        message = (
+            "Censored a seemingly valid token sent by "
+            f"{msg.author} (`{msg.author.id}`) in {msg.channel.mention}, token was "
+            f"`{user_id}.{creation_timestamp}.{'x' * len(hmac)}`"
+        )
+        log.debug(message)
+
+        # Send pretty mod log embed to mod-alerts
+        await self.mod_log.send_log_message(
+            icon_url=Icons.token_removed,
+            colour=Colour(Colours.soft_red),
+            title="Token removed!",
+            text=message,
+            thumbnail=msg.author.avatar_url_as(static_format="png"),
+            channel_id=Channels.mod_alerts,
+        )
 
     @classmethod
-    def is_token_in_message(self, msg: Message) -> bool:
+    def is_token_in_message(cls, msg: Message) -> bool:
         """Check if `msg` contains a seemly valid token."""
         if msg.author.bot:
             return False
@@ -90,7 +104,7 @@ class TokenRemover(Cog):
         except ValueError:
             return False
 
-        if self.is_valid_user_id(user_id) and self.is_valid_timestamp(creation_timestamp):
+        if cls.is_valid_user_id(user_id) and cls.is_valid_timestamp(creation_timestamp):
             return True
 
     @staticmethod
