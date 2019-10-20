@@ -32,7 +32,6 @@ NO_OVERRIDE_GROUPS = (
     "label",
     "pdbcommand",
     "term",
-    "function"
 )
 NO_OVERRIDE_PACKAGES = (
     "Python",
