@@ -281,18 +281,23 @@ class Doc(commands.Cog):
         if not signature:
             # It's some "meta-page", for example:
             # https://docs.djangoproject.com/en/dev/ref/views/#module-django.views
-            return discord.Embed(
+            embed = discord.Embed(
                 title=f'`{symbol}`',
                 url=permalink,
                 description="This appears to be a generic page not tied to a specific symbol."
             )
-
-        signature = textwrap.shorten(signature, 500)
-        return discord.Embed(
-            title=f'`{symbol}`',
-            url=permalink,
-            description=f"```py\n{signature}```{description}"
-        )
+        else:
+            signature = textwrap.shorten(signature, 500)
+            embed = discord.Embed(
+                title=f'`{symbol}`',
+                url=permalink,
+                description=f"```py\n{signature}```{description}"
+            )
+        # show all symbols with the same name that were renamed in the footer
+        embed.set_footer(text=", ".join(renamed for renamed in self.renamed_symbols - {symbol}
+                                        if renamed.endswith(f".{symbol}"))
+                         )
+        return embed
 
     @commands.group(name='docs', aliases=('doc', 'd'), invoke_without_command=True)
     async def docs_group(self, ctx: commands.Context, symbol: commands.clean_content = None) -> None:
