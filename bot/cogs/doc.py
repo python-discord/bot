@@ -23,7 +23,17 @@ from bot.pagination import LinePaginator
 log = logging.getLogger(__name__)
 logging.getLogger('urllib3').setLevel(logging.WARNING)
 
-
+NO_OVERRIDE_GROUPS = (
+    "2to3fixer",
+    "token",
+    "label",
+    "pdbcommand",
+    "term",
+    "function"
+)
+NO_OVERRIDE_PACKAGES = (
+    "Python",
+)
 UNWANTED_SIGNATURE_SYMBOLS = ('[source]', '¶')
 WHITESPACE_AFTER_NEWLINES_RE = re.compile(r"(?<=\n\n)(\s+)")
 
@@ -125,6 +135,7 @@ class Doc(commands.Cog):
         self.base_urls = {}
         self.bot = bot
         self.inventories = {}
+        self.renamed_symbols = set()
 
         self.bot.loop.create_task(self.init_refresh_inventory())
 
@@ -151,12 +162,32 @@ class Doc(commands.Cog):
         self.base_urls[package_name] = base_url
 
         fetch_func = functools.partial(intersphinx.fetch_inventory, config, '', inventory_url)
-        for _, value in (await self.bot.loop.run_in_executor(None, fetch_func)).items():
+        for group, value in (await self.bot.loop.run_in_executor(None, fetch_func)).items():
             # Each value has a bunch of information in the form
             # `(package_name, version, relative_url, ???)`, and we only
-            # need the relative documentation URL.
-            for symbol, (_, _, relative_doc_url, _) in value.items():
+            # need the package_name and the relative documentation URL.
+            for symbol, (package_name, _, relative_doc_url, _) in value.items():
                 absolute_doc_url = base_url + relative_doc_url
+
+                if symbol in self.inventories:
+                    # get `group_name` from _:group_name
+                    group_name = group.split(":")[1]
+                    if (group_name in NO_OVERRIDE_GROUPS
+                            # check if any package from `NO_OVERRIDE_PACKAGES`
+                            # is in base URL of the symbol that would be overridden
+                            or any(package in self.inventories[symbol].split("/", 3)[2]
+                                   for package in NO_OVERRIDE_PACKAGES)):
+
+                        symbol = f"{group_name}.{symbol}"
+                        # if renamed `symbol` was already exists, add library name in front
+                        if symbol in self.renamed_symbols:
+                            # split `package_name` because of packages like Pillow that have spaces in them
+                            symbol = f"{package_name.split()[0]}.{symbol}"
+
+                        self.inventories[symbol] = absolute_doc_url
+                        self.renamed_symbols.add(symbol)
+                        continue
+
                 self.inventories[symbol] = absolute_doc_url
 
         log.trace(f"Fetched inventory for {package_name}.")
