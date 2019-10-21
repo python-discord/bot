@@ -205,8 +205,8 @@ class Defcon(Cog):
             msg = f"{Emojis.defcon_disabled} DEFCON disabled.\n\n"
         elif action is Action.UPDATED:
             msg = (
-                f"{Emojis.defcon_updated} DEFCON days updated; accounts must be {self.days} "
-                "days old to join the server.\n\n"
+                f"{Emojis.defcon_updated} DEFCON days updated; accounts must be {self.days.days} "
+                f"day{'s' if self.days.days > 1 else ''} old to join the server.\n\n"
             )
 
         if e:
