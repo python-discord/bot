@@ -306,7 +306,7 @@ class Doc(commands.Cog):
             url=permalink,
             description=embed_description
         )
-        # show all symbols with the same name that were renamed in the footer
+        # Show all symbols with the same name that were renamed in the footer.
         embed.set_footer(text=", ".join(renamed for renamed in self.renamed_symbols - {symbol}
                                         if renamed.endswith(f".{symbol}"))
                          )
