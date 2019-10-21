@@ -222,12 +222,11 @@ class Doc(commands.Cog):
         """
         Given a Python symbol, return its signature and description.
 
-        Returns a tuple in the form (str, str), or `None`.
-
         The first tuple element is the signature of the given symbol as a markup-free string, and
         the second tuple element is the description of the given symbol with HTML markup included.
 
-        If the given symbol could not be found, returns `None`.
+        If the given symbol is a module, returns a tuple `(None, str)`
+        else if the symbol could not be found, returns `None`.
         """
         url = self.inventories.get(symbol)
         if url is None:
@@ -245,14 +244,23 @@ class Doc(commands.Cog):
         if symbol_heading is None:
             return None
 
-        # Traverse the tags of the signature header and ignore any
-        # unwanted symbols from it. Add all of it to a temporary buffer.
-        for tag in symbol_heading.strings:
-            if tag not in UNWANTED_SIGNATURE_SYMBOLS:
-                signature_buffer.append(tag.replace('\\', ''))
+        if symbol_id == f"module-{symbol}":
+            # Get all paragraphs until the first div after the section div
+            # if searched symbol is a module.
+            trailing_div = symbol_heading.findNext("div")
+            info_paragraphs = trailing_div.find_previous_siblings("p")[::-1]
+            signature = None
+            description = ''.join(str(paragraph) for paragraph in info_paragraphs).replace('¶', '')
 
-        signature = ''.join(signature_buffer)
-        description = str(symbol_heading.next_sibling.next_sibling).replace('¶', '')
+        else:
+            # Traverse the tags of the signature header and ignore any
+            # unwanted symbols from it. Add all of it to a temporary buffer.
+
+            for tag in symbol_heading.strings:
+                if tag not in UNWANTED_SIGNATURE_SYMBOLS:
+                    signature_buffer.append(tag.replace('\\', ''))
+            signature = ''.join(signature_buffer)
+            description = str(symbol_heading.next_sibling.next_sibling).replace('¶', '')
 
         return signature, description
 
