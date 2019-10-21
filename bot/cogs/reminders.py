@@ -101,13 +101,13 @@ class Reminders(Scheduler, Cog):
         embed.colour = Colour.blurple()
         embed.set_author(
             icon_url=Icons.remind_blurple,
-            name="It has arrived!")
+            name="It has arrived!"
+        )
 
-        if "jump_url" in reminder:  # keep backward compatibility
-            embed.description = (f"Here's your reminder: `{reminder['content']}`.\n"
-                                 f"[Jump back to when you created the reminder]({reminder['jump_url']})")
-        else:
-            embed.description = f"Here's your reminder: `{reminder['content']}`"
+        embed.description = f"Here's your reminder: `{reminder['content']}`."
+
+        if reminder.get("jump_url"):  # keep backward compatibility
+            embed.description += f"\n[Jump back to when you created the reminder]({reminder['jump_url']})"
 
         if late:
             embed.colour = Colour.red()
