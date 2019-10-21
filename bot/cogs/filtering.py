@@ -26,7 +26,7 @@ INVITE_RE = re.compile(
     flags=re.IGNORECASE
 )
 
-SPOILER_RE = re.compile(r"(\|\|.+?\|\|)")
+SPOILER_RE = re.compile(r"(\|\|.+?\|\|)", re.DOTALL)
 URL_RE = re.compile(r"(https?://[^\s]+)", flags=re.IGNORECASE)
 ZALGO_RE = re.compile(r"[\u0300-\u036F\u0489]")
 
