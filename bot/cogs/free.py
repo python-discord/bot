@@ -79,18 +79,15 @@ class Free(Cog):
             if len(sorted_channels) > 3:  # display 3 channels max
                 sorted_channels = sorted_channels[:3]
 
-            for i, (inactive, channel) in enumerate(sorted_channels, 1):
+            for (inactive, channel) in sorted_channels:
                 minutes, seconds = divmod(inactive, 60)
                 if minutes > 59:
                     hours, minutes = divmod(minutes, 60)
-                    embed.description += f"{i}. {channel.mention} **{hours}h {minutes}m {seconds}s** inactive\n"
+                    embed.description += f"{channel.mention} **{hours}h {minutes}m {seconds}s** inactive\n"
                 else:
-                    embed.description += f"{i}. {channel.mention} **{minutes}m {seconds}s** inactive\n"
+                    embed.description += f"{channel.mention} **{minutes}m {seconds}s** inactive\n"
 
-            embed.description += (
-                "Please confirm these channels "
-                "are free before posting"
-            )
+            embed.set_footer(text="Please confirm these channels are free before posting")
         else:
             embed.description = (
                 "**Doesn't look like any channels are available right now. "
