@@ -37,11 +37,6 @@ class Action(Enum):
     DISABLED = ActionInfo(Icons.defcon_disabled, Colours.soft_red, "")
     UPDATED = ActionInfo(Icons.defcon_updated, Colour.blurple(), "**Days:** {days}\n\n")
 
-    @staticmethod
-    def get_info(action: str) -> Action.ActionInfo:
-        """Getting value from an action."""
-        return Action[action.upper()].value
-
 
 class Defcon(Cog):
     """Time-sensitive server defense mechanisms."""
@@ -146,8 +141,8 @@ class Defcon(Cog):
             log.exception("Unable to update DEFCON settings.")
             error = err
         finally:
-            await ctx.send(self.build_defcon_msg(action.name.lower(), error))
-            await self.send_defcon_log(action.name.lower(), ctx.author, error)
+            await ctx.send(self.build_defcon_msg(action, error))
+            await self.send_defcon_log(action, ctx.author, error)
 
     @defcon_group.command(name='enable', aliases=('on', 'e'))
     @with_role(Roles.admin, Roles.owner)
@@ -202,17 +197,17 @@ class Defcon(Cog):
         self.mod_log.ignore(Event.guild_channel_update, Channels.defcon)
         await self.channel.edit(topic=new_topic)
 
-    def build_defcon_msg(self, change: str, e: Exception = None) -> str:
+    def build_defcon_msg(self, action: Action, e: Exception = None) -> str:
         """
         Build in-channel response string for DEFCON action.
 
         `change` string may be one of the following: ('enabled', 'disabled', 'updated')
         """
-        if change.lower() == "enabled":
+        if action is Action.ENABLED:
             msg = f"{Emojis.defcon_enabled} DEFCON enabled.\n\n"
-        elif change.lower() == "disabled":
+        elif action is Action.DISABLED:
             msg = f"{Emojis.defcon_disabled} DEFCON disabled.\n\n"
-        elif change.lower() == "updated":
+        elif action is Action.UPDATED:
             msg = (
                 f"{Emojis.defcon_updated} DEFCON days updated; accounts must be {self.days} "
                 "days old to join the server.\n\n"
@@ -226,18 +221,18 @@ class Defcon(Cog):
 
         return msg
 
-    async def send_defcon_log(self, change: str, actor: Member, e: Exception = None) -> None:
+    async def send_defcon_log(self, action: Action, actor: Member, e: Exception = None) -> None:
         """
         Send log message for DEFCON action.
 
         `change` string may be one of the following: ('enabled', 'disabled', 'updated')
         """
-        info = Action.get_info(change)
+        info = action.value
         log_msg: str = (
             f"**Staffer:** {actor.mention} {actor} (`{actor.id}`)\n"
             f"{info.template.format(days=self.days.days)}"
         )
-        status_msg = f"DEFCON {change.lower()}"
+        status_msg = f"DEFCON {action.name.lower()}"
 
         if e:
             log_msg += (
