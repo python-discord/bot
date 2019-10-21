@@ -256,7 +256,7 @@ class ModManagement(commands.Cog):
 
     # This cannot be static (must have a __func__ attribute).
     def cog_check(self, ctx: Context) -> bool:
-        """Only allow moderators to invoke the commands in this cog."""
+        """Only allow moderators from moderator channels to invoke the commands in this cog."""
         checks = [
             with_role_check(ctx, *constants.MODERATION_ROLES),
             in_channel_check(ctx, *constants.MODERATION_CHANNELS)

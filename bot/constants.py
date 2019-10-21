@@ -328,6 +328,7 @@ class Channels(metaclass=YAMLGetter):
     subsection = "channels"
 
     admins: int
+    admin_spam: int
     announcements: int
     big_brother_logs: int
     bot: int
@@ -503,7 +504,7 @@ MODERATION_ROLES = Roles.moderator, Roles.admin, Roles.owner
 STAFF_ROLES = Roles.helpers, Roles.moderator, Roles.admin, Roles.owner
 
 # Default Channel combinations
-MODERATION_CHANNELS = Channels.admins, Channels.mod_alerts, Channels.mods, Channels.mod_spam
+MODERATION_CHANNELS = Channels.admins, Channels.admin_spam, Channels.mod_alerts, Channels.mods, Channels.mod_spam
 
 
 # Bot replies
