@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import logging
+from collections import namedtuple
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Optional
 
 from discord import Colour, Embed, Member
 from discord.ext.commands import Bot, Cog, Context, group
@@ -26,17 +28,19 @@ will be resolved soon. In the meantime, please feel free to peruse the resources
 BASE_CHANNEL_TOPIC = "Python Discord Defense Mechanism"
 
 
-class DefconLogInfo(Enum):
+class Action(Enum):
     """Defcon Logging Information."""
 
-    ENABLED = (Icons.defcon_enabled, Colours.soft_green, "**Days:** {days}\n\n")
-    DISABLED = (Icons.defcon_disabled, Colours.soft_red, "")
-    UPDATED = (Icons.defcon_updated, Colour.blurple(), "**Days:** {days}\n\n")
+    ActionInfo = namedtuple('LogInfoDetails', ['icon', 'color', 'template'])
+
+    ENABLED = ActionInfo(Icons.defcon_enabled, Colours.soft_green, "**Days:** {days}\n\n")
+    DISABLED = ActionInfo(Icons.defcon_disabled, Colours.soft_red, "")
+    UPDATED = ActionInfo(Icons.defcon_updated, Colour.blurple(), "**Days:** {days}\n\n")
 
     @staticmethod
-    def from_action(action: str) -> Optional[tuple]:
+    def get_info(action: str) -> Action.ActionInfo:
         """Getting value from an action."""
-        return DefconLogInfo[action.upper()].value
+        return Action[action.upper()].value
 
 
 class Defcon(Cog):
@@ -123,14 +127,9 @@ class Defcon(Cog):
         """Check the DEFCON status or run a subcommand."""
         await ctx.invoke(self.bot.get_command("help"), "defcon")
 
-    async def _defcon_action(self, ctx: Context, days: int, enabled: bool) -> None:
+    async def _defcon_action(self, ctx: Context, days: int, action: Action) -> None:
         """Providing a structured way to do an defcon action."""
         error = None
-        if days == 0:
-            action_type = 'enabled' if enabled else 'disabled'
-        else:
-            action_type = 'updated'
-
         try:
             await self.bot.api_client.put(
                 'bot/bot-settings/defcon',
@@ -139,7 +138,7 @@ class Defcon(Cog):
                     'data': {
                         # TODO: retrieve old days count
                         'days': days,
-                        'enabled': enabled,
+                        'enabled': action is not Action.DISABLED,
                     }
                 }
             )
@@ -147,8 +146,8 @@ class Defcon(Cog):
             log.exception("Unable to update DEFCON settings.")
             error = err
         finally:
-            await ctx.send(self.build_defcon_msg(action_type, error))
-            await self.send_defcon_log(action_type, ctx.author, error)
+            await ctx.send(self.build_defcon_msg(action.name.lower(), error))
+            await self.send_defcon_log(action.name.lower(), ctx.author, error)
 
     @defcon_group.command(name='enable', aliases=('on', 'e'))
     @with_role(Roles.admin, Roles.owner)
@@ -160,7 +159,7 @@ class Defcon(Cog):
         in days.
         """
         self.enabled = True
-        await self._defcon_action(ctx, days=0, enabled=True)
+        await self._defcon_action(ctx, days=0, action=Action.ENABLED)
         await self.update_channel_topic()
 
     @defcon_group.command(name='disable', aliases=('off', 'd'))
@@ -168,7 +167,7 @@ class Defcon(Cog):
     async def disable_command(self, ctx: Context) -> None:
         """Disable DEFCON mode. Useful in a pinch, but be sure you know what you're doing!"""
         self.enabled = False
-        await self._defcon_action(ctx, days=0, enabled=False)
+        await self._defcon_action(ctx, days=0, action=Action.DISABLED)
         await self.update_channel_topic()
 
     @defcon_group.command(name='status', aliases=('s',))
@@ -189,7 +188,7 @@ class Defcon(Cog):
         """Set how old an account must be to join the server, in days, with DEFCON mode enabled."""
         self.days = timedelta(days=days)
         self.enabled = True
-        await self._defcon_action(ctx, days=days, enabled=True)
+        await self._defcon_action(ctx, days=days, action=Action.UPDATED)
         await self.update_channel_topic()
 
     async def update_channel_topic(self) -> None:
@@ -233,10 +232,10 @@ class Defcon(Cog):
 
         `change` string may be one of the following: ('enabled', 'disabled', 'updated')
         """
-        icon, color, info_template = DefconLogInfo.from_action(change)
+        info = Action.get_info(change)
         log_msg: str = (
             f"**Staffer:** {actor.mention} {actor} (`{actor.id}`)\n"
-            f"{info_template.format(days=self.days.days)}"
+            f"{info.template.format(days=self.days.days)}"
         )
         status_msg = f"DEFCON {change.lower()}"
 
@@ -246,7 +245,7 @@ class Defcon(Cog):
                 f"```py\n{e}\n```"
             )
 
-        await self.mod_log.send_log_message(icon, color, status_msg, log_msg)
+        await self.mod_log.send_log_message(info.icon, info.color, status_msg, log_msg)
 
 
 def setup(bot: Bot) -> None:
