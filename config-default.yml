@@ -90,7 +90,7 @@ guild:
 
     channels:
         admins:            &ADMINS        365960823622991872
-        admin-spam:                       563594791770914816
+        admin_spam:                       563594791770914816
         announcements:                    354619224620138496
         big_brother_logs:  &BBLOGS        468507907357409333
         bot:                              267659945086812160
