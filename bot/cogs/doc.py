@@ -288,21 +288,24 @@ class Doc(commands.Cog):
 
         description = WHITESPACE_AFTER_NEWLINES_RE.sub('', description)
 
-        if not signature:
+        if signature is None:
+            # If symbol is a module, don't show signature.
+            embed_description = description
+
+        elif not signature:
             # It's some "meta-page", for example:
             # https://docs.djangoproject.com/en/dev/ref/views/#module-django.views
-            embed = discord.Embed(
-                title=f'`{symbol}`',
-                url=permalink,
-                description="This appears to be a generic page not tied to a specific symbol."
-            )
+            embed_description = "This appears to be a generic page not tied to a specific symbol."
+
         else:
             signature = textwrap.shorten(signature, 500)
-            embed = discord.Embed(
-                title=f'`{symbol}`',
-                url=permalink,
-                description=f"```py\n{signature}```{description}"
-            )
+            embed_description = f"```py\n{signature}```{description}"
+
+        embed = discord.Embed(
+            title=f'`{symbol}`',
+            url=permalink,
+            description=embed_description
+        )
         # show all symbols with the same name that were renamed in the footer
         embed.set_footer(text=", ".join(renamed for renamed in self.renamed_symbols - {symbol}
                                         if renamed.endswith(f".{symbol}"))
