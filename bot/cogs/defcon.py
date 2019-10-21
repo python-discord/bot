@@ -29,7 +29,7 @@ BASE_CHANNEL_TOPIC = "Python Discord Defense Mechanism"
 
 
 class Action(Enum):
-    """Defcon Logging Information."""
+    """Defcon Action."""
 
     ActionInfo = namedtuple('LogInfoDetails', ['icon', 'color', 'template'])
 
@@ -198,11 +198,7 @@ class Defcon(Cog):
         await self.channel.edit(topic=new_topic)
 
     def build_defcon_msg(self, action: Action, e: Exception = None) -> str:
-        """
-        Build in-channel response string for DEFCON action.
-
-        `change` string may be one of the following: ('enabled', 'disabled', 'updated')
-        """
+        """Build in-channel response string for DEFCON action."""
         if action is Action.ENABLED:
             msg = f"{Emojis.defcon_enabled} DEFCON enabled.\n\n"
         elif action is Action.DISABLED:
@@ -222,11 +218,7 @@ class Defcon(Cog):
         return msg
 
     async def send_defcon_log(self, action: Action, actor: Member, e: Exception = None) -> None:
-        """
-        Send log message for DEFCON action.
-
-        `change` string may be one of the following: ('enabled', 'disabled', 'updated')
-        """
+        """Send log message for DEFCON action."""
         info = action.value
         log_msg: str = (
             f"**Staffer:** {actor.mention} {actor} (`{actor.id}`)\n"
