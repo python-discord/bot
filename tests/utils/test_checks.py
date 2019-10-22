@@ -57,10 +57,10 @@ def test_without_role_check_without_unwanted_role(context):
 
 
 def test_in_channel_check_for_correct_channel(context):
-    context.channel.id = 42
-    assert checks.in_channel_check(context, context.channel.id)
+    context.channel.id = [42]
+    assert checks.in_channel_check(context, *context.channel.id)
 
 
 def test_in_channel_check_for_incorrect_channel(context):
-    context.channel.id = 42
-    assert not checks.in_channel_check(context, context.channel.id + 10)
+    context.channel.id = [42 + 10]
+    assert not checks.in_channel_check(context, *context.channel.id)
