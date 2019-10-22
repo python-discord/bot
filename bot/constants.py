@@ -346,6 +346,7 @@ class Channels(metaclass=YAMLGetter):
     help_7: int
     helpers: int
     message_log: int
+    meta: int
     mod_alerts: int
     modlog: int
     mods: int
@@ -461,6 +462,12 @@ class AntiSpam(metaclass=YAMLGetter):
 
     punishment: Dict[str, Dict[str, int]]
     rules: Dict[str, Dict[str, int]]
+
+
+class AntiMalware(metaclass=YAMLGetter):
+    section = "anti_malware"
+
+    whitelist: list
 
 
 class BigBrother(metaclass=YAMLGetter):
