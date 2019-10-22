@@ -12,7 +12,7 @@ from discord.ext.commands import Context, command
 
 from bot import constants
 from bot.api import ResponseCodeError
-from bot.constants import Colours, Event
+from bot.constants import Colours, Event, STAFF_CHANNELS
 from bot.decorators import respect_role_hierarchy
 from bot.utils import time
 from bot.utils.checks import with_role_check
@@ -465,6 +465,8 @@ class Infractions(Scheduler, commands.Cog):
 
         if infraction["actor"] == self.bot.user.id:
             end_msg = f" (reason: {infraction['reason']})"
+        elif ctx.channel.id not in STAFF_CHANNELS:
+            end_msg = ''
         else:
             infractions = await self.bot.api_client.get(
                 "bot/infractions",
