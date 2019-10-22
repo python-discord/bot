@@ -209,7 +209,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         await self.pardon_infraction(ctx, "ban", user)
 
     # endregion
-    # region: Base infraction functions
+    # region: Base apply functions
 
     async def apply_mute(self, ctx: Context, user: Member, reason: str, **kwargs) -> None:
         """Apply a mute infraction with kwargs passed to `post_infraction`."""
@@ -251,6 +251,65 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         action = ctx.guild.ban(user, reason=reason, delete_message_days=0)
         await self.apply_infraction(ctx, infraction, user, action)
+
+    # endregion
+    # region: Base pardon functions
+
+    async def pardon_mute(self, user_id: int, guild: discord.Guild, reason: str) -> t.Dict[str, str]:
+        """Remove a user's muted role, DM them a notification, and return a log dict."""
+        user = guild.get_member(user_id)
+        log_text = {}
+
+        if user:
+            # Remove the muted role.
+            self.mod_log.ignore(Event.member_update, user.id)
+            await user.remove_roles(self._muted_role, reason=reason)
+
+            # DM the user about the expiration.
+            notified = await utils.notify_pardon(
+                user=user,
+                title="You have been unmuted.",
+                content="You may now send messages in the server.",
+                icon_url=utils.INFRACTION_ICONS["mute"][1]
+            )
+
+            log_text["Member"] = f"{user.mention}(`{user.id}`)"
+            log_text["DM"] = "Sent" if notified else "**Failed**"
+        else:
+            log.info(f"Failed to unmute user {user_id}: user not found")
+            log_text["Failure"] = "User was not found in the guild."
+
+        return log_text
+
+    async def pardon_ban(self, user_id: int, guild: discord.Guild, reason: str) -> t.Dict[str, str]:
+        """Remove a user's ban on the Discord guild and return a log dict."""
+        user = discord.Object(user_id)
+        log_text = {}
+
+        self.mod_log.ignore(Event.member_unban, user_id)
+
+        try:
+            await guild.unban(user, reason=reason)
+        except discord.NotFound:
+            log.info(f"Failed to unban user {user_id}: no active ban found on Discord")
+            log_text["Note"] = "No active ban found on Discord."
+
+        return log_text
+
+    async def _pardon_action(self, infraction: utils.Infraction) -> t.Optional[t.Dict[str, str]]:
+        """
+        Execute deactivation steps specific to the infraction's type and return a log dict.
+
+        If an infraction type is unsupported, return None instead.
+        """
+        guild = self.bot.get_guild(constants.Guild.id)
+        user_id = infraction["user"]
+        reason = f"Infraction #{infraction['id']} expired or was pardoned."
+
+        if infraction["type"] == "mute":
+            return await self.pardon_mute(user_id, guild, reason)
+        elif infraction["type"] == "ban":
+            return await self.pardon_ban(user_id, guild, reason)
 
     # endregion
 

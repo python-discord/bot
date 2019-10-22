@@ -1,16 +1,16 @@
 import logging
 import textwrap
 import typing as t
+from abc import abstractmethod
 from gettext import ngettext
 
 import dateutil.parser
 import discord
-from discord.ext import commands
-from discord.ext.commands import Context
+from discord.ext.commands import Bot, Context
 
 from bot import constants
 from bot.api import ResponseCodeError
-from bot.constants import Colours, Event, STAFF_CHANNELS
+from bot.constants import Colours, STAFF_CHANNELS
 from bot.utils import time
 from bot.utils.scheduling import Scheduler
 from . import utils
@@ -23,7 +23,7 @@ log = logging.getLogger(__name__)
 class InfractionScheduler(Scheduler):
     """Handles the application, pardoning, and expiration of infractions."""
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: Bot):
         super().__init__()
 
         self.bot = bot
@@ -240,14 +240,13 @@ class InfractionScheduler(Scheduler):
         expiration task cancelled. If `send_log` is True, a mod log is sent for the
         deactivation of the infraction.
 
-        Supported infraction types are mute and ban. Other types will raise a ValueError.
+        Infractions of unsupported types will raise a ValueError.
         """
         guild = self.bot.get_guild(constants.Guild.id)
         mod_role = guild.get_role(constants.Roles.moderator)
         user_id = infraction["user"]
         _type = infraction["type"]
         _id = infraction["id"]
-        reason = f"Infraction #{_id} expired or was pardoned."
 
         log.debug(f"Marking infraction #{_id} as inactive (expired).")
 
@@ -259,34 +258,9 @@ class InfractionScheduler(Scheduler):
         }
 
         try:
-            if _type == "mute":
-                user = guild.get_member(user_id)
-                if user:
-                    # Remove the muted role.
-                    self.mod_log.ignore(Event.member_update, user.id)
-                    await user.remove_roles(self._muted_role, reason=reason)
-
-                    # DM the user about the expiration.
-                    notified = await utils.notify_pardon(
-                        user=user,
-                        title="You have been unmuted.",
-                        content="You may now send messages in the server.",
-                        icon_url=utils.INFRACTION_ICONS["mute"][1]
-                    )
-
-                    log_text["Member"] = f"{user.mention}(`{user.id}`)"
-                    log_text["DM"] = "Sent" if notified else "**Failed**"
-                else:
-                    log.info(f"Failed to unmute user {user_id}: user not found")
-                    log_text["Failure"] = "User was not found in the guild."
-            elif _type == "ban":
-                user = discord.Object(user_id)
-                self.mod_log.ignore(Event.member_unban, user_id)
-                try:
-                    await guild.unban(user, reason=reason)
-                except discord.NotFound:
-                    log.info(f"Failed to unban user {user_id}: no active ban found on Discord")
-                    log_text["Note"] = "No active ban found on Discord."
+            returned_log = await self._pardon_action(infraction)
+            if returned_log is not None:
+                log_text = {**log_text, **returned_log}  # Merge the logs together
             else:
                 raise ValueError(
                     f"Attempted to deactivate an unsupported infraction #{_id} ({_type})!"
@@ -351,6 +325,15 @@ class InfractionScheduler(Scheduler):
             )
 
         return log_text
+
+    @abstractmethod
+    async def _pardon_action(self, infraction: utils.Infraction) -> t.Optional[t.Dict[str, str]]:
+        """
+        Execute deactivation steps specific to the infraction's type and return a log dict.
+
+        If an infraction type is unsupported, return None instead.
+        """
+        raise NotImplementedError
 
     async def _scheduled_task(self, infraction: utils.Infraction) -> None:
         """
