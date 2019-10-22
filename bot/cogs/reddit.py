@@ -25,7 +25,7 @@ class Reddit(Cog):
     # including the target platform, a unique application identifier, a version string,
     # and your username as contact information, in the following format:
     # <platform>:<app ID>:<version string> (by /u/<reddit username>)
-    USER_AGENT = "docker:Discord Bot of https://pythondiscord.com/:v?.?.? (by /u/PythonDiscord)"
+    USER_AGENT = "docker-python3:Discord Bot of PythonDiscord (https://pythondiscord.com/):v?.?.? (by /u/PythonDiscord)"
     URL = "https://www.reddit.com"
     OAUTH_URL = "https://oauth.reddit.com"
     MAX_FETCH_RETRIES = 3
@@ -117,7 +117,7 @@ class Reddit(Cog):
                 content = await response.json()
                 posts = content["data"]["children"]
                 return posts[:amount]
-            
+
             await asyncio.sleep(3)
 
         log.debug(f"Invalid response from: {url} - status code {response.status}, mimetype {response.content_type}")
