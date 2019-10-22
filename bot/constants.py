@@ -172,9 +172,7 @@ class YAMLGetter(type):
         name = name.lower()
 
         try:
-            if cls.subsection is not None:
-                return _CONFIG_YAML[cls.section][cls.subsection][name]
-            return _CONFIG_YAML[cls.section][name]
+            return _CONFIG_YAML[cls.section][name] if cls.subsection is None else _CONFIG_YAML[cls.section][cls.subsection][name]
         except KeyError:
             dotted_path = '.'.join(
                 (cls.section, cls.subsection, name)
