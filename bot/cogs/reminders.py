@@ -2,7 +2,7 @@ import asyncio
 import logging
 import random
 import textwrap
-from datetime import datetime
+from datetime import datetime, timedelta
 from operator import itemgetter
 from typing import Optional
 
@@ -176,7 +176,7 @@ class Reminders(Scheduler, Cog):
             }
         )
 
-        now = datetime.utcnow()
+        now = datetime.utcnow() - timedelta(seconds=1)
 
         # Confirm to the user that it worked.
         await self._send_confirmation(
