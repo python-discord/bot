@@ -236,12 +236,22 @@ class ModManagement(commands.Cog):
             expires = time.format_infraction(infraction["expires_at"])
 
         if user is None:  # if user not in cache
-            user = self.bot.get_user(user_id) or await self.bot.fetch_user(user_id)
+            user = self.bot.get_user(user_id)
+            if user is None:
+                try:
+                    user = await self.bot.fetch_user(user_id)
+                except discord.HttpException:
+                    log.debug("User not found")
         if user.nick is not None:  # if nickname different from username
             user = user.nick
 
         if actor is None:
-            actor = self.bot.get_user(actor_id) or await self.bot.fetch_user(actor_id)
+            actor = self.bot.get_user(actor_id)
+            if actor is None:
+                try:
+                    actor = await self.bot.fetch_user(actor_id)
+                except discord.HttpException:
+                    log.debug("Actor not found")
         if actor.nick is not None:
             actor = actor.nick
 
