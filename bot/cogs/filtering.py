@@ -241,7 +241,7 @@ class Filtering(Cog):
                         break  # We don't want multiple filters to trigger
 
     @staticmethod
-    async def _has_watchlist_words(text: str) -> bool:
+    async def _has_watchlist_words(text: str) -> Union[bool, re.Match]:
         """
         Returns True if the text contains one of the regular expressions from the word_watchlist in our filter config.
 
@@ -255,7 +255,7 @@ class Filtering(Cog):
         return False
 
     @staticmethod
-    async def _has_watchlist_tokens(text: str) -> bool:
+    async def _has_watchlist_tokens(text: str) -> Union[bool, re.Match]:
         """
         Returns True if the text contains one of the regular expressions from the token_watchlist in our filter config.
 
