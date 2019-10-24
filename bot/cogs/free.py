@@ -76,10 +76,8 @@ class Free(Cog):
             # Get position in list, inactivity, and channel object
             # For each channel, add to embed.description
             sorted_channels = sorted(free_channels, key=itemgetter(0), reverse=True)
-            if len(sorted_channels) > 3:  # display 3 channels max
-                sorted_channels = sorted_channels[:3]
 
-            for (inactive, channel) in sorted_channels:
+            for (inactive, channel) in sorted_channels[:3]:
                 minutes, seconds = divmod(inactive, 60)
                 if minutes > 59:
                     hours, minutes = divmod(minutes, 60)
