@@ -188,7 +188,7 @@ class Snekbox(Cog):
         if ctx.author.id in self.jobs:
             await ctx.send(
                 f"{ctx.author.mention} You've already got a job running - "
-                f"please wait for it to finish!"
+                "please wait for it to finish!"
             )
             return
 
@@ -196,10 +196,7 @@ class Snekbox(Cog):
             await ctx.invoke(self.bot.get_command("help"), "eval")
             return
 
-        log.info(
-            f"Received code from {ctx.author.name}#{ctx.author.discriminator} "
-            f"for evaluation:\n{code}"
-        )
+        log.info(f"Received code from {ctx.author} for evaluation:\n{code}")
 
         self.jobs[ctx.author.id] = datetime.datetime.now()
         code = self.prepare_input(code)
@@ -224,10 +221,7 @@ class Snekbox(Cog):
                     wait_for_deletion(response, user_ids=(ctx.author.id,), client=ctx.bot)
                 )
 
-                log.info(
-                    f"{ctx.author.name}#{ctx.author.discriminator}'s job had a return code of "
-                    f"{results['returncode']}"
-                )
+                log.info(f"{ctx.author}'s job had a return code of {results['returncode']}")
         finally:
             del self.jobs[ctx.author.id]
 

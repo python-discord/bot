@@ -328,6 +328,7 @@ class Channels(metaclass=YAMLGetter):
     subsection = "channels"
 
     admins: int
+    admin_spam: int
     announcements: int
     big_brother_logs: int
     bot: int
@@ -345,11 +346,15 @@ class Channels(metaclass=YAMLGetter):
     help_7: int
     helpers: int
     message_log: int
+    meta: int
+    mod_spam: int
+    mods: int
     mod_alerts: int
     modlog: int
     off_topic_0: int
     off_topic_1: int
     off_topic_2: int
+    organisation: int
     python: int
     reddit: int
     talent_pool: int
@@ -391,6 +396,7 @@ class Guild(metaclass=YAMLGetter):
 
     id: int
     ignored: List[int]
+    staff_channels: List[int]
 
 
 class Keys(metaclass=YAMLGetter):
@@ -460,6 +466,12 @@ class AntiSpam(metaclass=YAMLGetter):
     rules: Dict[str, Dict[str, int]]
 
 
+class AntiMalware(metaclass=YAMLGetter):
+    section = "anti_malware"
+
+    whitelist: list
+
+
 class BigBrother(metaclass=YAMLGetter):
     section = 'big_brother'
 
@@ -473,6 +485,13 @@ class Free(metaclass=YAMLGetter):
     activity_timeout: int
     cooldown_rate: int
     cooldown_per: float
+
+
+class Mention(metaclass=YAMLGetter):
+    section = 'mention'
+
+    message_timeout: int
+    reset_delay: int
 
 
 class RedirectOutput(metaclass=YAMLGetter):
@@ -492,6 +511,9 @@ PROJECT_ROOT = os.path.abspath(os.path.join(BOT_DIR, os.pardir))
 # Default role combinations
 MODERATION_ROLES = Roles.moderator, Roles.admin, Roles.owner
 STAFF_ROLES = Roles.helpers, Roles.moderator, Roles.admin, Roles.owner
+
+# Roles combinations
+STAFF_CHANNELS = Guild.staff_channels
 
 
 # Bot replies
