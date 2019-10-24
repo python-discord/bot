@@ -80,7 +80,7 @@ class InfractionScheduler(Scheduler):
         # DM the user about the infraction if it's not a shadow/hidden infraction.
         if not infraction["hidden"]:
             # Sometimes user is a discord.Object; make it a proper user.
-            await self.bot.fetch_user(user.id)
+            user = await self.bot.fetch_user(user.id)
 
             # Accordingly display whether the user was successfully notified via DM.
             if await utils.notify_infraction(user, infr_type, expiry, reason, icon):
