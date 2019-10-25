@@ -127,7 +127,7 @@ async def notify_infraction(
         colour=Colours.soft_red
     )
 
-    embed.set_author(name="Infraction Information", icon_url=icon_url, url=RULES_URL)
+    embed.set_author(name="Infraction information", icon_url=icon_url, url=RULES_URL)
     embed.title = f"Please review our rules over at {RULES_URL}"
     embed.url = RULES_URL
 
