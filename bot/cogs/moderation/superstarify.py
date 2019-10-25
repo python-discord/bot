@@ -152,15 +152,17 @@ class Superstarify(InfractionScheduler, Cog):
         )
 
         # Send an embed with the infraction information to the invoking context.
-        embed = Embed()
-        embed.title = "Congratulations!"
-        embed.description = (
-            f"Your previous nickname, **{old_nick}**, "
-            f"was so bad that we have decided to change it. "
-            f"Your new nickname will be **{forced_nick}**.\n\n"
-            f"You will be unable to change your nickname until \n**{expiry_str}**.\n\n"
-            "If you're confused by this, please read our "
-            f"[official nickname policy]({NICKNAME_POLICY_URL})."
+        embed = Embed(
+            title="Congratulations!",
+            colour=constants.Colours.soft_orange,
+            description=(
+                f"Your previous nickname, **{old_nick}**, "
+                f"was so bad that we have decided to change it. "
+                f"Your new nickname will be **{forced_nick}**.\n\n"
+                f"You will be unable to change your nickname until **{expiry_str}**.\n\n"
+                "If you're confused by this, please read our "
+                f"[official nickname policy]({NICKNAME_POLICY_URL})."
+            )
         )
         await ctx.send(embed=embed)
 
