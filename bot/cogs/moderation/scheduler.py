@@ -362,10 +362,7 @@ class InfractionScheduler(Scheduler):
         At the time of expiration, the infraction is marked as inactive on the website and the
         expiration task is cancelled.
         """
-        _id = infraction["id"]
-
         expiry = dateutil.parser.isoparse(infraction["expires_at"]).replace(tzinfo=None)
         await time.wait_until(expiry)
 
-        log.debug(f"Marking infraction {_id} as inactive (expired).")
         await self.deactivate_infraction(infraction)
