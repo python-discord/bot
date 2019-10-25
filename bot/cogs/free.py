@@ -72,30 +72,27 @@ class Free(Cog):
         # Display all potentially inactive channels
         # in descending order of inactivity
         if free_channels:
-            embed.description += "**The following channel{0} look{1} free:**\n\n**".format(
-                's' if len(free_channels) > 1 else '',
-                '' if len(free_channels) > 1 else 's'
-            )
-
             # Sort channels in descending order by seconds
             # Get position in list, inactivity, and channel object
             # For each channel, add to embed.description
             sorted_channels = sorted(free_channels, key=itemgetter(0), reverse=True)
-            for i, (inactive, channel) in enumerate(sorted_channels, 1):
+
+            for (inactive, channel) in sorted_channels[:3]:
                 minutes, seconds = divmod(inactive, 60)
                 if minutes > 59:
                     hours, minutes = divmod(minutes, 60)
-                    embed.description += f"{i}. {channel.mention} inactive for {hours}h{minutes}m{seconds}s\n\n"
+                    embed.description += f"{channel.mention} **{hours}h {minutes}m {seconds}s** inactive\n"
                 else:
-                    embed.description += f"{i}. {channel.mention} inactive for {minutes}m{seconds}s\n\n"
+                    embed.description += f"{channel.mention} **{minutes}m {seconds}s** inactive\n"
 
-            embed.description += ("**\nThese channels aren't guaranteed to be free, "
-                                  "so use your best judgement and check for yourself.")
+            embed.set_footer(text="Please confirm these channels are free before posting")
         else:
-            embed.description = ("**Doesn't look like any channels are available right now. "
-                                 "You're welcome to check for yourself to be sure. "
-                                 "If all channels are truly busy, please be patient "
-                                 "as one will likely be available soon.**")
+            embed.description = (
+                "Doesn't look like any channels are available right now. "
+                "You're welcome to check for yourself to be sure. "
+                "If all channels are truly busy, please be patient "
+                "as one will likely be available soon."
+            )
 
         await ctx.send(embed=embed)
 
