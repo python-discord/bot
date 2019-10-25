@@ -1,14 +1,18 @@
 import colorsys
 import logging
+import pprint
 import textwrap
 import typing
+from typing import Any, Mapping, Optional
 
+import discord
 from discord import CategoryChannel, Colour, Embed, Member, Role, TextChannel, VoiceChannel, utils
-from discord.ext.commands import Bot, Cog, Context, command
+from discord.ext import commands
+from discord.ext.commands import Bot, BucketType, Cog, Context, command, group
 
 from bot.constants import Channels, Emojis, MODERATION_ROLES, STAFF_ROLES
-from bot.decorators import InChannelCheckFailure, with_role
-from bot.utils.checks import with_role_check
+from bot.decorators import InChannelCheckFailure, in_channel, with_role
+from bot.utils.checks import cooldown_with_role_bypass, with_role_check
 from bot.utils.time import time_since
 
 log = logging.getLogger(__name__)
@@ -228,6 +232,82 @@ class Information(Cog):
         embed.colour = user.top_role.colour if roles else Colour.blurple()
 
         await ctx.send(embed=embed)
+
+    def format_fields(self, mapping: Mapping[str, Any], field_width: Optional[int] = None) -> str:
+        """Format a mapping to be readable to a human."""
+        # sorting is technically superfluous but nice if you want to look for a specific field
+        fields = sorted(mapping.items(), key=lambda item: item[0])
+
+        if field_width is None:
+            field_width = len(max(mapping.keys(), key=len))
+
+        out = ''
+
+        for key, val in fields:
+            if isinstance(val, dict):
+                # if we have dicts inside dicts we want to apply the same treatment to the inner dictionaries
+                inner_width = int(field_width * 1.6)
+                val = '\n' + self.format_fields(val, field_width=inner_width)
+
+            elif isinstance(val, str):
+                # split up text since it might be long
+                text = textwrap.fill(val, width=100, replace_whitespace=False)
+
+                # indent it, I guess you could do this with `wrap` and `join` but this is nicer
+                val = textwrap.indent(text, ' ' * (field_width + len(': ')))
+
+                # the first line is already indented so we `str.lstrip` it
+                val = val.lstrip()
+
+            if key == 'color':
+                # makes the base 10 representation of a hex number readable to humans
+                val = hex(val)
+
+            out += '{0:>{width}}: {1}\n'.format(key, val, width=field_width)
+
+        # remove trailing whitespace
+        return out.rstrip()
+
+    @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=STAFF_ROLES)
+    @group(invoke_without_command=True)
+    @in_channel(Channels.bot, bypass_roles=STAFF_ROLES)
+    async def raw(self, ctx: Context, *, message: discord.Message, json: bool = False) -> None:
+        """Shows information about the raw API response."""
+        # I *guess* it could be deleted right as the command is invoked but I felt like it wasn't worth handling
+        # doing this extra request is also much easier than trying to convert everything back into a dictionary again
+        raw_data = await ctx.bot.http.get_message(message.channel.id, message.id)
+
+        paginator = commands.Paginator()
+
+        def add_content(title: str, content: str) -> None:
+            paginator.add_line(f'== {title} ==\n')
+            # replace backticks as it breaks out of code blocks. Spaces seemed to be the most reasonable solution.
+            # we hope it's not close to 2000
+            paginator.add_line(content.replace('```', '`` `'))
+            paginator.close_page()
+
+        if message.content:
+            add_content('Raw message', message.content)
+
+        transformer = pprint.pformat if json else self.format_fields
+        for field_name in ('embeds', 'attachments'):
+            data = raw_data[field_name]
+
+            if not data:
+                continue
+
+            total = len(data)
+            for current, item in enumerate(data, start=1):
+                title = f'Raw {field_name} ({current}/{total})'
+                add_content(title, transformer(item))
+
+        for page in paginator.pages:
+            await ctx.send(page)
+
+    @raw.command()
+    async def json(self, ctx: Context, message: discord.Message) -> None:
+        """Shows information about the raw API response in a copy-pasteable Python format."""
+        await ctx.invoke(self.raw, message=message, json=True)
 
 
 def setup(bot: Bot) -> None:
