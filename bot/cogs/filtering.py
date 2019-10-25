@@ -1,12 +1,15 @@
+import asyncio
+import datetime
 import logging
 import re
 from typing import Optional, Union
 
 import discord.errors
 from dateutil.relativedelta import relativedelta
-from discord import Colour, DMChannel, Member, Message, TextChannel
+from discord import Colour, DMChannel, Member, Message, NotFound, TextChannel
 from discord.ext.commands import Bot, Cog
 
+from bot.api import ResponseCodeError
 from bot.cogs.moderation import ModLog
 from bot.constants import (
     Channels, Colours, DEBUG_MODE,
@@ -16,13 +19,13 @@ from bot.constants import (
 log = logging.getLogger(__name__)
 
 INVITE_RE = re.compile(
-    r"(?:discord(?:[\.,]|dot)gg|"                     # Could be discord.gg/
-    r"discord(?:[\.,]|dot)com(?:\/|slash)invite|"     # or discord.com/invite/
+    r"(?:discord(?:[\.,]|dot)gg|"  # Could be discord.gg/
+    r"discord(?:[\.,]|dot)com(?:\/|slash)invite|"  # or discord.com/invite/
     r"discordapp(?:[\.,]|dot)com(?:\/|slash)invite|"  # or discordapp.com/invite/
-    r"discord(?:[\.,]|dot)me|"                        # or discord.me
-    r"discord(?:[\.,]|dot)io"                         # or discord.io.
-    r")(?:[\/]|slash)"                                # / or 'slash'
-    r"([a-zA-Z0-9]+)",                                # the invite code itself
+    r"discord(?:[\.,]|dot)me|"  # or discord.me
+    r"discord(?:[\.,]|dot)io"  # or discord.io.
+    r")(?:[\/]|slash)"  # / or 'slash'
+    r"([a-zA-Z0-9]+)",  # the invite code itself
     flags=re.IGNORECASE
 )
 
@@ -35,6 +38,8 @@ WORD_WATCHLIST_PATTERNS = [
 TOKEN_WATCHLIST_PATTERNS = [
     re.compile(fr'{expression}', flags=re.IGNORECASE) for expression in Filter.token_watchlist
 ]
+
+OFFENSIVE_MSG_DELETE_TIME = datetime.timedelta(days=7)  # Time before an offensive msg is deleted.
 
 
 class Filtering(Cog):
@@ -54,7 +59,8 @@ class Filtering(Cog):
                 "notification_msg": (
                     "Your post has been removed for abusing Unicode character rendering (aka Zalgo text). "
                     f"{_staff_mistake_str}"
-                )
+                ),
+                "offensive_msg": False
             },
             "filter_invites": {
                 "enabled": Filter.filter_invites,
@@ -65,7 +71,8 @@ class Filtering(Cog):
                 "notification_msg": (
                     f"Per Rule 10, your invite link has been removed. {_staff_mistake_str}\n\n"
                     r"Our server rules can be found here: <https://pythondiscord.com/pages/rules>"
-                )
+                ),
+                "offensive_msg": False
             },
             "filter_domains": {
                 "enabled": Filter.filter_domains,
@@ -75,27 +82,46 @@ class Filtering(Cog):
                 "user_notification": Filter.notify_user_domains,
                 "notification_msg": (
                     f"Your URL has been removed because it matched a blacklisted domain. {_staff_mistake_str}"
-                )
+                ),
+                "offensive_msg": False
             },
             "watch_rich_embeds": {
                 "enabled": Filter.watch_rich_embeds,
                 "function": self._has_rich_embed,
                 "type": "watchlist",
                 "content_only": False,
+                "offensive_msg": False
             },
             "watch_words": {
                 "enabled": Filter.watch_words,
                 "function": self._has_watchlist_words,
                 "type": "watchlist",
                 "content_only": True,
+                "offensive_msg": True
             },
             "watch_tokens": {
                 "enabled": Filter.watch_tokens,
                 "function": self._has_watchlist_tokens,
                 "type": "watchlist",
                 "content_only": True,
+                "offensive_msg": True
             },
         }
+
+        self.deletion_task = None
+        self.bot.loop.create_task(self.init_deletion_task())
+
+    def cog_unload(self) -> None:
+        """Cancel any running updater tasks on cog unload."""
+        if self.deletion_task is not None:
+            self.deletion_task.cancel()
+
+    async def init_deletion_task(self) -> None:
+        """Start offensive messages deletion event loop if it hasn't already started."""
+        await self.bot.wait_until_ready()
+        if self.deletion_task is None:
+            coro = delete_offensive_msg(self.bot)
+            self.deletion_task = self.bot.loop.create_task(coro)
 
     @property
     def mod_log(self) -> ModLog:
@@ -159,6 +185,21 @@ class Filtering(Cog):
                         triggered = await _filter["function"](msg)
 
                     if triggered:
+                        # If the message is classed as offensive, we store it in the site db and
+                        # it will be deleted it after one week.
+                        if _filter["offensive_msg"]:
+                            delete_date = msg.created_at.date() + OFFENSIVE_MSG_DELETE_TIME
+                            await self.bot.api_client.post(
+                                'bot/offensive-message',
+                                json={
+                                    'id': msg.id,
+                                    'channel_id': msg.channel.id,
+                                    'delete_date': delete_date.isoformat()
+                                }
+                            )
+                            log.trace(f"Offensive message will be deleted on "
+                                      f"{delete_date.isoformat()}")
+
                         # If this is a filter (not a watchlist), we should delete the message.
                         if _filter["type"] == "filter":
                             try:
@@ -358,6 +399,34 @@ class Filtering(Cog):
             await filtered_member.send(reason)
         except discord.errors.Forbidden:
             await channel.send(f"{filtered_member.mention} {reason}")
+
+
+async def delete_offensive_msg(bot: Bot) -> None:
+    """Background task that pull up a list of offensive messages every day and delete them."""
+    while True:
+        tomorrow = datetime.date.today() + datetime.timedelta(days=1)
+        time_until_next = datetime.datetime(tomorrow.year, tomorrow.month, tomorrow.day) - datetime.datetime.now()
+        try:
+            msg_list = await bot.api_client.get(
+                'bot/offensive-message',
+                params={'delete_date': datetime.date.today().isoformat()}
+            )
+        except ResponseCodeError as e:
+            log.error(f"Failed to get offending messages to delete (got code {e.response.status}), "
+                      f"retrying in 30 minutes.")
+            time_until_next = datetime.timedelta(minutes=30)
+            msg_list = []
+        for msg in msg_list:
+            try:
+                channel = bot.get_channel(msg['channel_id'])
+                if channel:
+                    msg_obj = await channel.fetch_message(msg['id'])
+                    await msg_obj.delete()
+            except NotFound:
+                log.info(f"Tried to delete message {msg['id']}, but the message can't be found "
+                         f"(it has been probably already deleted).")
+        log.info(f"Deleted {len(msg_list)} offensive message(s).")
+        await asyncio.sleep(time_until_next.seconds)
 
 
 def setup(bot: Bot) -> None:
