@@ -9,7 +9,7 @@ from discord.ext.commands import Bot, Cog
 
 from bot.cogs.moderation import ModLog
 from bot.constants import (
-    Channels, Colours, DEBUG_MODE,
+    Channels, Colours,
     Filter, Icons, URLs
 )
 
@@ -135,10 +135,6 @@ class Filtering(Cog):
             and not role_whitelisted                        # Role not in whitelist
             and not msg.author.bot                          # Author not a bot
         )
-
-        # If we're running the bot locally, ignore role whitelist and only listen to #dev-test
-        if DEBUG_MODE:
-            filter_message = not msg.author.bot and msg.channel.id == Channels.devtest
 
         # If none of the above, we can start filtering.
         if filter_message:
