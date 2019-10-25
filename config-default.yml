@@ -109,7 +109,7 @@ guild:
         helpers:           &HELPERS       385474242440986624
         message_log:       &MESSAGE_LOG   467752170159079424
         meta:                             429409067623251969
-        mod_spam:          &MOD_SPAM      620607373828030464    
+        mod_spam:          &MOD_SPAM      620607373828030464
         mods:              &MODS          305126844661760000
         mod_alerts:                       473092532147060736
         modlog:            &MODLOG        282638479504965634

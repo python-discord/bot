@@ -515,6 +515,9 @@ STAFF_ROLES = Roles.helpers, Roles.moderator, Roles.admin, Roles.owner
 # Roles combinations
 STAFF_CHANNELS = Guild.staff_channels
 
+# Default Channel combinations
+MODERATION_CHANNELS = Channels.admins, Channels.admin_spam, Channels.mod_alerts, Channels.mods, Channels.mod_spam
+
 
 # Bot replies
 NEGATIVE_REPLIES = [
