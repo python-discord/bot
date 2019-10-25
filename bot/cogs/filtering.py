@@ -2,19 +2,20 @@ import asyncio
 import datetime
 import logging
 import re
-from typing import Optional, Union
+from typing import Mapping, Optional, Union
 
 import discord.errors
 from dateutil.relativedelta import relativedelta
 from discord import Colour, DMChannel, Member, Message, NotFound, TextChannel
 from discord.ext.commands import Bot, Cog
 
-from bot.api import ResponseCodeError
 from bot.cogs.moderation import ModLog
 from bot.constants import (
     Channels, Colours, DEBUG_MODE,
     Filter, Icons, URLs
 )
+from bot.utils.scheduling import Scheduler
+from bot.utils.time import wait_until
 
 log = logging.getLogger(__name__)
 
@@ -42,11 +43,12 @@ TOKEN_WATCHLIST_PATTERNS = [
 OFFENSIVE_MSG_DELETE_TIME = datetime.timedelta(days=Filter.offensive_msg_delete_time)
 
 
-class Filtering(Cog):
+class Filtering(Cog, Scheduler):
     """Filtering out invites, blacklisting domains, and warning us of certain regular expressions."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
+        super().__init__()
 
         _staff_mistake_str = "If you believe this was a mistake, please let staff know!"
         self.filters = {
@@ -109,19 +111,7 @@ class Filtering(Cog):
         }
 
         self.deletion_task = None
-        self.bot.loop.create_task(self.init_deletion_task())
-
-    def cog_unload(self) -> None:
-        """Cancel any running updater tasks on cog unload."""
-        if self.deletion_task is not None:
-            self.deletion_task.cancel()
-
-    async def init_deletion_task(self) -> None:
-        """Start offensive messages deletion event loop if it hasn't already started."""
-        await self.bot.wait_until_ready()
-        if self.deletion_task is None:
-            coro = delete_offensive_msg(self.bot)
-            self.deletion_task = self.bot.loop.create_task(coro)
+        self.bot.loop.create_task(self.reschedule_offensive_msg_deletion())
 
     @property
     def mod_log(self) -> ModLog:
@@ -400,33 +390,45 @@ class Filtering(Cog):
         except discord.errors.Forbidden:
             await channel.send(f"{filtered_member.mention} {reason}")
 
+    async def _scheduled_task(self, msg: dict) -> None:
+        """A coroutine which delete the offensive message once the delete date is reached."""
+        delete_at = datetime.datetime.fromisoformat(msg['delete_date'][:-1])
 
-async def delete_offensive_msg(bot: Bot) -> None:
-    """Background task that pull up a list of offensive messages every day and delete them."""
-    while True:
-        tomorrow = datetime.date.today() + datetime.timedelta(days=1)
-        time_until_next = datetime.datetime(tomorrow.year, tomorrow.month, tomorrow.day) - datetime.datetime.now()
+        await wait_until(delete_at)
+        await self.delete_offensive_msg(msg)
+
+        self.cancel_task(msg['id'])
+
+    async def reschedule_offensive_msg_deletion(self) -> None:
+        """Get all the pending message deletion from the API and reschedule them."""
+        await self.bot.wait_until_ready()
+        response = await self.bot.api_client.get(
+            'bot/offensive-message',
+        )
+
+        now = datetime.datetime.utcnow()
+        loop = asyncio.get_event_loop()
+
+        for msg in response:
+            delete_at = datetime.datetime.fromisoformat(msg['delete_date'][:-1])
+
+            if delete_at < now:
+                await self.delete_offensive_msg(msg)
+            else:
+                self.schedule_task(loop, msg['id'], msg)
+
+    async def delete_offensive_msg(self, msg: Mapping[str, str]) -> None:
+        """Delete an offensive message, and then delete it from the db."""
         try:
-            msg_list = await bot.api_client.get(
-                'bot/offensive-message',
-                params={'delete_date': datetime.date.today().isoformat()}
-            )
-        except ResponseCodeError as e:
-            log.error(f"Failed to get offending messages to delete (got code {e.response.status}), "
-                      f"retrying in 30 minutes.")
-            time_until_next = datetime.timedelta(minutes=30)
-            msg_list = []
-        for msg in msg_list:
-            try:
-                channel = bot.get_channel(msg['channel_id'])
-                if channel:
-                    msg_obj = await channel.fetch_message(msg['id'])
-                    await msg_obj.delete()
-            except NotFound:
-                log.info(f"Tried to delete message {msg['id']}, but the message can't be found "
-                         f"(it has been probably already deleted).")
-        log.info(f"Deleted {len(msg_list)} offensive message(s).")
-        await asyncio.sleep(time_until_next.seconds)
+            channel = self.bot.get_channel(msg['channel_id'])
+            if channel:
+                msg_obj = await channel.fetch_message(msg['id'])
+                await msg_obj.delete()
+        except NotFound:
+            log.info(f"Tried to delete message {msg['id']}, but the message can't be found "
+                     f"(it has been probably already deleted).")
+        await self.bot.api_client.delete(f'bot/offensive-message/{msg["id"]}')
+        log.info(f"Deleted the offensive message with id {msg['id']}.")
 
 
 def setup(bot: Bot) -> None:
