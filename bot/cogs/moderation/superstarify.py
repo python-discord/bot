@@ -170,7 +170,7 @@ class Superstarify(InfractionScheduler, Cog):
         await self.mod_log.send_log_message(
             icon_url=utils.INFRACTION_ICONS["superstar"][0],
             colour=Colour.gold(),
-            title="Member Achieved Superstardom",
+            title="Member achieved superstardom",
             thumbnail=member.avatar_url_as(static_format="png"),
             text=textwrap.dedent(f"""
                 Member: {member.mention} (`{member.id}`)
