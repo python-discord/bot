@@ -1,6 +1,7 @@
 import json
 import logging
 import random
+import textwrap
 import typing as t
 from pathlib import Path
 
@@ -158,50 +159,55 @@ class Superstarify(InfractionScheduler, Cog):
         if await utils.has_active_infraction(ctx, member, "superstar"):
             return
 
-        reason = reason or ('old nick: ' + member.display_name)
-        infraction = await utils.post_infraction(ctx, member, 'superstar', reason, expires_at=duration)
-        forced_nick = self.get_nick(infraction['id'], member.id)
+        # Post the infraction to the API
+        reason = reason or f"old nick: {member.display_name}"
+        infraction = await utils.post_infraction(ctx, member, "superstar", reason, expires_at=duration)
+
+        forced_nick = self.get_nick(infraction["id"], member.id)
         expiry_str = format_infraction(infraction["expires_at"])
 
+        # Apply the infraction and schedule the expiration task.
+        await member.edit(nick=forced_nick, reason=reason)
+        self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
+
+        # Send a DM to the user to notify them of their new infraction.
+        await utils.notify_infraction(
+            user=member,
+            infr_type="Superstarify",
+            expires_at=expiry_str,
+            reason=f"Your nickname didn't comply with our [nickname policy]({NICKNAME_POLICY_URL}).",
+            icon_url=utils.INFRACTION_ICONS["superstar"][0]
+        )
+
+        # Send an embed with the infraction information to the invoking context.
         embed = Embed()
         embed.title = "Congratulations!"
         embed.description = (
-            f"Your previous nickname, **{member.display_name}**, was so bad that we have decided to change it. "
+            f"Your previous nickname, **{member.display_name}**, "
+            f"was so bad that we have decided to change it. "
             f"Your new nickname will be **{forced_nick}**.\n\n"
             f"You will be unable to change your nickname until \n**{expiry_str}**.\n\n"
             "If you're confused by this, please read our "
             f"[official nickname policy]({NICKNAME_POLICY_URL})."
         )
+        await ctx.send(embed=embed)
 
-        # Log to the mod_log channel
-        log.trace("Logging to the #mod-log channel. This could fail because of channel permissions.")
-        mod_log_message = (
-            f"**{member}** (`{member.id}`)\n\n"
-            f"Superstarified by **{ctx.author.name}**\n"
-            f"Old nickname: `{member.display_name}`\n"
-            f"New nickname: `{forced_nick}`\n"
-            f"Superstardom ends: **{expiry_str}**"
-        )
+        # Log to the mod log channel.
         await self.mod_log.send_log_message(
-            icon_url=constants.Icons.user_update,
+            icon_url=utils.INFRACTION_ICONS["superstar"][0],
             colour=Colour.gold(),
             title="Member Achieved Superstardom",
-            text=mod_log_message,
-            thumbnail=member.avatar_url_as(static_format="png")
+            thumbnail=member.avatar_url_as(static_format="png"),
+            text=textwrap.dedent(f"""
+                Member: {member.mentiom} (`{member.id}`)
+                Actor: {ctx.message.author}
+                Reason: {reason}
+                Expires: {expiry_str}
+                Old nickname: `{member.display_name}`
+                New nickname: `{forced_nick}`
+            """),
+            footer=f"ID {infraction['id']}"
         )
-
-        await utils.notify_infraction(
-            user=member,
-            infr_type="Superstarify",
-            expires_at=expiry_str,
-            reason=f"Your nickname didn't comply with our [nickname policy]({NICKNAME_POLICY_URL})."
-        )
-
-        # Change the nick and return the embed
-        log.trace("Changing the users nickname and sending the embed.")
-        await member.edit(nick=forced_nick)
-        self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
-        await ctx.send(embed=embed)
 
     @command(name='unsuperstarify', aliases=('release_nick', 'unstar'))
     async def unsuperstarify(self, ctx: Context, member: Member) -> None:
