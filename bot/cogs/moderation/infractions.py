@@ -254,7 +254,7 @@ class Infractions(InfractionScheduler, commands.Cog):
             # DM the user about the expiration.
             notified = await utils.notify_pardon(
                 user=user,
-                title="You have been unmuted.",
+                title="You have been unmuted",
                 content="You may now send messages in the server.",
                 icon_url=utils.INFRACTION_ICONS["mute"][1]
             )

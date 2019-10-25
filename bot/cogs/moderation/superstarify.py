@@ -200,7 +200,7 @@ class Superstarify(InfractionScheduler, Cog):
         # DM the user about the expiration.
         notified = await utils.notify_pardon(
             user=user,
-            title="You are no longer superstarified.",
+            title="You are no longer superstarified",
             content="You may now change your nickname on the server.",
             icon_url=utils.INFRACTION_ICONS["superstar"][1]
         )
