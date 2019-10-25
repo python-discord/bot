@@ -115,6 +115,16 @@ class Snekbox(Cog):
 
         return msg, error
 
+    @staticmethod
+    def get_status_emoji(results: dict) -> str:
+        """Return an emoji corresponding to the status code or lack of output in result."""
+        if not results["stdout"].strip():  # No output
+            return ":warning:"
+        elif results["returncode"] == 0:  # No error
+            return ":white_check_mark:"
+        else:  # Exception
+            return ":x:"
+
     async def format_output(self, output: str) -> Tuple[str, Optional[str]]:
         """
         Format the output and return a tuple of the formatted output and a URL to the full output.
@@ -201,7 +211,8 @@ class Snekbox(Cog):
                 else:
                     output, paste_link = await self.format_output(results["stdout"])
 
-                msg = f"{ctx.author.mention} {msg}.\n\n```py\n{output}\n```"
+                icon = self.get_status_emoji(results)
+                msg = f"{ctx.author.mention} {icon} {msg}.\n\n```py\n{output}\n```"
                 if paste_link:
                     msg = f"{msg}\nFull output: {paste_link}"
 
