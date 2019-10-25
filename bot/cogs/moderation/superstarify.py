@@ -47,7 +47,7 @@ class Superstarify(InfractionScheduler, Cog):
             }
         )
 
-        if active_superstarifies:
+        if not active_superstarifies:
             return
 
         infraction = active_superstarifies[0]
