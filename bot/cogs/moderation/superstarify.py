@@ -6,7 +6,6 @@ import typing as t
 from pathlib import Path
 
 from discord import Colour, Embed, Member
-from discord.errors import Forbidden
 from discord.ext.commands import Bot, Cog, Context, command
 
 from bot import constants
@@ -30,13 +29,7 @@ class Superstarify(InfractionScheduler, Cog):
 
     @Cog.listener()
     async def on_member_update(self, before: Member, after: Member) -> None:
-        """
-        This event will trigger when someone changes their name.
-
-        At this point we will look up the user in our database and check whether they are allowed to
-        change their names, or if they are in superstar-prison. If they are not allowed, we will
-        change it back.
-        """
+        """Revert nickname edits if the user has an active superstarify infraction."""
         if before.display_name == after.display_name:
             return  # User didn't change their nickname. Abort!
 
@@ -46,42 +39,45 @@ class Superstarify(InfractionScheduler, Cog):
         )
 
         active_superstarifies = await self.bot.api_client.get(
-            'bot/infractions',
+            "bot/infractions",
             params={
-                'active': 'true',
-                'type': 'superstar',
-                'user__id': str(before.id)
+                "active": "true",
+                "type": "superstar",
+                "user__id": str(before.id)
             }
         )
 
         if active_superstarifies:
-            [infraction] = active_superstarifies
-            forced_nick = self.get_nick(infraction['id'], before.id)
-            if after.display_name == forced_nick:
-                return  # Nick change was triggered by this event. Ignore.
+            return
 
-            log.info(
-                f"{after.display_name} is currently in superstar-prison. "
-                f"Changing the nick back to {before.display_name}."
-            )
-            await after.edit(nick=forced_nick)
-            end_timestamp_human = format_infraction(infraction['expires_at'])
+        infraction = active_superstarifies[0]
+        forced_nick = self.get_nick(infraction["id"], before.id)
+        if after.display_name == forced_nick:
+            return  # Nick change was triggered by this event. Ignore.
 
-            try:
-                await after.send(
-                    "You have tried to change your nickname on the **Python Discord** server "
-                    f"from **{before.display_name}** to **{after.display_name}**, but as you "
-                    "are currently in superstar-prison, you do not have permission to do so. "
-                    "You will be allowed to change your nickname again at the following time:\n\n"
-                    f"**{end_timestamp_human}**."
-                )
-            except Forbidden:
-                log.warning(
-                    "The user tried to change their nickname while in superstar-prison. "
-                    "This led to the bot trying to DM the user to let them know they cannot do that, "
-                    "but the user had either blocked the bot or disabled DMs, so it was not possible "
-                    "to DM them, and a discord.errors.Forbidden error was incurred."
-                )
+        log.info(
+            f"{after.display_name} is currently in superstar-prison. "
+            f"Changing the nick back to {before.display_name}."
+        )
+        await after.edit(
+            nick=forced_nick,
+            reason=f"Superstarified member tried to escape the prison: {infraction['id']}"
+        )
+
+        notified = await utils.notify_infraction(
+            user=after,
+            infr_type="Superstarify",
+            expires_at=format_infraction(infraction["expires_at"]),
+            reason=(
+                "You have tried to change your nickname on the **Python Discord** server "
+                f"from **{before.display_name}** to **{after.display_name}**, but as you "
+                "are currently in superstar-prison, you do not have permission to do so."
+            ),
+            icon_url=utils.INFRACTION_ICONS["superstar"][0]
+        )
+
+        if not notified:
+            log.warning("Failed to DM user about why they cannot change their nickname.")
 
     @Cog.listener()
     async def on_member_join(self, member: Member) -> None:
