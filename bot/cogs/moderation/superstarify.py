@@ -82,59 +82,24 @@ class Superstarify(InfractionScheduler, Cog):
 
     @Cog.listener()
     async def on_member_join(self, member: Member) -> None:
-        """
-        This event will trigger when someone (re)joins the server.
-
-        At this point we will look up the user in our database and check whether they are in
-        superstar-prison. If so, we will change their name back to the forced nickname.
-        """
+        """Reapply active superstar infractions for returning members."""
         active_superstarifies = await self.bot.api_client.get(
-            'bot/infractions',
+            "bot/infractions",
             params={
-                'active': 'true',
-                'type': 'superstar',
-                'user__id': member.id
+                "active": "true",
+                "type": "superstar",
+                "user__id": member.id
             }
         )
 
         if active_superstarifies:
-            [infraction] = active_superstarifies
-            forced_nick = self.get_nick(infraction['id'], member.id)
-            await member.edit(nick=forced_nick)
-            end_timestamp_human = format_infraction(infraction['expires_at'])
-
-            try:
-                await member.send(
-                    "You have left and rejoined the **Python Discord** server, effectively resetting "
-                    f"your nickname from **{forced_nick}** to **{member.name}**, "
-                    "but as you are currently in superstar-prison, you do not have permission to do so. "
-                    "Therefore your nickname was automatically changed back. You will be allowed to "
-                    "change your nickname again at the following time:\n\n"
-                    f"**{end_timestamp_human}**."
-                )
-            except Forbidden:
-                log.warning(
-                    "The user left and rejoined the server while in superstar-prison. "
-                    "This led to the bot trying to DM the user to let them know their name was restored, "
-                    "but the user had either blocked the bot or disabled DMs, so it was not possible "
-                    "to DM them, and a discord.errors.Forbidden error was incurred."
-                )
-
-            # Log to the mod_log channel
-            log.trace("Logging to the #mod-log channel. This could fail because of channel permissions.")
-            mod_log_message = (
-                f"**{member}** (`{member.id}`)\n\n"
-                f"Superstarified member potentially tried to escape the prison.\n"
-                f"Restored enforced nickname: `{forced_nick}`\n"
-                f"Superstardom ends: **{end_timestamp_human}**"
+            infraction = active_superstarifies[0]
+            action = member.edit(
+                nick=self.get_nick(infraction["id"], member.id),
+                reason=f"Superstarified member tried to escape the prison: {infraction['id']}"
             )
-            await self.modlog.send_log_message(
-                icon_url=constants.Icons.user_update,
-                colour=Colour.gold(),
-                title="Superstar member rejoined server",
-                text=mod_log_message,
-                thumbnail=member.avatar_url_as(static_format="png")
-            )
+
+            await self.reapply_infraction(infraction, action)
 
     @command(name='superstarify', aliases=('force_nick', 'star'))
     async def superstarify(self, ctx: Context, member: Member, duration: utils.Expiry, reason: str = None) -> None:

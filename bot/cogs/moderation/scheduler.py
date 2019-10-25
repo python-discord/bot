@@ -2,6 +2,7 @@ import logging
 import textwrap
 import typing as t
 from abc import abstractmethod
+from datetime import datetime
 from gettext import ngettext
 
 import dateutil.parser
@@ -45,6 +46,25 @@ class InfractionScheduler(Scheduler):
         for infraction in infractions:
             if infraction["expires_at"] is not None:
                 self.schedule_task(self.bot.loop, infraction["id"], infraction)
+
+    async def reapply_infraction(
+        self,
+        infraction: utils.Infraction,
+        apply_coro: t.Optional[t.Awaitable]
+    ) -> None:
+        """Reapply an infraction if it's still active or deactivate it if less than 60 sec left."""
+        # Calculate the time remaining, in seconds, for the mute.
+        expiry = dateutil.parser.isoparse(infraction["expires_at"]).replace(tzinfo=None)
+        delta = (expiry - datetime.utcnow()).total_seconds()
+
+        # Mark as inactive if less than a minute remains.
+        if delta < 60:
+            await self.deactivate_infraction(infraction)
+            return
+
+        # Allowing mod log since this is a passive action that should be logged.
+        await apply_coro
+        log.info(f"Re-applied {infraction['type']} to user {infraction['user']} upon rejoining.")
 
     async def apply_infraction(
         self,

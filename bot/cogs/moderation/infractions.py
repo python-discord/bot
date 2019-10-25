@@ -1,8 +1,6 @@
 import logging
 import typing as t
-from datetime import datetime
 
-import dateutil.parser
 import discord
 from discord import Member
 from discord.ext import commands
@@ -37,31 +35,19 @@ class Infractions(InfractionScheduler, commands.Cog):
     async def on_member_join(self, member: Member) -> None:
         """Reapply active mute infractions for returning members."""
         active_mutes = await self.bot.api_client.get(
-            'bot/infractions',
+            "bot/infractions",
             params={
-                'user__id': str(member.id),
-                'type': 'mute',
-                'active': 'true'
+                "active": "true",
+                "type": "mute",
+                "user__id": member.id
             }
         )
-        if not active_mutes:
-            return
 
-        # Assume a single mute because of restrictions elsewhere.
-        mute = active_mutes[0]
+        if active_mutes:
+            reason = f"Re-applying active mute: {active_mutes[0]['id']}"
+            action = member.add_roles(self._muted_role, reason=reason)
 
-        # Calculate the time remaining, in seconds, for the mute.
-        expiry = dateutil.parser.isoparse(mute["expires_at"]).replace(tzinfo=None)
-        delta = (expiry - datetime.utcnow()).total_seconds()
-
-        # Mark as inactive if less than a minute remains.
-        if delta < 60:
-            await self.deactivate_infraction(mute)
-            return
-
-        # Allowing mod log since this is a passive action that should be logged.
-        await member.add_roles(self._muted_role, reason=f"Re-applying active mute: {mute['id']}")
-        log.debug(f"User {member.id} has been re-muted on rejoin.")
+            await self.reapply_infraction(active_mutes[0], action)
 
     # region: Permanent infractions
 
