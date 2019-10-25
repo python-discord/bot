@@ -1,17 +1,18 @@
 import json
 import logging
 import random
+import typing as t
 from pathlib import Path
 
 from discord import Colour, Embed, Member
 from discord.errors import Forbidden
-from discord.ext.commands import Bot, Cog, Context, command
+from discord.ext.commands import Cog, Context, command
 
 from bot import constants
 from bot.utils.checks import with_role_check
 from bot.utils.time import format_infraction
 from . import utils
-from .modlog import ModLog
+from .scheduler import InfractionScheduler
 
 log = logging.getLogger(__name__)
 NICKNAME_POLICY_URL = "https://pythondiscord.com/pages/rules/#nickname-policy"
@@ -20,16 +21,8 @@ with Path("bot/resources/stars.json").open(encoding="utf-8") as stars_file:
     STAR_NAMES = json.load(stars_file)
 
 
-class Superstarify(Cog):
+class Superstarify(InfractionScheduler, Cog):
     """A set of commands to moderate terrible nicknames."""
-
-    def __init__(self, bot: Bot):
-        self.bot = bot
-
-    @property
-    def modlog(self) -> ModLog:
-        """Get currently loaded ModLog cog instance."""
-        return self.bot.get_cog("ModLog")
 
     @Cog.listener()
     async def on_member_update(self, before: Member, after: Member) -> None:
@@ -189,7 +182,7 @@ class Superstarify(Cog):
             f"New nickname: `{forced_nick}`\n"
             f"Superstardom ends: **{expiry_str}**"
         )
-        await self.modlog.send_log_message(
+        await self.mod_log.send_log_message(
             icon_url=constants.Icons.user_update,
             colour=Colour.gold(),
             title="Member Achieved Superstardom",
@@ -207,45 +200,35 @@ class Superstarify(Cog):
         # Change the nick and return the embed
         log.trace("Changing the users nickname and sending the embed.")
         await member.edit(nick=forced_nick)
+        self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
         await ctx.send(embed=embed)
 
     @command(name='unsuperstarify', aliases=('release_nick', 'unstar'))
     async def unsuperstarify(self, ctx: Context, member: Member) -> None:
-        """Remove the superstarify entry from our database, allowing the user to change their nickname."""
-        log.debug(f"Attempting to unsuperstarify the following user: {member.display_name}")
+        """Remove the superstarify infraction and allow the user to change their nickname."""
+        await self.pardon_infraction(ctx, "superstar", member)
 
-        embed = Embed()
-        embed.colour = Colour.blurple()
+    async def _pardon_action(self, infraction: utils.Infraction) -> t.Optional[t.Dict[str, str]]:
+        """Pardon a superstar infraction and return a log dict."""
+        guild = self.bot.get_guild(constants.Guild.id)
+        user = guild.get_member(infraction["user"])
 
-        active_superstarifies = await self.bot.api_client.get(
-            'bot/infractions',
-            params={
-                'active': 'true',
-                'type': 'superstar',
-                'user__id': str(member.id)
-            }
-        )
-        if not active_superstarifies:
-            await ctx.send(":x: There is no active superstarify infraction for this user.")
-            return
+        # Don't bother sending a notification if the user left the guild.
+        if infraction["type"] != "mute" or not user:
+            return {}
 
-        [infraction] = active_superstarifies
-        await self.bot.api_client.patch(
-            'bot/infractions/' + str(infraction['id']),
-            json={'active': False}
-        )
-
-        embed = Embed()
-        embed.description = "User has been released from superstar-prison."
-        embed.title = random.choice(constants.POSITIVE_REPLIES)
-
-        await utils.notify_pardon(
-            user=member,
+        # DM the user about the expiration.
+        notified = await utils.notify_pardon(
+            user=user,
             title="You are no longer superstarified.",
-            content="You may now change your nickname on the server."
+            content="You may now change your nickname on the server.",
+            icon_url=utils.INFRACTION_ICONS["superstar"][1]
         )
-        log.trace(f"{member.display_name} was successfully released from superstar-prison.")
-        await ctx.send(embed=embed)
+
+        return {
+            "Member": f"{user.mention}(`{user.id}`)",
+            "DM": "Sent" if notified else "**Failed**"
+        }
 
     @staticmethod
     def get_nick(infraction_id: int, member_id: int) -> str:
