@@ -41,3 +41,11 @@ class ChecksTests(unittest.TestCase):
         role_id = 42
         self.ctx.author.roles.append(MockRole(role_id=role_id))
         self.assertTrue(checks.without_role_check(self.ctx, role_id + 10))
+
+    def test_in_channel_check_for_correct_channel(self):
+        self.ctx.channel.id = 42
+        self.assertTrue(checks.in_channel_check(self.ctx, *[42]))
+
+    def test_in_channel_check_for_incorrect_channel(self):
+        self.ctx.channel.id = 42 + 10
+        self.assertFalse(checks.in_channel_check(self.ctx, *[42]))

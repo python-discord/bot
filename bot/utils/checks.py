@@ -38,9 +38,9 @@ def without_role_check(ctx: Context, *role_ids: int) -> bool:
     return check
 
 
-def in_channel_check(ctx: Context, channel_id: int) -> bool:
-    """Checks if the command was executed inside of the specified channel."""
-    check = ctx.channel.id == channel_id
+def in_channel_check(ctx: Context, *channel_ids: int) -> bool:
+    """Checks if the command was executed inside the list of specified channels."""
+    check = ctx.channel.id in channel_ids
     log.trace(f"{ctx.author} tried to call the '{ctx.command.name}' command. "
               f"The result of the in_channel check was {check}.")
     return check

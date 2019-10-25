@@ -11,7 +11,7 @@ from discord.ext.commands import Bot, Cog
 
 from bot.cogs.moderation import ModLog
 from bot.constants import (
-    Channels, Colours, DEBUG_MODE,
+    Channels, Colours,
     Filter, Icons, URLs
 )
 from bot.utils.scheduling import Scheduler
@@ -152,10 +152,6 @@ class Filtering(Cog, Scheduler):
             and not msg.author.bot                          # Author not a bot
         )
 
-        # If we're running the bot locally, ignore role whitelist and only listen to #dev-test
-        if DEBUG_MODE:
-            filter_message = not msg.author.bot and msg.channel.id == Channels.devtest
-
         # If none of the above, we can start filtering.
         if filter_message:
             for filter_name, _filter in self.filters.items():
@@ -170,11 +166,11 @@ class Filtering(Cog, Scheduler):
 
                     # Does the filter only need the message content or the full message?
                     if _filter["content_only"]:
-                        triggered = await _filter["function"](msg.content)
+                        match = await _filter["function"](msg.content)
                     else:
-                        triggered = await _filter["function"](msg)
+                        match = await _filter["function"](msg)
 
-                    if triggered:
+                    if match:
                         # If this is a filter (not a watchlist), we should delete the message.
                         if _filter["type"] == "filter":
                             try:
@@ -215,12 +211,23 @@ class Filtering(Cog, Scheduler):
                         else:
                             channel_str = f"in {msg.channel.mention}"
 
+                        # Word and match stats for watch_words and watch_tokens
+                        if filter_name in ("watch_words", "watch_tokens"):
+                            surroundings = match.string[max(match.start() - 10, 0): match.end() + 10]
+                            message_content = (
+                                f"**Match:** '{match[0]}'\n"
+                                f"**Location:** '...{surroundings}...'\n"
+                                f"\n**Original Message:**\n{msg.content}"
+                            )
+                        else:  # Use content of discord Message
+                            message_content = msg.content
+
                         message = (
                             f"The {filter_name} {_filter['type']} was triggered "
                             f"by **{msg.author}** "
                             f"(`{msg.author.id}`) {channel_str} with [the "
                             f"following message]({msg.jump_url}):\n\n"
-                            f"{msg.content}"
+                            f"{message_content}"
                         )
 
                         log.debug(message)
@@ -230,7 +237,7 @@ class Filtering(Cog, Scheduler):
 
                         if filter_name == "filter_invites":
                             additional_embeds = []
-                            for invite, data in triggered.items():
+                            for invite, data in match.items():
                                 embed = discord.Embed(description=(
                                     f"**Members:**\n{data['members']}\n"
                                     f"**Active:**\n{data['active']}"
@@ -261,31 +268,33 @@ class Filtering(Cog, Scheduler):
                         break  # We don't want multiple filters to trigger
 
     @staticmethod
-    async def _has_watchlist_words(text: str) -> bool:
+    async def _has_watchlist_words(text: str) -> Union[bool, re.Match]:
         """
         Returns True if the text contains one of the regular expressions from the word_watchlist in our filter config.
 
         Only matches words with boundaries before and after the expression.
         """
         for regex_pattern in WORD_WATCHLIST_PATTERNS:
-            if regex_pattern.search(text):
-                return True
+            match = regex_pattern.search(text)
+            if match:
+                return match  # match objects always have a boolean value of True
 
         return False
 
     @staticmethod
-    async def _has_watchlist_tokens(text: str) -> bool:
+    async def _has_watchlist_tokens(text: str) -> Union[bool, re.Match]:
         """
         Returns True if the text contains one of the regular expressions from the token_watchlist in our filter config.
 
         This will match the expression even if it does not have boundaries before and after.
         """
         for regex_pattern in TOKEN_WATCHLIST_PATTERNS:
-            if regex_pattern.search(text):
+            match = regex_pattern.search(text)
+            if match:
 
                 # Make sure it's not a URL
                 if not URL_RE.search(text):
-                    return True
+                    return match  # match objects always have a boolean value of True
 
         return False
 
