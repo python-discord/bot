@@ -133,6 +133,7 @@ class Superstarify(InfractionScheduler, Cog):
         reason = reason or f"old nick: {member.display_name}"
         infraction = await utils.post_infraction(ctx, member, "superstar", reason, duration)
 
+        old_nick = member.display_name
         forced_nick = self.get_nick(infraction["id"], member.id)
         expiry_str = format_infraction(infraction["expires_at"])
 
@@ -154,7 +155,7 @@ class Superstarify(InfractionScheduler, Cog):
         embed = Embed()
         embed.title = "Congratulations!"
         embed.description = (
-            f"Your previous nickname, **{member.display_name}**, "
+            f"Your previous nickname, **{old_nick}**, "
             f"was so bad that we have decided to change it. "
             f"Your new nickname will be **{forced_nick}**.\n\n"
             f"You will be unable to change your nickname until \n**{expiry_str}**.\n\n"
@@ -174,7 +175,7 @@ class Superstarify(InfractionScheduler, Cog):
                 Actor: {ctx.message.author}
                 Reason: {reason}
                 Expires: {expiry_str}
-                Old nickname: `{member.display_name}`
+                Old nickname: `{old_nick}`
                 New nickname: `{forced_nick}`
             """),
             footer=f"ID {infraction['id']}"
