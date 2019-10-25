@@ -24,18 +24,18 @@ log = logging.getLogger(__name__)
 class InfractionScheduler(Scheduler):
     """Handles the application, pardoning, and expiration of infractions."""
 
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: Bot, supported_infractions: t.Container[str]):
         super().__init__()
 
         self.bot = bot
-        self.bot.loop.create_task(self.reschedule_infractions())
+        self.bot.loop.create_task(self.reschedule_infractions(supported_infractions))
 
     @property
     def mod_log(self) -> ModLog:
         """Get the currently loaded ModLog cog instance."""
         return self.bot.get_cog("ModLog")
 
-    async def reschedule_infractions(self) -> None:
+    async def reschedule_infractions(self, supported_infractions: t.Container[str]) -> None:
         """Schedule expiration for previous infractions."""
         await self.bot.wait_until_ready()
 
@@ -44,7 +44,7 @@ class InfractionScheduler(Scheduler):
             params={'active': 'true'}
         )
         for infraction in infractions:
-            if infraction["expires_at"] is not None:
+            if infraction["expires_at"] is not None and infraction["type"] in supported_infractions:
                 self.schedule_task(self.bot.loop, infraction["id"], infraction)
 
     async def reapply_infraction(

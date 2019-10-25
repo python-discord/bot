@@ -7,7 +7,7 @@ from pathlib import Path
 
 from discord import Colour, Embed, Member
 from discord.errors import Forbidden
-from discord.ext.commands import Cog, Context, command
+from discord.ext.commands import Bot, Cog, Context, command
 
 from bot import constants
 from bot.utils.checks import with_role_check
@@ -24,6 +24,9 @@ with Path("bot/resources/stars.json").open(encoding="utf-8") as stars_file:
 
 class Superstarify(InfractionScheduler, Cog):
     """A set of commands to moderate terrible nicknames."""
+
+    def __init__(self, bot: Bot):
+        super().__init__(bot, supported_infractions={"superstar"})
 
     @Cog.listener()
     async def on_member_update(self, before: Member, after: Member) -> None:
