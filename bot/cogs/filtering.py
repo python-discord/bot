@@ -197,7 +197,7 @@ class Filtering(Cog):
 
                         message = (
                             f"The {filter_name} {_filter['type']} was triggered "
-                            f"by **{msg.author.name}#{msg.author.discriminator}** "
+                            f"by **{msg.author}** "
                             f"(`{msg.author.id}`) {channel_str} with [the "
                             f"following message]({msg.jump_url}):\n\n"
                             f"{message_content}"

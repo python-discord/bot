@@ -1,5 +1,9 @@
+from __future__ import annotations
+
 import logging
+from collections import namedtuple
 from datetime import datetime, timedelta
+from enum import Enum
 
 from discord import Colour, Embed, Member
 from discord.ext.commands import Bot, Cog, Context, group
@@ -24,6 +28,16 @@ will be resolved soon. In the meantime, please feel free to peruse the resources
 BASE_CHANNEL_TOPIC = "Python Discord Defense Mechanism"
 
 
+class Action(Enum):
+    """Defcon Action."""
+
+    ActionInfo = namedtuple('LogInfoDetails', ['icon', 'color', 'template'])
+
+    ENABLED = ActionInfo(Icons.defcon_enabled, Colours.soft_green, "**Days:** {days}\n\n")
+    DISABLED = ActionInfo(Icons.defcon_disabled, Colours.soft_red, "")
+    UPDATED = ActionInfo(Icons.defcon_updated, Colour.blurple(), "**Days:** {days}\n\n")
+
+
 class Defcon(Cog):
     """Time-sensitive server defense mechanisms."""
 
@@ -46,6 +60,7 @@ class Defcon(Cog):
         """On cog load, try to synchronize DEFCON settings to the API."""
         await self.bot.wait_until_ready()
         self.channel = await self.bot.fetch_channel(Channels.defcon)
+
         try:
             response = await self.bot.api_client.get('bot/bot-settings/defcon')
             data = response['data']
@@ -90,8 +105,7 @@ class Defcon(Cog):
                 await member.kick(reason="DEFCON active, user is too new")
 
                 message = (
-                    f"{member.name}#{member.discriminator} (`{member.id}`) "
-                    f"was denied entry because their account is too new."
+                    f"{member} (`{member.id}`) was denied entry because their account is too new."
                 )
 
                 if not message_sent:
@@ -108,6 +122,28 @@ class Defcon(Cog):
         """Check the DEFCON status or run a subcommand."""
         await ctx.invoke(self.bot.get_command("help"), "defcon")
 
+    async def _defcon_action(self, ctx: Context, days: int, action: Action) -> None:
+        """Providing a structured way to do an defcon action."""
+        error = None
+        try:
+            await self.bot.api_client.put(
+                'bot/bot-settings/defcon',
+                json={
+                    'name': 'defcon',
+                    'data': {
+                        # TODO: retrieve old days count
+                        'days': days,
+                        'enabled': action is not Action.DISABLED,
+                    }
+                }
+            )
+        except Exception as err:
+            log.exception("Unable to update DEFCON settings.")
+            error = err
+        finally:
+            await ctx.send(self.build_defcon_msg(action, error))
+            await self.send_defcon_log(action, ctx.author, error)
+
     @defcon_group.command(name='enable', aliases=('on', 'e'))
     @with_role(Roles.admin, Roles.owner)
     async def enable_command(self, ctx: Context) -> None:
@@ -118,29 +154,7 @@ class Defcon(Cog):
         in days.
         """
         self.enabled = True
-
-        try:
-            await self.bot.api_client.put(
-                'bot/bot-settings/defcon',
-                json={
-                    'name': 'defcon',
-                    'data': {
-                        'enabled': True,
-                        # TODO: retrieve old days count
-                        'days': 0
-                    }
-                }
-            )
-
-        except Exception as e:
-            log.exception("Unable to update DEFCON settings.")
-            await ctx.send(self.build_defcon_msg("enabled", e))
-            await self.send_defcon_log("enabled", ctx.author, e)
-
-        else:
-            await ctx.send(self.build_defcon_msg("enabled"))
-            await self.send_defcon_log("enabled", ctx.author)
-
+        await self._defcon_action(ctx, days=0, action=Action.ENABLED)
         await self.update_channel_topic()
 
     @defcon_group.command(name='disable', aliases=('off', 'd'))
@@ -148,26 +162,7 @@ class Defcon(Cog):
     async def disable_command(self, ctx: Context) -> None:
         """Disable DEFCON mode. Useful in a pinch, but be sure you know what you're doing!"""
         self.enabled = False
-
-        try:
-            await self.bot.api_client.put(
-                'bot/bot-settings/defcon',
-                json={
-                    'data': {
-                        'days': 0,
-                        'enabled': False
-                    },
-                    'name': 'defcon'
-                }
-            )
-        except Exception as e:
-            log.exception("Unable to update DEFCON settings.")
-            await ctx.send(self.build_defcon_msg("disabled", e))
-            await self.send_defcon_log("disabled", ctx.author, e)
-        else:
-            await ctx.send(self.build_defcon_msg("disabled"))
-            await self.send_defcon_log("disabled", ctx.author)
-
+        await self._defcon_action(ctx, days=0, action=Action.DISABLED)
         await self.update_channel_topic()
 
     @defcon_group.command(name='status', aliases=('s',))
@@ -187,30 +182,8 @@ class Defcon(Cog):
     async def days_command(self, ctx: Context, days: int) -> None:
         """Set how old an account must be to join the server, in days, with DEFCON mode enabled."""
         self.days = timedelta(days=days)
-
-        try:
-            await self.bot.api_client.put(
-                'bot/bot-settings/defcon',
-                json={
-                    'data': {
-                        'days': days,
-                        'enabled': True
-                    },
-                    'name': 'defcon'
-                }
-            )
-        except Exception as e:
-            log.exception("Unable to update DEFCON settings.")
-            await ctx.send(self.build_defcon_msg("updated", e))
-            await self.send_defcon_log("updated", ctx.author, e)
-        else:
-            await ctx.send(self.build_defcon_msg("updated"))
-            await self.send_defcon_log("updated", ctx.author)
-
-        # Enable DEFCON if it's not already
-        if not self.enabled:
-            self.enabled = True
-
+        self.enabled = True
+        await self._defcon_action(ctx, days=days, action=Action.UPDATED)
         await self.update_channel_topic()
 
     async def update_channel_topic(self) -> None:
@@ -224,20 +197,16 @@ class Defcon(Cog):
         self.mod_log.ignore(Event.guild_channel_update, Channels.defcon)
         await self.channel.edit(topic=new_topic)
 
-    def build_defcon_msg(self, change: str, e: Exception = None) -> str:
-        """
-        Build in-channel response string for DEFCON action.
-
-        `change` string may be one of the following: ('enabled', 'disabled', 'updated')
-        """
-        if change.lower() == "enabled":
+    def build_defcon_msg(self, action: Action, e: Exception = None) -> str:
+        """Build in-channel response string for DEFCON action."""
+        if action is Action.ENABLED:
             msg = f"{Emojis.defcon_enabled} DEFCON enabled.\n\n"
-        elif change.lower() == "disabled":
+        elif action is Action.DISABLED:
             msg = f"{Emojis.defcon_disabled} DEFCON disabled.\n\n"
-        elif change.lower() == "updated":
+        elif action is Action.UPDATED:
             msg = (
-                f"{Emojis.defcon_updated} DEFCON days updated; accounts must be {self.days} "
-                "days old to join the server.\n\n"
+                f"{Emojis.defcon_updated} DEFCON days updated; accounts must be {self.days.days} "
+                f"day{'s' if self.days.days > 1 else ''} old to join the server.\n\n"
             )
 
         if e:
@@ -248,28 +217,14 @@ class Defcon(Cog):
 
         return msg
 
-    async def send_defcon_log(self, change: str, actor: Member, e: Exception = None) -> None:
-        """
-        Send log message for DEFCON action.
-
-        `change` string may be one of the following: ('enabled', 'disabled', 'updated')
-        """
-        log_msg = f"**Staffer:** {actor.name}#{actor.discriminator} (`{actor.id}`)\n"
-
-        if change.lower() == "enabled":
-            icon = Icons.defcon_enabled
-            color = Colours.soft_green
-            status_msg = "DEFCON enabled"
-            log_msg += f"**Days:** {self.days.days}\n\n"
-        elif change.lower() == "disabled":
-            icon = Icons.defcon_disabled
-            color = Colours.soft_red
-            status_msg = "DEFCON enabled"
-        elif change.lower() == "updated":
-            icon = Icons.defcon_updated
-            color = Colour.blurple()
-            status_msg = "DEFCON updated"
-            log_msg += f"**Days:** {self.days.days}\n\n"
+    async def send_defcon_log(self, action: Action, actor: Member, e: Exception = None) -> None:
+        """Send log message for DEFCON action."""
+        info = action.value
+        log_msg: str = (
+            f"**Staffer:** {actor.mention} {actor} (`{actor.id}`)\n"
+            f"{info.template.format(days=self.days.days)}"
+        )
+        status_msg = f"DEFCON {action.name.lower()}"
 
         if e:
             log_msg += (
@@ -277,7 +232,7 @@ class Defcon(Cog):
                 f"```py\n{e}\n```"
             )
 
-        await self.mod_log.send_log_message(icon, color, status_msg, log_msg)
+        await self.mod_log.send_log_message(info.icon, info.color, status_msg, log_msg)
 
 
 def setup(bot: Bot) -> None:
