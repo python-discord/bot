@@ -170,7 +170,7 @@ class Superstarify(InfractionScheduler, Cog):
             title="Member Achieved Superstardom",
             thumbnail=member.avatar_url_as(static_format="png"),
             text=textwrap.dedent(f"""
-                Member: {member.mentiom} (`{member.id}`)
+                Member: {member.mention} (`{member.id}`)
                 Actor: {ctx.message.author}
                 Reason: {reason}
                 Expires: {expiry_str}
