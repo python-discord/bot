@@ -100,10 +100,16 @@ class Superstarify(InfractionScheduler, Cog):
 
             await self.reapply_infraction(infraction, action)
 
-    @command(name='superstarify', aliases=('force_nick', 'star'))
-    async def superstarify(self, ctx: Context, member: Member, duration: utils.Expiry, reason: str = None) -> None:
+    @command(name="superstarify", aliases=("force_nick", "star"))
+    async def superstarify(
+        self,
+        ctx: Context,
+        member: Member,
+        duration: utils.Expiry,
+        reason: str = None
+    ) -> None:
         """
-        Force a random superstar name (like Taylor Swift) to be the user's nickname for a specified duration.
+        Temporarily force a random superstar name (like Taylor Swift) to be the user's nickname.
 
         A unit of time should be appended to the duration.
         Units (∗case-sensitive):
@@ -125,7 +131,7 @@ class Superstarify(InfractionScheduler, Cog):
 
         # Post the infraction to the API
         reason = reason or f"old nick: {member.display_name}"
-        infraction = await utils.post_infraction(ctx, member, "superstar", reason, expires_at=duration)
+        infraction = await utils.post_infraction(ctx, member, "superstar", reason, duration)
 
         forced_nick = self.get_nick(infraction["id"], member.id)
         expiry_str = format_infraction(infraction["expires_at"])
@@ -140,8 +146,8 @@ class Superstarify(InfractionScheduler, Cog):
             user=member,
             infr_type="Superstarify",
             expires_at=expiry_str,
-            reason=f"Your nickname didn't comply with our [nickname policy]({NICKNAME_POLICY_URL}).",
-            icon_url=utils.INFRACTION_ICONS["superstar"][0]
+            icon_url=utils.INFRACTION_ICONS["superstar"][0],
+            reason=f"Your nickname didn't comply with our [nickname policy]({NICKNAME_POLICY_URL})."
         )
 
         # Send an embed with the infraction information to the invoking context.
@@ -174,7 +180,7 @@ class Superstarify(InfractionScheduler, Cog):
             footer=f"ID {infraction['id']}"
         )
 
-    @command(name='unsuperstarify', aliases=('release_nick', 'unstar'))
+    @command(name="unsuperstarify", aliases=("release_nick", "unstar"))
     async def unsuperstarify(self, ctx: Context, member: Member) -> None:
         """Remove the superstarify infraction and allow the user to change their nickname."""
         await self.pardon_infraction(ctx, "superstar", member)
