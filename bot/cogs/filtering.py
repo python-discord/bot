@@ -60,7 +60,7 @@ class Filtering(Cog):
                     "Your post has been removed for abusing Unicode character rendering (aka Zalgo text). "
                     f"{_staff_mistake_str}"
                 ),
-                "offensive_msg": False
+                "schedule_deletion": False
             },
             "filter_invites": {
                 "enabled": Filter.filter_invites,
@@ -72,7 +72,7 @@ class Filtering(Cog):
                     f"Per Rule 10, your invite link has been removed. {_staff_mistake_str}\n\n"
                     r"Our server rules can be found here: <https://pythondiscord.com/pages/rules>"
                 ),
-                "offensive_msg": False
+                "schedule_deletion": False
             },
             "filter_domains": {
                 "enabled": Filter.filter_domains,
@@ -83,28 +83,28 @@ class Filtering(Cog):
                 "notification_msg": (
                     f"Your URL has been removed because it matched a blacklisted domain. {_staff_mistake_str}"
                 ),
-                "offensive_msg": False
+                "schedule_deletion": False
             },
             "watch_rich_embeds": {
                 "enabled": Filter.watch_rich_embeds,
                 "function": self._has_rich_embed,
                 "type": "watchlist",
                 "content_only": False,
-                "offensive_msg": False
+                "schedule_deletion": False
             },
             "watch_words": {
                 "enabled": Filter.watch_words,
                 "function": self._has_watchlist_words,
                 "type": "watchlist",
                 "content_only": True,
-                "offensive_msg": True
+                "schedule_deletion": True
             },
             "watch_tokens": {
                 "enabled": Filter.watch_tokens,
                 "function": self._has_watchlist_tokens,
                 "type": "watchlist",
                 "content_only": True,
-                "offensive_msg": True
+                "schedule_deletion": True
             },
         }
 
@@ -203,7 +203,7 @@ class Filtering(Cog):
 
                         # If the message is classed as offensive, we store it in the site db and
                         # it will be deleted it after one week.
-                        if _filter["offensive_msg"]:
+                        if _filter["schedule_deletion"]:
                             delete_date = msg.created_at.date() + OFFENSIVE_MSG_DELETE_TIME
                             await self.bot.api_client.post(
                                 'bot/offensive-message',
