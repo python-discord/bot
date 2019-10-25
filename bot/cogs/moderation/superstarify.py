@@ -192,7 +192,7 @@ class Superstarify(InfractionScheduler, Cog):
         user = guild.get_member(infraction["user"])
 
         # Don't bother sending a notification if the user left the guild.
-        if infraction["type"] != "mute" or not user:
+        if infraction["type"] != "superstar" or not user:
             return {}
 
         # DM the user about the expiration.
