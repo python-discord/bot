@@ -135,6 +135,7 @@ class Superstarify(InfractionScheduler, Cog):
         expiry_str = format_infraction(infraction["expires_at"])
 
         # Apply the infraction and schedule the expiration task.
+        self.mod_log.ignore(constants.Event.member_update, member.id)
         await member.edit(nick=forced_nick, reason=reason)
         self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
 
