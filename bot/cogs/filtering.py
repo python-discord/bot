@@ -185,21 +185,6 @@ class Filtering(Cog):
                         triggered = await _filter["function"](msg)
 
                     if triggered:
-                        # If the message is classed as offensive, we store it in the site db and
-                        # it will be deleted it after one week.
-                        if _filter["offensive_msg"]:
-                            delete_date = msg.created_at.date() + OFFENSIVE_MSG_DELETE_TIME
-                            await self.bot.api_client.post(
-                                'bot/offensive-message',
-                                json={
-                                    'id': msg.id,
-                                    'channel_id': msg.channel.id,
-                                    'delete_date': delete_date.isoformat()
-                                }
-                            )
-                            log.trace(f"Offensive message will be deleted on "
-                                      f"{delete_date.isoformat()}")
-
                         # If this is a filter (not a watchlist), we should delete the message.
                         if _filter["type"] == "filter":
                             try:
@@ -215,6 +200,21 @@ class Filtering(Cog):
                                 await msg.delete()
                             except discord.errors.NotFound:
                                 return
+
+                        # If the message is classed as offensive, we store it in the site db and
+                        # it will be deleted it after one week.
+                        if _filter["offensive_msg"]:
+                            delete_date = msg.created_at.date() + OFFENSIVE_MSG_DELETE_TIME
+                            await self.bot.api_client.post(
+                                'bot/offensive-message',
+                                json={
+                                    'id': msg.id,
+                                    'channel_id': msg.channel.id,
+                                    'delete_date': delete_date.isoformat()
+                                }
+                            )
+                            log.trace(f"Offensive message will be deleted on "
+                                      f"{delete_date.isoformat()}")
 
                             # Notify the user if the filter specifies
                             if _filter["user_notification"]:
