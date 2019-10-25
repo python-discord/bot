@@ -39,7 +39,7 @@ TOKEN_WATCHLIST_PATTERNS = [
     re.compile(fr'{expression}', flags=re.IGNORECASE) for expression in Filter.token_watchlist
 ]
 
-OFFENSIVE_MSG_DELETE_TIME = datetime.timedelta(days=7)  # Time before an offensive msg is deleted.
+OFFENSIVE_MSG_DELETE_TIME = datetime.timedelta(days=Filter.offensive_msg_delete_time)
 
 
 class Filtering(Cog):
