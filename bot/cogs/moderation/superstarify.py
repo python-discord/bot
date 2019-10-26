@@ -190,11 +190,14 @@ class Superstarify(InfractionScheduler, Cog):
 
     async def _pardon_action(self, infraction: utils.Infraction) -> t.Optional[t.Dict[str, str]]:
         """Pardon a superstar infraction and return a log dict."""
+        if infraction["type"] != "superstar":
+            return
+
         guild = self.bot.get_guild(constants.Guild.id)
         user = guild.get_member(infraction["user"])
 
         # Don't bother sending a notification if the user left the guild.
-        if infraction["type"] != "superstar" or not user:
+        if not user:
             return {}
 
         # DM the user about the expiration.
