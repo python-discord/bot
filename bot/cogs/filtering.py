@@ -187,24 +187,24 @@ class Filtering(Cog, Scheduler):
                             except discord.errors.NotFound:
                                 return
 
+                            # Notify the user if the filter specifies
+                            if _filter["user_notification"]:
+                                await self.notify_member(msg.author, _filter["notification_msg"], msg.channel)
+
                         # If the message is classed as offensive, we store it in the site db and
                         # it will be deleted it after one week.
                         if _filter["schedule_deletion"]:
-                            delete_date = msg.created_at.date() + OFFENSIVE_MSG_DELETE_TIME
+                            delete_date = msg.created_at + OFFENSIVE_MSG_DELETE_TIME
                             await self.bot.api_client.post(
                                 'bot/offensive-message',
                                 json={
                                     'id': msg.id,
                                     'channel_id': msg.channel.id,
-                                    'delete_date': delete_date.isoformat()
+                                    'delete_date': delete_date.isoformat()[:-1]
                                 }
                             )
                             log.trace(f"Offensive message will be deleted on "
                                       f"{delete_date.isoformat()}")
-
-                            # Notify the user if the filter specifies
-                            if _filter["user_notification"]:
-                                await self.notify_member(msg.author, _filter["notification_msg"], msg.channel)
 
                         if isinstance(msg.channel, DMChannel):
                             channel_str = "via DM"
