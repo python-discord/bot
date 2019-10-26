@@ -20,6 +20,7 @@ log = logging.getLogger(__name__)
 
 class Reddit(Cog):
     """Track subreddit posts and show detailed statistics about them."""
+
     # Change your client's User-Agent string to something unique and descriptive,
     # including the target platform, a unique application identifier, a version string,
     # and your username as contact information, in the following format:
