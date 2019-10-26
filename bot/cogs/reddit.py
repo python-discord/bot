@@ -2,15 +2,15 @@ import asyncio
 import logging
 import random
 import textwrap
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import List
 
 from aiohttp import BasicAuth
-from discord import Colour, Embed, Message, TextChannel
-from discord.ext import tasks
+from discord import Colour, Embed, TextChannel
 from discord.ext.commands import Bot, Cog, Context, group
+from discord.ext.tasks import loop
 
-from bot.constants import Channels, ERROR_REPLIES, Reddit as RedditConfig, STAFF_ROLES
+from bot.constants import Channels, ERROR_REPLIES, Reddit as RedditConfig, STAFF_ROLES, Webhooks
 from bot.converters import Subreddit
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
@@ -20,7 +20,6 @@ log = logging.getLogger(__name__)
 
 class Reddit(Cog):
     """Track subreddit posts and show detailed statistics about them."""
-
     # Change your client's User-Agent string to something unique and descriptive,
     # including the target platform, a unique application identifier, a version string,
     # and your username as contact information, in the following format:
@@ -28,73 +27,85 @@ class Reddit(Cog):
     USER_AGENT = "docker-python3:Discord Bot of PythonDiscord (https://pythondiscord.com/):v?.?.? (by /u/PythonDiscord)"
     URL = "https://www.reddit.com"
     OAUTH_URL = "https://oauth.reddit.com"
-    MAX_FETCH_RETRIES = 3
+    MAX_RETRIES = 3
 
     def __init__(self, bot: Bot):
         self.bot = bot
 
-        self.reddit_channel = None
+        self.webhook = None  # set in on_ready
+        bot.loop.create_task(self.init_reddit_ready())
 
-        self.prev_lengths = {}
-        self.last_ids = {}
+        self.auto_poster_loop.start()
 
-        self.new_posts_task = None
-        self.top_weekly_posts_task = None
+    def cog_unload(self) -> None:
+        """Stops the loops when the cog is unloaded."""
+        self.auto_poster_loop.cancel()
 
-        self.bot.loop.create_task(self.init_reddit_polling())
+    async def init_reddit_ready(self) -> None:
+        """Sets the reddit webhook when the cog is loaded."""
+        await self.bot.wait_until_ready()
+        if not self.webhook:
+            self.webhook = await self.bot.fetch_webhook(Webhooks.reddit)
 
-    @tasks.loop(hours=0.99)  # access tokens are valid for one hour
-    async def refresh_access_token(self) -> None:
-        """Refresh Reddits access token."""
-        headers = {"Authorization": self.client_auth}
-        data = {
-            "grant_type": "refresh_token",
-            "refresh_token": self.refresh_token
-        }
+    @property
+    def channel(self) -> TextChannel:
+        """Get the #reddit channel object from the bot's cache."""
+        return self.bot.get_channel(Channels.reddit)
 
-        response = await self.bot.http_session.post(
-            url=f"{self.URL}/api/v1/access_token",
-            headers=headers,
-            data=data,
-        )
-
-        content = await response.json()
-        self.access_token = content["access_token"]
-        self.headers = {
-            "Authorization": "bearer " + self.access_token,
-            "User-Agent": self.USER_AGENT
-        }
-
-    @refresh_access_token.before_loop
-    async def get_tokens(self) -> None:
-        """Get Reddit access and refresh tokens."""
+    async def get_access_tokens(self) -> None:
+        """Get Reddit access tokens."""
         headers = {"User-Agent": self.USER_AGENT}
         data = {
             "grant_type": "client_credentials",
-            "duration": "permanent"
+            "duration": "temporary"
         }
 
         self.client_auth = BasicAuth(RedditConfig.client_id, RedditConfig.secret)
 
+        for _ in range(self.MAX_RETRIES):
+            response = await self.bot.http_session.post(
+                url=f"{self.URL}/api/v1/access_token",
+                headers=headers,
+                auth=self.client_auth,
+                data=data
+            )
+            if response.status == 200 and response.content_type == "application/json":
+                content = await response.json()
+                self.access_token = content["access_token"]
+                self.headers = {
+                    "Authorization": "bearer " + self.access_token,
+                    "User-Agent": self.USER_AGENT
+                }
+                return
+
+            await asyncio.sleep(3)
+
+        log.error("Authentication with Reddit API failed. Unloading extension.")
+        self.bot.remove_cog(self.__class__.__name__)
+        return
+
+    async def revoke_access_token(self) -> None:
+        """Revoke the access token for Reddit API."""
+        # Access tokens are valid for 1 hour.
+        # The token should be revoked, since the API is called only once a day.
+        headers = {"User-Agent": self.USER_AGENT}
+        data = {
+            "token": self.access_token,
+            "token_type_hint": "access_token"
+        }
+
         response = await self.bot.http_session.post(
-            url=f"{self.URL}/api/v1/access_token",
+            url=f"{self.URL}/api/v1/revoke_token",
             headers=headers,
             auth=self.client_auth,
             data=data
         )
-
-        if response.status == 200 and response.content_type == "application/json":
-            content = await response.json()
-            self.access_token = content["access_token"]
-            self.refresh_token = content["refresh_token"]
-            self.headers = {
-                "Authorization": "bearer " + self.access_token,
-                "User-Agent": self.USER_AGENT
-            }
-        else:
-            log.error("Authentication with Reddit API failed. Unloading extension.")
-            self.bot.remove_cog(self.__class__.__name__)
+        if response.status == 204 and response.content_type == "application/json":
+            self.access_token = None
+            self.headers = None
             return
+
+        log.warning(f"Unable to revoke access token, status code {response.status}.")
 
     async def fetch_posts(self, route: str, *, amount: int = 25, params: dict = None) -> List[dict]:
         """A helper method to fetch a certain amount of Reddit posts at a given route."""
@@ -106,7 +117,7 @@ class Reddit(Cog):
             params = {}
 
         url = f"{self.OAUTH_URL}/{route}"
-        for _ in range(self.MAX_FETCH_RETRIES):
+        for _ in range(self.MAX_RETRIES):
             response = await self.bot.http_session.get(
                 url=url,
                 headers=self.headers,
@@ -123,23 +134,22 @@ class Reddit(Cog):
         log.debug(f"Invalid response from: {url} - status code {response.status}, mimetype {response.content_type}")
         return list()  # Failed to get appropriate response within allowed number of retries.
 
-    async def send_top_posts(
-        self, channel: TextChannel, subreddit: Subreddit, content: str = None, time: str = "all"
-    ) -> Message:
-        """Create an embed for the top posts, then send it in a given TextChannel."""
-        # Create the new spicy embed.
-        embed = Embed()
-        embed.description = ""
+    async def get_top_posts(self, subreddit: Subreddit, time: str = "all", amount: int = 5) -> Embed:
+        """
+        Get the top amount of posts for a given subreddit within a specified timeframe.
 
-        # Get the posts
-        async with channel.typing():
-            posts = await self.fetch_posts(
-                route=f"{subreddit}/top",
-                amount=5,
-                params={
-                    "t": time
-                }
-            )
+        A time of "all" will get posts from all time, "day" will get top daily posts and "week" will get the top
+        weekly posts.
+
+        The amount should be between 0 and 25 as Reddit's JSON requests only provide 25 posts at most.
+        """
+        embed = Embed(description="")
+
+        posts = await self.fetch_posts(
+            route=f"{subreddit}/top",
+            amount=amount,
+            params={"t": time}
+        )
 
         if not posts:
             embed.title = random.choice(ERROR_REPLIES)
@@ -149,9 +159,7 @@ class Reddit(Cog):
                 "If this problem persists, please let us know."
             )
 
-            return await channel.send(
-                embed=embed
-            )
+            return embed
 
         for post in posts:
             data = post["data"]
@@ -175,103 +183,55 @@ class Reddit(Cog):
             )
 
         embed.colour = Colour.blurple()
+        return embed
 
-        return await channel.send(
-            content=content,
-            embed=embed
-        )
+    @loop()
+    async def auto_poster_loop(self) -> None:
+        """Post the top 5 posts daily, and the top 5 posts weekly."""
+        # once we upgrade to d.py 1.3 this can be removed and the loop can use the `time=datetime.time.min` parameter
+        now = datetime.utcnow()
+        midnight_tomorrow = now.replace(day=now.day + 1, hour=0, minute=0, second=0)
+        seconds_until = (midnight_tomorrow - now).total_seconds()
 
-    async def poll_new_posts(self) -> None:
-        """Periodically search for new subreddit posts."""
-        while True:
-            await asyncio.sleep(RedditConfig.request_delay)
+        await asyncio.sleep(seconds_until)
 
-            for subreddit in RedditConfig.subreddits:
-                # Make a HEAD request to the subreddit
-                head_response = await self.bot.http_session.head(
-                    url=f"{self.OAUTH_URL}/{subreddit}/new.rss",
-                    headers=self.headers
-                )
+        await self.bot.wait_until_ready()
+        if not self.webhook:
+            await self.bot.fetch_webhook(Webhooks.reddit)
 
-                content_length = head_response.headers["content-length"]
+        await self.get_access_tokens()
 
-                # If the content is the same size as before, assume there's no new posts.
-                if content_length == self.prev_lengths.get(subreddit, None):
-                    continue
+        if datetime.utcnow().weekday() == 0:
+            await self.top_weekly_posts()
+            # if it's a monday send the top weekly posts
 
-                self.prev_lengths[subreddit] = content_length
+        for subreddit in RedditConfig.subreddits:
+            top_posts = await self.get_top_posts(subreddit=subreddit, time="day")
+            await self.webhook.send(username=f"{subreddit} Top Daily Posts", embed=top_posts)
 
-                # Now we can actually fetch the new data
-                posts = await self.fetch_posts(f"{subreddit}/new")
-                new_posts = []
+        await self.revoke_access_token()
 
-                # Only show new posts if we've checked before.
-                if subreddit in self.last_ids:
-                    for post in posts:
-                        data = post["data"]
+    async def top_weekly_posts(self) -> None:
+        """Post a summary of the top posts."""
+        for subreddit in RedditConfig.subreddits:
+            # Send and pin the new weekly posts.
+            top_posts = await self.get_top_posts(subreddit=subreddit, time="week")
 
-                        # Convert the ID to an integer for easy comparison.
-                        int_id = int(data["id"], 36)
+            message = await self.webhook.send(wait=True, username=f"{subreddit} Top Weekly Posts", embed=top_posts)
 
-                        # If we've already seen this post, finish checking
-                        if int_id <= self.last_ids[subreddit]:
-                            break
+            if subreddit.lower() == "r/python":
+                if not self.channel:
+                    log.warning("Failed to get #reddit channel to remove pins in the weekly loop.")
+                    return
 
-                        embed_data = {
-                            "title": textwrap.shorten(data["title"], width=64, placeholder="..."),
-                            "text": textwrap.shorten(data["selftext"], width=128, placeholder="..."),
-                            "url": self.URL + data["permalink"],
-                            "author": data["author"]
-                        }
+                # Remove the oldest pins so that only 12 remain at most.
+                pins = await self.channel.pins()
 
-                        new_posts.append(embed_data)
+                while len(pins) >= 12:
+                    await pins[-1].unpin()
+                    del pins[-1]
 
-                self.last_ids[subreddit] = int(posts[0]["data"]["id"], 36)
-
-                # Send all of the new posts as spicy embeds
-                for data in new_posts:
-                    embed = Embed()
-
-                    embed.title = data["title"]
-                    embed.url = data["url"]
-                    embed.description = data["text"]
-                    embed.set_footer(text=f"Posted by u/{data['author']} in {subreddit}")
-                    embed.colour = Colour.blurple()
-
-                    await self.reddit_channel.send(embed=embed)
-
-                log.trace(f"Sent {len(new_posts)} new {subreddit} posts to channel {self.reddit_channel.id}.")
-
-    async def poll_top_weekly_posts(self) -> None:
-        """Post a summary of the top posts every week."""
-        while True:
-            now = datetime.utcnow()
-
-            # Calculate the amount of seconds until midnight next monday.
-            monday = now + timedelta(days=7 - now.weekday())
-            monday = monday.replace(hour=0, minute=0, second=0)
-            until_monday = (monday - now).total_seconds()
-
-            await asyncio.sleep(until_monday)
-
-            for subreddit in RedditConfig.subreddits:
-                # Send and pin the new weekly posts.
-                message = await self.send_top_posts(
-                    channel=self.reddit_channel,
-                    subreddit=subreddit,
-                    content=f"This week's top {subreddit} posts have arrived!",
-                    time="week"
-                )
-
-                if subreddit.lower() == "r/python":
-                    # Remove the oldest pins so that only 5 remain at most.
-                    pins = await self.reddit_channel.pins()
-
-                    while len(pins) >= 5:
-                        await pins[-1].unpin()
-                        del pins[-1]
-
-                    await message.pin()
+                await message.pin()
 
     @group(name="reddit", invoke_without_command=True)
     async def reddit_group(self, ctx: Context) -> None:
@@ -281,32 +241,32 @@ class Reddit(Cog):
     @reddit_group.command(name="top")
     async def top_command(self, ctx: Context, subreddit: Subreddit = "r/Python") -> None:
         """Send the top posts of all time from a given subreddit."""
-        await self.send_top_posts(
-            channel=ctx.channel,
-            subreddit=subreddit,
-            content=f"Here are the top {subreddit} posts of all time!",
-            time="all"
-        )
+        async with ctx.typing():
+            await self.get_access_tokens()
+            embed = await self.get_top_posts(subreddit=subreddit, time="all")
+
+        await ctx.send(content=f"Here are the top {subreddit} posts of all time!", embed=embed)
+        await self.revoke_access_token()
 
     @reddit_group.command(name="daily")
     async def daily_command(self, ctx: Context, subreddit: Subreddit = "r/Python") -> None:
         """Send the top posts of today from a given subreddit."""
-        await self.send_top_posts(
-            channel=ctx.channel,
-            subreddit=subreddit,
-            content=f"Here are today's top {subreddit} posts!",
-            time="day"
-        )
+        async with ctx.typing():
+            await self.get_access_tokens()
+            embed = await self.get_top_posts(subreddit=subreddit, time="day")
+
+        await ctx.send(content=f"Here are today's top {subreddit} posts!", embed=embed)
+        await self.revoke_access_token()
 
     @reddit_group.command(name="weekly")
     async def weekly_command(self, ctx: Context, subreddit: Subreddit = "r/Python") -> None:
         """Send the top posts of this week from a given subreddit."""
-        await self.send_top_posts(
-            channel=ctx.channel,
-            subreddit=subreddit,
-            content=f"Here are this week's top {subreddit} posts!",
-            time="week"
-        )
+        async with ctx.typing():
+            await self.get_access_tokens()
+            embed = await self.get_top_posts(subreddit=subreddit, time="week")
+
+        await ctx.send(content=f"Here are this week's top {subreddit} posts!", embed=embed)
+        await self.revoke_access_token()
 
     @with_role(*STAFF_ROLES)
     @reddit_group.command(name="subreddits", aliases=("subs",))
@@ -323,20 +283,6 @@ class Reddit(Cog):
             empty=False,
             max_lines=15
         )
-
-    async def init_reddit_polling(self) -> None:
-        """Initiate reddit post event loop."""
-        await self.bot.wait_until_ready()
-        self.reddit_channel = await self.bot.fetch_channel(Channels.reddit)
-        self.refresh_access_token.start()
-
-        if self.reddit_channel is not None:
-            if self.new_posts_task is None:
-                self.new_posts_task = self.bot.loop.create_task(self.poll_new_posts())
-            if self.top_weekly_posts_task is None:
-                self.top_weekly_posts_task = self.bot.loop.create_task(self.poll_top_weekly_posts())
-        else:
-            log.warning("Couldn't locate a channel for subreddit relaying.")
 
 
 def setup(bot: Bot) -> None:
