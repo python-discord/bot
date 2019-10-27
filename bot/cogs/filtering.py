@@ -136,9 +136,9 @@ class Filtering(Cog):
             and not msg.author.bot                          # Author not a bot
         )
 
-        # If we're running the bot locally, ignore role whitelist
+        # If we're running the bot locally, ignore role whitelist and only listen to #dev-test
         if DEBUG_MODE:
-            filter_message = not msg.author.bot
+            filter_message = not msg.author.bot and msg.channel.id == Channels.devtest
 
         # If none of the above, we can start filtering.
         if filter_message:
