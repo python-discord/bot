@@ -32,6 +32,8 @@ style:
         status_dnd:     "<:status_dnd:470326272082313216>"
         status_offline: "<:status_offline:470326266537705472>"
 
+        trashcan: "637136429717389331"
+
         bullet:     "\u2022"
         pencil:     "\u270F"
         new:        "\U0001F195"

@@ -15,7 +15,7 @@ MAX_SIZE = 1024 * 1024 * 8  # 8 Mebibytes
 async def wait_for_deletion(
     message: Message,
     user_ids: Sequence[Snowflake],
-    deletion_emojis: Sequence[str] = (Emojis.cross_mark,),
+    deletion_emojis: Sequence[str] = None,
     timeout: float = 60 * 5,
     attach_emojis: bool = True,
     client: Optional[Client] = None
@@ -33,6 +33,10 @@ async def wait_for_deletion(
         raise ValueError("Message must be sent on a guild")
 
     bot = client or message.guild.me
+
+    if deletion_emojis is None:
+        default_emoji = bot.get_emoji(int(Emojis.trashcan)) or Emojis.cross_mark
+        deletion_emojis = (default_emoji,)
 
     if attach_emojis:
         for emoji in deletion_emojis:

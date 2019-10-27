@@ -254,6 +254,8 @@ class Emojis(metaclass=YAMLGetter):
     status_idle: str
     status_dnd: str
 
+    trashcan: str
+
     bullet: str
     new: str
     pencil: str
