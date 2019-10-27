@@ -164,6 +164,6 @@ class DuckPond(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Token Remover cog load."""
+    """Load the duck pond cog."""
     bot.add_cog(DuckPond(bot))
     log.info("Cog loaded: DuckPond")
