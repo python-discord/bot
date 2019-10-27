@@ -96,7 +96,7 @@ guild:
         defcon:            &DEFCON        464469101889454091
         devlog:            &DEVLOG        622895325144940554
         devtest:           &DEVTEST       414574275865870337
-        duck_pond:         &DUCK_POND     000000000000000000
+        duck_pond:         &DUCK_POND     637820308341915648
         help_0:                           303906576991780866
         help_1:                           303906556754395136
         help_2:                           303906514266226689
@@ -147,7 +147,7 @@ guild:
         talent_pool:                        569145364800602132
         big_brother:                        569133704568373283
         reddit:                             635408384794951680
-        duck_pond:                          637779355304722435
+        duck_pond:                          637821475327311927
 
 
 filter:
