@@ -15,7 +15,7 @@ MAX_SIZE = 1024 * 1024 * 8  # 8 Mebibytes
 async def wait_for_deletion(
     message: Message,
     user_ids: Sequence[Snowflake],
-    deletion_emojis: Sequence[str] = None,
+    deletion_emojis: Sequence[str] = (Emojis.trashcan,),
     timeout: float = 60 * 5,
     attach_emojis: bool = True,
     client: Optional[Client] = None
@@ -34,10 +34,6 @@ async def wait_for_deletion(
 
     bot = client or message.guild.me
 
-    if deletion_emojis is None:
-        default_emoji = bot.get_emoji(int(Emojis.trashcan)) or Emojis.cross_mark
-        deletion_emojis = (default_emoji,)
-
     if attach_emojis:
         for emoji in deletion_emojis:
             await message.add_reaction(emoji)
@@ -46,7 +42,7 @@ async def wait_for_deletion(
         """Check that the deletion emoji is reacted by the approprite user."""
         return (
             reaction.message.id == message.id
-            and reaction.emoji in deletion_emojis
+            and str(reaction.emoji) in deletion_emojis
             and user.id in user_ids
         )
 

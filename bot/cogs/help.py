@@ -10,20 +10,22 @@ from discord.ext.commands import Bot, CheckFailure, Cog as DiscordCog, Command, 
 from fuzzywuzzy import fuzz, process
 
 from bot import constants
-from bot.constants import Channels, STAFF_ROLES
+from bot.constants import Channels, Emojis, STAFF_ROLES
 from bot.decorators import redirect_output
 from bot.pagination import (
-    DELETE_EMOJI, FIRST_EMOJI, LAST_EMOJI,
+    DELETE_EMOJI as CLEAR_EMOJI, FIRST_EMOJI, LAST_EMOJI,
     LEFT_EMOJI, LinePaginator, RIGHT_EMOJI,
 )
 
+DELETE_EMOJI = Emojis.trashcan
 
 REACTIONS = {
     FIRST_EMOJI: 'first',
     LEFT_EMOJI: 'back',
     RIGHT_EMOJI: 'next',
     LAST_EMOJI: 'end',
-    DELETE_EMOJI: 'stop'
+    CLEAR_EMOJI: 'clear',
+    DELETE_EMOJI: 'stop',
 }
 
 Cog = namedtuple('Cog', ['name', 'description', 'commands'])
@@ -495,6 +497,11 @@ class HelpSession:
         """Event that is called when the user requests the last page."""
         if not self.is_last_page:
             await self.update_page(len(self._pages)-1)
+
+    async def do_clear(self) -> None:
+        """Event that is called when the user clears the emojis from the pagination."""
+        await self.message.clear_reactions()
+        await self.message.add_reaction(DELETE_EMOJI)
 
     async def do_stop(self) -> None:
         """Event that is called when the user requests to stop the help session."""
