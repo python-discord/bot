@@ -96,7 +96,6 @@ guild:
         defcon:            &DEFCON        464469101889454091
         devlog:            &DEVLOG        622895325144940554
         devtest:           &DEVTEST       414574275865870337
-        duck_pond:         &DUCK_POND     637820308341915648
         help_0:                           303906576991780866
         help_1:                           303906556754395136
         help_2:                           303906514266226689
@@ -383,9 +382,8 @@ redirect_output:
     delete_delay: 15
 
 duck_pond:
-    ducks_required: 5
-    duck_custom_emojis: [*DUCKY_EMOJI, *DUCKY_BLURPLE_EMOJI]
-    duck_pond_channel: *DUCK_POND
+    threshold: 5
+    custom_emojis: [*DUCKY_EMOJI, *DUCKY_BLURPLE_EMOJI]
 
 config:
     required_keys: ['bot.token']

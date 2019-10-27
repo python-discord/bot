@@ -239,9 +239,8 @@ class Colours(metaclass=YAMLGetter):
 class DuckPond(metaclass=YAMLGetter):
     section = "duck_pond"
 
-    ducks_required: int
-    duck_custom_emojis: List[int]
-    duck_pond_channel: int
+    threshold: int
+    custom_emojis: List[int]
 
 
 class Emojis(metaclass=YAMLGetter):

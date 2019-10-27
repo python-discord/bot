@@ -1,8 +1,8 @@
 import logging
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 import discord
-from discord import Color, Embed, Member, Message, PartialEmoji, RawReactionActionEvent, Reaction, User, errors
+from discord import Color, Embed, Member, Message, RawReactionActionEvent, User, errors
 from discord.ext.commands import Bot, Cog
 
 from bot import constants
@@ -16,7 +16,6 @@ class DuckPond(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.log = log
         self.webhook_id = constants.Webhooks.duck_pond
         self.bot.loop.create_task(self.fetch_webhook())
 
@@ -27,7 +26,7 @@ class DuckPond(Cog):
         try:
             self.webhook = await self.bot.fetch_webhook(self.webhook_id)
         except discord.HTTPException:
-            self.log.exception(f"Failed to fetch webhook with id `{self.webhook_id}`")
+            log.exception(f"Failed to fetch webhook with id `{self.webhook_id}`")
 
     @staticmethod
     def is_staff(member: Union[User, Member]) -> bool:
@@ -39,22 +38,11 @@ class DuckPond(Cog):
         return False
 
     @staticmethod
-    def has_green_checkmark(message: Optional[Message] = None, reaction_list: Optional[List[Reaction]] = None) -> bool:
+    def has_green_checkmark(message: Message) -> bool:
         """Check if the message has a green checkmark reaction."""
-        assert message or reaction_list, "You can either pass message or reactions, but not both, or neither."
-
-        if message:
-            reactions = message.reactions
-        else:
-            reactions = reaction_list
-
-        for reaction in reactions:
-            if isinstance(reaction.emoji, str):
-                if reaction.emoji == "✅":
-                    return True
-            elif isinstance(reaction.emoji, PartialEmoji):
-                if reaction.emoji.name == "✅":
-                    return True
+        for reaction in message.reactions:
+            if reaction.emoji == "✅":
+                return True
         return False
 
     async def send_webhook(
@@ -72,52 +60,34 @@ class DuckPond(Cog):
                 avatar_url=avatar_url,
                 embed=embed
             )
-        except discord.HTTPException as exc:
-            self.log.exception(
-                f"Failed to send a message to the Duck Pool webhook",
-                exc_info=exc
-            )
+        except discord.HTTPException:
+            log.exception(f"Failed to send a message to the Duck Pool webhook")
 
-    async def count_ducks(
-        self,
-        message: Optional[Message] = None,
-        reaction_list: Optional[List[Reaction]] = None
-    ) -> int:
+    async def count_ducks(self, message: Message) -> int:
         """
         Count the number of ducks in the reactions of a specific message.
 
         Only counts ducks added by staff members.
         """
-        assert message or reaction_list, "You can either pass message or reactions, but not both, or neither."
-
         duck_count = 0
         duck_reactors = []
 
-        if message:
-            reactions = message.reactions
-        else:
-            reactions = reaction_list
-
-        for reaction in reactions:
+        for reaction in message.reactions:
             async for user in reaction.users():
 
                 # Is the user or member a staff member?
-                if self.is_staff(user) and user.id not in duck_reactors:
+                if not self.is_staff(user) or not user.id not in duck_reactors:
+                    continue
 
-                    # Is the emoji a duck?
-                    if hasattr(reaction.emoji, "id"):
-                        if reaction.emoji.id in constants.DuckPond.duck_custom_emojis:
-                            duck_count += 1
-                            duck_reactors.append(user.id)
-                    else:
-                        if isinstance(reaction.emoji, str):
-                            if reaction.emoji == "🦆":
-                                duck_count += 1
-                                duck_reactors.append(user.id)
-                        elif isinstance(reaction.emoji, PartialEmoji):
-                            if reaction.emoji.name == "🦆":
-                                duck_count += 1
-                                duck_reactors.append(user.id)
+                # Is the emoji a duck?
+                if hasattr(reaction.emoji, "id"):
+                    if reaction.emoji.id in constants.DuckPond.custom_emojis:
+                        duck_count += 1
+                        duck_reactors.append(user.id)
+                elif isinstance(reaction.emoji, str):
+                    if reaction.emoji == "🦆":
+                        duck_count += 1
+                        duck_reactors.append(user.id)
         return duck_count
 
     @Cog.listener()
@@ -126,28 +96,23 @@ class DuckPond(Cog):
         Determine if a message should be sent to the duck pond.
 
         This will count the number of duck reactions on the message, and if this amount meets the
-        amount of ducks specified in the config under duck_pond/ducks_required, it will
+        amount of ducks specified in the config under duck_pond/threshold, it will
         send the message off to the duck pond.
         """
         channel = discord.utils.get(self.bot.get_all_channels(), id=payload.channel_id)
         message = await channel.fetch_message(payload.message_id)
         member = discord.utils.get(message.guild.members, id=payload.user_id)
 
-        # Is the member a staff member?
-        if not self.is_staff(member):
-            return
-
-        # Bot reactions don't count.
-        if member.bot:
+        # Is the member a human and a staff member?
+        if not self.is_staff(member) or member.bot:
             return
 
         # Is the emoji in the reaction a duck?
         if payload.emoji.is_custom_emoji():
-            if payload.emoji.id not in constants.DuckPond.duck_custom_emojis:
+            if payload.emoji.id not in constants.DuckPond.custom_emojis:
                 return
-        else:
-            if payload.emoji.name != "🦆":
-                return
+        elif payload.emoji.name != "🦆":
+            return
 
         # Does the message already have a green checkmark?
         if self.has_green_checkmark(message):
@@ -157,7 +122,7 @@ class DuckPond(Cog):
         duck_count = await self.count_ducks(message)
 
         # If we've got more than the required amount of ducks, send the message to the duck_pond.
-        if duck_count >= constants.DuckPond.ducks_required:
+        if duck_count >= constants.DuckPond.threshold:
             clean_content = message.clean_content
 
             if clean_content:
@@ -180,31 +145,22 @@ class DuckPond(Cog):
                         username=message.author.display_name,
                         avatar_url=message.author.avatar_url
                     )
-                except discord.HTTPException as exc:
-                    self.log.exception(
-                        f"Failed to send an attachment to the webhook",
-                        exc_info=exc
-                    )
+                except discord.HTTPException:
+                    log.exception(f"Failed to send an attachment to the webhook")
+
             await message.add_reaction("✅")
 
     @Cog.listener()
     async def on_raw_reaction_remove(self, payload: RawReactionActionEvent) -> None:
         """Ensure that people don't remove the green checkmark from duck ponded messages."""
         channel = discord.utils.get(self.bot.get_all_channels(), id=payload.channel_id)
-        message = await channel.fetch_message(payload.message_id)
 
         # Prevent the green checkmark from being removed
-        if isinstance(payload.emoji, str):
-            if payload.emoji == "✅":
-                duck_count = await self.count_ducks(message)
-                if duck_count >= constants.DuckPond.ducks_required:
-                    await message.add_reaction("✅")
-
-        elif isinstance(payload.emoji, PartialEmoji):
-            if payload.emoji.name == "✅":
-                duck_count = await self.count_ducks(message)
-                if duck_count >= constants.DuckPond.ducks_required:
-                    await message.add_reaction("✅")
+        if payload.emoji.name == "✅":
+            message = await channel.fetch_message(payload.message_id)
+            duck_count = await self.count_ducks(message)
+            if duck_count >= constants.DuckPond.threshold:
+                await message.add_reaction("✅")
 
 
 def setup(bot: Bot) -> None:
