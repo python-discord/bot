@@ -236,6 +236,14 @@ class Colours(metaclass=YAMLGetter):
     soft_orange: int
 
 
+class DuckPond(metaclass=YAMLGetter):
+    section = "duck_pond"
+
+    ducks_required: int
+    duck_custom_emojis: List[int]
+    duck_pond_channel: int
+
+
 class Emojis(metaclass=YAMLGetter):
     section = "style"
     subsection = "emojis"
@@ -370,6 +378,7 @@ class Webhooks(metaclass=YAMLGetter):
     talent_pool: int
     big_brother: int
     reddit: int
+    duck_pond: int
 
 
 class Roles(metaclass=YAMLGetter):
@@ -501,6 +510,30 @@ class RedirectOutput(metaclass=YAMLGetter):
     delete_delay: int
 
 
+class Event(Enum):
+    """
+    Event names. This does not include every event (for example, raw
+    events aren't here), but only events used in ModLog for now.
+    """
+
+    guild_channel_create = "guild_channel_create"
+    guild_channel_delete = "guild_channel_delete"
+    guild_channel_update = "guild_channel_update"
+    guild_role_create = "guild_role_create"
+    guild_role_delete = "guild_role_delete"
+    guild_role_update = "guild_role_update"
+    guild_update = "guild_update"
+
+    member_join = "member_join"
+    member_remove = "member_remove"
+    member_ban = "member_ban"
+    member_unban = "member_unban"
+    member_update = "member_update"
+
+    message_delete = "message_delete"
+    message_edit = "message_edit"
+
+
 # Debug mode
 DEBUG_MODE = True if 'local' in os.environ.get("SITE_URL", "local") else False
 
@@ -572,27 +605,3 @@ ERROR_REPLIES = [
     "Noooooo!!",
     "I can't believe you've done this",
 ]
-
-
-class Event(Enum):
-    """
-    Event names. This does not include every event (for example, raw
-    events aren't here), but only events used in ModLog for now.
-    """
-
-    guild_channel_create = "guild_channel_create"
-    guild_channel_delete = "guild_channel_delete"
-    guild_channel_update = "guild_channel_update"
-    guild_role_create = "guild_role_create"
-    guild_role_delete = "guild_role_delete"
-    guild_role_update = "guild_role_update"
-    guild_update = "guild_update"
-
-    member_join = "member_join"
-    member_remove = "member_remove"
-    member_ban = "member_ban"
-    member_unban = "member_unban"
-    member_update = "member_update"
-
-    message_delete = "message_delete"
-    message_edit = "message_edit"

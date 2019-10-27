@@ -22,11 +22,6 @@ style:
         defcon_enabled:  "<:defconenabled:470326274213150730>"
         defcon_updated:  "<:defconsettingsupdated:470326274082996224>"
 
-        green_chevron: "<:greenchevron:418104310329769993>"
-        red_chevron:   "<:redchevron:418112778184818698>"
-        white_chevron: "<:whitechevron:418110396973711363>"
-        bb_message:    "<:bbmessage:476273120999636992>"
-
         status_online:  "<:status_online:470326272351010816>"
         status_idle:    "<:status_idle:470326266625785866>"
         status_dnd:     "<:status_dnd:470326272082313216>"
@@ -36,6 +31,9 @@ style:
         pencil:     "\u270F"
         new:        "\U0001F195"
         cross_mark: "\u274C"
+
+        ducky:         &DUCKY_EMOJI 574951975574175744
+        ducky_blurple: &DUCKY_BLURPLE_EMOJI 574951975310065675
 
     icons:
         crown_blurple: "https://cdn.discordapp.com/emojis/469964153289965568.png"
@@ -98,6 +96,7 @@ guild:
         defcon:            &DEFCON        464469101889454091
         devlog:            &DEVLOG        622895325144940554
         devtest:           &DEVTEST       414574275865870337
+        duck_pond:         &DUCK_POND     000000000000000000
         help_0:                           303906576991780866
         help_1:                           303906556754395136
         help_2:                           303906514266226689
@@ -148,6 +147,7 @@ guild:
         talent_pool:                        569145364800602132
         big_brother:                        569133704568373283
         reddit:                             635408384794951680
+        duck_pond:                          637779355304722435
 
 
 filter:
@@ -381,6 +381,11 @@ mention:
 redirect_output:
     delete_invocation: true
     delete_delay: 15
+
+duck_pond:
+    ducks_required: 5
+    duck_custom_emojis: [*DUCKY_EMOJI, *DUCKY_BLURPLE_EMOJI]
+    duck_pond_channel: *DUCK_POND
 
 config:
     required_keys: ['bot.token']
