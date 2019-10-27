@@ -5,7 +5,7 @@ import discord
 from discord import Color, Embed, Member, Message, PartialEmoji, RawReactionActionEvent, Reaction, User, errors
 from discord.ext.commands import Bot, Cog
 
-import bot.constants as constants
+from bot import constants
 from bot.utils.messages import send_attachments
 
 log = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ class DuckPond(Cog):
         self.webhook_id = constants.Webhooks.duck_pond
         self.bot.loop.create_task(self.fetch_webhook())
 
-    async def fetch_webhook(self):
+    async def fetch_webhook(self) -> None:
         """Fetches the webhook object, so we can post to it."""
         await self.bot.wait_until_ready()
 
@@ -31,7 +31,7 @@ class DuckPond(Cog):
 
     @staticmethod
     def is_staff(member: Union[User, Member]) -> bool:
-        """Check if a specific member or user is staff"""
+        """Check if a specific member or user is staff."""
         if hasattr(member, "roles"):
             for role in member.roles:
                 if role.id in constants.STAFF_ROLES:
@@ -64,6 +64,7 @@ class DuckPond(Cog):
         avatar_url: Optional[str] = None,
         embed: Optional[Embed] = None,
     ) -> None:
+        """Send a webhook to the duck_pond channel."""
         try:
             await self.webhook.send(
                 content=content,
@@ -77,8 +78,13 @@ class DuckPond(Cog):
                 exc_info=exc
             )
 
-    async def count_ducks(self, message: Optional[Message] = None, reaction_list: Optional[List[Reaction]] = None) -> int:
-        """Count the number of ducks in the reactions of a specific message.
+    async def count_ducks(
+        self,
+        message: Optional[Message] = None,
+        reaction_list: Optional[List[Reaction]] = None
+    ) -> int:
+        """
+        Count the number of ducks in the reactions of a specific message.
 
         Only counts ducks added by staff members.
         """
@@ -116,7 +122,8 @@ class DuckPond(Cog):
 
     @Cog.listener()
     async def on_raw_reaction_add(self, payload: RawReactionActionEvent) -> None:
-        """Determine if a message should be sent to the duck pond.
+        """
+        Determine if a message should be sent to the duck pond.
 
         This will count the number of duck reactions on the message, and if this amount meets the
         amount of ducks specified in the config under duck_pond/ducks_required, it will
