@@ -252,11 +252,6 @@ class Emojis(metaclass=YAMLGetter):
     defcon_enabled: str  # noqa: E704
     defcon_updated: str  # noqa: E704
 
-    green_chevron: str
-    red_chevron: str
-    white_chevron: str
-    bb_message: str
-
     status_online: str
     status_offline: str
     status_idle: str
@@ -266,6 +261,9 @@ class Emojis(metaclass=YAMLGetter):
     new: str
     pencil: str
     cross_mark: str
+
+    ducky: int
+    ducky_blurple: int
 
 
 class Icons(metaclass=YAMLGetter):
@@ -344,6 +342,7 @@ class Channels(metaclass=YAMLGetter):
     defcon: int
     devlog: int
     devtest: int
+    duck_pond: int
     help_0: int
     help_1: int
     help_2: int
