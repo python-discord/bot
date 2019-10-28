@@ -221,10 +221,10 @@ class DiscordMocksTests(unittest.TestCase):
     @unittest.mock.patch(f'{__name__}.DiscordMocksTests.subTest')
     def test_the_custom_mock_methods_test(self, subtest_mock):
         """The custom method test should raise AssertionError for invalid methods."""
-        class FakeMockBot(helpers.AttributeMock, unittest.mock.MagicMock):
+        class FakeMockBot(helpers.GetChildMockMixin, unittest.mock.MagicMock):
             """Fake MockBot class with invalid attribute/method `release_the_walrus`."""
 
-            attribute_mocktype = unittest.mock.MagicMock
+            child_mock_type = unittest.mock.MagicMock
 
             def __init__(self, **kwargs):
                 super().__init__(spec=helpers.bot_instance, **kwargs)
@@ -331,6 +331,18 @@ class MockObjectTests(unittest.TestCase):
                 self.assertFalse(instance_one != instance_two)
                 self.assertTrue(instance_one != instance_three)
 
+    def test_get_child_mock_mixin_accepts_mock_seal(self):
+        """The `GetChildMockMixin` should support `unittest.mock.seal`."""
+        class MyMock(helpers.GetChildMockMixin, unittest.mock.MagicMock):
+
+            child_mock_type = unittest.mock.MagicMock
+            pass
+
+        mock = MyMock()
+        unittest.mock.seal(mock)
+        with self.assertRaises(AttributeError, msg="MyMock.shirayuki"):
+            mock.shirayuki = "hello!"
+
     def test_spec_propagation_of_mock_subclasses(self):
         """Test if the `spec` does not propagate to attributes of the mock object."""
         test_values = (
@@ -346,7 +358,7 @@ class MockObjectTests(unittest.TestCase):
                 mock = mock_type()
                 self.assertTrue(isinstance(mock, mock_type))
                 attribute = getattr(mock, valid_attribute)
-                self.assertTrue(isinstance(attribute, mock_type.attribute_mocktype))
+                self.assertTrue(isinstance(attribute, mock_type.child_mock_type))
 
     def test_async_mock_provides_coroutine_for_dunder_call(self):
         """Test if AsyncMock objects have a coroutine for their __call__ method."""

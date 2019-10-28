@@ -24,19 +24,6 @@ def async_test(wrapped):
     return wrapper
 
 
-# TODO: Remove me in Python 3.8
-class AsyncMock(unittest.mock.MagicMock):
-    """
-    A MagicMock subclass to mock async callables.
-
-    Python 3.8 will introduce an AsyncMock class in the standard library that will have some more
-    features; this stand-in only overwrites the `__call__` method to an async version.
-    """
-
-    async def __call__(self, *args, **kwargs):
-        return super(AsyncMock, self).__call__(*args, **kwargs)
-
-
 class HashableMixin(discord.mixins.EqualityComparable):
     """
     Mixin that provides similar hashing and equality functionality as discord.py's `Hashable` mixin.
@@ -61,15 +48,43 @@ class ColourMixin:
         self.colour = color
 
 
-class AttributeMock:
+class GetChildMockMixin:
     """Ensures attributes of our mock types will be instantiated with the correct mock type."""
 
-    def __new__(cls, *args, **kwargs):
-        """Stops the regular parent class from propagating to newly mocked attributes."""
-        if 'parent' in kwargs:
-            return cls.attribute_mocktype(*args, **kwargs)
+    def _get_child_mock(self, **kw):
+        """
+        Overwrite of the `_get_child_mock` method to stop the propagation of our custom mock classes.
 
-        return super().__new__(cls)
+        Mock objects automatically create children when you access an attribute or call a method on them. By default,
+        the class of these children is the type of the parent itself. However, this would mean that the children created
+        for our custom mock types would also be instances of that custom mock type. This is not desirable, as attributes
+        of, e.g., a `Bot` object are not `Bot` objects themselves. The Python docs for `unittest.mock` hint that
+        overwriting this method is the best way to deal with that.
+
+        This override will look for an attribute called `child_mock_type` and use that as the type of the child mock.
+        """
+        klass = self.child_mock_type
+
+        if self._mock_sealed:
+            attribute = "." + kw["name"] if "name" in kw else "()"
+            mock_name = self._extract_mock_name() + attribute
+            raise AttributeError(mock_name)
+
+        return klass(**kw)
+
+
+# TODO: Remove me in Python 3.8
+class AsyncMock(GetChildMockMixin, unittest.mock.MagicMock):
+    """
+    A MagicMock subclass to mock async callables.
+
+    Python 3.8 will introduce an AsyncMock class in the standard library that will have some more
+    features; this stand-in only overwrites the `__call__` method to an async version.
+    """
+    child_mock_type = unittest.mock.MagicMock
+
+    async def __call__(self, *args, **kwargs):
+        return super(AsyncMock, self).__call__(*args, **kwargs)
 
 
 # Create a guild instance to get a realistic Mock of `discord.Guild`
@@ -95,7 +110,7 @@ guild_data = {
 guild_instance = discord.Guild(data=guild_data, state=unittest.mock.MagicMock())
 
 
-class MockGuild(AttributeMock, unittest.mock.Mock, HashableMixin):
+class MockGuild(GetChildMockMixin, unittest.mock.Mock, HashableMixin):
     """
     A `Mock` subclass to mock `discord.Guild` objects.
 
@@ -122,7 +137,7 @@ class MockGuild(AttributeMock, unittest.mock.Mock, HashableMixin):
     For more info, see the `Mocking` section in `tests/README.md`.
     """
 
-    attribute_mocktype = unittest.mock.MagicMock
+    child_mock_type = unittest.mock.MagicMock
 
     def __init__(
         self,
@@ -175,7 +190,7 @@ role_data = {'name': 'role', 'id': 1}
 role_instance = discord.Role(guild=guild_instance, state=unittest.mock.MagicMock(), data=role_data)
 
 
-class MockRole(AttributeMock, unittest.mock.Mock, ColourMixin, HashableMixin):
+class MockRole(GetChildMockMixin, unittest.mock.Mock, ColourMixin, HashableMixin):
     """
     A Mock subclass to mock `discord.Role` objects.
 
@@ -183,7 +198,7 @@ class MockRole(AttributeMock, unittest.mock.Mock, ColourMixin, HashableMixin):
     information, see the `MockGuild` docstring.
     """
 
-    attribute_mocktype = unittest.mock.MagicMock
+    child_mock_type = unittest.mock.MagicMock
 
     def __init__(self, name: str = "role", role_id: int = 1, position: int = 1, **kwargs) -> None:
         super().__init__(spec=role_instance, **kwargs)
@@ -208,7 +223,7 @@ state_mock = unittest.mock.MagicMock()
 member_instance = discord.Member(data=member_data, guild=guild_instance, state=state_mock)
 
 
-class MockMember(AttributeMock, unittest.mock.Mock, ColourMixin, HashableMixin):
+class MockMember(GetChildMockMixin, unittest.mock.Mock, ColourMixin, HashableMixin):
     """
     A Mock subclass to mock Member objects.
 
@@ -216,7 +231,7 @@ class MockMember(AttributeMock, unittest.mock.Mock, ColourMixin, HashableMixin):
     information, see the `MockGuild` docstring.
     """
 
-    attribute_mocktype = unittest.mock.MagicMock
+    child_mock_type = unittest.mock.MagicMock
 
     def __init__(
         self,
@@ -254,7 +269,7 @@ class MockMember(AttributeMock, unittest.mock.Mock, ColourMixin, HashableMixin):
 bot_instance = Bot(command_prefix=unittest.mock.MagicMock())
 
 
-class MockBot(AttributeMock, unittest.mock.MagicMock):
+class MockBot(GetChildMockMixin, unittest.mock.MagicMock):
     """
     A MagicMock subclass to mock Bot objects.
 
@@ -262,10 +277,14 @@ class MockBot(AttributeMock, unittest.mock.MagicMock):
     For more information, see the `MockGuild` docstring.
     """
 
-    attribute_mocktype = unittest.mock.MagicMock
+    child_mock_type = unittest.mock.MagicMock
 
     def __init__(self, **kwargs) -> None:
         super().__init__(spec=bot_instance, **kwargs)
+
+        # Our custom attributes and methods
+        self.http_session = unittest.mock.MagicMock()
+        self.api_client = unittest.mock.MagicMock()
 
         # `discord.ext.commands.Bot` coroutines
         self._before_invoke = AsyncMock()
@@ -303,7 +322,7 @@ class MockBot(AttributeMock, unittest.mock.MagicMock):
 context_instance = Context(message=unittest.mock.MagicMock(), prefix=unittest.mock.MagicMock())
 
 
-class MockContext(AttributeMock, unittest.mock.MagicMock):
+class MockContext(GetChildMockMixin, unittest.mock.MagicMock):
     """
     A MagicMock subclass to mock Context objects.
 
@@ -311,7 +330,7 @@ class MockContext(AttributeMock, unittest.mock.MagicMock):
     instances. For more information, see the `MockGuild` docstring.
     """
 
-    attribute_mocktype = unittest.mock.MagicMock
+    child_mock_type = unittest.mock.MagicMock
 
     def __init__(self, **kwargs) -> None:
         super().__init__(spec=context_instance, **kwargs)
@@ -346,7 +365,7 @@ guild = unittest.mock.MagicMock()
 channel_instance = discord.TextChannel(state=state, guild=guild, data=channel_data)
 
 
-class MockTextChannel(AttributeMock, unittest.mock.Mock, HashableMixin):
+class MockTextChannel(GetChildMockMixin, unittest.mock.Mock, HashableMixin):
     """
     A MagicMock subclass to mock TextChannel objects.
 
@@ -354,7 +373,7 @@ class MockTextChannel(AttributeMock, unittest.mock.Mock, HashableMixin):
     more information, see the `MockGuild` docstring.
     """
 
-    attribute_mocktype = unittest.mock.MagicMock
+    child_mock_type = unittest.mock.MagicMock
 
     def __init__(self, name: str = 'channel', channel_id: int = 1, **kwargs) -> None:
         super().__init__(spec=channel_instance, **kwargs)
@@ -402,7 +421,7 @@ channel = unittest.mock.MagicMock()
 message_instance = discord.Message(state=state, channel=channel, data=message_data)
 
 
-class MockMessage(AttributeMock, unittest.mock.MagicMock):
+class MockMessage(GetChildMockMixin, unittest.mock.MagicMock):
     """
     A MagicMock subclass to mock Message objects.
 
@@ -410,7 +429,7 @@ class MockMessage(AttributeMock, unittest.mock.MagicMock):
     information, see the `MockGuild` docstring.
     """
 
-    attribute_mocktype = unittest.mock.MagicMock
+    child_mock_type = unittest.mock.MagicMock
 
     def __init__(self, **kwargs) -> None:
         super().__init__(spec=message_instance, **kwargs)
