@@ -39,7 +39,7 @@ async def wait_for_deletion(
             await message.add_reaction(emoji)
 
     def check(reaction: Reaction, user: Member) -> bool:
-        """Check that the deletion emoji is reacted by the approprite user."""
+         """Check that the deletion emoji is reacted by the appropriate user."""
         return (
             reaction.message.id == message.id
             and str(reaction.emoji) in deletion_emojis

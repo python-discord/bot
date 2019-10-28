@@ -397,7 +397,7 @@ class ImagePaginator(Paginator):
 
             # Clear reaction press - [:x:]
             if reaction.emoji == CLEAR_EMOJI:
-                log.debug("Got delete reaction")
+                 log.debug("Got clear reaction")
                 break
 
             # Delete reaction press - [:trashcan:]
