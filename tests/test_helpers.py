@@ -221,7 +221,7 @@ class DiscordMocksTests(unittest.TestCase):
     @unittest.mock.patch(f'{__name__}.DiscordMocksTests.subTest')
     def test_the_custom_mock_methods_test(self, subtest_mock):
         """The custom method test should raise AssertionError for invalid methods."""
-        class FakeMockBot(helpers.GetChildMockMixin, unittest.mock.MagicMock):
+        class FakeMockBot(helpers.CustomMockMixin, unittest.mock.MagicMock):
             """Fake MockBot class with invalid attribute/method `release_the_walrus`."""
 
             child_mock_type = unittest.mock.MagicMock
@@ -331,9 +331,9 @@ class MockObjectTests(unittest.TestCase):
                 self.assertFalse(instance_one != instance_two)
                 self.assertTrue(instance_one != instance_three)
 
-    def test_get_child_mock_mixin_accepts_mock_seal(self):
-        """The `GetChildMockMixin` should support `unittest.mock.seal`."""
-        class MyMock(helpers.GetChildMockMixin, unittest.mock.MagicMock):
+    def test_custom_mock_mixin_accepts_mock_seal(self):
+        """The `CustomMockMixin` should support `unittest.mock.seal`."""
+        class MyMock(helpers.CustomMockMixin, unittest.mock.MagicMock):
 
             child_mock_type = unittest.mock.MagicMock
             pass
@@ -351,6 +351,10 @@ class MockObjectTests(unittest.TestCase):
             (helpers.MockMember, "display_name"),
             (helpers.MockBot, "owner_id"),
             (helpers.MockContext, "command_failed"),
+            (helpers.MockMessage, "mention_everyone"),
+            (helpers.MockEmoji, 'managed'),
+            (helpers.MockPartialEmoji, 'url'),
+            (helpers.MockReaction, 'me'),
         )
 
         for mock_type, valid_attribute in test_values:
@@ -359,6 +363,52 @@ class MockObjectTests(unittest.TestCase):
                 self.assertTrue(isinstance(mock, mock_type))
                 attribute = getattr(mock, valid_attribute)
                 self.assertTrue(isinstance(attribute, mock_type.child_mock_type))
+
+    def test_extract_coroutine_methods_from_spec_instance_should_extract_all_and_only_coroutines(self):
+        """Test if all coroutine functions are extracted, but not regular methods or attributes."""
+        class CoroutineDonor:
+            def __init__(self):
+                self.some_attribute = 'alpha'
+
+            async def first_coroutine():
+                """This coroutine function should be extracted."""
+
+            async def second_coroutine():
+                """This coroutine function should be extracted."""
+
+            def regular_method():
+                """This regular function should not be extracted."""
+
+        class Receiver:
+            pass
+
+        donor = CoroutineDonor()
+        receiver = Receiver()
+
+        helpers.CustomMockMixin._extract_coroutine_methods_from_spec_instance(receiver, donor)
+
+        self.assertIsInstance(receiver.first_coroutine, helpers.AsyncMock)
+        self.assertIsInstance(receiver.second_coroutine, helpers.AsyncMock)
+        self.assertFalse(hasattr(receiver, 'regular_method'))
+        self.assertFalse(hasattr(receiver, 'some_attribute'))
+
+    @unittest.mock.patch("builtins.super", new=unittest.mock.MagicMock())
+    @unittest.mock.patch("tests.helpers.CustomMockMixin._extract_coroutine_methods_from_spec_instance")
+    def test_custom_mock_mixin_init_with_spec(self, extract_method_mock):
+        """Test if CustomMockMixin correctly passes on spec/kwargs and calls the extraction method."""
+        spec = "pydis"
+
+        helpers.CustomMockMixin(spec=spec)
+
+        extract_method_mock.assert_called_once_with(spec)
+
+    @unittest.mock.patch("builtins.super", new=unittest.mock.MagicMock())
+    @unittest.mock.patch("tests.helpers.CustomMockMixin._extract_coroutine_methods_from_spec_instance")
+    def test_custom_mock_mixin_init_without_spec(self, extract_method_mock):
+        """Test if CustomMockMixin correctly passes on spec/kwargs and calls the extraction method."""
+        helpers.CustomMockMixin()
+
+        extract_method_mock.assert_not_called()
 
     def test_async_mock_provides_coroutine_for_dunder_call(self):
         """Test if AsyncMock objects have a coroutine for their __call__ method."""
