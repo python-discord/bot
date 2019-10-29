@@ -9,7 +9,7 @@ from discord import Colour, Embed, TextChannel
 from discord.ext.commands import Bot, Cog, Context, group
 from discord.ext.tasks import loop
 
-from bot.constants import Channels, ERROR_REPLIES, Reddit as RedditConfig, STAFF_ROLES, Webhooks
+from bot.constants import Channels, ERROR_REPLIES, Emojis, Reddit as RedditConfig, STAFF_ROLES, Webhooks
 from bot.converters import Subreddit
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
@@ -117,9 +117,9 @@ class Reddit(Cog):
             link = self.URL + data["permalink"]
 
             embed.description += (
-                f"[**{title}**]({link})\n"
+                f"**[{title}]({link})**\n"
                 f"{text}"
-                f"| {ups} upvotes | {comments} comments | u/{author} | {subreddit} |\n\n"
+                f"{Emojis.upvotes} {ups} {Emojis.comments} {comments} {Emojis.user} {author}\n\n"
             )
 
         embed.colour = Colour.blurple()
