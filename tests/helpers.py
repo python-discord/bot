@@ -50,7 +50,15 @@ class ColourMixin:
 
 
 class CustomMockMixin:
-    """Ensures attributes of our mock types will be instantiated with the correct mock type."""
+    """
+    Provides common functionality for our custom Mock types.
+
+    The cooperative `__init__` automatically creates `AsyncMock` attributes for every coroutine
+    function `inspect` detects in the `spec` instance we provide. In addition, this mixin takes care
+    of making sure child mocks are instantiated with the correct class. By default, the mock of the
+    children will be `unittest.mock.MagicMock`, but this can be overwritten by setting the attribute
+    `child_mock_type` on the custom mock inheriting from this mixin.
+    """
 
     child_mock_type = unittest.mock.MagicMock
 
@@ -179,9 +187,6 @@ class MockRole(CustomMockMixin, unittest.mock.Mock, ColourMixin, HashableMixin):
     Instances of this class will follow the specifications of `discord.Role` instances. For more
     information, see the `MockGuild` docstring.
     """
-
-    child_mock_type = unittest.mock.MagicMock
-
     def __init__(self, name: str = "role", role_id: int = 1, position: int = 1, **kwargs) -> None:
         super().__init__(spec=role_instance, **kwargs)
 
