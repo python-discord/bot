@@ -259,6 +259,10 @@ class Emojis(metaclass=YAMLGetter):
     pencil: str
     cross_mark: str
 
+    upvotes: str
+    comments: str
+    user: str
+
 
 class Icons(metaclass=YAMLGetter):
     section = "style"
