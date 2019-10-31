@@ -84,9 +84,9 @@ class InfractionScheduler(Scheduler):
         icon = utils.INFRACTION_ICONS[infr_type][0]
         reason = infraction["reason"]
         expiry = infraction["expires_at"]
-        _id = infraction['id']
+        id_ = infraction['id']
 
-        log.trace(f"Applying {infr_type} infraction #{_id} to {user}.")
+        log.trace(f"Applying {infr_type} infraction #{id_} to {user}.")
 
         if expiry:
             expiry = time.format_infraction(expiry)
@@ -121,13 +121,13 @@ class InfractionScheduler(Scheduler):
 
         if infraction["actor"] == self.bot.user.id:
             log.trace(
-                f"Infraction #{_id} actor is bot; including the reason in the confirmation message."
+                f"Infraction #{id_} actor is bot; including the reason in the confirmation message."
             )
 
             end_msg = f" (reason: {infraction['reason']})"
         elif ctx.channel.id not in STAFF_CHANNELS:
             log.trace(
-                f"Infraction #{_id} context is not in a staff channel; omitting infraction count."
+                f"Infraction #{id_} context is not in a staff channel; omitting infraction count."
             )
 
             end_msg = ""
@@ -143,7 +143,7 @@ class InfractionScheduler(Scheduler):
 
         # Execute the necessary actions to apply the infraction on Discord.
         if action_coro:
-            log.trace(f"Awaiting the infraction #{_id} application action coroutine.")
+            log.trace(f"Awaiting the infraction #{id_} application action coroutine.")
             try:
                 await action_coro
                 if expiry:
@@ -156,16 +156,16 @@ class InfractionScheduler(Scheduler):
                 log_content = ctx.author.mention
                 log_title = "failed to apply"
 
-                log.warning(f"Failed to apply {infr_type} infraction #{_id} to {user}.")
+                log.warning(f"Failed to apply {infr_type} infraction #{id_} to {user}.")
 
         # Send a confirmation message to the invoking context.
-        log.trace(f"Sending infraction #{_id} confirmation message.")
+        log.trace(f"Sending infraction #{id_} confirmation message.")
         await ctx.send(
             f"{dm_result}{confirm_msg} **{infr_type}** to {user.mention}{expiry_msg}{end_msg}."
         )
 
         # Send a log message to the mod log.
-        log.trace(f"Sending apply mod log for infraction #{_id}.")
+        log.trace(f"Sending apply mod log for infraction #{id_}.")
         await self.mod_log.send_log_message(
             icon_url=icon,
             colour=Colours.soft_red,
@@ -181,7 +181,7 @@ class InfractionScheduler(Scheduler):
             footer=f"ID {infraction['id']}"
         )
 
-        log.info(f"Applied {infr_type} infraction #{_id} to {user}.")
+        log.info(f"Applied {infr_type} infraction #{id_} to {user}.")
 
     async def pardon_infraction(self, ctx: Context, infr_type: str, user: MemberObject) -> None:
         """Prematurely end an infraction for a user and log the action in the mod log."""
@@ -209,8 +209,8 @@ class InfractionScheduler(Scheduler):
         log_text["Member"] = f"{user.mention}(`{user.id}`)"
         log_text["Actor"] = str(ctx.message.author)
         log_content = None
-        _id = response[0]['id']
-        footer = f"ID: {_id}"
+        id_ = response[0]['id']
+        footer = f"ID: {id_}"
 
         # If multiple active infractions were found, mark them as inactive in the database
         # and cancel their expiration tasks.
@@ -232,15 +232,15 @@ class InfractionScheduler(Scheduler):
             #     1. Discord cannot store multiple active bans or assign multiples of the same role
             #     2. It would send a pardon DM for each active infraction, which is redundant
             for infraction in response[1:]:
-                _id = infraction['id']
+                id_ = infraction['id']
                 try:
                     # Mark infraction as inactive in the database.
                     await self.bot.api_client.patch(
-                        f"bot/infractions/{_id}",
+                        f"bot/infractions/{id_}",
                         json={"active": False}
                     )
                 except ResponseCodeError:
-                    log.exception(f"Failed to deactivate infraction #{_id} ({infr_type})")
+                    log.exception(f"Failed to deactivate infraction #{id_} ({infr_type})")
                     # This is simpler and cleaner than trying to concatenate all the errors.
                     log_text["Failure"] = "See bot's logs for details."
 
@@ -262,15 +262,15 @@ class InfractionScheduler(Scheduler):
             log_title = "pardon failed"
             log_content = ctx.author.mention
 
-            log.warning(f"Failed to pardon {infr_type} infraction #{_id} for {user}.")
+            log.warning(f"Failed to pardon {infr_type} infraction #{id_} for {user}.")
         else:
             confirm_msg = f":ok_hand: pardoned"
             log_title = "pardoned"
 
-            log.info(f"Pardoned {infr_type} infraction #{_id} for {user}.")
+            log.info(f"Pardoned {infr_type} infraction #{id_} for {user}.")
 
         # Send a confirmation message to the invoking context.
-        log.trace(f"Sending infraction #{_id} pardon confirmation message.")
+        log.trace(f"Sending infraction #{id_} pardon confirmation message.")
         await ctx.send(
             f"{dm_emoji}{confirm_msg} infraction **{infr_type}** for {user.mention}. "
             f"{log_text.get('Failure', '')}"
@@ -305,9 +305,9 @@ class InfractionScheduler(Scheduler):
         mod_role = guild.get_role(constants.Roles.moderator)
         user_id = infraction["user"]
         _type = infraction["type"]
-        _id = infraction["id"]
+        id_ = infraction["id"]
 
-        log.info(f"Marking infraction #{_id} as inactive (expired).")
+        log.info(f"Marking infraction #{id_} as inactive (expired).")
 
         log_content = None
         log_text = {
@@ -324,14 +324,14 @@ class InfractionScheduler(Scheduler):
                 log_text = {**log_text, **returned_log}  # Merge the logs together
             else:
                 raise ValueError(
-                    f"Attempted to deactivate an unsupported infraction #{_id} ({_type})!"
+                    f"Attempted to deactivate an unsupported infraction #{id_} ({_type})!"
                 )
         except discord.Forbidden:
-            log.warning(f"Failed to deactivate infraction #{_id} ({_type}): bot lacks permissions")
+            log.warning(f"Failed to deactivate infraction #{id_} ({_type}): bot lacks permissions")
             log_text["Failure"] = f"The bot lacks permissions to do this (role hierarchy?)"
             log_content = mod_role.mention
         except discord.HTTPException as e:
-            log.exception(f"Failed to deactivate infraction #{_id} ({_type})")
+            log.exception(f"Failed to deactivate infraction #{id_} ({_type})")
             log_text["Failure"] = f"HTTPException with code {e.code}."
             log_content = mod_role.mention
 
@@ -355,13 +355,13 @@ class InfractionScheduler(Scheduler):
 
         try:
             # Mark infraction as inactive in the database.
-            log.trace(f"Marking infraction #{_id} as inactive in the database.")
+            log.trace(f"Marking infraction #{id_} as inactive in the database.")
             await self.bot.api_client.patch(
-                f"bot/infractions/{_id}",
+                f"bot/infractions/{id_}",
                 json={"active": False}
             )
         except ResponseCodeError as e:
-            log.exception(f"Failed to deactivate infraction #{_id} ({_type})")
+            log.exception(f"Failed to deactivate infraction #{id_} ({_type})")
             log_line = f"API request failed with code {e.status}."
             log_content = mod_role.mention
 
@@ -379,13 +379,13 @@ class InfractionScheduler(Scheduler):
         if send_log:
             log_title = f"expiration failed" if "Failure" in log_text else "expired"
 
-            log.trace(f"Sending deactivation mod log for infraction #{_id}.")
+            log.trace(f"Sending deactivation mod log for infraction #{id_}.")
             await self.mod_log.send_log_message(
                 icon_url=utils.INFRACTION_ICONS[_type][1],
                 colour=Colours.soft_green,
                 title=f"Infraction {log_title}: {_type}",
                 text="\n".join(f"{k}: {v}" for k, v in log_text.items()),
-                footer=f"ID: {_id}",
+                footer=f"ID: {id_}",
                 content=log_content,
             )
 

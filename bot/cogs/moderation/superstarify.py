@@ -133,17 +133,17 @@ class Superstarify(InfractionScheduler, Cog):
         # Post the infraction to the API
         reason = reason or f"old nick: {member.display_name}"
         infraction = await utils.post_infraction(ctx, member, "superstar", reason, duration)
-        _id = infraction["id"]
+        id_ = infraction["id"]
 
         old_nick = member.display_name
-        forced_nick = self.get_nick(_id, member.id)
+        forced_nick = self.get_nick(id_, member.id)
         expiry_str = format_infraction(infraction["expires_at"])
 
         # Apply the infraction and schedule the expiration task.
         log.debug(f"Changing nickname of {member} to {forced_nick}.")
         self.mod_log.ignore(constants.Event.member_update, member.id)
         await member.edit(nick=forced_nick, reason=reason)
-        self.schedule_task(ctx.bot.loop, _id, infraction)
+        self.schedule_task(ctx.bot.loop, id_, infraction)
 
         # Send a DM to the user to notify them of their new infraction.
         await utils.notify_infraction(
@@ -155,7 +155,7 @@ class Superstarify(InfractionScheduler, Cog):
         )
 
         # Send an embed with the infraction information to the invoking context.
-        log.trace(f"Sending superstar #{_id} embed.")
+        log.trace(f"Sending superstar #{id_} embed.")
         embed = Embed(
             title="Congratulations!",
             colour=constants.Colours.soft_orange,
@@ -171,7 +171,7 @@ class Superstarify(InfractionScheduler, Cog):
         await ctx.send(embed=embed)
 
         # Log to the mod log channel.
-        log.trace(f"Sending apply mod log for superstar #{_id}.")
+        log.trace(f"Sending apply mod log for superstar #{id_}.")
         await self.mod_log.send_log_message(
             icon_url=utils.INFRACTION_ICONS["superstar"][0],
             colour=Colour.gold(),
@@ -185,7 +185,7 @@ class Superstarify(InfractionScheduler, Cog):
                 Old nickname: `{old_nick}`
                 New nickname: `{forced_nick}`
             """),
-            footer=f"ID {_id}"
+            footer=f"ID {id_}"
         )
 
     @command(name="unsuperstarify", aliases=("release_nick", "unstar"))
