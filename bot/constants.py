@@ -398,6 +398,7 @@ class Guild(metaclass=YAMLGetter):
     id: int
     ignored: List[int]
     staff_channels: List[int]
+    attachment_repost: int
 
 
 class Keys(metaclass=YAMLGetter):

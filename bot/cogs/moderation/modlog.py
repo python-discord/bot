@@ -2,6 +2,7 @@ import asyncio
 import logging
 import typing as t
 from datetime import datetime
+from io import BytesIO
 
 import discord
 from dateutil.relativedelta import relativedelta
@@ -53,7 +54,8 @@ class ModLog(Cog, name="ModLog"):
                         'author': message.author.id,
                         'channel_id': message.channel.id,
                         'content': message.content,
-                        'embeds': [embed.to_dict() for embed in message.embeds]
+                        'embeds': [embed.to_dict() for embed in message.embeds],
+                        'attachments': await self.reupload_attachments(message) if message.attachments else [],
                     }
                     for message in messages
                 ]
@@ -115,6 +117,21 @@ class ModLog(Cog, name="ModLog"):
                 await channel.send(embed=additional_embed)
 
         return await self.bot.get_context(log_message)  # Optionally return for use with antispam
+
+    async def reupload_attachments(
+            self,
+            message: discord.Message,
+            channel_id: int = GuildConstant.attachment_repost
+    ) -> t.List[str]:
+        """Re-upload message's attachments to the the channel_id and return the list of re-posted attachments URLs."""
+        channel = self.bot.get_channel(channel_id)
+        out = []
+        for attachment in message.attachments:
+            buffer = BytesIO()
+            await attachment.save(buffer, use_cached=True)
+            reupload = await channel.send(file=discord.File(buffer, filename=attachment.filename))
+            out.append(reupload.attachments[0].url)
+        return out
 
     @Cog.listener()
     async def on_guild_channel_create(self, channel: GUILD_CHANNEL) -> None:

@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -243,9 +242,6 @@ class AntiSpam(Cog):
 
     async def _process_deletion_context(self, context_id: int) -> None:
         """Processes the Deletion Context queue."""
-        log.trace("Sleeping before processing message deletion queue.")
-        await asyncio.sleep(10)
-
         if context_id not in self.message_deletion_queue:
             log.error(f"Started processing deletion queue for context `{context_id}`, but it was not found!")
             return
