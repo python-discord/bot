@@ -261,8 +261,13 @@ class Emojis(metaclass=YAMLGetter):
     pencil: str
     cross_mark: str
 
-    ducky: int
+    ducky_yellow: int
     ducky_blurple: int
+    ducky_regal: int
+    ducky_camo: int
+    ducky_ninja: int
+    ducky_devil: int
+    ducky_tube: int
 
 
 class Icons(metaclass=YAMLGetter):
@@ -341,7 +346,6 @@ class Channels(metaclass=YAMLGetter):
     defcon: int
     devlog: int
     devtest: int
-    duck_pond: int
     help_0: int
     help_1: int
     help_2: int
