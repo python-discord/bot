@@ -39,6 +39,7 @@ class LinksTests(unittest.TestCase):
             [msg("bob", 0)],
             [msg("bob", 2)],
             [msg("bob", 3)],
+            [msg("bob", 1), msg("bob", 1)],
             [msg("bob", 3), msg("alice", 3)]
         )
 
@@ -61,6 +62,12 @@ class LinksTests(unittest.TestCase):
                 [msg("bob", 1), msg("bob", 2)],
                 (msg("bob", 1), msg("bob", 2)),
                 ("bob",),
+                3
+            ),
+            Case(
+                [msg("alice", 1), msg("alice", 1), msg("alice", 1)],
+                (msg("alice", 1), msg("alice", 1), msg("alice", 1)),
+                ("alice",),
                 3
             ),
             Case(
