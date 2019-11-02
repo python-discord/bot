@@ -36,7 +36,7 @@ NO_OVERRIDE_GROUPS = (
 NO_OVERRIDE_PACKAGES = (
     "Python",
 )
-UNWANTED_SIGNATURE_SYMBOLS = ('[source]', '¶')
+UNWANTED_SIGNATURE_SYMBOLS_RE = re.compile(r"\[source]|\\\\|¶")
 WHITESPACE_AFTER_NEWLINES_RE = re.compile(r"(?<=\n\n)(\s+)")
 
 
@@ -218,7 +218,7 @@ class Doc(commands.Cog):
         ]
         await asyncio.gather(*coros)
 
-    async def get_symbol_html(self, symbol: str) -> Optional[Tuple[str, str]]:
+    async def get_symbol_html(self, symbol: str) -> Optional[Tuple[list, str]]:
         """
         Given a Python symbol, return its signature and description.
 
@@ -239,7 +239,7 @@ class Doc(commands.Cog):
         symbol_id = url.split('#')[-1]
         soup = BeautifulSoup(html, 'lxml')
         symbol_heading = soup.find(id=symbol_id)
-        signature_buffer = []
+        signatures = []
 
         if symbol_heading is None:
             return None
@@ -253,16 +253,14 @@ class Doc(commands.Cog):
             description = ''.join(str(paragraph) for paragraph in info_paragraphs).replace('¶', '')
 
         else:
-            # Traverse the tags of the signature header and ignore any
-            # unwanted symbols from it. Add all of it to a temporary buffer.
-
-            for tag in symbol_heading.strings:
-                if tag not in UNWANTED_SIGNATURE_SYMBOLS:
-                    signature_buffer.append(tag.replace('\\', ''))
-            signature = ''.join(signature_buffer)
+            # Get text of up to 3 signatures, remove unwanted symbols
+            for element in [symbol_heading] + symbol_heading.find_next_siblings("dt", limit=2):
+                signature = UNWANTED_SIGNATURE_SYMBOLS_RE.sub("", element.text)
+                if signature:
+                    signatures.append(signature)
             description = str(symbol_heading.find_next_sibling("dd")).replace('¶', '')
 
-        return signature, description
+        return signatures, description
 
     @async_cache(arg_offset=1)
     async def get_symbol_embed(self, symbol: str) -> Optional[discord.Embed]:
@@ -275,7 +273,7 @@ class Doc(commands.Cog):
         if scraped_html is None:
             return None
 
-        signature = scraped_html[0]
+        signatures = scraped_html[0]
         permalink = self.inventories[symbol]
         description = markdownify(scraped_html[1])
 
@@ -294,18 +292,18 @@ class Doc(commands.Cog):
 
         description = WHITESPACE_AFTER_NEWLINES_RE.sub('', description)
 
-        if signature is None:
+        if signatures is None:
             # If symbol is a module, don't show signature.
             embed_description = description
 
-        elif not signature:
+        elif not signatures:
             # It's some "meta-page", for example:
             # https://docs.djangoproject.com/en/dev/ref/views/#module-django.views
             embed_description = "This appears to be a generic page not tied to a specific symbol."
 
         else:
-            signature = textwrap.shorten(signature, 500)
-            embed_description = f"```py\n{signature}```{description}"
+            embed_description = "".join(f"```py\n{textwrap.shorten(signature, 500)}```" for signature in signatures)
+            embed_description += description
 
         embed = discord.Embed(
             title=f'`{symbol}`',
