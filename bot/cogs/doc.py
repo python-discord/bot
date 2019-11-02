@@ -9,7 +9,7 @@ from typing import Any, Callable, Optional, Tuple
 
 import discord
 from bs4 import BeautifulSoup
-from bs4.element import PageElement
+from bs4.element import PageElement, Tag
 from discord.errors import NotFound
 from discord.ext import commands
 from markdownify import MarkdownConverter
@@ -37,6 +37,16 @@ NO_OVERRIDE_PACKAGES = (
     "Python",
 )
 UNWANTED_SIGNATURE_SYMBOLS_RE = re.compile(r"\[source]|\\\\|¶")
+SEARCH_END_TAG_ATTRS = (
+    "data",
+    "function",
+    "class",
+    "exception",
+    "seealso",
+    "section",
+    "rubric",
+    "sphinxsidebar",
+)
 WHITESPACE_AFTER_NEWLINES_RE = re.compile(r"(?<=\n\n)(\s+)")
 
 
@@ -245,12 +255,21 @@ class Doc(commands.Cog):
             return None
 
         if symbol_id == f"module-{symbol}":
-            # Get all paragraphs until the first div after the section div
-            # if searched symbol is a module.
-            trailing_div = symbol_heading.findNext("div")
-            info_paragraphs = trailing_div.find_previous_siblings("p")[::-1]
-            signature = None
-            description = ''.join(str(paragraph) for paragraph in info_paragraphs).replace('¶', '')
+            search_html = str(soup)
+            # Get page content from the module headerlink to the
+            # first tag that has its class in `SEARCH_END_TAG_ATTRS`
+            start_tag = symbol_heading.find("a", attrs={"class": "headerlink"})
+            if start_tag is None:
+                return [], ""
+
+            end_tag = start_tag.find_next(self._match_end_tag)
+            if end_tag is None:
+                return [], ""
+
+            description_start_index = search_html.find(str(start_tag.parent)) + len(str(start_tag.parent))
+            description_end_index = search_html.find(str(end_tag))
+            description = search_html[description_start_index:description_end_index].replace('¶', '')
+            signatures = None
 
         else:
             # Get text of up to 3 signatures, remove unwanted symbols
@@ -421,6 +440,15 @@ class Doc(commands.Cog):
             # that was from this package is properly deleted.
             await self.refresh_inventory()
         await ctx.send(f"Successfully deleted `{package_name}` and refreshed inventory.")
+
+    @staticmethod
+    def _match_end_tag(tag: Tag) -> bool:
+        """Matches `tag` if its class value is in `SEARCH_END_TAG_ATTRS` or the tag is table."""
+        for attr in SEARCH_END_TAG_ATTRS:
+            if attr in tag.get("class", ()):
+                return True
+
+        return tag.name == "table"
 
 
 def setup(bot: commands.Bot) -> None:
