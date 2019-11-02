@@ -260,7 +260,7 @@ class Doc(commands.Cog):
                 if tag not in UNWANTED_SIGNATURE_SYMBOLS:
                     signature_buffer.append(tag.replace('\\', ''))
             signature = ''.join(signature_buffer)
-            description = str(symbol_heading.next_sibling.next_sibling).replace('¶', '')
+            description = str(symbol_heading.find_next_sibling("dd")).replace('¶', '')
 
         return signature, description
 
