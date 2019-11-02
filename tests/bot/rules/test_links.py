@@ -38,9 +38,9 @@ class LinksTests(unittest.TestCase):
         cases = (
             [msg("bob", 0)],
             [msg("bob", 2)],
-            [msg("bob", 3)],
+            [msg("bob", 3)],  # Filter only applies if len(messages_with_links) > 1
             [msg("bob", 1), msg("bob", 1)],
-            [msg("bob", 3), msg("alice", 3)]
+            [msg("bob", 3), msg("alice", 3)]  # Only messages from latest author count
         )
 
         for recent_messages in cases:
