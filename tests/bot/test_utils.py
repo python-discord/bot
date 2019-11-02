@@ -16,7 +16,10 @@ class CaseInsensitiveDictTests(unittest.TestCase):
         instance[key] = value
         self.assertIn(key, instance)
         self.assertEqual(instance.get(key), value)
-        self.assertEqual(instance.pop(key), value)
+        self.assertEqual(instance.get(key.casefold()), value)
+        self.assertEqual(instance.pop(key.casefold()), value)
+        self.assertNotIn(key, instance)
+        self.assertNotIn(key.casefold(), instance)
 
         instance.setdefault(key, value)
         del instance[key]
