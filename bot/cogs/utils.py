@@ -214,12 +214,14 @@ class Utils(Cog):
                 description=ZEN_OF_PYTHON
             )
 
-            return await ctx.send(embed=embed)
+            await ctx.send(embed=embed)
+            return
 
         zen_lines = ZEN_OF_PYTHON.splitlines()
 
         # check if it's an integer. could be negative. why not.
-        if search_value.lstrip("-").isdigit():
+        is_negative_integer = search_value[0] == "-" and search_value[1:].isdigit()
+        if search_value.isdigit() or is_negative_integer:
             index = int(search_value)
 
             try:
@@ -228,9 +230,8 @@ class Utils(Cog):
                 embed = Embed(
                     colour=Colour.red(),
                     title=random.choice(NEGATIVE_REPLIES),
-                    description="Please provide a valid index."
+                    description=f"Please provide an index between {-len(zen_lines)} and {len(zen_lines) - 1}."
                 )
-
             else:
                 embed = Embed(
                     colour=Colour.blurple(),
@@ -238,7 +239,8 @@ class Utils(Cog):
                     description=line
                 )
 
-            return await ctx.send(embed=embed)
+            await ctx.send(embed=embed)
+            return
 
         # at this point, we must be dealing with a string search.
         matcher = difflib.SequenceMatcher(None, search_value.lower())
@@ -266,7 +268,7 @@ class Utils(Cog):
             description=best_match
         )
 
-        return await ctx.send(embed=embed)
+        await ctx.send(embed=embed)
 
 
 def setup(bot: Bot) -> None:
