@@ -284,7 +284,13 @@ class Doc(commands.Cog):
         if len(description) > 1000:
             shortened = description[:1000]
             last_paragraph_end = shortened.rfind('\n\n')
-            description = description[:last_paragraph_end] + f"... [read more]({permalink})"
+            description = description[:last_paragraph_end]
+
+            # If there is an incomplete code block, cut it out
+            if description.count("```") % 2:
+                codeblock_start = description.rfind('```py')
+                description = description[:codeblock_start].rstrip()
+            description += f"... [read more]({permalink})"
 
         description = WHITESPACE_AFTER_NEWLINES_RE.sub('', description)
 
