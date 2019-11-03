@@ -35,7 +35,7 @@ NO_OVERRIDE_GROUPS = (
     "term",
 )
 NO_OVERRIDE_PACKAGES = (
-    "Python",
+    "python",
 )
 FAILED_REQUEST_RETRY_AMOUNT = 3
 UNWANTED_SIGNATURE_SYMBOLS_RE = re.compile(r"\[source]|\\\\|¶")
