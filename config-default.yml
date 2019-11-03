@@ -40,6 +40,10 @@ style:
         ducky_devil:    &DUCKY_DEVIL    637925314982576139
         ducky_tube:     &DUCKY_TUBE     637881368008851456
 
+        upvotes:        "<:upvotes:638729835245731840>"
+        comments:       "<:comments:638729835073765387>"
+        user:           "<:user:638729835442602003>"
+
     icons:
         crown_blurple: "https://cdn.discordapp.com/emojis/469964153289965568.png"
         crown_green:   "https://cdn.discordapp.com/emojis/469964154719961088.png"

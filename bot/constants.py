@@ -269,6 +269,10 @@ class Emojis(metaclass=YAMLGetter):
     ducky_devil: int
     ducky_tube: int
 
+    upvotes: str
+    comments: str
+    user: str
+
 
 class Icons(metaclass=YAMLGetter):
     section = "style"
