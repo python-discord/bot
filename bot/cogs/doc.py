@@ -194,9 +194,9 @@ class Doc(commands.Cog):
                                        for package in NO_OVERRIDE_PACKAGES)):
 
                             symbol = f"{group_name}.{symbol}"
-                            # if renamed `symbol` was already exists, add library name in front
+                            # If renamed `symbol` already exists, add library name in front.
                             if symbol in self.renamed_symbols:
-                                # split `package_name` because of packages like Pillow that have spaces in them
+                                # Split `package_name` because of packages like Pillow that have spaces in them.
                                 symbol = f"{package_name.split()[0]}.{symbol}"
 
                             self.inventories[symbol] = absolute_doc_url
