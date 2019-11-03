@@ -253,12 +253,12 @@ class Doc(commands.Cog):
         soup = BeautifulSoup(html, 'lxml')
         symbol_heading = soup.find(id=symbol_id)
         signatures = []
+        search_html = str(soup)
 
         if symbol_heading is None:
             return None
 
         if symbol_id == f"module-{symbol}":
-            search_html = str(soup)
             # Get page content from the module headerlink to the
             # first tag that has its class in `SEARCH_END_TAG_ATTRS`
             start_tag = symbol_heading.find("a", attrs={"class": "headerlink"})
@@ -275,12 +275,13 @@ class Doc(commands.Cog):
             signatures = None
 
         else:
+            description = str(symbol_heading.find_next_sibling("dd")).replace('¶', '')
+            description_pos = search_html.find(description)
             # Get text of up to 3 signatures, remove unwanted symbols
             for element in [symbol_heading] + symbol_heading.find_next_siblings("dt", limit=2):
                 signature = UNWANTED_SIGNATURE_SYMBOLS_RE.sub("", element.text)
-                if signature:
+                if signature and search_html.find(signature) < description_pos:
                     signatures.append(signature)
-            description = str(symbol_heading.find_next_sibling("dd")).replace('¶', '')
 
         return signatures, description
 
