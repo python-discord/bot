@@ -15,7 +15,7 @@ from bot.pagination import DELETE_EMOJI, LinePaginator
 
 log = logging.getLogger(__name__)
 
-COMMANDS_PER_PAGE = 5
+COMMANDS_PER_PAGE = 8
 PREFIX = constants.Bot.prefix
 
 Category = namedtuple("Category", ["name", "description", "cogs"])
