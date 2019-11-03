@@ -1,4 +1,6 @@
 import asyncio
+import difflib
+import itertools
 import logging
 import typing as t
 from datetime import datetime
@@ -637,20 +639,36 @@ class ModLog(Cog, name="ModLog"):
         channel = before.channel
         channel_name = f"{channel.category}/#{channel.name}" if channel.category else f"#{channel.name}"
 
-        before_response = (
-            f"**Author:** {author} (`{author.id}`)\n"
-            f"**Channel:** {channel_name} (`{channel.id}`)\n"
-            f"**Message ID:** `{before.id}`\n"
-            "\n"
-            f"{before.clean_content}"
-        )
+        _before = before.clean_content
+        _after = after.clean_content
+        groups = tuple((g[0], tuple(g[1]))
+                       for g in itertools.groupby(difflib.ndiff(_before.split(), _after.split()), key=lambda s: s[0]))
 
-        after_response = (
+        for index, (name, values) in enumerate(groups):
+            sub = ' '.join(s[2:].strip() for s in values)
+            if name == '-':
+                _before = _before.replace(sub, f"[{sub}](http://.z)")
+            elif name == '+':
+                _after = _after.replace(sub, f"[{sub}](http://.z)")
+            else:
+                if len(values) > 2:
+                    new = (f"{values[0].strip() if index > 0 else ''}"
+                           " ... "
+                           f"{values[-1].strip() if index < len(groups) - 1 else ''}")
+                else:
+                    new = sub
+                _before = _before.replace(sub, new)
+                _after = _after.replace(sub, new)
+
+        response = (
             f"**Author:** {author} (`{author.id}`)\n"
             f"**Channel:** {channel_name} (`{channel.id}`)\n"
             f"**Message ID:** `{before.id}`\n"
             "\n"
-            f"{after.clean_content}"
+            f"**Before**:\n{_before}\n"
+            f"**After**:\n{_after}\n"
+            "\n"
+            f"[jump to message]({after.jump_url})"
         )
 
         if before.edited_at:
@@ -667,13 +685,8 @@ class ModLog(Cog, name="ModLog"):
             footer = None
 
         await self.send_log_message(
-            Icons.message_edit, Colour.blurple(), "Message edited (Before)", before_response,
+            Icons.message_edit, Colour.blurple(), "Message edited", response,
             channel_id=Channels.message_log, timestamp_override=timestamp, footer=footer
-        )
-
-        await self.send_log_message(
-            Icons.message_edit, Colour.blurple(), "Message edited (After)", after_response,
-            channel_id=Channels.message_log, timestamp_override=after.edited_at
         )
 
     @Cog.listener()
