@@ -635,39 +635,23 @@ class ModLog(Cog, name="ModLog"):
 
         author = before.author
         channel = before.channel
+        channel_name = f"{channel.category}/#{channel.name}" if channel.category else f"#{channel.name}"
 
-        if channel.category:
-            before_response = (
-                f"**Author:** {author} (`{author.id}`)\n"
-                f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
-                f"**Message ID:** `{before.id}`\n"
-                "\n"
-                f"{before.clean_content}"
-            )
+        before_response = (
+            f"**Author:** {author} (`{author.id}`)\n"
+            f"**Channel:** {channel_name} (`{channel.id}`)\n"
+            f"**Message ID:** `{before.id}`\n"
+            "\n"
+            f"{before.clean_content}"
+        )
 
-            after_response = (
-                f"**Author:** {author} (`{author.id}`)\n"
-                f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
-                f"**Message ID:** `{before.id}`\n"
-                "\n"
-                f"{after.clean_content}"
-            )
-        else:
-            before_response = (
-                f"**Author:** {author} (`{author.id}`)\n"
-                f"**Channel:** #{channel.name} (`{channel.id}`)\n"
-                f"**Message ID:** `{before.id}`\n"
-                "\n"
-                f"{before.clean_content}"
-            )
-
-            after_response = (
-                f"**Author:** {author} (`{author.id}`)\n"
-                f"**Channel:** #{channel.name} (`{channel.id}`)\n"
-                f"**Message ID:** `{before.id}`\n"
-                "\n"
-                f"{after.clean_content}"
-            )
+        after_response = (
+            f"**Author:** {author} (`{author.id}`)\n"
+            f"**Channel:** {channel_name} (`{channel.id}`)\n"
+            f"**Message ID:** `{before.id}`\n"
+            "\n"
+            f"{after.clean_content}"
+        )
 
         if before.edited_at:
             # Message was previously edited, to assist with self-bot detection, use the edited_at
@@ -718,39 +702,23 @@ class ModLog(Cog, name="ModLog"):
 
         author = message.author
         channel = message.channel
+        channel_name = f"{channel.category}/#{channel.name}" if channel.category else f"#{channel.name}"
 
-        if channel.category:
-            before_response = (
-                f"**Author:** {author} (`{author.id}`)\n"
-                f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
-                f"**Message ID:** `{message.id}`\n"
-                "\n"
-                "This message was not cached, so the message content cannot be displayed."
-            )
+        before_response = (
+            f"**Author:** {author} (`{author.id}`)\n"
+            f"**Channel:** {channel_name} (`{channel.id}`)\n"
+            f"**Message ID:** `{message.id}`\n"
+            "\n"
+            "This message was not cached, so the message content cannot be displayed."
+        )
 
-            after_response = (
-                f"**Author:** {author} (`{author.id}`)\n"
-                f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
-                f"**Message ID:** `{message.id}`\n"
-                "\n"
-                f"{message.clean_content}"
-            )
-        else:
-            before_response = (
-                f"**Author:** {author} (`{author.id}`)\n"
-                f"**Channel:** #{channel.name} (`{channel.id}`)\n"
-                f"**Message ID:** `{message.id}`\n"
-                "\n"
-                "This message was not cached, so the message content cannot be displayed."
-            )
-
-            after_response = (
-                f"**Author:** {author} (`{author.id}`)\n"
-                f"**Channel:** #{channel.name} (`{channel.id}`)\n"
-                f"**Message ID:** `{message.id}`\n"
-                "\n"
-                f"{message.clean_content}"
-            )
+        after_response = (
+            f"**Author:** {author} (`{author.id}`)\n"
+            f"**Channel:** {channel_name} (`{channel.id}`)\n"
+            f"**Message ID:** `{message.id}`\n"
+            "\n"
+            f"{message.clean_content}"
+        )
 
         await self.send_log_message(
             Icons.message_edit, Colour.blurple(), "Message edited (Before)",
