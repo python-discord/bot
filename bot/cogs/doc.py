@@ -13,8 +13,9 @@ from bs4.element import PageElement, Tag
 from discord.errors import NotFound
 from discord.ext import commands
 from markdownify import MarkdownConverter
-from requests import ConnectionError
+from requests import ConnectTimeout, ConnectionError, HTTPError
 from sphinx.ext import intersphinx
+from urllib3.exceptions import ProtocolError
 
 from bot.constants import MODERATION_ROLES, RedirectOutput
 from bot.converters import ValidPythonIdentifier, ValidURL
@@ -36,6 +37,7 @@ NO_OVERRIDE_GROUPS = (
 NO_OVERRIDE_PACKAGES = (
     "Python",
 )
+FAILED_REQUEST_RETRY_AMOUNT = 3
 UNWANTED_SIGNATURE_SYMBOLS_RE = re.compile(r"\[source]|\\\\|¶")
 SEARCH_END_TAG_ATTRS = (
     "data",
@@ -173,36 +175,37 @@ class Doc(commands.Cog):
         """
         self.base_urls[package_name] = base_url
 
-        fetch_func = functools.partial(intersphinx.fetch_inventory, config, '', inventory_url)
-        for group, value in (await self.bot.loop.run_in_executor(None, fetch_func)).items():
-            # Each value has a bunch of information in the form
-            # `(package_name, version, relative_url, ???)`, and we only
-            # need the package_name and the relative documentation URL.
-            for symbol, (package_name, _, relative_doc_url, _) in value.items():
-                absolute_doc_url = base_url + relative_doc_url
+        package = await self._fetch_inventory(inventory_url, config)
+        if package:
+            for group, value in package.items():
+                # Each value has a bunch of information in the form
+                # `(package_name, version, relative_url, ???)`, and we only
+                # need the package_name and the relative documentation URL.
+                for symbol, (package_name, _, relative_doc_url, _) in value.items():
+                    absolute_doc_url = base_url + relative_doc_url
 
-                if symbol in self.inventories:
-                    # get `group_name` from _:group_name
-                    group_name = group.split(":")[1]
-                    if (group_name in NO_OVERRIDE_GROUPS
-                            # check if any package from `NO_OVERRIDE_PACKAGES`
-                            # is in base URL of the symbol that would be overridden
-                            or any(package in self.inventories[symbol].split("/", 3)[2]
-                                   for package in NO_OVERRIDE_PACKAGES)):
+                    if symbol in self.inventories:
+                        # get `group_name` from _:group_name
+                        group_name = group.split(":")[1]
+                        if (group_name in NO_OVERRIDE_GROUPS
+                                # check if any package from `NO_OVERRIDE_PACKAGES`
+                                # is in base URL of the symbol that would be overridden
+                                or any(package in self.inventories[symbol].split("/", 3)[2]
+                                       for package in NO_OVERRIDE_PACKAGES)):
 
-                        symbol = f"{group_name}.{symbol}"
-                        # if renamed `symbol` was already exists, add library name in front
-                        if symbol in self.renamed_symbols:
-                            # split `package_name` because of packages like Pillow that have spaces in them
-                            symbol = f"{package_name.split()[0]}.{symbol}"
+                            symbol = f"{group_name}.{symbol}"
+                            # if renamed `symbol` was already exists, add library name in front
+                            if symbol in self.renamed_symbols:
+                                # split `package_name` because of packages like Pillow that have spaces in them
+                                symbol = f"{package_name.split()[0]}.{symbol}"
 
-                        self.inventories[symbol] = absolute_doc_url
-                        self.renamed_symbols.add(symbol)
-                        continue
+                            self.inventories[symbol] = absolute_doc_url
+                            self.renamed_symbols.add(symbol)
+                            continue
 
-                self.inventories[symbol] = absolute_doc_url
+                    self.inventories[symbol] = absolute_doc_url
 
-        log.trace(f"Fetched inventory for {package_name}.")
+            log.trace(f"Fetched inventory for {package_name}.")
 
     async def refresh_inventory(self) -> None:
         """Refresh internal documentation inventory."""
@@ -440,6 +443,29 @@ class Doc(commands.Cog):
             # that was from this package is properly deleted.
             await self.refresh_inventory()
         await ctx.send(f"Successfully deleted `{package_name}` and refreshed inventory.")
+
+    async def _fetch_inventory(self, inventory_url: str, config: SphinxConfiguration) -> Optional[dict]:
+        """Get and return inventory from `inventory_url`. If fetching fails, return None."""
+        fetch_func = functools.partial(intersphinx.fetch_inventory, config, '', inventory_url)
+        for retry in range(1, FAILED_REQUEST_RETRY_AMOUNT+1):
+            try:
+                package = await self.bot.loop.run_in_executor(None, fetch_func)
+            except ConnectTimeout:
+                log.error(f"Fetching of inventory {inventory_url} timed out,"
+                          f" trying again. ({retry}/{FAILED_REQUEST_RETRY_AMOUNT})")
+            except ProtocolError:
+                log.error(f"Connection lost while fetching inventory {inventory_url},"
+                          f" trying again. ({retry}/{FAILED_REQUEST_RETRY_AMOUNT})")
+            except HTTPError as e:
+                log.error(f"Fetching of inventory {inventory_url} failed with status code {e.response.status_code}.")
+                return None
+            except ConnectionError:
+                log.error(f"Couldn't establish connection to inventory {inventory_url}.")
+                return None
+            else:
+                return package
+        log.error(f"Fetching of inventory {inventory_url} failed.")
+        return None
 
     @staticmethod
     def _match_end_tag(tag: Tag) -> bool:
