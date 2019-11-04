@@ -2,7 +2,7 @@ import asyncio
 import logging
 import random
 import textwrap
-from datetime import datetime
+from datetime import datetime, timedelta
 from operator import itemgetter
 from typing import Optional
 
@@ -30,9 +30,11 @@ class Reminders(Scheduler, Cog):
         self.bot = bot
         super().__init__()
 
-    @Cog.listener()
-    async def on_ready(self) -> None:
+        self.bot.loop.create_task(self.reschedule_reminders())
+
+    async def reschedule_reminders(self) -> None:
         """Get all current reminders from the API and reschedule them."""
+        await self.bot.wait_until_ready()
         response = await self.bot.api_client.get(
             'bot/reminders',
             params={'active': 'true'}
@@ -102,7 +104,10 @@ class Reminders(Scheduler, Cog):
             name="It has arrived!"
         )
 
-        embed.description = f"Here's your reminder: `{reminder['content']}`"
+        embed.description = f"Here's your reminder: `{reminder['content']}`."
+
+        if reminder.get("jump_url"):  # keep backward compatibility
+            embed.description += f"\n[Jump back to when you created the reminder]({reminder['jump_url']})"
 
         if late:
             embed.colour = Colour.red()
@@ -165,14 +170,18 @@ class Reminders(Scheduler, Cog):
             json={
                 'author': ctx.author.id,
                 'channel_id': ctx.message.channel.id,
+                'jump_url': ctx.message.jump_url,
                 'content': content,
                 'expiration': expiration.isoformat()
             }
         )
 
+        now = datetime.utcnow() - timedelta(seconds=1)
+
         # Confirm to the user that it worked.
         await self._send_confirmation(
-            ctx, on_success="Your reminder has been created successfully!"
+            ctx,
+            on_success=f"Your reminder will arrive in {humanize_delta(relativedelta(expiration, now))}!"
         )
 
         loop = asyncio.get_event_loop()

@@ -114,5 +114,8 @@ log.*
 # Custom user configuration
 config.yml
 
-# JUnit XML reports from pytest
-junit.xml
+# xmlrunner unittest XML reports
+TEST-**.xml
+
+# Mac OS .DS_Store, which is a file that stores custom attributes of its containing folder
+.DS_Store

@@ -10,7 +10,7 @@ from discord import Colour, Member, Message, NotFound, Object, TextChannel
 from discord.ext.commands import Bot, Cog
 
 from bot import rules
-from bot.cogs.modlog import ModLog
+from bot.cogs.moderation import ModLog
 from bot.constants import (
     AntiSpam as AntiSpamConfig, Channels,
     Colours, DEBUG_MODE, Event, Filter,
@@ -59,7 +59,7 @@ class DeletionContext:
 
     async def upload_messages(self, actor_id: int, modlog: ModLog) -> None:
         """Method that takes care of uploading the queue and posting modlog alert."""
-        triggered_by_users = ", ".join(f"{m.display_name}#{m.discriminator} (`{m.id}`)" for m in self.members.values())
+        triggered_by_users = ", ".join(f"{m} (`{m.id}`)" for m in self.members.values())
 
         mod_alert_message = (
             f"**Triggered by:** {triggered_by_users}\n"
@@ -107,14 +107,16 @@ class AntiSpam(Cog):
         self.message_deletion_queue = dict()
         self.queue_consumption_tasks = dict()
 
+        self.bot.loop.create_task(self.alert_on_validation_error())
+
     @property
     def mod_log(self) -> ModLog:
         """Allows for easy access of the ModLog cog."""
         return self.bot.get_cog("ModLog")
 
-    @Cog.listener()
-    async def on_ready(self) -> None:
+    async def alert_on_validation_error(self) -> None:
         """Unloads the cog and alerts admins if configuration validation failed."""
+        await self.bot.wait_until_ready()
         if self.validation_errors:
             body = "**The following errors were encountered:**\n"
             body += "\n".join(f"- {error}" for error in self.validation_errors.values())
@@ -207,8 +209,10 @@ class AntiSpam(Cog):
         if not any(role.id == self.muted_role.id for role in member.roles):
             remove_role_after = AntiSpamConfig.punishment['remove_after']
 
-            # We need context, let's get it
+            # Get context and make sure the bot becomes the actor of infraction by patching the `author` attributes
             context = await self.bot.get_context(msg)
+            context.author = self.bot.user
+            context.message.author = self.bot.user
 
             # Since we're going to invoke the tempmute command directly, we need to manually call the converter.
             dt_remove_role_after = await self.expiration_date_converter.convert(context, f"{remove_role_after}S")

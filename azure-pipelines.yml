@@ -30,8 +30,11 @@ jobs:
       - script: python -m flake8
         displayName: 'Run linter'
 
-      - script: BOT_API_KEY=foo BOT_TOKEN=bar WOLFRAM_API_KEY=baz python -m pytest --junitxml=junit.xml --cov=bot --cov-branch --cov-report=term --cov-report=xml tests
+      - script: BOT_API_KEY=foo BOT_TOKEN=bar WOLFRAM_API_KEY=baz coverage run -m xmlrunner
         displayName: Run tests
+
+      - script: coverage report -m && coverage xml -o coverage.xml
+        displayName: Generate test coverage report
 
       - task: PublishCodeCoverageResults@1
         displayName: 'Publish Coverage Results'
@@ -41,11 +44,11 @@ jobs:
           summaryFileLocation: coverage.xml
 
       - task: PublishTestResults@2
-        displayName: 'Publish Test Results'
         condition: succeededOrFailed()
+        displayName: 'Publish Test Results'
         inputs:
-          testResultsFiles: junit.xml
-          testRunTitle: 'Bot Test results'
+          testResultsFiles: '**/TEST-*.xml'
+          testRunTitle: 'Bot Test Results'
 
   - job: build
     displayName: 'Build & Push Container'

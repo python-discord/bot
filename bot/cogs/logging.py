@@ -15,9 +15,11 @@ class Logging(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @Cog.listener()
-    async def on_ready(self) -> None:
+        self.bot.loop.create_task(self.startup_greeting())
+
+    async def startup_greeting(self) -> None:
         """Announce our presence to the configured devlog channel."""
+        await self.bot.wait_until_ready()
         log.info("Bot connected!")
 
         embed = Embed(description="Connected!")
