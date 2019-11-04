@@ -494,6 +494,9 @@ class Infractions(Scheduler, commands.Cog):
             f"{dm_result}{confirm_msg} **{infr_type}** to {user.mention}{expiry_msg}{end_msg}."
         )
 
+        # Check if `avatar_url_as` is a method, if it isn't we know it's a proxy object.
+        user_plain = f" (`{user}`)" if hasattr(user.avatar_url_as, "__self__") else ""
+
         # Send a log message to the mod log.
         await self.mod_log.send_log_message(
             icon_url=icon,
@@ -501,7 +504,7 @@ class Infractions(Scheduler, commands.Cog):
             title=f"Infraction {log_title}: {infr_type}",
             thumbnail=user.avatar_url_as(static_format="png"),
             text=textwrap.dedent(f"""
-                Member: {user.mention} (`{user.id}`)
+                Member: {user.mention}{user_plain}
                 Actor: {ctx.message.author}{dm_log_text}
                 Reason: {reason}
                 {expiry_log_text}
