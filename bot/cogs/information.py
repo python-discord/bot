@@ -9,6 +9,7 @@ import discord
 from discord import CategoryChannel, Colour, Embed, Member, Role, TextChannel, VoiceChannel, utils
 from discord.ext import commands
 from discord.ext.commands import Bot, BucketType, Cog, Context, command, group
+from discord.utils import escape_markdown
 
 from bot.constants import Channels, Emojis, MODERATION_ROLES, STAFF_ROLES
 from bot.decorators import InChannelCheckFailure, in_channel, with_role
@@ -180,6 +181,13 @@ class Information(Cog):
         # User information
         created = time_since(user.created_at, max_units=3)
 
+        # Custom status
+        custom_status = ''
+        for activity in user.activities:
+            if activity.name == 'Custom Status':
+                state = escape_markdown(activity.state)
+                custom_status = f'Status: {state}\n'
+
         name = str(user)
         if user.nick:
             name = f"{user.nick} ({name})"
@@ -217,7 +225,7 @@ class Information(Cog):
                 Created: {created}
                 Profile: {user.mention}
                 ID: {user.id}
-
+                {custom_status}
                 **Member Information**
                 Joined: {joined}
                 Roles: {roles or None}
