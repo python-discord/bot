@@ -135,7 +135,7 @@ class ModManagement(commands.Cog):
         user = ctx.guild.get_member(user_id)
 
         if user:
-            user_text = f"{user.mention} (`{user.id}`)"
+            user_text = f"{user.mention} (`{user}`)"
             thumbnail = user.avatar_url_as(static_format="png")
         else:
             user_text = f"`{user_id}`"

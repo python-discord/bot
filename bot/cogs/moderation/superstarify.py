@@ -211,7 +211,7 @@ class Superstarify(InfractionScheduler, Cog):
         )
 
         return {
-            "Member": f"{user.mention}(`{user.id}`)",
+            "Member": f"{user.mention}(`{user}`)",
             "DM": "Sent" if notified else "**Failed**"
         }
 
