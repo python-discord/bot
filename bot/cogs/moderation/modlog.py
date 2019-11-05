@@ -661,10 +661,8 @@ class ModLog(Cog, name="ModLog"):
                     new = (f"{words[0] if index > 0 else ''}"
                            " ... "
                            f"{words[-1] if index < len(diff_groups) - 1 else ''}")
-                else:
-                    new = sub
-                _before = _before.replace(sub, new)
-                _after = _after.replace(sub, new)
+                    _before = _before.replace(sub, new)
+                    _after = _after.replace(sub, new)
 
         response = (
             f"**Author:** {author} (`{author.id}`)\n"
