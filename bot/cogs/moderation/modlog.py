@@ -653,9 +653,9 @@ class ModLog(Cog, name="ModLog"):
         for index, (diff_type, words) in enumerate(diff_groups):
             sub = ' '.join(words)
             if diff_type == '-':
-                _before = _before.replace(sub, f"[{sub}](http://.z)")
+                _before = _before.replace(sub, f"[{sub}](http://o.hi)")
             elif diff_type == '+':
-                _after = _after.replace(sub, f"[{sub}](http://.z)")
+                _after = _after.replace(sub, f"[{sub}](http://o.hi)")
             else:
                 if len(words) > 2:
                     new = (f"{words[0] if index > 0 else ''}"
