@@ -12,7 +12,7 @@ from discord.ext.commands import Bot, Context
 from bot import constants
 from bot.api import ResponseCodeError
 from bot.constants import Colours, STAFF_CHANNELS
-from bot.utils import time
+from bot.utils import ProxyUser, time
 from bot.utils.scheduling import Scheduler
 from . import utils
 from .modlog import ModLog
@@ -140,7 +140,7 @@ class InfractionScheduler(Scheduler):
         await ctx.send(
             f"{dm_result}{confirm_msg} **{infr_type}** to {user.mention}{expiry_msg}{end_msg}."
         )
-
+        user_plain = f" (`{user}`)" if not isinstance(user, ProxyUser) else ""
         # Send a log message to the mod log.
         await self.mod_log.send_log_message(
             icon_url=icon,
@@ -148,7 +148,7 @@ class InfractionScheduler(Scheduler):
             title=f"Infraction {log_title}: {infr_type}",
             thumbnail=user.avatar_url_as(static_format="png"),
             text=textwrap.dedent(f"""
-                Member: {user.mention} (`{user.id}`)
+                Member: {user.mention}{user_plain}
                 Actor: {ctx.message.author}{dm_log_text}
                 Reason: {reason}
                 {expiry_log_text}
@@ -176,7 +176,8 @@ class InfractionScheduler(Scheduler):
         # Deactivate the infraction and cancel its scheduled expiration task.
         log_text = await self.deactivate_infraction(response[0], send_log=False)
 
-        log_text["Member"] = f"{user.mention}(`{user.id}`)"
+        user_plain = f" (`{user}`)" if not isinstance(user, ProxyUser) else ""
+        log_text["Member"] = f"{user.mention}{user_plain}"
         log_text["Actor"] = str(ctx.message.author)
         log_content = None
         footer = f"ID: {response[0]['id']}"
