@@ -641,20 +641,26 @@ class ModLog(Cog, name="ModLog"):
 
         _before = before.clean_content
         _after = after.clean_content
-        groups = tuple((g[0], tuple(g[1]))
-                       for g in itertools.groupby(difflib.ndiff(_before.split(), _after.split()), key=lambda s: s[0]))
 
-        for index, (name, values) in enumerate(groups):
-            sub = ' '.join(s[2:].strip() for s in values)
-            if name == '-':
+        # Getting the difference per words and group them by type - add, remove, same
+        # Note that this is intended grouping without sorting
+        diff = difflib.ndiff(_before.split(), _after.split())
+        diff_groups = tuple(
+            (diff_type, tuple(s[2:] for s in diff_words))
+            for diff_type, diff_words in itertools.groupby(diff, key=lambda s: s[0])
+        )
+
+        for index, (diff_type, words) in enumerate(diff_groups):
+            sub = ' '.join(words)
+            if diff_type == '-':
                 _before = _before.replace(sub, f"[{sub}](http://.z)")
-            elif name == '+':
+            elif diff_type == '+':
                 _after = _after.replace(sub, f"[{sub}](http://.z)")
             else:
-                if len(values) > 2:
-                    new = (f"{values[0].strip() if index > 0 else ''}"
+                if len(words) > 2:
+                    new = (f"{words[0] if index > 0 else ''}"
                            " ... "
-                           f"{values[-1].strip() if index < len(groups) - 1 else ''}")
+                           f"{words[-1] if index < len(diff_groups) - 1 else ''}")
                 else:
                     new = sub
                 _before = _before.replace(sub, new)
