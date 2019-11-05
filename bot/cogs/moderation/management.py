@@ -138,7 +138,7 @@ class ModManagement(commands.Cog):
             user_text = f"{user.mention} (`{user}`)"
             thumbnail = user.avatar_url_as(static_format="png")
         else:
-            user_text = f"`{user_id}`"
+            user_text = f"`<@{user_id}>`"
             thumbnail = None
 
         # The infraction's actor
