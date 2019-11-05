@@ -10,8 +10,8 @@ from bot.api import ResponseCodeError
 from bot.constants import Channels, Guild, Roles, Webhooks
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
-from bot.utils import time
-from .watchchannel import WatchChannel, proxy_user
+from bot.utils import ProxyUser, time
+from .watchchannel import WatchChannel
 
 log = logging.getLogger(__name__)
 STAFF_ROLES = Roles.owner, Roles.admin, Roles.moderator, Roles.helpers    # <- In constants after the merge?
@@ -49,7 +49,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
 
     @nomination_group.command(name='watch', aliases=('w', 'add', 'a'))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
-    async def watch_command(self, ctx: Context, user: Union[Member, User, proxy_user], *, reason: str) -> None:
+    async def watch_command(self, ctx: Context, user: Union[Member, User, ProxyUser], *, reason: str) -> None:
         """
         Relay messages sent by the given `user` to the `#talent-pool` channel.
 
@@ -114,7 +114,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
 
     @nomination_group.command(name='history', aliases=('info', 'search'))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
-    async def history_command(self, ctx: Context, user: Union[User, proxy_user]) -> None:
+    async def history_command(self, ctx: Context, user: Union[User, ProxyUser]) -> None:
         """Shows the specified user's nomination history."""
         result = await self.bot.api_client.get(
             self.api_endpoint,
@@ -143,7 +143,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
 
     @nomination_group.command(name='unwatch', aliases=('end', ))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
-    async def unwatch_command(self, ctx: Context, user: Union[User, proxy_user], *, reason: str) -> None:
+    async def unwatch_command(self, ctx: Context, user: Union[User, ProxyUser], *, reason: str) -> None:
         """
         Ends the active nomination of the specified user with the given reason.
 

@@ -9,6 +9,7 @@ from discord.ext.commands import Context, command
 from bot import constants
 from bot.constants import Event
 from bot.decorators import respect_role_hierarchy
+from bot.utils import ProxyUser
 from bot.utils.checks import with_role_check
 from . import utils
 from .scheduler import InfractionScheduler
@@ -16,7 +17,7 @@ from .utils import MemberObject
 
 log = logging.getLogger(__name__)
 
-MemberConverter = t.Union[utils.UserTypes, utils.proxy_user]
+MemberConverter = t.Union[utils.UserTypes, ProxyUser]
 
 
 class Infractions(InfractionScheduler, commands.Cog):

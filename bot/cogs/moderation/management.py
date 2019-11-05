@@ -10,7 +10,7 @@ from discord.ext.commands import Context
 from bot import constants
 from bot.converters import InfractionSearchQuery
 from bot.pagination import LinePaginator
-from bot.utils import time
+from bot.utils import ProxyUser, time
 from bot.utils.checks import in_channel_check, with_role_check
 from . import utils
 from .infractions import Infractions
@@ -18,7 +18,7 @@ from .modlog import ModLog
 
 log = logging.getLogger(__name__)
 
-UserConverter = t.Union[discord.User, utils.proxy_user]
+UserConverter = t.Union[discord.User, ProxyUser]
 
 
 def permanent_duration(expires_at: str) -> str:

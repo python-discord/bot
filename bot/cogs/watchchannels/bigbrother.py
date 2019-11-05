@@ -8,7 +8,8 @@ from discord.ext.commands import Bot, Cog, Context, group
 from bot.cogs.moderation.utils import post_infraction
 from bot.constants import Channels, Roles, Webhooks
 from bot.decorators import with_role
-from .watchchannel import WatchChannel, proxy_user
+from bot.utils import ProxyUser
+from .watchchannel import WatchChannel
 
 log = logging.getLogger(__name__)
 
@@ -45,7 +46,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
 
     @bigbrother_group.command(name='watch', aliases=('w',))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
-    async def watch_command(self, ctx: Context, user: Union[User, proxy_user], *, reason: str) -> None:
+    async def watch_command(self, ctx: Context, user: Union[User, ProxyUser], *, reason: str) -> None:
         """
         Relay messages sent by the given `user` to the `#big-brother` channel.
 
@@ -92,7 +93,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
 
     @bigbrother_group.command(name='unwatch', aliases=('uw',))
     @with_role(Roles.owner, Roles.admin, Roles.moderator)
-    async def unwatch_command(self, ctx: Context, user: Union[User, proxy_user], *, reason: str) -> None:
+    async def unwatch_command(self, ctx: Context, user: Union[User, ProxyUser], *, reason: str) -> None:
         """Stop relaying messages by the given `user`."""
         active_watches = await self.bot.api_client.get(
             self.api_endpoint,

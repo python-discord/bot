@@ -1,7 +1,8 @@
 from abc import ABCMeta
 from typing import Any, Generator, Hashable, Iterable
 
-from discord.ext.commands import CogMeta
+from discord import Object
+from discord.ext.commands import BadArgument, CogMeta
 
 
 class CogABCMeta(CogMeta, ABCMeta):
@@ -64,6 +65,33 @@ class CaseInsensitiveDict(dict):
         for k in list(self.keys()):
             v = super(CaseInsensitiveDict, self).pop(k)
             self.__setitem__(k, v)
+
+
+class ProxyUser(Object):
+    """
+    Create a proxy user object from the given id.
+
+    Used when a Member or User object cannot be resolved.
+    """
+
+    def __init__(self, user_id: str):
+        try:
+            user_id = int(user_id)
+        except ValueError:
+            raise BadArgument
+
+        super().__init__(user_id)
+        self.bot = False
+        self.display_name = f"<@{self.id}>"
+        self.mention = user_id
+
+    @staticmethod
+    def avatar_url_as(*_, **__) -> None:
+        """Return `None` when avatar `Asset` is requested."""
+        return None
+
+    def __str__(self):
+        return f"User: ID {self.id}"
 
 
 def chunks(iterable: Iterable, size: int) -> Generator[Any, None, None]:
