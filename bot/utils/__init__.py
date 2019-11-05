@@ -87,7 +87,7 @@ class ProxyUser(Object):
 
     @staticmethod
     def avatar_url_as(*_, **__) -> None:
-        """Return `None` when avatar `Asset` is requested."""
+        """Return `None` when avatar is requested."""
         return None
 
     def __str__(self):
