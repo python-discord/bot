@@ -82,8 +82,8 @@ class ProxyUser(Object):
 
         super().__init__(user_id)
         self.bot = False
-        self.display_name = f"<@{self.id}>"
-        self.mention = user_id
+        self.display_name = str(user_id)
+        self.mention = f"<@{self.id}>"
 
     @staticmethod
     def avatar_url_as(*_, **__) -> None:
