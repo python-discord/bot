@@ -304,7 +304,7 @@ class InfractionScheduler(Scheduler):
         guild = self.bot.get_guild(constants.Guild.id)
         mod_role = guild.get_role(constants.Roles.moderator)
         user_id = infraction["user"]
-        _type = infraction["type"]
+        type_ = infraction["type"]
         id_ = infraction["id"]
 
         log.info(f"Marking infraction #{id_} as inactive (expired).")
@@ -324,14 +324,14 @@ class InfractionScheduler(Scheduler):
                 log_text = {**log_text, **returned_log}  # Merge the logs together
             else:
                 raise ValueError(
-                    f"Attempted to deactivate an unsupported infraction #{id_} ({_type})!"
+                    f"Attempted to deactivate an unsupported infraction #{id_} ({type_})!"
                 )
         except discord.Forbidden:
-            log.warning(f"Failed to deactivate infraction #{id_} ({_type}): bot lacks permissions")
+            log.warning(f"Failed to deactivate infraction #{id_} ({type_}): bot lacks permissions")
             log_text["Failure"] = f"The bot lacks permissions to do this (role hierarchy?)"
             log_content = mod_role.mention
         except discord.HTTPException as e:
-            log.exception(f"Failed to deactivate infraction #{id_} ({_type})")
+            log.exception(f"Failed to deactivate infraction #{id_} ({type_})")
             log_text["Failure"] = f"HTTPException with code {e.code}."
             log_content = mod_role.mention
 
@@ -361,7 +361,7 @@ class InfractionScheduler(Scheduler):
                 json={"active": False}
             )
         except ResponseCodeError as e:
-            log.exception(f"Failed to deactivate infraction #{id_} ({_type})")
+            log.exception(f"Failed to deactivate infraction #{id_} ({type_})")
             log_line = f"API request failed with code {e.status}."
             log_content = mod_role.mention
 
@@ -381,9 +381,9 @@ class InfractionScheduler(Scheduler):
 
             log.trace(f"Sending deactivation mod log for infraction #{id_}.")
             await self.mod_log.send_log_message(
-                icon_url=utils.INFRACTION_ICONS[_type][1],
+                icon_url=utils.INFRACTION_ICONS[type_][1],
                 colour=Colours.soft_green,
-                title=f"Infraction {log_title}: {_type}",
+                title=f"Infraction {log_title}: {type_}",
                 text="\n".join(f"{k}: {v}" for k, v in log_text.items()),
                 footer=f"ID: {id_}",
                 content=log_content,
