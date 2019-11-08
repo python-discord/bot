@@ -3,8 +3,7 @@ import logging
 from discord import Colour, Embed
 from discord.ext.commands import Bot, Cog, Context, group
 
-from bot.constants import Channels, STAFF_ROLES, URLs
-from bot.decorators import redirect_output
+from bot.constants import URLs
 from bot.pagination import LinePaginator
 
 log = logging.getLogger(__name__)
@@ -105,7 +104,6 @@ class Site(Cog):
         await ctx.send(embed=embed)
 
     @site_group.command(aliases=['r', 'rule'], name='rules')
-    @redirect_output(destination_channel=Channels.bot, bypass_roles=STAFF_ROLES)
     async def site_rules(self, ctx: Context, *rules: int) -> None:
         """Provides a link to all rules or, if specified, displays specific rule(s)."""
         rules_embed = Embed(title='Rules', color=Colour.blurple())

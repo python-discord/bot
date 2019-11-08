@@ -7,14 +7,13 @@ from discord import Color, Embed, Member, User
 from discord.ext.commands import Bot, Cog, Context, group
 
 from bot.api import ResponseCodeError
-from bot.constants import Channels, Guild, Roles, Webhooks
+from bot.constants import Channels, Guild, MODERATION_ROLES, STAFF_ROLES, Webhooks
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
 from bot.utils import time
 from .watchchannel import WatchChannel, proxy_user
 
 log = logging.getLogger(__name__)
-STAFF_ROLES = Roles.owner, Roles.admin, Roles.moderator, Roles.helpers    # <- In constants after the merge?
 
 
 class TalentPool(WatchChannel, Cog, name="Talentpool"):
@@ -31,13 +30,13 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         )
 
     @group(name='talentpool', aliases=('tp', 'talent', 'nomination', 'n'), invoke_without_command=True)
-    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     async def nomination_group(self, ctx: Context) -> None:
         """Highlights the activity of helper nominees by relaying their messages to the talent pool channel."""
         await ctx.invoke(self.bot.get_command("help"), "talentpool")
 
     @nomination_group.command(name='watched', aliases=('all', 'list'))
-    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     async def watched_command(self, ctx: Context, update_cache: bool = True) -> None:
         """
         Shows the users that are currently being monitored in the talent pool.
@@ -48,7 +47,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         await self.list_watched_users(ctx, update_cache)
 
     @nomination_group.command(name='watch', aliases=('w', 'add', 'a'))
-    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    @with_role(*STAFF_ROLES)
     async def watch_command(self, ctx: Context, user: Union[Member, User, proxy_user], *, reason: str) -> None:
         """
         Relay messages sent by the given `user` to the `#talent-pool` channel.
@@ -113,7 +112,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         await ctx.send(msg)
 
     @nomination_group.command(name='history', aliases=('info', 'search'))
-    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     async def history_command(self, ctx: Context, user: Union[User, proxy_user]) -> None:
         """Shows the specified user's nomination history."""
         result = await self.bot.api_client.get(
@@ -142,7 +141,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         )
 
     @nomination_group.command(name='unwatch', aliases=('end', ))
-    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     async def unwatch_command(self, ctx: Context, user: Union[User, proxy_user], *, reason: str) -> None:
         """
         Ends the active nomination of the specified user with the given reason.
@@ -170,13 +169,13 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         self._remove_user(user.id)
 
     @nomination_group.group(name='edit', aliases=('e',), invoke_without_command=True)
-    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     async def nomination_edit_group(self, ctx: Context) -> None:
         """Commands to edit nominations."""
         await ctx.invoke(self.bot.get_command("help"), "talentpool", "edit")
 
     @nomination_edit_group.command(name='reason')
-    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     async def edit_reason_command(self, ctx: Context, nomination_id: int, *, reason: str) -> None:
         """
         Edits the reason/unnominate reason for the nomination with the given `id` depending on the status.

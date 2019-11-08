@@ -15,11 +15,12 @@ log = logging.getLogger(__name__)
 
 # apply icon, pardon icon
 INFRACTION_ICONS = {
-    "mute": (Icons.user_mute, Icons.user_unmute),
-    "kick": (Icons.sign_out, None),
     "ban": (Icons.user_ban, Icons.user_unban),
-    "warning": (Icons.user_warn, None),
+    "kick": (Icons.sign_out, None),
+    "mute": (Icons.user_mute, Icons.user_unmute),
     "note": (Icons.user_warn, None),
+    "superstar": (Icons.superstarify, Icons.unsuperstarify),
+    "warning": (Icons.user_warn, None),
 }
 RULES_URL = "https://pythondiscord.com/pages/rules"
 APPEALABLE_INFRACTIONS = ("ban", "mute")
@@ -126,7 +127,7 @@ async def notify_infraction(
         colour=Colours.soft_red
     )
 
-    embed.set_author(name="Infraction Information", icon_url=icon_url, url=RULES_URL)
+    embed.set_author(name="Infraction information", icon_url=icon_url, url=RULES_URL)
     embed.title = f"Please review our rules over at {RULES_URL}"
     embed.url = RULES_URL
 
