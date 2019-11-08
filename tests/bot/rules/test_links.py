@@ -45,6 +45,7 @@ class LinksTests(unittest.TestCase):
 
         for recent_messages in cases:
             last_message = recent_messages[0]
+
             with self.subTest(
                 last_message=last_message,
                 recent_messages=recent_messages,
