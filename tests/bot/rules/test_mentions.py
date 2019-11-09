@@ -2,24 +2,18 @@ import unittest
 from typing import List, NamedTuple, Tuple
 
 from bot.rules import mentions
-from tests.helpers import async_test
-
-
-class FakeMessage(NamedTuple):
-    author: str
-    mentions: List[int]
+from tests.helpers import MockMessage, async_test
 
 
 class Case(NamedTuple):
-    recent_messages: List[FakeMessage]
-    relevant_messages: Tuple[FakeMessage]
-    culprit: str
+    recent_messages: List[MockMessage, ...]
+    culprit: Tuple[str]
     total_mentions: int
 
 
-def msg(author: str, total_mentions: int) -> FakeMessage:
+def msg(author: str, total_mentions: int) -> MockMessage:
     """Makes a message with `total_mentions` mentions."""
-    return FakeMessage(author=author, mentions=list(range(total_mentions)))
+    return MockMessage(author=author, mentions=list(range(total_mentions)))
 
 
 class TestMentions(unittest.TestCase):
@@ -59,26 +53,28 @@ class TestMentions(unittest.TestCase):
         cases = (
             Case(
                 [msg("bob", 3)],
-                (msg("bob", 3),),
                 ("bob",),
                 3
             ),
             Case(
                 [msg("alice", 2), msg("alice", 0), msg("alice", 1)],
-                (msg("alice", 2), msg("alice", 0), msg("alice", 1)),
                 ("alice",),
                 3
             ),
             Case(
                 [msg("bob", 2), msg("alice", 3), msg("bob", 2)],
-                (msg("bob", 2), msg("bob", 2)),
                 ("bob",),
                 4
             )
         )
 
-        for recent_messages, relevant_messages, culprit, total_mentions in cases:
+        for recent_messages, culprit, total_mentions in cases:
             last_message = recent_messages[0]
+            relevant_messages = tuple(
+                msg
+                for msg in recent_messages
+                if msg.author == last_message.author
+            )
 
             with self.subTest(
                 last_message=last_message,
