@@ -18,7 +18,7 @@ class Case(NamedTuple):
 
 
 def msg(author: str, total_links: int) -> FakeMessage:
-    """Makes a message with *total_links* links."""
+    """Makes a message with `total_links` links."""
     content = " ".join(["https://pydis.com"] * total_links)
     return FakeMessage(author=author, content=content)
 
