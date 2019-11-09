@@ -6,7 +6,7 @@ from tests.helpers import MockMessage, async_test
 
 
 class Case(NamedTuple):
-    recent_messages: List[MockMessage, ...]
+    recent_messages: List[MockMessage]
     culprit: Tuple[str]
     total_mentions: int
 
