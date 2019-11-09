@@ -19,7 +19,7 @@ class Case(NamedTuple):
 
 def msg(author: str, total_mentions: int) -> FakeMessage:
     """Makes a message with `total_mentions` mentions."""
-    return FakeMessage(author=author, mentions=[None] * total_mentions)
+    return FakeMessage(author=author, mentions=list(range(total_mentions)))
 
 
 class TestMentions(unittest.TestCase):
