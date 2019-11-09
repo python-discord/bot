@@ -7,7 +7,7 @@ from tests.helpers import async_test
 
 class FakeMessage(NamedTuple):
     author: str
-    mentions: List[None]
+    mentions: List[int]
 
 
 class Case(NamedTuple):
