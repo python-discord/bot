@@ -447,6 +447,28 @@ class Doc(commands.Cog):
             await self.refresh_inventory()
         await ctx.send(f"Successfully deleted `{package_name}` and refreshed inventory.")
 
+    @docs_group.command(name="refresh", aliases=("rfsh", "r"))
+    @with_role(*MODERATION_ROLES)
+    async def refresh_command(self, ctx: commands.Context) -> None:
+        """Refresh inventories and send differences to channel."""
+        old_inventories = set(self.base_urls)
+        with ctx.typing():
+            await self.refresh_inventory()
+        # Get differences of added and removed inventories
+        added = ', '.join(inv for inv in self.base_urls if inv not in old_inventories)
+        if added:
+            added = f"`+ {added}`"
+
+        removed = ', '.join(inv for inv in old_inventories if inv not in self.base_urls)
+        if removed:
+            removed = f"`- {removed}`"
+
+        embed = discord.Embed(
+            title="Inventories refreshed",
+            description=f"{added}\n{removed}" if added or removed else ""
+        )
+        await ctx.send(embed=embed)
+
     async def _fetch_inventory(self, inventory_url: str, config: SphinxConfiguration) -> Optional[dict]:
         """Get and return inventory from `inventory_url`. If fetching fails, return None."""
         fetch_func = functools.partial(intersphinx.fetch_inventory, config, '', inventory_url)
