@@ -304,7 +304,7 @@ class Doc(commands.Cog):
         # of a double newline (interpreted as a paragraph) before index 1000.
         if len(description) > 1000:
             shortened = description[:1000]
-            last_paragraph_end = shortened.rfind('\n\n')
+            last_paragraph_end = shortened.rfind('\n\n', 100)
             if last_paragraph_end == -1:
                 last_paragraph_end = 1000
             description = description[:last_paragraph_end]
