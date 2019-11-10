@@ -271,19 +271,19 @@ class Doc(commands.Cog):
 
             description_start_index = search_html.find(str(start_tag.parent)) + len(str(start_tag.parent))
             description_end_index = search_html.find(str(end_tag))
-            description = search_html[description_start_index:description_end_index].replace('¶', '')
+            description = search_html[description_start_index:description_end_index]
             signatures = None
 
         else:
-            description = str(symbol_heading.find_next_sibling("dd")).replace('¶', '')
+            description = str(symbol_heading.find_next_sibling("dd"))
             description_pos = search_html.find(description)
             # Get text of up to 3 signatures, remove unwanted symbols
             for element in [symbol_heading] + symbol_heading.find_next_siblings("dt", limit=2):
                 signature = UNWANTED_SIGNATURE_SYMBOLS_RE.sub("", element.text)
-                if signature and search_html.find(signature) < description_pos:
+                if signature and search_html.find(str(element)) < description_pos:
                     signatures.append(signature)
 
-        return signatures, description
+        return signatures, description.replace('¶', '')
 
     @async_cache(arg_offset=1)
     async def get_symbol_embed(self, symbol: str) -> Optional[discord.Embed]:
