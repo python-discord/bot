@@ -326,7 +326,7 @@ class Doc(commands.Cog):
 
         else:
             embed_description = "".join(f"```py\n{textwrap.shorten(signature, 500)}```" for signature in signatures)
-            embed_description += description
+            embed_description += f"\n{description}"
 
         embed = discord.Embed(
             title=f'`{symbol}`',
