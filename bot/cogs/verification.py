@@ -1,12 +1,16 @@
 import logging
 from datetime import datetime
 
-from discord import Message, NotFound, Object
+from discord import Colour, Message, NotFound, Object
 from discord.ext import tasks
 from discord.ext.commands import Bot, Cog, Context, command
 
 from bot.cogs.moderation import ModLog
-from bot.constants import Bot as BotConfig, Channels, Event, Roles
+from bot.constants import (
+    Bot as BotConfig,
+    Channels, Colours, Event,
+    Filter, Icons, Roles
+)
 from bot.decorators import InChannelCheckFailure, in_channel, without_role
 
 log = logging.getLogger(__name__)
@@ -52,6 +56,34 @@ class Verification(Cog):
         """Check new message event for messages to the checkpoint channel & process."""
         if message.author.bot:
             return  # They're a bot, ignore
+
+        if message.channel.id != Channels.verification:
+            return  # Only listen for #checkpoint messages
+
+        # if a user mentions a role or guild member
+        # alert the mods in mod-alerts channel
+        if message.mentions or message.role_mentions:
+            log.debug(
+                f"{message.author} mentioned one or more users "
+                f"and/or roles in {message.channel.name}"
+            )
+
+            embed_text = (
+                f"{message.author.mention} sent a message in "
+                f"{message.channel.mention} that contained user and/or role mentions."
+                f"\n\n**Original message:**\n>>> {message.content}"
+            )
+
+            # Send pretty mod log embed to mod-alerts
+            await self.mod_log.send_log_message(
+                icon_url=Icons.filtering,
+                colour=Colour(Colours.soft_red),
+                title=f"User/Role mentioned in {message.channel.name}",
+                text=embed_text,
+                thumbnail=message.author.avatar_url_as(static_format="png"),
+                channel_id=Channels.mod_alerts,
+                ping_everyone=Filter.ping_everyone,
+            )
 
         ctx = await self.bot.get_context(message)  # type: Context
 
