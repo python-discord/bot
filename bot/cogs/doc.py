@@ -305,6 +305,8 @@ class Doc(commands.Cog):
         if len(description) > 1000:
             shortened = description[:1000]
             last_paragraph_end = shortened.rfind('\n\n')
+            if last_paragraph_end == -1:
+                last_paragraph_end = 1000
             description = description[:last_paragraph_end]
 
             # If there is an incomplete code block, cut it out
