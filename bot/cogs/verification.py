@@ -90,27 +90,26 @@ class Verification(Cog):
         if ctx.command is not None and ctx.command.name == "accept":
             return  # They used the accept command
 
-        if ctx.channel.id == Channels.verification:  # We're in the verification channel
-            for role in ctx.author.roles:
-                if role.id == Roles.verified:
-                    log.warning(f"{ctx.author} posted '{ctx.message.content}' "
-                                "in the verification channel, but is already verified.")
-                    return  # They're already verified
+        for role in ctx.author.roles:
+            if role.id == Roles.verified:
+                log.warning(f"{ctx.author} posted '{ctx.message.content}' "
+                            "in the verification channel, but is already verified.")
+                return  # They're already verified
 
-            log.debug(f"{ctx.author} posted '{ctx.message.content}' in the verification "
-                      "channel. We are providing instructions how to verify.")
-            await ctx.send(
-                f"{ctx.author.mention} Please type `!accept` to verify that you accept our rules, "
-                f"and gain access to the rest of the server.",
-                delete_after=20
-            )
+        log.debug(f"{ctx.author} posted '{ctx.message.content}' in the verification "
+                  "channel. We are providing instructions how to verify.")
+        await ctx.send(
+            f"{ctx.author.mention} Please type `!accept` to verify that you accept our rules, "
+            f"and gain access to the rest of the server.",
+            delete_after=20
+        )
 
-            log.trace(f"Deleting the message posted by {ctx.author}")
+        log.trace(f"Deleting the message posted by {ctx.author}")
 
-            try:
-                await ctx.message.delete()
-            except NotFound:
-                log.trace("No message found, it must have been deleted by another bot.")
+        try:
+            await ctx.message.delete()
+        except NotFound:
+            log.trace("No message found, it must have been deleted by another bot.")
 
     @command(name='accept', aliases=('verify', 'verified', 'accepted'), hidden=True)
     @without_role(Roles.verified)
