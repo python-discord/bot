@@ -216,6 +216,7 @@ class Doc(commands.Cog):
         # Also, reset the cache used for fetching documentation.
         self.base_urls.clear()
         self.inventories.clear()
+        self.renamed_symbols.clear()
         async_cache.cache = OrderedDict()
 
         # Since Intersphinx is intended to be used with Sphinx,
