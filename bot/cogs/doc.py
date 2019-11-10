@@ -252,7 +252,6 @@ class Doc(commands.Cog):
         symbol_id = url.split('#')[-1]
         soup = BeautifulSoup(html, 'lxml')
         symbol_heading = soup.find(id=symbol_id)
-        signatures = []
         search_html = str(soup)
 
         if symbol_heading is None:
@@ -275,6 +274,7 @@ class Doc(commands.Cog):
             signatures = None
 
         else:
+            signatures = []
             description = str(symbol_heading.find_next_sibling("dd"))
             description_pos = search_html.find(description)
             # Get text of up to 3 signatures, remove unwanted symbols
