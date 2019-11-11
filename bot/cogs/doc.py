@@ -458,15 +458,15 @@ class Doc(commands.Cog):
         # Get differences of added and removed inventories
         added = ', '.join(inv for inv in self.base_urls if inv not in old_inventories)
         if added:
-            added = f"`+ {added}`"
+            added = f"+ {added}"
 
         removed = ', '.join(inv for inv in old_inventories if inv not in self.base_urls)
         if removed:
-            removed = f"`- {removed}`"
+            removed = f"- {removed}"
 
         embed = discord.Embed(
             title="Inventories refreshed",
-            description=f"{added}\n{removed}" if added or removed else ""
+            description=f"```diff\n{added}\n{removed}```" if added or removed else ""
         )
         await ctx.send(embed=embed)
 
