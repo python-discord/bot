@@ -102,8 +102,30 @@ class AsyncMock(CustomMockMixin, unittest.mock.MagicMock):
     Python 3.8 will introduce an AsyncMock class in the standard library that will have some more
     features; this stand-in only overwrites the `__call__` method to an async version.
     """
+
     async def __call__(self, *args, **kwargs):
-        return super(AsyncMock, self).__call__(*args, **kwargs)
+        return super().__call__(*args, **kwargs)
+
+
+class AsyncIteratorMock:
+    """
+    A class to mock asyncronous iterators.
+
+    This allows async for, which is used in certain Discord.py objects. For example,
+    an async iterator is returned by the Reaction.users() coroutine.
+    """
+
+    def __init__(self, sequence):
+        self.iter = iter(sequence)
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        try:
+            return next(self.iter)
+        except StopIteration:
+            raise StopAsyncIteration
 
 
 # Create a guild instance to get a realistic Mock of `discord.Guild`
@@ -155,6 +177,7 @@ class MockGuild(CustomMockMixin, unittest.mock.Mock, HashableMixin):
 
     For more info, see the `Mocking` section in `tests/README.md`.
     """
+
     def __init__(
         self,
         guild_id: int = 1,
@@ -187,6 +210,7 @@ class MockRole(CustomMockMixin, unittest.mock.Mock, ColourMixin, HashableMixin):
     Instances of this class will follow the specifications of `discord.Role` instances. For more
     information, see the `MockGuild` docstring.
     """
+
     def __init__(self, name: str = "role", role_id: int = 1, position: int = 1, **kwargs) -> None:
         super().__init__(spec=role_instance, **kwargs)
 
@@ -213,6 +237,7 @@ class MockMember(CustomMockMixin, unittest.mock.Mock, ColourMixin, HashableMixin
     Instances of this class will follow the specifications of `discord.Member` instances. For more
     information, see the `MockGuild` docstring.
     """
+
     def __init__(
         self,
         name: str = "member",
@@ -243,6 +268,7 @@ class MockBot(CustomMockMixin, unittest.mock.MagicMock):
     Instances of this class will follow the specifications of `discord.ext.commands.Bot` instances.
     For more information, see the `MockGuild` docstring.
     """
+
     def __init__(self, **kwargs) -> None:
         super().__init__(spec=bot_instance, **kwargs)
 
@@ -279,6 +305,7 @@ class MockTextChannel(CustomMockMixin, unittest.mock.Mock, HashableMixin):
     Instances of this class will follow the specifications of `discord.TextChannel` instances. For
     more information, see the `MockGuild` docstring.
     """
+
     def __init__(self, name: str = 'channel', channel_id: int = 1, **kwargs) -> None:
         super().__init__(spec=channel_instance, **kwargs)
         self.id = channel_id
@@ -320,6 +347,7 @@ class MockContext(CustomMockMixin, unittest.mock.MagicMock):
     Instances of this class will follow the specifications of `discord.ext.commands.Context`
     instances. For more information, see the `MockGuild` docstring.
     """
+
     def __init__(self, **kwargs) -> None:
         super().__init__(spec=context_instance, **kwargs)
         self.bot = kwargs.get('bot', MockBot())
@@ -336,6 +364,7 @@ class MockMessage(CustomMockMixin, unittest.mock.MagicMock):
     Instances of this class will follow the specifications of `discord.Message` instances. For more
     information, see the `MockGuild` docstring.
     """
+
     def __init__(self, **kwargs) -> None:
         super().__init__(spec=message_instance, **kwargs)
         self.author = kwargs.get('author', MockMember())
@@ -353,6 +382,7 @@ class MockEmoji(CustomMockMixin, unittest.mock.MagicMock):
     Instances of this class will follow the specifications of `discord.Emoji` instances. For more
     information, see the `MockGuild` docstring.
     """
+
     def __init__(self, **kwargs) -> None:
         super().__init__(spec=emoji_instance, **kwargs)
         self.guild = kwargs.get('guild', MockGuild())
@@ -371,6 +401,7 @@ class MockPartialEmoji(CustomMockMixin, unittest.mock.MagicMock):
     Instances of this class will follow the specifications of `discord.PartialEmoji` instances. For
     more information, see the `MockGuild` docstring.
     """
+
     def __init__(self, **kwargs) -> None:
         super().__init__(spec=partial_emoji_instance, **kwargs)
 
@@ -385,7 +416,12 @@ class MockReaction(CustomMockMixin, unittest.mock.MagicMock):
     Instances of this class will follow the specifications of `discord.Reaction` instances. For
     more information, see the `MockGuild` docstring.
     """
+
     def __init__(self, **kwargs) -> None:
         super().__init__(spec=reaction_instance, **kwargs)
         self.emoji = kwargs.get('emoji', MockEmoji())
         self.message = kwargs.get('message', MockMessage())
+        self.user_list = AsyncIteratorMock(kwargs.get('user_list', []))
+
+    def users(self):
+        return self.user_list
