@@ -20,6 +20,10 @@ class DuckPondTest(unittest.TestCase):
         constants.DuckPond.custom_emojis = (789,)
         constants.DuckPond.threshold = 1
 
+        # Mock bot.get_all_channels()
+        CHANNEL_ID = 555
+        USER_ID = 666
+
         # Set up some roles
         self.admin_role = MockRole(name="Admins", role_id=123)
         self.contrib_role = MockRole(name="Contributor", role_id=456)
@@ -63,7 +67,12 @@ class DuckPondTest(unittest.TestCase):
         self.thumbs_up_message = MockMessage(reactions=(self.thumbs_up_reaction,))
         self.yellow_ducky_message = MockMessage(reactions=(self.yellow_ducky_reaction,))
         self.unicode_duck_message = MockMessage(reactions=(self.unicode_duck_reaction_1,))
-        self.double_duck_message = MockMessage(reactions=(self.unicode_duck_reaction_1, self.unicode_duck_reaction_2))
+        self.double_unicode_duck_message = MockMessage(
+            reactions=(self.unicode_duck_reaction_1, self.unicode_duck_reaction_2)
+        )
+        self.double_mixed_duck_message = MockMessage(
+            reactions=(self.unicode_duck_reaction_1, self.yellow_ducky_reaction)
+        )
         self.no_reaction_message = MockMessage()
 
     def test_is_staff_correctly_identifies_staff(self):
@@ -81,27 +90,28 @@ class DuckPondTest(unittest.TestCase):
             self.assertFalse(self.cog.has_green_checkmark(self.no_reaction_message))
 
     def test_count_custom_duck_emojis(self):
-        """A string decoding to numeric characters is a valid user ID."""
-        count_one_duck = self.cog.count_ducks(self.yellow_ducky_message)
+        """Test that count_ducks counts custom ducks correctly."""
         count_no_ducks = self.cog.count_ducks(self.thumbs_up_message)
+        count_one_duck = self.cog.count_ducks(self.yellow_ducky_message)
         with self.subTest():
-            self.assertEqual(asyncio.run(count_one_duck), 1)
             self.assertEqual(asyncio.run(count_no_ducks), 0)
+            self.assertEqual(asyncio.run(count_one_duck), 1)
 
     def test_count_unicode_duck_emojis(self):
-        """A string decoding to numeric characters is a valid user ID."""
-        count_no_ducks = self.cog.count_ducks(self.thumbs_up_message)
+        """Test that count_ducks counts unicode ducks correctly."""
         count_one_duck = self.cog.count_ducks(self.unicode_duck_message)
-        count_two_ducks = self.cog.count_ducks(self.double_duck_message)
+        count_two_ducks = self.cog.count_ducks(self.double_unicode_duck_message)
 
         with self.subTest():
-            self.assertEqual(asyncio.run(count_no_ducks), 0)
             self.assertEqual(asyncio.run(count_one_duck), 1)
             self.assertEqual(asyncio.run(count_two_ducks), 2)
 
     def test_count_mixed_duck_emojis(self):
-        """A string decoding to numeric characters is a valid user ID."""
-        pass
+        """Test that count_ducks counts mixed ducks correctly."""
+        count_two_ducks = self.cog.count_ducks(self.double_mixed_duck_message)
+
+        with self.subTest():
+            self.assertEqual(asyncio.run(count_two_ducks), 2)
 
     def test_raw_reaction_add_rejects_bot(self):
         """A string decoding to numeric characters is a valid user ID."""
