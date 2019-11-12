@@ -176,36 +176,34 @@ class Doc(commands.Cog):
         self.base_urls[package_name] = base_url
 
         package = await self._fetch_inventory(inventory_url, config)
-        if package:
-            for group, value in package.items():
-                # Each value has a bunch of information in the form
-                # `(package_name, version, relative_url, ???)`, and we only
-                # need the package_name and the relative documentation URL.
-                for symbol, (package_name, _, relative_doc_url, _) in value.items():
-                    absolute_doc_url = base_url + relative_doc_url
+        if not package:
+            return None
 
-                    if symbol in self.inventories:
-                        # get `group_name` from _:group_name
-                        group_name = group.split(":")[1]
-                        if (group_name in NO_OVERRIDE_GROUPS
-                                # check if any package from `NO_OVERRIDE_PACKAGES`
-                                # is in base URL of the symbol that would be overridden
-                                or any(package in self.inventories[symbol].split("/", 3)[2]
-                                       for package in NO_OVERRIDE_PACKAGES)):
+        for group, value in package.items():
+            for symbol, (package_name, _, relative_doc_url, _) in value.items():
+                absolute_doc_url = base_url + relative_doc_url
 
-                            symbol = f"{group_name}.{symbol}"
-                            # If renamed `symbol` already exists, add library name in front.
-                            if symbol in self.renamed_symbols:
-                                # Split `package_name` because of packages like Pillow that have spaces in them.
-                                symbol = f"{package_name.split()[0]}.{symbol}"
+                if symbol in self.inventories:
+                    group_name = group.split(":")[1]
+                    symbol_base_url = self.inventories[symbol].split("/", 3)[2]
+                    if (
+                        group_name in NO_OVERRIDE_GROUPS
+                        or any(package in symbol_base_url for package in NO_OVERRIDE_PACKAGES)
+                    ):
 
-                            self.inventories[symbol] = absolute_doc_url
-                            self.renamed_symbols.add(symbol)
-                            continue
+                        symbol = f"{group_name}.{symbol}"
+                        # If renamed `symbol` already exists, add library name in front to differentiate between them.
+                        if symbol in self.renamed_symbols:
+                            # Split `package_name` because of packages like Pillow that have spaces in them.
+                            symbol = f"{package_name.split()[0]}.{symbol}"
 
-                    self.inventories[symbol] = absolute_doc_url
+                        self.inventories[symbol] = absolute_doc_url
+                        self.renamed_symbols.add(symbol)
+                        continue
 
-            log.trace(f"Fetched inventory for {package_name}.")
+                self.inventories[symbol] = absolute_doc_url
+
+        log.trace(f"Fetched inventory for {package_name}.")
 
     async def refresh_inventory(self) -> None:
         """Refresh internal documentation inventory."""
@@ -337,9 +335,10 @@ class Doc(commands.Cog):
             description=embed_description
         )
         # Show all symbols with the same name that were renamed in the footer.
-        embed.set_footer(text=", ".join(renamed for renamed in self.renamed_symbols - {symbol}
-                                        if renamed.endswith(f".{symbol}"))
-                         )
+        embed.set_footer(
+            text=", ".join(renamed for renamed in self.renamed_symbols - {symbol}
+                           if renamed.endswith(f".{symbol}"))
+        )
         return embed
 
     @commands.group(name='docs', aliases=('doc', 'd'), invoke_without_command=True)
@@ -477,11 +476,15 @@ class Doc(commands.Cog):
             try:
                 package = await self.bot.loop.run_in_executor(None, fetch_func)
             except ConnectTimeout:
-                log.error(f"Fetching of inventory {inventory_url} timed out,"
-                          f" trying again. ({retry}/{FAILED_REQUEST_RETRY_AMOUNT})")
+                log.error(
+                    f"Fetching of inventory {inventory_url} timed out,"
+                    f" trying again. ({retry}/{FAILED_REQUEST_RETRY_AMOUNT})"
+                )
             except ProtocolError:
-                log.error(f"Connection lost while fetching inventory {inventory_url},"
-                          f" trying again. ({retry}/{FAILED_REQUEST_RETRY_AMOUNT})")
+                log.error(
+                    f"Connection lost while fetching inventory {inventory_url},"
+                    f" trying again. ({retry}/{FAILED_REQUEST_RETRY_AMOUNT})"
+                )
             except HTTPError as e:
                 log.error(f"Fetching of inventory {inventory_url} failed with status code {e.response.status_code}.")
                 return None
