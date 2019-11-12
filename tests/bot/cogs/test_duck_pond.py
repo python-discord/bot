@@ -1,10 +1,11 @@
 import asyncio
 import logging
 import unittest
+from unittest.mock import MagicMock
 
 from bot import constants
 from bot.cogs import duck_pond
-from tests.helpers import MockBot, MockEmoji, MockMember, MockMessage, MockReaction, MockRole
+from tests.helpers import MockBot, MockEmoji, MockMember, MockMessage, MockReaction, MockRole, MockTextChannel
 
 
 class DuckPondTest(unittest.TestCase):
@@ -15,23 +16,27 @@ class DuckPondTest(unittest.TestCase):
         self.bot = MockBot()
         self.cog = duck_pond.DuckPond(bot=self.bot)
 
+        # Set up some constants
+        self.CHANNEL_ID = 555
+        self.MESSAGE_ID = 666
+        self.BOT_ID = 777
+        self.CONTRIB_ID = 888
+        self.ADMIN_ID = 999
+
         # Override the constants we'll be needing
         constants.STAFF_ROLES = (123,)
         constants.DuckPond.custom_emojis = (789,)
         constants.DuckPond.threshold = 1
-
-        # Mock bot.get_all_channels()
-        CHANNEL_ID = 555
-        USER_ID = 666
 
         # Set up some roles
         self.admin_role = MockRole(name="Admins", role_id=123)
         self.contrib_role = MockRole(name="Contributor", role_id=456)
 
         # Set up some users
-        self.admin_member_1 = MockMember(roles=(self.admin_role,), id=1)
-        self.admin_member_2 = MockMember(roles=(self.admin_role,), id=2)
-        self.contrib_member = MockMember(roles=(self.contrib_role,))
+        self.admin_member_1 = MockMember(roles=(self.admin_role,), id=self.ADMIN_ID)
+        self.admin_member_2 = MockMember(roles=(self.admin_role,), id=911)
+        self.contrib_member = MockMember(roles=(self.contrib_role,), id=self.CONTRIB_ID)
+        self.bot_member = MockMember(roles=(self.contrib_role,), id=self.BOT_ID, bot=True)
         self.no_role_member = MockMember()
 
         # Set up emojis
@@ -61,6 +66,14 @@ class DuckPondTest(unittest.TestCase):
             emoji=self.unicode_duck_emoji,
             user_list=[self.admin_member_2]
         )
+        self.bot_reaction = MockReaction(
+            emoji=self.yellow_ducky_emoji,
+            user_list=[self.bot_member]
+        )
+        self.contrib_reaction = MockReaction(
+            emoji=self.yellow_ducky_emoji,
+            user_list=[self.contrib_member]
+        )
 
         # Set up a messages
         self.checkmark_message = MockMessage(reactions=(self.checkmark_reaction,))
@@ -73,7 +86,17 @@ class DuckPondTest(unittest.TestCase):
         self.double_mixed_duck_message = MockMessage(
             reactions=(self.unicode_duck_reaction_1, self.yellow_ducky_reaction)
         )
+
+        self.bot_message = MockMessage(reactions=(self.bot_reaction,))
+        self.contrib_message = MockMessage(reactions=(self.contrib_reaction,))
         self.no_reaction_message = MockMessage()
+
+        # Set up some channels
+        self.text_channel = MockTextChannel(id=self.CHANNEL_ID)
+
+    @staticmethod
+    def _mock_send_webhook(content, username, avatar_url, embed):
+        """Mock for the send_webhook method in DuckPond"""
 
     def test_is_staff_correctly_identifies_staff(self):
         """Test that is_staff correctly identifies a staff member."""
@@ -114,16 +137,49 @@ class DuckPondTest(unittest.TestCase):
             self.assertEqual(asyncio.run(count_two_ducks), 2)
 
     def test_raw_reaction_add_rejects_bot(self):
-        """A string decoding to numeric characters is a valid user ID."""
-        pass
+        """Test that send_webhook is not called if the user is a bot."""
+        self.text_channel.fetch_message.return_value = self.bot_message
+        self.bot.get_all_channels.return_value = (self.text_channel,)
+
+        payload = MagicMock(  # RawReactionActionEvent
+            channel_id=self.CHANNEL_ID,
+            message_id=self.MESSAGE_ID,
+            user_id=self.BOT_ID,
+        )
+
+        with self.subTest():
+            asyncio.run(self.cog.on_raw_reaction_add(payload))
+            self.bot.cog.send_webhook.assert_not_called()
 
     def test_raw_reaction_add_rejects_non_staff(self):
-        """A string decoding to numeric characters is a valid user ID."""
-        pass
+        """Test that send_webhook is not called if the user is not a member of staff."""
+        self.text_channel.fetch_message.return_value = self.contrib_message
+        self.bot.get_all_channels.return_value = (self.text_channel,)
+
+        payload = MagicMock(  # RawReactionActionEvent
+            channel_id=self.CHANNEL_ID,
+            message_id=self.MESSAGE_ID,
+            user_id=self.CONTRIB_ID,
+        )
+
+        with self.subTest():
+            asyncio.run(self.cog.on_raw_reaction_add(payload))
+            self.bot.cog.send_webhook.assert_not_called()
 
     def test_raw_reaction_add_sends_message_on_valid_input(self):
-        """A string decoding to numeric characters is a valid user ID."""
-        pass
+        """Test that send_webhook is called if payload is valid."""
+        self.text_channel.fetch_message.return_value = self.unicode_duck_message
+        self.bot.get_all_channels.return_value = (self.text_channel,)
+
+        payload = MagicMock(  # RawReactionActionEvent
+            channel_id=self.CHANNEL_ID,
+            message_id=self.MESSAGE_ID,
+            user_id=self.ADMIN_ID,
+        )
+
+        with self.subTest():
+            asyncio.run(self.cog.on_raw_reaction_add(payload))
+            self.bot.cog.send_webhook.assert_called_once()
 
     def test_raw_reaction_remove_rejects_non_checkmarks(self):
         """A string decoding to numeric characters is a valid user ID."""
