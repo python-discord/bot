@@ -3,11 +3,22 @@ from __future__ import annotations
 import asyncio
 import functools
 import inspect
+import logging
 import unittest.mock
 from typing import Any, Iterable, Optional
 
 import discord
 from discord.ext.commands import Bot, Context
+
+
+for logger in logging.Logger.manager.loggerDict.values():
+    # Set all loggers to CRITICAL by default to prevent screen clutter during testing
+
+    if not isinstance(logger, logging.Logger):
+        # There might be some logging.PlaceHolder objects in there
+        continue
+
+    logger.setLevel(logging.CRITICAL)
 
 
 def async_test(wrapped):
