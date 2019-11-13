@@ -639,39 +639,42 @@ class ModLog(Cog, name="ModLog"):
         channel = before.channel
         channel_name = f"{channel.category}/#{channel.name}" if channel.category else f"#{channel.name}"
 
-        _before = before.clean_content
-        _after = after.clean_content
-
         # Getting the difference per words and group them by type - add, remove, same
         # Note that this is intended grouping without sorting
-        diff = difflib.ndiff(_before.split(), _after.split())
+        diff = difflib.ndiff(before.clean_content.split(), after.clean_content.split())
         diff_groups = tuple(
             (diff_type, tuple(s[2:] for s in diff_words))
             for diff_type, diff_words in itertools.groupby(diff, key=lambda s: s[0])
         )
 
+        _before = []
+        _after = []
+
         for index, (diff_type, words) in enumerate(diff_groups):
             sub = ' '.join(words)
             if diff_type == '-':
-                _before = _before.replace(sub, f"[{sub}](http://o.hi)")
+                _before.append(f"[{sub}](http://o.hi)")
             elif diff_type == '+':
-                _after = _after.replace(sub, f"[{sub}](http://o.hi)")
+                _after.append(f"[{sub}](http://o.hi)")
             elif len(words) > 2:
                 new = (
                     f"{words[0] if index > 0 else ''}"
                     " ... "
                     f"{words[-1] if index < len(diff_groups) - 1 else ''}"
                 )
-                _before = _before.replace(sub, new)
-                _after = _after.replace(sub, new)
+                _before.append(new)
+                _after.append(new)
+            elif diff_type == ' ':
+                _before.append(sub)
+                _after.append(sub)
 
         response = (
             f"**Author:** {author} (`{author.id}`)\n"
             f"**Channel:** {channel_name} (`{channel.id}`)\n"
             f"**Message ID:** `{before.id}`\n"
             "\n"
-            f"**Before**:\n{_before}\n"
-            f"**After**:\n{_after}\n"
+            f"**Before**:\n{' '.join(_before)}\n"
+            f"**After**:\n{' '.join(_after)}\n"
             "\n"
             f"[jump to message]({after.jump_url})"
         )
