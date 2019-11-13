@@ -19,7 +19,6 @@ class DiscordMocksTests(unittest.TestCase):
         self.assertIsInstance(role, discord.Role)
 
         self.assertEqual(role.name, "role")
-        self.assertEqual(role.id, 1)
         self.assertEqual(role.position, 1)
         self.assertEqual(role.mention, "&role")
 
@@ -27,7 +26,7 @@ class DiscordMocksTests(unittest.TestCase):
         """Test if MockRole initializes with the arguments provided."""
         role = helpers.MockRole(
             name="Admins",
-            role_id=90210,
+            id=90210,
             position=10,
         )
 
@@ -67,22 +66,21 @@ class DiscordMocksTests(unittest.TestCase):
         self.assertIsInstance(member, discord.Member)
 
         self.assertEqual(member.name, "member")
-        self.assertEqual(member.id, 1)
-        self.assertListEqual(member.roles, [helpers.MockRole("@everyone", 1)])
+        self.assertListEqual(member.roles, [helpers.MockRole(name="@everyone", position=1, id=0)])
         self.assertEqual(member.mention, "@member")
 
     def test_mock_member_alternative_arguments(self):
         """Test if MockMember initializes with the arguments provided."""
-        core_developer = helpers.MockRole("Core Developer", 2)
+        core_developer = helpers.MockRole(name="Core Developer", position=2)
         member = helpers.MockMember(
             name="Mark",
-            user_id=12345,
+            id=12345,
             roles=[core_developer]
         )
 
         self.assertEqual(member.name, "Mark")
         self.assertEqual(member.id, 12345)
-        self.assertListEqual(member.roles, [helpers.MockRole("@everyone", 1), core_developer])
+        self.assertListEqual(member.roles, [helpers.MockRole(name="@everyone", position=1, id=0), core_developer])
         self.assertEqual(member.mention, "@Mark")
 
     def test_mock_member_accepts_dynamic_arguments(self):
@@ -102,19 +100,19 @@ class DiscordMocksTests(unittest.TestCase):
         # The `spec` argument makes sure `isistance` checks with `discord.Guild` pass
         self.assertIsInstance(guild, discord.Guild)
 
-        self.assertListEqual(guild.roles, [helpers.MockRole("@everyone", 1)])
+        self.assertListEqual(guild.roles, [helpers.MockRole(name="@everyone", position=1, id=0)])
         self.assertListEqual(guild.members, [])
 
     def test_mock_guild_alternative_arguments(self):
         """Test if MockGuild initializes with the arguments provided."""
-        core_developer = helpers.MockRole("Core Developer", 2)
+        core_developer = helpers.MockRole(name="Core Developer", position=2)
         guild = helpers.MockGuild(
             roles=[core_developer],
-            members=[helpers.MockMember(user_id=54321)],
+            members=[helpers.MockMember(id=54321)],
         )
 
-        self.assertListEqual(guild.roles, [helpers.MockRole("@everyone", 1), core_developer])
-        self.assertListEqual(guild.members, [helpers.MockMember(user_id=54321)])
+        self.assertListEqual(guild.roles, [helpers.MockRole(name="@everyone", position=1, id=0), core_developer])
+        self.assertListEqual(guild.members, [helpers.MockMember(id=54321)])
 
     def test_mock_guild_accepts_dynamic_arguments(self):
         """Test if MockGuild accepts and sets abitrary keyword arguments."""
@@ -191,51 +189,18 @@ class DiscordMocksTests(unittest.TestCase):
                 with self.assertRaises(AttributeError):
                     mock.the_cake_is_a_lie
 
-    def test_custom_mock_methods_are_valid_discord_object_methods(self):
-        """The `AsyncMock` attributes of the mocks should be valid for the class they're mocking."""
-        mocks = (
-            (helpers.MockGuild, helpers.guild_instance),
-            (helpers.MockRole, helpers.role_instance),
-            (helpers.MockMember, helpers.member_instance),
-            (helpers.MockBot, helpers.bot_instance),
-            (helpers.MockContext, helpers.context_instance),
-            (helpers.MockTextChannel, helpers.channel_instance),
-            (helpers.MockMessage, helpers.message_instance),
+    def test_mocks_use_mention_when_provided_as_kwarg(self):
+        """The mock should use the passed `mention` instead of the default one if present."""
+        test_cases = (
+            (helpers.MockRole, "role mention"),
+            (helpers.MockMember, "member mention"),
+            (helpers.MockTextChannel, "channel mention"),
         )
 
-        for mock_class, instance in mocks:
-            mock = mock_class()
-            async_methods = (
-                attr for attr in dir(mock) if isinstance(getattr(mock, attr), helpers.AsyncMock)
-            )
-
-            # spec_mock = unittest.mock.MagicMock(spec=instance)
-            for method in async_methods:
-                with self.subTest(mock_class=mock_class, method=method):
-                    try:
-                        getattr(instance, method)
-                    except AttributeError:
-                        msg = f"method {method} is not a method attribute of {instance.__class__}"
-                        self.fail(msg)
-
-    @unittest.mock.patch(f'{__name__}.DiscordMocksTests.subTest')
-    def test_the_custom_mock_methods_test(self, subtest_mock):
-        """The custom method test should raise AssertionError for invalid methods."""
-        class FakeMockBot(helpers.CustomMockMixin, unittest.mock.MagicMock):
-            """Fake MockBot class with invalid attribute/method `release_the_walrus`."""
-
-            child_mock_type = unittest.mock.MagicMock
-
-            def __init__(self, **kwargs):
-                super().__init__(spec=helpers.bot_instance, **kwargs)
-
-                # Fake attribute
-                self.release_the_walrus = helpers.AsyncMock()
-
-        with unittest.mock.patch("tests.helpers.MockBot", new=FakeMockBot):
-            msg = "method release_the_walrus is not a valid method of <class 'discord.ext.commands.bot.Bot'>"
-            with self.assertRaises(AssertionError, msg=msg):
-                self.test_custom_mock_methods_are_valid_discord_object_methods()
+        for mock_type, mention in test_cases:
+            with self.subTest(mock_type=mock_type, mention=mention):
+                mock = mock_type(mention=mention)
+                self.assertEqual(mock.mention, mention)
 
 
 class MockObjectTests(unittest.TestCase):
@@ -266,14 +231,14 @@ class MockObjectTests(unittest.TestCase):
 
     def test_hashable_mixin_uses_id_for_equality_comparison(self):
         """Test if the HashableMixing uses the id attribute for hashing."""
-        class MockScragly(unittest.mock.Mock, helpers.HashableMixin):
+        class MockScragly(helpers.HashableMixin):
             pass
 
-        scragly = MockScragly(spec=object)
+        scragly = MockScragly()
         scragly.id = 10
-        eevee = MockScragly(spec=object)
+        eevee = MockScragly()
         eevee.id = 10
-        python = MockScragly(spec=object)
+        python = MockScragly()
         python.id = 20
 
         self.assertTrue(scragly == eevee)
@@ -281,14 +246,14 @@ class MockObjectTests(unittest.TestCase):
 
     def test_hashable_mixin_uses_id_for_nonequality_comparison(self):
         """Test if the HashableMixing uses the id attribute for hashing."""
-        class MockScragly(unittest.mock.Mock, helpers.HashableMixin):
+        class MockScragly(helpers.HashableMixin):
             pass
 
-        scragly = MockScragly(spec=object)
+        scragly = MockScragly()
         scragly.id = 10
-        eevee = MockScragly(spec=object)
+        eevee = MockScragly()
         eevee.id = 10
-        python = MockScragly(spec=object)
+        python = MockScragly()
         python.id = 20
 
         self.assertTrue(scragly != python)
@@ -298,7 +263,7 @@ class MockObjectTests(unittest.TestCase):
         """Test if the MagicMock subclasses that implement the HashableMixin use id for hash."""
         for mock in self.hashable_mocks:
             with self.subTest(mock_class=mock):
-                instance = helpers.MockRole(role_id=100)
+                instance = helpers.MockRole(id=100)
                 self.assertEqual(hash(instance), instance.id)
 
     def test_mock_class_with_hashable_mixin_uses_id_for_equality(self):
@@ -396,11 +361,11 @@ class MockObjectTests(unittest.TestCase):
     @unittest.mock.patch("tests.helpers.CustomMockMixin._extract_coroutine_methods_from_spec_instance")
     def test_custom_mock_mixin_init_with_spec(self, extract_method_mock):
         """Test if CustomMockMixin correctly passes on spec/kwargs and calls the extraction method."""
-        spec = "pydis"
+        spec_set = "pydis"
 
-        helpers.CustomMockMixin(spec=spec)
+        helpers.CustomMockMixin(spec_set=spec_set)
 
-        extract_method_mock.assert_called_once_with(spec)
+        extract_method_mock.assert_called_once_with(spec_set)
 
     @unittest.mock.patch("builtins.super", new=unittest.mock.MagicMock())
     @unittest.mock.patch("tests.helpers.CustomMockMixin._extract_coroutine_methods_from_spec_instance")
