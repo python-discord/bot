@@ -89,6 +89,9 @@ style:
 
         questionmark: "https://cdn.discordapp.com/emojis/512367613339369475.png"
 
+        superstarify: "https://cdn.discordapp.com/emojis/636288153044516874.png"
+        unsuperstarify: "https://cdn.discordapp.com/emojis/636288201258172446.png"
+
 guild:
     id: 267624335836053506
 

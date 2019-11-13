@@ -322,6 +322,9 @@ class Icons(metaclass=YAMLGetter):
 
     questionmark: str
 
+    superstarify: str
+    unsuperstarify: str
+
 
 class CleanMessages(metaclass=YAMLGetter):
     section = "bot"
