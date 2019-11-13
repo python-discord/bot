@@ -202,6 +202,18 @@ class DiscordMocksTests(unittest.TestCase):
                 mock = mock_type(mention=mention)
                 self.assertEqual(mock.mention, mention)
 
+    def test_create_test_on_mock_bot_closes_passed_coroutine(self):
+        """`bot.loop.create_task` should close the passed coroutine object to prevent warnings."""
+        async def dementati():
+            """Dummy coroutine for testing purposes."""
+
+        coroutine_object = dementati()
+
+        bot = helpers.MockBot()
+        bot.loop.create_task(coroutine_object)
+        with self.assertRaises(RuntimeError, msg="cannot reuse already awaited coroutine"):
+            asyncio.run(coroutine_object)
+
 
 class MockObjectTests(unittest.TestCase):
     """Tests the mock objects and mixins we've defined."""

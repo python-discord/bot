@@ -227,7 +227,8 @@ class MockMember(CustomMockMixin, unittest.mock.Mock, ColourMixin, HashableMixin
         if roles:
             self.roles.extend(roles)
 
-        self.mention = f"@{self.name}"
+        if 'mention' not in kwargs:
+            self.mention = f"@{self.name}"
 
 
 # Create a Bot instance to get a realistic MagicMock of `discord.ext.commands.Bot`
@@ -250,6 +251,11 @@ class MockBot(CustomMockMixin, unittest.mock.MagicMock):
         # and should therefore be awaited. (The documentation calls it a coroutine as well, which
         # is technically incorrect, since it's a regular def.)
         self.wait_for = AsyncMock()
+
+        # Since calling `create_task` on our MockBot does not actually schedule the coroutine object
+        # as a task in the asyncio loop, this `side_effect` calls `close()` on the coroutine object
+        # to prevent "has not been awaited"-warnings.
+        self.loop.create_task.side_effect = lambda coroutine: coroutine.close()
 
 
 # Create a TextChannel instance to get a realistic MagicMock of `discord.TextChannel`
