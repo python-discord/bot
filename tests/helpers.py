@@ -74,7 +74,10 @@ class CustomMockMixin:
     child_mock_type = unittest.mock.MagicMock
 
     def __init__(self, spec: Any = None, **kwargs):
+        name = kwargs.pop('name', None)  # `name` has special meaning for Mock classes, so we need to set it manually.
         super().__init__(spec=spec, **kwargs)
+        if name:
+            self.name = name
         if spec:
             self._extract_coroutine_methods_from_spec_instance(spec)
 
