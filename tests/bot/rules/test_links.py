@@ -2,25 +2,19 @@ import unittest
 from typing import List, NamedTuple, Tuple
 
 from bot.rules import links
-from tests.helpers import async_test
-
-
-class FakeMessage(NamedTuple):
-    author: str
-    content: str
+from tests.helpers import MockMessage, async_test
 
 
 class Case(NamedTuple):
-    recent_messages: List[FakeMessage]
-    relevant_messages: Tuple[FakeMessage]
+    recent_messages: List[MockMessage]
     culprit: Tuple[str]
     total_links: int
 
 
-def msg(author: str, total_links: int) -> FakeMessage:
+def msg(author: str, total_links: int) -> MockMessage:
     """Makes a message with `total_links` links."""
     content = " ".join(["https://pydis.com"] * total_links)
-    return FakeMessage(author=author, content=content)
+    return MockMessage(author=author, content=content)
 
 
 class LinksTests(unittest.TestCase):
@@ -61,26 +55,28 @@ class LinksTests(unittest.TestCase):
         cases = (
             Case(
                 [msg("bob", 1), msg("bob", 2)],
-                (msg("bob", 1), msg("bob", 2)),
                 ("bob",),
                 3
             ),
             Case(
                 [msg("alice", 1), msg("alice", 1), msg("alice", 1)],
-                (msg("alice", 1), msg("alice", 1), msg("alice", 1)),
                 ("alice",),
                 3
             ),
             Case(
                 [msg("alice", 2), msg("bob", 3), msg("alice", 1)],
-                (msg("alice", 2), msg("alice", 1)),
                 ("alice",),
                 3
             )
         )
 
-        for recent_messages, relevant_messages, culprit, total_links in cases:
+        for recent_messages, culprit, total_links in cases:
             last_message = recent_messages[0]
+            relevant_messages = tuple(
+                msg
+                for msg in recent_messages
+                if msg.author == last_message.author
+            )
 
             with self.subTest(
                 last_message=last_message,
