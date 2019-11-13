@@ -24,7 +24,7 @@ class TokenRemoverTests(unittest.TestCase):
         self.bot.get_cog.return_value.send_log_message = AsyncMock()
         self.cog = TokenRemover(bot=self.bot)
 
-        self.msg = MockMessage(message_id=555, content='')
+        self.msg = MockMessage(id=555, content='')
         self.msg.author.__str__ = MagicMock()
         self.msg.author.__str__.return_value = 'lemon'
         self.msg.author.bot = False
