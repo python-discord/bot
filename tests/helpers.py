@@ -355,6 +355,20 @@ class MockContext(CustomMockMixin, unittest.mock.MagicMock):
         self.channel = kwargs.get('channel', MockTextChannel())
 
 
+attachment_instance = discord.Attachment(data=unittest.mock.MagicMock(id=1), state=unittest.mock.MagicMock())
+
+
+class MockAttachment(CustomMockMixin, unittest.mock.MagicMock):
+    """
+    A MagicMock subclass to mock Attachment objects.
+
+    Instances of this class will follow the specifications of `discord.Attachment` instances. For
+    more information, see the `MockGuild` docstring.
+    """
+    def __init__(self, **kwargs) -> None:
+        super().__init__(spec_set=attachment_instance, **kwargs)
+
+
 class MockMessage(CustomMockMixin, unittest.mock.MagicMock):
     """
     A MagicMock subclass to mock Message objects.
@@ -364,7 +378,8 @@ class MockMessage(CustomMockMixin, unittest.mock.MagicMock):
     """
 
     def __init__(self, **kwargs) -> None:
-        super().__init__(spec_set=message_instance, **kwargs)
+        default_kwargs = {'attachments': []}
+        super().__init__(spec_set=message_instance, **collections.ChainMap(kwargs, default_kwargs))
         self.author = kwargs.get('author', MockMember())
         self.channel = kwargs.get('channel', MockTextChannel())
 
