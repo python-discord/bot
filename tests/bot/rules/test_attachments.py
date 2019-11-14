@@ -12,13 +12,16 @@ def msg(total_attachments: int) -> MockMessage:
 class AttachmentRuleTests(unittest.TestCase):
     """Tests applying the `attachments` antispam rule."""
 
+    def setUp(self):
+        self.config = {"max": 5}
+
     @async_test
     async def test_allows_messages_without_too_many_attachments(self):
         """Messages without too many attachments are allowed as-is."""
         cases = (
-            (msg(0), msg(0), msg(0)),
-            (msg(2), msg(2)),
-            (msg(0),),
+            [msg(0), msg(0), msg(0)],
+            [msg(2), msg(2)],
+            [msg(0)],
         )
 
         for recent_messages in cases:
@@ -29,7 +32,7 @@ class AttachmentRuleTests(unittest.TestCase):
                 recent_messages=recent_messages
             ):
                 self.assertIsNone(
-                    await attachments.apply(last_message, recent_messages, {'max': 5})
+                    await attachments.apply(last_message, recent_messages, self.config)
                 )
 
     @async_test
@@ -59,6 +62,6 @@ class AttachmentRuleTests(unittest.TestCase):
                 total=total
             ):
                 self.assertEqual(
-                    await attachments.apply(last_message, recent_messages, {'max': 5}),
+                    await attachments.apply(last_message, recent_messages, self.config),
                     (f"sent {total} attachments in 5s", ('lemon',), relevant_messages)
                 )
