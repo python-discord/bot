@@ -1,12 +1,19 @@
 import unittest
+from typing import List, NamedTuple, Tuple
 
 from bot.rules import attachments
 from tests.helpers import MockMessage, async_test
 
 
-def msg(total_attachments: int) -> MockMessage:
+class Case(NamedTuple):
+    recent_messages: List[MockMessage]
+    culprit: Tuple[str]
+    total_attachments: int
+
+
+def msg(author: str, total_attachments: int) -> MockMessage:
     """Builds a message with `total_attachments` attachments."""
-    return MockMessage(author='lemon', attachments=list(range(total_attachments)))
+    return MockMessage(author=author, attachments=list(range(total_attachments)))
 
 
 class AttachmentRuleTests(unittest.TestCase):
@@ -19,9 +26,9 @@ class AttachmentRuleTests(unittest.TestCase):
     async def test_allows_messages_without_too_many_attachments(self):
         """Messages without too many attachments are allowed as-is."""
         cases = (
-            [msg(0), msg(0), msg(0)],
-            [msg(2), msg(2)],
-            [msg(0)],
+            [msg("bob", 0), msg("bob", 0), msg("bob", 0)],
+            [msg("bob", 2), msg("bob", 2)],
+            [msg("bob", 2), msg("alice", 2), msg("bob", 2)],
         )
 
         for recent_messages in cases:
@@ -29,7 +36,8 @@ class AttachmentRuleTests(unittest.TestCase):
 
             with self.subTest(
                 last_message=last_message,
-                recent_messages=recent_messages
+                recent_messages=recent_messages,
+                config=self.config
             ):
                 self.assertIsNone(
                     await attachments.apply(last_message, recent_messages, self.config)
@@ -39,12 +47,29 @@ class AttachmentRuleTests(unittest.TestCase):
     async def test_disallows_messages_with_too_many_attachments(self):
         """Messages with too many attachments trigger the rule."""
         cases = (
-            ([msg(4), msg(0), msg(6)], 10),
-            ([msg(6)], 6),
-            ([msg(1)] * 6, 6),
+            Case(
+                [msg("bob", 4), msg("bob", 0), msg("bob", 6)],
+                ("bob",),
+                10
+            ),
+            Case(
+                [msg("bob", 4), msg("alice", 6), msg("bob", 2)],
+                ("bob",),
+                6
+            ),
+            Case(
+                [msg("alice", 6)],
+                ("alice",),
+                6
+            ),
+            (
+                [msg("alice", 1) for _ in range(6)],
+                ("alice",),
+                6
+            ),
         )
 
-        for recent_messages, total in cases:
+        for recent_messages, culprit, total_attachments in cases:
             last_message = recent_messages[0]
             relevant_messages = tuple(
                 msg
@@ -59,9 +84,15 @@ class AttachmentRuleTests(unittest.TestCase):
                 last_message=last_message,
                 recent_messages=recent_messages,
                 relevant_messages=relevant_messages,
-                total=total
+                total_attachments=total_attachments,
+                config=self.config
             ):
+                desired_output = (
+                    f"sent {total_attachments} attachments in {self.config['max']}s",
+                    culprit,
+                    relevant_messages
+                )
                 self.assertEqual(
                     await attachments.apply(last_message, recent_messages, self.config),
-                    (f"sent {total} attachments in 5s", ('lemon',), relevant_messages)
+                    desired_output
                 )
