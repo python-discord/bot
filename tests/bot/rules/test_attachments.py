@@ -92,7 +92,7 @@ class AttachmentRuleTests(unittest.TestCase):
                     culprit,
                     relevant_messages
                 )
-                self.assertEqual(
+                self.assertTupleEqual(
                     await attachments.apply(last_message, recent_messages, self.config),
                     desired_output
                 )
