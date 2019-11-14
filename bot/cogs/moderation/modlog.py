@@ -656,15 +656,13 @@ class ModLog(Cog, name="ModLog"):
                 _before.append(f"[{sub}](http://o.hi)")
             elif diff_type == '+':
                 _after.append(f"[{sub}](http://o.hi)")
-            elif len(words) > 2:
-                new = (
-                    f"{words[0] if index > 0 else ''}"
-                    " ... "
-                    f"{words[-1] if index < len(diff_groups) - 1 else ''}"
-                )
-                _before.append(new)
-                _after.append(new)
             elif diff_type == ' ':
+                if len(words) > 2:
+                    sub = (
+                        f"{words[0] if index > 0 else ''}"
+                        " ... "
+                        f"{words[-1] if index < len(diff_groups) - 1 else ''}"
+                    )
                 _before.append(sub)
                 _after.append(sub)
 
