@@ -21,7 +21,9 @@ class AttachmentRuleTests(unittest.TestCase):
             (msg(0),),
         )
 
-        for last_message, *recent_messages in cases:
+        for recent_messages in cases:
+            last_message = recent_messages[0]
+
             with self.subTest(
                 last_message=last_message,
                 recent_messages=recent_messages
@@ -39,14 +41,16 @@ class AttachmentRuleTests(unittest.TestCase):
             ([msg(1)] * 6, 6),
         )
 
-        for messages, total in cases:
-            last_message, *recent_messages = messages
-            relevant_messages = [last_message] + [
+        for recent_messages, total in cases:
+            last_message = recent_messages[0]
+            relevant_messages = tuple(
                 msg
                 for msg in recent_messages
-                if msg.author == last_message.author
-                and len(msg.attachments) > 0
-            ]
+                if (
+                    msg.author == last_message.author
+                    and len(msg.attachments) > 0
+                )
+            )
 
             with self.subTest(
                 last_message=last_message,
