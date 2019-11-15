@@ -336,8 +336,7 @@ class Doc(commands.Cog):
         )
         # Show all symbols with the same name that were renamed in the footer.
         embed.set_footer(
-            text=", ".join(renamed for renamed in self.renamed_symbols - {symbol}
-                           if renamed.endswith(f".{symbol}"))
+            text=", ".join(renamed for renamed in self.renamed_symbols - {symbol} if renamed.endswith(f".{symbol}"))
         )
         return embed
 
