@@ -418,8 +418,7 @@ class Doc(commands.Cog):
         await self.bot.api_client.post('bot/documentation-links', json=body)
 
         log.info(
-            f"User @{ctx.author.name}#{ctx.author.discriminator} ({ctx.author.id}) "
-            "added a new documentation package:\n"
+            f"User @{ctx.author} ({ctx.author.id}) added a new documentation package:\n"
             f"Package name: {package_name}\n"
             f"Base url: {base_url}\n"
             f"Inventory URL: {inventory_url}"

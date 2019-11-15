@@ -1,23 +1,17 @@
 import logging
-import textwrap
 import typing as t
-from datetime import datetime
 
-import dateutil.parser
 import discord
 from discord import Member
 from discord.ext import commands
 from discord.ext.commands import Context, command
 
 from bot import constants
-from bot.api import ResponseCodeError
-from bot.constants import Colours, Event
+from bot.constants import Event
 from bot.decorators import respect_role_hierarchy
-from bot.utils import time
 from bot.utils.checks import with_role_check
-from bot.utils.scheduling import Scheduler
 from . import utils
-from .modlog import ModLog
+from .scheduler import InfractionScheduler
 from .utils import MemberObject
 
 log = logging.getLogger(__name__)
@@ -25,67 +19,35 @@ log = logging.getLogger(__name__)
 MemberConverter = t.Union[utils.UserTypes, utils.proxy_user]
 
 
-class Infractions(Scheduler, commands.Cog):
+class Infractions(InfractionScheduler, commands.Cog):
     """Apply and pardon infractions on users for moderation purposes."""
 
     category = "Moderation"
     category_description = "Server moderation tools."
 
     def __init__(self, bot: commands.Bot):
-        super().__init__()
+        super().__init__(bot, supported_infractions={"ban", "kick", "mute", "note", "warning"})
 
-        self.bot = bot
         self.category = "Moderation"
         self._muted_role = discord.Object(constants.Roles.muted)
-
-        self.bot.loop.create_task(self.reschedule_infractions())
-
-    @property
-    def mod_log(self) -> ModLog:
-        """Get currently loaded ModLog cog instance."""
-        return self.bot.get_cog("ModLog")
-
-    async def reschedule_infractions(self) -> None:
-        """Schedule expiration for previous infractions."""
-        await self.bot.wait_until_ready()
-
-        infractions = await self.bot.api_client.get(
-            'bot/infractions',
-            params={'active': 'true'}
-        )
-        for infraction in infractions:
-            if infraction["expires_at"] is not None:
-                self.schedule_task(self.bot.loop, infraction["id"], infraction)
 
     @commands.Cog.listener()
     async def on_member_join(self, member: Member) -> None:
         """Reapply active mute infractions for returning members."""
         active_mutes = await self.bot.api_client.get(
-            'bot/infractions',
+            "bot/infractions",
             params={
-                'user__id': str(member.id),
-                'type': 'mute',
-                'active': 'true'
+                "active": "true",
+                "type": "mute",
+                "user__id": member.id
             }
         )
-        if not active_mutes:
-            return
 
-        # Assume a single mute because of restrictions elsewhere.
-        mute = active_mutes[0]
+        if active_mutes:
+            reason = f"Re-applying active mute: {active_mutes[0]['id']}"
+            action = member.add_roles(self._muted_role, reason=reason)
 
-        # Calculate the time remaining, in seconds, for the mute.
-        expiry = dateutil.parser.isoparse(mute["expires_at"]).replace(tzinfo=None)
-        delta = (expiry - datetime.utcnow()).total_seconds()
-
-        # Mark as inactive if less than a minute remains.
-        if delta < 60:
-            await self.deactivate_infraction(mute)
-            return
-
-        # Allowing mod log since this is a passive action that should be logged.
-        await member.add_roles(self._muted_role, reason=f"Re-applying active mute: {mute['id']}")
-        log.debug(f"User {member.id} has been re-muted on rejoin.")
+            await self.reapply_infraction(active_mutes[0], action)
 
     # region: Permanent infractions
 
@@ -233,7 +195,7 @@ class Infractions(Scheduler, commands.Cog):
         await self.pardon_infraction(ctx, "ban", user)
 
     # endregion
-    # region: Base infraction functions
+    # region: Base apply functions
 
     async def apply_mute(self, ctx: Context, user: Member, reason: str, **kwargs) -> None:
         """Apply a mute infraction with kwargs passed to `post_infraction`."""
@@ -277,319 +239,63 @@ class Infractions(Scheduler, commands.Cog):
         await self.apply_infraction(ctx, infraction, user, action)
 
     # endregion
-    # region: Utility functions
+    # region: Base pardon functions
 
-    async def _scheduled_task(self, infraction: utils.Infraction) -> None:
-        """
-        Marks an infraction expired after the delay from time of scheduling to time of expiration.
+    async def pardon_mute(self, user_id: int, guild: discord.Guild, reason: str) -> t.Dict[str, str]:
+        """Remove a user's muted role, DM them a notification, and return a log dict."""
+        user = guild.get_member(user_id)
+        log_text = {}
 
-        At the time of expiration, the infraction is marked as inactive on the website and the
-        expiration task is cancelled.
-        """
-        _id = infraction["id"]
+        if user:
+            # Remove the muted role.
+            self.mod_log.ignore(Event.member_update, user.id)
+            await user.remove_roles(self._muted_role, reason=reason)
 
-        expiry = dateutil.parser.isoparse(infraction["expires_at"]).replace(tzinfo=None)
-        await time.wait_until(expiry)
-
-        log.debug(f"Marking infraction {_id} as inactive (expired).")
-        await self.deactivate_infraction(infraction)
-
-    async def deactivate_infraction(
-        self,
-        infraction: utils.Infraction,
-        send_log: bool = True
-    ) -> t.Dict[str, str]:
-        """
-        Deactivate an active infraction and return a dictionary of lines to send in a mod log.
-
-        The infraction is removed from Discord, marked as inactive in the database, and has its
-        expiration task cancelled. If `send_log` is True, a mod log is sent for the
-        deactivation of the infraction.
-
-        Supported infraction types are mute and ban. Other types will raise a ValueError.
-        """
-        guild = self.bot.get_guild(constants.Guild.id)
-        mod_role = guild.get_role(constants.Roles.moderator)
-        user_id = infraction["user"]
-        _type = infraction["type"]
-        _id = infraction["id"]
-        reason = f"Infraction #{_id} expired or was pardoned."
-
-        log.debug(f"Marking infraction #{_id} as inactive (expired).")
-
-        log_content = None
-        log_text = {
-            "Member": str(user_id),
-            "Actor": str(self.bot.user),
-            "Reason": infraction["reason"]
-        }
-
-        try:
-            if _type == "mute":
-                user = guild.get_member(user_id)
-                if user:
-                    # Remove the muted role.
-                    self.mod_log.ignore(Event.member_update, user.id)
-                    await user.remove_roles(self._muted_role, reason=reason)
-
-                    # DM the user about the expiration.
-                    notified = await utils.notify_pardon(
-                        user=user,
-                        title="You have been unmuted.",
-                        content="You may now send messages in the server.",
-                        icon_url=utils.INFRACTION_ICONS["mute"][1]
-                    )
-
-                    log_text["Member"] = f"{user.mention}(`{user.id}`)"
-                    log_text["DM"] = "Sent" if notified else "**Failed**"
-                else:
-                    log.info(f"Failed to unmute user {user_id}: user not found")
-                    log_text["Failure"] = "User was not found in the guild."
-            elif _type == "ban":
-                user = discord.Object(user_id)
-                self.mod_log.ignore(Event.member_unban, user_id)
-                try:
-                    await guild.unban(user, reason=reason)
-                except discord.NotFound:
-                    log.info(f"Failed to unban user {user_id}: no active ban found on Discord")
-                    log_text["Note"] = "No active ban found on Discord."
-            else:
-                raise ValueError(
-                    f"Attempted to deactivate an unsupported infraction #{_id} ({_type})!"
-                )
-        except discord.Forbidden:
-            log.warning(f"Failed to deactivate infraction #{_id} ({_type}): bot lacks permissions")
-            log_text["Failure"] = f"The bot lacks permissions to do this (role hierarchy?)"
-            log_content = mod_role.mention
-        except discord.HTTPException as e:
-            log.exception(f"Failed to deactivate infraction #{_id} ({_type})")
-            log_text["Failure"] = f"HTTPException with code {e.code}."
-            log_content = mod_role.mention
-
-        # Check if the user is currently being watched by Big Brother.
-        try:
-            active_watch = await self.bot.api_client.get(
-                "bot/infractions",
-                params={
-                    "active": "true",
-                    "type": "watch",
-                    "user__id": user_id
-                }
+            # DM the user about the expiration.
+            notified = await utils.notify_pardon(
+                user=user,
+                title="You have been unmuted",
+                content="You may now send messages in the server.",
+                icon_url=utils.INFRACTION_ICONS["mute"][1]
             )
 
-            log_text["Watching"] = "Yes" if active_watch else "No"
-        except ResponseCodeError:
-            log.exception(f"Failed to fetch watch status for user {user_id}")
-            log_text["Watching"] = "Unknown - failed to fetch watch status."
-
-        try:
-            # Mark infraction as inactive in the database.
-            await self.bot.api_client.patch(
-                f"bot/infractions/{_id}",
-                json={"active": False}
-            )
-        except ResponseCodeError as e:
-            log.exception(f"Failed to deactivate infraction #{_id} ({_type})")
-            log_line = f"API request failed with code {e.status}."
-            log_content = mod_role.mention
-
-            # Append to an existing failure message if possible
-            if "Failure" in log_text:
-                log_text["Failure"] += f" {log_line}"
-            else:
-                log_text["Failure"] = log_line
-
-        # Cancel the expiration task.
-        if infraction["expires_at"] is not None:
-            self.cancel_task(infraction["id"])
-
-        # Send a log message to the mod log.
-        if send_log:
-            log_title = f"expiration failed" if "Failure" in log_text else "expired"
-
-            await self.mod_log.send_log_message(
-                icon_url=utils.INFRACTION_ICONS[_type][1],
-                colour=Colours.soft_green,
-                title=f"Infraction {log_title}: {_type}",
-                text="\n".join(f"{k}: {v}" for k, v in log_text.items()),
-                footer=f"ID: {_id}",
-                content=log_content,
-            )
+            log_text["Member"] = f"{user.mention}(`{user.id}`)"
+            log_text["DM"] = "Sent" if notified else "**Failed**"
+        else:
+            log.info(f"Failed to unmute user {user_id}: user not found")
+            log_text["Failure"] = "User was not found in the guild."
 
         return log_text
 
-    async def apply_infraction(
-        self,
-        ctx: Context,
-        infraction: utils.Infraction,
-        user: MemberObject,
-        action_coro: t.Optional[t.Awaitable] = None
-    ) -> None:
-        """Apply an infraction to the user, log the infraction, and optionally notify the user."""
-        infr_type = infraction["type"]
-        icon = utils.INFRACTION_ICONS[infr_type][0]
-        reason = infraction["reason"]
-        expiry = infraction["expires_at"]
+    async def pardon_ban(self, user_id: int, guild: discord.Guild, reason: str) -> t.Dict[str, str]:
+        """Remove a user's ban on the Discord guild and return a log dict."""
+        user = discord.Object(user_id)
+        log_text = {}
 
-        if expiry:
-            expiry = time.format_infraction(expiry)
+        self.mod_log.ignore(Event.member_unban, user_id)
 
-        # Default values for the confirmation message and mod log.
-        confirm_msg = f":ok_hand: applied"
-        expiry_msg = f" until {expiry}" if expiry else " permanently"
-        dm_result = ""
-        dm_log_text = ""
-        expiry_log_text = f"Expires: {expiry}" if expiry else ""
-        log_title = "applied"
-        log_content = None
+        try:
+            await guild.unban(user, reason=reason)
+        except discord.NotFound:
+            log.info(f"Failed to unban user {user_id}: no active ban found on Discord")
+            log_text["Note"] = "No active ban found on Discord."
 
-        # DM the user about the infraction if it's not a shadow/hidden infraction.
-        if not infraction["hidden"]:
-            # Sometimes user is a discord.Object; make it a proper user.
-            await self.bot.fetch_user(user.id)
+        return log_text
 
-            # Accordingly display whether the user was successfully notified via DM.
-            if await utils.notify_infraction(user, infr_type, expiry, reason, icon):
-                dm_result = ":incoming_envelope: "
-                dm_log_text = "\nDM: Sent"
-            else:
-                dm_log_text = "\nDM: **Failed**"
-                log_content = ctx.author.mention
+    async def _pardon_action(self, infraction: utils.Infraction) -> t.Optional[t.Dict[str, str]]:
+        """
+        Execute deactivation steps specific to the infraction's type and return a log dict.
 
-        if infraction["actor"] == self.bot.user.id:
-            end_msg = f" (reason: {infraction['reason']})"
-        else:
-            infractions = await self.bot.api_client.get(
-                "bot/infractions",
-                params={"user__id": str(user.id)}
-            )
-            end_msg = f" ({len(infractions)} infractions total)"
+        If an infraction type is unsupported, return None instead.
+        """
+        guild = self.bot.get_guild(constants.Guild.id)
+        user_id = infraction["user"]
+        reason = f"Infraction #{infraction['id']} expired or was pardoned."
 
-        # Execute the necessary actions to apply the infraction on Discord.
-        if action_coro:
-            try:
-                await action_coro
-                if expiry:
-                    # Schedule the expiration of the infraction.
-                    self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
-            except discord.Forbidden:
-                # Accordingly display that applying the infraction failed.
-                confirm_msg = f":x: failed to apply"
-                expiry_msg = ""
-                log_content = ctx.author.mention
-                log_title = "failed to apply"
-
-        # Send a confirmation message to the invoking context.
-        await ctx.send(
-            f"{dm_result}{confirm_msg} **{infr_type}** to {user.mention}{expiry_msg}{end_msg}."
-        )
-
-        # Send a log message to the mod log.
-        await self.mod_log.send_log_message(
-            icon_url=icon,
-            colour=Colours.soft_red,
-            title=f"Infraction {log_title}: {infr_type}",
-            thumbnail=user.avatar_url_as(static_format="png"),
-            text=textwrap.dedent(f"""
-                Member: {user.mention} (`{user.id}`)
-                Actor: {ctx.message.author}{dm_log_text}
-                Reason: {reason}
-                {expiry_log_text}
-            """),
-            content=log_content,
-            footer=f"ID {infraction['id']}"
-        )
-
-    async def pardon_infraction(self, ctx: Context, infr_type: str, user: MemberObject) -> None:
-        """Prematurely end an infraction for a user and log the action in the mod log."""
-        # Check the current active infraction
-        response = await self.bot.api_client.get(
-            'bot/infractions',
-            params={
-                'active': 'true',
-                'type': infr_type,
-                'user__id': user.id
-            }
-        )
-
-        if not response:
-            await ctx.send(f":x: There's no active {infr_type} infraction for user {user.mention}.")
-            return
-
-        # Deactivate the infraction and cancel its scheduled expiration task.
-        log_text = await self.deactivate_infraction(response[0], send_log=False)
-
-        log_text["Member"] = f"{user.mention}(`{user.id}`)"
-        log_text["Actor"] = str(ctx.message.author)
-        log_content = None
-        footer = f"ID: {response[0]['id']}"
-
-        # If multiple active infractions were found, mark them as inactive in the database
-        # and cancel their expiration tasks.
-        if len(response) > 1:
-            log.warning(f"Found more than one active {infr_type} infraction for user {user.id}")
-
-            footer = f"Infraction IDs: {', '.join(str(infr['id']) for infr in response)}"
-
-            log_note = f"Found multiple **active** {infr_type} infractions in the database."
-            if "Note" in log_text:
-                log_text["Note"] = f" {log_note}"
-            else:
-                log_text["Note"] = log_note
-
-            # deactivate_infraction() is not called again because:
-            #     1. Discord cannot store multiple active bans or assign multiples of the same role
-            #     2. It would send a pardon DM for each active infraction, which is redundant
-            for infraction in response[1:]:
-                _id = infraction['id']
-                try:
-                    # Mark infraction as inactive in the database.
-                    await self.bot.api_client.patch(
-                        f"bot/infractions/{_id}",
-                        json={"active": False}
-                    )
-                except ResponseCodeError:
-                    log.exception(f"Failed to deactivate infraction #{_id} ({infr_type})")
-                    # This is simpler and cleaner than trying to concatenate all the errors.
-                    log_text["Failure"] = "See bot's logs for details."
-
-                # Cancel pending expiration task.
-                if infraction["expires_at"] is not None:
-                    self.cancel_task(infraction["id"])
-
-        # Accordingly display whether the user was successfully notified via DM.
-        dm_emoji = ""
-        if log_text.get("DM") == "Sent":
-            dm_emoji = ":incoming_envelope: "
-        elif "DM" in log_text:
-            # Mention the actor because the DM failed to send.
-            log_content = ctx.author.mention
-
-        # Accordingly display whether the pardon failed.
-        if "Failure" in log_text:
-            confirm_msg = ":x: failed to pardon"
-            log_title = "pardon failed"
-            log_content = ctx.author.mention
-        else:
-            confirm_msg = f":ok_hand: pardoned"
-            log_title = "pardoned"
-
-        # Send a confirmation message to the invoking context.
-        await ctx.send(
-            f"{dm_emoji}{confirm_msg} infraction **{infr_type}** for {user.mention}. "
-            f"{log_text.get('Failure', '')}"
-        )
-
-        # Send a log message to the mod log.
-        await self.mod_log.send_log_message(
-            icon_url=utils.INFRACTION_ICONS[infr_type][1],
-            colour=Colours.soft_green,
-            title=f"Infraction {log_title}: {infr_type}",
-            thumbnail=user.avatar_url_as(static_format="png"),
-            text="\n".join(f"{k}: {v}" for k, v in log_text.items()),
-            footer=footer,
-            content=log_content,
-        )
+        if infraction["type"] == "mute":
+            return await self.pardon_mute(user_id, guild, reason)
+        elif infraction["type"] == "ban":
+            return await self.pardon_ban(user_id, guild, reason)
 
     # endregion
 

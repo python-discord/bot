@@ -36,11 +36,15 @@ class Scheduler(metaclass=CogABCMeta):
         `task_data` is passed to `Scheduler._scheduled_expiration`
         """
         if task_id in self.scheduled_tasks:
+            log.debug(
+                f"{self.cog_name}: did not schedule task #{task_id}; task was already scheduled."
+            )
             return
 
         task: asyncio.Task = create_task(loop, self._scheduled_task(task_data))
 
         self.scheduled_tasks[task_id] = task
+        log.debug(f"{self.cog_name}: scheduled task #{task_id}.")
 
     def cancel_task(self, task_id: str) -> None:
         """Un-schedules a task."""
@@ -51,7 +55,7 @@ class Scheduler(metaclass=CogABCMeta):
             return
 
         task.cancel()
-        log.debug(f"{self.cog_name}: Unscheduled {task_id}.")
+        log.debug(f"{self.cog_name}: unscheduled task #{task_id}.")
         del self.scheduled_tasks[task_id]
 
 

@@ -1,14 +1,20 @@
 import colorsys
 import logging
+import pprint
 import textwrap
 import typing
+from collections import defaultdict
+from typing import Any, Mapping, Optional
 
+import discord
 from discord import CategoryChannel, Colour, Embed, Member, Role, TextChannel, VoiceChannel, utils
-from discord.ext.commands import Bot, Cog, Context, command
+from discord.ext import commands
+from discord.ext.commands import Bot, BucketType, Cog, Context, command, group
+from discord.utils import escape_markdown
 
-from bot.constants import Channels, Emojis, MODERATION_ROLES, STAFF_ROLES
-from bot.decorators import InChannelCheckFailure, with_role
-from bot.utils.checks import with_role_check
+from bot import constants
+from bot.decorators import InChannelCheckFailure, in_channel, with_role
+from bot.utils.checks import cooldown_with_role_bypass, with_role_check
 from bot.utils.time import time_since
 
 log = logging.getLogger(__name__)
@@ -20,7 +26,7 @@ class Information(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @with_role(*MODERATION_ROLES)
+    @with_role(*constants.MODERATION_ROLES)
     @command(name="roles")
     async def roles_info(self, ctx: Context) -> None:
         """Returns a list of all roles and their corresponding IDs."""
@@ -44,7 +50,7 @@ class Information(Cog):
 
         await ctx.send(embed=embed)
 
-    @with_role(*MODERATION_ROLES)
+    @with_role(*constants.MODERATION_ROLES)
     @command(name="role")
     async def role_info(self, ctx: Context, *roles: typing.Union[Role, str]) -> None:
         """
@@ -144,10 +150,10 @@ class Information(Cog):
                 Channel categories: {category_channels}
 
                 **Members**
-                {Emojis.status_online} {online}
-                {Emojis.status_idle} {idle}
-                {Emojis.status_dnd} {dnd}
-                {Emojis.status_offline} {offline}
+                {constants.Emojis.status_online} {online}
+                {constants.Emojis.status_idle} {idle}
+                {constants.Emojis.status_dnd} {dnd}
+                {constants.Emojis.status_offline} {offline}
             """)
         )
 
@@ -156,78 +162,232 @@ class Information(Cog):
         await ctx.send(embed=embed)
 
     @command(name="user", aliases=["user_info", "member", "member_info"])
-    async def user_info(self, ctx: Context, user: Member = None, hidden: bool = False) -> None:
+    async def user_info(self, ctx: Context, user: Member = None) -> None:
         """Returns info about a user."""
         if user is None:
             user = ctx.author
 
         # Do a role check if this is being executed on someone other than the caller
-        if user != ctx.author and not with_role_check(ctx, *MODERATION_ROLES):
+        if user != ctx.author and not with_role_check(ctx, *constants.MODERATION_ROLES):
             await ctx.send("You may not use this command on users other than yourself.")
             return
 
-        # Non-moderators may only do this in #bot-commands and can't see hidden infractions.
-        if not with_role_check(ctx, *STAFF_ROLES):
-            if not ctx.channel.id == Channels.bot:
-                raise InChannelCheckFailure(Channels.bot)
-            # Hide hidden infractions for users without a moderation role
-            hidden = False
+        # Non-staff may only do this in #bot-commands
+        if not with_role_check(ctx, *constants.STAFF_ROLES):
+            if not ctx.channel.id == constants.Channels.bot:
+                raise InChannelCheckFailure(constants.Channels.bot)
 
-        # User information
+        embed = await self.create_user_embed(ctx, user)
+
+        await ctx.send(embed=embed)
+
+    async def create_user_embed(self, ctx: Context, user: Member) -> Embed:
+        """Creates an embed containing information on the `user`."""
         created = time_since(user.created_at, max_units=3)
+
+        # Custom status
+        custom_status = ''
+        for activity in user.activities:
+            if activity.name == 'Custom Status':
+                state = escape_markdown(activity.state)
+                custom_status = f'Status: {state}\n'
 
         name = str(user)
         if user.nick:
             name = f"{user.nick} ({name})"
 
-        # Member information
         joined = time_since(user.joined_at, precision="days")
-
-        # You're welcome, Volcyyyyyyyyyyyyyyyy
         roles = ", ".join(role.mention for role in user.roles if role.name != "@everyone")
 
-        # Infractions
-        infractions = await self.bot.api_client.get(
-            'bot/infractions',
-            params={
-                'hidden': str(hidden),
-                'user__id': str(user.id)
-            }
-        )
-
-        infr_total = 0
-        infr_active = 0
-
-        # At least it's readable.
-        for infr in infractions:
-            if infr["active"]:
-                infr_active += 1
-
-            infr_total += 1
-
-        # Let's build the embed now
-        embed = Embed(
-            title=name,
-            description=textwrap.dedent(f"""
+        description = [
+            textwrap.dedent(f"""
                 **User Information**
                 Created: {created}
                 Profile: {user.mention}
                 ID: {user.id}
-
+                {custom_status}
                 **Member Information**
                 Joined: {joined}
                 Roles: {roles or None}
+            """).strip()
+        ]
 
-                **Infractions**
-                Total: {infr_total}
-                Active: {infr_active}
-            """)
+        # Show more verbose output in moderation channels for infractions and nominations
+        if ctx.channel.id in constants.MODERATION_CHANNELS:
+            description.append(await self.expanded_user_infraction_counts(user))
+            description.append(await self.user_nomination_counts(user))
+        else:
+            description.append(await self.basic_user_infraction_counts(user))
+
+        # Let's build the embed now
+        embed = Embed(
+            title=name,
+            description="\n\n".join(description)
         )
 
         embed.set_thumbnail(url=user.avatar_url_as(format="png"))
         embed.colour = user.top_role.colour if roles else Colour.blurple()
 
-        await ctx.send(embed=embed)
+        return embed
+
+    async def basic_user_infraction_counts(self, member: Member) -> str:
+        """Gets the total and active infraction counts for the given `member`."""
+        infractions = await self.bot.api_client.get(
+            'bot/infractions',
+            params={
+                'hidden': 'False',
+                'user__id': str(member.id)
+            }
+        )
+
+        total_infractions = len(infractions)
+        active_infractions = sum(infraction['active'] for infraction in infractions)
+
+        infraction_output = f"**Infractions**\nTotal: {total_infractions}\nActive: {active_infractions}"
+
+        return infraction_output
+
+    async def expanded_user_infraction_counts(self, member: Member) -> str:
+        """
+        Gets expanded infraction counts for the given `member`.
+
+        The counts will be split by infraction type and the number of active infractions for each type will indicated
+        in the output as well.
+        """
+        infractions = await self.bot.api_client.get(
+            'bot/infractions',
+            params={
+                'user__id': str(member.id)
+            }
+        )
+
+        infraction_output = ["**Infractions**"]
+        if not infractions:
+            infraction_output.append("This user has never received an infraction.")
+        else:
+            # Count infractions split by `type` and `active` status for this user
+            infraction_types = set()
+            infraction_counter = defaultdict(int)
+            for infraction in infractions:
+                infraction_type = infraction["type"]
+                infraction_active = 'active' if infraction["active"] else 'inactive'
+
+                infraction_types.add(infraction_type)
+                infraction_counter[f"{infraction_active} {infraction_type}"] += 1
+
+            # Format the output of the infraction counts
+            for infraction_type in sorted(infraction_types):
+                active_count = infraction_counter[f"active {infraction_type}"]
+                total_count = active_count + infraction_counter[f"inactive {infraction_type}"]
+
+                line = f"{infraction_type.capitalize()}s: {total_count}"
+                if active_count:
+                    line += f" ({active_count} active)"
+
+                infraction_output.append(line)
+
+        return "\n".join(infraction_output)
+
+    async def user_nomination_counts(self, member: Member) -> str:
+        """Gets the active and historical nomination counts for the given `member`."""
+        nominations = await self.bot.api_client.get(
+            'bot/nominations',
+            params={
+                'user__id': str(member.id)
+            }
+        )
+
+        output = ["**Nominations**"]
+
+        if not nominations:
+            output.append("This user has never been nominated.")
+        else:
+            count = len(nominations)
+            is_currently_nominated = any(nomination["active"] for nomination in nominations)
+            nomination_noun = "nomination" if count == 1 else "nominations"
+
+            if is_currently_nominated:
+                output.append(f"This user is **currently** nominated ({count} {nomination_noun} in total).")
+            else:
+                output.append(f"This user has {count} historical {nomination_noun}, but is currently not nominated.")
+
+        return "\n".join(output)
+
+    def format_fields(self, mapping: Mapping[str, Any], field_width: Optional[int] = None) -> str:
+        """Format a mapping to be readable to a human."""
+        # sorting is technically superfluous but nice if you want to look for a specific field
+        fields = sorted(mapping.items(), key=lambda item: item[0])
+
+        if field_width is None:
+            field_width = len(max(mapping.keys(), key=len))
+
+        out = ''
+
+        for key, val in fields:
+            if isinstance(val, dict):
+                # if we have dicts inside dicts we want to apply the same treatment to the inner dictionaries
+                inner_width = int(field_width * 1.6)
+                val = '\n' + self.format_fields(val, field_width=inner_width)
+
+            elif isinstance(val, str):
+                # split up text since it might be long
+                text = textwrap.fill(val, width=100, replace_whitespace=False)
+
+                # indent it, I guess you could do this with `wrap` and `join` but this is nicer
+                val = textwrap.indent(text, ' ' * (field_width + len(': ')))
+
+                # the first line is already indented so we `str.lstrip` it
+                val = val.lstrip()
+
+            if key == 'color':
+                # makes the base 10 representation of a hex number readable to humans
+                val = hex(val)
+
+            out += '{0:>{width}}: {1}\n'.format(key, val, width=field_width)
+
+        # remove trailing whitespace
+        return out.rstrip()
+
+    @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=constants.STAFF_ROLES)
+    @group(invoke_without_command=True)
+    @in_channel(constants.Channels.bot, bypass_roles=constants.STAFF_ROLES)
+    async def raw(self, ctx: Context, *, message: discord.Message, json: bool = False) -> None:
+        """Shows information about the raw API response."""
+        # I *guess* it could be deleted right as the command is invoked but I felt like it wasn't worth handling
+        # doing this extra request is also much easier than trying to convert everything back into a dictionary again
+        raw_data = await ctx.bot.http.get_message(message.channel.id, message.id)
+
+        paginator = commands.Paginator()
+
+        def add_content(title: str, content: str) -> None:
+            paginator.add_line(f'== {title} ==\n')
+            # replace backticks as it breaks out of code blocks. Spaces seemed to be the most reasonable solution.
+            # we hope it's not close to 2000
+            paginator.add_line(content.replace('```', '`` `'))
+            paginator.close_page()
+
+        if message.content:
+            add_content('Raw message', message.content)
+
+        transformer = pprint.pformat if json else self.format_fields
+        for field_name in ('embeds', 'attachments'):
+            data = raw_data[field_name]
+
+            if not data:
+                continue
+
+            total = len(data)
+            for current, item in enumerate(data, start=1):
+                title = f'Raw {field_name} ({current}/{total})'
+                add_content(title, transformer(item))
+
+        for page in paginator.pages:
+            await ctx.send(page)
+
+    @raw.command()
+    async def json(self, ctx: Context, message: discord.Message) -> None:
+        """Shows information about the raw API response in a copy-pasteable Python format."""
+        await ctx.invoke(self.raw, message=message, json=True)
 
 
 def setup(bot: Bot) -> None:

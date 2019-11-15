@@ -24,6 +24,9 @@ class OffTopicName(Converter):
         """Attempt to replace any invalid characters with their approximate Unicode equivalent."""
         allowed_characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ!?'`-"
 
+        # Chain multiple words to a single one
+        argument = "-".join(argument.split())
+
         if not (2 <= len(argument) <= 96):
             raise BadArgument("Channel name must be between 2 and 96 chars long")
 
@@ -97,30 +100,47 @@ class OffTopicNames(Cog):
 
     @otname_group.command(name='add', aliases=('a',))
     @with_role(*MODERATION_ROLES)
-    async def add_command(self, ctx: Context, *names: OffTopicName) -> None:
-        """Adds a new off-topic name to the rotation."""
-        # Chain multiple words to a single one
-        name = "-".join(names)
+    async def add_command(self, ctx: Context, *, name: OffTopicName) -> None:
+        """
+        Adds a new off-topic name to the rotation.
 
-        await self.bot.api_client.post(f'bot/off-topic-channel-names', params={'name': name})
-        log.info(
-            f"{ctx.author.name}#{ctx.author.discriminator}"
-            f" added the off-topic channel name '{name}"
-        )
+        The name is not added if it is too similar to an existing name.
+        """
+        existing_names = await self.bot.api_client.get('bot/off-topic-channel-names')
+        close_match = difflib.get_close_matches(name, existing_names, n=1, cutoff=0.8)
+
+        if close_match:
+            match = close_match[0]
+            log.info(
+                f"{ctx.author} tried to add channel name '{name}' but it was too similar to '{match}'"
+            )
+            await ctx.send(
+                f":x: The channel name `{name}` is too similar to `{match}`, and thus was not added. "
+                "Use `!otn forceadd` to override this check."
+            )
+        else:
+            await self._add_name(ctx, name)
+
+    @otname_group.command(name='forceadd', aliases=('fa',))
+    @with_role(*MODERATION_ROLES)
+    async def force_add_command(self, ctx: Context, *, name: OffTopicName) -> None:
+        """Forcefully adds a new off-topic name to the rotation."""
+        await self._add_name(ctx, name)
+
+    async def _add_name(self, ctx: Context, name: str) -> None:
+        """Adds an off-topic channel name to the site storage."""
+        await self.bot.api_client.post('bot/off-topic-channel-names', params={'name': name})
+
+        log.info(f"{ctx.author} added the off-topic channel name '{name}'")
         await ctx.send(f":ok_hand: Added `{name}` to the names list.")
 
     @otname_group.command(name='delete', aliases=('remove', 'rm', 'del', 'd'))
     @with_role(*MODERATION_ROLES)
-    async def delete_command(self, ctx: Context, *names: OffTopicName) -> None:
+    async def delete_command(self, ctx: Context, *, name: OffTopicName) -> None:
         """Removes a off-topic name from the rotation."""
-        # Chain multiple words to a single one
-        name = "-".join(names)
-
         await self.bot.api_client.delete(f'bot/off-topic-channel-names/{name}')
-        log.info(
-            f"{ctx.author.name}#{ctx.author.discriminator}"
-            f" deleted the off-topic channel name '{name}"
-        )
+
+        log.info(f"{ctx.author} deleted the off-topic channel name '{name}'")
         await ctx.send(f":ok_hand: Removed `{name}` from the names list.")
 
     @otname_group.command(name='list', aliases=('l',))
@@ -152,7 +172,7 @@ class OffTopicNames(Cog):
         close_matches = difflib.get_close_matches(query, result, n=10, cutoff=0.70)
         lines = sorted(f"• {name}" for name in in_matches.union(close_matches))
         embed = Embed(
-            title=f"Query results",
+            title="Query results",
             colour=Colour.blue()
         )
 
