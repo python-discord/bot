@@ -180,7 +180,7 @@ class Doc(commands.Cog):
             return None
 
         for group, value in package.items():
-            for symbol, (package_name, _, relative_doc_url, _) in value.items():
+            for symbol, (package_name, _version, relative_doc_url, _) in value.items():
                 absolute_doc_url = base_url + relative_doc_url
 
                 if symbol in self.inventories:
