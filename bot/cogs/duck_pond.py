@@ -62,7 +62,7 @@ class DuckPond(Cog):
                 embed=embed
             )
         except discord.HTTPException:
-            log.exception(f"Failed to send a message to the Duck Pool webhook")
+            log.exception("Failed to send a message to the Duck Pool webhook")
 
     async def count_ducks(self, message: Message) -> int:
         """
@@ -76,8 +76,8 @@ class DuckPond(Cog):
         for reaction in message.reactions:
             async for user in reaction.users():
 
-                # Is the user or member a staff member?
-                if not self.is_staff(user) or not user.id not in duck_reactors:
+                # Is the user a staff member and not already counted as reactor?
+                if not self.is_staff(user) or user.id in duck_reactors:
                     continue
 
                 # Is the emoji a duck?
@@ -90,6 +90,35 @@ class DuckPond(Cog):
                         duck_count += 1
                         duck_reactors.append(user.id)
         return duck_count
+
+    async def relay_message_to_duck_pond(self, message: Message) -> None:
+        """Relays the message's content and attachments to the duck pond channel."""
+        clean_content = message.clean_content
+
+        if clean_content:
+            await self.send_webhook(
+                content=message.clean_content,
+                username=message.author.display_name,
+                avatar_url=message.author.avatar_url
+            )
+
+        if message.attachments:
+            try:
+                await send_attachments(message, self.webhook)
+            except (errors.Forbidden, errors.NotFound):
+                e = Embed(
+                    description=":x: **This message contained an attachment, but it could not be retrieved**",
+                    color=Color.red()
+                )
+                await self.send_webhook(
+                    embed=e,
+                    username=message.author.display_name,
+                    avatar_url=message.author.avatar_url
+                )
+            except discord.HTTPException:
+                log.exception(f"Failed to send an attachment to the webhook")
+
+        await message.add_reaction("✅")
 
     @Cog.listener()
     async def on_raw_reaction_add(self, payload: RawReactionActionEvent) -> None:
@@ -124,32 +153,7 @@ class DuckPond(Cog):
 
         # If we've got more than the required amount of ducks, send the message to the duck_pond.
         if duck_count >= constants.DuckPond.threshold:
-            clean_content = message.clean_content
-
-            if clean_content:
-                await self.send_webhook(
-                    content=message.clean_content,
-                    username=message.author.display_name,
-                    avatar_url=message.author.avatar_url
-                )
-
-            if message.attachments:
-                try:
-                    await send_attachments(message, self.webhook)
-                except (errors.Forbidden, errors.NotFound):
-                    e = Embed(
-                        description=":x: **This message contained an attachment, but it could not be retrieved**",
-                        color=Color.red()
-                    )
-                    await self.send_webhook(
-                        embed=e,
-                        username=message.author.display_name,
-                        avatar_url=message.author.avatar_url
-                    )
-                except discord.HTTPException:
-                    log.exception(f"Failed to send an attachment to the webhook")
-
-            await message.add_reaction("✅")
+            await self.relay_message_to_duck_pond(message)
 
     @Cog.listener()
     async def on_raw_reaction_remove(self, payload: RawReactionActionEvent) -> None:
