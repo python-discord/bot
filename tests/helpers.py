@@ -127,14 +127,20 @@ class AsyncMock(CustomMockMixin, unittest.mock.MagicMock):
 
 class AsyncIteratorMock:
     """
-    A class to mock asyncronous iterators.
+    A class to mock asynchronous iterators.
 
     This allows async for, which is used in certain Discord.py objects. For example,
-    an async iterator is returned by the Reaction.users() coroutine.
+    an async iterator is returned by the Reaction.users() method.
     """
 
-    def __init__(self, sequence):
-        self.iter = iter(sequence)
+    def __init__(self, iterable: Iterable = None):
+        if iterable is None:
+            iterable = []
+
+        self.iter = iter(iterable)
+        self.iterable = iterable
+
+        self.call_count = 0
 
     def __aiter__(self):
         return self
@@ -144,6 +150,50 @@ class AsyncIteratorMock:
             return next(self.iter)
         except StopIteration:
             raise StopAsyncIteration
+
+    def __call__(self):
+        """
+        Keeps track of the number of times an instance has been called.
+
+        This is useful, since it typically shows that the iterator has actually been used somewhere after we have
+        instantiated the mock for an attribute that normally returns an iterator when called.
+        """
+        self.call_count += 1
+        return self
+
+    @property
+    def return_value(self):
+        """Makes `self.iterable` accessible as self.return_value."""
+        return self.iterable
+
+    @return_value.setter
+    def return_value(self, iterable):
+        """Stores the `return_value` as `self.iterable` and its iterator as `self.iter`."""
+        self.iter = iter(iterable)
+        self.iterable = iterable
+
+    def assert_called(self):
+        """Asserts if the AsyncIteratorMock instance has been called at least once."""
+        if self.call_count == 0:
+            raise AssertionError("Expected AsyncIteratorMock to have been called.")
+
+    def assert_called_once(self):
+        """Asserts if the AsyncIteratorMock instance has been called exactly once."""
+        if self.call_count != 1:
+            raise AssertionError(
+                f"Expected AsyncIteratorMock to have been called once. Called {self.call_count} times."
+            )
+
+    def assert_not_called(self):
+        """Asserts if the AsyncIteratorMock instance has not been called."""
+        if self.call_count != 0:
+            raise AssertionError(
+                f"Expected AsyncIteratorMock to not have been called once. Called {self.call_count} times."
+            )
+
+    def reset_mock(self):
+        """Resets the call count, but not the return value or iterator."""
+        self.call_count = 0
 
 
 # Create a guild instance to get a realistic Mock of `discord.Guild`
