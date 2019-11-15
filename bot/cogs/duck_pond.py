@@ -129,19 +129,19 @@ class DuckPond(Cog):
         amount of ducks specified in the config under duck_pond/threshold, it will
         send the message off to the duck pond.
         """
+        # Is the emoji in the reaction a duck?
+        if payload.emoji.is_custom_emoji():
+            if payload.emoji.id not in constants.DuckPond.custom_emojis:
+                return
+        elif payload.emoji.name != "🦆":
+            return
+
         channel = discord.utils.get(self.bot.get_all_channels(), id=payload.channel_id)
         message = await channel.fetch_message(payload.message_id)
         member = discord.utils.get(message.guild.members, id=payload.user_id)
 
         # Is the member a human and a staff member?
         if not self.is_staff(member) or member.bot:
-            return
-
-        # Is the emoji in the reaction a duck?
-        if payload.emoji.is_custom_emoji():
-            if payload.emoji.id not in constants.DuckPond.custom_emojis:
-                return
-        elif payload.emoji.name != "🦆":
             return
 
         # Does the message already have a green checkmark?
