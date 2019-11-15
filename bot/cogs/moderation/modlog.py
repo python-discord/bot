@@ -127,10 +127,10 @@ class ModLog(Cog, name="ModLog"):
         channel = self.bot.get_channel(channel_id)
         out = []
         for attachment in message.attachments:
-            buffer = BytesIO()
-            await attachment.save(buffer, use_cached=True)
-            reupload = await channel.send(file=discord.File(buffer, filename=attachment.filename))
-            out.append(reupload.attachments[0].url)
+            with BytesIO() as buffer:
+                await attachment.save(buffer, use_cached=True)
+                reupload: discord.Message = await channel.send(file=discord.File(buffer, filename=attachment.filename))
+                out.append(reupload.attachments[0].url)
         return out
 
     @Cog.listener()
