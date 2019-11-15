@@ -303,6 +303,25 @@ class MockMember(CustomMockMixin, unittest.mock.Mock, ColourMixin, HashableMixin
             self.mention = f"@{self.name}"
 
 
+# Create a User instance to get a realistic Mock of `discord.User`
+user_instance = discord.User(data=unittest.mock.MagicMock(), state=unittest.mock.MagicMock())
+
+
+class MockUser(CustomMockMixin, unittest.mock.Mock, ColourMixin, HashableMixin):
+    """
+    A Mock subclass to mock User objects.
+
+    Instances of this class will follow the specifications of `discord.User` instances. For more
+    information, see the `MockGuild` docstring.
+    """
+    def __init__(self, **kwargs) -> None:
+        default_kwargs = {'name': 'user', 'id': next(self.discord_id), 'bot': False}
+        super().__init__(spec_set=user_instance, **collections.ChainMap(kwargs, default_kwargs))
+
+        if 'mention' not in kwargs:
+            self.mention = f"@{self.name}"
+
+
 # Create a Bot instance to get a realistic MagicMock of `discord.ext.commands.Bot`
 bot_instance = Bot(command_prefix=unittest.mock.MagicMock())
 bot_instance.http_session = None
