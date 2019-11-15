@@ -502,3 +502,24 @@ class MockReaction(CustomMockMixin, unittest.mock.MagicMock):
         self.message = kwargs.get('message', MockMessage())
         self.users = AsyncIteratorMock(kwargs.get('users', []))
 
+
+webhook_instance = discord.Webhook(data=unittest.mock.MagicMock(), adapter=unittest.mock.MagicMock())
+
+
+class MockAsyncWebhook(CustomMockMixin, unittest.mock.MagicMock):
+    """
+    A MagicMock subclass to mock Webhook objects using an AsyncWebhookAdapter.
+
+    Instances of this class will follow the specifications of `discord.Webhook` instances. For
+    more information, see the `MockGuild` docstring.
+    """
+
+    def __init__(self, **kwargs) -> None:
+        super().__init__(spec_set=webhook_instance, **kwargs)
+
+        # Because Webhooks can also use a synchronous "WebhookAdapter", the methods are not defined
+        # as coroutines. That's why we need to set the methods manually.
+        self.send = AsyncMock()
+        self.edit = AsyncMock()
+        self.delete = AsyncMock()
+        self.execute = AsyncMock()
