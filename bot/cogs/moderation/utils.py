@@ -40,6 +40,8 @@ async def post_infraction(
     active: bool = True,
 ) -> t.Optional[dict]:
     """Posts an infraction to the API."""
+    log.trace(f"Posting {infr_type} infraction for {user} to the API.")
+
     payload = {
         "actor": ctx.message.author.id,
         "hidden": hidden,
@@ -73,6 +75,8 @@ async def post_infraction(
 
 async def has_active_infraction(ctx: Context, user: MemberObject, infr_type: str) -> bool:
     """Checks if a user already has an active infraction of the given type."""
+    log.trace(f"Checking if {user} has active infractions of type {infr_type}.")
+
     active_infractions = await ctx.bot.api_client.get(
         'bot/infractions',
         params={
@@ -82,12 +86,14 @@ async def has_active_infraction(ctx: Context, user: MemberObject, infr_type: str
         }
     )
     if active_infractions:
+        log.trace(f"{user} has active infractions of type {infr_type}.")
         await ctx.send(
             f":x: According to my records, this user already has a {infr_type} infraction. "
             f"See infraction **#{active_infractions[0]['id']}**."
         )
         return True
     else:
+        log.trace(f"{user} does not have active infractions of type {infr_type}.")
         return False
 
 
@@ -99,6 +105,8 @@ async def notify_infraction(
     icon_url: str = Icons.token_removed
 ) -> bool:
     """DM a user about their new infraction and return True if the DM is successful."""
+    log.trace(f"Sending {user} a DM about their {infr_type} infraction.")
+
     embed = discord.Embed(
         description=textwrap.dedent(f"""
             **Type:** {infr_type.capitalize()}
@@ -127,6 +135,8 @@ async def notify_pardon(
     icon_url: str = Icons.user_verified
 ) -> bool:
     """DM a user about their pardoned infraction and return True if the DM is successful."""
+    log.trace(f"Sending {user} a DM about their pardoned infraction.")
+
     embed = discord.Embed(
         description=content,
         colour=Colours.soft_green
