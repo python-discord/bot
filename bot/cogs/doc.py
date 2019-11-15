@@ -26,7 +26,6 @@ from bot.pagination import LinePaginator
 log = logging.getLogger(__name__)
 logging.getLogger('urllib3').setLevel(logging.WARNING)
 
-NOT_FOUND_DELETE_DELAY = RedirectOutput.delete_delay
 NO_OVERRIDE_GROUPS = (
     "2to3fixer",
     "token",
@@ -37,8 +36,7 @@ NO_OVERRIDE_GROUPS = (
 NO_OVERRIDE_PACKAGES = (
     "python",
 )
-FAILED_REQUEST_RETRY_AMOUNT = 3
-UNWANTED_SIGNATURE_SYMBOLS_RE = re.compile(r"\[source]|\\\\|¶")
+
 SEARCH_END_TAG_ATTRS = (
     "data",
     "function",
@@ -49,7 +47,11 @@ SEARCH_END_TAG_ATTRS = (
     "rubric",
     "sphinxsidebar",
 )
+UNWANTED_SIGNATURE_SYMBOLS_RE = re.compile(r"\[source]|\\\\|¶")
 WHITESPACE_AFTER_NEWLINES_RE = re.compile(r"(?<=\n\n)(\s+)")
+
+FAILED_REQUEST_RETRY_AMOUNT = 3
+NOT_FOUND_DELETE_DELAY = RedirectOutput.delete_delay
 
 
 def async_cache(max_size: int = 128, arg_offset: int = 0) -> Callable:
