@@ -37,12 +37,13 @@ class DuckPond(Cog):
                     return True
         return False
 
-    @staticmethod
-    def has_green_checkmark(message: Message) -> bool:
+    async def has_green_checkmark(self, message: Message) -> bool:
         """Check if the message has a green checkmark reaction."""
         for reaction in message.reactions:
             if reaction.emoji == "✅":
-                return True
+                async for user in reaction.users():
+                    if user == self.bot.user:
+                        return True
         return False
 
     async def send_webhook(
@@ -115,7 +116,7 @@ class DuckPond(Cog):
             return
 
         # Does the message already have a green checkmark?
-        if self.has_green_checkmark(message):
+        if await self.has_green_checkmark(message):
             return
 
         # Time to count our ducks!
