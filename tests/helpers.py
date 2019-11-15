@@ -500,7 +500,5 @@ class MockReaction(CustomMockMixin, unittest.mock.MagicMock):
         super().__init__(spec_set=reaction_instance, **kwargs)
         self.emoji = kwargs.get('emoji', MockEmoji())
         self.message = kwargs.get('message', MockMessage())
-        self.user_list = AsyncIteratorMock(kwargs.get('user_list', []))
+        self.users = AsyncIteratorMock(kwargs.get('users', []))
 
-    def users(self):
-        return self.user_list
