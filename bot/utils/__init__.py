@@ -1,8 +1,11 @@
+import logging
 from abc import ABCMeta
 from typing import Any, Generator, Hashable, Iterable
 
 from discord import Object
 from discord.ext.commands import BadArgument, CogMeta
+
+log = logging.getLogger(__name__)
 
 
 class CogABCMeta(CogMeta, ABCMeta):
@@ -75,6 +78,7 @@ class ProxyUser(Object):
     """
 
     def __init__(self, user_id: str):
+        log.trace(f"Attempting to create a proxy user for the user id {user_id}.")
         try:
             user_id = int(user_id)
         except ValueError:
