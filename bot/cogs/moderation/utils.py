@@ -9,6 +9,7 @@ from discord.ext.commands import Context
 from bot.api import ResponseCodeError
 from bot.constants import Colours, Icons
 from bot.converters import Duration, ISODateTime
+from bot.utils import ProxyUser
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +26,7 @@ RULES_URL = "https://pythondiscord.com/pages/rules"
 APPEALABLE_INFRACTIONS = ("ban", "mute")
 
 UserTypes = t.Union[discord.Member, discord.User]
-MemberObject = t.Union[UserTypes, discord.Object]
+MemberObject = t.Union[UserTypes, ProxyUser]
 Infraction = t.Dict[str, t.Union[str, int, bool]]
 Expiry = t.Union[Duration, ISODateTime]
 
