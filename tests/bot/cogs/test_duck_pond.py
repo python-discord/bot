@@ -269,7 +269,7 @@ class DuckPondTests(base.LoggingTestCase):
                     self._get_reaction(emoji=self.duck_pond_emoji, staff=3, nonstaff=2),
                     self._get_reaction(emoji=self.unicode_duck_emoji, staff=4, nonstaff=9),
                 ]),
-                3+4
+                3 + 4
             ),
         )
 
@@ -310,7 +310,6 @@ class DuckPondTests(base.LoggingTestCase):
     @helpers.async_test
     async def test_relay_message_to_duck_pond_handles_send_attachments_exceptions(self, send_attachments, send_webhook):
         """The `relay_message_to_duck_pond` method should handle exceptions when calling `send_attachment`."""
-
         message = helpers.MockMessage(clean_content="message", attachments=["attachment"])
         side_effects = (discord.errors.Forbidden(MagicMock(), ""), discord.errors.NotFound(MagicMock(), ""))
 
@@ -435,9 +434,9 @@ class DuckPondTests(base.LoggingTestCase):
     async def test_on_raw_reaction_add_does_not_relay_below_duck_threshold(self, count_ducks, message_relay):
         """The `on_raw_reaction_add` listener should not relay messages or attachments below the duck threshold."""
         test_cases = (
-            (constants.DuckPond.threshold-1, False),
+            (constants.DuckPond.threshold - 1, False),
             (constants.DuckPond.threshold, True),
-            (constants.DuckPond.threshold+1, True),
+            (constants.DuckPond.threshold + 1, True),
         )
 
         channel, message, member, payload = self._raw_reaction_mocks(channel_id=3, message_id=4, user_id=5)
