@@ -163,7 +163,6 @@ class InfractionScheduler(Scheduler):
         await ctx.send(
             f"{dm_result}{confirm_msg} **{infr_type}** to {user.mention}{expiry_msg}{end_msg}."
         )
-        user_plain = f" (`{user}`)" if not isinstance(user, ProxyUser) else ""
         # Send a log message to the mod log.
         log.trace(f"Sending apply mod log for infraction #{id_}.")
         await self.mod_log.send_log_message(
@@ -172,7 +171,7 @@ class InfractionScheduler(Scheduler):
             title=f"Infraction {log_title}: {infr_type}",
             thumbnail=user.avatar_url_as(static_format="png"),
             text=textwrap.dedent(f"""
-                Member: {user.mention}{user_plain}
+                Member: {user.mention}{self._get_plain_user(user)}
                 Actor: {ctx.message.author}{dm_log_text}
                 Reason: {reason}
                 {expiry_log_text}
@@ -206,8 +205,7 @@ class InfractionScheduler(Scheduler):
         # Deactivate the infraction and cancel its scheduled expiration task.
         log_text = await self.deactivate_infraction(response[0], send_log=False)
 
-        user_plain = f" (`{user}`)" if not isinstance(user, ProxyUser) else ""
-        log_text["Member"] = f"{user.mention}{user_plain}"
+        log_text["Member"] = f"{user.mention}{self._get_plain_user(user)}"
         log_text["Actor"] = str(ctx.message.author)
         log_content = None
         id_ = response[0]['id']
@@ -412,3 +410,12 @@ class InfractionScheduler(Scheduler):
         await time.wait_until(expiry)
 
         await self.deactivate_infraction(infraction)
+
+    @staticmethod
+    def _get_plain_user(user: MemberObject) -> str:
+        """Get plain string representation for `user` in embed."""
+        if isinstance(user, ProxyUser):
+            return ""
+        if isinstance(user, discord.User):
+            return f" (`{user.name}`)"
+        return f" (`{user.nick}`)"
