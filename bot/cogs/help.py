@@ -126,7 +126,8 @@ class CustomHelpCommand(HelpCommand):
             choices.add(str(c))
 
             # all aliases if it's just a command
-            choices.update(n for n in c.aliases if isinstance(c, Command))
+            if isinstance(c, Command):
+                choices.update(c.aliases)
 
             # else aliases with parent if group. we need to strip() in case it's a Command and `full_parent` is None,
             # otherwise we get 2 commands: ` help` and normal `help`.
@@ -137,7 +138,7 @@ class CustomHelpCommand(HelpCommand):
         choices.update(self.context.bot.cogs)
 
         # all category names
-        choices.update(getattr(n, "category", None) for n in self.context.bot.cogs if hasattr(n, "category"))
+        choices.update(n.category for n in self.context.bot.cogs if hasattr(n, "category"))
         return choices
 
     def command_not_found(self, string: str) -> "HelpQueryNotFound":
@@ -164,7 +165,7 @@ class CustomHelpCommand(HelpCommand):
         embed = Embed(colour=Colour.red(), title=str(error))
 
         if getattr(error, "possible_matches", None):
-            matches = "\n".join(f"`{n}`" for n in error.possible_matches.keys())
+            matches = "\n".join(f"`{n}`" for n in error.possible_matches)
             embed.description = f"**Did you mean:**\n{matches}"
 
         await self.context.send(embed=embed)
@@ -285,14 +286,13 @@ class CustomHelpCommand(HelpCommand):
             f"\n*{c.short_doc or 'No details provided.'}*" for c in filtered_commands
         ]
 
-        description = f"**{category.name}**\n*{category.description}*"
+        description = f"```**{category.name}**\n*{category.description}*"
 
         if lines:
             description += "\n\n**Commands:**"
 
         await LinePaginator.paginate(
-            lines, self.context, embed, max_lines=COMMANDS_PER_PAGE,
-            max_size=2040, description=description, cleanup=True
+            lines, self.context, embed, prefix=description, max_lines=COMMANDS_PER_PAGE, max_size=2040
         )
 
     async def send_bot_help(self, mapping: dict) -> None:
@@ -350,7 +350,7 @@ class CustomHelpCommand(HelpCommand):
             # add any remaining command help that didn't get added in the last iteration above.
             pages.append(formatted)
 
-        await LinePaginator.paginate(pages, self.context, embed=embed, max_lines=1, max_size=2040, cleanup=True)
+        await LinePaginator.paginate(pages, self.context, embed=embed, max_lines=1, max_size=2040)
 
 
 class Help(Cog):
