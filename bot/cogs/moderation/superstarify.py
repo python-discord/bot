@@ -181,7 +181,7 @@ class Superstarify(InfractionScheduler, Cog):
             thumbnail=member.avatar_url_as(static_format="png"),
             text=textwrap.dedent(f"""
                 Member: {member.mention}{user_plain}
-                Actor:Actor: {ctx.message.author}
+                Actor: {ctx.message.author}
                 Reason: {reason}
                 Expires: {expiry_str}
                 Old nickname: `{old_nick}`
