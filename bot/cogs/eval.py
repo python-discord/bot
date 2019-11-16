@@ -148,7 +148,7 @@ class CodeEval(Cog):
         self.env.update(env)
 
         # Ignore this code, it works
-        _code = """
+        code_ = """
 async def func():  # (None,) -> Any
     try:
         with contextlib.redirect_stdout(self.stdout):
@@ -162,7 +162,7 @@ async def func():  # (None,) -> Any
 """.format(textwrap.indent(code, '            '))
 
         try:
-            exec(_code, self.env)  # noqa: B102,S102
+            exec(code_, self.env)  # noqa: B102,S102
             func = self.env['func']
             res = await func()
 
