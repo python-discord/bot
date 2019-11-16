@@ -9,7 +9,6 @@ from discord import Colour, Embed, Member
 from discord.ext.commands import Bot, Cog, Context, command
 
 from bot import constants
-from bot.utils import ProxyUser
 from bot.utils.checks import with_role_check
 from bot.utils.time import format_infraction
 from . import utils
@@ -173,14 +172,13 @@ class Superstarify(InfractionScheduler, Cog):
 
         # Log to the mod log channel.
         log.trace(f"Sending apply mod log for superstar #{id_}.")
-        user_plain = f" (`{member}`)" if not isinstance(member, ProxyUser) else ""
         await self.mod_log.send_log_message(
             icon_url=utils.INFRACTION_ICONS["superstar"][0],
             colour=Colour.gold(),
             title="Member achieved superstardom",
             thumbnail=member.avatar_url_as(static_format="png"),
             text=textwrap.dedent(f"""
-                Member: {member.mention}{user_plain}
+                Member: {member.mention} (`{member}`)
                 Actor: {ctx.message.author}
                 Reason: {reason}
                 Expires: {expiry_str}
