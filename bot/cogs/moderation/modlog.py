@@ -119,9 +119,9 @@ class ModLog(Cog, name="ModLog"):
         return await self.bot.get_context(log_message)  # Optionally return for use with antispam
 
     async def reupload_attachments(
-            self,
-            message: discord.Message,
-            channel_id: int = GuildConstant.attachment_repost
+        self,
+        message: discord.Message,
+        channel_id: int = GuildConstant.attachment_repost
     ) -> t.List[str]:
         """Re-upload message's attachments to the the channel_id and return the list of re-posted attachments URLs."""
         channel = self.bot.get_channel(channel_id)
