@@ -91,7 +91,7 @@ class DuckPond(Cog):
                         duck_reactors.append(user.id)
         return duck_count
 
-    async def relay_message_to_duck_pond(self, message: Message) -> None:
+    async def relay_message(self, message: Message) -> None:
         """Relays the message's content and attachments to the duck pond channel."""
         clean_content = message.clean_content
 
@@ -120,6 +120,17 @@ class DuckPond(Cog):
 
         await message.add_reaction("✅")
 
+    @staticmethod
+    def _payload_has_duckpond_emoji(payload: RawReactionActionEvent) -> bool:
+        """Test if the RawReactionActionEvent payload contains a duckpond emoji."""
+        if payload.emoji.is_custom_emoji():
+            if payload.emoji.id in constants.DuckPond.custom_emojis:
+                return True
+        elif payload.emoji.name == "🦆":
+            return True
+
+        return False
+
     @Cog.listener()
     async def on_raw_reaction_add(self, payload: RawReactionActionEvent) -> None:
         """
@@ -130,10 +141,7 @@ class DuckPond(Cog):
         send the message off to the duck pond.
         """
         # Is the emoji in the reaction a duck?
-        if payload.emoji.is_custom_emoji():
-            if payload.emoji.id not in constants.DuckPond.custom_emojis:
-                return
-        elif payload.emoji.name != "🦆":
+        if not self._payload_has_duckpond_emoji(payload):
             return
 
         channel = discord.utils.get(self.bot.get_all_channels(), id=payload.channel_id)
@@ -153,7 +161,7 @@ class DuckPond(Cog):
 
         # If we've got more than the required amount of ducks, send the message to the duck_pond.
         if duck_count >= constants.DuckPond.threshold:
-            await self.relay_message_to_duck_pond(message)
+            await self.relay_message(message)
 
     @Cog.listener()
     async def on_raw_reaction_remove(self, payload: RawReactionActionEvent) -> None:
