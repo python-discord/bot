@@ -2,6 +2,7 @@ import asyncio
 import logging
 import textwrap
 import typing as t
+from datetime import datetime
 
 import discord
 from discord.ext import commands
@@ -97,7 +98,8 @@ class ModManagement(commands.Cog):
         elif duration is not None:
             request_data['expires_at'] = duration.isoformat()
             expiry = duration.strftime(time.INFRACTION_FORMAT)
-            confirm_messages.append(f"set to expire on {expiry}")
+            duration_string = time.get_duration(duration, datetime.utcnow())
+            confirm_messages.append(f"set to expire on {expiry} ({duration_string})")
         else:
             confirm_messages.append("expiry unchanged")
 
@@ -234,7 +236,8 @@ class ModManagement(commands.Cog):
         if infraction["expires_at"] is None:
             expires = "*Permanent*"
         else:
-            expires = time.format_infraction(infraction["expires_at"])
+            duration = time.get_duration_from_expiry(infraction["expires_at"])
+            expires = f"{time.format_infraction(infraction['expires_at'])} ({duration})"
 
         lines = textwrap.dedent(f"""
             {"**===============**" if active else "==============="}
