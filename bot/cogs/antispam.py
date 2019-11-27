@@ -7,7 +7,7 @@ from io import BytesIO
 from operator import itemgetter
 from typing import Dict, Iterable, List, Set
 
-from discord import Colour, File, Member, Message, NotFound, Object, TextChannel
+from discord import Colour, File, HTTPException, Member, Message, NotFound, Object, TextChannel
 from discord.ext.commands import Bot, Cog
 
 from bot import rules
@@ -274,10 +274,13 @@ async def reupload_attachments(
     channel = bot.get_channel(channel_id)
     out = []
     for attachment in message.attachments:
-        with BytesIO() as buffer:
-            await attachment.save(buffer, use_cached=True)
-            reupload: Message = await channel.send(file=File(buffer, filename=attachment.filename))
-            out.append(reupload.attachments[0].url)
+        try:
+            with BytesIO() as buffer:
+                await attachment.save(buffer, use_cached=True)
+                reupload: Message = await channel.send(file=File(buffer, filename=attachment.filename))
+                out.append(reupload.attachments[0].url)
+        except (HTTPException, NotFound):
+            log.warning(f"Tried to re-upload attchment {attachment.id}, but it has failed.")
     return out
 
 
