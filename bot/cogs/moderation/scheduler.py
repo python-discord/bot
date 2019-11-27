@@ -83,16 +83,10 @@ class InfractionScheduler(Scheduler):
         infr_type = infraction["type"]
         icon = utils.INFRACTION_ICONS[infr_type][0]
         reason = infraction["reason"]
-        expiry = infraction["expires_at"]
-        expiry_at = expiry
+        expiry = time.get_duration_from_expiry(infraction["expires_at"])
         id_ = infraction['id']
 
         log.trace(f"Applying {infr_type} infraction #{id_} to {user}.")
-
-        if expiry:
-            duration = time.get_duration_from_expiry(expiry)
-            expiry = time.format_infraction(expiry)
-            expiry_at = f"{expiry} ({duration})"
 
         # Default values for the confirmation message and mod log.
         confirm_msg = f":ok_hand: applied"
@@ -101,11 +95,11 @@ class InfractionScheduler(Scheduler):
         if infr_type in ("note", "warning"):
             expiry_msg = ""
         else:
-            expiry_msg = f" until {expiry_at}" if expiry else " permanently"
+            expiry_msg = f" until {expiry}" if expiry else " permanently"
 
         dm_result = ""
         dm_log_text = ""
-        expiry_log_text = f"Expires: {expiry_at}" if expiry else ""
+        expiry_log_text = f"Expires: {expiry}" if expiry else ""
         log_title = "applied"
         log_content = None
 
@@ -115,7 +109,7 @@ class InfractionScheduler(Scheduler):
             user = await self.bot.fetch_user(user.id)
 
             # Accordingly display whether the user was successfully notified via DM.
-            if await utils.notify_infraction(user, infr_type, expiry_at, reason, icon):
+            if await utils.notify_infraction(user, infr_type, expiry, reason, icon):
                 dm_result = ":incoming_envelope: "
                 dm_log_text = "\nDM: Sent"
             else:
