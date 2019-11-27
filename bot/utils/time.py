@@ -1,12 +1,21 @@
 import asyncio
 import datetime
-from typing import Optional
+from typing import List, Optional
 
 import dateutil.parser
 from dateutil.relativedelta import relativedelta
 
 RFC1123_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
 INFRACTION_FORMAT = "%Y-%m-%d %H:%M"
+TIME_MARKS = (
+    (60, 'second'),  # 1 minute
+    (60, 'minute'),  # 1 hour
+    (24, 'hour'),  # 1 day
+    (7, 'day'),  # 1 week
+    (4, 'week'),  # 1 month
+    (12, 'month'),  # 1 year
+    (999, 'year')  # dumb the rest as year, max 999
+)
 
 
 def _stringify_time_unit(value: int, unit: str) -> str:
@@ -111,3 +120,28 @@ async def wait_until(time: datetime.datetime, start: Optional[datetime.datetime]
 def format_infraction(timestamp: str) -> str:
     """Format an infraction timestamp to a more readable ISO 8601 format."""
     return dateutil.parser.isoparse(timestamp).strftime(INFRACTION_FORMAT)
+
+
+def get_duration(date_from: datetime.datetime, date_to: datetime.datetime) -> str:
+    """
+    Get the duration between two datetime, in human readable format.
+
+    Will return the two biggest units avaiable, for example:
+    - 11 hours, 59 minutes
+    - 1 week, 6 minutes
+    - 7 months, 2 weeks
+    - 3 years, 3 months
+    - 5 minutes
+
+    :param date_from: A datetime.datetime object.
+    :param date_to: A datetime.datetime object.
+    """
+    div = abs(date_from - date_to).total_seconds()
+    results: List[str] = []
+    for unit, name in TIME_MARKS:
+        div, amount = divmod(div, unit)
+        if amount > 0:
+            plural = 's' if amount > 1 else ''
+            results.append(f"{amount:.0f} {name}{plural}")
+    # We have to reverse the order of units because currently it's smallest -> largest
+    return ', '.join(results[::-1][:2])
