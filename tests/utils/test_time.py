@@ -82,14 +82,15 @@ def test_get_duration(date_from: datetime, date_to: datetime, expected: str):
 @pytest.mark.parametrize(
     ('expiry', 'date_from', 'expected'),
     (
-        ('2019-12-12T00:01:00Z', datetime(2019, 12, 12, 12, 0, 5), '11 hours, 59 minutes'),
-        ('2019-12-12T00:00:00Z', datetime(2019, 12, 11, 23, 59), '1 minute'),
-        ('2019-11-23T20:09:00Z', datetime(2019, 11, 30, 20, 15), '1 week, 6 minutes'),
-        ('2019-11-23T20:09:00Z', datetime(2019, 4, 25, 20, 15), '7 months, 2 weeks'),
-        ('2019-11-23T20:58:00Z', datetime(2019, 11, 23, 21, 3), '5 minutes'),
-        ('2019-11-23T23:59:00Z', datetime(2019, 11, 24, 0, 0), '1 minute'),
-        ('2019-11-23T23:59:00Z', datetime(2022, 11, 23, 23, 0), '3 years, 3 months'),
-        ('2019-11-23T23:59:00Z', datetime(2019, 11, 23, 23, 49, 5), '9 minutes, 55 seconds'),
+        ('2019-12-12T00:01:00Z', datetime(2019, 12, 12, 12, 0, 5), '2019-12-12 00:01 (11 hours, 59 minutes)'),
+        ('2019-12-12T00:00:00Z', datetime(2019, 12, 11, 23, 59), '2019-12-12 00:00 (1 minute)'),
+        ('2019-11-23T20:09:00Z', datetime(2019, 11, 30, 20, 15), '2019-11-23 20:09 (1 week, 6 minutes)'),
+        ('2019-11-23T20:09:00Z', datetime(2019, 4, 25, 20, 15), '2019-11-23 20:09 (7 months, 2 weeks)'),
+        ('2019-11-23T20:58:00Z', datetime(2019, 11, 23, 21, 3), '2019-11-23 20:58 (5 minutes)'),
+        ('2019-11-23T23:59:00Z', datetime(2019, 11, 24, 0, 0), '2019-11-23 23:59 (1 minute)'),
+        ('2019-11-23T23:59:00Z', datetime(2022, 11, 23, 23, 0), '2019-11-23 23:59 (3 years, 3 months)'),
+        ('2019-11-23T23:59:00Z', datetime(2019, 11, 23, 23, 49, 5), '2019-11-23 23:59 (9 minutes, 55 seconds)'),
+        (None, datetime(2019, 11, 23, 23, 49, 5), None),
     )
 )
 def test_get_duration_from_expiry(expiry: str, date_from: datetime, expected: str):
