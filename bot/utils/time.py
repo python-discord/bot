@@ -148,7 +148,7 @@ def get_duration(date_from: datetime.datetime, date_to: datetime.datetime) -> st
     return ', '.join(results[::-1][:2])
 
 
-def get_duration_from_expiry(expiry: str, date_from: datetime = None) -> str:
+def get_duration_from_expiry(expiry: str = None, date_from: datetime = None) -> Optional[str]:
     """
     Get the duration between datetime.utcnow() and an expiry, in human readable format.
 
@@ -161,6 +161,15 @@ def get_duration_from_expiry(expiry: str, date_from: datetime = None) -> str:
 
     :param expiry: A string.
     """
+    if not expiry:
+        return None
+
     date_from = date_from or datetime.datetime.utcnow()
     date_to = dateutil.parser.isoparse(expiry).replace(tzinfo=None)
-    return get_duration(date_from, date_to)
+
+    expiry_formatted = format_infraction(expiry)
+
+    duration = get_duration(date_from, date_to)
+    duration_formatted = f" ({duration})" if duration else ''
+
+    return f"{expiry_formatted}{duration_formatted}"
