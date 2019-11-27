@@ -122,11 +122,11 @@ def format_infraction(timestamp: str) -> str:
     return dateutil.parser.isoparse(timestamp).strftime(INFRACTION_FORMAT)
 
 
-def get_duration(date_from: datetime.datetime, date_to: datetime.datetime) -> str:
+def get_duration(date_from: datetime.datetime, date_to: datetime.datetime, parts: Optional[int] = 2) -> str:
     """
     Get the duration between two datetime, in human readable format.
 
-    Will return the two biggest units avaiable, for example:
+    Will return <parts> number of units if avaiable, for example:
     - 11 hours, 59 minutes
     - 1 week, 6 minutes
     - 7 months, 2 weeks
@@ -135,6 +135,7 @@ def get_duration(date_from: datetime.datetime, date_to: datetime.datetime) -> st
 
     :param date_from: A datetime.datetime object.
     :param date_to: A datetime.datetime object.
+    :param parts: An int, defauted to two - the amount of units to return.
     """
     div = abs(date_from - date_to).total_seconds()
     div = round(div, 0)  # to avoid (14 minutes, 60 seconds)
@@ -144,11 +145,16 @@ def get_duration(date_from: datetime.datetime, date_to: datetime.datetime) -> st
         if amount > 0:
             plural = 's' if amount > 1 else ''
             results.append(f"{amount:.0f} {name}{plural}")
+    parts = parts if parts is not None else len(results)  # allow passing None directly to return all parts
     # We have to reverse the order of units because currently it's smallest -> largest
-    return ', '.join(results[::-1][:2])
+    return ', '.join(results[::-1][:parts])
 
 
-def get_duration_from_expiry(expiry: str = None, date_from: datetime = None) -> Optional[str]:
+def get_duration_from_expiry(
+    expiry: str = None,
+    date_from: datetime.datetime = None,
+    parts: Optional[int] = 2
+) -> Optional[str]:
     """
     Get the duration between datetime.utcnow() and an expiry, in human readable format.
 
@@ -159,7 +165,9 @@ def get_duration_from_expiry(expiry: str = None, date_from: datetime = None) -> 
     - 3 years, 3 months
     - 5 minutes
 
-    :param expiry: A string.
+    :param expiry: A string. If not passed in, will early return a None ( Permanent infraction ).
+    :param date_from: A datetime.datetime object. If not passed in, will use datetime.utcnow().
+    :param parts: An int, to show how many parts will be returned ( year - month or year - month - week - day ...).
     """
     if not expiry:
         return None
@@ -169,7 +177,7 @@ def get_duration_from_expiry(expiry: str = None, date_from: datetime = None) -> 
 
     expiry_formatted = format_infraction(expiry)
 
-    duration = get_duration(date_from, date_to)
+    duration = get_duration(date_from, date_to, parts)
     duration_formatted = f" ({duration})" if duration else ''
 
     return f"{expiry_formatted}{duration_formatted}"
