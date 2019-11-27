@@ -161,5 +161,5 @@ def get_duration_from_expiry(expiry: str) -> str:
     :param expiry: A string.
     """
     date_from = datetime.datetime.utcnow()
-    date_to = dateutil.parser.isoparse(expiry)
+    date_to = dateutil.parser.isoparse(expiry).replace(tzinfo=None)
     return get_duration(date_from, date_to)
