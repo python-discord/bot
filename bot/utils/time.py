@@ -145,3 +145,21 @@ def get_duration(date_from: datetime.datetime, date_to: datetime.datetime) -> st
             results.append(f"{amount:.0f} {name}{plural}")
     # We have to reverse the order of units because currently it's smallest -> largest
     return ', '.join(results[::-1][:2])
+
+
+def get_duration_from_expiry(expiry: str) -> str:
+    """
+    Get the duration between datetime.utcnow() and an expiry, in human readable format.
+
+    Will return the two biggest units avaiable, for example:
+    - 11 hours, 59 minutes
+    - 1 week, 6 minutes
+    - 7 months, 2 weeks
+    - 3 years, 3 months
+    - 5 minutes
+
+    :param expiry: A string.
+    """
+    date_from = datetime.datetime.utcnow()
+    date_to = dateutil.parser.isoparse(expiry)
+    return get_duration(date_from, date_to)
