@@ -137,6 +137,7 @@ def get_duration(date_from: datetime.datetime, date_to: datetime.datetime) -> st
     :param date_to: A datetime.datetime object.
     """
     div = abs(date_from - date_to).total_seconds()
+    div = round(div, 0)  # to avoid (14 minutes, 60 seconds)
     results: List[str] = []
     for unit, name in TIME_MARKS:
         div, amount = divmod(div, unit)
