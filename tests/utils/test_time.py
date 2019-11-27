@@ -60,3 +60,20 @@ def test_wait_until(sleep_patch):
     assert asyncio.run(time.wait_until(then, start)) is None
 
     sleep_patch.assert_called_once_with(10 * 60)
+
+
+@pytest.mark.parametrize(
+    ('date_from', 'date_to', 'expected'),
+    (
+        (datetime(2019, 12, 12, 0, 1), datetime(2019, 12, 12, 12, 0, 5), '11 hours, 59 minutes'),
+        (datetime(2019, 12, 12), datetime(2019, 12, 11, 23, 59), '1 minute'),
+        (datetime(2019, 11, 23, 20, 9), datetime(2019, 11, 30, 20, 15), '1 week, 6 minutes'),
+        (datetime(2019, 11, 23, 20, 9), datetime(2019, 4, 25, 20, 15), '7 months, 2 weeks'),
+        (datetime(2019, 11, 23, 20, 58), datetime(2019, 11, 23, 21, 3), '5 minutes'),
+        (datetime(2019, 11, 23, 23, 59), datetime(2019, 11, 24, 0, 0), '1 minute'),
+        (datetime(2019, 11, 23, 23, 59), datetime(2022, 11, 23, 23, 0), '3 years, 3 months'),
+        (datetime(2019, 11, 23, 23, 59), datetime(2019, 11, 23, 23, 49, 5), '9 minutes, 55 seconds'),
+    )
+)
+def test_get_duration(date_from: datetime, date_to: datetime, expected: str):
+    assert time.get_duration(date_from, date_to) == expected
