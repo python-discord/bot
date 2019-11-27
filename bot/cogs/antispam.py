@@ -1,11 +1,13 @@
+import asyncio
 import logging
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from io import BytesIO
 from operator import itemgetter
 from typing import Dict, Iterable, List, Set
 
-from discord import Colour, Member, Message, NotFound, Object, TextChannel
+from discord import Colour, File, Member, Message, NotFound, Object, TextChannel
 from discord.ext.commands import Bot, Cog
 
 from bot import rules
@@ -40,11 +42,13 @@ class DeletionContext:
     """Represents a Deletion Context for a single spam event."""
 
     channel: TextChannel
+    bot: Bot
     members: Dict[int, Member] = field(default_factory=dict)
     rules: Set[str] = field(default_factory=set)
     messages: Dict[int, Message] = field(default_factory=dict)
+    attachments: List[List[str]] = field(default_factory=list)
 
-    def add(self, rule_name: str, members: Iterable[Member], messages: Iterable[Message]) -> None:
+    async def add(self, rule_name: str, members: Iterable[Member], messages: Iterable[Message]) -> None:
         """Adds new rule violation events to the deletion context."""
         self.rules.add(rule_name)
 
@@ -55,6 +59,9 @@ class DeletionContext:
         for message in messages:
             if message.id not in self.messages:
                 self.messages[message.id] = message
+
+                # Re-upload attachments :
+                self.attachments.append(await reupload_attachments(self.bot, message))
 
     async def upload_messages(self, actor_id: int, modlog: ModLog) -> None:
         """Method that takes care of uploading the queue and posting modlog alert."""
@@ -68,7 +75,7 @@ class DeletionContext:
 
         # For multiple messages or those with excessive newlines, use the logs API
         if len(self.messages) > 1 or 'newlines' in self.rules:
-            url = await modlog.upload_log(self.messages.values(), actor_id)
+            url = await modlog.upload_log(self.messages.values(), actor_id, attachments=self.attachments)
             mod_alert_message += f"A complete log of the offending messages can be found [here]({url})"
         else:
             mod_alert_message += "Message:\n"
@@ -180,13 +187,16 @@ class AntiSpam(Cog):
                 # If there's no spam event going on for this channel, start a new Message Deletion Context
                 if message.channel.id not in self.message_deletion_queue:
                     log.trace(f"Creating queue for channel `{message.channel.id}`")
-                    self.message_deletion_queue[message.channel.id] = DeletionContext(channel=message.channel)
+                    self.message_deletion_queue[message.channel.id] = DeletionContext(
+                        channel=message.channel,
+                        bot=self.bot
+                    )
                     self.queue_consumption_tasks = self.bot.loop.create_task(
                         self._process_deletion_context(message.channel.id)
                     )
 
                 # Add the relevant of this trigger to the Deletion Context
-                self.message_deletion_queue[message.channel.id].add(
+                await self.message_deletion_queue[message.channel.id].add(
                     rule_name=rule_name,
                     members=members,
                     messages=relevant_messages
@@ -242,12 +252,33 @@ class AntiSpam(Cog):
 
     async def _process_deletion_context(self, context_id: int) -> None:
         """Processes the Deletion Context queue."""
+        log.trace("Sleeping before processing message deletion queue.")
+        await asyncio.sleep(10)
+
         if context_id not in self.message_deletion_queue:
             log.error(f"Started processing deletion queue for context `{context_id}`, but it was not found!")
             return
 
         deletion_context = self.message_deletion_queue.pop(context_id)
         await deletion_context.upload_messages(self.bot.user.id, self.mod_log)
+
+
+async def reupload_attachments(
+    bot: Bot,
+    message: Message,
+    channel_id: int = GuildConfig.attachment_repost
+) -> List[str]:
+    """Re-upload message's attachments to the the channel_id and return the list of re-posted attachments URLs."""
+    if not message.attachments:
+        return []
+    channel = bot.get_channel(channel_id)
+    out = []
+    for attachment in message.attachments:
+        with BytesIO() as buffer:
+            await attachment.save(buffer, use_cached=True)
+            reupload: Message = await channel.send(file=File(buffer, filename=attachment.filename))
+            out.append(reupload.attachments[0].url)
+    return out
 
 
 def validate_config(rules: Mapping = AntiSpamConfig.rules) -> Dict[str, str]:

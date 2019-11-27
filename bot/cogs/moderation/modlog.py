@@ -2,7 +2,6 @@ import asyncio
 import logging
 import typing as t
 from datetime import datetime
-from io import BytesIO
 
 import discord
 from dateutil.relativedelta import relativedelta
@@ -35,7 +34,12 @@ class ModLog(Cog, name="ModLog"):
         self._cached_deletes = []
         self._cached_edits = []
 
-    async def upload_log(self, messages: t.List[discord.Message], actor_id: int) -> str:
+    async def upload_log(
+            self,
+            messages: t.List[discord.Message],
+            actor_id: int,
+            attachments: t.List[t.List[str]] = None
+    ) -> str:
         """
         Uploads the log data to the database via an API endpoint for uploading logs.
 
@@ -43,6 +47,9 @@ class ModLog(Cog, name="ModLog"):
 
         Returns a URL that can be used to view the log.
         """
+        if attachments is None:
+            attachments = []
+
         response = await self.bot.api_client.post(
             'bot/deleted-messages',
             json={
@@ -55,9 +62,9 @@ class ModLog(Cog, name="ModLog"):
                         'channel_id': message.channel.id,
                         'content': message.content,
                         'embeds': [embed.to_dict() for embed in message.embeds],
-                        'attachments': await self.reupload_attachments(message) if message.attachments else [],
+                        'attachments': attachment,
                     }
-                    for message in messages
+                    for message, attachment in zip(messages, attachments)
                 ]
             }
         )
@@ -117,21 +124,6 @@ class ModLog(Cog, name="ModLog"):
                 await channel.send(embed=additional_embed)
 
         return await self.bot.get_context(log_message)  # Optionally return for use with antispam
-
-    async def reupload_attachments(
-        self,
-        message: discord.Message,
-        channel_id: int = GuildConstant.attachment_repost
-    ) -> t.List[str]:
-        """Re-upload message's attachments to the the channel_id and return the list of re-posted attachments URLs."""
-        channel = self.bot.get_channel(channel_id)
-        out = []
-        for attachment in message.attachments:
-            with BytesIO() as buffer:
-                await attachment.save(buffer, use_cached=True)
-                reupload: discord.Message = await channel.send(file=discord.File(buffer, filename=attachment.filename))
-                out.append(reupload.attachments[0].url)
-        return out
 
     @Cog.listener()
     async def on_guild_channel_create(self, channel: GUILD_CHANNEL) -> None:
