@@ -72,8 +72,7 @@ class DuckPondTests(base.LoggingTestCase):
 
         self.assertEqual(len(log_watcher.records), 1)
 
-        [record] = log_watcher.records
-        self.assertEqual(record.message, f"Failed to fetch webhook with id `{self.cog.webhook_id}`")
+        record = log_watcher.records[0]
         self.assertEqual(record.levelno, logging.ERROR)
 
     def test_is_staff_returns_correct_values_based_on_instance_passed(self):
@@ -99,15 +98,15 @@ class DuckPondTests(base.LoggingTestCase):
             (
                 "No green check mark reactions",
                 helpers.MockMessage(reactions=[
-                    helpers.MockReaction(emoji=self.unicode_duck_emoji),
-                    helpers.MockReaction(emoji=self.thumbs_up_emoji)
+                    helpers.MockReaction(emoji=self.unicode_duck_emoji, users=[self.bot.user]),
+                    helpers.MockReaction(emoji=self.thumbs_up_emoji, users=[self.bot.user])
                 ]),
                 False
             ),
             (
                 "Green check mark reaction, but not from our bot",
                 helpers.MockMessage(reactions=[
-                    helpers.MockReaction(emoji=self.unicode_duck_emoji),
+                    helpers.MockReaction(emoji=self.unicode_duck_emoji, users=[self.bot.user]),
                     helpers.MockReaction(emoji=self.checkmark_emoji, users=[self.staff_member])
                 ]),
                 False
@@ -115,7 +114,7 @@ class DuckPondTests(base.LoggingTestCase):
             (
                 "Green check mark reaction, with one from the bot",
                 helpers.MockMessage(reactions=[
-                    helpers.MockReaction(emoji=self.unicode_duck_emoji),
+                    helpers.MockReaction(emoji=self.unicode_duck_emoji, users=[self.bot.user]),
                     helpers.MockReaction(emoji=self.checkmark_emoji, users=[self.staff_member, self.bot.user])
                 ]),
                 True
@@ -160,8 +159,7 @@ class DuckPondTests(base.LoggingTestCase):
 
         self.assertEqual(len(log_watcher.records), 1)
 
-        [record] = log_watcher.records
-        self.assertEqual(record.message, "Failed to send a message to the Duck Pool webhook")
+        record = log_watcher.records[0]
         self.assertEqual(record.levelno, logging.ERROR)
 
     def _get_reaction(
@@ -250,10 +248,12 @@ class DuckPondTests(base.LoggingTestCase):
             # A staffer with multiple duck reactions only counts once
             (
                 "Two different duck reactions from the same staffer",
-                helpers.MockMessage(reactions=[
-                    helpers.MockReaction(emoji=self.duck_pond_emoji, users=[self.staff_member]),
-                    helpers.MockReaction(emoji=self.unicode_duck_emoji, users=[self.staff_member]),
-                ]),
+                helpers.MockMessage(
+                    reactions=[
+                        helpers.MockReaction(emoji=self.duck_pond_emoji, users=[self.staff_member]),
+                        helpers.MockReaction(emoji=self.unicode_duck_emoji, users=[self.staff_member]),
+                    ]
+                ),
                 1
             ),
             # A non-string emoji does not count (to test the `isinstance(reaction.emoji, str)` elif)
@@ -265,10 +265,12 @@ class DuckPondTests(base.LoggingTestCase):
             # We correctly sum when multiple reactions are provided.
             (
                 "Duckpond Duck Reaction from 3 staffers + 2 non-staffers",
-                helpers.MockMessage(reactions=[
-                    self._get_reaction(emoji=self.duck_pond_emoji, staff=3, nonstaff=2),
-                    self._get_reaction(emoji=self.unicode_duck_emoji, staff=4, nonstaff=9),
-                ]),
+                helpers.MockMessage(
+                    reactions=[
+                        self._get_reaction(emoji=self.duck_pond_emoji, staff=3, nonstaff=2),
+                        self._get_reaction(emoji=self.unicode_duck_emoji, staff=4, nonstaff=9),
+                    ]
+                ),
                 3 + 4
             ),
         )
@@ -279,8 +281,8 @@ class DuckPondTests(base.LoggingTestCase):
                 self.assertEqual(expected_count, actual_count)
 
     @helpers.async_test
-    async def test_relay_message_to_duck_pond_correctly_relays_content_and_attachments(self):
-        """The `relay_message_to_duck_pond` method should correctly relay message content and attachments."""
+    async def test_relay_message_correctly_relays_content_and_attachments(self):
+        """The `relay_message` method should correctly relay message content and attachments."""
         send_webhook_path = f"{MODULE_PATH}.DuckPond.send_webhook"
         send_attachments_path = f"{MODULE_PATH}.send_attachments"
 
@@ -297,41 +299,47 @@ class DuckPondTests(base.LoggingTestCase):
             with patch(send_webhook_path, new_callable=helpers.AsyncMock) as send_webhook:
                 with patch(send_attachments_path, new_callable=helpers.AsyncMock) as send_attachments:
                     with self.subTest(clean_content=message.clean_content, attachments=message.attachments):
-                        await self.cog.relay_message_to_duck_pond(message)
+                        await self.cog.relay_message(message)
 
                         self.assertEqual(expect_webhook_call, send_webhook.called)
                         self.assertEqual(expect_attachment_call, send_attachments.called)
 
                         message.add_reaction.assert_called_once_with(self.checkmark_emoji)
-                        message.reset_mock()
 
-    @patch(f"{MODULE_PATH}.DuckPond.send_webhook", new_callable=helpers.AsyncMock)
     @patch(f"{MODULE_PATH}.send_attachments", new_callable=helpers.AsyncMock)
     @helpers.async_test
-    async def test_relay_message_to_duck_pond_handles_send_attachments_exceptions(self, send_attachments, send_webhook):
-        """The `relay_message_to_duck_pond` method should handle exceptions when calling `send_attachment`."""
+    async def test_relay_message_handles_irretrievable_attachment_exceptions(self, send_attachments):
+        """The `relay_message` method should handle irretrievable attachments."""
         message = helpers.MockMessage(clean_content="message", attachments=["attachment"])
         side_effects = (discord.errors.Forbidden(MagicMock(), ""), discord.errors.NotFound(MagicMock(), ""))
 
         self.cog.webhook = helpers.MockAsyncWebhook()
         log = logging.getLogger("bot.cogs.duck_pond")
 
-        # Subtests for the first `except` block
         for side_effect in side_effects:
             send_attachments.side_effect = side_effect
-            with self.subTest(side_effect=type(side_effect).__name__):
-                with self.assertNotLogs(logger=log, level=logging.ERROR):
-                    await self.cog.relay_message_to_duck_pond(message)
+            with patch(f"{MODULE_PATH}.DuckPond.send_webhook", new_callable=helpers.AsyncMock) as send_webhook:
+                with self.subTest(side_effect=type(side_effect).__name__):
+                    with self.assertNotLogs(logger=log, level=logging.ERROR):
+                        await self.cog.relay_message(message)
 
-                self.assertEqual(send_webhook.call_count, 2)
-                send_webhook.reset_mock()
+                    self.assertEqual(send_webhook.call_count, 2)
 
-        # Subtests for the second `except` block
+    @patch(f"{MODULE_PATH}.DuckPond.send_webhook", new_callable=helpers.AsyncMock)
+    @patch(f"{MODULE_PATH}.send_attachments", new_callable=helpers.AsyncMock)
+    @helpers.async_test
+    async def test_relay_message_handles_attachment_http_error(self, send_attachments, send_webhook):
+        """The `relay_message` method should handle irretrievable attachments."""
+        message = helpers.MockMessage(clean_content="message", attachments=["attachment"])
+
+        self.cog.webhook = helpers.MockAsyncWebhook()
+        log = logging.getLogger("bot.cogs.duck_pond")
+
         side_effect = discord.HTTPException(MagicMock(), "")
         send_attachments.side_effect = side_effect
         with self.subTest(side_effect=type(side_effect).__name__):
             with self.assertLogs(logger=log, level=logging.ERROR) as log_watcher:
-                await self.cog.relay_message_to_duck_pond(message)
+                await self.cog.relay_message(message)
 
             send_webhook.assert_called_once_with(
                 content=message.clean_content,
@@ -341,9 +349,74 @@ class DuckPondTests(base.LoggingTestCase):
 
             self.assertEqual(len(log_watcher.records), 1)
 
-            [record] = log_watcher.records
-            self.assertEqual(record.message, "Failed to send an attachment to the webhook")
+            record = log_watcher.records[0]
             self.assertEqual(record.levelno, logging.ERROR)
+
+    def _mock_payload(self, label: str, is_custom_emoji: bool, id_: int, emoji_name: str):
+        """Creates a mock `on_raw_reaction_add` payload with the specified emoji data."""
+        payload = MagicMock(name=label)
+        payload.emoji.is_custom_emoji.return_value = is_custom_emoji
+        payload.emoji.id = id_
+        payload.emoji.name = emoji_name
+        return payload
+
+    @helpers.async_test
+    async def test_payload_has_duckpond_emoji_correctly_detects_relevant_emojis(self):
+        """The `on_raw_reaction_add` event handler should ignore irrelevant emojis."""
+        test_values = (
+            # Custom Emojis
+            (
+                self._mock_payload(
+                    label="Custom Duckpond Emoji",
+                    is_custom_emoji=True,
+                    id_=constants.DuckPond.custom_emojis[0],
+                    emoji_name=""
+                ),
+                True
+            ),
+            (
+                self._mock_payload(
+                    label="Custom Non-Duckpond Emoji",
+                    is_custom_emoji=True,
+                    id_=123,
+                    emoji_name=""
+                ),
+                False
+            ),
+            # Unicode Emojis
+            (
+                self._mock_payload(
+                    label="Unicode Duck Emoji",
+                    is_custom_emoji=False,
+                    id_=1,
+                    emoji_name=self.unicode_duck_emoji
+                ),
+                True
+            ),
+            (
+                self._mock_payload(
+                    label="Unicode Non-Duck Emoji",
+                    is_custom_emoji=False,
+                    id_=1,
+                    emoji_name=self.thumbs_up_emoji
+                ),
+                False
+            ),
+        )
+
+        for payload, expected_return in test_values:
+            actual_return = self.cog._payload_has_duckpond_emoji(payload)
+            with self.subTest(case=payload._mock_name, expected_return=expected_return, actual_return=actual_return):
+                self.assertEqual(expected_return, actual_return)
+
+    @patch(f"{MODULE_PATH}.discord.utils.get")
+    @patch(f"{MODULE_PATH}.DuckPond._payload_has_duckpond_emoji", new=MagicMock(return_value=False))
+    def test_on_raw_reaction_add_returns_early_with_payload_without_duck_emoji(self, utils_get):
+        """The `on_raw_reaction_add` method should return early if the payload does not contain a duck emoji."""
+        self.assertIsNone(asyncio.run(self.cog.on_raw_reaction_add(payload=MagicMock())))
+
+        # Ensure we've returned before making an unnecessary API call in the lines of code after the emoji check
+        utils_get.assert_not_called()
 
     def _raw_reaction_mocks(self, channel_id, message_id, user_id):
         """Sets up mocks for tests of the `on_raw_reaction_add` event listener."""
@@ -360,22 +433,6 @@ class DuckPondTests(base.LoggingTestCase):
         payload = MagicMock(channel_id=channel_id, message_id=message_id, user_id=user_id)
 
         return channel, message, member, payload
-
-    @helpers.async_test
-    async def test_on_raw_reaction_add_returns_for_non_relevant_emojis(self):
-        """The `on_raw_reaction_add` event handler should ignore irrelevant emojis."""
-        payload_custom_emoji = MagicMock(label="Non-Duck Custom Emoji")
-        payload_custom_emoji.emoji.is_custom_emoji.return_value = True
-        payload_custom_emoji.emoji.id = 12345
-
-        payload_unicode_emoji = MagicMock(label="Non-Duck Unicode Emoji")
-        payload_unicode_emoji.emoji.is_custom_emoji.return_value = False
-        payload_unicode_emoji.emoji.name = self.thumbs_up_emoji
-
-        for payload in (payload_custom_emoji, payload_unicode_emoji):
-            with self.subTest(case=payload.label), patch(f"{MODULE_PATH}.discord.utils.get") as discord_utils_get:
-                self.assertIsNone(await self.cog.on_raw_reaction_add(payload))
-                discord_utils_get.assert_not_called()
 
     @helpers.async_test
     async def test_on_raw_reaction_add_returns_for_bot_and_non_staff_members(self):
@@ -428,10 +485,8 @@ class DuckPondTests(base.LoggingTestCase):
         # Assert that we've made it past `self.is_staff`
         is_staff.assert_called_once()
 
-    @patch(f"{MODULE_PATH}.DuckPond.relay_message_to_duck_pond", new_callable=helpers.AsyncMock)
-    @patch(f"{MODULE_PATH}.DuckPond.count_ducks", new_callable=helpers.AsyncMock)
     @helpers.async_test
-    async def test_on_raw_reaction_add_does_not_relay_below_duck_threshold(self, count_ducks, message_relay):
+    async def test_on_raw_reaction_add_does_not_relay_below_duck_threshold(self):
         """The `on_raw_reaction_add` listener should not relay messages or attachments below the duck threshold."""
         test_cases = (
             (constants.DuckPond.threshold - 1, False),
@@ -444,21 +499,21 @@ class DuckPondTests(base.LoggingTestCase):
         payload.emoji = self.duck_pond_emoji
 
         for duck_count, should_relay in test_cases:
-            count_ducks.return_value = duck_count
-            with self.subTest(duck_count=duck_count, should_relay=should_relay):
-                await self.cog.on_raw_reaction_add(payload)
+            with patch(f"{MODULE_PATH}.DuckPond.relay_message", new_callable=helpers.AsyncMock) as relay_message:
+                with patch(f"{MODULE_PATH}.DuckPond.count_ducks", new_callable=helpers.AsyncMock) as count_ducks:
+                    count_ducks.return_value = duck_count
+                    with self.subTest(duck_count=duck_count, should_relay=should_relay):
+                        await self.cog.on_raw_reaction_add(payload)
 
-                # Confirm that we've made it past counting
-                count_ducks.assert_called_once()
-                count_ducks.reset_mock()
+                        # Confirm that we've made it past counting
+                        count_ducks.assert_called_once()
 
-                # Did we relay a message?
-                has_relayed = message_relay.called
-                self.assertEqual(has_relayed, should_relay)
+                        # Did we relay a message?
+                        has_relayed = relay_message.called
+                        self.assertEqual(has_relayed, should_relay)
 
-                if should_relay:
-                    message_relay.assert_called_once_with(message)
-                    message_relay.reset_mock()
+                        if should_relay:
+                            relay_message.assert_called_once_with(message)
 
     @helpers.async_test
     async def test_on_raw_reaction_remove_prevents_removal_of_green_checkmark_depending_on_the_duck_count(self):
@@ -479,10 +534,10 @@ class DuckPondTests(base.LoggingTestCase):
             (constants.DuckPond.threshold, True),
             (constants.DuckPond.threshold + 1, True),
         )
-        for duck_count, should_readd_checkmark in test_cases:
+        for duck_count, should_re_add_checkmark in test_cases:
             with patch(f"{MODULE_PATH}.DuckPond.count_ducks", new_callable=helpers.AsyncMock) as count_ducks:
                 count_ducks.return_value = duck_count
-                with self.subTest(duck_count=duck_count, should_readd_checkmark=should_readd_checkmark):
+                with self.subTest(duck_count=duck_count, should_re_add_checkmark=should_re_add_checkmark):
                     await self.cog.on_raw_reaction_remove(payload)
 
                     # Check if we fetched the message
@@ -491,16 +546,15 @@ class DuckPondTests(base.LoggingTestCase):
                     # Check if we actually counted the number of ducks
                     count_ducks.assert_called_once_with(message)
 
-                    has_readded_checkmark = message.add_reaction.called
-                    self.assertEqual(should_readd_checkmark, has_readded_checkmark)
+                    has_re_added_checkmark = message.add_reaction.called
+                    self.assertEqual(should_re_add_checkmark, has_re_added_checkmark)
 
-                    if should_readd_checkmark:
+                    if should_re_add_checkmark:
                         message.add_reaction.assert_called_once_with(self.checkmark_emoji)
                         message.add_reaction.reset_mock()
 
                     # reset mocks
                     channel.fetch_message.reset_mock()
-                    count_ducks.reset_mock()
                     message.reset_mock()
 
     def test_on_raw_reaction_remove_ignores_removal_of_non_checkmark_reactions(self):
@@ -530,7 +584,9 @@ class DuckPondSetupTests(unittest.TestCase):
 
         with self.assertLogs(logger=log, level=logging.INFO) as log_watcher:
             duck_pond.setup(bot)
-            line = log_watcher.output[0]
+
+        self.assertEqual(len(log_watcher.records), 1)
+        record = log_watcher.records[0]
+        self.assertEqual(record.levelno, logging.INFO)
 
         bot.add_cog.assert_called_once()
-        self.assertIn("Cog loaded: DuckPond", line)
