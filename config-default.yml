@@ -127,7 +127,7 @@ guild:
 
     staff_channels: [*ADMINS, *ADMIN_SPAM, *MOD_SPAM, *MODS, *HELPERS, *ORGANISATION, *DEFCON]
     ignored: [*ADMINS, *MESSAGE_LOG, *MODLOG]
-    attachment_repost: *MODLOG
+    attachment_repost: 649243850006855680
 
     roles:
         admin:             &ADMIN_ROLE      267628507062992896
