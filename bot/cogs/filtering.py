@@ -38,6 +38,14 @@ TOKEN_WATCHLIST_PATTERNS = [
 ]
 
 
+def expand_spoilers(text: str) -> str:
+    """Return a string containing all interpretations of a spoilered message."""
+    split_text = SPOILER_RE.split(text)
+    return ''.join(
+        split_text[0::2] + split_text[1::2] + split_text
+    )
+
+
 class Filtering(Cog):
     """Filtering out invites, blacklisting domains, and warning us of certain regular expressions."""
 
@@ -237,8 +245,10 @@ class Filtering(Cog):
 
         Only matches words with boundaries before and after the expression.
         """
+        if SPOILER_RE.search(text):
+            text = expand_spoilers(text)
         for regex_pattern in WORD_WATCHLIST_PATTERNS:
-            if regex_pattern.search(text + SPOILER_RE.sub('', text)):
+            if regex_pattern.search(text):
                 return True
 
         return False
