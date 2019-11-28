@@ -3,8 +3,7 @@ import logging
 from discord import Colour, Embed
 from discord.ext.commands import Bot, Cog, Context, group
 
-from bot.constants import Channels, STAFF_ROLES, URLs
-from bot.decorators import redirect_output
+from bot.constants import URLs
 from bot.pagination import LinePaginator
 
 log = logging.getLogger(__name__)
@@ -105,7 +104,6 @@ class Site(Cog):
         await ctx.send(embed=embed)
 
     @site_group.command(aliases=['r', 'rule'], name='rules')
-    @redirect_output(destination_channel=Channels.bot, bypass_roles=STAFF_ROLES)
     async def site_rules(self, ctx: Context, *rules: int) -> None:
         """Provides a link to all rules or, if specified, displays specific rule(s)."""
         rules_embed = Embed(title='Rules', color=Colour.blurple())
@@ -126,15 +124,15 @@ class Site(Cog):
         invalid_indices = tuple(
             pick
             for pick in rules
-            if pick < 0 or pick >= len(full_rules)
+            if pick < 1 or pick > len(full_rules)
         )
 
         if invalid_indices:
             indices = ', '.join(map(str, invalid_indices))
-            await ctx.send(f":x: Invalid rule indices {indices}")
+            await ctx.send(f":x: Invalid rule indices: {indices}")
             return
 
-        final_rules = tuple(f"**{pick}.** {full_rules[pick]}" for pick in rules)
+        final_rules = tuple(f"**{pick}.** {full_rules[pick - 1]}" for pick in rules)
 
         await LinePaginator.paginate(final_rules, ctx, rules_embed, max_lines=3)
 

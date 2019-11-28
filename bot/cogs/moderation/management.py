@@ -8,10 +8,10 @@ from discord.ext import commands
 from discord.ext.commands import Context
 
 from bot import constants
-from bot.converters import Duration, InfractionSearchQuery
+from bot.converters import InfractionSearchQuery
 from bot.pagination import LinePaginator
 from bot.utils import time
-from bot.utils.checks import with_role_check
+from bot.utils.checks import in_channel_check, with_role_check
 from . import utils
 from .infractions import Infractions
 from .modlog import ModLog
@@ -60,7 +60,7 @@ class ModManagement(commands.Cog):
         self,
         ctx: Context,
         infraction_id: int,
-        expires_at: t.Union[Duration, permanent_duration, None],
+        duration: t.Union[utils.Expiry, permanent_duration, None],
         *,
         reason: str = None
     ) -> None:
@@ -77,9 +77,10 @@ class ModManagement(commands.Cog):
         \u2003`M` - minutes∗
         \u2003`s` - seconds
 
-        Use "permanent" to mark the infraction as permanent.
+        Use "permanent" to mark the infraction as permanent. Alternatively, an ISO 8601 timestamp
+        can be provided for the duration.
         """
-        if expires_at is None and reason is None:
+        if duration is None and reason is None:
             # Unlike UserInputError, the error handler will show a specified message for BadArgument
             raise commands.BadArgument("Neither a new expiry nor a new reason was specified.")
 
@@ -90,12 +91,12 @@ class ModManagement(commands.Cog):
         confirm_messages = []
         log_text = ""
 
-        if expires_at == "permanent":
+        if duration == "permanent":
             request_data['expires_at'] = None
             confirm_messages.append("marked as permanent")
-        elif expires_at is not None:
-            request_data['expires_at'] = expires_at.isoformat()
-            expiry = expires_at.strftime(time.INFRACTION_FORMAT)
+        elif duration is not None:
+            request_data['expires_at'] = duration.isoformat()
+            expiry = duration.strftime(time.INFRACTION_FORMAT)
             confirm_messages.append(f"set to expire on {expiry}")
         else:
             confirm_messages.append("expiry unchanged")
@@ -255,8 +256,12 @@ class ModManagement(commands.Cog):
 
     # This cannot be static (must have a __func__ attribute).
     def cog_check(self, ctx: Context) -> bool:
-        """Only allow moderators to invoke the commands in this cog."""
-        return with_role_check(ctx, *constants.MODERATION_ROLES)
+        """Only allow moderators from moderator channels to invoke the commands in this cog."""
+        checks = [
+            with_role_check(ctx, *constants.MODERATION_ROLES),
+            in_channel_check(ctx, *constants.MODERATION_CHANNELS)
+        ]
+        return all(checks)
 
     # This cannot be static (must have a __func__ attribute).
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:

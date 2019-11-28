@@ -39,10 +39,11 @@ bot.load_extension("bot.cogs.logging")
 bot.load_extension("bot.cogs.security")
 
 # Commands, etc
+bot.load_extension("bot.cogs.antimalware")
 bot.load_extension("bot.cogs.antispam")
 bot.load_extension("bot.cogs.bot")
 bot.load_extension("bot.cogs.clean")
-bot.load_extension("bot.cogs.cogs")
+bot.load_extension("bot.cogs.extensions")
 bot.load_extension("bot.cogs.help")
 
 # Only load this in production

@@ -4,17 +4,20 @@ import logging
 import re
 import textwrap
 from collections import OrderedDict
+from contextlib import suppress
 from typing import Any, Callable, Optional, Tuple
 
 import discord
 from bs4 import BeautifulSoup
-from bs4.element import PageElement
+from bs4.element import PageElement, Tag
+from discord.errors import NotFound
 from discord.ext import commands
 from markdownify import MarkdownConverter
-from requests import ConnectionError
+from requests import ConnectTimeout, ConnectionError, HTTPError
 from sphinx.ext import intersphinx
+from urllib3.exceptions import ProtocolError
 
-from bot.constants import MODERATION_ROLES
+from bot.constants import MODERATION_ROLES, RedirectOutput
 from bot.converters import ValidPythonIdentifier, ValidURL
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
@@ -23,9 +26,32 @@ from bot.pagination import LinePaginator
 log = logging.getLogger(__name__)
 logging.getLogger('urllib3').setLevel(logging.WARNING)
 
+NO_OVERRIDE_GROUPS = (
+    "2to3fixer",
+    "token",
+    "label",
+    "pdbcommand",
+    "term",
+)
+NO_OVERRIDE_PACKAGES = (
+    "python",
+)
 
-UNWANTED_SIGNATURE_SYMBOLS = ('[source]', '¶')
+SEARCH_END_TAG_ATTRS = (
+    "data",
+    "function",
+    "class",
+    "exception",
+    "seealso",
+    "section",
+    "rubric",
+    "sphinxsidebar",
+)
+UNWANTED_SIGNATURE_SYMBOLS_RE = re.compile(r"\[source]|\\\\|¶")
 WHITESPACE_AFTER_NEWLINES_RE = re.compile(r"(?<=\n\n)(\s+)")
+
+FAILED_REQUEST_RETRY_AMOUNT = 3
+NOT_FOUND_DELETE_DELAY = RedirectOutput.delete_delay
 
 
 def async_cache(max_size: int = 128, arg_offset: int = 0) -> Callable:
@@ -125,10 +151,13 @@ class Doc(commands.Cog):
         self.base_urls = {}
         self.bot = bot
         self.inventories = {}
+        self.renamed_symbols = set()
 
-    @commands.Cog.listener()
-    async def on_ready(self) -> None:
-        """Refresh documentation inventory."""
+        self.bot.loop.create_task(self.init_refresh_inventory())
+
+    async def init_refresh_inventory(self) -> None:
+        """Refresh documentation inventory on cog initialization."""
+        await self.bot.wait_until_ready()
         await self.refresh_inventory()
 
     async def update_single(
@@ -148,13 +177,32 @@ class Doc(commands.Cog):
         """
         self.base_urls[package_name] = base_url
 
-        fetch_func = functools.partial(intersphinx.fetch_inventory, config, '', inventory_url)
-        for _, value in (await self.bot.loop.run_in_executor(None, fetch_func)).items():
-            # Each value has a bunch of information in the form
-            # `(package_name, version, relative_url, ???)`, and we only
-            # need the relative documentation URL.
-            for symbol, (_, _, relative_doc_url, _) in value.items():
+        package = await self._fetch_inventory(inventory_url, config)
+        if not package:
+            return None
+
+        for group, value in package.items():
+            for symbol, (package_name, _version, relative_doc_url, _) in value.items():
                 absolute_doc_url = base_url + relative_doc_url
+
+                if symbol in self.inventories:
+                    group_name = group.split(":")[1]
+                    symbol_base_url = self.inventories[symbol].split("/", 3)[2]
+                    if (
+                        group_name in NO_OVERRIDE_GROUPS
+                        or any(package in symbol_base_url for package in NO_OVERRIDE_PACKAGES)
+                    ):
+
+                        symbol = f"{group_name}.{symbol}"
+                        # If renamed `symbol` already exists, add library name in front to differentiate between them.
+                        if symbol in self.renamed_symbols:
+                            # Split `package_name` because of packages like Pillow that have spaces in them.
+                            symbol = f"{package_name.split()[0]}.{symbol}"
+
+                        self.inventories[symbol] = absolute_doc_url
+                        self.renamed_symbols.add(symbol)
+                        continue
+
                 self.inventories[symbol] = absolute_doc_url
 
         log.trace(f"Fetched inventory for {package_name}.")
@@ -168,6 +216,7 @@ class Doc(commands.Cog):
         # Also, reset the cache used for fetching documentation.
         self.base_urls.clear()
         self.inventories.clear()
+        self.renamed_symbols.clear()
         async_cache.cache = OrderedDict()
 
         # Since Intersphinx is intended to be used with Sphinx,
@@ -183,16 +232,15 @@ class Doc(commands.Cog):
         ]
         await asyncio.gather(*coros)
 
-    async def get_symbol_html(self, symbol: str) -> Optional[Tuple[str, str]]:
+    async def get_symbol_html(self, symbol: str) -> Optional[Tuple[list, str]]:
         """
         Given a Python symbol, return its signature and description.
-
-        Returns a tuple in the form (str, str), or `None`.
 
         The first tuple element is the signature of the given symbol as a markup-free string, and
         the second tuple element is the description of the given symbol with HTML markup included.
 
-        If the given symbol could not be found, returns `None`.
+        If the given symbol is a module, returns a tuple `(None, str)`
+        else if the symbol could not be found, returns `None`.
         """
         url = self.inventories.get(symbol)
         if url is None:
@@ -205,21 +253,38 @@ class Doc(commands.Cog):
         symbol_id = url.split('#')[-1]
         soup = BeautifulSoup(html, 'lxml')
         symbol_heading = soup.find(id=symbol_id)
-        signature_buffer = []
+        search_html = str(soup)
 
         if symbol_heading is None:
             return None
 
-        # Traverse the tags of the signature header and ignore any
-        # unwanted symbols from it. Add all of it to a temporary buffer.
-        for tag in symbol_heading.strings:
-            if tag not in UNWANTED_SIGNATURE_SYMBOLS:
-                signature_buffer.append(tag.replace('\\', ''))
+        if symbol_id == f"module-{symbol}":
+            # Get page content from the module headerlink to the
+            # first tag that has its class in `SEARCH_END_TAG_ATTRS`
+            start_tag = symbol_heading.find("a", attrs={"class": "headerlink"})
+            if start_tag is None:
+                return [], ""
 
-        signature = ''.join(signature_buffer)
-        description = str(symbol_heading.next_sibling.next_sibling).replace('¶', '')
+            end_tag = start_tag.find_next(self._match_end_tag)
+            if end_tag is None:
+                return [], ""
 
-        return signature, description
+            description_start_index = search_html.find(str(start_tag.parent)) + len(str(start_tag.parent))
+            description_end_index = search_html.find(str(end_tag))
+            description = search_html[description_start_index:description_end_index]
+            signatures = None
+
+        else:
+            signatures = []
+            description = str(symbol_heading.find_next_sibling("dd"))
+            description_pos = search_html.find(description)
+            # Get text of up to 3 signatures, remove unwanted symbols
+            for element in [symbol_heading] + symbol_heading.find_next_siblings("dt", limit=2):
+                signature = UNWANTED_SIGNATURE_SYMBOLS_RE.sub("", element.text)
+                if signature and search_html.find(str(element)) < description_pos:
+                    signatures.append(signature)
+
+        return signatures, description.replace('¶', '')
 
     @async_cache(arg_offset=1)
     async def get_symbol_embed(self, symbol: str) -> Optional[discord.Embed]:
@@ -232,7 +297,7 @@ class Doc(commands.Cog):
         if scraped_html is None:
             return None
 
-        signature = scraped_html[0]
+        signatures = scraped_html[0]
         permalink = self.inventories[symbol]
         description = markdownify(scraped_html[1])
 
@@ -240,26 +305,42 @@ class Doc(commands.Cog):
         # of a double newline (interpreted as a paragraph) before index 1000.
         if len(description) > 1000:
             shortened = description[:1000]
-            last_paragraph_end = shortened.rfind('\n\n')
-            description = description[:last_paragraph_end] + f"... [read more]({permalink})"
+            last_paragraph_end = shortened.rfind('\n\n', 100)
+            if last_paragraph_end == -1:
+                last_paragraph_end = shortened.rfind('. ')
+            description = description[:last_paragraph_end]
+
+            # If there is an incomplete code block, cut it out
+            if description.count("```") % 2:
+                codeblock_start = description.rfind('```py')
+                description = description[:codeblock_start].rstrip()
+            description += f"... [read more]({permalink})"
 
         description = WHITESPACE_AFTER_NEWLINES_RE.sub('', description)
 
-        if not signature:
+        if signatures is None:
+            # If symbol is a module, don't show signature.
+            embed_description = description
+
+        elif not signatures:
             # It's some "meta-page", for example:
             # https://docs.djangoproject.com/en/dev/ref/views/#module-django.views
-            return discord.Embed(
-                title=f'`{symbol}`',
-                url=permalink,
-                description="This appears to be a generic page not tied to a specific symbol."
-            )
+            embed_description = "This appears to be a generic page not tied to a specific symbol."
 
-        signature = textwrap.shorten(signature, 500)
-        return discord.Embed(
+        else:
+            embed_description = "".join(f"```py\n{textwrap.shorten(signature, 500)}```" for signature in signatures)
+            embed_description += f"\n{description}"
+
+        embed = discord.Embed(
             title=f'`{symbol}`',
             url=permalink,
-            description=f"```py\n{signature}```{description}"
+            description=embed_description
         )
+        # Show all symbols with the same name that were renamed in the footer.
+        embed.set_footer(
+            text=", ".join(renamed for renamed in self.renamed_symbols - {symbol} if renamed.endswith(f".{symbol}"))
+        )
+        return embed
 
     @commands.group(name='docs', aliases=('doc', 'd'), invoke_without_command=True)
     async def docs_group(self, ctx: commands.Context, symbol: commands.clean_content = None) -> None:
@@ -305,7 +386,10 @@ class Doc(commands.Cog):
                     description=f"Sorry, I could not find any documentation for `{symbol}`.",
                     colour=discord.Colour.red()
                 )
-                await ctx.send(embed=error_embed)
+                error_message = await ctx.send(embed=error_embed)
+                with suppress(NotFound):
+                    await error_message.delete(delay=NOT_FOUND_DELETE_DELAY)
+                    await ctx.message.delete(delay=NOT_FOUND_DELETE_DELAY)
             else:
                 await ctx.send(embed=doc_embed)
 
@@ -334,8 +418,7 @@ class Doc(commands.Cog):
         await self.bot.api_client.post('bot/documentation-links', json=body)
 
         log.info(
-            f"User @{ctx.author.name}#{ctx.author.discriminator} ({ctx.author.id}) "
-            "added a new documentation package:\n"
+            f"User @{ctx.author} ({ctx.author.id}) added a new documentation package:\n"
             f"Package name: {package_name}\n"
             f"Base url: {base_url}\n"
             f"Inventory URL: {inventory_url}"
@@ -363,6 +446,64 @@ class Doc(commands.Cog):
             # that was from this package is properly deleted.
             await self.refresh_inventory()
         await ctx.send(f"Successfully deleted `{package_name}` and refreshed inventory.")
+
+    @docs_group.command(name="refresh", aliases=("rfsh", "r"))
+    @with_role(*MODERATION_ROLES)
+    async def refresh_command(self, ctx: commands.Context) -> None:
+        """Refresh inventories and send differences to channel."""
+        old_inventories = set(self.base_urls)
+        with ctx.typing():
+            await self.refresh_inventory()
+        # Get differences of added and removed inventories
+        added = ', '.join(inv for inv in self.base_urls if inv not in old_inventories)
+        if added:
+            added = f"+ {added}"
+
+        removed = ', '.join(inv for inv in old_inventories if inv not in self.base_urls)
+        if removed:
+            removed = f"- {removed}"
+
+        embed = discord.Embed(
+            title="Inventories refreshed",
+            description=f"```diff\n{added}\n{removed}```" if added or removed else ""
+        )
+        await ctx.send(embed=embed)
+
+    async def _fetch_inventory(self, inventory_url: str, config: SphinxConfiguration) -> Optional[dict]:
+        """Get and return inventory from `inventory_url`. If fetching fails, return None."""
+        fetch_func = functools.partial(intersphinx.fetch_inventory, config, '', inventory_url)
+        for retry in range(1, FAILED_REQUEST_RETRY_AMOUNT+1):
+            try:
+                package = await self.bot.loop.run_in_executor(None, fetch_func)
+            except ConnectTimeout:
+                log.error(
+                    f"Fetching of inventory {inventory_url} timed out,"
+                    f" trying again. ({retry}/{FAILED_REQUEST_RETRY_AMOUNT})"
+                )
+            except ProtocolError:
+                log.error(
+                    f"Connection lost while fetching inventory {inventory_url},"
+                    f" trying again. ({retry}/{FAILED_REQUEST_RETRY_AMOUNT})"
+                )
+            except HTTPError as e:
+                log.error(f"Fetching of inventory {inventory_url} failed with status code {e.response.status_code}.")
+                return None
+            except ConnectionError:
+                log.error(f"Couldn't establish connection to inventory {inventory_url}.")
+                return None
+            else:
+                return package
+        log.error(f"Fetching of inventory {inventory_url} failed.")
+        return None
+
+    @staticmethod
+    def _match_end_tag(tag: Tag) -> bool:
+        """Matches `tag` if its class value is in `SEARCH_END_TAG_ATTRS` or the tag is table."""
+        for attr in SEARCH_END_TAG_ATTRS:
+            if attr in tag.get("class", ()):
+                return True
+
+        return tag.name == "table"
 
 
 def setup(bot: commands.Bot) -> None:
