@@ -280,7 +280,7 @@ async def reupload_attachments(
                 reupload: Message = await channel.send(file=File(buffer, filename=attachment.filename))
                 out.append(reupload.attachments[0].url)
         except (HTTPException, NotFound):
-            log.warning(f"Tried to re-upload attchment {attachment.id}, but it has failed.")
+            log.warning(f"Tried to re-upload attachment {attachment.id}, but it has failed.")
     return out
 
 
