@@ -1,12 +1,26 @@
 from __future__ import annotations
 
 import asyncio
+import collections
 import functools
+import inspect
+import itertools
+import logging
 import unittest.mock
-from typing import Iterable, Optional
+from typing import Any, Iterable, Optional
 
 import discord
 from discord.ext.commands import Bot, Context
+
+
+for logger in logging.Logger.manager.loggerDict.values():
+    # Set all loggers to CRITICAL by default to prevent screen clutter during testing
+
+    if not isinstance(logger, logging.Logger):
+        # There might be some logging.PlaceHolder objects in there
+        continue
+
+    logger.setLevel(logging.CRITICAL)
 
 
 def async_test(wrapped):
@@ -22,19 +36,6 @@ def async_test(wrapped):
     def wrapper(*args, **kwargs):
         return asyncio.run(wrapped(*args, **kwargs))
     return wrapper
-
-
-# TODO: Remove me in Python 3.8
-class AsyncMock(unittest.mock.MagicMock):
-    """
-    A MagicMock subclass to mock async callables.
-
-    Python 3.8 will introduce an AsyncMock class in the standard library that will have some more
-    features; this stand-in only overwrites the `__call__` method to an async version.
-    """
-
-    async def __call__(self, *args, **kwargs):
-        return super(AsyncMock, self).__call__(*args, **kwargs)
 
 
 class HashableMixin(discord.mixins.EqualityComparable):
@@ -61,15 +62,66 @@ class ColourMixin:
         self.colour = color
 
 
-class AttributeMock:
-    """Ensures attributes of our mock types will be instantiated with the correct mock type."""
+class CustomMockMixin:
+    """
+    Provides common functionality for our custom Mock types.
 
-    def __new__(cls, *args, **kwargs):
-        """Stops the regular parent class from propagating to newly mocked attributes."""
-        if 'parent' in kwargs:
-            return cls.attribute_mocktype(*args, **kwargs)
+    The cooperative `__init__` automatically creates `AsyncMock` attributes for every coroutine
+    function `inspect` detects in the `spec` instance we provide. In addition, this mixin takes care
+    of making sure child mocks are instantiated with the correct class. By default, the mock of the
+    children will be `unittest.mock.MagicMock`, but this can be overwritten by setting the attribute
+    `child_mock_type` on the custom mock inheriting from this mixin.
+    """
 
-        return super().__new__(cls)
+    child_mock_type = unittest.mock.MagicMock
+    discord_id = itertools.count(0)
+
+    def __init__(self, spec_set: Any = None, **kwargs):
+        name = kwargs.pop('name', None)  # `name` has special meaning for Mock classes, so we need to set it manually.
+        super().__init__(spec_set=spec_set, **kwargs)
+
+        if name:
+            self.name = name
+        if spec_set:
+            self._extract_coroutine_methods_from_spec_instance(spec_set)
+
+    def _get_child_mock(self, **kw):
+        """
+        Overwrite of the `_get_child_mock` method to stop the propagation of our custom mock classes.
+
+        Mock objects automatically create children when you access an attribute or call a method on them. By default,
+        the class of these children is the type of the parent itself. However, this would mean that the children created
+        for our custom mock types would also be instances of that custom mock type. This is not desirable, as attributes
+        of, e.g., a `Bot` object are not `Bot` objects themselves. The Python docs for `unittest.mock` hint that
+        overwriting this method is the best way to deal with that.
+
+        This override will look for an attribute called `child_mock_type` and use that as the type of the child mock.
+        """
+        klass = self.child_mock_type
+
+        if self._mock_sealed:
+            attribute = "." + kw["name"] if "name" in kw else "()"
+            mock_name = self._extract_mock_name() + attribute
+            raise AttributeError(mock_name)
+
+        return klass(**kw)
+
+    def _extract_coroutine_methods_from_spec_instance(self, source: Any) -> None:
+        """Automatically detect coroutine functions in `source` and set them as AsyncMock attributes."""
+        for name, _method in inspect.getmembers(source, inspect.iscoroutinefunction):
+            setattr(self, name, AsyncMock())
+
+
+# TODO: Remove me in Python 3.8
+class AsyncMock(CustomMockMixin, unittest.mock.MagicMock):
+    """
+    A MagicMock subclass to mock async callables.
+
+    Python 3.8 will introduce an AsyncMock class in the standard library that will have some more
+    features; this stand-in only overwrites the `__call__` method to an async version.
+    """
+    async def __call__(self, *args, **kwargs):
+        return super(AsyncMock, self).__call__(*args, **kwargs)
 
 
 # Create a guild instance to get a realistic Mock of `discord.Guild`
@@ -95,7 +147,7 @@ guild_data = {
 guild_instance = discord.Guild(data=guild_data, state=unittest.mock.MagicMock())
 
 
-class MockGuild(AttributeMock, unittest.mock.Mock, HashableMixin):
+class MockGuild(CustomMockMixin, unittest.mock.Mock, HashableMixin):
     """
     A `Mock` subclass to mock `discord.Guild` objects.
 
@@ -121,53 +173,13 @@ class MockGuild(AttributeMock, unittest.mock.Mock, HashableMixin):
 
     For more info, see the `Mocking` section in `tests/README.md`.
     """
+    def __init__(self, roles: Optional[Iterable[MockRole]] = None, **kwargs) -> None:
+        default_kwargs = {'id': next(self.discord_id), 'members': []}
+        super().__init__(spec_set=guild_instance, **collections.ChainMap(kwargs, default_kwargs))
 
-    attribute_mocktype = unittest.mock.MagicMock
-
-    def __init__(
-        self,
-        guild_id: int = 1,
-        roles: Optional[Iterable[MockRole]] = None,
-        members: Optional[Iterable[MockMember]] = None,
-        **kwargs,
-    ) -> None:
-        super().__init__(spec=guild_instance, **kwargs)
-
-        self.id = guild_id
-
-        self.roles = [MockRole("@everyone", 1)]
+        self.roles = [MockRole(name="@everyone", position=1, id=0)]
         if roles:
             self.roles.extend(roles)
-
-        self.members = []
-        if members:
-            self.members.extend(members)
-
-        # `discord.Guild` coroutines
-        self.create_category_channel = AsyncMock()
-        self.ban = AsyncMock()
-        self.bans = AsyncMock()
-        self.create_category = AsyncMock()
-        self.create_custom_emoji = AsyncMock()
-        self.create_role = AsyncMock()
-        self.create_text_channel = AsyncMock()
-        self.create_voice_channel = AsyncMock()
-        self.delete = AsyncMock()
-        self.edit = AsyncMock()
-        self.estimate_pruned_members = AsyncMock()
-        self.fetch_ban = AsyncMock()
-        self.fetch_channels = AsyncMock()
-        self.fetch_emoji = AsyncMock()
-        self.fetch_emojis = AsyncMock()
-        self.fetch_member = AsyncMock()
-        self.invites = AsyncMock()
-        self.kick = AsyncMock()
-        self.leave = AsyncMock()
-        self.prune_members = AsyncMock()
-        self.unban = AsyncMock()
-        self.vanity_invite = AsyncMock()
-        self.webhooks = AsyncMock()
-        self.widget = AsyncMock()
 
 
 # Create a Role instance to get a realistic Mock of `discord.Role`
@@ -175,27 +187,19 @@ role_data = {'name': 'role', 'id': 1}
 role_instance = discord.Role(guild=guild_instance, state=unittest.mock.MagicMock(), data=role_data)
 
 
-class MockRole(AttributeMock, unittest.mock.Mock, ColourMixin, HashableMixin):
+class MockRole(CustomMockMixin, unittest.mock.Mock, ColourMixin, HashableMixin):
     """
     A Mock subclass to mock `discord.Role` objects.
 
     Instances of this class will follow the specifications of `discord.Role` instances. For more
     information, see the `MockGuild` docstring.
     """
+    def __init__(self, **kwargs) -> None:
+        default_kwargs = {'id': next(self.discord_id), 'name': 'role', 'position': 1}
+        super().__init__(spec_set=role_instance, **collections.ChainMap(kwargs, default_kwargs))
 
-    attribute_mocktype = unittest.mock.MagicMock
-
-    def __init__(self, name: str = "role", role_id: int = 1, position: int = 1, **kwargs) -> None:
-        super().__init__(spec=role_instance, **kwargs)
-
-        self.name = name
-        self.id = role_id
-        self.position = position
-        self.mention = f'&{self.name}'
-
-        # 'discord.Role' coroutines
-        self.delete = AsyncMock()
-        self.edit = AsyncMock()
+        if 'mention' not in kwargs:
+            self.mention = f'&{self.name}'
 
     def __lt__(self, other):
         """Simplified position-based comparisons similar to those of `discord.Role`."""
@@ -208,126 +212,50 @@ state_mock = unittest.mock.MagicMock()
 member_instance = discord.Member(data=member_data, guild=guild_instance, state=state_mock)
 
 
-class MockMember(AttributeMock, unittest.mock.Mock, ColourMixin, HashableMixin):
+class MockMember(CustomMockMixin, unittest.mock.Mock, ColourMixin, HashableMixin):
     """
     A Mock subclass to mock Member objects.
 
     Instances of this class will follow the specifications of `discord.Member` instances. For more
     information, see the `MockGuild` docstring.
     """
+    def __init__(self, roles: Optional[Iterable[MockRole]] = None, **kwargs) -> None:
+        default_kwargs = {'name': 'member', 'id': next(self.discord_id)}
+        super().__init__(spec_set=member_instance, **collections.ChainMap(kwargs, default_kwargs))
 
-    attribute_mocktype = unittest.mock.MagicMock
-
-    def __init__(
-        self,
-        name: str = "member",
-        user_id: int = 1,
-        roles: Optional[Iterable[MockRole]] = None,
-        **kwargs,
-    ) -> None:
-        super().__init__(spec=member_instance, **kwargs)
-
-        self.name = name
-        self.id = user_id
-
-        self.roles = [MockRole("@everyone", 1)]
+        self.roles = [MockRole(name="@everyone", position=1, id=0)]
         if roles:
             self.roles.extend(roles)
 
-        self.mention = f"@{self.name}"
-
-        # `discord.Member` coroutines
-        self.add_roles = AsyncMock()
-        self.ban = AsyncMock()
-        self.edit = AsyncMock()
-        self.fetch_message = AsyncMock()
-        self.kick = AsyncMock()
-        self.move_to = AsyncMock()
-        self.pins = AsyncMock()
-        self.remove_roles = AsyncMock()
-        self.send = AsyncMock()
-        self.trigger_typing = AsyncMock()
-        self.unban = AsyncMock()
+        if 'mention' not in kwargs:
+            self.mention = f"@{self.name}"
 
 
 # Create a Bot instance to get a realistic MagicMock of `discord.ext.commands.Bot`
 bot_instance = Bot(command_prefix=unittest.mock.MagicMock())
+bot_instance.http_session = None
+bot_instance.api_client = None
 
 
-class MockBot(AttributeMock, unittest.mock.MagicMock):
+class MockBot(CustomMockMixin, unittest.mock.MagicMock):
     """
     A MagicMock subclass to mock Bot objects.
 
     Instances of this class will follow the specifications of `discord.ext.commands.Bot` instances.
     For more information, see the `MockGuild` docstring.
     """
-
-    attribute_mocktype = unittest.mock.MagicMock
-
     def __init__(self, **kwargs) -> None:
-        super().__init__(spec=bot_instance, **kwargs)
+        super().__init__(spec_set=bot_instance, **kwargs)
 
-        # `discord.ext.commands.Bot` coroutines
-        self._before_invoke = AsyncMock()
-        self._after_invoke = AsyncMock()
-        self.application_info = AsyncMock()
-        self.change_presence = AsyncMock()
-        self.connect = AsyncMock()
-        self.close = AsyncMock()
-        self.create_guild = AsyncMock()
-        self.delete_invite = AsyncMock()
-        self.fetch_channel = AsyncMock()
-        self.fetch_guild = AsyncMock()
-        self.fetch_guilds = AsyncMock()
-        self.fetch_invite = AsyncMock()
-        self.fetch_user = AsyncMock()
-        self.fetch_user_profile = AsyncMock()
-        self.fetch_webhook = AsyncMock()
-        self.fetch_widget = AsyncMock()
-        self.get_context = AsyncMock()
-        self.get_prefix = AsyncMock()
-        self.invoke = AsyncMock()
-        self.is_owner = AsyncMock()
-        self.login = AsyncMock()
-        self.logout = AsyncMock()
-        self.on_command_error = AsyncMock()
-        self.on_error = AsyncMock()
-        self.process_commands = AsyncMock()
-        self.request_offline_members = AsyncMock()
-        self.start = AsyncMock()
-        self.wait_until_ready = AsyncMock()
+        # self.wait_for is *not* a coroutine function, but returns a coroutine nonetheless and
+        # and should therefore be awaited. (The documentation calls it a coroutine as well, which
+        # is technically incorrect, since it's a regular def.)
         self.wait_for = AsyncMock()
 
-
-# Create a Context instance to get a realistic MagicMock of `discord.ext.commands.Context`
-context_instance = Context(message=unittest.mock.MagicMock(), prefix=unittest.mock.MagicMock())
-
-
-class MockContext(AttributeMock, unittest.mock.MagicMock):
-    """
-    A MagicMock subclass to mock Context objects.
-
-    Instances of this class will follow the specifications of `discord.ext.commands.Context`
-    instances. For more information, see the `MockGuild` docstring.
-    """
-
-    attribute_mocktype = unittest.mock.MagicMock
-
-    def __init__(self, **kwargs) -> None:
-        super().__init__(spec=context_instance, **kwargs)
-        self.bot = MockBot()
-        self.guild = MockGuild()
-        self.author = MockMember()
-        self.command = unittest.mock.MagicMock()
-
-        # `discord.ext.commands.Context` coroutines
-        self.fetch_message = AsyncMock()
-        self.invoke = AsyncMock()
-        self.pins = AsyncMock()
-        self.reinvoke = AsyncMock()
-        self.send = AsyncMock()
-        self.send_help = AsyncMock()
-        self.trigger_typing = AsyncMock()
+        # Since calling `create_task` on our MockBot does not actually schedule the coroutine object
+        # as a task in the asyncio loop, this `side_effect` calls `close()` on the coroutine object
+        # to prevent "has not been awaited"-warnings.
+        self.loop.create_task.side_effect = lambda coroutine: coroutine.close()
 
 
 # Create a TextChannel instance to get a realistic MagicMock of `discord.TextChannel`
@@ -346,38 +274,19 @@ guild = unittest.mock.MagicMock()
 channel_instance = discord.TextChannel(state=state, guild=guild, data=channel_data)
 
 
-class MockTextChannel(AttributeMock, unittest.mock.Mock, HashableMixin):
+class MockTextChannel(CustomMockMixin, unittest.mock.Mock, HashableMixin):
     """
     A MagicMock subclass to mock TextChannel objects.
 
     Instances of this class will follow the specifications of `discord.TextChannel` instances. For
     more information, see the `MockGuild` docstring.
     """
-
-    attribute_mocktype = unittest.mock.MagicMock
-
     def __init__(self, name: str = 'channel', channel_id: int = 1, **kwargs) -> None:
-        super().__init__(spec=channel_instance, **kwargs)
-        self.id = channel_id
-        self.name = name
-        self.guild = MockGuild()
-        self.mention = f"#{self.name}"
+        default_kwargs = {'id': next(self.discord_id), 'name': 'channel', 'guild': MockGuild()}
+        super().__init__(spec_set=channel_instance, **collections.ChainMap(kwargs, default_kwargs))
 
-        # `discord.TextChannel` coroutines
-        self.clone = AsyncMock()
-        self.create_invite = AsyncMock()
-        self.create_webhook = AsyncMock()
-        self.delete = AsyncMock()
-        self.delete_messages = AsyncMock()
-        self.edit = AsyncMock()
-        self.fetch_message = AsyncMock()
-        self.invites = AsyncMock()
-        self.pins = AsyncMock()
-        self.purge = AsyncMock()
-        self.send = AsyncMock()
-        self.set_permissions = AsyncMock()
-        self.trigger_typing = AsyncMock()
-        self.webhooks = AsyncMock()
+        if 'mention' not in kwargs:
+            self.mention = f"#{self.name}"
 
 
 # Create a Message instance to get a realistic MagicMock of `discord.Message`
@@ -402,27 +311,79 @@ channel = unittest.mock.MagicMock()
 message_instance = discord.Message(state=state, channel=channel, data=message_data)
 
 
-class MockMessage(AttributeMock, unittest.mock.MagicMock):
+# Create a Context instance to get a realistic MagicMock of `discord.ext.commands.Context`
+context_instance = Context(message=unittest.mock.MagicMock(), prefix=unittest.mock.MagicMock())
+
+
+class MockContext(CustomMockMixin, unittest.mock.MagicMock):
+    """
+    A MagicMock subclass to mock Context objects.
+
+    Instances of this class will follow the specifications of `discord.ext.commands.Context`
+    instances. For more information, see the `MockGuild` docstring.
+    """
+    def __init__(self, **kwargs) -> None:
+        super().__init__(spec_set=context_instance, **kwargs)
+        self.bot = kwargs.get('bot', MockBot())
+        self.guild = kwargs.get('guild', MockGuild())
+        self.author = kwargs.get('author', MockMember())
+        self.channel = kwargs.get('channel', MockTextChannel())
+
+
+class MockMessage(CustomMockMixin, unittest.mock.MagicMock):
     """
     A MagicMock subclass to mock Message objects.
 
     Instances of this class will follow the specifications of `discord.Message` instances. For more
     information, see the `MockGuild` docstring.
     """
-
-    attribute_mocktype = unittest.mock.MagicMock
-
     def __init__(self, **kwargs) -> None:
-        super().__init__(spec=message_instance, **kwargs)
-        self.author = MockMember()
-        self.channel = MockTextChannel()
+        super().__init__(spec_set=message_instance, **kwargs)
+        self.author = kwargs.get('author', MockMember())
+        self.channel = kwargs.get('channel', MockTextChannel())
 
-        # `discord.Message` coroutines
-        self.ack = AsyncMock()
-        self.add_reaction = AsyncMock()
-        self.clear_reactions = AsyncMock()
-        self.delete = AsyncMock()
-        self.edit = AsyncMock()
-        self.pin = AsyncMock()
-        self.remove_reaction = AsyncMock()
-        self.unpin = AsyncMock()
+
+emoji_data = {'require_colons': True, 'managed': True, 'id': 1, 'name': 'hyperlemon'}
+emoji_instance = discord.Emoji(guild=MockGuild(), state=unittest.mock.MagicMock(), data=emoji_data)
+
+
+class MockEmoji(CustomMockMixin, unittest.mock.MagicMock):
+    """
+    A MagicMock subclass to mock Emoji objects.
+
+    Instances of this class will follow the specifications of `discord.Emoji` instances. For more
+    information, see the `MockGuild` docstring.
+    """
+    def __init__(self, **kwargs) -> None:
+        super().__init__(spec_set=emoji_instance, **kwargs)
+        self.guild = kwargs.get('guild', MockGuild())
+
+
+partial_emoji_instance = discord.PartialEmoji(animated=False, name='guido')
+
+
+class MockPartialEmoji(CustomMockMixin, unittest.mock.MagicMock):
+    """
+    A MagicMock subclass to mock PartialEmoji objects.
+
+    Instances of this class will follow the specifications of `discord.PartialEmoji` instances. For
+    more information, see the `MockGuild` docstring.
+    """
+    def __init__(self, **kwargs) -> None:
+        super().__init__(spec_set=partial_emoji_instance, **kwargs)
+
+
+reaction_instance = discord.Reaction(message=MockMessage(), data={'me': True}, emoji=MockEmoji())
+
+
+class MockReaction(CustomMockMixin, unittest.mock.MagicMock):
+    """
+    A MagicMock subclass to mock Reaction objects.
+
+    Instances of this class will follow the specifications of `discord.Reaction` instances. For
+    more information, see the `MockGuild` docstring.
+    """
+    def __init__(self, **kwargs) -> None:
+        super().__init__(spec_set=reaction_instance, **kwargs)
+        self.emoji = kwargs.get('emoji', MockEmoji())
+        self.message = kwargs.get('message', MockMessage())
