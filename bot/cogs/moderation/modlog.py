@@ -674,7 +674,7 @@ class ModLog(Cog, name="ModLog"):
             f"**Before**:\n{' '.join(content_before)}\n"
             f"**After**:\n{' '.join(content_after)}\n"
             "\n"
-            f"[jump to message]({msg_after.jump_url})"
+            f"[Jump to message]({msg_after.jump_url})"
         )
 
         if msg_before.edited_at:
