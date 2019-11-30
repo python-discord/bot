@@ -15,6 +15,7 @@ We are using the following modules and packages for our unit tests:
 To ensure the results you obtain on your personal machine are comparable to those generated in the Azure pipeline, please make sure to run your tests with the virtual environment defined by our [Pipfile](/Pipfile). To run your tests with `pipenv`, we've provided two "scripts" shortcuts:
 
 - `pipenv run test` will run `unittest` with `coverage.py`
+- `pipenv run test path/to/test.py` will run a specific test.
 - `pipenv run report` will generate a coverage report of the tests you've run with `pipenv run test`. If you append the `-m` flag to this command, the report will include the lines and branches not covered by tests in addition to the test coverage report.
 
 If you want a coverage report, make sure to run the tests with `pipenv run test` *first*.

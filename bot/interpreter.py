@@ -20,8 +20,8 @@ class Interpreter(InteractiveInterpreter):
     write_callable = None
 
     def __init__(self, bot: Bot):
-        _locals = {"bot": bot}
-        super().__init__(_locals)
+        locals_ = {"bot": bot}
+        super().__init__(locals_)
 
     async def run(self, code: str, ctx: Context, io: StringIO, *args, **kwargs) -> Any:
         """Execute the provided source code as the bot & return the output."""
