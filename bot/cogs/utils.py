@@ -8,10 +8,11 @@ from typing import Tuple
 
 from dateutil import relativedelta
 from discord import Colour, Embed, Message, Role
-from discord.ext.commands import Bot, Cog, Context, command
+from discord.ext.commands import Bot, Cog, command
 
 from bot.constants import Channels, MODERATION_ROLES, Mention, STAFF_ROLES
 from bot.decorators import in_channel, with_role
+from bot.utils.context import Context
 from bot.utils.time import humanize_delta
 
 log = logging.getLogger(__name__)
@@ -36,7 +37,7 @@ class Utils(Cog):
             return
 
         possible_extensions = ['.txt', '.rst']
-        found_pep = False
+
         for extension in possible_extensions:
             # Attempt to fetch the PEP
             pep_url = f"{self.base_github_pep_url}{pep_number:04}{extension}"
@@ -45,8 +46,6 @@ class Utils(Cog):
 
             if response.status == 200:
                 log.trace("PEP found")
-                found_pep = True
-
                 pep_content = await response.text()
 
                 # Taken from https://github.com/python/peps/blob/master/pep0/pep.py#L179
@@ -58,7 +57,8 @@ class Utils(Cog):
                     description=f"[Link]({self.base_pep_url}{pep_number:04})",
                 )
 
-                pep_embed.set_thumbnail(url="https://www.python.org/static/opengraph-icon-200x200.png")
+                pep_embed.set_thumbnail(
+                    url="https://www.python.org/static/opengraph-icon-200x200.png")
 
                 # Add the interesting information
                 if "Status" in pep_header:
@@ -70,24 +70,22 @@ class Utils(Cog):
                 if "Type" in pep_header:
                     pep_embed.add_field(name="Type", value=pep_header["Type"])
 
+                await ctx.send(embed=pep_embed)
+                return
+
             elif response.status != 404:
                 # any response except 200 and 404 is expected
-                found_pep = True  # actually not, but it's easier to display this way
-                log.trace(f"The user requested PEP {pep_number}, but the response had an unexpected status code: "
-                          f"{response.status}.\n{response.text}")
+                log.trace(
+                    f"The user requested PEP {pep_number}, but the response had an unexpected status code: "
+                    f"{response.status}.\n{response.text}")
 
-                error_message = "Unexpected HTTP error during PEP search. Please let us know."
-                pep_embed = Embed(title="Unexpected error", description=error_message)
-                pep_embed.colour = Colour.red()
-                break
-
-        if not found_pep:
+                await ctx.send_error(error="Unexpected error",
+                                     explanation="Unexpected HTTP error during PEP search. Please let us know.")
+                return
+        else:
             log.trace("PEP was not found")
-            not_found = f"PEP {pep_number} does not exist."
-            pep_embed = Embed(title="PEP not found", description=not_found)
-            pep_embed.colour = Colour.red()
-
-        await ctx.message.channel.send(embed=pep_embed)
+            await ctx.send_error(error="PEP not found",
+                                 explanation=f"PEP {pep_number} does not exist.")
 
     @command()
     @in_channel(Channels.bot, bypass_roles=STAFF_ROLES)
@@ -95,21 +93,13 @@ class Utils(Cog):
         """Shows you information on up to 25 unicode characters."""
         match = re.match(r"<(a?):(\w+):(\d+)>", characters)
         if match:
-            embed = Embed(
-                title="Non-Character Detected",
-                description=(
-                    "Only unicode characters can be processed, but a custom Discord emoji "
-                    "was found. Please remove it and try again."
-                )
-            )
-            embed.colour = Colour.red()
-            await ctx.send(embed=embed)
+            await ctx.send_error(error="Non-Character Detected",
+                                 explanation="Only unicode characters can be processed, but a custom Discord emoji "
+                                             "was found. Please remove it and try again.")
             return
 
         if len(characters) > 25:
-            embed = Embed(title=f"Too many characters ({len(characters)}/25)")
-            embed.colour = Colour.red()
-            await ctx.send(embed=embed)
+            await ctx.send_error(error=f"Too many characters ({len(characters)}/25)")
             return
 
         def get_info(char: str) -> Tuple[str, str]:
@@ -156,7 +146,8 @@ class Utils(Cog):
             msg = await self.bot.wait_for("message", check=check, timeout=Mention.message_timeout)
         except TimeoutError:
             await role.edit(mentionable=False, reason="Automatic role lock - timeout.")
-            await ctx.send(f"{ctx.author.mention}, you took too long. I have reset {role} to be unmentionable.")
+            await ctx.send(
+                f"{ctx.author.mention}, you took too long. I have reset {role} to be unmentionable.")
             return
 
         if any(r.id in MODERATION_ROLES for r in msg.author.roles):
@@ -168,7 +159,8 @@ class Utils(Cog):
             )
             return
 
-        await role.edit(mentionable=False, reason=f"Automatic role lock - unauthorised use by {msg.author}")
+        await role.edit(mentionable=False,
+                        reason=f"Automatic role lock - unauthorised use by {msg.author}")
         await ctx.send(
             f"{ctx.author.mention}, I have reset {role} to be unmentionable "
             f"as I detected unauthorised use by {msg.author} (ID: {msg.author.id})."

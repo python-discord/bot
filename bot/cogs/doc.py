@@ -21,7 +21,7 @@ from bot.constants import MODERATION_ROLES, RedirectOutput
 from bot.converters import ValidPythonIdentifier, ValidURL
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
-
+from bot.utils.context import Context
 
 log = logging.getLogger(__name__)
 logging.getLogger('urllib3').setLevel(logging.WARNING)
@@ -67,6 +67,7 @@ def async_cache(max_size: int = 128, arg_offset: int = 0) -> Callable:
 
     def decorator(function: Callable) -> Callable:
         """Define the async_cache decorator."""
+
         @functools.wraps(function)
         async def wrapper(*args) -> Any:
             """Decorator wrapper for the caching logic."""
@@ -79,7 +80,9 @@ def async_cache(max_size: int = 128, arg_offset: int = 0) -> Callable:
 
                 async_cache.cache[key] = await function(*args)
             return async_cache.cache[key]
+
         return wrapper
+
     return decorator
 
 
@@ -161,7 +164,7 @@ class Doc(commands.Cog):
         await self.refresh_inventory()
 
     async def update_single(
-        self, package_name: str, base_url: str, inventory_url: str, config: SphinxConfiguration
+            self, package_name: str, base_url: str, inventory_url: str, config: SphinxConfiguration
     ) -> None:
         """
         Rebuild the inventory for a single package.
@@ -189,8 +192,8 @@ class Doc(commands.Cog):
                     group_name = group.split(":")[1]
                     symbol_base_url = self.inventories[symbol].split("/", 3)[2]
                     if (
-                        group_name in NO_OVERRIDE_GROUPS
-                        or any(package in symbol_base_url for package in NO_OVERRIDE_PACKAGES)
+                            group_name in NO_OVERRIDE_GROUPS
+                            or any(package in symbol_base_url for package in NO_OVERRIDE_PACKAGES)
                     ):
 
                         symbol = f"{group_name}.{symbol}"
@@ -269,7 +272,8 @@ class Doc(commands.Cog):
             if end_tag is None:
                 return [], ""
 
-            description_start_index = search_html.find(str(start_tag.parent)) + len(str(start_tag.parent))
+            description_start_index = search_html.find(str(start_tag.parent)) + len(
+                str(start_tag.parent))
             description_end_index = search_html.find(str(end_tag))
             description = search_html[description_start_index:description_end_index]
             signatures = None
@@ -328,7 +332,8 @@ class Doc(commands.Cog):
             embed_description = "This appears to be a generic page not tied to a specific symbol."
 
         else:
-            embed_description = "".join(f"```py\n{textwrap.shorten(signature, 500)}```" for signature in signatures)
+            embed_description = "".join(
+                f"```py\n{textwrap.shorten(signature, 500)}```" for signature in signatures)
             embed_description += f"\n{description}"
 
         embed = discord.Embed(
@@ -338,17 +343,18 @@ class Doc(commands.Cog):
         )
         # Show all symbols with the same name that were renamed in the footer.
         embed.set_footer(
-            text=", ".join(renamed for renamed in self.renamed_symbols - {symbol} if renamed.endswith(f".{symbol}"))
+            text=", ".join(renamed for renamed in self.renamed_symbols - {symbol} if
+                           renamed.endswith(f".{symbol}"))
         )
         return embed
 
     @commands.group(name='docs', aliases=('doc', 'd'), invoke_without_command=True)
-    async def docs_group(self, ctx: commands.Context, symbol: commands.clean_content = None) -> None:
+    async def docs_group(self, ctx: Context, symbol: commands.clean_content = None) -> None:
         """Lookup documentation for Python symbols."""
         await ctx.invoke(self.get_command, symbol)
 
     @docs_group.command(name='get', aliases=('g',))
-    async def get_command(self, ctx: commands.Context, symbol: commands.clean_content = None) -> None:
+    async def get_command(self, ctx: Context, symbol: commands.clean_content = None) -> None:
         """
         Return a documentation embed for a given symbol.
 
@@ -382,13 +388,12 @@ class Doc(commands.Cog):
                 doc_embed = await self.get_symbol_embed(symbol)
 
             if doc_embed is None:
-                error_embed = discord.Embed(
-                    description=f"Sorry, I could not find any documentation for `{symbol}`.",
-                    colour=discord.Colour.red()
+                await ctx.send_error(
+                    explanation=f"Sorry, I could not find any documentation for `{symbol}`.",
+                    delete_after=NOT_FOUND_DELETE_DELAY
                 )
-                error_message = await ctx.send(embed=error_embed)
+
                 with suppress(NotFound):
-                    await error_message.delete(delay=NOT_FOUND_DELETE_DELAY)
                     await ctx.message.delete(delay=NOT_FOUND_DELETE_DELAY)
             else:
                 await ctx.send(embed=doc_embed)
@@ -396,8 +401,8 @@ class Doc(commands.Cog):
     @docs_group.command(name='set', aliases=('s',))
     @with_role(*MODERATION_ROLES)
     async def set_command(
-        self, ctx: commands.Context, package_name: ValidPythonIdentifier,
-        base_url: ValidURL, inventory_url: InventoryURL
+            self, ctx: Context, package_name: ValidPythonIdentifier,
+            base_url: ValidURL, inventory_url: InventoryURL
     ) -> None:
         """
         Adds a new documentation metadata object to the site's database.
@@ -432,7 +437,7 @@ class Doc(commands.Cog):
 
     @docs_group.command(name='delete', aliases=('remove', 'rm', 'd'))
     @with_role(*MODERATION_ROLES)
-    async def delete_command(self, ctx: commands.Context, package_name: ValidPythonIdentifier) -> None:
+    async def delete_command(self, ctx: Context, package_name: ValidPythonIdentifier) -> None:
         """
         Removes the specified package from the database.
 
@@ -449,7 +454,7 @@ class Doc(commands.Cog):
 
     @docs_group.command(name="refresh", aliases=("rfsh", "r"))
     @with_role(*MODERATION_ROLES)
-    async def refresh_command(self, ctx: commands.Context) -> None:
+    async def refresh_command(self, ctx: Context) -> None:
         """Refresh inventories and send differences to channel."""
         old_inventories = set(self.base_urls)
         with ctx.typing():
@@ -469,10 +474,11 @@ class Doc(commands.Cog):
         )
         await ctx.send(embed=embed)
 
-    async def _fetch_inventory(self, inventory_url: str, config: SphinxConfiguration) -> Optional[dict]:
+    async def _fetch_inventory(self, inventory_url: str, config: SphinxConfiguration) -> Optional[
+        dict]:
         """Get and return inventory from `inventory_url`. If fetching fails, return None."""
         fetch_func = functools.partial(intersphinx.fetch_inventory, config, '', inventory_url)
-        for retry in range(1, FAILED_REQUEST_RETRY_AMOUNT+1):
+        for retry in range(1, FAILED_REQUEST_RETRY_AMOUNT + 1):
             try:
                 package = await self.bot.loop.run_in_executor(None, fetch_func)
             except ConnectTimeout:
@@ -486,7 +492,8 @@ class Doc(commands.Cog):
                     f" trying again. ({retry}/{FAILED_REQUEST_RETRY_AMOUNT})"
                 )
             except HTTPError as e:
-                log.error(f"Fetching of inventory {inventory_url} failed with status code {e.response.status_code}.")
+                log.error(
+                    f"Fetching of inventory {inventory_url} failed with status code {e.response.status_code}.")
                 return None
             except ConnectionError:
                 log.error(f"Couldn't establish connection to inventory {inventory_url}.")

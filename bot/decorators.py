@@ -9,10 +9,11 @@ from weakref import WeakValueDictionary
 from discord import Colour, Embed, Member
 from discord.errors import NotFound
 from discord.ext import commands
-from discord.ext.commands import CheckFailure, Cog, Context
+from discord.ext.commands import CheckFailure, Cog
 
 from bot.constants import ERROR_REPLIES, RedirectOutput
 from bot.utils.checks import with_role_check, without_role_check
+from bot.utils.context import Context
 
 log = logging.getLogger(__name__)
 
@@ -81,15 +82,11 @@ def locked() -> Callable:
         async def inner(self: Cog, ctx: Context, *args, **kwargs) -> None:
             lock = func.__locks.setdefault(ctx.author.id, Lock())
             if lock.locked():
-                embed = Embed()
-                embed.colour = Colour.red()
-
                 log.debug(f"User tried to invoke a locked command.")
-                embed.description = (
-                    "You're already using this command. Please wait until it is done before you use it again."
+                await ctx.send_error(
+                    error=random.choice(ERROR_REPLIES),
+                    explanation="You're already using this command. Please wait until it is done before you use it again."
                 )
-                embed.title = random.choice(ERROR_REPLIES)
-                await ctx.send(embed=embed)
                 return
 
             async with func.__locks.setdefault(ctx.author.id, Lock()):

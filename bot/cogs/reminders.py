@@ -8,12 +8,13 @@ from typing import Optional
 
 from dateutil.relativedelta import relativedelta
 from discord import Colour, Embed, Message
-from discord.ext.commands import Bot, Cog, Context, group
+from discord.ext.commands import Bot, Cog, group
 
 from bot.constants import Channels, Icons, NEGATIVE_REPLIES, POSITIVE_REPLIES, STAFF_ROLES
 from bot.converters import Duration
 from bot.pagination import LinePaginator
 from bot.utils.checks import without_role_check
+from bot.utils.context import Context
 from bot.utils.scheduling import Scheduler
 from bot.utils.time import humanize_delta, wait_until
 
@@ -128,7 +129,8 @@ class Reminders(Scheduler, Cog):
         await ctx.invoke(self.new_reminder, expiration=expiration, content=content)
 
     @remind_group.command(name="new", aliases=("add", "create"))
-    async def new_reminder(self, ctx: Context, expiration: Duration, *, content: str) -> Optional[Message]:
+    async def new_reminder(self, ctx: Context, expiration: Duration, *, content: str) -> Optional[
+        Message]:
         """
         Set yourself a simple reminder.
 
@@ -141,11 +143,8 @@ class Reminders(Scheduler, Cog):
 
             # If they don't have permission to set a reminder in this channel
             if ctx.channel.id not in WHITELISTED_CHANNELS:
-                embed.colour = Colour.red()
-                embed.title = random.choice(NEGATIVE_REPLIES)
-                embed.description = "Sorry, you can't do that here!"
-
-                return await ctx.send(embed=embed)
+                return await ctx.send_error(error=random.choice(NEGATIVE_REPLIES),
+                                            explanation="Sorry, you can't do that here!")
 
             # Get their current active reminders
             active_reminders = await self.bot.api_client.get(
@@ -158,11 +157,8 @@ class Reminders(Scheduler, Cog):
             # Let's limit this, so we don't get 10 000
             # reminders from kip or something like that :P
             if len(active_reminders) > MAXIMUM_REMINDERS:
-                embed.colour = Colour.red()
-                embed.title = random.choice(NEGATIVE_REPLIES)
-                embed.description = "You have too many active reminders!"
-
-                return await ctx.send(embed=embed)
+                return await ctx.send_error(random.choice(NEGATIVE_REPLIES),
+                                            "You have too many active reminders!")
 
         # Now we can attempt to actually set the reminder.
         reminder = await self.bot.api_client.post(

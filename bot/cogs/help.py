@@ -6,7 +6,7 @@ from typing import Union
 
 from discord import Colour, Embed, HTTPException, Message, Reaction, User
 from discord.ext import commands
-from discord.ext.commands import Bot, CheckFailure, Cog as DiscordCog, Command, Context
+from discord.ext.commands import Bot, CheckFailure, Cog as DiscordCog, Command
 from fuzzywuzzy import fuzz, process
 
 from bot import constants
@@ -16,7 +16,7 @@ from bot.pagination import (
     DELETE_EMOJI, FIRST_EMOJI, LAST_EMOJI,
     LEFT_EMOJI, LinePaginator, RIGHT_EMOJI,
 )
-
+from bot.utils.context import Context
 
 REACTIONS = {
     FIRST_EMOJI: 'first',
@@ -511,15 +511,12 @@ class Help(DiscordCog):
         try:
             await HelpSession.start(ctx, *commands)
         except HelpQueryNotFound as error:
-            embed = Embed()
-            embed.colour = Colour.red()
-            embed.title = str(error)
-
+            explanation = None
             if error.possible_matches:
                 matches = '\n'.join(error.possible_matches.keys())
-                embed.description = f'**Did you mean:**\n`{matches}`'
+                explanation = f'**Did you mean:**\n`{matches}`'
 
-            await ctx.send(embed=embed)
+            await ctx.send_error(error=str(error), explanation=explanation)
 
 
 def unload(bot: Bot) -> None:

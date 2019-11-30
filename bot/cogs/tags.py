@@ -2,13 +2,13 @@ import logging
 import time
 
 from discord import Colour, Embed
-from discord.ext.commands import Bot, Cog, Context, group
+from discord.ext.commands import Bot, Cog, group
 
 from bot.constants import Channels, Cooldowns, MODERATION_ROLES, Roles
 from bot.converters import TagContentConverter, TagNameConverter
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
-
+from bot.utils.context import Context
 
 log = logging.getLogger(__name__)
 
@@ -71,10 +71,9 @@ class Tags(Cog):
         else:
             tags = await self.bot.api_client.get('bot/tags')
             if not tags:
-                await ctx.send(embed=Embed(
-                    description="**There are no tags in the database!**",
-                    colour=Colour.red()
-                ))
+                await ctx.send_error(
+                    explanation="**There are no tags in the database!**",
+                )
             else:
                 embed: Embed = Embed(title="**Current tags**")
                 await LinePaginator.paginate(
