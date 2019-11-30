@@ -55,6 +55,7 @@ if not DEBUG_MODE:
 bot.load_extension("bot.cogs.alias")
 bot.load_extension("bot.cogs.defcon")
 bot.load_extension("bot.cogs.eval")
+bot.load_extension("bot.cogs.duck_pond")
 bot.load_extension("bot.cogs.free")
 bot.load_extension("bot.cogs.information")
 bot.load_extension("bot.cogs.jams")
