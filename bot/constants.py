@@ -353,6 +353,7 @@ class Channels(metaclass=YAMLGetter):
     defcon: int
     devlog: int
     devtest: int
+    esoteric: int
     help_0: int
     help_1: int
     help_2: int
