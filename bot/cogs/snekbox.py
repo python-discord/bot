@@ -2,12 +2,14 @@ import datetime
 import logging
 import re
 import textwrap
+from asyncio import sleep
 from signal import Signals
 from typing import Optional, Tuple
 
 from discord.ext.commands import Bot, Cog, Context, command, guild_only
 
 from bot.constants import Channels, Roles, URLs
+from bot.converters import Literal
 from bot.decorators import in_channel
 from bot.utils.messages import wait_for_deletion
 
@@ -34,6 +36,7 @@ RAW_CODE_REGEX = re.compile(
 
 MAX_PASTE_LEN = 1000
 EVAL_ROLES = (Roles.helpers, Roles.moderator, Roles.admin, Roles.owner, Roles.rockstars, Roles.partners)
+HOURS_CACHE_LIMIT = 2  # Cache code (from -save) for 2 hours since last use
 
 
 class Snekbox(Cog):
@@ -42,6 +45,20 @@ class Snekbox(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.jobs = {}
+
+        # Dict[int[user_id],
+        #      Tuple[str[saved_code],
+        #            datetime[last_used]]]
+        self.contexts = {}
+        self._run = True
+
+        async def clean_task():
+            while self._run:
+                await sleep(3600)
+                # Iterate over a copy to prevent RuntimeError if a command is ran while iterating over this
+                for _id, ctx in self.contexts.copy().items():
+                    if (datetime.datetime.now() - ctx[1]).hour >= HOURS_CACHE_LIMIT:
+                        del self.contexts[_id]
 
     async def post_eval(self, code: str) -> dict:
         """Send a POST request to the Snekbox API to evaluate code and return the results."""
@@ -177,7 +194,8 @@ class Snekbox(Cog):
     @command(name="eval", aliases=("e",))
     @guild_only()
     @in_channel(Channels.bot, hidden_channels=(Channels.esoteric,), bypass_roles=EVAL_ROLES)
-    async def eval_command(self, ctx: Context, *, code: str = None) -> None:
+    async def eval_command(self, ctx: Context, action: Optional[Literal["-save", "-load"]] = None,
+                           *, code: str = None) -> None:
         """
         Run Python code and get the results.
 
@@ -195,6 +213,15 @@ class Snekbox(Cog):
         if not code:  # None or empty string
             await ctx.invoke(self.bot.get_command("help"), "eval")
             return
+
+        if action == "-save":
+            # Save code in context cache
+            self.contexts[ctx.author.id] = (code, datetime.datetime.now())
+        elif action == "-load":
+            # Update timestamp in context cache
+            ctx = self.contexts[ctx.author.id]
+            self.contexts[ctx.author.id] = (ctx[0], datetime.datetime.now())
+            code = ctx[0] + "\n" + code
 
         log.info(f"Received code from {ctx.author} for evaluation:\n{code}")
 
