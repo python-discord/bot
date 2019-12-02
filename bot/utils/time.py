@@ -1,21 +1,12 @@
 import asyncio
 import datetime
-from typing import List, Optional
+from typing import Optional
 
 import dateutil.parser
 from dateutil.relativedelta import relativedelta
 
 RFC1123_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
 INFRACTION_FORMAT = "%Y-%m-%d %H:%M"
-TIME_MARKS = (
-    (60, 'second'),  # 1 minute
-    (60, 'minute'),  # 1 hour
-    (24, 'hour'),  # 1 day
-    (7, 'day'),  # 1 week
-    (4, 'week'),  # 1 month
-    (12, 'month'),  # 1 year
-    (999, 'year')  # dumb the rest as year, max 999
-)
 
 
 def _stringify_time_unit(value: int, unit: str) -> str:
@@ -122,48 +113,17 @@ def format_infraction(timestamp: str) -> str:
     return dateutil.parser.isoparse(timestamp).strftime(INFRACTION_FORMAT)
 
 
-def get_duration(date_from: datetime.datetime, date_to: datetime.datetime, parts: Optional[int] = 2) -> str:
-    """
-    Get the duration between two datetime, in human readable format.
-
-    Will return <parts> number of units if avaiable, for example:
-    - 11 hours, 59 minutes
-    - 1 week, 6 minutes
-    - 7 months, 2 weeks
-    - 3 years, 3 months
-    - 5 minutes
-
-    :param date_from: A datetime.datetime object.
-    :param date_to: A datetime.datetime object.
-    :param parts: An int, defauted to two - the amount of units to return.
-    """
-    div = abs(date_from - date_to).total_seconds()
-    div = round(div, 0)  # to avoid (14 minutes, 60 seconds)
-    results: List[str] = []
-    for unit, name in TIME_MARKS:
-        div, amount = divmod(div, unit)
-        if amount > 0:
-            plural = 's' if amount > 1 else ''
-            results.append(f"{amount:.0f} {name}{plural}")
-    parts = parts if parts is not None else len(results)  # allow passing None directly to return all parts
-    # We have to reverse the order of units because currently it's smallest -> largest
-    return ', '.join(results[::-1][:parts])
-
-
 def get_duration_from_expiry(
     expiry: str = None,
     date_from: datetime.datetime = None,
-    parts: Optional[int] = 2
+    max_units: int = 2
 ) -> Optional[str]:
     """
-    Get the duration between datetime.utcnow() and an expiry, in human readable format.
+    Returns a human-readable version of the  the duration between datetime.utcnow() and an expiry.
 
-    Will return the two biggest units avaiable, for example:
-    - 11 hours, 59 minutes
-    - 1 week, 6 minutes
-    - 7 months, 2 weeks
-    - 3 years, 3 months
-    - 5 minutes
+    Unlike the original function, this function will force the precision to be 'seconds' by not passing it.
+    max_units specifies the maximum number of units of time to include (e.g. 1 may include days but not hours).
+    By default, max_units is 2
 
     :param expiry: A string. If not passed in, will early return a None ( Permanent infraction ).
     :param date_from: A datetime.datetime object. If not passed in, will use datetime.utcnow().
@@ -173,11 +133,11 @@ def get_duration_from_expiry(
         return None
 
     date_from = date_from or datetime.datetime.utcnow()
-    date_to = dateutil.parser.isoparse(expiry).replace(tzinfo=None)
+    date_to = dateutil.parser.isoparse(expiry).replace(tzinfo=None, microsecond=0)
 
     expiry_formatted = format_infraction(expiry)
 
-    duration = get_duration(date_from, date_to, parts)
+    duration = humanize_delta(relativedelta(date_to, date_from), max_units=max_units)
     duration_formatted = f" ({duration})" if duration else ''
 
     return f"{expiry_formatted}{duration_formatted}"
