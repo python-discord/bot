@@ -60,6 +60,11 @@ class Snekbox(Cog):
                     if (datetime.datetime.now() - ctx[1]).hour >= HOURS_CACHE_LIMIT:
                         del self.contexts[_id]
 
+        self._task = bot.loop.create_task(clean_task())
+
+    def __del__(self):
+        self._run = False
+
     async def post_eval(self, code: str) -> dict:
         """Send a POST request to the Snekbox API to evaluate code and return the results."""
         url = URLs.snekbox_eval_api
