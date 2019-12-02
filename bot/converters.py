@@ -2,7 +2,7 @@ import logging
 import re
 from datetime import datetime
 from ssl import CertificateError
-from typing import Union, Optional, Tuple
+from typing import Union
 
 import dateutil.parser
 import dateutil.tz
@@ -263,20 +263,21 @@ class ISODateTime(Converter):
 
 class Literal:
     """
+
     Matches a literal, useful for e.g. flags.
     Can be used with Optional.
 
     Implementation by Danny#0007
     """
 
-    def __class_getitem__(cls, item):
+    def __class_getitem__(cls, item: Union[tuple, str]):
         if not isinstance(item, tuple):
             item = (item,)
 
         class LiteralProxy(Converter):
             @classmethod
-            async def convert(cls, ctx, argument):
+            async def convert(cls, ctx: Context, argument: str) -> str:
                 if argument in item:
                     return argument
-                raise BadArgument(f"Expected literal: one of {list(map(repr, self.literals))}")
+                raise BadArgument(f"Expected literal: one of {list(map(repr, item))}")
         return LiteralProxy
