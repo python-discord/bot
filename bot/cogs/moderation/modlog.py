@@ -35,10 +35,10 @@ class ModLog(Cog, name="ModLog"):
         self._cached_edits = []
 
     async def upload_log(
-            self,
-            messages: t.List[discord.Message],
-            actor_id: int,
-            attachments: t.List[t.List[str]] = None
+        self,
+        messages: t.Iterable[discord.Message],
+        actor_id: int,
+        attachments: t.Iterable[t.List[str]] = None
     ) -> str:
         """
         Uploads the log data to the database via an API endpoint for uploading logs.
