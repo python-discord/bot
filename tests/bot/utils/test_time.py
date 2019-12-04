@@ -12,9 +12,6 @@ from tests.helpers import AsyncMock
 class TimeTests(unittest.TestCase):
     """Test helper functions in bot.utils.time."""
 
-    def setUp(self):
-        pass
-
     def test_humanize_delta_handle_unknown_units(self):
         """humanize_delta should be able to handle unknown units, and will not abort."""
         # Does not abort for unknown units, as the unit name is checked
