@@ -73,27 +73,31 @@ class TimeTests(unittest.TestCase):
 
     def test_format_infraction_with_duration_none_expiry(self):
         """format_infraction_with_duration should work for None expiry."""
-        self.assertEqual(time.format_infraction_with_duration(None), None)
+        test_cases = (
+            (None, None, None, None),
 
-        # To make sure that date_from and max_units are not touched
-        self.assertEqual(time.format_infraction_with_duration(None, date_from='Why hello there!'), None)
-        self.assertEqual(time.format_infraction_with_duration(None, max_units=float('inf')), None)
-        self.assertEqual(
-            time.format_infraction_with_duration(None, date_from='Why hello there!', max_units=float('inf')),
-            None
+            # To make sure that date_from and max_units are not touched
+            (None, 'Why hello there!', None, None),
+            (None, None, float('inf'), None),
+            (None, 'Why hello there!', float('inf'), None),
         )
+
+        for expiry, date_from, max_units, expected in test_cases:
+            with self.subTest(expiry=expiry, date_from=date_from, max_units=max_units, expected=expected):
+                self.assertEqual(time.format_infraction_with_duration(expiry, date_from, max_units), expected)
 
     def test_format_infraction_with_duration_custom_units(self):
         """format_infraction_with_duration should work for custom max_units."""
-        self.assertEqual(
-            time.format_infraction_with_duration('2019-12-12T00:01:00Z', datetime(2019, 12, 11, 12, 5, 5), 6),
-            '2019-12-12 00:01 (11 hours, 55 minutes and 55 seconds)'
+        test_cases = (
+            ('2019-12-12T00:01:00Z', datetime(2019, 12, 11, 12, 5, 5), 6,
+             '2019-12-12 00:01 (11 hours, 55 minutes and 55 seconds)'),
+            ('2019-11-23T20:09:00Z', datetime(2019, 4, 25, 20, 15), 20,
+             '2019-11-23 20:09 (6 months, 28 days, 23 hours and 54 minutes)')
         )
 
-        self.assertEqual(
-            time.format_infraction_with_duration('2019-11-23T20:09:00Z', datetime(2019, 4, 25, 20, 15), 20),
-            '2019-11-23 20:09 (6 months, 28 days, 23 hours and 54 minutes)'
-        )
+        for expiry, date_from, max_units, expected in test_cases:
+            with self.subTest(expiry=expiry, date_from=date_from, max_units=max_units, expected=expected):
+                self.assertEqual(time.format_infraction_with_duration(expiry, date_from, max_units), expected)
 
     def test_format_infraction_with_duration_normal_usage(self):
         """format_infraction_with_duration should work for normal usage, across various durations."""
