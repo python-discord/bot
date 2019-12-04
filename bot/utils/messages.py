@@ -9,8 +9,6 @@ from discord.errors import HTTPException
 
 from bot.constants import Emojis
 
-MAX_SIZE = 1024 * 1024 * 8  # 8 Mebibytes
-
 
 async def wait_for_deletion(
     message: Message,
@@ -62,9 +60,10 @@ async def send_attachments(message: Message, destination: Union[TextChannel, Web
     urls = []
     for attachment in message.attachments:
         try:
-            # This should avoid most files that are too large, but some may get through hence the try-catch.
             # Allow 512 bytes of leeway for the rest of the request.
-            if attachment.size <= MAX_SIZE - 512:
+            # This should avoid most files that are too large,
+            # but some may get through hence the try-catch.
+            if attachment.size <= destination.guild.filesize_limit - 512:
                 with BytesIO() as file:
                     await attachment.save(file)
                     attachment_file = File(file, filename=attachment.filename)
