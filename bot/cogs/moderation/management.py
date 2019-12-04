@@ -234,9 +234,9 @@ class ModManagement(commands.Cog):
         created = time.format_infraction(infraction["inserted_at"])
 
         if active:
-            remaining = time.until_expiration(infraction["expires_at"]) or 'Expired.'
+            remaining = time.until_expiration(infraction["expires_at"]) or "Expired"
         else:
-            remaining = 'Inactive.'
+            remaining = "Inactive"
 
         if infraction["expires_at"] is None:
             expires = "*Permanent*"
