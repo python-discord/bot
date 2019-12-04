@@ -3,11 +3,10 @@ import logging
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from io import BytesIO
 from operator import itemgetter
 from typing import Dict, Iterable, List, Set
 
-from discord import Colour, File, HTTPException, Member, Message, NotFound, Object, TextChannel
+from discord import Colour, Member, Message, NotFound, Object, TextChannel
 from discord.ext.commands import Bot, Cog
 
 from bot import rules
@@ -19,6 +18,7 @@ from bot.constants import (
     STAFF_ROLES,
 )
 from bot.converters import Duration
+from bot.utils.messages import send_attachments
 
 
 log = logging.getLogger(__name__)
@@ -60,8 +60,10 @@ class DeletionContext:
             if message.id not in self.messages:
                 self.messages[message.id] = message
 
-                # Re-upload attachments :
-                self.attachments.append(await reupload_attachments(self.bot, message))
+                # Re-upload attachments
+                destination = self.bot.get_channel(GuildConfig.attachment_repost)
+                urls = await send_attachments(message, destination, link_large=False)
+                self.attachments.append(urls)
 
     async def upload_messages(self, actor_id: int, modlog: ModLog) -> None:
         """Method that takes care of uploading the queue and posting modlog alert."""
@@ -261,30 +263,6 @@ class AntiSpam(Cog):
 
         deletion_context = self.message_deletion_queue.pop(context_id)
         await deletion_context.upload_messages(self.bot.user.id, self.mod_log)
-
-
-async def reupload_attachments(
-    bot: Bot,
-    message: Message,
-    channel_id: int = GuildConfig.attachment_repost
-) -> List[str]:
-    """Re-upload message's attachments to the the channel_id and return the list of re-posted attachments URLs."""
-    if not message.attachments:
-        return []
-    channel = bot.get_channel(channel_id)
-    out = []
-    for attachment in message.attachments:
-        try:
-            with BytesIO() as buffer:
-                await attachment.save(buffer, use_cached=True)
-                reupload: Message = await channel.send(file=File(buffer, filename=attachment.filename))
-                out.append(reupload.attachments[0].url)
-        except HTTPException:
-            log.warning(
-                f"Tried to re-upload attachment {attachment.filename} "
-                f"with ID {attachment.id} from message {message.id}, but it has failed."
-            )
-    return out
 
 
 def validate_config(rules: Mapping = AntiSpamConfig.rules) -> Dict[str, str]:
