@@ -42,7 +42,6 @@ class DeletionContext:
     """Represents a Deletion Context for a single spam event."""
 
     channel: TextChannel
-    bot: Bot
     members: Dict[int, Member] = field(default_factory=dict)
     rules: Set[str] = field(default_factory=set)
     messages: Dict[int, Message] = field(default_factory=dict)
@@ -61,7 +60,7 @@ class DeletionContext:
                 self.messages[message.id] = message
 
                 # Re-upload attachments
-                destination = self.bot.get_channel(GuildConfig.attachment_repost)
+                destination = message.guild.get_channel(GuildConfig.attachment_repost)
                 urls = await send_attachments(message, destination, link_large=False)
                 self.attachments.append(urls)
 
@@ -77,7 +76,7 @@ class DeletionContext:
 
         # For multiple messages or those with excessive newlines, use the logs API
         if len(self.messages) > 1 or 'newlines' in self.rules:
-            url = await modlog.upload_log(self.messages.values(), actor_id, attachments=self.attachments)
+            url = await modlog.upload_log(self.messages.values(), actor_id, self.attachments)
             mod_alert_message += f"A complete log of the offending messages can be found [here]({url})"
         else:
             mod_alert_message += "Message:\n"
@@ -113,7 +112,6 @@ class AntiSpam(Cog):
         self.expiration_date_converter = Duration()
 
         self.message_deletion_queue = dict()
-        self.queue_consumption_tasks = dict()
 
         self.bot.loop.create_task(self.alert_on_validation_error())
 
@@ -187,15 +185,11 @@ class AntiSpam(Cog):
                 full_reason = f"`{rule_name}` rule: {reason}"
 
                 # If there's no spam event going on for this channel, start a new Message Deletion Context
-                if message.channel.id not in self.message_deletion_queue:
-                    log.trace(f"Creating queue for channel `{message.channel.id}`")
-                    self.message_deletion_queue[message.channel.id] = DeletionContext(
-                        channel=message.channel,
-                        bot=self.bot
-                    )
-                    self.queue_consumption_tasks = self.bot.loop.create_task(
-                        self._process_deletion_context(message.channel.id)
-                    )
+                channel = message.channel
+                if channel.id not in self.message_deletion_queue:
+                    log.trace(f"Creating queue for channel `{channel.id}`")
+                    self.message_deletion_queue[message.channel.id] = DeletionContext(channel)
+                    self.bot.loop.create_task(self._process_deletion_context(message.channel.id))
 
                 # Add the relevant of this trigger to the Deletion Context
                 await self.message_deletion_queue[message.channel.id].add(
@@ -212,7 +206,7 @@ class AntiSpam(Cog):
                         self.punish(message, member, full_reason)
                     )
 
-                await self.maybe_delete_messages(message.channel, relevant_messages)
+                await self.maybe_delete_messages(channel, relevant_messages)
                 break
 
     async def punish(self, msg: Message, member: Member, reason: str) -> None:
