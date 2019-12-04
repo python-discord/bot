@@ -113,21 +113,14 @@ def format_infraction(timestamp: str) -> str:
     return dateutil.parser.isoparse(timestamp).strftime(INFRACTION_FORMAT)
 
 
-def get_duration_from_expiry(
-    expiry: str = None,
-    date_from: datetime.datetime = None,
-    max_units: int = 2
-) -> Optional[str]:
+def format_infraction_with_duration(expiry: str, date_from: datetime.datetime = None, max_units: int = 2) -> str:
     """
-    Returns a human-readable version of the  the duration between datetime.utcnow() and an expiry.
+    Format an infraction timestamp to a more readable ISO 8601 format WITH the duration.
 
-    Unlike the original function, this function will force the precision to be 'seconds' by not passing it.
-    max_units specifies the maximum number of units of time to include (e.g. 1 may include days but not hours).
-    By default, max_units is 2
-
-    :param expiry: A string. If not passed in, will early return a None ( Permanent infraction ).
-    :param date_from: A datetime.datetime object. If not passed in, will use datetime.utcnow().
-    :param parts: An int, to show how many parts will be returned ( year - month or year - month - week - day ...).
+    Returns a human-readable version of the duration between datetime.utcnow() and an expiry.
+    Unlike `humanize_delta`, this function will force the `precision` to be `seconds` by not passing it.
+    `max_units` specifies the maximum number of units of time to include (e.g. 1 may include days but not hours).
+    By default, max_units is 2.
     """
     if not expiry:
         return None

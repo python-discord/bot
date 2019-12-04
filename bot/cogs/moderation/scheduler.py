@@ -83,7 +83,7 @@ class InfractionScheduler(Scheduler):
         infr_type = infraction["type"]
         icon = utils.INFRACTION_ICONS[infr_type][0]
         reason = infraction["reason"]
-        expiry = time.get_duration_from_expiry(infraction["expires_at"])
+        expiry = time.format_infraction_with_duration(infraction["expires_at"])
         id_ = infraction['id']
 
         log.trace(f"Applying {infr_type} infraction #{id_} to {user}.")
