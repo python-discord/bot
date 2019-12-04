@@ -232,6 +232,12 @@ class ModManagement(commands.Cog):
         user_id = infraction["user"]
         hidden = infraction["hidden"]
         created = time.format_infraction(infraction["inserted_at"])
+
+        if active:
+            remaining = time.until_expiration(infraction["expires_at"]) or 'Expired.'
+        else:
+            remaining = 'Inactive.'
+
         if infraction["expires_at"] is None:
             expires = "*Permanent*"
         else:
@@ -247,6 +253,7 @@ class ModManagement(commands.Cog):
             Reason: {infraction["reason"] or "*None*"}
             Created: {created}
             Expires: {expires}
+            Remaining: {remaining}
             Actor: {actor.mention if actor else actor_id}
             ID: `{infraction["id"]}`
             {"**===============**" if active else "==============="}
