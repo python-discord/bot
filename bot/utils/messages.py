@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import logging
 from io import BytesIO
 from typing import List, Optional, Sequence, Union
 
@@ -8,6 +9,8 @@ from discord.abc import Snowflake
 from discord.errors import HTTPException
 
 from bot.constants import Emojis
+
+log = logging.getLogger(__name__)
 
 
 async def wait_for_deletion(
@@ -64,6 +67,10 @@ async def send_attachments(
     large = []
     urls = []
     for attachment in message.attachments:
+        failure_msg = (
+            f"Failed to re-upload attachment {attachment.filename} from message {message.id}"
+        )
+
         try:
             # Allow 512 bytes of leeway for the rest of the request.
             # This should avoid most files that are too large,
@@ -84,11 +91,13 @@ async def send_attachments(
                         )
             elif link_large:
                 large.append(attachment)
+            else:
+                log.warning(f"{failure_msg} because it's too large.")
         except HTTPException as e:
             if link_large and e.status == 413:
                 large.append(attachment)
             else:
-                raise
+                log.warning(f"{failure_msg} with status {e.status}.")
 
     if link_large and large:
         desc = f"\n".join(f"[{attachment.filename}]({attachment.url})" for attachment in large)
