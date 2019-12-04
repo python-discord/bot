@@ -77,7 +77,7 @@ async def send_attachments(
             # but some may get through hence the try-catch.
             if attachment.size <= destination.guild.filesize_limit - 512:
                 with BytesIO() as file:
-                    await attachment.save(file)
+                    await attachment.save(file, use_cached=True)
                     attachment_file = File(file, filename=attachment.filename)
 
                     if isinstance(destination, TextChannel):
