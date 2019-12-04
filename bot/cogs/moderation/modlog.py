@@ -2,6 +2,7 @@ import asyncio
 import logging
 import typing as t
 from datetime import datetime
+from itertools import zip_longest
 
 import discord
 from dateutil.relativedelta import relativedelta
@@ -40,13 +41,7 @@ class ModLog(Cog, name="ModLog"):
         actor_id: int,
         attachments: t.Iterable[t.List[str]] = None
     ) -> str:
-        """
-        Uploads the log data to the database via an API endpoint for uploading logs.
-
-        Used in several mod log embeds.
-
-        Returns a URL that can be used to view the log.
-        """
+        """Upload message logs to the database and return a URL to a page for viewing the logs."""
         if attachments is None:
             attachments = []
 
@@ -64,7 +59,7 @@ class ModLog(Cog, name="ModLog"):
                         'embeds': [embed.to_dict() for embed in message.embeds],
                         'attachments': attachment,
                     }
-                    for message, attachment in zip(messages, attachments)
+                    for message, attachment in zip_longest(messages, attachments)
                 ]
             }
         )
