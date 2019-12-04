@@ -113,7 +113,11 @@ def format_infraction(timestamp: str) -> str:
     return dateutil.parser.isoparse(timestamp).strftime(INFRACTION_FORMAT)
 
 
-def format_infraction_with_duration(expiry: str, date_from: datetime.datetime = None, max_units: int = 2) -> str:
+def format_infraction_with_duration(
+    expiry: Optional[str],
+    date_from: datetime.datetime = None,
+    max_units: int = 2
+) -> Optional[str]:
     """
     Format an infraction timestamp to a more readable ISO 8601 format WITH the duration.
 
