@@ -50,7 +50,7 @@ class TimeTests(unittest.TestCase):
             self.assertEqual(time.humanize_delta(delta, precision, max_units), expected)
 
     def test_humanize_delta_raises_for_invalid_max_units(self):
-        """humanize_delta should raises ValueError('max_units must be positive') for invalid max units."""
+        """humanize_delta should raises ValueError('max_units must be positive') for invalid max_units."""
         test_cases = (-1, 0)
 
         for max_units in test_cases:
@@ -60,12 +60,14 @@ class TimeTests(unittest.TestCase):
 
     def test_parse_rfc1123(self):
         """Testing parse_rfc1123."""
-        test_cases = (
-            ('Sun, 15 Sep 2019 12:00:00 GMT', datetime(2019, 9, 15, 12, 0, 0, tzinfo=timezone.utc)),
+        self.assertEqual(
+            time.parse_rfc1123('Sun, 15 Sep 2019 12:00:00 GMT'),
+            datetime(2019, 9, 15, 12, 0, 0, tzinfo=timezone.utc)
         )
 
-        for stamp, expected in test_cases:
-            self.assertEqual(time.parse_rfc1123(stamp), expected)
+    def test_format_infraction(self):
+        """Testing format_infraction."""
+        self.assertEqual(time.format_infraction('2019-12-12T00:01:00Z'), '2019-12-12 00:01')
 
     @patch('asyncio.sleep', new_callable=AsyncMock)
     def test_wait_until(self, mock):
