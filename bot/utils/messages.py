@@ -49,12 +49,17 @@ async def wait_for_deletion(
         await message.delete()
 
 
-async def send_attachments(message: Message, destination: Union[TextChannel, Webhook]) -> List[str]:
+async def send_attachments(
+    message: Message,
+    destination: Union[TextChannel, Webhook],
+    link_large: bool = True
+) -> List[str]:
     """
     Re-upload the message's attachments to the destination and return a list of their new URLs.
 
-    Each attachment is sent as a separate message to more easily comply with the 8 MiB request size limit.
-    If attachments are too large, they are instead grouped into a single embed which links to them.
+    Each attachment is sent as a separate message to more easily comply with the request/file size
+    limit. If link_large is True, attachments which are too large are instead grouped into a single
+    embed which links to them.
     """
     large = []
     urls = []
@@ -77,17 +82,19 @@ async def send_attachments(message: Message, destination: Union[TextChannel, Web
                             username=message.author.display_name,
                             avatar_url=message.author.avatar_url
                         )
-            else:
+            elif link_large:
                 large.append(attachment)
         except HTTPException as e:
-            if e.status == 413:
+            if link_large and e.status == 413:
                 large.append(attachment)
             else:
                 raise
 
-    if large:
-        embed = Embed(description=f"\n".join(f"[{attachment.filename}]({attachment.url})" for attachment in large))
+    if link_large and large:
+        desc = f"\n".join(f"[{attachment.filename}]({attachment.url})" for attachment in large)
+        embed = Embed(description=desc)
         embed.set_footer(text="Attachments exceed upload size limit.")
+
         if isinstance(destination, TextChannel):
             await destination.send(embed=embed)
         else:
