@@ -83,13 +83,10 @@ class InfractionScheduler(Scheduler):
         infr_type = infraction["type"]
         icon = utils.INFRACTION_ICONS[infr_type][0]
         reason = infraction["reason"]
-        expiry = infraction["expires_at"]
+        expiry = time.format_infraction_with_duration(infraction["expires_at"])
         id_ = infraction['id']
 
         log.trace(f"Applying {infr_type} infraction #{id_} to {user}.")
-
-        if expiry:
-            expiry = time.format_infraction(expiry)
 
         # Default values for the confirmation message and mod log.
         confirm_msg = f":ok_hand: applied"
