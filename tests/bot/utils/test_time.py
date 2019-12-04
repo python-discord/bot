@@ -50,6 +50,7 @@ class TimeTests(unittest.TestCase):
             self.assertEqual(time.humanize_delta(delta, precision, max_units), expected)
 
     def test_humanize_delta_raises_for_invalid_max_units(self):
+        """humanize_delta should raises ValueError('max_units must be positive') for invalid max units."""
         test_cases = (-1, 0)
 
         for max_units in test_cases:
