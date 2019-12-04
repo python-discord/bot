@@ -15,21 +15,35 @@ class TimeTests(unittest.TestCase):
     def setUp(self):
         pass
 
-    def test_humanize_delta(self):
+    def test_humanize_delta_handle_unknown_units(self):
+        """humanize_delta should be able to handle unknown units, and will not abort."""
+        test_cases = (
+            # Does not abort for unknown units, as the unit name is checked
+            # against the attribute of the relativedelta instance.
+            (relativedelta(days=2, hours=2), 'elephants', 2, '2 days and 2 hours'),
+        )
+
+        for delta, precision, max_units, expected in test_cases:
+            self.assertEqual(time.humanize_delta(delta, precision, max_units), expected)
+
+    def test_humanize_delta_handle_high_units(self):
+        """humanize_delta should be able to handle very high units."""
+        test_cases = (
+            # Very high maximum units, but it only ever iterates over
+            # each value the relativedelta might have.
+            (relativedelta(days=2, hours=2), 'hours', 20, '2 days and 2 hours'),
+        )
+
+        for delta, precision, max_units, expected in test_cases:
+            self.assertEqual(time.humanize_delta(delta, precision, max_units), expected)
+
+    def test_humanize_delta_should_work_normally(self):
         """Testing humanize delta."""
         test_cases = (
             (relativedelta(days=2), 'seconds', 1, '2 days'),
             (relativedelta(days=2, hours=2), 'seconds', 2, '2 days and 2 hours'),
             (relativedelta(days=2, hours=2), 'seconds', 1, '2 days'),
             (relativedelta(days=2, hours=2), 'days', 2, '2 days'),
-
-            # Does not abort for unknown units, as the unit name is checked
-            # against the attribute of the relativedelta instance.
-            (relativedelta(days=2, hours=2), 'elephants', 2, '2 days and 2 hours'),
-
-            # Very high maximum units, but it only ever iterates over
-            # each value the relativedelta might have.
-            (relativedelta(days=2, hours=2), 'hours', 20, '2 days and 2 hours'),
         )
 
         for delta, precision, max_units, expected in test_cases:
