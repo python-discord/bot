@@ -1,7 +1,7 @@
 import asyncio
 import contextlib
 from io import BytesIO
-from typing import Optional, Sequence, Union
+from typing import List, Optional, Sequence, Union
 
 from discord import Client, Embed, File, Member, Message, Reaction, TextChannel, Webhook
 from discord.abc import Snowflake
@@ -51,14 +51,15 @@ async def wait_for_deletion(
         await message.delete()
 
 
-async def send_attachments(message: Message, destination: Union[TextChannel, Webhook]) -> None:
+async def send_attachments(message: Message, destination: Union[TextChannel, Webhook]) -> List[str]:
     """
-    Re-uploads each attachment in a message to the given channel or webhook.
+    Re-upload the message's attachments to the destination and return a list of their new URLs.
 
     Each attachment is sent as a separate message to more easily comply with the 8 MiB request size limit.
     If attachments are too large, they are instead grouped into a single embed which links to them.
     """
     large = []
+    urls = []
     for attachment in message.attachments:
         try:
             # This should avoid most files that are too large, but some may get through hence the try-catch.
@@ -69,7 +70,8 @@ async def send_attachments(message: Message, destination: Union[TextChannel, Web
                     attachment_file = File(file, filename=attachment.filename)
 
                     if isinstance(destination, TextChannel):
-                        await destination.send(file=attachment_file)
+                        msg = await destination.send(file=attachment_file)
+                        urls.append(msg.attachments[0].url)
                     else:
                         await destination.send(
                             file=attachment_file,
@@ -95,3 +97,5 @@ async def send_attachments(message: Message, destination: Union[TextChannel, Web
                 username=message.author.display_name,
                 avatar_url=message.author.avatar_url
             )
+
+    return urls
