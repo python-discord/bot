@@ -74,7 +74,7 @@ class TimeTests(unittest.TestCase):
         then = datetime(2019, 1, 1, 0, 10)
 
         # No return value
-        assert asyncio.run(time.wait_until(then, start)) is None
+        self.assertIs(asyncio.run(time.wait_until(then, start)), None)
 
         mock.assert_called_once_with(10 * 60)
 
