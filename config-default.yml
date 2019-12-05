@@ -22,11 +22,6 @@ style:
         defcon_enabled:  "<:defconenabled:470326274213150730>"
         defcon_updated:  "<:defconsettingsupdated:470326274082996224>"
 
-        green_chevron: "<:greenchevron:418104310329769993>"
-        red_chevron:   "<:redchevron:418112778184818698>"
-        white_chevron: "<:whitechevron:418110396973711363>"
-        bb_message:    "<:bbmessage:476273120999636992>"
-
         status_online:  "<:status_online:470326272351010816>"
         status_idle:    "<:status_idle:470326266625785866>"
         status_dnd:     "<:status_dnd:470326272082313216>"
@@ -36,6 +31,18 @@ style:
         pencil:     "\u270F"
         new:        "\U0001F195"
         cross_mark: "\u274C"
+
+        ducky_yellow:   &DUCKY_YELLOW   574951975574175744
+        ducky_blurple:  &DUCKY_BLURPLE  574951975310065675
+        ducky_regal:    &DUCKY_REGAL    637883439185395712
+        ducky_camo:     &DUCKY_CAMO     637914731566596096
+        ducky_ninja:    &DUCKY_NINJA    637923502535606293
+        ducky_devil:    &DUCKY_DEVIL    637925314982576139
+        ducky_tube:     &DUCKY_TUBE     637881368008851456
+
+        upvotes:        "<:upvotes:638729835245731840>"
+        comments:       "<:comments:638729835073765387>"
+        user:           "<:user:638729835442602003>"
 
     icons:
         crown_blurple: "https://cdn.discordapp.com/emojis/469964153289965568.png"
@@ -82,6 +89,9 @@ style:
 
         questionmark: "https://cdn.discordapp.com/emojis/512367613339369475.png"
 
+        superstarify: "https://cdn.discordapp.com/emojis/636288153044516874.png"
+        unsuperstarify: "https://cdn.discordapp.com/emojis/636288201258172446.png"
+
 guild:
     id: 267624335836053506
 
@@ -98,6 +108,7 @@ guild:
         defcon:            &DEFCON        464469101889454091
         devlog:            &DEVLOG        622895325144940554
         devtest:           &DEVTEST       414574275865870337
+        esoteric:                         470884583684964352
         help_0:                           303906576991780866
         help_1:                           303906556754395136
         help_2:                           303906514266226689
@@ -148,6 +159,7 @@ guild:
         talent_pool:                        569145364800602132
         big_brother:                        569133704568373283
         reddit:                             635408384794951680
+        duck_pond:                          637821475327311927
 
 
 filter:
@@ -383,6 +395,10 @@ mention:
 redirect_output:
     delete_invocation: true
     delete_delay: 15
+
+duck_pond:
+    threshold: 5
+    custom_emojis: [*DUCKY_YELLOW, *DUCKY_BLURPLE, *DUCKY_CAMO, *DUCKY_DEVIL, *DUCKY_NINJA, *DUCKY_REGAL, *DUCKY_TUBE]
 
 config:
     required_keys: ['bot.token']

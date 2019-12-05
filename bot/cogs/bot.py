@@ -4,7 +4,7 @@ import re
 import time
 from typing import Optional, Tuple
 
-from discord import Embed, Message, RawMessageUpdateEvent
+from discord import Embed, Message, RawMessageUpdateEvent, TextChannel
 from discord.ext.commands import Bot, Cog, Context, command, group
 
 from bot.constants import Channels, DEBUG_MODE, Guild, MODERATION_ROLES, Roles, URLs
@@ -71,9 +71,12 @@ class Bot(Cog):
 
     @command(name='echo', aliases=('print',))
     @with_role(*MODERATION_ROLES)
-    async def echo_command(self, ctx: Context, *, text: str) -> None:
-        """Send the input verbatim to the current channel."""
-        await ctx.send(text)
+    async def echo_command(self, ctx: Context, channel: Optional[TextChannel], *, text: str) -> None:
+        """Repeat the given message in either a specified channel or the current channel."""
+        if channel is None:
+            await ctx.send(text)
+        else:
+            await channel.send(text)
 
     @command(name='embed')
     @with_role(*MODERATION_ROLES)
