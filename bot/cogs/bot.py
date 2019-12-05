@@ -236,9 +236,10 @@ class Bot(Cog):
             )
             and not msg.author.bot
             and len(msg.content.splitlines()) > 3
+            and not TokenRemover.is_token_in_message(msg)
         )
 
-        if parse_codeblock and not TokenRemover.is_token_in_message(msg):  # no token in the msg
+        if parse_codeblock:  # no token in the msg
             on_cooldown = (time.time() - self.channel_cooldowns.get(msg.channel.id, 0)) < 300
             if not on_cooldown or DEBUG_MODE:
                 try:
