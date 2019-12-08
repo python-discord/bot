@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 RE_MARKDOWN = re.compile(r'([*_~`|>])')
 
 
-class Bot(Cog):
+class BotCog(Cog, name="Bot"):
     """Bot information commands."""
 
     def __init__(self, bot: Bot):
@@ -374,9 +374,9 @@ class Bot(Cog):
             bot_message = await channel.fetch_message(self.codeblock_message_ids[payload.message_id])
             await bot_message.delete()
             del self.codeblock_message_ids[payload.message_id]
-            log.trace("User's incorrect code block has been fixed.  Removing bot formatting message.")
+            log.trace("User's incorrect code block has been fixed. Removing bot formatting message.")
 
 
 def setup(bot: Bot) -> None:
     """Load the Bot cog."""
-    bot.add_cog(Bot(bot))
+    bot.add_cog(BotCog(bot))
