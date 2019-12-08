@@ -1,6 +1,6 @@
-import asyncio
 import logging
 import socket
+from typing import Optional
 
 import aiohttp
 from discord.ext import commands
@@ -16,6 +16,30 @@ class Bot(commands.Bot):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.http_session: Optional[aiohttp.ClientSession] = None
+        self.api_client = api.APIClient(loop=self.loop)
+
+        log.addHandler(api.APILoggingHandler(self.api_client))
+
+    def add_cog(self, cog: commands.Cog) -> None:
+        """Adds a "cog" to the bot and logs the operation."""
+        super().add_cog(cog)
+        log.info(f"Cog loaded: {cog.qualified_name}")
+
+    def clear(self) -> None:
+        """Clears the internal state of the bot and resets the API client."""
+        super().clear()
+        self.api_client.recreate()
+
+    async def close(self) -> None:
+        """Close the aiohttp session after closing the Discord connection."""
+        await super().close()
+
+        await self.http_session.close()
+        await self.api_client.close()
+
+    async def start(self, *args, **kwargs) -> None:
+        """Open an aiohttp session before logging in and connecting to Discord."""
         # Global aiohttp session for all cogs
         # - Uses asyncio for DNS resolution instead of threads, so we don't spam threads
         # - Uses AF_INET as its socket family to prevent https related problems both locally and in prod.
@@ -26,10 +50,4 @@ class Bot(commands.Bot):
             )
         )
 
-        self.api_client = api.APIClient(loop=asyncio.get_event_loop())
-        log.addHandler(api.APILoggingHandler(self.api_client))
-
-    def add_cog(self, cog: commands.Cog) -> None:
-        """Adds a "cog" to the bot and logs the operation."""
-        super().add_cog(cog)
-        log.info(f"Cog loaded: {cog.qualified_name}")
+        await super().start(*args, **kwargs)
