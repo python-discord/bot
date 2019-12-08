@@ -268,6 +268,5 @@ class Wolfram(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Wolfram cog load."""
+    """Load the Wolfram cog."""
     bot.add_cog(Wolfram(bot))
-    log.info("Cog loaded: Wolfram")

@@ -139,6 +139,5 @@ class Site(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Site cog load."""
+    """Load the Site cog."""
     bot.add_cog(Site(bot))
-    log.info("Cog loaded: Site")

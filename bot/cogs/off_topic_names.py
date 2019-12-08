@@ -185,6 +185,5 @@ class OffTopicNames(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Off topic names cog load."""
+    """Load the OffTopicNames cog."""
     bot.add_cog(OffTopicNames(bot))
-    log.info("Cog loaded: OffTopicNames")

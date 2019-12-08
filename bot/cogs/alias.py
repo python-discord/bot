@@ -148,6 +148,5 @@ class Alias (Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Alias cog load."""
+    """Load the Alias cog."""
     bot.add_cog(Alias(bot))
-    log.info("Cog loaded: Alias")

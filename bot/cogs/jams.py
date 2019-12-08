@@ -110,6 +110,5 @@ class CodeJams(commands.Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Code Jams cog load."""
+    """Load the CodeJams cog."""
     bot.add_cog(CodeJams(bot))
-    log.info("Cog loaded: CodeJams")

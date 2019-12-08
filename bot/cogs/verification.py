@@ -225,6 +225,5 @@ class Verification(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Verification cog load."""
+    """Load the Verification cog."""
     bot.add_cog(Verification(bot))
-    log.info("Cog loaded: Verification")

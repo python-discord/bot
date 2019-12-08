@@ -198,6 +198,5 @@ async def func():  # (None,) -> Any
 
 
 def setup(bot: Bot) -> None:
-    """Code eval cog load."""
+    """Load the CodeEval cog."""
     bot.add_cog(CodeEval(bot))
-    log.info("Cog loaded: Eval")

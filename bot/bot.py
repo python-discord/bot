@@ -28,3 +28,8 @@ class Bot(commands.Bot):
 
         self.api_client = api.APIClient(loop=asyncio.get_event_loop())
         log.addHandler(api.APILoggingHandler(self.api_client))
+
+    def add_cog(self, cog: commands.Cog) -> None:
+        """Adds a "cog" to the bot and logs the operation."""
+        super().add_cog(cog)
+        log.info(f"Cog loaded: {cog.qualified_name}")

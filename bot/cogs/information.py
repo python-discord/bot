@@ -392,6 +392,5 @@ class Information(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Information cog load."""
+    """Load the Information cog."""
     bot.add_cog(Information(bot))
-    log.info("Cog loaded: Information")

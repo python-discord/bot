@@ -234,4 +234,3 @@ class Extensions(commands.Cog):
 def setup(bot: Bot) -> None:
     """Load the Extensions cog."""
     bot.add_cog(Extensions(bot))
-    log.info("Cog loaded: Extensions")

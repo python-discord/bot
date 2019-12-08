@@ -228,6 +228,5 @@ class Snekbox(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Snekbox cog load."""
+    """Load the Snekbox cog."""
     bot.add_cog(Snekbox(bot))
-    log.info("Cog loaded: Snekbox")

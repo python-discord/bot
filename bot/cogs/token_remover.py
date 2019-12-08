@@ -120,6 +120,5 @@ class TokenRemover(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Token Remover cog load."""
+    """Load the TokenRemover cog."""
     bot.add_cog(TokenRemover(bot))
-    log.info("Cog loaded: TokenRemover")

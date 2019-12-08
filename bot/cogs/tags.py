@@ -161,6 +161,5 @@ class Tags(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Tags cog load."""
+    """Load the Tags cog."""
     bot.add_cog(Tags(bot))
-    log.info("Cog loaded: Tags")

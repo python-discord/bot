@@ -508,6 +508,5 @@ class Doc(commands.Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Doc cog load."""
+    """Load the Doc cog."""
     bot.add_cog(Doc(bot))
-    log.info("Cog loaded: Doc")

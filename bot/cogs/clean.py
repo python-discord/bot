@@ -212,6 +212,5 @@ class Clean(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Clean cog load."""
+    """Load the Clean cog."""
     bot.add_cog(Clean(bot))
-    log.info("Cog loaded: Clean")

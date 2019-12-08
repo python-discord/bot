@@ -237,6 +237,5 @@ class Defcon(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """DEFCON cog load."""
+    """Load the Defcon cog."""
     bot.add_cog(Defcon(bot))
-    log.info("Cog loaded: Defcon")

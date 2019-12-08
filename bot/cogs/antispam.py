@@ -277,7 +277,6 @@ def validate_config(rules: Mapping = AntiSpamConfig.rules) -> Dict[str, str]:
 
 
 def setup(bot: Bot) -> None:
-    """Antispam cog load."""
+    """Validate the AntiSpam configs and load the AntiSpam cog."""
     validation_errors = validate_config()
     bot.add_cog(AntiSpam(bot, validation_errors))
-    log.info("Cog loaded: AntiSpam")

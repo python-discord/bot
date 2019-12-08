@@ -38,6 +38,5 @@ class Logging(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Logging cog load."""
+    """Load the Logging cog."""
     bot.add_cog(Logging(bot))
-    log.info("Cog loaded: Logging")

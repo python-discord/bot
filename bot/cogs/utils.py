@@ -177,6 +177,5 @@ class Utils(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Utils cog load."""
+    """Load the Utils cog."""
     bot.add_cog(Utils(bot))
-    log.info("Cog loaded: Utils")

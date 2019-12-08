@@ -27,6 +27,5 @@ class Security(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Security cog load."""
+    """Load the Security cog."""
     bot.add_cog(Security(bot))
-    log.info("Cog loaded: Security")

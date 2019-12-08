@@ -218,6 +218,5 @@ class Reddit(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Reddit cog load."""
+    """Load the Reddit cog."""
     bot.add_cog(Reddit(bot))
-    log.info("Cog loaded: Reddit")

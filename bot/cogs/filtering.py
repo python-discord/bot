@@ -371,6 +371,5 @@ class Filtering(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Filtering cog load."""
+    """Load the Filtering cog."""
     bot.add_cog(Filtering(bot))
-    log.info("Cog loaded: Filtering")

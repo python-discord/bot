@@ -291,6 +291,5 @@ class Reminders(Scheduler, Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Reminders cog load."""
+    """Load the Reminders cog."""
     bot.add_cog(Reminders(bot))
-    log.info("Cog loaded: Reminders")

@@ -144,6 +144,5 @@ class ErrorHandler(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Error handler cog load."""
+    """Load the ErrorHandler cog."""
     bot.add_cog(ErrorHandler(bot))
-    log.info("Cog loaded: Events")

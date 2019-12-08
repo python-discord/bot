@@ -99,6 +99,5 @@ class Free(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Free cog load."""
+    """Load the Free cog."""
     bot.add_cog(Free())
-    log.info("Cog loaded: Free")
