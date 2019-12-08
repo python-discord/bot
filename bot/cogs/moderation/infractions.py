@@ -7,6 +7,7 @@ from discord.ext import commands
 from discord.ext.commands import Context, command
 
 from bot import constants
+from bot.bot import Bot
 from bot.constants import Event
 from bot.decorators import respect_role_hierarchy
 from bot.utils.checks import with_role_check
@@ -25,7 +26,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     category = "Moderation"
     category_description = "Server moderation tools."
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: Bot):
         super().__init__(bot, supported_infractions={"ban", "kick", "mute", "note", "warning"})
 
         self.category = "Moderation"

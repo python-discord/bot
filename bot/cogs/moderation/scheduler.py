@@ -7,10 +7,11 @@ from gettext import ngettext
 
 import dateutil.parser
 import discord
-from discord.ext.commands import Bot, Context
+from discord.ext.commands import Context
 
 from bot import constants
 from bot.api import ResponseCodeError
+from bot.bot import Bot
 from bot.constants import Colours, STAFF_CHANNELS
 from bot.utils import time
 from bot.utils.scheduling import Scheduler

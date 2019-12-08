@@ -1,6 +1,8 @@
 import logging
 
-from discord.ext.commands import Bot, Cog, Context, NoPrivateMessage
+from discord.ext.commands import Cog, Context, NoPrivateMessage
+
+from bot.bot import Bot
 
 log = logging.getLogger(__name__)
 

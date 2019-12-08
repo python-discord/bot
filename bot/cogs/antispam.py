@@ -7,9 +7,10 @@ from operator import itemgetter
 from typing import Dict, Iterable, List, Set
 
 from discord import Colour, Member, Message, NotFound, Object, TextChannel
-from discord.ext.commands import Bot, Cog
+from discord.ext.commands import Cog
 
 from bot import rules
+from bot.bot import Bot
 from bot.cogs.moderation import ModLog
 from bot.constants import (
     AntiSpam as AntiSpamConfig, Channels,

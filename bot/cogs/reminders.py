@@ -8,8 +8,9 @@ from typing import Optional
 
 from dateutil.relativedelta import relativedelta
 from discord import Colour, Embed, Message
-from discord.ext.commands import Bot, Cog, Context, group
+from discord.ext.commands import Cog, Context, group
 
+from bot.bot import Bot
 from bot.constants import Channels, Icons, NEGATIVE_REPLIES, POSITIVE_REPLIES, STAFF_ROLES
 from bot.converters import Duration
 from bot.pagination import LinePaginator

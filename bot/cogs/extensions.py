@@ -6,8 +6,9 @@ from pkgutil import iter_modules
 
 from discord import Colour, Embed
 from discord.ext import commands
-from discord.ext.commands import Bot, Context, group
+from discord.ext.commands import Context, group
 
+from bot.bot import Bot
 from bot.constants import Emojis, MODERATION_ROLES, Roles, URLs
 from bot.pagination import LinePaginator
 from bot.utils.checks import with_role_check

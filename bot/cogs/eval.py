@@ -9,8 +9,9 @@ from io import StringIO
 from typing import Any, Optional, Tuple
 
 import discord
-from discord.ext.commands import Bot, Cog, Context, group
+from discord.ext.commands import Cog, Context, group
 
+from bot.bot import Bot
 from bot.constants import Roles
 from bot.decorators import with_role
 from bot.interpreter import Interpreter

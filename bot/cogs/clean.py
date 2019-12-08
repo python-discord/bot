@@ -4,8 +4,9 @@ import re
 from typing import Optional
 
 from discord import Colour, Embed, Message, User
-from discord.ext.commands import Bot, Cog, Context, group
+from discord.ext.commands import Cog, Context, group
 
+from bot.bot import Bot
 from bot.cogs.moderation import ModLog
 from bot.constants import (
     Channels, CleanMessages, Colours, Event,

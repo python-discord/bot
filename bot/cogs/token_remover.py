@@ -6,9 +6,10 @@ import struct
 from datetime import datetime
 
 from discord import Colour, Message
-from discord.ext.commands import Bot, Cog
+from discord.ext.commands import Cog
 from discord.utils import snowflake_time
 
+from bot.bot import Bot
 from bot.cogs.moderation import ModLog
 from bot.constants import Channels, Colours, Event, Icons
 

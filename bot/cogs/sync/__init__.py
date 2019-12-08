@@ -1,7 +1,6 @@
 import logging
 
-from discord.ext.commands import Bot
-
+from bot.bot import Bot
 from .cog import Sync
 
 log = logging.getLogger(__name__)

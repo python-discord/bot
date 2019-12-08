@@ -1,7 +1,6 @@
 import logging
 
-from discord.ext.commands import Bot
-
+from bot.bot import Bot
 from .bigbrother import BigBrother
 from .talentpool import TalentPool
 

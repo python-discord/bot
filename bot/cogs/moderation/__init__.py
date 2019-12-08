@@ -1,7 +1,6 @@
 import logging
 
-from discord.ext.commands import Bot
-
+from bot.bot import Bot
 from .infractions import Infractions
 from .management import ModManagement
 from .modlog import ModLog

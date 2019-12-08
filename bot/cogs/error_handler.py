@@ -14,9 +14,10 @@ from discord.ext.commands import (
     NoPrivateMessage,
     UserInputError,
 )
-from discord.ext.commands import Bot, Cog, Context
+from discord.ext.commands import Cog, Context
 
 from bot.api import ResponseCodeError
+from bot.bot import Bot
 from bot.constants import Channels
 from bot.decorators import InChannelCheckFailure
 

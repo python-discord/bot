@@ -2,7 +2,9 @@ from code import InteractiveInterpreter
 from io import StringIO
 from typing import Any
 
-from discord.ext.commands import Bot, Context
+from discord.ext.commands import Context
+
+from bot.bot import Bot
 
 CODE_TEMPLATE = """
 async def _func():

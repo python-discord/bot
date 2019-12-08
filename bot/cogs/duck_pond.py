@@ -3,9 +3,10 @@ from typing import Optional, Union
 
 import discord
 from discord import Color, Embed, Member, Message, RawReactionActionEvent, User, errors
-from discord.ext.commands import Bot, Cog
+from discord.ext.commands import Cog
 
 from bot import constants
+from bot.bot import Bot
 from bot.utils.messages import send_attachments
 
 log = logging.getLogger(__name__)

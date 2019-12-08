@@ -1,8 +1,9 @@
 import logging
 
 from discord import Colour, Embed
-from discord.ext.commands import Bot, Cog, Context, group
+from discord.ext.commands import Cog, Context, group
 
+from bot.bot import Bot
 from bot.constants import URLs
 from bot.pagination import LinePaginator
 
