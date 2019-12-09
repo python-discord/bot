@@ -38,6 +38,9 @@ def in_channel(
     Hidden channels are channels which will not be displayed in the InChannelCheckFailure error
     message.
     """
+    hidden_channels = hidden_channels or []
+    bypass_roles = bypass_roles or []
+
     def predicate(ctx: Context) -> bool:
         """In-channel checker predicate."""
         if ctx.channel.id in channels or ctx.channel.id in hidden_channels:
