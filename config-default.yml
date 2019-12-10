@@ -193,6 +193,7 @@ filter:
         - 544525886180032552  # kennethreitz.org
         - 590806733924859943  # Discord Hack Week
         - 423249981340778496  # Kivy
+        - 197038439483310086  # Discord Testers
 
     domain_blacklist:
         - pornhub.com
