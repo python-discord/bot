@@ -329,7 +329,7 @@ class InfractionScheduler(Scheduler):
             log_content = mod_role.mention
         except discord.HTTPException as e:
             log.exception(f"Failed to deactivate infraction #{id_} ({type_})")
-            log_text["Failure"] = f"HTTPException with code {e.code}."
+            log_text["Failure"] = f"HTTPException with status {e.status} and code {e.code}."
             log_content = mod_role.mention
 
         # Check if the user is currently being watched by Big Brother.
