@@ -25,7 +25,7 @@ CHANNEL_CHANGES_SUPPRESSED = ("_overwrites", "position")
 MEMBER_CHANGES_SUPPRESSED = ("status", "activities", "_client_status", "nick")
 ROLE_CHANGES_UNSUPPORTED = ("colour", "permissions")
 
-VOICE_STATE_ATTRIBUTES = {"self_video": "Broadcasting", "afk": "AFK"}
+VOICE_STATE_ATTRIBUTES = {"self_video": "Broadcasting", "afk": "AFK", "channel.name": "Channel"}
 
 
 class ModLog(Cog, name="ModLog"):
@@ -769,7 +769,13 @@ class ModLog(Cog, name="ModLog"):
             self._ignored[Event.voice_state_update].remove(member.id)
             return
 
-        diff = DeepDiff(before, after, exclude_paths="root.session_id")
+        # Exclude all channel attributes except the name.
+        diff = DeepDiff(
+            before,
+            after,
+            exclude_paths="root.session_id",
+            exclude_regex_paths=r"root\.channel\.(?!name)",
+        )
 
         # A type change seems to always take precedent over a value change. Furthermore, it will
         # include the value change along with the type change anyway. Therefore, it's OK to
