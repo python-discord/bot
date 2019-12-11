@@ -24,7 +24,7 @@ AccessToken = namedtuple("AccessToken", ["token", "expires_at"])
 class Reddit(Cog):
     """Track subreddit posts and show detailed statistics about them."""
 
-    USER_AGENT = "docker-python3:Discord Bot of PythonDiscord (https://pythondiscord.com/):1.0.0 (by /u/PythonDiscord)"
+    HEADERS = {"User-Agent": "python3:python-discord/bot:1.0.0 (by /u/PythonDiscord)"}
     URL = "https://www.reddit.com"
     OAUTH_URL = "https://oauth.reddit.com"
     MAX_RETRIES = 3
@@ -34,7 +34,6 @@ class Reddit(Cog):
 
         self.webhook = None
         self.access_token = None
-        self.headers = None
         self.client_auth = BasicAuth(RedditConfig.client_id, RedditConfig.secret)
 
         bot.loop.create_task(self.init_reddit_ready())
@@ -64,18 +63,15 @@ class Reddit(Cog):
         A token is valid for 1 hour. There will be MAX_RETRIES to get a token, after which the cog
         will be unloaded if retrieval was still unsuccessful.
         """
-        headers = {"User-Agent": self.USER_AGENT}
-        data = {
-            "grant_type": "client_credentials",
-            "duration": "temporary"
-        }
-
         for _ in range(self.MAX_RETRIES):
             response = await self.bot.http_session.post(
                 url=f"{self.URL}/api/v1/access_token",
-                headers=headers,
+                headers=self.HEADERS,
                 auth=self.client_auth,
-                data=data
+                data={
+                    "grant_type": "client_credentials",
+                    "duration": "temporary"
+                }
             )
 
             if response.status == 200 and response.content_type == "application/json":
@@ -85,10 +81,6 @@ class Reddit(Cog):
                     token=content["access_token"],
                     expires_at=datetime.utcnow() + timedelta(seconds=expiration)
                 )
-                self.headers = {
-                    "Authorization": "bearer " + self.access_token.token,
-                    "User-Agent": self.USER_AGENT
-                }
                 return
 
             await asyncio.sleep(3)
@@ -103,22 +95,18 @@ class Reddit(Cog):
 
         For security reasons, it's good practice to revoke the token when it's no longer being used.
         """
-        headers = {"User-Agent": self.USER_AGENT}
-        data = {
-            "token": self.access_token.token,
-            "token_type_hint": "access_token"
-        }
-
         response = await self.bot.http_session.post(
             url=f"{self.URL}/api/v1/revoke_token",
-            headers=headers,
+            headers=self.HEADERS,
             auth=self.client_auth,
-            data=data
+            data={
+                "token": self.access_token.token,
+                "token_type_hint": "access_token"
+            }
         )
 
         if response.status == 204 and response.content_type == "application/json":
             self.access_token = None
-            self.headers = None
         else:
             log.warning(f"Unable to revoke access token: status {response.status}.")
 
@@ -128,9 +116,6 @@ class Reddit(Cog):
         if not 25 >= amount > 0:
             raise ValueError("Invalid amount of subreddit posts requested.")
 
-        if params is None:
-            params = {}
-
         # Renew the token if necessary.
         if not self.access_token or self.access_token.expires_at < datetime.utcnow():
             await self.get_access_token()
@@ -139,7 +124,7 @@ class Reddit(Cog):
         for _ in range(self.MAX_RETRIES):
             response = await self.bot.http_session.get(
                 url=url,
-                headers=self.headers,
+                headers={**self.HEADERS, "Authorization": f"bearer {self.access_token.token}"},
                 params=params
             )
             if response.status == 200 and response.content_type == 'application/json':
