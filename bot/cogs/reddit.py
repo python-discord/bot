@@ -63,7 +63,7 @@ class Reddit(Cog):
         A token is valid for 1 hour. There will be MAX_RETRIES to get a token, after which the cog
         will be unloaded if retrieval was still unsuccessful.
         """
-        for _ in range(self.MAX_RETRIES):
+        for i in range(1, self.MAX_RETRIES + 1):
             response = await self.bot.http_session.post(
                 url=f"{self.URL}/api/v1/access_token",
                 headers=self.HEADERS,
@@ -81,7 +81,15 @@ class Reddit(Cog):
                     token=content["access_token"],
                     expires_at=datetime.utcnow() + timedelta(seconds=expiration)
                 )
+
+                log.debug(f"New token acquired; expires on {self.access_token.expires_at}")
                 return
+            else:
+                log.debug(
+                    f"Failed to get an access token: "
+                    f"status {response.status} & content type {response.content_type}; "
+                    f"retrying ({i}/{self.MAX_RETRIES})"
+                )
 
             await asyncio.sleep(3)
 
