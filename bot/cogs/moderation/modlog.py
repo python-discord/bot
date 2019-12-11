@@ -207,7 +207,7 @@ class ModLog(Cog, name="ModLog"):
                 new = value["new_value"]
                 old = value["old_value"]
 
-                changes.append(f"**{key.title()}:** `{old}` **->** `{new}`")
+                changes.append(f"**{key.title()}:** `{old}` **→** `{new}`")
 
             done.append(key)
 
@@ -285,7 +285,7 @@ class ModLog(Cog, name="ModLog"):
                 new = value["new_value"]
                 old = value["old_value"]
 
-                changes.append(f"**{key.title()}:** `{old}` **->** `{new}`")
+                changes.append(f"**{key.title()}:** `{old}` **→** `{new}`")
 
             done.append(key)
 
@@ -335,7 +335,7 @@ class ModLog(Cog, name="ModLog"):
             new = value["new_value"]
             old = value["old_value"]
 
-            changes.append(f"**{key.title()}:** `{old}` **->** `{new}`")
+            changes.append(f"**{key.title()}:** `{old}` **→** `{new}`")
 
             done.append(key)
 
@@ -488,23 +488,23 @@ class ModLog(Cog, name="ModLog"):
                 old = value.get("old_value")
 
                 if new and old:
-                    changes.append(f"**{key.title()}:** `{old}` **->** `{new}`")
+                    changes.append(f"**{key.title()}:** `{old}` **→** `{new}`")
 
             done.append(key)
 
         if before.name != after.name:
             changes.append(
-                f"**Username:** `{before.name}` **->** `{after.name}`"
+                f"**Username:** `{before.name}` **→** `{after.name}`"
             )
 
         if before.discriminator != after.discriminator:
             changes.append(
-                f"**Discriminator:** `{before.discriminator}` **->** `{after.discriminator}`"
+                f"**Discriminator:** `{before.discriminator}` **→** `{after.discriminator}`"
             )
 
         if before.display_name != after.display_name:
             changes.append(
-                f"**Display name:** `{before.display_name}` **->** `{after.display_name}`"
+                f"**Display name:** `{before.display_name}` **→** `{after.display_name}`"
             )
 
         if not changes:
@@ -781,7 +781,7 @@ class ModLog(Cog, name="ModLog"):
             attr = attr[5:]  # Remove "root." prefix
             attr = VOICE_STATE_ATTRIBUTES.get(attr, attr.replace("_", " ").capitalize())
 
-            changes.append(f"**{attr}:** `{values['old_value']}` **->** `{values['new_value']}`")
+            changes.append(f"**{attr}:** `{values['old_value']}` **→** `{values['new_value']}`")
 
         if not changes:
             return
