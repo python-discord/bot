@@ -18,6 +18,8 @@ from bot.pagination import LinePaginator
 
 log = logging.getLogger(__name__)
 
+AccessToken = namedtuple("AccessToken", ["token", "expires_at"])
+
 
 class Reddit(Cog):
     """Track subreddit posts and show detailed statistics about them."""
@@ -73,7 +75,6 @@ class Reddit(Cog):
             if response.status == 200 and response.content_type == "application/json":
                 content = await response.json()
                 expiration = int(content["expires_in"]) - 60  # Subtract 1 minute for leeway.
-                AccessToken = namedtuple("AccessToken", ["token", "expires_at"])
                 self.access_token = AccessToken(
                     token=content["access_token"],
                     expires_at=datetime.utcnow() + timedelta(seconds=expiration)
