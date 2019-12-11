@@ -544,6 +544,8 @@ class Event(Enum):
     message_delete = "message_delete"
     message_edit = "message_edit"
 
+    voice_state_update = "voice_state_update"
+
 
 # Debug mode
 DEBUG_MODE = True if 'local' in os.environ.get("SITE_URL", "local") else False

@@ -25,6 +25,8 @@ CHANNEL_CHANGES_SUPPRESSED = ("_overwrites", "position")
 MEMBER_CHANGES_SUPPRESSED = ("status", "activities", "_client_status", "nick")
 ROLE_CHANGES_UNSUPPORTED = ("colour", "permissions")
 
+VOICE_STATE_ATTRIBUTES = {"self_video": "Broadcasting", "afk": "AFK"}
+
 
 class ModLog(Cog, name="ModLog"):
     """Logging for server events and staff actions."""
@@ -747,4 +749,51 @@ class ModLog(Cog, name="ModLog"):
         await self.send_log_message(
             Icons.message_edit, Colour.blurple(), "Message edited (After)",
             after_response, channel_id=Channels.message_log
+        )
+
+    @Cog.listener()
+    async def on_voice_state_update(
+        self,
+        member: discord.Member,
+        before: discord.VoiceState,
+        after: discord.VoiceState
+    ) -> None:
+        """Log member voice state changes to the voice log channel."""
+        if member.guild.id != GuildConstant.id:
+            return
+
+        if member.id in self._ignored[Event.voice_state_update]:
+            self._ignored[Event.voice_state_update].remove(member.id)
+            return
+
+        diff = DeepDiff(before, after, exclude_paths="root.session_id")
+
+        # A type change seems to always take precedent over a value change. Furthermore, it will
+        # include the value change along with the type change anyway. Therefore, it's OK to
+        # "overwrite" values_changed; in practice there will never even be anything to overwrite.
+        diff_values = {**diff.get("values_changed", {}), **diff.get("type_changes", {})}
+
+        changes = []
+        for attr, values in diff_values.items():
+            if not attr:  # Not sure why, but it happens
+                continue
+
+            attr = attr[5:]  # Remove "root." prefix
+            attr = VOICE_STATE_ATTRIBUTES.get(attr, attr.replace("_", " ").capitalize())
+
+            changes.append(f"**{attr}:** `{values['old_value']}` **->** `{values['new_value']}`")
+
+        if not changes:
+            return
+
+        message = "\n".join(f"{Emojis.bullet} {item}" for item in sorted(changes))
+        message = f"**{member}** (`{member.id}`)\n{message}"
+
+        await self.send_log_message(
+            icon_url=Icons.user_update,
+            colour=Colour.blurple(),
+            title="Voice state updated",
+            text=message,
+            thumbnail=member.avatar_url_as(static_format="png"),
+            channel_id=Channels.voice_log
         )
