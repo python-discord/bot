@@ -86,7 +86,7 @@ class Reddit(Cog):
             await asyncio.sleep(3)
 
         log.error("Authentication with Reddit API failed. Unloading extension.")
-        self.bot.remove_cog(self.__class__.__name__)
+        self.bot.remove_cog(self.qualified_name)
         return
 
     async def revoke_access_token(self) -> None:
