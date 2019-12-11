@@ -6,7 +6,7 @@ from collections import namedtuple
 from datetime import datetime, timedelta
 from typing import List
 
-from aiohttp import BasicAuth
+from aiohttp import BasicAuth, ClientError
 from discord import Colour, Embed, TextChannel
 from discord.ext.commands import Bot, Cog, Context, group
 from discord.ext.tasks import loop
@@ -61,7 +61,7 @@ class Reddit(Cog):
         Get a Reddit API OAuth2 access token and assign it to self.access_token.
 
         A token is valid for 1 hour. There will be MAX_RETRIES to get a token, after which the cog
-        will be unloaded if retrieval was still unsuccessful.
+        will be unloaded and a ClientError raised if retrieval was still unsuccessful.
         """
         for i in range(1, self.MAX_RETRIES + 1):
             response = await self.bot.http_session.post(
@@ -93,9 +93,8 @@ class Reddit(Cog):
 
             await asyncio.sleep(3)
 
-        log.error("Authentication with Reddit API failed. Unloading the cog.")
         self.bot.remove_cog(self.qualified_name)
-        return
+        raise ClientError("Authentication with the Reddit API failed. Unloading the cog.")
 
     async def revoke_access_token(self) -> None:
         """
