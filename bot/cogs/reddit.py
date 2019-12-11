@@ -122,6 +122,10 @@ class Reddit(Cog):
         if params is None:
             params = {}
 
+        # Renew the token if necessary.
+        if not self.access_token or self.access_token.expires_at < datetime.utcnow():
+            await self.get_access_token()
+
         url = f"{self.OAUTH_URL}/{route}"
         for _ in range(self.MAX_RETRIES):
             response = await self.bot.http_session.get(
@@ -206,11 +210,6 @@ class Reddit(Cog):
         if not self.webhook:
             await self.bot.fetch_webhook(Webhooks.reddit)
 
-        if not self.access_token:
-            await self.get_access_token()
-        elif self.access_token.expires_at < datetime.utcnow():
-            await self.get_access_token()
-
         if datetime.utcnow().weekday() == 0:
             await self.top_weekly_posts()
             # if it's a monday send the top weekly posts
@@ -249,10 +248,6 @@ class Reddit(Cog):
     @reddit_group.command(name="top")
     async def top_command(self, ctx: Context, subreddit: Subreddit = "r/Python") -> None:
         """Send the top posts of all time from a given subreddit."""
-        if not self.access_token:
-            await self.get_access_token()
-        elif self.access_token.expires_at < datetime.utcnow():
-            await self.get_access_token()
         async with ctx.typing():
             embed = await self.get_top_posts(subreddit=subreddit, time="all")
 
@@ -261,10 +256,6 @@ class Reddit(Cog):
     @reddit_group.command(name="daily")
     async def daily_command(self, ctx: Context, subreddit: Subreddit = "r/Python") -> None:
         """Send the top posts of today from a given subreddit."""
-        if not self.access_token:
-            await self.get_access_token()
-        elif self.access_token.expires_at < datetime.utcnow():
-            await self.get_access_token()
         async with ctx.typing():
             embed = await self.get_top_posts(subreddit=subreddit, time="day")
 
@@ -273,10 +264,6 @@ class Reddit(Cog):
     @reddit_group.command(name="weekly")
     async def weekly_command(self, ctx: Context, subreddit: Subreddit = "r/Python") -> None:
         """Send the top posts of this week from a given subreddit."""
-        if not self.access_token:
-            await self.get_access_token()
-        elif self.access_token.expires_at < datetime.utcnow():
-            await self.get_access_token()
         async with ctx.typing():
             embed = await self.get_top_posts(subreddit=subreddit, time="week")
 
