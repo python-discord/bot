@@ -32,8 +32,10 @@ class Reddit(Cog):
 
         self.webhook = None
         self.access_token = None
-        bot.loop.create_task(self.init_reddit_ready())
+        self.headers = None
+        self.client_auth = BasicAuth(RedditConfig.client_id, RedditConfig.secret)
 
+        bot.loop.create_task(self.init_reddit_ready())
         self.auto_poster_loop.start()
 
     def cog_unload(self) -> None:
@@ -60,9 +62,6 @@ class Reddit(Cog):
             "grant_type": "client_credentials",
             "duration": "temporary"
         }
-
-        log.info(f"{RedditConfig.client_id}, {RedditConfig.secret}")
-        self.client_auth = BasicAuth(RedditConfig.client_id, RedditConfig.secret)
 
         for _ in range(self.MAX_RETRIES):
             response = await self.bot.http_session.post(
