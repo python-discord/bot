@@ -759,7 +759,10 @@ class ModLog(Cog, name="ModLog"):
         after: discord.VoiceState
     ) -> None:
         """Log member voice state changes to the voice log channel."""
-        if member.guild.id != GuildConstant.id:
+        if (
+            member.guild.id != GuildConstant.id
+            or (before.channel and before.channel.id in GuildConstant.ignored)
+        ):
             return
 
         if member.id in self._ignored[Event.voice_state_update]:
