@@ -25,7 +25,7 @@ CHANNEL_CHANGES_SUPPRESSED = ("_overwrites", "position")
 MEMBER_CHANGES_SUPPRESSED = ("status", "activities", "_client_status", "nick")
 ROLE_CHANGES_UNSUPPORTED = ("colour", "permissions")
 
-VOICE_STATE_ATTRIBUTES = {"self_video": "Broadcasting", "afk": "AFK", "channel.name": "Channel"}
+VOICE_STATE_ATTRIBUTES = {"self_video": "Broadcasting", "channel.name": "Channel"}
 
 
 class ModLog(Cog, name="ModLog"):
@@ -773,7 +773,7 @@ class ModLog(Cog, name="ModLog"):
         diff = DeepDiff(
             before,
             after,
-            exclude_paths="root.session_id",
+            exclude_paths=("root.session_id", "root.afk"),
             exclude_regex_paths=r"root\.channel\.(?!name)",
         )
 
