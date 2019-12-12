@@ -139,7 +139,8 @@ class ModManagement(commands.Cog):
                 New expiry: {new_infraction['expires_at'] or "Permanent"}
             """.rstrip()
 
-        await ctx.send(f":ok_hand: Updated infraction: {' & '.join(confirm_messages)}")
+        changes = ' & '.join(confirm_messages)
+        await ctx.send(f":ok_hand: Updated infraction #{infraction_id}: {changes}")
 
         # Get information about the infraction's user
         user_id = new_infraction['user']
