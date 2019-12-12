@@ -146,14 +146,18 @@ class InfractionScheduler(Scheduler):
                 if expiry:
                     # Schedule the expiration of the infraction.
                     self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
-            except discord.Forbidden:
+            except discord.HTTPException as e:
                 # Accordingly display that applying the infraction failed.
                 confirm_msg = f":x: failed to apply"
                 expiry_msg = ""
                 log_content = ctx.author.mention
                 log_title = "failed to apply"
 
-                log.warning(f"Failed to apply {infr_type} infraction #{id_} to {user}.")
+                log_msg = f"Failed to apply {infr_type} infraction #{id_} to {user}"
+                if isinstance(e, discord.Forbidden):
+                    log.warning(f"{log_msg}: bot lacks permissions.")
+                else:
+                    log.exception(log_msg)
 
         # Send a confirmation message to the invoking context.
         log.trace(f"Sending infraction #{id_} confirmation message.")
@@ -324,12 +328,12 @@ class InfractionScheduler(Scheduler):
                     f"Attempted to deactivate an unsupported infraction #{id_} ({type_})!"
                 )
         except discord.Forbidden:
-            log.warning(f"Failed to deactivate infraction #{id_} ({type_}): bot lacks permissions")
+            log.warning(f"Failed to deactivate infraction #{id_} ({type_}): bot lacks permissions.")
             log_text["Failure"] = f"The bot lacks permissions to do this (role hierarchy?)"
             log_content = mod_role.mention
         except discord.HTTPException as e:
             log.exception(f"Failed to deactivate infraction #{id_} ({type_})")
-            log_text["Failure"] = f"HTTPException with code {e.code}."
+            log_text["Failure"] = f"HTTPException with status {e.status} and code {e.code}."
             log_content = mod_role.mention
 
         # Check if the user is currently being watched by Big Brother.
