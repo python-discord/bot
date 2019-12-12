@@ -2,12 +2,14 @@ import asyncio
 import logging
 import textwrap
 import typing as t
+from datetime import datetime
 
 import discord
 from discord.ext import commands
 from discord.ext.commands import Context
 
 from bot import constants
+from bot.bot import Bot
 from bot.converters import InfractionSearchQuery
 from bot.pagination import LinePaginator
 from bot.utils import time
@@ -35,7 +37,7 @@ class ModManagement(commands.Cog):
 
     category = "Moderation"
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: Bot):
         self.bot = bot
 
     @property
@@ -96,7 +98,7 @@ class ModManagement(commands.Cog):
             confirm_messages.append("marked as permanent")
         elif duration is not None:
             request_data['expires_at'] = duration.isoformat()
-            expiry = duration.strftime(time.INFRACTION_FORMAT)
+            expiry = time.format_infraction_with_duration(request_data['expires_at'])
             confirm_messages.append(f"set to expire on {expiry}")
         else:
             confirm_messages.append("expiry unchanged")
@@ -234,7 +236,8 @@ class ModManagement(commands.Cog):
         if infraction["expires_at"] is None:
             expires = "*Permanent*"
         else:
-            expires = time.format_infraction(infraction["expires_at"])
+            date_from = datetime.strptime(created, time.INFRACTION_FORMAT)
+            expires = time.format_infraction_with_duration(infraction["expires_at"], date_from)
 
         lines = textwrap.dedent(f"""
             {"**===============**" if active else "==============="}

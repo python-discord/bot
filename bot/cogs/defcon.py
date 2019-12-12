@@ -6,8 +6,9 @@ from datetime import datetime, timedelta
 from enum import Enum
 
 from discord import Colour, Embed, Member
-from discord.ext.commands import Bot, Cog, Context, group
+from discord.ext.commands import Cog, Context, group
 
+from bot.bot import Bot
 from bot.cogs.moderation import ModLog
 from bot.constants import Channels, Colours, Emojis, Event, Icons, Roles
 from bot.decorators import with_role
@@ -236,6 +237,5 @@ class Defcon(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """DEFCON cog load."""
+    """Load the Defcon cog."""
     bot.add_cog(Defcon(bot))
-    log.info("Cog loaded: Defcon")

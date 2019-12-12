@@ -9,10 +9,11 @@ from typing import Any, Mapping, Optional
 import discord
 from discord import CategoryChannel, Colour, Embed, Member, Role, TextChannel, VoiceChannel, utils
 from discord.ext import commands
-from discord.ext.commands import Bot, BucketType, Cog, Context, command, group
+from discord.ext.commands import BucketType, Cog, Context, command, group
 from discord.utils import escape_markdown
 
 from bot import constants
+from bot.bot import Bot
 from bot.decorators import InChannelCheckFailure, in_channel, with_role
 from bot.utils.checks import cooldown_with_role_bypass, with_role_check
 from bot.utils.time import time_since
@@ -391,6 +392,5 @@ class Information(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Information cog load."""
+    """Load the Information cog."""
     bot.add_cog(Information(bot))
-    log.info("Cog loaded: Information")
