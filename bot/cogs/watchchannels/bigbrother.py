@@ -3,8 +3,9 @@ from collections import ChainMap
 from typing import Union
 
 from discord import User
-from discord.ext.commands import Bot, Cog, Context, group
+from discord.ext.commands import Cog, Context, group
 
+from bot.bot import Bot
 from bot.cogs.moderation.utils import post_infraction
 from bot.constants import Channels, MODERATION_ROLES, Webhooks
 from bot.decorators import with_role

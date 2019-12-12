@@ -7,9 +7,10 @@ from operator import itemgetter
 from typing import Dict, Iterable, List, Set
 
 from discord import Colour, Member, Message, NotFound, Object, TextChannel
-from discord.ext.commands import Bot, Cog
+from discord.ext.commands import Cog
 
 from bot import rules
+from bot.bot import Bot
 from bot.cogs.moderation import ModLog
 from bot.constants import (
     AntiSpam as AntiSpamConfig, Channels,
@@ -281,7 +282,6 @@ def validate_config(_rules: Mapping = AntiSpamConfig.rules) -> Dict[str, str]:
 
 
 def setup(bot: Bot) -> None:
-    """Antispam cog load."""
+    """Validate the AntiSpam configs and load the AntiSpam cog."""
     validation_errors = validate_config()
     bot.add_cog(AntiSpam(bot, validation_errors))
-    log.info("Cog loaded: AntiSpam")

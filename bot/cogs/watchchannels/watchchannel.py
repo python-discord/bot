@@ -10,9 +10,10 @@ from typing import Optional
 import dateutil.parser
 import discord
 from discord import Color, Embed, HTTPException, Message, Object, errors
-from discord.ext.commands import BadArgument, Bot, Cog, Context
+from discord.ext.commands import BadArgument, Cog, Context
 
 from bot.api import ResponseCodeError
+from bot.bot import Bot
 from bot.cogs.moderation import ModLog
 from bot.constants import BigBrother as BigBrotherConfig, Guild as GuildConfig, Icons
 from bot.pagination import LinePaginator
