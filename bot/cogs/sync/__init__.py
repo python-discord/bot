@@ -1,13 +1,7 @@
-import logging
-
-from discord.ext.commands import Bot
-
+from bot.bot import Bot
 from .cog import Sync
-
-log = logging.getLogger(__name__)
 
 
 def setup(bot: Bot) -> None:
-    """Sync cog load."""
+    """Load the Sync cog."""
     bot.add_cog(Sync(bot))
-    log.info("Cog loaded: Sync")

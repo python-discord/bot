@@ -10,7 +10,9 @@ import unittest.mock
 from typing import Any, Iterable, Optional
 
 import discord
-from discord.ext.commands import Bot, Context
+from discord.ext.commands import Context
+
+from bot.bot import Bot
 
 
 for logger in logging.Logger.manager.loggerDict.values():
