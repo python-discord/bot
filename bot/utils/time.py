@@ -113,7 +113,11 @@ def format_infraction(timestamp: str) -> str:
     return dateutil.parser.isoparse(timestamp).strftime(INFRACTION_FORMAT)
 
 
-def format_infraction_with_duration(expiry: str, date_from: datetime.datetime = None, max_units: int = 2) -> str:
+def format_infraction_with_duration(
+    expiry: Optional[str],
+    date_from: datetime.datetime = None,
+    max_units: int = 2
+) -> Optional[str]:
     """
     Format an infraction timestamp to a more readable ISO 8601 format WITH the duration.
 
@@ -134,3 +138,23 @@ def format_infraction_with_duration(expiry: str, date_from: datetime.datetime = 
     duration_formatted = f" ({duration})" if duration else ''
 
     return f"{expiry_formatted}{duration_formatted}"
+
+
+def until_expiration(expiry: Optional[str], max_units: int = 2) -> Optional[str]:
+    """
+    Get the remaining time until infraction's expiration, in a human-readable version of the relativedelta.
+
+    Unlike `humanize_delta`, this function will force the `precision` to be `seconds` by not passing it.
+    `max_units` specifies the maximum number of units of time to include (e.g. 1 may include days but not hours).
+    By default, max_units is 2.
+    """
+    if not expiry:
+        return None
+
+    now = datetime.datetime.utcnow()
+    since = dateutil.parser.isoparse(expiry).replace(tzinfo=None, microsecond=0)
+
+    if since < now:
+        return None
+
+    return humanize_delta(relativedelta(since, now), max_units=max_units)
