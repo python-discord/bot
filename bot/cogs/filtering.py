@@ -7,7 +7,7 @@ from typing import Mapping, Optional, Union
 import discord.errors
 from dateutil.relativedelta import relativedelta
 from discord import Colour, DMChannel, Member, Message, NotFound, TextChannel
-from discord.ext.commands import Bot, Cog
+from discord.ext.commands import Cog
 
 from bot.bot import Bot
 from bot.cogs.moderation import ModLog
