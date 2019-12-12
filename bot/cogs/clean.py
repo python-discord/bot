@@ -37,10 +37,13 @@ class Clean(Cog):
         return self.bot.get_cog("ModLog")
 
     async def _clean_messages(
-            self, amount: int, ctx: Context,
-            bots_only: bool = False, user: User = None,
-            regex: Optional[str] = None,
-            channel: Optional[TextChannel] = None
+        self,
+        amount: int,
+        ctx: Context,
+        bots_only: bool = False,
+        user: User = None,
+        regex: Optional[str] = None,
+        channel: Optional[TextChannel] = None
     ) -> None:
         """A helper function that does the actual message cleaning."""
         def predicate_bots_only(message: Message) -> bool:
@@ -180,25 +183,47 @@ class Clean(Cog):
 
     @clean_group.command(name="user", aliases=["users"])
     @with_role(*MODERATION_ROLES)
-    async def clean_user(self, ctx: Context, user: User, amount: Optional[int] = 10, channel: TextChannel = None) -> None:
+    async def clean_user(
+        self,
+        ctx: Context,
+        user: User,
+        amount: Optional[int] = 10,
+        channel: TextChannel = None
+    ) -> None:
         """Delete messages posted by the provided user, stop cleaning after traversing `amount` messages."""
         await self._clean_messages(amount, ctx, user=user, channel=channel)
 
     @clean_group.command(name="all", aliases=["everything"])
     @with_role(*MODERATION_ROLES)
-    async def clean_all(self, ctx: Context, amount: Optional[int] = 10, channel: TextChannel = None) -> None:
+    async def clean_all(
+        self,
+        ctx: Context,
+        amount: Optional[int] = 10,
+        channel: TextChannel = None
+    ) -> None:
         """Delete all messages, regardless of poster, stop cleaning after traversing `amount` messages."""
         await self._clean_messages(amount, ctx, channel=channel)
 
     @clean_group.command(name="bots", aliases=["bot"])
     @with_role(*MODERATION_ROLES)
-    async def clean_bots(self, ctx: Context, amount: Optional[int] = 10, channel: TextChannel = None) -> None:
+    async def clean_bots(
+        self,
+        ctx: Context,
+        amount: Optional[int] = 10,
+        channel: TextChannel = None
+    ) -> None:
         """Delete all messages posted by a bot, stop cleaning after traversing `amount` messages."""
         await self._clean_messages(amount, ctx, bots_only=True, channel=channel)
 
     @clean_group.command(name="regex", aliases=["word", "expression"])
     @with_role(*MODERATION_ROLES)
-    async def clean_regex(self, ctx: Context, regex: str, amount: Optional[int] = 10, channel: TextChannel = None) -> None:
+    async def clean_regex(
+        self,
+        ctx: Context,
+        regex: str,
+        amount: Optional[int] = 10,
+        channel: TextChannel = None
+    ) -> None:
         """Delete all messages that match a certain regex, stop cleaning after traversing `amount` messages."""
         await self._clean_messages(amount, ctx, regex=regex, channel=channel)
 
