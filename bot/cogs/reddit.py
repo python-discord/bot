@@ -6,9 +6,10 @@ from datetime import datetime, timedelta
 from typing import List
 
 from discord import Colour, Embed, TextChannel
-from discord.ext.commands import Bot, Cog, Context, group
+from discord.ext.commands import Cog, Context, group
 from discord.ext.tasks import loop
 
+from bot.bot import Bot
 from bot.constants import Channels, ERROR_REPLIES, Emojis, Reddit as RedditConfig, STAFF_ROLES, Webhooks
 from bot.converters import Subreddit
 from bot.decorators import with_role
@@ -217,6 +218,5 @@ class Reddit(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Reddit cog load."""
+    """Load the Reddit cog."""
     bot.add_cog(Reddit(bot))
-    log.info("Cog loaded: Reddit")

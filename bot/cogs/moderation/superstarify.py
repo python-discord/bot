@@ -6,9 +6,10 @@ import typing as t
 from pathlib import Path
 
 from discord import Colour, Embed, Member
-from discord.ext.commands import Bot, Cog, Context, command
+from discord.ext.commands import Cog, Context, command
 
 from bot import constants
+from bot.bot import Bot
 from bot.utils.checks import with_role_check
 from bot.utils.time import format_infraction
 from . import utils
