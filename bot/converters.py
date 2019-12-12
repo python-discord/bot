@@ -1,8 +1,8 @@
 import logging
 import re
+import typing as t
 from datetime import datetime
 from ssl import CertificateError
-from typing import Union
 
 import dateutil.parser
 import dateutil.tz
@@ -13,6 +13,25 @@ from discord.ext.commands import BadArgument, Context, Converter
 
 
 log = logging.getLogger(__name__)
+
+
+def string(*values, preserve_case: bool = False) -> t.Callable[[str], str]:
+    """
+    Return a converter which only allows arguments equal to one of the given values.
+
+    Unless preserve_case is True, the argument is converter to lowercase. All values are then
+    expected to have already been given in lowercase too.
+    """
+    def converter(arg: str) -> str:
+        if not preserve_case:
+            arg = arg.lower()
+
+        if arg not in values:
+            raise BadArgument(f"Only the following values are allowed:\n```{', '.join(values)}```")
+        else:
+            return arg
+
+    return converter
 
 
 class ValidPythonIdentifier(Converter):
@@ -70,7 +89,7 @@ class InfractionSearchQuery(Converter):
     """A converter that checks if the argument is a Discord user, and if not, falls back to a string."""
 
     @staticmethod
-    async def convert(ctx: Context, arg: str) -> Union[discord.Member, str]:
+    async def convert(ctx: Context, arg: str) -> t.Union[discord.Member, str]:
         """Check if the argument is a Discord user, and if not, falls back to a string."""
         try:
             maybe_snowflake = arg.strip("<@!>")

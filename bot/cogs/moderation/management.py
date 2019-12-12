@@ -9,7 +9,7 @@ from discord.ext import commands
 from discord.ext.commands import Context
 
 from bot import constants
-from bot.converters import InfractionSearchQuery
+from bot.converters import InfractionSearchQuery, string
 from bot.pagination import LinePaginator
 from bot.utils import time
 from bot.utils.checks import in_channel_check, with_role_check
@@ -20,15 +20,6 @@ from .modlog import ModLog
 log = logging.getLogger(__name__)
 
 UserConverter = t.Union[discord.User, utils.proxy_user]
-
-
-def permanent_duration(expires_at: str) -> str:
-    """Only allow an expiration to be 'permanent' if it is a string."""
-    expires_at = expires_at.lower()
-    if expires_at != "permanent":
-        raise commands.BadArgument
-    else:
-        return expires_at
 
 
 class ModManagement(commands.Cog):
@@ -61,7 +52,7 @@ class ModManagement(commands.Cog):
         self,
         ctx: Context,
         infraction_id: int,
-        duration: t.Union[utils.Expiry, permanent_duration, None],
+        duration: t.Union[utils.Expiry, string("permanent"), None],
         *,
         reason: str = None
     ) -> None:
