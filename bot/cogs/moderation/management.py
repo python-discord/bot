@@ -9,7 +9,7 @@ from discord.ext import commands
 from discord.ext.commands import Context
 
 from bot import constants
-from bot.converters import InfractionSearchQuery, string
+from bot.converters import InfractionSearchQuery, allowed_strings
 from bot.pagination import LinePaginator
 from bot.utils import time
 from bot.utils.checks import in_channel_check, with_role_check
@@ -51,8 +51,8 @@ class ModManagement(commands.Cog):
     async def infraction_edit(
         self,
         ctx: Context,
-        infraction_id: t.Union[int, string("l", "last", "recent")],
-        duration: t.Union[utils.Expiry, string("p", "permanent"), None],
+        infraction_id: t.Union[int, allowed_strings("l", "last", "recent")],
+        duration: t.Union[utils.Expiry, allowed_strings("p", "permanent"), None],
         *,
         reason: str = None
     ) -> None:

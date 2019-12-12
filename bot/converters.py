@@ -15,11 +15,11 @@ from discord.ext.commands import BadArgument, Context, Converter
 log = logging.getLogger(__name__)
 
 
-def string(*values, preserve_case: bool = False) -> t.Callable[[str], str]:
+def allowed_strings(*values, preserve_case: bool = False) -> t.Callable[[str], str]:
     """
     Return a converter which only allows arguments equal to one of the given values.
 
-    Unless preserve_case is True, the argument is converter to lowercase. All values are then
+    Unless preserve_case is True, the argument is converted to lowercase. All values are then
     expected to have already been given in lowercase too.
     """
     def converter(arg: str) -> str:
