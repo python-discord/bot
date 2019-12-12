@@ -237,6 +237,13 @@ class Colours(metaclass=YAMLGetter):
     soft_orange: int
 
 
+class DuckPond(metaclass=YAMLGetter):
+    section = "duck_pond"
+
+    threshold: int
+    custom_emojis: List[int]
+
+
 class Emojis(metaclass=YAMLGetter):
     section = "style"
     subsection = "emojis"
@@ -244,11 +251,6 @@ class Emojis(metaclass=YAMLGetter):
     defcon_disabled: str  # noqa: E704
     defcon_enabled: str  # noqa: E704
     defcon_updated: str  # noqa: E704
-
-    green_chevron: str
-    red_chevron: str
-    white_chevron: str
-    bb_message: str
 
     status_online: str
     status_offline: str
@@ -259,6 +261,14 @@ class Emojis(metaclass=YAMLGetter):
     new: str
     pencil: str
     cross_mark: str
+
+    ducky_yellow: int
+    ducky_blurple: int
+    ducky_regal: int
+    ducky_camo: int
+    ducky_ninja: int
+    ducky_devil: int
+    ducky_tube: int
 
     upvotes: str
     comments: str
@@ -344,6 +354,7 @@ class Channels(metaclass=YAMLGetter):
     defcon: int
     devlog: int
     devtest: int
+    esoteric: int
     help_0: int
     help_1: int
     help_2: int
@@ -378,6 +389,7 @@ class Webhooks(metaclass=YAMLGetter):
     talent_pool: int
     big_brother: int
     reddit: int
+    duck_pond: int
 
 
 class Roles(metaclass=YAMLGetter):
@@ -509,6 +521,30 @@ class RedirectOutput(metaclass=YAMLGetter):
     delete_delay: int
 
 
+class Event(Enum):
+    """
+    Event names. This does not include every event (for example, raw
+    events aren't here), but only events used in ModLog for now.
+    """
+
+    guild_channel_create = "guild_channel_create"
+    guild_channel_delete = "guild_channel_delete"
+    guild_channel_update = "guild_channel_update"
+    guild_role_create = "guild_role_create"
+    guild_role_delete = "guild_role_delete"
+    guild_role_update = "guild_role_update"
+    guild_update = "guild_update"
+
+    member_join = "member_join"
+    member_remove = "member_remove"
+    member_ban = "member_ban"
+    member_unban = "member_unban"
+    member_update = "member_update"
+
+    message_delete = "message_delete"
+    message_edit = "message_edit"
+
+
 # Debug mode
 DEBUG_MODE = True if 'local' in os.environ.get("SITE_URL", "local") else False
 
@@ -580,27 +616,3 @@ ERROR_REPLIES = [
     "Noooooo!!",
     "I can't believe you've done this",
 ]
-
-
-class Event(Enum):
-    """
-    Event names. This does not include every event (for example, raw
-    events aren't here), but only events used in ModLog for now.
-    """
-
-    guild_channel_create = "guild_channel_create"
-    guild_channel_delete = "guild_channel_delete"
-    guild_channel_update = "guild_channel_update"
-    guild_role_create = "guild_role_create"
-    guild_role_delete = "guild_role_delete"
-    guild_role_update = "guild_role_update"
-    guild_update = "guild_update"
-
-    member_join = "member_join"
-    member_remove = "member_remove"
-    member_ban = "member_ban"
-    member_unban = "member_unban"
-    member_update = "member_update"
-
-    message_delete = "message_delete"
-    message_edit = "message_edit"

@@ -2,7 +2,8 @@ from collections import namedtuple
 from typing import Dict, Set, Tuple
 
 from discord import Guild
-from discord.ext.commands import Bot
+
+from bot.bot import Bot
 
 # These objects are declared as namedtuples because tuples are hashable,
 # something that we make use of when diffing site roles against guild roles.
@@ -52,7 +53,7 @@ async def sync_roles(bot: Bot, guild: Guild) -> Tuple[int, int, int]:
     Synchronize roles found on the given `guild` with the ones on the API.
 
     Arguments:
-        bot (discord.ext.commands.Bot):
+        bot (bot.bot.Bot):
             The bot instance that we're running with.
 
         guild (discord.Guild):
@@ -169,7 +170,7 @@ async def sync_users(bot: Bot, guild: Guild) -> Tuple[int, int, None]:
     Synchronize users found in the given `guild` with the ones in the API.
 
     Arguments:
-        bot (discord.ext.commands.Bot):
+        bot (bot.bot.Bot):
             The bot instance that we're running with.
 
         guild (discord.Guild):

@@ -9,6 +9,7 @@ from dateutil.relativedelta import relativedelta
 from discord import Colour, DMChannel, Member, Message, NotFound, TextChannel
 from discord.ext.commands import Bot, Cog
 
+from bot.bot import Bot
 from bot.cogs.moderation import ModLog
 from bot.constants import (
     Channels, Colours,
@@ -442,6 +443,5 @@ class Filtering(Cog, Scheduler):
 
 
 def setup(bot: Bot) -> None:
-    """Filtering cog load."""
+    """Load the Filtering cog."""
     bot.add_cog(Filtering(bot))
-    log.info("Cog loaded: Filtering")

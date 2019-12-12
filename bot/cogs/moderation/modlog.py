@@ -1,4 +1,6 @@
 import asyncio
+import difflib
+import itertools
 import logging
 import typing as t
 from datetime import datetime
@@ -8,8 +10,9 @@ from dateutil.relativedelta import relativedelta
 from deepdiff import DeepDiff
 from discord import Colour
 from discord.abc import GuildChannel
-from discord.ext.commands import Bot, Cog, Context
+from discord.ext.commands import Cog, Context
 
+from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, URLs
 from bot.utils.time import humanize_delta
 from .utils import UserTypes
@@ -618,78 +621,79 @@ class ModLog(Cog, name="ModLog"):
         )
 
     @Cog.listener()
-    async def on_message_edit(self, before: discord.Message, after: discord.Message) -> None:
+    async def on_message_edit(self, msg_before: discord.Message, msg_after: discord.Message) -> None:
         """Log message edit event to message change log."""
         if (
-            not before.guild
-            or before.guild.id != GuildConstant.id
-            or before.channel.id in GuildConstant.ignored
-            or before.author.bot
+            not msg_before.guild
+            or msg_before.guild.id != GuildConstant.id
+            or msg_before.channel.id in GuildConstant.ignored
+            or msg_before.author.bot
         ):
             return
 
-        self._cached_edits.append(before.id)
+        self._cached_edits.append(msg_before.id)
 
-        if before.content == after.content:
+        if msg_before.content == msg_after.content:
             return
 
-        author = before.author
-        channel = before.channel
+        author = msg_before.author
+        channel = msg_before.channel
+        channel_name = f"{channel.category}/#{channel.name}" if channel.category else f"#{channel.name}"
 
-        if channel.category:
-            before_response = (
-                f"**Author:** {author} (`{author.id}`)\n"
-                f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
-                f"**Message ID:** `{before.id}`\n"
-                "\n"
-                f"{before.clean_content}"
-            )
+        # Getting the difference per words and group them by type - add, remove, same
+        # Note that this is intended grouping without sorting
+        diff = difflib.ndiff(msg_before.clean_content.split(), msg_after.clean_content.split())
+        diff_groups = tuple(
+            (diff_type, tuple(s[2:] for s in diff_words))
+            for diff_type, diff_words in itertools.groupby(diff, key=lambda s: s[0])
+        )
 
-            after_response = (
-                f"**Author:** {author} (`{author.id}`)\n"
-                f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
-                f"**Message ID:** `{before.id}`\n"
-                "\n"
-                f"{after.clean_content}"
-            )
-        else:
-            before_response = (
-                f"**Author:** {author} (`{author.id}`)\n"
-                f"**Channel:** #{channel.name} (`{channel.id}`)\n"
-                f"**Message ID:** `{before.id}`\n"
-                "\n"
-                f"{before.clean_content}"
-            )
+        content_before: t.List[str] = []
+        content_after: t.List[str] = []
 
-            after_response = (
-                f"**Author:** {author} (`{author.id}`)\n"
-                f"**Channel:** #{channel.name} (`{channel.id}`)\n"
-                f"**Message ID:** `{before.id}`\n"
-                "\n"
-                f"{after.clean_content}"
-            )
+        for index, (diff_type, words) in enumerate(diff_groups):
+            sub = ' '.join(words)
+            if diff_type == '-':
+                content_before.append(f"[{sub}](http://o.hi)")
+            elif diff_type == '+':
+                content_after.append(f"[{sub}](http://o.hi)")
+            elif diff_type == ' ':
+                if len(words) > 2:
+                    sub = (
+                        f"{words[0] if index > 0 else ''}"
+                        " ... "
+                        f"{words[-1] if index < len(diff_groups) - 1 else ''}"
+                    )
+                content_before.append(sub)
+                content_after.append(sub)
 
-        if before.edited_at:
+        response = (
+            f"**Author:** {author} (`{author.id}`)\n"
+            f"**Channel:** {channel_name} (`{channel.id}`)\n"
+            f"**Message ID:** `{msg_before.id}`\n"
+            "\n"
+            f"**Before**:\n{' '.join(content_before)}\n"
+            f"**After**:\n{' '.join(content_after)}\n"
+            "\n"
+            f"[Jump to message]({msg_after.jump_url})"
+        )
+
+        if msg_before.edited_at:
             # Message was previously edited, to assist with self-bot detection, use the edited_at
             # datetime as the baseline and create a human-readable delta between this edit event
             # and the last time the message was edited
-            timestamp = before.edited_at
-            delta = humanize_delta(relativedelta(after.edited_at, before.edited_at))
+            timestamp = msg_before.edited_at
+            delta = humanize_delta(relativedelta(msg_after.edited_at, msg_before.edited_at))
             footer = f"Last edited {delta} ago"
         else:
             # Message was not previously edited, use the created_at datetime as the baseline, no
             # delta calculation needed
-            timestamp = before.created_at
+            timestamp = msg_before.created_at
             footer = None
 
         await self.send_log_message(
-            Icons.message_edit, Colour.blurple(), "Message edited (Before)", before_response,
+            Icons.message_edit, Colour.blurple(), "Message edited", response,
             channel_id=Channels.message_log, timestamp_override=timestamp, footer=footer
-        )
-
-        await self.send_log_message(
-            Icons.message_edit, Colour.blurple(), "Message edited (After)", after_response,
-            channel_id=Channels.message_log, timestamp_override=after.edited_at
         )
 
     @Cog.listener()
@@ -718,39 +722,23 @@ class ModLog(Cog, name="ModLog"):
 
         author = message.author
         channel = message.channel
+        channel_name = f"{channel.category}/#{channel.name}" if channel.category else f"#{channel.name}"
 
-        if channel.category:
-            before_response = (
-                f"**Author:** {author} (`{author.id}`)\n"
-                f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
-                f"**Message ID:** `{message.id}`\n"
-                "\n"
-                "This message was not cached, so the message content cannot be displayed."
-            )
+        before_response = (
+            f"**Author:** {author} (`{author.id}`)\n"
+            f"**Channel:** {channel_name} (`{channel.id}`)\n"
+            f"**Message ID:** `{message.id}`\n"
+            "\n"
+            "This message was not cached, so the message content cannot be displayed."
+        )
 
-            after_response = (
-                f"**Author:** {author} (`{author.id}`)\n"
-                f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
-                f"**Message ID:** `{message.id}`\n"
-                "\n"
-                f"{message.clean_content}"
-            )
-        else:
-            before_response = (
-                f"**Author:** {author} (`{author.id}`)\n"
-                f"**Channel:** #{channel.name} (`{channel.id}`)\n"
-                f"**Message ID:** `{message.id}`\n"
-                "\n"
-                "This message was not cached, so the message content cannot be displayed."
-            )
-
-            after_response = (
-                f"**Author:** {author} (`{author.id}`)\n"
-                f"**Channel:** #{channel.name} (`{channel.id}`)\n"
-                f"**Message ID:** `{message.id}`\n"
-                "\n"
-                f"{message.clean_content}"
-            )
+        after_response = (
+            f"**Author:** {author} (`{author.id}`)\n"
+            f"**Channel:** {channel_name} (`{channel.id}`)\n"
+            f"**Message ID:** `{message.id}`\n"
+            "\n"
+            f"{message.clean_content}"
+        )
 
         await self.send_log_message(
             Icons.message_edit, Colour.blurple(), "Message edited (Before)",
