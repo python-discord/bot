@@ -3,8 +3,9 @@ import logging
 from typing import Union
 
 from discord import Colour, Embed, Member, User
-from discord.ext.commands import Bot, Cog, Command, Context, clean_content, command, group
+from discord.ext.commands import Cog, Command, Context, clean_content, command, group
 
+from bot.bot import Bot
 from bot.cogs.extensions import Extension
 from bot.cogs.watchchannels.watchchannel import proxy_user
 from bot.converters import TagNameConverter
@@ -147,6 +148,5 @@ class Alias (Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Alias cog load."""
+    """Load the Alias cog."""
     bot.add_cog(Alias(bot))
-    log.info("Cog loaded: Alias")
