@@ -3,9 +3,10 @@ from typing import Optional, Union
 
 import discord
 from discord import Color, Embed, Member, Message, RawReactionActionEvent, User, errors
-from discord.ext.commands import Bot, Cog
+from discord.ext.commands import Cog
 
 from bot import constants
+from bot.bot import Bot
 from bot.utils.messages import send_attachments
 
 log = logging.getLogger(__name__)
@@ -177,6 +178,5 @@ class DuckPond(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Load the duck pond cog."""
+    """Load the DuckPond cog."""
     bot.add_cog(DuckPond(bot))
-    log.info("Cog loaded: DuckPond")

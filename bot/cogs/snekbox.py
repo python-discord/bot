@@ -5,8 +5,9 @@ import textwrap
 from signal import Signals
 from typing import Optional, Tuple
 
-from discord.ext.commands import Bot, Cog, Context, command, guild_only
+from discord.ext.commands import Cog, Context, command, guild_only
 
+from bot.bot import Bot
 from bot.constants import Channels, Roles, URLs
 from bot.decorators import in_channel
 from bot.utils.messages import wait_for_deletion
@@ -227,6 +228,5 @@ class Snekbox(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Snekbox cog load."""
+    """Load the Snekbox cog."""
     bot.add_cog(Snekbox(bot))
-    log.info("Cog loaded: Snekbox")

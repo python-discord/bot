@@ -32,7 +32,7 @@ class ResponseCodeError(ValueError):
 class APIClient:
     """Django Site API wrapper."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, loop: asyncio.AbstractEventLoop, **kwargs):
         auth_headers = {
             'Authorization': f"Token {Keys.site_api}"
         }
@@ -42,11 +42,38 @@ class APIClient:
         else:
             kwargs['headers'] = auth_headers
 
-        self.session = aiohttp.ClientSession(**kwargs)
+        self.session: Optional[aiohttp.ClientSession] = None
+        self.loop = loop
+
+        self._ready = asyncio.Event(loop=loop)
+        self._creation_task = None
+        self._session_args = kwargs
+
+        self.recreate()
 
     @staticmethod
     def _url_for(endpoint: str) -> str:
         return f"{URLs.site_schema}{URLs.site_api}/{quote_url(endpoint)}"
+
+    async def _create_session(self) -> None:
+        """Create the aiohttp session and set the ready event."""
+        self.session = aiohttp.ClientSession(**self._session_args)
+        self._ready.set()
+
+    async def close(self) -> None:
+        """Close the aiohttp session and unset the ready event."""
+        if not self._ready.is_set():
+            return
+
+        await self.session.close()
+        self._ready.clear()
+
+    def recreate(self) -> None:
+        """Schedule the aiohttp session to be created if it's been closed."""
+        if self.session is None or self.session.closed:
+            # Don't schedule a task if one is already in progress.
+            if self._creation_task is None or self._creation_task.done():
+                self._creation_task = self.loop.create_task(self._create_session())
 
     async def maybe_raise_for_status(self, response: aiohttp.ClientResponse, should_raise: bool) -> None:
         """Raise ResponseCodeError for non-OK response if an exception should be raised."""
@@ -60,30 +87,40 @@ class APIClient:
 
     async def get(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs) -> dict:
         """Site API GET."""
+        await self._ready.wait()
+
         async with self.session.get(self._url_for(endpoint), *args, **kwargs) as resp:
             await self.maybe_raise_for_status(resp, raise_for_status)
             return await resp.json()
 
     async def patch(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs) -> dict:
         """Site API PATCH."""
+        await self._ready.wait()
+
         async with self.session.patch(self._url_for(endpoint), *args, **kwargs) as resp:
             await self.maybe_raise_for_status(resp, raise_for_status)
             return await resp.json()
 
     async def post(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs) -> dict:
         """Site API POST."""
+        await self._ready.wait()
+
         async with self.session.post(self._url_for(endpoint), *args, **kwargs) as resp:
             await self.maybe_raise_for_status(resp, raise_for_status)
             return await resp.json()
 
     async def put(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs) -> dict:
         """Site API PUT."""
+        await self._ready.wait()
+
         async with self.session.put(self._url_for(endpoint), *args, **kwargs) as resp:
             await self.maybe_raise_for_status(resp, raise_for_status)
             return await resp.json()
 
     async def delete(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs) -> Optional[dict]:
         """Site API DELETE."""
+        await self._ready.wait()
+
         async with self.session.delete(self._url_for(endpoint), *args, **kwargs) as resp:
             if resp.status == 204:
                 return None
