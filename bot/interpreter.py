@@ -2,7 +2,9 @@ from code import InteractiveInterpreter
 from io import StringIO
 from typing import Any
 
-from discord.ext.commands import Bot, Context
+from discord.ext.commands import Context
+
+from bot.bot import Bot
 
 CODE_TEMPLATE = """
 async def _func():
@@ -20,8 +22,8 @@ class Interpreter(InteractiveInterpreter):
     write_callable = None
 
     def __init__(self, bot: Bot):
-        _locals = {"bot": bot}
-        super().__init__(_locals)
+        locals_ = {"bot": bot}
+        super().__init__(locals_)
 
     async def run(self, code: str, ctx: Context, io: StringIO, *args, **kwargs) -> Any:
         """Execute the provided source code as the bot & return the output."""

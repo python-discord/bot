@@ -14,9 +14,10 @@ from discord.ext.commands import (
     NoPrivateMessage,
     UserInputError,
 )
-from discord.ext.commands import Bot, Cog, Context
+from discord.ext.commands import Cog, Context
 
 from bot.api import ResponseCodeError
+from bot.bot import Bot
 from bot.constants import Channels
 from bot.decorators import InChannelCheckFailure
 
@@ -74,6 +75,16 @@ class ErrorHandler(Cog):
             if not ctx.channel.id == Channels.verification:
                 tags_get_command = self.bot.get_command("tags get")
                 ctx.invoked_from_error_handler = True
+
+                log_msg = "Cancelling attempt to fall back to a tag due to failed checks."
+                try:
+                    if not await tags_get_command.can_run(ctx):
+                        log.debug(log_msg)
+                        return
+                except CommandError as tag_error:
+                    log.debug(log_msg)
+                    await self.on_command_error(ctx, tag_error)
+                    return
 
                 # Return to not raise the exception
                 with contextlib.suppress(ResponseCodeError):
@@ -143,6 +154,5 @@ class ErrorHandler(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Error handler cog load."""
+    """Load the ErrorHandler cog."""
     bot.add_cog(ErrorHandler(bot))
-    log.info("Cog loaded: Events")

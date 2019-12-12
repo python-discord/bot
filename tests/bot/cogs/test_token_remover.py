@@ -24,7 +24,7 @@ class TokenRemoverTests(unittest.TestCase):
         self.bot.get_cog.return_value.send_log_message = AsyncMock()
         self.cog = TokenRemover(bot=self.bot)
 
-        self.msg = MockMessage(message_id=555, content='')
+        self.msg = MockMessage(id=555, content='')
         self.msg.author.__str__ = MagicMock()
         self.msg.author.__str__.return_value = 'lemon'
         self.msg.author.bot = False
@@ -125,11 +125,7 @@ class TokenRemoverSetupTests(unittest.TestCase):
     """Tests setup of the `TokenRemover` cog."""
 
     def test_setup(self):
-        """Setup of the cog should log a message at `INFO` level."""
+        """Setup of the extension should call add_cog."""
         bot = MockBot()
-        with self.assertLogs(logger='bot.cogs.token_remover', level=logging.INFO) as cm:
-            setup_cog(bot)
-
-        [line] = cm.output
+        setup_cog(bot)
         bot.add_cog.assert_called_once()
-        self.assertIn("Cog loaded: TokenRemover", line)

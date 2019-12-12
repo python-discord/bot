@@ -2,13 +2,14 @@ import asyncio
 import logging
 import random
 import textwrap
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List
 
 from discord import Colour, Embed, TextChannel
-from discord.ext.commands import Bot, Cog, Context, group
+from discord.ext.commands import Cog, Context, group
 from discord.ext.tasks import loop
 
+from bot.bot import Bot
 from bot.constants import Channels, ERROR_REPLIES, Emojis, Reddit as RedditConfig, STAFF_ROLES, Webhooks
 from bot.converters import Subreddit
 from bot.decorators import with_role
@@ -130,7 +131,8 @@ class Reddit(Cog):
         """Post the top 5 posts daily, and the top 5 posts weekly."""
         # once we upgrade to d.py 1.3 this can be removed and the loop can use the `time=datetime.time.min` parameter
         now = datetime.utcnow()
-        midnight_tomorrow = now.replace(day=now.day + 1, hour=0, minute=0, second=0)
+        tomorrow = now + timedelta(days=1)
+        midnight_tomorrow = tomorrow.replace(hour=0, minute=0, second=0)
         seconds_until = (midnight_tomorrow - now).total_seconds()
 
         await asyncio.sleep(seconds_until)
@@ -216,6 +218,5 @@ class Reddit(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Reddit cog load."""
+    """Load the Reddit cog."""
     bot.add_cog(Reddit(bot))
-    log.info("Cog loaded: Reddit")

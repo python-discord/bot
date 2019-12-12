@@ -10,8 +10,9 @@ from typing import Optional, Tuple
 
 from dateutil import relativedelta
 from discord import Colour, Embed, Message, Role
-from discord.ext.commands import Bot, Cog, Context, command
+from discord.ext.commands import Cog, Context, command
 
+from bot.bot import Bot
 from bot.constants import Channels, MODERATION_ROLES, Mention, NEGATIVE_REPLIES, STAFF_ROLES
 from bot.decorators import in_channel, with_role
 from bot.utils.time import humanize_delta
@@ -272,6 +273,5 @@ class Utils(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Utils cog load."""
+    """Load the Utils cog."""
     bot.add_cog(Utils(bot))
-    log.info("Cog loaded: Utils")

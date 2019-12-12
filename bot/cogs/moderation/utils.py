@@ -15,11 +15,12 @@ log = logging.getLogger(__name__)
 
 # apply icon, pardon icon
 INFRACTION_ICONS = {
-    "mute": (Icons.user_mute, Icons.user_unmute),
-    "kick": (Icons.sign_out, None),
     "ban": (Icons.user_ban, Icons.user_unban),
-    "warning": (Icons.user_warn, None),
+    "kick": (Icons.sign_out, None),
+    "mute": (Icons.user_mute, Icons.user_unmute),
     "note": (Icons.user_warn, None),
+    "superstar": (Icons.superstarify, Icons.unsuperstarify),
+    "warning": (Icons.user_warn, None),
 }
 RULES_URL = "https://pythondiscord.com/pages/rules"
 APPEALABLE_INFRACTIONS = ("ban", "mute")
@@ -36,6 +37,8 @@ def proxy_user(user_id: str) -> discord.Object:
 
     Used when a Member or User object cannot be resolved.
     """
+    log.trace(f"Attempting to create a proxy user for the user id {user_id}.")
+
     try:
         user_id = int(user_id)
     except ValueError:
@@ -58,6 +61,8 @@ async def post_infraction(
     active: bool = True,
 ) -> t.Optional[dict]:
     """Posts an infraction to the API."""
+    log.trace(f"Posting {infr_type} infraction for {user} to the API.")
+
     payload = {
         "actor": ctx.message.author.id,
         "hidden": hidden,
@@ -91,6 +96,8 @@ async def post_infraction(
 
 async def has_active_infraction(ctx: Context, user: MemberObject, infr_type: str) -> bool:
     """Checks if a user already has an active infraction of the given type."""
+    log.trace(f"Checking if {user} has active infractions of type {infr_type}.")
+
     active_infractions = await ctx.bot.api_client.get(
         'bot/infractions',
         params={
@@ -100,12 +107,14 @@ async def has_active_infraction(ctx: Context, user: MemberObject, infr_type: str
         }
     )
     if active_infractions:
+        log.trace(f"{user} has active infractions of type {infr_type}.")
         await ctx.send(
             f":x: According to my records, this user already has a {infr_type} infraction. "
             f"See infraction **#{active_infractions[0]['id']}**."
         )
         return True
     else:
+        log.trace(f"{user} does not have active infractions of type {infr_type}.")
         return False
 
 
@@ -117,6 +126,8 @@ async def notify_infraction(
     icon_url: str = Icons.token_removed
 ) -> bool:
     """DM a user about their new infraction and return True if the DM is successful."""
+    log.trace(f"Sending {user} a DM about their {infr_type} infraction.")
+
     embed = discord.Embed(
         description=textwrap.dedent(f"""
             **Type:** {infr_type.capitalize()}
@@ -126,7 +137,7 @@ async def notify_infraction(
         colour=Colours.soft_red
     )
 
-    embed.set_author(name="Infraction Information", icon_url=icon_url, url=RULES_URL)
+    embed.set_author(name="Infraction information", icon_url=icon_url, url=RULES_URL)
     embed.title = f"Please review our rules over at {RULES_URL}"
     embed.url = RULES_URL
 
@@ -145,6 +156,8 @@ async def notify_pardon(
     icon_url: str = Icons.user_verified
 ) -> bool:
     """DM a user about their pardoned infraction and return True if the DM is successful."""
+    log.trace(f"Sending {user} a DM about their pardoned infraction.")
+
     embed = discord.Embed(
         description=content,
         colour=Colours.soft_green

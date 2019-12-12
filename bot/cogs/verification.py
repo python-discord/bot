@@ -1,12 +1,17 @@
 import logging
 from datetime import datetime
 
-from discord import Message, NotFound, Object
+from discord import Colour, Message, NotFound, Object
 from discord.ext import tasks
-from discord.ext.commands import Bot, Cog, Context, command
+from discord.ext.commands import Cog, Context, command
 
+from bot.bot import Bot
 from bot.cogs.moderation import ModLog
-from bot.constants import Bot as BotConfig, Channels, Event, Roles
+from bot.constants import (
+    Bot as BotConfig,
+    Channels, Colours, Event,
+    Filter, Icons, Roles
+)
 from bot.decorators import InChannelCheckFailure, in_channel, without_role
 
 log = logging.getLogger(__name__)
@@ -31,7 +36,7 @@ If you'd like to unsubscribe from the announcement notifications, simply send `!
 
 PERIODIC_PING = (
     f"@everyone To verify that you have read our rules, please type `{BotConfig.prefix}accept`."
-    f" Ping <@&{Roles.admin}> if you encounter any problems during the verification process."
+    f" If you encounter any problems during the verification process, ping the <@&{Roles.admin}> role in this channel."
 )
 
 
@@ -53,32 +58,59 @@ class Verification(Cog):
         if message.author.bot:
             return  # They're a bot, ignore
 
+        if message.channel.id != Channels.verification:
+            return  # Only listen for #checkpoint messages
+
+        # if a user mentions a role or guild member
+        # alert the mods in mod-alerts channel
+        if message.mentions or message.role_mentions:
+            log.debug(
+                f"{message.author} mentioned one or more users "
+                f"and/or roles in {message.channel.name}"
+            )
+
+            embed_text = (
+                f"{message.author.mention} sent a message in "
+                f"{message.channel.mention} that contained user and/or role mentions."
+                f"\n\n**Original message:**\n>>> {message.content}"
+            )
+
+            # Send pretty mod log embed to mod-alerts
+            await self.mod_log.send_log_message(
+                icon_url=Icons.filtering,
+                colour=Colour(Colours.soft_red),
+                title=f"User/Role mentioned in {message.channel.name}",
+                text=embed_text,
+                thumbnail=message.author.avatar_url_as(static_format="png"),
+                channel_id=Channels.mod_alerts,
+                ping_everyone=Filter.ping_everyone,
+            )
+
         ctx = await self.bot.get_context(message)  # type: Context
 
         if ctx.command is not None and ctx.command.name == "accept":
             return  # They used the accept command
 
-        if ctx.channel.id == Channels.verification:  # We're in the verification channel
-            for role in ctx.author.roles:
-                if role.id == Roles.verified:
-                    log.warning(f"{ctx.author} posted '{ctx.message.content}' "
-                                "in the verification channel, but is already verified.")
-                    return  # They're already verified
+        for role in ctx.author.roles:
+            if role.id == Roles.verified:
+                log.warning(f"{ctx.author} posted '{ctx.message.content}' "
+                            "in the verification channel, but is already verified.")
+                return  # They're already verified
 
-            log.debug(f"{ctx.author} posted '{ctx.message.content}' in the verification "
-                      "channel. We are providing instructions how to verify.")
-            await ctx.send(
-                f"{ctx.author.mention} Please type `!accept` to verify that you accept our rules, "
-                f"and gain access to the rest of the server.",
-                delete_after=20
-            )
+        log.debug(f"{ctx.author} posted '{ctx.message.content}' in the verification "
+                  "channel. We are providing instructions how to verify.")
+        await ctx.send(
+            f"{ctx.author.mention} Please type `!accept` to verify that you accept our rules, "
+            f"and gain access to the rest of the server.",
+            delete_after=20
+        )
 
-            log.trace(f"Deleting the message posted by {ctx.author}")
+        log.trace(f"Deleting the message posted by {ctx.author}")
 
-            try:
-                await ctx.message.delete()
-            except NotFound:
-                log.trace("No message found, it must have been deleted by another bot.")
+        try:
+            await ctx.message.delete()
+        except NotFound:
+            log.trace("No message found, it must have been deleted by another bot.")
 
     @command(name='accept', aliases=('verify', 'verified', 'accepted'), hidden=True)
     @without_role(Roles.verified)
@@ -193,6 +225,5 @@ class Verification(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Verification cog load."""
+    """Load the Verification cog."""
     bot.add_cog(Verification(bot))
-    log.info("Cog loaded: Verification")
