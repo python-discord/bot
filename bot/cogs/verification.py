@@ -38,6 +38,7 @@ PERIODIC_PING = (
     f"@everyone To verify that you have read our rules, please type `{BotConfig.prefix}accept`."
     f" If you encounter any problems during the verification process, ping the <@&{Roles.admin}> role in this channel."
 )
+BOT_MESSAGE_DELETE_DELAY = 10
 
 
 class Verification(Cog):
@@ -56,7 +57,11 @@ class Verification(Cog):
     async def on_message(self, message: Message) -> None:
         """Check new message event for messages to the checkpoint channel & process."""
         if message.author.bot:
-            return  # They're a bot, ignore
+            # They're a bot, delete their message after the delay.
+            # But not the periodic ping; we like that one.
+            if message.content != PERIODIC_PING:
+                await message.delete(delay=BOT_MESSAGE_DELETE_DELAY)
+            return
 
         if message.channel.id != Channels.verification:
             return  # Only listen for #checkpoint messages
