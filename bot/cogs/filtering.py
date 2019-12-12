@@ -436,6 +436,7 @@ class Filtering(Cog, Scheduler):
         except NotFound:
             log.info(f"Tried to delete message {msg['id']}, but the message can't be found "
                      f"(it has been probably already deleted).")
+
         await self.bot.api_client.delete(f'bot/offensive-message/{msg["id"]}')
         log.info(f"Deleted the offensive message with id {msg['id']}.")
 
