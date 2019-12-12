@@ -17,6 +17,7 @@ from requests import ConnectTimeout, ConnectionError, HTTPError
 from sphinx.ext import intersphinx
 from urllib3.exceptions import ProtocolError
 
+from bot.bot import Bot
 from bot.constants import MODERATION_ROLES, RedirectOutput
 from bot.converters import ValidPythonIdentifier, ValidURL
 from bot.decorators import with_role
@@ -147,7 +148,7 @@ class InventoryURL(commands.Converter):
 class Doc(commands.Cog):
     """A set of commands for querying & displaying documentation."""
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: Bot):
         self.base_urls = {}
         self.bot = bot
         self.inventories = {}
@@ -506,7 +507,6 @@ class Doc(commands.Cog):
         return tag.name == "table"
 
 
-def setup(bot: commands.Bot) -> None:
-    """Doc cog load."""
+def setup(bot: Bot) -> None:
+    """Load the Doc cog."""
     bot.add_cog(Doc(bot))
-    log.info("Cog loaded: Doc")

@@ -125,11 +125,7 @@ class TokenRemoverSetupTests(unittest.TestCase):
     """Tests setup of the `TokenRemover` cog."""
 
     def test_setup(self):
-        """Setup of the cog should log a message at `INFO` level."""
+        """Setup of the extension should call add_cog."""
         bot = MockBot()
-        with self.assertLogs(logger='bot.cogs.token_remover', level=logging.INFO) as cm:
-            setup_cog(bot)
-
-        [line] = cm.output
+        setup_cog(bot)
         bot.add_cog.assert_called_once()
-        self.assertIn("Cog loaded: TokenRemover", line)

@@ -3,8 +3,9 @@ from datetime import datetime
 
 from discord import Colour, Message, NotFound, Object
 from discord.ext import tasks
-from discord.ext.commands import Bot, Cog, Context, command
+from discord.ext.commands import Cog, Context, command
 
+from bot.bot import Bot
 from bot.cogs.moderation import ModLog
 from bot.constants import (
     Bot as BotConfig,
@@ -224,6 +225,5 @@ class Verification(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Verification cog load."""
+    """Load the Verification cog."""
     bot.add_cog(Verification(bot))
-    log.info("Cog loaded: Verification")
