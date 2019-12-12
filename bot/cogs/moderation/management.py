@@ -9,6 +9,7 @@ from discord.ext import commands
 from discord.ext.commands import Context
 
 from bot import constants
+from bot.bot import Bot
 from bot.converters import InfractionSearchQuery
 from bot.pagination import LinePaginator
 from bot.utils import time
@@ -36,7 +37,7 @@ class ModManagement(commands.Cog):
 
     category = "Moderation"
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: Bot):
         self.bot = bot
 
     @property

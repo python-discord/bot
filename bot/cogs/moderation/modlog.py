@@ -10,8 +10,9 @@ from dateutil.relativedelta import relativedelta
 from deepdiff import DeepDiff
 from discord import Colour
 from discord.abc import GuildChannel
-from discord.ext.commands import Bot, Cog, Context
+from discord.ext.commands import Cog, Context
 
+from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, URLs
 from bot.utils.time import humanize_delta
 from .utils import UserTypes

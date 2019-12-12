@@ -9,8 +9,9 @@ from io import StringIO
 from typing import Any, Optional, Tuple
 
 import discord
-from discord.ext.commands import Bot, Cog, Context, group
+from discord.ext.commands import Cog, Context, group
 
+from bot.bot import Bot
 from bot.constants import Roles
 from bot.decorators import with_role
 from bot.interpreter import Interpreter
@@ -197,6 +198,5 @@ async def func():  # (None,) -> Any
 
 
 def setup(bot: Bot) -> None:
-    """Code eval cog load."""
+    """Load the CodeEval cog."""
     bot.add_cog(CodeEval(bot))
-    log.info("Cog loaded: Eval")
