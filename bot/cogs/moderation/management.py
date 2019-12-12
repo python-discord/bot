@@ -51,8 +51,8 @@ class ModManagement(commands.Cog):
     async def infraction_edit(
         self,
         ctx: Context,
-        infraction_id: t.Union[int, string("recent")],
-        duration: t.Union[utils.Expiry, string("permanent"), None],
+        infraction_id: t.Union[int, string("l", "last", "recent")],
+        duration: t.Union[utils.Expiry, string("p", "permanent"), None],
         *,
         reason: str = None
     ) -> None:
@@ -69,18 +69,18 @@ class ModManagement(commands.Cog):
         \u2003`M` - minutes∗
         \u2003`s` - seconds
 
-        Use "recent" as the infraction ID to specify that the ost recent infraction authored by the
-        command invoker should be edited.
+        Use "l", "last", or "recent" as the infraction ID to specify that the most recent infraction
+        authored by the command invoker should be edited.
 
-        Use "permanent" to mark the infraction as permanent. Alternatively, an ISO 8601 timestamp
-        can be provided for the duration.
+        Use "p" or "permanent" to mark the infraction as permanent. Alternatively, an ISO 8601
+        timestamp can be provided for the duration.
         """
         if duration is None and reason is None:
             # Unlike UserInputError, the error handler will show a specified message for BadArgument
             raise commands.BadArgument("Neither a new expiry nor a new reason was specified.")
 
         # Retrieve the previous infraction for its information.
-        if infraction_id == "recent":
+        if isinstance(infraction_id, str):
             params = {
                 "actor__id": ctx.author.id,
                 "ordering": "-inserted_at"
@@ -102,7 +102,7 @@ class ModManagement(commands.Cog):
         confirm_messages = []
         log_text = ""
 
-        if duration == "permanent":
+        if isinstance(duration, str):
             request_data['expires_at'] = None
             confirm_messages.append("marked as permanent")
         elif duration is not None:
