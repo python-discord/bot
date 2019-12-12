@@ -167,7 +167,7 @@ class Clean(Cog):
             channel_id=Channels.modlog,
         )
 
-    @group(invoke_without_command=True, name="clean", hidden=True)
+    @group(invoke_without_command=True, name="clean", aliases=["purge"])
     @with_role(*MODERATION_ROLES)
     async def clean_group(self, ctx: Context) -> None:
         """Commands for cleaning messages in channels."""
