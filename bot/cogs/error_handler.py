@@ -75,6 +75,16 @@ class ErrorHandler(Cog):
                 tags_get_command = self.bot.get_command("tags get")
                 ctx.invoked_from_error_handler = True
 
+                log_msg = "Cancelling attempt to fall back to a tag due to failed checks."
+                try:
+                    if not await tags_get_command.can_run(ctx):
+                        log.debug(log_msg)
+                        return
+                except CommandError as tag_error:
+                    log.debug(log_msg)
+                    await self.on_command_error(ctx, tag_error)
+                    return
+
                 # Return to not raise the exception
                 with contextlib.suppress(ResponseCodeError):
                     await ctx.invoke(tags_get_command, tag_name=ctx.invoked_with)
