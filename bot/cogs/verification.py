@@ -9,9 +9,10 @@ from bot.cogs.moderation import ModLog
 from bot.constants import (
     Bot as BotConfig,
     Channels, Colours, Event,
-    Filter, Icons, Roles
+    Filter, Icons, MODERATION_ROLES, Roles
 )
 from bot.decorators import InChannelCheckFailure, in_channel, without_role
+from bot.utils.checks import without_role_check
 
 log = logging.getLogger(__name__)
 
@@ -189,7 +190,7 @@ class Verification(Cog):
     @staticmethod
     def bot_check(ctx: Context) -> bool:
         """Block any command within the verification channel that is not !accept."""
-        if ctx.channel.id == Channels.verification:
+        if ctx.channel.id == Channels.verification and without_role_check(ctx, *MODERATION_ROLES):
             return ctx.command.name == "accept"
         else:
             return True
