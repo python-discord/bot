@@ -51,7 +51,7 @@ class ModManagement(commands.Cog):
     async def infraction_edit(
         self,
         ctx: Context,
-        infraction_id: int,
+        infraction_id: t.Union[int, string("recent")],
         duration: t.Union[utils.Expiry, string("permanent"), None],
         *,
         reason: str = None
@@ -69,6 +69,9 @@ class ModManagement(commands.Cog):
         \u2003`M` - minutes∗
         \u2003`s` - seconds
 
+        Use "recent" as the infraction ID to specify that the ost recent infraction authored by the
+        command invoker should be edited.
+
         Use "permanent" to mark the infraction as permanent. Alternatively, an ISO 8601 timestamp
         can be provided for the duration.
         """
@@ -77,7 +80,23 @@ class ModManagement(commands.Cog):
             raise commands.BadArgument("Neither a new expiry nor a new reason was specified.")
 
         # Retrieve the previous infraction for its information.
-        old_infraction = await self.bot.api_client.get(f'bot/infractions/{infraction_id}')
+        if infraction_id == "recent":
+            params = {
+                "actor__id": ctx.author.id,
+                "ordering": "-inserted_at"
+            }
+            infractions = await self.bot.api_client.get(f"bot/infractions", params=params)
+
+            if infractions:
+                old_infraction = infractions[0]
+                infraction_id = old_infraction["id"]
+            else:
+                await ctx.send(
+                    f":x: Couldn't find most recent infraction; you have never given an infraction."
+                )
+                return
+        else:
+            old_infraction = await self.bot.api_client.get(f"bot/infractions/{infraction_id}")
 
         request_data = {}
         confirm_messages = []
