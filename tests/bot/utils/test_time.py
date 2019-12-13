@@ -121,7 +121,7 @@ class TimeTests(unittest.TestCase):
         test_cases = (
             (None, None, None, None),
 
-            # To make sure that date_from and max_units are not touched
+            # To make sure that now and max_units are not touched
             (None, 'Why hello there!', None, None),
             (None, None, float('inf'), None),
             (None, 'Why hello there!', float('inf'), None),
