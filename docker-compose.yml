@@ -42,5 +42,3 @@ services:
     environment:
       BOT_TOKEN: ${BOT_TOKEN}
       BOT_API_KEY: badbot13m0n8f570f942013fc818f234916ca531
-      REDDIT_CLIENT_ID: ${REDDIT_CLIENT_ID}
-      REDDIT_SECRET: ${REDDIT_SECRET}
