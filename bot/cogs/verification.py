@@ -56,15 +56,15 @@ class Verification(Cog):
     @Cog.listener()
     async def on_message(self, message: Message) -> None:
         """Check new message event for messages to the checkpoint channel & process."""
+        if message.channel.id != Channels.verification:
+            return  # Only listen for #checkpoint messages
+
         if message.author.bot:
             # They're a bot, delete their message after the delay.
             # But not the periodic ping; we like that one.
             if message.content != PERIODIC_PING:
                 await message.delete(delay=BOT_MESSAGE_DELETE_DELAY)
             return
-
-        if message.channel.id != Channels.verification:
-            return  # Only listen for #checkpoint messages
 
         # if a user mentions a role or guild member
         # alert the mods in mod-alerts channel
