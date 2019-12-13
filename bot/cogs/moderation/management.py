@@ -10,7 +10,7 @@ from discord.ext.commands import Context
 
 from bot import constants
 from bot.bot import Bot
-from bot.converters import InfractionSearchQuery
+from bot.converters import InfractionSearchQuery, allowed_strings
 from bot.pagination import LinePaginator
 from bot.utils import time
 from bot.utils.checks import in_channel_check, with_role_check
@@ -21,15 +21,6 @@ from .modlog import ModLog
 log = logging.getLogger(__name__)
 
 UserConverter = t.Union[discord.User, utils.proxy_user]
-
-
-def permanent_duration(expires_at: str) -> str:
-    """Only allow an expiration to be 'permanent' if it is a string."""
-    expires_at = expires_at.lower()
-    if expires_at != "permanent":
-        raise commands.BadArgument
-    else:
-        return expires_at
 
 
 class ModManagement(commands.Cog):
@@ -61,8 +52,8 @@ class ModManagement(commands.Cog):
     async def infraction_edit(
         self,
         ctx: Context,
-        infraction_id: int,
-        duration: t.Union[utils.Expiry, permanent_duration, None],
+        infraction_id: t.Union[int, allowed_strings("l", "last", "recent")],
+        duration: t.Union[utils.Expiry, allowed_strings("p", "permanent"), None],
         *,
         reason: str = None
     ) -> None:
@@ -79,21 +70,40 @@ class ModManagement(commands.Cog):
         \u2003`M` - minutes∗
         \u2003`s` - seconds
 
-        Use "permanent" to mark the infraction as permanent. Alternatively, an ISO 8601 timestamp
-        can be provided for the duration.
+        Use "l", "last", or "recent" as the infraction ID to specify that the most recent infraction
+        authored by the command invoker should be edited.
+
+        Use "p" or "permanent" to mark the infraction as permanent. Alternatively, an ISO 8601
+        timestamp can be provided for the duration.
         """
         if duration is None and reason is None:
             # Unlike UserInputError, the error handler will show a specified message for BadArgument
             raise commands.BadArgument("Neither a new expiry nor a new reason was specified.")
 
         # Retrieve the previous infraction for its information.
-        old_infraction = await self.bot.api_client.get(f'bot/infractions/{infraction_id}')
+        if isinstance(infraction_id, str):
+            params = {
+                "actor__id": ctx.author.id,
+                "ordering": "-inserted_at"
+            }
+            infractions = await self.bot.api_client.get(f"bot/infractions", params=params)
+
+            if infractions:
+                old_infraction = infractions[0]
+                infraction_id = old_infraction["id"]
+            else:
+                await ctx.send(
+                    f":x: Couldn't find most recent infraction; you have never given an infraction."
+                )
+                return
+        else:
+            old_infraction = await self.bot.api_client.get(f"bot/infractions/{infraction_id}")
 
         request_data = {}
         confirm_messages = []
         log_text = ""
 
-        if duration == "permanent":
+        if isinstance(duration, str):
             request_data['expires_at'] = None
             confirm_messages.append("marked as permanent")
         elif duration is not None:
@@ -130,7 +140,8 @@ class ModManagement(commands.Cog):
                 New expiry: {new_infraction['expires_at'] or "Permanent"}
             """.rstrip()
 
-        await ctx.send(f":ok_hand: Updated infraction: {' & '.join(confirm_messages)}")
+        changes = ' & '.join(confirm_messages)
+        await ctx.send(f":ok_hand: Updated infraction #{infraction_id}: {changes}")
 
         # Get information about the infraction's user
         user_id = new_infraction['user']
@@ -233,6 +244,12 @@ class ModManagement(commands.Cog):
         user_id = infraction["user"]
         hidden = infraction["hidden"]
         created = time.format_infraction(infraction["inserted_at"])
+
+        if active:
+            remaining = time.until_expiration(infraction["expires_at"]) or "Expired"
+        else:
+            remaining = "Inactive"
+
         if infraction["expires_at"] is None:
             expires = "*Permanent*"
         else:
@@ -248,6 +265,7 @@ class ModManagement(commands.Cog):
             Reason: {infraction["reason"] or "*None*"}
             Created: {created}
             Expires: {expires}
+            Remaining: {remaining}
             Actor: {actor.mention if actor else actor_id}
             ID: `{infraction["id"]}`
             {"**===============**" if active else "==============="}
