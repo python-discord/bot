@@ -114,8 +114,8 @@ class InfractionScheduler(Scheduler):
                 dm_result = ":incoming_envelope: "
                 dm_log_text = "\nDM: Sent"
             else:
+                dm_result = f"{constants.Emojis.failmail} "
                 dm_log_text = "\nDM: **Failed**"
-                log_content = ctx.author.mention
 
         if infraction["actor"] == self.bot.user.id:
             log.trace(
@@ -255,8 +255,7 @@ class InfractionScheduler(Scheduler):
         if log_text.get("DM") == "Sent":
             dm_emoji = ":incoming_envelope: "
         elif "DM" in log_text:
-            # Mention the actor because the DM failed to send.
-            log_content = ctx.author.mention
+            dm_emoji = f"{constants.Emojis.failmail} "
 
         # Accordingly display whether the pardon failed.
         if "Failure" in log_text:
