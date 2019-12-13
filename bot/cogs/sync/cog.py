@@ -3,10 +3,11 @@ from typing import Callable, Iterable
 
 from discord import Guild, Member, Role
 from discord.ext import commands
-from discord.ext.commands import Bot, Cog, Context
+from discord.ext.commands import Cog, Context
 
 from bot import constants
 from bot.api import ResponseCodeError
+from bot.bot import Bot
 from bot.cogs.sync import syncers
 
 log = logging.getLogger(__name__)
