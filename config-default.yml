@@ -367,6 +367,8 @@ anti_malware:
 reddit:
     subreddits:
         - 'r/Python'
+    client_id: !ENV "REDDIT_CLIENT_ID"
+    secret:    !ENV "REDDIT_SECRET"
 
 
 wolfram:
