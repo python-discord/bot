@@ -3,8 +3,9 @@ from datetime import datetime
 from operator import itemgetter
 
 from discord import Colour, Embed, Member, utils
-from discord.ext.commands import Bot, Cog, Context, command
+from discord.ext.commands import Cog, Context, command
 
+from bot.bot import Bot
 from bot.constants import Categories, Channels, Free, STAFF_ROLES
 from bot.decorators import redirect_output
 
@@ -98,6 +99,5 @@ class Free(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Free cog load."""
+    """Load the Free cog."""
     bot.add_cog(Free())
-    log.info("Cog loaded: Free")
