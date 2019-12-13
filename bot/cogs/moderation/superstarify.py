@@ -6,9 +6,10 @@ import typing as t
 from pathlib import Path
 
 from discord import Colour, Embed, Member
-from discord.ext.commands import Bot, Cog, Context, command
+from discord.ext.commands import Cog, Context, command
 
 from bot import constants
+from bot.bot import Bot
 from bot.utils.checks import with_role_check
 from bot.utils.time import format_infraction
 from . import utils
@@ -34,8 +35,8 @@ class Superstarify(InfractionScheduler, Cog):
             return  # User didn't change their nickname. Abort!
 
         log.trace(
-            f"{before.display_name} is trying to change their nickname to {after.display_name}. "
-            "Checking if the user is in superstar-prison..."
+            f"{before} ({before.display_name}) is trying to change their nickname to "
+            f"{after.display_name}. Checking if the user is in superstar-prison..."
         )
 
         active_superstarifies = await self.bot.api_client.get(
@@ -48,6 +49,7 @@ class Superstarify(InfractionScheduler, Cog):
         )
 
         if not active_superstarifies:
+            log.trace(f"{before} has no active superstar infractions.")
             return
 
         infraction = active_superstarifies[0]
@@ -132,15 +134,17 @@ class Superstarify(InfractionScheduler, Cog):
         # Post the infraction to the API
         reason = reason or f"old nick: {member.display_name}"
         infraction = await utils.post_infraction(ctx, member, "superstar", reason, duration)
+        id_ = infraction["id"]
 
         old_nick = member.display_name
-        forced_nick = self.get_nick(infraction["id"], member.id)
+        forced_nick = self.get_nick(id_, member.id)
         expiry_str = format_infraction(infraction["expires_at"])
 
         # Apply the infraction and schedule the expiration task.
+        log.debug(f"Changing nickname of {member} to {forced_nick}.")
         self.mod_log.ignore(constants.Event.member_update, member.id)
         await member.edit(nick=forced_nick, reason=reason)
-        self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
+        self.schedule_task(ctx.bot.loop, id_, infraction)
 
         # Send a DM to the user to notify them of their new infraction.
         await utils.notify_infraction(
@@ -152,6 +156,7 @@ class Superstarify(InfractionScheduler, Cog):
         )
 
         # Send an embed with the infraction information to the invoking context.
+        log.trace(f"Sending superstar #{id_} embed.")
         embed = Embed(
             title="Congratulations!",
             colour=constants.Colours.soft_orange,
@@ -167,6 +172,7 @@ class Superstarify(InfractionScheduler, Cog):
         await ctx.send(embed=embed)
 
         # Log to the mod log channel.
+        log.trace(f"Sending apply mod log for superstar #{id_}.")
         await self.mod_log.send_log_message(
             icon_url=utils.INFRACTION_ICONS["superstar"][0],
             colour=Colour.gold(),
@@ -180,7 +186,7 @@ class Superstarify(InfractionScheduler, Cog):
                 Old nickname: `{old_nick}`
                 New nickname: `{forced_nick}`
             """),
-            footer=f"ID {infraction['id']}"
+            footer=f"ID {id_}"
         )
 
     @command(name="unsuperstarify", aliases=("release_nick", "unstar"))
@@ -198,6 +204,10 @@ class Superstarify(InfractionScheduler, Cog):
 
         # Don't bother sending a notification if the user left the guild.
         if not user:
+            log.debug(
+                "User left the guild and therefore won't be notified about superstar "
+                f"{infraction['id']} pardon."
+            )
             return {}
 
         # DM the user about the expiration.
@@ -216,6 +226,8 @@ class Superstarify(InfractionScheduler, Cog):
     @staticmethod
     def get_nick(infraction_id: int, member_id: int) -> str:
         """Randomly select a nickname from the Superstarify nickname list."""
+        log.trace(f"Choosing a random nickname for superstar #{infraction_id}.")
+
         rng = random.Random(str(infraction_id) + str(member_id))
         return rng.choice(STAR_NAMES)
 

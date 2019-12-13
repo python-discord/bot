@@ -5,8 +5,9 @@ from typing import Optional, Union
 import discord.errors
 from dateutil.relativedelta import relativedelta
 from discord import Colour, DMChannel, Member, Message, TextChannel
-from discord.ext.commands import Bot, Cog
+from discord.ext.commands import Cog
 
+from bot.bot import Bot
 from bot.cogs.moderation import ModLog
 from bot.constants import (
     Channels, Colours,
@@ -43,7 +44,7 @@ class Filtering(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-        _staff_mistake_str = "If you believe this was a mistake, please let staff know!"
+        staff_mistake_str = "If you believe this was a mistake, please let staff know!"
         self.filters = {
             "filter_zalgo": {
                 "enabled": Filter.filter_zalgo,
@@ -53,7 +54,7 @@ class Filtering(Cog):
                 "user_notification": Filter.notify_user_zalgo,
                 "notification_msg": (
                     "Your post has been removed for abusing Unicode character rendering (aka Zalgo text). "
-                    f"{_staff_mistake_str}"
+                    f"{staff_mistake_str}"
                 )
             },
             "filter_invites": {
@@ -63,7 +64,7 @@ class Filtering(Cog):
                 "content_only": True,
                 "user_notification": Filter.notify_user_invites,
                 "notification_msg": (
-                    f"Per Rule 6, your invite link has been removed. {_staff_mistake_str}\n\n"
+                    f"Per Rule 6, your invite link has been removed. {staff_mistake_str}\n\n"
                     r"Our server rules can be found here: <https://pythondiscord.com/pages/rules>"
                 )
             },
@@ -74,7 +75,7 @@ class Filtering(Cog):
                 "content_only": True,
                 "user_notification": Filter.notify_user_domains,
                 "notification_msg": (
-                    f"Your URL has been removed because it matched a blacklisted domain. {_staff_mistake_str}"
+                    f"Your URL has been removed because it matched a blacklisted domain. {staff_mistake_str}"
                 )
             },
             "watch_rich_embeds": {
@@ -370,6 +371,5 @@ class Filtering(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Filtering cog load."""
+    """Load the Filtering cog."""
     bot.add_cog(Filtering(bot))
-    log.info("Cog loaded: Filtering")

@@ -4,9 +4,10 @@ from collections import ChainMap
 from typing import Union
 
 from discord import Color, Embed, Member, User
-from discord.ext.commands import Bot, Cog, Context, group
+from discord.ext.commands import Cog, Context, group
 
 from bot.api import ResponseCodeError
+from bot.bot import Bot
 from bot.constants import Channels, Guild, MODERATION_ROLES, STAFF_ROLES, Webhooks
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
