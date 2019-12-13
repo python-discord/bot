@@ -465,6 +465,8 @@ class Reddit(metaclass=YAMLGetter):
     section = "reddit"
 
     subreddits: list
+    client_id: str
+    secret: str
 
 
 class Wolfram(metaclass=YAMLGetter):
