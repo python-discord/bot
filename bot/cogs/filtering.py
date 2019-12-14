@@ -204,6 +204,8 @@ class Filtering(Cog, Scheduler):
                                     'delete_date': delete_date.isoformat()
                                 }
                             )
+                            loop = asyncio.get_event_loop()
+                            self.schedule_task(loop, msg.id, {'id': msg.id, 'channel_id': msg.channel.id})
                             log.trace(
                                 f"Offensive message will be deleted on "
                                 f"{delete_date.isoformat()}"
