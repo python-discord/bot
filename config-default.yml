@@ -180,7 +180,7 @@ filter:
 
     # Filter configuration
     ping_everyone:             true  # Ping @everyone when we send a mod-alert?
-    offensive_msg_delete_time: 7     # How many days before deleting an offensive message?
+    offensive_msg_delete_days: 7     # How many days before deleting an offensive message?
 
     guild_invite_whitelist:
         - 280033776820813825  # Functional Programming
