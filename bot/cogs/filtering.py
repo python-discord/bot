@@ -111,7 +111,6 @@ class Filtering(Cog, Scheduler):
             },
         }
 
-        self.deletion_task = None
         self.bot.loop.create_task(self.reschedule_offensive_msg_deletion())
 
     @property
@@ -201,11 +200,13 @@ class Filtering(Cog, Scheduler):
                                 json={
                                     'id': msg.id,
                                     'channel_id': msg.channel.id,
-                                    'delete_date': delete_date.isoformat()[:-1]
+                                    'delete_date': delete_date.isoformat()
                                 }
                             )
-                            log.trace(f"Offensive message will be deleted on "
-                                      f"{delete_date.isoformat()}")
+                            log.trace(
+                                f"Offensive message will be deleted on "
+                                f"{delete_date.isoformat()}"
+                            )
 
                         if isinstance(msg.channel, DMChannel):
                             channel_str = "via DM"
@@ -412,9 +413,7 @@ class Filtering(Cog, Scheduler):
     async def reschedule_offensive_msg_deletion(self) -> None:
         """Get all the pending message deletion from the API and reschedule them."""
         await self.bot.wait_until_ready()
-        response = await self.bot.api_client.get(
-            'bot/offensive-message',
-        )
+        response = await self.bot.api_client.get('bot/offensive-message',)
 
         now = datetime.datetime.utcnow()
         loop = asyncio.get_event_loop()
@@ -435,8 +434,10 @@ class Filtering(Cog, Scheduler):
                 msg_obj = await channel.fetch_message(msg['id'])
                 await msg_obj.delete()
         except NotFound:
-            log.info(f"Tried to delete message {msg['id']}, but the message can't be found "
-                     f"(it has been probably already deleted).")
+            log.info(
+                f"Tried to delete message {msg['id']}, but the message can't be found "
+                f"(it has been probably already deleted)."
+            )
 
         await self.bot.api_client.delete(f'bot/offensive-message/{msg["id"]}')
         log.info(f"Deleted the offensive message with id {msg['id']}.")
