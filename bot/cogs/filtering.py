@@ -197,7 +197,7 @@ class Filtering(Cog, Scheduler):
                         if _filter["schedule_deletion"]:
                             delete_date = msg.created_at + OFFENSIVE_MSG_DELETE_TIME
                             await self.bot.api_client.post(
-                                'bot/offensive-message',
+                                'bot/offensive-messages',
                                 json={
                                     'id': msg.id,
                                     'channel_id': msg.channel.id,
@@ -416,7 +416,7 @@ class Filtering(Cog, Scheduler):
     async def reschedule_offensive_msg_deletion(self) -> None:
         """Get all the pending message deletion from the API and reschedule them."""
         await self.bot.wait_until_ready()
-        response = await self.bot.api_client.get('bot/offensive-message',)
+        response = await self.bot.api_client.get('bot/offensive-messages',)
 
         now = datetime.datetime.utcnow()
         loop = asyncio.get_event_loop()
@@ -446,7 +446,7 @@ class Filtering(Cog, Scheduler):
                 f"Failed to delete message {msg['id']}."
             )
 
-        await self.bot.api_client.delete(f'bot/offensive-message/{msg["id"]}')
+        await self.bot.api_client.delete(f'bot/offensive-messages/{msg["id"]}')
         log.info(f"Deleted the offensive message with id {msg['id']}.")
 
 
