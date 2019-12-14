@@ -7,7 +7,7 @@ from typing import Mapping, Optional, Union
 import dateutil
 import discord.errors
 from dateutil.relativedelta import relativedelta
-from discord import Colour, DMChannel, Member, Message, NotFound, TextChannel
+from discord import Colour, DMChannel, HTTPException, Member, Message, NotFound, TextChannel
 from discord.ext.commands import Cog
 
 from bot.bot import Bot
@@ -438,6 +438,10 @@ class Filtering(Cog, Scheduler):
             log.info(
                 f"Tried to delete message {msg['id']}, but the message can't be found "
                 f"(it has been probably already deleted)."
+            )
+        except HTTPException:
+            log.warning(
+                f"Failed to delete message {msg['id']}."
             )
 
         await self.bot.api_client.delete(f'bot/offensive-message/{msg["id"]}')
