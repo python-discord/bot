@@ -405,7 +405,7 @@ class Filtering(Cog, Scheduler):
             await channel.send(f"{filtered_member.mention} {reason}")
 
     async def _scheduled_task(self, msg: dict) -> None:
-        """A coroutine which delete the offensive message once the delete date is reached."""
+        """A coroutine that delete the offensive message once the delete date is reached."""
         delete_at = dateutil.parser.isoparse(msg['delete_date'])
 
         await wait_until(delete_at)
