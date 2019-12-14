@@ -102,6 +102,7 @@ guild:
         admins:            &ADMINS        365960823622991872
         admin_spam:        &ADMIN_SPAM    563594791770914816
         announcements:                    354619224620138496
+        attachment_log:    &ATTCH_LOG     649243850006855680
         big_brother_logs:  &BBLOGS        468507907357409333
         bot:                              267659945086812160
         checkpoint_test:                  422077681434099723
@@ -138,7 +139,7 @@ guild:
 
     staff_channels: [*ADMINS, *ADMIN_SPAM, *MOD_SPAM, *MODS, *HELPERS, *ORGANISATION, *DEFCON]
     ignored: [*ADMINS, *MESSAGE_LOG, *MODLOG]
-    attachment_repost: 649243850006855680
+    attachment_repost: *ATTCH_LOG
 
     roles:
         admin:             &ADMIN_ROLE      267628507062992896
