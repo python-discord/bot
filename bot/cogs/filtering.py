@@ -4,6 +4,7 @@ import logging
 import re
 from typing import Mapping, Optional, Union
 
+import dateutil
 import discord.errors
 from dateutil.relativedelta import relativedelta
 from discord import Colour, DMChannel, Member, Message, NotFound, TextChannel
@@ -403,7 +404,7 @@ class Filtering(Cog, Scheduler):
 
     async def _scheduled_task(self, msg: dict) -> None:
         """A coroutine which delete the offensive message once the delete date is reached."""
-        delete_at = datetime.datetime.fromisoformat(msg['delete_date'][:-1])
+        delete_at = dateutil.parser.isoparse(msg['delete_date'])
 
         await wait_until(delete_at)
         await self.delete_offensive_msg(msg)
@@ -419,7 +420,7 @@ class Filtering(Cog, Scheduler):
         loop = asyncio.get_event_loop()
 
         for msg in response:
-            delete_at = datetime.datetime.fromisoformat(msg['delete_date'][:-1])
+            delete_at = dateutil.parser.isoparse(msg['delete_date'])
 
             if delete_at < now:
                 await self.delete_offensive_msg(msg)
