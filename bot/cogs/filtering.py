@@ -418,7 +418,7 @@ class Filtering(Cog, Scheduler):
         now = datetime.datetime.utcnow()
 
         for msg in response:
-            delete_at = dateutil.parser.isoparse(msg['delete_date'])
+            delete_at = dateutil.parser.isoparse(msg['delete_date']).replace(tzinfo=None)
 
             if delete_at < now:
                 await self.delete_offensive_msg(msg)
