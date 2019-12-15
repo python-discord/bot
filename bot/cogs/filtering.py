@@ -195,17 +195,14 @@ class Filtering(Cog, Scheduler):
                         # it will be deleted it after one week.
                         if _filter["schedule_deletion"]:
                             delete_date = (msg.created_at + OFFENSIVE_MSG_DELETE_TIME).isoformat()
-                            await self.bot.api_client.post(
-                                'bot/offensive-messages',
-                                json={
-                                    'id': msg.id,
-                                    'channel_id': msg.channel.id,
-                                    'delete_date': delete_date
-                                }
-                            )
+                            data = {
+                                'id': msg.id,
+                                'channel_id': msg.channel.id,
+                                'delete_date': delete_date
+                            }
 
-                            task_data = {'id': msg.id, 'channel_id': msg.channel.id}
-                            self.schedule_task(self.bot.loop, msg.id, task_data)
+                            await self.bot.api_client.post('bot/offensive-messages', json=data)
+                            self.schedule_task(self.bot.loop, msg.id, data)
                             log.trace(f"Offensive message {msg.id} will be deleted on {delete_date}")
 
                         if isinstance(msg.channel, DMChannel):
