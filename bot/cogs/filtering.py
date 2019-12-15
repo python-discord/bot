@@ -441,10 +441,8 @@ class Filtering(Cog, Scheduler):
                 f"Tried to delete message {msg['id']}, but the message can't be found "
                 f"(it has been probably already deleted)."
             )
-        except HTTPException:
-            log.warning(
-                f"Failed to delete message {msg['id']}."
-            )
+        except HTTPException as e:
+            log.warning(f"Failed to delete message {msg['id']}: status {e.status}")
 
         await self.bot.api_client.delete(f'bot/offensive-messages/{msg["id"]}')
         log.info(f"Deleted the offensive message with id {msg['id']}.")
