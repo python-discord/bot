@@ -1,4 +1,3 @@
-import asyncio
 import datetime
 import logging
 import re
@@ -195,21 +194,19 @@ class Filtering(Cog, Scheduler):
                         # If the message is classed as offensive, we store it in the site db and
                         # it will be deleted it after one week.
                         if _filter["schedule_deletion"]:
-                            delete_date = msg.created_at + OFFENSIVE_MSG_DELETE_TIME
+                            delete_date = (msg.created_at + OFFENSIVE_MSG_DELETE_TIME).isoformat()
                             await self.bot.api_client.post(
                                 'bot/offensive-messages',
                                 json={
                                     'id': msg.id,
                                     'channel_id': msg.channel.id,
-                                    'delete_date': delete_date.isoformat()
+                                    'delete_date': delete_date
                                 }
                             )
-                            loop = asyncio.get_event_loop()
-                            self.schedule_task(loop, msg.id, {'id': msg.id, 'channel_id': msg.channel.id})
-                            log.trace(
-                                f"Offensive message will be deleted on "
-                                f"{delete_date.isoformat()}"
-                            )
+
+                            task_data = {'id': msg.id, 'channel_id': msg.channel.id}
+                            self.schedule_task(self.bot.loop, msg.id, task_data)
+                            log.trace(f"Offensive message {msg.id} will be deleted on {delete_date}")
 
                         if isinstance(msg.channel, DMChannel):
                             channel_str = "via DM"
@@ -335,7 +332,7 @@ class Filtering(Cog, Scheduler):
 
         Attempts to catch some of common ways to try to cheat the system.
         """
-        # Remove backslashes to prevent escape character aroundfuckery like
+        # Remove backslashes to prevent escape character around fuckery like
         # discord\.gg/gdudes-pony-farm
         text = text.replace("\\", "")
 
@@ -405,7 +402,7 @@ class Filtering(Cog, Scheduler):
             await channel.send(f"{filtered_member.mention} {reason}")
 
     async def _scheduled_task(self, msg: dict) -> None:
-        """A coroutine that delete the offensive message once the delete date is reached."""
+        """Delete an offensive message once its deletion date is reached."""
         delete_at = dateutil.parser.isoparse(msg['delete_date'])
 
         await wait_until(delete_at)
@@ -419,7 +416,6 @@ class Filtering(Cog, Scheduler):
         response = await self.bot.api_client.get('bot/offensive-messages',)
 
         now = datetime.datetime.utcnow()
-        loop = asyncio.get_event_loop()
 
         for msg in response:
             delete_at = dateutil.parser.isoparse(msg['delete_date'])
@@ -427,7 +423,7 @@ class Filtering(Cog, Scheduler):
             if delete_at < now:
                 await self.delete_offensive_msg(msg)
             else:
-                self.schedule_task(loop, msg['id'], msg)
+                self.schedule_task(self.bot.loop, msg['id'], msg)
 
     async def delete_offensive_msg(self, msg: Mapping[str, str]) -> None:
         """Delete an offensive message, and then delete it from the db."""
