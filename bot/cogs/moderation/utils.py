@@ -58,7 +58,7 @@ async def post_infraction(
     reason: str,
     expires_at: datetime = None,
     hidden: bool = False,
-    active: bool = True,
+    active: bool = True
 ) -> t.Optional[dict]:
     """Posts an infraction to the API."""
     log.trace(f"Posting {infr_type} infraction for {user} to the API.")
