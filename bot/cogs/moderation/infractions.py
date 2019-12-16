@@ -13,11 +13,9 @@ from bot.decorators import respect_role_hierarchy
 from bot.utils.checks import with_role_check
 from . import utils
 from .scheduler import InfractionScheduler
-from .utils import MemberObject
+from .utils import MemberObject, UserTypes as MemberConverter
 
 log = logging.getLogger(__name__)
-
-MemberConverter = t.Union[utils.UserTypes, utils.proxy_user]
 
 
 class Infractions(InfractionScheduler, commands.Cog):

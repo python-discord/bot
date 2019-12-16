@@ -9,7 +9,7 @@ from discord.ext.commands import Context
 
 from bot.api import ResponseCodeError
 from bot.constants import Colours, Icons
-from bot.converters import Duration, ISODateTime
+from bot.converters import Duration, FetchedUser, ISODateTime
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ INFRACTION_ICONS = {
 RULES_URL = "https://pythondiscord.com/pages/rules"
 APPEALABLE_INFRACTIONS = ("ban", "mute")
 
-UserTypes = t.Union[discord.Member, discord.User]
+UserTypes = t.Union[discord.Member, discord.User, FetchedUser]
 MemberObject = t.Union[UserTypes, discord.Object]
 Infraction = t.Dict[str, t.Union[str, int, bool]]
 Expiry = t.Union[Duration, ISODateTime]
@@ -107,22 +107,21 @@ async def post_infraction(
     if expires_at:
         payload['expires_at'] = expires_at.isoformat()
 
-    try:
-        response = await ctx.bot.api_client.post('bot/infractions', json=payload)
-    except ResponseCodeError as exp:
-        if exp.status == 400 and 'user' in exp.response_json:
-            log.info(
-                f"{ctx.author} tried to add a {infr_type} infraction to `{user.id}`, "
-                "but that user id was not found in the database."
-            )
-            await ctx.send(
-                f":x: Cannot add infraction, the specified user is not known to the database."
-            )
-            return
+    # Try to apply the infraction. If it fails because the user doesn't exist, try to add it.
+    for attempt in range(2):
+        try:
+            response = await ctx.bot.api_client.post('bot/infractions', json=payload)
+        except ResponseCodeError as exp:
+            if exp.status == 400 and 'user'in exp.response_json:
+                # Only once attempt to try to add the user to the database, not two:
+                if attempt > 0 or await post_user(ctx, user) is None:
+                    return
+            else:
+                log.exception("An unexpected ResponseCodeError occurred while adding an infraction:")
+                await ctx.send(":x: There was an error adding the infraction.")
+                return
         else:
-            log.exception("An unexpected ResponseCodeError occurred while adding an infraction:")
-            await ctx.send(":x: There was an error adding the infraction.")
-            return
+            break
 
     return response
 
