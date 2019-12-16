@@ -278,3 +278,25 @@ class ISODateTime(Converter):
             dt = dt.replace(tzinfo=None)
 
         return dt
+
+
+class FetchedUser(Converter):
+    """Fetches from the Discord API and returns a `discord.User` object."""
+
+    @staticmethod
+    async def convert(ctx: Context, user_id: str) -> discord.User:
+        """Converts `user_id` to a `discord.User` object, after fetching from the Discord API."""
+        # TODO: add docstring
+        # TODO: add remaining exceptions
+        try:
+            user_id = int(user_id)
+            user = await ctx.bot.fetch_user(user_id)
+        except ValueError:
+            raise BadArgument(f"The provided argument can't be turned into integer: `{user_id}`")
+        except discord.HTTPException as e:
+            # If the Discord error isn't Unknown user, save it in the log
+            if e.code != 10013:
+                log.warning(f"Failed to fetch user:")
+            raise BadArgument
+
+        return user
