@@ -31,6 +31,39 @@ Infraction = t.Dict[str, t.Union[str, int, bool]]
 Expiry = t.Union[Duration, ISODateTime]
 
 
+async def post_user(ctx: Context, user: discord.User) -> t.Optional[dict]:
+    """
+    Create a new user in the database.
+
+    Used when an infraction needs to be applied on a user absent in the guild.
+    """
+    log.warn("Attempting to add user to the database.")
+
+    payload = {
+        'avatar_hash': user.avatar,
+        'discriminator': int(user.discriminator),
+        'id': user.id,
+        'in_guild': False,
+        'name': user.name,
+        'roles': []
+    }
+
+    try:
+        response = await ctx.bot.api_client.post('bot/users', json=payload)
+    except ResponseCodeError:
+        # TODO: Add details, and specific information per possible situation.
+        #  Potential race condition if someone joins and the bot syncs before the API replies!
+        log.info("Couldn't post user.")
+        # TODO: Rewrite message.
+        await ctx.send("Tried to post user to the DB, couldn't be done.")
+
+        return
+
+    return response
+
+
+# TODO: maybe delete proxy_user
+
 def proxy_user(user_id: str) -> discord.Object:
     """
     Create a proxy user object from the given id.
