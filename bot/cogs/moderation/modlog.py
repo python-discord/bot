@@ -25,7 +25,11 @@ CHANNEL_CHANGES_SUPPRESSED = ("_overwrites", "position")
 MEMBER_CHANGES_SUPPRESSED = ("status", "activities", "_client_status", "nick")
 ROLE_CHANGES_UNSUPPORTED = ("colour", "permissions")
 
-VOICE_STATE_ATTRIBUTES = {"self_video": "Broadcasting", "channel.name": "Channel"}
+VOICE_STATE_ATTRIBUTES = {
+    "channel.name": "Channel",
+    "self_stream": "Streaming",
+    "self_video": "Broadcasting",
+}
 
 
 class ModLog(Cog, name="ModLog"):
