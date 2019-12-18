@@ -325,6 +325,10 @@ class Icons(metaclass=YAMLGetter):
     superstarify: str
     unsuperstarify: str
 
+    voice_state_blue: str
+    voice_state_green: str
+    voice_state_red: str
+
 
 class CleanMessages(metaclass=YAMLGetter):
     section = "bot"
