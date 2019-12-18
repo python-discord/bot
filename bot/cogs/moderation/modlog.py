@@ -782,15 +782,32 @@ class ModLog(Cog, name="ModLog"):
         # "overwrite" values_changed; in practice there will never even be anything to overwrite.
         diff_values = {**diff.get("values_changed", {}), **diff.get("type_changes", {})}
 
+        icon = Icons.voice_state_blue
+        colour = Colour.blurple()
         changes = []
+
         for attr, values in diff_values.items():
-            if not attr:  # Not sure why, but it happens
+            if not attr:  # Not sure why, but it happens.
                 continue
 
-            attr = attr[5:]  # Remove "root." prefix
+            old = values["old_value"]
+            new = values["new_value"]
+
+            attr = attr[5:]  # Remove "root." prefix.
             attr = VOICE_STATE_ATTRIBUTES.get(attr, attr.replace("_", " ").capitalize())
 
-            changes.append(f"**{attr}:** `{values['old_value']}` **→** `{values['new_value']}`")
+            changes.append(f"**{attr}:** `{old}` **→** `{new}`")
+
+            # Set the embed icon and colour depending on which attribute changed.
+            if any(name in attr for name in ("Channel", "deaf", "mute")):
+                if new is None or new is True:
+                    # Left a channel or was muted/deafened.
+                    icon = Icons.voice_state_red
+                    colour = Colours.soft_red
+                elif old is None or old is True:
+                    # Joined a channel or was unmuted/undeafened.
+                    icon = Icons.voice_state_green
+                    colour = Colours.soft_green
 
         if not changes:
             return
@@ -799,8 +816,8 @@ class ModLog(Cog, name="ModLog"):
         message = f"**{member}** (`{member.id}`)\n{message}"
 
         await self.send_log_message(
-            icon_url=Icons.user_update,
-            colour=Colour.blurple(),
+            icon_url=icon,
+            colour=colour,
             title="Voice state updated",
             text=message,
             thumbnail=member.avatar_url_as(static_format="png"),
