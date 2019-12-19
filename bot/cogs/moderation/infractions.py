@@ -203,7 +203,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         if await utils.has_active_infraction(ctx, user, "mute"):
             return
 
-        infraction = await utils.post_infraction(ctx, user, "mute", reason, **kwargs)
+        infraction = await utils.post_infraction(ctx, user, "mute", reason, active=True, **kwargs)
         if infraction is None:
             return
 
@@ -220,7 +220,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     @respect_role_hierarchy()
     async def apply_kick(self, ctx: Context, user: Member, reason: str, **kwargs) -> None:
         """Apply a kick infraction with kwargs passed to `post_infraction`."""
-        infraction = await utils.post_infraction(ctx, user, "kick", reason, **kwargs)
+        infraction = await utils.post_infraction(ctx, user, "kick", reason, active=False, **kwargs)
         if infraction is None:
             return
 
@@ -235,7 +235,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         if await utils.has_active_infraction(ctx, user, "ban"):
             return
 
-        infraction = await utils.post_infraction(ctx, user, "ban", reason, **kwargs)
+        infraction = await utils.post_infraction(ctx, user, "ban", reason, active=True, **kwargs)
         if infraction is None:
             return
 
