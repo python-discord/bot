@@ -31,38 +31,45 @@ Infraction = t.Dict[str, t.Union[str, int, bool]]
 Expiry = t.Union[Duration, ISODateTime]
 
 
-async def post_user(ctx: Context, user: discord.User) -> t.Optional[dict]:
+async def post_user(ctx: Context, user: t.Union[discord.User, discord.Object]) -> t.Optional[dict]:
     """
     Create a new user in the database.
 
     Used when an infraction needs to be applied on a user absent in the guild.
     """
-    log.warn("Attempting to add user to the database.")
+    log.trace("Attempting to add user to the database.")
 
-    payload = {
-        'avatar_hash': user.avatar,
-        'discriminator': int(user.discriminator),
-        'id': user.id,
-        'in_guild': False,
-        'name': user.name,
-        'roles': []
-    }
+    try:
+        payload = {
+            'avatar_hash': user.avatar,
+            'discriminator': int(user.discriminator),
+            'id': user.id,
+            'in_guild': False,
+            'name': user.name,
+            'roles': []
+        }
+    except AttributeError:
+        log.trace("Couldn't take all the attributes for the user payload, taking just its ID.")
+        # XXX: Not sure if these default values are ideal.
+        payload = {
+            'avatar_hash': 0,
+            'discriminator': 0,
+            'id': user.id,
+            'in_guild': False,
+            'name': 'Some name',
+            'roles': []
+        }
 
     try:
         response = await ctx.bot.api_client.post('bot/users', json=payload)
-    except ResponseCodeError:
+        return response
+    except ResponseCodeError as e:
         # TODO: Add details, and specific information per possible situation.
         #  Potential race condition if someone joins and the bot syncs before the API replies!
         log.info("Couldn't post user.")
-        # TODO: Rewrite message.
-        await ctx.send("Tried to post user to the DB, couldn't be done.")
+        # NOTE: `e.status` is probably not enough for a good message
+        await ctx.send(f"The attempt to add the user to the DB failed: {e.status}")
 
-        return
-
-    return response
-
-
-# TODO: maybe delete proxy_user
 
 def proxy_user(user_id: str) -> discord.Object:
     """
