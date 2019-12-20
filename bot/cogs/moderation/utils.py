@@ -108,13 +108,14 @@ async def post_infraction(
         payload['expires_at'] = expires_at.isoformat()
 
     # Try to apply the infraction. If it fails because the user doesn't exist, try to add it.
-    for attempt in range(2):
+    for should_post_user in (True, False):
         try:
             response = await ctx.bot.api_client.post('bot/infractions', json=payload)
+            return response
         except ResponseCodeError as exp:
             if exp.status == 400 and 'user'in exp.response_json:
-                # Only once attempt to try to add the user to the database, not two:
-                if attempt > 0 or await post_user(ctx, user) is None:
+                # Only one attempt to add the user to the database, not two:
+                if not should_post_user or await post_user(ctx, user) is None:
                     return
             else:
                 log.exception("An unexpected ResponseCodeError occurred while adding an infraction:")
@@ -122,8 +123,6 @@ async def post_infraction(
                 return
         else:
             break
-
-    return response
 
 
 async def has_active_infraction(ctx: Context, user: MemberObject, infr_type: str) -> bool:
