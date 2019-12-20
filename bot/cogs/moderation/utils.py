@@ -39,26 +39,18 @@ async def post_user(ctx: Context, user: t.Union[discord.User, discord.Object]) -
     """
     log.trace("Attempting to add user to the database.")
 
-    try:
-        payload = {
-            'avatar_hash': user.avatar,
-            'discriminator': int(user.discriminator),
-            'id': user.id,
-            'in_guild': False,
-            'name': user.name,
-            'roles': []
-        }
-    except AttributeError:
-        log.trace("Couldn't take all the attributes for the user payload, taking just its ID.")
-        # XXX: Not sure if these default values are ideal.
-        payload = {
-            'avatar_hash': 0,
-            'discriminator': 0,
-            'id': user.id,
-            'in_guild': False,
-            'name': 'Some name',
-            'roles': []
-        }
+    if not isinstance(user, discord.User):
+        log.warn("The given user is not a discord.User object.")
+
+    # XXX: Not sure if these default values are ideal.
+    payload = {
+        'avatar_hash': getattr(user, 'avatar', 0),
+        'discriminator': int(getattr(user, 'discriminator', 0)),
+        'id': user.id,
+        'in_guild': False,
+        'name': getattr(user, 'name', 'No name'),
+        'roles': []
+    }
 
     try:
         response = await ctx.bot.api_client.post('bot/users', json=payload)
