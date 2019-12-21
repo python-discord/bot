@@ -20,17 +20,17 @@ class Bot(commands.Bot):
         # Use asyncio for DNS resolution instead of threads so threads aren't spammed.
         # Use AF_INET as its socket family to prevent HTTPS related problems both locally
         # and in production.
-        self.connector = aiohttp.TCPConnector(
+        self._connector = aiohttp.TCPConnector(
             resolver=aiohttp.AsyncResolver(),
             family=socket.AF_INET,
         )
 
-        super().__init__(*args, connector=self.connector, **kwargs)
+        super().__init__(*args, connector=self._connector, **kwargs)
 
         self._guild_available = asyncio.Event()
 
         self.http_session: Optional[aiohttp.ClientSession] = None
-        self.api_client = api.APIClient(loop=self.loop, connector=self.connector)
+        self.api_client = api.APIClient(loop=self.loop, connector=self._connector)
 
         log.addHandler(api.APILoggingHandler(self.api_client))
 
@@ -53,7 +53,7 @@ class Bot(commands.Bot):
 
     async def start(self, *args, **kwargs) -> None:
         """Open an aiohttp session before logging in and connecting to Discord."""
-        self.http_session = aiohttp.ClientSession(connector=self.connector)
+        self.http_session = aiohttp.ClientSession(connector=self._connector)
 
         await super().start(*args, **kwargs)
 
