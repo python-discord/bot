@@ -35,11 +35,13 @@ class Sync(Cog):
         for syncer_name in (syncers.sync_roles, syncers.sync_users):
             await self.sync(syncer_name, guild)
 
-    async def sync(self, syncer: Syncer, guild: Guild) -> None:
+    async def sync(self, syncer: Syncer, guild: Guild, ctx: Optional[Context] = None) -> None:
         """Run the named syncer for the given guild."""
         syncer_name = syncer.__name__[5:]  # drop off `sync_`
 
         log.info(f"Starting {syncer_name} syncer.")
+        if ctx:
+            message = await ctx.send(f"📊 Synchronizing {syncer_name}.")
 
         totals = await syncer(self.bot, guild)
         totals = zip(("created", "updated", "deleted"), totals)
@@ -47,8 +49,14 @@ class Sync(Cog):
 
         if results:
             log.info(f"`{syncer_name}` syncer finished: {results}.")
+            if ctx:
+                await message.edit(
+                    content=f":ok_hand: Synchronization of {syncer_name} complete: {results}"
+                )
         else:
             log.warning(f"`{syncer_name}` syncer aborted!")
+            if ctx:
+                await message.edit(content=f":x: Synchronization of {syncer_name} aborted!")
 
     async def patch_user(self, user_id: int, updated_information: Dict[str, Any]) -> None:
         """Send a PATCH request to partially update a user in the database."""
@@ -177,24 +185,10 @@ class Sync(Cog):
     @commands.has_permissions(administrator=True)
     async def sync_roles_command(self, ctx: Context) -> None:
         """Manually synchronize the guild's roles with the roles on the site."""
-        initial_response = await ctx.send("📊 Synchronizing roles.")
-        total_created, total_updated, total_deleted = await syncers.sync_roles(self.bot, ctx.guild)
-        await initial_response.edit(
-            content=(
-                f"👌 Role synchronization complete, created **{total_created}** "
-                f", updated **{total_created}** roles, and deleted **{total_deleted}** roles."
-            )
-        )
+        await self.sync(syncers.sync_roles, ctx.guild, ctx)
 
     @sync_group.command(name='users')
     @commands.has_permissions(administrator=True)
     async def sync_users_command(self, ctx: Context) -> None:
         """Manually synchronize the guild's users with the users on the site."""
-        initial_response = await ctx.send("📊 Synchronizing users.")
-        total_created, total_updated, total_deleted = await syncers.sync_users(self.bot, ctx.guild)
-        await initial_response.edit(
-            content=(
-                f"👌 User synchronization complete, created **{total_created}** "
-                f"and updated **{total_created}** users."
-            )
-        )
+        await self.sync(syncers.sync_users, ctx.guild, ctx)
