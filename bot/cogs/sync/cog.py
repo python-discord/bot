@@ -34,7 +34,7 @@ class Sync(Cog):
 
     async def sync_guild(self) -> None:
         """Syncs the roles/users of the guild with the database."""
-        await self.bot.wait_until_ready()
+        await self.bot.wait_until_guild_available()
         guild = self.bot.get_guild(self.SYNC_SERVER_ID)
         if guild is not None:
             for syncer in self.ON_READY_SYNCERS:
