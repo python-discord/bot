@@ -40,18 +40,15 @@ class Sync(Cog):
         syncer_name = syncer.__name__[5:]  # drop off `sync_`
 
         log.info(f"Starting {syncer_name} syncer.")
-        total_created, total_updated, total_deleted = await syncer(self.bot, guild)
 
-        if total_deleted is None:
-            log.info(
-                f"`{syncer_name}` syncer finished: created `{total_created}`, "
-                f"updated `{total_updated}`."
-            )
+        totals = await syncer(self.bot, guild)
+        totals = zip(("created", "updated", "deleted"), totals)
+        results = ", ".join(f"{name} `{total}`" for name, total in totals if total is not None)
+
+        if results:
+            log.info(f"`{syncer_name}` syncer finished: {results}.")
         else:
-            log.info(
-                f"`{syncer_name}` syncer finished: created `{total_created}`, "
-                f"updated `{total_updated}`, deleted `{total_deleted}`."
-            )
+            log.warning(f"`{syncer_name}` syncer aborted!")
 
     async def patch_user(self, user_id: int, updated_information: Dict[str, Any]) -> None:
         """Send a PATCH request to partially update a user in the database."""
