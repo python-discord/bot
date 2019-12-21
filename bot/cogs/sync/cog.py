@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Callable, Dict, Iterable
+from typing import Any, Callable, Coroutine, Dict, Optional, Tuple
 
 from discord import Guild, Member, Role, User
 from discord.ext import commands
@@ -12,15 +12,12 @@ from bot.cogs.sync import syncers
 
 log = logging.getLogger(__name__)
 
+SyncerResult = Tuple[Optional[int], Optional[int], Optional[int]]
+Syncer = Callable[[Bot, Guild], Coroutine[Any, Any, SyncerResult]]
+
 
 class Sync(Cog):
     """Captures relevant events and sends them to the site."""
-
-    # An iterable of callables that are called when the bot is ready.
-    ON_READY_SYNCERS: Iterable[Callable[[Bot, Guild], None]] = (
-        syncers.sync_roles,
-        syncers.sync_users
-    )
 
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
@@ -35,21 +32,26 @@ class Sync(Cog):
         if guild is None:
             return
 
-        for syncer in self.ON_READY_SYNCERS:
-            syncer_name = syncer.__name__[5:]  # drop off `sync_`
-            log.info(f"Starting {syncer_name} syncer.")
-            total_created, total_updated, total_deleted = await syncer(self.bot, guild)
+        for syncer_name in (syncers.sync_roles, syncers.sync_users):
+            await self.sync(syncer_name, guild)
 
-            if total_deleted is None:
-                log.info(
-                    f"`{syncer_name}` syncer finished: created `{total_created}`, "
-                    f"updated `{total_updated}`."
-                )
-            else:
-                log.info(
-                    f"`{syncer_name}` syncer finished: created `{total_created}`, "
-                    f"updated `{total_updated}`, deleted `{total_deleted}`."
-                )
+    async def sync(self, syncer: Syncer, guild: Guild) -> None:
+        """Run the named syncer for the given guild."""
+        syncer_name = syncer.__name__[5:]  # drop off `sync_`
+
+        log.info(f"Starting {syncer_name} syncer.")
+        total_created, total_updated, total_deleted = await syncer(self.bot, guild)
+
+        if total_deleted is None:
+            log.info(
+                f"`{syncer_name}` syncer finished: created `{total_created}`, "
+                f"updated `{total_updated}`."
+            )
+        else:
+            log.info(
+                f"`{syncer_name}` syncer finished: created `{total_created}`, "
+                f"updated `{total_updated}`, deleted `{total_deleted}`."
+            )
 
     async def patch_user(self, user_id: int, updated_information: Dict[str, Any]) -> None:
         """Send a PATCH request to partially update a user in the database."""
