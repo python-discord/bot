@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, Dict, Iterable, Union
+from typing import Any, Callable, Dict, Iterable
 
 from discord import Guild, Member, Role, User
 from discord.ext import commands
@@ -16,11 +16,6 @@ log = logging.getLogger(__name__)
 class Sync(Cog):
     """Captures relevant events and sends them to the site."""
 
-    # The server to synchronize events on.
-    # Note that setting this wrongly will result in things getting deleted
-    # that possibly shouldn't be.
-    SYNC_SERVER_ID = constants.Guild.id
-
     # An iterable of callables that are called when the bot is ready.
     ON_READY_SYNCERS: Iterable[Callable[[Bot, Guild], None]] = (
         syncers.sync_roles,
@@ -35,26 +30,31 @@ class Sync(Cog):
     async def sync_guild(self) -> None:
         """Syncs the roles/users of the guild with the database."""
         await self.bot.wait_until_guild_available()
-        guild = self.bot.get_guild(self.SYNC_SERVER_ID)
-        if guild is not None:
-            for syncer in self.ON_READY_SYNCERS:
-                syncer_name = syncer.__name__[5:]  # drop off `sync_`
-                log.info("Starting `%s` syncer.", syncer_name)
-                total_created, total_updated, total_deleted = await syncer(self.bot, guild)
-                if total_deleted is None:
-                    log.info(
-                        f"`{syncer_name}` syncer finished, created `{total_created}`, updated `{total_updated}`."
-                    )
-                else:
-                    log.info(
-                        f"`{syncer_name}` syncer finished, created `{total_created}`, updated `{total_updated}`, "
-                        f"deleted `{total_deleted}`."
-                    )
 
-    async def patch_user(self, user_id: int, updated_information: Dict[str, Union[str, int]]) -> None:
+        guild = self.bot.get_guild(constants.Guild.id)
+        if guild is None:
+            return
+
+        for syncer in self.ON_READY_SYNCERS:
+            syncer_name = syncer.__name__[5:]  # drop off `sync_`
+            log.info(f"Starting {syncer_name} syncer.")
+            total_created, total_updated, total_deleted = await syncer(self.bot, guild)
+
+            if total_deleted is None:
+                log.info(
+                    f"`{syncer_name}` syncer finished: created `{total_created}`, "
+                    f"updated `{total_updated}`."
+                )
+            else:
+                log.info(
+                    f"`{syncer_name}` syncer finished: created `{total_created}`, "
+                    f"updated `{total_updated}`, deleted `{total_deleted}`."
+                )
+
+    async def patch_user(self, user_id: int, updated_information: Dict[str, Any]) -> None:
         """Send a PATCH request to partially update a user in the database."""
         try:
-            await self.bot.api_client.patch("bot/users/" + str(user_id), json=updated_information)
+            await self.bot.api_client.patch(f"bot/users/{user_id}", json=updated_information)
         except ResponseCodeError as e:
             if e.response.status != 404:
                 raise
@@ -160,7 +160,8 @@ class Sync(Cog):
     @Cog.listener()
     async def on_user_update(self, before: User, after: User) -> None:
         """Update the user information in the database if a relevant change is detected."""
-        if any(getattr(before, attr) != getattr(after, attr) for attr in ("name", "discriminator", "avatar")):
+        attrs = ("name", "discriminator", "avatar")
+        if any(getattr(before, attr) != getattr(after, attr) for attr in attrs):
             updated_information = {
                 "name": after.name,
                 "discriminator": int(after.discriminator),
