@@ -280,6 +280,26 @@ class ISODateTime(Converter):
         return dt
 
 
+def proxy_user(user_id: str) -> discord.Object:
+    """
+    Create a proxy user object from the given id.
+
+    Used when a Member or User object cannot be resolved.
+    """
+    log.trace(f"Attempting to create a proxy user for the user id {user_id}.")
+
+    try:
+        user_id = int(user_id)
+    except ValueError:
+        raise BadArgument
+
+    user = discord.Object(user_id)
+    user.mention = user.id
+    user.avatar_url_as = lambda static_format: None
+
+    return user
+
+
 class FetchedUser(Converter):
     """
     Fetches from the Discord API and returns a `discord.User` or `discord.Object` object, given an ID.
@@ -288,28 +308,6 @@ class FetchedUser(Converter):
     the error doesn't imply the user doesn't exist, then a `discord.Object` is returned
     via the `user_proxy` function.
     """
-
-    # XXX: `proxy_user` shouldn't be here as a helper.
-    #  Should wait for PR #651 to import from bot.utils.whatever, maybe?
-    @staticmethod
-    def proxy_user(user_id: str) -> discord.Object:
-        """
-        Create a proxy user object from the given id.
-
-        Used when a Member or User object cannot be resolved.
-        """
-        log.trace(f"Attempting to create a proxy user for the user id {user_id}.")
-
-        try:
-            user_id = int(user_id)
-        except ValueError:
-            raise BadArgument
-
-        user = discord.Object(user_id)
-        user.mention = user.id
-        user.avatar_url_as = lambda static_format: None
-
-        return user
 
     @staticmethod
     async def convert(ctx: Context, user_id: str) -> t.Union[discord.User, discord.Object]:
@@ -320,11 +318,10 @@ class FetchedUser(Converter):
         except ValueError:
             raise BadArgument(f"The provided argument can't be turned into integer: `{user_id}`")
         except discord.HTTPException as e:
-            # If the Discord error isn't `Unknown user`, save it in the log and return a proxy
+            # If the Discord error isn't `Unknown user`, save it in the log and return a proxy instead
             if e.code != 10013:
                 log.warning("Failed to fetch user, returning a proxy instead.")
-                # XXX:
-                return FetchedUser.proxy_user(user_id)
+                return proxy_user(user_id)
             raise BadArgument
 
         return user

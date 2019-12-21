@@ -10,7 +10,7 @@ from discord.ext.commands import Context
 
 from bot import constants
 from bot.bot import Bot
-from bot.converters import InfractionSearchQuery, allowed_strings
+from bot.converters import InfractionSearchQuery, allowed_strings, proxy_user
 from bot.pagination import LinePaginator
 from bot.utils import time
 from bot.utils.checks import in_channel_check, with_role_check
@@ -20,7 +20,7 @@ from .modlog import ModLog
 
 log = logging.getLogger(__name__)
 
-UserConverter = t.Union[discord.User, utils.proxy_user]
+UserConverter = t.Union[discord.User, proxy_user]
 
 
 class ModManagement(commands.Cog):

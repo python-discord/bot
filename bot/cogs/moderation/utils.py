@@ -4,7 +4,6 @@ import typing as t
 from datetime import datetime
 
 import discord
-from discord.ext import commands
 from discord.ext.commands import Context
 
 from bot.api import ResponseCodeError
@@ -42,45 +41,23 @@ async def post_user(ctx: Context, user: t.Union[discord.User, discord.Object]) -
     if not isinstance(user, discord.User):
         log.warn("The given user is not a discord.User object.")
 
-    # XXX: Not sure if these default values are ideal.
     payload = {
         'avatar_hash': getattr(user, 'avatar', 0),
         'discriminator': int(getattr(user, 'discriminator', 0)),
         'id': user.id,
         'in_guild': False,
-        'name': getattr(user, 'name', 'No name'),
+        'name': getattr(user, 'name', 'Name unknown'),
         'roles': []
     }
 
     try:
         response = await ctx.bot.api_client.post('bot/users', json=payload)
+        log.trace(f"User {user.id} added to the DB.")
         return response
     except ResponseCodeError as e:
-        # TODO: Add details, and specific information per possible situation.
-        #  Potential race condition if someone joins and the bot syncs before the API replies!
-        log.info("Couldn't post user.")
-        # NOTE: `e.status` is probably not enough for a good message
-        await ctx.send(f"The attempt to add the user to the DB failed: {e.status}")
-
-
-def proxy_user(user_id: str) -> discord.Object:
-    """
-    Create a proxy user object from the given id.
-
-    Used when a Member or User object cannot be resolved.
-    """
-    log.trace(f"Attempting to create a proxy user for the user id {user_id}.")
-
-    try:
-        user_id = int(user_id)
-    except ValueError:
-        raise commands.BadArgument
-
-    user = discord.Object(user_id)
-    user.mention = user.id
-    user.avatar_url_as = lambda static_format: None
-
-    return user
+        log.warn("Couldn't post user.")
+        await ctx.send("The attempt to add the user to the DB failed: "
+                       f"{e.status}, {e.response_text if e.response_text else 'no message received'}.")
 
 
 async def post_infraction(
