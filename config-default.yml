@@ -34,6 +34,7 @@ style:
         pencil:     "\u270F"
         new:        "\U0001F195"
         cross_mark: "\u274C"
+        check_mark: "\u2705"
 
         ducky_yellow:   &DUCKY_YELLOW   574951975574175744
         ducky_blurple:  &DUCKY_BLURPLE  574951975310065675
@@ -121,6 +122,7 @@ guild:
         bot:                              267659945086812160
         checkpoint_test:                  422077681434099723
         defcon:            &DEFCON        464469101889454091
+        devcore:                          411200599653351425
         devlog:            &DEVLOG        622895325144940554
         devtest:           &DEVTEST       414574275865870337
         esoteric:                         470884583684964352

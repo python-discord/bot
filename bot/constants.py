@@ -263,6 +263,7 @@ class Emojis(metaclass=YAMLGetter):
     new: str
     pencil: str
     cross_mark: str
+    check_mark: str
 
     ducky_yellow: int
     ducky_blurple: int
@@ -365,6 +366,7 @@ class Channels(metaclass=YAMLGetter):
     bot: int
     checkpoint_test: int
     defcon: int
+    devcore: int
     devlog: int
     devtest: int
     esoteric: int
