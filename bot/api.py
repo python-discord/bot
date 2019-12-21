@@ -85,43 +85,43 @@ class APIClient:
                 response_text = await response.text()
                 raise ResponseCodeError(response=response, response_text=response_text)
 
-    async def get(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs) -> dict:
+    async def get(self, endpoint: str, *, raise_for_status: bool = True, **kwargs) -> dict:
         """Site API GET."""
         await self._ready.wait()
 
-        async with self.session.get(self._url_for(endpoint), *args, **kwargs) as resp:
+        async with self.session.get(self._url_for(endpoint), **kwargs) as resp:
             await self.maybe_raise_for_status(resp, raise_for_status)
             return await resp.json()
 
-    async def patch(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs) -> dict:
+    async def patch(self, endpoint: str, *, raise_for_status: bool = True, **kwargs) -> dict:
         """Site API PATCH."""
         await self._ready.wait()
 
-        async with self.session.patch(self._url_for(endpoint), *args, **kwargs) as resp:
+        async with self.session.patch(self._url_for(endpoint), **kwargs) as resp:
             await self.maybe_raise_for_status(resp, raise_for_status)
             return await resp.json()
 
-    async def post(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs) -> dict:
+    async def post(self, endpoint: str, *, raise_for_status: bool = True, **kwargs) -> dict:
         """Site API POST."""
         await self._ready.wait()
 
-        async with self.session.post(self._url_for(endpoint), *args, **kwargs) as resp:
+        async with self.session.post(self._url_for(endpoint), **kwargs) as resp:
             await self.maybe_raise_for_status(resp, raise_for_status)
             return await resp.json()
 
-    async def put(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs) -> dict:
+    async def put(self, endpoint: str, *, raise_for_status: bool = True, **kwargs) -> dict:
         """Site API PUT."""
         await self._ready.wait()
 
-        async with self.session.put(self._url_for(endpoint), *args, **kwargs) as resp:
+        async with self.session.put(self._url_for(endpoint), **kwargs) as resp:
             await self.maybe_raise_for_status(resp, raise_for_status)
             return await resp.json()
 
-    async def delete(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs) -> Optional[dict]:
+    async def delete(self, endpoint: str, *, raise_for_status: bool = True, **kwargs) -> Optional[dict]:
         """Site API DELETE."""
         await self._ready.wait()
 
-        async with self.session.delete(self._url_for(endpoint), *args, **kwargs) as resp:
+        async with self.session.delete(self._url_for(endpoint), **kwargs) as resp:
             if resp.status == 204:
                 return None
 
