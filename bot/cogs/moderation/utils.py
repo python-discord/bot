@@ -56,8 +56,10 @@ async def post_user(ctx: Context, user: t.Union[discord.User, discord.Object]) -
         return response
     except ResponseCodeError as e:
         log.warn("Couldn't post user.")
-        await ctx.send("The attempt to add the user to the DB failed: "
-                       f"{e.status}, {e.response_text if e.response_text else 'no message received'}.")
+        await ctx.send(
+            "The attempt to add the user to the DB failed: "
+            f"{e.status}, {e.response_text if e.response_text else 'no message received'}."
+        )
 
 
 async def post_infraction(
