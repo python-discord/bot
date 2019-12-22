@@ -114,7 +114,7 @@ class InfractionScheduler(Scheduler):
                 if not isinstance(user, (discord.Member, discord.User)):
                     user = await self.bot.fetch_user(user.id)
             except discord.HTTPException as e:
-                log.error(f"Failed to fetch user `{user.id}`: status {e.status}")
+                log.error(f"Failed to DM {user.id}: could not fetch user (status {e.status})")
             else:
                 # Accordingly display whether the user was successfully notified via DM.
                 if await utils.notify_infraction(user, infr_type, expiry, reason, icon):
