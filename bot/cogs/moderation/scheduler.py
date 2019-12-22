@@ -106,16 +106,20 @@ class InfractionScheduler(Scheduler):
 
         # DM the user about the infraction if it's not a shadow/hidden infraction.
         if not infraction["hidden"]:
-            # Sometimes user is a discord.Object; make it a proper user.
-            user = await self.bot.fetch_user(user.id)
+            dm_result = f"{constants.Emojis.failmail} "
+            dm_log_text = "\nDM: **Failed**"
 
-            # Accordingly display whether the user was successfully notified via DM.
-            if await utils.notify_infraction(user, infr_type, expiry, reason, icon):
-                dm_result = ":incoming_envelope: "
-                dm_log_text = "\nDM: Sent"
+            # Sometimes user is a discord.Object; make it a proper user.
+            try:
+                if not isinstance(user, (discord.Member, discord.User)):
+                    user = await self.bot.fetch_user(user.id)
+            except discord.HTTPException as e:
+                log.error(f"Failed to fetch user `{user.id}`: status {e.status}")
             else:
-                dm_result = f"{constants.Emojis.failmail} "
-                dm_log_text = "\nDM: **Failed**"
+                # Accordingly display whether the user was successfully notified via DM.
+                if await utils.notify_infraction(user, infr_type, expiry, reason, icon):
+                    dm_result = ":incoming_envelope: "
+                    dm_log_text = "\nDM: Sent"
 
         if infraction["actor"] == self.bot.user.id:
             log.trace(
