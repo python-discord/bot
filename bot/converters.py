@@ -291,7 +291,8 @@ def proxy_user(user_id: str) -> discord.Object:
     try:
         user_id = int(user_id)
     except ValueError:
-        raise BadArgument
+        log.debug(f"Failed to create proxy user {user_id}: could not convert to int.")
+        raise BadArgument(f"User ID `{user_id}` is invalid - could not convert to an integer.")
 
     user = discord.Object(user_id)
     user.mention = user.id
@@ -314,14 +315,18 @@ class FetchedUser(Converter):
         """Convert `user_id` to a `discord.User` object, after fetching from the Discord API."""
         try:
             user_id = int(user_id)
+            log.trace(f"Fetching user {user_id}...")
             user = await ctx.bot.fetch_user(user_id)
         except ValueError:
+            log.debug(f"Failed to fetch user {user_id}: could not convert to int.")
             raise BadArgument(f"The provided argument can't be turned into integer: `{user_id}`")
         except discord.HTTPException as e:
             # If the Discord error isn't `Unknown user`, save it in the log and return a proxy instead
             if e.code != 10013:
-                log.warning("Failed to fetch user, returning a proxy instead.")
+                log.warning(f"Failed to fetch user, returning a proxy instead: status {e.status}")
                 return proxy_user(user_id)
+
+            log.debug(f"Failed to fetch user {user_id}: user does not exist.")
             raise BadArgument
 
         return user

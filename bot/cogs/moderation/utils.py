@@ -36,10 +36,10 @@ async def post_user(ctx: Context, user: t.Union[discord.User, discord.Object]) -
 
     Used when an infraction needs to be applied on a user absent in the guild.
     """
-    log.trace("Attempting to add user to the database.")
+    log.trace(f"Attempting to add user {user.id} to the database.")
 
     if not isinstance(user, discord.User):
-        log.warn("The given user is not a discord.User object.")
+        log.warn("The user being added to the DB is not a Member or User object.")
 
     payload = {
         'avatar_hash': getattr(user, 'avatar', 0),
@@ -52,12 +52,12 @@ async def post_user(ctx: Context, user: t.Union[discord.User, discord.Object]) -
 
     try:
         response = await ctx.bot.api_client.post('bot/users', json=payload)
-        log.trace(f"User {user.id} added to the DB.")
+        log.info(f"User {user.id} added to the DB.")
         return response
     except ResponseCodeError as e:
-        log.warn("Couldn't post user.")
+        log.error(f"Failed to add user {user.id} to the DB. {e}")
         await ctx.send(
-            "The attempt to add the user to the DB failed: "
+            ":x: The attempt to add the user to the DB failed: "
             f"{e.status}, {e.response_text if e.response_text else 'no message received'}."
         )
 
