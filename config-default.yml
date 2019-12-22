@@ -362,6 +362,11 @@ anti_malware:
         - '.png'
         - '.tiff'
         - '.wmv'
+        - '.svg'
+        - '.psd'  # Photoshop
+        - '.ai'   # Illustrator
+        - '.aep'  # After Effects
+        - '.xcf'  # GIMP
 
 
 reddit:
