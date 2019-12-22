@@ -327,6 +327,6 @@ class FetchedUser(Converter):
                 return proxy_user(user_id)
 
             log.debug(f"Failed to fetch user {user_id}: user does not exist.")
-            raise BadArgument
+            raise BadArgument(f"User `{user_id}` does not exist")
 
         return user
