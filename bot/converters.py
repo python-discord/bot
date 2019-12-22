@@ -296,7 +296,9 @@ def proxy_user(user_id: str) -> discord.Object:
 
     user = discord.Object(user_id)
     user.mention = user.id
+    user.display_name = f"<@{user.id}>"
     user.avatar_url_as = lambda static_format: None
+    user.bot = False
 
     return user
 

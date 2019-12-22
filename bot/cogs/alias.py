@@ -7,8 +7,7 @@ from discord.ext.commands import Cog, Command, Context, clean_content, command, 
 
 from bot.bot import Bot
 from bot.cogs.extensions import Extension
-from bot.cogs.watchchannels.watchchannel import proxy_user
-from bot.converters import TagNameConverter
+from bot.converters import FetchedUser, TagNameConverter
 from bot.pagination import LinePaginator
 
 log = logging.getLogger(__name__)
@@ -61,12 +60,18 @@ class Alias (Cog):
         await self.invoke(ctx, "site tools")
 
     @command(name="watch", hidden=True)
-    async def bigbrother_watch_alias(self, ctx: Context, user: Union[Member, User, proxy_user], *, reason: str) -> None:
+    async def bigbrother_watch_alias(
+            self,
+            ctx: Context,
+            user: Union[Member, User, FetchedUser],
+            *,
+            reason: str
+    ) -> None:
         """Alias for invoking <prefix>bigbrother watch [user] [reason]."""
         await self.invoke(ctx, "bigbrother watch", user, reason=reason)
 
     @command(name="unwatch", hidden=True)
-    async def bigbrother_unwatch_alias(self, ctx: Context, user: Union[User, proxy_user], *, reason: str) -> None:
+    async def bigbrother_unwatch_alias(self, ctx: Context, user: Union[User, FetchedUser], *, reason: str) -> None:
         """Alias for invoking <prefix>bigbrother unwatch [user] [reason]."""
         await self.invoke(ctx, "bigbrother unwatch", user, reason=reason)
 
@@ -132,12 +137,12 @@ class Alias (Cog):
         await self.invoke(ctx, "docs get", symbol)
 
     @command(name="nominate", hidden=True)
-    async def nomination_add_alias(self, ctx: Context, user: Union[Member, User, proxy_user], *, reason: str) -> None:
+    async def nomination_add_alias(self, ctx: Context, user: Union[Member, User, FetchedUser], *, reason: str) -> None:
         """Alias for invoking <prefix>talentpool add [user] [reason]."""
         await self.invoke(ctx, "talentpool add", user, reason=reason)
 
     @command(name="unnominate", hidden=True)
-    async def nomination_end_alias(self, ctx: Context, user: Union[User, proxy_user], *, reason: str) -> None:
+    async def nomination_end_alias(self, ctx: Context, user: Union[User, FetchedUser], *, reason: str) -> None:
         """Alias for invoking <prefix>nomination end [user] [reason]."""
         await self.invoke(ctx, "nomination end", user, reason=reason)
 
