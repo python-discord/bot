@@ -56,10 +56,7 @@ async def post_user(ctx: Context, user: MemberObject) -> t.Optional[dict]:
         return response
     except ResponseCodeError as e:
         log.error(f"Failed to add user {user.id} to the DB. {e}")
-        await ctx.send(
-            ":x: The attempt to add the user to the DB failed: "
-            f"{e.status}, {e.response_text if e.response_text else 'no message received'}."
-        )
+        await ctx.send(f":x: The attempt to add the user to the DB failed: status {e.status}")
 
 
 async def post_infraction(
@@ -90,14 +87,14 @@ async def post_infraction(
         try:
             response = await ctx.bot.api_client.post('bot/infractions', json=payload)
             return response
-        except ResponseCodeError as exp:
-            if exp.status == 400 and 'user' in exp.response_json:
+        except ResponseCodeError as e:
+            if e.status == 400 and 'user' in e.response_json:
                 # Only one attempt to add the user to the database, not two:
                 if not should_post_user or await post_user(ctx, user) is None:
                     return
             else:
                 log.exception(f"Unexpected error while adding an infraction for {user}:")
-                await ctx.send(":x: There was an error adding the infraction.")
+                await ctx.send(f":x: There was an error adding the infraction: status {e.status}.")
                 return
 
 
