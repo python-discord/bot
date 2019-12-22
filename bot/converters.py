@@ -316,7 +316,7 @@ class FetchedUser(Converter):
         try:
             user_id = int(user_id)
             log.trace(f"Fetching user {user_id}...")
-            user = await ctx.bot.fetch_user(user_id)
+            return await ctx.bot.fetch_user(user_id)
         except ValueError:
             log.debug(f"Failed to fetch user {user_id}: could not convert to int.")
             raise BadArgument(f"The provided argument can't be turned into integer: `{user_id}`")
@@ -328,5 +328,3 @@ class FetchedUser(Converter):
 
             log.debug(f"Failed to fetch user {user_id}: user does not exist.")
             raise BadArgument(f"User `{user_id}` does not exist")
-
-        return user
