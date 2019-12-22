@@ -96,11 +96,9 @@ async def post_infraction(
                 if not should_post_user or await post_user(ctx, user) is None:
                     return
             else:
-                log.exception("An unexpected ResponseCodeError occurred while adding an infraction:")
+                log.exception(f"Unexpected error while adding an infraction for {user}:")
                 await ctx.send(":x: There was an error adding the infraction.")
                 return
-        else:
-            break
 
 
 async def has_active_infraction(ctx: Context, user: MemberObject, infr_type: str) -> bool:
