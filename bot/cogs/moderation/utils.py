@@ -91,7 +91,7 @@ async def post_infraction(
             response = await ctx.bot.api_client.post('bot/infractions', json=payload)
             return response
         except ResponseCodeError as exp:
-            if exp.status == 400 and 'user'in exp.response_json:
+            if exp.status == 400 and 'user' in exp.response_json:
                 # Only one attempt to add the user to the database, not two:
                 if not should_post_user or await post_user(ctx, user) is None:
                     return
