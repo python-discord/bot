@@ -38,7 +38,7 @@ async def post_user(ctx: Context, user: MemberObject) -> t.Optional[dict]:
     """
     log.trace(f"Attempting to add user {user.id} to the database.")
 
-    if not isinstance(user, discord.User):
+    if not isinstance(user, (discord.Member, discord.User)):
         log.warn("The user being added to the DB is not a Member or User object.")
 
     payload = {
