@@ -9,13 +9,16 @@ from discord.ext.commands import Context, command
 from bot import constants
 from bot.bot import Bot
 from bot.constants import Event
+from bot.converters import FetchedUser
 from bot.decorators import respect_role_hierarchy
 from bot.utils.checks import with_role_check
 from . import utils
 from .scheduler import InfractionScheduler
-from .utils import MemberObject, UserTypes as MemberConverter
+from .utils import MemberObject, UserTypes
 
 log = logging.getLogger(__name__)
+
+MemberConverter = t.Union[UserTypes, FetchedUser]
 
 
 class Infractions(InfractionScheduler, commands.Cog):

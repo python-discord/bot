@@ -8,7 +8,7 @@ from discord.ext.commands import Context
 
 from bot.api import ResponseCodeError
 from bot.constants import Colours, Icons
-from bot.converters import Duration, FetchedUser, ISODateTime
+from bot.converters import Duration, ISODateTime
 
 log = logging.getLogger(__name__)
 
@@ -24,13 +24,13 @@ INFRACTION_ICONS = {
 RULES_URL = "https://pythondiscord.com/pages/rules"
 APPEALABLE_INFRACTIONS = ("ban", "mute")
 
-UserTypes = t.Union[discord.Member, discord.User, FetchedUser]
+UserTypes = t.Union[discord.Member, discord.User]
 MemberObject = t.Union[UserTypes, discord.Object]
 Infraction = t.Dict[str, t.Union[str, int, bool]]
 Expiry = t.Union[Duration, ISODateTime]
 
 
-async def post_user(ctx: Context, user: t.Union[discord.User, discord.Object]) -> t.Optional[dict]:
+async def post_user(ctx: Context, user: MemberObject) -> t.Optional[dict]:
     """
     Create a new user in the database.
 
