@@ -270,6 +270,12 @@ class Emojis(metaclass=YAMLGetter):
     ducky_ninja: int
     ducky_devil: int
     ducky_tube: int
+    ducky_hunt: int
+    ducky_wizard: int
+    ducky_party: int
+    ducky_angel: int
+    ducky_maul: int
+    ducky_santa: int
 
     upvotes: str
     comments: str
