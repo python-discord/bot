@@ -17,7 +17,7 @@ from bot.utils import time
 from bot.utils.scheduling import Scheduler
 from . import utils
 from .modlog import ModLog
-from .utils import MemberObject
+from .utils import UserSnowflake
 
 log = logging.getLogger(__name__)
 
@@ -77,7 +77,7 @@ class InfractionScheduler(Scheduler):
         self,
         ctx: Context,
         infraction: utils.Infraction,
-        user: MemberObject,
+        user: UserSnowflake,
         action_coro: t.Optional[t.Awaitable] = None
     ) -> None:
         """Apply an infraction to the user, log the infraction, and optionally notify the user."""
@@ -189,7 +189,7 @@ class InfractionScheduler(Scheduler):
 
         log.info(f"Applied {infr_type} infraction #{id_} to {user}.")
 
-    async def pardon_infraction(self, ctx: Context, infr_type: str, user: MemberObject) -> None:
+    async def pardon_infraction(self, ctx: Context, infr_type: str, user: UserSnowflake) -> None:
         """Prematurely end an infraction for a user and log the action in the mod log."""
         log.trace(f"Pardoning {infr_type} infraction for {user}.")
 

@@ -24,13 +24,14 @@ INFRACTION_ICONS = {
 RULES_URL = "https://pythondiscord.com/pages/rules"
 APPEALABLE_INFRACTIONS = ("ban", "mute")
 
-UserTypes = t.Union[discord.Member, discord.User]
-MemberObject = t.Union[UserTypes, discord.Object]
+# Type aliases
+UserObject = t.Union[discord.Member, discord.User]
+UserSnowflake = t.Union[UserObject, discord.Object]
 Infraction = t.Dict[str, t.Union[str, int, bool]]
 Expiry = t.Union[Duration, ISODateTime]
 
 
-async def post_user(ctx: Context, user: MemberObject) -> t.Optional[dict]:
+async def post_user(ctx: Context, user: UserSnowflake) -> t.Optional[dict]:
     """
     Create a new user in the database.
 
@@ -61,7 +62,7 @@ async def post_user(ctx: Context, user: MemberObject) -> t.Optional[dict]:
 
 async def post_infraction(
     ctx: Context,
-    user: MemberObject,
+    user: UserSnowflake,
     infr_type: str,
     reason: str,
     expires_at: datetime = None,
@@ -98,7 +99,7 @@ async def post_infraction(
                 return
 
 
-async def has_active_infraction(ctx: Context, user: MemberObject, infr_type: str) -> bool:
+async def has_active_infraction(ctx: Context, user: UserSnowflake, infr_type: str) -> bool:
     """Checks if a user already has an active infraction of the given type."""
     log.trace(f"Checking if {user} has active infractions of type {infr_type}.")
 
@@ -123,7 +124,7 @@ async def has_active_infraction(ctx: Context, user: MemberObject, infr_type: str
 
 
 async def notify_infraction(
-    user: UserTypes,
+    user: UserObject,
     infr_type: str,
     expires_at: t.Optional[str] = None,
     reason: t.Optional[str] = None,
@@ -154,7 +155,7 @@ async def notify_infraction(
 
 
 async def notify_pardon(
-    user: UserTypes,
+    user: UserObject,
     title: str,
     content: str,
     icon_url: str = Icons.user_verified
@@ -172,7 +173,7 @@ async def notify_pardon(
     return await send_private_embed(user, embed)
 
 
-async def send_private_embed(user: UserTypes, embed: discord.Embed) -> bool:
+async def send_private_embed(user: UserObject, embed: discord.Embed) -> bool:
     """
     A helper method for sending an embed to a user's DMs.
 

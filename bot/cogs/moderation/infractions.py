@@ -14,7 +14,7 @@ from bot.decorators import respect_role_hierarchy
 from bot.utils.checks import with_role_check
 from . import utils
 from .scheduler import InfractionScheduler
-from .utils import MemberObject
+from .utils import UserSnowflake
 
 log = logging.getLogger(__name__)
 
@@ -229,7 +229,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         await self.apply_infraction(ctx, infraction, user, action)
 
     @respect_role_hierarchy()
-    async def apply_ban(self, ctx: Context, user: MemberObject, reason: str, **kwargs) -> None:
+    async def apply_ban(self, ctx: Context, user: UserSnowflake, reason: str, **kwargs) -> None:
         """Apply a ban infraction with kwargs passed to `post_infraction`."""
         if await utils.has_active_infraction(ctx, user, "ban"):
             return
