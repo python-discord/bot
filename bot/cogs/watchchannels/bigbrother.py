@@ -1,8 +1,6 @@
 import logging
 from collections import ChainMap
-from typing import Union
 
-from discord import User
 from discord.ext.commands import Cog, Context, group
 
 from bot.bot import Bot
@@ -47,7 +45,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
 
     @bigbrother_group.command(name='watch', aliases=('w',))
     @with_role(*MODERATION_ROLES)
-    async def watch_command(self, ctx: Context, user: Union[User, FetchedUser], *, reason: str) -> None:
+    async def watch_command(self, ctx: Context, user: FetchedUser, *, reason: str) -> None:
         """
         Relay messages sent by the given `user` to the `#big-brother` channel.
 
@@ -94,7 +92,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
 
     @bigbrother_group.command(name='unwatch', aliases=('uw',))
     @with_role(*MODERATION_ROLES)
-    async def unwatch_command(self, ctx: Context, user: Union[User, FetchedUser], *, reason: str) -> None:
+    async def unwatch_command(self, ctx: Context, user: FetchedUser, *, reason: str) -> None:
         """Stop relaying messages by the given `user`."""
         active_watches = await self.bot.api_client.get(
             self.api_endpoint,

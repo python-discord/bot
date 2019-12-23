@@ -20,8 +20,6 @@ from .modlog import ModLog
 
 log = logging.getLogger(__name__)
 
-UserConverter = t.Union[discord.User, proxy_user]
-
 
 class ModManagement(commands.Cog):
     """Management of infractions."""
@@ -182,7 +180,7 @@ class ModManagement(commands.Cog):
             await ctx.invoke(self.search_reason, query)
 
     @infraction_search_group.command(name="user", aliases=("member", "id"))
-    async def search_user(self, ctx: Context, user: UserConverter) -> None:
+    async def search_user(self, ctx: Context, user: t.Union[discord.User, proxy_user]) -> None:
         """Search for infractions by member."""
         infraction_list = await self.bot.api_client.get(
             'bot/infractions',

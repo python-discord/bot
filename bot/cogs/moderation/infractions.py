@@ -14,11 +14,9 @@ from bot.decorators import respect_role_hierarchy
 from bot.utils.checks import with_role_check
 from . import utils
 from .scheduler import InfractionScheduler
-from .utils import MemberObject, UserTypes
+from .utils import MemberObject
 
 log = logging.getLogger(__name__)
-
-MemberConverter = t.Union[UserTypes, FetchedUser]
 
 
 class Infractions(InfractionScheduler, commands.Cog):
@@ -68,7 +66,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         await self.apply_kick(ctx, user, reason, active=False)
 
     @command()
-    async def ban(self, ctx: Context, user: MemberConverter, *, reason: str = None) -> None:
+    async def ban(self, ctx: Context, user: FetchedUser, *, reason: str = None) -> None:
         """Permanently ban a user for the given reason."""
         await self.apply_ban(ctx, user, reason)
 
@@ -95,7 +93,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         await self.apply_mute(ctx, user, reason, expires_at=duration)
 
     @command()
-    async def tempban(self, ctx: Context, user: MemberConverter, duration: utils.Expiry, *, reason: str = None) -> None:
+    async def tempban(self, ctx: Context, user: FetchedUser, duration: utils.Expiry, *, reason: str = None) -> None:
         """
         Temporarily ban a user for the given reason and duration.
 
@@ -117,7 +115,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     # region: Permanent shadow infractions
 
     @command(hidden=True)
-    async def note(self, ctx: Context, user: MemberConverter, *, reason: str = None) -> None:
+    async def note(self, ctx: Context, user: FetchedUser, *, reason: str = None) -> None:
         """Create a private note for a user with the given reason without notifying the user."""
         infraction = await utils.post_infraction(ctx, user, "note", reason, hidden=True, active=False)
         if infraction is None:
@@ -131,7 +129,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         await self.apply_kick(ctx, user, reason, hidden=True, active=False)
 
     @command(hidden=True, aliases=['shadowban', 'sban'])
-    async def shadow_ban(self, ctx: Context, user: MemberConverter, *, reason: str = None) -> None:
+    async def shadow_ban(self, ctx: Context, user: FetchedUser, *, reason: str = None) -> None:
         """Permanently ban a user for the given reason without notifying the user."""
         await self.apply_ban(ctx, user, reason, hidden=True)
 
@@ -161,7 +159,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     async def shadow_tempban(
         self,
         ctx: Context,
-        user: MemberConverter,
+        user: FetchedUser,
         duration: utils.Expiry,
         *,
         reason: str = None
@@ -187,12 +185,12 @@ class Infractions(InfractionScheduler, commands.Cog):
     # region: Remove infractions (un- commands)
 
     @command()
-    async def unmute(self, ctx: Context, user: MemberConverter) -> None:
+    async def unmute(self, ctx: Context, user: FetchedUser) -> None:
         """Prematurely end the active mute infraction for the user."""
         await self.pardon_infraction(ctx, "mute", user)
 
     @command()
-    async def unban(self, ctx: Context, user: MemberConverter) -> None:
+    async def unban(self, ctx: Context, user: FetchedUser) -> None:
         """Prematurely end the active ban infraction for the user."""
         await self.pardon_infraction(ctx, "ban", user)
 

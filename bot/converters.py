@@ -9,7 +9,7 @@ import dateutil.tz
 import discord
 from aiohttp import ClientConnectorError
 from dateutil.relativedelta import relativedelta
-from discord.ext.commands import BadArgument, Context, Converter
+from discord.ext.commands import BadArgument, Context, Converter, UserConverter
 
 
 log = logging.getLogger(__name__)
@@ -303,30 +303,46 @@ def proxy_user(user_id: str) -> discord.Object:
     return user
 
 
-class FetchedUser(Converter):
+class FetchedUser(UserConverter):
     """
-    Fetches from the Discord API and returns a `discord.User` or `discord.Object` object, given an ID.
+    Converts to a `discord.User` or, if it fails, a `discord.Object`.
 
-    If the fetching is successful, a `discord.User` object is returned. If it fails and
-    the error doesn't imply the user doesn't exist, then a `discord.Object` is returned
-    via the `user_proxy` function.
+    Unlike the default `UserConverter`, which only does lookups via the global user cache, this
+    converter attempts to fetch the user via an API call to Discord when the using the cache is
+    unsuccessful.
+
+    If the fetch also fails and the error doesn't imply the user doesn't exist, then a
+    `discord.Object` is returned via the `user_proxy` converter.
+
+    The lookup strategy is as follows (in order):
+
+    1. Lookup by ID.
+    2. Lookup by mention.
+    3. Lookup by name#discrim
+    4. Lookup by name
+    5. Lookup via API
+    6. Create a proxy user with discord.Object
     """
 
-    @staticmethod
-    async def convert(ctx: Context, user_id: str) -> t.Union[discord.User, discord.Object]:
-        """Convert `user_id` to a `discord.User` object, after fetching from the Discord API."""
+    async def convert(self, ctx: Context, arg: str) -> t.Union[discord.User, discord.Object]:
+        """Convert the `arg` to a `discord.User` or `discord.Object`."""
         try:
-            user_id = int(user_id)
+            return await super().convert(ctx, arg)
+        except BadArgument:
+            pass
+
+        try:
+            user_id = int(arg)
             log.trace(f"Fetching user {user_id}...")
             return await ctx.bot.fetch_user(user_id)
         except ValueError:
-            log.debug(f"Failed to fetch user {user_id}: could not convert to int.")
-            raise BadArgument(f"The provided argument can't be turned into integer: `{user_id}`")
+            log.debug(f"Failed to fetch user {arg}: could not convert to int.")
+            raise BadArgument(f"The provided argument can't be turned into integer: `{arg}`")
         except discord.HTTPException as e:
-            # If the Discord error isn't `Unknown user`, save it in the log and return a proxy instead
+            # If the Discord error isn't `Unknown user`, return a proxy instead
             if e.code != 10013:
                 log.warning(f"Failed to fetch user, returning a proxy instead: status {e.status}")
-                return proxy_user(user_id)
+                return proxy_user(arg)
 
-            log.debug(f"Failed to fetch user {user_id}: user does not exist.")
-            raise BadArgument(f"User `{user_id}` does not exist")
+            log.debug(f"Failed to fetch user {arg}: user does not exist.")
+            raise BadArgument(f"User `{arg}` does not exist")

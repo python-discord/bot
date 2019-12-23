@@ -1,9 +1,8 @@
 import logging
 import textwrap
 from collections import ChainMap
-from typing import Union
 
-from discord import Color, Embed, Member, User
+from discord import Color, Embed, Member
 from discord.ext.commands import Cog, Context, group
 
 from bot.api import ResponseCodeError
@@ -50,7 +49,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
 
     @nomination_group.command(name='watch', aliases=('w', 'add', 'a'))
     @with_role(*STAFF_ROLES)
-    async def watch_command(self, ctx: Context, user: Union[Member, User, FetchedUser], *, reason: str) -> None:
+    async def watch_command(self, ctx: Context, user: FetchedUser, *, reason: str) -> None:
         """
         Relay messages sent by the given `user` to the `#talent-pool` channel.
 
@@ -115,7 +114,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
 
     @nomination_group.command(name='history', aliases=('info', 'search'))
     @with_role(*MODERATION_ROLES)
-    async def history_command(self, ctx: Context, user: Union[User, FetchedUser]) -> None:
+    async def history_command(self, ctx: Context, user: FetchedUser) -> None:
         """Shows the specified user's nomination history."""
         result = await self.bot.api_client.get(
             self.api_endpoint,
@@ -144,7 +143,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
 
     @nomination_group.command(name='unwatch', aliases=('end', ))
     @with_role(*MODERATION_ROLES)
-    async def unwatch_command(self, ctx: Context, user: Union[User, FetchedUser], *, reason: str) -> None:
+    async def unwatch_command(self, ctx: Context, user: FetchedUser, *, reason: str) -> None:
         """
         Ends the active nomination of the specified user with the given reason.
 

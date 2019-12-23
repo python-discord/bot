@@ -1,8 +1,7 @@
 import inspect
 import logging
-from typing import Union
 
-from discord import Colour, Embed, Member, User
+from discord import Colour, Embed
 from discord.ext.commands import Cog, Command, Context, clean_content, command, group
 
 from bot.bot import Bot
@@ -60,18 +59,12 @@ class Alias (Cog):
         await self.invoke(ctx, "site tools")
 
     @command(name="watch", hidden=True)
-    async def bigbrother_watch_alias(
-            self,
-            ctx: Context,
-            user: Union[Member, User, FetchedUser],
-            *,
-            reason: str
-    ) -> None:
+    async def bigbrother_watch_alias(self, ctx: Context, user: FetchedUser, *, reason: str) -> None:
         """Alias for invoking <prefix>bigbrother watch [user] [reason]."""
         await self.invoke(ctx, "bigbrother watch", user, reason=reason)
 
     @command(name="unwatch", hidden=True)
-    async def bigbrother_unwatch_alias(self, ctx: Context, user: Union[User, FetchedUser], *, reason: str) -> None:
+    async def bigbrother_unwatch_alias(self, ctx: Context, user: FetchedUser, *, reason: str) -> None:
         """Alias for invoking <prefix>bigbrother unwatch [user] [reason]."""
         await self.invoke(ctx, "bigbrother unwatch", user, reason=reason)
 
@@ -137,12 +130,12 @@ class Alias (Cog):
         await self.invoke(ctx, "docs get", symbol)
 
     @command(name="nominate", hidden=True)
-    async def nomination_add_alias(self, ctx: Context, user: Union[Member, User, FetchedUser], *, reason: str) -> None:
+    async def nomination_add_alias(self, ctx: Context, user: FetchedUser, *, reason: str) -> None:
         """Alias for invoking <prefix>talentpool add [user] [reason]."""
         await self.invoke(ctx, "talentpool add", user, reason=reason)
 
     @command(name="unnominate", hidden=True)
-    async def nomination_end_alias(self, ctx: Context, user: Union[User, FetchedUser], *, reason: str) -> None:
+    async def nomination_end_alias(self, ctx: Context, user: FetchedUser, *, reason: str) -> None:
         """Alias for invoking <prefix>nomination end [user] [reason]."""
         await self.invoke(ctx, "nomination end", user, reason=reason)
 
