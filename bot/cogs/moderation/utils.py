@@ -8,7 +8,6 @@ from discord.ext.commands import Context
 
 from bot.api import ResponseCodeError
 from bot.constants import Colours, Icons
-from bot.converters import Duration, ISODateTime
 
 log = logging.getLogger(__name__)
 
@@ -28,7 +27,6 @@ APPEALABLE_INFRACTIONS = ("ban", "mute")
 UserObject = t.Union[discord.Member, discord.User]
 UserSnowflake = t.Union[UserObject, discord.Object]
 Infraction = t.Dict[str, t.Union[str, int, bool]]
-Expiry = t.Union[Duration, ISODateTime]
 
 
 async def post_user(ctx: Context, user: UserSnowflake) -> t.Optional[dict]:

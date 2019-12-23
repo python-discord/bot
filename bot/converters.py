@@ -348,4 +348,5 @@ class FetchedUser(UserConverter):
             raise BadArgument(f"User `{arg}` does not exist")
 
 
+Expiry = t.Union[Duration, ISODateTime]
 FetchedMember = t.Union[discord.Member, FetchedUser]

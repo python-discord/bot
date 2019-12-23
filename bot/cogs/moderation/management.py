@@ -10,7 +10,7 @@ from discord.ext.commands import Context
 
 from bot import constants
 from bot.bot import Bot
-from bot.converters import InfractionSearchQuery, allowed_strings, proxy_user
+from bot.converters import Expiry, InfractionSearchQuery, allowed_strings, proxy_user
 from bot.pagination import LinePaginator
 from bot.utils import time
 from bot.utils.checks import in_channel_check, with_role_check
@@ -51,7 +51,7 @@ class ModManagement(commands.Cog):
         self,
         ctx: Context,
         infraction_id: t.Union[int, allowed_strings("l", "last", "recent")],
-        duration: t.Union[utils.Expiry, allowed_strings("p", "permanent"), None],
+        duration: t.Union[Expiry, allowed_strings("p", "permanent"), None],
         *,
         reason: str = None
     ) -> None:

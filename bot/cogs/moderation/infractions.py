@@ -9,7 +9,7 @@ from discord.ext.commands import Context, command
 from bot import constants
 from bot.bot import Bot
 from bot.constants import Event
-from bot.converters import FetchedMember
+from bot.converters import Expiry, FetchedMember
 from bot.decorators import respect_role_hierarchy
 from bot.utils.checks import with_role_check
 from . import utils
@@ -74,7 +74,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     # region: Temporary infractions
 
     @command(aliases=["mute"])
-    async def tempmute(self, ctx: Context, user: Member, duration: utils.Expiry, *, reason: str = None) -> None:
+    async def tempmute(self, ctx: Context, user: Member, duration: Expiry, *, reason: str = None) -> None:
         """
         Temporarily mute a user for the given reason and duration.
 
@@ -93,7 +93,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         await self.apply_mute(ctx, user, reason, expires_at=duration)
 
     @command()
-    async def tempban(self, ctx: Context, user: FetchedMember, duration: utils.Expiry, *, reason: str = None) -> None:
+    async def tempban(self, ctx: Context, user: FetchedMember, duration: Expiry, *, reason: str = None) -> None:
         """
         Temporarily ban a user for the given reason and duration.
 
@@ -137,7 +137,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     # region: Temporary shadow infractions
 
     @command(hidden=True, aliases=["shadowtempmute, stempmute", "shadowmute", "smute"])
-    async def shadow_tempmute(self, ctx: Context, user: Member, duration: utils.Expiry, *, reason: str = None) -> None:
+    async def shadow_tempmute(self, ctx: Context, user: Member, duration: Expiry, *, reason: str = None) -> None:
         """
         Temporarily mute a user for the given reason and duration without notifying the user.
 
@@ -160,7 +160,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         self,
         ctx: Context,
         user: FetchedMember,
-        duration: utils.Expiry,
+        duration: Expiry,
         *,
         reason: str = None
     ) -> None:
