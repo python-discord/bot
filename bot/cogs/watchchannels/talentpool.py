@@ -8,7 +8,7 @@ from discord.ext.commands import Cog, Context, group
 from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Channels, Guild, MODERATION_ROLES, STAFF_ROLES, Webhooks
-from bot.converters import FetchedUser
+from bot.converters import FetchedMember
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
 from bot.utils import time
@@ -49,7 +49,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
 
     @nomination_group.command(name='watch', aliases=('w', 'add', 'a'))
     @with_role(*STAFF_ROLES)
-    async def watch_command(self, ctx: Context, user: FetchedUser, *, reason: str) -> None:
+    async def watch_command(self, ctx: Context, user: FetchedMember, *, reason: str) -> None:
         """
         Relay messages sent by the given `user` to the `#talent-pool` channel.
 
@@ -114,7 +114,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
 
     @nomination_group.command(name='history', aliases=('info', 'search'))
     @with_role(*MODERATION_ROLES)
-    async def history_command(self, ctx: Context, user: FetchedUser) -> None:
+    async def history_command(self, ctx: Context, user: FetchedMember) -> None:
         """Shows the specified user's nomination history."""
         result = await self.bot.api_client.get(
             self.api_endpoint,
@@ -143,7 +143,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
 
     @nomination_group.command(name='unwatch', aliases=('end', ))
     @with_role(*MODERATION_ROLES)
-    async def unwatch_command(self, ctx: Context, user: FetchedUser, *, reason: str) -> None:
+    async def unwatch_command(self, ctx: Context, user: FetchedMember, *, reason: str) -> None:
         """
         Ends the active nomination of the specified user with the given reason.
 

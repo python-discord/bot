@@ -346,3 +346,6 @@ class FetchedUser(UserConverter):
 
             log.debug(f"Failed to fetch user {arg}: user does not exist.")
             raise BadArgument(f"User `{arg}` does not exist")
+
+
+FetchedMember = t.Union[discord.Member, FetchedUser]
