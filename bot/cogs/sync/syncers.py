@@ -43,6 +43,7 @@ class Syncer(abc.ABC):
         log.trace(f"Sending {self.name} sync confirmation prompt.")
 
         allowed_emoji = (constants.Emojis.check_mark, constants.Emojis.cross_mark)
+        mention = ""
         msg_content = (
             f'Possible cache issue while syncing {self.name}s. '
             f'More than {self.MAX_DIFF} {self.name}s were changed. '
@@ -65,7 +66,8 @@ class Syncer(abc.ABC):
                     )
                     return False
 
-            message = await channel.send(f"<@&{constants.Roles.core_developer}> {msg_content}")
+            mention = f"<@&{constants.Roles.core_developer}> "
+            message = await channel.send(f"{mention}{msg_content}")
         else:
             await message.edit(content=msg_content)
 
@@ -98,11 +100,11 @@ class Syncer(abc.ABC):
         finally:
             if str(reaction) == constants.Emojis.check_mark:
                 log.trace(f"The {self.name} syncer was confirmed.")
-                await message.edit(content=f':ok_hand: {self.name} sync will proceed.')
+                await message.edit(content=f':ok_hand: {mention}{self.name} sync will proceed.')
                 return True
             else:
-                log.warning(f"{self.name} syncer aborted or timed out!")
-                await message.edit(content=f':x: {self.name} sync aborted or timed out!')
+                log.warning(f"The {self.name} syncer was aborted or timed out!")
+                await message.edit(content=f':x: {mention}{self.name} sync aborted or timed out!')
                 return False
 
     @abc.abstractmethod
