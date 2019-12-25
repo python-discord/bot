@@ -1,7 +1,7 @@
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
-from discord import Guild, Member, Role, User
+from discord import Member, Role, User
 from discord.ext import commands
 from discord.ext.commands import Cog, Context
 
@@ -18,8 +18,8 @@ class Sync(Cog):
 
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
-        self.role_syncer = syncers.RoleSyncer(self.bot.api_client)
-        self.user_syncer = syncers.UserSyncer(self.bot.api_client)
+        self.role_syncer = syncers.RoleSyncer(self.bot)
+        self.user_syncer = syncers.UserSyncer(self.bot)
 
         self.bot.loop.create_task(self.sync_guild())
 
@@ -32,32 +32,7 @@ class Sync(Cog):
             return
 
         for syncer in (self.role_syncer, self.user_syncer):
-            await self.sync(syncer, guild)
-
-    @staticmethod
-    async def sync(syncer: syncers.Syncer, guild: Guild, ctx: Optional[Context] = None) -> None:
-        """Run `syncer` using the cache of the given `guild`."""
-        log.info(f"Starting {syncer.name} syncer.")
-        if ctx:
-            message = await ctx.send(f"📊 Synchronising {syncer.name}s.")
-
-        diff = await syncer.sync(guild, ctx)
-        if not diff:
-            return  # Sync was aborted.
-
-        totals = zip(("created", "updated", "deleted"), diff)
-        results = ", ".join(f"{name} `{len(total)}`" for name, total in totals if total is not None)
-
-        if results:
-            log.info(f"{syncer.name} syncer finished: {results}.")
-            if ctx:
-                await message.edit(
-                    content=f":ok_hand: Synchronisation of {syncer.name}s complete: {results}"
-                )
-        else:
-            log.warning(f"{syncer.name} syncer aborted!")
-            if ctx:
-                await message.edit(content=f":x: Synchronisation of {syncer.name}s aborted!")
+            await syncer.sync(guild)
 
     async def patch_user(self, user_id: int, updated_information: Dict[str, Any]) -> None:
         """Send a PATCH request to partially update a user in the database."""
@@ -186,10 +161,10 @@ class Sync(Cog):
     @commands.has_permissions(administrator=True)
     async def sync_roles_command(self, ctx: Context) -> None:
         """Manually synchronise the guild's roles with the roles on the site."""
-        await self.sync(self.role_syncer, ctx.guild, ctx)
+        await self.role_syncer.sync(ctx.guild, ctx)
 
     @sync_group.command(name='users')
     @commands.has_permissions(administrator=True)
     async def sync_users_command(self, ctx: Context) -> None:
         """Manually synchronise the guild's users with the users on the site."""
-        await self.sync(self.user_syncer, ctx.guild, ctx)
+        await self.user_syncer.sync(ctx.guild, ctx)
