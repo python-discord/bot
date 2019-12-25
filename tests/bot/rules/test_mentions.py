@@ -1,24 +1,23 @@
 import unittest
 from typing import List, NamedTuple, Tuple
 
-from bot.rules import links
+from bot.rules import mentions
 from tests.helpers import MockMessage, async_test
 
 
 class Case(NamedTuple):
     recent_messages: List[MockMessage]
     culprit: Tuple[str]
-    total_links: int
+    total_mentions: int
 
 
-def msg(author: str, total_links: int) -> MockMessage:
-    """Makes a message with `total_links` links."""
-    content = " ".join(["https://pydis.com"] * total_links)
-    return MockMessage(author=author, content=content)
+def msg(author: str, total_mentions: int) -> MockMessage:
+    """Makes a message with `total_mentions` mentions."""
+    return MockMessage(author=author, mentions=list(range(total_mentions)))
 
 
-class LinksTests(unittest.TestCase):
-    """Tests applying the `links` rule."""
+class TestMentions(unittest.TestCase):
+    """Tests applying the `mentions` antispam rule."""
 
     def setUp(self):
         self.config = {
@@ -27,14 +26,13 @@ class LinksTests(unittest.TestCase):
         }
 
     @async_test
-    async def test_links_within_limit(self):
-        """Messages with an allowed amount of links."""
+    async def test_mentions_within_limit(self):
+        """Messages with an allowed amount of mentions."""
         cases = (
             [msg("bob", 0)],
             [msg("bob", 2)],
-            [msg("bob", 3)],  # Filter only applies if len(messages_with_links) > 1
             [msg("bob", 1), msg("bob", 1)],
-            [msg("bob", 2), msg("alice", 2)]  # Only messages from latest author count
+            [msg("bob", 1), msg("alice", 2)]
         )
 
         for recent_messages in cases:
@@ -46,31 +44,31 @@ class LinksTests(unittest.TestCase):
                 config=self.config
             ):
                 self.assertIsNone(
-                    await links.apply(last_message, recent_messages, self.config)
+                    await mentions.apply(last_message, recent_messages, self.config)
                 )
 
     @async_test
-    async def test_links_exceeding_limit(self):
-        """Messages with a a higher than allowed amount of links."""
+    async def test_mentions_exceeding_limit(self):
+        """Messages with a higher than allowed amount of mentions."""
         cases = (
             Case(
-                [msg("bob", 1), msg("bob", 2)],
+                [msg("bob", 3)],
                 ("bob",),
                 3
             ),
             Case(
-                [msg("alice", 1), msg("alice", 1), msg("alice", 1)],
+                [msg("alice", 2), msg("alice", 0), msg("alice", 1)],
                 ("alice",),
                 3
             ),
             Case(
-                [msg("alice", 2), msg("bob", 3), msg("alice", 1)],
-                ("alice",),
-                3
+                [msg("bob", 2), msg("alice", 3), msg("bob", 2)],
+                ("bob",),
+                4
             )
         )
 
-        for recent_messages, culprit, total_links in cases:
+        for recent_messages, culprit, total_mentions in cases:
             last_message = recent_messages[0]
             relevant_messages = tuple(
                 msg
@@ -83,15 +81,15 @@ class LinksTests(unittest.TestCase):
                 recent_messages=recent_messages,
                 relevant_messages=relevant_messages,
                 culprit=culprit,
-                total_links=total_links,
-                config=self.config
+                total_mentions=total_mentions,
+                cofig=self.config
             ):
                 desired_output = (
-                    f"sent {total_links} links in {self.config['interval']}s",
+                    f"sent {total_mentions} mentions in {self.config['interval']}s",
                     culprit,
                     relevant_messages
                 )
                 self.assertTupleEqual(
-                    await links.apply(last_message, recent_messages, self.config),
+                    await mentions.apply(last_message, recent_messages, self.config),
                     desired_output
                 )

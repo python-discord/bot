@@ -1,12 +1,13 @@
 import logging
-from typing import Callable, Iterable
+from typing import Callable, Dict, Iterable, Union
 
-from discord import Guild, Member, Role
+from discord import Guild, Member, Role, User
 from discord.ext import commands
-from discord.ext.commands import Bot, Cog, Context
+from discord.ext.commands import Cog, Context
 
 from bot import constants
 from bot.api import ResponseCodeError
+from bot.bot import Bot
 from bot.cogs.sync import syncers
 
 log = logging.getLogger(__name__)
@@ -49,6 +50,15 @@ class Sync(Cog):
                         f"`{syncer_name}` syncer finished, created `{total_created}`, updated `{total_updated}`, "
                         f"deleted `{total_deleted}`."
                     )
+
+    async def patch_user(self, user_id: int, updated_information: Dict[str, Union[str, int]]) -> None:
+        """Send a PATCH request to partially update a user in the database."""
+        try:
+            await self.bot.api_client.patch("bot/users/" + str(user_id), json=updated_information)
+        except ResponseCodeError as e:
+            if e.response.status != 404:
+                raise
+            log.warning("Unable to update user, got 404. Assuming race condition from join event.")
 
     @Cog.listener()
     async def on_guild_role_create(self, role: Role) -> None:
@@ -142,33 +152,21 @@ class Sync(Cog):
 
     @Cog.listener()
     async def on_member_update(self, before: Member, after: Member) -> None:
-        """Updates the user information if any of relevant attributes have changed."""
-        if (
-                before.name != after.name
-                or before.avatar != after.avatar
-                or before.discriminator != after.discriminator
-                or before.roles != after.roles
-        ):
-            try:
-                await self.bot.api_client.put(
-                    'bot/users/' + str(after.id),
-                    json={
-                        'avatar_hash': after.avatar,
-                        'discriminator': int(after.discriminator),
-                        'id': after.id,
-                        'in_guild': True,
-                        'name': after.name,
-                        'roles': sorted(role.id for role in after.roles)
-                    }
-                )
-            except ResponseCodeError as e:
-                if e.response.status != 404:
-                    raise
+        """Update the roles of the member in the database if a change is detected."""
+        if before.roles != after.roles:
+            updated_information = {"roles": sorted(role.id for role in after.roles)}
+            await self.patch_user(after.id, updated_information=updated_information)
 
-                log.warning(
-                    "Unable to update user, got 404. "
-                    "Assuming race condition from join event."
-                )
+    @Cog.listener()
+    async def on_user_update(self, before: User, after: User) -> None:
+        """Update the user information in the database if a relevant change is detected."""
+        if any(getattr(before, attr) != getattr(after, attr) for attr in ("name", "discriminator", "avatar")):
+            updated_information = {
+                "name": after.name,
+                "discriminator": int(after.discriminator),
+                "avatar_hash": after.avatar,
+            }
+            await self.patch_user(after.id, updated_information=updated_information)
 
     @commands.group(name='sync')
     @commands.has_permissions(administrator=True)

@@ -27,6 +27,8 @@ style:
         status_dnd:     "<:status_dnd:470326272082313216>"
         status_offline: "<:status_offline:470326266537705472>"
 
+        failmail: "<:failmail:633660039931887616>"
+
         bullet:     "\u2022"
         pencil:     "\u270F"
         new:        "\U0001F195"
@@ -39,6 +41,12 @@ style:
         ducky_ninja:    &DUCKY_NINJA    637923502535606293
         ducky_devil:    &DUCKY_DEVIL    637925314982576139
         ducky_tube:     &DUCKY_TUBE     637881368008851456
+        ducky_hunt:     &DUCKY_HUNT     639355090909528084
+        ducky_wizard:   &DUCKY_WIZARD   639355996954689536
+        ducky_party:    &DUCKY_PARTY    639468753440210977
+        ducky_angel:    &DUCKY_ANGEL    640121935610511361
+        ducky_maul:     &DUCKY_MAUL     640137724958867467
+        ducky_santa:    &DUCKY_SANTA    655360331002019870
 
         upvotes:        "<:upvotes:638729835245731840>"
         comments:       "<:comments:638729835073765387>"
@@ -361,11 +369,18 @@ anti_malware:
         - '.png'
         - '.tiff'
         - '.wmv'
+        - '.svg'
+        - '.psd'  # Photoshop
+        - '.ai'   # Illustrator
+        - '.aep'  # After Effects
+        - '.xcf'  # GIMP
 
 
 reddit:
     subreddits:
         - 'r/Python'
+    client_id: !ENV "REDDIT_CLIENT_ID"
+    secret:    !ENV "REDDIT_SECRET"
 
 
 wolfram:
@@ -397,7 +412,7 @@ redirect_output:
 
 duck_pond:
     threshold: 5
-    custom_emojis: [*DUCKY_YELLOW, *DUCKY_BLURPLE, *DUCKY_CAMO, *DUCKY_DEVIL, *DUCKY_NINJA, *DUCKY_REGAL, *DUCKY_TUBE]
+    custom_emojis: [*DUCKY_YELLOW, *DUCKY_BLURPLE, *DUCKY_CAMO, *DUCKY_DEVIL, *DUCKY_NINJA, *DUCKY_REGAL, *DUCKY_TUBE, *DUCKY_HUNT, *DUCKY_WIZARD, *DUCKY_PARTY, *DUCKY_ANGEL, *DUCKY_MAUL, *DUCKY_SANTA]
 
 config:
     required_keys: ['bot.token']
