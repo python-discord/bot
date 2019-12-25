@@ -3,7 +3,7 @@ import logging
 import typing as t
 from collections import namedtuple
 
-from discord import Guild, HTTPException, Message
+from discord import Guild, HTTPException, Member, Message
 from discord.ext.commands import Context
 
 from bot import constants
@@ -33,7 +33,7 @@ class Syncer(abc.ABC):
         """The name of the syncer; used in output messages and logging."""
         raise NotImplementedError
 
-    async def _confirm(self, message: t.Optional[Message] = None) -> bool:
+    async def _confirm(self, author: Member, message: t.Optional[Message] = None) -> bool:
         """
         Send a prompt to confirm or abort a sync using reactions and return True if confirmed.
 
@@ -70,10 +70,12 @@ class Syncer(abc.ABC):
             await message.add_reaction(emoji)
 
         def check(_reaction, user):  # noqa: TYP
-            # Skip author check for auto syncs
+            # For automatic syncs, check for the core dev role instead of an exact author
+            has_role = any(constants.Roles.core_developer == role.id for role in user.roles)
             return (
                 _reaction.message.id == message.id
-                and True if message.author.bot else user == message.author
+                and not user.bot
+                and has_role if author.bot else user == author
                 and str(_reaction.emoji) in allowed_emoji
             )
 
@@ -115,14 +117,17 @@ class Syncer(abc.ABC):
         optionally redirect to `ctx` instead.
         """
         log.info(f"Starting {self.name} syncer.")
+
         message = None
+        author = self.bot.user
         if ctx:
             message = await ctx.send(f"📊 Synchronising {self.name}s.")
+            author = ctx.author
 
         diff = await self._get_diff(guild)
         totals = {k: len(v) for k, v in diff._asdict().items() if v is not None}
 
-        if sum(totals.values()) > self.MAX_DIFF and not await self._confirm(message):
+        if sum(totals.values()) > self.MAX_DIFF and not await self._confirm(author, message):
             return  # Sync aborted.
 
         await self._sync(diff)
