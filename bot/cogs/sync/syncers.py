@@ -15,19 +15,10 @@ log = logging.getLogger(__name__)
 # something that we make use of when diffing site roles against guild roles.
 Role = namedtuple('Role', ('id', 'name', 'colour', 'permissions', 'position'))
 User = namedtuple('User', ('id', 'name', 'discriminator', 'avatar_hash', 'roles', 'in_guild'))
-
-_T = t.TypeVar("_T")
-
-
-class Diff(t.NamedTuple, t.Generic[_T]):
-    """The differences between the Discord cache and the contents of the database."""
-
-    created: t.Set[_T] = {}
-    updated: t.Set[_T] = {}
-    deleted: t.Set[_T] = {}
+Diff = namedtuple('Diff', ('created', 'updated', 'deleted'))
 
 
-class Syncer(abc.ABC, t.Generic[_T]):
+class Syncer(abc.ABC):
     """Base class for synchronising the database with objects in the Discord cache."""
 
     CONFIRM_TIMEOUT = 60 * 5  # 5 minutes
@@ -106,12 +97,12 @@ class Syncer(abc.ABC, t.Generic[_T]):
                 return False
 
     @abc.abstractmethod
-    async def _get_diff(self, guild: Guild) -> Diff[_T]:
+    async def _get_diff(self, guild: Guild) -> Diff:
         """Return the difference between the cache of `guild` and the database."""
         raise NotImplementedError
 
     @abc.abstractmethod
-    async def _sync(self, diff: Diff[_T]) -> None:
+    async def _sync(self, diff: Diff) -> None:
         """Perform the API calls for synchronisation."""
         raise NotImplementedError
 
@@ -143,12 +134,12 @@ class Syncer(abc.ABC, t.Generic[_T]):
             )
 
 
-class RoleSyncer(Syncer[Role]):
+class RoleSyncer(Syncer):
     """Synchronise the database with roles in the cache."""
 
     name = "role"
 
-    async def _get_diff(self, guild: Guild) -> Diff[Role]:
+    async def _get_diff(self, guild: Guild) -> Diff:
         """Return the difference of roles between the cache of `guild` and the database."""
         roles = await self.bot.api_client.get('bot/roles')
 
@@ -179,7 +170,7 @@ class RoleSyncer(Syncer[Role]):
 
         return Diff(roles_to_create, roles_to_update, roles_to_delete)
 
-    async def _sync(self, diff: Diff[Role]) -> None:
+    async def _sync(self, diff: Diff) -> None:
         """Synchronise the database with the role cache of `guild`."""
         for role in diff.created:
             await self.bot.api_client.post('bot/roles', json={**role._asdict()})
@@ -191,12 +182,12 @@ class RoleSyncer(Syncer[Role]):
             await self.bot.api_client.delete(f'bot/roles/{role.id}')
 
 
-class UserSyncer(Syncer[User]):
+class UserSyncer(Syncer):
     """Synchronise the database with users in the cache."""
 
     name = "user"
 
-    async def _get_diff(self, guild: Guild) -> Diff[User]:
+    async def _get_diff(self, guild: Guild) -> Diff:
         """Return the difference of users between the cache of `guild` and the database."""
         users = await self.bot.api_client.get('bot/users')
 
@@ -248,7 +239,7 @@ class UserSyncer(Syncer[User]):
 
         return Diff(users_to_create, users_to_update)
 
-    async def _sync(self, diff: Diff[User]) -> None:
+    async def _sync(self, diff: Diff) -> None:
         """Synchronise the database with the user cache of `guild`."""
         for user in diff.created:
             await self.bot.api_client.post('bot/users', json={**user._asdict()})
