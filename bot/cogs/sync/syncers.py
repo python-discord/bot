@@ -43,7 +43,7 @@ class Syncer(abc.ABC):
         allowed_emoji = (constants.Emojis.check_mark, constants.Emojis.cross_mark)
         msg_content = (
             f'Possible cache issue while syncing {self.name}s. '
-            f'Found no {self.name}s or more than {self.MAX_DIFF} {self.name}s were changed. '
+            f'More than {self.MAX_DIFF} {self.name}s were changed. '
             f'React to confirm or abort the sync.'
         )
 
@@ -63,7 +63,7 @@ class Syncer(abc.ABC):
 
             message = await channel.send(f"<@&{constants.Roles.core_developer}> {msg_content}")
         else:
-            await message.edit(content=f"{message.author.mention} {msg_content}")
+            await message.edit(content=msg_content)
 
         # Add the initial reactions.
         for emoji in allowed_emoji:
