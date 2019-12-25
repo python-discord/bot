@@ -53,7 +53,7 @@ class Syncer(abc.ABC):
 
             if not channel:
                 try:
-                    channel = self.bot.fetch_channel(constants.Channels.devcore)
+                    channel = await self.bot.fetch_channel(constants.Channels.devcore)
                 except HTTPException:
                     log.exception(
                         f"Failed to fetch channel for sending sync confirmation prompt; "
