@@ -40,6 +40,8 @@ class Syncer(abc.ABC):
         If a message is given, it is edited to display the prompt and reactions. Otherwise, a new
         message is sent to the dev-core channel and mentions the core developers role.
         """
+        log.trace(f"Sending {self.name} sync confirmation prompt.")
+
         allowed_emoji = (constants.Emojis.check_mark, constants.Emojis.cross_mark)
         msg_content = (
             f'Possible cache issue while syncing {self.name}s. '
@@ -49,9 +51,11 @@ class Syncer(abc.ABC):
 
         # Send to core developers if it's an automatic sync.
         if not message:
+            log.trace("Message not provided for confirmation; creating a new one in dev-core.")
             channel = self.bot.get_channel(constants.Channels.devcore)
 
             if not channel:
+                log.debug("Failed to get the dev-core channel from cache; attempting to fetch it.")
                 try:
                     channel = await self.bot.fetch_channel(constants.Channels.devcore)
                 except HTTPException:
@@ -66,6 +70,7 @@ class Syncer(abc.ABC):
             await message.edit(content=msg_content)
 
         # Add the initial reactions.
+        log.trace(f"Adding reactions to {self.name} syncer confirmation prompt.")
         for emoji in allowed_emoji:
             await message.add_reaction(emoji)
 
@@ -81,6 +86,7 @@ class Syncer(abc.ABC):
 
         reaction = None
         try:
+            log.trace(f"Waiting for a reaction to the {self.name} syncer confirmation prompt.")
             reaction, _ = await self.bot.wait_for(
                 'reaction_add',
                 check=check,
@@ -88,9 +94,10 @@ class Syncer(abc.ABC):
             )
         except TimeoutError:
             # reaction will remain none thus sync will be aborted in the finally block below.
-            pass
+            log.debug(f"The {self.name} syncer confirmation prompt timed out.")
         finally:
             if str(reaction) == constants.Emojis.check_mark:
+                log.trace(f"The {self.name} syncer was confirmed.")
                 await message.edit(content=f':ok_hand: {self.name} sync will proceed.')
                 return True
             else:
@@ -127,6 +134,7 @@ class Syncer(abc.ABC):
         diff = await self._get_diff(guild)
         totals = {k: len(v) for k, v in diff._asdict().items() if v is not None}
 
+        log.trace(f"Determining if confirmation prompt should be sent for {self.name} syncer.")
         if sum(totals.values()) > self.MAX_DIFF and not await self._confirm(author, message):
             return  # Sync aborted.
 
@@ -147,6 +155,7 @@ class RoleSyncer(Syncer):
 
     async def _get_diff(self, guild: Guild) -> _Diff:
         """Return the difference of roles between the cache of `guild` and the database."""
+        log.trace("Getting the diff for roles.")
         roles = await self.bot.api_client.get('bot/roles')
 
         # Pack DB roles and guild roles into one common, hashable format.
@@ -178,12 +187,15 @@ class RoleSyncer(Syncer):
 
     async def _sync(self, diff: _Diff) -> None:
         """Synchronise the database with the role cache of `guild`."""
+        log.trace("Syncing created roles...")
         for role in diff.created:
             await self.bot.api_client.post('bot/roles', json={**role._asdict()})
 
+        log.trace("Syncing updated roles...")
         for role in diff.updated:
             await self.bot.api_client.put(f'bot/roles/{role.id}', json={**role._asdict()})
 
+        log.trace("Syncing deleted roles...")
         for role in diff.deleted:
             await self.bot.api_client.delete(f'bot/roles/{role.id}')
 
@@ -195,6 +207,7 @@ class UserSyncer(Syncer):
 
     async def _get_diff(self, guild: Guild) -> _Diff:
         """Return the difference of users between the cache of `guild` and the database."""
+        log.trace("Getting the diff for users.")
         users = await self.bot.api_client.get('bot/users')
 
         # Pack DB roles and guild roles into one common, hashable format.
@@ -247,8 +260,10 @@ class UserSyncer(Syncer):
 
     async def _sync(self, diff: _Diff) -> None:
         """Synchronise the database with the user cache of `guild`."""
+        log.trace("Syncing created users...")
         for user in diff.created:
             await self.bot.api_client.post('bot/users', json={**user._asdict()})
 
+        log.trace("Syncing updated users...")
         for user in diff.updated:
             await self.bot.api_client.put(f'bot/users/{user.id}', json={**user._asdict()})
