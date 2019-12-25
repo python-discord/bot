@@ -13,9 +13,9 @@ log = logging.getLogger(__name__)
 
 # These objects are declared as namedtuples because tuples are hashable,
 # something that we make use of when diffing site roles against guild roles.
-Role = namedtuple('Role', ('id', 'name', 'colour', 'permissions', 'position'))
-User = namedtuple('User', ('id', 'name', 'discriminator', 'avatar_hash', 'roles', 'in_guild'))
-Diff = namedtuple('Diff', ('created', 'updated', 'deleted'))
+_Role = namedtuple('Role', ('id', 'name', 'colour', 'permissions', 'position'))
+_User = namedtuple('User', ('id', 'name', 'discriminator', 'avatar_hash', 'roles', 'in_guild'))
+_Diff = namedtuple('Diff', ('created', 'updated', 'deleted'))
 
 
 class Syncer(abc.ABC):
@@ -97,12 +97,12 @@ class Syncer(abc.ABC):
                 return False
 
     @abc.abstractmethod
-    async def _get_diff(self, guild: Guild) -> Diff:
+    async def _get_diff(self, guild: Guild) -> _Diff:
         """Return the difference between the cache of `guild` and the database."""
         raise NotImplementedError
 
     @abc.abstractmethod
-    async def _sync(self, diff: Diff) -> None:
+    async def _sync(self, diff: _Diff) -> None:
         """Perform the API calls for synchronisation."""
         raise NotImplementedError
 
@@ -139,15 +139,15 @@ class RoleSyncer(Syncer):
 
     name = "role"
 
-    async def _get_diff(self, guild: Guild) -> Diff:
+    async def _get_diff(self, guild: Guild) -> _Diff:
         """Return the difference of roles between the cache of `guild` and the database."""
         roles = await self.bot.api_client.get('bot/roles')
 
         # Pack DB roles and guild roles into one common, hashable format.
         # They're hashable so that they're easily comparable with sets later.
-        db_roles = {Role(**role_dict) for role_dict in roles}
+        db_roles = {_Role(**role_dict) for role_dict in roles}
         guild_roles = {
-            Role(
+            _Role(
                 id=role.id,
                 name=role.name,
                 colour=role.colour.value,
@@ -168,9 +168,9 @@ class RoleSyncer(Syncer):
         roles_to_update = guild_roles - db_roles - roles_to_create
         roles_to_delete = {role for role in db_roles if role.id in deleted_role_ids}
 
-        return Diff(roles_to_create, roles_to_update, roles_to_delete)
+        return _Diff(roles_to_create, roles_to_update, roles_to_delete)
 
-    async def _sync(self, diff: Diff) -> None:
+    async def _sync(self, diff: _Diff) -> None:
         """Synchronise the database with the role cache of `guild`."""
         for role in diff.created:
             await self.bot.api_client.post('bot/roles', json={**role._asdict()})
@@ -187,21 +187,21 @@ class UserSyncer(Syncer):
 
     name = "user"
 
-    async def _get_diff(self, guild: Guild) -> Diff:
+    async def _get_diff(self, guild: Guild) -> _Diff:
         """Return the difference of users between the cache of `guild` and the database."""
         users = await self.bot.api_client.get('bot/users')
 
         # Pack DB roles and guild roles into one common, hashable format.
         # They're hashable so that they're easily comparable with sets later.
         db_users = {
-            user_dict['id']: User(
+            user_dict['id']: _User(
                 roles=tuple(sorted(user_dict.pop('roles'))),
                 **user_dict
             )
             for user_dict in users
         }
         guild_users = {
-            member.id: User(
+            member.id: _User(
                 id=member.id,
                 name=member.name,
                 discriminator=int(member.discriminator),
@@ -237,9 +237,9 @@ class UserSyncer(Syncer):
             new_user = guild_users[user_id]
             users_to_create.add(new_user)
 
-        return Diff(users_to_create, users_to_update)
+        return _Diff(users_to_create, users_to_update)
 
-    async def _sync(self, diff: Diff) -> None:
+    async def _sync(self, diff: _Diff) -> None:
         """Synchronise the database with the user cache of `guild`."""
         for user in diff.created:
             await self.bot.api_client.post('bot/users', json={**user._asdict()})
