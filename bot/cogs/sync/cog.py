@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Callable, Coroutine, Dict, Optional, Tuple
+from typing import Any, Dict, Optional
 
 from discord import Guild, Member, Role, User
 from discord.ext import commands
@@ -12,15 +12,14 @@ from bot.cogs.sync import syncers
 
 log = logging.getLogger(__name__)
 
-SyncerResult = Tuple[Optional[int], Optional[int], Optional[int]]
-Syncer = Callable[[Bot, Guild], Coroutine[Any, Any, SyncerResult]]
-
 
 class Sync(Cog):
     """Captures relevant events and sends them to the site."""
 
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
+        self.role_syncer = syncers.RoleSyncer(self.bot.api_client)
+        self.user_syncer = syncers.UserSyncer(self.bot.api_client)
 
         self.bot.loop.create_task(self.sync_guild())
 
@@ -32,31 +31,34 @@ class Sync(Cog):
         if guild is None:
             return
 
-        for syncer_name in (syncers.sync_roles, syncers.sync_users):
-            await self.sync(syncer_name, guild)
+        for syncer in (self.role_syncer, self.user_syncer):
+            await self.sync(syncer, guild)
 
-    async def sync(self, syncer: Syncer, guild: Guild, ctx: Optional[Context] = None) -> None:
+    @staticmethod
+    async def sync(syncer: syncers.Syncer, guild: Guild, ctx: Optional[Context] = None) -> None:
         """Run the named syncer for the given guild."""
-        syncer_name = syncer.__name__[5:]  # drop off `sync_`
+        syncer_name = syncer.__class__.__name__[-6:].lower()  # Drop off "Syncer" suffix
 
         log.info(f"Starting {syncer_name} syncer.")
         if ctx:
-            message = await ctx.send(f"📊 Synchronizing {syncer_name}.")
+            message = await ctx.send(f"📊 Synchronizing {syncer_name}s.")
 
-        totals = await syncer(self.bot, guild)
-        totals = zip(("created", "updated", "deleted"), totals)
-        results = ", ".join(f"{name} `{total}`" for name, total in totals if total is not None)
+        diff = await syncer.get_diff(guild)
+        await syncer.sync(diff)
+
+        totals = zip(("created", "updated", "deleted"), diff)
+        results = ", ".join(f"{name} `{len(total)}`" for name, total in totals if total is not None)
 
         if results:
-            log.info(f"`{syncer_name}` syncer finished: {results}.")
+            log.info(f"{syncer_name} syncer finished: {results}.")
             if ctx:
                 await message.edit(
-                    content=f":ok_hand: Synchronization of {syncer_name} complete: {results}"
+                    content=f":ok_hand: Synchronization of {syncer_name}s complete: {results}"
                 )
         else:
-            log.warning(f"`{syncer_name}` syncer aborted!")
+            log.warning(f"{syncer_name} syncer aborted!")
             if ctx:
-                await message.edit(content=f":x: Synchronization of {syncer_name} aborted!")
+                await message.edit(content=f":x: Synchronization of {syncer_name}s aborted!")
 
     async def patch_user(self, user_id: int, updated_information: Dict[str, Any]) -> None:
         """Send a PATCH request to partially update a user in the database."""
@@ -185,10 +187,10 @@ class Sync(Cog):
     @commands.has_permissions(administrator=True)
     async def sync_roles_command(self, ctx: Context) -> None:
         """Manually synchronize the guild's roles with the roles on the site."""
-        await self.sync(syncers.sync_roles, ctx.guild, ctx)
+        await self.sync(self.role_syncer, ctx.guild, ctx)
 
     @sync_group.command(name='users')
     @commands.has_permissions(administrator=True)
     async def sync_users_command(self, ctx: Context) -> None:
         """Manually synchronize the guild's users with the users on the site."""
-        await self.sync(syncers.sync_users, ctx.guild, ctx)
+        await self.sync(self.user_syncer, ctx.guild, ctx)

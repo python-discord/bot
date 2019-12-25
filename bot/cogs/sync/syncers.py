@@ -1,9 +1,12 @@
+import abc
+import typing as t
 from collections import namedtuple
-from typing import Dict, Set, Tuple
 
 from discord import Guild
 
-from bot.bot import Bot
+from bot.api import APIClient
+
+_T = t.TypeVar("_T")
 
 # These objects are declared as namedtuples because tuples are hashable,
 # something that we make use of when diffing site roles against guild roles.
@@ -11,225 +14,136 @@ Role = namedtuple('Role', ('id', 'name', 'colour', 'permissions', 'position'))
 User = namedtuple('User', ('id', 'name', 'discriminator', 'avatar_hash', 'roles', 'in_guild'))
 
 
-def get_roles_for_sync(
-        guild_roles: Set[Role], api_roles: Set[Role]
-) -> Tuple[Set[Role], Set[Role], Set[Role]]:
-    """
-    Determine which roles should be created or updated on the site.
+class Diff(t.NamedTuple, t.Generic[_T]):
+    """The differences between the Discord cache and the contents of the database."""
 
-    Arguments:
-        guild_roles (Set[Role]):
-            Roles that were found on the guild at startup.
-
-        api_roles (Set[Role]):
-            Roles that were retrieved from the API at startup.
-
-    Returns:
-        Tuple[Set[Role], Set[Role]. Set[Role]]:
-            A tuple with three elements. The first element represents
-            roles to be created on the site, meaning that they were
-            present on the cached guild but not on the API. The second
-            element represents roles to be updated, meaning they were
-            present on both the cached guild and the API but non-ID
-            fields have changed inbetween. The third represents roles
-            to be deleted on the site, meaning the roles are present on
-            the API but not in the cached guild.
-    """
-    guild_role_ids = {role.id for role in guild_roles}
-    api_role_ids = {role.id for role in api_roles}
-    new_role_ids = guild_role_ids - api_role_ids
-    deleted_role_ids = api_role_ids - guild_role_ids
-
-    # New roles are those which are on the cached guild but not on the
-    # API guild, going by the role ID. We need to send them in for creation.
-    roles_to_create = {role for role in guild_roles if role.id in new_role_ids}
-    roles_to_update = guild_roles - api_roles - roles_to_create
-    roles_to_delete = {role for role in api_roles if role.id in deleted_role_ids}
-    return roles_to_create, roles_to_update, roles_to_delete
+    created: t.Optional[t.Set[_T]] = None
+    updated: t.Optional[t.Set[_T]] = None
+    deleted: t.Optional[t.Set[_T]] = None
 
 
-async def sync_roles(bot: Bot, guild: Guild) -> Tuple[int, int, int]:
-    """
-    Synchronize roles found on the given `guild` with the ones on the API.
+class Syncer(abc.ABC, t.Generic[_T]):
+    """Base class for synchronising the database with objects in the Discord cache."""
 
-    Arguments:
-        bot (bot.bot.Bot):
-            The bot instance that we're running with.
+    def __init__(self, api_client: APIClient) -> None:
+        self.api_client = api_client
 
-        guild (discord.Guild):
-            The guild instance from the bot's cache
-            to synchronize roles with.
+    @abc.abstractmethod
+    async def get_diff(self, guild: Guild) -> Diff[_T]:
+        """Return objects of `guild` with which to synchronise the database."""
+        raise NotImplementedError
 
-    Returns:
-        Tuple[int, int, int]:
-            A tuple with three integers representing how many roles were created
-            (element `0`) , how many roles were updated (element `1`), and how many
-            roles were deleted (element `2`) on the API.
-    """
-    roles = await bot.api_client.get('bot/roles')
-
-    # Pack API roles and guild roles into one common format,
-    # which is also hashable. We need hashability to be able
-    # to compare these easily later using sets.
-    api_roles = {Role(**role_dict) for role_dict in roles}
-    guild_roles = {
-        Role(
-            id=role.id, name=role.name,
-            colour=role.colour.value, permissions=role.permissions.value,
-            position=role.position,
-        )
-        for role in guild.roles
-    }
-    roles_to_create, roles_to_update, roles_to_delete = get_roles_for_sync(guild_roles, api_roles)
-
-    for role in roles_to_create:
-        await bot.api_client.post(
-            'bot/roles',
-            json={
-                'id': role.id,
-                'name': role.name,
-                'colour': role.colour,
-                'permissions': role.permissions,
-                'position': role.position,
-            }
-        )
-
-    for role in roles_to_update:
-        await bot.api_client.put(
-            f'bot/roles/{role.id}',
-            json={
-                'id': role.id,
-                'name': role.name,
-                'colour': role.colour,
-                'permissions': role.permissions,
-                'position': role.position,
-            }
-        )
-
-    for role in roles_to_delete:
-        await bot.api_client.delete(f'bot/roles/{role.id}')
-
-    return len(roles_to_create), len(roles_to_update), len(roles_to_delete)
+    @abc.abstractmethod
+    async def sync(self, diff: Diff[_T]) -> None:
+        """Synchronise the database with the given `diff`."""
+        raise NotImplementedError
 
 
-def get_users_for_sync(
-        guild_users: Dict[int, User], api_users: Dict[int, User]
-) -> Tuple[Set[User], Set[User]]:
-    """
-    Determine which users should be created or updated on the website.
+class RoleSyncer(Syncer[Role]):
+    """Synchronise the database with roles in the cache."""
 
-    Arguments:
-        guild_users (Dict[int, User]):
-            A mapping of user IDs to user data, populated from the
-            guild cached on the running bot instance.
+    async def get_diff(self, guild: Guild) -> Diff[Role]:
+        """Return the roles of `guild` with which to synchronise the database."""
+        roles = await self.api_client.get('bot/roles')
 
-        api_users (Dict[int, User]):
-            A mapping of user IDs to user data, populated from the API's
-            current inventory of all users.
+        # Pack DB roles and guild roles into one common, hashable format.
+        # They're hashable so that they're easily comparable with sets later.
+        db_roles = {Role(**role_dict) for role_dict in roles}
+        guild_roles = {
+            Role(
+                id=role.id,
+                name=role.name,
+                colour=role.colour.value,
+                permissions=role.permissions.value,
+                position=role.position,
+            )
+            for role in guild.roles
+        }
 
-    Returns:
-        Tuple[Set[User], Set[User]]:
-            Two user sets as a tuple. The first element represents users
-            to be created on the website, these are users that are present
-            in the cached guild data but not in the API at all, going by
-            their ID. The second element represents users to update. It is
-            populated by users which are present on both the API and the
-            guild, but where the attribute of a user on the API is not
-            equal to the attribute of the user on the guild.
-    """
-    users_to_create = set()
-    users_to_update = set()
+        guild_role_ids = {role.id for role in guild_roles}
+        api_role_ids = {role.id for role in db_roles}
+        new_role_ids = guild_role_ids - api_role_ids
+        deleted_role_ids = api_role_ids - guild_role_ids
 
-    for api_user in api_users.values():
-        guild_user = guild_users.get(api_user.id)
-        if guild_user is not None:
-            if api_user != guild_user:
-                users_to_update.add(guild_user)
+        # New roles are those which are on the cached guild but not on the
+        # DB guild, going by the role ID. We need to send them in for creation.
+        roles_to_create = {role for role in guild_roles if role.id in new_role_ids}
+        roles_to_update = guild_roles - db_roles - roles_to_create
+        roles_to_delete = {role for role in db_roles if role.id in deleted_role_ids}
 
-        elif api_user.in_guild:
-            # The user is known on the API but not the guild, and the
-            # API currently specifies that the user is a member of the guild.
-            # This means that the user has left since the last sync.
-            # Update the `in_guild` attribute of the user on the site
-            # to signify that the user left.
-            new_api_user = api_user._replace(in_guild=False)
-            users_to_update.add(new_api_user)
+        return Diff(roles_to_create, roles_to_update, roles_to_delete)
 
-    new_user_ids = set(guild_users.keys()) - set(api_users.keys())
-    for user_id in new_user_ids:
-        # The user is known on the guild but not on the API. This means
-        # that the user has joined since the last sync. Create it.
-        new_user = guild_users[user_id]
-        users_to_create.add(new_user)
+    async def sync(self, diff: Diff[Role]) -> None:
+        """Synchronise roles in the database with the given `diff`."""
+        for role in diff.created:
+            await self.api_client.post('bot/roles', json={**role._asdict()})
 
-    return users_to_create, users_to_update
+        for role in diff.updated:
+            await self.api_client.put(f'bot/roles/{role.id}', json={**role._asdict()})
+
+        for role in diff.deleted:
+            await self.api_client.delete(f'bot/roles/{role.id}')
 
 
-async def sync_users(bot: Bot, guild: Guild) -> Tuple[int, int, None]:
-    """
-    Synchronize users found in the given `guild` with the ones in the API.
+class UserSyncer(Syncer[User]):
+    """Synchronise the database with users in the cache."""
 
-    Arguments:
-        bot (bot.bot.Bot):
-            The bot instance that we're running with.
+    async def get_diff(self, guild: Guild) -> Diff[User]:
+        """Return the users of `guild` with which to synchronise the database."""
+        users = await self.api_client.get('bot/users')
 
-        guild (discord.Guild):
-            The guild instance from the bot's cache
-            to synchronize roles with.
+        # Pack DB roles and guild roles into one common, hashable format.
+        # They're hashable so that they're easily comparable with sets later.
+        db_users = {
+            user_dict['id']: User(
+                roles=tuple(sorted(user_dict.pop('roles'))),
+                **user_dict
+            )
+            for user_dict in users
+        }
+        guild_users = {
+            member.id: User(
+                id=member.id,
+                name=member.name,
+                discriminator=int(member.discriminator),
+                avatar_hash=member.avatar,
+                roles=tuple(sorted(role.id for role in member.roles)),
+                in_guild=True
+            )
+            for member in guild.members
+        }
 
-    Returns:
-        Tuple[int, int, None]:
-            A tuple with two integers, representing how many users were created
-            (element `0`) and how many users were updated (element `1`), and `None`
-            to indicate that a user sync never deletes entries from the API.
-    """
-    current_users = await bot.api_client.get('bot/users')
+        users_to_create = set()
+        users_to_update = set()
 
-    # Pack API users and guild users into one common format,
-    # which is also hashable. We need hashability to be able
-    # to compare these easily later using sets.
-    api_users = {
-        user_dict['id']: User(
-            roles=tuple(sorted(user_dict.pop('roles'))),
-            **user_dict
-        )
-        for user_dict in current_users
-    }
-    guild_users = {
-        member.id: User(
-            id=member.id, name=member.name,
-            discriminator=int(member.discriminator), avatar_hash=member.avatar,
-            roles=tuple(sorted(role.id for role in member.roles)), in_guild=True
-        )
-        for member in guild.members
-    }
+        for db_user in db_users.values():
+            guild_user = guild_users.get(db_user.id)
+            if guild_user is not None:
+                if db_user != guild_user:
+                    users_to_update.add(guild_user)
 
-    users_to_create, users_to_update = get_users_for_sync(guild_users, api_users)
+            elif db_user.in_guild:
+                # The user is known in the DB but not the guild, and the
+                # DB currently specifies that the user is a member of the guild.
+                # This means that the user has left since the last sync.
+                # Update the `in_guild` attribute of the user on the site
+                # to signify that the user left.
+                new_api_user = db_user._replace(in_guild=False)
+                users_to_update.add(new_api_user)
 
-    for user in users_to_create:
-        await bot.api_client.post(
-            'bot/users',
-            json={
-                'avatar_hash': user.avatar_hash,
-                'discriminator': user.discriminator,
-                'id': user.id,
-                'in_guild': user.in_guild,
-                'name': user.name,
-                'roles': list(user.roles)
-            }
-        )
+        new_user_ids = set(guild_users.keys()) - set(db_users.keys())
+        for user_id in new_user_ids:
+            # The user is known on the guild but not on the API. This means
+            # that the user has joined since the last sync. Create it.
+            new_user = guild_users[user_id]
+            users_to_create.add(new_user)
 
-    for user in users_to_update:
-        await bot.api_client.put(
-            f'bot/users/{user.id}',
-            json={
-                'avatar_hash': user.avatar_hash,
-                'discriminator': user.discriminator,
-                'id': user.id,
-                'in_guild': user.in_guild,
-                'name': user.name,
-                'roles': list(user.roles)
-            }
-        )
+        return Diff(users_to_create, users_to_update)
 
-    return len(users_to_create), len(users_to_update), None
+    async def sync(self, diff: Diff[User]) -> None:
+        """Synchronise users in the database with the given `diff`."""
+        for user in diff.created:
+            await self.api_client.post('bot/users', json={**user._asdict()})
+
+        for user in diff.updated:
+            await self.api_client.put(f'bot/users/{user.id}', json={**user._asdict()})
