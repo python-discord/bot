@@ -36,6 +36,8 @@ RAW_CODE_REGEX = re.compile(
 MAX_PASTE_LEN = 1000
 EVAL_ROLES = (Roles.helpers, Roles.moderator, Roles.admin, Roles.owner, Roles.rockstars, Roles.partners)
 
+SIGKILL = 9
+
 
 class Snekbox(Cog):
     """Safe evaluation of Python code using Snekbox."""
@@ -101,7 +103,7 @@ class Snekbox(Cog):
         if returncode is None:
             msg = "Your eval job has failed"
             error = stdout.strip()
-        elif returncode == 128 + Signals.SIGKILL:
+        elif returncode == 128 + SIGKILL:
             msg = "Your eval job timed out or ran out of memory"
         elif returncode == 255:
             msg = "Your eval job has failed"
