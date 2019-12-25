@@ -63,7 +63,7 @@ class Syncer(abc.ABC):
 
             message = await channel.send(f"<@&{constants.Roles.core_developer}> {msg_content}")
         else:
-            message = await message.edit(content=f"{message.author.mention} {msg_content}")
+            await message.edit(content=f"{message.author.mention} {msg_content}")
 
         # Add the initial reactions.
         for emoji in allowed_emoji:
