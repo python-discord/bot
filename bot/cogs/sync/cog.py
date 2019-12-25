@@ -36,29 +36,28 @@ class Sync(Cog):
 
     @staticmethod
     async def sync(syncer: syncers.Syncer, guild: Guild, ctx: Optional[Context] = None) -> None:
-        """Run the named syncer for the given guild."""
-        syncer_name = syncer.__class__.__name__[-6:].lower()  # Drop off "Syncer" suffix
-
-        log.info(f"Starting {syncer_name} syncer.")
+        """Run `syncer` using the cache of the given `guild`."""
+        log.info(f"Starting {syncer.name} syncer.")
         if ctx:
-            message = await ctx.send(f"📊 Synchronizing {syncer_name}s.")
+            message = await ctx.send(f"📊 Synchronising {syncer.name}s.")
 
-        diff = await syncer.get_diff(guild)
-        await syncer.sync(diff)
+        diff = await syncer.sync(guild, ctx)
+        if not diff:
+            return  # Sync was aborted.
 
         totals = zip(("created", "updated", "deleted"), diff)
         results = ", ".join(f"{name} `{len(total)}`" for name, total in totals if total is not None)
 
         if results:
-            log.info(f"{syncer_name} syncer finished: {results}.")
+            log.info(f"{syncer.name} syncer finished: {results}.")
             if ctx:
                 await message.edit(
-                    content=f":ok_hand: Synchronization of {syncer_name}s complete: {results}"
+                    content=f":ok_hand: Synchronisation of {syncer.name}s complete: {results}"
                 )
         else:
-            log.warning(f"{syncer_name} syncer aborted!")
+            log.warning(f"{syncer.name} syncer aborted!")
             if ctx:
-                await message.edit(content=f":x: Synchronization of {syncer_name}s aborted!")
+                await message.edit(content=f":x: Synchronisation of {syncer.name}s aborted!")
 
     async def patch_user(self, user_id: int, updated_information: Dict[str, Any]) -> None:
         """Send a PATCH request to partially update a user in the database."""
@@ -186,11 +185,11 @@ class Sync(Cog):
     @sync_group.command(name='roles')
     @commands.has_permissions(administrator=True)
     async def sync_roles_command(self, ctx: Context) -> None:
-        """Manually synchronize the guild's roles with the roles on the site."""
+        """Manually synchronise the guild's roles with the roles on the site."""
         await self.sync(self.role_syncer, ctx.guild, ctx)
 
     @sync_group.command(name='users')
     @commands.has_permissions(administrator=True)
     async def sync_users_command(self, ctx: Context) -> None:
-        """Manually synchronize the guild's users with the users on the site."""
+        """Manually synchronise the guild's users with the users on the site."""
         await self.sync(self.user_syncer, ctx.guild, ctx)

@@ -1,17 +1,22 @@
 import abc
+import logging
 import typing as t
 from collections import namedtuple
 
-from discord import Guild
+from discord import Guild, HTTPException
+from discord.ext.commands import Context
 
-from bot.api import APIClient
+from bot import constants
+from bot.bot import Bot
 
-_T = t.TypeVar("_T")
+log = logging.getLogger(__name__)
 
 # These objects are declared as namedtuples because tuples are hashable,
 # something that we make use of when diffing site roles against guild roles.
 Role = namedtuple('Role', ('id', 'name', 'colour', 'permissions', 'position'))
 User = namedtuple('User', ('id', 'name', 'discriminator', 'avatar_hash', 'roles', 'in_guild'))
+
+_T = t.TypeVar("_T")
 
 
 class Diff(t.NamedTuple, t.Generic[_T]):
@@ -25,26 +30,113 @@ class Diff(t.NamedTuple, t.Generic[_T]):
 class Syncer(abc.ABC, t.Generic[_T]):
     """Base class for synchronising the database with objects in the Discord cache."""
 
-    def __init__(self, api_client: APIClient) -> None:
-        self.api_client = api_client
+    CONFIRM_TIMEOUT = 60 * 5  # 5 minutes
+    MAX_DIFF = 10
+
+    def __init__(self, bot: Bot) -> None:
+        self.bot = bot
+
+    @property
+    @abc.abstractmethod
+    def name(self) -> str:
+        """The name of the syncer; used in output messages and logging."""
+        raise NotImplementedError
+
+    async def _confirm(self, ctx: t.Optional[Context] = None) -> bool:
+        """
+        Send a prompt to confirm or abort a sync using reactions and return True if confirmed.
+
+        If no context is given, the prompt is sent to the dev-core channel and mentions the core
+        developers role.
+        """
+        allowed_emoji = (constants.Emojis.check_mark, constants.Emojis.cross_mark)
+
+        # Send to core developers if it's an automatic sync.
+        if not ctx:
+            mention = f'<@&{constants.Roles.core_developer}>'
+            channel = self.bot.get_channel(constants.Channels.devcore)
+
+            if not channel:
+                try:
+                    channel = self.bot.fetch_channel(constants.Channels.devcore)
+                except HTTPException:
+                    log.exception(
+                        f"Failed to fetch channel for sending sync confirmation prompt; "
+                        f"aborting {self.name} sync."
+                    )
+                    return False
+        else:
+            mention = ctx.author.mention
+            channel = ctx.channel
+
+        message = await channel.send(
+            f'{mention} Possible cache issue while syncing {self.name}s. '
+            f'Found no {self.name}s or more than {self.MAX_DIFF} {self.name}s were changed. '
+            f'React to confirm or abort the sync.'
+        )
+
+        # Add the initial reactions.
+        for emoji in allowed_emoji:
+            await message.add_reaction(emoji)
+
+        def check(_reaction, user):  # noqa: TYP
+            return (
+                _reaction.message.id == message.id
+                and True if not ctx else user == ctx.author  # Skip author check for auto syncs
+                and str(_reaction.emoji) in allowed_emoji
+            )
+
+        reaction = None
+        try:
+            reaction, _ = await self.bot.wait_for(
+                'reaction_add',
+                check=check,
+                timeout=self.CONFIRM_TIMEOUT
+            )
+        except TimeoutError:
+            # reaction will remain none thus sync will be aborted in the finally block below.
+            pass
+        finally:
+            if str(reaction) == constants.Emojis.check_mark:
+                await channel.send(f':ok_hand: {self.name} sync will proceed.')
+                return True
+            else:
+                await channel.send(f':x: {self.name} sync aborted!')
+                return False
 
     @abc.abstractmethod
-    async def get_diff(self, guild: Guild) -> Diff[_T]:
-        """Return objects of `guild` with which to synchronise the database."""
+    async def _get_diff(self, guild: Guild) -> Diff[_T]:
+        """Return the difference between the cache of `guild` and the database."""
         raise NotImplementedError
 
     @abc.abstractmethod
-    async def sync(self, diff: Diff[_T]) -> None:
-        """Synchronise the database with the given `diff`."""
-        raise NotImplementedError
+    async def sync(self, guild: Guild, ctx: t.Optional[Context] = None) -> t.Optional[Diff[_T]]:
+        """
+        Synchronise the database with the cache of `guild` and return the synced difference.
+
+        If the differences between the cache and the database are greater than `MAX_DIFF`, then
+        a confirmation prompt will be sent to the dev-core channel. The confirmation can be
+        optionally redirect to `ctx` instead.
+
+        If the sync is not confirmed, None is returned.
+        """
+        diff = await self._get_diff(guild)
+        confirmed = await self._confirm(ctx)
+
+        if not confirmed:
+            return None
+        else:
+            return diff
 
 
 class RoleSyncer(Syncer[Role]):
     """Synchronise the database with roles in the cache."""
 
-    async def get_diff(self, guild: Guild) -> Diff[Role]:
-        """Return the roles of `guild` with which to synchronise the database."""
-        roles = await self.api_client.get('bot/roles')
+    name = "role"
+
+    async def _get_diff(self, guild: Guild) -> Diff[Role]:
+        """Return the difference of roles between the cache of `guild` and the database."""
+        roles = await self.bot.api_client.get('bot/roles')
 
         # Pack DB roles and guild roles into one common, hashable format.
         # They're hashable so that they're easily comparable with sets later.
@@ -73,24 +165,40 @@ class RoleSyncer(Syncer[Role]):
 
         return Diff(roles_to_create, roles_to_update, roles_to_delete)
 
-    async def sync(self, diff: Diff[Role]) -> None:
-        """Synchronise roles in the database with the given `diff`."""
+    async def sync(self, guild: Guild, ctx: t.Optional[Context] = None) -> t.Optional[Diff[Role]]:
+        """
+        Synchronise the database with the role cache of `guild` and return the synced difference.
+
+        If the differences between the cache and the database are greater than `MAX_DIFF`, then
+        a confirmation prompt will be sent to the dev-core channel. The confirmation can be
+        optionally redirect to `ctx` instead.
+
+        If the sync is not confirmed, None is returned.
+        """
+        diff = await super().sync(guild, ctx)
+        if diff is None:
+            return None
+
         for role in diff.created:
-            await self.api_client.post('bot/roles', json={**role._asdict()})
+            await self.bot.api_client.post('bot/roles', json={**role._asdict()})
 
         for role in diff.updated:
-            await self.api_client.put(f'bot/roles/{role.id}', json={**role._asdict()})
+            await self.bot.api_client.put(f'bot/roles/{role.id}', json={**role._asdict()})
 
         for role in diff.deleted:
-            await self.api_client.delete(f'bot/roles/{role.id}')
+            await self.bot.api_client.delete(f'bot/roles/{role.id}')
+
+        return diff
 
 
 class UserSyncer(Syncer[User]):
     """Synchronise the database with users in the cache."""
 
-    async def get_diff(self, guild: Guild) -> Diff[User]:
-        """Return the users of `guild` with which to synchronise the database."""
-        users = await self.api_client.get('bot/users')
+    name = "user"
+
+    async def _get_diff(self, guild: Guild) -> Diff[User]:
+        """Return the difference of users between the cache of `guild` and the database."""
+        users = await self.bot.api_client.get('bot/users')
 
         # Pack DB roles and guild roles into one common, hashable format.
         # They're hashable so that they're easily comparable with sets later.
@@ -140,10 +248,24 @@ class UserSyncer(Syncer[User]):
 
         return Diff(users_to_create, users_to_update)
 
-    async def sync(self, diff: Diff[User]) -> None:
-        """Synchronise users in the database with the given `diff`."""
+    async def sync(self, guild: Guild, ctx: t.Optional[Context] = None) -> t.Optional[Diff[_T]]:
+        """
+        Synchronise the database with the user cache of `guild` and return the synced difference.
+
+        If the differences between the cache and the database are greater than `MAX_DIFF`, then
+        a confirmation prompt will be sent to the dev-core channel. The confirmation can be
+        optionally redirect to `ctx` instead.
+
+        If the sync is not confirmed, None is returned.
+        """
+        diff = await super().sync(guild, ctx)
+        if diff is None:
+            return None
+
         for user in diff.created:
-            await self.api_client.post('bot/users', json={**user._asdict()})
+            await self.bot.api_client.post('bot/users', json={**user._asdict()})
 
         for user in diff.updated:
-            await self.api_client.put(f'bot/users/{user.id}', json={**user._asdict()})
+            await self.bot.api_client.put(f'bot/users/{user.id}', json={**user._asdict()})
+
+        return diff
