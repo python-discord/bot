@@ -119,14 +119,14 @@ class Syncer(abc.ABC):
             message = await ctx.send(f"📊 Synchronising {self.name}s.")
 
         diff = await self._get_diff(guild)
-        total = sum(map(len, diff))
+        totals = {k: len(v) for k, v in diff._asdict().items() if v is not None}
 
-        if total > self.MAX_DIFF and not await self._confirm(ctx):
+        if sum(totals.values()) > self.MAX_DIFF and not await self._confirm(ctx):
             return  # Sync aborted.
 
         await self._sync(diff)
 
-        results = ", ".join(f"{name} `{len(total)}`" for name, total in diff._asdict().items())
+        results = ", ".join(f"{name} `{total}`" for name, total in totals.items())
         log.info(f"{self.name} syncer finished: {results}.")
         if ctx:
             await message.edit(
@@ -237,7 +237,7 @@ class UserSyncer(Syncer):
             new_user = guild_users[user_id]
             users_to_create.add(new_user)
 
-        return _Diff(users_to_create, users_to_update)
+        return _Diff(users_to_create, users_to_update, None)
 
     async def _sync(self, diff: _Diff) -> None:
         """Synchronise the database with the user cache of `guild`."""
