@@ -92,8 +92,8 @@ class Syncer(abc.ABC):
                 await message.edit(content=f':ok_hand: {self.name} sync will proceed.')
                 return True
             else:
-                log.warning(f"{self.name} syncer aborted!")
-                await message.edit(content=f':x: {self.name} sync aborted!')
+                log.warning(f"{self.name} syncer aborted or timed out!")
+                await message.edit(content=f':x: {self.name} sync aborted or timed out!')
                 return False
 
     @abc.abstractmethod
@@ -115,20 +115,21 @@ class Syncer(abc.ABC):
         optionally redirect to `ctx` instead.
         """
         log.info(f"Starting {self.name} syncer.")
+        message = None
         if ctx:
             message = await ctx.send(f"📊 Synchronising {self.name}s.")
 
         diff = await self._get_diff(guild)
         totals = {k: len(v) for k, v in diff._asdict().items() if v is not None}
 
-        if sum(totals.values()) > self.MAX_DIFF and not await self._confirm(ctx):
+        if sum(totals.values()) > self.MAX_DIFF and not await self._confirm(message):
             return  # Sync aborted.
 
         await self._sync(diff)
 
         results = ", ".join(f"{name} `{total}`" for name, total in totals.items())
         log.info(f"{self.name} syncer finished: {results}.")
-        if ctx:
+        if message:
             await message.edit(
                 content=f":ok_hand: Synchronisation of {self.name}s complete: {results}"
             )
