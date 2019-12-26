@@ -154,7 +154,7 @@ class Snekbox(Cog):
         lines = output.count("\n")
 
         if lines > 0:
-            output = output.split("\n")[:10]  # Only first 10 cause the rest is truncated anyway
+            output = output.split("\n")[:11]  # Only first 11 cause the rest is truncated anyway
             output = (f"{i:03d} | {line}" for i, line in enumerate(output, 1))
             output = "\n".join(output)
 
