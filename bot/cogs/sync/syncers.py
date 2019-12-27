@@ -21,7 +21,9 @@ _Diff = namedtuple('Diff', ('created', 'updated', 'deleted'))
 class Syncer(abc.ABC):
     """Base class for synchronising the database with objects in the Discord cache."""
 
+    _CORE_DEV_MENTION = f"<@&{constants.Roles.core_developer}> "
     _REACTION_EMOJIS = (constants.Emojis.check_mark, constants.Emojis.cross_mark)
+
     CONFIRM_TIMEOUT = 60 * 5  # 5 minutes
     MAX_DIFF = 10
 
@@ -66,8 +68,7 @@ class Syncer(abc.ABC):
                     )
                     return None
 
-            mention = f"<@&{constants.Roles.core_developer}> "
-            message = await channel.send(f"{mention}{msg_content}")
+            message = await channel.send(f"{self._CORE_DEV_MENTION}{msg_content}")
         else:
             await message.edit(content=msg_content)
 
@@ -98,9 +99,7 @@ class Syncer(abc.ABC):
 
         # Preserve the core-dev role mention in the message edits so users aren't confused about
         # where notifications came from.
-        mention = ""
-        if message.role_mentions:
-            mention = message.role_mentions[0].mention
+        mention = self._CORE_DEV_MENTION if author.bot else ""
 
         reaction = None
         try:
@@ -167,8 +166,11 @@ class Syncer(abc.ABC):
         results = ", ".join(f"{name} `{total}`" for name, total in totals.items())
         log.info(f"{self.name} syncer finished: {results}.")
         if message:
+            # Preserve the core-dev role mention in the message edits so users aren't confused about
+            # where notifications came from.
+            mention = self._CORE_DEV_MENTION if author.bot else ""
             await message.edit(
-                content=f":ok_hand: Synchronisation of {self.name}s complete: {results}"
+                content=f":ok_hand: {mention}Synchronisation of {self.name}s complete: {results}"
             )
 
 
