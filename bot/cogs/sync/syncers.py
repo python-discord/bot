@@ -7,6 +7,7 @@ from discord import Guild, HTTPException, Member, Message
 from discord.ext.commands import Context
 
 from bot import constants
+from bot.api import ResponseCodeError
 from bot.bot import Bot
 
 log = logging.getLogger(__name__)
@@ -119,7 +120,9 @@ class Syncer(abc.ABC):
                 return True
             else:
                 log.warning(f"The {self.name} syncer was aborted or timed out!")
-                await message.edit(content=f':x: {mention}{self.name} sync aborted or timed out!')
+                await message.edit(
+                    content=f':warning: {mention}{self.name} sync aborted or timed out!'
+                )
                 return False
 
     @abc.abstractmethod
@@ -161,17 +164,25 @@ class Syncer(abc.ABC):
             if not confirmed:
                 return  # Sync aborted.
 
-        await self._sync(diff)
+        # Preserve the core-dev role mention in the message edits so users aren't confused about
+        # where notifications came from.
+        mention = self._CORE_DEV_MENTION if author.bot else ""
 
-        results = ", ".join(f"{name} `{total}`" for name, total in totals.items())
-        log.info(f"{self.name} syncer finished: {results}.")
+        try:
+            await self._sync(diff)
+        except ResponseCodeError as e:
+            log.exception(f"{self.name} syncer failed!")
+
+            # Don't show response text because it's probably some really long HTML.
+            results = f"status {e.status}\n```{e.response_json or 'See log output for details'}```"
+            content = f":x: {mention}Synchronisation of {self.name}s failed: {results}"
+        else:
+            results = ", ".join(f"{name} `{total}`" for name, total in totals.items())
+            log.info(f"{self.name} syncer finished: {results}.")
+            content = f":ok_hand: {mention}Synchronisation of {self.name}s complete: {results}"
+
         if message:
-            # Preserve the core-dev role mention in the message edits so users aren't confused about
-            # where notifications came from.
-            mention = self._CORE_DEV_MENTION if author.bot else ""
-            await message.edit(
-                content=f":ok_hand: {mention}Synchronisation of {self.name}s complete: {results}"
-            )
+            await message.edit(content=content)
 
 
 class RoleSyncer(Syncer):
