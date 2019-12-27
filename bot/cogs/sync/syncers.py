@@ -21,6 +21,7 @@ _Diff = namedtuple('Diff', ('created', 'updated', 'deleted'))
 class Syncer(abc.ABC):
     """Base class for synchronising the database with objects in the Discord cache."""
 
+    _REACTION_EMOJIS = (constants.Emojis.check_mark, constants.Emojis.cross_mark)
     CONFIRM_TIMEOUT = 60 * 5  # 5 minutes
     MAX_DIFF = 10
 
@@ -33,17 +34,16 @@ class Syncer(abc.ABC):
         """The name of the syncer; used in output messages and logging."""
         raise NotImplementedError
 
-    async def _confirm(self, author: Member, message: t.Optional[Message] = None) -> bool:
+    async def _send_prompt(self, message: t.Optional[Message] = None) -> t.Optional[Message]:
         """
-        Send a prompt to confirm or abort a sync using reactions and return True if confirmed.
+        Send a prompt to confirm or abort a sync using reactions and return the sent message.
 
         If a message is given, it is edited to display the prompt and reactions. Otherwise, a new
-        message is sent to the dev-core channel and mentions the core developers role.
+        message is sent to the dev-core channel and mentions the core developers role. If the
+        channel cannot be retrieved, return None.
         """
         log.trace(f"Sending {self.name} sync confirmation prompt.")
 
-        allowed_emoji = (constants.Emojis.check_mark, constants.Emojis.cross_mark)
-        mention = ""
         msg_content = (
             f'Possible cache issue while syncing {self.name}s. '
             f'More than {self.MAX_DIFF} {self.name}s were changed. '
@@ -64,7 +64,7 @@ class Syncer(abc.ABC):
                         f"Failed to fetch channel for sending sync confirmation prompt; "
                         f"aborting {self.name} sync."
                     )
-                    return False
+                    return None
 
             mention = f"<@&{constants.Roles.core_developer}> "
             message = await channel.send(f"{mention}{msg_content}")
@@ -73,9 +73,19 @@ class Syncer(abc.ABC):
 
         # Add the initial reactions.
         log.trace(f"Adding reactions to {self.name} syncer confirmation prompt.")
-        for emoji in allowed_emoji:
+        for emoji in self._REACTION_EMOJIS:
             await message.add_reaction(emoji)
 
+        return message
+
+    async def _wait_for_confirmation(self, author: Member, message: Message) -> bool:
+        """
+        Wait for a confirmation reaction by `author` on `message` and return True if confirmed.
+
+        If `author` is a bot user, then anyone with the core developers role may react to confirm.
+        If there is no reaction within `CONFIRM_TIMEOUT` seconds, return False. To acknowledge the
+        reaction (or lack thereof), `message` will be edited.
+        """
         def check(_reaction, user):  # noqa: TYP
             # For automatic syncs, check for the core dev role instead of an exact author
             has_role = any(constants.Roles.core_developer == role.id for role in user.roles)
@@ -83,8 +93,14 @@ class Syncer(abc.ABC):
                 _reaction.message.id == message.id
                 and not user.bot
                 and has_role if author.bot else user == author
-                and str(_reaction.emoji) in allowed_emoji
+                and str(_reaction.emoji) in self._REACTION_EMOJIS
             )
+
+        # Preserve the core-dev role mention in the message edits so users aren't confused about
+        # where notifications came from.
+        mention = ""
+        if message.role_mentions:
+            mention = message.role_mentions[0].mention
 
         reaction = None
         try:
@@ -137,8 +153,14 @@ class Syncer(abc.ABC):
         totals = {k: len(v) for k, v in diff._asdict().items() if v is not None}
 
         log.trace(f"Determining if confirmation prompt should be sent for {self.name} syncer.")
-        if sum(totals.values()) > self.MAX_DIFF and not await self._confirm(author, message):
-            return  # Sync aborted.
+        if sum(totals.values()) > self.MAX_DIFF:
+            message = await self._send_prompt(message)
+            if not message:
+                return  # Couldn't get channel.
+
+            confirmed = await self._wait_for_confirmation(author, message)
+            if not confirmed:
+                return  # Sync aborted.
 
         await self._sync(diff)
 
