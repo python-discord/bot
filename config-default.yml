@@ -374,6 +374,9 @@ anti_malware:
         - '.ai'   # Illustrator
         - '.aep'  # After Effects
         - '.xcf'  # GIMP
+        - '.mp3'
+        - '.wav'
+        - '.ogg'
 
 
 reddit:
