@@ -307,9 +307,9 @@ class Doc(commands.Cog):
         if len(description) > 1000:
             shortened = description[:1000]
             description_cutoff = shortened.rfind('\n\n', 100)
-            # Search the shortened version for cutoff points in decreasing desirability,
-            # cutoff at 1000 if none are found.
             if description_cutoff == -1:
+                # Search the shortened version for cutoff points in decreasing desirability,
+                # cutoff at 1000 if none are found.
                 for string in (". ", ", ", ",", " "):
                     description_cutoff = shortened.rfind(string)
                     if description_cutoff != -1:
