@@ -307,8 +307,15 @@ class Doc(commands.Cog):
         if len(description) > 1000:
             shortened = description[:1000]
             last_paragraph_end = shortened.rfind('\n\n', 100)
+            # Search the shortened version for cutoff points in decreasing desirability,
+            # cutoff at 1000 if none are found.
             if last_paragraph_end == -1:
-                last_paragraph_end = shortened.rfind('. ')
+                for string in (". ", ", ", ",", " "):
+                    last_paragraph_end = shortened.rfind(string)
+                    if last_paragraph_end != -1:
+                        break
+                else:
+                    last_paragraph_end = 1000
             description = description[:last_paragraph_end]
 
             # If there is an incomplete code block, cut it out
@@ -318,7 +325,6 @@ class Doc(commands.Cog):
             description += f"... [read more]({permalink})"
 
         description = WHITESPACE_AFTER_NEWLINES_RE.sub('', description)
-
         if signatures is None:
             # If symbol is a module, don't show signature.
             embed_description = description
