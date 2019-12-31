@@ -12,6 +12,7 @@ from typing import Any, Iterable, Optional
 import discord
 from discord.ext.commands import Context
 
+from bot.api import APIClient
 from bot.bot import Bot
 
 
@@ -324,6 +325,22 @@ class MockUser(CustomMockMixin, unittest.mock.Mock, ColourMixin, HashableMixin):
             self.mention = f"@{self.name}"
 
 
+# Create an APIClient instance to get a realistic MagicMock of `bot.api.APIClient`
+api_client_instance = APIClient(loop=unittest.mock.MagicMock())
+
+
+class MockAPIClient(CustomMockMixin, unittest.mock.MagicMock):
+    """
+    A MagicMock subclass to mock APIClient objects.
+
+    Instances of this class will follow the specifications of `bot.api.APIClient` instances.
+    For more information, see the `MockGuild` docstring.
+    """
+
+    def __init__(self, **kwargs) -> None:
+        super().__init__(spec_set=api_client_instance, **kwargs)
+
+
 # Create a Bot instance to get a realistic MagicMock of `discord.ext.commands.Bot`
 bot_instance = Bot(command_prefix=unittest.mock.MagicMock())
 bot_instance.http_session = None
@@ -340,6 +357,7 @@ class MockBot(CustomMockMixin, unittest.mock.MagicMock):
 
     def __init__(self, **kwargs) -> None:
         super().__init__(spec_set=bot_instance, **kwargs)
+        self.api_client = MockAPIClient()
 
         # self.wait_for is *not* a coroutine function, but returns a coroutine nonetheless and
         # and should therefore be awaited. (The documentation calls it a coroutine as well, which
