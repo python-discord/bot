@@ -1,10 +1,30 @@
 import unittest
 
-from bot.cogs.sync.syncers import Role, get_roles_for_sync
+import discord
+
+from bot.cogs.sync.syncers import RoleSyncer
+from tests import helpers
 
 
 class RoleSyncerTests(unittest.TestCase):
     """Tests constructing the roles to synchronize with the site."""
+
+    def setUp(self):
+        self.bot = helpers.MockBot()
+        self.syncer = RoleSyncer(self.bot)
+
+    @staticmethod
+    def get_guild(*roles):
+        """Fixture to return a guild object with the given roles."""
+        guild = helpers.MockGuild()
+        guild.roles = []
+
+        for role in roles:
+            role.colour = discord.Colour(role.colour)
+            role.permissions = discord.Permissions(role.permissions)
+            guild.roles.append(helpers.MockRole(**role))
+
+        return guild
 
     def test_get_roles_for_sync_empty_return_for_equal_roles(self):
         """No roles should be synced when no diff is found."""
