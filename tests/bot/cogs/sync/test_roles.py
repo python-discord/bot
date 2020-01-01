@@ -20,9 +20,10 @@ class RoleSyncerTests(unittest.TestCase):
         guild.roles = []
 
         for role in roles:
-            role.colour = discord.Colour(role.colour)
-            role.permissions = discord.Permissions(role.permissions)
-            guild.roles.append(helpers.MockRole(**role))
+            mock_role = helpers.MockRole(**role)
+            mock_role.colour = discord.Colour(role["colour"])
+            mock_role.permissions = discord.Permissions(role["permissions"])
+            guild.roles.append(mock_role)
 
         return guild
 
