@@ -1,3 +1,4 @@
+import asyncio
 import unittest
 
 import discord
@@ -27,15 +28,17 @@ class RoleSyncerTests(unittest.TestCase):
 
         return guild
 
-    def test_get_roles_for_sync_empty_return_for_equal_roles(self):
-        """No roles should be synced when no diff is found."""
-        api_roles = {Role(id=41, name='name', colour=33, permissions=0x8, position=1)}
-        guild_roles = {Role(id=41, name='name', colour=33, permissions=0x8, position=1)}
+    def test_empty_diff_for_identical_roles(self):
+        """No differences should be found if the roles in the guild and DB are identical."""
+        role = {"id": 41, "name": "name", "colour": 33, "permissions": 0x8, "position": 1}
 
-        self.assertEqual(
-            get_roles_for_sync(guild_roles, api_roles),
-            (set(), set(), set())
-        )
+        self.bot.api_client.get.return_value = [role]
+        guild = self.get_guild(role)
+
+        actual_diff = asyncio.run(self.syncer._get_diff(guild))
+        expected_diff = (set(), set(), set())
+
+        self.assertEqual(actual_diff, expected_diff)
 
     def test_get_roles_for_sync_returns_roles_to_update_with_non_id_diff(self):
         """Roles to be synced are returned when non-ID attributes differ."""
