@@ -3,7 +3,7 @@ import unittest
 from bot.cogs.sync.syncers import Role, get_roles_for_sync
 
 
-class GetRolesForSyncTests(unittest.TestCase):
+class RoleSyncerTests(unittest.TestCase):
     """Tests constructing the roles to synchronize with the site."""
 
     def test_get_roles_for_sync_empty_return_for_equal_roles(self):
