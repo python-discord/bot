@@ -91,24 +91,17 @@ class RoleSyncerTests(unittest.TestCase):
             )
         )
 
-    def test_get_roles_returns_roles_to_delete(self):
-        """Roles to be deleted should be returned as the third tuple element."""
-        api_roles = {
-            Role(id=41, name='name', colour=35, permissions=0x8, position=1),
-            Role(id=61, name='to delete', colour=99, permissions=0x9, position=2),
-        }
-        guild_roles = {
-            Role(id=41, name='name', colour=35, permissions=0x8, position=1),
-        }
+    def test_diff_for_deleted_roles(self):
+        """Only deleted roles should be added to the 'deleted' set of the diff."""
+        deleted_role = {"id": 61, "name": "delete", "colour": 99, "permissions": 0x9, "position": 2}
 
-        self.assertEqual(
-            get_roles_for_sync(guild_roles, api_roles),
-            (
-                set(),
-                set(),
-                {Role(id=61, name='to delete', colour=99, permissions=0x9, position=2)},
-            )
-        )
+        self.bot.api_client.get.return_value = [self.constant_role, deleted_role]
+        guild = self.get_guild(self.constant_role)
+
+        actual_diff = asyncio.run(self.syncer._get_diff(guild))
+        expected_diff = (set(), set(), {_Role(**deleted_role)})
+
+        self.assertEqual(actual_diff, expected_diff)
 
     def test_get_roles_returns_roles_to_delete_update_and_new_roles(self):
         """When roles were added, updated, and removed, all of them are returned properly."""
