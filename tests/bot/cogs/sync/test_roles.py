@@ -1,5 +1,6 @@
 import asyncio
 import unittest
+from unittest import mock
 
 import discord
 
@@ -104,35 +105,56 @@ class RoleSyncerSyncTests(unittest.TestCase):
         self.bot = helpers.MockBot()
         self.syncer = RoleSyncer(self.bot)
 
-    def test_sync_created_role(self):
-        """Only a POST request should be made with the correct payload."""
-        role = {"id": 41, "name": "new", "colour": 33, "permissions": 0x8, "position": 1}
-        diff = _Diff({_Role(**role)}, set(), set())
+    def test_sync_created_roles(self):
+        """Only POST requests should be made with the correct payload."""
+        roles = [
+            {"id": 111, "name": "new", "colour": 4, "permissions": 0x7, "position": 1},
+            {"id": 222, "name": "new2", "colour": 44, "permissions": 0x7, "position": 11},
+        ]
 
+        role_tuples = {_Role(**role) for role in roles}
+        diff = _Diff(role_tuples, set(), set())
         asyncio.run(self.syncer._sync(diff))
 
-        self.bot.api_client.post.assert_called_once_with("bot/roles", json=role)
+        calls = [mock.call("bot/roles", json=role) for role in roles]
+        self.bot.api_client.post.assert_has_calls(calls, any_order=True)
+        self.assertEqual(self.bot.api_client.post.call_count, len(roles))
+
         self.bot.api_client.put.assert_not_called()
         self.bot.api_client.delete.assert_not_called()
 
-    def test_sync_updated_role(self):
-        """Only a PUT request should be made with the correct payload."""
-        role = {"id": 51, "name": "updated", "colour": 44, "permissions": 0x7, "position": 2}
-        diff = _Diff(set(), {_Role(**role)}, set())
+    def test_sync_updated_roles(self):
+        """Only PUT requests should be made with the correct payload."""
+        roles = [
+            {"id": 333, "name": "updated", "colour": 5, "permissions": 0x7, "position": 2},
+            {"id": 444, "name": "updated2", "colour": 55, "permissions": 0x7, "position": 22},
+        ]
 
+        role_tuples = {_Role(**role) for role in roles}
+        diff = _Diff(set(), role_tuples, set())
         asyncio.run(self.syncer._sync(diff))
 
-        self.bot.api_client.put.assert_called_once_with(f"bot/roles/{role['id']}", json=role)
+        calls = [mock.call(f"bot/roles/{role['id']}", json=role) for role in roles]
+        self.bot.api_client.put.assert_has_calls(calls, any_order=True)
+        self.assertEqual(self.bot.api_client.put.call_count, len(roles))
+
         self.bot.api_client.post.assert_not_called()
         self.bot.api_client.delete.assert_not_called()
 
-    def test_sync_deleted_role(self):
-        """Only a DELETE request should be made with the correct payload."""
-        role = {"id": 61, "name": "deleted", "colour": 55, "permissions": 0x6, "position": 3}
-        diff = _Diff(set(), set(), {_Role(**role)})
+    def test_sync_deleted_roles(self):
+        """Only DELETE requests should be made with the correct payload."""
+        roles = [
+            {"id": 555, "name": "deleted", "colour": 6, "permissions": 0x7, "position": 3},
+            {"id": 666, "name": "deleted2", "colour": 66, "permissions": 0x7, "position": 33},
+        ]
 
+        role_tuples = {_Role(**role) for role in roles}
+        diff = _Diff(set(), set(), role_tuples)
         asyncio.run(self.syncer._sync(diff))
 
-        self.bot.api_client.delete.assert_called_once_with(f"bot/roles/{role['id']}")
+        calls = [mock.call(f"bot/roles/{role['id']}") for role in roles]
+        self.bot.api_client.delete.assert_has_calls(calls, any_order=True)
+        self.assertEqual(self.bot.api_client.delete.call_count, len(roles))
+
         self.bot.api_client.post.assert_not_called()
         self.bot.api_client.put.assert_not_called()
