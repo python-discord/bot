@@ -62,7 +62,7 @@ class RoleSyncerTests(unittest.TestCase):
         self.bot.api_client.get.return_value = [self.constant_role]
         guild_roles = [
             self.constant_role,
-            {"id": 41, "name": "new", "colour": 33, "permissions": 0x8, "position": 1}
+            {"id": 41, "name": "new", "colour": 33, "permissions": 0x8, "position": 1},
         ]
 
         guild = self.get_guild(*guild_roles)
@@ -103,24 +103,20 @@ class RoleSyncerTests(unittest.TestCase):
 
         self.assertEqual(actual_diff, expected_diff)
 
-    def test_get_roles_returns_roles_to_delete_update_and_new_roles(self):
-        """When roles were added, updated, and removed, all of them are returned properly."""
-        api_roles = {
-            Role(id=41, name='not changed', colour=35, permissions=0x8, position=1),
-            Role(id=61, name='to delete', colour=99, permissions=0x9, position=2),
-            Role(id=71, name='to update', colour=99, permissions=0x9, position=3),
-        }
-        guild_roles = {
-            Role(id=41, name='not changed', colour=35, permissions=0x8, position=1),
-            Role(id=81, name='to create', colour=99, permissions=0x9, position=4),
-            Role(id=71, name='updated', colour=101, permissions=0x5, position=3),
-        }
+    def test_diff_for_new_updated_and_deleted_roles(self):
+        """When roles are added, updated, and removed, all of them are returned properly."""
+        new = {"id": 41, "name": "new", "colour": 33, "permissions": 0x8, "position": 1}
+        updated = {"id": 71, "name": "updated", "colour": 101, "permissions": 0x5, "position": 4}
+        deleted = {"id": 61, "name": "delete", "colour": 99, "permissions": 0x9, "position": 2}
 
-        self.assertEqual(
-            get_roles_for_sync(guild_roles, api_roles),
-            (
-                {Role(id=81, name='to create', colour=99, permissions=0x9, position=4)},
-                {Role(id=71, name='updated', colour=101, permissions=0x5, position=3)},
-                {Role(id=61, name='to delete', colour=99, permissions=0x9, position=2)},
-            )
-        )
+        self.bot.api_client.get.return_value = [
+            self.constant_role,
+            {"id": 71, "name": "update", "colour": 99, "permissions": 0x9, "position": 4},
+            deleted,
+        ]
+        guild = self.get_guild(self.constant_role, new, updated)
+
+        actual_diff = asyncio.run(self.syncer._get_diff(guild))
+        expected_diff = ({_Role(**new)}, {_Role(**updated)}, {_Role(**deleted)})
+
+        self.assertEqual(actual_diff, expected_diff)
