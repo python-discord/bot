@@ -72,25 +72,6 @@ class RoleSyncerTests(unittest.TestCase):
 
         self.assertEqual(actual_diff, expected_diff)
 
-    def test_get_roles_returns_roles_to_update_and_new_roles(self):
-        """Newly created and updated roles should be returned together."""
-        api_roles = {
-            Role(id=41, name='old name', colour=35, permissions=0x8, position=1),
-        }
-        guild_roles = {
-            Role(id=41, name='new name', colour=40, permissions=0x16, position=2),
-            Role(id=53, name='other role', colour=55, permissions=0, position=3)
-        }
-
-        self.assertEqual(
-            get_roles_for_sync(guild_roles, api_roles),
-            (
-                {Role(id=53, name='other role', colour=55, permissions=0, position=3)},
-                {Role(id=41, name='new name', colour=40, permissions=0x16, position=2)},
-                set(),
-            )
-        )
-
     def test_diff_for_deleted_roles(self):
         """Only deleted roles should be added to the 'deleted' set of the diff."""
         deleted_role = {"id": 61, "name": "delete", "colour": 99, "permissions": 0x9, "position": 2}
