@@ -13,6 +13,7 @@ class RoleSyncerTests(unittest.TestCase):
     def setUp(self):
         self.bot = helpers.MockBot()
         self.syncer = RoleSyncer(self.bot)
+        self.constant_role = {"id": 9, "name": "test", "colour": 7, "permissions": 0, "position": 3}
 
     @staticmethod
     def get_guild(*roles):
@@ -30,10 +31,8 @@ class RoleSyncerTests(unittest.TestCase):
 
     def test_empty_diff_for_identical_roles(self):
         """No differences should be found if the roles in the guild and DB are identical."""
-        role = {"id": 41, "name": "name", "colour": 33, "permissions": 0x8, "position": 1}
-
-        self.bot.api_client.get.return_value = [role]
-        guild = self.get_guild(role)
+        self.bot.api_client.get.return_value = [self.constant_role]
+        guild = self.get_guild(self.constant_role)
 
         actual_diff = asyncio.run(self.syncer._get_diff(guild))
         expected_diff = (set(), set(), set())
@@ -44,11 +43,11 @@ class RoleSyncerTests(unittest.TestCase):
         """Only updated roles should be added to the updated set of the diff."""
         db_roles = [
             {"id": 41, "name": "old", "colour": 33, "permissions": 0x8, "position": 1},
-            {"id": 53, "name": "other", "colour": 55, "permissions": 0, "position": 3},
+            self.constant_role,
         ]
         guild_roles = [
             {"id": 41, "name": "new", "colour": 33, "permissions": 0x8, "position": 1},
-            {"id": 53, "name": "other", "colour": 55, "permissions": 0, "position": 3},
+            self.constant_role,
         ]
 
         self.bot.api_client.get.return_value = db_roles
