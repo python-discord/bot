@@ -13,8 +13,8 @@ def fake_user(**kwargs):
     return User(**kwargs)
 
 
-class GetUsersForSyncTests(unittest.TestCase):
-    """Tests constructing the users to synchronize with the site."""
+class UserSyncerDiffTests(unittest.TestCase):
+    """Tests for determining differences between users in the DB and users in the Guild cache."""
 
     def test_get_users_for_sync_returns_nothing_for_empty_params(self):
         """When no users are given, none are returned."""
