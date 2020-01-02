@@ -3,7 +3,7 @@ import unittest
 
 import discord
 
-from bot.cogs.sync.syncers import RoleSyncer, _Role
+from bot.cogs.sync.syncers import RoleSyncer, _Diff, _Role
 from tests import helpers
 
 
@@ -103,3 +103,36 @@ class RoleSyncerSyncTests(unittest.TestCase):
     def setUp(self):
         self.bot = helpers.MockBot()
         self.syncer = RoleSyncer(self.bot)
+
+    def test_sync_created_role(self):
+        """Only a POST request should be made with the correct payload."""
+        role = {"id": 41, "name": "new", "colour": 33, "permissions": 0x8, "position": 1}
+        diff = _Diff({_Role(**role)}, set(), set())
+
+        asyncio.run(self.syncer._sync(diff))
+
+        self.bot.api_client.post.assert_called_once_with("bot/roles", json=role)
+        self.bot.api_client.put.assert_not_called()
+        self.bot.api_client.delete.assert_not_called()
+
+    def test_sync_updated_role(self):
+        """Only a PUT request should be made with the correct payload."""
+        role = {"id": 51, "name": "updated", "colour": 44, "permissions": 0x7, "position": 2}
+        diff = _Diff(set(), {_Role(**role)}, set())
+
+        asyncio.run(self.syncer._sync(diff))
+
+        self.bot.api_client.put.assert_called_once_with(f"bot/roles/{role['id']}", json=role)
+        self.bot.api_client.post.assert_not_called()
+        self.bot.api_client.delete.assert_not_called()
+
+    def test_sync_deleted_role(self):
+        """Only a DELETE request should be made with the correct payload."""
+        role = {"id": 61, "name": "deleted", "colour": 55, "permissions": 0x6, "position": 3}
+        diff = _Diff(set(), set(), {_Role(**role)})
+
+        asyncio.run(self.syncer._sync(diff))
+
+        self.bot.api_client.delete.assert_called_once_with(f"bot/roles/{role['id']}")
+        self.bot.api_client.post.assert_not_called()
+        self.bot.api_client.put.assert_not_called()
