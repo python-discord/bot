@@ -41,34 +41,28 @@ class RoleSyncerTests(unittest.TestCase):
 
     def test_diff_for_updated_roles(self):
         """Only updated roles should be added to the 'updated' set of the diff."""
+        updated_role = {"id": 41, "name": "new", "colour": 33, "permissions": 0x8, "position": 1}
+
         self.bot.api_client.get.return_value = [
             {"id": 41, "name": "old", "colour": 33, "permissions": 0x8, "position": 1},
             self.constant_role,
         ]
-        guild_roles = [
-            {"id": 41, "name": "new", "colour": 33, "permissions": 0x8, "position": 1},
-            self.constant_role,
-        ]
-
-        guild = self.get_guild(*guild_roles)
+        guild = self.get_guild(updated_role, self.constant_role)
 
         actual_diff = asyncio.run(self.syncer._get_diff(guild))
-        expected_diff = (set(), {_Role(**guild_roles[0])}, set())
+        expected_diff = (set(), {_Role(**updated_role)}, set())
 
         self.assertEqual(actual_diff, expected_diff)
 
     def test_diff_for_new_roles(self):
         """Only new roles should be added to the 'created' set of the diff."""
-        self.bot.api_client.get.return_value = [self.constant_role]
-        guild_roles = [
-            self.constant_role,
-            {"id": 41, "name": "new", "colour": 33, "permissions": 0x8, "position": 1},
-        ]
+        new_role = {"id": 41, "name": "new", "colour": 33, "permissions": 0x8, "position": 1}
 
-        guild = self.get_guild(*guild_roles)
+        self.bot.api_client.get.return_value = [self.constant_role]
+        guild = self.get_guild(self.constant_role, new_role)
 
         actual_diff = asyncio.run(self.syncer._get_diff(guild))
-        expected_diff = ({_Role(**guild_roles[1])}, set(), set())
+        expected_diff = ({_Role(**new_role)}, set(), set())
 
         self.assertEqual(actual_diff, expected_diff)
 
