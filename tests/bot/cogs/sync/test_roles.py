@@ -7,8 +7,8 @@ from bot.cogs.sync.syncers import RoleSyncer, _Role
 from tests import helpers
 
 
-class RoleSyncerTests(unittest.TestCase):
-    """Tests constructing the roles to synchronize with the site."""
+class RoleSyncerDiffTests(unittest.TestCase):
+    """Tests for determining differences between roles in the DB and roles in the Guild cache."""
 
     def setUp(self):
         self.bot = helpers.MockBot()
@@ -95,3 +95,11 @@ class RoleSyncerTests(unittest.TestCase):
         expected_diff = ({_Role(**new)}, {_Role(**updated)}, {_Role(**deleted)})
 
         self.assertEqual(actual_diff, expected_diff)
+
+
+class RoleSyncerSyncTests(unittest.TestCase):
+    """Tests for the API requests that sync roles."""
+
+    def setUp(self):
+        self.bot = helpers.MockBot()
+        self.syncer = RoleSyncer(self.bot)
