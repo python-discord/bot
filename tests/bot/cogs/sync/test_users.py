@@ -32,6 +32,9 @@ class UserSyncerDiffTests(unittest.TestCase):
 
         for member in members:
             roles = (helpers.MockRole(id=role_id) for role_id in member.pop("roles"))
+            member["avatar"] = member.pop("avatar_hash")
+            del member["in_guild"]
+
             mock_member = helpers.MockMember(roles, **member)
             guild.members.append(mock_member)
 
