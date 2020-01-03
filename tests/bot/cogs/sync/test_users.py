@@ -124,7 +124,7 @@ class UserSyncerDiffTests(unittest.TestCase):
 
 
 class UserSyncerSyncTests(unittest.TestCase):
-    """Tests for the API requests that sync roles."""
+    """Tests for the API requests that sync users."""
 
     def setUp(self):
         self.bot = helpers.MockBot()
