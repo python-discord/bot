@@ -8,13 +8,23 @@ from bot.cogs.sync.syncers import RoleSyncer, _Diff, _Role
 from tests import helpers
 
 
+def fake_role(**kwargs):
+    """Fixture to return a dictionary representing a role with default values set."""
+    kwargs.setdefault("id", 9)
+    kwargs.setdefault("name", "fake role")
+    kwargs.setdefault("colour", 7)
+    kwargs.setdefault("permissions", 0)
+    kwargs.setdefault("position", 55)
+
+    return kwargs
+
+
 class RoleSyncerDiffTests(unittest.TestCase):
     """Tests for determining differences between roles in the DB and roles in the Guild cache."""
 
     def setUp(self):
         self.bot = helpers.MockBot()
         self.syncer = RoleSyncer(self.bot)
-        self.constant_role = {"id": 9, "name": "test", "colour": 7, "permissions": 0, "position": 3}
 
     @staticmethod
     def get_guild(*roles):
@@ -32,8 +42,8 @@ class RoleSyncerDiffTests(unittest.TestCase):
 
     def test_empty_diff_for_identical_roles(self):
         """No differences should be found if the roles in the guild and DB are identical."""
-        self.bot.api_client.get.return_value = [self.constant_role]
-        guild = self.get_guild(self.constant_role)
+        self.bot.api_client.get.return_value = [fake_role()]
+        guild = self.get_guild(fake_role())
 
         actual_diff = asyncio.run(self.syncer._get_diff(guild))
         expected_diff = (set(), set(), set())
@@ -42,13 +52,10 @@ class RoleSyncerDiffTests(unittest.TestCase):
 
     def test_diff_for_updated_roles(self):
         """Only updated roles should be added to the 'updated' set of the diff."""
-        updated_role = {"id": 41, "name": "new", "colour": 33, "permissions": 0x8, "position": 1}
+        updated_role = fake_role(id=41, name="new")
 
-        self.bot.api_client.get.return_value = [
-            {"id": 41, "name": "old", "colour": 33, "permissions": 0x8, "position": 1},
-            self.constant_role,
-        ]
-        guild = self.get_guild(updated_role, self.constant_role)
+        self.bot.api_client.get.return_value = [fake_role(id=41, name="old"), fake_role()]
+        guild = self.get_guild(updated_role, fake_role())
 
         actual_diff = asyncio.run(self.syncer._get_diff(guild))
         expected_diff = (set(), {_Role(**updated_role)}, set())
@@ -57,10 +64,10 @@ class RoleSyncerDiffTests(unittest.TestCase):
 
     def test_diff_for_new_roles(self):
         """Only new roles should be added to the 'created' set of the diff."""
-        new_role = {"id": 41, "name": "new", "colour": 33, "permissions": 0x8, "position": 1}
+        new_role = fake_role(id=41, name="new")
 
-        self.bot.api_client.get.return_value = [self.constant_role]
-        guild = self.get_guild(self.constant_role, new_role)
+        self.bot.api_client.get.return_value = [fake_role()]
+        guild = self.get_guild(fake_role(), new_role)
 
         actual_diff = asyncio.run(self.syncer._get_diff(guild))
         expected_diff = ({_Role(**new_role)}, set(), set())
@@ -69,10 +76,10 @@ class RoleSyncerDiffTests(unittest.TestCase):
 
     def test_diff_for_deleted_roles(self):
         """Only deleted roles should be added to the 'deleted' set of the diff."""
-        deleted_role = {"id": 61, "name": "delete", "colour": 99, "permissions": 0x9, "position": 2}
+        deleted_role = fake_role(id=61, name="deleted")
 
-        self.bot.api_client.get.return_value = [self.constant_role, deleted_role]
-        guild = self.get_guild(self.constant_role)
+        self.bot.api_client.get.return_value = [fake_role(), deleted_role]
+        guild = self.get_guild(fake_role())
 
         actual_diff = asyncio.run(self.syncer._get_diff(guild))
         expected_diff = (set(), set(), {_Role(**deleted_role)})
@@ -81,16 +88,16 @@ class RoleSyncerDiffTests(unittest.TestCase):
 
     def test_diff_for_new_updated_and_deleted_roles(self):
         """When roles are added, updated, and removed, all of them are returned properly."""
-        new = {"id": 41, "name": "new", "colour": 33, "permissions": 0x8, "position": 1}
-        updated = {"id": 71, "name": "updated", "colour": 101, "permissions": 0x5, "position": 4}
-        deleted = {"id": 61, "name": "delete", "colour": 99, "permissions": 0x9, "position": 2}
+        new = fake_role(id=41, name="new")
+        updated = fake_role(id=71, name="updated")
+        deleted = fake_role(id=61, name="deleted")
 
         self.bot.api_client.get.return_value = [
-            self.constant_role,
-            {"id": 71, "name": "update", "colour": 99, "permissions": 0x9, "position": 4},
+            fake_role(),
+            fake_role(id=71, name="updated name"),
             deleted,
         ]
-        guild = self.get_guild(self.constant_role, new, updated)
+        guild = self.get_guild(fake_role(), new, updated)
 
         actual_diff = asyncio.run(self.syncer._get_diff(guild))
         expected_diff = ({_Role(**new)}, {_Role(**updated)}, {_Role(**deleted)})
@@ -107,10 +114,7 @@ class RoleSyncerSyncTests(unittest.TestCase):
 
     def test_sync_created_roles(self):
         """Only POST requests should be made with the correct payload."""
-        roles = [
-            {"id": 111, "name": "new", "colour": 4, "permissions": 0x7, "position": 1},
-            {"id": 222, "name": "new2", "colour": 44, "permissions": 0x7, "position": 11},
-        ]
+        roles = [fake_role(id=111), fake_role(id=222)]
 
         role_tuples = {_Role(**role) for role in roles}
         diff = _Diff(role_tuples, set(), set())
@@ -125,10 +129,7 @@ class RoleSyncerSyncTests(unittest.TestCase):
 
     def test_sync_updated_roles(self):
         """Only PUT requests should be made with the correct payload."""
-        roles = [
-            {"id": 333, "name": "updated", "colour": 5, "permissions": 0x7, "position": 2},
-            {"id": 444, "name": "updated2", "colour": 55, "permissions": 0x7, "position": 22},
-        ]
+        roles = [fake_role(id=111), fake_role(id=222)]
 
         role_tuples = {_Role(**role) for role in roles}
         diff = _Diff(set(), role_tuples, set())
@@ -143,10 +144,7 @@ class RoleSyncerSyncTests(unittest.TestCase):
 
     def test_sync_deleted_roles(self):
         """Only DELETE requests should be made with the correct payload."""
-        roles = [
-            {"id": 555, "name": "deleted", "colour": 6, "permissions": 0x7, "position": 3},
-            {"id": 666, "name": "deleted2", "colour": 66, "permissions": 0x7, "position": 33},
-        ]
+        roles = [fake_role(id=111), fake_role(id=222)]
 
         role_tuples = {_Role(**role) for role in roles}
         diff = _Diff(set(), set(), role_tuples)
