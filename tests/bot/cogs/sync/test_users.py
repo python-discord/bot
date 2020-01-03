@@ -97,15 +97,19 @@ class UserSyncerDiffTests(unittest.TestCase):
 
         self.assertEqual(actual_diff, expected_diff)
 
-    def test_get_users_for_sync_updates_and_creates_users_as_needed(self):
-        """When one user left and another one was updated, both are returned."""
-        api_users = {43: fake_user()}
-        guild_users = {63: fake_user(id=63)}
+    def test_diff_for_new_updated_and_leaving_users(self):
+        """When users are added, updated, and removed, all of them are returned properly."""
+        new_user = fake_user(id=99, name="new")
+        updated_user = fake_user(id=55, name="updated")
+        leaving_user = fake_user(id=63, in_guild=False)
 
-        self.assertEqual(
-            get_users_for_sync(guild_users, api_users),
-            ({fake_user(id=63)}, {fake_user(in_guild=False)})
-        )
+        self.bot.api_client.get.return_value = [fake_user(), fake_user(id=55), fake_user(id=63)]
+        guild = self.get_guild(fake_user(), new_user, updated_user)
+
+        actual_diff = asyncio.run(self.syncer._get_diff(guild))
+        expected_diff = ({_User(**new_user)}, {_User(**updated_user), _User(**leaving_user)}, None)
+
+        self.assertEqual(actual_diff, expected_diff)
 
     def test_get_users_for_sync_does_not_duplicate_update_users(self):
         """When the API knows a user the guild doesn't, nothing is performed."""
