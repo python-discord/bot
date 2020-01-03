@@ -31,6 +31,7 @@ class UserSyncerDiffTests(unittest.TestCase):
         guild.members = []
 
         for member in members:
+            member = member.copy()
             member["avatar"] = member.pop("avatar_hash")
             del member["in_guild"]
 
