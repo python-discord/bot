@@ -1,3 +1,4 @@
+import asyncio
 import unittest
 
 from bot.cogs.sync.syncers import UserSyncer
@@ -34,12 +35,14 @@ class UserSyncerDiffTests(unittest.TestCase):
 
         return guild
 
-    def test_get_users_for_sync_returns_nothing_for_empty_params(self):
-        """When no users are given, none are returned."""
-        self.assertEqual(
-            get_users_for_sync({}, {}),
-            (set(), set())
-        )
+    def test_empty_diff_for_no_users(self):
+        """When no users are given, an empty diff should be returned."""
+        guild = self.get_guild()
+
+        actual_diff = asyncio.run(self.syncer._get_diff(guild))
+        expected_diff = (set(), set(), None)
+
+        self.assertEqual(actual_diff, expected_diff)
 
     def test_get_users_for_sync_returns_nothing_for_equal_users(self):
         """When no users are updated, none are returned."""
