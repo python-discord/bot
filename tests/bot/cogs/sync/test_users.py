@@ -1,6 +1,7 @@
 import unittest
 
-from bot.cogs.sync.syncers import User, get_users_for_sync
+from bot.cogs.sync.syncers import UserSyncer
+from tests import helpers
 
 
 def fake_user(**kwargs):
@@ -15,6 +16,23 @@ def fake_user(**kwargs):
 
 class UserSyncerDiffTests(unittest.TestCase):
     """Tests for determining differences between users in the DB and users in the Guild cache."""
+
+    def setUp(self):
+        self.bot = helpers.MockBot()
+        self.syncer = UserSyncer(self.bot)
+
+    @staticmethod
+    def get_guild(*members):
+        """Fixture to return a guild object with the given members."""
+        guild = helpers.MockGuild()
+        guild.members = []
+
+        for member in members:
+            roles = (helpers.MockRole(id=role_id) for role_id in member.pop("roles"))
+            mock_member = helpers.MockMember(roles, **member)
+            guild.members.append(mock_member)
+
+        return guild
 
     def test_get_users_for_sync_returns_nothing_for_empty_params(self):
         """When no users are given, none are returned."""
