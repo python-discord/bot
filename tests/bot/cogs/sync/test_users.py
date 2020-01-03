@@ -50,15 +50,15 @@ class UserSyncerDiffTests(unittest.TestCase):
 
         self.assertEqual(actual_diff, expected_diff)
 
-    def test_get_users_for_sync_returns_nothing_for_equal_users(self):
-        """When no users are updated, none are returned."""
-        api_users = {43: fake_user()}
-        guild_users = {43: fake_user()}
+    def test_empty_diff_for_identical_users(self):
+        """No differences should be found if the users in the guild and DB are identical."""
+        self.bot.api_client.get.return_value = [fake_user()]
+        guild = self.get_guild(fake_user())
 
-        self.assertEqual(
-            get_users_for_sync(guild_users, api_users),
-            (set(), set())
-        )
+        actual_diff = asyncio.run(self.syncer._get_diff(guild))
+        expected_diff = (set(), set(), None)
+
+        self.assertEqual(actual_diff, expected_diff)
 
     def test_get_users_for_sync_returns_users_to_update_on_non_id_field_diff(self):
         """When a non-ID-field differs, the user to update is returned."""
