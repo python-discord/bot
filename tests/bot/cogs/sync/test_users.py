@@ -1,7 +1,7 @@
 import asyncio
 import unittest
 
-from bot.cogs.sync.syncers import UserSyncer
+from bot.cogs.sync.syncers import UserSyncer, _User
 from tests import helpers
 
 
@@ -61,15 +61,17 @@ class UserSyncerDiffTests(unittest.TestCase):
 
         self.assertEqual(actual_diff, expected_diff)
 
-    def test_get_users_for_sync_returns_users_to_update_on_non_id_field_diff(self):
-        """When a non-ID-field differs, the user to update is returned."""
-        api_users = {43: fake_user()}
-        guild_users = {43: fake_user(name='new fancy name')}
+    def test_diff_for_updated_users(self):
+        """Only updated users should be added to the 'updated' set of the diff."""
+        updated_user = fake_user(id=99, name="new")
 
-        self.assertEqual(
-            get_users_for_sync(guild_users, api_users),
-            (set(), {fake_user(name='new fancy name')})
-        )
+        self.bot.api_client.get.return_value = [fake_user(id=99, name="old"), fake_user()]
+        guild = self.get_guild(updated_user, fake_user())
+
+        actual_diff = asyncio.run(self.syncer._get_diff(guild))
+        expected_diff = (set(), {_User(**updated_user)}, None)
+
+        self.assertEqual(actual_diff, expected_diff)
 
     def test_get_users_for_sync_returns_users_to_create_with_new_ids_on_guild(self):
         """When new users join the guild, they are returned as the first tuple element."""
