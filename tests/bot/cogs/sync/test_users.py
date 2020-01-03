@@ -31,11 +31,12 @@ class UserSyncerDiffTests(unittest.TestCase):
         guild.members = []
 
         for member in members:
-            roles = (helpers.MockRole(id=role_id) for role_id in member.pop("roles"))
             member["avatar"] = member.pop("avatar_hash")
             del member["in_guild"]
 
-            mock_member = helpers.MockMember(roles, **member)
+            mock_member = helpers.MockMember(**member)
+            mock_member.roles = [helpers.MockRole(id=role_id) for role_id in member["roles"]]
+
             guild.members.append(mock_member)
 
         return guild
