@@ -85,15 +85,17 @@ class UserSyncerDiffTests(unittest.TestCase):
 
         self.assertEqual(actual_diff, expected_diff)
 
-    def test_get_users_for_sync_updates_in_guild_field_on_user_leave(self):
+    def test_diff_sets_in_guild_false_for_leaving_users(self):
         """When a user leaves the guild, the `in_guild` flag is updated to `False`."""
-        api_users = {43: fake_user(), 63: fake_user(id=63)}
-        guild_users = {43: fake_user()}
+        leaving_user = fake_user(id=63, in_guild=False)
 
-        self.assertEqual(
-            get_users_for_sync(guild_users, api_users),
-            (set(), {fake_user(id=63, in_guild=False)})
-        )
+        self.bot.api_client.get.return_value = [fake_user(), fake_user(id=63)]
+        guild = self.get_guild(fake_user())
+
+        actual_diff = asyncio.run(self.syncer._get_diff(guild))
+        expected_diff = (set(), {_User(**leaving_user)}, None)
+
+        self.assertEqual(actual_diff, expected_diff)
 
     def test_get_users_for_sync_updates_and_creates_users_as_needed(self):
         """When one user left and another one was updated, both are returned."""
