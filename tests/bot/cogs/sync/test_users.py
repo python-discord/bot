@@ -1,7 +1,8 @@
 import asyncio
 import unittest
+from unittest import mock
 
-from bot.cogs.sync.syncers import UserSyncer, _User
+from bot.cogs.sync.syncers import UserSyncer, _Diff, _User
 from tests import helpers
 
 
@@ -120,3 +121,41 @@ class UserSyncerDiffTests(unittest.TestCase):
         expected_diff = (set(), set(), None)
 
         self.assertEqual(actual_diff, expected_diff)
+
+
+class UserSyncerSyncTests(unittest.TestCase):
+    """Tests for the API requests that sync roles."""
+
+    def setUp(self):
+        self.bot = helpers.MockBot()
+        self.syncer = UserSyncer(self.bot)
+
+    def test_sync_created_users(self):
+        """Only POST requests should be made with the correct payload."""
+        users = [fake_user(id=111), fake_user(id=222)]
+
+        user_tuples = {_User(**user) for user in users}
+        diff = _Diff(user_tuples, set(), None)
+        asyncio.run(self.syncer._sync(diff))
+
+        calls = [mock.call("bot/users", json=user) for user in users]
+        self.bot.api_client.post.assert_has_calls(calls, any_order=True)
+        self.assertEqual(self.bot.api_client.post.call_count, len(users))
+
+        self.bot.api_client.put.assert_not_called()
+        self.bot.api_client.delete.assert_not_called()
+
+    def test_sync_updated_users(self):
+        """Only PUT requests should be made with the correct payload."""
+        users = [fake_user(id=111), fake_user(id=222)]
+
+        user_tuples = {_User(**user) for user in users}
+        diff = _Diff(set(), user_tuples, None)
+        asyncio.run(self.syncer._sync(diff))
+
+        calls = [mock.call(f"bot/users/{user['id']}", json=user) for user in users]
+        self.bot.api_client.put.assert_has_calls(calls, any_order=True)
+        self.assertEqual(self.bot.api_client.put.call_count, len(users))
+
+        self.bot.api_client.post.assert_not_called()
+        self.bot.api_client.delete.assert_not_called()
