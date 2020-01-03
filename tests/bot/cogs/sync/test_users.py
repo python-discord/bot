@@ -6,13 +6,15 @@ from tests import helpers
 
 
 def fake_user(**kwargs):
-    kwargs.setdefault('id', 43)
-    kwargs.setdefault('name', 'bob the test man')
-    kwargs.setdefault('discriminator', 1337)
-    kwargs.setdefault('avatar_hash', None)
-    kwargs.setdefault('roles', (666,))
-    kwargs.setdefault('in_guild', True)
-    return User(**kwargs)
+    """Fixture to return a dictionary representing a user with default values set."""
+    kwargs.setdefault("id", 43)
+    kwargs.setdefault("name", "bob the test man")
+    kwargs.setdefault("discriminator", 1337)
+    kwargs.setdefault("avatar_hash", None)
+    kwargs.setdefault("roles", (666,))
+    kwargs.setdefault("in_guild", True)
+
+    return kwargs
 
 
 class UserSyncerDiffTests(unittest.TestCase):
