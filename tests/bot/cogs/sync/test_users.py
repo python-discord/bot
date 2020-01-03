@@ -73,15 +73,17 @@ class UserSyncerDiffTests(unittest.TestCase):
 
         self.assertEqual(actual_diff, expected_diff)
 
-    def test_get_users_for_sync_returns_users_to_create_with_new_ids_on_guild(self):
-        """When new users join the guild, they are returned as the first tuple element."""
-        api_users = {43: fake_user()}
-        guild_users = {43: fake_user(), 63: fake_user(id=63)}
+    def test_diff_for_new_users(self):
+        """Only new users should be added to the 'created' set of the diff."""
+        new_user = fake_user(id=99, name="new")
 
-        self.assertEqual(
-            get_users_for_sync(guild_users, api_users),
-            ({fake_user(id=63)}, set())
-        )
+        self.bot.api_client.get.return_value = [fake_user()]
+        guild = self.get_guild(fake_user(), new_user)
+
+        actual_diff = asyncio.run(self.syncer._get_diff(guild))
+        expected_diff = ({_User(**new_user)}, set(), None)
+
+        self.assertEqual(actual_diff, expected_diff)
 
     def test_get_users_for_sync_updates_in_guild_field_on_user_leave(self):
         """When a user leaves the guild, the `in_guild` flag is updated to `False`."""
