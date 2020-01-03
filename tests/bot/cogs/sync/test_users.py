@@ -111,12 +111,12 @@ class UserSyncerDiffTests(unittest.TestCase):
 
         self.assertEqual(actual_diff, expected_diff)
 
-    def test_get_users_for_sync_does_not_duplicate_update_users(self):
-        """When the API knows a user the guild doesn't, nothing is performed."""
-        api_users = {43: fake_user(in_guild=False)}
-        guild_users = {}
+    def test_empty_diff_for_db_users_not_in_guild(self):
+        """When the DB knows a user the guild doesn't, no difference is found."""
+        self.bot.api_client.get.return_value = [fake_user(), fake_user(id=63, in_guild=False)]
+        guild = self.get_guild(fake_user())
 
-        self.assertEqual(
-            get_users_for_sync(guild_users, api_users),
-            (set(), set())
-        )
+        actual_diff = asyncio.run(self.syncer._get_diff(guild))
+        expected_diff = (set(), set(), None)
+
+        self.assertEqual(actual_diff, expected_diff)
