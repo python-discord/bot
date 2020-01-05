@@ -1,3 +1,4 @@
+import asyncio
 import unittest
 
 from bot.cogs.sync.syncers import Syncer
@@ -24,3 +25,10 @@ class SyncerBaseTests(unittest.TestCase):
         with self.assertRaisesRegex(TypeError, "Can't instantiate abstract class"):
             Syncer(self.bot)
 
+    def test_send_prompt_edits_message_content(self):
+        """The contents of the given message should be edited to display the prompt."""
+        msg = helpers.MockMessage()
+        asyncio.run(self.syncer._send_prompt(msg))
+
+        msg.edit.assert_called_once()
+        self.assertIn("content", msg.edit.call_args[1])
