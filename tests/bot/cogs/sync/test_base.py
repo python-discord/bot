@@ -77,3 +77,11 @@ class SyncerBaseTests(unittest.TestCase):
 
         mock_channel.send.assert_called_once()
         self.assertIn(self.syncer._CORE_DEV_MENTION, mock_channel.send.call_args[0][0])
+
+    def test_send_prompt_adds_reactions(self):
+        """The message should have reactions for confirmation added."""
+        msg = helpers.MockMessage()
+        asyncio.run(self.syncer._send_prompt(msg))
+
+        calls = [mock.call(emoji) for emoji in self.syncer._REACTION_EMOJIS]
+        msg.add_reaction.assert_has_calls(calls)
