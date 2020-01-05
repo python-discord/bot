@@ -43,3 +43,14 @@ class SyncerBaseTests(unittest.TestCase):
         asyncio.run(self.syncer._send_prompt())
 
         self.bot.get_channel.assert_called_once_with(constants.Channels.devcore)
+
+    def test_send_prompt_fetches_channel_if_cache_miss(self):
+        """The dev-core channel should be fetched with an API call if it's not in the cache."""
+        self.bot.get_channel.return_value = None
+        mock_channel = helpers.MockTextChannel()
+        mock_channel.send.return_value = helpers.MockMessage()
+        self.bot.fetch_channel.return_value = mock_channel
+
+        asyncio.run(self.syncer._send_prompt())
+
+        self.bot.fetch_channel.assert_called_once_with(constants.Channels.devcore)
