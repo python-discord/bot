@@ -2,6 +2,7 @@ import asyncio
 import unittest
 
 from bot.cogs.sync.syncers import Syncer
+from bot import constants
 from tests import helpers
 
 
@@ -32,3 +33,13 @@ class SyncerBaseTests(unittest.TestCase):
 
         msg.edit.assert_called_once()
         self.assertIn("content", msg.edit.call_args[1])
+
+    def test_send_prompt_gets_channel_from_cache(self):
+        """The dev-core channel should be retrieved from cache if an extant message isn't given."""
+        mock_channel = helpers.MockTextChannel()
+        mock_channel.send.return_value = helpers.MockMessage()
+        self.bot.get_channel.return_value = mock_channel
+
+        asyncio.run(self.syncer._send_prompt())
+
+        self.bot.get_channel.assert_called_once_with(constants.Channels.devcore)
