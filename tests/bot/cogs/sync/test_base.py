@@ -1,5 +1,8 @@
 import asyncio
 import unittest
+from unittest import mock
+
+import discord
 
 from bot.cogs.sync.syncers import Syncer
 from bot import constants
@@ -54,3 +57,12 @@ class SyncerBaseTests(unittest.TestCase):
         asyncio.run(self.syncer._send_prompt())
 
         self.bot.fetch_channel.assert_called_once_with(constants.Channels.devcore)
+
+    def test_send_prompt_returns_None_if_channel_fetch_fails(self):
+        """None should be returned if there's an HTTPException when fetching the channel."""
+        self.bot.get_channel.return_value = None
+        self.bot.fetch_channel.side_effect = discord.HTTPException(mock.MagicMock(), "test error!")
+
+        ret_val = asyncio.run(self.syncer._send_prompt())
+
+        self.assertIsNone(ret_val)
