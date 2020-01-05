@@ -66,3 +66,14 @@ class SyncerBaseTests(unittest.TestCase):
         ret_val = asyncio.run(self.syncer._send_prompt())
 
         self.assertIsNone(ret_val)
+
+    def test_send_prompt_sends_new_message_if_not_given(self):
+        """A new message that mentions core devs should be sent if an extant message isn't given."""
+        mock_channel = helpers.MockTextChannel()
+        mock_channel.send.return_value = helpers.MockMessage()
+        self.bot.get_channel.return_value = mock_channel
+
+        asyncio.run(self.syncer._send_prompt())
+
+        mock_channel.send.assert_called_once()
+        self.assertIn(self.syncer._CORE_DEV_MENTION, mock_channel.send.call_args[0][0])
