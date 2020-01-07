@@ -97,8 +97,19 @@ class SyncerBaseTests(unittest.TestCase):
 
     def test_send_prompt_adds_reactions(self):
         """The message should have reactions for confirmation added."""
-        msg = helpers.MockMessage()
-        asyncio.run(self.syncer._send_prompt(msg))
+        extant_message = helpers.MockMessage()
+        subtests = (
+            (extant_message, lambda: (None, extant_message)),
+            (None, self.mock_get_channel),
+            (None, self.mock_fetch_channel),
+        )
 
-        calls = [mock.call(emoji) for emoji in self.syncer._REACTION_EMOJIS]
-        msg.add_reaction.assert_has_calls(calls)
+        for message_arg, mock_ in subtests:
+            subtest_msg = "Extant message" if mock_.__name__ == "<lambda>" else mock_.__name__
+
+            with self.subTest(msg=subtest_msg):
+                _, mock_message = mock_()
+                asyncio.run(self.syncer._send_prompt(message_arg))
+
+                calls = [mock.call(emoji) for emoji in self.syncer._REACTION_EMOJIS]
+                mock_message.add_reaction.assert_has_calls(calls)
