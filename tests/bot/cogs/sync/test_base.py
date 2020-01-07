@@ -62,26 +62,19 @@ class SyncerBaseTests(unittest.TestCase):
         msg.edit.assert_called_once()
         self.assertIn("content", msg.edit.call_args[1])
 
-    def test_send_prompt_gets_channel_from_cache(self):
-        """The dev-core channel should be retrieved from cache if an extant message isn't given."""
-        mock_channel = helpers.MockTextChannel()
-        mock_channel.send.return_value = helpers.MockMessage()
-        self.bot.get_channel.return_value = mock_channel
+    def test_send_prompt_gets_dev_core_channel(self):
+        """The dev-core channel should be retrieved if an extant message isn't given."""
+        subtests = (
+            (self.bot.get_channel, self.mock_get_channel),
+            (self.bot.fetch_channel, self.mock_fetch_channel),
+        )
 
-        asyncio.run(self.syncer._send_prompt())
+        for method, mock_ in subtests:
+            with self.subTest(method=method, msg=mock_.__name__):
+                mock_()
+                asyncio.run(self.syncer._send_prompt())
 
-        self.bot.get_channel.assert_called_once_with(constants.Channels.devcore)
-
-    def test_send_prompt_fetches_channel_if_cache_miss(self):
-        """The dev-core channel should be fetched with an API call if it's not in the cache."""
-        self.bot.get_channel.return_value = None
-        mock_channel = helpers.MockTextChannel()
-        mock_channel.send.return_value = helpers.MockMessage()
-        self.bot.fetch_channel.return_value = mock_channel
-
-        asyncio.run(self.syncer._send_prompt())
-
-        self.bot.fetch_channel.assert_called_once_with(constants.Channels.devcore)
+                method.assert_called_once_with(constants.Channels.devcore)
 
     def test_send_prompt_returns_None_if_channel_fetch_fails(self):
         """None should be returned if there's an HTTPException when fetching the channel."""
@@ -94,14 +87,13 @@ class SyncerBaseTests(unittest.TestCase):
 
     def test_send_prompt_sends_new_message_if_not_given(self):
         """A new message that mentions core devs should be sent if an extant message isn't given."""
-        mock_channel = helpers.MockTextChannel()
-        mock_channel.send.return_value = helpers.MockMessage()
-        self.bot.get_channel.return_value = mock_channel
+        for mock_ in (self.mock_get_channel, self.mock_fetch_channel):
+            with self.subTest(msg=mock_.__name__):
+                mock_channel, _ = mock_()
+                asyncio.run(self.syncer._send_prompt())
 
-        asyncio.run(self.syncer._send_prompt())
-
-        mock_channel.send.assert_called_once()
-        self.assertIn(self.syncer._CORE_DEV_MENTION, mock_channel.send.call_args[0][0])
+                mock_channel.send.assert_called_once()
+                self.assertIn(self.syncer._CORE_DEV_MENTION, mock_channel.send.call_args[0][0])
 
     def test_send_prompt_adds_reactions(self):
         """The message should have reactions for confirmation added."""
