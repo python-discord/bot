@@ -24,6 +24,27 @@ class SyncerBaseTests(unittest.TestCase):
         self.bot = helpers.MockBot()
         self.syncer = TestSyncer(self.bot)
 
+    def mock_dev_core_channel(self):
+        """Fixture to return a mock channel and message for when `get_channel` is used."""
+        mock_channel = helpers.MockTextChannel()
+        mock_message = helpers.MockMessage()
+
+        mock_channel.send.return_value = mock_message
+        self.bot.get_channel.return_value = mock_channel
+
+        return mock_channel, mock_message
+
+    def mock_dev_core_channel_cache_miss(self):
+        """Fixture to return a mock channel and message for when `fetch_channel` is used."""
+        mock_channel = helpers.MockTextChannel()
+        mock_message = helpers.MockMessage()
+
+        self.bot.get_channel.return_value = None
+        mock_channel.send.return_value = mock_message
+        self.bot.fetch_channel.return_value = mock_channel
+
+        return mock_channel, mock_message
+
     def test_instantiation_fails_without_abstract_methods(self):
         """The class must have abstract methods implemented."""
         with self.assertRaisesRegex(TypeError, "Can't instantiate abstract class"):
