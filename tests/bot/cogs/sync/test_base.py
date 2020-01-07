@@ -54,13 +54,14 @@ class SyncerBaseTests(unittest.TestCase):
         with self.assertRaisesRegex(TypeError, "Can't instantiate abstract class"):
             Syncer(self.bot)
 
-    def test_send_prompt_edits_message_content(self):
-        """The contents of the given message should be edited to display the prompt."""
+    def test_send_prompt_edits_and_returns_message(self):
+        """The given message should be edited to display the prompt and then should be returned."""
         msg = helpers.MockMessage()
-        asyncio.run(self.syncer._send_prompt(msg))
+        ret_val = asyncio.run(self.syncer._send_prompt(msg))
 
         msg.edit.assert_called_once()
         self.assertIn("content", msg.edit.call_args[1])
+        self.assertEqual(ret_val, msg)
 
     def test_send_prompt_gets_dev_core_channel(self):
         """The dev-core channel should be retrieved if an extant message isn't given."""
@@ -85,15 +86,16 @@ class SyncerBaseTests(unittest.TestCase):
 
         self.assertIsNone(ret_val)
 
-    def test_send_prompt_sends_new_message_if_not_given(self):
-        """A new message that mentions core devs should be sent if an extant message isn't given."""
+    def test_send_prompt_sends_and_returns_new_message_if_not_given(self):
+        """A new message mentioning core devs should be sent and returned if message isn't given."""
         for mock_ in (self.mock_get_channel, self.mock_fetch_channel):
             with self.subTest(msg=mock_.__name__):
-                mock_channel, _ = mock_()
-                asyncio.run(self.syncer._send_prompt())
+                mock_channel, mock_message = mock_()
+                ret_val = asyncio.run(self.syncer._send_prompt())
 
                 mock_channel.send.assert_called_once()
                 self.assertIn(self.syncer._CORE_DEV_MENTION, mock_channel.send.call_args[0][0])
+                self.assertEqual(ret_val, mock_message)
 
     def test_send_prompt_adds_reactions(self):
         """The message should have reactions for confirmation added."""
