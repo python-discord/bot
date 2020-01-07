@@ -24,7 +24,7 @@ class SyncerBaseTests(unittest.TestCase):
         self.bot = helpers.MockBot()
         self.syncer = TestSyncer(self.bot)
 
-    def mock_dev_core_channel(self):
+    def mock_get_channel(self):
         """Fixture to return a mock channel and message for when `get_channel` is used."""
         self.bot.reset_mock()
 
@@ -36,7 +36,7 @@ class SyncerBaseTests(unittest.TestCase):
 
         return mock_channel, mock_message
 
-    def mock_dev_core_channel_cache_miss(self):
+    def mock_fetch_channel(self):
         """Fixture to return a mock channel and message for when `fetch_channel` is used."""
         self.bot.reset_mock()
 
