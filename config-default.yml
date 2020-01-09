@@ -202,6 +202,8 @@ filter:
         - 590806733924859943  # Discord Hack Week
         - 423249981340778496  # Kivy
         - 197038439483310086  # Discord Testers
+        - 286633898581164032  # Ren'Py
+        - 349505959032389632  # PyGame
 
     domain_blacklist:
         - pornhub.com
