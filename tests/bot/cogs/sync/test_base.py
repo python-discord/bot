@@ -22,6 +22,18 @@ class SyncerBaseTests(unittest.TestCase):
 
     def setUp(self):
         self.bot = helpers.MockBot()
+
+    def test_instantiation_fails_without_abstract_methods(self):
+        """The class must have abstract methods implemented."""
+        with self.assertRaisesRegex(TypeError, "Can't instantiate abstract class"):
+            Syncer(self.bot)
+
+
+class SyncerSendPromptTests(unittest.TestCase):
+    """Tests for sending the sync confirmation prompt."""
+
+    def setUp(self):
+        self.bot = helpers.MockBot()
         self.syncer = TestSyncer(self.bot)
 
     def mock_get_channel(self):
@@ -48,11 +60,6 @@ class SyncerBaseTests(unittest.TestCase):
         self.bot.fetch_channel.return_value = mock_channel
 
         return mock_channel, mock_message
-
-    def test_instantiation_fails_without_abstract_methods(self):
-        """The class must have abstract methods implemented."""
-        with self.assertRaisesRegex(TypeError, "Can't instantiate abstract class"):
-            Syncer(self.bot)
 
     def test_send_prompt_edits_and_returns_message(self):
         """The given message should be edited to display the prompt and then should be returned."""
