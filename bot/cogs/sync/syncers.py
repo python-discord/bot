@@ -2,8 +2,9 @@ import abc
 import logging
 import typing as t
 from collections import namedtuple
+from functools import partial
 
-from discord import Guild, HTTPException, Member, Message
+from discord import Guild, HTTPException, Member, Message, Reaction, User
 from discord.ext.commands import Context
 
 from bot import constants
@@ -80,24 +81,38 @@ class Syncer(abc.ABC):
 
         return message
 
+    def _reaction_check(
+        self,
+        author: Member,
+        message: Message,
+        reaction: Reaction,
+        user: t.Union[Member, User]
+    ) -> bool:
+        """
+        Return True if the `reaction` is a valid confirmation or abort reaction on `message`.
+
+        If the `author` of the prompt is a bot, then a reaction by any core developer will be
+        considered valid. Otherwise, the author of the reaction (`user`) will have to be the
+        `author` of the prompt.
+        """
+        # For automatic syncs, check for the core dev role instead of an exact author
+        has_role = any(constants.Roles.core_developer == role.id for role in user.roles)
+        return (
+            reaction.message.id == message.id
+            and not user.bot
+            and has_role if author.bot else user == author
+            and str(reaction.emoji) in self._REACTION_EMOJIS
+        )
+
     async def _wait_for_confirmation(self, author: Member, message: Message) -> bool:
         """
         Wait for a confirmation reaction by `author` on `message` and return True if confirmed.
 
-        If `author` is a bot user, then anyone with the core developers role may react to confirm.
+        Uses the `_reaction_check` function to determine if a reaction is valid.
+
         If there is no reaction within `CONFIRM_TIMEOUT` seconds, return False. To acknowledge the
         reaction (or lack thereof), `message` will be edited.
         """
-        def check(_reaction, user):  # noqa: TYP
-            # For automatic syncs, check for the core dev role instead of an exact author
-            has_role = any(constants.Roles.core_developer == role.id for role in user.roles)
-            return (
-                _reaction.message.id == message.id
-                and not user.bot
-                and has_role if author.bot else user == author
-                and str(_reaction.emoji) in self._REACTION_EMOJIS
-            )
-
         # Preserve the core-dev role mention in the message edits so users aren't confused about
         # where notifications came from.
         mention = self._CORE_DEV_MENTION if author.bot else ""
@@ -107,7 +122,7 @@ class Syncer(abc.ABC):
             log.trace(f"Waiting for a reaction to the {self.name} syncer confirmation prompt.")
             reaction, _ = await self.bot.wait_for(
                 'reaction_add',
-                check=check,
+                check=partial(self._reaction_check, author, message),
                 timeout=self.CONFIRM_TIMEOUT
             )
         except TimeoutError:
