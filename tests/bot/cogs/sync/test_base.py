@@ -4,8 +4,8 @@ from unittest import mock
 
 import discord
 
-from bot.cogs.sync.syncers import Syncer
 from bot import constants
+from bot.cogs.sync.syncers import Syncer
 from tests import helpers
 
 
@@ -122,3 +122,11 @@ class SyncerSendPromptTests(unittest.TestCase):
 
                 calls = [mock.call(emoji) for emoji in self.syncer._REACTION_EMOJIS]
                 mock_message.add_reaction.assert_has_calls(calls)
+
+
+class SyncerConfirmationTests(unittest.TestCase):
+    """Tests for waiting for a sync confirmation reaction on the prompt."""
+
+    def setUp(self):
+        self.bot = helpers.MockBot()
+        self.syncer = TestSyncer(self.bot)
