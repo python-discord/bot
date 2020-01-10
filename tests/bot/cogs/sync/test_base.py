@@ -130,3 +130,30 @@ class SyncerConfirmationTests(unittest.TestCase):
     def setUp(self):
         self.bot = helpers.MockBot()
         self.syncer = TestSyncer(self.bot)
+        self.core_dev_role = helpers.MockRole(id=constants.Roles.core_developer)
+
+    @staticmethod
+    def get_message_reaction(emoji):
+        """Fixture to return a mock message an reaction from the given `emoji`."""
+        message = helpers.MockMessage()
+        reaction = helpers.MockReaction(emoji=emoji, message=message)
+
+        return message, reaction
+
+    def test_reaction_check_for_valid_emoji_and_authors(self):
+        """Should return True if authors are identical or are a bot and a core dev, respectively."""
+        user_subtests = (
+            (helpers.MockMember(id=77), helpers.MockMember(id=77)),
+            (
+                helpers.MockMember(id=77, bot=True),
+                helpers.MockMember(id=43, roles=[self.core_dev_role]),
+            )
+        )
+
+        for emoji in self.syncer._REACTION_EMOJIS:
+            for author, user in user_subtests:
+                with self.subTest(author=author, user=user, emoji=emoji):
+                    message, reaction = self.get_message_reaction(emoji)
+                    ret_val = self.syncer._reaction_check(author, message, reaction, user)
+
+                    self.assertTrue(ret_val)
