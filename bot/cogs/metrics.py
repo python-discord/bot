@@ -8,7 +8,11 @@ from bot.bot import Bot
 
 
 class Metrics(Cog):
-    """Exports metrics for Prometheus."""
+    """
+    Exports metrics for Prometheus.
+
+    See https://github.com/prometheus/client_python for metric documentation.
+    """
 
     PREFIX = 'pydis_bot_'
 
@@ -28,6 +32,7 @@ class Metrics(Cog):
 
     @Cog.listener()
     async def on_ready(self) -> None:
+        """Initialize the guild member counter."""
         members_by_status = defaultdict(lambda: defaultdict(int))
 
         for guild in self.bot.guilds:
@@ -42,20 +47,24 @@ class Metrics(Cog):
 
     @Cog.listener()
     async def on_member_join(self, member: Member) -> None:
+        """Increment the member gauge."""
         self.guild_members.labels(guild_id=member.guild.id, status=str(member.status)).inc()
 
     @Cog.listener()
     async def on_member_leave(self, member: Member) -> None:
+        """Decrement the member gauge."""
         self.guild_members.labels(guild_id=member.guild.id, status=str(member.status)).dec()
 
     @Cog.listener()
     async def on_member_update(self, before: Member, after: Member) -> None:
+        """Update member gauges for the new and old status if applicable."""
         if before.status is not after.status:
             self.guild_members.labels(guild_id=after.guild.id, status=str(before.status)).dec()
             self.guild_members.labels(guild_id=after.guild.id, status=str(after.status)).inc()
 
     @Cog.listener()
     async def on_message(self, message: Message) -> None:
+        """Increment the guild message counter."""
         self.guild_messages.labels(
             channel_id=message.channel.id, channel_name=message.channel.name
         ).inc()
