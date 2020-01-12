@@ -14,18 +14,18 @@ class Metrics(Cog):
     See https://github.com/prometheus/client_python for metric documentation.
     """
 
-    PREFIX = 'pydis_bot_'
+    PREFIX = 'pydis_bot'
 
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
 
         self.guild_members = Gauge(
-            name=f'{self.PREFIX}guild_members',
+            name=f'{self.PREFIX}_guild_members',
             documentation="Total members by guild by status.",
             labelnames=('guild_id', 'status')
         )
         self.guild_messages = Counter(
-            name=f'{self.PREFIX}guild_messages',
+            name=f'{self.PREFIX}_guild_messages',
             documentation="Guild messages by guild by channel.",
             labelnames=('channel_id', 'guild_id', 'channel_name')
         )
