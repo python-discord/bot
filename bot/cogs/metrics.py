@@ -21,13 +21,13 @@ class Metrics(Cog):
 
         self.guild_members = Gauge(
             name=f'{self.PREFIX}guild_members',
-            documentation="Total members by status.",
+            documentation="Total members by guild by status.",
             labelnames=('guild_id', 'status')
         )
         self.guild_messages = Counter(
             name=f'{self.PREFIX}guild_messages',
-            documentation="Guild messages by channel.",
-            labelnames=('channel_id', 'channel_name')
+            documentation="Guild messages by guild by channel.",
+            labelnames=('channel_id', 'guild_id', 'channel_name')
         )
 
     @Cog.listener()
@@ -66,7 +66,9 @@ class Metrics(Cog):
     async def on_message(self, message: Message) -> None:
         """Increment the guild message counter."""
         self.guild_messages.labels(
-            channel_id=message.channel.id, channel_name=message.channel.name
+            channel_id=message.channel.id,
+            channel_name=message.channel.name,
+            guild_id=message.guild.id,
         ).inc()
 
 
