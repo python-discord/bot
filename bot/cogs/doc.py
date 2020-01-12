@@ -306,10 +306,17 @@ class Doc(commands.Cog):
         # of a double newline (interpreted as a paragraph) before index 1000.
         if len(description) > 1000:
             shortened = description[:1000]
-            last_paragraph_end = shortened.rfind('\n\n', 100)
-            if last_paragraph_end == -1:
-                last_paragraph_end = shortened.rfind('. ')
-            description = description[:last_paragraph_end]
+            description_cutoff = shortened.rfind('\n\n', 100)
+            if description_cutoff == -1:
+                # Search the shortened version for cutoff points in decreasing desirability,
+                # cutoff at 1000 if none are found.
+                for string in (". ", ", ", ",", " "):
+                    description_cutoff = shortened.rfind(string)
+                    if description_cutoff != -1:
+                        break
+                else:
+                    description_cutoff = 1000
+            description = description[:description_cutoff]
 
             # If there is an incomplete code block, cut it out
             if description.count("```") % 2:
@@ -318,7 +325,6 @@ class Doc(commands.Cog):
             description += f"... [read more]({permalink})"
 
         description = WHITESPACE_AFTER_NEWLINES_RE.sub('', description)
-
         if signatures is None:
             # If symbol is a module, don't show signature.
             embed_description = description
