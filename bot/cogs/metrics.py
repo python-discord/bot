@@ -25,8 +25,9 @@ class Metrics(Cog):
     async def on_ready(self) -> None:
         members_by_status = defaultdict(lambda: defaultdict(int))
 
-        await self.bot.request_offline_members(*self.bot.guilds)
         for guild in self.bot.guilds:
+            if guild.large:
+                await self.bot.request_offline_members(guild)
             for member in guild.members:
                 members_by_status[guild.id][member.status] += 1
 
