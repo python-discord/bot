@@ -80,21 +80,14 @@ class Metrics(Cog):
     async def on_command_completion(self, ctx: Context) -> None:
         """Increment the command completion counter."""
         if ctx.message.guild is not None:
-            path = []
-            if (
-                    ctx.command.root_parent is not None
-                    and ctx.command.root_parent is not ctx.command.parent
-            ):
-                path.append(ctx.command.root_parent.name)
-
-            if ctx.command.parent is not None:
-                path.append(ctx.command.parent.name)
-
-            path.append(ctx.command.name)
+            if ctx.command.full_parent_name:
+                command = f'{ctx.command.full_parent_name} {ctx.command.name}'
+            else:
+                command = ctx.command.name
 
             self.command_completions.labels(
                 guild_id=ctx.message.guild.id,
-                command=' '.join(path),
+                command=command,
             ).inc()
 
 
