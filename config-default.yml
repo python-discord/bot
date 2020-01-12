@@ -154,7 +154,7 @@ guild:
         contributor:                        295488872404484098
         core_developer:                     587606783669829632
         helpers:                            267630620367257601
-        jammer:                             423054537079783434
+        jammer:                             591786436651646989
         moderator:         &MOD_ROLE        267629731250176001
         muted:             &MUTED_ROLE      277914926603829249
         owner:             &OWNER_ROLE      267627879762755584
@@ -202,6 +202,8 @@ filter:
         - 590806733924859943  # Discord Hack Week
         - 423249981340778496  # Kivy
         - 197038439483310086  # Discord Testers
+        - 286633898581164032  # Ren'Py
+        - 349505959032389632  # PyGame
 
     domain_blacklist:
         - pornhub.com

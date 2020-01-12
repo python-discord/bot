@@ -3,7 +3,10 @@ import logging
 from typing import Union
 
 from discord import Colour, Embed, Member, User
-from discord.ext.commands import Cog, Command, Context, clean_content, command, group
+from discord.ext.commands import (
+    Cog, Command, Context, Greedy,
+    clean_content, command, group,
+)
 
 from bot.bot import Bot
 from bot.cogs.extensions import Extension
@@ -81,7 +84,7 @@ class Alias (Cog):
         await self.invoke(ctx, "site faq")
 
     @command(name="rules", aliases=("rule",), hidden=True)
-    async def site_rules_alias(self, ctx: Context, *rules: int) -> None:
+    async def site_rules_alias(self, ctx: Context, rules: Greedy[int], *_: str) -> None:
         """Alias for invoking <prefix>site rules."""
         await self.invoke(ctx, "site rules", *rules)
 
