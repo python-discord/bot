@@ -1,8 +1,8 @@
 from collections import defaultdict
 
-from discord import Member
+from discord import Member, Message
 from discord.ext.commands import Cog
-from prometheus_client import Gauge
+from prometheus_client import Counter, Gauge
 
 from bot.bot import Bot
 
@@ -16,9 +16,14 @@ class Metrics(Cog):
         self.bot = bot
 
         self.guild_members = Gauge(
-            name=f'{self.PREFIX}server_members',
+            name=f'{self.PREFIX}guild_members',
             documentation="Total members by status.",
             labelnames=('guild_id', 'status')
+        )
+        self.guild_messages = Counter(
+            name=f'{self.PREFIX}guild_messages',
+            documentation="Guild messages by channel.",
+            labelnames=('channel_id', 'channel_name')
         )
 
     @Cog.listener()
@@ -48,6 +53,12 @@ class Metrics(Cog):
         if before.status is not after.status:
             self.guild_members.labels(guild_id=after.guild.id, status=str(before.status)).dec()
             self.guild_members.labels(guild_id=after.guild.id, status=str(after.status)).inc()
+
+    @Cog.listener()
+    async def on_message(self, message: Message) -> None:
+        self.guild_messages.labels(
+            channel_id=message.channel.id, channel_name=message.channel.name
+        ).inc()
 
 
 def setup(bot: Bot) -> None:
