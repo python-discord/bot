@@ -31,7 +31,7 @@ class Metrics(Cog):
         )
         self.command_completions = Counter(
             name=f'{self.PREFIX}_command_completions',
-            documentation="Completed commands by command by user by guild.",
+            documentation="Completed commands by command, user, and guild.",
             labelnames=('guild_id', 'user_id', 'user_name', 'command')
         )
 
