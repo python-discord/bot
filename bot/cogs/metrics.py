@@ -1,7 +1,7 @@
 from collections import defaultdict
 
 from discord import Member, Message
-from discord.ext.commands import Cog
+from discord.ext.commands import Cog, Context
 from prometheus_client import Counter, Gauge
 
 from bot.bot import Bot
@@ -28,6 +28,11 @@ class Metrics(Cog):
             name=f'{self.PREFIX}_guild_messages',
             documentation="Guild messages by guild by channel.",
             labelnames=('channel_id', 'guild_id', 'channel_name')
+        )
+        self.command_completions = Counter(
+            name=f'{self.PREFIX}_command_completions',
+            documentation="Completed commands by command by guild.",
+            labelnames=('guild_id', 'command')
         )
 
     @Cog.listener()
@@ -70,6 +75,27 @@ class Metrics(Cog):
             channel_name=message.channel.name,
             guild_id=message.guild.id,
         ).inc()
+
+    @Cog.listener()
+    async def on_command_completion(self, ctx: Context) -> None:
+        """Increment the command completion counter."""
+        if ctx.message.guild is not None:
+            path = []
+            if (
+                    ctx.command.root_parent is not None
+                    and ctx.command.root_parent is not ctx.command.parent
+            ):
+                path.append(ctx.command.root_parent.name)
+
+            if ctx.command.parent is not None:
+                path.append(ctx.command.parent.name)
+
+            path.append(ctx.command.name)
+
+            self.command_completions.labels(
+                guild_id=ctx.message.guild.id,
+                command=' '.join(path),
+            ).inc()
 
 
 def setup(bot: Bot) -> None:
