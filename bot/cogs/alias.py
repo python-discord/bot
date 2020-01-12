@@ -4,8 +4,8 @@ from typing import Union
 
 from discord import Colour, Embed, Member, User
 from discord.ext.commands import (
-    Cog, Command, Context, clean_content,
-    command, Greedy, group,
+    Cog, Command, Context, Greedy,
+    clean_content, command, group,
 )
 
 from bot.bot import Bot
