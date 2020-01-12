@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from discord import Status
+from discord import Member
 from discord.ext.commands import Cog
 from prometheus_client import Gauge
 
@@ -34,6 +34,20 @@ class Metrics(Cog):
         for guild_id, members in members_by_status.items():
             for status, count in members.items():
                 self.guild_members.labels(guild_id=guild_id, status=str(status)).set(count)
+
+    @Cog.listener()
+    async def on_member_join(self, member: Member) -> None:
+        self.guild_members.labels(guild_id=member.guild.id, status=str(member.status)).inc()
+
+    @Cog.listener()
+    async def on_member_leave(self, member: Member) -> None:
+        self.guild_members.labels(guild_id=member.guild.id, status=str(member.status)).dec()
+
+    @Cog.listener()
+    async def on_member_update(self, before: Member, after: Member) -> None:
+        if before.status is not after.status:
+            self.guild_members.labels(guild_id=after.guild.id, status=str(before.status)).dec()
+            self.guild_members.labels(guild_id=after.guild.id, status=str(after.status)).inc()
 
 
 def setup(bot: Bot) -> None:
