@@ -157,3 +157,46 @@ class SyncerConfirmationTests(unittest.TestCase):
                     ret_val = self.syncer._reaction_check(author, message, reaction, user)
 
                     self.assertTrue(ret_val)
+
+    def test_reaction_check_for_invalid_reactions(self):
+        """Should return False for invalid reaction events."""
+        valid_emoji = self.syncer._REACTION_EMOJIS[0]
+        subtests = (
+            (
+                helpers.MockMember(id=77),
+                *self.get_message_reaction(valid_emoji),
+                helpers.MockMember(id=43, roles=[self.core_dev_role]),
+                "users are not identical",
+            ),
+            (
+                helpers.MockMember(id=77, bot=True),
+                *self.get_message_reaction(valid_emoji),
+                helpers.MockMember(id=43),
+                "reactor lacks the core-dev role",
+            ),
+            (
+                helpers.MockMember(id=77, bot=True, roles=[self.core_dev_role]),
+                *self.get_message_reaction(valid_emoji),
+                helpers.MockMember(id=77, bot=True, roles=[self.core_dev_role]),
+                "reactor is a bot",
+            ),
+            (
+                helpers.MockMember(id=77),
+                helpers.MockMessage(id=95),
+                helpers.MockReaction(emoji=valid_emoji, message=helpers.MockMessage(id=26)),
+                helpers.MockMember(id=77),
+                "messages are not identical",
+            ),
+            (
+                helpers.MockMember(id=77),
+                *self.get_message_reaction("InVaLiD"),
+                helpers.MockMember(id=77),
+                "emoji is invalid",
+            ),
+        )
+
+        for *args, msg in subtests:
+            kwargs = dict(zip(("author", "message", "reaction", "user"), args))
+            with self.subTest(**kwargs, msg=msg):
+                ret_val = self.syncer._reaction_check(*args)
+                self.assertFalse(ret_val)
