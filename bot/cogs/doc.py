@@ -5,6 +5,7 @@ import re
 import textwrap
 from collections import OrderedDict
 from contextlib import suppress
+from types import SimpleNamespace
 from typing import Any, Callable, Optional, Tuple
 
 import discord
@@ -26,6 +27,16 @@ from bot.pagination import LinePaginator
 
 log = logging.getLogger(__name__)
 logging.getLogger('urllib3').setLevel(logging.WARNING)
+
+# Since Intersphinx is intended to be used with Sphinx,
+# we need to mock its configuration.
+SPHINX_MOCK_APP = SimpleNamespace(
+    config=SimpleNamespace(
+        intersphinx_timeout=3,
+        tls_verify=True,
+        user_agent="python3:python-discord/bot:1.0.0"
+    )
+)
 
 NO_OVERRIDE_GROUPS = (
     "2to3fixer",
@@ -102,18 +113,6 @@ def markdownify(html: str) -> DocMarkdownConverter:
     return DocMarkdownConverter(bullets='•').convert(html)
 
 
-class DummyObject(object):
-    """A dummy object which supports assigning anything, which the builtin `object()` does not support normally."""
-
-
-class SphinxConfiguration:
-    """Dummy configuration for use with intersphinx."""
-
-    config = DummyObject()
-    config.intersphinx_timeout = 3
-    config.tls_verify = True
-
-
 class InventoryURL(commands.Converter):
     """
     Represents an Intersphinx inventory URL.
@@ -128,7 +127,7 @@ class InventoryURL(commands.Converter):
     async def convert(ctx: commands.Context, url: str) -> str:
         """Convert url to Intersphinx inventory URL."""
         try:
-            intersphinx.fetch_inventory(SphinxConfiguration(), '', url)
+            intersphinx.fetch_inventory(SPHINX_MOCK_APP, '', url)
         except AttributeError:
             raise commands.BadArgument(f"Failed to fetch Intersphinx inventory from URL `{url}`.")
         except ConnectionError:
@@ -162,7 +161,7 @@ class Doc(commands.Cog):
         await self.refresh_inventory()
 
     async def update_single(
-        self, package_name: str, base_url: str, inventory_url: str, config: SphinxConfiguration
+        self, package_name: str, base_url: str, inventory_url: str
     ) -> None:
         """
         Rebuild the inventory for a single package.
@@ -173,12 +172,10 @@ class Doc(commands.Cog):
                 absolute paths that link to specific symbols
             * `inventory_url` is the absolute URL to the intersphinx inventory, fetched by running
                 `intersphinx.fetch_inventory` in an executor on the bot's event loop
-            * `config` is a `SphinxConfiguration` instance to mock the regular sphinx
-                project layout, required for use with intersphinx
         """
         self.base_urls[package_name] = base_url
 
-        package = await self._fetch_inventory(inventory_url, config)
+        package = await self._fetch_inventory(inventory_url)
         if not package:
             return None
 
@@ -220,15 +217,11 @@ class Doc(commands.Cog):
         self.renamed_symbols.clear()
         async_cache.cache = OrderedDict()
 
-        # Since Intersphinx is intended to be used with Sphinx,
-        # we need to mock its configuration.
-        config = SphinxConfiguration()
-
         # Run all coroutines concurrently - since each of them performs a HTTP
         # request, this speeds up fetching the inventory data heavily.
         coros = [
             self.update_single(
-                package["package"], package["base_url"], package["inventory_url"], config
+                package["package"], package["base_url"], package["inventory_url"]
             ) for package in await self.bot.api_client.get('bot/documentation-links')
         ]
         await asyncio.gather(*coros)
@@ -476,9 +469,9 @@ class Doc(commands.Cog):
         )
         await ctx.send(embed=embed)
 
-    async def _fetch_inventory(self, inventory_url: str, config: SphinxConfiguration) -> Optional[dict]:
+    async def _fetch_inventory(self, inventory_url: str) -> Optional[dict]:
         """Get and return inventory from `inventory_url`. If fetching fails, return None."""
-        fetch_func = functools.partial(intersphinx.fetch_inventory, config, '', inventory_url)
+        fetch_func = functools.partial(intersphinx.fetch_inventory, SPHINX_MOCK_APP, '', inventory_url)
         for retry in range(1, FAILED_REQUEST_RETRY_AMOUNT+1):
             try:
                 package = await self.bot.loop.run_in_executor(None, fetch_func)
