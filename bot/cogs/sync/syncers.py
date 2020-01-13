@@ -100,7 +100,7 @@ class Syncer(abc.ABC):
         return (
             reaction.message.id == message.id
             and not user.bot
-            and has_role if author.bot else user == author
+            and (has_role if author.bot else user == author)
             and str(reaction.emoji) in self._REACTION_EMOJIS
         )
 
