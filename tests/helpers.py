@@ -521,6 +521,7 @@ class MockReaction(CustomMockMixin, unittest.mock.MagicMock):
         self.emoji = kwargs.get('emoji', MockEmoji())
         self.message = kwargs.get('message', MockMessage())
         self.users = AsyncIteratorMock(kwargs.get('users', []))
+        self.__str__.return_value = str(self.emoji)
 
 
 webhook_instance = discord.Webhook(data=unittest.mock.MagicMock(), adapter=unittest.mock.MagicMock())
