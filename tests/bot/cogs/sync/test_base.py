@@ -205,3 +205,41 @@ class SyncerConfirmationTests(unittest.TestCase):
             with self.subTest(**kwargs, msg=msg):
                 ret_val = self.syncer._reaction_check(*args)
                 self.assertFalse(ret_val)
+
+    def test_wait_for_confirmation(self):
+        """The message should always be edited and only return True if the emoji is a check mark."""
+        subtests = (
+            (constants.Emojis.check_mark, True, None),
+            ("InVaLiD", False, None),
+            (None, False, TimeoutError),
+        )
+
+        for emoji, ret_val, side_effect in subtests:
+            for bot in (True, False):
+                with self.subTest(emoji=emoji, ret_val=ret_val, side_effect=side_effect, bot=bot):
+                    # Set up mocks
+                    message = helpers.MockMessage()
+                    member = helpers.MockMember(bot=bot)
+
+                    self.bot.wait_for.reset_mock()
+                    self.bot.wait_for.return_value = (helpers.MockReaction(emoji=emoji), None)
+                    self.bot.wait_for.side_effect = side_effect
+
+                    # Call the function
+                    actual_return = asyncio.run(self.syncer._wait_for_confirmation(member, message))
+
+                    # Perform assertions
+                    self.bot.wait_for.assert_called_once()
+                    self.assertIn("reaction_add", self.bot.wait_for.call_args[0])
+
+                    message.edit.assert_called_once()
+                    kwargs = message.edit.call_args[1]
+                    self.assertIn("content", kwargs)
+
+                    # Core devs should only be mentioned if the author is a bot.
+                    if bot:
+                        self.assertIn(self.syncer._CORE_DEV_MENTION, kwargs["content"])
+                    else:
+                        self.assertNotIn(self.syncer._CORE_DEV_MENTION, kwargs["content"])
+
+                    self.assertIs(actual_return, ret_val)
