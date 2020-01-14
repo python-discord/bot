@@ -204,6 +204,8 @@ filter:
         - 197038439483310086  # Discord Testers
         - 286633898581164032  # Ren'Py
         - 349505959032389632  # PyGame
+        - 438622377094414346  # Pyglet
+        - 524691714909274162  # Panda3D
 
     domain_blacklist:
         - pornhub.com
