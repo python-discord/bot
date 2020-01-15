@@ -5,7 +5,7 @@ from unittest import mock
 import discord
 
 from bot import constants
-from bot.cogs.sync.syncers import Syncer
+from bot.cogs.sync.syncers import Syncer, _Diff
 from tests import helpers
 
 
@@ -243,3 +243,27 @@ class SyncerConfirmationTests(unittest.TestCase):
                         self.assertNotIn(self.syncer._CORE_DEV_MENTION, kwargs["content"])
 
                     self.assertIs(actual_return, ret_val)
+
+
+class SyncerSyncTests(unittest.TestCase):
+    """Tests for main function orchestrating the sync."""
+
+    def setUp(self):
+        self.bot = helpers.MockBot()
+        self.syncer = TestSyncer(self.bot)
+
+    def test_sync_with_empty_diff(self):
+        """A confirmation prompt should not be sent if the diff is too small."""
+        guild = helpers.MockGuild()
+        diff = _Diff(set(), set(), set())
+
+        self.syncer._send_prompt = helpers.AsyncMock()
+        self.syncer._wait_for_confirmation = helpers.AsyncMock()
+        self.syncer._get_diff.return_value = diff
+
+        asyncio.run(self.syncer.sync(guild))
+
+        self.syncer._get_diff.assert_called_once_with(guild)
+        self.syncer._send_prompt.assert_not_called()
+        self.syncer._wait_for_confirmation.assert_not_called()
+        self.syncer._sync.assert_called_once_with(diff)
