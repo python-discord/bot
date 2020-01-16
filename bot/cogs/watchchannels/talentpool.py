@@ -69,7 +69,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
             return
 
         if user.id in self.watched_users:
-            await ctx.send(":x: The specified user is already being watched in the talent pool")
+            await ctx.send(f":x: {user} is already being watched in the talent pool")
             return
 
         # Manual request with `raise_for_status` as False because we want the actual response

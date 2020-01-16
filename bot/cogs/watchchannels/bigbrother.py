@@ -61,10 +61,10 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
             return
 
         if user.id in self.watched_users:
-            await ctx.send(":x: The specified user is already being watched.")
+            await ctx.send(f":x: {user} is already being watched.")
             return
 
-        response = await post_infraction(ctx, user, 'watch', reason, hidden=True)
+        response = await post_infraction(ctx, user, 'watch', reason, hidden=True, active=True)
 
         if response is not None:
             self.watched_users[user.id] = response
