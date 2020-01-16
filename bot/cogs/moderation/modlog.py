@@ -15,7 +15,6 @@ from discord.ext.commands import Cog, Context
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, URLs
 from bot.utils.time import humanize_delta
-from .utils import UserTypes
 
 log = logging.getLogger(__name__)
 
@@ -361,7 +360,7 @@ class ModLog(Cog, name="ModLog"):
         )
 
     @Cog.listener()
-    async def on_member_ban(self, guild: discord.Guild, member: UserTypes) -> None:
+    async def on_member_ban(self, guild: discord.Guild, member: discord.Member) -> None:
         """Log ban event to user log."""
         if guild.id != GuildConstant.id:
             return
