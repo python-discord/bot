@@ -333,6 +333,10 @@ class Icons(metaclass=YAMLGetter):
     superstarify: str
     unsuperstarify: str
 
+    voice_state_blue: str
+    voice_state_green: str
+    voice_state_red: str
+
 
 class CleanMessages(metaclass=YAMLGetter):
     section = "bot"
@@ -387,6 +391,7 @@ class Channels(metaclass=YAMLGetter):
     userlog: int
     user_event_a: int
     verification: int
+    voice_log: int
 
 
 class Webhooks(metaclass=YAMLGetter):
@@ -552,6 +557,8 @@ class Event(Enum):
 
     message_delete = "message_delete"
     message_edit = "message_edit"
+
+    voice_state_update = "voice_state_update"
 
 
 # Debug mode
