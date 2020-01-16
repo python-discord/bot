@@ -1,4 +1,3 @@
-import logging
 import unittest
 from unittest.mock import MagicMock
 
@@ -49,11 +48,7 @@ class SecurityCogLoadTests(unittest.TestCase):
     """Tests loading the `Security` cog."""
 
     def test_security_cog_load(self):
-        """Cog loading logs a message at `INFO` level."""
+        """Setup of the extension should call add_cog."""
         bot = MagicMock()
-        with self.assertLogs(logger='bot.cogs.security', level=logging.INFO) as cm:
-            security.setup(bot)
-            bot.add_cog.assert_called_once()
-
-        [line] = cm.output
-        self.assertIn("Cog loaded: Security", line)
+        security.setup(bot)
+        bot.add_cog.assert_called_once()

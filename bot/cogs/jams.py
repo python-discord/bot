@@ -4,6 +4,7 @@ from discord import Member, PermissionOverwrite, utils
 from discord.ext import commands
 from more_itertools import unique_everseen
 
+from bot.bot import Bot
 from bot.constants import Roles
 from bot.decorators import with_role
 
@@ -13,7 +14,7 @@ log = logging.getLogger(__name__)
 class CodeJams(commands.Cog):
     """Manages the code-jam related parts of our server."""
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: Bot):
         self.bot = bot
 
     @commands.command()
@@ -108,7 +109,6 @@ class CodeJams(commands.Cog):
         )
 
 
-def setup(bot: commands.Bot) -> None:
-    """Code Jams cog load."""
+def setup(bot: Bot) -> None:
+    """Load the CodeJams cog."""
     bot.add_cog(CodeJams(bot))
-    log.info("Cog loaded: CodeJams")

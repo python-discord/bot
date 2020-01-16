@@ -7,6 +7,7 @@ from discord.ext import commands
 from discord.ext.commands import Context, command
 
 from bot import constants
+from bot.bot import Bot
 from bot.constants import Event
 from bot.decorators import respect_role_hierarchy
 from bot.utils.checks import with_role_check
@@ -25,7 +26,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     category = "Moderation"
     category_description = "Server moderation tools."
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: Bot):
         super().__init__(bot, supported_infractions={"ban", "kick", "mute", "note", "warning"})
 
         self.category = "Moderation"
@@ -202,19 +203,24 @@ class Infractions(InfractionScheduler, commands.Cog):
         if await utils.has_active_infraction(ctx, user, "mute"):
             return
 
-        infraction = await utils.post_infraction(ctx, user, "mute", reason, **kwargs)
+        infraction = await utils.post_infraction(ctx, user, "mute", reason, active=True, **kwargs)
         if infraction is None:
             return
 
         self.mod_log.ignore(Event.member_update, user.id)
 
-        action = user.add_roles(self._muted_role, reason=reason)
-        await self.apply_infraction(ctx, infraction, user, action)
+        async def action() -> None:
+            await user.add_roles(self._muted_role, reason=reason)
+
+            log.trace(f"Attempting to kick {user} from voice because they've been muted.")
+            await user.move_to(None, reason=reason)
+
+        await self.apply_infraction(ctx, infraction, user, action())
 
     @respect_role_hierarchy()
     async def apply_kick(self, ctx: Context, user: Member, reason: str, **kwargs) -> None:
         """Apply a kick infraction with kwargs passed to `post_infraction`."""
-        infraction = await utils.post_infraction(ctx, user, "kick", reason, **kwargs)
+        infraction = await utils.post_infraction(ctx, user, "kick", reason, active=False, **kwargs)
         if infraction is None:
             return
 
@@ -229,7 +235,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         if await utils.has_active_infraction(ctx, user, "ban"):
             return
 
-        infraction = await utils.post_infraction(ctx, user, "ban", reason, **kwargs)
+        infraction = await utils.post_infraction(ctx, user, "ban", reason, active=True, **kwargs)
         if infraction is None:
             return
 

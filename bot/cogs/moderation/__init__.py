@@ -1,25 +1,13 @@
-import logging
-
-from discord.ext.commands import Bot
-
+from bot.bot import Bot
 from .infractions import Infractions
 from .management import ModManagement
 from .modlog import ModLog
 from .superstarify import Superstarify
 
-log = logging.getLogger(__name__)
-
 
 def setup(bot: Bot) -> None:
-    """Load the moderation extension (Infractions, ModManagement, ModLog, & Superstarify cogs)."""
+    """Load the Infractions, ModManagement, ModLog, and Superstarify cogs."""
     bot.add_cog(Infractions(bot))
-    log.info("Cog loaded: Infractions")
-
     bot.add_cog(ModLog(bot))
-    log.info("Cog loaded: ModLog")
-
     bot.add_cog(ModManagement(bot))
-    log.info("Cog loaded: ModManagement")
-
     bot.add_cog(Superstarify(bot))
-    log.info("Cog loaded: Superstarify")

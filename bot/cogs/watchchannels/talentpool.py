@@ -4,9 +4,10 @@ from collections import ChainMap
 from typing import Union
 
 from discord import Color, Embed, Member, User
-from discord.ext.commands import Bot, Cog, Context, group
+from discord.ext.commands import Cog, Context, group
 
 from bot.api import ResponseCodeError
+from bot.bot import Bot
 from bot.constants import Channels, Guild, MODERATION_ROLES, STAFF_ROLES, Webhooks
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
@@ -68,7 +69,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
             return
 
         if user.id in self.watched_users:
-            await ctx.send(":x: The specified user is already being watched in the talent pool")
+            await ctx.send(f":x: {user} is already being watched in the talent pool")
             return
 
         # Manual request with `raise_for_status` as False because we want the actual response

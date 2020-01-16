@@ -256,6 +256,8 @@ class Emojis(metaclass=YAMLGetter):
     status_idle: str
     status_dnd: str
 
+    failmail: str
+
     bullet: str
     new: str
     pencil: str
@@ -268,6 +270,12 @@ class Emojis(metaclass=YAMLGetter):
     ducky_ninja: int
     ducky_devil: int
     ducky_tube: int
+    ducky_hunt: int
+    ducky_wizard: int
+    ducky_party: int
+    ducky_angel: int
+    ducky_maul: int
+    ducky_santa: int
 
     upvotes: str
     comments: str
@@ -470,6 +478,8 @@ class Reddit(metaclass=YAMLGetter):
     section = "reddit"
 
     subreddits: list
+    client_id: str
+    secret: str
 
 
 class Wolfram(metaclass=YAMLGetter):
