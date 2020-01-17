@@ -252,18 +252,42 @@ class SyncerSyncTests(unittest.TestCase):
         self.bot = helpers.MockBot()
         self.syncer = TestSyncer(self.bot)
 
-    def test_sync_with_empty_diff(self):
-        """A confirmation prompt should not be sent if the diff is too small."""
-        guild = helpers.MockGuild()
-        diff = _Diff(set(), set(), set())
+    def test_sync_sends_confirmation_prompt(self):
+        """The prompt should be sent only if the diff is large and should fail if not confirmed."""
+        large_diff = _Diff({1}, {2}, {3})
+        subtests = (
+            (False, False, True, None, None, _Diff({1}, {2}, set()), "diff too small"),
+            (True, True, True, helpers.MockMessage(), True, large_diff, "confirmed"),
+            (True, False, False, None, None, large_diff, "couldn't get channel"),
+            (True, True, False, helpers.MockMessage(), False, large_diff, "not confirmed"),
+        )
 
-        self.syncer._send_prompt = helpers.AsyncMock()
-        self.syncer._wait_for_confirmation = helpers.AsyncMock()
-        self.syncer._get_diff.return_value = diff
+        for prompt_called, wait_called, sync_called, prompt_msg, confirmed, diff, msg in subtests:
+            with self.subTest(msg=msg):
+                self.syncer._sync.reset_mock()
+                self.syncer._get_diff.reset_mock()
 
-        asyncio.run(self.syncer.sync(guild))
+                self.syncer.MAX_DIFF = 2
+                self.syncer._get_diff.return_value = diff
+                self.syncer._send_prompt = helpers.AsyncMock(return_value=prompt_msg)
+                self.syncer._wait_for_confirmation = helpers.AsyncMock(return_value=confirmed)
 
-        self.syncer._get_diff.assert_called_once_with(guild)
-        self.syncer._send_prompt.assert_not_called()
-        self.syncer._wait_for_confirmation.assert_not_called()
-        self.syncer._sync.assert_called_once_with(diff)
+                guild = helpers.MockGuild()
+                asyncio.run(self.syncer.sync(guild))
+
+                self.syncer._get_diff.assert_called_once_with(guild)
+
+                if prompt_called:
+                    self.syncer._send_prompt.assert_called_once()
+                else:
+                    self.syncer._send_prompt.assert_not_called()
+
+                if wait_called:
+                    self.syncer._wait_for_confirmation.assert_called_once()
+                else:
+                    self.syncer._wait_for_confirmation.assert_not_called()
+
+                if sync_called:
+                    self.syncer._sync.assert_called_once_with(diff)
+                else:
+                    self.syncer._sync.assert_not_called()
