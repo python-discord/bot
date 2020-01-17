@@ -150,6 +150,34 @@ class Syncer(abc.ABC):
         """Perform the API calls for synchronisation."""
         raise NotImplementedError
 
+    async def _get_confirmation_result(
+        self,
+        diff_size: int,
+        author: Member,
+        message: t.Optional[Message] = None
+    ) -> t.Tuple[bool, t.Optional[Message]]:
+        """
+        Prompt for confirmation and return a tuple of the result and the prompt message.
+
+        `diff_size` is the size of the diff of the sync. If it is greater than `MAX_DIFF`, the
+        prompt will be sent. The `author` is the invoked of the sync and the `message` is an extant
+        message to edit to display the prompt.
+
+        If confirmed or no confirmation was needed, the result is True. The returned message will
+        either be the given `message` or a new one which was created when sending the prompt.
+        """
+        log.trace(f"Determining if confirmation prompt should be sent for {self.name} syncer.")
+        if diff_size > self.MAX_DIFF:
+            message = await self._send_prompt(message)
+            if not message:
+                return False, None  # Couldn't get channel.
+
+            confirmed = await self._wait_for_confirmation(author, message)
+            if not confirmed:
+                return False, message  # Sync aborted.
+
+        return True, message
+
     async def sync(self, guild: Guild, ctx: t.Optional[Context] = None) -> None:
         """
         Synchronise the database with the cache of `guild`.
@@ -168,16 +196,11 @@ class Syncer(abc.ABC):
 
         diff = await self._get_diff(guild)
         totals = {k: len(v) for k, v in diff._asdict().items() if v is not None}
+        diff_size = sum(totals.values())
 
-        log.trace(f"Determining if confirmation prompt should be sent for {self.name} syncer.")
-        if sum(totals.values()) > self.MAX_DIFF:
-            message = await self._send_prompt(message)
-            if not message:
-                return  # Couldn't get channel.
-
-            confirmed = await self._wait_for_confirmation(author, message)
-            if not confirmed:
-                return  # Sync aborted.
+        confirmed, message = await self._get_confirmation_result(diff_size, author, message)
+        if not confirmed:
+            return
 
         # Preserve the core-dev role mention in the message edits so users aren't confused about
         # where notifications came from.
