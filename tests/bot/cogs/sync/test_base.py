@@ -281,3 +281,25 @@ class SyncerSyncTests(unittest.TestCase):
                     self.syncer._sync.assert_called_once_with(diff)
                 else:
                     self.syncer._sync.assert_not_called()
+
+    def test_sync_diff_size(self):
+        """The diff size should be correctly calculated."""
+        subtests = (
+            (6, _Diff({1, 2}, {3, 4}, {5, 6})),
+            (5, _Diff({1, 2, 3}, None, {4, 5})),
+            (0, _Diff(None, None, None)),
+            (0, _Diff(set(), set(), set())),
+        )
+
+        for size, diff in subtests:
+            with self.subTest(size=size, diff=diff):
+                self.syncer._get_diff.reset_mock()
+                self.syncer._get_diff.return_value = diff
+                self.syncer._get_confirmation_result = helpers.AsyncMock(return_value=(False, None))
+
+                guild = helpers.MockGuild()
+                asyncio.run(self.syncer.sync(guild))
+
+                self.syncer._get_diff.assert_called_once_with(guild)
+                self.syncer._get_confirmation_result.assert_called_once()
+                self.assertEqual(self.syncer._get_confirmation_result.call_args[0][0], size)
