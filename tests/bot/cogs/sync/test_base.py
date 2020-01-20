@@ -303,3 +303,18 @@ class SyncerSyncTests(unittest.TestCase):
                 self.syncer._get_diff.assert_called_once_with(guild)
                 self.syncer._get_confirmation_result.assert_called_once()
                 self.assertEqual(self.syncer._get_confirmation_result.call_args[0][0], size)
+
+    def test_sync_message_edited(self):
+        """The message should be edited if one was sent."""
+        for message in (helpers.MockMessage(), None):
+            with self.subTest(message=message):
+                self.syncer._get_confirmation_result = helpers.AsyncMock(
+                    return_value=(True, message)
+                )
+
+                guild = helpers.MockGuild()
+                asyncio.run(self.syncer.sync(guild))
+
+                if message is not None:
+                    message.edit.assert_called_once()
+                    self.assertIn("content", message.edit.call_args[1])
