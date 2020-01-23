@@ -319,20 +319,27 @@ class SyncerSyncTests(unittest.TestCase):
                     message.edit.assert_called_once()
                     self.assertIn("content", message.edit.call_args[1])
 
-    def test_sync_confirmation_author(self):
-        """Author should be the bot or the ctx author, if a ctx is given."""
+    def test_sync_confirmation_context_redirect(self):
+        """If ctx is given, a new message should be sent and author should be ctx's author."""
         mock_member = helpers.MockMember()
         subtests = (
-            (None, self.bot.user),
-            (helpers.MockContext(author=mock_member), mock_member),
+            (None, self.bot.user, None),
+            (helpers.MockContext(author=mock_member), mock_member, helpers.MockMessage()),
         )
 
-        for ctx, author in subtests:
-            with self.subTest(ctx=ctx, author=author):
+        for ctx, author, message in subtests:
+            with self.subTest(ctx=ctx, author=author, message=message):
+                if ctx is not None:
+                    ctx.send.return_value = message
+
                 self.syncer._get_confirmation_result = helpers.AsyncMock(return_value=(False, None))
 
                 guild = helpers.MockGuild()
                 asyncio.run(self.syncer.sync(guild, ctx))
 
+                if ctx is not None:
+                    ctx.send.assert_called_once()
+
                 self.syncer._get_confirmation_result.assert_called_once()
                 self.assertEqual(self.syncer._get_confirmation_result.call_args[0][1], author)
+                self.assertEqual(self.syncer._get_confirmation_result.call_args[0][2], message)
