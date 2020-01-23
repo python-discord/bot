@@ -5,6 +5,7 @@ from unittest import mock
 import discord
 
 from bot import constants
+from bot.api import ResponseCodeError
 from bot.cogs.sync.syncers import Syncer, _Diff
 from tests import helpers
 
@@ -305,9 +306,16 @@ class SyncerSyncTests(unittest.TestCase):
                 self.assertEqual(self.syncer._get_confirmation_result.call_args[0][0], size)
 
     def test_sync_message_edited(self):
-        """The message should be edited if one was sent."""
-        for message in (helpers.MockMessage(), None):
-            with self.subTest(message=message):
+        """The message should be edited if one was sent, even if the sync has an API error."""
+        subtests = (
+            (None, None, False),
+            (helpers.MockMessage(), None, True),
+            (helpers.MockMessage(), ResponseCodeError(mock.MagicMock()), True),
+        )
+
+        for message, side_effect, should_edit in subtests:
+            with self.subTest(message=message, side_effect=side_effect, should_edit=should_edit):
+                self.syncer._sync.side_effect = side_effect
                 self.syncer._get_confirmation_result = helpers.AsyncMock(
                     return_value=(True, message)
                 )
@@ -315,7 +323,7 @@ class SyncerSyncTests(unittest.TestCase):
                 guild = helpers.MockGuild()
                 asyncio.run(self.syncer.sync(guild))
 
-                if message is not None:
+                if should_edit:
                     message.edit.assert_called_once()
                     self.assertIn("content", message.edit.call_args[1])
 
