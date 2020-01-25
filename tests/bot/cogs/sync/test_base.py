@@ -351,3 +351,22 @@ class SyncerSyncTests(unittest.TestCase):
                 self.syncer._get_confirmation_result.assert_called_once()
                 self.assertEqual(self.syncer._get_confirmation_result.call_args[0][1], author)
                 self.assertEqual(self.syncer._get_confirmation_result.call_args[0][2], message)
+
+    def test_confirmation_result_small_diff(self):
+        """Should always return True and the given message if the diff size is too small."""
+        self.syncer.MAX_DIFF = 3
+        author = helpers.MockMember()
+        expected_message = helpers.MockMessage()
+
+        for size in (3, 2):
+            with self.subTest(size=size):
+                self.syncer._send_prompt = helpers.AsyncMock()
+                self.syncer._wait_for_confirmation = helpers.AsyncMock()
+
+                coro = self.syncer._get_confirmation_result(size, author, expected_message)
+                result, actual_message = asyncio.run(coro)
+
+                self.assertTrue(result)
+                self.assertEqual(actual_message, expected_message)
+                self.syncer._send_prompt.assert_not_called()
+                self.syncer._wait_for_confirmation.assert_not_called()
