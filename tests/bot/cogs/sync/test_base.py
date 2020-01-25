@@ -370,3 +370,32 @@ class SyncerSyncTests(unittest.TestCase):
                 self.assertEqual(actual_message, expected_message)
                 self.syncer._send_prompt.assert_not_called()
                 self.syncer._wait_for_confirmation.assert_not_called()
+
+    def test_confirmation_result_large_diff(self):
+        """Should return True if confirmed and False if _send_prompt fails or aborted."""
+        self.syncer.MAX_DIFF = 3
+        author = helpers.MockMember()
+        mock_message = helpers.MockMessage()
+
+        subtests = (
+            (True, mock_message, True, "confirmed"),
+            (False, None, False, "_send_prompt failed"),
+            (False, mock_message, False, "aborted"),
+        )
+
+        for expected_result, expected_message, confirmed, msg in subtests:
+            with self.subTest(msg=msg):
+                self.syncer._send_prompt = helpers.AsyncMock(return_value=expected_message)
+                self.syncer._wait_for_confirmation = helpers.AsyncMock(return_value=confirmed)
+
+                coro = self.syncer._get_confirmation_result(4, author)
+                actual_result, actual_message = asyncio.run(coro)
+
+                self.syncer._send_prompt.assert_called_once_with(None)  # message defaults to None
+                self.assertIs(actual_result, expected_result)
+                self.assertEqual(actual_message, expected_message)
+
+                if expected_message:
+                    self.syncer._wait_for_confirmation.assert_called_once_with(
+                        author, expected_message
+                    )
