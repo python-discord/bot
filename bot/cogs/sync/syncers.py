@@ -36,7 +36,7 @@ class Syncer(abc.ABC):
     @abc.abstractmethod
     def name(self) -> str:
         """The name of the syncer; used in output messages and logging."""
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     async def _send_prompt(self, message: t.Optional[Message] = None) -> t.Optional[Message]:
         """
@@ -143,12 +143,12 @@ class Syncer(abc.ABC):
     @abc.abstractmethod
     async def _get_diff(self, guild: Guild) -> _Diff:
         """Return the difference between the cache of `guild` and the database."""
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     @abc.abstractmethod
     async def _sync(self, diff: _Diff) -> None:
         """Perform the API calls for synchronisation."""
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     async def _get_confirmation_result(
         self,
