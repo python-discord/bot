@@ -20,7 +20,7 @@ class AttachmentRuleTests(unittest.TestCase):
     """Tests applying the `attachments` antispam rule."""
 
     def setUp(self):
-        self.config = {"max": 5}
+        self.config = {"max": 5, "interval": 10}
 
     @async_test
     async def test_allows_messages_without_too_many_attachments(self):
@@ -88,7 +88,7 @@ class AttachmentRuleTests(unittest.TestCase):
                 config=self.config
             ):
                 desired_output = (
-                    f"sent {total_attachments} attachments in {self.config['max']}s",
+                    f"sent {total_attachments} attachments in {self.config['interval']}s",
                     culprit,
                     relevant_messages
                 )
