@@ -11,7 +11,7 @@ class Case(NamedTuple):
     total_links: int
 
 
-def msg(author: str, total_links: int) -> MockMessage:
+def make_msg(author: str, total_links: int) -> MockMessage:
     """Makes a message with `total_links` links."""
     content = " ".join(["https://pydis.com"] * total_links)
     return MockMessage(author=author, content=content)
@@ -30,11 +30,11 @@ class LinksTests(unittest.TestCase):
     async def test_links_within_limit(self):
         """Messages with an allowed amount of links."""
         cases = (
-            [msg("bob", 0)],
-            [msg("bob", 2)],
-            [msg("bob", 3)],  # Filter only applies if len(messages_with_links) > 1
-            [msg("bob", 1), msg("bob", 1)],
-            [msg("bob", 2), msg("alice", 2)]  # Only messages from latest author count
+            [make_msg("bob", 0)],
+            [make_msg("bob", 2)],
+            [make_msg("bob", 3)],  # Filter only applies if len(messages_with_links) > 1
+            [make_msg("bob", 1), make_msg("bob", 1)],
+            [make_msg("bob", 2), make_msg("alice", 2)]  # Only messages from latest author count
         )
 
         for recent_messages in cases:
@@ -54,17 +54,17 @@ class LinksTests(unittest.TestCase):
         """Messages with a a higher than allowed amount of links."""
         cases = (
             Case(
-                [msg("bob", 1), msg("bob", 2)],
+                [make_msg("bob", 1), make_msg("bob", 2)],
                 ("bob",),
                 3
             ),
             Case(
-                [msg("alice", 1), msg("alice", 1), msg("alice", 1)],
+                [make_msg("alice", 1), make_msg("alice", 1), make_msg("alice", 1)],
                 ("alice",),
                 3
             ),
             Case(
-                [msg("alice", 2), msg("bob", 3), msg("alice", 1)],
+                [make_msg("alice", 2), make_msg("bob", 3), make_msg("alice", 1)],
                 ("alice",),
                 3
             )

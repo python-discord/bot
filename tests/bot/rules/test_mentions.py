@@ -11,7 +11,7 @@ class Case(NamedTuple):
     total_mentions: int
 
 
-def msg(author: str, total_mentions: int) -> MockMessage:
+def make_msg(author: str, total_mentions: int) -> MockMessage:
     """Makes a message with `total_mentions` mentions."""
     return MockMessage(author=author, mentions=list(range(total_mentions)))
 
@@ -29,10 +29,10 @@ class TestMentions(unittest.TestCase):
     async def test_mentions_within_limit(self):
         """Messages with an allowed amount of mentions."""
         cases = (
-            [msg("bob", 0)],
-            [msg("bob", 2)],
-            [msg("bob", 1), msg("bob", 1)],
-            [msg("bob", 1), msg("alice", 2)]
+            [make_msg("bob", 0)],
+            [make_msg("bob", 2)],
+            [make_msg("bob", 1), make_msg("bob", 1)],
+            [make_msg("bob", 1), make_msg("alice", 2)]
         )
 
         for recent_messages in cases:
@@ -52,17 +52,17 @@ class TestMentions(unittest.TestCase):
         """Messages with a higher than allowed amount of mentions."""
         cases = (
             Case(
-                [msg("bob", 3)],
+                [make_msg("bob", 3)],
                 ("bob",),
                 3
             ),
             Case(
-                [msg("alice", 2), msg("alice", 0), msg("alice", 1)],
+                [make_msg("alice", 2), make_msg("alice", 0), make_msg("alice", 1)],
                 ("alice",),
                 3
             ),
             Case(
-                [msg("bob", 2), msg("alice", 3), msg("bob", 2)],
+                [make_msg("bob", 2), make_msg("alice", 3), make_msg("bob", 2)],
                 ("bob",),
                 4
             )

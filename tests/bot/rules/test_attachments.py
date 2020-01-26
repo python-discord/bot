@@ -11,7 +11,7 @@ class Case(NamedTuple):
     total_attachments: int
 
 
-def msg(author: str, total_attachments: int) -> MockMessage:
+def make_msg(author: str, total_attachments: int) -> MockMessage:
     """Builds a message with `total_attachments` attachments."""
     return MockMessage(author=author, attachments=list(range(total_attachments)))
 
@@ -26,9 +26,9 @@ class AttachmentRuleTests(unittest.TestCase):
     async def test_allows_messages_without_too_many_attachments(self):
         """Messages without too many attachments are allowed as-is."""
         cases = (
-            [msg("bob", 0), msg("bob", 0), msg("bob", 0)],
-            [msg("bob", 2), msg("bob", 2)],
-            [msg("bob", 2), msg("alice", 2), msg("bob", 2)],
+            [make_msg("bob", 0), make_msg("bob", 0), make_msg("bob", 0)],
+            [make_msg("bob", 2), make_msg("bob", 2)],
+            [make_msg("bob", 2), make_msg("alice", 2), make_msg("bob", 2)],
         )
 
         for recent_messages in cases:
@@ -48,22 +48,22 @@ class AttachmentRuleTests(unittest.TestCase):
         """Messages with too many attachments trigger the rule."""
         cases = (
             Case(
-                [msg("bob", 4), msg("bob", 0), msg("bob", 6)],
+                [make_msg("bob", 4), make_msg("bob", 0), make_msg("bob", 6)],
                 ("bob",),
                 10
             ),
             Case(
-                [msg("bob", 4), msg("alice", 6), msg("bob", 2)],
+                [make_msg("bob", 4), make_msg("alice", 6), make_msg("bob", 2)],
                 ("bob",),
                 6
             ),
             Case(
-                [msg("alice", 6)],
+                [make_msg("alice", 6)],
                 ("alice",),
                 6
             ),
             (
-                [msg("alice", 1) for _ in range(6)],
+                [make_msg("alice", 1) for _ in range(6)],
                 ("alice",),
                 6
             ),
