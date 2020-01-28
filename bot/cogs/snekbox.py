@@ -137,7 +137,7 @@ class Snekbox(Cog):
         """
         log.trace("Formatting output...")
 
-        output = output.strip(" \n")
+        output = output.rstrip("\n")
         original_output = output  # To be uploaded to a pasting service if needed
         paste_link = None
 
@@ -171,7 +171,6 @@ class Snekbox(Cog):
         if truncated:
             paste_link = await self.upload_output(original_output)
 
-        output = output.strip()
         if not output:
             output = "[No output]"
 
