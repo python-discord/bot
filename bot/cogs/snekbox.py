@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import logging
 import re
@@ -200,32 +201,54 @@ class Snekbox(Cog):
 
         log.info(f"Received code from {ctx.author} for evaluation:\n{code}")
 
-        self.jobs[ctx.author.id] = datetime.datetime.now()
-        code = self.prepare_input(code)
+        while True:
+            self.jobs[ctx.author.id] = datetime.datetime.now()
+            code = self.prepare_input(code)
 
-        try:
-            async with ctx.typing():
-                results = await self.post_eval(code)
-                msg, error = self.get_results_message(results)
+            try:
+                async with ctx.typing():
+                    results = await self.post_eval(code)
+                    msg, error = self.get_results_message(results)
 
-                if error:
-                    output, paste_link = error, None
-                else:
-                    output, paste_link = await self.format_output(results["stdout"])
+                    if error:
+                        output, paste_link = error, None
+                    else:
+                        output, paste_link = await self.format_output(results["stdout"])
 
-                icon = self.get_status_emoji(results)
-                msg = f"{ctx.author.mention} {icon} {msg}.\n\n```py\n{output}\n```"
-                if paste_link:
-                    msg = f"{msg}\nFull output: {paste_link}"
+                    icon = self.get_status_emoji(results)
+                    msg = f"{ctx.author.mention} {icon} {msg}.\n\n```py\n{output}\n```"
+                    if paste_link:
+                        msg = f"{msg}\nFull output: {paste_link}"
 
-                response = await ctx.send(msg)
-                self.bot.loop.create_task(
-                    wait_for_deletion(response, user_ids=(ctx.author.id,), client=ctx.bot)
+                    response = await ctx.send(msg)
+                    self.bot.loop.create_task(
+                        wait_for_deletion(response, user_ids=(ctx.author.id,), client=ctx.bot)
+                    )
+
+                    log.info(f"{ctx.author}'s job had a return code of {results['returncode']}")
+            finally:
+                del self.jobs[ctx.author.id]
+
+            try:
+                _, new_message = await self.bot.wait_for(
+                    'message_edit',
+                    check=lambda o, n: n.id == ctx.message.id and o.content != n.content,
+                    timeout=10
+                )
+                await ctx.message.add_reaction('🔁')
+                await self.bot.wait_for(
+                    'reaction_add',
+                    check=lambda r, u: r.message.id == ctx.message.id and u.id == ctx.author.id and str(r) == '🔁',
+                    timeout=10
                 )
 
-                log.info(f"{ctx.author}'s job had a return code of {results['returncode']}")
-        finally:
-            del self.jobs[ctx.author.id]
+                log.info(f"Re-evaluating message {ctx.message.id}")
+                code = new_message.content.split(' ', maxsplit=1)[1]
+                await ctx.message.clear_reactions()
+                await response.delete()
+            except asyncio.TimeoutError:
+                await ctx.message.clear_reactions()
+                return
 
 
 def setup(bot: Bot) -> None:
