@@ -212,3 +212,9 @@ All in all, it's not only important to consider if all statements or branches we
 Another restriction of unit testing is that it tests, well, in units. Even if we can guarantee that the units work as they should independently, we have no guarantee that they will actually work well together. Even more, while the mocking described above gives us a lot of flexibility in factoring out external code, we are work under the implicit assumption that we fully understand those external parts and utilize it correctly. What if our mocked `Context` object works with a `send` method, but `discord.py` has changed it to a `send_message` method in a recent update? It could mean our tests are passing, but the code it's testing still doesn't work in production.
 
 The answer to this is that we also need to make sure that the individual parts come together into a working application. In addition, we will also need to make sure that the application communicates correctly with external applications. Since we currently have no automated integration tests or functional tests, that means **it's still very important to fire up the bot and test the code you've written manually** in addition to the unit tests you've written.
+
+## Additional resources
+
+* [Corey Schafer video about unittest](https://youtu.be/6tNS--WetLI)
+* [RealPython tutorial on unittest testing](https://realpython.com/python-testing/)
+* [RealPython tutorial on mocking](https://realpython.com/python-mock-library/)
