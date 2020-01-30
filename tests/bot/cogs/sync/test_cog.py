@@ -2,7 +2,19 @@ import unittest
 from unittest import mock
 
 from bot.cogs import sync
+from bot.cogs.sync.syncers import Syncer
 from tests import helpers
+
+
+class MockSyncer(helpers.CustomMockMixin, mock.MagicMock):
+    """
+    A MagicMock subclass to mock Syncer objects.
+
+    Instances of this class will follow the specifications of `bot.cogs.sync.syncers.Syncer`
+    instances. For more information, see the `MockGuild` docstring.
+    """
+    def __init__(self, **kwargs) -> None:
+        super().__init__(spec_set=Syncer, **kwargs)
 
 
 class SyncExtensionTests(unittest.TestCase):
@@ -22,8 +34,17 @@ class SyncCogTests(unittest.TestCase):
     def setUp(self):
         self.bot = helpers.MockBot()
 
-        self.role_syncer_patcher = mock.patch("bot.cogs.sync.syncers.RoleSyncer", autospec=True)
-        self.user_syncer_patcher = mock.patch("bot.cogs.sync.syncers.UserSyncer", autospec=True)
+        # These patch the type. When the type is called, a MockSyncer instanced is returned.
+        # MockSyncer is needed so that our custom AsyncMock is used.
+        # TODO: Use autospec instead in 3.8, which will automatically use AsyncMock when needed.
+        self.role_syncer_patcher = mock.patch(
+            "bot.cogs.sync.syncers.RoleSyncer",
+            new=mock.MagicMock(return_value=MockSyncer())
+        )
+        self.user_syncer_patcher = mock.patch(
+            "bot.cogs.sync.syncers.UserSyncer",
+            new=mock.MagicMock(return_value=MockSyncer())
+        )
         self.RoleSyncer = self.role_syncer_patcher.start()
         self.UserSyncer = self.user_syncer_patcher.start()
 
