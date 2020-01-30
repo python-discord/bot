@@ -33,7 +33,8 @@ class SyncCogTests(unittest.TestCase):
         self.role_syncer_patcher.stop()
         self.user_syncer_patcher.stop()
 
-    def test_sync_cog_init(self):
+    @mock.patch.object(sync.Sync, "sync_guild")
+    def test_sync_cog_init(self, sync_guild):
         """Should instantiate syncers and run a sync for the guild."""
         # Reset because a Sync cog was already instantiated in setUp.
         self.RoleSyncer.reset_mock()
@@ -41,10 +42,11 @@ class SyncCogTests(unittest.TestCase):
         self.bot.loop.create_task.reset_mock()
 
         mock_sync_guild_coro = mock.MagicMock()
-        sync.Sync.sync_guild = mock.MagicMock(return_value=mock_sync_guild_coro)
+        sync_guild.return_value = mock_sync_guild_coro
 
         sync.Sync(self.bot)
 
         self.RoleSyncer.assert_called_once_with(self.bot)
         self.UserSyncer.assert_called_once_with(self.bot)
+        sync_guild.assert_called_once_with()
         self.bot.loop.create_task.assert_called_once_with(mock_sync_guild_coro)
