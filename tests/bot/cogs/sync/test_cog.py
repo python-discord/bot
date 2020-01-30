@@ -1,6 +1,8 @@
+import asyncio
 import unittest
 from unittest import mock
 
+from bot import constants
 from bot.cogs import sync
 from bot.cogs.sync.syncers import Syncer
 from tests import helpers
@@ -71,3 +73,25 @@ class SyncCogTests(unittest.TestCase):
         self.UserSyncer.assert_called_once_with(self.bot)
         sync_guild.assert_called_once_with()
         self.bot.loop.create_task.assert_called_once_with(mock_sync_guild_coro)
+
+    def test_sync_cog_sync_guild(self):
+        """Roles and users should be synced only if a guild is successfully retrieved."""
+        for guild in (helpers.MockGuild(), None):
+            with self.subTest(guild=guild):
+                self.bot.reset_mock()
+                self.cog.role_syncer.reset_mock()
+                self.cog.user_syncer.reset_mock()
+
+                self.bot.get_guild = mock.MagicMock(return_value=guild)
+
+                asyncio.run(self.cog.sync_guild())
+
+                self.bot.wait_until_guild_available.assert_called_once()
+                self.bot.get_guild.assert_called_once_with(constants.Guild.id)
+
+                if guild is None:
+                    self.cog.role_syncer.sync.assert_not_called()
+                    self.cog.user_syncer.sync.assert_not_called()
+                else:
+                    self.cog.role_syncer.sync.assert_called_once_with(guild)
+                    self.cog.user_syncer.sync.assert_called_once_with(guild)
