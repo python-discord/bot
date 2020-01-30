@@ -10,7 +10,7 @@ from discord.ext.commands import Context
 
 from bot import constants
 from bot.bot import Bot
-from bot.converters import InfractionSearchQuery, allowed_strings
+from bot.converters import Expiry, InfractionSearchQuery, allowed_strings, proxy_user
 from bot.pagination import LinePaginator
 from bot.utils import time
 from bot.utils.checks import in_channel_check, with_role_check
@@ -19,8 +19,6 @@ from .infractions import Infractions
 from .modlog import ModLog
 
 log = logging.getLogger(__name__)
-
-UserConverter = t.Union[discord.User, utils.proxy_user]
 
 
 class ModManagement(commands.Cog):
@@ -53,7 +51,7 @@ class ModManagement(commands.Cog):
         self,
         ctx: Context,
         infraction_id: t.Union[int, allowed_strings("l", "last", "recent")],
-        duration: t.Union[utils.Expiry, allowed_strings("p", "permanent"), None],
+        duration: t.Union[Expiry, allowed_strings("p", "permanent"), None],
         *,
         reason: str = None
     ) -> None:
@@ -182,7 +180,7 @@ class ModManagement(commands.Cog):
             await ctx.invoke(self.search_reason, query)
 
     @infraction_search_group.command(name="user", aliases=("member", "id"))
-    async def search_user(self, ctx: Context, user: UserConverter) -> None:
+    async def search_user(self, ctx: Context, user: t.Union[discord.User, proxy_user]) -> None:
         """Search for infractions by member."""
         infraction_list = await self.bot.api_client.get(
             'bot/infractions',

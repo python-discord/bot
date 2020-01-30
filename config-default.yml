@@ -100,6 +100,10 @@ style:
         superstarify: "https://cdn.discordapp.com/emojis/636288153044516874.png"
         unsuperstarify: "https://cdn.discordapp.com/emojis/636288201258172446.png"
 
+        voice_state_blue: "https://cdn.discordapp.com/emojis/656899769662439456.png"
+        voice_state_green: "https://cdn.discordapp.com/emojis/656899770094452754.png"
+        voice_state_red: "https://cdn.discordapp.com/emojis/656899769905709076.png"
+
 guild:
     id: 267624335836053506
 
@@ -109,6 +113,7 @@ guild:
     channels:
         admins:            &ADMINS        365960823622991872
         admin_spam:        &ADMIN_SPAM    563594791770914816
+        admins_voice:      &ADMINS_VOICE  500734494840717332
         announcements:                    354619224620138496
         big_brother_logs:  &BBLOGS        468507907357409333
         bot:                              267659945086812160
@@ -139,13 +144,15 @@ guild:
         python:                           267624335836053506
         reddit:                           458224812528238616
         staff_lounge:      &STAFF_LOUNGE  464905259261755392
+        staff_voice:       &STAFF_VOICE   412375055910043655
         talent_pool:       &TALENT_POOL   534321732593647616
         userlog:                          528976905546760203
         user_event_a:      &USER_EVENT_A  592000283102674944
         verification:                     352442727016693763
+        voice_log:                        640292421988646961
 
     staff_channels: [*ADMINS, *ADMIN_SPAM, *MOD_SPAM, *MODS, *HELPERS, *ORGANISATION, *DEFCON]
-    ignored: [*ADMINS, *MESSAGE_LOG, *MODLOG]
+    ignored: [*ADMINS, *MESSAGE_LOG, *MODLOG, *ADMINS_VOICE, *STAFF_VOICE]
 
     roles:
         admin:             &ADMIN_ROLE      267628507062992896
@@ -154,7 +161,7 @@ guild:
         contributor:                        295488872404484098
         core_developer:                     587606783669829632
         helpers:                            267630620367257601
-        jammer:                             423054537079783434
+        jammer:                             591786436651646989
         moderator:         &MOD_ROLE        267629731250176001
         muted:             &MUTED_ROLE      277914926603829249
         owner:             &OWNER_ROLE      267627879762755584
@@ -201,6 +208,12 @@ filter:
         - 544525886180032552  # kennethreitz.org
         - 590806733924859943  # Discord Hack Week
         - 423249981340778496  # Kivy
+        - 197038439483310086  # Discord Testers
+        - 286633898581164032  # Ren'Py
+        - 349505959032389632  # PyGame
+        - 438622377094414346  # Pyglet
+        - 524691714909274162  # Panda3D
+        - 336642139381301249  # discord.py
 
     domain_blacklist:
         - pornhub.com
@@ -373,6 +386,9 @@ anti_malware:
         - '.ai'   # Illustrator
         - '.aep'  # After Effects
         - '.xcf'  # GIMP
+        - '.mp3'
+        - '.wav'
+        - '.ogg'
 
 
 reddit:

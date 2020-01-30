@@ -189,7 +189,11 @@ class Information(Cog):
         # Custom status
         custom_status = ''
         for activity in user.activities:
-            if activity.name == 'Custom Status':
+            # Check activity.state for None value if user has a custom status set
+            # This guards against a custom status with an emoji but no text, which will cause
+            # escape_markdown to raise an exception
+            # This can be reworked after a move to d.py 1.3.0+, which adds a CustomActivity class
+            if activity.name == 'Custom Status' and activity.state:
                 state = escape_markdown(activity.state)
                 custom_status = f'Status: {state}\n'
 

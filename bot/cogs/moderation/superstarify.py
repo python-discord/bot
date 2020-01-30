@@ -10,6 +10,7 @@ from discord.ext.commands import Cog, Context, command
 
 from bot import constants
 from bot.bot import Bot
+from bot.converters import Expiry
 from bot.utils.checks import with_role_check
 from bot.utils.time import format_infraction
 from . import utils
@@ -107,7 +108,7 @@ class Superstarify(InfractionScheduler, Cog):
         self,
         ctx: Context,
         member: Member,
-        duration: utils.Expiry,
+        duration: Expiry,
         reason: str = None
     ) -> None:
         """
@@ -133,7 +134,7 @@ class Superstarify(InfractionScheduler, Cog):
 
         # Post the infraction to the API
         reason = reason or f"old nick: {member.display_name}"
-        infraction = await utils.post_infraction(ctx, member, "superstar", reason, duration)
+        infraction = await utils.post_infraction(ctx, member, "superstar", reason, duration, active=True)
         id_ = infraction["id"]
 
         old_nick = member.display_name
