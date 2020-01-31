@@ -105,19 +105,26 @@ class SyncCogTests(unittest.TestCase):
                     self.cog.role_syncer.sync.assert_called_once_with(guild)
                     self.cog.user_syncer.sync.assert_called_once_with(guild)
 
+    def patch_user_helper(self, side_effect: BaseException) -> None:
+        """Helper to set a side effect for bot.api_client.patch and then assert it is called."""
+        self.bot.api_client.patch.reset_mock(side_effect=True)
+        self.bot.api_client.patch.side_effect = side_effect
+
+        user_id, updated_information = 5, {"key": 123}
+        asyncio.run(self.cog.patch_user(user_id, updated_information))
+
+        self.bot.api_client.patch.assert_called_once_with(
+            f"bot/users/{user_id}",
+            json=updated_information,
+        )
+
     def test_sync_cog_patch_user(self):
         """A PATCH request should be sent and 404 errors ignored."""
         for side_effect in (None, self.response_error(404)):
             with self.subTest(side_effect=side_effect):
-                self.bot.api_client.patch.reset_mock(side_effect=True)
-                self.bot.api_client.patch.side_effect = side_effect
-
-                asyncio.run(self.cog.patch_user(5, {}))
-                self.bot.api_client.patch.assert_called_once()
+                self.patch_user_helper(side_effect)
 
     def test_sync_cog_patch_user_non_404(self):
         """A PATCH request should be sent and the error raised if it's not a 404."""
-        self.bot.api_client.patch.side_effect = self.response_error(500)
         with self.assertRaises(ResponseCodeError):
-            asyncio.run(self.cog.patch_user(5, {}))
-            self.bot.api_client.patch.assert_called_once()
+            self.patch_user_helper(self.response_error(500))
