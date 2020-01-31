@@ -1,6 +1,9 @@
 import asyncio
+import typing as t
 import unittest
 from unittest import mock
+
+import discord
 
 from bot import constants
 from bot.api import ResponseCodeError
@@ -139,3 +142,29 @@ class SyncCogListenerTests(SyncCogTestCase):
     def setUp(self):
         super().setUp()
         self.cog.patch_user = helpers.AsyncMock(spec_set=self.cog.patch_user)
+
+    @staticmethod
+    def mock_role() -> t.Tuple[helpers.MockRole, t.Dict[str, t.Any]]:
+        """Fixture to return a MockRole and corresponding JSON dict."""
+        colour = 49
+        permissions = 8
+        role_data = {
+            "colour": colour,
+            "id": 777,
+            "name": "rolename",
+            "permissions": permissions,
+            "position": 23,
+        }
+
+        role = helpers.MockRole(**role_data)
+        role.colour = discord.Colour(colour)
+        role.permissions = discord.Permissions(permissions)
+
+        return role, role_data
+
+    def test_sync_cog_on_guild_role_create(self):
+        """A POST request should be sent with the new role's data."""
+        role, role_data = self.mock_role()
+        asyncio.run(self.cog.on_guild_role_create(role))
+
+        self.bot.api_client.post.assert_called_once_with("bot/roles", json=role_data)
