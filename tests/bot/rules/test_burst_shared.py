@@ -5,7 +5,8 @@ from tests.helpers import MockMessage, async_test
 
 
 def make_msg(author: str) -> MockMessage:
-    """Init a MockMessage instance with the passed arg.
+    """
+    Init a MockMessage instance with the passed arg.
 
     This serves as a shorthand / alias to keep the test cases visually clean.
     """
@@ -20,7 +21,8 @@ class BurstSharedRuleTests(unittest.TestCase):
 
     @async_test
     async def test_allows_messages_within_limit(self):
-        """Cases that do not violate the rule.
+        """
+        Cases that do not violate the rule.
 
         There really isn't more to test here than a single case.
         """

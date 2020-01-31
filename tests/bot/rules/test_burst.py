@@ -5,7 +5,8 @@ from tests.helpers import MockMessage, async_test
 
 
 def make_msg(author: str) -> MockMessage:
-    """Init a MockMessage instance with author set to `author`.
+    """
+    Init a MockMessage instance with author set to `author`.
 
     This serves as a shorthand / alias to keep the test cases visually clean.
     """
