@@ -31,8 +31,8 @@ class SyncExtensionTests(unittest.TestCase):
         bot.add_cog.assert_called_once()
 
 
-class SyncCogTests(unittest.TestCase):
-    """Tests for the Sync cog."""
+class SyncCogTestCase(unittest.TestCase):
+    """Base class for Sync cog tests. Sets up patches for syncers."""
 
     def setUp(self):
         self.bot = helpers.MockBot()
@@ -64,6 +64,10 @@ class SyncCogTests(unittest.TestCase):
         response.status = status
 
         return ResponseCodeError(response)
+
+
+class SyncCogTests(SyncCogTestCase):
+    """Tests for the Sync cog."""
 
     @mock.patch.object(sync.Sync, "sync_guild")
     def test_sync_cog_init(self, sync_guild):
