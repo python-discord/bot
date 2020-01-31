@@ -132,3 +132,10 @@ class SyncCogTests(SyncCogTestCase):
         """A PATCH request should be sent and the error raised if it's not a 404."""
         with self.assertRaises(ResponseCodeError):
             self.patch_user_helper(self.response_error(500))
+
+
+class SyncCogListenerTests(SyncCogTestCase):
+    """Tests for the listeners of the Sync cog."""
+    def setUp(self):
+        super().setUp()
+        self.cog.patch_user = helpers.AsyncMock(spec_set=self.cog.patch_user)
