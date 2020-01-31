@@ -168,3 +168,10 @@ class SyncCogListenerTests(SyncCogTestCase):
         asyncio.run(self.cog.on_guild_role_create(role))
 
         self.bot.api_client.post.assert_called_once_with("bot/roles", json=role_data)
+
+    def test_sync_cog_on_guild_role_delete(self):
+        """A DELETE request should be sent."""
+        role = helpers.MockRole(id=99)
+        asyncio.run(self.cog.on_guild_role_delete(role))
+
+        self.bot.api_client.delete.assert_called_once_with("bot/roles/99")
