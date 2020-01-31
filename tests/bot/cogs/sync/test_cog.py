@@ -3,6 +3,7 @@ import unittest
 from unittest import mock
 
 from bot import constants
+from bot.api import ResponseCodeError
 from bot.cogs import sync
 from bot.cogs.sync.syncers import Syncer
 from tests import helpers
@@ -56,6 +57,14 @@ class SyncCogTests(unittest.TestCase):
         self.role_syncer_patcher.stop()
         self.user_syncer_patcher.stop()
 
+    @staticmethod
+    def response_error(status: int) -> ResponseCodeError:
+        """Fixture to return a ResponseCodeError with the given status code."""
+        response = mock.MagicMock()
+        response.status = status
+
+        return ResponseCodeError(response)
+
     @mock.patch.object(sync.Sync, "sync_guild")
     def test_sync_cog_init(self, sync_guild):
         """Should instantiate syncers and run a sync for the guild."""
@@ -95,3 +104,20 @@ class SyncCogTests(unittest.TestCase):
                 else:
                     self.cog.role_syncer.sync.assert_called_once_with(guild)
                     self.cog.user_syncer.sync.assert_called_once_with(guild)
+
+    def test_sync_cog_patch_user(self):
+        """A PATCH request should be sent and 404 errors ignored."""
+        for side_effect in (None, self.response_error(404)):
+            with self.subTest(side_effect=side_effect):
+                self.bot.api_client.patch.reset_mock(side_effect=True)
+                self.bot.api_client.patch.side_effect = side_effect
+
+                asyncio.run(self.cog.patch_user(5, {}))
+                self.bot.api_client.patch.assert_called_once()
+
+    def test_sync_cog_patch_user_non_404(self):
+        """A PATCH request should be sent and the error raised if it's not a 404."""
+        self.bot.api_client.patch.side_effect = self.response_error(500)
+        with self.assertRaises(ResponseCodeError):
+            asyncio.run(self.cog.patch_user(5, {}))
+            self.bot.api_client.patch.assert_called_once()
