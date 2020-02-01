@@ -270,8 +270,20 @@ class MockRole(CustomMockMixin, unittest.mock.Mock, ColourMixin, HashableMixin):
     information, see the `MockGuild` docstring.
     """
     def __init__(self, **kwargs) -> None:
-        default_kwargs = {'id': next(self.discord_id), 'name': 'role', 'position': 1}
+        default_kwargs = {
+            'id': next(self.discord_id),
+            'name': 'role',
+            'position': 1,
+            'colour': discord.Colour(0xdeadbf),
+            'permissions': discord.Permissions(),
+        }
         super().__init__(spec_set=role_instance, **collections.ChainMap(kwargs, default_kwargs))
+
+        if isinstance(self.colour, int):
+            self.colour = discord.Colour(self.colour)
+
+        if isinstance(self.permissions, int):
+            self.permissions = discord.Permissions(self.permissions)
 
         if 'mention' not in kwargs:
             self.mention = f'&{self.name}'
