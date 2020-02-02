@@ -10,9 +10,10 @@ from bot.cogs.moderation import ModLog
 from bot.constants import (
     Bot as BotConfig,
     Channels, Colours, Event,
-    Filter, Icons, Roles
+    Filter, Icons, MODERATION_ROLES, Roles
 )
 from bot.decorators import InChannelCheckFailure, in_channel, without_role
+from bot.utils.checks import without_role_check
 
 log = logging.getLogger(__name__)
 
@@ -38,6 +39,7 @@ PERIODIC_PING = (
     f"@everyone To verify that you have read our rules, please type `{BotConfig.prefix}accept`."
     f" If you encounter any problems during the verification process, ping the <@&{Roles.admin}> role in this channel."
 )
+BOT_MESSAGE_DELETE_DELAY = 10
 
 
 class Verification(Cog):
@@ -55,11 +57,15 @@ class Verification(Cog):
     @Cog.listener()
     async def on_message(self, message: Message) -> None:
         """Check new message event for messages to the checkpoint channel & process."""
-        if message.author.bot:
-            return  # They're a bot, ignore
-
         if message.channel.id != Channels.verification:
             return  # Only listen for #checkpoint messages
+
+        if message.author.bot:
+            # They're a bot, delete their message after the delay.
+            # But not the periodic ping; we like that one.
+            if message.content != PERIODIC_PING:
+                await message.delete(delay=BOT_MESSAGE_DELETE_DELAY)
+            return
 
         # if a user mentions a role or guild member
         # alert the mods in mod-alerts channel
@@ -190,7 +196,7 @@ class Verification(Cog):
     @staticmethod
     def bot_check(ctx: Context) -> bool:
         """Block any command within the verification channel that is not !accept."""
-        if ctx.channel.id == Channels.verification:
+        if ctx.channel.id == Channels.verification and without_role_check(ctx, *MODERATION_ROLES):
             return ctx.command.name == "accept"
         else:
             return True

@@ -6,6 +6,7 @@ from pathlib import Path
 
 from logmatic import JsonFormatter
 
+
 logging.TRACE = 5
 logging.addLevelName(logging.TRACE, "TRACE")
 

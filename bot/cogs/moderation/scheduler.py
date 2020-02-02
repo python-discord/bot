@@ -17,7 +17,7 @@ from bot.utils import time
 from bot.utils.scheduling import Scheduler
 from . import utils
 from .modlog import ModLog
-from .utils import MemberObject
+from .utils import UserSnowflake
 
 log = logging.getLogger(__name__)
 
@@ -77,7 +77,7 @@ class InfractionScheduler(Scheduler):
         self,
         ctx: Context,
         infraction: utils.Infraction,
-        user: MemberObject,
+        user: UserSnowflake,
         action_coro: t.Optional[t.Awaitable] = None
     ) -> None:
         """Apply an infraction to the user, log the infraction, and optionally notify the user."""
@@ -106,16 +106,20 @@ class InfractionScheduler(Scheduler):
 
         # DM the user about the infraction if it's not a shadow/hidden infraction.
         if not infraction["hidden"]:
-            # Sometimes user is a discord.Object; make it a proper user.
-            user = await self.bot.fetch_user(user.id)
+            dm_result = f"{constants.Emojis.failmail} "
+            dm_log_text = "\nDM: **Failed**"
 
-            # Accordingly display whether the user was successfully notified via DM.
-            if await utils.notify_infraction(user, infr_type, expiry, reason, icon):
-                dm_result = ":incoming_envelope: "
-                dm_log_text = "\nDM: Sent"
+            # Sometimes user is a discord.Object; make it a proper user.
+            try:
+                if not isinstance(user, (discord.Member, discord.User)):
+                    user = await self.bot.fetch_user(user.id)
+            except discord.HTTPException as e:
+                log.error(f"Failed to DM {user.id}: could not fetch user (status {e.status})")
             else:
-                dm_log_text = "\nDM: **Failed**"
-                log_content = ctx.author.mention
+                # Accordingly display whether the user was successfully notified via DM.
+                if await utils.notify_infraction(user, infr_type, expiry, reason, icon):
+                    dm_result = ":incoming_envelope: "
+                    dm_log_text = "\nDM: Sent"
 
         if infraction["actor"] == self.bot.user.id:
             log.trace(
@@ -185,7 +189,7 @@ class InfractionScheduler(Scheduler):
 
         log.info(f"Applied {infr_type} infraction #{id_} to {user}.")
 
-    async def pardon_infraction(self, ctx: Context, infr_type: str, user: MemberObject) -> None:
+    async def pardon_infraction(self, ctx: Context, infr_type: str, user: UserSnowflake) -> None:
         """Prematurely end an infraction for a user and log the action in the mod log."""
         log.trace(f"Pardoning {infr_type} infraction for {user}.")
 
@@ -255,8 +259,7 @@ class InfractionScheduler(Scheduler):
         if log_text.get("DM") == "Sent":
             dm_emoji = ":incoming_envelope: "
         elif "DM" in log_text:
-            # Mention the actor because the DM failed to send.
-            log_content = ctx.author.mention
+            dm_emoji = f"{constants.Emojis.failmail} "
 
         # Accordingly display whether the pardon failed.
         if "Failure" in log_text:
