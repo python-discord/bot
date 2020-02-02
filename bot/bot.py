@@ -4,7 +4,6 @@ from typing import Optional
 
 import aiohttp
 from discord.ext import commands
-from prometheus_async.aio.web import start_http_server as start_prometheus_http_server
 
 from bot import api
 
@@ -51,6 +50,4 @@ class Bot(commands.Bot):
         """Open an aiohttp session before logging in and connecting to Discord."""
         self.http_session = aiohttp.ClientSession(connector=self.connector)
 
-        await start_prometheus_http_server(addr="0.0.0.0", port=9330)
-        log.debug("Started Prometheus server on port 9330.")
         await super().start(*args, **kwargs)

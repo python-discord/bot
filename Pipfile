@@ -19,7 +19,6 @@ deepdiff = "~=4.0"
 requests = "~=2.22"
 more_itertools = "~=7.2"
 urllib3 = ">=1.24.2,<1.25"
-prometheus-async = {extras = ["aiohttp"],version = "~=19.2"}
 
 [dev-packages]
 coverage = "~=4.5"
