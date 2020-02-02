@@ -1,5 +1,5 @@
 import unittest
-from abc import abstractmethod
+from abc import ABCMeta, abstractmethod
 from typing import Callable, Dict, Iterable, List, NamedTuple, Tuple
 
 from tests.helpers import MockMessage
@@ -12,7 +12,7 @@ class DisallowedCase(NamedTuple):
     n_violations: int
 
 
-class RuleTest(unittest.TestCase):
+class RuleTest(unittest.TestCase, metaclass=ABCMeta):
     """
     Abstract class for antispam rule test cases.
 
