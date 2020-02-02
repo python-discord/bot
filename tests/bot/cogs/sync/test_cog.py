@@ -160,3 +160,38 @@ class SyncCogListenerTests(SyncCogTestCase):
         asyncio.run(self.cog.on_guild_role_delete(role))
 
         self.bot.api_client.delete.assert_called_once_with("bot/roles/99")
+
+    def test_sync_cog_on_guild_role_update(self):
+        """A PUT request should be sent if the colour, name, permissions, or position changes."""
+        role_data = {
+            "colour": 49,
+            "id": 777,
+            "name": "rolename",
+            "permissions": 8,
+            "position": 23,
+        }
+        subtests = (
+            (True, ("colour", "name", "permissions", "position")),
+            (False, ("hoist", "mentionable")),
+        )
+
+        for should_put, attributes in subtests:
+            for attribute in attributes:
+                with self.subTest(should_put=should_put, changed_attribute=attribute):
+                    self.bot.api_client.put.reset_mock()
+
+                    after_role_data = role_data.copy()
+                    after_role_data[attribute] = 876
+
+                    before_role = helpers.MockRole(**role_data)
+                    after_role = helpers.MockRole(**after_role_data)
+
+                    asyncio.run(self.cog.on_guild_role_update(before_role, after_role))
+
+                    if should_put:
+                        self.bot.api_client.put.assert_called_once_with(
+                            f"bot/roles/{after_role.id}",
+                            json=after_role_data
+                        )
+                    else:
+                        self.bot.api_client.put.assert_not_called()
