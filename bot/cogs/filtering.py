@@ -5,11 +5,12 @@ from typing import Optional, Union
 import discord.errors
 from dateutil.relativedelta import relativedelta
 from discord import Colour, DMChannel, Member, Message, TextChannel
-from discord.ext.commands import Bot, Cog
+from discord.ext.commands import Cog
 
+from bot.bot import Bot
 from bot.cogs.moderation import ModLog
 from bot.constants import (
-    Channels, Colours, DEBUG_MODE,
+    Channels, Colours,
     Filter, Icons, URLs
 )
 
@@ -43,7 +44,7 @@ class Filtering(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-        _staff_mistake_str = "If you believe this was a mistake, please let staff know!"
+        staff_mistake_str = "If you believe this was a mistake, please let staff know!"
         self.filters = {
             "filter_zalgo": {
                 "enabled": Filter.filter_zalgo,
@@ -53,7 +54,7 @@ class Filtering(Cog):
                 "user_notification": Filter.notify_user_zalgo,
                 "notification_msg": (
                     "Your post has been removed for abusing Unicode character rendering (aka Zalgo text). "
-                    f"{_staff_mistake_str}"
+                    f"{staff_mistake_str}"
                 )
             },
             "filter_invites": {
@@ -63,7 +64,7 @@ class Filtering(Cog):
                 "content_only": True,
                 "user_notification": Filter.notify_user_invites,
                 "notification_msg": (
-                    f"Per Rule 10, your invite link has been removed. {_staff_mistake_str}\n\n"
+                    f"Per Rule 6, your invite link has been removed. {staff_mistake_str}\n\n"
                     r"Our server rules can be found here: <https://pythondiscord.com/pages/rules>"
                 )
             },
@@ -74,7 +75,7 @@ class Filtering(Cog):
                 "content_only": True,
                 "user_notification": Filter.notify_user_domains,
                 "notification_msg": (
-                    f"Your URL has been removed because it matched a blacklisted domain. {_staff_mistake_str}"
+                    f"Your URL has been removed because it matched a blacklisted domain. {staff_mistake_str}"
                 )
             },
             "watch_rich_embeds": {
@@ -136,10 +137,6 @@ class Filtering(Cog):
             and not msg.author.bot                          # Author not a bot
         )
 
-        # If we're running the bot locally, ignore role whitelist and only listen to #dev-test
-        if DEBUG_MODE:
-            filter_message = not msg.author.bot and msg.channel.id == Channels.devtest
-
         # If none of the above, we can start filtering.
         if filter_message:
             for filter_name, _filter in self.filters.items():
@@ -154,11 +151,11 @@ class Filtering(Cog):
 
                     # Does the filter only need the message content or the full message?
                     if _filter["content_only"]:
-                        triggered = await _filter["function"](msg.content)
+                        match = await _filter["function"](msg.content)
                     else:
-                        triggered = await _filter["function"](msg)
+                        match = await _filter["function"](msg)
 
-                    if triggered:
+                    if match:
                         # If this is a filter (not a watchlist), we should delete the message.
                         if _filter["type"] == "filter":
                             try:
@@ -184,12 +181,23 @@ class Filtering(Cog):
                         else:
                             channel_str = f"in {msg.channel.mention}"
 
+                        # Word and match stats for watch_words and watch_tokens
+                        if filter_name in ("watch_words", "watch_tokens"):
+                            surroundings = match.string[max(match.start() - 10, 0): match.end() + 10]
+                            message_content = (
+                                f"**Match:** '{match[0]}'\n"
+                                f"**Location:** '...{surroundings}...'\n"
+                                f"\n**Original Message:**\n{msg.content}"
+                            )
+                        else:  # Use content of discord Message
+                            message_content = msg.content
+
                         message = (
                             f"The {filter_name} {_filter['type']} was triggered "
                             f"by **{msg.author}** "
                             f"(`{msg.author.id}`) {channel_str} with [the "
                             f"following message]({msg.jump_url}):\n\n"
-                            f"{msg.content}"
+                            f"{message_content}"
                         )
 
                         log.debug(message)
@@ -199,7 +207,7 @@ class Filtering(Cog):
 
                         if filter_name == "filter_invites":
                             additional_embeds = []
-                            for invite, data in triggered.items():
+                            for invite, data in match.items():
                                 embed = discord.Embed(description=(
                                     f"**Members:**\n{data['members']}\n"
                                     f"**Active:**\n{data['active']}"
@@ -230,31 +238,33 @@ class Filtering(Cog):
                         break  # We don't want multiple filters to trigger
 
     @staticmethod
-    async def _has_watchlist_words(text: str) -> bool:
+    async def _has_watchlist_words(text: str) -> Union[bool, re.Match]:
         """
         Returns True if the text contains one of the regular expressions from the word_watchlist in our filter config.
 
         Only matches words with boundaries before and after the expression.
         """
         for regex_pattern in WORD_WATCHLIST_PATTERNS:
-            if regex_pattern.search(text):
-                return True
+            match = regex_pattern.search(text)
+            if match:
+                return match  # match objects always have a boolean value of True
 
         return False
 
     @staticmethod
-    async def _has_watchlist_tokens(text: str) -> bool:
+    async def _has_watchlist_tokens(text: str) -> Union[bool, re.Match]:
         """
         Returns True if the text contains one of the regular expressions from the token_watchlist in our filter config.
 
         This will match the expression even if it does not have boundaries before and after.
         """
         for regex_pattern in TOKEN_WATCHLIST_PATTERNS:
-            if regex_pattern.search(text):
+            match = regex_pattern.search(text)
+            if match:
 
                 # Make sure it's not a URL
                 if not URL_RE.search(text):
-                    return True
+                    return match  # match objects always have a boolean value of True
 
         return False
 
@@ -361,6 +371,5 @@ class Filtering(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Filtering cog load."""
+    """Load the Filtering cog."""
     bot.add_cog(Filtering(bot))
-    log.info("Cog loaded: Filtering")

@@ -2,8 +2,9 @@ import logging
 import time
 
 from discord import Colour, Embed
-from discord.ext.commands import Bot, Cog, Context, group
+from discord.ext.commands import Cog, Context, group
 
+from bot.bot import Bot
 from bot.constants import Channels, Cooldowns, MODERATION_ROLES, Roles
 from bot.converters import TagContentConverter, TagNameConverter
 from bot.decorators import with_role
@@ -212,6 +213,5 @@ class Tags(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Tags cog load."""
+    """Load the Tags cog."""
     bot.add_cog(Tags(bot))
-    log.info("Cog loaded: Tags")

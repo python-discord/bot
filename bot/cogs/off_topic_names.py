@@ -4,9 +4,10 @@ import logging
 from datetime import datetime, timedelta
 
 from discord import Colour, Embed
-from discord.ext.commands import BadArgument, Bot, Cog, Context, Converter, group
+from discord.ext.commands import BadArgument, Cog, Context, Converter, group
 
 from bot.api import ResponseCodeError
+from bot.bot import Bot
 from bot.constants import Channels, MODERATION_ROLES
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
@@ -23,6 +24,9 @@ class OffTopicName(Converter):
     async def convert(ctx: Context, argument: str) -> str:
         """Attempt to replace any invalid characters with their approximate Unicode equivalent."""
         allowed_characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ!?'`-"
+
+        # Chain multiple words to a single one
+        argument = "-".join(argument.split())
 
         if not (2 <= len(argument) <= 96):
             raise BadArgument("Channel name must be between 2 and 96 chars long")
@@ -97,15 +101,12 @@ class OffTopicNames(Cog):
 
     @otname_group.command(name='add', aliases=('a',))
     @with_role(*MODERATION_ROLES)
-    async def add_command(self, ctx: Context, *names: OffTopicName) -> None:
+    async def add_command(self, ctx: Context, *, name: OffTopicName) -> None:
         """
         Adds a new off-topic name to the rotation.
 
         The name is not added if it is too similar to an existing name.
         """
-        # Chain multiple words to a single one
-        name = "-".join(names)
-
         existing_names = await self.bot.api_client.get('bot/off-topic-channel-names')
         close_match = difflib.get_close_matches(name, existing_names, n=1, cutoff=0.8)
 
@@ -123,10 +124,8 @@ class OffTopicNames(Cog):
 
     @otname_group.command(name='forceadd', aliases=('fa',))
     @with_role(*MODERATION_ROLES)
-    async def force_add_command(self, ctx: Context, *names: OffTopicName) -> None:
+    async def force_add_command(self, ctx: Context, *, name: OffTopicName) -> None:
         """Forcefully adds a new off-topic name to the rotation."""
-        # Chain multiple words to a single one
-        name = "-".join(names)
         await self._add_name(ctx, name)
 
     async def _add_name(self, ctx: Context, name: str) -> None:
@@ -138,10 +137,8 @@ class OffTopicNames(Cog):
 
     @otname_group.command(name='delete', aliases=('remove', 'rm', 'del', 'd'))
     @with_role(*MODERATION_ROLES)
-    async def delete_command(self, ctx: Context, *names: OffTopicName) -> None:
+    async def delete_command(self, ctx: Context, *, name: OffTopicName) -> None:
         """Removes a off-topic name from the rotation."""
-        # Chain multiple words to a single one
-        name = "-".join(names)
         await self.bot.api_client.delete(f'bot/off-topic-channel-names/{name}')
 
         log.info(f"{ctx.author} deleted the off-topic channel name '{name}'")
@@ -188,6 +185,5 @@ class OffTopicNames(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Off topic names cog load."""
+    """Load the OffTopicNames cog."""
     bot.add_cog(OffTopicNames(bot))
-    log.info("Cog loaded: OffTopicNames")

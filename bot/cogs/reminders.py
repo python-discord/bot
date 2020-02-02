@@ -2,14 +2,15 @@ import asyncio
 import logging
 import random
 import textwrap
-from datetime import datetime
+from datetime import datetime, timedelta
 from operator import itemgetter
 from typing import Optional
 
 from dateutil.relativedelta import relativedelta
 from discord import Colour, Embed, Message
-from discord.ext.commands import Bot, Cog, Context, group
+from discord.ext.commands import Cog, Context, group
 
+from bot.bot import Bot
 from bot.constants import Channels, Icons, NEGATIVE_REPLIES, POSITIVE_REPLIES, STAFF_ROLES
 from bot.converters import Duration
 from bot.pagination import LinePaginator
@@ -104,7 +105,10 @@ class Reminders(Scheduler, Cog):
             name="It has arrived!"
         )
 
-        embed.description = f"Here's your reminder: `{reminder['content']}`"
+        embed.description = f"Here's your reminder: `{reminder['content']}`."
+
+        if reminder.get("jump_url"):  # keep backward compatibility
+            embed.description += f"\n[Jump back to when you created the reminder]({reminder['jump_url']})"
 
         if late:
             embed.colour = Colour.red()
@@ -167,14 +171,18 @@ class Reminders(Scheduler, Cog):
             json={
                 'author': ctx.author.id,
                 'channel_id': ctx.message.channel.id,
+                'jump_url': ctx.message.jump_url,
                 'content': content,
                 'expiration': expiration.isoformat()
             }
         )
 
+        now = datetime.utcnow() - timedelta(seconds=1)
+
         # Confirm to the user that it worked.
         await self._send_confirmation(
-            ctx, on_success="Your reminder has been created successfully!"
+            ctx,
+            on_success=f"Your reminder will arrive in {humanize_delta(relativedelta(expiration, now))}!"
         )
 
         loop = asyncio.get_event_loop()
@@ -283,6 +291,5 @@ class Reminders(Scheduler, Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Reminders cog load."""
+    """Load the Reminders cog."""
     bot.add_cog(Reminders(bot))
-    log.info("Cog loaded: Reminders")
