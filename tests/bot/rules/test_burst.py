@@ -1,6 +1,7 @@
-import unittest
+from typing import Iterable
 
 from bot.rules import burst
+from tests.bot.rules import DisallowedCase, RuleTest
 from tests.helpers import MockMessage, async_test
 
 
@@ -13,10 +14,11 @@ def make_msg(author: str) -> MockMessage:
     return MockMessage(author=author)
 
 
-class BurstRuleTests(unittest.TestCase):
+class BurstRuleTests(RuleTest):
     """Tests the `burst` antispam rule."""
 
     def setUp(self):
+        self.apply = burst.apply
         self.config = {"max": 2, "interval": 10}
 
     @async_test
@@ -27,44 +29,28 @@ class BurstRuleTests(unittest.TestCase):
             [make_msg("bob"), make_msg("alice"), make_msg("bob")],
         )
 
-        for recent_messages in cases:
-            last_message = recent_messages[0]
-
-            with self.subTest(last_message=last_message, recent_messages=recent_messages, config=self.config):
-                self.assertIsNone(await burst.apply(last_message, recent_messages, self.config))
+        await self.run_allowed(cases)
 
     @async_test
     async def test_disallows_messages_beyond_limit(self):
         """Cases where the amount of messages exceeds the limit, triggering the rule."""
         cases = (
-            (
+            DisallowedCase(
                 [make_msg("bob"), make_msg("bob"), make_msg("bob")],
-                "bob",
+                ("bob",),
                 3,
             ),
-            (
+            DisallowedCase(
                 [make_msg("bob"), make_msg("bob"), make_msg("alice"), make_msg("bob")],
-                "bob",
+                ("bob",),
                 3,
             ),
         )
 
-        for recent_messages, culprit, total_msgs in cases:
-            last_message = recent_messages[0]
-            relevant_messages = tuple(msg for msg in recent_messages if msg.author == culprit)
-            expected_output = (
-                f"sent {total_msgs} messages in {self.config['interval']}s",
-                (culprit,),
-                relevant_messages,
-            )
+        await self.run_disallowed(cases)
 
-            with self.subTest(
-                last_message=last_message,
-                recent_messages=recent_messages,
-                config=self.config,
-                expected_output=expected_output,
-            ):
-                self.assertTupleEqual(
-                    await burst.apply(last_message, recent_messages, self.config),
-                    expected_output,
-                )
+    def relevant_messages(self, case: DisallowedCase) -> Iterable[MockMessage]:
+        return tuple(msg for msg in case.recent_messages if msg.author in case.culprits)
+
+    def get_report(self, case: DisallowedCase) -> str:
+        return f"sent {case.n_violations} messages in {self.config['interval']}s"

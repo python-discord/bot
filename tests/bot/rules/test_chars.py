@@ -1,6 +1,7 @@
-import unittest
+from typing import Iterable
 
 from bot.rules import chars
+from tests.bot.rules import DisallowedCase, RuleTest
 from tests.helpers import MockMessage, async_test
 
 
@@ -9,10 +10,11 @@ def make_msg(author: str, n_chars: int) -> MockMessage:
     return MockMessage(author=author, content="A" * n_chars)
 
 
-class CharsRuleTests(unittest.TestCase):
+class CharsRuleTests(RuleTest):
     """Tests the `chars` antispam rule."""
 
     def setUp(self):
+        self.apply = chars.apply
         self.config = {
             "max": 20,  # Max allowed sum of chars per user
             "interval": 10,
@@ -27,49 +29,38 @@ class CharsRuleTests(unittest.TestCase):
             [make_msg("bob", 15), make_msg("alice", 15)],
         )
 
-        for recent_messages in cases:
-            last_message = recent_messages[0]
-
-            with self.subTest(last_message=last_message, recent_messages=recent_messages, config=self.config):
-                self.assertIsNone(await chars.apply(last_message, recent_messages, self.config))
+        await self.run_allowed(cases)
 
     @async_test
     async def test_disallows_messages_beyond_limit(self):
         """Cases where the total amount of chars exceeds the limit, triggering the rule."""
         cases = (
-            (
+            DisallowedCase(
                 [make_msg("bob", 21)],
-                "bob",
+                ("bob",),
                 21,
             ),
-            (
+            DisallowedCase(
                 [make_msg("bob", 15), make_msg("bob", 15)],
-                "bob",
+                ("bob",),
                 30,
             ),
-            (
+            DisallowedCase(
                 [make_msg("alice", 15), make_msg("bob", 20), make_msg("alice", 15)],
-                "alice",
+                ("alice",),
                 30,
             ),
         )
 
-        for recent_messages, culprit, total_chars in cases:
-            last_message = recent_messages[0]
-            relevant_messages = tuple(msg for msg in recent_messages if msg.author == culprit)
-            expected_output = (
-                f"sent {total_chars} characters in {self.config['interval']}s",
-                (culprit,),
-                relevant_messages,
-            )
+        await self.run_disallowed(cases)
 
-            with self.subTest(
-                last_message=last_message,
-                recent_messages=recent_messages,
-                config=self.config,
-                expected_output=expected_output,
-            ):
-                self.assertTupleEqual(
-                    await chars.apply(last_message, recent_messages, self.config),
-                    expected_output,
-                )
+    def relevant_messages(self, case: DisallowedCase) -> Iterable[MockMessage]:
+        last_message = case.recent_messages[0]
+        return tuple(
+            msg
+            for msg in case.recent_messages
+            if msg.author == last_message.author
+        )
+
+    def get_report(self, case: DisallowedCase) -> str:
+        return f"sent {case.n_violations} characters in {self.config['interval']}s"
