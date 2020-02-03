@@ -347,6 +347,7 @@ class Channels(metaclass=YAMLGetter):
     admins: int
     admin_spam: int
     announcements: int
+    attachment_repost: int
     big_brother_logs: int
     bot: int
     checkpoint_test: int
@@ -417,7 +418,6 @@ class Guild(metaclass=YAMLGetter):
     id: int
     ignored: List[int]
     staff_channels: List[int]
-    attachment_repost: int
 
 
 class Keys(metaclass=YAMLGetter):

@@ -61,7 +61,7 @@ class DeletionContext:
                 self.messages[message.id] = message
 
                 # Re-upload attachments
-                destination = message.guild.get_channel(GuildConfig.attachment_repost)
+                destination = message.guild.get_channel(Channels.attachment_log)
                 urls = await send_attachments(message, destination, link_large=False)
                 self.attachments.append(urls)
 
