@@ -260,10 +260,10 @@ class AntiSpam(Cog):
         await deletion_context.upload_messages(self.bot.user.id, self.mod_log)
 
 
-def validate_config(_rules: Mapping = AntiSpamConfig.rules) -> Dict[str, str]:
+def validate_config(rules_: Mapping = AntiSpamConfig.rules) -> Dict[str, str]:
     """Validates the antispam configs."""
     validation_errors = {}
-    for name, config in _rules.items():
+    for name, config in rules_.items():
         if name not in RULE_FUNCTION_MAPPING:
             log.error(
                 f"Unrecognized antispam rule `{name}`. "
