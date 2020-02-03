@@ -16,7 +16,6 @@ from discord.ext.commands import Cog, Context
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, URLs
 from bot.utils.time import humanize_delta
-from .utils import UserTypes
 
 log = logging.getLogger(__name__)
 
@@ -26,6 +25,12 @@ CHANNEL_CHANGES_UNSUPPORTED = ("permissions",)
 CHANNEL_CHANGES_SUPPRESSED = ("_overwrites", "position")
 MEMBER_CHANGES_SUPPRESSED = ("status", "activities", "_client_status", "nick")
 ROLE_CHANGES_UNSUPPORTED = ("colour", "permissions")
+
+VOICE_STATE_ATTRIBUTES = {
+    "channel.name": "Channel",
+    "self_stream": "Streaming",
+    "self_video": "Broadcasting",
+}
 
 
 class ModLog(Cog, name="ModLog"):
@@ -210,7 +215,7 @@ class ModLog(Cog, name="ModLog"):
                 new = value["new_value"]
                 old = value["old_value"]
 
-                changes.append(f"**{key.title()}:** `{old}` **->** `{new}`")
+                changes.append(f"**{key.title()}:** `{old}` **→** `{new}`")
 
             done.append(key)
 
@@ -288,7 +293,7 @@ class ModLog(Cog, name="ModLog"):
                 new = value["new_value"]
                 old = value["old_value"]
 
-                changes.append(f"**{key.title()}:** `{old}` **->** `{new}`")
+                changes.append(f"**{key.title()}:** `{old}` **→** `{new}`")
 
             done.append(key)
 
@@ -338,7 +343,7 @@ class ModLog(Cog, name="ModLog"):
             new = value["new_value"]
             old = value["old_value"]
 
-            changes.append(f"**{key.title()}:** `{old}` **->** `{new}`")
+            changes.append(f"**{key.title()}:** `{old}` **→** `{new}`")
 
             done.append(key)
 
@@ -359,7 +364,7 @@ class ModLog(Cog, name="ModLog"):
         )
 
     @Cog.listener()
-    async def on_member_ban(self, guild: discord.Guild, member: UserTypes) -> None:
+    async def on_member_ban(self, guild: discord.Guild, member: discord.Member) -> None:
         """Log ban event to user log."""
         if guild.id != GuildConstant.id:
             return
@@ -491,23 +496,23 @@ class ModLog(Cog, name="ModLog"):
                 old = value.get("old_value")
 
                 if new and old:
-                    changes.append(f"**{key.title()}:** `{old}` **->** `{new}`")
+                    changes.append(f"**{key.title()}:** `{old}` **→** `{new}`")
 
             done.append(key)
 
         if before.name != after.name:
             changes.append(
-                f"**Username:** `{before.name}` **->** `{after.name}`"
+                f"**Username:** `{before.name}` **→** `{after.name}`"
             )
 
         if before.discriminator != after.discriminator:
             changes.append(
-                f"**Discriminator:** `{before.discriminator}` **->** `{after.discriminator}`"
+                f"**Discriminator:** `{before.discriminator}` **→** `{after.discriminator}`"
             )
 
         if before.display_name != after.display_name:
             changes.append(
-                f"**Display name:** `{before.display_name}` **->** `{after.display_name}`"
+                f"**Display name:** `{before.display_name}` **→** `{after.display_name}`"
             )
 
         if not changes:
@@ -752,4 +757,77 @@ class ModLog(Cog, name="ModLog"):
         await self.send_log_message(
             Icons.message_edit, Colour.blurple(), "Message edited (After)",
             after_response, channel_id=Channels.message_log
+        )
+
+    @Cog.listener()
+    async def on_voice_state_update(
+        self,
+        member: discord.Member,
+        before: discord.VoiceState,
+        after: discord.VoiceState
+    ) -> None:
+        """Log member voice state changes to the voice log channel."""
+        if (
+            member.guild.id != GuildConstant.id
+            or (before.channel and before.channel.id in GuildConstant.ignored)
+        ):
+            return
+
+        if member.id in self._ignored[Event.voice_state_update]:
+            self._ignored[Event.voice_state_update].remove(member.id)
+            return
+
+        # Exclude all channel attributes except the name.
+        diff = DeepDiff(
+            before,
+            after,
+            exclude_paths=("root.session_id", "root.afk"),
+            exclude_regex_paths=r"root\.channel\.(?!name)",
+        )
+
+        # A type change seems to always take precedent over a value change. Furthermore, it will
+        # include the value change along with the type change anyway. Therefore, it's OK to
+        # "overwrite" values_changed; in practice there will never even be anything to overwrite.
+        diff_values = {**diff.get("values_changed", {}), **diff.get("type_changes", {})}
+
+        icon = Icons.voice_state_blue
+        colour = Colour.blurple()
+        changes = []
+
+        for attr, values in diff_values.items():
+            if not attr:  # Not sure why, but it happens.
+                continue
+
+            old = values["old_value"]
+            new = values["new_value"]
+
+            attr = attr[5:]  # Remove "root." prefix.
+            attr = VOICE_STATE_ATTRIBUTES.get(attr, attr.replace("_", " ").capitalize())
+
+            changes.append(f"**{attr}:** `{old}` **→** `{new}`")
+
+            # Set the embed icon and colour depending on which attribute changed.
+            if any(name in attr for name in ("Channel", "deaf", "mute")):
+                if new is None or new is True:
+                    # Left a channel or was muted/deafened.
+                    icon = Icons.voice_state_red
+                    colour = Colours.soft_red
+                elif old is None or old is True:
+                    # Joined a channel or was unmuted/undeafened.
+                    icon = Icons.voice_state_green
+                    colour = Colours.soft_green
+
+        if not changes:
+            return
+
+        message = "\n".join(f"{Emojis.bullet} {item}" for item in sorted(changes))
+        message = f"**{member}** (`{member.id}`)\n{message}"
+
+        await self.send_log_message(
+            icon_url=icon,
+            colour=colour,
+            title="Voice state updated",
+            text=message,
+            thumbnail=member.avatar_url_as(static_format="png"),
+            channel_id=Channels.voice_log
         )

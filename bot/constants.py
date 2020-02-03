@@ -256,6 +256,8 @@ class Emojis(metaclass=YAMLGetter):
     status_idle: str
     status_dnd: str
 
+    failmail: str
+
     bullet: str
     new: str
     pencil: str
@@ -268,6 +270,12 @@ class Emojis(metaclass=YAMLGetter):
     ducky_ninja: int
     ducky_devil: int
     ducky_tube: int
+    ducky_hunt: int
+    ducky_wizard: int
+    ducky_party: int
+    ducky_angel: int
+    ducky_maul: int
+    ducky_santa: int
 
     upvotes: str
     comments: str
@@ -325,6 +333,10 @@ class Icons(metaclass=YAMLGetter):
     superstarify: str
     unsuperstarify: str
 
+    voice_state_blue: str
+    voice_state_green: str
+    voice_state_red: str
+
 
 class CleanMessages(metaclass=YAMLGetter):
     section = "bot"
@@ -380,6 +392,7 @@ class Channels(metaclass=YAMLGetter):
     userlog: int
     user_event_a: int
     verification: int
+    voice_log: int
 
 
 class Webhooks(metaclass=YAMLGetter):
@@ -466,6 +479,8 @@ class Reddit(metaclass=YAMLGetter):
     section = "reddit"
 
     subreddits: list
+    client_id: str
+    secret: str
 
 
 class Wolfram(metaclass=YAMLGetter):
@@ -543,6 +558,8 @@ class Event(Enum):
 
     message_delete = "message_delete"
     message_edit = "message_edit"
+
+    voice_state_update = "voice_state_update"
 
 
 # Debug mode
