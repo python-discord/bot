@@ -62,7 +62,7 @@ class Tags(Cog):
             for tag_title, tag in self._cache.items()
         }
 
-        thresholds = thresholds or [100, 80]
+        thresholds = thresholds or [100, 90, 80, 70, 60]
 
         for threshold in thresholds:
             suggestions = [
@@ -80,7 +80,7 @@ class Tags(Cog):
         await self._get_tags()
         found = [self._cache.get(tag_name.lower(), None)]
         if not found[0]:
-            return self._get_suggestions(tag_name, thresholds=[100, 80])
+            return self._get_suggestions(tag_name)
         return found
 
     @group(name='tags', aliases=('tag', 't'), invoke_without_command=True)
