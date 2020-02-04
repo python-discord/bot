@@ -27,14 +27,16 @@ class Tags(Cog):
         self.tag_cooldowns = {}
 
         self._cache = {}
-        self._last_fetch = None
+        self._last_fetch: float = 0.0
 
     async def _get_tags(self, is_forced: bool = False) -> None:
-        """Getting all tags."""
-        # Refresh only when there's a more than 5m gap from last call.
-        if is_forced or not self._last_fetch or time.time() - self._last_fetch > 5 * 60:
+        """Get all tags."""
+        # refresh only when there's a more than 5m gap from last call.
+        time_now: float = time.time()
+        if is_forced or not self._last_fetch or time_now - self._last_fetch > 5 * 60:
             tags = await self.bot.api_client.get('bot/tags')
             self._cache = {tag['title'].lower(): tag for tag in tags}
+            self._last_fetch = time_now
 
     @staticmethod
     def _fuzzy_search(search: str, target: str) -> bool:
