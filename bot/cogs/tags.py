@@ -1,4 +1,5 @@
 import logging
+import re
 import time
 from typing import Dict, List, Optional
 
@@ -18,6 +19,8 @@ TEST_CHANNELS = (
     Channels.bot,
     Channels.helpers
 )
+
+REGEX_NON_ALPHABET = re.compile(r"[^a-z]", re.IGNORECASE & re.MULTILINE)
 
 
 class Tags(Cog):
@@ -43,8 +46,8 @@ class Tags(Cog):
     def _fuzzy_search(search: str, target: str) -> int:
         """A simple scoring algorithm based on how many letters are found / total, with order in mind."""
         found, index = 0, 0
-        _search = search.lower().replace(' ', '')
-        _target = target.lower().replace(' ', '')
+        _search = REGEX_NON_ALPHABET.sub('', search.lower())
+        _target = REGEX_NON_ALPHABET.sub('', target.lower())
         for letter in _search:
             index = _target.find(letter, index)
             if index == -1:
