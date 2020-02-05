@@ -2,17 +2,14 @@ import colorsys
 import logging
 import pprint
 import textwrap
-import typing
 from collections import defaultdict
-from typing import Any, Mapping, Optional
+from typing import Any, Mapping, Optional, Union
 
-import discord
-from discord import CategoryChannel, Colour, Embed, Member, Role, TextChannel, VoiceChannel, utils
-from discord.ext import commands
-from discord.ext.commands import Bot, BucketType, Cog, Context, command, group
+from discord import CategoryChannel, Colour, Embed, Member, Message, Role, Status, TextChannel, VoiceChannel, utils
+from discord.ext.commands import Bot, BucketType, Cog, Context, command, group, Paginator
 from discord.utils import escape_markdown
 
-from bot import constants
+from bot.constants import Channels, Emojis, MODERATION_CHANNELS, MODERATION_ROLES, STAFF_ROLES
 from bot.decorators import InChannelCheckFailure, in_channel, with_role
 from bot.utils.checks import cooldown_with_role_bypass, with_role_check
 from bot.utils.time import time_since
@@ -26,13 +23,12 @@ class Information(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @with_role(*constants.MODERATION_ROLES)
+    @with_role(*MODERATION_ROLES)
     @command(name="roles")
     async def roles_info(self, ctx: Context) -> None:
         """Returns a list of all roles and their corresponding IDs."""
         # Sort the roles alphabetically and remove the @everyone role
-        roles = sorted(ctx.guild.roles, key=lambda role: role.name)
-        roles = [role for role in roles if role.name != "@everyone"]
+        roles = sorted(ctx.guild.roles[1:], key=lambda role: role.name)
 
         # Build a string
         role_string = ""
@@ -45,20 +41,20 @@ class Information(Cog):
             colour=Colour.blurple(),
             description=role_string
         )
-
         embed.set_footer(text=f"Total roles: {len(roles)}")
 
         await ctx.send(embed=embed)
 
-    @with_role(*constants.MODERATION_ROLES)
+    @with_role(*MODERATION_ROLES)
     @command(name="role")
-    async def role_info(self, ctx: Context, *roles: typing.Union[Role, str]) -> None:
+    async def role_info(self, ctx: Context, *roles: Union[Role, str]) -> None:
         """
         Return information on a role or list of roles.
 
         To specify multiple roles just add to the arguments, delimit roles with spaces in them using quotation marks.
         """
         parsed_roles = []
+        failed_roles = []
 
         for role_name in roles:
             if isinstance(role_name, Role):
@@ -69,29 +65,30 @@ class Information(Cog):
             role = utils.find(lambda r: r.name.lower() == role_name.lower(), ctx.guild.roles)
 
             if not role:
-                await ctx.send(f":x: Could not convert `{role_name}` to a role")
+                failed_roles.append(role_name)
                 continue
 
             parsed_roles.append(role)
 
+        if failed_roles:
+            await ctx.send(
+                ":x: I could not convert the following role names to a role: \n- "
+                "\n- ".join(failed_roles)
+            )
+
+
         for role in parsed_roles:
+            h, s, v = colorsys.rgb_to_hsv(*role.colour.to_rgb())
+
             embed = Embed(
                 title=f"{role.name} info",
                 colour=role.colour,
             )
-
             embed.add_field(name="ID", value=role.id, inline=True)
-
             embed.add_field(name="Colour (RGB)", value=f"#{role.colour.value:0>6x}", inline=True)
-
-            h, s, v = colorsys.rgb_to_hsv(*role.colour.to_rgb())
-
             embed.add_field(name="Colour (HSV)", value=f"{h:.2f} {s:.2f} {v}", inline=True)
-
             embed.add_field(name="Member count", value=len(role.members), inline=True)
-
             embed.add_field(name="Position", value=role.position)
-
             embed.add_field(name="Permission code", value=role.permissions.value, inline=True)
 
             await ctx.send(embed=embed)
@@ -103,60 +100,42 @@ class Information(Cog):
         features = ", ".join(ctx.guild.features)
         region = ctx.guild.region
 
-        # How many of each type of channel?
         roles = len(ctx.guild.roles)
-        channels = ctx.guild.channels
-        text_channels = 0
-        category_channels = 0
-        voice_channels = 0
-        for channel in channels:
-            if type(channel) == TextChannel:
-                text_channels += 1
-            elif type(channel) == CategoryChannel:
-                category_channels += 1
-            elif type(channel) == VoiceChannel:
-                voice_channels += 1
+        member_count = ctx.guild.member_count
+
+        # How many of each type of channel?
+        channels = {TextChannel: 0, VoiceChannel: 0, CategoryChannel: 0}
+        for channel in ctx.guild.channels:
+            channels[channel.__class__] += 1
 
         # How many of each user status?
-        member_count = ctx.guild.member_count
         members = ctx.guild.members
-        online = 0
-        dnd = 0
-        idle = 0
-        offline = 0
+        statuses = {status.value: 0 for status in Status}
         for member in members:
-            if str(member.status) == "online":
-                online += 1
-            elif str(member.status) == "offline":
-                offline += 1
-            elif str(member.status) == "idle":
-                idle += 1
-            elif str(member.status) == "dnd":
-                dnd += 1
+            statuses[member.status.value] += 1
 
         embed = Embed(
             colour=Colour.blurple(),
-            description=textwrap.dedent(f"""
-                **Server information**
-                Created: {created}
-                Voice region: {region}
-                Features: {features}
+            description=(
+                f"**Server information**"
+                f"Created: {created}"
+                f"Voice region: {region}"
+                f"Features: {features}"
 
-                **Counts**
-                Members: {member_count:,}
-                Roles: {roles}
-                Text: {text_channels}
-                Voice: {voice_channels}
-                Channel categories: {category_channels}
+                f"**Counts**"
+                f"Members: {member_count:,}"
+                f"Roles: {roles}"
+                f"Text Channels: {channels[TextChannel]}"
+                f"Voice Channels: {channels[VoiceChannel]}"
+                f"Channel categories: {channels[CategoryChannel]}"
 
-                **Members**
-                {constants.Emojis.status_online} {online}
-                {constants.Emojis.status_idle} {idle}
-                {constants.Emojis.status_dnd} {dnd}
-                {constants.Emojis.status_offline} {offline}
-            """)
+                f"**Members**"
+                f"{Emojis.status_online} {statuses['online']}"
+                f"{Emojis.status_idle} {statuses['idle']}"
+                f"{Emojis.status_dnd} {statuses['dnd']}"
+                f"{Emojis.status_offline} {statuses['offline']}"
+            )
         )
-
         embed.set_thumbnail(url=ctx.guild.icon_url)
 
         await ctx.send(embed=embed)
@@ -168,14 +147,14 @@ class Information(Cog):
             user = ctx.author
 
         # Do a role check if this is being executed on someone other than the caller
-        if user != ctx.author and not with_role_check(ctx, *constants.MODERATION_ROLES):
+        if user != ctx.author and not with_role_check(ctx, *MODERATION_ROLES):
             await ctx.send("You may not use this command on users other than yourself.")
             return
 
         # Non-staff may only do this in #bot-commands
-        if not with_role_check(ctx, *constants.STAFF_ROLES):
-            if not ctx.channel.id == constants.Channels.bot:
-                raise InChannelCheckFailure(constants.Channels.bot)
+        if not with_role_check(ctx, *STAFF_ROLES):
+            if not ctx.channel.id == Channels.bot:
+                raise InChannelCheckFailure(Channels.bot)
 
         embed = await self.create_user_embed(ctx, user)
 
@@ -197,23 +176,23 @@ class Information(Cog):
             name = f"{user.nick} ({name})"
 
         joined = time_since(user.joined_at, precision="days")
-        roles = ", ".join(role.mention for role in user.roles if role.name != "@everyone")
+        roles = ", ".join(role.mention for role in user.roles[1:])
 
         description = [
-            textwrap.dedent(f"""
-                **User Information**
-                Created: {created}
-                Profile: {user.mention}
-                ID: {user.id}
-                {custom_status}
-                **Member Information**
-                Joined: {joined}
-                Roles: {roles or None}
-            """).strip()
+            (
+                f"**User Information**"
+                f"Created: {created}"
+                f"Profile: {user.mention}"
+                f"ID: {user.id}"
+                f"{custom_status}"
+                f"**Member Information**"
+                f"Joined: {joined}"
+                f"Roles: {roles}"
+            )
         ]
 
         # Show more verbose output in moderation channels for infractions and nominations
-        if ctx.channel.id in constants.MODERATION_CHANNELS:
+        if ctx.channel.id in MODERATION_CHANNELS:
             description.append(await self.expanded_user_infraction_counts(user))
             description.append(await self.user_nomination_counts(user))
         else:
@@ -348,16 +327,16 @@ class Information(Cog):
         # remove trailing whitespace
         return out.rstrip()
 
-    @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=constants.STAFF_ROLES)
+    @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=STAFF_ROLES)
     @group(invoke_without_command=True)
-    @in_channel(constants.Channels.bot, bypass_roles=constants.STAFF_ROLES)
-    async def raw(self, ctx: Context, *, message: discord.Message, json: bool = False) -> None:
+    @in_channel(Channels.bot, bypass_roles=STAFF_ROLES)
+    async def raw(self, ctx: Context, *, message: Message, json: bool = False) -> None:
         """Shows information about the raw API response."""
         # I *guess* it could be deleted right as the command is invoked but I felt like it wasn't worth handling
         # doing this extra request is also much easier than trying to convert everything back into a dictionary again
         raw_data = await ctx.bot.http.get_message(message.channel.id, message.id)
 
-        paginator = commands.Paginator()
+        paginator = Paginator()
 
         def add_content(title: str, content: str) -> None:
             paginator.add_line(f'== {title} ==\n')
@@ -385,7 +364,7 @@ class Information(Cog):
             await ctx.send(page)
 
     @raw.command()
-    async def json(self, ctx: Context, message: discord.Message) -> None:
+    async def json(self, ctx: Context, message: Message) -> None:
         """Shows information about the raw API response in a copy-pasteable Python format."""
         await ctx.invoke(self.raw, message=message, json=True)
 
