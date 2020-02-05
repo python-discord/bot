@@ -2,6 +2,8 @@ import asyncio
 import unittest
 from unittest import mock
 
+import discord
+
 from bot import constants
 from bot.api import ResponseCodeError
 from bot.cogs import sync
@@ -223,3 +225,22 @@ class SyncCogListenerTests(SyncCogTestCase):
 
         data = {"roles": sorted(role.id for role in after_member.roles)}
         self.cog.patch_user.assert_called_once_with(after_member.id, updated_information=data)
+
+    def test_sync_cog_on_member_update_other(self):
+        """Members should not be patched if other attributes have changed."""
+        subtests = (
+            ("activities", discord.Game("Pong"), discord.Game("Frogger")),
+            ("nick", "old nick", "new nick"),
+            ("status", discord.Status.online, discord.Status.offline)
+        )
+
+        for attribute, old_value, new_value in subtests:
+            with self.subTest(attribute=attribute):
+                self.cog.patch_user.reset_mock()
+
+                before_member = helpers.MockMember(**{attribute: old_value})
+                after_member = helpers.MockMember(**{attribute: new_value})
+
+                asyncio.run(self.cog.on_member_update(before_member, after_member))
+
+                self.cog.patch_user.assert_not_called()
