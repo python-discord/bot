@@ -4,6 +4,7 @@ import itertools
 import logging
 import typing as t
 from datetime import datetime
+from itertools import zip_longest
 
 import discord
 from dateutil.relativedelta import relativedelta
@@ -42,14 +43,16 @@ class ModLog(Cog, name="ModLog"):
         self._cached_deletes = []
         self._cached_edits = []
 
-    async def upload_log(self, messages: t.List[discord.Message], actor_id: int) -> str:
-        """
-        Uploads the log data to the database via an API endpoint for uploading logs.
+    async def upload_log(
+        self,
+        messages: t.Iterable[discord.Message],
+        actor_id: int,
+        attachments: t.Iterable[t.List[str]] = None
+    ) -> str:
+        """Upload message logs to the database and return a URL to a page for viewing the logs."""
+        if attachments is None:
+            attachments = []
 
-        Used in several mod log embeds.
-
-        Returns a URL that can be used to view the log.
-        """
         response = await self.bot.api_client.post(
             'bot/deleted-messages',
             json={
@@ -61,9 +64,10 @@ class ModLog(Cog, name="ModLog"):
                         'author': message.author.id,
                         'channel_id': message.channel.id,
                         'content': message.content,
-                        'embeds': [embed.to_dict() for embed in message.embeds]
+                        'embeds': [embed.to_dict() for embed in message.embeds],
+                        'attachments': attachment,
                     }
-                    for message in messages
+                    for message, attachment in zip_longest(messages, attachments)
                 ]
             }
         )

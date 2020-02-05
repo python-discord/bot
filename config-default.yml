@@ -115,6 +115,7 @@ guild:
         admin_spam:        &ADMIN_SPAM    563594791770914816
         admins_voice:      &ADMINS_VOICE  500734494840717332
         announcements:                    354619224620138496
+        attachment_log:    &ATTCH_LOG     649243850006855680
         big_brother_logs:  &BBLOGS        468507907357409333
         bot:                              267659945086812160
         checkpoint_test:                  422077681434099723
@@ -152,7 +153,7 @@ guild:
         voice_log:                        640292421988646961
 
     staff_channels: [*ADMINS, *ADMIN_SPAM, *MOD_SPAM, *MODS, *HELPERS, *ORGANISATION, *DEFCON]
-    ignored: [*ADMINS, *MESSAGE_LOG, *MODLOG, *ADMINS_VOICE, *STAFF_VOICE]
+    ignored: [*ADMINS, *MESSAGE_LOG, *MODLOG, *ADMINS_VOICE, *STAFF_VOICE, *ATTCH_LOG]
 
     roles:
         admin:             &ADMIN_ROLE      267628507062992896
