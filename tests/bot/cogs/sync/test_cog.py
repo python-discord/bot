@@ -231,7 +231,7 @@ class SyncCogListenerTests(SyncCogTestCase):
         subtests = (
             ("activities", discord.Game("Pong"), discord.Game("Frogger")),
             ("nick", "old nick", "new nick"),
-            ("status", discord.Status.online, discord.Status.offline)
+            ("status", discord.Status.online, discord.Status.offline),
         )
 
         for attribute, old_value, new_value in subtests:
@@ -244,3 +244,44 @@ class SyncCogListenerTests(SyncCogTestCase):
                 asyncio.run(self.cog.on_member_update(before_member, after_member))
 
                 self.cog.patch_user.assert_not_called()
+
+    def test_sync_cog_on_user_update(self):
+        """A user should be patched only if the name, discriminator, or avatar changes."""
+        before_data = {
+            "name": "old name",
+            "discriminator": "1234",
+            "avatar": "old avatar",
+            "bot": False,
+        }
+
+        subtests = (
+            (True, "name", "name", "new name", "new name"),
+            (True, "discriminator", "discriminator", "8765", 8765),
+            (True, "avatar", "avatar_hash", "9j2e9", "9j2e9"),
+            (False, "bot", "bot", True, True),
+        )
+
+        for should_patch, attribute, api_field, value, api_value in subtests:
+            with self.subTest(attribute=attribute):
+                self.cog.patch_user.reset_mock()
+
+                after_data = before_data.copy()
+                after_data[attribute] = value
+                before_user = helpers.MockUser(**before_data)
+                after_user = helpers.MockUser(**after_data)
+
+                asyncio.run(self.cog.on_user_update(before_user, after_user))
+
+                if should_patch:
+                    self.cog.patch_user.assert_called_once()
+
+                    # Don't care if *all* keys are present; only the changed one is required
+                    call_args = self.cog.patch_user.call_args
+                    self.assertEqual(call_args[0][0], after_user.id)
+                    self.assertIn("updated_information", call_args[1])
+
+                    updated_information = call_args[1]["updated_information"]
+                    self.assertIn(api_field, updated_information)
+                    self.assertEqual(updated_information[api_field], api_value)
+                else:
+                    self.cog.patch_user.assert_not_called()
