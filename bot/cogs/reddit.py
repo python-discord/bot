@@ -2,13 +2,16 @@ import asyncio
 import logging
 import random
 import textwrap
+from collections import namedtuple
 from datetime import datetime, timedelta
 from typing import List
 
+from aiohttp import BasicAuth, ClientError
 from discord import Colour, Embed, TextChannel
-from discord.ext.commands import Bot, Cog, Context, group
+from discord.ext.commands import Cog, Context, group
 from discord.ext.tasks import loop
 
+from bot.bot import Bot
 from bot.constants import Channels, ERROR_REPLIES, Emojis, Reddit as RedditConfig, STAFF_ROLES, Webhooks
 from bot.converters import Subreddit
 from bot.decorators import with_role
@@ -16,25 +19,32 @@ from bot.pagination import LinePaginator
 
 log = logging.getLogger(__name__)
 
+AccessToken = namedtuple("AccessToken", ["token", "expires_at"])
+
 
 class Reddit(Cog):
     """Track subreddit posts and show detailed statistics about them."""
 
-    HEADERS = {"User-Agent": "Discord Bot: PythonDiscord (https://pythondiscord.com/)"}
+    HEADERS = {"User-Agent": "python3:python-discord/bot:1.0.0 (by /u/PythonDiscord)"}
     URL = "https://www.reddit.com"
-    MAX_FETCH_RETRIES = 3
+    OAUTH_URL = "https://oauth.reddit.com"
+    MAX_RETRIES = 3
 
     def __init__(self, bot: Bot):
         self.bot = bot
 
-        self.webhook = None  # set in on_ready
-        bot.loop.create_task(self.init_reddit_ready())
+        self.webhook = None
+        self.access_token = None
+        self.client_auth = BasicAuth(RedditConfig.client_id, RedditConfig.secret)
 
+        bot.loop.create_task(self.init_reddit_ready())
         self.auto_poster_loop.start()
 
     def cog_unload(self) -> None:
-        """Stops the loops when the cog is unloaded."""
+        """Stop the loop task and revoke the access token when the cog is unloaded."""
         self.auto_poster_loop.cancel()
+        if self.access_token.expires_at < datetime.utcnow():
+            self.revoke_access_token()
 
     async def init_reddit_ready(self) -> None:
         """Sets the reddit webhook when the cog is loaded."""
@@ -47,20 +57,82 @@ class Reddit(Cog):
         """Get the #reddit channel object from the bot's cache."""
         return self.bot.get_channel(Channels.reddit)
 
+    async def get_access_token(self) -> None:
+        """
+        Get a Reddit API OAuth2 access token and assign it to self.access_token.
+
+        A token is valid for 1 hour. There will be MAX_RETRIES to get a token, after which the cog
+        will be unloaded and a ClientError raised if retrieval was still unsuccessful.
+        """
+        for i in range(1, self.MAX_RETRIES + 1):
+            response = await self.bot.http_session.post(
+                url=f"{self.URL}/api/v1/access_token",
+                headers=self.HEADERS,
+                auth=self.client_auth,
+                data={
+                    "grant_type": "client_credentials",
+                    "duration": "temporary"
+                }
+            )
+
+            if response.status == 200 and response.content_type == "application/json":
+                content = await response.json()
+                expiration = int(content["expires_in"]) - 60  # Subtract 1 minute for leeway.
+                self.access_token = AccessToken(
+                    token=content["access_token"],
+                    expires_at=datetime.utcnow() + timedelta(seconds=expiration)
+                )
+
+                log.debug(f"New token acquired; expires on {self.access_token.expires_at}")
+                return
+            else:
+                log.debug(
+                    f"Failed to get an access token: "
+                    f"status {response.status} & content type {response.content_type}; "
+                    f"retrying ({i}/{self.MAX_RETRIES})"
+                )
+
+            await asyncio.sleep(3)
+
+        self.bot.remove_cog(self.qualified_name)
+        raise ClientError("Authentication with the Reddit API failed. Unloading the cog.")
+
+    async def revoke_access_token(self) -> None:
+        """
+        Revoke the OAuth2 access token for the Reddit API.
+
+        For security reasons, it's good practice to revoke the token when it's no longer being used.
+        """
+        response = await self.bot.http_session.post(
+            url=f"{self.URL}/api/v1/revoke_token",
+            headers=self.HEADERS,
+            auth=self.client_auth,
+            data={
+                "token": self.access_token.token,
+                "token_type_hint": "access_token"
+            }
+        )
+
+        if response.status == 204 and response.content_type == "application/json":
+            self.access_token = None
+        else:
+            log.warning(f"Unable to revoke access token: status {response.status}.")
+
     async def fetch_posts(self, route: str, *, amount: int = 25, params: dict = None) -> List[dict]:
         """A helper method to fetch a certain amount of Reddit posts at a given route."""
         # Reddit's JSON responses only provide 25 posts at most.
         if not 25 >= amount > 0:
             raise ValueError("Invalid amount of subreddit posts requested.")
 
-        if params is None:
-            params = {}
+        # Renew the token if necessary.
+        if not self.access_token or self.access_token.expires_at < datetime.utcnow():
+            await self.get_access_token()
 
-        url = f"{self.URL}/{route}.json"
-        for _ in range(self.MAX_FETCH_RETRIES):
+        url = f"{self.OAUTH_URL}/{route}"
+        for _ in range(self.MAX_RETRIES):
             response = await self.bot.http_session.get(
                 url=url,
-                headers=self.HEADERS,
+                headers={**self.HEADERS, "Authorization": f"bearer {self.access_token.token}"},
                 params=params
             )
             if response.status == 200 and response.content_type == 'application/json':
@@ -217,6 +289,5 @@ class Reddit(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Reddit cog load."""
+    """Load the Reddit cog."""
     bot.add_cog(Reddit(bot))
-    log.info("Cog loaded: Reddit")

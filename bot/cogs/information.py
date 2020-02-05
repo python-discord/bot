@@ -9,10 +9,11 @@ from typing import Any, Mapping, Optional
 import discord
 from discord import CategoryChannel, Colour, Embed, Member, Role, TextChannel, VoiceChannel, utils
 from discord.ext import commands
-from discord.ext.commands import Bot, BucketType, Cog, Context, command, group
+from discord.ext.commands import BucketType, Cog, Context, command, group
 from discord.utils import escape_markdown
 
 from bot import constants
+from bot.bot import Bot
 from bot.decorators import InChannelCheckFailure, in_channel, with_role
 from bot.utils.checks import cooldown_with_role_bypass, with_role_check
 from bot.utils.time import time_since
@@ -188,7 +189,11 @@ class Information(Cog):
         # Custom status
         custom_status = ''
         for activity in user.activities:
-            if activity.name == 'Custom Status':
+            # Check activity.state for None value if user has a custom status set
+            # This guards against a custom status with an emoji but no text, which will cause
+            # escape_markdown to raise an exception
+            # This can be reworked after a move to d.py 1.3.0+, which adds a CustomActivity class
+            if activity.name == 'Custom Status' and activity.state:
                 state = escape_markdown(activity.state)
                 custom_status = f'Status: {state}\n'
 
@@ -391,6 +396,5 @@ class Information(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Information cog load."""
+    """Load the Information cog."""
     bot.add_cog(Information(bot))
-    log.info("Cog loaded: Information")

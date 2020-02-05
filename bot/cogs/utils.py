@@ -8,8 +8,9 @@ from typing import Tuple
 
 from dateutil import relativedelta
 from discord import Colour, Embed, Message, Role
-from discord.ext.commands import Bot, Cog, Context, command
+from discord.ext.commands import Cog, Context, command
 
+from bot.bot import Bot
 from bot.constants import Channels, MODERATION_ROLES, Mention, STAFF_ROLES
 from bot.decorators import in_channel, with_role
 from bot.utils.time import humanize_delta
@@ -61,14 +62,12 @@ class Utils(Cog):
                 pep_embed.set_thumbnail(url="https://www.python.org/static/opengraph-icon-200x200.png")
 
                 # Add the interesting information
-                if "Status" in pep_header:
-                    pep_embed.add_field(name="Status", value=pep_header["Status"])
-                if "Python-Version" in pep_header:
-                    pep_embed.add_field(name="Python-Version", value=pep_header["Python-Version"])
-                if "Created" in pep_header:
-                    pep_embed.add_field(name="Created", value=pep_header["Created"])
-                if "Type" in pep_header:
-                    pep_embed.add_field(name="Type", value=pep_header["Type"])
+                fields_to_check = ("Status", "Python-Version", "Created", "Type")
+                for field in fields_to_check:
+                    # Check for a PEP metadata field that is present but has an empty value
+                    # embed field values can't contain an empty string
+                    if pep_header.get(field, ""):
+                        pep_embed.add_field(name=field, value=pep_header[field])
 
             elif response.status != 404:
                 # any response except 200 and 404 is expected
@@ -176,6 +175,5 @@ class Utils(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Utils cog load."""
+    """Load the Utils cog."""
     bot.add_cog(Utils(bot))
-    log.info("Cog loaded: Utils")

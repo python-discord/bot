@@ -578,15 +578,7 @@ class DuckPondSetupTests(unittest.TestCase):
     """Tests setup of the `DuckPond` cog."""
 
     def test_setup(self):
-        """Setup of the cog should log a message at `INFO` level."""
+        """Setup of the extension should call add_cog."""
         bot = helpers.MockBot()
-        log = logging.getLogger('bot.cogs.duck_pond')
-
-        with self.assertLogs(logger=log, level=logging.INFO) as log_watcher:
-            duck_pond.setup(bot)
-
-        self.assertEqual(len(log_watcher.records), 1)
-        record = log_watcher.records[0]
-        self.assertEqual(record.levelno, logging.INFO)
-
+        duck_pond.setup(bot)
         bot.add_cog.assert_called_once()
