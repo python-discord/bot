@@ -2,14 +2,14 @@ import colorsys
 import logging
 import pprint
 import textwrap
-from collections import defaultdict
+from collections import Counter, defaultdict
 from typing import Any, Mapping, Optional, Union
 
 from discord import CategoryChannel, Colour, Embed, Member, Message, Role, Status, TextChannel, VoiceChannel, utils
-from discord.ext.commands import Bot, BucketType, Cog, Context, command, group, Paginator
+from discord.ext.commands import Bot, BucketType, Cog, Context, Paginator, command, group
 from discord.utils import escape_markdown
 
-from bot.constants import Channels, Emojis, MODERATION_CHANNELS, MODERATION_ROLES, STAFF_ROLES
+from bot import constants
 from bot.decorators import InChannelCheckFailure, in_channel, with_role
 from bot.utils.checks import cooldown_with_role_bypass, with_role_check
 from bot.utils.time import time_since
@@ -23,7 +23,7 @@ class Information(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @with_role(*MODERATION_ROLES)
+    @with_role(*constants.MODERATION_ROLES)
     @command(name="roles")
     async def roles_info(self, ctx: Context) -> None:
         """Returns a list of all roles and their corresponding IDs."""
@@ -45,7 +45,7 @@ class Information(Cog):
 
         await ctx.send(embed=embed)
 
-    @with_role(*MODERATION_ROLES)
+    @with_role(*constants.MODERATION_ROLES)
     @command(name="role")
     async def role_info(self, ctx: Context, *roles: Union[Role, str]) -> None:
         """
@@ -76,7 +76,6 @@ class Information(Cog):
                 "\n- ".join(failed_roles)
             )
 
-
         for role in parsed_roles:
             h, s, v = colorsys.rgb_to_hsv(*role.colour.to_rgb())
 
@@ -104,37 +103,37 @@ class Information(Cog):
         member_count = ctx.guild.member_count
 
         # How many of each type of channel?
-        channels = {TextChannel: 0, VoiceChannel: 0, CategoryChannel: 0}
+        channels = Counter({TextChannel: 0, VoiceChannel: 0, CategoryChannel: 0})
         for channel in ctx.guild.channels:
             channels[channel.__class__] += 1
 
         # How many of each user status?
         members = ctx.guild.members
-        statuses = {status.value: 0 for status in Status}
+        statuses = Counter({status.value: 0 for status in Status})
         for member in members:
             statuses[member.status.value] += 1
 
         embed = Embed(
             colour=Colour.blurple(),
-            description=(
-                f"**Server information**"
-                f"Created: {created}"
-                f"Voice region: {region}"
-                f"Features: {features}"
+            description=textwrap.dedent(f"""
+                **Server information**
+                Created: {created}
+                Voice region: {region}
+                Features: {features}
 
-                f"**Counts**"
-                f"Members: {member_count:,}"
-                f"Roles: {roles}"
-                f"Text Channels: {channels[TextChannel]}"
-                f"Voice Channels: {channels[VoiceChannel]}"
-                f"Channel categories: {channels[CategoryChannel]}"
+                **Counts**
+                Members: {member_count:,}
+                Roles: {roles}
+                Text Channels: {channels[TextChannel]}
+                Voice Channels: {channels[VoiceChannel]}
+                Channel categories: {channels[CategoryChannel]}
 
-                f"**Members**"
-                f"{Emojis.status_online} {statuses['online']}"
-                f"{Emojis.status_idle} {statuses['idle']}"
-                f"{Emojis.status_dnd} {statuses['dnd']}"
-                f"{Emojis.status_offline} {statuses['offline']}"
-            )
+                **Members**
+                {constants.Emojis.status_online} {statuses['online']}
+                {constants.Emojis.status_idle} {statuses['idle']}
+                {constants.Emojis.status_dnd} {statuses['dnd']}
+                {constants.Emojis.status_offline} {statuses['offline']}
+            """)
         )
         embed.set_thumbnail(url=ctx.guild.icon_url)
 
@@ -147,14 +146,14 @@ class Information(Cog):
             user = ctx.author
 
         # Do a role check if this is being executed on someone other than the caller
-        if user != ctx.author and not with_role_check(ctx, *MODERATION_ROLES):
+        if user != ctx.author and not with_role_check(ctx, *constants.MODERATION_ROLES):
             await ctx.send("You may not use this command on users other than yourself.")
             return
 
         # Non-staff may only do this in #bot-commands
-        if not with_role_check(ctx, *STAFF_ROLES):
-            if not ctx.channel.id == Channels.bot:
-                raise InChannelCheckFailure(Channels.bot)
+        if not with_role_check(ctx, *constants.STAFF_ROLES):
+            if not ctx.channel.id == constants.Channels.bot:
+                raise InChannelCheckFailure(constants.Channels.bot)
 
         embed = await self.create_user_embed(ctx, user)
 
@@ -183,20 +182,20 @@ class Information(Cog):
         roles = ", ".join(role.mention for role in user.roles[1:])
 
         description = [
-            (
-                f"**User Information**"
-                f"Created: {created}"
-                f"Profile: {user.mention}"
-                f"ID: {user.id}"
-                f"{custom_status}"
-                f"**Member Information**"
-                f"Joined: {joined}"
-                f"Roles: {roles}"
-            )
+            textwrap.dedent(f"""
+                **User Information**
+                Created: {created}
+                Profile: {user.mention}
+                ID: {user.id}
+                {custom_status}
+                **Member Information**
+                Joined: {joined}
+                Roles: {roles}
+            """).strip()
         ]
 
         # Show more verbose output in moderation channels for infractions and nominations
-        if ctx.channel.id in MODERATION_CHANNELS:
+        if ctx.channel.id in constants.MODERATION_CHANNELS:
             description.append(await self.expanded_user_infraction_counts(user))
             description.append(await self.user_nomination_counts(user))
         else:
@@ -331,9 +330,9 @@ class Information(Cog):
         # remove trailing whitespace
         return out.rstrip()
 
-    @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=STAFF_ROLES)
+    @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=constants.STAFF_ROLES)
     @group(invoke_without_command=True)
-    @in_channel(Channels.bot, bypass_roles=STAFF_ROLES)
+    @in_channel(constants.Channels.bot, bypass_roles=constants.STAFF_ROLES)
     async def raw(self, ctx: Context, *, message: Message, json: bool = False) -> None:
         """Shows information about the raw API response."""
         # I *guess* it could be deleted right as the command is invoked but I felt like it wasn't worth handling
