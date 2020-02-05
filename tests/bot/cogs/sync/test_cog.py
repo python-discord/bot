@@ -213,7 +213,7 @@ class SyncCogListenerTests(SyncCogTestCase):
             "name": member.name,
             "roles": sorted(role.id for role in member.roles)
         }
-        self.bot.api_client.put.assert_called_once_with("bot/users/88", json=json_data)
+        self.bot.api_client.put.assert_called_once_with(f"bot/users/{member.id}", json=json_data)
 
     def test_sync_cog_on_member_update_roles(self):
         """Members should be patched if their roles have changed."""
