@@ -1,4 +1,5 @@
 import logging
+import re
 import time
 from typing import Dict, List, Optional
 
@@ -18,6 +19,8 @@ TEST_CHANNELS = (
     Channels.bot,
     Channels.helpers
 )
+
+REGEX_NON_ALPHABET = re.compile(r"[^a-z]", re.MULTILINE & re.IGNORECASE)
 
 
 class Tags(Cog):
@@ -42,20 +45,19 @@ class Tags(Cog):
     @staticmethod
     def _fuzzy_search(search: str, target: str) -> int:
         """A simple scoring algorithm based on how many letters are found / total, with order in mind."""
-        found, index = 0, 0
-        _search = search.lower().replace(' ', '')
-        _targets = iter(target.lower())
+        current, index = 0, 0
+        _search = REGEX_NON_ALPHABET.sub('', search.lower())
+        _targets = iter(REGEX_NON_ALPHABET.split(target.lower()))
         _target = next(_targets)
         try:
-            for letter in _search:
-                index = _target.find(letter, index)
-                while index == -1:
-                    _target = next(_targets)
-                    index = _target.find(letter)
-                found += 1
-        except StopIteration:
+            while True:
+                while index < len(_target) and _search[current] == _target[index]:
+                    current += 1
+                    index += 1
+                index, _target = 0, next(_targets)
+        except (StopIteration, IndexError):
             pass
-        return found / len(_search) * 100
+        return current / len(_search) * 100
 
     def _get_suggestions(self, tag_name: str, thresholds: Optional[List[int]] = None) -> List[str]:
         """Return a list of suggested tags."""
