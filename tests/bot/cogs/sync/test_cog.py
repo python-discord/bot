@@ -212,3 +212,14 @@ class SyncCogListenerTests(SyncCogTestCase):
             "roles": sorted(role.id for role in member.roles)
         }
         self.bot.api_client.put.assert_called_once_with("bot/users/88", json=json_data)
+
+    def test_sync_cog_on_member_update_roles(self):
+        """Members should be patched if their roles have changed."""
+        before_roles = [helpers.MockRole(id=12), helpers.MockRole(id=30)]
+        before_member = helpers.MockMember(roles=before_roles)
+        after_member = helpers.MockMember(roles=before_roles[1:])
+
+        asyncio.run(self.cog.on_member_update(before_member, after_member))
+
+        data = {"roles": sorted(role.id for role in after_member.roles)}
+        self.cog.patch_user.assert_called_once_with(after_member.id, updated_information=data)
