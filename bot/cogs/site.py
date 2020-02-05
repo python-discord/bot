@@ -74,7 +74,7 @@ class Site(Cog):
     @site_group.command(name="help")
     async def site_help(self, ctx: Context) -> None:
         """Info about the site's Getting Help page."""
-        url = f"{PAGES_URL}resources/guides/asking-good-questions"
+        url = f"{PAGES_URL}/resources/guides/asking-good-questions"
 
         embed = Embed(title="Asking Good Questions")
         embed.set_footer(text=url)
