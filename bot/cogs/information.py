@@ -5,22 +5,11 @@ import textwrap
 from collections import defaultdict
 from typing import Any, Mapping, Optional, Union
 
-<<<<<<< HEAD
 from discord import CategoryChannel, Colour, Embed, Member, Message, Role, Status, TextChannel, VoiceChannel, utils
 from discord.ext.commands import Bot, BucketType, Cog, Context, command, group, Paginator
 from discord.utils import escape_markdown
 
 from bot.constants import Channels, Emojis, MODERATION_CHANNELS, MODERATION_ROLES, STAFF_ROLES
-=======
-import discord
-from discord import CategoryChannel, Colour, Embed, Member, Role, TextChannel, VoiceChannel, utils
-from discord.ext import commands
-from discord.ext.commands import BucketType, Cog, Context, command, group
-from discord.utils import escape_markdown
-
-from bot import constants
-from bot.bot import Bot
->>>>>>> upstream/master
 from bot.decorators import InChannelCheckFailure, in_channel, with_role
 from bot.utils.checks import cooldown_with_role_bypass, with_role_check
 from bot.utils.time import time_since
