@@ -45,7 +45,6 @@ class Information(Cog):
             colour=Colour.blurple(),
             description=role_string
         )
-
         embed.set_footer(text=f"Total roles: {len(roles)}")
 
         await ctx.send(embed=embed)
@@ -75,23 +74,17 @@ class Information(Cog):
             parsed_roles.append(role)
 
         for role in parsed_roles:
+            h, s, v = colorsys.rgb_to_hsv(*role.colour.to_rgb())
+
             embed = Embed(
                 title=f"{role.name} info",
                 colour=role.colour,
             )
-
             embed.add_field(name="ID", value=role.id, inline=True)
-
             embed.add_field(name="Colour (RGB)", value=f"#{role.colour.value:0>6x}", inline=True)
-
-            h, s, v = colorsys.rgb_to_hsv(*role.colour.to_rgb())
-
             embed.add_field(name="Colour (HSV)", value=f"{h:.2f} {s:.2f} {v}", inline=True)
-
             embed.add_field(name="Member count", value=len(role.members), inline=True)
-
             embed.add_field(name="Position", value=role.position)
-
             embed.add_field(name="Permission code", value=role.permissions.value, inline=True)
 
             await ctx.send(embed=embed)
