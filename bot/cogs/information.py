@@ -212,7 +212,7 @@ class Information(Cog):
                 {custom_status}
                 **Member Information**
                 Joined: {joined}
-                Roles: {roles or None}
+                Roles: {roles}
             """).strip()
         ]
 
