@@ -147,7 +147,7 @@ class Information(Cog):
             user = ctx.author
 
         # Do a role check if this is being executed on someone other than the caller
-        if user != ctx.author and not with_role_check(ctx, *constants.MODERATION_ROLES):
+        elif user != ctx.author and not with_role_check(ctx, *constants.MODERATION_ROLES):
             await ctx.send("You may not use this command on users other than yourself.")
             return
 
