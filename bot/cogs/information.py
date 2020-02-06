@@ -32,8 +32,7 @@ class Information(Cog):
     async def roles_info(self, ctx: Context) -> None:
         """Returns a list of all roles and their corresponding IDs."""
         # Sort the roles alphabetically and remove the @everyone role
-        roles = sorted(ctx.guild.roles, key=lambda role: role.name)
-        roles = [role for role in roles if role.name != "@everyone"]
+        roles = sorted(ctx.guild.roles[1:], key=lambda role: role.name)
 
         # Build a string
         role_string = ""
@@ -202,7 +201,7 @@ class Information(Cog):
             name = f"{user.nick} ({name})"
 
         joined = time_since(user.joined_at, precision="days")
-        roles = ", ".join(role.mention for role in user.roles if role.name != "@everyone")
+        roles = ", ".join(role.mention for role in user.roles[1:])
 
         description = [
             textwrap.dedent(f"""
