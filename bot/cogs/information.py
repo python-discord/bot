@@ -3,7 +3,7 @@ import logging
 import pprint
 import textwrap
 import typing
-from collections import defaultdict
+from collections import Counter, defaultdict
 from typing import Any, Mapping, Optional
 
 import discord
@@ -96,36 +96,18 @@ class Information(Cog):
         features = ", ".join(ctx.guild.features)
         region = ctx.guild.region
 
-        # How many of each type of channel?
         roles = len(ctx.guild.roles)
-        channels = ctx.guild.channels
-        text_channels = 0
-        category_channels = 0
-        voice_channels = 0
-        for channel in channels:
-            if type(channel) == TextChannel:
-                text_channels += 1
-            elif type(channel) == CategoryChannel:
-                category_channels += 1
-            elif type(channel) == VoiceChannel:
-                voice_channels += 1
+        member_count = ctx.guild.member_count
+
+        # How many of each type of channel?
+        channels = Counter({TextChannel: 0, VoiceChannel: 0, CategoryChannel: 0})
+        for channel in ctx.guild.channels:
+            channels[channel.__class__] += 1
 
         # How many of each user status?
-        member_count = ctx.guild.member_count
-        members = ctx.guild.members
-        online = 0
-        dnd = 0
-        idle = 0
-        offline = 0
-        for member in members:
-            if str(member.status) == "online":
-                online += 1
-            elif str(member.status) == "offline":
-                offline += 1
-            elif str(member.status) == "idle":
-                idle += 1
-            elif str(member.status) == "dnd":
-                dnd += 1
+        statuses = Counter({status.value: 0 for status in Status})
+        for member in ctx.guild.members:
+            statuses[member.status.value] += 1
 
         embed = Embed(
             colour=Colour.blurple(),
@@ -138,15 +120,15 @@ class Information(Cog):
                 **Counts**
                 Members: {member_count:,}
                 Roles: {roles}
-                Text: {text_channels}
-                Voice: {voice_channels}
-                Channel categories: {category_channels}
+                Text Channels: {channels[TextChannel]}
+                Voice Channels: {channels[VoiceChannel]}
+                Channel categories: {channels[CategoryChannel]}
 
                 **Members**
-                {constants.Emojis.status_online} {online}
-                {constants.Emojis.status_idle} {idle}
-                {constants.Emojis.status_dnd} {dnd}
-                {constants.Emojis.status_offline} {offline}
+                {constants.Emojis.status_online} {statuses['online']}
+                {constants.Emojis.status_idle} {statuses['idle']}
+                {constants.Emojis.status_dnd} {statuses['dnd']}
+                {constants.Emojis.status_offline} {statuses['offline']}
             """)
         )
 
