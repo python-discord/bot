@@ -58,6 +58,7 @@ class Information(Cog):
         To specify multiple roles just add to the arguments, delimit roles with spaces in them using quotation marks.
         """
         parsed_roles = []
+        failed_roles = []
 
         for role_name in roles:
             if isinstance(role_name, Role):
@@ -68,10 +69,16 @@ class Information(Cog):
             role = utils.find(lambda r: r.name.lower() == role_name.lower(), ctx.guild.roles)
 
             if not role:
-                await ctx.send(f":x: Could not convert `{role_name}` to a role")
+                failed_roles.append(role_name)
                 continue
 
             parsed_roles.append(role)
+
+        if failed_roles:
+            await ctx.send(
+                ":x: I could not convert the following role names to a role: \n- "
+                "\n- ".join(failed_roles)
+            )
 
         for role in parsed_roles:
             h, s, v = colorsys.rgb_to_hsv(*role.colour.to_rgb())
