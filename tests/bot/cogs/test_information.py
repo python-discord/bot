@@ -153,8 +153,8 @@ class InformationCogTests(unittest.TestCase):
                 **Counts**
                 Members: {self.ctx.guild.member_count:,}
                 Roles: {len(self.ctx.guild.roles)}
-                Text: 1
-                Voice: 1
+                Text Channels: 1
+                Voice Channels: 1
                 Channel categories: 1
 
                 **Members**
