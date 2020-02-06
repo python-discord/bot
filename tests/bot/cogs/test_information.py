@@ -125,10 +125,10 @@ class InformationCogTests(unittest.TestCase):
                 )
             ],
             members=[
-                *(helpers.MockMember(status='online') for _ in range(2)),
-                *(helpers.MockMember(status='idle') for _ in range(1)),
-                *(helpers.MockMember(status='dnd') for _ in range(4)),
-                *(helpers.MockMember(status='offline') for _ in range(3)),
+                *(helpers.MockMember(status=discord.Status.online) for _ in range(2)),
+                *(helpers.MockMember(status=discord.Status.idle) for _ in range(1)),
+                *(helpers.MockMember(status=discord.Status.dnd) for _ in range(4)),
+                *(helpers.MockMember(status=discord.Status.offline) for _ in range(3)),
             ],
             member_count=1_234,
             icon_url='a-lemon.jpg',
