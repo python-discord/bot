@@ -2,14 +2,11 @@ import colorsys
 import logging
 import pprint
 import textwrap
-import typing
 from collections import Counter, defaultdict
-from typing import Any, Mapping, Optional
+from typing import Any, Mapping, Optional, Union
 
-import discord
-from discord import CategoryChannel, Colour, Embed, Member, Role, TextChannel, VoiceChannel, utils
-from discord.ext import commands
-from discord.ext.commands import BucketType, Cog, Context, command, group
+from discord import CategoryChannel, Colour, Embed, Member, Message, Role, Status, TextChannel, VoiceChannel, utils
+from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group
 from discord.utils import escape_markdown
 
 from bot import constants
@@ -51,7 +48,7 @@ class Information(Cog):
 
     @with_role(*constants.MODERATION_ROLES)
     @command(name="role")
-    async def role_info(self, ctx: Context, *roles: typing.Union[Role, str]) -> None:
+    async def role_info(self, ctx: Context, *roles: Union[Role, str]) -> None:
         """
         Return information on a role or list of roles.
 
@@ -337,13 +334,13 @@ class Information(Cog):
     @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=constants.STAFF_ROLES)
     @group(invoke_without_command=True)
     @in_channel(constants.Channels.bot, bypass_roles=constants.STAFF_ROLES)
-    async def raw(self, ctx: Context, *, message: discord.Message, json: bool = False) -> None:
+    async def raw(self, ctx: Context, *, message: Message, json: bool = False) -> None:
         """Shows information about the raw API response."""
         # I *guess* it could be deleted right as the command is invoked but I felt like it wasn't worth handling
         # doing this extra request is also much easier than trying to convert everything back into a dictionary again
         raw_data = await ctx.bot.http.get_message(message.channel.id, message.id)
 
-        paginator = commands.Paginator()
+        paginator = Paginator()
 
         def add_content(title: str, content: str) -> None:
             paginator.add_line(f'== {title} ==\n')
@@ -371,7 +368,7 @@ class Information(Cog):
             await ctx.send(page)
 
     @raw.command()
-    async def json(self, ctx: Context, message: discord.Message) -> None:
+    async def json(self, ctx: Context, message: Message) -> None:
         """Shows information about the raw API response in a copy-pasteable Python format."""
         await ctx.invoke(self.raw, message=message, json=True)
 
