@@ -285,3 +285,12 @@ class SyncCogListenerTests(SyncCogTestCase):
                     self.assertEqual(updated_information[api_field], api_value)
                 else:
                     self.cog.patch_user.assert_not_called()
+
+
+class SyncCogCommandTests(SyncCogTestCase):
+    def test_sync_roles_command(self):
+        """sync() should be called on the RoleSyncer."""
+        ctx = helpers.MockContext()
+        asyncio.run(self.cog.sync_roles_command.callback(self.cog, ctx))
+
+        self.cog.role_syncer.sync.assert_called_once_with(ctx.guild, ctx)
