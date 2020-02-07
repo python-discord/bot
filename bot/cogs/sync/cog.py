@@ -66,10 +66,10 @@ class Sync(Cog):
     async def on_guild_role_update(self, before: Role, after: Role) -> None:
         """Syncs role with the database if any of the stored attributes were updated."""
         if (
-                before.name != after.name
-                or before.colour != after.colour
-                or before.permissions != after.permissions
-                or before.position != after.position
+            before.name != after.name
+            or before.colour != after.colour
+            or before.permissions != after.permissions
+            or before.position != after.position
         ):
             await self.bot.api_client.put(
                 f'bot/roles/{after.id}',
@@ -120,18 +120,8 @@ class Sync(Cog):
 
     @Cog.listener()
     async def on_member_remove(self, member: Member) -> None:
-        """Updates the user information when a member leaves the guild."""
-        await self.bot.api_client.put(
-            f'bot/users/{member.id}',
-            json={
-                'avatar_hash': member.avatar,
-                'discriminator': int(member.discriminator),
-                'id': member.id,
-                'in_guild': False,
-                'name': member.name,
-                'roles': sorted(role.id for role in member.roles)
-            }
-        )
+        """Set the in_guild field to False when a member leaves the guild."""
+        await self.patch_user(member.id, updated_information={"in_guild": False})
 
     @Cog.listener()
     async def on_member_update(self, before: Member, after: Member) -> None:
