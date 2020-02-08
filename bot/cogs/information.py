@@ -109,9 +109,9 @@ class Information(Cog):
             channels[channel.__class__] += 1
 
         # How many of each user status?
-        statuses = Counter({status.value: 0 for status in Status})
+        statuses = Counter({status: 0 for status in Status})
         for member in ctx.guild.members:
-            statuses[member.status.value] += 1
+            statuses[member.status] += 1
 
         embed = Embed(
             colour=Colour.blurple(),
@@ -129,10 +129,10 @@ class Information(Cog):
                 Channel categories: {channels[CategoryChannel]}
 
                 **Members**
-                {constants.Emojis.status_online} {statuses['online']}
-                {constants.Emojis.status_idle} {statuses['idle']}
-                {constants.Emojis.status_dnd} {statuses['dnd']}
-                {constants.Emojis.status_offline} {statuses['offline']}
+                {constants.Emojis.status_online} {statuses[Status.online]}
+                {constants.Emojis.status_idle} {statuses[Status.idle]}
+                {constants.Emojis.status_dnd} {statuses[Status.dnd]}
+                {constants.Emojis.status_offline} {statuses[Status.offline]}
             """)
         )
 
