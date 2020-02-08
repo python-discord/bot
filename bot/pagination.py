@@ -12,10 +12,9 @@ FIRST_EMOJI = "\u23EE"   # [:track_previous:]
 LEFT_EMOJI = "\u2B05"    # [:arrow_left:]
 RIGHT_EMOJI = "\u27A1"   # [:arrow_right:]
 LAST_EMOJI = "\u23ED"    # [:track_next:]
-CLEAR_EMOJI = "\u274c"  # [:x:]
 DELETE_EMOJI = constants.Emojis.trashcan  # [:trashcan:]
 
-PAGINATION_EMOJI = [FIRST_EMOJI, LEFT_EMOJI, RIGHT_EMOJI, LAST_EMOJI, CLEAR_EMOJI, DELETE_EMOJI]
+PAGINATION_EMOJI = [FIRST_EMOJI, LEFT_EMOJI, RIGHT_EMOJI, LAST_EMOJI, DELETE_EMOJI]
 
 log = logging.getLogger(__name__)
 
@@ -206,10 +205,6 @@ class LinePaginator(Paginator):
                 log.debug("Timed out waiting for a reaction")
                 break  # We're done, no reactions for the last 5 minutes
 
-            if reaction.emoji == CLEAR_EMOJI:
-                log.debug("Got clear reaction")
-                break
-
             if str(reaction.emoji) == DELETE_EMOJI:
                 log.debug("Got delete reaction")
                 return await message.delete()
@@ -394,11 +389,6 @@ class ImagePaginator(Paginator):
 
             # Deletes the users reaction
             await message.remove_reaction(reaction.emoji, user)
-
-            # Clear reaction press - [:x:]
-            if reaction.emoji == CLEAR_EMOJI:
-                log.debug("Got clear reaction")
-                break
 
             # Delete reaction press - [:trashcan:]
             if str(reaction.emoji) == DELETE_EMOJI:

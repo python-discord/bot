@@ -14,7 +14,7 @@ from bot.bot import Bot
 from bot.constants import Channels, Emojis, STAFF_ROLES
 from bot.decorators import redirect_output
 from bot.pagination import (
-    CLEAR_EMOJI, FIRST_EMOJI, LAST_EMOJI,
+    FIRST_EMOJI, LAST_EMOJI,
     LEFT_EMOJI, LinePaginator, RIGHT_EMOJI,
 )
 
@@ -25,7 +25,6 @@ REACTIONS = {
     LEFT_EMOJI: 'back',
     RIGHT_EMOJI: 'next',
     LAST_EMOJI: 'end',
-    CLEAR_EMOJI: 'clear',
     DELETE_EMOJI: 'stop',
 }
 
@@ -498,10 +497,6 @@ class HelpSession:
         """Event that is called when the user requests the last page."""
         if not self.is_last_page:
             await self.update_page(len(self._pages)-1)
-
-    async def do_clear(self) -> None:
-        """Event that is called when the user clears the emojis from the pagination."""
-        await self.message.clear_reactions()
 
     async def do_stop(self) -> None:
         """Event that is called when the user requests to stop the help session."""
