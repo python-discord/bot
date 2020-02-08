@@ -111,3 +111,55 @@ async def wait_until(time: datetime.datetime, start: Optional[datetime.datetime]
 def format_infraction(timestamp: str) -> str:
     """Format an infraction timestamp to a more readable ISO 8601 format."""
     return dateutil.parser.isoparse(timestamp).strftime(INFRACTION_FORMAT)
+
+
+def format_infraction_with_duration(
+    expiry: Optional[str],
+    date_from: Optional[datetime.datetime] = None,
+    max_units: int = 2
+) -> Optional[str]:
+    """
+    Format an infraction timestamp to a more readable ISO 8601 format WITH the duration.
+
+    Returns a human-readable version of the duration between datetime.utcnow() and an expiry.
+    Unlike `humanize_delta`, this function will force the `precision` to be `seconds` by not passing it.
+    `max_units` specifies the maximum number of units of time to include (e.g. 1 may include days but not hours).
+    By default, max_units is 2.
+    """
+    if not expiry:
+        return None
+
+    date_from = date_from or datetime.datetime.utcnow()
+    date_to = dateutil.parser.isoparse(expiry).replace(tzinfo=None, microsecond=0)
+
+    expiry_formatted = format_infraction(expiry)
+
+    duration = humanize_delta(relativedelta(date_to, date_from), max_units=max_units)
+    duration_formatted = f" ({duration})" if duration else ''
+
+    return f"{expiry_formatted}{duration_formatted}"
+
+
+def until_expiration(
+    expiry: Optional[str],
+    now: Optional[datetime.datetime] = None,
+    max_units: int = 2
+) -> Optional[str]:
+    """
+    Get the remaining time until infraction's expiration, in a human-readable version of the relativedelta.
+
+    Returns a human-readable version of the remaining duration between datetime.utcnow() and an expiry.
+    Unlike `humanize_delta`, this function will force the `precision` to be `seconds` by not passing it.
+    `max_units` specifies the maximum number of units of time to include (e.g. 1 may include days but not hours).
+    By default, max_units is 2.
+    """
+    if not expiry:
+        return None
+
+    now = now or datetime.datetime.utcnow()
+    since = dateutil.parser.isoparse(expiry).replace(tzinfo=None, microsecond=0)
+
+    if since < now:
+        return None
+
+    return humanize_delta(relativedelta(since, now), max_units=max_units)

@@ -6,10 +6,11 @@ from typing import Union
 
 from discord import Colour, Embed, HTTPException, Message, Reaction, User
 from discord.ext import commands
-from discord.ext.commands import Bot, CheckFailure, Cog as DiscordCog, Command, Context
+from discord.ext.commands import CheckFailure, Cog as DiscordCog, Command, Context
 from fuzzywuzzy import fuzz, process
 
 from bot import constants
+from bot.bot import Bot
 from bot.constants import Channels, Emojis, STAFF_ROLES
 from bot.decorators import redirect_output
 from bot.pagination import (

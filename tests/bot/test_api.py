@@ -121,7 +121,9 @@ class LoggingHandlerTests(LoggingTestCase):
 
     def test_schedule_queued_tasks_for_nonempty_queue(self):
         """`APILoggingHandler` should schedule logs when the queue is not empty."""
-        with self.assertLogs(level=logging.DEBUG) as logs, patch('asyncio.create_task') as create_task:
+        log = logging.getLogger("bot.api")
+
+        with self.assertLogs(logger=log, level=logging.DEBUG) as logs, patch('asyncio.create_task') as create_task:
             self.log_handler.queue = [555]
             self.log_handler.schedule_queued_tasks()
             self.assertListEqual(self.log_handler.queue, [])

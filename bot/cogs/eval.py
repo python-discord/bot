@@ -9,8 +9,9 @@ from io import StringIO
 from typing import Any, Optional, Tuple
 
 import discord
-from discord.ext.commands import Bot, Cog, Context, group
+from discord.ext.commands import Cog, Context, group
 
+from bot.bot import Bot
 from bot.constants import Roles
 from bot.decorators import with_role
 from bot.interpreter import Interpreter
@@ -148,7 +149,7 @@ class CodeEval(Cog):
         self.env.update(env)
 
         # Ignore this code, it works
-        _code = """
+        code_ = """
 async def func():  # (None,) -> Any
     try:
         with contextlib.redirect_stdout(self.stdout):
@@ -162,7 +163,7 @@ async def func():  # (None,) -> Any
 """.format(textwrap.indent(code, '            '))
 
         try:
-            exec(_code, self.env)  # noqa: B102,S102
+            exec(code_, self.env)  # noqa: B102,S102
             func = self.env['func']
             res = await func()
 
@@ -197,6 +198,5 @@ async def func():  # (None,) -> Any
 
 
 def setup(bot: Bot) -> None:
-    """Code eval cog load."""
+    """Load the CodeEval cog."""
     bot.add_cog(CodeEval(bot))
-    log.info("Cog loaded: Eval")

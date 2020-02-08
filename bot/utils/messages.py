@@ -1,7 +1,8 @@
 import asyncio
 import contextlib
+import logging
 from io import BytesIO
-from typing import Optional, Sequence, Union
+from typing import List, Optional, Sequence, Union
 
 from discord import Client, Embed, File, Member, Message, Reaction, TextChannel, Webhook
 from discord.abc import Snowflake
@@ -9,7 +10,7 @@ from discord.errors import HTTPException
 
 from bot.constants import Emojis
 
-MAX_SIZE = 1024 * 1024 * 8  # 8 Mebibytes
+log = logging.getLogger(__name__)
 
 
 async def wait_for_deletion(
@@ -51,42 +52,58 @@ async def wait_for_deletion(
         await message.delete()
 
 
-async def send_attachments(message: Message, destination: Union[TextChannel, Webhook]) -> None:
+async def send_attachments(
+    message: Message,
+    destination: Union[TextChannel, Webhook],
+    link_large: bool = True
+) -> List[str]:
     """
-    Re-uploads each attachment in a message to the given channel or webhook.
+    Re-upload the message's attachments to the destination and return a list of their new URLs.
 
-    Each attachment is sent as a separate message to more easily comply with the 8 MiB request size limit.
-    If attachments are too large, they are instead grouped into a single embed which links to them.
+    Each attachment is sent as a separate message to more easily comply with the request/file size
+    limit. If link_large is True, attachments which are too large are instead grouped into a single
+    embed which links to them.
     """
     large = []
+    urls = []
     for attachment in message.attachments:
+        failure_msg = (
+            f"Failed to re-upload attachment {attachment.filename} from message {message.id}"
+        )
+
         try:
-            # This should avoid most files that are too large, but some may get through hence the try-catch.
             # Allow 512 bytes of leeway for the rest of the request.
-            if attachment.size <= MAX_SIZE - 512:
+            # This should avoid most files that are too large,
+            # but some may get through hence the try-catch.
+            if attachment.size <= destination.guild.filesize_limit - 512:
                 with BytesIO() as file:
-                    await attachment.save(file)
+                    await attachment.save(file, use_cached=True)
                     attachment_file = File(file, filename=attachment.filename)
 
                     if isinstance(destination, TextChannel):
-                        await destination.send(file=attachment_file)
+                        msg = await destination.send(file=attachment_file)
+                        urls.append(msg.attachments[0].url)
                     else:
                         await destination.send(
                             file=attachment_file,
                             username=message.author.display_name,
                             avatar_url=message.author.avatar_url
                         )
-            else:
+            elif link_large:
                 large.append(attachment)
+            else:
+                log.warning(f"{failure_msg} because it's too large.")
         except HTTPException as e:
-            if e.status == 413:
+            if link_large and e.status == 413:
                 large.append(attachment)
             else:
-                raise
+                log.warning(f"{failure_msg} with status {e.status}.")
 
-    if large:
-        embed = Embed(description=f"\n".join(f"[{attachment.filename}]({attachment.url})" for attachment in large))
+    if link_large and large:
+        desc = f"\n".join(f"[{attachment.filename}]({attachment.url})" for attachment in large)
+        embed = Embed(description=desc)
         embed.set_footer(text="Attachments exceed upload size limit.")
+
         if isinstance(destination, TextChannel):
             await destination.send(embed=embed)
         else:
@@ -95,3 +112,5 @@ async def send_attachments(message: Message, destination: Union[TextChannel, Web
                 username=message.author.display_name,
                 avatar_url=message.author.avatar_url
             )
+
+    return urls
