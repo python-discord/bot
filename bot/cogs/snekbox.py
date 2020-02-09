@@ -3,9 +3,11 @@ import datetime
 import logging
 import re
 import textwrap
+from functools import partial
 from signal import Signals
 from typing import Optional, Tuple
 
+from discord import Message, Reaction, User
 from discord.ext.commands import Cog, Context, command, guild_only
 
 from bot.bot import Bot
@@ -232,13 +234,13 @@ class Snekbox(Cog):
             try:
                 _, new_message = await self.bot.wait_for(
                     'message_edit',
-                    check=lambda o, n: n.id == ctx.message.id and o.content != n.content,
+                    check=partial(predicate_eval_message_edit, ctx),
                     timeout=10
                 )
                 await ctx.message.add_reaction('🔁')
                 await self.bot.wait_for(
                     'reaction_add',
-                    check=lambda r, u: r.message.id == ctx.message.id and u.id == ctx.author.id and str(r) == '🔁',
+                    check=partial(predicate_eval_emoji_reaction, ctx),
                     timeout=10
                 )
 
@@ -249,6 +251,16 @@ class Snekbox(Cog):
             except asyncio.TimeoutError:
                 await ctx.message.clear_reactions()
                 return
+
+
+def predicate_eval_message_edit(ctx: Context, old_msg: Message, new_msg: Message) -> bool:
+    """Return True if the edited message is the context message and the content was indeed modified."""
+    return new_msg.id == ctx.message.id and old_msg.content != new_msg.content
+
+
+def predicate_eval_emoji_reaction(ctx: Context, reaction: Reaction, user: User) -> bool:
+    """Return True if the reaction 🔁 was added by the context message author on this message."""
+    return reaction.message.id == ctx.message.id and user.id == ctx.author.id and str(reaction) == '🔁'
 
 
 def setup(bot: Bot) -> None:
