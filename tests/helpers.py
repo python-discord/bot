@@ -127,6 +127,18 @@ class AsyncMock(CustomMockMixin, unittest.mock.MagicMock):
         return super().__call__(*args, **kwargs)
 
 
+class AsyncContextManagerMock(unittest.mock.MagicMock):
+    def __init__(self, return_value: Any):
+        super().__init__()
+        self._return_value = return_value
+
+    async def __aenter__(self):
+        return self._return_value
+
+    async def __aexit__(self, *args):
+        pass
+
+
 class AsyncIteratorMock:
     """
     A class to mock asynchronous iterators.
