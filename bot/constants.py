@@ -257,6 +257,7 @@ class Emojis(metaclass=YAMLGetter):
     status_dnd: str
 
     failmail: str
+    trashcan: str
 
     bullet: str
     new: str

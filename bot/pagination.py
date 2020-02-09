@@ -6,11 +6,13 @@ from discord import Embed, Member, Message, Reaction
 from discord.abc import User
 from discord.ext.commands import Context, Paginator
 
+from bot import constants
+
 FIRST_EMOJI = "\u23EE"   # [:track_previous:]
 LEFT_EMOJI = "\u2B05"    # [:arrow_left:]
 RIGHT_EMOJI = "\u27A1"   # [:arrow_right:]
 LAST_EMOJI = "\u23ED"    # [:track_next:]
-DELETE_EMOJI = "\u274c"  # [:x:]
+DELETE_EMOJI = constants.Emojis.trashcan  # [:trashcan:]
 
 PAGINATION_EMOJI = [FIRST_EMOJI, LEFT_EMOJI, RIGHT_EMOJI, LAST_EMOJI, DELETE_EMOJI]
 
@@ -131,7 +133,7 @@ class LinePaginator(Paginator):
                     # Reaction is on this message
                     reaction_.message.id == message.id,
                     # Reaction is one of the pagination emotes
-                    reaction_.emoji in PAGINATION_EMOJI,
+                    str(reaction_.emoji) in PAGINATION_EMOJI,
                     # Reaction was not made by the Bot
                     user_.id != ctx.bot.user.id,
                     # There were no restrictions
@@ -203,9 +205,9 @@ class LinePaginator(Paginator):
                 log.debug("Timed out waiting for a reaction")
                 break  # We're done, no reactions for the last 5 minutes
 
-            if reaction.emoji == DELETE_EMOJI:
+            if str(reaction.emoji) == DELETE_EMOJI:
                 log.debug("Got delete reaction")
-                break
+                return await message.delete()
 
             if reaction.emoji == FIRST_EMOJI:
                 await message.remove_reaction(reaction.emoji, user)
@@ -342,7 +344,7 @@ class ImagePaginator(Paginator):
                 # Reaction is on the same message sent
                 reaction_.message.id == message.id,
                 # The reaction is part of the navigation menu
-                reaction_.emoji in PAGINATION_EMOJI,
+                str(reaction_.emoji) in PAGINATION_EMOJI,
                 # The reactor is not a bot
                 not member.bot
             ))
@@ -388,10 +390,10 @@ class ImagePaginator(Paginator):
             # Deletes the users reaction
             await message.remove_reaction(reaction.emoji, user)
 
-            # Delete reaction press - [:x:]
-            if reaction.emoji == DELETE_EMOJI:
+            # Delete reaction press - [:trashcan:]
+            if str(reaction.emoji) == DELETE_EMOJI:
                 log.debug("Got delete reaction")
-                break
+                return await message.delete()
 
             # First reaction press - [:track_previous:]
             if reaction.emoji == FIRST_EMOJI:
