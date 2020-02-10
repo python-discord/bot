@@ -9,13 +9,14 @@ from discord.ext.commands import Bot, Cog, Command, Context, Group, HelpCommand
 from fuzzywuzzy import fuzz, process
 
 from bot import constants
-from bot.constants import Channels, STAFF_ROLES
+from bot.constants import Channels, Emojis, STAFF_ROLES
 from bot.decorators import redirect_output
-from bot.pagination import DELETE_EMOJI, LinePaginator
+from bot.pagination import LinePaginator
 
 log = logging.getLogger(__name__)
 
 COMMANDS_PER_PAGE = 8
+DELETE_EMOJI = Emojis.trashcan
 PREFIX = constants.Bot.prefix
 
 Category = namedtuple("Category", ["name", "description", "cogs"])
@@ -25,11 +26,11 @@ async def help_cleanup(bot: Bot, author: Member, message: Message) -> None:
     """
     Runs the cleanup for the help command.
 
-    Adds a :x: reaction that, when clicked, will delete the help message.
+    Adds the :trashcan: reaction that, when clicked, will delete the help message.
     After a 300 second timeout, the reaction will be removed.
     """
     def check(r: Reaction, u: User) -> bool:
-        """Checks the reaction is :x:, the author is original author and messages are the same."""
+        """Checks the reaction is :trashcan:, the author is original author and messages are the same."""
         return str(r) == DELETE_EMOJI and u.id == author.id and r.message.id == message.id
 
     await message.add_reaction(DELETE_EMOJI)
