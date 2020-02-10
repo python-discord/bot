@@ -7,8 +7,9 @@ import discord
 from dateutil.relativedelta import relativedelta
 from discord import Embed
 from discord.ext import commands
-from discord.ext.commands import Bot, BucketType, Cog, Context, check, group
+from discord.ext.commands import BucketType, Cog, Context, check, group
 
+from bot.bot import Bot
 from bot.constants import Colours, STAFF_ROLES, Wolfram
 from bot.pagination import ImagePaginator
 from bot.utils.time import humanize_delta
@@ -159,7 +160,7 @@ async def get_pod_pages(ctx: Context, bot: Bot, query: str) -> Optional[List[Tup
 class Wolfram(Cog):
     """Commands for interacting with the Wolfram|Alpha API."""
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: Bot):
         self.bot = bot
 
     @group(name="wolfram", aliases=("wolf", "wa"), invoke_without_command=True)
@@ -274,7 +275,6 @@ class Wolfram(Cog):
             await send_embed(ctx, message, color)
 
 
-def setup(bot: commands.Bot) -> None:
-    """Wolfram cog load."""
+def setup(bot: Bot) -> None:
+    """Load the Wolfram cog."""
     bot.add_cog(Wolfram(bot))
-    log.info("Cog loaded: Wolfram")

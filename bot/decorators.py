@@ -27,11 +27,23 @@ class InChannelCheckFailure(CheckFailure):
         super().__init__(f"Sorry, but you may only use this command within {channels_str}.")
 
 
-def in_channel(*channels: int, bypass_roles: Container[int] = None) -> Callable:
-    """Checks that the message is in a whitelisted channel or optionally has a bypass role."""
+def in_channel(
+    *channels: int,
+    hidden_channels: Container[int] = None,
+    bypass_roles: Container[int] = None
+) -> Callable:
+    """
+    Checks that the message is in a whitelisted channel or optionally has a bypass role.
+
+    Hidden channels are channels which will not be displayed in the InChannelCheckFailure error
+    message.
+    """
+    hidden_channels = hidden_channels or []
+    bypass_roles = bypass_roles or []
+
     def predicate(ctx: Context) -> bool:
         """In-channel checker predicate."""
-        if ctx.channel.id in channels:
+        if ctx.channel.id in channels or ctx.channel.id in hidden_channels:
             log.debug(f"{ctx.author} tried to call the '{ctx.command.name}' command. "
                       f"The command was used in a whitelisted channel.")
             return True

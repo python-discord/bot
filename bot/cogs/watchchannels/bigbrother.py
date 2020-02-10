@@ -1,14 +1,14 @@
 import logging
 from collections import ChainMap
-from typing import Union
 
-from discord import User
-from discord.ext.commands import Bot, Cog, Context, group
+from discord.ext.commands import Cog, Context, group
 
+from bot.bot import Bot
 from bot.cogs.moderation.utils import post_infraction
-from bot.constants import Channels, Roles, Webhooks
+from bot.constants import Channels, MODERATION_ROLES, Webhooks
+from bot.converters import FetchedMember
 from bot.decorators import with_role
-from .watchchannel import WatchChannel, proxy_user
+from .watchchannel import WatchChannel
 
 log = logging.getLogger(__name__)
 
@@ -27,13 +27,13 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
         )
 
     @group(name='bigbrother', aliases=('bb',), invoke_without_command=True)
-    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     async def bigbrother_group(self, ctx: Context) -> None:
         """Monitors users by relaying their messages to the Big Brother watch channel."""
         await ctx.invoke(self.bot.get_command("help"), "bigbrother")
 
     @bigbrother_group.command(name='watched', aliases=('all', 'list'))
-    @with_role(Roles.owner, Roles.admin, Roles.moderator)
+    @with_role(*MODERATION_ROLES)
     async def watched_command(self, ctx: Context, update_cache: bool = True) -> None:
         """
         Shows the users that are currently being monitored by Big Brother.
@@ -44,8 +44,8 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
         await self.list_watched_users(ctx, update_cache)
 
     @bigbrother_group.command(name='watch', aliases=('w',))
-    @with_role(Roles.owner, Roles.admin, Roles.moderator)
-    async def watch_command(self, ctx: Context, user: Union[User, proxy_user], *, reason: str) -> None:
+    @with_role(*MODERATION_ROLES)
+    async def watch_command(self, ctx: Context, user: FetchedMember, *, reason: str) -> None:
         """
         Relay messages sent by the given `user` to the `#big-brother` channel.
 
@@ -61,10 +61,10 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
             return
 
         if user.id in self.watched_users:
-            await ctx.send(":x: The specified user is already being watched.")
+            await ctx.send(f":x: {user} is already being watched.")
             return
 
-        response = await post_infraction(ctx, user, 'watch', reason, hidden=True)
+        response = await post_infraction(ctx, user, 'watch', reason, hidden=True, active=True)
 
         if response is not None:
             self.watched_users[user.id] = response
@@ -91,8 +91,8 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
         await ctx.send(msg)
 
     @bigbrother_group.command(name='unwatch', aliases=('uw',))
-    @with_role(Roles.owner, Roles.admin, Roles.moderator)
-    async def unwatch_command(self, ctx: Context, user: Union[User, proxy_user], *, reason: str) -> None:
+    @with_role(*MODERATION_ROLES)
+    async def unwatch_command(self, ctx: Context, user: FetchedMember, *, reason: str) -> None:
         """Stop relaying messages by the given `user`."""
         active_watches = await self.bot.api_client.get(
             self.api_endpoint,

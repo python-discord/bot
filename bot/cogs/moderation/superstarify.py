@@ -1,17 +1,20 @@
 import json
 import logging
 import random
+import textwrap
+import typing as t
 from pathlib import Path
 
 from discord import Colour, Embed, Member
-from discord.errors import Forbidden
-from discord.ext.commands import Bot, Cog, Context, command
+from discord.ext.commands import Cog, Context, command
 
 from bot import constants
+from bot.bot import Bot
+from bot.converters import Expiry
 from bot.utils.checks import with_role_check
 from bot.utils.time import format_infraction
 from . import utils
-from .modlog import ModLog
+from .scheduler import InfractionScheduler
 
 log = logging.getLogger(__name__)
 NICKNAME_POLICY_URL = "https://pythondiscord.com/pages/rules/#nickname-policy"
@@ -20,132 +23,96 @@ with Path("bot/resources/stars.json").open(encoding="utf-8") as stars_file:
     STAR_NAMES = json.load(stars_file)
 
 
-class Superstarify(Cog):
+class Superstarify(InfractionScheduler, Cog):
     """A set of commands to moderate terrible nicknames."""
 
     def __init__(self, bot: Bot):
-        self.bot = bot
-
-    @property
-    def modlog(self) -> ModLog:
-        """Get currently loaded ModLog cog instance."""
-        return self.bot.get_cog("ModLog")
+        super().__init__(bot, supported_infractions={"superstar"})
 
     @Cog.listener()
     async def on_member_update(self, before: Member, after: Member) -> None:
-        """
-        This event will trigger when someone changes their name.
-
-        At this point we will look up the user in our database and check whether they are allowed to
-        change their names, or if they are in superstar-prison. If they are not allowed, we will
-        change it back.
-        """
+        """Revert nickname edits if the user has an active superstarify infraction."""
         if before.display_name == after.display_name:
             return  # User didn't change their nickname. Abort!
 
         log.trace(
-            f"{before.display_name} is trying to change their nickname to {after.display_name}. "
-            "Checking if the user is in superstar-prison..."
+            f"{before} ({before.display_name}) is trying to change their nickname to "
+            f"{after.display_name}. Checking if the user is in superstar-prison..."
         )
 
         active_superstarifies = await self.bot.api_client.get(
-            'bot/infractions',
+            "bot/infractions",
             params={
-                'active': 'true',
-                'type': 'superstar',
-                'user__id': str(before.id)
+                "active": "true",
+                "type": "superstar",
+                "user__id": str(before.id)
             }
         )
 
-        if active_superstarifies:
-            [infraction] = active_superstarifies
-            forced_nick = self.get_nick(infraction['id'], before.id)
-            if after.display_name == forced_nick:
-                return  # Nick change was triggered by this event. Ignore.
+        if not active_superstarifies:
+            log.trace(f"{before} has no active superstar infractions.")
+            return
 
-            log.info(
-                f"{after.display_name} is currently in superstar-prison. "
-                f"Changing the nick back to {before.display_name}."
-            )
-            await after.edit(nick=forced_nick)
-            end_timestamp_human = format_infraction(infraction['expires_at'])
+        infraction = active_superstarifies[0]
+        forced_nick = self.get_nick(infraction["id"], before.id)
+        if after.display_name == forced_nick:
+            return  # Nick change was triggered by this event. Ignore.
 
-            try:
-                await after.send(
-                    "You have tried to change your nickname on the **Python Discord** server "
-                    f"from **{before.display_name}** to **{after.display_name}**, but as you "
-                    "are currently in superstar-prison, you do not have permission to do so. "
-                    "You will be allowed to change your nickname again at the following time:\n\n"
-                    f"**{end_timestamp_human}**."
-                )
-            except Forbidden:
-                log.warning(
-                    "The user tried to change their nickname while in superstar-prison. "
-                    "This led to the bot trying to DM the user to let them know they cannot do that, "
-                    "but the user had either blocked the bot or disabled DMs, so it was not possible "
-                    "to DM them, and a discord.errors.Forbidden error was incurred."
-                )
+        log.info(
+            f"{after.display_name} is currently in superstar-prison. "
+            f"Changing the nick back to {before.display_name}."
+        )
+        await after.edit(
+            nick=forced_nick,
+            reason=f"Superstarified member tried to escape the prison: {infraction['id']}"
+        )
+
+        notified = await utils.notify_infraction(
+            user=after,
+            infr_type="Superstarify",
+            expires_at=format_infraction(infraction["expires_at"]),
+            reason=(
+                "You have tried to change your nickname on the **Python Discord** server "
+                f"from **{before.display_name}** to **{after.display_name}**, but as you "
+                "are currently in superstar-prison, you do not have permission to do so."
+            ),
+            icon_url=utils.INFRACTION_ICONS["superstar"][0]
+        )
+
+        if not notified:
+            log.warning("Failed to DM user about why they cannot change their nickname.")
 
     @Cog.listener()
     async def on_member_join(self, member: Member) -> None:
-        """
-        This event will trigger when someone (re)joins the server.
-
-        At this point we will look up the user in our database and check whether they are in
-        superstar-prison. If so, we will change their name back to the forced nickname.
-        """
+        """Reapply active superstar infractions for returning members."""
         active_superstarifies = await self.bot.api_client.get(
-            'bot/infractions',
+            "bot/infractions",
             params={
-                'active': 'true',
-                'type': 'superstar',
-                'user__id': member.id
+                "active": "true",
+                "type": "superstar",
+                "user__id": member.id
             }
         )
 
         if active_superstarifies:
-            [infraction] = active_superstarifies
-            forced_nick = self.get_nick(infraction['id'], member.id)
-            await member.edit(nick=forced_nick)
-            end_timestamp_human = format_infraction(infraction['expires_at'])
-
-            try:
-                await member.send(
-                    "You have left and rejoined the **Python Discord** server, effectively resetting "
-                    f"your nickname from **{forced_nick}** to **{member.name}**, "
-                    "but as you are currently in superstar-prison, you do not have permission to do so. "
-                    "Therefore your nickname was automatically changed back. You will be allowed to "
-                    "change your nickname again at the following time:\n\n"
-                    f"**{end_timestamp_human}**."
-                )
-            except Forbidden:
-                log.warning(
-                    "The user left and rejoined the server while in superstar-prison. "
-                    "This led to the bot trying to DM the user to let them know their name was restored, "
-                    "but the user had either blocked the bot or disabled DMs, so it was not possible "
-                    "to DM them, and a discord.errors.Forbidden error was incurred."
-                )
-
-            # Log to the mod_log channel
-            log.trace("Logging to the #mod-log channel. This could fail because of channel permissions.")
-            mod_log_message = (
-                f"**{member.name}#{member.discriminator}** (`{member.id}`)\n\n"
-                f"Superstarified member potentially tried to escape the prison.\n"
-                f"Restored enforced nickname: `{forced_nick}`\n"
-                f"Superstardom ends: **{end_timestamp_human}**"
-            )
-            await self.modlog.send_log_message(
-                icon_url=constants.Icons.user_update,
-                colour=Colour.gold(),
-                title="Superstar member rejoined server",
-                text=mod_log_message,
-                thumbnail=member.avatar_url_as(static_format="png")
+            infraction = active_superstarifies[0]
+            action = member.edit(
+                nick=self.get_nick(infraction["id"], member.id),
+                reason=f"Superstarified member tried to escape the prison: {infraction['id']}"
             )
 
-    @command(name='superstarify', aliases=('force_nick', 'star'))
-    async def superstarify(self, ctx: Context, member: Member, duration: utils.Expiry, reason: str = None) -> None:
+            await self.reapply_infraction(infraction, action)
+
+    @command(name="superstarify", aliases=("force_nick", "star"))
+    async def superstarify(
+        self,
+        ctx: Context,
+        member: Member,
+        duration: Expiry,
+        reason: str = None
+    ) -> None:
         """
-        Force a random superstar name (like Taylor Swift) to be the user's nickname for a specified duration.
+        Temporarily force a random superstar name (like Taylor Swift) to be the user's nickname.
 
         A unit of time should be appended to the duration.
         Units (∗case-sensitive):
@@ -165,91 +132,103 @@ class Superstarify(Cog):
         if await utils.has_active_infraction(ctx, member, "superstar"):
             return
 
-        reason = reason or ('old nick: ' + member.display_name)
-        infraction = await utils.post_infraction(ctx, member, 'superstar', reason, expires_at=duration)
-        forced_nick = self.get_nick(infraction['id'], member.id)
+        # Post the infraction to the API
+        reason = reason or f"old nick: {member.display_name}"
+        infraction = await utils.post_infraction(ctx, member, "superstar", reason, duration, active=True)
+        id_ = infraction["id"]
+
+        old_nick = member.display_name
+        forced_nick = self.get_nick(id_, member.id)
         expiry_str = format_infraction(infraction["expires_at"])
 
-        embed = Embed()
-        embed.title = "Congratulations!"
-        embed.description = (
-            f"Your previous nickname, **{member.display_name}**, was so bad that we have decided to change it. "
-            f"Your new nickname will be **{forced_nick}**.\n\n"
-            f"You will be unable to change your nickname until \n**{expiry_str}**.\n\n"
-            "If you're confused by this, please read our "
-            f"[official nickname policy]({NICKNAME_POLICY_URL})."
-        )
+        # Apply the infraction and schedule the expiration task.
+        log.debug(f"Changing nickname of {member} to {forced_nick}.")
+        self.mod_log.ignore(constants.Event.member_update, member.id)
+        await member.edit(nick=forced_nick, reason=reason)
+        self.schedule_task(ctx.bot.loop, id_, infraction)
 
-        # Log to the mod_log channel
-        log.trace("Logging to the #mod-log channel. This could fail because of channel permissions.")
-        mod_log_message = (
-            f"**{member.name}#{member.discriminator}** (`{member.id}`)\n\n"
-            f"Superstarified by **{ctx.author.name}**\n"
-            f"Old nickname: `{member.display_name}`\n"
-            f"New nickname: `{forced_nick}`\n"
-            f"Superstardom ends: **{expiry_str}**"
-        )
-        await self.modlog.send_log_message(
-            icon_url=constants.Icons.user_update,
-            colour=Colour.gold(),
-            title="Member Achieved Superstardom",
-            text=mod_log_message,
-            thumbnail=member.avatar_url_as(static_format="png")
-        )
-
+        # Send a DM to the user to notify them of their new infraction.
         await utils.notify_infraction(
             user=member,
             infr_type="Superstarify",
             expires_at=expiry_str,
+            icon_url=utils.INFRACTION_ICONS["superstar"][0],
             reason=f"Your nickname didn't comply with our [nickname policy]({NICKNAME_POLICY_URL})."
         )
 
-        # Change the nick and return the embed
-        log.trace("Changing the users nickname and sending the embed.")
-        await member.edit(nick=forced_nick)
+        # Send an embed with the infraction information to the invoking context.
+        log.trace(f"Sending superstar #{id_} embed.")
+        embed = Embed(
+            title="Congratulations!",
+            colour=constants.Colours.soft_orange,
+            description=(
+                f"Your previous nickname, **{old_nick}**, "
+                f"was so bad that we have decided to change it. "
+                f"Your new nickname will be **{forced_nick}**.\n\n"
+                f"You will be unable to change your nickname until **{expiry_str}**.\n\n"
+                "If you're confused by this, please read our "
+                f"[official nickname policy]({NICKNAME_POLICY_URL})."
+            )
+        )
         await ctx.send(embed=embed)
 
-    @command(name='unsuperstarify', aliases=('release_nick', 'unstar'))
-    async def unsuperstarify(self, ctx: Context, member: Member) -> None:
-        """Remove the superstarify entry from our database, allowing the user to change their nickname."""
-        log.debug(f"Attempting to unsuperstarify the following user: {member.display_name}")
-
-        embed = Embed()
-        embed.colour = Colour.blurple()
-
-        active_superstarifies = await self.bot.api_client.get(
-            'bot/infractions',
-            params={
-                'active': 'true',
-                'type': 'superstar',
-                'user__id': str(member.id)
-            }
+        # Log to the mod log channel.
+        log.trace(f"Sending apply mod log for superstar #{id_}.")
+        await self.mod_log.send_log_message(
+            icon_url=utils.INFRACTION_ICONS["superstar"][0],
+            colour=Colour.gold(),
+            title="Member achieved superstardom",
+            thumbnail=member.avatar_url_as(static_format="png"),
+            text=textwrap.dedent(f"""
+                Member: {member.mention} (`{member.id}`)
+                Actor: {ctx.message.author}
+                Reason: {reason}
+                Expires: {expiry_str}
+                Old nickname: `{old_nick}`
+                New nickname: `{forced_nick}`
+            """),
+            footer=f"ID {id_}"
         )
-        if not active_superstarifies:
-            await ctx.send(":x: There is no active superstarify infraction for this user.")
+
+    @command(name="unsuperstarify", aliases=("release_nick", "unstar"))
+    async def unsuperstarify(self, ctx: Context, member: Member) -> None:
+        """Remove the superstarify infraction and allow the user to change their nickname."""
+        await self.pardon_infraction(ctx, "superstar", member)
+
+    async def _pardon_action(self, infraction: utils.Infraction) -> t.Optional[t.Dict[str, str]]:
+        """Pardon a superstar infraction and return a log dict."""
+        if infraction["type"] != "superstar":
             return
 
-        [infraction] = active_superstarifies
-        await self.bot.api_client.patch(
-            'bot/infractions/' + str(infraction['id']),
-            json={'active': False}
+        guild = self.bot.get_guild(constants.Guild.id)
+        user = guild.get_member(infraction["user"])
+
+        # Don't bother sending a notification if the user left the guild.
+        if not user:
+            log.debug(
+                "User left the guild and therefore won't be notified about superstar "
+                f"{infraction['id']} pardon."
+            )
+            return {}
+
+        # DM the user about the expiration.
+        notified = await utils.notify_pardon(
+            user=user,
+            title="You are no longer superstarified",
+            content="You may now change your nickname on the server.",
+            icon_url=utils.INFRACTION_ICONS["superstar"][1]
         )
 
-        embed = Embed()
-        embed.description = "User has been released from superstar-prison."
-        embed.title = random.choice(constants.POSITIVE_REPLIES)
-
-        await utils.notify_pardon(
-            user=member,
-            title="You are no longer superstarified.",
-            content="You may now change your nickname on the server."
-        )
-        log.trace(f"{member.display_name} was successfully released from superstar-prison.")
-        await ctx.send(embed=embed)
+        return {
+            "Member": f"{user.mention}(`{user.id}`)",
+            "DM": "Sent" if notified else "**Failed**"
+        }
 
     @staticmethod
     def get_nick(infraction_id: int, member_id: int) -> str:
         """Randomly select a nickname from the Superstarify nickname list."""
+        log.trace(f"Choosing a random nickname for superstar #{infraction_id}.")
+
         rng = random.Random(str(infraction_id) + str(member_id))
         return rng.choice(STAR_NAMES)
 

@@ -5,8 +5,9 @@ import textwrap
 from signal import Signals
 from typing import Optional, Tuple
 
-from discord.ext.commands import Bot, Cog, Context, command, guild_only
+from discord.ext.commands import Cog, Context, command, guild_only
 
+from bot.bot import Bot
 from bot.constants import Channels, Roles, URLs
 from bot.decorators import in_channel
 from bot.utils.messages import wait_for_deletion
@@ -115,6 +116,16 @@ class Snekbox(Cog):
 
         return msg, error
 
+    @staticmethod
+    def get_status_emoji(results: dict) -> str:
+        """Return an emoji corresponding to the status code or lack of output in result."""
+        if not results["stdout"].strip():  # No output
+            return ":warning:"
+        elif results["returncode"] == 0:  # No error
+            return ":white_check_mark:"
+        else:  # Exception
+            return ":x:"
+
     async def format_output(self, output: str) -> Tuple[str, Optional[str]]:
         """
         Format the output and return a tuple of the formatted output and a URL to the full output.
@@ -166,7 +177,7 @@ class Snekbox(Cog):
 
     @command(name="eval", aliases=("e",))
     @guild_only()
-    @in_channel(Channels.bot, bypass_roles=EVAL_ROLES)
+    @in_channel(Channels.bot, hidden_channels=(Channels.esoteric,), bypass_roles=EVAL_ROLES)
     async def eval_command(self, ctx: Context, *, code: str = None) -> None:
         """
         Run Python code and get the results.
@@ -178,7 +189,7 @@ class Snekbox(Cog):
         if ctx.author.id in self.jobs:
             await ctx.send(
                 f"{ctx.author.mention} You've already got a job running - "
-                f"please wait for it to finish!"
+                "please wait for it to finish!"
             )
             return
 
@@ -186,10 +197,7 @@ class Snekbox(Cog):
             await ctx.invoke(self.bot.get_command("help"), "eval")
             return
 
-        log.info(
-            f"Received code from {ctx.author.name}#{ctx.author.discriminator} "
-            f"for evaluation:\n{code}"
-        )
+        log.info(f"Received code from {ctx.author} for evaluation:\n{code}")
 
         self.jobs[ctx.author.id] = datetime.datetime.now()
         code = self.prepare_input(code)
@@ -204,7 +212,8 @@ class Snekbox(Cog):
                 else:
                     output, paste_link = await self.format_output(results["stdout"])
 
-                msg = f"{ctx.author.mention} {msg}.\n\n```py\n{output}\n```"
+                icon = self.get_status_emoji(results)
+                msg = f"{ctx.author.mention} {icon} {msg}.\n\n```py\n{output}\n```"
                 if paste_link:
                     msg = f"{msg}\nFull output: {paste_link}"
 
@@ -213,15 +222,11 @@ class Snekbox(Cog):
                     wait_for_deletion(response, user_ids=(ctx.author.id,), client=ctx.bot)
                 )
 
-                log.info(
-                    f"{ctx.author.name}#{ctx.author.discriminator}'s job had a return code of "
-                    f"{results['returncode']}"
-                )
+                log.info(f"{ctx.author}'s job had a return code of {results['returncode']}")
         finally:
             del self.jobs[ctx.author.id]
 
 
 def setup(bot: Bot) -> None:
-    """Snekbox cog load."""
+    """Load the Snekbox cog."""
     bot.add_cog(Snekbox(bot))
-    log.info("Cog loaded: Snekbox")
