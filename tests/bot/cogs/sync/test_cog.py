@@ -208,23 +208,16 @@ class SyncCogListenerTests(SyncCogTestCase):
                         self.bot.api_client.put.assert_not_called()
 
     def test_sync_cog_on_member_remove(self):
-        """A PUT request should be sent to set in_guild as False and update other fields."""
+        """Member should patched to set in_guild as False."""
         self.assertTrue(self.cog.on_member_remove.__cog_listener__)
 
-        roles = [helpers.MockRole(id=i) for i in (57, 22, 43)]  # purposefully unsorted
-        member = helpers.MockMember(roles=roles)
-
+        member = helpers.MockMember()
         asyncio.run(self.cog.on_member_remove(member))
 
-        json_data = {
-            "avatar_hash": member.avatar,
-            "discriminator": int(member.discriminator),
-            "id": member.id,
-            "in_guild": False,
-            "name": member.name,
-            "roles": sorted(role.id for role in member.roles)
-        }
-        self.bot.api_client.put.assert_called_once_with(f"bot/users/{member.id}", json=json_data)
+        self.cog.patch_user.assert_called_once_with(
+            member.id,
+            updated_information={"in_guild": False}
+        )
 
     def test_sync_cog_on_member_update_roles(self):
         """Members should be patched if their roles have changed."""
