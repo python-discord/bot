@@ -147,6 +147,8 @@ class SyncCogListenerTests(SyncCogTestCase):
 
     def test_sync_cog_on_guild_role_create(self):
         """A POST request should be sent with the new role's data."""
+        self.assertTrue(self.cog.on_guild_role_create.__cog_listener__)
+
         role_data = {
             "colour": 49,
             "id": 777,
@@ -161,6 +163,8 @@ class SyncCogListenerTests(SyncCogTestCase):
 
     def test_sync_cog_on_guild_role_delete(self):
         """A DELETE request should be sent."""
+        self.assertTrue(self.cog.on_guild_role_delete.__cog_listener__)
+
         role = helpers.MockRole(id=99)
         asyncio.run(self.cog.on_guild_role_delete(role))
 
@@ -168,6 +172,8 @@ class SyncCogListenerTests(SyncCogTestCase):
 
     def test_sync_cog_on_guild_role_update(self):
         """A PUT request should be sent if the colour, name, permissions, or position changes."""
+        self.assertTrue(self.cog.on_guild_role_update.__cog_listener__)
+
         role_data = {
             "colour": 49,
             "id": 777,
@@ -203,6 +209,8 @@ class SyncCogListenerTests(SyncCogTestCase):
 
     def test_sync_cog_on_member_remove(self):
         """A PUT request should be sent to set in_guild as False and update other fields."""
+        self.assertTrue(self.cog.on_member_remove.__cog_listener__)
+
         roles = [helpers.MockRole(id=i) for i in (57, 22, 43)]  # purposefully unsorted
         member = helpers.MockMember(roles=roles)
 
@@ -220,6 +228,8 @@ class SyncCogListenerTests(SyncCogTestCase):
 
     def test_sync_cog_on_member_update_roles(self):
         """Members should be patched if their roles have changed."""
+        self.assertTrue(self.cog.on_member_update.__cog_listener__)
+
         before_roles = [helpers.MockRole(id=12), helpers.MockRole(id=30)]
         before_member = helpers.MockMember(roles=before_roles)
         after_member = helpers.MockMember(roles=before_roles[1:])
@@ -231,6 +241,8 @@ class SyncCogListenerTests(SyncCogTestCase):
 
     def test_sync_cog_on_member_update_other(self):
         """Members should not be patched if other attributes have changed."""
+        self.assertTrue(self.cog.on_member_update.__cog_listener__)
+
         subtests = (
             ("activities", discord.Game("Pong"), discord.Game("Frogger")),
             ("nick", "old nick", "new nick"),
@@ -250,6 +262,8 @@ class SyncCogListenerTests(SyncCogTestCase):
 
     def test_sync_cog_on_user_update(self):
         """A user should be patched only if the name, discriminator, or avatar changes."""
+        self.assertTrue(self.cog.on_user_update.__cog_listener__)
+
         before_data = {
             "name": "old name",
             "discriminator": "1234",
