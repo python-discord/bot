@@ -9,6 +9,7 @@ from bot.api import ResponseCodeError
 from bot.cogs import sync
 from bot.cogs.sync.syncers import Syncer
 from tests import helpers
+from tests.base import CommandTestCase
 
 
 class MockSyncer(helpers.CustomMockMixin, mock.MagicMock):
@@ -18,6 +19,7 @@ class MockSyncer(helpers.CustomMockMixin, mock.MagicMock):
     Instances of this class will follow the specifications of `bot.cogs.sync.syncers.Syncer`
     instances. For more information, see the `MockGuild` docstring.
     """
+
     def __init__(self, **kwargs) -> None:
         super().__init__(spec_set=Syncer, **kwargs)
 
@@ -138,6 +140,7 @@ class SyncCogTests(SyncCogTestCase):
 
 class SyncCogListenerTests(SyncCogTestCase):
     """Tests for the listeners of the Sync cog."""
+
     def setUp(self):
         super().setUp()
         self.cog.patch_user = helpers.AsyncMock(spec_set=self.cog.patch_user)
@@ -287,7 +290,9 @@ class SyncCogListenerTests(SyncCogTestCase):
                     self.cog.patch_user.assert_not_called()
 
 
-class SyncCogCommandTests(SyncCogTestCase):
+class SyncCogCommandTests(SyncCogTestCase, CommandTestCase):
+    """Tests for the commands in the Sync cog."""
+
     def test_sync_roles_command(self):
         """sync() should be called on the RoleSyncer."""
         ctx = helpers.MockContext()
@@ -301,3 +306,15 @@ class SyncCogCommandTests(SyncCogTestCase):
         asyncio.run(self.cog.sync_users_command.callback(self.cog, ctx))
 
         self.cog.user_syncer.sync.assert_called_once_with(ctx.guild, ctx)
+
+    def test_commands_require_admin(self):
+        """The sync commands should only run if the author has the administrator permission."""
+        cmds = (
+            self.cog.sync_group,
+            self.cog.sync_roles_command,
+            self.cog.sync_users_command,
+        )
+
+        for cmd in cmds:
+            with self.subTest(cmd=cmd):
+                self.assertHasPermissionsCheck(cmd, {"administrator": True})
