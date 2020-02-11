@@ -223,7 +223,8 @@ class SyncCogListenerTests(SyncCogTestCase):
         """Members should be patched if their roles have changed."""
         self.assertTrue(self.cog.on_member_update.__cog_listener__)
 
-        before_roles = [helpers.MockRole(id=12), helpers.MockRole(id=30)]
+        # Roles are intentionally unsorted.
+        before_roles = [helpers.MockRole(id=12), helpers.MockRole(id=30), helpers.MockRole(id=20)]
         before_member = helpers.MockMember(roles=before_roles)
         after_member = helpers.MockMember(roles=before_roles[1:])
 
