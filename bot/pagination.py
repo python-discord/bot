@@ -410,7 +410,7 @@ class ImagePaginator(Paginator):
                     log.debug("Got last page reaction, but we're on the last page - ignoring")
                     continue
 
-                current_page = len(paginator.pages - 1)
+                current_page = len(paginator.pages) - 1
                 reaction_type = "last"
 
             # Previous reaction press - [:arrow_left: ]
