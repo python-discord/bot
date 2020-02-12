@@ -20,7 +20,7 @@ from bot.utils.time import humanize_delta, wait_until
 
 log = logging.getLogger(__name__)
 
-WHITELISTED_CHANNELS = (Channels.bot,)
+WHITELISTED_CHANNELS = (Channels.bot, Channels.devcontrib)
 MAXIMUM_REMINDERS = 5
 
 

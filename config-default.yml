@@ -121,6 +121,7 @@ guild:
         bot:                              267659945086812160
         checkpoint_test:                  422077681434099723
         defcon:            &DEFCON        464469101889454091
+        devcontrib:                       635950537262759947
         devlog:            &DEVLOG        622895325144940554
         devtest:           &DEVTEST       414574275865870337
         esoteric:                         470884583684964352
