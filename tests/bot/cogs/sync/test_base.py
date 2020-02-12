@@ -1,4 +1,3 @@
-import asyncio
 import unittest
 from unittest import mock
 
@@ -62,16 +61,18 @@ class SyncerSendPromptTests(unittest.TestCase):
 
         return mock_channel, mock_message
 
-    def test_send_prompt_edits_and_returns_message(self):
+    @helpers.async_test
+    async def test_send_prompt_edits_and_returns_message(self):
         """The given message should be edited to display the prompt and then should be returned."""
         msg = helpers.MockMessage()
-        ret_val = asyncio.run(self.syncer._send_prompt(msg))
+        ret_val = await self.syncer._send_prompt(msg)
 
         msg.edit.assert_called_once()
         self.assertIn("content", msg.edit.call_args[1])
         self.assertEqual(ret_val, msg)
 
-    def test_send_prompt_gets_dev_core_channel(self):
+    @helpers.async_test
+    async def test_send_prompt_gets_dev_core_channel(self):
         """The dev-core channel should be retrieved if an extant message isn't given."""
         subtests = (
             (self.bot.get_channel, self.mock_get_channel),
@@ -81,31 +82,34 @@ class SyncerSendPromptTests(unittest.TestCase):
         for method, mock_ in subtests:
             with self.subTest(method=method, msg=mock_.__name__):
                 mock_()
-                asyncio.run(self.syncer._send_prompt())
+                await self.syncer._send_prompt()
 
                 method.assert_called_once_with(constants.Channels.devcore)
 
-    def test_send_prompt_returns_None_if_channel_fetch_fails(self):
+    @helpers.async_test
+    async def test_send_prompt_returns_None_if_channel_fetch_fails(self):
         """None should be returned if there's an HTTPException when fetching the channel."""
         self.bot.get_channel.return_value = None
         self.bot.fetch_channel.side_effect = discord.HTTPException(mock.MagicMock(), "test error!")
 
-        ret_val = asyncio.run(self.syncer._send_prompt())
+        ret_val = await self.syncer._send_prompt()
 
         self.assertIsNone(ret_val)
 
-    def test_send_prompt_sends_and_returns_new_message_if_not_given(self):
+    @helpers.async_test
+    async def test_send_prompt_sends_and_returns_new_message_if_not_given(self):
         """A new message mentioning core devs should be sent and returned if message isn't given."""
         for mock_ in (self.mock_get_channel, self.mock_fetch_channel):
             with self.subTest(msg=mock_.__name__):
                 mock_channel, mock_message = mock_()
-                ret_val = asyncio.run(self.syncer._send_prompt())
+                ret_val = await self.syncer._send_prompt()
 
                 mock_channel.send.assert_called_once()
                 self.assertIn(self.syncer._CORE_DEV_MENTION, mock_channel.send.call_args[0][0])
                 self.assertEqual(ret_val, mock_message)
 
-    def test_send_prompt_adds_reactions(self):
+    @helpers.async_test
+    async def test_send_prompt_adds_reactions(self):
         """The message should have reactions for confirmation added."""
         extant_message = helpers.MockMessage()
         subtests = (
@@ -119,7 +123,7 @@ class SyncerSendPromptTests(unittest.TestCase):
 
             with self.subTest(msg=subtest_msg):
                 _, mock_message = mock_()
-                asyncio.run(self.syncer._send_prompt(message_arg))
+                await self.syncer._send_prompt(message_arg)
 
                 calls = [mock.call(emoji) for emoji in self.syncer._REACTION_EMOJIS]
                 mock_message.add_reaction.assert_has_calls(calls)
@@ -207,7 +211,8 @@ class SyncerConfirmationTests(unittest.TestCase):
                 ret_val = self.syncer._reaction_check(*args)
                 self.assertFalse(ret_val)
 
-    def test_wait_for_confirmation(self):
+    @helpers.async_test
+    async def test_wait_for_confirmation(self):
         """The message should always be edited and only return True if the emoji is a check mark."""
         subtests = (
             (constants.Emojis.check_mark, True, None),
@@ -227,7 +232,7 @@ class SyncerConfirmationTests(unittest.TestCase):
                     self.bot.wait_for.side_effect = side_effect
 
                     # Call the function
-                    actual_return = asyncio.run(self.syncer._wait_for_confirmation(member, message))
+                    actual_return = await self.syncer._wait_for_confirmation(member, message)
 
                     # Perform assertions
                     self.bot.wait_for.assert_called_once()
@@ -253,7 +258,8 @@ class SyncerSyncTests(unittest.TestCase):
         self.bot = helpers.MockBot(user=helpers.MockMember(bot=True))
         self.syncer = TestSyncer(self.bot)
 
-    def test_sync_respects_confirmation_result(self):
+    @helpers.async_test
+    async def test_sync_respects_confirmation_result(self):
         """The sync should abort if confirmation fails and continue if confirmed."""
         mock_message = helpers.MockMessage()
         subtests = (
@@ -273,7 +279,7 @@ class SyncerSyncTests(unittest.TestCase):
                 )
 
                 guild = helpers.MockGuild()
-                asyncio.run(self.syncer.sync(guild))
+                await self.syncer.sync(guild)
 
                 self.syncer._get_diff.assert_called_once_with(guild)
                 self.syncer._get_confirmation_result.assert_called_once()
@@ -283,7 +289,8 @@ class SyncerSyncTests(unittest.TestCase):
                 else:
                     self.syncer._sync.assert_not_called()
 
-    def test_sync_diff_size(self):
+    @helpers.async_test
+    async def test_sync_diff_size(self):
         """The diff size should be correctly calculated."""
         subtests = (
             (6, _Diff({1, 2}, {3, 4}, {5, 6})),
@@ -299,13 +306,14 @@ class SyncerSyncTests(unittest.TestCase):
                 self.syncer._get_confirmation_result = helpers.AsyncMock(return_value=(False, None))
 
                 guild = helpers.MockGuild()
-                asyncio.run(self.syncer.sync(guild))
+                await self.syncer.sync(guild)
 
                 self.syncer._get_diff.assert_called_once_with(guild)
                 self.syncer._get_confirmation_result.assert_called_once()
                 self.assertEqual(self.syncer._get_confirmation_result.call_args[0][0], size)
 
-    def test_sync_message_edited(self):
+    @helpers.async_test
+    async def test_sync_message_edited(self):
         """The message should be edited if one was sent, even if the sync has an API error."""
         subtests = (
             (None, None, False),
@@ -321,13 +329,14 @@ class SyncerSyncTests(unittest.TestCase):
                 )
 
                 guild = helpers.MockGuild()
-                asyncio.run(self.syncer.sync(guild))
+                await self.syncer.sync(guild)
 
                 if should_edit:
                     message.edit.assert_called_once()
                     self.assertIn("content", message.edit.call_args[1])
 
-    def test_sync_confirmation_context_redirect(self):
+    @helpers.async_test
+    async def test_sync_confirmation_context_redirect(self):
         """If ctx is given, a new message should be sent and author should be ctx's author."""
         mock_member = helpers.MockMember()
         subtests = (
@@ -343,7 +352,7 @@ class SyncerSyncTests(unittest.TestCase):
                 self.syncer._get_confirmation_result = helpers.AsyncMock(return_value=(False, None))
 
                 guild = helpers.MockGuild()
-                asyncio.run(self.syncer.sync(guild, ctx))
+                await self.syncer.sync(guild, ctx)
 
                 if ctx is not None:
                     ctx.send.assert_called_once()
@@ -352,7 +361,8 @@ class SyncerSyncTests(unittest.TestCase):
                 self.assertEqual(self.syncer._get_confirmation_result.call_args[0][1], author)
                 self.assertEqual(self.syncer._get_confirmation_result.call_args[0][2], message)
 
-    def test_confirmation_result_small_diff(self):
+    @helpers.async_test
+    async def test_confirmation_result_small_diff(self):
         """Should always return True and the given message if the diff size is too small."""
         self.syncer.MAX_DIFF = 3
         author = helpers.MockMember()
@@ -364,14 +374,15 @@ class SyncerSyncTests(unittest.TestCase):
                 self.syncer._wait_for_confirmation = helpers.AsyncMock()
 
                 coro = self.syncer._get_confirmation_result(size, author, expected_message)
-                result, actual_message = asyncio.run(coro)
+                result, actual_message = await coro
 
                 self.assertTrue(result)
                 self.assertEqual(actual_message, expected_message)
                 self.syncer._send_prompt.assert_not_called()
                 self.syncer._wait_for_confirmation.assert_not_called()
 
-    def test_confirmation_result_large_diff(self):
+    @helpers.async_test
+    async def test_confirmation_result_large_diff(self):
         """Should return True if confirmed and False if _send_prompt fails or aborted."""
         self.syncer.MAX_DIFF = 3
         author = helpers.MockMember()
@@ -389,7 +400,7 @@ class SyncerSyncTests(unittest.TestCase):
                 self.syncer._wait_for_confirmation = helpers.AsyncMock(return_value=confirmed)
 
                 coro = self.syncer._get_confirmation_result(4, author)
-                actual_result, actual_message = asyncio.run(coro)
+                actual_result, actual_message = await coro
 
                 self.syncer._send_prompt.assert_called_once_with(None)  # message defaults to None
                 self.assertIs(actual_result, expected_result)
