@@ -5,7 +5,7 @@ import textwrap
 from collections import Counter, defaultdict
 from typing import Any, Mapping, Optional, Union
 
-from discord import CategoryChannel, Colour, Embed, Member, Message, Role, Status, TextChannel, VoiceChannel, utils
+from discord import Colour, Embed, Member, Message, Role, Status, utils
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group
 from discord.utils import escape_markdown
 
@@ -104,14 +104,11 @@ class Information(Cog):
         member_count = ctx.guild.member_count
 
         # How many of each type of channel?
-        channels = Counter({TextChannel: 0, VoiceChannel: 0, CategoryChannel: 0})
-        for channel in ctx.guild.channels:
-            channels[channel.__class__] += 1
+        channels = Counter(c.type for c in ctx.guild.channels)
+        channel_counts = "".join(sorted(f"{str(ch).title()} channels: {channels[ch]} \n" for ch in channels)).strip()
 
         # How many of each user status?
-        statuses = Counter({status: 0 for status in Status})
-        for member in ctx.guild.members:
-            statuses[member.status] += 1
+        statuses = Counter(member.status for member in ctx.guild.members)
 
         embed = Embed(
             colour=Colour.blurple(),
@@ -124,9 +121,7 @@ class Information(Cog):
                 **Counts**
                 Members: {member_count:,}
                 Roles: {roles}
-                Text Channels: {channels[TextChannel]}
-                Voice Channels: {channels[VoiceChannel]}
-                Channel categories: {channels[CategoryChannel]}
+                {channel_counts}
 
                 **Members**
                 {constants.Emojis.status_online} {statuses[Status.online]}
@@ -135,7 +130,6 @@ class Information(Cog):
                 {constants.Emojis.status_offline} {statuses[Status.offline]}
             """)
         )
-
         embed.set_thumbnail(url=ctx.guild.icon_url)
 
         await ctx.send(embed=embed)
@@ -191,7 +185,7 @@ class Information(Cog):
                 {custom_status}
                 **Member Information**
                 Joined: {joined}
-                Roles: {roles}
+                Roles: {roles or None}
             """).strip()
         ]
 
