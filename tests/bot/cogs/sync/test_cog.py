@@ -297,6 +297,58 @@ class SyncCogListenerTests(SyncCogTestCase):
                 else:
                     self.cog.patch_user.assert_not_called()
 
+    def on_member_join_helper(self, side_effect: Exception) -> dict:
+        """
+        Helper to set `side_effect` for on_member_join and assert a PUT request was sent.
+
+        The request data for the mock member is returned. All exceptions will be re-raised.
+        """
+        member = helpers.MockMember(
+            discriminator="1234",
+            roles=[helpers.MockRole(id=22), helpers.MockRole(id=12)],
+        )
+
+        data = {
+            "avatar_hash": member.avatar,
+            "discriminator": int(member.discriminator),
+            "id": member.id,
+            "in_guild": True,
+            "name": member.name,
+            "roles": sorted(role.id for role in member.roles)
+        }
+
+        self.bot.api_client.put.reset_mock(side_effect=True)
+        self.bot.api_client.put.side_effect = side_effect
+
+        try:
+            asyncio.run(self.cog.on_member_join(member))
+        except Exception:
+            raise
+        finally:
+            self.bot.api_client.put.assert_called_once_with(
+                f"bot/users/{member.id}",
+                json=data
+            )
+
+        return data
+
+    def test_sync_cog_on_member_join(self):
+        """Should PUT user's data or POST it if the user doesn't exist."""
+        for side_effect in (None, self.response_error(404)):
+            with self.subTest(side_effect=side_effect):
+                self.bot.api_client.post.reset_mock()
+                data = self.on_member_join_helper(side_effect)
+
+                if side_effect:
+                    self.bot.api_client.post.assert_called_once_with("bot/users", json=data)
+                else:
+                    self.bot.api_client.post.assert_not_called()
+
+    def test_sync_cog_on_member_join_non_404(self):
+        """ResponseCodeError should be re-raised if status code isn't a 404."""
+        self.assertRaises(ResponseCodeError, self.on_member_join_helper, self.response_error(500))
+        self.bot.api_client.post.assert_not_called()
+
 
 class SyncCogCommandTests(SyncCogTestCase, CommandTestCase):
     """Tests for the commands in the Sync cog."""
