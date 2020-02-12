@@ -32,6 +32,9 @@ class ResponseCodeError(ValueError):
 class APIClient:
     """Django Site API wrapper."""
 
+    session: Optional[aiohttp.ClientSession] = None
+    loop: asyncio.AbstractEventLoop = None
+
     def __init__(self, loop: asyncio.AbstractEventLoop, **kwargs):
         auth_headers = {
             'Authorization': f"Token {Keys.site_api}"
@@ -42,7 +45,7 @@ class APIClient:
         else:
             kwargs['headers'] = auth_headers
 
-        self.session: Optional[aiohttp.ClientSession] = None
+        self.session = None
         self.loop = loop
 
         self._ready = asyncio.Event(loop=loop)

@@ -337,10 +337,6 @@ class MockUser(CustomMockMixin, unittest.mock.Mock, ColourMixin, HashableMixin):
             self.mention = f"@{self.name}"
 
 
-# Create an APIClient instance to get a realistic MagicMock of `bot.api.APIClient`
-api_client_instance = APIClient(loop=unittest.mock.MagicMock())
-
-
 class MockAPIClient(CustomMockMixin, unittest.mock.MagicMock):
     """
     A MagicMock subclass to mock APIClient objects.
@@ -350,7 +346,7 @@ class MockAPIClient(CustomMockMixin, unittest.mock.MagicMock):
     """
 
     def __init__(self, **kwargs) -> None:
-        super().__init__(spec_set=api_client_instance, **kwargs)
+        super().__init__(spec_set=APIClient, **kwargs)
 
 
 # Create a Bot instance to get a realistic MagicMock of `discord.ext.commands.Bot`
