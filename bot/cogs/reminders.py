@@ -56,13 +56,20 @@ class Reminders(Scheduler, Cog):
                 self.schedule_task(loop, reminder["id"], reminder)
 
     @staticmethod
-    async def _send_confirmation(ctx: Context, on_success: str, reminder_id: str) -> None:
+    async def _send_confirmation(
+        ctx: Context, on_success: str, reminder_id: str, delivery_dt: Optional[datetime]
+    ) -> None:
         """Send an embed confirming the reminder change was made successfully."""
         embed = Embed()
         embed.colour = Colour.green()
         embed.title = random.choice(POSITIVE_REPLIES)
         embed.description = on_success
-        embed.set_footer(text=f"ID {reminder_id}")
+
+        if delivery_dt:
+            embed.set_footer(text=f"ID: {reminder_id}, Due: {delivery_dt.strftime('%Y-%m-%dT%H:%M:%S')}")
+        else:
+            # Reminder deletion will have a `None` `delivery_dt`
+            embed.set_footer(text=f"ID: {reminder_id}")
 
         await ctx.send(embed=embed)
 
@@ -186,6 +193,7 @@ class Reminders(Scheduler, Cog):
             ctx,
             on_success=f"Your reminder will arrive in {humanize_delta(relativedelta(expiration, now))}!",
             reminder_id=reminder["id"],
+            delivery_dt=expiration,
         )
 
         loop = asyncio.get_event_loop()
@@ -264,7 +272,7 @@ class Reminders(Scheduler, Cog):
 
         # Send a confirmation message to the channel
         await self._send_confirmation(
-            ctx, on_success="That reminder has been edited successfully!", reminder_id=id_
+            ctx, on_success="That reminder has been edited successfully!", reminder_id=id_, delivery_dt=expiration
         )
 
         await self._reschedule_reminder(reminder)
@@ -278,9 +286,12 @@ class Reminders(Scheduler, Cog):
             json={'content': content}
         )
 
+        # Parse the reminder expiration back into a datetime for the confirmation message
+        expiration = datetime.fromisoformat(reminder['expiration'][:-1])
+
         # Send a confirmation message to the channel
         await self._send_confirmation(
-            ctx, on_success="That reminder has been edited successfully!", reminder_id=id_
+            ctx, on_success="That reminder has been edited successfully!", reminder_id=id_, delivery_dt=expiration
         )
         await self._reschedule_reminder(reminder)
 
@@ -289,7 +300,7 @@ class Reminders(Scheduler, Cog):
         """Delete one of your active reminders."""
         await self._delete_reminder(id_)
         await self._send_confirmation(
-            ctx, on_success="That reminder has been deleted successfully!", reminder_id=id_
+            ctx, on_success="That reminder has been deleted successfully!", reminder_id=id_, delivery_dt=None
         )
 
 
