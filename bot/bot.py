@@ -1,5 +1,6 @@
 import logging
 import socket
+import warnings
 from typing import Optional
 
 import aiohttp
@@ -14,6 +15,11 @@ class Bot(commands.Bot):
     """A subclass of `discord.ext.commands.Bot` with an aiohttp session and an API client."""
 
     def __init__(self, *args, **kwargs):
+        if "connector" in kwargs:
+            warnings.warn(
+                "If the bot is started, the connector will be overwritten with an internal one"
+            )
+
         super().__init__(*args, **kwargs)
 
         self.http_session: Optional[aiohttp.ClientSession] = None
