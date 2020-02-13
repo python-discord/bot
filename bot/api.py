@@ -47,7 +47,7 @@ class APIClient:
 
         self._ready = asyncio.Event(loop=loop)
         self._creation_task = None
-        self._session_args = kwargs
+        self._default_session_kwargs = kwargs
 
         self.recreate()
 
@@ -55,9 +55,13 @@ class APIClient:
     def _url_for(endpoint: str) -> str:
         return f"{URLs.site_schema}{URLs.site_api}/{quote_url(endpoint)}"
 
-    async def _create_session(self) -> None:
-        """Create the aiohttp session and set the ready event."""
-        self.session = aiohttp.ClientSession(**self._session_args)
+    async def _create_session(self, **session_kwargs) -> None:
+        """
+        Create the aiohttp session with `session_kwargs` and set the ready event.
+
+        `session_kwargs` is merged with `_default_session_kwargs` and overwrites its values.
+        """
+        self.session = aiohttp.ClientSession(**{**self._default_session_kwargs, **session_kwargs})
         self._ready.set()
 
     async def close(self) -> None:
@@ -68,12 +72,17 @@ class APIClient:
         await self.session.close()
         self._ready.clear()
 
-    def recreate(self) -> None:
-        """Schedule the aiohttp session to be created if it's been closed."""
+    def recreate(self, **session_kwargs) -> None:
+        """
+        Schedule the aiohttp session to be created with `session_kwargs` if it's been closed.
+
+        `session_kwargs` is merged with the kwargs given when the `APIClient` was created and
+        overwrites those default kwargs.
+        """
         if self.session is None or self.session.closed:
             # Don't schedule a task if one is already in progress.
             if self._creation_task is None or self._creation_task.done():
-                self._creation_task = self.loop.create_task(self._create_session())
+                self._creation_task = self.loop.create_task(self._create_session(**session_kwargs))
 
     async def maybe_raise_for_status(self, response: aiohttp.ClientResponse, should_raise: bool) -> None:
         """Raise ResponseCodeError for non-OK response if an exception should be raised."""
