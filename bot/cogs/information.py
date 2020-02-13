@@ -124,10 +124,10 @@ class Information(Cog):
                 {channel_counts}
 
                 **Members**
-                {constants.Emojis.status_online} {statuses[Status.online]}
-                {constants.Emojis.status_idle} {statuses[Status.idle]}
-                {constants.Emojis.status_dnd} {statuses[Status.dnd]}
-                {constants.Emojis.status_offline} {statuses[Status.offline]}
+                {constants.Emojis.status_online} {statuses[Status.online]:,}
+                {constants.Emojis.status_idle} {statuses[Status.idle]:,}
+                {constants.Emojis.status_dnd} {statuses[Status.dnd]:,}
+                {constants.Emojis.status_offline} {statuses[Status.offline]:,}
             """)
         )
         embed.set_thumbnail(url=ctx.guild.icon_url)
