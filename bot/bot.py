@@ -44,8 +44,10 @@ class Bot(commands.Bot):
         """Close the Discord connection and the aiohttp session, connector, and resolver."""
         await super().close()
 
-        await self.http_session.close()
         await self.api_client.close()
+
+        if self.http_session:
+            await self.http_session.close()
 
         if self._connector:
             await self._connector.close()
