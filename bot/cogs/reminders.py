@@ -6,12 +6,13 @@ from datetime import datetime, timedelta
 from operator import itemgetter
 from typing import Optional
 
+from dateutil.parser import isoparse
 from dateutil.relativedelta import relativedelta
 from discord import Colour, Embed, Message
 from discord.ext.commands import Cog, Context, group
 
 from bot.bot import Bot
-from bot.constants import Channels, Icons, NEGATIVE_REPLIES, POSITIVE_REPLIES, STAFF_ROLES
+from bot.constants import Guild, Icons, NEGATIVE_REPLIES, POSITIVE_REPLIES, STAFF_ROLES
 from bot.converters import Duration
 from bot.pagination import LinePaginator
 from bot.utils.checks import without_role_check
@@ -20,7 +21,7 @@ from bot.utils.time import humanize_delta, wait_until
 
 log = logging.getLogger(__name__)
 
-WHITELISTED_CHANNELS = (Channels.bot, Channels.devcontrib)
+WHITELISTED_CHANNELS = Guild.reminder_whitelist
 MAXIMUM_REMINDERS = 5
 
 
@@ -45,13 +46,12 @@ class Reminders(Scheduler, Cog):
         loop = asyncio.get_event_loop()
 
         for reminder in response:
-            remind_at = datetime.fromisoformat(reminder['expiration'][:-1])
+            remind_at = isoparse(reminder['expiration']).replace(tzinfo=None)
 
             # If the reminder is already overdue ...
             if remind_at < now:
                 late = relativedelta(now, remind_at)
                 await self.send_reminder(reminder, late)
-
             else:
                 self.schedule_task(loop, reminder["id"], reminder)
 
@@ -65,18 +65,19 @@ class Reminders(Scheduler, Cog):
         embed.title = random.choice(POSITIVE_REPLIES)
         embed.description = on_success
 
+        footer_str = f"ID: {reminder_id}"
         if delivery_dt:
-            embed.set_footer(text=f"ID: {reminder_id}, Due: {delivery_dt.strftime('%Y-%m-%dT%H:%M:%S')}")
-        else:
             # Reminder deletion will have a `None` `delivery_dt`
-            embed.set_footer(text=f"ID: {reminder_id}")
+            footer_str = f"{footer_str}, Due: {delivery_dt.strftime('%Y-%m-%dT%H:%M:%S')}"
+
+        embed.set_footer(text=footer_str)
 
         await ctx.send(embed=embed)
 
     async def _scheduled_task(self, reminder: dict) -> None:
         """A coroutine which sends the reminder once the time is reached, and cancels the running task."""
         reminder_id = reminder["id"]
-        reminder_datetime = datetime.fromisoformat(reminder['expiration'][:-1])
+        reminder_datetime = isoparse(reminder['expiration']).replace(tzinfo=None)
 
         # Send the reminder message once the desired duration has passed
         await wait_until(reminder_datetime)
@@ -187,11 +188,12 @@ class Reminders(Scheduler, Cog):
         )
 
         now = datetime.utcnow() - timedelta(seconds=1)
+        humanized_delta = humanize_delta(relativedelta(expiration, now))
 
         # Confirm to the user that it worked.
         await self._send_confirmation(
             ctx,
-            on_success=f"Your reminder will arrive in {humanize_delta(relativedelta(expiration, now))}!",
+            on_success=f"Your reminder will arrive in {humanized_delta}!",
             reminder_id=reminder["id"],
             delivery_dt=expiration,
         )
@@ -223,7 +225,7 @@ class Reminders(Scheduler, Cog):
 
         for content, remind_at, id_ in reminders:
             # Parse and humanize the time, make it pretty :D
-            remind_datetime = datetime.fromisoformat(remind_at[:-1])
+            remind_datetime = isoparse(remind_at).replace(tzinfo=None)
             time = humanize_delta(relativedelta(remind_datetime, now))
 
             text = textwrap.dedent(f"""
@@ -272,7 +274,10 @@ class Reminders(Scheduler, Cog):
 
         # Send a confirmation message to the channel
         await self._send_confirmation(
-            ctx, on_success="That reminder has been edited successfully!", reminder_id=id_, delivery_dt=expiration
+            ctx,
+            on_success="That reminder has been edited successfully!",
+            reminder_id=id_,
+            delivery_dt=expiration,
         )
 
         await self._reschedule_reminder(reminder)
@@ -287,11 +292,14 @@ class Reminders(Scheduler, Cog):
         )
 
         # Parse the reminder expiration back into a datetime for the confirmation message
-        expiration = datetime.fromisoformat(reminder['expiration'][:-1])
+        expiration = isoparse(reminder['expiration']).replace(tzinfo=None)
 
         # Send a confirmation message to the channel
         await self._send_confirmation(
-            ctx, on_success="That reminder has been edited successfully!", reminder_id=id_, delivery_dt=expiration
+            ctx,
+            on_success="That reminder has been edited successfully!",
+            reminder_id=id_,
+            delivery_dt=expiration,
         )
         await self._reschedule_reminder(reminder)
 
@@ -300,7 +308,10 @@ class Reminders(Scheduler, Cog):
         """Delete one of your active reminders."""
         await self._delete_reminder(id_)
         await self._send_confirmation(
-            ctx, on_success="That reminder has been deleted successfully!", reminder_id=id_, delivery_dt=None
+            ctx,
+            on_success="That reminder has been deleted successfully!",
+            reminder_id=id_,
+            delivery_dt=None,
         )
 
 

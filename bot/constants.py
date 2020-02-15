@@ -433,7 +433,7 @@ class Guild(metaclass=YAMLGetter):
     id: int
     ignored: List[int]
     staff_channels: List[int]
-
+    reminder_whitelist: List[int]
 
 class Keys(metaclass=YAMLGetter):
     section = "keys"

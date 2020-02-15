@@ -118,10 +118,10 @@ guild:
         announcements:                    354619224620138496
         attachment_log:    &ATTCH_LOG     649243850006855680
         big_brother_logs:  &BBLOGS        468507907357409333
-        bot:                              267659945086812160
+        bot:               &BOT_CMD       267659945086812160
         checkpoint_test:                  422077681434099723
         defcon:            &DEFCON        464469101889454091
-        devcontrib:                       635950537262759947
+        devcontrib:        &DEV_CONTRIB   635950537262759947
         devlog:            &DEVLOG        622895325144940554
         devtest:           &DEVTEST       414574275865870337
         esoteric:                         470884583684964352
@@ -156,6 +156,7 @@ guild:
 
     staff_channels: [*ADMINS, *ADMIN_SPAM, *MOD_SPAM, *MODS, *HELPERS, *ORGANISATION, *DEFCON]
     ignored: [*ADMINS, *MESSAGE_LOG, *MODLOG, *ADMINS_VOICE, *STAFF_VOICE, *ATTCH_LOG]
+    reminder_whitelist: [*BOT_CMD, *DEV_CONTRIB]
 
     roles:
         admin:             &ADMIN_ROLE      267628507062992896
