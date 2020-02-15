@@ -70,20 +70,17 @@ class Bot(commands.Bot):
     def _recreate(self) -> None:
         """Re-create the connector, aiohttp session, and the APIClient."""
         # Use asyncio for DNS resolution instead of threads so threads aren't spammed.
-        # Use AF_INET as its socket family to prevent HTTPS related problems both locally
-        # and in production.
-
         # Doesn't seem to have any state with regards to being closed, so no need to worry?
         self._resolver = aiohttp.AsyncResolver()
 
-        # Does have a closed state. Its __del__ will warn about this, but let's do it immediately.
+        # Its __del__ does send a warning but it doesn't always show up for some reason.
         if self._connector and not self._connector._closed:
-            warnings.warn(
-                "The previous connector was not closed; it will remain open and be overwritten",
-                ResourceWarning,
-                stacklevel=2
+            log.warning(
+                "The previous connector was not closed; it will remain open and be overwritten"
             )
 
+        # Use AF_INET as its socket family to prevent HTTPS related problems both locally
+        # and in production.
         self._connector = aiohttp.TCPConnector(
             resolver=self._resolver,
             family=socket.AF_INET,
@@ -93,11 +90,10 @@ class Bot(commands.Bot):
         # this connector attribute.
         self.http.connector = self._connector
 
+        # Its __del__ does send a warning but it doesn't always show up for some reason.
         if self.http_session and not self.http_session.closed:
-            warnings.warn(
-                "The previous ClientSession was not closed; it will remain open and be overwritten",
-                ResourceWarning,
-                stacklevel=2
+            log.warning(
+                "The previous session was not closed; it will remain open and be overwritten"
             )
 
         self.http_session = aiohttp.ClientSession(connector=self._connector)
