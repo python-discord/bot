@@ -17,7 +17,8 @@ class Bot(commands.Bot):
     def __init__(self, *args, **kwargs):
         if "connector" in kwargs:
             warnings.warn(
-                "If the bot is started, the connector will be overwritten with an internal one"
+                "If login() is called (or the bot is started), the connector will be overwritten "
+                "with an internal one"
             )
 
         super().__init__(*args, **kwargs)
@@ -55,8 +56,8 @@ class Bot(commands.Bot):
         if self._resolver:
             await self._resolver.close()
 
-    async def start(self, *args, **kwargs) -> None:
-        """Set up aiohttp sessions before logging in and connecting to Discord."""
+    async def login(self, *args, **kwargs) -> None:
+        """Re-create the connector and set up sessions before logging into Discord."""
         # Use asyncio for DNS resolution instead of threads so threads aren't spammed.
         # Use AF_INET as its socket family to prevent HTTPS related problems both locally
         # and in production.
@@ -73,4 +74,4 @@ class Bot(commands.Bot):
         self.http_session = aiohttp.ClientSession(connector=self._connector)
         self.api_client.recreate(connector=self._connector)
 
-        await super().start(*args, **kwargs)
+        await super().login(*args, **kwargs)
