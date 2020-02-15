@@ -58,6 +58,11 @@ class Bot(commands.Bot):
 
     async def login(self, *args, **kwargs) -> None:
         """Re-create the connector and set up sessions before logging into Discord."""
+        self._recreate()
+        await super().login(*args, **kwargs)
+
+    def _recreate(self) -> None:
+        """Re-create the connector, aiohttp session, and the APIClient."""
         # Use asyncio for DNS resolution instead of threads so threads aren't spammed.
         # Use AF_INET as its socket family to prevent HTTPS related problems both locally
         # and in production.
@@ -73,5 +78,3 @@ class Bot(commands.Bot):
 
         self.http_session = aiohttp.ClientSession(connector=self._connector)
         self.api_client.recreate(connector=self._connector)
-
-        await super().login(*args, **kwargs)
