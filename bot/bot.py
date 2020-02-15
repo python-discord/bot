@@ -97,4 +97,4 @@ class Bot(commands.Bot):
             )
 
         self.http_session = aiohttp.ClientSession(connector=self._connector)
-        self.api_client.recreate(connector=self._connector)
+        self.api_client.recreate(force=True, connector=self._connector)

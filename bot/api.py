@@ -72,16 +72,22 @@ class APIClient:
         await self.session.close()
         self._ready.clear()
 
-    def recreate(self, **session_kwargs) -> None:
+    def recreate(self, force: bool = False, **session_kwargs) -> None:
         """
         Schedule the aiohttp session to be created with `session_kwargs` if it's been closed.
+
+        If `force` is True, the session will be recreated even if an open one exists. If a task to
+        create the session is pending, it will be cancelled.
 
         `session_kwargs` is merged with the kwargs given when the `APIClient` was created and
         overwrites those default kwargs.
         """
-        if self.session is None or self.session.closed:
+        if force or self.session is None or self.session.closed:
+            if force and self._creation_task:
+                self._creation_task.cancel()
+
             # Don't schedule a task if one is already in progress.
-            if self._creation_task is None or self._creation_task.done():
+            if force or self._creation_task is None or self._creation_task.done():
                 self._creation_task = self.loop.create_task(self._create_session(**session_kwargs))
 
     async def maybe_raise_for_status(self, response: aiohttp.ClientResponse, should_raise: bool) -> None:
