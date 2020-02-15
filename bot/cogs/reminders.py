@@ -57,7 +57,10 @@ class Reminders(Scheduler, Cog):
 
     @staticmethod
     async def _send_confirmation(
-        ctx: Context, on_success: str, reminder_id: str, delivery_dt: Optional[datetime]
+        ctx: Context,
+        on_success: str,
+        reminder_id: str,
+        delivery_dt: Optional[datetime],
     ) -> None:
         """Send an embed confirming the reminder change was made successfully."""
         embed = Embed()
