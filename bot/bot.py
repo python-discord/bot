@@ -37,8 +37,14 @@ class Bot(commands.Bot):
         log.info(f"Cog loaded: {cog.qualified_name}")
 
     def clear(self) -> None:
-        """Clears the internal state of the bot and sets the HTTPClient connector to None."""
-        self.http.connector = None  # Use the default connector.
+        """
+        Clears the internal state of the bot and recreates the connector and sessions.
+
+        Will cause a DeprecationWarning if called outside a coroutine.
+        """
+        # Because discord.py recreates the HTTPClient session, may as well follow suite and recreate
+        # our own stuff here too.
+        self._recreate()
         super().clear()
 
     async def close(self) -> None:
