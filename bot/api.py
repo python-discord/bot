@@ -60,16 +60,17 @@ class APIClient:
         Create the aiohttp session with `session_kwargs` and set the ready event.
 
         `session_kwargs` is merged with `_default_session_kwargs` and overwrites its values.
+        If an open session already exists, it will first be closed.
         """
+        await self.close()
         self.session = aiohttp.ClientSession(**{**self._default_session_kwargs, **session_kwargs})
         self._ready.set()
 
     async def close(self) -> None:
         """Close the aiohttp session and unset the ready event."""
-        if not self._ready.is_set():
-            return
+        if self.session:
+            await self.session.close()
 
-        await self.session.close()
         self._ready.clear()
 
     def recreate(self, force: bool = False, **session_kwargs) -> None:
