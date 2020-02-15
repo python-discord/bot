@@ -303,7 +303,7 @@ class Reminders(Scheduler, Cog):
         )
         await self._reschedule_reminder(reminder)
 
-    @remind_group.command("delete", aliases=("remove",))
+    @remind_group.command("delete", aliases=("remove", "cancel"))
     async def delete_reminder(self, ctx: Context, id_: int) -> None:
         """Delete one of your active reminders."""
         await self._delete_reminder(id_)
