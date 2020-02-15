@@ -72,7 +72,18 @@ class Bot(commands.Bot):
         # Use asyncio for DNS resolution instead of threads so threads aren't spammed.
         # Use AF_INET as its socket family to prevent HTTPS related problems both locally
         # and in production.
+
+        # Doesn't seem to have any state with regards to being closed, so no need to worry?
         self._resolver = aiohttp.AsyncResolver()
+
+        # Does have a closed state. Its __del__ will warn about this, but let's do it immediately.
+        if self._connector and not self._connector._closed:
+            warnings.warn(
+                "The previous connector was not closed; it will remain open and be overwritten",
+                ResourceWarning,
+                stacklevel=2
+            )
+
         self._connector = aiohttp.TCPConnector(
             resolver=self._resolver,
             family=socket.AF_INET,
@@ -81,6 +92,13 @@ class Bot(commands.Bot):
         # Client.login() will call HTTPClient.static_login() which will create a session using
         # this connector attribute.
         self.http.connector = self._connector
+
+        if self.http_session and not self.http_session.closed:
+            warnings.warn(
+                "The previous ClientSession was not closed; it will remain open and be overwritten",
+                ResourceWarning,
+                stacklevel=2
+            )
 
         self.http_session = aiohttp.ClientSession(connector=self._connector)
         self.api_client.recreate(connector=self._connector)
