@@ -113,7 +113,10 @@ class ErrorHandler(Cog):
         # TODO: use ctx.send_help() once PR #519 is merged.
         help_command = await self.get_help_command(ctx.command)
 
-        if isinstance(e, errors.BadArgument):
+        if isinstance(e, errors.MissingRequiredArgument):
+            await ctx.send(f"Missing required argument `{e.param.name}`.")
+            await ctx.invoke(*help_command)
+        elif isinstance(e, errors.BadArgument):
             await ctx.send(f"Bad argument: {e}\n")
             await ctx.invoke(*help_command)
         else:
