@@ -72,24 +72,8 @@ class ErrorHandler(Cog):
 
         # Try to look for a tag with the command's name if the command isn't found.
         if isinstance(e, CommandNotFound) and not hasattr(ctx, "invoked_from_error_handler"):
-            if not ctx.channel.id == Channels.verification:
-                tags_get_command = self.bot.get_command("tags get")
-                ctx.invoked_from_error_handler = True
-
-                log_msg = "Cancelling attempt to fall back to a tag due to failed checks."
-                try:
-                    if not await tags_get_command.can_run(ctx):
-                        log.debug(log_msg)
-                        return
-                except CommandError as tag_error:
-                    log.debug(log_msg)
-                    await self.on_command_error(ctx, tag_error)
-                    return
-
-                # Return to not raise the exception
-                with contextlib.suppress(ResponseCodeError):
-                    await ctx.invoke(tags_get_command, tag_name=ctx.invoked_with)
-                    return
+            if ctx.channel.id != Channels.verification:
+                await self.try_get_tag(ctx)
         elif isinstance(e, BadArgument):
             await ctx.send(f"Bad argument: {e}\n")
             await ctx.invoke(*help_command)
@@ -115,6 +99,32 @@ class ErrorHandler(Cog):
         else:
             # MaxConcurrencyReached, ExtensionError
             await self.handle_unexpected_error(ctx, e)
+
+    async def try_get_tag(self, ctx: Context) -> None:
+        """
+        Attempt to display a tag by interpreting the command name as a tag name.
+
+        The invocation of tags get respects its checks. Any CommandErrors raised will be handled
+        by `on_command_error`, but the `invoked_from_error_handler` attribute will be added to
+        the context to prevent infinite recursion in the case of a CommandNotFound exception.
+        """
+        tags_get_command = self.bot.get_command("tags get")
+        ctx.invoked_from_error_handler = True
+
+        log_msg = "Cancelling attempt to fall back to a tag due to failed checks."
+        try:
+            if not await tags_get_command.can_run(ctx):
+                log.debug(log_msg)
+                return
+        except CommandError as tag_error:
+            log.debug(log_msg)
+            await self.on_command_error(ctx, tag_error)
+            return
+
+        # Return to not raise the exception
+        with contextlib.suppress(ResponseCodeError):
+            await ctx.invoke(tags_get_command, tag_name=ctx.invoked_with)
+            return
 
     @staticmethod
     async def handle_check_failure(ctx: Context, e: CheckFailure) -> None:
