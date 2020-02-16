@@ -1,10 +1,12 @@
 import contextlib
 import logging
+import typing as t
 
 from discord.ext.commands import (
     BadArgument,
     BotMissingPermissions,
     CheckFailure,
+    Command,
     CommandError,
     CommandInvokeError,
     CommandNotFound,
@@ -53,18 +55,9 @@ class ErrorHandler(Cog):
             10. Otherwise, handling is deferred to `handle_unexpected_error`
         """
         command = ctx.command
-        parent = None
 
-        if command is not None:
-            parent = command.parent
-
-        # Retrieve the help command for the invoked command.
-        if parent and command:
-            help_command = (self.bot.get_command("help"), parent.name, command.name)
-        elif command:
-            help_command = (self.bot.get_command("help"), command.name)
-        else:
-            help_command = (self.bot.get_command("help"),)
+        # TODO: use ctx.send_help() once PR #519 is merged.
+        help_command = await self.get_help_command(command)
 
         if hasattr(e, "handled"):
             log.trace(f"Command {command} had its error already handled locally; ignoring.")
@@ -99,6 +92,20 @@ class ErrorHandler(Cog):
         else:
             # MaxConcurrencyReached, ExtensionError
             await self.handle_unexpected_error(ctx, e)
+
+    async def get_help_command(self, command: t.Optional[Command]) -> t.Tuple:
+        """Return the help command invocation args to display help for `command`."""
+        parent = None
+        if command is not None:
+            parent = command.parent
+
+        # Retrieve the help command for the invoked command.
+        if parent and command:
+            return self.bot.get_command("help"), parent.name, command.name
+        elif command:
+            return self.bot.get_command("help"), command.name
+        else:
+            return self.bot.get_command("help")
 
     async def try_get_tag(self, ctx: Context) -> None:
         """
