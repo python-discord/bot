@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import random
 import textwrap
@@ -42,7 +41,6 @@ class Reminders(Scheduler, Cog):
         )
 
         now = datetime.utcnow()
-        loop = asyncio.get_event_loop()
 
         for reminder in response:
             remind_at = datetime.fromisoformat(reminder['expiration'][:-1])
@@ -53,7 +51,7 @@ class Reminders(Scheduler, Cog):
                 await self.send_reminder(reminder, late)
 
             else:
-                self.schedule_task(loop, reminder["id"], reminder)
+                self.schedule_task(reminder["id"], reminder)
 
     @staticmethod
     async def _send_confirmation(ctx: Context, on_success: str) -> None:
@@ -88,10 +86,8 @@ class Reminders(Scheduler, Cog):
 
     async def _reschedule_reminder(self, reminder: dict) -> None:
         """Reschedule a reminder object."""
-        loop = asyncio.get_event_loop()
-
         self.cancel_task(reminder["id"])
-        self.schedule_task(loop, reminder["id"], reminder)
+        self.schedule_task(reminder["id"], reminder)
 
     async def send_reminder(self, reminder: dict, late: relativedelta = None) -> None:
         """Send the reminder."""
@@ -185,8 +181,7 @@ class Reminders(Scheduler, Cog):
             on_success=f"Your reminder will arrive in {humanize_delta(relativedelta(expiration, now))}!"
         )
 
-        loop = asyncio.get_event_loop()
-        self.schedule_task(loop, reminder["id"], reminder)
+        self.schedule_task(reminder["id"], reminder)
 
     @remind_group.command(name="list")
     async def list_reminders(self, ctx: Context) -> Optional[Message]:

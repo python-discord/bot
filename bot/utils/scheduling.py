@@ -29,7 +29,7 @@ class Scheduler(metaclass=CogABCMeta):
         then make a site API request to delete the reminder from the database.
         """
 
-    def schedule_task(self, loop: asyncio.AbstractEventLoop, task_id: str, task_data: dict) -> None:
+    def schedule_task(self, task_id: str, task_data: dict) -> None:
         """
         Schedules a task.
 
@@ -41,7 +41,7 @@ class Scheduler(metaclass=CogABCMeta):
             )
             return
 
-        task = loop.create_task(self._scheduled_task(task_data))
+        task = asyncio.create_task(self._scheduled_task(task_data))
         task.add_done_callback(_suppress_cancelled_error)
 
         self.scheduled_tasks[task_id] = task

@@ -48,7 +48,7 @@ class InfractionScheduler(Scheduler):
         )
         for infraction in infractions:
             if infraction["expires_at"] is not None and infraction["type"] in supported_infractions:
-                self.schedule_task(self.bot.loop, infraction["id"], infraction)
+                self.schedule_task(infraction["id"], infraction)
 
     async def reapply_infraction(
         self,
@@ -150,7 +150,7 @@ class InfractionScheduler(Scheduler):
                 await action_coro
                 if expiry:
                     # Schedule the expiration of the infraction.
-                    self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
+                    self.schedule_task(infraction["id"], infraction)
             except discord.HTTPException as e:
                 # Accordingly display that applying the infraction failed.
                 confirm_msg = f":x: failed to apply"
