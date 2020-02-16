@@ -322,7 +322,7 @@ class InfractionScheduler(Scheduler):
 
         log_content = None
         log_text = {
-            "Member": str(user_id),
+            "Member": f"<@{user_id}>",
             "Actor": str(self.bot.get_user(actor) or actor),
             "Reason": infraction["reason"],
             "Created": created,
