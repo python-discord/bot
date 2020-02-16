@@ -63,12 +63,13 @@ def create_task(loop: asyncio.AbstractEventLoop, coro_or_future: Union[Coroutine
     """Creates an asyncio.Task object from a coroutine or future object."""
     task: asyncio.Task = asyncio.ensure_future(coro_or_future, loop=loop)
 
-    # Silently ignore exceptions in a callback (handles the CancelledError nonsense)
-    task.add_done_callback(_silent_exception)
+    # Silently ignore CancelledError in a callback
+    task.add_done_callback(_suppress_cancelled_error)
     return task
 
 
-def _silent_exception(future: asyncio.Future) -> None:
-    """Suppress future's exception."""
-    with contextlib.suppress(Exception):
-        future.exception()
+def _suppress_cancelled_error(future: asyncio.Future) -> None:
+    """Suppress future's CancelledError exception."""
+    if future.cancelled():
+        with contextlib.suppress(asyncio.CancelledError):
+            future.exception()
