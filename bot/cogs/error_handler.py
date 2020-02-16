@@ -122,6 +122,8 @@ class ErrorHandler(Cog):
         elif isinstance(e, errors.BadArgument):
             await ctx.send(f"Bad argument: {e}\n")
             await ctx.invoke(*help_command)
+        elif isinstance(e, errors.BadUnionArgument):
+            await ctx.send(f"Bad argument: {e}\n```{e.errors[-1]}```")
         else:
             await ctx.send("Something about your input seems off. Check the arguments:")
             await ctx.invoke(*help_command)
