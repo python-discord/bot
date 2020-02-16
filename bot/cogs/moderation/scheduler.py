@@ -311,6 +311,11 @@ class InfractionScheduler(Scheduler):
         user_id = infraction["user"]
         type_ = infraction["type"]
         id_ = infraction["id"]
+        inserted_at = infraction["inserted_at"]
+        expiry = infraction["expires_at"]
+
+        expiry = dateutil.parser.isoparse(expiry).replace(tzinfo=None) if expiry else None
+        created = time.format_infraction_with_duration(inserted_at, expiry)
 
         log.info(f"Marking infraction #{id_} as inactive (expired).")
 
@@ -318,7 +323,8 @@ class InfractionScheduler(Scheduler):
         log_text = {
             "Member": str(user_id),
             "Actor": str(self.bot.user),
-            "Reason": infraction["reason"]
+            "Reason": infraction["reason"],
+            "Created": created,
         }
 
         try:
