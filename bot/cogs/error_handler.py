@@ -109,20 +109,7 @@ class ErrorHandler(Cog):
             )
         elif isinstance(e, CommandInvokeError):
             if isinstance(e.original, ResponseCodeError):
-                status = e.original.response.status
-
-                if status == 404:
-                    await ctx.send("There does not seem to be anything matching your query.")
-                elif status == 400:
-                    content = await e.original.response.json()
-                    log.debug(f"API responded with 400 for command {command}: %r.", content)
-                    await ctx.send("According to the API, your request is malformed.")
-                elif 500 <= status < 600:
-                    await ctx.send("Sorry, there seems to be an internal issue with the API.")
-                    log.warning(f"API responded with {status} for command {command}")
-                else:
-                    await ctx.send(f"Got an unexpected status code from the API (`{status}`).")
-                    log.warning(f"Unexpected API response for command {command}: {status}")
+                await self.handle_api_error(ctx, e.original)
             else:
                 await self.handle_unexpected_error(ctx, e.original)
         else:
@@ -153,6 +140,22 @@ class ErrorHandler(Cog):
                 f"Command {command} invoked by {ctx.message.author} with error "
                 f"{e.__class__.__name__}: {e}"
             )
+
+    @staticmethod
+    async def handle_api_error(ctx: Context, e: ResponseCodeError) -> None:
+        """Handle ResponseCodeError exceptions."""
+        if e.status == 404:
+            await ctx.send("There does not seem to be anything matching your query.")
+        elif e.status == 400:
+            content = await e.response.json()
+            log.debug(f"API responded with 400 for command {ctx.command}: %r.", content)
+            await ctx.send("According to the API, your request is malformed.")
+        elif 500 <= e.status < 600:
+            await ctx.send("Sorry, there seems to be an internal issue with the API.")
+            log.warning(f"API responded with {e.status} for command {ctx.command}")
+        else:
+            await ctx.send(f"Got an unexpected status code from the API (`{e.status}`).")
+            log.warning(f"Unexpected API response for command {ctx.command}: {e.status}")
 
     @staticmethod
     async def handle_unexpected_error(ctx: Context, e: CommandError) -> None:
