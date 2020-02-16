@@ -13,8 +13,9 @@ class Scheduler(metaclass=CogABCMeta):
     """Task scheduler."""
 
     def __init__(self):
+        # Keep track of the child cog's name so the logs are clear.
+        self.cog_name = self.__class__.__name__
 
-        self.cog_name = self.__class__.__name__  # keep track of the child cog's name so the logs are clear.
         self.scheduled_tasks: Dict[str, asyncio.Task] = {}
 
     @abstractmethod
@@ -42,7 +43,7 @@ class Scheduler(metaclass=CogABCMeta):
             return
 
         task = asyncio.create_task(self._scheduled_task(task_data))
-        task.add_done_callback(_suppress_cancelled_error)
+        task.add_done_callback(_handle_task_exception)
 
         self.scheduled_tasks[task_id] = task
         log.debug(f"{self.cog_name}: scheduled task #{task_id}.")
@@ -60,8 +61,10 @@ class Scheduler(metaclass=CogABCMeta):
         del self.scheduled_tasks[task_id]
 
 
-def _suppress_cancelled_error(task: asyncio.Task) -> None:
-    """Suppress a task's CancelledError exception."""
+def _handle_task_exception(task: asyncio.Task) -> None:
+    """Raise the task's exception, if any, unless the task is cancelled and has a CancelledError."""
     if task.cancelled():
         with contextlib.suppress(asyncio.CancelledError):
             task.exception()
+    else:
+        task.exception()
