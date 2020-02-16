@@ -100,21 +100,9 @@ class ErrorHandler(Cog):
                 f"Command {command} invoked by {ctx.message.author} with error "
                 f"{e.__class__.__name__}: {e}"
             )
-        elif isinstance(e, NoPrivateMessage):
-            await ctx.send("Sorry, this command can't be used in a private message!")
-        elif isinstance(e, BotMissingPermissions):
-            await ctx.send(f"Sorry, it looks like I don't have the permissions I need to do that.")
-            log.warning(
-                f"The bot is missing permissions to execute command {command}: {e.missing_perms}"
-            )
-        elif isinstance(e, MissingPermissions):
-            log.debug(
-                f"{ctx.message.author} is missing permissions to invoke command {command}: "
-                f"{e.missing_perms}"
-            )
-        elif isinstance(e, InChannelCheckFailure):
-            await ctx.send(e)
-        elif isinstance(e, (CheckFailure, CommandOnCooldown, DisabledCommand)):
+        elif isinstance(e, CheckFailure):
+            await self.handle_check_failure(ctx, e)
+        elif isinstance(e, (CommandOnCooldown, DisabledCommand)):
             log.debug(
                 f"Command {command} invoked by {ctx.message.author} with error "
                 f"{e.__class__.__name__}: {e}"
@@ -138,7 +126,33 @@ class ErrorHandler(Cog):
             else:
                 await self.handle_unexpected_error(ctx, e.original)
         else:
+            # MaxConcurrencyReached, ExtensionError
             await self.handle_unexpected_error(ctx, e)
+
+    @staticmethod
+    async def handle_check_failure(ctx: Context, e: CheckFailure) -> None:
+        """Handle CheckFailure exceptions and its children."""
+        command = ctx.command
+
+        if isinstance(e, NoPrivateMessage):
+            await ctx.send("Sorry, this command can't be used in a private message!")
+        elif isinstance(e, BotMissingPermissions):
+            await ctx.send(f"Sorry, it looks like I don't have the permissions I need to do that.")
+            log.warning(
+                f"The bot is missing permissions to execute command {command}: {e.missing_perms}"
+            )
+        elif isinstance(e, MissingPermissions):
+            log.debug(
+                f"{ctx.message.author} is missing permissions to invoke command {command}: "
+                f"{e.missing_perms}"
+            )
+        elif isinstance(e, InChannelCheckFailure):
+            await ctx.send(e)
+        else:
+            log.debug(
+                f"Command {command} invoked by {ctx.message.author} with error "
+                f"{e.__class__.__name__}: {e}"
+            )
 
     @staticmethod
     async def handle_unexpected_error(ctx: Context, e: CommandError) -> None:
