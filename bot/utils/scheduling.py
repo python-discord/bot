@@ -2,7 +2,7 @@ import asyncio
 import contextlib
 import logging
 from abc import abstractmethod
-from typing import Coroutine, Dict, Union
+from typing import Dict
 
 from bot.utils import CogABCMeta
 
@@ -41,7 +41,8 @@ class Scheduler(metaclass=CogABCMeta):
             )
             return
 
-        task: asyncio.Task = create_task(loop, self._scheduled_task(task_data))
+        task = loop.create_task(self._scheduled_task(task_data))
+        task.add_done_callback(_suppress_cancelled_error)
 
         self.scheduled_tasks[task_id] = task
         log.debug(f"{self.cog_name}: scheduled task #{task_id}.")
@@ -59,17 +60,8 @@ class Scheduler(metaclass=CogABCMeta):
         del self.scheduled_tasks[task_id]
 
 
-def create_task(loop: asyncio.AbstractEventLoop, coro_or_future: Union[Coroutine, asyncio.Future]) -> asyncio.Task:
-    """Creates an asyncio.Task object from a coroutine or future object."""
-    task: asyncio.Task = asyncio.ensure_future(coro_or_future, loop=loop)
-
-    # Silently ignore CancelledError in a callback
-    task.add_done_callback(_suppress_cancelled_error)
-    return task
-
-
-def _suppress_cancelled_error(future: asyncio.Future) -> None:
-    """Suppress future's CancelledError exception."""
-    if future.cancelled():
+def _suppress_cancelled_error(task: asyncio.Task) -> None:
+    """Suppress a task's CancelledError exception."""
+    if task.cancelled():
         with contextlib.suppress(asyncio.CancelledError):
-            future.exception()
+            task.exception()
