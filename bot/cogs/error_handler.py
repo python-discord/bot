@@ -56,9 +56,6 @@ class ErrorHandler(Cog):
         """
         command = ctx.command
 
-        # TODO: use ctx.send_help() once PR #519 is merged.
-        help_command = await self.get_help_command(command)
-
         if hasattr(e, "handled"):
             log.trace(f"Command {command} had its error already handled locally; ignoring.")
             return
@@ -67,16 +64,8 @@ class ErrorHandler(Cog):
         if isinstance(e, CommandNotFound) and not hasattr(ctx, "invoked_from_error_handler"):
             if ctx.channel.id != Channels.verification:
                 await self.try_get_tag(ctx)
-        elif isinstance(e, BadArgument):
-            await ctx.send(f"Bad argument: {e}\n")
-            await ctx.invoke(*help_command)
         elif isinstance(e, UserInputError):
-            await ctx.send("Something about your input seems off. Check the arguments:")
-            await ctx.invoke(*help_command)
-            log.debug(
-                f"Command {command} invoked by {ctx.message.author} with error "
-                f"{e.__class__.__name__}: {e}"
-            )
+            await self.handle_user_input_error(ctx, e)
         elif isinstance(e, CheckFailure):
             await self.handle_check_failure(ctx, e)
         elif isinstance(e, (CommandOnCooldown, DisabledCommand)):
@@ -132,6 +121,22 @@ class ErrorHandler(Cog):
         with contextlib.suppress(ResponseCodeError):
             await ctx.invoke(tags_get_command, tag_name=ctx.invoked_with)
             return
+
+    async def handle_user_input_error(self, ctx: Context, e: UserInputError) -> None:
+        """Handle UserInputError exceptions and its children."""
+        # TODO: use ctx.send_help() once PR #519 is merged.
+        help_command = await self.get_help_command(ctx.command)
+
+        if isinstance(e, BadArgument):
+            await ctx.send(f"Bad argument: {e}\n")
+            await ctx.invoke(*help_command)
+        else:
+            await ctx.send("Something about your input seems off. Check the arguments:")
+            await ctx.invoke(*help_command)
+            log.debug(
+                f"Command {ctx.command} invoked by {ctx.message.author} with error "
+                f"{e.__class__.__name__}: {e}"
+            )
 
     @staticmethod
     async def handle_check_failure(ctx: Context, e: CheckFailure) -> None:
