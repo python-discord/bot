@@ -313,6 +313,6 @@ class Infractions(InfractionScheduler, commands.Cog):
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:
         """Send a notification to the invoking context on a Union failure."""
         if isinstance(error, commands.BadUnionArgument):
-            if discord.User in error.converters:
+            if discord.User in error.converters or discord.Member in error.converters:
                 await ctx.send(str(error.errors[0]))
                 error.handled = True
