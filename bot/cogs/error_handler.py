@@ -116,6 +116,9 @@ class ErrorHandler(Cog):
         if isinstance(e, errors.MissingRequiredArgument):
             await ctx.send(f"Missing required argument `{e.param.name}`.")
             await ctx.invoke(*help_command)
+        elif isinstance(e, errors.TooManyArguments):
+            await ctx.send(f"Too many arguments provided.")
+            await ctx.invoke(*help_command)
         elif isinstance(e, errors.BadArgument):
             await ctx.send(f"Bad argument: {e}\n")
             await ctx.invoke(*help_command)
