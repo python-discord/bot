@@ -165,9 +165,9 @@ class ErrorHandler(Cog):
             f"```{e.__class__.__name__}: {e}```"
         )
         log.error(
-            f"Error executing command invoked by {ctx.message.author}: {ctx.message.content}"
+            f"Error executing command invoked by {ctx.message.author}: {ctx.message.content}",
+            exc_info=e
         )
-        raise e
 
 
 def setup(bot: Bot) -> None:
