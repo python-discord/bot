@@ -2,21 +2,7 @@ import contextlib
 import logging
 import typing as t
 
-from discord.ext.commands import (
-    BadArgument,
-    BotMissingPermissions,
-    CheckFailure,
-    Command,
-    CommandError,
-    CommandInvokeError,
-    CommandNotFound,
-    CommandOnCooldown,
-    DisabledCommand,
-    MissingPermissions,
-    NoPrivateMessage,
-    UserInputError,
-)
-from discord.ext.commands import Cog, Context
+from discord.ext.commands import Cog, Command, Context, errors
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
@@ -33,7 +19,7 @@ class ErrorHandler(Cog):
         self.bot = bot
 
     @Cog.listener()
-    async def on_command_error(self, ctx: Context, e: CommandError) -> None:
+    async def on_command_error(self, ctx: Context, e: errors.CommandError) -> None:
         """
         Provide generic command error handling.
 
@@ -61,19 +47,19 @@ class ErrorHandler(Cog):
             return
 
         # Try to look for a tag with the command's name if the command isn't found.
-        if isinstance(e, CommandNotFound) and not hasattr(ctx, "invoked_from_error_handler"):
+        if isinstance(e, errors.CommandNotFound) and not hasattr(ctx, "invoked_from_error_handler"):
             if ctx.channel.id != Channels.verification:
                 await self.try_get_tag(ctx)
-        elif isinstance(e, UserInputError):
+        elif isinstance(e, errors.UserInputError):
             await self.handle_user_input_error(ctx, e)
-        elif isinstance(e, CheckFailure):
+        elif isinstance(e, errors.CheckFailure):
             await self.handle_check_failure(ctx, e)
-        elif isinstance(e, (CommandOnCooldown, DisabledCommand)):
+        elif isinstance(e, (errors.CommandOnCooldown, errors.DisabledCommand)):
             log.debug(
                 f"Command {command} invoked by {ctx.message.author} with error "
                 f"{e.__class__.__name__}: {e}"
             )
-        elif isinstance(e, CommandInvokeError):
+        elif isinstance(e, errors.CommandInvokeError):
             if isinstance(e.original, ResponseCodeError):
                 await self.handle_api_error(ctx, e.original)
             else:
@@ -112,7 +98,7 @@ class ErrorHandler(Cog):
             if not await tags_get_command.can_run(ctx):
                 log.debug(log_msg)
                 return
-        except CommandError as tag_error:
+        except errors.CommandError as tag_error:
             log.debug(log_msg)
             await self.on_command_error(ctx, tag_error)
             return
@@ -122,12 +108,12 @@ class ErrorHandler(Cog):
             await ctx.invoke(tags_get_command, tag_name=ctx.invoked_with)
             return
 
-    async def handle_user_input_error(self, ctx: Context, e: UserInputError) -> None:
+    async def handle_user_input_error(self, ctx: Context, e: errors.UserInputError) -> None:
         """Handle UserInputError exceptions and its children."""
         # TODO: use ctx.send_help() once PR #519 is merged.
         help_command = await self.get_help_command(ctx.command)
 
-        if isinstance(e, BadArgument):
+        if isinstance(e, errors.BadArgument):
             await ctx.send(f"Bad argument: {e}\n")
             await ctx.invoke(*help_command)
         else:
@@ -139,18 +125,18 @@ class ErrorHandler(Cog):
             )
 
     @staticmethod
-    async def handle_check_failure(ctx: Context, e: CheckFailure) -> None:
+    async def handle_check_failure(ctx: Context, e: errors.CheckFailure) -> None:
         """Handle CheckFailure exceptions and its children."""
         command = ctx.command
 
-        if isinstance(e, NoPrivateMessage):
+        if isinstance(e, errors.NoPrivateMessage):
             await ctx.send("Sorry, this command can't be used in a private message!")
-        elif isinstance(e, BotMissingPermissions):
+        elif isinstance(e, errors.BotMissingPermissions):
             await ctx.send(f"Sorry, it looks like I don't have the permissions I need to do that.")
             log.warning(
                 f"The bot is missing permissions to execute command {command}: {e.missing_perms}"
             )
-        elif isinstance(e, MissingPermissions):
+        elif isinstance(e, errors.MissingPermissions):
             log.debug(
                 f"{ctx.message.author} is missing permissions to invoke command {command}: "
                 f"{e.missing_perms}"
@@ -180,7 +166,7 @@ class ErrorHandler(Cog):
             log.warning(f"Unexpected API response for command {ctx.command}: {e.status}")
 
     @staticmethod
-    async def handle_unexpected_error(ctx: Context, e: CommandError) -> None:
+    async def handle_unexpected_error(ctx: Context, e: errors.CommandError) -> None:
         """Generic handler for errors without an explicit handler."""
         await ctx.send(
             f"Sorry, an unexpected error occurred. Please let us know!\n\n"
