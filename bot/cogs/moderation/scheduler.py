@@ -415,4 +415,6 @@ class InfractionScheduler(Scheduler):
         expiry = dateutil.parser.isoparse(infraction["expires_at"]).replace(tzinfo=None)
         await time.wait_until(expiry)
 
-        await self.deactivate_infraction(infraction)
+        # Because deactivate_infraction() explicitly cancels this scheduled task, it runs in
+        # a separate task to avoid prematurely cancelling itself.
+        self.bot.loop.create_task(self.deactivate_infraction(infraction))
