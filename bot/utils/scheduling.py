@@ -2,6 +2,7 @@ import asyncio
 import contextlib
 import logging
 from abc import abstractmethod
+from functools import partial
 from typing import Dict
 
 from bot.utils import CogABCMeta
@@ -36,6 +37,8 @@ class Scheduler(metaclass=CogABCMeta):
 
         `task_data` is passed to the `Scheduler._scheduled_task()` coroutine.
         """
+        log.trace(f"{self.cog_name}: scheduling task #{task_id}...")
+
         if task_id in self.scheduled_tasks:
             log.debug(
                 f"{self.cog_name}: did not schedule task #{task_id}; task was already scheduled."
@@ -43,13 +46,15 @@ class Scheduler(metaclass=CogABCMeta):
             return
 
         task = asyncio.create_task(self._scheduled_task(task_data))
-        task.add_done_callback(_handle_task_exception)
+        task.add_done_callback(partial(self._task_done_callback, task_id))
 
         self.scheduled_tasks[task_id] = task
-        log.debug(f"{self.cog_name}: scheduled task #{task_id}.")
+        log.debug(f"{self.cog_name}: scheduled task #{task_id} {id(task)}.")
 
     def cancel_task(self, task_id: str) -> None:
         """Un-schedules a task."""
+        log.trace(f"{self.cog_name}: cancelling task #{task_id}...")
+
         task = self.scheduled_tasks.get(task_id)
 
         if task is None:
@@ -57,14 +62,27 @@ class Scheduler(metaclass=CogABCMeta):
             return
 
         task.cancel()
-        log.debug(f"{self.cog_name}: unscheduled task #{task_id}.")
+        log.debug(f"{self.cog_name}: unscheduled task #{task_id} {id(task)}.")
         del self.scheduled_tasks[task_id]
 
+    def _task_done_callback(self, task_id: str, task: asyncio.Task) -> None:
+        """
+        Unschedule the task and raise its exception if one exists.
 
-def _handle_task_exception(task: asyncio.Task) -> None:
-    """Raise the task's exception, if any, unless the task is cancelled and has a CancelledError."""
-    if task.cancelled():
-        with contextlib.suppress(asyncio.CancelledError):
+        If the task was cancelled, the CancelledError is retrieved and suppressed. In this case,
+        the task is already assumed to have been unscheduled.
+        """
+        log.trace(f"{self.cog_name}: performing done callback for task #{task_id} {id(task)}")
+
+        if task.cancelled():
+            with contextlib.suppress(asyncio.CancelledError):
+                task.exception()
+        else:
+            # Check if it exists to avoid logging a warning.
+            if task_id in self.scheduled_tasks:
+                # Only cancel if the task is not cancelled to avoid a race condition when a new
+                # task is scheduled using the same ID. Reminders do this when re-scheduling after
+                # editing.
+                self.cancel_task(task_id)
+
             task.exception()
-    else:
-        task.exception()

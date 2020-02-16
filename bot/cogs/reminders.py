@@ -74,9 +74,6 @@ class Reminders(Scheduler, Cog):
         log.debug(f"Deleting reminder {reminder_id} (the user has been reminded).")
         await self._delete_reminder(reminder_id)
 
-        # Now we can begone with it from our schedule list.
-        self.cancel_task(reminder_id)
-
     async def _delete_reminder(self, reminder_id: str) -> None:
         """Delete a reminder from the database, given its ID, and cancel the running task."""
         await self.bot.api_client.delete('bot/reminders/' + str(reminder_id))
@@ -86,7 +83,10 @@ class Reminders(Scheduler, Cog):
 
     async def _reschedule_reminder(self, reminder: dict) -> None:
         """Reschedule a reminder object."""
+        log.trace(f"Cancelling old task #{reminder['id']}")
         self.cancel_task(reminder["id"])
+
+        log.trace(f"Scheduling new task #{reminder['id']}")
         self.schedule_task(reminder["id"], reminder)
 
     async def send_reminder(self, reminder: dict, late: relativedelta = None) -> None:
