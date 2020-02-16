@@ -33,7 +33,7 @@ class Scheduler(metaclass=CogABCMeta):
         """
         Schedules a task.
 
-        `task_data` is passed to `Scheduler._scheduled_expiration`
+        `task_data` is passed to the `Scheduler._scheduled_task()` coroutine.
         """
         if task_id in self.scheduled_tasks:
             log.debug(
