@@ -50,23 +50,26 @@ class ErrorHandler(Cog):
         if isinstance(e, errors.CommandNotFound) and not hasattr(ctx, "invoked_from_error_handler"):
             if ctx.channel.id != Channels.verification:
                 await self.try_get_tag(ctx)
+                return  # Exit early to avoid logging.
         elif isinstance(e, errors.UserInputError):
             await self.handle_user_input_error(ctx, e)
         elif isinstance(e, errors.CheckFailure):
             await self.handle_check_failure(ctx, e)
-        elif isinstance(e, (errors.CommandOnCooldown, errors.DisabledCommand)):
-            log.debug(
-                f"Command {command} invoked by {ctx.message.author} with error "
-                f"{e.__class__.__name__}: {e}"
-            )
         elif isinstance(e, errors.CommandInvokeError):
             if isinstance(e.original, ResponseCodeError):
                 await self.handle_api_error(ctx, e.original)
             else:
                 await self.handle_unexpected_error(ctx, e.original)
-        else:
-            # MaxConcurrencyReached, ExtensionError
+            return  # Exit early to avoid logging.
+        elif not isinstance(e, (errors.CommandOnCooldown, errors.DisabledCommand)):
+            # ConversionError, MaxConcurrencyReached, ExtensionError
             await self.handle_unexpected_error(ctx, e)
+            return  # Exit early to avoid logging.
+
+        log.debug(
+            f"Command {command} invoked by {ctx.message.author} with error "
+            f"{e.__class__.__name__}: {e}"
+        )
 
     async def get_help_command(self, command: t.Optional[Command]) -> t.Tuple:
         """Return the help command invocation args to display help for `command`."""
@@ -129,10 +132,6 @@ class ErrorHandler(Cog):
         else:
             await ctx.send("Something about your input seems off. Check the arguments:")
             await ctx.invoke(*help_command)
-            log.debug(
-                f"Command {ctx.command} invoked by {ctx.message.author} with error "
-                f"{e.__class__.__name__}: {e}"
-            )
 
     @staticmethod
     async def handle_check_failure(ctx: Context, e: errors.CheckFailure) -> None:
@@ -153,17 +152,13 @@ class ErrorHandler(Cog):
             )
         elif isinstance(e, InChannelCheckFailure):
             await ctx.send(e)
-        else:
-            log.debug(
-                f"Command {command} invoked by {ctx.message.author} with error "
-                f"{e.__class__.__name__}: {e}"
-            )
 
     @staticmethod
     async def handle_api_error(ctx: Context, e: ResponseCodeError) -> None:
         """Handle ResponseCodeError exceptions."""
         if e.status == 404:
             await ctx.send("There does not seem to be anything matching your query.")
+            log.debug(f"API responded with 404 for command {ctx.command}")
         elif e.status == 400:
             content = await e.response.json()
             log.debug(f"API responded with 400 for command {ctx.command}: %r.", content)
