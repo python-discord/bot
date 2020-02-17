@@ -23,22 +23,22 @@ class ErrorHandler(Cog):
         """
         Provide generic command error handling.
 
-        Error handling is deferred to any local error handler, if present.
+        Error handling is deferred to any local error handler, if present. This is done by
+        checking for the presence of a `handled` attribute on the error.
 
-        Error handling emits a single error response, prioritized as follows:
-            1. If the name fails to match a command but matches a tag, the tag is invoked
-            2. Send a BadArgument error message to the invoking context & invoke the command's help
-            3. Send a UserInputError error message to the invoking context & invoke the command's help
-            4. Send a NoPrivateMessage error message to the invoking context
-            5. Send a BotMissingPermissions error message to the invoking context
-            6. Log a MissingPermissions error, no message is sent
-            7. Send a InChannelCheckFailure error message to the invoking context
-            8. Log CheckFailure, CommandOnCooldown, and DisabledCommand errors, no message is sent
-            9. For CommandInvokeErrors, response is based on the type of error:
-                * 404: Error message is sent to the invoking context
-                * 400: Log the resopnse JSON, no message is sent
-                * 500 <= status <= 600: Error message is sent to the invoking context
-            10. Otherwise, handling is deferred to `handle_unexpected_error`
+        Error handling emits a single error message in the invoking context `ctx` and a log message,
+        prioritised as follows:
+
+        1. If the name fails to match a command but matches a tag, the tag is invoked
+            * If CommandNotFound is raised when invoking the tag (determined by the presence of the
+              `invoked_from_error_handler` attribute), this error is treated as being unexpected
+              and therefore sends an error message
+            * Commands in the verification channel are ignored
+        2. UserInputError: see `handle_user_input_error`
+        3. CheckFailure: see `handle_check_failure`
+        4. ResponseCodeError: see `handle_api_error`
+        5. Otherwise, if not a CommandOnCooldown or DisabledCommand, handling is deferred to
+           `handle_unexpected_error`
         """
         command = ctx.command
 
@@ -112,7 +112,16 @@ class ErrorHandler(Cog):
             return
 
     async def handle_user_input_error(self, ctx: Context, e: errors.UserInputError) -> None:
-        """Handle UserInputError exceptions and its children."""
+        """
+        Send an error message in `ctx` for UserInputError, sometimes invoking the help command too.
+
+        * MissingRequiredArgument: send an error message with arg name and the help command
+        * TooManyArguments: send an error message and the help command
+        * BadArgument: send an error message and the help command
+        * BadUnionArgument: send an error message including the error produced by the last converter
+        * ArgumentParsingError: send an error message
+        * Other: send an error message and the help command
+        """
         # TODO: use ctx.send_help() once PR #519 is merged.
         help_command = await self.get_help_command(ctx.command)
 
@@ -135,7 +144,17 @@ class ErrorHandler(Cog):
 
     @staticmethod
     async def handle_check_failure(ctx: Context, e: errors.CheckFailure) -> None:
-        """Handle CheckFailure exceptions and its children."""
+        """
+        Send an error message in `ctx` for certain types of CheckFailure.
+
+        The following types are handled:
+
+        * BotMissingPermissions
+        * BotMissingRole
+        * BotMissingAnyRole
+        * NoPrivateMessage
+        * InChannelCheckFailure
+        """
         bot_missing_errors = (
             errors.BotMissingPermissions,
             errors.BotMissingRole,
@@ -151,7 +170,7 @@ class ErrorHandler(Cog):
 
     @staticmethod
     async def handle_api_error(ctx: Context, e: ResponseCodeError) -> None:
-        """Handle ResponseCodeError exceptions."""
+        """Send an error message in `ctx` for ResponseCodeError and log it."""
         if e.status == 404:
             await ctx.send("There does not seem to be anything matching your query.")
             log.debug(f"API responded with 404 for command {ctx.command}")
@@ -168,7 +187,7 @@ class ErrorHandler(Cog):
 
     @staticmethod
     async def handle_unexpected_error(ctx: Context, e: errors.CommandError) -> None:
-        """Generic handler for errors without an explicit handler."""
+        """Send a generic error message in `ctx` and log the exception as an error with exc_info."""
         await ctx.send(
             f"Sorry, an unexpected error occurred. Please let us know!\n\n"
             f"```{e.__class__.__name__}: {e}```"
