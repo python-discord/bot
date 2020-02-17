@@ -36,9 +36,9 @@ class ErrorHandler(Cog):
             * Commands in the verification channel are ignored
         2. UserInputError: see `handle_user_input_error`
         3. CheckFailure: see `handle_check_failure`
-        4. ResponseCodeError: see `handle_api_error`
-        5. Otherwise, if not a CommandOnCooldown or DisabledCommand, handling is deferred to
-           `handle_unexpected_error`
+        4. CommandOnCooldown: send an error message in the invoking context
+        5. ResponseCodeError: see `handle_api_error`
+        6. Otherwise, if not a DisabledCommand, handling is deferred to `handle_unexpected_error`
         """
         command = ctx.command
 
@@ -55,13 +55,15 @@ class ErrorHandler(Cog):
             await self.handle_user_input_error(ctx, e)
         elif isinstance(e, errors.CheckFailure):
             await self.handle_check_failure(ctx, e)
+        elif isinstance(e, errors.CommandOnCooldown):
+            await ctx.send(e)
         elif isinstance(e, errors.CommandInvokeError):
             if isinstance(e.original, ResponseCodeError):
                 await self.handle_api_error(ctx, e.original)
             else:
                 await self.handle_unexpected_error(ctx, e.original)
             return  # Exit early to avoid logging.
-        elif not isinstance(e, (errors.CommandOnCooldown, errors.DisabledCommand)):
+        elif not isinstance(e, errors.DisabledCommand):
             # ConversionError, MaxConcurrencyReached, ExtensionError
             await self.handle_unexpected_error(ctx, e)
             return  # Exit early to avoid logging.
