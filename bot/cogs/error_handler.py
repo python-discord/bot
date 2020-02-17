@@ -136,21 +136,17 @@ class ErrorHandler(Cog):
     @staticmethod
     async def handle_check_failure(ctx: Context, e: errors.CheckFailure) -> None:
         """Handle CheckFailure exceptions and its children."""
-        command = ctx.command
+        bot_missing_errors = (
+            errors.BotMissingPermissions,
+            errors.BotMissingRole,
+            errors.BotMissingAnyRole
+        )
 
-        if isinstance(e, errors.NoPrivateMessage):
-            await ctx.send("Sorry, this command can't be used in a private message!")
-        elif isinstance(e, errors.BotMissingPermissions):
-            await ctx.send(f"Sorry, it looks like I don't have the permissions I need to do that.")
-            log.warning(
-                f"The bot is missing permissions to execute command {command}: {e.missing_perms}"
+        if isinstance(e, bot_missing_errors):
+            await ctx.send(
+                f"Sorry, it looks like I don't have the permissions or roles I need to do that."
             )
-        elif isinstance(e, errors.MissingPermissions):
-            log.debug(
-                f"{ctx.message.author} is missing permissions to invoke command {command}: "
-                f"{e.missing_perms}"
-            )
-        elif isinstance(e, InChannelCheckFailure):
+        elif isinstance(e, (InChannelCheckFailure, errors.NoPrivateMessage)):
             await ctx.send(e)
 
     @staticmethod
