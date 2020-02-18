@@ -76,7 +76,7 @@ class SnekboxTests(unittest.TestCase):
             ('```py\nprint("Hello world!")```', 'print("Hello world!")', 'multiline python code block'),
         )
         for case, expected, testname in cases:
-            with self.subTest(msg=f'Extract code from {testname}.', case=case, expected=expected):
+            with self.subTest(msg=f'Extract code from {testname}.'):
                 self.assertEqual(self.cog.prepare_input(case), expected)
 
     def test_get_results_message(self):
