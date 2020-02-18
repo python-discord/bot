@@ -35,7 +35,8 @@ class SnekboxTests(unittest.TestCase):
     @async_test
     async def test_upload_output_reject_too_long(self):
         """Reject output longer than MAX_PASTE_LEN."""
-        self.assertEqual(await self.cog.upload_output("-" * (snekbox.MAX_PASTE_LEN + 1)), "too long to upload")
+        result = await self.cog.upload_output("-" * (snekbox.MAX_PASTE_LEN + 1))
+        self.assertEqual(result, "too long to upload")
 
     @async_test
     async def test_upload_output(self):
