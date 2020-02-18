@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import datetime
 import logging
 import re
@@ -7,7 +8,7 @@ from functools import partial
 from signal import Signals
 from typing import Optional, Tuple
 
-from discord import Message, Reaction, User
+from discord import HTTPException, Message, Reaction, User
 from discord.ext.commands import Cog, Context, command, guild_only
 
 from bot.bot import Bot
@@ -250,7 +251,8 @@ class Snekbox(Cog):
                 log.info(f"Re-evaluating message {ctx.message.id}")
                 code = new_message.content.split(' ', maxsplit=1)[1]
                 await ctx.message.clear_reactions()
-                await response.delete()
+                with contextlib.suppress(HTTPException):
+                    await response.delete()
             except asyncio.TimeoutError:
                 await ctx.message.clear_reactions()
                 return
