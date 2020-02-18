@@ -25,7 +25,9 @@ class SnekboxTests(unittest.TestCase):
     @async_test
     async def test_post_eval(self):
         """Post the eval code to the URLs.snekbox_eval_api endpoint."""
-        await self.cog.post_eval("import random")
+        self.mocked_post.json.return_value = {'lemon': 'AI'}
+
+        self.assertEqual(await self.cog.post_eval("import random"), {'lemon': 'AI'})
         self.bot.http_session.post.assert_called_once_with(
             URLs.snekbox_eval_api,
             json={"input": "import random"},
