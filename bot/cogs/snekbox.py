@@ -203,6 +203,9 @@ class Snekbox(Cog):
 
         log.info(f"Received code from {ctx.author} for evaluation:\n{code}")
 
+        _predicate_eval_message_edit = partial(predicate_eval_message_edit, ctx)
+        _predicate_emoji_reaction = partial(predicate_eval_emoji_reaction, ctx)
+
         while True:
             self.jobs[ctx.author.id] = datetime.datetime.now()
             code = self.prepare_input(code)
@@ -234,13 +237,13 @@ class Snekbox(Cog):
             try:
                 _, new_message = await self.bot.wait_for(
                     'message_edit',
-                    check=partial(predicate_eval_message_edit, ctx),
+                    check=_predicate_eval_message_edit,
                     timeout=10
                 )
                 await ctx.message.add_reaction('🔁')
                 await self.bot.wait_for(
                     'reaction_add',
-                    check=partial(predicate_eval_emoji_reaction, ctx),
+                    check=_predicate_emoji_reaction,
                     timeout=10
                 )
 
