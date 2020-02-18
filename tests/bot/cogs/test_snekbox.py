@@ -109,7 +109,7 @@ class SnekboxTests(unittest.TestCase):
     def test_get_status_emoji(self):
         """Return emoji according to the eval result."""
         cases = (
-            ('', -1, ':warning:'),
+            (' ', -1, ':warning:'),
             ('Hello world!', 0, ':white_check_mark:'),
             ('Invalid beard size', -1, ':x:')
         )
