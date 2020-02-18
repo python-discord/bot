@@ -306,15 +306,9 @@ class SnekboxTests(unittest.TestCase):
 
     def test_predicate_eval_message_edit(self):
         """Test the predicate_eval_message_edit function."""
-        msg0 = MockMessage()
-        msg0.id = 1
-        msg0.content = 'abc'
-        msg1 = MockMessage()
-        msg1.id = 2
-        msg1.content = 'abcdef'
-        msg2 = MockMessage()
-        msg2.id = 1
-        msg2.content = 'abcdef'
+        msg0 = MockMessage(id=1, content='abc')
+        msg1 = MockMessage(id=2, content='abcdef')
+        msg2 = MockMessage(id=1, content='abcdef')
 
         cases = (
             (msg0, msg0, False, 'same ID, same content'),
@@ -323,29 +317,21 @@ class SnekboxTests(unittest.TestCase):
         )
         for ctx_msg, new_msg, expected, testname in cases:
             with self.subTest(msg=f'Messages with {testname} return {expected}'):
-                ctx = MockContext()
-                ctx.message = ctx_msg
+                ctx = MockContext(message=ctx_msg)
                 actual = snekbox.predicate_eval_message_edit(ctx, ctx_msg, new_msg)
                 self.assertEqual(actual, expected)
 
     def test_predicate_eval_emoji_reaction(self):
         """Test the predicate_eval_emoji_reaction function."""
-        valid_reaction = MockReaction()
-        valid_reaction.message.id = 1
+        valid_reaction = MockReaction(message=MockMessage(id=1))
         valid_reaction.__str__.return_value = '🔁'
-        valid_ctx = MockContext()
-        valid_ctx.message.id = 1
-        valid_ctx.author.id = 2
-        valid_user = MockUser()
-        valid_user.id = 2
+        valid_ctx = MockContext(message=MockMessage(id=1), author=MockUser(id=2))
+        valid_user = MockUser(id=2)
 
-        invalid_reaction_id = MockReaction()
-        invalid_reaction_id.message.id = 42
+        invalid_reaction_id = MockReaction(message=MockMessage(id=42))
         invalid_reaction_id.__str__.return_value = '🔁'
-        invalid_user_id = MockUser()
-        invalid_user_id.id = 42
-        invalid_reaction_str = MockReaction()
-        invalid_reaction_str.message.id = 1
+        invalid_user_id = MockUser(id=42)
+        invalid_reaction_str = MockReaction(message=MockMessage(id=1))
         invalid_reaction_str.__str__.return_value = ':longbeard:'
 
         cases = (
