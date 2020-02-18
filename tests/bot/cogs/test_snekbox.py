@@ -88,7 +88,8 @@ class SnekboxTests(unittest.TestCase):
         )
         for stdout, returncode, expected in cases:
             with self.subTest(stdout=stdout, returncode=returncode, expected=expected):
-                self.assertEqual(self.cog.get_results_message({'stdout': stdout, 'returncode': returncode}), expected)
+                actual = self.cog.get_results_message({'stdout': stdout, 'returncode': returncode})
+                self.assertEqual(actual, expected)
 
     @patch('bot.cogs.snekbox.Signals', side_effect=ValueError)
     def test_get_results_message_invalid_signal(self, mock_Signals: Mock):
@@ -114,7 +115,8 @@ class SnekboxTests(unittest.TestCase):
         )
         for stdout, returncode, expected in cases:
             with self.subTest(stdout=stdout, returncode=returncode, expected=expected):
-                self.assertEqual(self.cog.get_status_emoji({'stdout': stdout, 'returncode': returncode}), expected)
+                actual = self.cog.get_status_emoji({'stdout': stdout, 'returncode': returncode})
+                self.assertEqual(actual, expected)
 
     @async_test
     async def test_format_output(self):
@@ -321,7 +323,8 @@ class SnekboxTests(unittest.TestCase):
             with self.subTest(msg=f'Messages with {testname} return {expected}'):
                 ctx = MockContext()
                 ctx.message = ctx_msg
-                self.assertEqual(snekbox.predicate_eval_message_edit(ctx, ctx_msg, new_msg), expected)
+                actual = snekbox.predicate_eval_message_edit(ctx, ctx_msg, new_msg)
+                self.assertEqual(actual, expected)
 
     def test_predicate_eval_emoji_reaction(self):
         """Test the predicate_eval_emoji_reaction function."""
@@ -351,7 +354,8 @@ class SnekboxTests(unittest.TestCase):
         )
         for reaction, user, expected, testname in cases:
             with self.subTest(msg=f'Test with {testname} and expected return {expected}'):
-                self.assertEqual(snekbox.predicate_eval_emoji_reaction(valid_ctx, reaction, user), expected)
+                actual = snekbox.predicate_eval_emoji_reaction(valid_ctx, reaction, user)
+                self.assertEqual(actual, expected)
 
 
 class SnekboxSetupTests(unittest.TestCase):
