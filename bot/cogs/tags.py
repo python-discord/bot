@@ -12,6 +12,8 @@ from bot.converters import TagContentConverter, TagNameConverter
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
 
+from fuzzywuzzy import process
+
 log = logging.getLogger(__name__)
 
 TEST_CHANNELS = (
@@ -138,6 +140,23 @@ class Tags(Cog):
                     title='Did you mean ...',
                     description='\n'.join(tag['title'] for tag in founds[:10])
                 ))
+            else:
+                # No similar tag found, searching for a similar command
+                command_name = ctx.invoked_with
+                raw_commands = [cmd.name for cmd in self.bot.walk_commands()]
+                similar_command_data = process.extractOne(command_name, raw_commands)
+                # The match is not very similar, no need to suggest it
+                log.debug(similar_command_data)
+                if similar_command_data[1] < 65:
+                    log.debug("No similar commands found")
+                    return
+                similar_command = self.bot.get_command(similar_command_data[0])
+                if similar_command.can_run(ctx):
+                    misspelled_content = ctx.message.content
+                    await ctx.send(
+                        f"Did you mean:\n**{misspelled_content.replace(command_name, similar_command.name)}**"
+                    )
+                    return
 
         else:
             tags = self._cache.values()
