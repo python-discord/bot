@@ -158,8 +158,8 @@ class Snekbox(Cog):
         lines = output.count("\n")
 
         if lines > 0:
-            output = output.split("\n")[:11]  # Only first 11 cause the rest is truncated anyway
-            output = (f"{i:03d} | {line}" for i, line in enumerate(output, 1))
+            output = [f"{i:03d} | {line}" for i, line in enumerate(output.split('\n'), 1)]
+            output = output[:11]  # Limiting to only 11 lines
             output = "\n".join(output)
 
         if lines > 10:
@@ -175,8 +175,7 @@ class Snekbox(Cog):
         if truncated:
             paste_link = await self.upload_output(original_output)
 
-        if not output:
-            output = "[No output]"
+        output = output or "[No output]"
 
         return output, paste_link
 
