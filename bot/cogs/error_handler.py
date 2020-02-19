@@ -88,16 +88,13 @@ class ErrorHandler(Cog):
                     return
 
                 # Return to not raise the exception
-                log.debug("Calling...")
                 tags_cog = self.bot.get_cog("Tags")
                 sent = await tags_cog._get_command(ctx, command_name)
                 # sent = await tags_get_command.callback(tags_get_command.cog, ctx, ctx.invoked_with)
                 if sent:
-                    log.debug("Found")
                     return
                 # No similar tag found, or tag on cooldown -
                 # searching for a similar command
-                log.debug("Not Found")
                 raw_commands = [
                     (cmd.name, *cmd.aliases)
                     for cmd in self.bot.walk_commands()
