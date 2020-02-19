@@ -391,14 +391,19 @@ class InfractionScheduler(Scheduler):
         if send_log:
             log_title = f"expiration failed" if "Failure" in log_text else "expired"
 
+            user = self.bot.get_user(user_id)
+            avatar = user.avatar_url_as(static_format="png") if user else None
+
             log.trace(f"Sending deactivation mod log for infraction #{id_}.")
             await self.mod_log.send_log_message(
                 icon_url=utils.INFRACTION_ICONS[type_][1],
                 colour=Colours.soft_green,
                 title=f"Infraction {log_title}: {type_}",
+                thumbnail=avatar,
                 text="\n".join(f"{k}: {v}" for k, v in log_text.items()),
                 footer=f"ID: {id_}",
                 content=log_content,
+
             )
 
         return log_text
