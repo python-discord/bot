@@ -1,4 +1,5 @@
-import contextlib
+# import contextlib
+import difflib
 import logging
 
 from discord.ext.commands import (
@@ -75,7 +76,7 @@ class ErrorHandler(Cog):
             if not ctx.channel.id == Channels.verification:
                 tags_get_command = self.bot.get_command("tags get")
                 ctx.invoked_from_error_handler = True
-
+                command_name = ctx.invoked_with
                 log_msg = "Cancelling attempt to fall back to a tag due to failed checks."
                 try:
                     if not await tags_get_command.can_run(ctx):
@@ -87,9 +88,31 @@ class ErrorHandler(Cog):
                     return
 
                 # Return to not raise the exception
-                with contextlib.suppress(ResponseCodeError):
-                    await ctx.invoke(tags_get_command, tag_name=ctx.invoked_with)
+                log.debug("Calling...")
+                tags_cog = self.bot.get_cog("Tags")
+                sent = await tags_cog._get_command(ctx, command_name)
+                # sent = await tags_get_command.callback(tags_get_command.cog, ctx, ctx.invoked_with)
+                if sent:
+                    log.debug("Found")
                     return
+                # No similar tag found, or tag on cooldown -
+                # searching for a similar command
+                log.debug("Not Found")
+                raw_commands = [
+                    (cmd.name, *cmd.aliases)
+                    for cmd in self.bot.walk_commands()
+                    if not cmd.hidden
+                ]
+                raw_commands = [c for data in raw_commands for c in data]
+                similar_command_data = difflib.get_close_matches(command_name, raw_commands, 1)
+                log.debug(similar_command_data)
+                similar_command = self.bot.get_command(similar_command_data[0])
+                if similar_command.can_run(ctx):
+                    misspelled_content = ctx.message.content
+                    await ctx.send(
+                        f"Did you mean:\n**{misspelled_content.replace(command_name, similar_command.name)}**"
+                    )
+
         elif isinstance(e, BadArgument):
             await ctx.send(f"Bad argument: {e}\n")
             await ctx.invoke(*help_command)
