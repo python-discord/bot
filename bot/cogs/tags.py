@@ -92,8 +92,7 @@ class Tags(Cog):
         """Show all known tags, a single tag, or run a subcommand."""
         await ctx.invoke(self.get_command, tag_name=tag_name)
 
-    async def _get_command(self, ctx: Context, *, tag_name: TagNameConverter = None) -> None:
-        log.debug(self, ctx, tag_name)
+    async def _get_command(self, ctx: Context, tag_name: TagNameConverter = None) -> None:
 
         def _command_on_cooldown(tag_name: str) -> bool:
             """
