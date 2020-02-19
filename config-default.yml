@@ -302,7 +302,7 @@ urls:
     paste_service:                      !JOIN [*SCHEMA, *PASTE, "/{key}"]
 
     # Snekbox
-    snekbox_eval_api: "https://snekbox.pythondiscord.com/eval"
+    snekbox_eval_api: "http://snekbox:8060/eval"
 
     # Discord API URLs
     discord_api:        &DISCORD_API "https://discordapp.com/api/v7/"
