@@ -32,6 +32,8 @@ class ResponseCodeError(ValueError):
 class APIClient:
     """Django Site API wrapper."""
 
+    # These are class attributes so they can be seen when being mocked for tests.
+    # See commit 22a55534ef13990815a6f69d361e2a12693075d5 for details.
     session: Optional[aiohttp.ClientSession] = None
     loop: asyncio.AbstractEventLoop = None
 
