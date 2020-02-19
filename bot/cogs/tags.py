@@ -101,7 +101,6 @@ class Tags(Cog):
             tag_name - a string representing the searched tag name
 
         Returns False if no tag is not found or the tag is on cooldown
-
         Return True if found and sent a tag
         """
 
@@ -171,7 +170,7 @@ class Tags(Cog):
                 )
                 return True
 
-        return True
+        return False
 
     @tags_group.command(name='get', aliases=('show', 'g'))
     async def _get_command(self, ctx: Context, *, tag_name: TagNameConverter = None) -> None:
