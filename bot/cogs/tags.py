@@ -12,8 +12,6 @@ from bot.converters import TagContentConverter, TagNameConverter
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
 
-from fuzzywuzzy import process
-
 log = logging.getLogger(__name__)
 
 TEST_CHANNELS = (
@@ -94,9 +92,9 @@ class Tags(Cog):
         """Show all known tags, a single tag, or run a subcommand."""
         await ctx.invoke(self.get_command, tag_name=tag_name)
 
-    @tags_group.command(name='get', aliases=('show', 'g'))
-    async def get_command(self, ctx: Context, *, tag_name: TagNameConverter = None) -> None:
-        """Get a specified tag, or a list of all tags if no tag is specified."""
+    async def _get_command(self, ctx: Context, *, tag_name: TagNameConverter = None) -> None:
+        log.debug(self, ctx, tag_name)
+
         def _command_on_cooldown(tag_name: str) -> bool:
             """
             Check if the command is currently on cooldown, on a per-tag, per-channel basis.
@@ -120,7 +118,7 @@ class Tags(Cog):
             time_left = Cooldowns.tags - (time.time() - self.tag_cooldowns[tag_name]["time"])
             log.warning(f"{ctx.author} tried to get the '{tag_name}' tag, but the tag is on cooldown. "
                         f"Cooldown ends in {time_left:.1f} seconds.")
-            return
+            return False
 
         await self._get_tags()
 
@@ -135,28 +133,13 @@ class Tags(Cog):
                         "channel": ctx.channel.id
                     }
                 await ctx.send(embed=Embed.from_dict(tag['embed']))
+                return True
             elif founds and len(tag_name) >= 3:
                 await ctx.send(embed=Embed(
                     title='Did you mean ...',
                     description='\n'.join(tag['title'] for tag in founds[:10])
                 ))
-            else:
-                # No similar tag found, searching for a similar command
-                command_name = ctx.invoked_with
-                raw_commands = [cmd.name for cmd in self.bot.walk_commands()]
-                similar_command_data = process.extractOne(command_name, raw_commands)
-                # The match is not very similar, no need to suggest it
-                log.debug(similar_command_data)
-                if similar_command_data[1] < 65:
-                    log.debug("No similar commands found")
-                    return
-                similar_command = self.bot.get_command(similar_command_data[0])
-                if similar_command.can_run(ctx):
-                    misspelled_content = ctx.message.content
-                    await ctx.send(
-                        f"Did you mean:\n**{misspelled_content.replace(command_name, similar_command.name)}**"
-                    )
-                    return
+                return True
 
         else:
             tags = self._cache.values()
@@ -165,6 +148,7 @@ class Tags(Cog):
                     description="**There are no tags in the database!**",
                     colour=Colour.red()
                 ))
+                return True
             else:
                 embed: Embed = Embed(title="**Current tags**")
                 await LinePaginator.paginate(
@@ -175,6 +159,14 @@ class Tags(Cog):
                     empty=False,
                     max_lines=15
                 )
+                return True
+
+        return False
+
+    @tags_group.command(name='get', aliases=('show', 'g'))
+    async def get_command(self, ctx: Context, *, tag_name: TagNameConverter = None) -> None:
+        """Get a specified tag, or a list of all tags if no tag is specified."""
+        await self._get_command(ctx, tag_name)
 
     @tags_group.command(name='set', aliases=('add', 's'))
     @with_role(*MODERATION_ROLES)
