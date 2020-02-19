@@ -539,6 +539,13 @@ class RedirectOutput(metaclass=YAMLGetter):
     delete_delay: int
 
 
+class Sync(metaclass=YAMLGetter):
+    section = 'sync'
+
+    confirm_timeout: int
+    max_diff: int
+
+
 class Event(Enum):
     """
     Event names. This does not include every event (for example, raw

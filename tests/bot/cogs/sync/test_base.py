@@ -361,10 +361,10 @@ class SyncerSyncTests(unittest.TestCase):
                 self.assertEqual(self.syncer._get_confirmation_result.call_args[0][1], author)
                 self.assertEqual(self.syncer._get_confirmation_result.call_args[0][2], message)
 
+    @mock.patch.object(constants.Sync, "max_diff", new=3)
     @helpers.async_test
     async def test_confirmation_result_small_diff(self):
         """Should always return True and the given message if the diff size is too small."""
-        self.syncer.MAX_DIFF = 3
         author = helpers.MockMember()
         expected_message = helpers.MockMessage()
 
@@ -381,10 +381,10 @@ class SyncerSyncTests(unittest.TestCase):
                 self.syncer._send_prompt.assert_not_called()
                 self.syncer._wait_for_confirmation.assert_not_called()
 
+    @mock.patch.object(constants.Sync, "max_diff", new=3)
     @helpers.async_test
     async def test_confirmation_result_large_diff(self):
         """Should return True if confirmed and False if _send_prompt fails or aborted."""
-        self.syncer.MAX_DIFF = 3
         author = helpers.MockMember()
         mock_message = helpers.MockMessage()
 

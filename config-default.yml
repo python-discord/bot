@@ -430,6 +430,10 @@ redirect_output:
     delete_invocation: true
     delete_delay: 15
 
+sync:
+    confirm_timeout: 300
+    max_diff: 10
+
 duck_pond:
     threshold: 5
     custom_emojis: [*DUCKY_YELLOW, *DUCKY_BLURPLE, *DUCKY_CAMO, *DUCKY_DEVIL, *DUCKY_NINJA, *DUCKY_REGAL, *DUCKY_TUBE, *DUCKY_HUNT, *DUCKY_WIZARD, *DUCKY_PARTY, *DUCKY_ANGEL, *DUCKY_MAUL, *DUCKY_SANTA]

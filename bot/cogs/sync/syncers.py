@@ -26,9 +26,6 @@ class Syncer(abc.ABC):
     _CORE_DEV_MENTION = f"<@&{constants.Roles.core_developer}> "
     _REACTION_EMOJIS = (constants.Emojis.check_mark, constants.Emojis.cross_mark)
 
-    CONFIRM_TIMEOUT = 60 * 5  # 5 minutes
-    MAX_DIFF = 10
-
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
 
@@ -50,7 +47,7 @@ class Syncer(abc.ABC):
 
         msg_content = (
             f'Possible cache issue while syncing {self.name}s. '
-            f'More than {self.MAX_DIFF} {self.name}s were changed. '
+            f'More than {constants.Sync.max_diff} {self.name}s were changed. '
             f'React to confirm or abort the sync.'
         )
 
@@ -110,8 +107,8 @@ class Syncer(abc.ABC):
 
         Uses the `_reaction_check` function to determine if a reaction is valid.
 
-        If there is no reaction within `CONFIRM_TIMEOUT` seconds, return False. To acknowledge the
-        reaction (or lack thereof), `message` will be edited.
+        If there is no reaction within `bot.constants.Sync.confirm_timeout` seconds, return False.
+        To acknowledge the reaction (or lack thereof), `message` will be edited.
         """
         # Preserve the core-dev role mention in the message edits so users aren't confused about
         # where notifications came from.
@@ -123,7 +120,7 @@ class Syncer(abc.ABC):
             reaction, _ = await self.bot.wait_for(
                 'reaction_add',
                 check=partial(self._reaction_check, author, message),
-                timeout=self.CONFIRM_TIMEOUT
+                timeout=constants.Sync.confirm_timeout
             )
         except TimeoutError:
             # reaction will remain none thus sync will be aborted in the finally block below.
@@ -159,15 +156,15 @@ class Syncer(abc.ABC):
         """
         Prompt for confirmation and return a tuple of the result and the prompt message.
 
-        `diff_size` is the size of the diff of the sync. If it is greater than `MAX_DIFF`, the
-        prompt will be sent. The `author` is the invoked of the sync and the `message` is an extant
-        message to edit to display the prompt.
+        `diff_size` is the size of the diff of the sync. If it is greater than
+        `bot.constants.Sync.max_diff`, the prompt will be sent. The `author` is the invoked of the
+        sync and the `message` is an extant message to edit to display the prompt.
 
         If confirmed or no confirmation was needed, the result is True. The returned message will
         either be the given `message` or a new one which was created when sending the prompt.
         """
         log.trace(f"Determining if confirmation prompt should be sent for {self.name} syncer.")
-        if diff_size > self.MAX_DIFF:
+        if diff_size > constants.Sync.max_diff:
             message = await self._send_prompt(message)
             if not message:
                 return False, None  # Couldn't get channel.
@@ -182,9 +179,9 @@ class Syncer(abc.ABC):
         """
         Synchronise the database with the cache of `guild`.
 
-        If the differences between the cache and the database are greater than `MAX_DIFF`, then
-        a confirmation prompt will be sent to the dev-core channel. The confirmation can be
-        optionally redirect to `ctx` instead.
+        If the differences between the cache and the database are greater than
+        `bot.constants.Sync.max_diff`, then a confirmation prompt will be sent to the dev-core
+        channel. The confirmation can be optionally redirect to `ctx` instead.
         """
         log.info(f"Starting {self.name} syncer.")
 
