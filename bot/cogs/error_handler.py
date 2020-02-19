@@ -1,4 +1,4 @@
-# import contextlib
+import contextlib
 import difflib
 import logging
 
@@ -74,9 +74,13 @@ class ErrorHandler(Cog):
         # Try to look for a tag with the command's name if the command isn't found.
         if isinstance(e, CommandNotFound) and not hasattr(ctx, "invoked_from_error_handler"):
             if not ctx.channel.id == Channels.verification:
-                tags_get_command = self.bot.get_command("tags get")
-                ctx.invoked_from_error_handler = True
                 command_name = ctx.invoked_with
+                tags_get_command = self.bot.get_command("tags get")
+                tags_cog = self.bot.get_cog("Tags")
+                if not all(tags_cog, tags_get_command):
+                    return
+
+                ctx.invoked_from_error_handler = True
                 log_msg = "Cancelling attempt to fall back to a tag due to failed checks."
                 try:
                     if not await tags_get_command.can_run(ctx):
@@ -87,12 +91,10 @@ class ErrorHandler(Cog):
                     await self.on_command_error(ctx, tag_error)
                     return
 
-                # Return to not raise the exception
-                tags_cog = self.bot.get_cog("Tags")
-                sent = await tags_cog._get_command(ctx, command_name)
-                # sent = await tags_get_command.callback(tags_get_command.cog, ctx, ctx.invoked_with)
+                sent = await tags_cog.get_command(ctx, command_name)
                 if sent:
                     return
+
                 # No similar tag found, or tag on cooldown -
                 # searching for a similar command
                 raw_commands = [
@@ -104,12 +106,14 @@ class ErrorHandler(Cog):
                 similar_command_data = difflib.get_close_matches(command_name, raw_commands, 1)
                 similar_command_name = similar_command_data[0]
                 similar_command = self.bot.get_command(similar_command_name)
-                if similar_command.can_run(ctx):
-                    misspelled_content = ctx.message.content
-                    await ctx.send(
-                        f"Did you mean:\n**{misspelled_content.replace(command_name, similar_command_name)}**",
-                        delete_after=7.0
-                    )
+
+                with contextlib.suppress(CommandError):
+                    if similar_command.can_run(ctx):
+                        misspelled_content = ctx.message.content
+                        await ctx.send(
+                            f"Did you mean:\n**{misspelled_content.replace(command_name, similar_command_name)}**",
+                            delete_after=7.0
+                        )
 
         elif isinstance(e, BadArgument):
             await ctx.send(f"Bad argument: {e}\n")
