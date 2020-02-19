@@ -92,7 +92,18 @@ class Tags(Cog):
         """Show all known tags, a single tag, or run a subcommand."""
         await ctx.invoke(self.get_command, tag_name=tag_name)
 
-    async def _get_command(self, ctx: Context, tag_name: TagNameConverter = None) -> None:
+    async def get_command(self, ctx: Context, tag_name: str = None) -> bool:
+        """
+        Shows a specific tag or a suggestion within a given context.
+
+        params:
+            ctx - a Context object , being used to send and choose the right tag
+            tag_name - a string representing the searched tag name
+
+        Returns False if no tag is not found or the tag is on cooldown
+
+        Return True if found and sent a tag
+        """
 
         def _command_on_cooldown(tag_name: str) -> bool:
             """
@@ -160,12 +171,12 @@ class Tags(Cog):
                 )
                 return True
 
-        return False
+        return True
 
     @tags_group.command(name='get', aliases=('show', 'g'))
-    async def get_command(self, ctx: Context, *, tag_name: TagNameConverter = None) -> None:
-        """Get a specified tag, or a list of all tags if no tag is specified."""
-        await self._get_command(ctx, tag_name)
+    async def _get_command(self, ctx: Context, *, tag_name: TagNameConverter = None) -> None:
+        """Get a specified tag, or a list of related tags if no tag is specified."""
+        await self.get_command(ctx, tag_name)
 
     @tags_group.command(name='set', aliases=('add', 's'))
     @with_role(*MODERATION_ROLES)
