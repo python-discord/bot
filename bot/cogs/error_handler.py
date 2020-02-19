@@ -105,12 +105,12 @@ class ErrorHandler(Cog):
                 ]
                 raw_commands = [c for data in raw_commands for c in data]
                 similar_command_data = difflib.get_close_matches(command_name, raw_commands, 1)
-                log.debug(similar_command_data)
-                similar_command = self.bot.get_command(similar_command_data[0])
+                similar_command_name = similar_command_data[0]
+                similar_command = self.bot.get_command(similar_command_name)
                 if similar_command.can_run(ctx):
                     misspelled_content = ctx.message.content
                     await ctx.send(
-                        f"Did you mean:\n**{misspelled_content.replace(command_name, similar_command.name)}**",
+                        f"Did you mean:\n**{misspelled_content.replace(command_name, similar_command_name)}**",
                         delete_after=7.0
                     )
 
