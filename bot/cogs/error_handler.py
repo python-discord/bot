@@ -74,13 +74,13 @@ class ErrorHandler(Cog):
         # Try to look for a tag with the command's name if the command isn't found.
         if isinstance(e, CommandNotFound) and not hasattr(ctx, "invoked_from_error_handler"):
             if not ctx.channel.id == Channels.verification:
-                command_name = ctx.invoked_with
-                tags_get_command = self.bot.get_command("tags get")
                 tags_cog = self.bot.get_cog("Tags")
-                if not all(tags_cog, tags_get_command):
+                tags_get_command = self.bot.get_command("tags get")
+                if not tags_cog and not tags_get_command:
                     return
 
                 ctx.invoked_from_error_handler = True
+                command_name = ctx.invoked_with
                 log_msg = "Cancelling attempt to fall back to a tag due to failed checks."
                 try:
                     if not await tags_get_command.can_run(ctx):
