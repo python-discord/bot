@@ -110,7 +110,8 @@ class ErrorHandler(Cog):
                 if similar_command.can_run(ctx):
                     misspelled_content = ctx.message.content
                     await ctx.send(
-                        f"Did you mean:\n**{misspelled_content.replace(command_name, similar_command.name)}**"
+                        f"Did you mean:\n**{misspelled_content.replace(command_name, similar_command.name)}**",
+                        delete_after=7.0
                     )
 
         elif isinstance(e, BadArgument):
