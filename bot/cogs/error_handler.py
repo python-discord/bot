@@ -91,7 +91,7 @@ class ErrorHandler(Cog):
                     await self.on_command_error(ctx, tag_error)
                     return
 
-                sent = await tags_cog.get_command(ctx, command_name)
+                sent = await tags_cog.display_tag(ctx, command_name)
                 if sent:
                     return
 
