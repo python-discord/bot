@@ -92,38 +92,36 @@ class Tags(Cog):
         """Show all known tags, a single tag, or run a subcommand."""
         await ctx.invoke(self.get_command, tag_name=tag_name)
 
-    async def get_command(self, ctx: Context, tag_name: str = None) -> bool:
+    def command_on_cooldown(self, ctx: Context, tag_name: str) -> bool:
         """
-        Shows a specific tag or a suggestion within a given context.
+        Check if the command is currently on cooldown, on a per-tag, per-channel basis.
 
-        params:
-            ctx - a Context object , being used to send and choose the right tag
-            tag_name - a string representing the searched tag name
-
-        Returns False if no tag is not found or the tag is on cooldown
-        Return True if found and sent a tag
+        The cooldown duration is set in constants.py.
         """
+        now = time.time()
 
-        def _command_on_cooldown(tag_name: str) -> bool:
-            """
-            Check if the command is currently on cooldown, on a per-tag, per-channel basis.
+        cooldown_conditions = (
+            tag_name
+            and tag_name in self.tag_cooldowns
+            and (now - self.tag_cooldowns[tag_name]["time"]) < Cooldowns.tags
+            and self.tag_cooldowns[tag_name]["channel"] == ctx.channel.id
+        )
 
-            The cooldown duration is set in constants.py.
-            """
-            now = time.time()
+        if cooldown_conditions:
+            return True
+        return False
 
-            cooldown_conditions = (
-                tag_name
-                and tag_name in self.tag_cooldowns
-                and (now - self.tag_cooldowns[tag_name]["time"]) < Cooldowns.tags
-                and self.tag_cooldowns[tag_name]["channel"] == ctx.channel.id
-            )
+    async def display_tag(self, ctx: Context, tag_name: str = None) -> bool:
+        """
+        Show contents of the tag `tag_name` in `ctx` and return True if something is shown.
 
-            if cooldown_conditions:
-                return True
-            return False
+        If a tag is not found, display similar tag names as suggestions. If a tag is not specified,
+        display a paginated embed of all tags.
 
-        if _command_on_cooldown(tag_name):
+        Tags are on cooldowns on a per-tag, per-channel basis. If a tag is on cooldown, display
+        nothing and return False.
+        """
+        if self.command_on_cooldown(ctx, tag_name):
             time_left = Cooldowns.tags - (time.time() - self.tag_cooldowns[tag_name]["time"])
             log.warning(f"{ctx.author} tried to get the '{tag_name}' tag, but the tag is on cooldown. "
                         f"Cooldown ends in {time_left:.1f} seconds.")
@@ -173,9 +171,9 @@ class Tags(Cog):
         return False
 
     @tags_group.command(name='get', aliases=('show', 'g'))
-    async def _get_command(self, ctx: Context, *, tag_name: TagNameConverter = None) -> None:
-        """Get a specified tag, or a list of related tags if no tag is specified."""
-        await self.get_command(ctx, tag_name)
+    async def get_command(self, ctx: Context, *, tag_name: TagNameConverter = None) -> None:
+        """Get a specified tag, or a list of all tags if no tag is specified."""
+        await self.display_tag(ctx, tag_name)
 
     @tags_group.command(name='set', aliases=('add', 's'))
     @with_role(*MODERATION_ROLES)
