@@ -2,6 +2,7 @@ import contextlib
 import difflib
 import logging
 
+from discord import Embed
 from discord.ext.commands import (
     BadArgument,
     BotMissingPermissions,
@@ -19,7 +20,7 @@ from discord.ext.commands import Cog, Context
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Channels
+from bot.constants import Channels, Icons
 from bot.decorators import InChannelCheckFailure
 
 log = logging.getLogger(__name__)
@@ -110,8 +111,11 @@ class ErrorHandler(Cog):
                 with contextlib.suppress(CommandError):
                     if similar_command.can_run(ctx):
                         misspelled_content = ctx.message.content
+                        e = Embed()
+                        e.set_author(name="Did you mean:", icon_url=Icons.questionmark)
+                        e.description = f"{misspelled_content.replace(command_name, similar_command_name)}"
                         await ctx.send(
-                            f"Did you mean:\n**{misspelled_content.replace(command_name, similar_command_name)}**",
+                            embed=e,
                             delete_after=7.0
                         )
 
