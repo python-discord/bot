@@ -15,7 +15,7 @@ from discord.ext.commands import (
     UserInputError,
 )
 from discord.ext.commands import Cog, Context
-from sentry_sdk import configure_scope
+from sentry_sdk import push_scope
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
@@ -149,7 +149,7 @@ class ErrorHandler(Cog):
             f"```{e.__class__.__name__}: {e}```"
         )
 
-        with configure_scope() as scope:
+        with push_scope() as scope:
             scope.user = {
                 "id": ctx.author.id,
                 "username": str(ctx.author)
