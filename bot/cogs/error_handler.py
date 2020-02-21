@@ -120,7 +120,7 @@ class ErrorHandler(Cog):
                 misspelled_content = ctx.message.content
                 e = Embed()
                 e.set_author(name="Did you mean:", icon_url=Icons.questionmark)
-                e.description = f"{misspelled_content.replace(command_name, similar_command_name)}"
+                e.description = f"{misspelled_content.replace(command_name, similar_command_name, 1)}"
                 await ctx.send(embed=e, delete_after=7.0)
 
         elif isinstance(e, BadArgument):
