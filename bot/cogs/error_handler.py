@@ -157,7 +157,15 @@ class ErrorHandler(Cog):
 
             scope.set_tag("command", ctx.command.qualified_name)
             scope.set_tag("message_id", ctx.message.id)
+            scope.set_tag("channel_id", ctx.channel.id)
+
             scope.set_extra("full_message", ctx.message.content)
+
+            if ctx.guild is not None:
+                scope.set_extra(
+                    "jump_to",
+                    f"https://discordapp.com/channels/{ctx.guild.id}/{ctx.channel.id}/{ctx.message.id}"
+                )
 
             log.error(f"Error executing command invoked by {ctx.message.author}: {ctx.message.content}", exc_info=e)
 
