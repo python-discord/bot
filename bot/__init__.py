@@ -40,6 +40,6 @@ root_log.setLevel(TRACE_LEVEL if DEBUG_MODE else logging.INFO)
 root_log.addHandler(stream_handler)
 root_log.addHandler(file_handler)
 
-logging.getLogger("discord").setLevel(logging.ERROR)
-logging.getLogger("websockets").setLevel(logging.ERROR)
+logging.getLogger("discord").setLevel(logging.WARNING)
+logging.getLogger("websockets").setLevel(logging.WARNING)
 logging.getLogger(__name__).setLevel(TRACE_LEVEL)
