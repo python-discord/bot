@@ -1,12 +1,16 @@
 import discord
 import sentry_sdk
 from discord.ext.commands import when_mentioned_or
+from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 
 from bot import patches
 from bot.bot import Bot
 from bot.constants import Bot as BotConfig, DEBUG_MODE
 
-sentry_sdk.init(BotConfig.sentry_dsn)
+sentry_sdk.init(
+    dsn=BotConfig.sentry_dsn,
+    integrations=[AioHttpIntegration()]
+)
 
 bot = Bot(
     command_prefix=when_mentioned_or(BotConfig.prefix),
