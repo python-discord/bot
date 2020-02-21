@@ -106,7 +106,7 @@ class Information(Cog):
 
         # How many of each type of channel?
         channels = Counter(c.type for c in ctx.guild.channels)
-        channel_counts = "".join(sorted(f"{str(ch).title()} channels: {channels[ch]} \n" for ch in channels)).strip()
+        channel_counts = "".join(sorted(f"{str(ch).title()} channels: {channels[ch]}\n" for ch in channels)).strip()
 
         # How many of each user status?
         statuses = Counter(member.status for member in ctx.guild.members)
