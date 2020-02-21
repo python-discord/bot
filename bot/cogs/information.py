@@ -3,6 +3,7 @@ import logging
 import pprint
 import textwrap
 from collections import Counter, defaultdict
+from string import Template
 from typing import Any, Mapping, Optional, Union
 
 from discord import Colour, Embed, Member, Message, Role, Status, utils
@@ -109,10 +110,14 @@ class Information(Cog):
 
         # How many of each user status?
         statuses = Counter(member.status for member in ctx.guild.members)
+        embed = Embed(colour=Colour.blurple())
 
-        embed = Embed(
-            colour=Colour.blurple(),
-            description=textwrap.dedent(f"""
+        # Because channel_counts lacks leading whitespace, it breaks the dedent if it's inserted directly by the
+        # f-string. While this is correctly formated by Discord, it makes unit testing difficult. To keep the formatting
+        # without joining a tuple of strings we can use a Template string to insert the already-formatted channel_counts
+        # after the dedent is made.
+        embed.description = Template(
+            textwrap.dedent(f"""
                 **Server information**
                 Created: {created}
                 Voice region: {region}
@@ -121,7 +126,7 @@ class Information(Cog):
                 **Counts**
                 Members: {member_count:,}
                 Roles: {roles}
-                {channel_counts}
+                $channel_counts
 
                 **Members**
                 {constants.Emojis.status_online} {statuses[Status.online]:,}
@@ -129,7 +134,7 @@ class Information(Cog):
                 {constants.Emojis.status_dnd} {statuses[Status.dnd]:,}
                 {constants.Emojis.status_offline} {statuses[Status.offline]:,}
             """)
-        )
+        ).substitute({"channel_counts": channel_counts})
         embed.set_thumbnail(url=ctx.guild.icon_url)
 
         await ctx.send(embed=embed)
