@@ -108,16 +108,20 @@ class ErrorHandler(Cog):
                 similar_command_name = similar_command_data[0]
                 similar_command = self.bot.get_command(similar_command_name)
 
-                with contextlib.suppress(CommandError):
-                    if similar_command.can_run(ctx):
-                        misspelled_content = ctx.message.content
-                        e = Embed()
-                        e.set_author(name="Did you mean:", icon_url=Icons.questionmark)
-                        e.description = f"{misspelled_content.replace(command_name, similar_command_name)}"
-                        await ctx.send(
-                            embed=e,
-                            delete_after=7.0
-                        )
+                log_msg = "Cancelling attempt to suggest a command due to failed checks."
+                try:
+                    if not similar_command.can_run(ctx):
+                        log.debug(log_msg)
+                        return
+                except CommandError as cmd_error:
+                    log.debug(log_msg)
+                    await self.on_command_error(ctx, cmd_error)
+
+                misspelled_content = ctx.message.content
+                e = Embed()
+                e.set_author(name="Did you mean:", icon_url=Icons.questionmark)
+                e.description = f"{misspelled_content.replace(command_name, similar_command_name)}"
+                await ctx.send(embed=e, delete_after=7.0)
 
         elif isinstance(e, BadArgument):
             await ctx.send(f"Bad argument: {e}\n")
