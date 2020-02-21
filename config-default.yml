@@ -1,6 +1,7 @@
 bot:
     prefix:      "!"
     token:       !ENV "BOT_TOKEN"
+    sentry_dsn:  !ENV "BOT_SENTRY_DSN"
 
     cooldowns:
         # Per channel, per tag.
