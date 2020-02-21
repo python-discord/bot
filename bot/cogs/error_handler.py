@@ -15,7 +15,7 @@ from discord.ext.commands import (
     UserInputError,
 )
 from discord.ext.commands import Cog, Context
-from sentry_sdk import capture_exception, configure_scope
+from sentry_sdk import configure_scope
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
@@ -159,7 +159,7 @@ class ErrorHandler(Cog):
             scope.set_tag("message_id", ctx.message.id)
             scope.set_extra("full_message", ctx.message.content)
 
-            capture_exception(e)
+            log.error(f"Error executing command invoked by {ctx.message.author}: {ctx.message.content}", exc_info=e)
 
 
 def setup(bot: Bot) -> None:
