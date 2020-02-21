@@ -193,7 +193,7 @@ class Bot(metaclass=YAMLGetter):
 
     prefix: str
     token: str
-
+    sentry_dsn: str
 
 class Filter(metaclass=YAMLGetter):
     section = "filter"
@@ -257,6 +257,7 @@ class Emojis(metaclass=YAMLGetter):
     status_dnd: str
 
     failmail: str
+    trashcan: str
 
     bullet: str
     new: str
@@ -359,6 +360,7 @@ class Channels(metaclass=YAMLGetter):
     admins: int
     admin_spam: int
     announcements: int
+    attachment_log: int
     big_brother_logs: int
     bot: int
     checkpoint_test: int

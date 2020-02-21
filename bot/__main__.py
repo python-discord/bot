@@ -1,10 +1,14 @@
 import discord
+import sentry_sdk
 from discord.ext.commands import when_mentioned_or
 
 from bot import patches
 from bot.bot import Bot
 from bot.constants import Bot as BotConfig, DEBUG_MODE
 
+sentry_sdk.init(
+    dsn=BotConfig.sentry_dsn
+)
 
 bot = Bot(
     command_prefix=when_mentioned_or(BotConfig.prefix),
@@ -40,7 +44,6 @@ bot.load_extension("bot.cogs.duck_pond")
 bot.load_extension("bot.cogs.free")
 bot.load_extension("bot.cogs.information")
 bot.load_extension("bot.cogs.jams")
-bot.load_extension("bot.cogs.metrics")
 bot.load_extension("bot.cogs.moderation")
 bot.load_extension("bot.cogs.off_topic_names")
 bot.load_extension("bot.cogs.reddit")
