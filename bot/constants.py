@@ -406,6 +406,7 @@ class Webhooks(metaclass=YAMLGetter):
     big_brother: int
     reddit: int
     duck_pond: int
+    dev_log: int
 
 
 class Roles(metaclass=YAMLGetter):

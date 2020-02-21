@@ -68,9 +68,16 @@ class Bot(commands.Bot):
             return
 
         if not guild.roles or not guild.members or not guild.channels:
-            log.warning(
-                "Guild available event was dispatched but the cache appears to still be empty!"
-            )
+            msg = "Guild available event was dispatched but the cache appears to still be empty!"
+            log.warning(msg)
+
+            try:
+                webhook = await self.fetch_webhook(constants.Webhooks.dev_log)
+            except discord.HTTPException as e:
+                log.error(f"Failed to fetch webhook to send empty cache warning: status {e.status}")
+            else:
+                await webhook.send(f"<@&{constants.Roles.admin}> {msg}")
+
             return
 
         self._guild_available.set()
