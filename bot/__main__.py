@@ -1,10 +1,23 @@
+import logging
+
 import discord
+import sentry_sdk
 from discord.ext.commands import when_mentioned_or
+from sentry_sdk.integrations.logging import LoggingIntegration
 
 from bot import patches
 from bot.bot import Bot
 from bot.constants import Bot as BotConfig, DEBUG_MODE
 
+sentry_logging = LoggingIntegration(
+    level=logging.TRACE,
+    event_level=logging.WARNING
+)
+
+sentry_sdk.init(
+    dsn=BotConfig.sentry_dsn,
+    integrations=[sentry_logging]
+)
 
 bot = Bot(
     command_prefix=when_mentioned_or(BotConfig.prefix),
