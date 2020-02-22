@@ -108,7 +108,7 @@ class ErrorHandler(Cog):
 
                 log_msg = "Cancelling attempt to suggest a command due to failed checks."
                 try:
-                    if not similar_command.can_run(ctx):
+                    if not await similar_command.can_run(ctx):
                         log.debug(log_msg)
                         return
                 except CommandError as cmd_error:
