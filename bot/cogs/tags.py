@@ -155,7 +155,7 @@ class Tags(Cog):
                     description="**There are no tags in the database!**",
                     colour=Colour.red()
                 ))
-                return False
+                return True
             else:
                 embed: Embed = Embed(title="**Current tags**")
                 await LinePaginator.paginate(
