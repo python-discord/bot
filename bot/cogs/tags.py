@@ -146,7 +146,7 @@ class Tags(Cog):
                     title='Did you mean ...',
                     description='\n'.join(tag['title'] for tag in founds[:10])
                 ))
-                return True
+                return False
 
         else:
             tags = self._cache.values()
