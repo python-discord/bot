@@ -77,7 +77,7 @@ class ErrorHandler(Cog):
             if not ctx.channel.id == Channels.verification:
                 tags_cog = self.bot.get_cog("Tags")
                 tags_get_command = self.bot.get_command("tags get")
-                if not tags_cog and not tags_get_command:
+                if not tags_cog or not tags_get_command:
                     return
 
                 ctx.invoked_from_error_handler = True
