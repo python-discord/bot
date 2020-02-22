@@ -98,12 +98,10 @@ class ErrorHandler(Cog):
 
                 # No similar tag found, or tag on cooldown -
                 # searching for a similar command
-                raw_commands = [
-                    (cmd.name, *cmd.aliases)
-                    for cmd in self.bot.walk_commands()
-                    if not cmd.hidden
-                ]
-                raw_commands = [c for data in raw_commands for c in data]
+                raw_commands = []
+                for cmd in self.bot.walk_commands():
+                    if not cmd.hidden:
+                        raw_commands += (cmd.name, *cmd.aliases)
                 similar_command_data = difflib.get_close_matches(command_name, raw_commands, 1)
                 similar_command_name = similar_command_data[0]
                 similar_command = self.bot.get_command(similar_command_name)
@@ -116,6 +114,7 @@ class ErrorHandler(Cog):
                 except CommandError as cmd_error:
                     log.debug(log_msg)
                     await self.on_command_error(ctx, cmd_error)
+                    return
 
                 misspelled_content = ctx.message.content
                 e = Embed()
