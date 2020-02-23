@@ -117,7 +117,7 @@ guild:
         user_event_announcements:   &USER_EVENT_A   592000283102674944
 
         # Development
-        devcontrib:         &DEV_CONTRIB    635950537262759947
+        dev_contrib:        &DEV_CONTRIB    635950537262759947
         dev_log:            &DEV_LOG        622895325144940554
 
         # Discussion
