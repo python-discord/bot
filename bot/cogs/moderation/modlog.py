@@ -87,7 +87,7 @@ class ModLog(Cog, name="ModLog"):
         title: t.Optional[str],
         text: str,
         thumbnail: t.Optional[t.Union[str, discord.Asset]] = None,
-        channel_id: int = Channels.modlog,
+        channel_id: int = Channels.mod_log,
         ping_everyone: bool = False,
         files: t.Optional[t.List[discord.File]] = None,
         content: t.Optional[str] = None,
@@ -377,7 +377,7 @@ class ModLog(Cog, name="ModLog"):
             Icons.user_ban, Colours.soft_red,
             "User banned", f"{member} (`{member.id}`)",
             thumbnail=member.avatar_url_as(static_format="png"),
-            channel_id=Channels.userlog
+            channel_id=Channels.user_log
         )
 
     @Cog.listener()
@@ -399,7 +399,7 @@ class ModLog(Cog, name="ModLog"):
             Icons.sign_in, Colours.soft_green,
             "User joined", message,
             thumbnail=member.avatar_url_as(static_format="png"),
-            channel_id=Channels.userlog
+            channel_id=Channels.user_log
         )
 
     @Cog.listener()
@@ -416,7 +416,7 @@ class ModLog(Cog, name="ModLog"):
             Icons.sign_out, Colours.soft_red,
             "User left", f"{member} (`{member.id}`)",
             thumbnail=member.avatar_url_as(static_format="png"),
-            channel_id=Channels.userlog
+            channel_id=Channels.user_log
         )
 
     @Cog.listener()
@@ -433,7 +433,7 @@ class ModLog(Cog, name="ModLog"):
             Icons.user_unban, Colour.blurple(),
             "User unbanned", f"{member} (`{member.id}`)",
             thumbnail=member.avatar_url_as(static_format="png"),
-            channel_id=Channels.modlog
+            channel_id=Channels.mod_log
         )
 
     @Cog.listener()
@@ -529,7 +529,7 @@ class ModLog(Cog, name="ModLog"):
             Icons.user_update, Colour.blurple(),
             "Member updated", message,
             thumbnail=after.avatar_url_as(static_format="png"),
-            channel_id=Channels.userlog
+            channel_id=Channels.user_log
         )
 
     @Cog.listener()

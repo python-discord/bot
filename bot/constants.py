@@ -362,10 +362,10 @@ class Channels(metaclass=YAMLGetter):
     announcements: int
     attachment_log: int
     big_brother_logs: int
-    bot: int
+    bot_commands: int
     defcon: int
     devcontrib: int
-    devlog: int
+    dev_log: int
     esoteric: int
     help_0: int
     help_1: int
@@ -381,16 +381,16 @@ class Channels(metaclass=YAMLGetter):
     mod_spam: int
     mods: int
     mod_alerts: int
-    modlog: int
+    mod_log: int
     off_topic_0: int
     off_topic_1: int
     off_topic_2: int
     organisation: int
-    python: int
+    python_discussion: int
     reddit: int
     talent_pool: int
-    userlog: int
-    user_event_a: int
+    user_log: int
+    user_event_announcements: int
     verification: int
     voice_log: int
 

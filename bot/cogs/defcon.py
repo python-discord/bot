@@ -68,7 +68,7 @@ class Defcon(Cog):
 
         except Exception:  # Yikes!
             log.exception("Unable to get DEFCON settings!")
-            await self.bot.get_channel(Channels.devlog).send(
+            await self.bot.get_channel(Channels.dev_log).send(
                 f"<@&{Roles.admins}> **WARNING**: Unable to get DEFCON settings!"
             )
 
