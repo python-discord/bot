@@ -59,7 +59,7 @@ class Defcon(Cog):
 
     async def sync_settings(self) -> None:
         """On cog load, try to synchronize DEFCON settings to the API."""
-        await self.bot.wait_until_ready()
+        await self.bot.wait_until_guild_available()
         self.channel = await self.bot.fetch_channel(Channels.defcon)
 
         try:
