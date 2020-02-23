@@ -365,6 +365,7 @@ class Channels(metaclass=YAMLGetter):
     bot: int
     checkpoint_test: int
     defcon: int
+    devcontrib: int
     devlog: int
     devtest: int
     esoteric: int
@@ -432,7 +433,7 @@ class Guild(metaclass=YAMLGetter):
     id: int
     ignored: List[int]
     staff_channels: List[int]
-
+    reminder_whitelist: List[int]
 
 class Keys(metaclass=YAMLGetter):
     section = "keys"
