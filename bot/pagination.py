@@ -301,6 +301,7 @@ class ImagePaginator(Paginator):
         self._current_page = [prefix]
         self.images = []
         self._pages = []
+        self._count = 0
 
     def add_line(self, line: str = '', *, empty: bool = False) -> None:
         """Adds a line to each page."""
