@@ -116,7 +116,6 @@ class Reminders(Scheduler, Cog):
         """Send the reminder."""
         is_valid, user, channel = self.ensure_valid_reminder(reminder)
         if not is_valid:
-            await self._delete_reminder(reminder["id"])
             return
 
         embed = discord.Embed()
