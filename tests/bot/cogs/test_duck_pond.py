@@ -312,7 +312,7 @@ class DuckPondTests(base.LoggingTestsMixin, unittest.IsolatedAsyncioTestCase):
         self.cog.webhook = helpers.MockAsyncWebhook()
         log = logging.getLogger("bot.cogs.duck_pond")
 
-        for side_effect in side_effects:
+        for side_effect in side_effects:  # pragma: no cover
             send_attachments.side_effect = side_effect
             with patch(f"{MODULE_PATH}.DuckPond.send_webhook", new_callable=AsyncMock) as send_webhook:
                 with self.subTest(side_effect=type(side_effect).__name__):

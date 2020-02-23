@@ -43,7 +43,7 @@ class TimeTests(unittest.TestCase):
         for max_units in test_cases:
             with self.subTest(max_units=max_units), self.assertRaises(ValueError) as error:
                 time.humanize_delta(relativedelta(days=2, hours=2), 'hours', max_units)
-                self.assertEqual(str(error), 'max_units must be positive')
+            self.assertEqual(str(error.exception), 'max_units must be positive')
 
     def test_parse_rfc1123(self):
         """Testing parse_rfc1123."""
