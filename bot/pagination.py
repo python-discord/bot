@@ -15,7 +15,7 @@ RIGHT_EMOJI = "\u27A1"   # [:arrow_right:]
 LAST_EMOJI = "\u23ED"    # [:track_next:]
 DELETE_EMOJI = constants.Emojis.trashcan  # [:trashcan:]
 
-PAGINATION_EMOJI = [FIRST_EMOJI, LEFT_EMOJI, RIGHT_EMOJI, LAST_EMOJI, DELETE_EMOJI]
+PAGINATION_EMOJI = (FIRST_EMOJI, LEFT_EMOJI, RIGHT_EMOJI, LAST_EMOJI, DELETE_EMOJI)
 
 log = logging.getLogger(__name__)
 

@@ -42,4 +42,4 @@ root_log.addHandler(file_handler)
 
 logging.getLogger("discord").setLevel(logging.WARNING)
 logging.getLogger("websockets").setLevel(logging.WARNING)
-logging.getLogger(__name__).setLevel(TRACE_LEVEL)
+logging.getLogger(__name__)
