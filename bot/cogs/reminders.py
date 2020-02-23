@@ -2,12 +2,12 @@ import asyncio
 import logging
 import random
 import textwrap
+import typing as t
 from datetime import datetime, timedelta
 from operator import itemgetter
-from typing import Optional
 
+import discord
 from dateutil.relativedelta import relativedelta
-from discord import Colour, Embed, Message
 from discord.ext.commands import Cog, Context, group
 
 from bot.bot import Bot
@@ -45,6 +45,10 @@ class Reminders(Scheduler, Cog):
         loop = asyncio.get_event_loop()
 
         for reminder in response:
+            is_valid, *_ = self.ensure_valid_reminder(reminder)
+            if not is_valid:
+                continue
+
             remind_at = datetime.fromisoformat(reminder['expiration'][:-1])
 
             # If the reminder is already overdue ...
@@ -55,11 +59,26 @@ class Reminders(Scheduler, Cog):
             else:
                 self.schedule_task(loop, reminder["id"], reminder)
 
+    def ensure_valid_reminder(self, reminder: dict) -> t.Tuple[bool, discord.User, discord.TextChannel]:
+        """Ensure reminder author and channel can be fetched otherwise delete the reminder."""
+        user = self.bot.get_user(reminder['author'])
+        channel = self.bot.get_channel(reminder['channel_id'])
+        is_valid = True
+        if not user or not channel:
+            is_valid = False
+            log.info(
+                f"Reminder {reminder['id']} invalid: "
+                f"User {reminder['author']}={user}, Channel {reminder['channel_id']}={channel}."
+            )
+            asyncio.create_task(self._delete_reminder(reminder['id']))
+
+        return is_valid, user, channel
+
     @staticmethod
     async def _send_confirmation(ctx: Context, on_success: str) -> None:
         """Send an embed confirming the reminder change was made successfully."""
-        embed = Embed()
-        embed.colour = Colour.green()
+        embed = discord.Embed()
+        embed.colour = discord.Colour.green()
         embed.title = random.choice(POSITIVE_REPLIES)
         embed.description = on_success
         await ctx.send(embed=embed)
@@ -95,11 +114,12 @@ class Reminders(Scheduler, Cog):
 
     async def send_reminder(self, reminder: dict, late: relativedelta = None) -> None:
         """Send the reminder."""
-        channel = self.bot.get_channel(reminder["channel_id"])
-        user = self.bot.get_user(reminder["author"])
+        is_valid, user, channel = self.ensure_valid_reminder(reminder)
+        if not is_valid:
+            return
 
-        embed = Embed()
-        embed.colour = Colour.blurple()
+        embed = discord.Embed()
+        embed.colour = discord.Colour.blurple()
         embed.set_author(
             icon_url=Icons.remind_blurple,
             name="It has arrived!"
@@ -111,7 +131,7 @@ class Reminders(Scheduler, Cog):
             embed.description += f"\n[Jump back to when you created the reminder]({reminder['jump_url']})"
 
         if late:
-            embed.colour = Colour.red()
+            embed.colour = discord.Colour.red()
             embed.set_author(
                 icon_url=Icons.remind_red,
                 name=f"Sorry it arrived {humanize_delta(late, max_units=2)} late!"
@@ -129,20 +149,20 @@ class Reminders(Scheduler, Cog):
         await ctx.invoke(self.new_reminder, expiration=expiration, content=content)
 
     @remind_group.command(name="new", aliases=("add", "create"))
-    async def new_reminder(self, ctx: Context, expiration: Duration, *, content: str) -> Optional[Message]:
+    async def new_reminder(self, ctx: Context, expiration: Duration, *, content: str) -> t.Optional[discord.Message]:
         """
         Set yourself a simple reminder.
 
         Expiration is parsed per: http://strftime.org/
         """
-        embed = Embed()
+        embed = discord.Embed()
 
         # If the user is not staff, we need to verify whether or not to make a reminder at all.
         if without_role_check(ctx, *STAFF_ROLES):
 
             # If they don't have permission to set a reminder in this channel
             if ctx.channel.id not in WHITELISTED_CHANNELS:
-                embed.colour = Colour.red()
+                embed.colour = discord.Colour.red()
                 embed.title = random.choice(NEGATIVE_REPLIES)
                 embed.description = "Sorry, you can't do that here!"
 
@@ -159,7 +179,7 @@ class Reminders(Scheduler, Cog):
             # Let's limit this, so we don't get 10 000
             # reminders from kip or something like that :P
             if len(active_reminders) > MAXIMUM_REMINDERS:
-                embed.colour = Colour.red()
+                embed.colour = discord.Colour.red()
                 embed.title = random.choice(NEGATIVE_REPLIES)
                 embed.description = "You have too many active reminders!"
 
@@ -189,7 +209,7 @@ class Reminders(Scheduler, Cog):
         self.schedule_task(loop, reminder["id"], reminder)
 
     @remind_group.command(name="list")
-    async def list_reminders(self, ctx: Context) -> Optional[Message]:
+    async def list_reminders(self, ctx: Context) -> t.Optional[discord.Message]:
         """View a paginated embed of all reminders for your user."""
         # Get all the user's reminders from the database.
         data = await self.bot.api_client.get(
@@ -222,8 +242,8 @@ class Reminders(Scheduler, Cog):
 
             lines.append(text)
 
-        embed = Embed()
-        embed.colour = Colour.blurple()
+        embed = discord.Embed()
+        embed.colour = discord.Colour.blurple()
         embed.title = f"Reminders for {ctx.author}"
 
         # Remind the user that they have no reminders :^)
@@ -232,7 +252,7 @@ class Reminders(Scheduler, Cog):
             return await ctx.send(embed=embed)
 
         # Construct the embed and paginate it.
-        embed.colour = Colour.blurple()
+        embed.colour = discord.Colour.blurple()
 
         await LinePaginator.paginate(
             lines,
