@@ -114,13 +114,11 @@ guild:
 
     channels:
         announcements:                    354619224620138496
-        checkpoint_test:                  422077681434099723
         user_event_a:      &USER_EVENT_A  592000283102674944
 
         # Development
         devcontrib:        &DEV_CONTRIB   635950537262759947
         devlog:            &DEVLOG        622895325144940554
-        devtest:           &DEVTEST       414574275865870337
 
         # Discussion
         meta:                             429409067623251969

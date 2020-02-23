@@ -40,7 +40,6 @@ class BotCog(Cog, name="Bot"):
         # These channels will also work, but will not be subject to cooldown
         self.channel_whitelist = (
             Channels.bot,
-            Channels.devtest,
         )
 
         # Stores improperly formatted Python codeblock message ids and the corresponding bot message
