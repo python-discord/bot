@@ -174,14 +174,14 @@ async def func():  # (None,) -> Any
         await ctx.send(f"```py\n{out}```", embed=embed)
 
     @group(name='internal', aliases=('int',))
-    @with_role(Roles.owner, Roles.admin)
+    @with_role(Roles.owners, Roles.admins)
     async def internal_group(self, ctx: Context) -> None:
         """Internal commands. Top secret!"""
         if not ctx.invoked_subcommand:
             await ctx.invoke(self.bot.get_command("help"), "internal")
 
     @internal_group.command(name='eval', aliases=('e',))
-    @with_role(Roles.admin, Roles.owner)
+    @with_role(Roles.admins, Roles.owners)
     async def eval(self, ctx: Context, *, code: str) -> None:
         """Run eval in a REPL-like format."""
         code = code.strip("`")

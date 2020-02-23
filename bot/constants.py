@@ -409,19 +409,19 @@ class Roles(metaclass=YAMLGetter):
     section = "guild"
     subsection = "roles"
 
-    admin: int
+    admins: int
     announcements: int
-    champion: int
-    contributor: int
-    core_developer: int
+    code_jam_champions: int
+    contributors: int
+    core_developers: int
     helpers: int
-    jammer: int
-    moderator: int
+    jammers: int
+    moderators: int
     muted: int
-    owner: int
+    owners: int
     partners: int
-    rockstars: int
-    team_leader: int
+    python_community: int
+    team_leaders: int
     verified: int  # This is the Developers role on PyDis, here named verified for readability reasons.
 
 
@@ -570,8 +570,8 @@ BOT_DIR = os.path.dirname(__file__)
 PROJECT_ROOT = os.path.abspath(os.path.join(BOT_DIR, os.pardir))
 
 # Default role combinations
-MODERATION_ROLES = Roles.moderator, Roles.admin, Roles.owner
-STAFF_ROLES = Roles.helpers, Roles.moderator, Roles.admin, Roles.owner
+MODERATION_ROLES = Roles.moderators, Roles.admins, Roles.owners
+STAFF_ROLES = Roles.helpers, Roles.moderators, Roles.admins, Roles.owners
 
 # Roles combinations
 STAFF_CHANNELS = Guild.staff_channels

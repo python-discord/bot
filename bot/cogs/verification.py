@@ -38,7 +38,7 @@ If you'd like to unsubscribe from the announcement notifications, simply send `!
 
 PERIODIC_PING = (
     f"@everyone To verify that you have read our rules, please type `{BotConfig.prefix}accept`."
-    f" If you encounter any problems during the verification process, ping the <@&{Roles.admin}> role in this channel."
+    f" If you encounter any problems during the verification process, ping the <@&{Roles.admins}> role in this channel."
 )
 BOT_MESSAGE_DELETE_DELAY = 10
 

@@ -34,7 +34,7 @@ RAW_CODE_REGEX = re.compile(
 )
 
 MAX_PASTE_LEN = 1000
-EVAL_ROLES = (Roles.helpers, Roles.moderator, Roles.admin, Roles.owner, Roles.rockstars, Roles.partners)
+EVAL_ROLES = (Roles.helpers, Roles.moderators, Roles.admins, Roles.owners, Roles.python_community, Roles.partners)
 
 
 class Snekbox(Cog):

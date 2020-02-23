@@ -19,7 +19,7 @@ class InformationCogTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.moderator_role = helpers.MockRole(name="Moderator", id=constants.Roles.moderator)
+        cls.moderator_role = helpers.MockRole(name="Moderator", id=constants.Roles.moderators)
 
     def setUp(self):
         """Sets up fresh objects for each test."""

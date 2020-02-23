@@ -220,7 +220,7 @@ class Tags(Cog):
         ))
 
     @tags_group.command(name='delete', aliases=('remove', 'rm', 'd'))
-    @with_role(Roles.admin, Roles.owner)
+    @with_role(Roles.admins, Roles.owners)
     async def delete_command(self, ctx: Context, *, tag_name: TagNameConverter) -> None:
         """Remove a tag from the database."""
         await self.bot.api_client.delete(f'bot/tags/{tag_name}')
