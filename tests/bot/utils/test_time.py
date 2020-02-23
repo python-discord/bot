@@ -1,12 +1,11 @@
 import asyncio
 import unittest
 from datetime import datetime, timezone
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from dateutil.relativedelta import relativedelta
 
 from bot.utils import time
-from tests.helpers import AsyncMock
 
 
 class TimeTests(unittest.TestCase):

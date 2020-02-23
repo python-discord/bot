@@ -2,7 +2,7 @@ import asyncio
 import logging
 import typing
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import discord
 
@@ -293,8 +293,8 @@ class DuckPondTests(base.LoggingTestsMixin, unittest.IsolatedAsyncioTestCase):
         )
 
         for message, expect_webhook_call, expect_attachment_call in test_values:
-            with patch(send_webhook_path, new_callable=helpers.AsyncMock) as send_webhook:
-                with patch(send_attachments_path, new_callable=helpers.AsyncMock) as send_attachments:
+            with patch(send_webhook_path, new_callable=AsyncMock) as send_webhook:
+                with patch(send_attachments_path, new_callable=AsyncMock) as send_attachments:
                     with self.subTest(clean_content=message.clean_content, attachments=message.attachments):
                         await self.cog.relay_message(message)
 
@@ -303,7 +303,7 @@ class DuckPondTests(base.LoggingTestsMixin, unittest.IsolatedAsyncioTestCase):
 
                         message.add_reaction.assert_called_once_with(self.checkmark_emoji)
 
-    @patch(f"{MODULE_PATH}.send_attachments", new_callable=helpers.AsyncMock)
+    @patch(f"{MODULE_PATH}.send_attachments", new_callable=AsyncMock)
     async def test_relay_message_handles_irretrievable_attachment_exceptions(self, send_attachments):
         """The `relay_message` method should handle irretrievable attachments."""
         message = helpers.MockMessage(clean_content="message", attachments=["attachment"])
@@ -314,15 +314,15 @@ class DuckPondTests(base.LoggingTestsMixin, unittest.IsolatedAsyncioTestCase):
 
         for side_effect in side_effects:
             send_attachments.side_effect = side_effect
-            with patch(f"{MODULE_PATH}.DuckPond.send_webhook", new_callable=helpers.AsyncMock) as send_webhook:
+            with patch(f"{MODULE_PATH}.DuckPond.send_webhook", new_callable=AsyncMock) as send_webhook:
                 with self.subTest(side_effect=type(side_effect).__name__):
                     with self.assertNotLogs(logger=log, level=logging.ERROR):
                         await self.cog.relay_message(message)
 
                     self.assertEqual(send_webhook.call_count, 2)
 
-    @patch(f"{MODULE_PATH}.DuckPond.send_webhook", new_callable=helpers.AsyncMock)
-    @patch(f"{MODULE_PATH}.send_attachments", new_callable=helpers.AsyncMock)
+    @patch(f"{MODULE_PATH}.DuckPond.send_webhook", new_callable=AsyncMock)
+    @patch(f"{MODULE_PATH}.send_attachments", new_callable=AsyncMock)
     async def test_relay_message_handles_attachment_http_error(self, send_attachments, send_webhook):
         """The `relay_message` method should handle irretrievable attachments."""
         message = helpers.MockMessage(clean_content="message", attachments=["attachment"])
@@ -456,7 +456,7 @@ class DuckPondTests(base.LoggingTestsMixin, unittest.IsolatedAsyncioTestCase):
                 channel.fetch_message.reset_mock()
 
     @patch(f"{MODULE_PATH}.DuckPond.is_staff")
-    @patch(f"{MODULE_PATH}.DuckPond.count_ducks", new_callable=helpers.AsyncMock)
+    @patch(f"{MODULE_PATH}.DuckPond.count_ducks", new_callable=AsyncMock)
     def test_on_raw_reaction_add_returns_on_message_with_green_checkmark_placed_by_bot(self, count_ducks, is_staff):
         """The `on_raw_reaction_add` event should return when the message has a green check mark placed by the bot."""
         channel_id = 31415926535
@@ -491,8 +491,8 @@ class DuckPondTests(base.LoggingTestsMixin, unittest.IsolatedAsyncioTestCase):
         payload.emoji = self.duck_pond_emoji
 
         for duck_count, should_relay in test_cases:
-            with patch(f"{MODULE_PATH}.DuckPond.relay_message", new_callable=helpers.AsyncMock) as relay_message:
-                with patch(f"{MODULE_PATH}.DuckPond.count_ducks", new_callable=helpers.AsyncMock) as count_ducks:
+            with patch(f"{MODULE_PATH}.DuckPond.relay_message", new_callable=AsyncMock) as relay_message:
+                with patch(f"{MODULE_PATH}.DuckPond.count_ducks", new_callable=AsyncMock) as count_ducks:
                     count_ducks.return_value = duck_count
                     with self.subTest(duck_count=duck_count, should_relay=should_relay):
                         await self.cog.on_raw_reaction_add(payload)
@@ -526,7 +526,7 @@ class DuckPondTests(base.LoggingTestsMixin, unittest.IsolatedAsyncioTestCase):
             (constants.DuckPond.threshold + 1, True),
         )
         for duck_count, should_re_add_checkmark in test_cases:
-            with patch(f"{MODULE_PATH}.DuckPond.count_ducks", new_callable=helpers.AsyncMock) as count_ducks:
+            with patch(f"{MODULE_PATH}.DuckPond.count_ducks", new_callable=AsyncMock) as count_ducks:
                 count_ducks.return_value = duck_count
                 with self.subTest(duck_count=duck_count, should_re_add_checkmark=should_re_add_checkmark):
                     await self.cog.on_raw_reaction_remove(payload)
