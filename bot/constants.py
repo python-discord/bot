@@ -411,7 +411,6 @@ class Roles(metaclass=YAMLGetter):
 
     admins: int
     announcements: int
-    code_jam_champions: int
     contributors: int
     core_developers: int
     helpers: int

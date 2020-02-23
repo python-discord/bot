@@ -193,7 +193,6 @@ guild:
         owners:             &OWNERS_ROLE    267627879762755584
 
         # Code Jam
-        code_jam_champions: 430492892331769857
         jammers:            591786436651646989
         team_leaders:       501324292341104650
 
