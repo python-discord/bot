@@ -2,10 +2,9 @@ import unittest
 from unittest.mock import MagicMock
 
 from bot import api
-from tests.helpers import async_test
 
 
-class APIClientTests(unittest.TestCase):
+class APIClientTests(unittest.IsolatedAsyncioTestCase):
     """Tests for the bot's API client."""
 
     @classmethod
@@ -18,7 +17,6 @@ class APIClientTests(unittest.TestCase):
         """The event loop should not be running by default."""
         self.assertFalse(api.loop_is_running())
 
-    @async_test
     async def test_loop_is_running_in_async_context(self):
         """The event loop should be running in an async context."""
         self.assertTrue(api.loop_is_running())

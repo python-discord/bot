@@ -395,11 +395,3 @@ class MockObjectTests(unittest.TestCase):
         coroutine = async_mock()
         self.assertTrue(inspect.iscoroutine(coroutine))
         self.assertIsNotNone(asyncio.run(coroutine))
-
-    def test_async_test_decorator_allows_synchronous_call_to_async_def(self):
-        """Test if the `async_test` decorator allows an `async def` to be called synchronously."""
-        @helpers.async_test
-        async def kosayoda():
-            return "return value"
-
-        self.assertEqual(kosayoda(), "return value")

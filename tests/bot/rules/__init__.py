@@ -12,7 +12,7 @@ class DisallowedCase(NamedTuple):
     n_violations: int
 
 
-class RuleTest(unittest.TestCase, metaclass=ABCMeta):
+class RuleTest(unittest.IsolatedAsyncioTestCase, metaclass=ABCMeta):
     """
     Abstract class for antispam rule test cases.
 

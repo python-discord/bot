@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import asyncio
 import collections
-import functools
 import inspect
 import itertools
 import logging
@@ -23,21 +21,6 @@ for logger in logging.Logger.manager.loggerDict.values():
         continue
 
     logger.setLevel(logging.CRITICAL)
-
-
-def async_test(wrapped):
-    """
-    Run a test case via asyncio.
-    Example:
-        >>> @async_test
-        ... async def lemon_wins():
-        ...     assert True
-    """
-
-    @functools.wraps(wrapped)
-    def wrapper(*args, **kwargs):
-        return asyncio.run(wrapped(*args, **kwargs))
-    return wrapper
 
 
 class HashableMixin(discord.mixins.EqualityComparable):

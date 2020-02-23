@@ -14,7 +14,7 @@ from tests import helpers
 MODULE_PATH = "bot.cogs.duck_pond"
 
 
-class DuckPondTests(base.LoggingTestsMixin, unittest.TestCase):
+class DuckPondTests(base.LoggingTestsMixin, unittest.IsolatedAsyncioTestCase):
     """Tests for DuckPond functionality."""
 
     @classmethod
@@ -88,7 +88,6 @@ class DuckPondTests(base.LoggingTestsMixin, unittest.TestCase):
             with self.subTest(user_type=user.name, expected_return=expected_return, actual_return=actual_return):
                 self.assertEqual(expected_return, actual_return)
 
-    @helpers.async_test
     async def test_has_green_checkmark_correctly_detects_presence_of_green_checkmark_emoji(self):
         """The `has_green_checkmark` method should only return `True` if one is present."""
         test_cases = (
@@ -172,7 +171,6 @@ class DuckPondTests(base.LoggingTestsMixin, unittest.TestCase):
         nonstaffers = [helpers.MockMember() for _ in range(nonstaff)]
         return helpers.MockReaction(emoji=emoji, users=staffers + nonstaffers)
 
-    @helpers.async_test
     async def test_count_ducks_correctly_counts_the_number_of_eligible_duck_emojis(self):
         """The `count_ducks` method should return the number of unique staffers who gave a duck."""
         test_cases = (
@@ -280,7 +278,6 @@ class DuckPondTests(base.LoggingTestsMixin, unittest.TestCase):
             with self.subTest(test_case=description, expected_count=expected_count, actual_count=actual_count):
                 self.assertEqual(expected_count, actual_count)
 
-    @helpers.async_test
     async def test_relay_message_correctly_relays_content_and_attachments(self):
         """The `relay_message` method should correctly relay message content and attachments."""
         send_webhook_path = f"{MODULE_PATH}.DuckPond.send_webhook"
@@ -307,7 +304,6 @@ class DuckPondTests(base.LoggingTestsMixin, unittest.TestCase):
                         message.add_reaction.assert_called_once_with(self.checkmark_emoji)
 
     @patch(f"{MODULE_PATH}.send_attachments", new_callable=helpers.AsyncMock)
-    @helpers.async_test
     async def test_relay_message_handles_irretrievable_attachment_exceptions(self, send_attachments):
         """The `relay_message` method should handle irretrievable attachments."""
         message = helpers.MockMessage(clean_content="message", attachments=["attachment"])
@@ -327,7 +323,6 @@ class DuckPondTests(base.LoggingTestsMixin, unittest.TestCase):
 
     @patch(f"{MODULE_PATH}.DuckPond.send_webhook", new_callable=helpers.AsyncMock)
     @patch(f"{MODULE_PATH}.send_attachments", new_callable=helpers.AsyncMock)
-    @helpers.async_test
     async def test_relay_message_handles_attachment_http_error(self, send_attachments, send_webhook):
         """The `relay_message` method should handle irretrievable attachments."""
         message = helpers.MockMessage(clean_content="message", attachments=["attachment"])
@@ -360,7 +355,6 @@ class DuckPondTests(base.LoggingTestsMixin, unittest.TestCase):
         payload.emoji.name = emoji_name
         return payload
 
-    @helpers.async_test
     async def test_payload_has_duckpond_emoji_correctly_detects_relevant_emojis(self):
         """The `on_raw_reaction_add` event handler should ignore irrelevant emojis."""
         test_values = (
@@ -434,7 +428,6 @@ class DuckPondTests(base.LoggingTestsMixin, unittest.TestCase):
 
         return channel, message, member, payload
 
-    @helpers.async_test
     async def test_on_raw_reaction_add_returns_for_bot_and_non_staff_members(self):
         """The `on_raw_reaction_add` event handler should return for bot users or non-staff members."""
         channel_id = 1234
@@ -485,7 +478,6 @@ class DuckPondTests(base.LoggingTestsMixin, unittest.TestCase):
         # Assert that we've made it past `self.is_staff`
         is_staff.assert_called_once()
 
-    @helpers.async_test
     async def test_on_raw_reaction_add_does_not_relay_below_duck_threshold(self):
         """The `on_raw_reaction_add` listener should not relay messages or attachments below the duck threshold."""
         test_cases = (
@@ -515,7 +507,6 @@ class DuckPondTests(base.LoggingTestsMixin, unittest.TestCase):
                         if should_relay:
                             relay_message.assert_called_once_with(message)
 
-    @helpers.async_test
     async def test_on_raw_reaction_remove_prevents_removal_of_green_checkmark_depending_on_the_duck_count(self):
         """The `on_raw_reaction_remove` listener prevents removal of the check mark on messages with enough ducks."""
         checkmark = helpers.MockPartialEmoji(name=self.checkmark_emoji)
