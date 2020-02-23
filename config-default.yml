@@ -1,6 +1,7 @@
 bot:
     prefix:      "!"
     token:       !ENV "BOT_TOKEN"
+    sentry_dsn:  !ENV "BOT_SENTRY_DSN"
 
     cooldowns:
         # Per channel, per tag.
@@ -119,9 +120,10 @@ guild:
         announcements:                    354619224620138496
         attachment_log:    &ATTCH_LOG     649243850006855680
         big_brother_logs:  &BBLOGS        468507907357409333
-        bot:                              267659945086812160
+        bot:               &BOT_CMD       267659945086812160
         checkpoint_test:                  422077681434099723
         defcon:            &DEFCON        464469101889454091
+        devcontrib:        &DEV_CONTRIB   635950537262759947
         devcore:                          411200599653351425
         devlog:            &DEVLOG        622895325144940554
         devtest:           &DEVTEST       414574275865870337
@@ -157,6 +159,7 @@ guild:
 
     staff_channels: [*ADMINS, *ADMIN_SPAM, *MOD_SPAM, *MODS, *HELPERS, *ORGANISATION, *DEFCON]
     ignored: [*ADMINS, *MESSAGE_LOG, *MODLOG, *ADMINS_VOICE, *STAFF_VOICE, *ATTCH_LOG]
+    reminder_whitelist: [*BOT_CMD, *DEV_CONTRIB]
 
     roles:
         admin:             &ADMIN_ROLE      267628507062992896
@@ -219,6 +222,7 @@ filter:
         - 438622377094414346  # Pyglet
         - 524691714909274162  # Panda3D
         - 336642139381301249  # discord.py
+        - 405403391410438165  # Sentdex
 
     domain_blacklist:
         - pornhub.com
@@ -305,7 +309,7 @@ urls:
     paste_service:                      !JOIN [*SCHEMA, *PASTE, "/{key}"]
 
     # Snekbox
-    snekbox_eval_api: "https://snekbox.pythondiscord.com/eval"
+    snekbox_eval_api: "http://snekbox:8060/eval"
 
     # Discord API URLs
     discord_api:        &DISCORD_API "https://discordapp.com/api/v7/"

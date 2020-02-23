@@ -76,12 +76,12 @@ class Defcon(Cog):
             if data["enabled"]:
                 self.enabled = True
                 self.days = timedelta(days=data["days"])
-                log.warning(f"DEFCON enabled: {self.days.days} days")
+                log.info(f"DEFCON enabled: {self.days.days} days")
 
             else:
                 self.enabled = False
                 self.days = timedelta(days=0)
-                log.warning(f"DEFCON disabled")
+                log.info(f"DEFCON disabled")
 
             await self.update_channel_topic()
 

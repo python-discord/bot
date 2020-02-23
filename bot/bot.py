@@ -32,8 +32,6 @@ class Bot(commands.Bot):
         self.http_session: Optional[aiohttp.ClientSession] = None
         self.api_client = api.APIClient(loop=self.loop, connector=self._connector)
 
-        log.addHandler(api.APILoggingHandler(self.api_client))
-
     def add_cog(self, cog: commands.Cog) -> None:
         """Adds a "cog" to the bot and logs the operation."""
         super().add_cog(cog)

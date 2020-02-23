@@ -193,7 +193,7 @@ class Bot(metaclass=YAMLGetter):
 
     prefix: str
     token: str
-
+    sentry_dsn: str
 
 class Filter(metaclass=YAMLGetter):
     section = "filter"
@@ -366,6 +366,7 @@ class Channels(metaclass=YAMLGetter):
     bot: int
     checkpoint_test: int
     defcon: int
+    devcontrib: int
     devcore: int
     devlog: int
     devtest: int
@@ -435,7 +436,7 @@ class Guild(metaclass=YAMLGetter):
     id: int
     ignored: List[int]
     staff_channels: List[int]
-
+    reminder_whitelist: List[int]
 
 class Keys(metaclass=YAMLGetter):
     section = "keys"
