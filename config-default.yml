@@ -160,26 +160,30 @@ guild:
     reminder_whitelist: [*BOT_CMD, *DEV_CONTRIB]
 
     roles:
-        admins:             &ADMINS_ROLE            267628507062992896
         announcements:                              463658397560995840
-        code_jam_champions:                         430492892331769857
         contributors:                               295488872404484098
-        core_developers:                            587606783669829632
         developers:                                 352427296948486144
-        helpers:                                    267630620367257601
-        jammers:                                    591786436651646989
-        moderators:         &MODS_ROLE              267629731250176001
         muted:              &MUTED_ROLE             277914926603829249
-        owners:             &OWNERS_ROLE            267627879762755584
         partners:                                   323426753857191936
         python_community:   &PYTHON_COMMUNITY_ROLE  458226413825294336
-        team_leaders:                               501324292341104650
+
+        # Staff
+        admins:             &ADMINS_ROLE    267628507062992896
+        core_developers:                    587606783669829632
+        helpers:                            267630620367257601
+        moderators:         &MODS_ROLE      267629731250176001
+        owners:             &OWNERS_ROLE    267627879762755584
+
+        # Code Jam
+        code_jam_champions: 430492892331769857
+        jammers:            591786436651646989
+        team_leaders:       501324292341104650
 
     webhooks:
-        talent_pool:                        569145364800602132
-        big_brother:                        569133704568373283
-        reddit:                             635408384794951680
-        duck_pond:                          637821475327311927
+        talent_pool:    569145364800602132
+        big_brother:    569133704568373283
+        reddit:         635408384794951680
+        duck_pond:      637821475327311927
 
 
 filter:
