@@ -45,7 +45,7 @@ class Reminders(Scheduler, Cog):
         loop = asyncio.get_event_loop()
 
         for reminder in response:
-            is_valid, *_ = self.ensure_valid_reminder(reminder)
+            is_valid, *_ = self.ensure_valid_reminder(reminder, cancel_task=False)
             if not is_valid:
                 continue
 
@@ -59,7 +59,11 @@ class Reminders(Scheduler, Cog):
             else:
                 self.schedule_task(loop, reminder["id"], reminder)
 
-    def ensure_valid_reminder(self, reminder: dict) -> t.Tuple[bool, discord.User, discord.TextChannel]:
+    def ensure_valid_reminder(
+        self,
+        reminder: dict,
+        cancel_task: bool = True
+    ) -> t.Tuple[bool, discord.User, discord.TextChannel]:
         """Ensure reminder author and channel can be fetched otherwise delete the reminder."""
         user = self.bot.get_user(reminder['author'])
         channel = self.bot.get_channel(reminder['channel_id'])
@@ -70,7 +74,7 @@ class Reminders(Scheduler, Cog):
                 f"Reminder {reminder['id']} invalid: "
                 f"User {reminder['author']}={user}, Channel {reminder['channel_id']}={channel}."
             )
-            asyncio.create_task(self._delete_reminder(reminder['id']))
+            asyncio.create_task(self._delete_reminder(reminder['id'], cancel_task))
 
         return is_valid, user, channel
 
@@ -98,12 +102,13 @@ class Reminders(Scheduler, Cog):
         # Now we can begone with it from our schedule list.
         self.cancel_task(reminder_id)
 
-    async def _delete_reminder(self, reminder_id: str) -> None:
+    async def _delete_reminder(self, reminder_id: str, cancel_task: bool = True) -> None:
         """Delete a reminder from the database, given its ID, and cancel the running task."""
         await self.bot.api_client.delete('bot/reminders/' + str(reminder_id))
 
-        # Now we can remove it from the schedule list
-        self.cancel_task(reminder_id)
+        if cancel_task:
+            # Now we can remove it from the schedule list
+            self.cancel_task(reminder_id)
 
     async def _reschedule_reminder(self, reminder: dict) -> None:
         """Reschedule a reminder object."""
