@@ -1,8 +1,9 @@
 import asyncio
 import logging
-from typing import Iterable, List, Optional, Tuple
+import typing as t
+from contextlib import suppress
 
-from discord import Embed, Member, Message, Reaction
+import discord
 from discord.abc import User
 from discord.ext.commands import Context, Paginator
 
@@ -89,12 +90,12 @@ class LinePaginator(Paginator):
     @classmethod
     async def paginate(
         cls,
-        lines: Iterable[str],
+        lines: t.List[str],
         ctx: Context,
-        embed: Embed,
+        embed: discord.Embed,
         prefix: str = "",
         suffix: str = "",
-        max_lines: Optional[int] = None,
+        max_lines: t.Optional[int] = None,
         max_size: int = 500,
         empty: bool = True,
         restrict_to_user: User = None,
@@ -102,7 +103,7 @@ class LinePaginator(Paginator):
         footer_text: str = None,
         url: str = None,
         exception_on_empty_embed: bool = False
-    ) -> Optional[Message]:
+    ) -> t.Optional[discord.Message]:
         """
         Use a paginator and set of reactions to provide pagination over a set of lines.
 
@@ -114,11 +115,11 @@ class LinePaginator(Paginator):
         Pagination will also be removed automatically if no reaction is added for five minutes (300 seconds).
 
         Example:
-        >>> embed = Embed()
+        >>> embed = discord.Embed()
         >>> embed.set_author(name="Some Operation", url=url, icon_url=icon)
-        >>> await LinePaginator.paginate((line for line in lines), ctx, embed)
+        >>> await LinePaginator.paginate([line for line in lines], ctx, embed)
         """
-        def event_check(reaction_: Reaction, user_: Member) -> bool:
+        def event_check(reaction_: discord.Reaction, user_: discord.Member) -> bool:
             """Make sure that this reaction is what we want to operate on."""
             no_restrictions = (
                 # Pagination is not restricted
@@ -281,8 +282,9 @@ class LinePaginator(Paginator):
 
                 await message.edit(embed=embed)
 
-        log.debug("Ending pagination and removing all reactions...")
-        await message.clear_reactions()
+        log.debug("Ending pagination and clearing reactions.")
+        with suppress(discord.NotFound):
+            await message.clear_reactions()
 
 
 class ImagePaginator(Paginator):
@@ -299,6 +301,7 @@ class ImagePaginator(Paginator):
         self._current_page = [prefix]
         self.images = []
         self._pages = []
+        self._count = 0
 
     def add_line(self, line: str = '', *, empty: bool = False) -> None:
         """Adds a line to each page."""
@@ -316,13 +319,13 @@ class ImagePaginator(Paginator):
     @classmethod
     async def paginate(
         cls,
-        pages: List[Tuple[str, str]],
-        ctx: Context, embed: Embed,
+        pages: t.List[t.Tuple[str, str]],
+        ctx: Context, embed: discord.Embed,
         prefix: str = "",
         suffix: str = "",
         timeout: int = 300,
         exception_on_empty_embed: bool = False
-    ) -> Optional[Message]:
+    ) -> t.Optional[discord.Message]:
         """
         Use a paginator and set of reactions to provide pagination over a set of title/image pairs.
 
@@ -334,11 +337,11 @@ class ImagePaginator(Paginator):
         Note: Pagination will be removed automatically if no reaction is added for five minutes (300 seconds).
 
         Example:
-        >>> embed = Embed()
+        >>> embed = discord.Embed()
         >>> embed.set_author(name="Some Operation", url=url, icon_url=icon)
         >>> await ImagePaginator.paginate(pages, ctx, embed)
         """
-        def check_event(reaction_: Reaction, member: Member) -> bool:
+        def check_event(reaction_: discord.Reaction, member: discord.Member) -> bool:
             """Checks each reaction added, if it matches our conditions pass the wait_for."""
             return all((
                 # Reaction is on the same message sent
@@ -445,5 +448,6 @@ class ImagePaginator(Paginator):
 
             await message.edit(embed=embed)
 
-        log.debug("Ending pagination and removing all reactions...")
-        await message.clear_reactions()
+        log.debug("Ending pagination and clearing reactions.")
+        with suppress(discord.NotFound):
+            await message.clear_reactions()
