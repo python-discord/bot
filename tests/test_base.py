@@ -3,7 +3,11 @@ import unittest
 import unittest.mock
 
 
-from tests.base import LoggingTestCase, _CaptureLogHandler
+from tests.base import LoggingTestsMixin, _CaptureLogHandler
+
+
+class LoggingTestCase(LoggingTestsMixin):
+    pass
 
 
 class LoggingTestCaseTests(unittest.TestCase):
@@ -18,18 +22,8 @@ class LoggingTestCaseTests(unittest.TestCase):
         try:
             with LoggingTestCase.assertNotLogs(self, level=logging.DEBUG):
                 pass
-        except AssertionError:
+        except AssertionError:  # pragma: no cover
             self.fail("`self.assertNotLogs` raised an AssertionError when it should not!")
-
-    @unittest.mock.patch("tests.base.LoggingTestCase.assertNotLogs")
-    def test_the_test_function_assert_not_logs_does_not_raise_with_no_logs(self, assertNotLogs):
-        """Test if test_assert_not_logs_does_not_raise_with_no_logs captures exception correctly."""
-        assertNotLogs.return_value = iter([None])
-        assertNotLogs.side_effect = AssertionError
-
-        message = "`self.assertNotLogs` raised an AssertionError when it should not!"
-        with self.assertRaises(AssertionError, msg=message):
-            self.test_assert_not_logs_does_not_raise_with_no_logs()
 
     def test_assert_not_logs_raises_correct_assertion_error_when_logs_are_emitted(self):
         """Test if LoggingTestCase.assertNotLogs raises AssertionError when logs were emitted."""

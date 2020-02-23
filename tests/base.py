@@ -1,5 +1,4 @@
 import logging
-import unittest
 from contextlib import contextmanager
 
 
@@ -16,8 +15,13 @@ class _CaptureLogHandler(logging.Handler):
         self.records.append(record)
 
 
-class LoggingTestCase(unittest.TestCase):
-    """TestCase subclass that adds more logging assertion tools."""
+class LoggingTestsMixin:
+    """
+    A mixin that defines additional test methods for logging behavior.
+
+    This mixin relies on the availability of the `fail` attribute defined by the
+    test classes included in Python's unittest method to signal test failure.
+    """
 
     @contextmanager
     def assertNotLogs(self, logger=None, level=None, msg=None):

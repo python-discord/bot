@@ -14,7 +14,7 @@ from tests import helpers
 MODULE_PATH = "bot.cogs.duck_pond"
 
 
-class DuckPondTests(base.LoggingTestCase):
+class DuckPondTests(base.LoggingTestsMixin, unittest.TestCase):
     """Tests for DuckPond functionality."""
 
     @classmethod
