@@ -192,7 +192,8 @@ class Syncer(abc.ABC):
             author = ctx.author
 
         diff = await self._get_diff(guild)
-        totals = {k: len(v) for k, v in diff._asdict().items() if v is not None}
+        diff_dict = diff._asdict()  # Ugly method for transforming the NamedTuple into a dict
+        totals = {k: len(v) for k, v in diff_dict.items() if v is not None}
         diff_size = sum(totals.values())
 
         confirmed, message = await self._get_confirmation_result(diff_size, author, message)
@@ -261,11 +262,11 @@ class RoleSyncer(Syncer):
         """Synchronise the database with the role cache of `guild`."""
         log.trace("Syncing created roles...")
         for role in diff.created:
-            await self.bot.api_client.post('bot/roles', json={**role._asdict()})
+            await self.bot.api_client.post('bot/roles', json=role._asdict())
 
         log.trace("Syncing updated roles...")
         for role in diff.updated:
-            await self.bot.api_client.put(f'bot/roles/{role.id}', json={**role._asdict()})
+            await self.bot.api_client.put(f'bot/roles/{role.id}', json=role._asdict())
 
         log.trace("Syncing deleted roles...")
         for role in diff.deleted:
@@ -334,8 +335,8 @@ class UserSyncer(Syncer):
         """Synchronise the database with the user cache of `guild`."""
         log.trace("Syncing created users...")
         for user in diff.created:
-            await self.bot.api_client.post('bot/users', json={**user._asdict()})
+            await self.bot.api_client.post('bot/users', json=user._asdict())
 
         log.trace("Syncing updated users...")
         for user in diff.updated:
-            await self.bot.api_client.put(f'bot/users/{user.id}', json={**user._asdict()})
+            await self.bot.api_client.put(f'bot/users/{user.id}', json=user._asdict())
