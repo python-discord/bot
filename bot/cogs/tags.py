@@ -116,8 +116,10 @@ class Tags(Cog):
 
         if _command_on_cooldown(tag_name):
             time_left = Cooldowns.tags - (time.time() - self.tag_cooldowns[tag_name]["time"])
-            log.warning(f"{ctx.author} tried to get the '{tag_name}' tag, but the tag is on cooldown. "
-                        f"Cooldown ends in {time_left:.1f} seconds.")
+            log.info(
+                f"{ctx.author} tried to get the '{tag_name}' tag, but the tag is on cooldown. "
+                f"Cooldown ends in {time_left:.1f} seconds."
+            )
             return
 
         await self._get_tags()
