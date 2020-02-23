@@ -7,7 +7,7 @@ from sentry_sdk.integrations.logging import LoggingIntegration
 
 from bot import patches
 from bot.bot import Bot
-from bot.constants import Bot as BotConfig, DEBUG_MODE
+from bot.constants import Bot as BotConfig
 
 sentry_logging = LoggingIntegration(
     level=logging.TRACE,
@@ -40,10 +40,8 @@ bot.load_extension("bot.cogs.clean")
 bot.load_extension("bot.cogs.extensions")
 bot.load_extension("bot.cogs.help")
 
-# Only load this in production
-if not DEBUG_MODE:
-    bot.load_extension("bot.cogs.doc")
-    bot.load_extension("bot.cogs.verification")
+bot.load_extension("bot.cogs.doc")
+bot.load_extension("bot.cogs.verification")
 
 # Feature cogs
 bot.load_extension("bot.cogs.alias")
