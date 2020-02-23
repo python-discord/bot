@@ -217,6 +217,7 @@ filter:
         - 438622377094414346  # Pyglet
         - 524691714909274162  # Panda3D
         - 336642139381301249  # discord.py
+        - 405403391410438165  # Sentdex
 
     domain_blacklist:
         - pornhub.com
