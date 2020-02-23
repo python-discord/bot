@@ -130,8 +130,11 @@ class ModManagement(commands.Cog):
         # Re-schedule infraction if the expiration has been updated
         if 'expires_at' in request_data:
             self.infractions_cog.cancel_task(new_infraction['id'])
-            loop = asyncio.get_event_loop()
-            self.infractions_cog.schedule_task(loop, new_infraction['id'], new_infraction)
+
+            # If the infraction was not marked as permanent, schedule a new expiration task
+            if request_data['expires_at']:
+                loop = asyncio.get_event_loop()
+                self.infractions_cog.schedule_task(loop, new_infraction['id'], new_infraction)
 
             log_text += f"""
                 Previous expiry: {old_infraction['expires_at'] or "Permanent"}

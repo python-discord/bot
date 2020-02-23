@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 async def wait_for_deletion(
     message: Message,
     user_ids: Sequence[Snowflake],
-    deletion_emojis: Sequence[str] = (Emojis.cross_mark,),
+    deletion_emojis: Sequence[str] = (Emojis.trashcan,),
     timeout: float = 60 * 5,
     attach_emojis: bool = True,
     client: Optional[Client] = None
@@ -40,10 +40,10 @@ async def wait_for_deletion(
             await message.add_reaction(emoji)
 
     def check(reaction: Reaction, user: Member) -> bool:
-        """Check that the deletion emoji is reacted by the approprite user."""
+        """Check that the deletion emoji is reacted by the appropriate user."""
         return (
             reaction.message.id == message.id
-            and reaction.emoji in deletion_emojis
+            and str(reaction.emoji) in deletion_emojis
             and user.id in user_ids
         )
 
