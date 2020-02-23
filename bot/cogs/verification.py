@@ -1,7 +1,8 @@
 import logging
+from contextlib import suppress
 from datetime import datetime
 
-from discord import Colour, Message, NotFound, Object
+from discord import Colour, Forbidden, Message, NotFound, Object
 from discord.ext import tasks
 from discord.ext.commands import Cog, Context, command
 
@@ -127,17 +128,13 @@ class Verification(Cog):
         await ctx.author.add_roles(Object(Roles.verified), reason="Accepted the rules")
         try:
             await ctx.author.send(WELCOME_MESSAGE)
-        except Exception:
-            # Catch the exception, in case they have DMs off or something
-            log.exception(f"Unable to send welcome message to user {ctx.author}.")
-
-        log.trace(f"Deleting the message posted by {ctx.author}.")
-
-        try:
-            self.mod_log.ignore(Event.message_delete, ctx.message.id)
-            await ctx.message.delete()
-        except NotFound:
-            log.trace("No message found, it must have been deleted by another bot.")
+        except Forbidden:
+            log.info(f"Sending welcome message failed for {ctx.author}.")
+        finally:
+            log.trace(f"Deleting accept message by {ctx.author}.")
+            with suppress(NotFound):
+                self.mod_log.ignore(Event.message_delete, ctx.message.id)
+                await ctx.message.delete()
 
     @command(name='subscribe')
     @in_channel(Channels.bot)
