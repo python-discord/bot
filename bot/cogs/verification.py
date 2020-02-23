@@ -93,19 +93,21 @@ class Verification(Cog):
                 ping_everyone=Filter.ping_everyone,
             )
 
-        ctx = await self.bot.get_context(message)  # type: Context
-
+        ctx: Context = await self.bot.get_context(message)
         if ctx.command is not None and ctx.command.name == "accept":
-            return  # They used the accept command
+            return
 
-        for role in ctx.author.roles:
-            if role.id == Roles.verified:
-                log.warning(f"{ctx.author} posted '{ctx.message.content}' "
-                            "in the verification channel, but is already verified.")
-                return  # They're already verified
+        if any(r.id == Roles.verified for r in ctx.author.roles):
+            log.info(
+                f"{ctx.author} posted '{ctx.message.content}' "
+                "in the verification channel, but is already verified."
+            )
+            return
 
-        log.debug(f"{ctx.author} posted '{ctx.message.content}' in the verification "
-                  "channel. We are providing instructions how to verify.")
+        log.debug(
+            f"{ctx.author} posted '{ctx.message.content}' in the verification "
+            "channel. We are providing instructions how to verify."
+        )
         await ctx.send(
             f"{ctx.author.mention} Please type `!accept` to verify that you accept our rules, "
             f"and gain access to the rest of the server.",
@@ -113,11 +115,8 @@ class Verification(Cog):
         )
 
         log.trace(f"Deleting the message posted by {ctx.author}")
-
-        try:
+        with suppress(NotFound):
             await ctx.message.delete()
-        except NotFound:
-            log.trace("No message found, it must have been deleted by another bot.")
 
     @command(name='accept', aliases=('verify', 'verified', 'accepted'), hidden=True)
     @without_role(Roles.verified)
