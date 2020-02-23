@@ -178,10 +178,12 @@ guild:
     roles:
         announcements:                          463658397560995840
         contributors:                           295488872404484098
-        developers:                             352427296948486144
         muted:              &MUTED_ROLE         277914926603829249
         partners:                               323426753857191936
         python_community:   &PY_COMMUNITY_ROLE  458226413825294336
+
+        # This is the Developers role on PyDis, here named verified for readability reasons
+        verified:                               352427296948486144
 
         # Staff
         admins:             &ADMINS_ROLE    267628507062992896
