@@ -180,7 +180,8 @@ guild:
         - *MOD_SPAM
         - *ORGANISATION
 
-    ignored:
+    # Modlog cog ignores events which occur in these channels
+    modlog_blacklist:
         - *ADMINS
         - *ADMINS_VOICE
         - *ATTACH_LOG

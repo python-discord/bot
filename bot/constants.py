@@ -428,7 +428,7 @@ class Guild(metaclass=YAMLGetter):
     section = "guild"
 
     id: int
-    ignored: List[int]
+    modlog_blacklist: List[int]
     staff_channels: List[int]
     reminder_whitelist: List[int]
 

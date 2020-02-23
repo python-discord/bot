@@ -538,7 +538,7 @@ class ModLog(Cog, name="ModLog"):
         channel = message.channel
         author = message.author
 
-        if message.guild.id != GuildConstant.id or channel.id in GuildConstant.ignored:
+        if message.guild.id != GuildConstant.id or channel.id in GuildConstant.modlog_blacklist:
             return
 
         self._cached_deletes.append(message.id)
@@ -591,7 +591,7 @@ class ModLog(Cog, name="ModLog"):
     @Cog.listener()
     async def on_raw_message_delete(self, event: discord.RawMessageDeleteEvent) -> None:
         """Log raw message delete event to message change log."""
-        if event.guild_id != GuildConstant.id or event.channel_id in GuildConstant.ignored:
+        if event.guild_id != GuildConstant.id or event.channel_id in GuildConstant.modlog_blacklist:
             return
 
         await asyncio.sleep(1)  # Wait here in case the normal event was fired
@@ -635,7 +635,7 @@ class ModLog(Cog, name="ModLog"):
         if (
             not msg_before.guild
             or msg_before.guild.id != GuildConstant.id
-            or msg_before.channel.id in GuildConstant.ignored
+            or msg_before.channel.id in GuildConstant.modlog_blacklist
             or msg_before.author.bot
         ):
             return
@@ -717,7 +717,7 @@ class ModLog(Cog, name="ModLog"):
         if (
             not message.guild
             or message.guild.id != GuildConstant.id
-            or message.channel.id in GuildConstant.ignored
+            or message.channel.id in GuildConstant.modlog_blacklist
             or message.author.bot
         ):
             return
@@ -769,7 +769,7 @@ class ModLog(Cog, name="ModLog"):
         """Log member voice state changes to the voice log channel."""
         if (
             member.guild.id != GuildConstant.id
-            or (before.channel and before.channel.id in GuildConstant.ignored)
+            or (before.channel and before.channel.id in GuildConstant.modlog_blacklist)
         ):
             return
 
