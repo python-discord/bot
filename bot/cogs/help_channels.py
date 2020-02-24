@@ -43,6 +43,13 @@ with Path("bot/resources/elements.json").open(encoding="utf-8") as elements_file
     ELEMENTS = json.load(elements_file)
 
 
+class ChannelTimeout(t.NamedTuple):
+    """Data for a task scheduled to make a channel dormant."""
+
+    channel: discord.TextChannel
+    timeout: int
+
+
 class HelpChannels(Scheduler, commands.Cog):
     """Manage the help channel system of the guild."""
 
@@ -175,8 +182,8 @@ class HelpChannels(Scheduler, commands.Cog):
 
         return channel
 
-    async def _scheduled_task(self, channel: discord.TextChannel, timeout: int) -> None:
-        """Make the `channel` dormant after `timeout` seconds or reschedule if it's still active."""
+    async def _scheduled_task(self, data: ChannelTimeout) -> None:
+        """Make a channel dormant after specified timeout or reschedule if it's still active."""
 
 
 def setup(bot: Bot) -> None:
