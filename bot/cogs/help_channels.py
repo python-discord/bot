@@ -1,5 +1,4 @@
 import asyncio
-import itertools
 import json
 import logging
 import typing as t
@@ -85,16 +84,25 @@ class HelpChannels(Scheduler, commands.Cog):
     async def get_available_candidate(self) -> discord.TextChannel:
         """Return a dormant channel to turn into an available channel."""
 
+    @staticmethod
+    def get_category_channels(category: discord.CategoryChannel) -> t.Iterable[discord.TextChannel]:
+        """Yield the channels of the `category` in an unsorted manner."""
+        # This is faster than using category.channels because the latter sorts them.
+        for channel in category.guild.channels:
+            if channel.category_id == category.id:
+                yield channel
+
     def get_used_names(self) -> t.Set[str]:
         """Return channels names which are already being used."""
         start_index = len("help-")
-        channels = itertools.chain(
-            self.available_category.channels,
-            self.in_use_category.channels,
-            self.dormant_category.channels,
-        )
 
-        return {c.name[start_index:] for c in channels}
+        names = set()
+        for cat in (self.available_category, self.in_use_category, self.dormant_category):
+            for channel in self.get_category_channels(cat):
+                name = channel.name[start_index:]
+                names.add(name)
+
+        return names
 
     async def get_idle_time(self, channel: discord.TextChannel) -> int:
         """Return the time elapsed since the last message sent in the `channel`."""
