@@ -88,8 +88,22 @@ class HelpChannels(Scheduler, commands.Cog):
 
         return queue
 
-    async def create_dormant(self) -> discord.TextChannel:
-        """Create and return a new channel in the Dormant category."""
+    async def create_dormant(self) -> t.Optional[discord.TextChannel]:
+        """
+        Create and return a new channel in the Dormant category.
+
+        The new channel will sync its permission overwrites with the category.
+
+        Return None if no more channel names are available.
+        """
+        name = constants.HelpChannels.name_prefix
+
+        try:
+            name += self.name_queue.popleft()
+        except IndexError:
+            return None
+
+        return await self.dormant_category.create_text_channel(name)
 
     def create_name_queue(self) -> deque:
         """Return a queue of element names to use for creating new channels."""
