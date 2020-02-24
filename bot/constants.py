@@ -532,6 +532,14 @@ class Free(metaclass=YAMLGetter):
     cooldown_per: float
 
 
+class HelpChannels(metaclass=YAMLGetter):
+    section = 'help_channels'
+
+    cmd_whitelist: List[int]
+    idle_minutes: int
+    max_available: int
+
+
 class Mention(metaclass=YAMLGetter):
     section = 'mention'
 

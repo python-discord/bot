@@ -512,6 +512,17 @@ mention:
     message_timeout: 300
     reset_delay: 5
 
+help_channels:
+    # Roles which are allowed to use the command which makes channels dormant
+    cmd_whitelist:
+        - *HELPERS_ROLE
+
+    # Allowed duration of inactivity before making a channel dormant
+    idle_minutes: 45
+
+    # Maximum number of channels to put in the available category
+    max_available: 2
+
 redirect_output:
     delete_invocation: true
     delete_delay: 15
