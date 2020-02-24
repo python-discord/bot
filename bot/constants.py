@@ -186,6 +186,10 @@ class YAMLGetter(type):
     def __getitem__(cls, name):
         return cls.__getattr__(name)
 
+    def __iter__(cls):
+        """Returns iterator of key: value pairs of current constants class."""
+        return iter(_CONFIG_YAML[cls.section][cls.subsection].items())
+
 
 # Dataclasses
 class Bot(metaclass=YAMLGetter):
