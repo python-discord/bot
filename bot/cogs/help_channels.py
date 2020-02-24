@@ -1,10 +1,14 @@
+import asyncio
 import json
+from collections import deque
 from pathlib import Path
 
+import discord
 from discord.ext import commands
 
 from bot import constants
 from bot.bot import Bot
+from bot.utils.scheduling import Scheduler
 
 ASKING_GUIDE_URL = "https://pythondiscord.com/pages/asking-good-questions/"
 
@@ -34,8 +38,51 @@ with Path("bot/resources/elements.json").open(encoding="utf-8") as elements_file
     ELEMENTS = json.load(elements_file)
 
 
-class HelpChannels(commands.Cog):
+class HelpChannels(Scheduler, commands.Cog):
     """Manage the help channel system of the guild."""
+
+    def __init__(self, bot: Bot):
+        super().__init__()
+
+        self.bot = bot
+
+    async def create_channel_queue(self) -> asyncio.Queue:
+        """Return a queue of dormant channels to use for getting the next available channel."""
+
+    async def create_dormant(self) -> discord.TextChannel:
+        """Create and return a new channel in the Dormant category."""
+
+    async def create_name_queue(self) -> deque:
+        """Return a queue of element names to use for creating new channels."""
+
+    @commands.command(name="dormant")
+    async def dormant_command(self) -> None:
+        """Make the current in-use help channel dormant."""
+
+    async def get_available_candidate(self) -> discord.TextChannel:
+        """Return a dormant channel to turn into an available channel."""
+
+    async def get_idle_time(self, channel: discord.TextChannel) -> int:
+        """Return the time elapsed since the last message sent in the `channel`."""
+
+    async def init_available(self) -> None:
+        """Initialise the Available category with channels."""
+
+    async def move_idle_channels(self) -> None:
+        """Make all idle in-use channels dormant."""
+
+    async def move_to_available(self) -> None:
+        """Make a channel available."""
+
+    async def move_to_dormant(self, channel: discord.TextChannel) -> None:
+        """Make the `channel` dormant."""
+
+    @commands.Cog.listener()
+    async def on_message(self, message: discord.Message) -> None:
+        """Move an available channel to the In Use category and replace it with a dormant one."""
+
+    async def _scheduled_task(self, channel: discord.TextChannel, timeout: int) -> None:
+        """Make the `channel` dormant after `timeout` seconds or reschedule if it's still active."""
 
 
 def setup(bot: Bot) -> None:
