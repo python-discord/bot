@@ -18,7 +18,7 @@ class ConfigVerifier(Cog):
 
     async def verify_channels(self) -> None:
         """
-        Verifies channels in config.
+        Verify channels.
 
         If any channels in config aren't present in server, log them in a warning.
         """
