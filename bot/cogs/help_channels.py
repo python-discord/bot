@@ -16,6 +16,10 @@ from bot.utils.scheduling import Scheduler
 
 log = logging.getLogger(__name__)
 
+# TODO: write the channel topics
+AVAILABLE_TOPIC = ""
+IN_USE_TOPIC = ""
+DORMANT_TOPIC = ""
 ASKING_GUIDE_URL = "https://pythondiscord.com/pages/asking-good-questions/"
 
 AVAILABLE_MSG = f"""
@@ -216,6 +220,16 @@ class HelpChannels(Scheduler, commands.Cog):
 
     async def move_to_available(self) -> None:
         """Make a channel available."""
+        channel = await self.get_available_candidate()
+        embed = discord.Embed(description=AVAILABLE_MSG)
+
+        # TODO: edit or delete the dormant message
+        await channel.send(embed=embed)
+        await channel.edit(
+            category=self.available_category,
+            sync_permissions=True,
+            topic=AVAILABLE_TOPIC,
+        )
 
     async def move_to_dormant(self, channel: discord.TextChannel) -> None:
         """Make the `channel` dormant."""
