@@ -1,4 +1,5 @@
 import logging
+import unittest
 from contextlib import contextmanager
 from typing import Dict
 
@@ -77,10 +78,9 @@ class LoggingTestsMixin:
             self.fail(msg)
 
 
-class CommandTestCase(unittest.TestCase):
+class CommandTestCase(unittest.IsolatedAsyncioTestCase):
     """TestCase with additional assertions that are useful for testing Discord commands."""
 
-    @helpers.async_test
     async def assertHasPermissionsCheck(
         self,
         cmd: commands.Command,

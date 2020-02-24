@@ -261,9 +261,7 @@ class MockAPIClient(CustomMockMixin, unittest.mock.MagicMock):
     Instances of this class will follow the specifications of `bot.api.APIClient` instances.
     For more information, see the `MockGuild` docstring.
     """
-
-    def __init__(self, **kwargs) -> None:
-        super().__init__(spec_set=APIClient, **kwargs)
+    spec_set = APIClient
 
 
 # Create a Bot instance to get a realistic MagicMock of `discord.ext.commands.Bot`
