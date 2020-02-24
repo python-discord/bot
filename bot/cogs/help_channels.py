@@ -157,21 +157,22 @@ class HelpChannels(Scheduler, commands.Cog):
         self.name_queue = self.create_name_queue()
 
         await self.init_available()
-        await self.move_idle_channels()
+
+        for channel in self.get_category_channels(self.in_use_category):
+            await self.move_idle_channel(channel)
 
         self.ready.set()
 
-    async def move_idle_channels(self) -> None:
-        """Make all in-use channels dormant if idle or schedule the move if still active."""
+    async def move_idle_channel(self, channel: discord.TextChannel) -> None:
+        """Make the `channel` dormant if idle or schedule the move if still active."""
         idle_seconds = constants.HelpChannels.idle_minutes * 60
+        time_elapsed = await self.get_idle_time(channel)
 
-        for channel in self.get_category_channels(self.in_use_category):
-            time_elapsed = await self.get_idle_time(channel)
-            if time_elapsed > idle_seconds:
-                await self.move_to_dormant(channel)
-            else:
-                data = ChannelTimeout(channel, idle_seconds - time_elapsed)
-                self.schedule_task(self.bot.loop, channel.id, data)
+        if time_elapsed > idle_seconds:
+            await self.move_to_dormant(channel)
+        else:
+            data = ChannelTimeout(channel, idle_seconds - time_elapsed)
+            self.schedule_task(self.bot.loop, channel.id, data)
 
     async def move_to_available(self) -> None:
         """Make a channel available."""
