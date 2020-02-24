@@ -1,6 +1,8 @@
 import asyncio
+import itertools
 import json
 import logging
+import typing as t
 from collections import deque
 from pathlib import Path
 
@@ -78,6 +80,17 @@ class HelpChannels(Scheduler, commands.Cog):
 
     async def get_available_candidate(self) -> discord.TextChannel:
         """Return a dormant channel to turn into an available channel."""
+
+    def get_used_names(self) -> t.Set[str]:
+        """Return channels names which are already being used."""
+        start_index = len("help-")
+        channels = itertools.chain(
+            self.available_category.channels,
+            self.in_use_category.channels,
+            self.dormant_category.channels,
+        )
+
+        return {c.name[start_index:] for c in channels}
 
     async def get_idle_time(self, channel: discord.TextChannel) -> int:
         """Return the time elapsed since the last message sent in the `channel`."""
