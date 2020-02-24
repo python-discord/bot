@@ -56,6 +56,7 @@ class HelpChannels(Scheduler, commands.Cog):
         self.channel_queue: asyncio.Queue = None
         self.name_queue: deque = None
 
+        self.ready = asyncio.Event()
         self.init_task = asyncio.create_task(self.init_cog())
 
     async def cog_unload(self) -> None:
@@ -107,6 +108,8 @@ class HelpChannels(Scheduler, commands.Cog):
 
         await self.init_available()
         await self.move_idle_channels()
+
+        self.ready.set()
 
     async def move_idle_channels(self) -> None:
         """Make all idle in-use channels dormant."""
