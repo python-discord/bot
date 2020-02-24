@@ -339,8 +339,8 @@ class SyncerSyncTests(unittest.IsolatedAsyncioTestCase):
                 if ctx is not None:
                     ctx.send.return_value = message
 
-                diff = _Diff({1, 2, 3}, {4, 5}, None)
-                self.syncer._get_diff.return_value = diff
+                # Make sure `_get_diff` returns a MagicMock, not an AsyncMock
+                self.syncer._get_diff.return_value = mock.MagicMock()
 
                 self.syncer._get_confirmation_result = mock.AsyncMock(return_value=(False, None))
 
