@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import random
 import typing as t
 from collections import deque
 from pathlib import Path
@@ -64,8 +65,20 @@ class HelpChannels(Scheduler, commands.Cog):
         """Cancel the init task if the cog unloads."""
         self.init_task.cancel()
 
-    async def create_channel_queue(self) -> asyncio.Queue:
-        """Return a queue of dormant channels to use for getting the next available channel."""
+    def create_channel_queue(self) -> asyncio.Queue:
+        """
+        Return a queue of dormant channels to use for getting the next available channel.
+
+        The channels are added to the queue in a random order.
+        """
+        channels = list(self.get_category_channels(self.dormant_category))
+        random.shuffle(channels)
+
+        queue = asyncio.Queue()
+        for channel in channels:
+            queue.put_nowait(channel)
+
+        return queue
 
     async def create_dormant(self) -> discord.TextChannel:
         """Create and return a new channel in the Dormant category."""
