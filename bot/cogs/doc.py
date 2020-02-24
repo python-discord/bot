@@ -157,7 +157,7 @@ class Doc(commands.Cog):
 
     async def init_refresh_inventory(self) -> None:
         """Refresh documentation inventory on cog initialization."""
-        await self.bot.wait_until_ready()
+        await self.bot.wait_until_guild_available()
         await self.refresh_inventory()
 
     async def update_single(

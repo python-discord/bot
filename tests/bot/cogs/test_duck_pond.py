@@ -54,7 +54,7 @@ class DuckPondTests(base.LoggingTestsMixin, unittest.IsolatedAsyncioTestCase):
 
         asyncio.run(self.cog.fetch_webhook())
 
-        self.bot.wait_until_ready.assert_called_once()
+        self.bot.wait_until_guild_available.assert_called_once()
         self.bot.fetch_webhook.assert_called_once_with(1)
         self.assertEqual(self.cog.webhook, "dummy webhook")
 
@@ -67,7 +67,7 @@ class DuckPondTests(base.LoggingTestsMixin, unittest.IsolatedAsyncioTestCase):
         with self.assertLogs(logger=log, level=logging.ERROR) as log_watcher:
             asyncio.run(self.cog.fetch_webhook())
 
-        self.bot.wait_until_ready.assert_called_once()
+        self.bot.wait_until_guild_available.assert_called_once()
         self.bot.fetch_webhook.assert_called_once_with(1)
 
         self.assertEqual(len(log_watcher.records), 1)

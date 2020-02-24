@@ -91,7 +91,7 @@ class WatchChannel(metaclass=CogABCMeta):
 
     async def start_watchchannel(self) -> None:
         """Starts the watch channel by getting the channel, webhook, and user cache ready."""
-        await self.bot.wait_until_ready()
+        await self.bot.wait_until_guild_available()
 
         try:
             self.channel = await self.bot.fetch_channel(self.destination)

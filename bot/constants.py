@@ -263,6 +263,7 @@ class Emojis(metaclass=YAMLGetter):
     new: str
     pencil: str
     cross_mark: str
+    check_mark: str
 
     ducky_yellow: int
     ducky_blurple: int
@@ -366,6 +367,7 @@ class Channels(metaclass=YAMLGetter):
     checkpoint_test: int
     defcon: int
     devcontrib: int
+    devcore: int
     devlog: int
     devtest: int
     esoteric: int
@@ -405,6 +407,7 @@ class Webhooks(metaclass=YAMLGetter):
     big_brother: int
     reddit: int
     duck_pond: int
+    dev_log: int
 
 
 class Roles(metaclass=YAMLGetter):
@@ -536,6 +539,13 @@ class RedirectOutput(metaclass=YAMLGetter):
 
     delete_invocation: bool
     delete_delay: int
+
+
+class Sync(metaclass=YAMLGetter):
+    section = 'sync'
+
+    confirm_timeout: int
+    max_diff: int
 
 
 class Event(Enum):
