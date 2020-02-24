@@ -525,6 +525,9 @@ help_channels:
     # Maximum number of channels to put in the available category
     max_available: 2
 
+    # Prefix for help channel names
+    name_prefix: 'help-'
+
 redirect_output:
     delete_invocation: true
     delete_delay: 15

@@ -107,7 +107,7 @@ class HelpChannels(Scheduler, commands.Cog):
 
     def get_used_names(self) -> t.Set[str]:
         """Return channels names which are already being used."""
-        start_index = len("help-")
+        start_index = len(constants.HelpChannels.name_prefix)
 
         names = set()
         for cat in (self.available_category, self.in_use_category, self.dormant_category):
