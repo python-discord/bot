@@ -19,7 +19,7 @@ PER = Free.cooldown_per
 class Free(Cog):
     """Tries to figure out which help channels are free."""
 
-    PYTHON_HELP_ID = Categories.python_help
+    PYTHON_HELP_ID = Categories.help_in_use
 
     @command(name="free", aliases=('f',))
     @redirect_output(destination_channel=Channels.bot_commands, bypass_roles=STAFF_ROLES)

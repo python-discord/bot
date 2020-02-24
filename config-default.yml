@@ -111,7 +111,9 @@ guild:
     id: 267624335836053506
 
     categories:
-        python_help:    356013061213126657
+        help_available:                     691405807388196926
+        help_in_use:                        356013061213126657
+        help_dormant:                       691405908919451718
 
     channels:
         announcements:                              354619224620138496

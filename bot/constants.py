@@ -356,7 +356,9 @@ class Categories(metaclass=YAMLGetter):
     section = "guild"
     subsection = "categories"
 
-    python_help: int
+    help_available: int
+    help_in_use: int
+    help_dormant: int
 
 
 class Channels(metaclass=YAMLGetter):
