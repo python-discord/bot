@@ -233,6 +233,14 @@ class HelpChannels(Scheduler, commands.Cog):
 
     async def move_to_dormant(self, channel: discord.TextChannel) -> None:
         """Make the `channel` dormant."""
+        await channel.edit(
+            category=self.dormant_category,
+            sync_permissions=True,
+            topic=DORMANT_TOPIC,
+        )
+
+        embed = discord.Embed(description=DORMANT_MSG)
+        await channel.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
