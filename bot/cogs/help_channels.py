@@ -4,6 +4,7 @@ import logging
 import random
 import typing as t
 from collections import deque
+from datetime import datetime
 from pathlib import Path
 
 import discord
@@ -124,8 +125,19 @@ class HelpChannels(Scheduler, commands.Cog):
 
         return names
 
-    async def get_idle_time(self, channel: discord.TextChannel) -> int:
-        """Return the time elapsed since the last message sent in the `channel`."""
+    @staticmethod
+    async def get_idle_time(channel: discord.TextChannel) -> t.Optional[int]:
+        """
+        Return the time elapsed, in seconds, since the last message sent in the `channel`.
+
+        Return None if the channel has no messages.
+        """
+        try:
+            msg = await channel.history(limit=1).next()  # noqa: B305
+        except discord.NoMoreItems:
+            return None
+
+        return (datetime.utcnow() - msg.created_at).seconds
 
     async def init_available(self) -> None:
         """Initialise the Available category with channels."""
@@ -168,7 +180,7 @@ class HelpChannels(Scheduler, commands.Cog):
         idle_seconds = constants.HelpChannels.idle_minutes * 60
         time_elapsed = await self.get_idle_time(channel)
 
-        if time_elapsed > idle_seconds:
+        if time_elapsed is None or time_elapsed > idle_seconds:
             await self.move_to_dormant(channel)
         else:
             data = ChannelTimeout(channel, idle_seconds - time_elapsed)
