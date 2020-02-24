@@ -86,10 +86,10 @@ class HelpChannels(Scheduler, commands.Cog):
 
     @staticmethod
     def get_category_channels(category: discord.CategoryChannel) -> t.Iterable[discord.TextChannel]:
-        """Yield the channels of the `category` in an unsorted manner."""
+        """Yield the text channels of the `category` in an unsorted manner."""
         # This is faster than using category.channels because the latter sorts them.
         for channel in category.guild.channels:
-            if channel.category_id == category.id:
+            if channel.category_id == category.id and isinstance(channel, discord.TextChannel):
                 yield channel
 
     def get_used_names(self) -> t.Set[str]:
