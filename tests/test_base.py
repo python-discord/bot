@@ -6,7 +6,7 @@ import unittest.mock
 from tests.base import LoggingTestsMixin, _CaptureLogHandler
 
 
-class LoggingTestCase(LoggingTestsMixin):
+class LoggingTestCase(LoggingTestsMixin, unittest.TestCase):
     pass
 
 
