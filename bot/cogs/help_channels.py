@@ -56,7 +56,11 @@ class HelpChannels(Scheduler, commands.Cog):
         self.channel_queue: asyncio.Queue = None
         self.name_queue: deque = None
 
-        asyncio.create_task(self.init_cog())
+        self.init_task = asyncio.create_task(self.init_cog())
+
+    async def cog_unload(self) -> None:
+        """Cancel the init task if the cog unloads."""
+        self.init_task.cancel()
 
     async def create_channel_queue(self) -> asyncio.Queue:
         """Return a queue of dormant channels to use for getting the next available channel."""
