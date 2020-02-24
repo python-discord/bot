@@ -84,6 +84,14 @@ class HelpChannels(Scheduler, commands.Cog):
     async def on_message(self, message: discord.Message) -> None:
         """Move an available channel to the In Use category and replace it with a dormant one."""
 
+    async def try_get_channel(self, channel_id: int) -> discord.abc.GuildChannel:
+        """Attempt to get or fetch a channel and return it."""
+        channel = self.bot.get_channel(channel_id)
+        if not channel:
+            channel = await self.bot.fetch_channel(channel_id)
+
+        return channel
+
     async def _scheduled_task(self, channel: discord.TextChannel, timeout: int) -> None:
         """Make the `channel` dormant after `timeout` seconds or reschedule if it's still active."""
 
