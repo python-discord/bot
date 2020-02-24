@@ -122,6 +122,11 @@ class HelpChannels(Scheduler, commands.Cog):
 
     async def init_available(self) -> None:
         """Initialise the Available category with channels."""
+        channels = list(self.get_category_channels(self.available_category))
+        missing = constants.HelpChannels.max_available - len(channels)
+
+        for _ in range(missing):
+            await self.move_to_available()
 
     async def init_categories(self) -> None:
         """Get the help category objects. Remove the cog if retrieval fails."""
