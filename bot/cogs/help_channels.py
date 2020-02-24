@@ -153,8 +153,8 @@ class HelpChannels(Scheduler, commands.Cog):
 
         await self.init_categories()
 
-        self.channel_queue = await self.create_channel_queue()
-        self.name_queue = await self.name_queue()
+        self.channel_queue = self.create_channel_queue()
+        self.name_queue = self.create_name_queue()
 
         await self.init_available()
         await self.move_idle_channels()
