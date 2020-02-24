@@ -117,7 +117,21 @@ class HelpChannels(Scheduler, commands.Cog):
         """Make the current in-use help channel dormant."""
 
     async def get_available_candidate(self) -> discord.TextChannel:
-        """Return a dormant channel to turn into an available channel."""
+        """
+        Return a dormant channel to turn into an available channel.
+
+        If no channel is available, wait indefinitely until one becomes available.
+        """
+        try:
+            channel = self.channel_queue.get_nowait()
+        except asyncio.QueueEmpty:
+            channel = await self.create_dormant()
+
+            if not channel:
+                # Wait for a channel to become available.
+                channel = await self.channel_queue.get()
+
+        return channel
 
     @staticmethod
     def get_category_channels(category: discord.CategoryChannel) -> t.Iterable[discord.TextChannel]:
