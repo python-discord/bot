@@ -32,7 +32,7 @@ class ConfigVerifier(Cog):
         ]
 
         if invalid_channels:
-            log.warning(f"Channels do not exist in server: {', '.join(invalid_channels)}.")
+            log.warning(f"Configured channels do not exist in server: {', '.join(invalid_channels)}.")
 
 
 def setup(bot: Bot) -> None:
