@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 from collections import deque
 from pathlib import Path
 
@@ -9,6 +10,8 @@ from discord.ext import commands
 from bot import constants
 from bot.bot import Bot
 from bot.utils.scheduling import Scheduler
+
+log = logging.getLogger(__name__)
 
 ASKING_GUIDE_URL = "https://pythondiscord.com/pages/asking-good-questions/"
 
