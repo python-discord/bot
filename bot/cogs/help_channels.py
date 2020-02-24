@@ -53,6 +53,11 @@ class HelpChannels(Scheduler, commands.Cog):
         self.in_use_category: discord.CategoryChannel = None
         self.dormant_category: discord.CategoryChannel = None
 
+        self.channel_queue: asyncio.Queue = None
+        self.name_queue: deque = None
+
+        asyncio.create_task(self.init_cog())
+
     async def create_channel_queue(self) -> asyncio.Queue:
         """Return a queue of dormant channels to use for getting the next available channel."""
 
@@ -86,6 +91,18 @@ class HelpChannels(Scheduler, commands.Cog):
         except discord.HTTPException:
             log.exception(f"Failed to get a category; cog will be removed")
             self.bot.remove_cog(self.qualified_name)
+
+    async def init_cog(self) -> None:
+        """Initialise the help channel system."""
+        await self.bot.wait_until_guild_available()
+
+        await self.init_categories()
+
+        self.channel_queue = await self.create_channel_queue()
+        self.name_queue = await self.name_queue()
+
+        await self.init_available()
+        await self.move_idle_channels()
 
     async def move_idle_channels(self) -> None:
         """Make all idle in-use channels dormant."""
