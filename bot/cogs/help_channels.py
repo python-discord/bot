@@ -71,8 +71,12 @@ class HelpChannels(Scheduler, commands.Cog):
     async def create_dormant(self) -> discord.TextChannel:
         """Create and return a new channel in the Dormant category."""
 
-    async def create_name_queue(self) -> deque:
+    def create_name_queue(self) -> deque:
         """Return a queue of element names to use for creating new channels."""
+        used_names = self.get_used_names()
+        available_names = (name for name in ELEMENTS if name not in used_names)
+
+        return deque(available_names)
 
     @commands.command(name="dormant")
     async def dormant_command(self) -> None:
