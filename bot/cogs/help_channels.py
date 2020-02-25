@@ -77,8 +77,10 @@ class HelpChannels(Scheduler, commands.Cog):
 
     def cog_unload(self) -> None:
         """Cancel the init task and scheduled tasks when the cog unloads."""
+        log.trace("Cog unload: cancelling the cog_init task")
         self.init_task.cancel()
 
+        log.trace("Cog unload: cancelling the scheduled tasks")
         for task in self.scheduled_tasks.values():
             task.cancel()
 
@@ -88,9 +90,12 @@ class HelpChannels(Scheduler, commands.Cog):
 
         The channels are added to the queue in a random order.
         """
+        log.trace("Creating the channel queue.")
+
         channels = list(self.get_category_channels(self.dormant_category))
         random.shuffle(channels)
 
+        log.trace("Populating the channel queue with channels.")
         queue = asyncio.Queue()
         for channel in channels:
             queue.put_nowait(channel)
@@ -105,26 +110,36 @@ class HelpChannels(Scheduler, commands.Cog):
 
         Return None if no more channel names are available.
         """
+        log.trace("Getting a name for a new dormant channel.")
         name = constants.HelpChannels.name_prefix
 
         try:
             name += self.name_queue.popleft()
         except IndexError:
+            log.debug("No more names available for new dormant channels.")
             return None
 
+        log.debug(f"Creating a new dormant channel named {name}.")
         return await self.dormant_category.create_text_channel(name)
 
     def create_name_queue(self) -> deque:
         """Return a queue of element names to use for creating new channels."""
+        log.trace("Creating the chemical element name queue.")
+
         used_names = self.get_used_names()
+
+        log.trace("Determining the available names.")
         available_names = (name for name in ELEMENTS if name not in used_names)
 
+        log.trace("Populating the name queue with names.")
         return deque(available_names)
 
     @commands.command(name="dormant")
     @with_role(*constants.HelpChannels.cmd_whitelist)
     async def dormant_command(self, ctx: commands.Context) -> None:
         """Make the current in-use help channel dormant."""
+        log.trace("dormant command invoked; checking if the channel is in-use.")
+
         in_use = self.get_category_channels(self.in_use_category)
         if ctx.channel in in_use:
             await self.move_to_dormant(ctx.channel)
@@ -137,13 +152,16 @@ class HelpChannels(Scheduler, commands.Cog):
 
         If no channel is available, wait indefinitely until one becomes available.
         """
+        log.trace("Getting an available channel candidate.")
+
         try:
             channel = self.channel_queue.get_nowait()
         except asyncio.QueueEmpty:
+            log.info("No candidate channels in the queue; creating a new channel.")
             channel = await self.create_dormant()
 
             if not channel:
-                # Wait for a channel to become available.
+                log.info("Couldn't create a candidate channel; waiting to get one from the queue.")
                 channel = await self.channel_queue.get()
 
         return channel
@@ -151,6 +169,8 @@ class HelpChannels(Scheduler, commands.Cog):
     @staticmethod
     def get_category_channels(category: discord.CategoryChannel) -> t.Iterable[discord.TextChannel]:
         """Yield the text channels of the `category` in an unsorted manner."""
+        log.trace(f"Getting text channels in the category '{category.name}' ({category.id}).")
+
         # This is faster than using category.channels because the latter sorts them.
         for channel in category.guild.channels:
             if channel.category_id == category.id and isinstance(channel, discord.TextChannel):
@@ -158,6 +178,8 @@ class HelpChannels(Scheduler, commands.Cog):
 
     def get_used_names(self) -> t.Set[str]:
         """Return channels names which are already being used."""
+        log.trace("Getting channel names which are already being used.")
+
         start_index = len(constants.HelpChannels.name_prefix)
 
         names = set()
@@ -166,6 +188,7 @@ class HelpChannels(Scheduler, commands.Cog):
                 name = channel.name[start_index:]
                 names.add(name)
 
+        log.trace(f"Got {len(names)} used names: {names}")
         return names
 
     @staticmethod
@@ -175,23 +198,35 @@ class HelpChannels(Scheduler, commands.Cog):
 
         Return None if the channel has no messages.
         """
+        log.trace(f"Getting the idle time for #{channel.name} ({channel.id}).")
+
         try:
             msg = await channel.history(limit=1).next()  # noqa: B305
         except discord.NoMoreItems:
+            log.debug(f"No idle time available; #{channel.name} ({channel.id}) has no messages.")
             return None
 
-        return (datetime.utcnow() - msg.created_at).seconds
+        idle_time = (datetime.utcnow() - msg.created_at).seconds
+
+        log.trace(f"#{channel.name} ({channel.id}) has been idle for {idle_time} seconds.")
+        return idle_time
 
     async def init_available(self) -> None:
         """Initialise the Available category with channels."""
+        log.trace("Initialising the Available category with channels.")
+
         channels = list(self.get_category_channels(self.available_category))
         missing = constants.HelpChannels.max_available - len(channels)
+
+        log.trace(f"Moving {missing} missing channels to the Available category.")
 
         for _ in range(missing):
             await self.move_to_available()
 
     async def init_categories(self) -> None:
         """Get the help category objects. Remove the cog if retrieval fails."""
+        log.trace("Getting the CategoryChannel objects for the help categories.")
+
         try:
             self.available_category = await self.try_get_channel(
                 constants.Categories.help_available
@@ -204,8 +239,10 @@ class HelpChannels(Scheduler, commands.Cog):
 
     async def init_cog(self) -> None:
         """Initialise the help channel system."""
+        log.trace("Waiting for the guild to be available before initialisation.")
         await self.bot.wait_until_guild_available()
 
+        log.trace("Initialising the cog.")
         await self.init_categories()
 
         self.channel_queue = self.create_channel_queue()
@@ -213,9 +250,11 @@ class HelpChannels(Scheduler, commands.Cog):
 
         await self.init_available()
 
+        log.trace("Moving or rescheduling in-use channels.")
         for channel in self.get_category_channels(self.in_use_category):
             await self.move_idle_channel(channel)
 
+        log.info("Cog is ready!")
         self.ready.set()
 
     async def move_idle_channel(self, channel: discord.TextChannel) -> None:
@@ -224,10 +263,17 @@ class HelpChannels(Scheduler, commands.Cog):
 
         If a task to make the channel dormant already exists, it will first be cancelled.
         """
+        log.trace(f"Handling in-use channel #{channel.name} ({channel.id}).")
+
         idle_seconds = constants.HelpChannels.idle_minutes * 60
         time_elapsed = await self.get_idle_time(channel)
 
         if time_elapsed is None or time_elapsed > idle_seconds:
+            log.info(
+                f"#{channel.name} ({channel.id}) is idle longer than {idle_seconds} seconds "
+                f"and will be made dormant."
+            )
+
             await self.move_to_dormant(channel)
         else:
             # Cancel the existing task, if any.
@@ -235,15 +281,28 @@ class HelpChannels(Scheduler, commands.Cog):
                 self.cancel_task(channel.id)
 
             data = ChannelTimeout(channel, idle_seconds - time_elapsed)
+
+            log.info(
+                f"#{channel.name} ({channel.id}) is still active; "
+                f"scheduling it to be moved after {data.timeout} seconds."
+            )
+
             self.schedule_task(self.bot.loop, channel.id, data)
 
     async def move_to_available(self) -> None:
         """Make a channel available."""
+        log.trace("Making a channel available.")
+
         channel = await self.get_available_candidate()
         embed = discord.Embed(description=AVAILABLE_MSG)
 
+        log.info(f"Making #{channel.name} ({channel.id}) available.")
+
         # TODO: edit or delete the dormant message
+        log.trace(f"Sending available message for #{channel.name} ({channel.id}).")
         await channel.send(embed=embed)
+
+        log.trace(f"Moving #{channel.name} ({channel.id}) to the Available category.")
         await channel.edit(
             category=self.available_category,
             sync_permissions=True,
@@ -252,40 +311,53 @@ class HelpChannels(Scheduler, commands.Cog):
 
     async def move_to_dormant(self, channel: discord.TextChannel) -> None:
         """Make the `channel` dormant."""
+        log.info(f"Making #{channel.name} ({channel.id}) dormant.")
+
+        log.trace(f"Moving #{channel.name} ({channel.id}) to the Dormant category.")
         await channel.edit(
             category=self.dormant_category,
             sync_permissions=True,
             topic=DORMANT_TOPIC,
         )
 
+        log.trace(f"Sending dormant message for #{channel.name} ({channel.id}).")
         embed = discord.Embed(description=DORMANT_MSG)
         await channel.send(embed=embed)
 
     async def move_to_in_use(self, channel: discord.TextChannel) -> None:
         """Make a channel in-use and schedule it to be made dormant."""
-        # Move the channel to the In Use category.
+        log.info(f"Making #{channel.name} ({channel.id}) in-use.")
+
+        log.trace(f"Moving #{channel.name} ({channel.id}) to the In Use category.")
         await channel.edit(
             category=self.in_use_category,
             sync_permissions=True,
             topic=IN_USE_TOPIC,
         )
 
-        # Schedule the channel to be moved to the Dormant category.
-        data = ChannelTimeout(channel, constants.HelpChannels.idle_minutes * 60)
+        timeout = constants.HelpChannels.idle_minutes * 60
+
+        log.trace(f"Scheduling #{channel.name} ({channel.id}) to become dormant in {timeout} sec.")
+        data = ChannelTimeout(channel, timeout)
         self.schedule_task(self.bot.loop, channel.id, data)
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
         """Move an available channel to the In Use category and replace it with a dormant one."""
+        log.trace("Waiting for the cog to be ready before processing messages.")
         await self.ready.wait()
 
-        # Use a lock to prevent a channel from being processed twice.
+        log.trace("Acquiring lock to prevent a channel from being processed twice...")
         with self.on_message_lock.acquire():
+            log.trace("on_message lock acquired.")
+            log.trace("Checking if the message was sent in an available channel.")
+
             available_channels = self.get_category_channels(self.available_category)
             if message.channel not in available_channels:
                 return  # Ignore messages outside the Available category.
 
             await self.move_to_in_use(message.channel)
+            log.trace("Releasing on_message lock.")
 
         # Move a dormant channel to the Available category to fill in the gap.
         # This is done last and outside the lock because it may wait indefinitely for a channel to
@@ -294,14 +366,19 @@ class HelpChannels(Scheduler, commands.Cog):
 
     async def try_get_channel(self, channel_id: int) -> discord.abc.GuildChannel:
         """Attempt to get or fetch a channel and return it."""
+        log.trace(f"Getting the channel {channel_id}.")
+
         channel = self.bot.get_channel(channel_id)
         if not channel:
+            log.debug(f"Channel {channel_id} is not in cache; fetching from API.")
             channel = await self.bot.fetch_channel(channel_id)
 
+        log.trace(f"Channel #{channel.name} ({channel_id}) retrieved.")
         return channel
 
     async def _scheduled_task(self, data: ChannelTimeout) -> None:
         """Make a channel dormant after specified timeout or reschedule if it's still active."""
+        log.trace(f"Waiting {data.timeout} before making #{data.channel.name} dormant.")
         await asyncio.sleep(data.timeout)
 
         # Use asyncio.shield to prevent move_idle_channel from cancelling itself.
