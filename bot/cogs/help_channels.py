@@ -296,6 +296,11 @@ class HelpChannels(Scheduler, commands.Cog):
 
     async def _scheduled_task(self, data: ChannelTimeout) -> None:
         """Make a channel dormant after specified timeout or reschedule if it's still active."""
+        await asyncio.sleep(data.timeout)
+
+        # Use asyncio.shield to prevent move_idle_channel from cancelling itself.
+        # The parent task (_scheduled_task) will still get cancelled.
+        await asyncio.shield(self.move_idle_channel(data.channel))
 
 
 def setup(bot: Bot) -> None:
