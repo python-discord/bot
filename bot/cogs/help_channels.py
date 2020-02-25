@@ -73,7 +73,7 @@ class HelpChannels(Scheduler, commands.Cog):
 
         self.ready = asyncio.Event()
         self.on_message_lock = asyncio.Lock()
-        self.init_task = asyncio.create_task(self.init_cog())
+        self.init_task = self.bot.loop.create_task(self.init_cog())
 
     def cog_unload(self) -> None:
         """Cancel the init task and scheduled tasks when the cog unloads."""
