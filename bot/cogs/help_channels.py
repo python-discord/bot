@@ -12,6 +12,7 @@ from discord.ext import commands
 
 from bot import constants
 from bot.bot import Bot
+from bot.decorators import with_role
 from bot.utils.scheduling import Scheduler
 
 log = logging.getLogger(__name__)
@@ -117,8 +118,14 @@ class HelpChannels(Scheduler, commands.Cog):
         return deque(available_names)
 
     @commands.command(name="dormant")
-    async def dormant_command(self) -> None:
+    @with_role(*constants.HelpChannels.cmd_whitelist)
+    async def dormant_command(self, ctx: commands.Context) -> None:
         """Make the current in-use help channel dormant."""
+        in_use = self.get_category_channels(self.in_use_category)
+        if ctx.channel in in_use:
+            await self.move_to_dormant(ctx.channel)
+        else:
+            log.debug(f"{ctx.author} invoked command 'dormant' outside an in-use help channel")
 
     async def get_available_candidate(self) -> discord.TextChannel:
         """
