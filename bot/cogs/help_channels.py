@@ -421,6 +421,8 @@ class HelpChannels(Scheduler, commands.Cog):
         # The parent task (_scheduled_task) will still get cancelled.
         await asyncio.shield(self.move_idle_channel(data.channel))
 
+        self.cancel_task(data.channel.id)
+
 
 def setup(bot: Bot) -> None:
     """Load the HelpChannels cog."""
