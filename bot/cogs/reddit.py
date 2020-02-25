@@ -290,7 +290,8 @@ class Reddit(Cog):
 
 def setup(bot: Bot) -> None:
     """Load the Reddit cog."""
-    if None in (RedditConfig.client_id, RedditConfig.secret):
+    invalid_values = "", None
+    if any(value in (RedditConfig.secret, RedditConfig.client_id) for value in invalid_values):
         log.error("Credentials not provided, cog not loaded.")
         return
     bot.add_cog(Reddit(bot))
