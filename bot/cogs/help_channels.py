@@ -324,6 +324,9 @@ class HelpChannels(Scheduler, commands.Cog):
         embed = discord.Embed(description=DORMANT_MSG)
         await channel.send(embed=embed)
 
+        log.trace(f"Pushing #{channel.name} ({channel.id}) into the channel queue.")
+        self.channel_queue.put_nowait(channel)
+
     async def move_to_in_use(self, channel: discord.TextChannel) -> None:
         """Make a channel in-use and schedule it to be made dormant."""
         log.info(f"Making #{channel.name} ({channel.id}) in-use.")
