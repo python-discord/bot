@@ -187,8 +187,9 @@ class YAMLGetter(type):
         return cls.__getattr__(name)
 
     def __iter__(cls):
-        """Returns iterator of key: value pairs of current constants class."""
-        return iter(_CONFIG_YAML[cls.section][cls.subsection].items())
+        """Return generator of key: value pairs of current constants class' config values."""
+        for name in cls.__annotations__:
+            yield name, getattr(cls, name)
 
 
 # Dataclasses
