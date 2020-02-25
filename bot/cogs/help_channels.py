@@ -344,6 +344,9 @@ class HelpChannels(Scheduler, commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
         """Move an available channel to the In Use category and replace it with a dormant one."""
+        if message.author.bot:
+            return  # Ignore messages sent by bots.
+
         log.trace("Waiting for the cog to be ready before processing messages.")
         await self.ready.wait()
 
