@@ -26,8 +26,8 @@ ASKING_GUIDE_URL = "https://pythondiscord.com/pages/asking-good-questions/"
 AVAILABLE_MSG = f"""
 This help channel is now **available**, which means that you can claim it by simply typing your \
 question into it. Once claimed, the channel will move into the **Help: In Use** category, and will \
-be yours until it has been inactive for {constants.HelpChannels.idle_minutes}. When that happens, \
-it will be set to **dormant** and moved into the **Help: Dormant** category.
+be yours until it has been inactive for {constants.HelpChannels.idle_minutes} minutes. When that \
+happens, it will be set to **dormant** and moved into the **Help: Dormant** category.
 
 Try to write the best question you can by providing a detailed description and telling us what \
 you've tried already. For more information on asking a good question, \
@@ -381,7 +381,7 @@ class HelpChannels(Scheduler, commands.Cog):
 
     async def _scheduled_task(self, data: ChannelTimeout) -> None:
         """Make a channel dormant after specified timeout or reschedule if it's still active."""
-        log.trace(f"Waiting {data.timeout} before making #{data.channel.name} dormant.")
+        log.trace(f"Waiting {data.timeout} seconds before making #{data.channel.name} dormant.")
         await asyncio.sleep(data.timeout)
 
         # Use asyncio.shield to prevent move_idle_channel from cancelling itself.
