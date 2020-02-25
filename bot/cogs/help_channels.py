@@ -351,7 +351,7 @@ class HelpChannels(Scheduler, commands.Cog):
         await self.ready.wait()
 
         log.trace("Acquiring lock to prevent a channel from being processed twice...")
-        with self.on_message_lock.acquire():
+        async with self.on_message_lock:
             log.trace("on_message lock acquired.")
             log.trace("Checking if the message was sent in an available channel.")
 
