@@ -14,7 +14,7 @@ class ConfigVerifier(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.bot.loop.create_task(self.verify_channels())
+        self.channel_verify_task = self.bot.loop.create_task(self.verify_channels())
 
     async def verify_channels(self) -> None:
         """
