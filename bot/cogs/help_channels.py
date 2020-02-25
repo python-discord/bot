@@ -191,8 +191,8 @@ class HelpChannels(Scheduler, commands.Cog):
         log.trace(f"Got {len(names)} used names: {names}")
         return names
 
-    @staticmethod
-    async def get_idle_time(channel: discord.TextChannel) -> t.Optional[int]:
+    @classmethod
+    async def get_idle_time(cls, channel: discord.TextChannel) -> t.Optional[int]:
         """
         Return the time elapsed, in seconds, since the last message sent in the `channel`.
 
@@ -200,9 +200,8 @@ class HelpChannels(Scheduler, commands.Cog):
         """
         log.trace(f"Getting the idle time for #{channel.name} ({channel.id}).")
 
-        try:
-            msg = await channel.history(limit=1).next()  # noqa: B305
-        except discord.NoMoreItems:
+        msg = await cls.get_last_message(channel)
+        if not msg:
             log.debug(f"No idle time available; #{channel.name} ({channel.id}) has no messages.")
             return None
 
@@ -210,6 +209,17 @@ class HelpChannels(Scheduler, commands.Cog):
 
         log.trace(f"#{channel.name} ({channel.id}) has been idle for {idle_time} seconds.")
         return idle_time
+
+    @staticmethod
+    async def get_last_message(channel: discord.TextChannel) -> t.Optional[discord.Message]:
+        """Return the last message sent in the channel or None if no messages exist."""
+        log.trace(f"Getting the last message in #{channel.name} ({channel.id}).")
+
+        try:
+            return await channel.history(limit=1).next()  # noqa: B305
+        except discord.NoMoreItems:
+            log.debug(f"No last message available; #{channel.name} ({channel.id}) has no messages.")
+            return None
 
     async def init_available(self) -> None:
         """Initialise the Available category with channels."""
