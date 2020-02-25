@@ -249,6 +249,19 @@ class HelpChannels(Scheduler, commands.Cog):
         embed = discord.Embed(description=DORMANT_MSG)
         await channel.send(embed=embed)
 
+    async def move_to_in_use(self, channel: discord.TextChannel) -> None:
+        """Make a channel in-use and schedule it to be made dormant."""
+        # Move the channel to the In Use category.
+        await channel.edit(
+            category=self.in_use_category,
+            sync_permissions=True,
+            topic=IN_USE_TOPIC,
+        )
+
+        # Schedule the channel to be moved to the Dormant category.
+        data = ChannelTimeout(channel, constants.HelpChannels.idle_minutes * 60)
+        self.schedule_task(self.bot.loop, channel.id, data)
+
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
         """Move an available channel to the In Use category and replace it with a dormant one."""
