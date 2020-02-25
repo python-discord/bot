@@ -123,7 +123,7 @@ class AntiSpam(Cog):
 
     async def alert_on_validation_error(self) -> None:
         """Unloads the cog and alerts admins if configuration validation failed."""
-        await self.bot.wait_until_ready()
+        await self.bot.wait_until_guild_available()
         if self.validation_errors:
             body = "**The following errors were encountered:**\n"
             body += "\n".join(f"- {error}" for error in self.validation_errors.values())
