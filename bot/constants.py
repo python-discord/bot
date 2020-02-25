@@ -431,9 +431,12 @@ class Guild(metaclass=YAMLGetter):
     section = "guild"
 
     id: int
+    moderation_channels: List[int]
+    moderation_roles: List[int]
     modlog_blacklist: List[int]
-    staff_channels: List[int]
     reminder_whitelist: List[int]
+    staff_channels: List[int]
+    staff_roles: List[int]
 
 class Keys(metaclass=YAMLGetter):
     section = "keys"
@@ -579,14 +582,14 @@ BOT_DIR = os.path.dirname(__file__)
 PROJECT_ROOT = os.path.abspath(os.path.join(BOT_DIR, os.pardir))
 
 # Default role combinations
-MODERATION_ROLES = Roles.moderators, Roles.admins, Roles.owners
-STAFF_ROLES = Roles.helpers, Roles.moderators, Roles.admins, Roles.owners
+MODERATION_ROLES = Guild.moderation_roles
+STAFF_ROLES = Guild.staff_roles
 
 # Roles combinations
 STAFF_CHANNELS = Guild.staff_channels
 
 # Default Channel combinations
-MODERATION_CHANNELS = Channels.admins, Channels.admin_spam, Channels.mod_alerts, Channels.mods, Channels.mod_spam
+MODERATION_CHANNELS = Guild.moderation_channels
 
 
 # Bot replies
