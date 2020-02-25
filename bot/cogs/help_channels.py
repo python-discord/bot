@@ -265,6 +265,15 @@ class HelpChannels(Scheduler, commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
         """Move an available channel to the In Use category and replace it with a dormant one."""
+        available_channels = self.get_category_channels(self.available_category)
+        if message.channel not in available_channels:
+            return  # Ignore messages outside the Available category.
+
+        await self.move_to_in_use(message.channel)
+
+        # Move a dormant channel to the Available category to fill in the gap.
+        # This is done last because it may wait indefinitely for a channel to be put in the queue.
+        await self.move_to_available()
 
     async def try_get_channel(self, channel_id: int) -> discord.abc.GuildChannel:
         """Attempt to get or fetch a channel and return it."""
