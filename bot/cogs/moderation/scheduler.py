@@ -38,7 +38,7 @@ class InfractionScheduler(Scheduler):
 
     async def reschedule_infractions(self, supported_infractions: t.Container[str]) -> None:
         """Schedule expiration for previous infractions."""
-        await self.bot.wait_until_ready()
+        await self.bot.wait_until_guild_available()
 
         log.trace(f"Rescheduling infractions for {self.__class__.__name__}.")
 

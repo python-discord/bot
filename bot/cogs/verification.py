@@ -220,7 +220,7 @@ class Verification(Cog):
     @periodic_ping.before_loop
     async def before_ping(self) -> None:
         """Only start the loop when the bot is ready."""
-        await self.bot.wait_until_ready()
+        await self.bot.wait_until_guild_available()
 
     def cog_unload(self) -> None:
         """Cancel the periodic ping task when the cog is unloaded."""

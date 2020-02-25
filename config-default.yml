@@ -35,6 +35,7 @@ style:
         pencil:     "\u270F"
         new:        "\U0001F195"
         cross_mark: "\u274C"
+        check_mark: "\u2705"
 
         ducky_yellow:   &DUCKY_YELLOW   574951975574175744
         ducky_blurple:  &DUCKY_BLURPLE  574951975310065675
@@ -118,6 +119,7 @@ guild:
 
         # Development
         dev_contrib:        &DEV_CONTRIB    635950537262759947
+        dev_core:           &DEV_CORE       411200599653351425
         dev_log:            &DEV_LOG        622895325144940554
 
         # Discussion
@@ -193,6 +195,10 @@ guild:
         - *BOT_CMD
         - *DEV_CONTRIB
 
+    staff_channels: [*ADMINS, *ADMIN_SPAM, *MOD_SPAM, *MODS, *HELPERS, *ORGANISATION, *DEFCON]
+    ignored: [*ADMINS, *MESSAGE_LOG, *MODLOG, *ADMINS_VOICE, *STAFF_VOICE, *ATTCH_LOG]
+    reminder_whitelist: [*BOT_CMD, *DEV_CONTRIB]
+
     roles:
         announcements:                          463658397560995840
         contributors:                           295488872404484098
@@ -219,6 +225,7 @@ guild:
         big_brother:    569133704568373283
         reddit:         635408384794951680
         duck_pond:      637821475327311927
+        dev_log:        680501655111729222
 
 
 filter:
@@ -469,6 +476,10 @@ mention:
 redirect_output:
     delete_invocation: true
     delete_delay: 15
+
+sync:
+    confirm_timeout: 300
+    max_diff: 10
 
 duck_pond:
     threshold: 5

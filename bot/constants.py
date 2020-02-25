@@ -263,6 +263,7 @@ class Emojis(metaclass=YAMLGetter):
     new: str
     pencil: str
     cross_mark: str
+    check_mark: str
 
     ducky_yellow: int
     ducky_blurple: int
@@ -357,14 +358,15 @@ class Channels(metaclass=YAMLGetter):
     section = "guild"
     subsection = "channels"
 
-    admins: int
     admin_spam: int
+    admins: int
     announcements: int
     attachment_log: int
     big_brother_logs: int
     bot_commands: int
     defcon: int
     dev_contrib: int
+    dev_core: int
     dev_log: int
     esoteric: int
     help_0: int
@@ -378,10 +380,10 @@ class Channels(metaclass=YAMLGetter):
     helpers: int
     message_log: int
     meta: int
-    mod_spam: int
-    mods: int
     mod_alerts: int
     mod_log: int
+    mod_spam: int
+    mods: int
     off_topic_0: int
     off_topic_1: int
     off_topic_2: int
@@ -389,8 +391,8 @@ class Channels(metaclass=YAMLGetter):
     python_discussion: int
     reddit: int
     talent_pool: int
-    user_log: int
     user_event_announcements: int
+    user_log: int
     verification: int
     voice_log: int
 
@@ -403,6 +405,7 @@ class Webhooks(metaclass=YAMLGetter):
     big_brother: int
     reddit: int
     duck_pond: int
+    dev_log: int
 
 
 class Roles(metaclass=YAMLGetter):
@@ -533,6 +536,13 @@ class RedirectOutput(metaclass=YAMLGetter):
 
     delete_invocation: bool
     delete_delay: int
+
+
+class Sync(metaclass=YAMLGetter):
+    section = 'sync'
+
+    confirm_timeout: int
+    max_diff: int
 
 
 class Event(Enum):
