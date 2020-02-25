@@ -48,7 +48,7 @@ class Reddit(Cog):
 
     async def init_reddit_ready(self) -> None:
         """Sets the reddit webhook when the cog is loaded."""
-        await self.bot.wait_until_ready()
+        await self.bot.wait_until_guild_available()
         if not self.webhook:
             self.webhook = await self.bot.fetch_webhook(Webhooks.reddit)
 
@@ -208,7 +208,7 @@ class Reddit(Cog):
 
         await asyncio.sleep(seconds_until)
 
-        await self.bot.wait_until_ready()
+        await self.bot.wait_until_guild_available()
         if not self.webhook:
             await self.bot.fetch_webhook(Webhooks.reddit)
 

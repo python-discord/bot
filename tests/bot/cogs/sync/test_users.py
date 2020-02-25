@@ -1,84 +1,169 @@
 import unittest
+from unittest import mock
 
-from bot.cogs.sync.syncers import User, get_users_for_sync
+from bot.cogs.sync.syncers import UserSyncer, _Diff, _User
+from tests import helpers
 
 
 def fake_user(**kwargs):
-    kwargs.setdefault('id', 43)
-    kwargs.setdefault('name', 'bob the test man')
-    kwargs.setdefault('discriminator', 1337)
-    kwargs.setdefault('avatar_hash', None)
-    kwargs.setdefault('roles', (666,))
-    kwargs.setdefault('in_guild', True)
-    return User(**kwargs)
+    """Fixture to return a dictionary representing a user with default values set."""
+    kwargs.setdefault("id", 43)
+    kwargs.setdefault("name", "bob the test man")
+    kwargs.setdefault("discriminator", 1337)
+    kwargs.setdefault("avatar_hash", None)
+    kwargs.setdefault("roles", (666,))
+    kwargs.setdefault("in_guild", True)
+
+    return kwargs
 
 
-class GetUsersForSyncTests(unittest.TestCase):
-    """Tests constructing the users to synchronize with the site."""
+class UserSyncerDiffTests(unittest.TestCase):
+    """Tests for determining differences between users in the DB and users in the Guild cache."""
 
-    def test_get_users_for_sync_returns_nothing_for_empty_params(self):
-        """When no users are given, none are returned."""
-        self.assertEqual(
-            get_users_for_sync({}, {}),
-            (set(), set())
-        )
+    def setUp(self):
+        self.bot = helpers.MockBot()
+        self.syncer = UserSyncer(self.bot)
 
-    def test_get_users_for_sync_returns_nothing_for_equal_users(self):
-        """When no users are updated, none are returned."""
-        api_users = {43: fake_user()}
-        guild_users = {43: fake_user()}
+    @staticmethod
+    def get_guild(*members):
+        """Fixture to return a guild object with the given members."""
+        guild = helpers.MockGuild()
+        guild.members = []
 
-        self.assertEqual(
-            get_users_for_sync(guild_users, api_users),
-            (set(), set())
-        )
+        for member in members:
+            member = member.copy()
+            member["avatar"] = member.pop("avatar_hash")
+            del member["in_guild"]
 
-    def test_get_users_for_sync_returns_users_to_update_on_non_id_field_diff(self):
-        """When a non-ID-field differs, the user to update is returned."""
-        api_users = {43: fake_user()}
-        guild_users = {43: fake_user(name='new fancy name')}
+            mock_member = helpers.MockMember(**member)
+            mock_member.roles = [helpers.MockRole(id=role_id) for role_id in member["roles"]]
 
-        self.assertEqual(
-            get_users_for_sync(guild_users, api_users),
-            (set(), {fake_user(name='new fancy name')})
-        )
+            guild.members.append(mock_member)
 
-    def test_get_users_for_sync_returns_users_to_create_with_new_ids_on_guild(self):
-        """When new users join the guild, they are returned as the first tuple element."""
-        api_users = {43: fake_user()}
-        guild_users = {43: fake_user(), 63: fake_user(id=63)}
+        return guild
 
-        self.assertEqual(
-            get_users_for_sync(guild_users, api_users),
-            ({fake_user(id=63)}, set())
-        )
+    @helpers.async_test
+    async def test_empty_diff_for_no_users(self):
+        """When no users are given, an empty diff should be returned."""
+        guild = self.get_guild()
 
-    def test_get_users_for_sync_updates_in_guild_field_on_user_leave(self):
+        actual_diff = await self.syncer._get_diff(guild)
+        expected_diff = (set(), set(), None)
+
+        self.assertEqual(actual_diff, expected_diff)
+
+    @helpers.async_test
+    async def test_empty_diff_for_identical_users(self):
+        """No differences should be found if the users in the guild and DB are identical."""
+        self.bot.api_client.get.return_value = [fake_user()]
+        guild = self.get_guild(fake_user())
+
+        actual_diff = await self.syncer._get_diff(guild)
+        expected_diff = (set(), set(), None)
+
+        self.assertEqual(actual_diff, expected_diff)
+
+    @helpers.async_test
+    async def test_diff_for_updated_users(self):
+        """Only updated users should be added to the 'updated' set of the diff."""
+        updated_user = fake_user(id=99, name="new")
+
+        self.bot.api_client.get.return_value = [fake_user(id=99, name="old"), fake_user()]
+        guild = self.get_guild(updated_user, fake_user())
+
+        actual_diff = await self.syncer._get_diff(guild)
+        expected_diff = (set(), {_User(**updated_user)}, None)
+
+        self.assertEqual(actual_diff, expected_diff)
+
+    @helpers.async_test
+    async def test_diff_for_new_users(self):
+        """Only new users should be added to the 'created' set of the diff."""
+        new_user = fake_user(id=99, name="new")
+
+        self.bot.api_client.get.return_value = [fake_user()]
+        guild = self.get_guild(fake_user(), new_user)
+
+        actual_diff = await self.syncer._get_diff(guild)
+        expected_diff = ({_User(**new_user)}, set(), None)
+
+        self.assertEqual(actual_diff, expected_diff)
+
+    @helpers.async_test
+    async def test_diff_sets_in_guild_false_for_leaving_users(self):
         """When a user leaves the guild, the `in_guild` flag is updated to `False`."""
-        api_users = {43: fake_user(), 63: fake_user(id=63)}
-        guild_users = {43: fake_user()}
+        leaving_user = fake_user(id=63, in_guild=False)
 
-        self.assertEqual(
-            get_users_for_sync(guild_users, api_users),
-            (set(), {fake_user(id=63, in_guild=False)})
-        )
+        self.bot.api_client.get.return_value = [fake_user(), fake_user(id=63)]
+        guild = self.get_guild(fake_user())
 
-    def test_get_users_for_sync_updates_and_creates_users_as_needed(self):
-        """When one user left and another one was updated, both are returned."""
-        api_users = {43: fake_user()}
-        guild_users = {63: fake_user(id=63)}
+        actual_diff = await self.syncer._get_diff(guild)
+        expected_diff = (set(), {_User(**leaving_user)}, None)
 
-        self.assertEqual(
-            get_users_for_sync(guild_users, api_users),
-            ({fake_user(id=63)}, {fake_user(in_guild=False)})
-        )
+        self.assertEqual(actual_diff, expected_diff)
 
-    def test_get_users_for_sync_does_not_duplicate_update_users(self):
-        """When the API knows a user the guild doesn't, nothing is performed."""
-        api_users = {43: fake_user(in_guild=False)}
-        guild_users = {}
+    @helpers.async_test
+    async def test_diff_for_new_updated_and_leaving_users(self):
+        """When users are added, updated, and removed, all of them are returned properly."""
+        new_user = fake_user(id=99, name="new")
+        updated_user = fake_user(id=55, name="updated")
+        leaving_user = fake_user(id=63, in_guild=False)
 
-        self.assertEqual(
-            get_users_for_sync(guild_users, api_users),
-            (set(), set())
-        )
+        self.bot.api_client.get.return_value = [fake_user(), fake_user(id=55), fake_user(id=63)]
+        guild = self.get_guild(fake_user(), new_user, updated_user)
+
+        actual_diff = await self.syncer._get_diff(guild)
+        expected_diff = ({_User(**new_user)}, {_User(**updated_user), _User(**leaving_user)}, None)
+
+        self.assertEqual(actual_diff, expected_diff)
+
+    @helpers.async_test
+    async def test_empty_diff_for_db_users_not_in_guild(self):
+        """When the DB knows a user the guild doesn't, no difference is found."""
+        self.bot.api_client.get.return_value = [fake_user(), fake_user(id=63, in_guild=False)]
+        guild = self.get_guild(fake_user())
+
+        actual_diff = await self.syncer._get_diff(guild)
+        expected_diff = (set(), set(), None)
+
+        self.assertEqual(actual_diff, expected_diff)
+
+
+class UserSyncerSyncTests(unittest.TestCase):
+    """Tests for the API requests that sync users."""
+
+    def setUp(self):
+        self.bot = helpers.MockBot()
+        self.syncer = UserSyncer(self.bot)
+
+    @helpers.async_test
+    async def test_sync_created_users(self):
+        """Only POST requests should be made with the correct payload."""
+        users = [fake_user(id=111), fake_user(id=222)]
+
+        user_tuples = {_User(**user) for user in users}
+        diff = _Diff(user_tuples, set(), None)
+        await self.syncer._sync(diff)
+
+        calls = [mock.call("bot/users", json=user) for user in users]
+        self.bot.api_client.post.assert_has_calls(calls, any_order=True)
+        self.assertEqual(self.bot.api_client.post.call_count, len(users))
+
+        self.bot.api_client.put.assert_not_called()
+        self.bot.api_client.delete.assert_not_called()
+
+    @helpers.async_test
+    async def test_sync_updated_users(self):
+        """Only PUT requests should be made with the correct payload."""
+        users = [fake_user(id=111), fake_user(id=222)]
+
+        user_tuples = {_User(**user) for user in users}
+        diff = _Diff(set(), user_tuples, None)
+        await self.syncer._sync(diff)
+
+        calls = [mock.call(f"bot/users/{user['id']}", json=user) for user in users]
+        self.bot.api_client.put.assert_has_calls(calls, any_order=True)
+        self.assertEqual(self.bot.api_client.put.call_count, len(users))
+
+        self.bot.api_client.post.assert_not_called()
+        self.bot.api_client.delete.assert_not_called()

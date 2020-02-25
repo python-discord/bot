@@ -38,7 +38,7 @@ class InfractionScheduler(Scheduler):
 
     async def reschedule_infractions(self, supported_infractions: t.Container[str]) -> None:
         """Schedule expiration for previous infractions."""
-        await self.bot.wait_until_ready()
+        await self.bot.wait_until_guild_available()
 
         log.trace(f"Rescheduling infractions for {self.__class__.__name__}.")
 
@@ -309,16 +309,23 @@ class InfractionScheduler(Scheduler):
         guild = self.bot.get_guild(constants.Guild.id)
         mod_role = guild.get_role(constants.Roles.moderator)
         user_id = infraction["user"]
+        actor = infraction["actor"]
         type_ = infraction["type"]
         id_ = infraction["id"]
+        inserted_at = infraction["inserted_at"]
+        expiry = infraction["expires_at"]
 
         log.info(f"Marking infraction #{id_} as inactive (expired).")
 
+        expiry = dateutil.parser.isoparse(expiry).replace(tzinfo=None) if expiry else None
+        created = time.format_infraction_with_duration(inserted_at, expiry)
+
         log_content = None
         log_text = {
-            "Member": str(user_id),
-            "Actor": str(self.bot.user),
-            "Reason": infraction["reason"]
+            "Member": f"<@{user_id}>",
+            "Actor": str(self.bot.get_user(actor) or actor),
+            "Reason": infraction["reason"],
+            "Created": created,
         }
 
         try:
@@ -384,14 +391,19 @@ class InfractionScheduler(Scheduler):
         if send_log:
             log_title = f"expiration failed" if "Failure" in log_text else "expired"
 
+            user = self.bot.get_user(user_id)
+            avatar = user.avatar_url_as(static_format="png") if user else None
+
             log.trace(f"Sending deactivation mod log for infraction #{id_}.")
             await self.mod_log.send_log_message(
                 icon_url=utils.INFRACTION_ICONS[type_][1],
                 colour=Colours.soft_green,
                 title=f"Infraction {log_title}: {type_}",
+                thumbnail=avatar,
                 text="\n".join(f"{k}: {v}" for k, v in log_text.items()),
                 footer=f"ID: {id_}",
                 content=log_content,
+
             )
 
         return log_text

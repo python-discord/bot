@@ -109,7 +109,8 @@ class Superstarify(InfractionScheduler, Cog):
         ctx: Context,
         member: Member,
         duration: Expiry,
-        reason: str = None
+        *,
+        reason: str = None,
     ) -> None:
         """
         Temporarily force a random superstar name (like Taylor Swift) to be the user's nickname.
