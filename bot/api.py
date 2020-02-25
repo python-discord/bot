@@ -32,6 +32,11 @@ class ResponseCodeError(ValueError):
 class APIClient:
     """Django Site API wrapper."""
 
+    # These are class attributes so they can be seen when being mocked for tests.
+    # See commit 22a55534ef13990815a6f69d361e2a12693075d5 for details.
+    session: Optional[aiohttp.ClientSession] = None
+    loop: asyncio.AbstractEventLoop = None
+
     def __init__(self, loop: asyncio.AbstractEventLoop, **kwargs):
         auth_headers = {
             'Authorization': f"Token {Keys.site_api}"
@@ -42,7 +47,7 @@ class APIClient:
         else:
             kwargs['headers'] = auth_headers
 
-        self.session: Optional[aiohttp.ClientSession] = None
+        self.session = None
         self.loop = loop
 
         self._ready = asyncio.Event(loop=loop)
@@ -85,43 +90,35 @@ class APIClient:
                 response_text = await response.text()
                 raise ResponseCodeError(response=response, response_text=response_text)
 
-    async def get(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs) -> dict:
+    async def request(self, method: str, endpoint: str, *, raise_for_status: bool = True, **kwargs) -> dict:
+        """Send an HTTP request to the site API and return the JSON response."""
+        await self._ready.wait()
+
+        async with self.session.request(method.upper(), self._url_for(endpoint), **kwargs) as resp:
+            await self.maybe_raise_for_status(resp, raise_for_status)
+            return await resp.json()
+
+    async def get(self, endpoint: str, *, raise_for_status: bool = True, **kwargs) -> dict:
         """Site API GET."""
-        await self._ready.wait()
+        return await self.request("GET", endpoint, raise_for_status=raise_for_status, **kwargs)
 
-        async with self.session.get(self._url_for(endpoint), *args, **kwargs) as resp:
-            await self.maybe_raise_for_status(resp, raise_for_status)
-            return await resp.json()
-
-    async def patch(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs) -> dict:
+    async def patch(self, endpoint: str, *, raise_for_status: bool = True, **kwargs) -> dict:
         """Site API PATCH."""
-        await self._ready.wait()
+        return await self.request("PATCH", endpoint, raise_for_status=raise_for_status, **kwargs)
 
-        async with self.session.patch(self._url_for(endpoint), *args, **kwargs) as resp:
-            await self.maybe_raise_for_status(resp, raise_for_status)
-            return await resp.json()
-
-    async def post(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs) -> dict:
+    async def post(self, endpoint: str, *, raise_for_status: bool = True, **kwargs) -> dict:
         """Site API POST."""
-        await self._ready.wait()
+        return await self.request("POST", endpoint, raise_for_status=raise_for_status, **kwargs)
 
-        async with self.session.post(self._url_for(endpoint), *args, **kwargs) as resp:
-            await self.maybe_raise_for_status(resp, raise_for_status)
-            return await resp.json()
-
-    async def put(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs) -> dict:
+    async def put(self, endpoint: str, *, raise_for_status: bool = True, **kwargs) -> dict:
         """Site API PUT."""
-        await self._ready.wait()
+        return await self.request("PUT", endpoint, raise_for_status=raise_for_status, **kwargs)
 
-        async with self.session.put(self._url_for(endpoint), *args, **kwargs) as resp:
-            await self.maybe_raise_for_status(resp, raise_for_status)
-            return await resp.json()
-
-    async def delete(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs) -> Optional[dict]:
+    async def delete(self, endpoint: str, *, raise_for_status: bool = True, **kwargs) -> Optional[dict]:
         """Site API DELETE."""
         await self._ready.wait()
 
-        async with self.session.delete(self._url_for(endpoint), *args, **kwargs) as resp:
+        async with self.session.delete(self._url_for(endpoint), **kwargs) as resp:
             if resp.status == 204:
                 return None
 
