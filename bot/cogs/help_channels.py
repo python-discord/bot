@@ -267,6 +267,15 @@ class HelpChannels(Scheduler, commands.Cog):
         log.info("Cog is ready!")
         self.ready.set()
 
+    @staticmethod
+    def is_dormant_message(message: t.Optional[discord.Message]) -> bool:
+        """Return True if the contents of the `message` match `DORMANT_MSG`."""
+        if not message or not message.embeds:
+            return False
+
+        embed = message.embeds[0]
+        return embed.description.strip() == DORMANT_MSG.strip()
+
     async def move_idle_channel(self, channel: discord.TextChannel) -> None:
         """
         Make the `channel` dormant if idle or schedule the move if still active.
@@ -384,7 +393,7 @@ class HelpChannels(Scheduler, commands.Cog):
         embed = discord.Embed(description=AVAILABLE_MSG)
 
         msg = await self.get_last_message(channel)
-        if msg:
+        if self.is_dormant_message(msg):
             log.trace(f"Found dormant message {msg.id} in {channel_info}; editing it.")
             await msg.edit(embed=embed)
         else:
