@@ -23,6 +23,7 @@ services:
           - staff.web
     ports:
       - "127.0.0.1:8000:8000"
+    tty: true
     depends_on:
       - postgres
     environment:
@@ -37,6 +38,7 @@ services:
     volumes:
       - ./logs:/bot/logs
       - .:/bot:ro
+    tty: true
     depends_on:
       - web
     environment:

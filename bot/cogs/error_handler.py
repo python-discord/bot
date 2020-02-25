@@ -3,6 +3,7 @@ import logging
 import typing as t
 
 from discord.ext.commands import Cog, Command, Context, errors
+from sentry_sdk import push_scope
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
@@ -194,10 +195,26 @@ class ErrorHandler(Cog):
             f"Sorry, an unexpected error occurred. Please let us know!\n\n"
             f"```{e.__class__.__name__}: {e}```"
         )
-        log.error(
-            f"Error executing command invoked by {ctx.message.author}: {ctx.message.content}",
-            exc_info=e
-        )
+
+        with push_scope() as scope:
+            scope.user = {
+                "id": ctx.author.id,
+                "username": str(ctx.author)
+            }
+
+            scope.set_tag("command", ctx.command.qualified_name)
+            scope.set_tag("message_id", ctx.message.id)
+            scope.set_tag("channel_id", ctx.channel.id)
+
+            scope.set_extra("full_message", ctx.message.content)
+
+            if ctx.guild is not None:
+                scope.set_extra(
+                    "jump_to",
+                    f"https://discordapp.com/channels/{ctx.guild.id}/{ctx.channel.id}/{ctx.message.id}"
+                )
+
+            log.error(f"Error executing command invoked by {ctx.message.author}: {ctx.message.content}", exc_info=e)
 
 
 def setup(bot: Bot) -> None:
