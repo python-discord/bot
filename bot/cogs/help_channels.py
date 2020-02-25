@@ -57,7 +57,36 @@ class ChannelTimeout(t.NamedTuple):
 
 
 class HelpChannels(Scheduler, commands.Cog):
-    """Manage the help channel system of the guild."""
+    """
+    Manage the help channel system of the guild.
+
+    The system is based on a 3-category system:
+
+    Available Category
+
+    * Contains channels which are ready to be occupied by someone who needs help
+    * Will always contain 2 channels; refilled automatically from the pool of dormant channels
+        * Prioritise using the channels which have been dormant for the longest amount of time
+        * If there are no more dormant channels, the bot will automatically create a new one
+        * Configurable with `constants.HelpChannels.max_available`
+    * When a channel becomes available, the dormant embed will be edited to show `AVAILABLE_MSG`
+
+    In Use Category
+
+    * Contains all channels which are occupied by someone needing help
+    * Channel moves to dormant category after 45 minutes of being idle
+        * Configurable with `constants.HelpChannels.idle_minutes`
+    * Helpers+ command can prematurely mark a channel as dormant
+        * Configurable with `constants.HelpChannels.cmd_whitelist`
+    * When a channel becomes dormant, an embed with `DORMANT_MSG` will be sent
+
+    Dormant Category
+
+    * Contains channels which aren't in use
+    * Channels are used to refill the Available category
+
+    Help channels are named after the chemical elements in `bot/resources/elements.json`.
+    """
 
     def __init__(self, bot: Bot):
         super().__init__()
