@@ -72,6 +72,7 @@ class HelpChannels(Scheduler, commands.Cog):
         self.name_queue: deque = None
 
         self.ready = asyncio.Event()
+        self.on_message_lock = asyncio.Lock()
         self.init_task = asyncio.create_task(self.init_cog())
 
     def cog_unload(self) -> None:
@@ -278,14 +279,17 @@ class HelpChannels(Scheduler, commands.Cog):
         """Move an available channel to the In Use category and replace it with a dormant one."""
         await self.ready.wait()
 
-        available_channels = self.get_category_channels(self.available_category)
-        if message.channel not in available_channels:
-            return  # Ignore messages outside the Available category.
+        # Use a lock to prevent a channel from being processed twice.
+        with self.on_message_lock.acquire():
+            available_channels = self.get_category_channels(self.available_category)
+            if message.channel not in available_channels:
+                return  # Ignore messages outside the Available category.
 
-        await self.move_to_in_use(message.channel)
+            await self.move_to_in_use(message.channel)
 
         # Move a dormant channel to the Available category to fill in the gap.
-        # This is done last because it may wait indefinitely for a channel to be put in the queue.
+        # This is done last and outside the lock because it may wait indefinitely for a channel to
+        # be put in the queue.
         await self.move_to_available()
 
     async def try_get_channel(self, channel_id: int) -> discord.abc.GuildChannel:
