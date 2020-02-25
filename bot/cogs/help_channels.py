@@ -304,13 +304,9 @@ class HelpChannels(Scheduler, commands.Cog):
         log.trace("Making a channel available.")
 
         channel = await self.get_available_candidate()
-        embed = discord.Embed(description=AVAILABLE_MSG)
-
         log.info(f"Making #{channel.name} ({channel.id}) available.")
 
-        # TODO: edit or delete the dormant message
-        log.trace(f"Sending available message for #{channel.name} ({channel.id}).")
-        await channel.send(embed=embed)
+        await self.send_available_message(channel)
 
         log.trace(f"Moving #{channel.name} ({channel.id}) to the Available category.")
         await channel.edit(
@@ -379,6 +375,21 @@ class HelpChannels(Scheduler, commands.Cog):
         # This is done last and outside the lock because it may wait indefinitely for a channel to
         # be put in the queue.
         await self.move_to_available()
+
+    async def send_available_message(self, channel: discord.TextChannel) -> None:
+        """Send the available message by editing a dormant message or sending a new message."""
+        channel_info = f"#{channel.name} ({channel.id})"
+        log.trace(f"Sending available message in {channel_info}.")
+
+        embed = discord.Embed(description=AVAILABLE_MSG)
+
+        msg = await self.get_last_message(channel)
+        if msg:
+            log.trace(f"Found dormant message {msg.id} in {channel_info}; editing it.")
+            await msg.edit(embed=embed)
+        else:
+            log.trace(f"Dormant message not found in {channel_info}; sending a new message.")
+            await channel.send(embed=embed)
 
     async def try_get_channel(self, channel_id: int) -> discord.abc.GuildChannel:
         """Attempt to get or fetch a channel and return it."""
