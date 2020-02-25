@@ -287,7 +287,7 @@ class HelpChannels(Scheduler, commands.Cog):
         idle_seconds = constants.HelpChannels.idle_minutes * 60
         time_elapsed = await self.get_idle_time(channel)
 
-        if time_elapsed is None or time_elapsed > idle_seconds:
+        if time_elapsed is None or time_elapsed >= idle_seconds:
             log.info(
                 f"#{channel.name} ({channel.id}) is idle longer than {idle_seconds} seconds "
                 f"and will be made dormant."
