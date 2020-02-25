@@ -22,7 +22,7 @@ class ConfigVerifier(Cog):
 
         If any channels in config aren't present in server, log them in a warning.
         """
-        await self.bot.wait_until_ready()
+        await self.bot.wait_until_guild_available()
         server = self.bot.get_guild(constants.Guild.id)
 
         server_channel_ids = {channel.id for channel in server.channels}
