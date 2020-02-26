@@ -94,4 +94,7 @@ class Scheduler(metaclass=CogABCMeta):
             )
 
         with contextlib.suppress(asyncio.CancelledError):
-            done_task.exception()
+            exception = done_task.exception()
+            # Raise the exception if one exists.
+            if exception:
+                raise exception
