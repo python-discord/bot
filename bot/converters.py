@@ -175,6 +175,12 @@ class TagNameConverter(Converter):
                         "Rejecting the request.")
             raise BadArgument("Are you insane? That's way too long!")
 
+        # The tag name is ascii but does not contain any letters.
+        elif not any(character.isalpha() for character in tag_name):
+            log.warning(f"{ctx.author} tried to request a tag name without letters. "
+                        "Rejecting the request.")
+            raise BadArgument("Tag names must contain at least one letter.")
+
         return tag_name
 
 
