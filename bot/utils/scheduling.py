@@ -52,18 +52,18 @@ class Scheduler(metaclass=CogABCMeta):
         log.debug(f"{self.cog_name}: scheduled task #{task_id} {id(task)}.")
 
     def cancel_task(self, task_id: str) -> None:
-        """Un-schedules a task."""
+        """Unschedule the task identified by `task_id`."""
         log.trace(f"{self.cog_name}: cancelling task #{task_id}...")
-
         task = self._scheduled_tasks.get(task_id)
 
-        if task is None:
-            log.warning(f"{self.cog_name}: Failed to unschedule {task_id} (no task found).")
+        if not task:
+            log.warning(f"{self.cog_name}: failed to unschedule {task_id} (no task found).")
             return
 
         task.cancel()
-        log.debug(f"{self.cog_name}: unscheduled task #{task_id} {id(task)}.")
         del self._scheduled_tasks[task_id]
+
+        log.debug(f"{self.cog_name}: unscheduled task #{task_id} {id(task)}.")
 
     def _task_done_callback(self, task_id: str, task: asyncio.Task) -> None:
         """
