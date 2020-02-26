@@ -65,24 +65,33 @@ class Scheduler(metaclass=CogABCMeta):
 
         log.debug(f"{self.cog_name}: unscheduled task #{task_id} {id(task)}.")
 
-    def _task_done_callback(self, task_id: str, task: asyncio.Task) -> None:
+    def _task_done_callback(self, task_id: str, done_task: asyncio.Task) -> None:
         """
-        Unschedule the task and raise its exception if one exists.
+        Delete the task and raise its exception if one exists.
 
-        If the task was cancelled, the CancelledError is retrieved and suppressed. In this case,
-        the task is already assumed to have been unscheduled.
+        If `done_task` and the task associated with `task_id` are different, then the latter
+        will not be deleted. In this case, a new task was likely rescheduled with the same ID.
         """
-        log.trace(f"{self.cog_name}: performing done callback for task #{task_id} {id(task)}")
+        log.trace(f"{self.cog_name}: performing done callback for task #{task_id} {id(done_task)}.")
 
-        if task.cancelled():
-            with contextlib.suppress(asyncio.CancelledError):
-                task.exception()
+        scheduled_task = self._scheduled_tasks.get(task_id)
+
+        if scheduled_task and done_task is scheduled_task:
+            # A task for the ID exists and its the same as the done task.
+            # Since this is the done callback, the task is already done so no need to cancel it.
+            log.trace(f"{self.cog_name}: deleting task #{task_id} {id(done_task)}.")
+            del self._scheduled_tasks[task_id]
+        elif scheduled_task:
+            # A new task was likely rescheduled with the same ID.
+            log.debug(
+                f"{self.cog_name}: the scheduled task #{task_id} {id(scheduled_task)} "
+                f"and the done task {id(done_task)} differ."
+            )
         else:
-            # Check if it exists to avoid logging a warning.
-            if task_id in self._scheduled_tasks:
-                # Only cancel if the task is not cancelled to avoid a race condition when a new
-                # task is scheduled using the same ID. Reminders do this when re-scheduling after
-                # editing.
-                self.cancel_task(task_id)
+            log.warning(
+                f"{self.cog_name}: task #{task_id} not found while handling task {id(done_task)}! "
+                f"A task somehow got unscheduled improperly (i.e. deleted but not cancelled)."
+            )
 
-            task.exception()
+        with contextlib.suppress(asyncio.CancelledError):
+            done_task.exception()
