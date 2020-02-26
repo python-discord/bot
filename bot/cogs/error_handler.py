@@ -20,6 +20,7 @@ from sentry_sdk import push_scope
 from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Channels
+from bot.converters import TagNameConverter
 from bot.decorators import InChannelCheckFailure
 
 log = logging.getLogger(__name__)
@@ -88,8 +89,11 @@ class ErrorHandler(Cog):
                     return
 
                 # Return to not raise the exception
-                with contextlib.suppress(ResponseCodeError):
-                    await ctx.invoke(tags_get_command, tag_name=ctx.invoked_with)
+                with contextlib.suppress(BadArgument, ResponseCodeError):
+                    await ctx.invoke(
+                        tags_get_command,
+                        tag_name=await TagNameConverter.convert(ctx, ctx.invoked_with)
+                    )
                     return
         elif isinstance(e, BadArgument):
             await ctx.send(f"Bad argument: {e}\n")
