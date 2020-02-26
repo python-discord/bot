@@ -83,7 +83,7 @@ class Reddit(Cog):
                     expires_at=datetime.utcnow() + timedelta(seconds=expiration)
                 )
 
-                log.debug(f"New token acquired; expires on {self.access_token.expires_at}")
+                log.debug(f"New token acquired; expires on UTC {self.access_token.expires_at}")
                 return
             else:
                 log.debug(
