@@ -141,14 +141,6 @@ class TagNameConverter(Converter):
     @staticmethod
     async def convert(ctx: Context, tag_name: str) -> str:
         """Lowercase & strip whitespace from proposed tag_name & ensure it's valid."""
-        def is_number(value: str) -> bool:
-            """Check to see if the input string is numeric."""
-            try:
-                float(value)
-            except ValueError:
-                return False
-            return True
-
         tag_name = tag_name.lower().strip()
 
         # The tag name has at least one invalid character.
@@ -162,12 +154,6 @@ class TagNameConverter(Converter):
             log.warning(f"{ctx.author} tried to create a tag with a name consisting only of whitespace. "
                         "Rejecting the request.")
             raise BadArgument("Tag names should not be empty, or filled with whitespace.")
-
-        # The tag name is a number of some kind, we don't allow that.
-        elif is_number(tag_name):
-            log.warning(f"{ctx.author} tried to create a tag with a digit as its name. "
-                        "Rejecting the request.")
-            raise BadArgument("Tag names can't be numbers.")
 
         # The tag name is longer than 127 characters.
         elif len(tag_name) > 127:
