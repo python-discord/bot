@@ -89,12 +89,20 @@ class ErrorHandler(Cog):
                     return
 
                 # Return to not raise the exception
-                with contextlib.suppress(BadArgument, ResponseCodeError):
-                    await ctx.invoke(
-                        tags_get_command,
-                        tag_name=await TagNameConverter.convert(ctx, ctx.invoked_with)
+                try:
+                    tag_name = await TagNameConverter.convert(ctx, ctx.invoked_with)
+                except BadArgument:
+                    log.debug(
+                        f"{ctx.author} tried to use an invalid command "
+                        f"and the fallback tag failed validation in TagNameConverter."
                     )
-                    return
+                else:
+                    with contextlib.suppress(ResponseCodeError):
+                        await ctx.invoke(
+                            tags_get_command,
+                            tag_name=tag_name
+                        )
+                return
         elif isinstance(e, BadArgument):
             await ctx.send(f"Bad argument: {e}\n")
             await ctx.invoke(*help_command)
