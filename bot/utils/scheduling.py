@@ -87,7 +87,7 @@ class Scheduler(metaclass=CogABCMeta):
                 f"{self.cog_name}: the scheduled task #{task_id} {id(scheduled_task)} "
                 f"and the done task {id(done_task)} differ."
             )
-        else:
+        elif not done_task.cancelled():
             log.warning(
                 f"{self.cog_name}: task #{task_id} not found while handling task {id(done_task)}! "
                 f"A task somehow got unscheduled improperly (i.e. deleted but not cancelled)."
