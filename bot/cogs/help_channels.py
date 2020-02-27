@@ -99,8 +99,8 @@ class HelpChannels(Scheduler, commands.Cog):
         self.in_use_category: discord.CategoryChannel = None
         self.dormant_category: discord.CategoryChannel = None
 
-        self.channel_queue: asyncio.Queue = None
-        self.name_queue: deque = None
+        self.channel_queue: asyncio.Queue[discord.TextChannel] = None
+        self.name_queue: t.Deque[str] = None
 
         self.ready = asyncio.Event()
         self.on_message_lock = asyncio.Lock()
