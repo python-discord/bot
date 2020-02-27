@@ -46,7 +46,9 @@ through [our guide for asking a good question]({ASKING_GUIDE_URL}).
 """
 
 with Path("bot/resources/elements.json").open(encoding="utf-8") as elements_file:
-    ELEMENTS = json.load(elements_file)
+    # Discord has a hard limit of 50 channels per category.
+    # Easiest way to prevent more channels from being created is to limit the names available.
+    ELEMENTS = json.load(elements_file)[:50]
 
 
 class ChannelTimeout(t.NamedTuple):
