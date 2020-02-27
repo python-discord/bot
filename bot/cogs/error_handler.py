@@ -98,10 +98,7 @@ class ErrorHandler(Cog):
                     )
                 else:
                     with contextlib.suppress(ResponseCodeError):
-                        await ctx.invoke(
-                            tags_get_command,
-                            tag_name=tag_name
-                        )
+                        await ctx.invoke(tags_get_command, tag_name=tag_name)
                 return
         elif isinstance(e, BadArgument):
             await ctx.send(f"Bad argument: {e}\n")
