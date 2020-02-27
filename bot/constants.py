@@ -186,6 +186,11 @@ class YAMLGetter(type):
     def __getitem__(cls, name):
         return cls.__getattr__(name)
 
+    def __iter__(cls):
+        """Return generator of key: value pairs of current constants class' config values."""
+        for name in cls.__annotations__:
+            yield name, getattr(cls, name)
+
 
 # Dataclasses
 class Bot(metaclass=YAMLGetter):
@@ -193,7 +198,7 @@ class Bot(metaclass=YAMLGetter):
 
     prefix: str
     token: str
-
+    sentry_dsn: str
 
 class Filter(metaclass=YAMLGetter):
     section = "filter"
@@ -236,6 +241,13 @@ class Colours(metaclass=YAMLGetter):
     soft_orange: int
 
 
+class DuckPond(metaclass=YAMLGetter):
+    section = "duck_pond"
+
+    threshold: int
+    custom_emojis: List[int]
+
+
 class Emojis(metaclass=YAMLGetter):
     section = "style"
     subsection = "emojis"
@@ -244,20 +256,33 @@ class Emojis(metaclass=YAMLGetter):
     defcon_enabled: str  # noqa: E704
     defcon_updated: str  # noqa: E704
 
-    green_chevron: str
-    red_chevron: str
-    white_chevron: str
-    bb_message: str
-
     status_online: str
     status_offline: str
     status_idle: str
     status_dnd: str
 
+    failmail: str
+    trashcan: str
+
     bullet: str
     new: str
     pencil: str
     cross_mark: str
+    check_mark: str
+
+    ducky_yellow: int
+    ducky_blurple: int
+    ducky_regal: int
+    ducky_camo: int
+    ducky_ninja: int
+    ducky_devil: int
+    ducky_tube: int
+    ducky_hunt: int
+    ducky_wizard: int
+    ducky_party: int
+    ducky_angel: int
+    ducky_maul: int
+    ducky_santa: int
 
     upvotes: str
     comments: str
@@ -315,6 +340,10 @@ class Icons(metaclass=YAMLGetter):
     superstarify: str
     unsuperstarify: str
 
+    voice_state_blue: str
+    voice_state_green: str
+    voice_state_red: str
+
 
 class CleanMessages(metaclass=YAMLGetter):
     section = "bot"
@@ -337,12 +366,16 @@ class Channels(metaclass=YAMLGetter):
     admins: int
     admin_spam: int
     announcements: int
+    attachment_log: int
     big_brother_logs: int
     bot: int
     checkpoint_test: int
     defcon: int
+    devcontrib: int
+    devcore: int
     devlog: int
     devtest: int
+    esoteric: int
     help_0: int
     help_1: int
     help_2: int
@@ -368,6 +401,7 @@ class Channels(metaclass=YAMLGetter):
     userlog: int
     user_event_a: int
     verification: int
+    voice_log: int
 
 
 class Webhooks(metaclass=YAMLGetter):
@@ -377,6 +411,8 @@ class Webhooks(metaclass=YAMLGetter):
     talent_pool: int
     big_brother: int
     reddit: int
+    duck_pond: int
+    dev_log: int
 
 
 class Roles(metaclass=YAMLGetter):
@@ -405,7 +441,7 @@ class Guild(metaclass=YAMLGetter):
     id: int
     ignored: List[int]
     staff_channels: List[int]
-
+    reminder_whitelist: List[int]
 
 class Keys(metaclass=YAMLGetter):
     section = "keys"
@@ -453,6 +489,8 @@ class Reddit(metaclass=YAMLGetter):
     section = "reddit"
 
     subreddits: list
+    client_id: str
+    secret: str
 
 
 class Wolfram(metaclass=YAMLGetter):
@@ -506,6 +544,39 @@ class RedirectOutput(metaclass=YAMLGetter):
 
     delete_invocation: bool
     delete_delay: int
+
+
+class Sync(metaclass=YAMLGetter):
+    section = 'sync'
+
+    confirm_timeout: int
+    max_diff: int
+
+
+class Event(Enum):
+    """
+    Event names. This does not include every event (for example, raw
+    events aren't here), but only events used in ModLog for now.
+    """
+
+    guild_channel_create = "guild_channel_create"
+    guild_channel_delete = "guild_channel_delete"
+    guild_channel_update = "guild_channel_update"
+    guild_role_create = "guild_role_create"
+    guild_role_delete = "guild_role_delete"
+    guild_role_update = "guild_role_update"
+    guild_update = "guild_update"
+
+    member_join = "member_join"
+    member_remove = "member_remove"
+    member_ban = "member_ban"
+    member_unban = "member_unban"
+    member_update = "member_update"
+
+    message_delete = "message_delete"
+    message_edit = "message_edit"
+
+    voice_state_update = "voice_state_update"
 
 
 # Debug mode
@@ -579,27 +650,3 @@ ERROR_REPLIES = [
     "Noooooo!!",
     "I can't believe you've done this",
 ]
-
-
-class Event(Enum):
-    """
-    Event names. This does not include every event (for example, raw
-    events aren't here), but only events used in ModLog for now.
-    """
-
-    guild_channel_create = "guild_channel_create"
-    guild_channel_delete = "guild_channel_delete"
-    guild_channel_update = "guild_channel_update"
-    guild_role_create = "guild_role_create"
-    guild_role_delete = "guild_role_delete"
-    guild_role_update = "guild_role_update"
-    guild_update = "guild_update"
-
-    member_join = "member_join"
-    member_remove = "member_remove"
-    member_ban = "member_ban"
-    member_unban = "member_unban"
-    member_update = "member_update"
-
-    message_delete = "message_delete"
-    message_edit = "message_edit"

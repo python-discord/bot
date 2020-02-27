@@ -7,16 +7,17 @@ from gettext import ngettext
 
 import dateutil.parser
 import discord
-from discord.ext.commands import Bot, Context
+from discord.ext.commands import Context
 
 from bot import constants
 from bot.api import ResponseCodeError
+from bot.bot import Bot
 from bot.constants import Colours, STAFF_CHANNELS
 from bot.utils import time
 from bot.utils.scheduling import Scheduler
 from . import utils
 from .modlog import ModLog
-from .utils import MemberObject
+from .utils import UserSnowflake
 
 log = logging.getLogger(__name__)
 
@@ -37,7 +38,7 @@ class InfractionScheduler(Scheduler):
 
     async def reschedule_infractions(self, supported_infractions: t.Container[str]) -> None:
         """Schedule expiration for previous infractions."""
-        await self.bot.wait_until_ready()
+        await self.bot.wait_until_guild_available()
 
         log.trace(f"Rescheduling infractions for {self.__class__.__name__}.")
 
@@ -76,20 +77,17 @@ class InfractionScheduler(Scheduler):
         self,
         ctx: Context,
         infraction: utils.Infraction,
-        user: MemberObject,
+        user: UserSnowflake,
         action_coro: t.Optional[t.Awaitable] = None
     ) -> None:
         """Apply an infraction to the user, log the infraction, and optionally notify the user."""
         infr_type = infraction["type"]
         icon = utils.INFRACTION_ICONS[infr_type][0]
         reason = infraction["reason"]
-        expiry = infraction["expires_at"]
+        expiry = time.format_infraction_with_duration(infraction["expires_at"])
         id_ = infraction['id']
 
         log.trace(f"Applying {infr_type} infraction #{id_} to {user}.")
-
-        if expiry:
-            expiry = time.format_infraction(expiry)
 
         # Default values for the confirmation message and mod log.
         confirm_msg = f":ok_hand: applied"
@@ -108,16 +106,20 @@ class InfractionScheduler(Scheduler):
 
         # DM the user about the infraction if it's not a shadow/hidden infraction.
         if not infraction["hidden"]:
-            # Sometimes user is a discord.Object; make it a proper user.
-            user = await self.bot.fetch_user(user.id)
+            dm_result = f"{constants.Emojis.failmail} "
+            dm_log_text = "\nDM: **Failed**"
 
-            # Accordingly display whether the user was successfully notified via DM.
-            if await utils.notify_infraction(user, infr_type, expiry, reason, icon):
-                dm_result = ":incoming_envelope: "
-                dm_log_text = "\nDM: Sent"
+            # Sometimes user is a discord.Object; make it a proper user.
+            try:
+                if not isinstance(user, (discord.Member, discord.User)):
+                    user = await self.bot.fetch_user(user.id)
+            except discord.HTTPException as e:
+                log.error(f"Failed to DM {user.id}: could not fetch user (status {e.status})")
             else:
-                dm_log_text = "\nDM: **Failed**"
-                log_content = ctx.author.mention
+                # Accordingly display whether the user was successfully notified via DM.
+                if await utils.notify_infraction(user, infr_type, expiry, reason, icon):
+                    dm_result = ":incoming_envelope: "
+                    dm_log_text = "\nDM: Sent"
 
         if infraction["actor"] == self.bot.user.id:
             log.trace(
@@ -149,14 +151,18 @@ class InfractionScheduler(Scheduler):
                 if expiry:
                     # Schedule the expiration of the infraction.
                     self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
-            except discord.Forbidden:
+            except discord.HTTPException as e:
                 # Accordingly display that applying the infraction failed.
                 confirm_msg = f":x: failed to apply"
                 expiry_msg = ""
                 log_content = ctx.author.mention
                 log_title = "failed to apply"
 
-                log.warning(f"Failed to apply {infr_type} infraction #{id_} to {user}.")
+                log_msg = f"Failed to apply {infr_type} infraction #{id_} to {user}"
+                if isinstance(e, discord.Forbidden):
+                    log.warning(f"{log_msg}: bot lacks permissions.")
+                else:
+                    log.exception(log_msg)
 
         # Send a confirmation message to the invoking context.
         log.trace(f"Sending infraction #{id_} confirmation message.")
@@ -183,7 +189,7 @@ class InfractionScheduler(Scheduler):
 
         log.info(f"Applied {infr_type} infraction #{id_} to {user}.")
 
-    async def pardon_infraction(self, ctx: Context, infr_type: str, user: MemberObject) -> None:
+    async def pardon_infraction(self, ctx: Context, infr_type: str, user: UserSnowflake) -> None:
         """Prematurely end an infraction for a user and log the action in the mod log."""
         log.trace(f"Pardoning {infr_type} infraction for {user}.")
 
@@ -253,8 +259,7 @@ class InfractionScheduler(Scheduler):
         if log_text.get("DM") == "Sent":
             dm_emoji = ":incoming_envelope: "
         elif "DM" in log_text:
-            # Mention the actor because the DM failed to send.
-            log_content = ctx.author.mention
+            dm_emoji = f"{constants.Emojis.failmail} "
 
         # Accordingly display whether the pardon failed.
         if "Failure" in log_text:
@@ -304,16 +309,23 @@ class InfractionScheduler(Scheduler):
         guild = self.bot.get_guild(constants.Guild.id)
         mod_role = guild.get_role(constants.Roles.moderator)
         user_id = infraction["user"]
+        actor = infraction["actor"]
         type_ = infraction["type"]
         id_ = infraction["id"]
+        inserted_at = infraction["inserted_at"]
+        expiry = infraction["expires_at"]
 
         log.info(f"Marking infraction #{id_} as inactive (expired).")
 
+        expiry = dateutil.parser.isoparse(expiry).replace(tzinfo=None) if expiry else None
+        created = time.format_infraction_with_duration(inserted_at, expiry)
+
         log_content = None
         log_text = {
-            "Member": str(user_id),
-            "Actor": str(self.bot.user),
-            "Reason": infraction["reason"]
+            "Member": f"<@{user_id}>",
+            "Actor": str(self.bot.get_user(actor) or actor),
+            "Reason": infraction["reason"],
+            "Created": created,
         }
 
         try:
@@ -327,12 +339,12 @@ class InfractionScheduler(Scheduler):
                     f"Attempted to deactivate an unsupported infraction #{id_} ({type_})!"
                 )
         except discord.Forbidden:
-            log.warning(f"Failed to deactivate infraction #{id_} ({type_}): bot lacks permissions")
+            log.warning(f"Failed to deactivate infraction #{id_} ({type_}): bot lacks permissions.")
             log_text["Failure"] = f"The bot lacks permissions to do this (role hierarchy?)"
             log_content = mod_role.mention
         except discord.HTTPException as e:
             log.exception(f"Failed to deactivate infraction #{id_} ({type_})")
-            log_text["Failure"] = f"HTTPException with code {e.code}."
+            log_text["Failure"] = f"HTTPException with status {e.status} and code {e.code}."
             log_content = mod_role.mention
 
         # Check if the user is currently being watched by Big Brother.
@@ -379,14 +391,19 @@ class InfractionScheduler(Scheduler):
         if send_log:
             log_title = f"expiration failed" if "Failure" in log_text else "expired"
 
+            user = self.bot.get_user(user_id)
+            avatar = user.avatar_url_as(static_format="png") if user else None
+
             log.trace(f"Sending deactivation mod log for infraction #{id_}.")
             await self.mod_log.send_log_message(
                 icon_url=utils.INFRACTION_ICONS[type_][1],
                 colour=Colours.soft_green,
                 title=f"Infraction {log_title}: {type_}",
+                thumbnail=avatar,
                 text="\n".join(f"{k}: {v}" for k, v in log_text.items()),
                 footer=f"ID: {id_}",
                 content=log_content,
+
             )
 
         return log_text

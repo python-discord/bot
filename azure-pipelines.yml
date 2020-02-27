@@ -30,7 +30,7 @@ jobs:
       - script: python -m flake8
         displayName: 'Run linter'
 
-      - script: BOT_API_KEY=foo BOT_TOKEN=bar WOLFRAM_API_KEY=baz coverage run -m xmlrunner
+      - script: BOT_API_KEY=foo BOT_SENTRY_DSN=blah BOT_TOKEN=bar WOLFRAM_API_KEY=baz REDDIT_CLIENT_ID=spam REDDIT_SECRET=ham coverage run -m xmlrunner
         displayName: Run tests
 
       - script: coverage report -m && coverage xml -o coverage.xml

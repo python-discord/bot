@@ -32,7 +32,12 @@ class ResponseCodeError(ValueError):
 class APIClient:
     """Django Site API wrapper."""
 
-    def __init__(self, **kwargs):
+    # These are class attributes so they can be seen when being mocked for tests.
+    # See commit 22a55534ef13990815a6f69d361e2a12693075d5 for details.
+    session: Optional[aiohttp.ClientSession] = None
+    loop: asyncio.AbstractEventLoop = None
+
+    def __init__(self, loop: asyncio.AbstractEventLoop, **kwargs):
         auth_headers = {
             'Authorization': f"Token {Keys.site_api}"
         }
@@ -42,11 +47,38 @@ class APIClient:
         else:
             kwargs['headers'] = auth_headers
 
-        self.session = aiohttp.ClientSession(**kwargs)
+        self.session = None
+        self.loop = loop
+
+        self._ready = asyncio.Event(loop=loop)
+        self._creation_task = None
+        self._session_args = kwargs
+
+        self.recreate()
 
     @staticmethod
     def _url_for(endpoint: str) -> str:
         return f"{URLs.site_schema}{URLs.site_api}/{quote_url(endpoint)}"
+
+    async def _create_session(self) -> None:
+        """Create the aiohttp session and set the ready event."""
+        self.session = aiohttp.ClientSession(**self._session_args)
+        self._ready.set()
+
+    async def close(self) -> None:
+        """Close the aiohttp session and unset the ready event."""
+        if not self._ready.is_set():
+            return
+
+        await self.session.close()
+        self._ready.clear()
+
+    def recreate(self) -> None:
+        """Schedule the aiohttp session to be created if it's been closed."""
+        if self.session is None or self.session.closed:
+            # Don't schedule a task if one is already in progress.
+            if self._creation_task is None or self._creation_task.done():
+                self._creation_task = self.loop.create_task(self._create_session())
 
     async def maybe_raise_for_status(self, response: aiohttp.ClientResponse, should_raise: bool) -> None:
         """Raise ResponseCodeError for non-OK response if an exception should be raised."""
@@ -58,33 +90,35 @@ class APIClient:
                 response_text = await response.text()
                 raise ResponseCodeError(response=response, response_text=response_text)
 
-    async def get(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs) -> dict:
+    async def request(self, method: str, endpoint: str, *, raise_for_status: bool = True, **kwargs) -> dict:
+        """Send an HTTP request to the site API and return the JSON response."""
+        await self._ready.wait()
+
+        async with self.session.request(method.upper(), self._url_for(endpoint), **kwargs) as resp:
+            await self.maybe_raise_for_status(resp, raise_for_status)
+            return await resp.json()
+
+    async def get(self, endpoint: str, *, raise_for_status: bool = True, **kwargs) -> dict:
         """Site API GET."""
-        async with self.session.get(self._url_for(endpoint), *args, **kwargs) as resp:
-            await self.maybe_raise_for_status(resp, raise_for_status)
-            return await resp.json()
+        return await self.request("GET", endpoint, raise_for_status=raise_for_status, **kwargs)
 
-    async def patch(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs) -> dict:
+    async def patch(self, endpoint: str, *, raise_for_status: bool = True, **kwargs) -> dict:
         """Site API PATCH."""
-        async with self.session.patch(self._url_for(endpoint), *args, **kwargs) as resp:
-            await self.maybe_raise_for_status(resp, raise_for_status)
-            return await resp.json()
+        return await self.request("PATCH", endpoint, raise_for_status=raise_for_status, **kwargs)
 
-    async def post(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs) -> dict:
+    async def post(self, endpoint: str, *, raise_for_status: bool = True, **kwargs) -> dict:
         """Site API POST."""
-        async with self.session.post(self._url_for(endpoint), *args, **kwargs) as resp:
-            await self.maybe_raise_for_status(resp, raise_for_status)
-            return await resp.json()
+        return await self.request("POST", endpoint, raise_for_status=raise_for_status, **kwargs)
 
-    async def put(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs) -> dict:
+    async def put(self, endpoint: str, *, raise_for_status: bool = True, **kwargs) -> dict:
         """Site API PUT."""
-        async with self.session.put(self._url_for(endpoint), *args, **kwargs) as resp:
-            await self.maybe_raise_for_status(resp, raise_for_status)
-            return await resp.json()
+        return await self.request("PUT", endpoint, raise_for_status=raise_for_status, **kwargs)
 
-    async def delete(self, endpoint: str, *args, raise_for_status: bool = True, **kwargs) -> Optional[dict]:
+    async def delete(self, endpoint: str, *, raise_for_status: bool = True, **kwargs) -> Optional[dict]:
         """Site API DELETE."""
-        async with self.session.delete(self._url_for(endpoint), *args, **kwargs) as resp:
+        await self._ready.wait()
+
+        async with self.session.delete(self._url_for(endpoint), **kwargs) as resp:
             if resp.status == 204:
                 return None
 
@@ -104,77 +138,3 @@ def loop_is_running() -> bool:
     except RuntimeError:
         return False
     return True
-
-
-class APILoggingHandler(logging.StreamHandler):
-    """Site API logging handler."""
-
-    def __init__(self, client: APIClient):
-        logging.StreamHandler.__init__(self)
-        self.client = client
-
-        # internal batch of shipoff tasks that must not be scheduled
-        # on the event loop yet - scheduled when the event loop is ready.
-        self.queue = []
-
-    async def ship_off(self, payload: dict) -> None:
-        """Ship log payload to the logging API."""
-        try:
-            await self.client.post('logs', json=payload)
-        except ResponseCodeError as err:
-            log.warning(
-                "Cannot send logging record to the site, got code %d.",
-                err.response.status,
-                extra={'via_handler': True}
-            )
-        except Exception as err:
-            log.warning(
-                "Cannot send logging record to the site: %r",
-                err,
-                extra={'via_handler': True}
-            )
-
-    def emit(self, record: logging.LogRecord) -> None:
-        """
-        Determine if a log record should be shipped to the logging API.
-
-        If the asyncio event loop is not yet running, log records will instead be put in a queue
-        which will be consumed once the event loop is running.
-
-        The following two conditions are set:
-            1. Do not log anything below DEBUG (only applies to the monkeypatched `TRACE` level)
-            2. Ignore log records originating from this logging handler itself to prevent infinite recursion
-        """
-        if (
-                record.levelno >= logging.DEBUG
-                and not record.__dict__.get('via_handler')
-        ):
-            payload = {
-                'application': 'bot',
-                'logger_name': record.name,
-                'level': record.levelname.lower(),
-                'module': record.module,
-                'line': record.lineno,
-                'message': self.format(record)
-            }
-
-            task = self.ship_off(payload)
-            if not loop_is_running():
-                self.queue.append(task)
-            else:
-                asyncio.create_task(task)
-                self.schedule_queued_tasks()
-
-    def schedule_queued_tasks(self) -> None:
-        """Consume the queue and schedule the logging of each queued record."""
-        for task in self.queue:
-            asyncio.create_task(task)
-
-        if self.queue:
-            log.debug(
-                "Scheduled %d pending logging tasks.",
-                len(self.queue),
-                extra={'via_handler': True}
-            )
-
-        self.queue.clear()

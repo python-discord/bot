@@ -1,12 +1,13 @@
 import logging
-from typing import Callable, Iterable
+from typing import Any, Dict
 
-from discord import Guild, Member, Role
+from discord import Member, Role, User
 from discord.ext import commands
-from discord.ext.commands import Bot, Cog, Context
+from discord.ext.commands import Cog, Context
 
 from bot import constants
 from bot.api import ResponseCodeError
+from bot.bot import Bot
 from bot.cogs.sync import syncers
 
 log = logging.getLogger(__name__)
@@ -15,40 +16,32 @@ log = logging.getLogger(__name__)
 class Sync(Cog):
     """Captures relevant events and sends them to the site."""
 
-    # The server to synchronize events on.
-    # Note that setting this wrongly will result in things getting deleted
-    # that possibly shouldn't be.
-    SYNC_SERVER_ID = constants.Guild.id
-
-    # An iterable of callables that are called when the bot is ready.
-    ON_READY_SYNCERS: Iterable[Callable[[Bot, Guild], None]] = (
-        syncers.sync_roles,
-        syncers.sync_users
-    )
-
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
+        self.role_syncer = syncers.RoleSyncer(self.bot)
+        self.user_syncer = syncers.UserSyncer(self.bot)
 
         self.bot.loop.create_task(self.sync_guild())
 
     async def sync_guild(self) -> None:
         """Syncs the roles/users of the guild with the database."""
-        await self.bot.wait_until_ready()
-        guild = self.bot.get_guild(self.SYNC_SERVER_ID)
-        if guild is not None:
-            for syncer in self.ON_READY_SYNCERS:
-                syncer_name = syncer.__name__[5:]  # drop off `sync_`
-                log.info("Starting `%s` syncer.", syncer_name)
-                total_created, total_updated, total_deleted = await syncer(self.bot, guild)
-                if total_deleted is None:
-                    log.info(
-                        f"`{syncer_name}` syncer finished, created `{total_created}`, updated `{total_updated}`."
-                    )
-                else:
-                    log.info(
-                        f"`{syncer_name}` syncer finished, created `{total_created}`, updated `{total_updated}`, "
-                        f"deleted `{total_deleted}`."
-                    )
+        await self.bot.wait_until_guild_available()
+
+        guild = self.bot.get_guild(constants.Guild.id)
+        if guild is None:
+            return
+
+        for syncer in (self.role_syncer, self.user_syncer):
+            await syncer.sync(guild)
+
+    async def patch_user(self, user_id: int, updated_information: Dict[str, Any]) -> None:
+        """Send a PATCH request to partially update a user in the database."""
+        try:
+            await self.bot.api_client.patch(f"bot/users/{user_id}", json=updated_information)
+        except ResponseCodeError as e:
+            if e.response.status != 404:
+                raise
+            log.warning("Unable to update user, got 404. Assuming race condition from join event.")
 
     @Cog.listener()
     async def on_guild_role_create(self, role: Role) -> None:
@@ -72,12 +65,14 @@ class Sync(Cog):
     @Cog.listener()
     async def on_guild_role_update(self, before: Role, after: Role) -> None:
         """Syncs role with the database if any of the stored attributes were updated."""
-        if (
-                before.name != after.name
-                or before.colour != after.colour
-                or before.permissions != after.permissions
-                or before.position != after.position
-        ):
+        was_updated = (
+            before.name != after.name
+            or before.colour != after.colour
+            or before.permissions != after.permissions
+            or before.position != after.position
+        )
+
+        if was_updated:
             await self.bot.api_client.put(
                 f'bot/roles/{after.id}',
                 json={
@@ -127,48 +122,27 @@ class Sync(Cog):
 
     @Cog.listener()
     async def on_member_remove(self, member: Member) -> None:
-        """Updates the user information when a member leaves the guild."""
-        await self.bot.api_client.put(
-            f'bot/users/{member.id}',
-            json={
-                'avatar_hash': member.avatar,
-                'discriminator': int(member.discriminator),
-                'id': member.id,
-                'in_guild': False,
-                'name': member.name,
-                'roles': sorted(role.id for role in member.roles)
-            }
-        )
+        """Set the in_guild field to False when a member leaves the guild."""
+        await self.patch_user(member.id, updated_information={"in_guild": False})
 
     @Cog.listener()
     async def on_member_update(self, before: Member, after: Member) -> None:
-        """Updates the user information if any of relevant attributes have changed."""
-        if (
-                before.name != after.name
-                or before.avatar != after.avatar
-                or before.discriminator != after.discriminator
-                or before.roles != after.roles
-        ):
-            try:
-                await self.bot.api_client.put(
-                    'bot/users/' + str(after.id),
-                    json={
-                        'avatar_hash': after.avatar,
-                        'discriminator': int(after.discriminator),
-                        'id': after.id,
-                        'in_guild': True,
-                        'name': after.name,
-                        'roles': sorted(role.id for role in after.roles)
-                    }
-                )
-            except ResponseCodeError as e:
-                if e.response.status != 404:
-                    raise
+        """Update the roles of the member in the database if a change is detected."""
+        if before.roles != after.roles:
+            updated_information = {"roles": sorted(role.id for role in after.roles)}
+            await self.patch_user(after.id, updated_information=updated_information)
 
-                log.warning(
-                    "Unable to update user, got 404. "
-                    "Assuming race condition from join event."
-                )
+    @Cog.listener()
+    async def on_user_update(self, before: User, after: User) -> None:
+        """Update the user information in the database if a relevant change is detected."""
+        attrs = ("name", "discriminator", "avatar")
+        if any(getattr(before, attr) != getattr(after, attr) for attr in attrs):
+            updated_information = {
+                "name": after.name,
+                "discriminator": int(after.discriminator),
+                "avatar_hash": after.avatar,
+            }
+            await self.patch_user(after.id, updated_information=updated_information)
 
     @commands.group(name='sync')
     @commands.has_permissions(administrator=True)
@@ -178,25 +152,11 @@ class Sync(Cog):
     @sync_group.command(name='roles')
     @commands.has_permissions(administrator=True)
     async def sync_roles_command(self, ctx: Context) -> None:
-        """Manually synchronize the guild's roles with the roles on the site."""
-        initial_response = await ctx.send("📊 Synchronizing roles.")
-        total_created, total_updated, total_deleted = await syncers.sync_roles(self.bot, ctx.guild)
-        await initial_response.edit(
-            content=(
-                f"👌 Role synchronization complete, created **{total_created}** "
-                f", updated **{total_created}** roles, and deleted **{total_deleted}** roles."
-            )
-        )
+        """Manually synchronise the guild's roles with the roles on the site."""
+        await self.role_syncer.sync(ctx.guild, ctx)
 
     @sync_group.command(name='users')
     @commands.has_permissions(administrator=True)
     async def sync_users_command(self, ctx: Context) -> None:
-        """Manually synchronize the guild's users with the users on the site."""
-        initial_response = await ctx.send("📊 Synchronizing users.")
-        total_created, total_updated, total_deleted = await syncers.sync_users(self.bot, ctx.guild)
-        await initial_response.edit(
-            content=(
-                f"👌 User synchronization complete, created **{total_created}** "
-                f"and updated **{total_created}** users."
-            )
-        )
+        """Manually synchronise the guild's users with the users on the site."""
+        await self.user_syncer.sync(ctx.guild, ctx)

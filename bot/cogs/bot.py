@@ -4,9 +4,11 @@ import re
 import time
 from typing import Optional, Tuple
 
-from discord import Embed, Message, RawMessageUpdateEvent
-from discord.ext.commands import Bot, Cog, Context, command, group
+from discord import Embed, Message, RawMessageUpdateEvent, TextChannel
+from discord.ext.commands import Cog, Context, command, group
 
+from bot.bot import Bot
+from bot.cogs.token_remover import TokenRemover
 from bot.constants import Channels, DEBUG_MODE, Guild, MODERATION_ROLES, Roles, URLs
 from bot.decorators import with_role
 from bot.utils.messages import wait_for_deletion
@@ -16,7 +18,7 @@ log = logging.getLogger(__name__)
 RE_MARKDOWN = re.compile(r'([*_~`|>])')
 
 
-class Bot(Cog):
+class BotCog(Cog, name="Bot"):
     """Bot information commands."""
 
     def __init__(self, bot: Bot):
@@ -71,9 +73,12 @@ class Bot(Cog):
 
     @command(name='echo', aliases=('print',))
     @with_role(*MODERATION_ROLES)
-    async def echo_command(self, ctx: Context, *, text: str) -> None:
-        """Send the input verbatim to the current channel."""
-        await ctx.send(text)
+    async def echo_command(self, ctx: Context, channel: Optional[TextChannel], *, text: str) -> None:
+        """Repeat the given message in either a specified channel or the current channel."""
+        if channel is None:
+            await ctx.send(text)
+        else:
+            await channel.send(text)
 
     @command(name='embed')
     @with_role(*MODERATION_ROLES)
@@ -235,9 +240,10 @@ class Bot(Cog):
             )
             and not msg.author.bot
             and len(msg.content.splitlines()) > 3
+            and not TokenRemover.is_token_in_message(msg)
         )
 
-        if parse_codeblock:
+        if parse_codeblock:  # no token in the msg
             on_cooldown = (time.time() - self.channel_cooldowns.get(msg.channel.id, 0)) < 300
             if not on_cooldown or DEBUG_MODE:
                 try:
@@ -370,10 +376,9 @@ class Bot(Cog):
             bot_message = await channel.fetch_message(self.codeblock_message_ids[payload.message_id])
             await bot_message.delete()
             del self.codeblock_message_ids[payload.message_id]
-            log.trace("User's incorrect code block has been fixed.  Removing bot formatting message.")
+            log.trace("User's incorrect code block has been fixed. Removing bot formatting message.")
 
 
 def setup(bot: Bot) -> None:
-    """Bot cog load."""
-    bot.add_cog(Bot(bot))
-    log.info("Cog loaded: Bot")
+    """Load the Bot cog."""
+    bot.add_cog(BotCog(bot))

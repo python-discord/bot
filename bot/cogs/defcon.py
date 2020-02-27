@@ -6,8 +6,9 @@ from datetime import datetime, timedelta
 from enum import Enum
 
 from discord import Colour, Embed, Member
-from discord.ext.commands import Bot, Cog, Context, group
+from discord.ext.commands import Cog, Context, group
 
+from bot.bot import Bot
 from bot.cogs.moderation import ModLog
 from bot.constants import Channels, Colours, Emojis, Event, Icons, Roles
 from bot.decorators import with_role
@@ -58,7 +59,7 @@ class Defcon(Cog):
 
     async def sync_settings(self) -> None:
         """On cog load, try to synchronize DEFCON settings to the API."""
-        await self.bot.wait_until_ready()
+        await self.bot.wait_until_guild_available()
         self.channel = await self.bot.fetch_channel(Channels.defcon)
 
         try:
@@ -75,12 +76,12 @@ class Defcon(Cog):
             if data["enabled"]:
                 self.enabled = True
                 self.days = timedelta(days=data["days"])
-                log.warning(f"DEFCON enabled: {self.days.days} days")
+                log.info(f"DEFCON enabled: {self.days.days} days")
 
             else:
                 self.enabled = False
                 self.days = timedelta(days=0)
-                log.warning(f"DEFCON disabled")
+                log.info(f"DEFCON disabled")
 
             await self.update_channel_topic()
 
@@ -236,6 +237,5 @@ class Defcon(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """DEFCON cog load."""
+    """Load the Defcon cog."""
     bot.add_cog(Defcon(bot))
-    log.info("Cog loaded: Defcon")

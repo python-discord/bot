@@ -1,8 +1,9 @@
 import logging
 
 from discord import Colour, Embed
-from discord.ext.commands import Bot, Cog, Context, group
+from discord.ext.commands import Cog, Context, group
 
+from bot.bot import Bot
 from bot.constants import URLs
 from bot.pagination import LinePaginator
 
@@ -58,7 +59,7 @@ class Site(Cog):
     @site_group.command(name="tools")
     async def site_tools(self, ctx: Context) -> None:
         """Info about the site's Tools page."""
-        tools_url = f"{PAGES_URL}/tools"
+        tools_url = f"{PAGES_URL}/resources/tools"
 
         embed = Embed(title="Tools")
         embed.set_footer(text=f"{tools_url}")
@@ -73,7 +74,7 @@ class Site(Cog):
     @site_group.command(name="help")
     async def site_help(self, ctx: Context) -> None:
         """Info about the site's Getting Help page."""
-        url = f"{PAGES_URL}/asking-good-questions"
+        url = f"{PAGES_URL}/resources/guides/asking-good-questions"
 
         embed = Embed(title="Asking Good Questions")
         embed.set_footer(text=url)
@@ -138,6 +139,5 @@ class Site(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Site cog load."""
+    """Load the Site cog."""
     bot.add_cog(Site(bot))
-    log.info("Cog loaded: Site")

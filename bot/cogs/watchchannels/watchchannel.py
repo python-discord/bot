@@ -9,10 +9,11 @@ from typing import Optional
 
 import dateutil.parser
 import discord
-from discord import Color, Embed, HTTPException, Message, Object, errors
-from discord.ext.commands import BadArgument, Bot, Cog, Context
+from discord import Color, Embed, HTTPException, Message, errors
+from discord.ext.commands import Cog, Context
 
 from bot.api import ResponseCodeError
+from bot.bot import Bot
 from bot.cogs.moderation import ModLog
 from bot.constants import BigBrother as BigBrotherConfig, Guild as GuildConfig, Icons
 from bot.pagination import LinePaginator
@@ -22,22 +23,6 @@ from bot.utils.time import time_since
 log = logging.getLogger(__name__)
 
 URL_RE = re.compile(r"(https?://[^\s]+)")
-
-
-def proxy_user(user_id: str) -> Object:
-    """A proxy user object that mocks a real User instance for when the later is not available."""
-    try:
-        user_id = int(user_id)
-    except ValueError:
-        raise BadArgument
-
-    user = Object(user_id)
-    user.mention = user.id
-    user.display_name = f"<@{user.id}>"
-    user.avatar_url_as = lambda static_format: None
-    user.bot = False
-
-    return user
 
 
 @dataclass
@@ -106,7 +91,7 @@ class WatchChannel(metaclass=CogABCMeta):
 
     async def start_watchchannel(self) -> None:
         """Starts the watch channel by getting the channel, webhook, and user cache ready."""
-        await self.bot.wait_until_ready()
+        await self.bot.wait_until_guild_available()
 
         try:
             self.channel = await self.bot.fetch_channel(self.destination)

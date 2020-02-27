@@ -4,9 +4,10 @@ import logging
 from datetime import datetime, timedelta
 
 from discord import Colour, Embed
-from discord.ext.commands import BadArgument, Bot, Cog, Context, Converter, group
+from discord.ext.commands import BadArgument, Cog, Context, Converter, group
 
 from bot.api import ResponseCodeError
+from bot.bot import Bot
 from bot.constants import Channels, MODERATION_ROLES
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
@@ -87,7 +88,7 @@ class OffTopicNames(Cog):
 
     async def init_offtopic_updater(self) -> None:
         """Start off-topic channel updating event loop if it hasn't already started."""
-        await self.bot.wait_until_ready()
+        await self.bot.wait_until_guild_available()
         if self.updater_task is None:
             coro = update_names(self.bot)
             self.updater_task = self.bot.loop.create_task(coro)
@@ -184,6 +185,5 @@ class OffTopicNames(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Off topic names cog load."""
+    """Load the OffTopicNames cog."""
     bot.add_cog(OffTopicNames(bot))
-    log.info("Cog loaded: OffTopicNames")

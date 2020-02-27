@@ -1,234 +1,342 @@
+import abc
+import logging
+import typing as t
 from collections import namedtuple
-from typing import Dict, Set, Tuple
+from functools import partial
 
-from discord import Guild
-from discord.ext.commands import Bot
+from discord import Guild, HTTPException, Member, Message, Reaction, User
+from discord.ext.commands import Context
+
+from bot import constants
+from bot.api import ResponseCodeError
+from bot.bot import Bot
+
+log = logging.getLogger(__name__)
 
 # These objects are declared as namedtuples because tuples are hashable,
 # something that we make use of when diffing site roles against guild roles.
-Role = namedtuple('Role', ('id', 'name', 'colour', 'permissions', 'position'))
-User = namedtuple('User', ('id', 'name', 'discriminator', 'avatar_hash', 'roles', 'in_guild'))
+_Role = namedtuple('Role', ('id', 'name', 'colour', 'permissions', 'position'))
+_User = namedtuple('User', ('id', 'name', 'discriminator', 'avatar_hash', 'roles', 'in_guild'))
+_Diff = namedtuple('Diff', ('created', 'updated', 'deleted'))
 
 
-def get_roles_for_sync(
-        guild_roles: Set[Role], api_roles: Set[Role]
-) -> Tuple[Set[Role], Set[Role], Set[Role]]:
-    """
-    Determine which roles should be created or updated on the site.
+class Syncer(abc.ABC):
+    """Base class for synchronising the database with objects in the Discord cache."""
 
-    Arguments:
-        guild_roles (Set[Role]):
-            Roles that were found on the guild at startup.
+    _CORE_DEV_MENTION = f"<@&{constants.Roles.core_developer}> "
+    _REACTION_EMOJIS = (constants.Emojis.check_mark, constants.Emojis.cross_mark)
 
-        api_roles (Set[Role]):
-            Roles that were retrieved from the API at startup.
+    def __init__(self, bot: Bot) -> None:
+        self.bot = bot
 
-    Returns:
-        Tuple[Set[Role], Set[Role]. Set[Role]]:
-            A tuple with three elements. The first element represents
-            roles to be created on the site, meaning that they were
-            present on the cached guild but not on the API. The second
-            element represents roles to be updated, meaning they were
-            present on both the cached guild and the API but non-ID
-            fields have changed inbetween. The third represents roles
-            to be deleted on the site, meaning the roles are present on
-            the API but not in the cached guild.
-    """
-    guild_role_ids = {role.id for role in guild_roles}
-    api_role_ids = {role.id for role in api_roles}
-    new_role_ids = guild_role_ids - api_role_ids
-    deleted_role_ids = api_role_ids - guild_role_ids
+    @property
+    @abc.abstractmethod
+    def name(self) -> str:
+        """The name of the syncer; used in output messages and logging."""
+        raise NotImplementedError  # pragma: no cover
 
-    # New roles are those which are on the cached guild but not on the
-    # API guild, going by the role ID. We need to send them in for creation.
-    roles_to_create = {role for role in guild_roles if role.id in new_role_ids}
-    roles_to_update = guild_roles - api_roles - roles_to_create
-    roles_to_delete = {role for role in api_roles if role.id in deleted_role_ids}
-    return roles_to_create, roles_to_update, roles_to_delete
+    async def _send_prompt(self, message: t.Optional[Message] = None) -> t.Optional[Message]:
+        """
+        Send a prompt to confirm or abort a sync using reactions and return the sent message.
 
+        If a message is given, it is edited to display the prompt and reactions. Otherwise, a new
+        message is sent to the dev-core channel and mentions the core developers role. If the
+        channel cannot be retrieved, return None.
+        """
+        log.trace(f"Sending {self.name} sync confirmation prompt.")
 
-async def sync_roles(bot: Bot, guild: Guild) -> Tuple[int, int, int]:
-    """
-    Synchronize roles found on the given `guild` with the ones on the API.
-
-    Arguments:
-        bot (discord.ext.commands.Bot):
-            The bot instance that we're running with.
-
-        guild (discord.Guild):
-            The guild instance from the bot's cache
-            to synchronize roles with.
-
-    Returns:
-        Tuple[int, int, int]:
-            A tuple with three integers representing how many roles were created
-            (element `0`) , how many roles were updated (element `1`), and how many
-            roles were deleted (element `2`) on the API.
-    """
-    roles = await bot.api_client.get('bot/roles')
-
-    # Pack API roles and guild roles into one common format,
-    # which is also hashable. We need hashability to be able
-    # to compare these easily later using sets.
-    api_roles = {Role(**role_dict) for role_dict in roles}
-    guild_roles = {
-        Role(
-            id=role.id, name=role.name,
-            colour=role.colour.value, permissions=role.permissions.value,
-            position=role.position,
-        )
-        for role in guild.roles
-    }
-    roles_to_create, roles_to_update, roles_to_delete = get_roles_for_sync(guild_roles, api_roles)
-
-    for role in roles_to_create:
-        await bot.api_client.post(
-            'bot/roles',
-            json={
-                'id': role.id,
-                'name': role.name,
-                'colour': role.colour,
-                'permissions': role.permissions,
-                'position': role.position,
-            }
+        msg_content = (
+            f'Possible cache issue while syncing {self.name}s. '
+            f'More than {constants.Sync.max_diff} {self.name}s were changed. '
+            f'React to confirm or abort the sync.'
         )
 
-    for role in roles_to_update:
-        await bot.api_client.put(
-            f'bot/roles/{role.id}',
-            json={
-                'id': role.id,
-                'name': role.name,
-                'colour': role.colour,
-                'permissions': role.permissions,
-                'position': role.position,
-            }
+        # Send to core developers if it's an automatic sync.
+        if not message:
+            log.trace("Message not provided for confirmation; creating a new one in dev-core.")
+            channel = self.bot.get_channel(constants.Channels.devcore)
+
+            if not channel:
+                log.debug("Failed to get the dev-core channel from cache; attempting to fetch it.")
+                try:
+                    channel = await self.bot.fetch_channel(constants.Channels.devcore)
+                except HTTPException:
+                    log.exception(
+                        f"Failed to fetch channel for sending sync confirmation prompt; "
+                        f"aborting {self.name} sync."
+                    )
+                    return None
+
+            message = await channel.send(f"{self._CORE_DEV_MENTION}{msg_content}")
+        else:
+            await message.edit(content=msg_content)
+
+        # Add the initial reactions.
+        log.trace(f"Adding reactions to {self.name} syncer confirmation prompt.")
+        for emoji in self._REACTION_EMOJIS:
+            await message.add_reaction(emoji)
+
+        return message
+
+    def _reaction_check(
+        self,
+        author: Member,
+        message: Message,
+        reaction: Reaction,
+        user: t.Union[Member, User]
+    ) -> bool:
+        """
+        Return True if the `reaction` is a valid confirmation or abort reaction on `message`.
+
+        If the `author` of the prompt is a bot, then a reaction by any core developer will be
+        considered valid. Otherwise, the author of the reaction (`user`) will have to be the
+        `author` of the prompt.
+        """
+        # For automatic syncs, check for the core dev role instead of an exact author
+        has_role = any(constants.Roles.core_developer == role.id for role in user.roles)
+        return (
+            reaction.message.id == message.id
+            and not user.bot
+            and (has_role if author.bot else user == author)
+            and str(reaction.emoji) in self._REACTION_EMOJIS
         )
 
-    for role in roles_to_delete:
-        await bot.api_client.delete(f'bot/roles/{role.id}')
+    async def _wait_for_confirmation(self, author: Member, message: Message) -> bool:
+        """
+        Wait for a confirmation reaction by `author` on `message` and return True if confirmed.
 
-    return len(roles_to_create), len(roles_to_update), len(roles_to_delete)
+        Uses the `_reaction_check` function to determine if a reaction is valid.
+
+        If there is no reaction within `bot.constants.Sync.confirm_timeout` seconds, return False.
+        To acknowledge the reaction (or lack thereof), `message` will be edited.
+        """
+        # Preserve the core-dev role mention in the message edits so users aren't confused about
+        # where notifications came from.
+        mention = self._CORE_DEV_MENTION if author.bot else ""
+
+        reaction = None
+        try:
+            log.trace(f"Waiting for a reaction to the {self.name} syncer confirmation prompt.")
+            reaction, _ = await self.bot.wait_for(
+                'reaction_add',
+                check=partial(self._reaction_check, author, message),
+                timeout=constants.Sync.confirm_timeout
+            )
+        except TimeoutError:
+            # reaction will remain none thus sync will be aborted in the finally block below.
+            log.debug(f"The {self.name} syncer confirmation prompt timed out.")
+        finally:
+            if str(reaction) == constants.Emojis.check_mark:
+                log.trace(f"The {self.name} syncer was confirmed.")
+                await message.edit(content=f':ok_hand: {mention}{self.name} sync will proceed.')
+                return True
+            else:
+                log.warning(f"The {self.name} syncer was aborted or timed out!")
+                await message.edit(
+                    content=f':warning: {mention}{self.name} sync aborted or timed out!'
+                )
+                return False
+
+    @abc.abstractmethod
+    async def _get_diff(self, guild: Guild) -> _Diff:
+        """Return the difference between the cache of `guild` and the database."""
+        raise NotImplementedError  # pragma: no cover
+
+    @abc.abstractmethod
+    async def _sync(self, diff: _Diff) -> None:
+        """Perform the API calls for synchronisation."""
+        raise NotImplementedError  # pragma: no cover
+
+    async def _get_confirmation_result(
+        self,
+        diff_size: int,
+        author: Member,
+        message: t.Optional[Message] = None
+    ) -> t.Tuple[bool, t.Optional[Message]]:
+        """
+        Prompt for confirmation and return a tuple of the result and the prompt message.
+
+        `diff_size` is the size of the diff of the sync. If it is greater than
+        `bot.constants.Sync.max_diff`, the prompt will be sent. The `author` is the invoked of the
+        sync and the `message` is an extant message to edit to display the prompt.
+
+        If confirmed or no confirmation was needed, the result is True. The returned message will
+        either be the given `message` or a new one which was created when sending the prompt.
+        """
+        log.trace(f"Determining if confirmation prompt should be sent for {self.name} syncer.")
+        if diff_size > constants.Sync.max_diff:
+            message = await self._send_prompt(message)
+            if not message:
+                return False, None  # Couldn't get channel.
+
+            confirmed = await self._wait_for_confirmation(author, message)
+            if not confirmed:
+                return False, message  # Sync aborted.
+
+        return True, message
+
+    async def sync(self, guild: Guild, ctx: t.Optional[Context] = None) -> None:
+        """
+        Synchronise the database with the cache of `guild`.
+
+        If the differences between the cache and the database are greater than
+        `bot.constants.Sync.max_diff`, then a confirmation prompt will be sent to the dev-core
+        channel. The confirmation can be optionally redirect to `ctx` instead.
+        """
+        log.info(f"Starting {self.name} syncer.")
+
+        message = None
+        author = self.bot.user
+        if ctx:
+            message = await ctx.send(f"📊 Synchronising {self.name}s.")
+            author = ctx.author
+
+        diff = await self._get_diff(guild)
+        diff_dict = diff._asdict()  # Ugly method for transforming the NamedTuple into a dict
+        totals = {k: len(v) for k, v in diff_dict.items() if v is not None}
+        diff_size = sum(totals.values())
+
+        confirmed, message = await self._get_confirmation_result(diff_size, author, message)
+        if not confirmed:
+            return
+
+        # Preserve the core-dev role mention in the message edits so users aren't confused about
+        # where notifications came from.
+        mention = self._CORE_DEV_MENTION if author.bot else ""
+
+        try:
+            await self._sync(diff)
+        except ResponseCodeError as e:
+            log.exception(f"{self.name} syncer failed!")
+
+            # Don't show response text because it's probably some really long HTML.
+            results = f"status {e.status}\n```{e.response_json or 'See log output for details'}```"
+            content = f":x: {mention}Synchronisation of {self.name}s failed: {results}"
+        else:
+            results = ", ".join(f"{name} `{total}`" for name, total in totals.items())
+            log.info(f"{self.name} syncer finished: {results}.")
+            content = f":ok_hand: {mention}Synchronisation of {self.name}s complete: {results}"
+
+        if message:
+            await message.edit(content=content)
 
 
-def get_users_for_sync(
-        guild_users: Dict[int, User], api_users: Dict[int, User]
-) -> Tuple[Set[User], Set[User]]:
-    """
-    Determine which users should be created or updated on the website.
+class RoleSyncer(Syncer):
+    """Synchronise the database with roles in the cache."""
 
-    Arguments:
-        guild_users (Dict[int, User]):
-            A mapping of user IDs to user data, populated from the
-            guild cached on the running bot instance.
+    name = "role"
 
-        api_users (Dict[int, User]):
-            A mapping of user IDs to user data, populated from the API's
-            current inventory of all users.
+    async def _get_diff(self, guild: Guild) -> _Diff:
+        """Return the difference of roles between the cache of `guild` and the database."""
+        log.trace("Getting the diff for roles.")
+        roles = await self.bot.api_client.get('bot/roles')
 
-    Returns:
-        Tuple[Set[User], Set[User]]:
-            Two user sets as a tuple. The first element represents users
-            to be created on the website, these are users that are present
-            in the cached guild data but not in the API at all, going by
-            their ID. The second element represents users to update. It is
-            populated by users which are present on both the API and the
-            guild, but where the attribute of a user on the API is not
-            equal to the attribute of the user on the guild.
-    """
-    users_to_create = set()
-    users_to_update = set()
+        # Pack DB roles and guild roles into one common, hashable format.
+        # They're hashable so that they're easily comparable with sets later.
+        db_roles = {_Role(**role_dict) for role_dict in roles}
+        guild_roles = {
+            _Role(
+                id=role.id,
+                name=role.name,
+                colour=role.colour.value,
+                permissions=role.permissions.value,
+                position=role.position,
+            )
+            for role in guild.roles
+        }
 
-    for api_user in api_users.values():
-        guild_user = guild_users.get(api_user.id)
-        if guild_user is not None:
-            if api_user != guild_user:
-                users_to_update.add(guild_user)
+        guild_role_ids = {role.id for role in guild_roles}
+        api_role_ids = {role.id for role in db_roles}
+        new_role_ids = guild_role_ids - api_role_ids
+        deleted_role_ids = api_role_ids - guild_role_ids
 
-        elif api_user.in_guild:
-            # The user is known on the API but not the guild, and the
-            # API currently specifies that the user is a member of the guild.
-            # This means that the user has left since the last sync.
-            # Update the `in_guild` attribute of the user on the site
-            # to signify that the user left.
-            new_api_user = api_user._replace(in_guild=False)
-            users_to_update.add(new_api_user)
+        # New roles are those which are on the cached guild but not on the
+        # DB guild, going by the role ID. We need to send them in for creation.
+        roles_to_create = {role for role in guild_roles if role.id in new_role_ids}
+        roles_to_update = guild_roles - db_roles - roles_to_create
+        roles_to_delete = {role for role in db_roles if role.id in deleted_role_ids}
 
-    new_user_ids = set(guild_users.keys()) - set(api_users.keys())
-    for user_id in new_user_ids:
-        # The user is known on the guild but not on the API. This means
-        # that the user has joined since the last sync. Create it.
-        new_user = guild_users[user_id]
-        users_to_create.add(new_user)
+        return _Diff(roles_to_create, roles_to_update, roles_to_delete)
 
-    return users_to_create, users_to_update
+    async def _sync(self, diff: _Diff) -> None:
+        """Synchronise the database with the role cache of `guild`."""
+        log.trace("Syncing created roles...")
+        for role in diff.created:
+            await self.bot.api_client.post('bot/roles', json=role._asdict())
+
+        log.trace("Syncing updated roles...")
+        for role in diff.updated:
+            await self.bot.api_client.put(f'bot/roles/{role.id}', json=role._asdict())
+
+        log.trace("Syncing deleted roles...")
+        for role in diff.deleted:
+            await self.bot.api_client.delete(f'bot/roles/{role.id}')
 
 
-async def sync_users(bot: Bot, guild: Guild) -> Tuple[int, int, None]:
-    """
-    Synchronize users found in the given `guild` with the ones in the API.
+class UserSyncer(Syncer):
+    """Synchronise the database with users in the cache."""
 
-    Arguments:
-        bot (discord.ext.commands.Bot):
-            The bot instance that we're running with.
+    name = "user"
 
-        guild (discord.Guild):
-            The guild instance from the bot's cache
-            to synchronize roles with.
+    async def _get_diff(self, guild: Guild) -> _Diff:
+        """Return the difference of users between the cache of `guild` and the database."""
+        log.trace("Getting the diff for users.")
+        users = await self.bot.api_client.get('bot/users')
 
-    Returns:
-        Tuple[int, int, None]:
-            A tuple with two integers, representing how many users were created
-            (element `0`) and how many users were updated (element `1`), and `None`
-            to indicate that a user sync never deletes entries from the API.
-    """
-    current_users = await bot.api_client.get('bot/users')
+        # Pack DB roles and guild roles into one common, hashable format.
+        # They're hashable so that they're easily comparable with sets later.
+        db_users = {
+            user_dict['id']: _User(
+                roles=tuple(sorted(user_dict.pop('roles'))),
+                **user_dict
+            )
+            for user_dict in users
+        }
+        guild_users = {
+            member.id: _User(
+                id=member.id,
+                name=member.name,
+                discriminator=int(member.discriminator),
+                avatar_hash=member.avatar,
+                roles=tuple(sorted(role.id for role in member.roles)),
+                in_guild=True
+            )
+            for member in guild.members
+        }
 
-    # Pack API users and guild users into one common format,
-    # which is also hashable. We need hashability to be able
-    # to compare these easily later using sets.
-    api_users = {
-        user_dict['id']: User(
-            roles=tuple(sorted(user_dict.pop('roles'))),
-            **user_dict
-        )
-        for user_dict in current_users
-    }
-    guild_users = {
-        member.id: User(
-            id=member.id, name=member.name,
-            discriminator=int(member.discriminator), avatar_hash=member.avatar,
-            roles=tuple(sorted(role.id for role in member.roles)), in_guild=True
-        )
-        for member in guild.members
-    }
+        users_to_create = set()
+        users_to_update = set()
 
-    users_to_create, users_to_update = get_users_for_sync(guild_users, api_users)
+        for db_user in db_users.values():
+            guild_user = guild_users.get(db_user.id)
+            if guild_user is not None:
+                if db_user != guild_user:
+                    users_to_update.add(guild_user)
 
-    for user in users_to_create:
-        await bot.api_client.post(
-            'bot/users',
-            json={
-                'avatar_hash': user.avatar_hash,
-                'discriminator': user.discriminator,
-                'id': user.id,
-                'in_guild': user.in_guild,
-                'name': user.name,
-                'roles': list(user.roles)
-            }
-        )
+            elif db_user.in_guild:
+                # The user is known in the DB but not the guild, and the
+                # DB currently specifies that the user is a member of the guild.
+                # This means that the user has left since the last sync.
+                # Update the `in_guild` attribute of the user on the site
+                # to signify that the user left.
+                new_api_user = db_user._replace(in_guild=False)
+                users_to_update.add(new_api_user)
 
-    for user in users_to_update:
-        await bot.api_client.put(
-            f'bot/users/{user.id}',
-            json={
-                'avatar_hash': user.avatar_hash,
-                'discriminator': user.discriminator,
-                'id': user.id,
-                'in_guild': user.in_guild,
-                'name': user.name,
-                'roles': list(user.roles)
-            }
-        )
+        new_user_ids = set(guild_users.keys()) - set(db_users.keys())
+        for user_id in new_user_ids:
+            # The user is known on the guild but not on the API. This means
+            # that the user has joined since the last sync. Create it.
+            new_user = guild_users[user_id]
+            users_to_create.add(new_user)
 
-    return len(users_to_create), len(users_to_update), None
+        return _Diff(users_to_create, users_to_update, None)
+
+    async def _sync(self, diff: _Diff) -> None:
+        """Synchronise the database with the user cache of `guild`."""
+        log.trace("Syncing created users...")
+        for user in diff.created:
+            await self.bot.api_client.post('bot/users', json=user._asdict())
+
+        log.trace("Syncing updated users...")
+        for user in diff.updated:
+            await self.bot.api_client.put(f'bot/users/{user.id}', json=user._asdict())
