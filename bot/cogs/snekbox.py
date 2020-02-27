@@ -179,6 +179,68 @@ class Snekbox(Cog):
 
         return output, paste_link
 
+    async def send_eval(self, ctx: Context, code: str) -> Message:
+        """
+        Evaluate code, format it, and send the output to the corresponding channel.
+
+        Return the bot response.
+        """
+        async with ctx.typing():
+            results = await self.post_eval(code)
+            msg, error = self.get_results_message(results)
+
+            if error:
+                output, paste_link = error, None
+            else:
+                output, paste_link = await self.format_output(results["stdout"])
+
+            icon = self.get_status_emoji(results)
+            msg = f"{ctx.author.mention} {icon} {msg}.\n\n```py\n{output}\n```"
+            if paste_link:
+                msg = f"{msg}\nFull output: {paste_link}"
+
+            response = await ctx.send(msg)
+            self.bot.loop.create_task(
+                wait_for_deletion(response, user_ids=(ctx.author.id,), client=ctx.bot)
+            )
+
+            log.info(f"{ctx.author}'s job had a return code of {results['returncode']}")
+        return response
+
+    async def continue_eval(self, ctx: Context, response: Message) -> Tuple[bool, Optional[str]]:
+        """
+        Check if the eval session should continue.
+
+        First item of the returned tuple is if the eval session should continue,
+        the second is the new code to evaluate.
+        """
+        _predicate_eval_message_edit = partial(predicate_eval_message_edit, ctx)
+        _predicate_emoji_reaction = partial(predicate_eval_emoji_reaction, ctx)
+
+        try:
+            _, new_message = await self.bot.wait_for(
+                'message_edit',
+                check=_predicate_eval_message_edit,
+                timeout=10
+            )
+            await ctx.message.add_reaction('🔁')
+            await self.bot.wait_for(
+                'reaction_add',
+                check=_predicate_emoji_reaction,
+                timeout=10
+            )
+
+            code = new_message.content.split(' ', maxsplit=1)[1]
+            await ctx.message.clear_reactions()
+            with contextlib.suppress(HTTPException):
+                await response.delete()
+
+        except asyncio.TimeoutError:
+            await ctx.message.clear_reactions()
+            return False, None
+
+        return True, code
+
     @command(name="eval", aliases=("e",))
     @guild_only()
     @in_channel(Channels.bot, hidden_channels=(Channels.esoteric,), bypass_roles=EVAL_ROLES)
@@ -203,58 +265,18 @@ class Snekbox(Cog):
 
         log.info(f"Received code from {ctx.author} for evaluation:\n{code}")
 
-        _predicate_eval_message_edit = partial(predicate_eval_message_edit, ctx)
-        _predicate_emoji_reaction = partial(predicate_eval_emoji_reaction, ctx)
-
         while True:
             self.jobs[ctx.author.id] = datetime.datetime.now()
             code = self.prepare_input(code)
-
             try:
-                async with ctx.typing():
-                    results = await self.post_eval(code)
-                    msg, error = self.get_results_message(results)
-
-                    if error:
-                        output, paste_link = error, None
-                    else:
-                        output, paste_link = await self.format_output(results["stdout"])
-
-                    icon = self.get_status_emoji(results)
-                    msg = f"{ctx.author.mention} {icon} {msg}.\n\n```py\n{output}\n```"
-                    if paste_link:
-                        msg = f"{msg}\nFull output: {paste_link}"
-
-                    response = await ctx.send(msg)
-                    self.bot.loop.create_task(
-                        wait_for_deletion(response, user_ids=(ctx.author.id,), client=ctx.bot)
-                    )
-
-                    log.info(f"{ctx.author}'s job had a return code of {results['returncode']}")
+                response = await self.send_eval(ctx, code)
             finally:
                 del self.jobs[ctx.author.id]
 
-            try:
-                _, new_message = await self.bot.wait_for(
-                    'message_edit',
-                    check=_predicate_eval_message_edit,
-                    timeout=10
-                )
-                await ctx.message.add_reaction('🔁')
-                await self.bot.wait_for(
-                    'reaction_add',
-                    check=_predicate_emoji_reaction,
-                    timeout=10
-                )
-
-                log.info(f"Re-evaluating message {ctx.message.id}")
-                code = new_message.content.split(' ', maxsplit=1)[1]
-                await ctx.message.clear_reactions()
-                with contextlib.suppress(HTTPException):
-                    await response.delete()
-            except asyncio.TimeoutError:
-                await ctx.message.clear_reactions()
-                return
+            continue_eval, code = await self.continue_eval(ctx, response)
+            if not continue_eval:
+                break
+            log.info(f"Re-evaluating message {ctx.message.id}")
 
 
 def predicate_eval_message_edit(ctx: Context, old_msg: Message, new_msg: Message) -> bool:
