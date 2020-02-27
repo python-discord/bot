@@ -42,6 +42,8 @@ EVAL_ROLES = (Roles.helpers, Roles.moderator, Roles.admin, Roles.owner, Roles.ro
 
 SIGKILL = 9
 
+REEVAL_EMOJI = '\U0001f501'  # :repeat:
+
 
 class Snekbox(Cog):
     """Safe evaluation of Python code using Snekbox."""
@@ -223,7 +225,7 @@ class Snekbox(Cog):
                 check=_predicate_eval_message_edit,
                 timeout=10
             )
-            await ctx.message.add_reaction('🔁')
+            await ctx.message.add_reaction(REEVAL_EMOJI)
             await self.bot.wait_for(
                 'reaction_add',
                 check=_predicate_emoji_reaction,
@@ -285,8 +287,8 @@ def predicate_eval_message_edit(ctx: Context, old_msg: Message, new_msg: Message
 
 
 def predicate_eval_emoji_reaction(ctx: Context, reaction: Reaction, user: User) -> bool:
-    """Return True if the reaction 🔁 was added by the context message author on this message."""
-    return reaction.message.id == ctx.message.id and user.id == ctx.author.id and str(reaction) == '🔁'
+    """Return True if the reaction REEVAL_EMOJI was added by the context message author on this message."""
+    return reaction.message.id == ctx.message.id and user.id == ctx.author.id and str(reaction) == REEVAL_EMOJI
 
 
 def setup(bot: Bot) -> None:

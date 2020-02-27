@@ -303,7 +303,7 @@ class SnekboxTests(unittest.TestCase):
             call('message_edit', partial(snekbox.predicate_eval_message_edit, ctx), timeout=10),
             call('reaction_add', partial(snekbox.predicate_eval_emoji_reaction, ctx), timeout=10)
         )
-        ctx.message.add_reaction.assert_called_once_with('🔁')
+        ctx.message.add_reaction.assert_called_once_with(snekbox.REEVAL_EMOJI)
         ctx.message.clear_reactions.assert_called_once()
         response.delete.assert_called_once()
 
@@ -336,12 +336,12 @@ class SnekboxTests(unittest.TestCase):
     def test_predicate_eval_emoji_reaction(self):
         """Test the predicate_eval_emoji_reaction function."""
         valid_reaction = MockReaction(message=MockMessage(id=1))
-        valid_reaction.__str__.return_value = '🔁'
+        valid_reaction.__str__.return_value = snekbox.REEVAL_EMOJI
         valid_ctx = MockContext(message=MockMessage(id=1), author=MockUser(id=2))
         valid_user = MockUser(id=2)
 
         invalid_reaction_id = MockReaction(message=MockMessage(id=42))
-        invalid_reaction_id.__str__.return_value = '🔁'
+        invalid_reaction_id.__str__.return_value = snekbox.REEVAL_EMOJI
         invalid_user_id = MockUser(id=42)
         invalid_reaction_str = MockReaction(message=MockMessage(id=1))
         invalid_reaction_str.__str__.return_value = ':longbeard:'
