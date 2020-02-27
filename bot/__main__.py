@@ -10,7 +10,7 @@ from bot.bot import Bot
 from bot.constants import Bot as BotConfig, DEBUG_MODE
 
 sentry_logging = LoggingIntegration(
-    level=logging.TRACE,
+    level=logging.DEBUG,
     event_level=logging.WARNING
 )
 
