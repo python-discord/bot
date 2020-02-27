@@ -31,6 +31,7 @@ bot.load_extension("bot.cogs.error_handler")
 bot.load_extension("bot.cogs.filtering")
 bot.load_extension("bot.cogs.logging")
 bot.load_extension("bot.cogs.security")
+bot.load_extension("bot.cogs.config_verifier")
 
 # Commands, etc
 bot.load_extension("bot.cogs.antimalware")
