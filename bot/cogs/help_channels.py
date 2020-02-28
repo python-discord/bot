@@ -196,6 +196,26 @@ class HelpChannels(Scheduler, commands.Cog):
 
         return channel
 
+    def get_alphabetical_position(self, channel: discord.TextChannel) -> t.Optional[int]:
+        """
+        Return the position to move `channel` to so alphabetic order is maintained.
+
+        If the channel does not have a valid name with a chemical element, return None.
+        """
+        log.trace(f"Getting alphabetical position for #{channel.name} ({channel.id}).")
+
+        prefix = constants.HelpChannels.name_prefix
+        element = channel.name[len(prefix):]
+
+        try:
+            position = self.elements[element]
+        except KeyError:
+            log.warning(f"Channel #{channel.name} ({channel.id}) doesn't have the prefix {prefix}.")
+            position = None
+
+        log.trace(f"Position of #{channel.name} ({channel.id}) in Dormant will be {position}.")
+        return position
+
     @staticmethod
     def get_category_channels(category: discord.CategoryChannel) -> t.Iterable[discord.TextChannel]:
         """Yield the text channels of the `category` in an unsorted manner."""
@@ -381,15 +401,14 @@ class HelpChannels(Scheduler, commands.Cog):
         """Make the `channel` dormant."""
         log.info(f"Moving #{channel.name} ({channel.id}) to the Dormant category.")
 
-        start_index = len(constants.HelpChannels.name_prefix)
-        element = channel.name[start_index:]
-
         await channel.edit(
             category=self.dormant_category,
             sync_permissions=True,
             topic=DORMANT_TOPIC,
-            position=self.elements[element],
+            position=self.get_alphabetical_position(channel),
         )
+
+        log.trace(f"Position of #{channel.name} ({channel.id}) is actually {channel.position}.")
 
         log.trace(f"Sending dormant message for #{channel.name} ({channel.id}).")
         embed = discord.Embed(description=DORMANT_MSG)
