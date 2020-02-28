@@ -95,6 +95,9 @@ class Scheduler(metaclass=CogABCMeta):
 
         with contextlib.suppress(asyncio.CancelledError):
             exception = done_task.exception()
-            # Raise the exception if one exists.
+            # Log the exception if one exists.
             if exception:
-                raise exception
+                log.error(
+                    f"{self.cog_name}: error in task #{task_id} {id(scheduled_task)}!",
+                    exc_info=exception
+                )
