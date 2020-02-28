@@ -34,7 +34,7 @@ RAW_CODE_REGEX = re.compile(
 )
 
 MAX_PASTE_LEN = 1000
-EVAL_ROLES = (Roles.helpers, Roles.moderator, Roles.admin, Roles.owner, Roles.rockstars, Roles.partners)
+EVAL_ROLES = (Roles.helpers, Roles.moderators, Roles.admins, Roles.owners, Roles.python_community, Roles.partners)
 
 
 class Snekbox(Cog):
@@ -177,7 +177,7 @@ class Snekbox(Cog):
 
     @command(name="eval", aliases=("e",))
     @guild_only()
-    @in_channel(Channels.bot, hidden_channels=(Channels.esoteric,), bypass_roles=EVAL_ROLES)
+    @in_channel(Channels.bot_commands, hidden_channels=(Channels.esoteric,), bypass_roles=EVAL_ROLES)
     async def eval_command(self, ctx: Context, *, code: str = None) -> None:
         """
         Run Python code and get the results.

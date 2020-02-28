@@ -89,7 +89,7 @@ class Utils(Cog):
         await ctx.message.channel.send(embed=pep_embed)
 
     @command()
-    @in_channel(Channels.bot, bypass_roles=STAFF_ROLES)
+    @in_channel(Channels.bot_commands, bypass_roles=STAFF_ROLES)
     async def charinfo(self, ctx: Context, *, characters: str) -> None:
         """Shows you information on up to 25 unicode characters."""
         match = re.match(r"<(a?):(\w+):(\d+)>", characters)
