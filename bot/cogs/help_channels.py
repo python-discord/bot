@@ -460,7 +460,10 @@ class HelpChannels(Scheduler, commands.Cog):
         else:
             should_send = True
 
-        if should_send:
+        if not should_send:
+            return
+
+        try:
             channel = self.bot.get_channel(constants.HelpChannels.notify_channel)
             mentions = " ".join(f"<@&{role}>" for role in constants.HelpChannels.notify_roles)
 
@@ -469,6 +472,9 @@ class HelpChannels(Scheduler, commands.Cog):
                 f"are no more dormant ones. Consider freeing up some in-use channels manually by "
                 f"using the `!dormant` command within the channels."
             )
+        except Exception:
+            # Handle it here cause this feature isn't critical for the functionality of the system.
+            log.exception("Failed to send notification about lack of dormant channels!")
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
