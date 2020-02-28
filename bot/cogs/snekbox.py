@@ -8,7 +8,7 @@ from functools import partial
 from signal import Signals
 from typing import Optional, Tuple
 
-from discord import HTTPException, Message, Reaction, User
+from discord import HTTPException, Message, NotFound, Reaction, User
 from discord.ext.commands import Cog, Context, command, guild_only
 
 from bot.bot import Bot
@@ -218,29 +218,30 @@ class Snekbox(Cog):
         _predicate_eval_message_edit = partial(predicate_eval_message_edit, ctx)
         _predicate_emoji_reaction = partial(predicate_eval_emoji_reaction, ctx)
 
-        try:
-            _, new_message = await self.bot.wait_for(
-                'message_edit',
-                check=_predicate_eval_message_edit,
-                timeout=10
-            )
-            await ctx.message.add_reaction(REEVAL_EMOJI)
-            await self.bot.wait_for(
-                'reaction_add',
-                check=_predicate_emoji_reaction,
-                timeout=10
-            )
+        with contextlib.suppress(NotFound):
+            try:
+                _, new_message = await self.bot.wait_for(
+                    'message_edit',
+                    check=_predicate_eval_message_edit,
+                    timeout=10
+                )
+                await ctx.message.add_reaction(REEVAL_EMOJI)
+                await self.bot.wait_for(
+                    'reaction_add',
+                    check=_predicate_emoji_reaction,
+                    timeout=10
+                )
 
-            code = new_message.content.split(' ', maxsplit=1)[1]
-            await ctx.message.clear_reactions()
-            with contextlib.suppress(HTTPException):
-                await response.delete()
+                code = new_message.content.split(' ', maxsplit=1)[1]
+                await ctx.message.clear_reactions()
+                with contextlib.suppress(HTTPException):
+                    await response.delete()
 
-        except asyncio.TimeoutError:
-            await ctx.message.clear_reactions()
-            return None
+            except asyncio.TimeoutError:
+                await ctx.message.clear_reactions()
+                return None
 
-        return code
+            return code
 
     @command(name="eval", aliases=("e",))
     @guild_only()
