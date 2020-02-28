@@ -193,7 +193,7 @@ class HelpChannels(Scheduler, commands.Cog):
 
             if not channel:
                 log.info("Couldn't create a candidate channel; waiting to get one from the queue.")
-                await self.notify_helpers()
+                await self.notify()
                 channel = await self.channel_queue.get()
 
         return channel
@@ -439,13 +439,16 @@ class HelpChannels(Scheduler, commands.Cog):
         data = ChannelTimeout(channel, timeout)
         self.schedule_task(self.bot.loop, channel.id, data)
 
-    async def notify_helpers(self) -> None:
+    async def notify(self) -> None:
         """
-        Notify helpers about a lack of available help channels.
+        Send a message notifying about a lack of available help channels.
 
-        The notification can be disabled with `constants.HelpChannels.notify`. The minimum interval
-        between notifications can be configured with `constants.HelpChannels.notify_minutes`. The
-        channel for notifications can be configured with `constants.HelpChannels.notify_channel`.
+        Configuration:
+
+        * `HelpChannels.notify` - toggle notifications
+        * `HelpChannels.notify_channel` - destination channel for notifications
+        * `HelpChannels.notify_minutes` - minimum interval between notifications
+        * `HelpChannels.notify_roles` - roles mentioned in notifications
         """
         if not constants.HelpChannels.notify:
             return
@@ -459,8 +462,10 @@ class HelpChannels(Scheduler, commands.Cog):
 
         if should_send:
             channel = self.bot.get_channel(constants.HelpChannels.notify_channel)
+            mentions = " ".join(f"<@&{role}>" for role in constants.HelpChannels.notify_roles)
+
             await channel.send(
-                f"<@&{constants.Roles.helpers}> a new available help channel is needed but there "
+                f"{mentions} A new available help channel is needed but there "
                 f"are no more dormant ones. Consider freeing up some in-use channels manually by "
                 f"using the `!dormant` command within the channels."
             )
