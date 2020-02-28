@@ -535,6 +535,9 @@ help_channels:
     # Notify helpers if more channels are needed but none are available
     notify_helpers: true
 
+    # Minimum interval between helper notifications
+    notify_minutes: 15
+
 redirect_output:
     delete_invocation: true
     delete_delay: 15

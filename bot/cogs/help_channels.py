@@ -100,6 +100,7 @@ class HelpChannels(Scheduler, commands.Cog):
         self.name_queue: t.Deque[str] = None
 
         self.elements = self.get_names()
+        self.last_notification: t.Optional[datetime] = None
 
         self.ready = asyncio.Event()
         self.on_message_lock = asyncio.Lock()
@@ -192,15 +193,7 @@ class HelpChannels(Scheduler, commands.Cog):
 
             if not channel:
                 log.info("Couldn't create a candidate channel; waiting to get one from the queue.")
-
-                if constants.HelpChannels.notify_helpers:
-                    helpers_channel = self.bot.get_channel(constants.Channels.helpers)
-                    await helpers_channel.send(
-                        f"<@&{constants.Roles.helpers}> a help channel is in needed but none are "
-                        f"available. Consider freeing up some in-use channels manually by using "
-                        f"the `!dormant` command within the channels."
-                    )
-
+                await self.notify_helpers()
                 channel = await self.channel_queue.get()
 
         return channel
@@ -445,6 +438,32 @@ class HelpChannels(Scheduler, commands.Cog):
         log.trace(f"Scheduling #{channel.name} ({channel.id}) to become dormant in {timeout} sec.")
         data = ChannelTimeout(channel, timeout)
         self.schedule_task(self.bot.loop, channel.id, data)
+
+    async def notify_helpers(self) -> None:
+        """
+        Notify helpers in the #helpers channel about a lack of available help channels.
+
+        The notification can be disabled with `constants.HelpChannels.notify_helpers`. The
+        minimum interval between notifications can be configured with
+        `constants.HelpChannels.notify_minutes`.
+        """
+        if not constants.HelpChannels.notify_helpers:
+            return
+
+        if self.last_notification:
+            elapsed = (datetime.utcnow() - self.last_notification).seconds
+            minimum_interval = constants.HelpChannels.notify_minutes * 60
+            should_send = elapsed >= minimum_interval
+        else:
+            should_send = True
+
+        if should_send:
+            helpers_channel = self.bot.get_channel(constants.Channels.helpers)
+            await helpers_channel.send(
+                f"<@&{constants.Roles.helpers}> a help channel is in needed but none are "
+                f"available. Consider freeing up some in-use channels manually by using "
+                f"the `!dormant` command within the channels."
+            )
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
