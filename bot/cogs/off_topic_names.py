@@ -88,7 +88,7 @@ class OffTopicNames(Cog):
 
     async def init_offtopic_updater(self) -> None:
         """Start off-topic channel updating event loop if it hasn't already started."""
-        await self.bot.wait_until_ready()
+        await self.bot.wait_until_guild_available()
         if self.updater_task is None:
             coro = update_names(self.bot)
             self.updater_task = self.bot.loop.create_task(coro)

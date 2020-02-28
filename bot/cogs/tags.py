@@ -15,8 +15,7 @@ from bot.pagination import LinePaginator
 log = logging.getLogger(__name__)
 
 TEST_CHANNELS = (
-    Channels.devtest,
-    Channels.bot,
+    Channels.bot_commands,
     Channels.helpers
 )
 
@@ -116,8 +115,10 @@ class Tags(Cog):
 
         if _command_on_cooldown(tag_name):
             time_left = Cooldowns.tags - (time.time() - self.tag_cooldowns[tag_name]["time"])
-            log.warning(f"{ctx.author} tried to get the '{tag_name}' tag, but the tag is on cooldown. "
-                        f"Cooldown ends in {time_left:.1f} seconds.")
+            log.info(
+                f"{ctx.author} tried to get the '{tag_name}' tag, but the tag is on cooldown. "
+                f"Cooldown ends in {time_left:.1f} seconds."
+            )
             return
 
         await self._get_tags()
@@ -219,7 +220,7 @@ class Tags(Cog):
         ))
 
     @tags_group.command(name='delete', aliases=('remove', 'rm', 'd'))
-    @with_role(Roles.admin, Roles.owner)
+    @with_role(Roles.admins, Roles.owners)
     async def delete_command(self, ctx: Context, *, tag_name: TagNameConverter) -> None:
         """Remove a tag from the database."""
         await self.bot.api_client.delete(f'bot/tags/{tag_name}')
