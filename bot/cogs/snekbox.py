@@ -251,7 +251,10 @@ class Snekbox(Cog):
         Run Python code and get the results.
 
         This command supports multiple lines of code, including code wrapped inside a formatted code
-        block. We've done our best to make this safe, but do let us know if you manage to find an
+        block. Code can be re-evaluated by editing the original message within 10 seconds and
+        clicking the reaction that subsequently appears.
+
+        We've done our best to make this sandboxed, but do let us know if you manage to find an
         issue with it!
         """
         if ctx.author.id in self.jobs:
