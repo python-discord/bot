@@ -542,7 +542,7 @@ class HelpChannels(metaclass=YAMLGetter):
     max_available: int
     max_total_channels: int
     name_prefix: str
-    notify_helpers: bool
+    notify: bool
     notify_minutes: int
 
 

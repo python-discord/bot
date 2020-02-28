@@ -447,7 +447,7 @@ class HelpChannels(Scheduler, commands.Cog):
         minimum interval between notifications can be configured with
         `constants.HelpChannels.notify_minutes`.
         """
-        if not constants.HelpChannels.notify_helpers:
+        if not constants.HelpChannels.notify:
             return
 
         if self.last_notification:

@@ -532,8 +532,8 @@ help_channels:
     # Prefix for help channel names
     name_prefix: 'help-'
 
-    # Notify helpers if more channels are needed but none are available
-    notify_helpers: true
+    # Notify if more available channels are needed but there are no more dormant ones
+    notify: true
 
     # Minimum interval between helper notifications
     notify_minutes: 15
