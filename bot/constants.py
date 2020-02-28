@@ -363,18 +363,16 @@ class Channels(metaclass=YAMLGetter):
     section = "guild"
     subsection = "channels"
 
-    admins: int
     admin_spam: int
+    admins: int
     announcements: int
     attachment_log: int
     big_brother_logs: int
-    bot: int
-    checkpoint_test: int
+    bot_commands: int
     defcon: int
-    devcontrib: int
-    devcore: int
-    devlog: int
-    devtest: int
+    dev_contrib: int
+    dev_core: int
+    dev_log: int
     esoteric: int
     help_0: int
     help_1: int
@@ -387,19 +385,19 @@ class Channels(metaclass=YAMLGetter):
     helpers: int
     message_log: int
     meta: int
+    mod_alerts: int
+    mod_log: int
     mod_spam: int
     mods: int
-    mod_alerts: int
-    modlog: int
     off_topic_0: int
     off_topic_1: int
     off_topic_2: int
     organisation: int
-    python: int
+    python_discussion: int
     reddit: int
     talent_pool: int
-    userlog: int
-    user_event_a: int
+    user_event_announcements: int
+    user_log: int
     verification: int
     voice_log: int
 
@@ -419,19 +417,18 @@ class Roles(metaclass=YAMLGetter):
     section = "guild"
     subsection = "roles"
 
-    admin: int
+    admins: int
     announcements: int
-    champion: int
-    contributor: int
-    core_developer: int
+    contributors: int
+    core_developers: int
     helpers: int
-    jammer: int
-    moderator: int
+    jammers: int
+    moderators: int
     muted: int
-    owner: int
+    owners: int
     partners: int
-    rockstars: int
-    team_leader: int
+    python_community: int
+    team_leaders: int
     verified: int  # This is the Developers role on PyDis, here named verified for readability reasons.
 
 
@@ -439,9 +436,12 @@ class Guild(metaclass=YAMLGetter):
     section = "guild"
 
     id: int
-    ignored: List[int]
-    staff_channels: List[int]
+    moderation_channels: List[int]
+    moderation_roles: List[int]
+    modlog_blacklist: List[int]
     reminder_whitelist: List[int]
+    staff_channels: List[int]
+    staff_roles: List[int]
 
 class Keys(metaclass=YAMLGetter):
     section = "keys"
@@ -587,14 +587,14 @@ BOT_DIR = os.path.dirname(__file__)
 PROJECT_ROOT = os.path.abspath(os.path.join(BOT_DIR, os.pardir))
 
 # Default role combinations
-MODERATION_ROLES = Roles.moderator, Roles.admin, Roles.owner
-STAFF_ROLES = Roles.helpers, Roles.moderator, Roles.admin, Roles.owner
+MODERATION_ROLES = Guild.moderation_roles
+STAFF_ROLES = Guild.staff_roles
 
 # Roles combinations
 STAFF_CHANNELS = Guild.staff_channels
 
 # Default Channel combinations
-MODERATION_CHANNELS = Channels.admins, Channels.admin_spam, Channels.mod_alerts, Channels.mods, Channels.mod_spam
+MODERATION_CHANNELS = Guild.moderation_channels
 
 
 # Bot replies
