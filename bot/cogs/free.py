@@ -22,7 +22,7 @@ class Free(Cog):
     PYTHON_HELP_ID = Categories.python_help
 
     @command(name="free", aliases=('f',))
-    @redirect_output(destination_channel=Channels.bot, bypass_roles=STAFF_ROLES)
+    @redirect_output(destination_channel=Channels.bot_commands, bypass_roles=STAFF_ROLES)
     async def free(self, ctx: Context, user: Member = None, seek: int = 2) -> None:
         """
         Lists free help channels by likeliness of availability.

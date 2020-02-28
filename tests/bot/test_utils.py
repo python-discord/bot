@@ -35,18 +35,3 @@ class CaseInsensitiveDictTests(unittest.TestCase):
         instance = utils.CaseInsensitiveDict()
         instance.update({'FOO': 'bar'})
         self.assertEqual(instance['foo'], 'bar')
-
-
-class ChunkTests(unittest.TestCase):
-    """Tests the `chunk` method."""
-
-    def test_empty_chunking(self):
-        """Tests chunking on an empty iterable."""
-        generator = utils.chunks(iterable=[], size=5)
-        self.assertEqual(list(generator), [])
-
-    def test_list_chunking(self):
-        """Tests chunking a non-empty list."""
-        iterable = [1, 2, 3, 4, 5]
-        generator = utils.chunks(iterable=iterable, size=2)
-        self.assertEqual(list(generator), [[1, 2], [3, 4], [5]])

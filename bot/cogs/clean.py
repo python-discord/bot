@@ -173,7 +173,7 @@ class Clean(Cog):
             colour=Colour(Colours.soft_red),
             title="Bulk message delete",
             text=message,
-            channel_id=Channels.modlog,
+            channel_id=Channels.mod_log,
         )
 
     @group(invoke_without_command=True, name="clean", aliases=["purge"])
