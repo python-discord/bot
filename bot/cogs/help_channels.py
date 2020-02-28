@@ -92,16 +92,20 @@ class HelpChannels(Scheduler, commands.Cog):
 
         self.bot = bot
 
+        # Categories
         self.available_category: discord.CategoryChannel = None
         self.in_use_category: discord.CategoryChannel = None
         self.dormant_category: discord.CategoryChannel = None
 
+        # Queues
         self.channel_queue: asyncio.Queue[discord.TextChannel] = None
         self.name_queue: t.Deque[str] = None
 
         self.elements = self.get_names()
         self.last_notification: t.Optional[datetime] = None
 
+        # Asyncio stuff
+        self.queue_tasks: t.List[asyncio.Task] = []
         self.ready = asyncio.Event()
         self.on_message_lock = asyncio.Lock()
         self.init_task = self.bot.loop.create_task(self.init_cog())
@@ -110,6 +114,10 @@ class HelpChannels(Scheduler, commands.Cog):
         """Cancel the init task and scheduled tasks when the cog unloads."""
         log.trace("Cog unload: cancelling the cog_init task")
         self.init_task.cancel()
+
+        log.trace("Cog unload: cancelling the channel queue tasks")
+        for task in self.queue_tasks:
+            task.cancel()
 
         log.trace("Cog unload: cancelling the scheduled tasks")
         for task in self.scheduled_tasks.values():
@@ -194,7 +202,7 @@ class HelpChannels(Scheduler, commands.Cog):
             if not channel:
                 log.info("Couldn't create a candidate channel; waiting to get one from the queue.")
                 await self.notify()
-                channel = await self.channel_queue.get()
+                await self.wait_for_dormant_channel()
 
         return channel
 
@@ -533,6 +541,19 @@ class HelpChannels(Scheduler, commands.Cog):
             channel = await self.bot.fetch_channel(channel_id)
 
         log.trace(f"Channel #{channel.name} ({channel_id}) retrieved.")
+        return channel
+
+    async def wait_for_dormant_channel(self) -> discord.TextChannel:
+        """Wait for a dormant channel to become available in the queue and return it."""
+        log.trace("Waiting for a dormant channel.")
+
+        task = asyncio.create_task(self.channel_queue.get())
+        self.queue_tasks.append(task)
+        channel = await task
+
+        log.trace(f"Channel #{channel.name} ({channel.id}) finally retrieved from the queue.")
+        self.queue_tasks.remove(task)
+
         return channel
 
     async def _scheduled_task(self, data: ChannelTimeout) -> None:
