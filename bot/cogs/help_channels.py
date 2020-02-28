@@ -431,6 +431,7 @@ class HelpChannels(Scheduler, commands.Cog):
             category=self.in_use_category,
             sync_permissions=True,
             topic=IN_USE_TOPIC,
+            position=0,
         )
 
         timeout = constants.HelpChannels.idle_minutes * 60
