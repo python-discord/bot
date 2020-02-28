@@ -441,11 +441,11 @@ class HelpChannels(Scheduler, commands.Cog):
 
     async def notify_helpers(self) -> None:
         """
-        Notify helpers in the #helpers channel about a lack of available help channels.
+        Notify helpers about a lack of available help channels.
 
-        The notification can be disabled with `constants.HelpChannels.notify_helpers`. The
-        minimum interval between notifications can be configured with
-        `constants.HelpChannels.notify_minutes`.
+        The notification can be disabled with `constants.HelpChannels.notify`. The minimum interval
+        between notifications can be configured with `constants.HelpChannels.notify_minutes`. The
+        channel for notifications can be configured with `constants.HelpChannels.notify_channel`.
         """
         if not constants.HelpChannels.notify:
             return
@@ -458,8 +458,8 @@ class HelpChannels(Scheduler, commands.Cog):
             should_send = True
 
         if should_send:
-            helpers_channel = self.bot.get_channel(constants.Channels.helpers)
-            await helpers_channel.send(
+            channel = self.bot.get_channel(constants.HelpChannels.notify_channel)
+            await channel.send(
                 f"<@&{constants.Roles.helpers}> a new available help channel is needed but there "
                 f"are no more dormant ones. Consider freeing up some in-use channels manually by "
                 f"using the `!dormant` command within the channels."
