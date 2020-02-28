@@ -454,6 +454,8 @@ class HelpChannels(Scheduler, commands.Cog):
         if not constants.HelpChannels.notify:
             return
 
+        log.trace("Notifying about lack of channels.")
+
         if self.last_notification:
             elapsed = (datetime.utcnow() - self.last_notification).seconds
             minimum_interval = constants.HelpChannels.notify_minutes * 60
@@ -462,9 +464,12 @@ class HelpChannels(Scheduler, commands.Cog):
             should_send = True
 
         if not should_send:
+            log.trace("Notification not sent because it's too recent since the previous one.")
             return
 
         try:
+            log.trace("Sending notification message.")
+
             channel = self.bot.get_channel(constants.HelpChannels.notify_channel)
             mentions = " ".join(f"<@&{role}>" for role in constants.HelpChannels.notify_roles)
 
