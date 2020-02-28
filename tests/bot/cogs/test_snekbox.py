@@ -179,7 +179,7 @@ class SnekboxTests(unittest.TestCase):
         response = MockMessage()
         self.cog.prepare_input = MagicMock(return_value='MyAwesomeFormattedCode')
         self.cog.send_eval = AsyncMock(return_value=response)
-        self.cog.continue_eval = AsyncMock(return_value=(False, None))
+        self.cog.continue_eval = AsyncMock(return_value=None)
 
         await self.cog.eval_command.callback(self.cog, ctx=ctx, code='MyAwesomeCode')
         self.cog.prepare_input.assert_called_once_with('MyAwesomeCode')
@@ -194,7 +194,7 @@ class SnekboxTests(unittest.TestCase):
         self.cog.prepare_input = MagicMock(return_value='MyAwesomeFormattedCode')
         self.cog.send_eval = AsyncMock(return_value=response)
         self.cog.continue_eval = AsyncMock()
-        self.cog.continue_eval.side_effect = ((True, 'MyAwesomeCode-2'), (False, None))
+        self.cog.continue_eval.side_effect = ('MyAwesomeCode-2', None)
 
         await self.cog.eval_command.callback(self.cog, ctx=ctx, code='MyAwesomeCode')
         self.cog.prepare_input.has_calls(call('MyAwesomeCode'), call('MyAwesomeCode-2'))
@@ -298,7 +298,7 @@ class SnekboxTests(unittest.TestCase):
         self.bot.wait_for.side_effect = ((None, new_msg), None)
 
         actual = await self.cog.continue_eval(ctx, response)
-        self.assertEqual(actual, (True, 'NewCode'))
+        self.assertEqual(actual, 'NewCode')
         self.bot.wait_for.has_calls(
             call('message_edit', partial(snekbox.predicate_eval_message_edit, ctx), timeout=10),
             call('reaction_add', partial(snekbox.predicate_eval_emoji_reaction, ctx), timeout=10)
@@ -313,7 +313,7 @@ class SnekboxTests(unittest.TestCase):
         self.bot.wait_for.side_effect = asyncio.TimeoutError
 
         actual = await self.cog.continue_eval(ctx, MockMessage())
-        self.assertEqual(actual, (False, None))
+        self.assertEqual(actual, None)
         ctx.message.clear_reactions.assert_called_once()
 
     def test_predicate_eval_message_edit(self):

@@ -209,12 +209,11 @@ class Snekbox(Cog):
             log.info(f"{ctx.author}'s job had a return code of {results['returncode']}")
         return response
 
-    async def continue_eval(self, ctx: Context, response: Message) -> Tuple[bool, Optional[str]]:
+    async def continue_eval(self, ctx: Context, response: Message) -> Optional[str]:
         """
         Check if the eval session should continue.
 
-        First item of the returned tuple is if the eval session should continue,
-        the second is the new code to evaluate.
+        Return the new code to evaluate or None if the eval session should be terminated.
         """
         _predicate_eval_message_edit = partial(predicate_eval_message_edit, ctx)
         _predicate_emoji_reaction = partial(predicate_eval_emoji_reaction, ctx)
@@ -239,9 +238,9 @@ class Snekbox(Cog):
 
         except asyncio.TimeoutError:
             await ctx.message.clear_reactions()
-            return False, None
+            return None
 
-        return True, code
+        return code
 
     @command(name="eval", aliases=("e",))
     @guild_only()
@@ -275,8 +274,8 @@ class Snekbox(Cog):
             finally:
                 del self.jobs[ctx.author.id]
 
-            continue_eval, code = await self.continue_eval(ctx, response)
-            if not continue_eval:
+            code = await self.continue_eval(ctx, response)
+            if not code:
                 break
             log.info(f"Re-evaluating message {ctx.message.id}")
 
