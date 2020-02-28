@@ -192,6 +192,15 @@ class HelpChannels(Scheduler, commands.Cog):
 
             if not channel:
                 log.info("Couldn't create a candidate channel; waiting to get one from the queue.")
+
+                if constants.HelpChannels.notify_helpers:
+                    helpers_channel = self.bot.get_channel(constants.Channels.helpers)
+                    await helpers_channel.send(
+                        f"<@&{constants.Roles.helpers}> a help channel is in needed but none are "
+                        f"available. Consider freeing up some in-use channels manually by using "
+                        f"the `!dormant` command within the channels."
+                    )
+
                 channel = await self.channel_queue.get()
 
         return channel

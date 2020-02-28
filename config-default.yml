@@ -532,6 +532,9 @@ help_channels:
     # Prefix for help channel names
     name_prefix: 'help-'
 
+    # Notify helpers if more channels are needed but none are available
+    notify_helpers: true
+
 redirect_output:
     delete_invocation: true
     delete_delay: 15
