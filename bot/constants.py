@@ -376,14 +376,6 @@ class Channels(metaclass=YAMLGetter):
     dev_core: int
     dev_log: int
     esoteric: int
-    help_0: int
-    help_1: int
-    help_2: int
-    help_3: int
-    help_4: int
-    help_5: int
-    help_6: int
-    help_7: int
     helpers: int
     message_log: int
     meta: int
