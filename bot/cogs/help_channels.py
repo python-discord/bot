@@ -222,7 +222,11 @@ class HelpChannels(Scheduler, commands.Cog):
             log.warning(f"Channel #{channel.name} ({channel.id}) doesn't have the prefix {prefix}.")
             position = None
 
-        log.trace(f"Position of #{channel.name} ({channel.id}) in Dormant will be {position}.")
+        log.trace(
+            f"Position of #{channel.name} ({channel.id}) in Dormant will be {position} "
+            f"(was {channel.position})."
+        )
+
         return position
 
     @staticmethod
