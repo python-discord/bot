@@ -373,13 +373,16 @@ class HelpChannels(Scheduler, commands.Cog):
 
     async def move_to_dormant(self, channel: discord.TextChannel) -> None:
         """Make the `channel` dormant."""
-        log.info(f"Making #{channel.name} ({channel.id}) dormant.")
+        log.info(f"Moving #{channel.name} ({channel.id}) to the Dormant category.")
 
-        log.trace(f"Moving #{channel.name} ({channel.id}) to the Dormant category.")
+        start_index = len(constants.HelpChannels.name_prefix)
+        element = channel.name[start_index:]
+
         await channel.edit(
             category=self.dormant_category,
             sync_permissions=True,
             topic=DORMANT_TOPIC,
+            position=self.elements[element],
         )
 
         log.trace(f"Sending dormant message for #{channel.name} ({channel.id}).")
@@ -391,9 +394,8 @@ class HelpChannels(Scheduler, commands.Cog):
 
     async def move_to_in_use(self, channel: discord.TextChannel) -> None:
         """Make a channel in-use and schedule it to be made dormant."""
-        log.info(f"Making #{channel.name} ({channel.id}) in-use.")
+        log.info(f"Moving #{channel.name} ({channel.id}) to the In Use category.")
 
-        log.trace(f"Moving #{channel.name} ({channel.id}) to the In Use category.")
         await channel.edit(
             category=self.in_use_category,
             sync_permissions=True,
