@@ -545,6 +545,7 @@ class HelpChannels(metaclass=YAMLGetter):
     notify: bool
     notify_channel: int
     notify_minutes: int
+    notify_roles: List[int]
 
 
 class Mention(metaclass=YAMLGetter):
