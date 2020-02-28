@@ -43,7 +43,7 @@ class Tags(Cog):
             self._last_fetch = time_now
 
     @staticmethod
-    def _fuzzy_search(search: str, target: str) -> int:
+    def _fuzzy_search(search: str, target: str) -> float:
         """A simple scoring algorithm based on how many letters are found / total, with order in mind."""
         current, index = 0, 0
         _search = REGEX_NON_ALPHABET.sub('', search.lower())
