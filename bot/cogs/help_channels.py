@@ -235,6 +235,12 @@ class HelpChannels(Scheduler, commands.Cog):
                 name = channel.name[start_index:]
                 names.add(name)
 
+        if len(names) > MAX_CHANNELS_PER_CATEGORY:
+            log.warning(
+                f"Too many help channels ({len(names)}) already exist! "
+                f"Discord only supports {MAX_CHANNELS_PER_CATEGORY} in a category."
+            )
+
         log.trace(f"Got {len(names)} used names: {names}")
         return names
 
