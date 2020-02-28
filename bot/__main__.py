@@ -10,7 +10,7 @@ from bot.bot import Bot
 from bot.constants import Bot as BotConfig
 
 sentry_logging = LoggingIntegration(
-    level=logging.TRACE,
+    level=logging.DEBUG,
     event_level=logging.WARNING
 )
 
@@ -31,6 +31,7 @@ bot.load_extension("bot.cogs.error_handler")
 bot.load_extension("bot.cogs.filtering")
 bot.load_extension("bot.cogs.logging")
 bot.load_extension("bot.cogs.security")
+bot.load_extension("bot.cogs.config_verifier")
 
 # Commands, etc
 bot.load_extension("bot.cogs.antimalware")
