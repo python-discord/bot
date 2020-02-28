@@ -9,7 +9,7 @@ from discord.ext.commands import Cog, Context, command, group
 
 from bot.bot import Bot
 from bot.cogs.token_remover import TokenRemover
-from bot.constants import Channels, DEBUG_MODE, Guild, MODERATION_ROLES, Roles, URLs
+from bot.constants import Categories, Channels, DEBUG_MODE, Guild, MODERATION_ROLES, Roles, URLs
 from bot.decorators import with_role
 from bot.utils.messages import wait_for_deletion
 
@@ -26,14 +26,6 @@ class BotCog(Cog, name="Bot"):
 
         # Stores allowed channels plus epoch time since last call.
         self.channel_cooldowns = {
-            Channels.help_0: 0,
-            Channels.help_1: 0,
-            Channels.help_2: 0,
-            Channels.help_3: 0,
-            Channels.help_4: 0,
-            Channels.help_5: 0,
-            Channels.help_6: 0,
-            Channels.help_7: 0,
             Channels.python_discussion: 0,
         }
 
@@ -232,9 +224,14 @@ class BotCog(Cog, name="Bot"):
         If poorly formatted code is detected, send the user a helpful message explaining how to do
         properly formatted Python syntax highlighting codeblocks.
         """
+        is_help_channel = (
+            msg.channel.category
+            and msg.channel.category.id in (Categories.help_available, Categories.help_in_use)
+        )
         parse_codeblock = (
             (
-                msg.channel.id in self.channel_cooldowns
+                is_help_channel
+                or msg.channel.id in self.channel_cooldowns
                 or msg.channel.id in self.channel_whitelist
             )
             and not msg.author.bot
