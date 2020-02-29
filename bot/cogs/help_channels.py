@@ -45,11 +45,6 @@ question to maximize your chance of getting a good answer. If you're not sure ho
 through [our guide for asking a good question]({ASKING_GUIDE_URL}).
 """
 
-with Path("bot/resources/elements.json").open(encoding="utf-8") as elements_file:
-    # Discord has a hard limit of 50 channels per category.
-    # Easiest way to prevent more channels from being created is to limit the names available.
-    ELEMENTS = json.load(elements_file)[:50]
-
 
 class ChannelTimeout(t.NamedTuple):
     """Data for a task scheduled to make a channel dormant."""
@@ -101,6 +96,8 @@ class HelpChannels(Scheduler, commands.Cog):
 
         self.channel_queue: asyncio.Queue[discord.TextChannel] = None
         self.name_queue: t.Deque[str] = None
+
+        self.elements = self.get_names()
 
         self.ready = asyncio.Event()
         self.on_message_lock = asyncio.Lock()
@@ -160,7 +157,7 @@ class HelpChannels(Scheduler, commands.Cog):
         used_names = self.get_used_names()
 
         log.trace("Determining the available names.")
-        available_names = (name for name in ELEMENTS if name not in used_names)
+        available_names = (name for name in self.elements if name not in used_names)
 
         log.trace("Populating the name queue with names.")
         return deque(available_names)
@@ -206,6 +203,14 @@ class HelpChannels(Scheduler, commands.Cog):
         for channel in category.guild.channels:
             if channel.category_id == category.id and isinstance(channel, discord.TextChannel):
                 yield channel
+
+    @staticmethod
+    def get_names() -> t.List[str]:
+        """Return a list of element names."""
+        with Path("bot/resources/elements.json").open(encoding="utf-8") as elements_file:
+            # Discord has a hard limit of 50 channels per category.
+            # Easiest way to prevent more channels from being created is to limit available names.
+            return json.load(elements_file)[:50]
 
     def get_used_names(self) -> t.Set[str]:
         """Return channels names which are already being used."""
