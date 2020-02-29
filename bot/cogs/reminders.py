@@ -43,7 +43,6 @@ class Reminders(Scheduler, Cog):
         )
 
         now = datetime.utcnow()
-        loop = asyncio.get_event_loop()
 
         for reminder in response:
             is_valid, *_ = self.ensure_valid_reminder(reminder, cancel_task=False)
@@ -57,7 +56,7 @@ class Reminders(Scheduler, Cog):
                 late = relativedelta(now, remind_at)
                 await self.send_reminder(reminder, late)
             else:
-                self.schedule_task(loop, reminder["id"], reminder)
+                self.schedule_task(reminder["id"], reminder)
 
     def ensure_valid_reminder(
         self,
@@ -112,9 +111,6 @@ class Reminders(Scheduler, Cog):
         log.debug(f"Deleting reminder {reminder_id} (the user has been reminded).")
         await self._delete_reminder(reminder_id)
 
-        # Now we can begone with it from our schedule list.
-        self.cancel_task(reminder_id)
-
     async def _delete_reminder(self, reminder_id: str, cancel_task: bool = True) -> None:
         """Delete a reminder from the database, given its ID, and cancel the running task."""
         await self.bot.api_client.delete('bot/reminders/' + str(reminder_id))
@@ -125,10 +121,11 @@ class Reminders(Scheduler, Cog):
 
     async def _reschedule_reminder(self, reminder: dict) -> None:
         """Reschedule a reminder object."""
-        loop = asyncio.get_event_loop()
-
+        log.trace(f"Cancelling old task #{reminder['id']}")
         self.cancel_task(reminder["id"])
-        self.schedule_task(loop, reminder["id"], reminder)
+
+        log.trace(f"Scheduling new task #{reminder['id']}")
+        self.schedule_task(reminder["id"], reminder)
 
     async def send_reminder(self, reminder: dict, late: relativedelta = None) -> None:
         """Send the reminder."""
@@ -226,8 +223,7 @@ class Reminders(Scheduler, Cog):
             delivery_dt=expiration,
         )
 
-        loop = asyncio.get_event_loop()
-        self.schedule_task(loop, reminder["id"], reminder)
+        self.schedule_task(reminder["id"], reminder)
 
     @remind_group.command(name="list")
     async def list_reminders(self, ctx: Context) -> t.Optional[discord.Message]:

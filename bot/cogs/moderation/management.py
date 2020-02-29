@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import textwrap
 import typing as t
@@ -135,8 +134,7 @@ class ModManagement(commands.Cog):
 
             # If the infraction was not marked as permanent, schedule a new expiration task
             if request_data['expires_at']:
-                loop = asyncio.get_event_loop()
-                self.infractions_cog.schedule_task(loop, new_infraction['id'], new_infraction)
+                self.infractions_cog.schedule_task(new_infraction['id'], new_infraction)
 
             log_text += f"""
                 Previous expiry: {old_infraction['expires_at'] or "Permanent"}

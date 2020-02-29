@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import textwrap
 import typing as t
@@ -48,7 +49,7 @@ class InfractionScheduler(Scheduler):
         )
         for infraction in infractions:
             if infraction["expires_at"] is not None and infraction["type"] in supported_infractions:
-                self.schedule_task(self.bot.loop, infraction["id"], infraction)
+                self.schedule_task(infraction["id"], infraction)
 
     async def reapply_infraction(
         self,
@@ -150,7 +151,7 @@ class InfractionScheduler(Scheduler):
                 await action_coro
                 if expiry:
                     # Schedule the expiration of the infraction.
-                    self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
+                    self.schedule_task(infraction["id"], infraction)
             except discord.HTTPException as e:
                 # Accordingly display that applying the infraction failed.
                 confirm_msg = f":x: failed to apply"
@@ -427,4 +428,6 @@ class InfractionScheduler(Scheduler):
         expiry = dateutil.parser.isoparse(infraction["expires_at"]).replace(tzinfo=None)
         await time.wait_until(expiry)
 
-        await self.deactivate_infraction(infraction)
+        # Because deactivate_infraction() explicitly cancels this scheduled task, it is shielded
+        # to avoid prematurely cancelling itself.
+        await asyncio.shield(self.deactivate_infraction(infraction))
