@@ -529,6 +529,7 @@ class Free(metaclass=YAMLGetter):
 class HelpChannels(metaclass=YAMLGetter):
     section = 'help_channels'
 
+    claim_minutes: int
     cmd_whitelist: List[int]
     idle_minutes: int
     max_available: int

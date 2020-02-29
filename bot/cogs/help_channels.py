@@ -515,12 +515,32 @@ class HelpChannels(Scheduler, commands.Cog):
                 return  # Ignore messages outside the Available category.
 
             await self.move_to_in_use(message.channel)
+            await self.revoke_send_permissions(message.author)
             log.trace("Releasing on_message lock.")
 
         # Move a dormant channel to the Available category to fill in the gap.
         # This is done last and outside the lock because it may wait indefinitely for a channel to
         # be put in the queue.
         await self.move_to_available()
+
+    async def revoke_send_permissions(self, member: discord.Member) -> None:
+        """
+        Disallow `member` to send messages in the Available category for a certain time.
+
+        The time until permissions are reinstated can be configured with
+        `HelpChannels.claim_minutes`.
+        """
+        log.trace(
+            f"Revoking {member}'s ({member.id}) send message permissions in the Available category."
+        )
+
+        await self.available_category.set_permissions(member, send_messages=False)
+
+        timeout = constants.HelpChannels.claim_minutes * 60
+        callback = self.available_category.set_permissions(member, send_messages=None)
+
+        log.trace(f"Scheduling {member}'s ({member.id}) send message permissions to be reinstated.")
+        self.schedule_task(member.id, TaskData(timeout, callback))
 
     async def send_available_message(self, channel: discord.TextChannel) -> None:
         """Send the available message by editing a dormant message or sending a new message."""
