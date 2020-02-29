@@ -212,16 +212,16 @@ class HelpChannels(Scheduler, commands.Cog):
 
         If the channel does not have a valid name with a chemical element, return None.
         """
-        log.trace(f"Getting alphabetical position for #{channel.name} ({channel.id}).")
+        log.trace(f"Getting alphabetical position for #{channel} ({channel.id}).")
 
         try:
             position = self.name_positions[channel.name]
         except KeyError:
-            log.warning(f"Channel #{channel.name} ({channel.id}) doesn't have a valid name.")
+            log.warning(f"Channel #{channel} ({channel.id}) doesn't have a valid name.")
             position = None
 
         log.trace(
-            f"Position of #{channel.name} ({channel.id}) in Dormant will be {position} "
+            f"Position of #{channel} ({channel.id}) in Dormant will be {position} "
             f"(was {channel.position})."
         )
 
@@ -230,7 +230,7 @@ class HelpChannels(Scheduler, commands.Cog):
     @staticmethod
     def get_category_channels(category: discord.CategoryChannel) -> t.Iterable[discord.TextChannel]:
         """Yield the text channels of the `category` in an unsorted manner."""
-        log.trace(f"Getting text channels in the category '{category.name}' ({category.id}).")
+        log.trace(f"Getting text channels in the category '{category}' ({category.id}).")
 
         # This is faster than using category.channels because the latter sorts them.
         for channel in category.guild.channels:
@@ -284,27 +284,27 @@ class HelpChannels(Scheduler, commands.Cog):
 
         Return None if the channel has no messages.
         """
-        log.trace(f"Getting the idle time for #{channel.name} ({channel.id}).")
+        log.trace(f"Getting the idle time for #{channel} ({channel.id}).")
 
         msg = await cls.get_last_message(channel)
         if not msg:
-            log.debug(f"No idle time available; #{channel.name} ({channel.id}) has no messages.")
+            log.debug(f"No idle time available; #{channel} ({channel.id}) has no messages.")
             return None
 
         idle_time = (datetime.utcnow() - msg.created_at).seconds
 
-        log.trace(f"#{channel.name} ({channel.id}) has been idle for {idle_time} seconds.")
+        log.trace(f"#{channel} ({channel.id}) has been idle for {idle_time} seconds.")
         return idle_time
 
     @staticmethod
     async def get_last_message(channel: discord.TextChannel) -> t.Optional[discord.Message]:
         """Return the last message sent in the channel or None if no messages exist."""
-        log.trace(f"Getting the last message in #{channel.name} ({channel.id}).")
+        log.trace(f"Getting the last message in #{channel} ({channel.id}).")
 
         try:
             return await channel.history(limit=1).next()  # noqa: B305
         except discord.NoMoreItems:
-            log.debug(f"No last message available; #{channel.name} ({channel.id}) has no messages.")
+            log.debug(f"No last message available; #{channel} ({channel.id}) has no messages.")
             return None
 
     async def init_available(self) -> None:
@@ -376,14 +376,14 @@ class HelpChannels(Scheduler, commands.Cog):
         If `has_task` is True and rescheduling is required, the extant task to make the channel
         dormant will first be cancelled.
         """
-        log.trace(f"Handling in-use channel #{channel.name} ({channel.id}).")
+        log.trace(f"Handling in-use channel #{channel} ({channel.id}).")
 
         idle_seconds = constants.HelpChannels.idle_minutes * 60
         time_elapsed = await self.get_idle_time(channel)
 
         if time_elapsed is None or time_elapsed >= idle_seconds:
             log.info(
-                f"#{channel.name} ({channel.id}) is idle longer than {idle_seconds} seconds "
+                f"#{channel} ({channel.id}) is idle longer than {idle_seconds} seconds "
                 f"and will be made dormant."
             )
 
@@ -396,7 +396,7 @@ class HelpChannels(Scheduler, commands.Cog):
             data = TaskData(idle_seconds - time_elapsed, self.move_idle_channel(channel))
 
             log.info(
-                f"#{channel.name} ({channel.id}) is still active; "
+                f"#{channel} ({channel.id}) is still active; "
                 f"scheduling it to be moved after {data.wait_time} seconds."
             )
 
@@ -407,11 +407,11 @@ class HelpChannels(Scheduler, commands.Cog):
         log.trace("Making a channel available.")
 
         channel = await self.get_available_candidate()
-        log.info(f"Making #{channel.name} ({channel.id}) available.")
+        log.info(f"Making #{channel} ({channel.id}) available.")
 
         await self.send_available_message(channel)
 
-        log.trace(f"Moving #{channel.name} ({channel.id}) to the Available category.")
+        log.trace(f"Moving #{channel} ({channel.id}) to the Available category.")
         await channel.edit(
             category=self.available_category,
             sync_permissions=True,
@@ -420,7 +420,7 @@ class HelpChannels(Scheduler, commands.Cog):
 
     async def move_to_dormant(self, channel: discord.TextChannel) -> None:
         """Make the `channel` dormant."""
-        log.info(f"Moving #{channel.name} ({channel.id}) to the Dormant category.")
+        log.info(f"Moving #{channel} ({channel.id}) to the Dormant category.")
 
         await channel.edit(
             category=self.dormant_category,
@@ -429,18 +429,18 @@ class HelpChannels(Scheduler, commands.Cog):
             position=self.get_alphabetical_position(channel),
         )
 
-        log.trace(f"Position of #{channel.name} ({channel.id}) is actually {channel.position}.")
+        log.trace(f"Position of #{channel} ({channel.id}) is actually {channel.position}.")
 
-        log.trace(f"Sending dormant message for #{channel.name} ({channel.id}).")
+        log.trace(f"Sending dormant message for #{channel} ({channel.id}).")
         embed = discord.Embed(description=DORMANT_MSG)
         await channel.send(embed=embed)
 
-        log.trace(f"Pushing #{channel.name} ({channel.id}) into the channel queue.")
+        log.trace(f"Pushing #{channel} ({channel.id}) into the channel queue.")
         self.channel_queue.put_nowait(channel)
 
     async def move_to_in_use(self, channel: discord.TextChannel) -> None:
         """Make a channel in-use and schedule it to be made dormant."""
-        log.info(f"Moving #{channel.name} ({channel.id}) to the In Use category.")
+        log.info(f"Moving #{channel} ({channel.id}) to the In Use category.")
 
         await channel.edit(
             category=self.in_use_category,
@@ -451,7 +451,7 @@ class HelpChannels(Scheduler, commands.Cog):
 
         timeout = constants.HelpChannels.idle_minutes * 60
 
-        log.trace(f"Scheduling #{channel.name} ({channel.id}) to become dormant in {timeout} sec.")
+        log.trace(f"Scheduling #{channel} ({channel.id}) to become dormant in {timeout} sec.")
         data = TaskData(timeout, self.move_idle_channel(channel))
         self.schedule_task(channel.id, data)
 
@@ -563,7 +563,7 @@ class HelpChannels(Scheduler, commands.Cog):
 
     async def send_available_message(self, channel: discord.TextChannel) -> None:
         """Send the available message by editing a dormant message or sending a new message."""
-        channel_info = f"#{channel.name} ({channel.id})"
+        channel_info = f"#{channel} ({channel.id})"
         log.trace(f"Sending available message in {channel_info}.")
 
         embed = discord.Embed(description=AVAILABLE_MSG)
@@ -585,7 +585,7 @@ class HelpChannels(Scheduler, commands.Cog):
             log.debug(f"Channel {channel_id} is not in cache; fetching from API.")
             channel = await self.bot.fetch_channel(channel_id)
 
-        log.trace(f"Channel #{channel.name} ({channel_id}) retrieved.")
+        log.trace(f"Channel #{channel} ({channel_id}) retrieved.")
         return channel
 
     async def wait_for_dormant_channel(self) -> discord.TextChannel:
@@ -596,7 +596,7 @@ class HelpChannels(Scheduler, commands.Cog):
         self.queue_tasks.append(task)
         channel = await task
 
-        log.trace(f"Channel #{channel.name} ({channel.id}) finally retrieved from the queue.")
+        log.trace(f"Channel #{channel} ({channel.id}) finally retrieved from the queue.")
         self.queue_tasks.remove(task)
 
         return channel
