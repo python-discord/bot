@@ -351,7 +351,7 @@ class HelpChannels(Scheduler, commands.Cog):
 
         log.trace("Moving or rescheduling in-use channels.")
         for channel in self.get_category_channels(self.in_use_category):
-            await self.move_idle_channel(channel)
+            await self.move_idle_channel(channel, has_task=False)
 
         log.info("Cog is ready!")
         self.ready.set()
@@ -365,11 +365,12 @@ class HelpChannels(Scheduler, commands.Cog):
         embed = message.embeds[0]
         return embed.description.strip() == DORMANT_MSG.strip()
 
-    async def move_idle_channel(self, channel: discord.TextChannel) -> None:
+    async def move_idle_channel(self, channel: discord.TextChannel, has_task: bool = True) -> None:
         """
         Make the `channel` dormant if idle or schedule the move if still active.
 
-        If a task to make the channel dormant already exists, it will first be cancelled.
+        If `has_task` is True and rescheduling is required, the extant task to make the channel
+        dormant will first be cancelled.
         """
         log.trace(f"Handling in-use channel #{channel.name} ({channel.id}).")
 
@@ -385,7 +386,7 @@ class HelpChannels(Scheduler, commands.Cog):
             await self.move_to_dormant(channel)
         else:
             # Cancel the existing task, if any.
-            if channel.id in self.scheduled_tasks:
+            if has_task:
                 self.cancel_task(channel.id)
 
             data = ChannelTimeout(channel, idle_seconds - time_elapsed)
