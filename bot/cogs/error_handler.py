@@ -8,6 +8,7 @@ from sentry_sdk import push_scope
 from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Channels
+from bot.converters import TagNameConverter
 from bot.decorators import InChannelCheckFailure
 
 log = logging.getLogger(__name__)
@@ -109,10 +110,18 @@ class ErrorHandler(Cog):
             await self.on_command_error(ctx, tag_error)
             return
 
+        try:
+            tag_name = await TagNameConverter.convert(ctx, ctx.invoked_with)
+        except errors.BadArgument:
+            log.debug(
+                f"{ctx.author} tried to use an invalid command "
+                f"and the fallback tag failed validation in TagNameConverter."
+            )
+        else:
+            with contextlib.suppress(ResponseCodeError):
+                await ctx.invoke(tags_get_command, tag_name=tag_name)
         # Return to not raise the exception
-        with contextlib.suppress(ResponseCodeError):
-            await ctx.invoke(tags_get_command, tag_name=ctx.invoked_with)
-            return
+        return
 
     async def handle_user_input_error(self, ctx: Context, e: errors.UserInputError) -> None:
         """
