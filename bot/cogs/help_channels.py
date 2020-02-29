@@ -150,10 +150,9 @@ class HelpChannels(Scheduler, commands.Cog):
         Return None if no more channel names are available.
         """
         log.trace("Getting a name for a new dormant channel.")
-        name = constants.HelpChannels.name_prefix
 
         try:
-            name += self.name_queue.popleft()
+            name = self.name_queue.popleft()
         except IndexError:
             log.debug("No more names available for new dormant channels.")
             return None
@@ -214,13 +213,10 @@ class HelpChannels(Scheduler, commands.Cog):
         """
         log.trace(f"Getting alphabetical position for #{channel.name} ({channel.id}).")
 
-        prefix = constants.HelpChannels.name_prefix
-        element = channel.name[len(prefix):]
-
         try:
-            position = self.elements[element]
+            position = self.elements[channel.name]
         except KeyError:
-            log.warning(f"Channel #{channel.name} ({channel.id}) doesn't have the prefix {prefix}.")
+            log.warning(f"Channel #{channel.name} ({channel.id}) doesn't have a valid name.")
             position = None
 
         log.trace(
@@ -241,8 +237,16 @@ class HelpChannels(Scheduler, commands.Cog):
                 yield channel
 
     @staticmethod
-    def get_names(count: int = constants.HelpChannels.max_total_channels) -> t.Dict[str, int]:
-        """Return a dict with the first `count` element names and their alphabetical indices."""
+    def get_names() -> t.Dict[str, int]:
+        """
+        Return a truncated dict of prefixed element names and their alphabetical indices.
+
+        The amount of names if configured with `HelpChannels.max_total_channels`.
+        The prefix is configured with `HelpChannels.name_prefix`.
+        """
+        count = constants.HelpChannels.max_total_channels
+        prefix = constants.HelpChannels.name_prefix
+
         log.trace(f"Getting the first {count} element names from JSON.")
 
         if count > MAX_CHANNELS_PER_CATEGORY:
@@ -254,20 +258,20 @@ class HelpChannels(Scheduler, commands.Cog):
         with Path("bot/resources/elements.json").open(encoding="utf-8") as elements_file:
             all_names = json.load(elements_file)
 
-        truncated_names = itertools.islice(all_names.items(), count)
-        return dict(truncated_names)
+        names = itertools.islice(all_names.items(), count)
+        if prefix:
+            names = ((prefix + name, pos) for name, pos in names)
+
+        return dict(names)
 
     def get_used_names(self) -> t.Set[str]:
         """Return channels names which are already being used."""
         log.trace("Getting channel names which are already being used.")
 
-        start_index = len(constants.HelpChannels.name_prefix)
-
         names = set()
         for cat in (self.available_category, self.in_use_category, self.dormant_category):
             for channel in self.get_category_channels(cat):
-                name = channel.name[start_index:]
-                names.add(name)
+                names.add(channel.name)
 
         if len(names) > MAX_CHANNELS_PER_CATEGORY:
             log.warning(
