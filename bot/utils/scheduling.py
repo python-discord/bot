@@ -105,6 +105,6 @@ class Scheduler(metaclass=CogABCMeta):
             # Log the exception if one exists.
             if exception:
                 log.error(
-                    f"{self.cog_name}: error in task #{task_id} {id(scheduled_task)}!",
+                    f"{self.cog_name}: error in task #{task_id} {id(done_task)}!",
                     exc_info=exception
                 )
