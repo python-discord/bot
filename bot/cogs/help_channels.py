@@ -248,12 +248,6 @@ class HelpChannels(Scheduler, commands.Cog):
 
         log.trace(f"Getting the first {count} element names from JSON.")
 
-        if count > MAX_CHANNELS_PER_CATEGORY:
-            log.warning(
-                f"{count} is too many help channels to make available! "
-                f"Discord only supports at most {MAX_CHANNELS_PER_CATEGORY} channels per category."
-            )
-
         with Path("bot/resources/elements.json").open(encoding="utf-8") as elements_file:
             all_names = json.load(elements_file)
 
@@ -578,6 +572,33 @@ class HelpChannels(Scheduler, commands.Cog):
         await asyncio.shield(self.move_idle_channel(data.channel))
 
 
+def validate_config() -> None:
+    """Raise a ValueError if the cog's config is invalid."""
+    log.trace("Validating config.")
+    total = constants.HelpChannels.max_total_channels
+    available = constants.HelpChannels.max_available
+
+    if total == 0 or available == 0:
+        raise ValueError("max_total_channels and max_available and must be greater than 0.")
+
+    if total < available:
+        raise ValueError(
+            f"max_total_channels ({total}) must be greater than or equal to max_available "
+            f"({available})."
+        )
+
+    if total > MAX_CHANNELS_PER_CATEGORY:
+        raise ValueError(
+            f"max_total_channels ({total}) must be less than or equal to "
+            f"{MAX_CHANNELS_PER_CATEGORY} due to Discord's limit on channels per category."
+        )
+
+
 def setup(bot: Bot) -> None:
     """Load the HelpChannels cog."""
-    bot.add_cog(HelpChannels(bot))
+    try:
+        validate_config()
+    except ValueError as e:
+        log.error(f"HelpChannels cog will not be loaded due to misconfiguration: {e}")
+    else:
+        bot.add_cog(HelpChannels(bot))
