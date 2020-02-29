@@ -1,4 +1,5 @@
 import asyncio
+import itertools
 import json
 import logging
 import random
@@ -205,12 +206,13 @@ class HelpChannels(Scheduler, commands.Cog):
                 yield channel
 
     @staticmethod
-    def get_names() -> t.List[str]:
-        """Return a list of element names."""
+    def get_names(count: int = constants.HelpChannels.max_total_channels) -> t.Dict[str, int]:
+        """Return a dict with the first `count` element names and their alphabetical indices."""
         with Path("bot/resources/elements.json").open(encoding="utf-8") as elements_file:
-            # Discord has a hard limit of 50 channels per category.
-            # Easiest way to prevent more channels from being created is to limit available names.
-            return json.load(elements_file)[:50]
+            all_names = json.load(elements_file)
+
+        truncated_names = itertools.islice(all_names.items(), count)
+        return dict(truncated_names)
 
     def get_used_names(self) -> t.Set[str]:
         """Return channels names which are already being used."""
