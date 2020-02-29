@@ -34,7 +34,7 @@ class Logging(Cog):
         )
 
         if not DEBUG_MODE:
-            await self.bot.get_channel(Channels.devlog).send(embed=embed)
+            await self.bot.get_channel(Channels.dev_log).send(embed=embed)
 
 
 def setup(bot: Bot) -> None:

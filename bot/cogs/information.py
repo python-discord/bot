@@ -152,8 +152,8 @@ class Information(Cog):
 
         # Non-staff may only do this in #bot-commands
         if not with_role_check(ctx, *constants.STAFF_ROLES):
-            if not ctx.channel.id == constants.Channels.bot:
-                raise InChannelCheckFailure(constants.Channels.bot)
+            if not ctx.channel.id == constants.Channels.bot_commands:
+                raise InChannelCheckFailure(constants.Channels.bot_commands)
 
         embed = await self.create_user_embed(ctx, user)
 
@@ -332,7 +332,7 @@ class Information(Cog):
 
     @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=constants.STAFF_ROLES)
     @group(invoke_without_command=True)
-    @in_channel(constants.Channels.bot, bypass_roles=constants.STAFF_ROLES)
+    @in_channel(constants.Channels.bot_commands, bypass_roles=constants.STAFF_ROLES)
     async def raw(self, ctx: Context, *, message: Message, json: bool = False) -> None:
         """Shows information about the raw API response."""
         # I *guess* it could be deleted right as the command is invoked but I felt like it wasn't worth handling
