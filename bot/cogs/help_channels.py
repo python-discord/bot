@@ -485,11 +485,13 @@ class HelpChannels(Scheduler, commands.Cog):
             channel = self.bot.get_channel(constants.HelpChannels.notify_channel)
             mentions = " ".join(f"<@&{role}>" for role in constants.HelpChannels.notify_roles)
 
-            await channel.send(
+            message = await channel.send(
                 f"{mentions} A new available help channel is needed but there "
                 f"are no more dormant ones. Consider freeing up some in-use channels manually by "
                 f"using the `!dormant` command within the channels."
             )
+
+            self.last_notification = message.created_at
         except Exception:
             # Handle it here cause this feature isn't critical for the functionality of the system.
             log.exception("Failed to send notification about lack of dormant channels!")
