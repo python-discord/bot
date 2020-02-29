@@ -338,6 +338,7 @@ class HelpChannels(Scheduler, commands.Cog):
 
         log.trace("Initialising the cog.")
         await self.init_categories()
+        await self.reset_send_permissions()
 
         self.channel_queue = self.create_channel_queue()
         self.name_queue = self.create_name_queue()
@@ -522,6 +523,15 @@ class HelpChannels(Scheduler, commands.Cog):
         # This is done last and outside the lock because it may wait indefinitely for a channel to
         # be put in the queue.
         await self.move_to_available()
+
+    async def reset_send_permissions(self) -> None:
+        """Reset send permissions for members with it set to False in the Available category."""
+        log.trace("Resetting send permissions in the Available category.")
+
+        for member, overwrite in self.available_category.overwrites.items():
+            if isinstance(member, discord.Member) and overwrite.send_messages is False:
+                log.trace(f"Resetting send permissions for {member} ({member.id}).")
+                await self.available_category.set_permissions(member, send_messages=None)
 
     async def revoke_send_permissions(self, member: discord.Member) -> None:
         """
