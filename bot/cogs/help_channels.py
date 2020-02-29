@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 import itertools
 import json
 import logging
@@ -603,12 +604,18 @@ class HelpChannels(Scheduler, commands.Cog):
 
     async def _scheduled_task(self, data: TaskData) -> None:
         """Await the `data.callback` coroutine after waiting for `data.wait_time` seconds."""
-        log.trace(f"Waiting {data.wait_time} seconds before awaiting callback.")
-        await asyncio.sleep(data.wait_time)
+        try:
+            log.trace(f"Waiting {data.wait_time} seconds before awaiting callback.")
+            await asyncio.sleep(data.wait_time)
 
-        # Use asyncio.shield to prevent callback from cancelling itself.
-        # The parent task (_scheduled_task) will still get cancelled.
-        await asyncio.shield(data.callback)
+            # Use asyncio.shield to prevent callback from cancelling itself.
+            # The parent task (_scheduled_task) will still get cancelled.
+            log.trace("Done waiting; now awaiting the callback.")
+            await asyncio.shield(data.callback)
+        finally:
+            if inspect.iscoroutine(data.callback):
+                log.trace("Explicitly closing coroutine.")
+                data.callback.close()
 
 
 def validate_config() -> None:
