@@ -400,7 +400,7 @@ class Filtering(Cog, Scheduler):
 
     async def _scheduled_task(self, msg: dict) -> None:
         """Delete an offensive message once its deletion date is reached."""
-        delete_at = dateutil.parser.isoparse(msg['delete_date'])
+        delete_at = dateutil.parser.isoparse(msg['delete_date']).replace(tzinfo=None)
 
         await wait_until(delete_at)
         await self.delete_offensive_msg(msg)
