@@ -38,7 +38,7 @@ class InfractionScheduler(Scheduler):
 
     async def reschedule_infractions(self, supported_infractions: t.Container[str]) -> None:
         """Schedule expiration for previous infractions."""
-        await self.bot.wait_until_ready()
+        await self.bot.wait_until_guild_available()
 
         log.trace(f"Rescheduling infractions for {self.__class__.__name__}.")
 
@@ -307,7 +307,7 @@ class InfractionScheduler(Scheduler):
         Infractions of unsupported types will raise a ValueError.
         """
         guild = self.bot.get_guild(constants.Guild.id)
-        mod_role = guild.get_role(constants.Roles.moderator)
+        mod_role = guild.get_role(constants.Roles.moderators)
         user_id = infraction["user"]
         actor = infraction["actor"]
         type_ = infraction["type"]

@@ -1,10 +1,14 @@
+import asyncio
+import contextlib
 import datetime
 import logging
 import re
 import textwrap
+from functools import partial
 from signal import Signals
 from typing import Optional, Tuple
 
+from discord import HTTPException, Message, NotFound, Reaction, User
 from discord.ext.commands import Cog, Context, command, guild_only
 
 from bot.bot import Bot
@@ -34,7 +38,11 @@ RAW_CODE_REGEX = re.compile(
 )
 
 MAX_PASTE_LEN = 1000
-EVAL_ROLES = (Roles.helpers, Roles.moderator, Roles.admin, Roles.owner, Roles.rockstars, Roles.partners)
+EVAL_ROLES = (Roles.helpers, Roles.moderators, Roles.admins, Roles.owners, Roles.python_community, Roles.partners)
+
+SIGKILL = 9
+
+REEVAL_EMOJI = '\U0001f501'  # :repeat:
 
 
 class Snekbox(Cog):
@@ -101,7 +109,7 @@ class Snekbox(Cog):
         if returncode is None:
             msg = "Your eval job has failed"
             error = stdout.strip()
-        elif returncode == 128 + Signals.SIGKILL:
+        elif returncode == 128 + SIGKILL:
             msg = "Your eval job timed out or ran out of memory"
         elif returncode == 255:
             msg = "Your eval job has failed"
@@ -135,7 +143,7 @@ class Snekbox(Cog):
         """
         log.trace("Formatting output...")
 
-        output = output.strip(" \n")
+        output = output.rstrip("\n")
         original_output = output  # To be uploaded to a pasting service if needed
         paste_link = None
 
@@ -152,8 +160,8 @@ class Snekbox(Cog):
         lines = output.count("\n")
 
         if lines > 0:
-            output = output.split("\n")[:10]  # Only first 10 cause the rest is truncated anyway
-            output = (f"{i:03d} | {line}" for i, line in enumerate(output, 1))
+            output = [f"{i:03d} | {line}" for i, line in enumerate(output.split('\n'), 1)]
+            output = output[:11]  # Limiting to only 11 lines
             output = "\n".join(output)
 
         if lines > 10:
@@ -169,21 +177,84 @@ class Snekbox(Cog):
         if truncated:
             paste_link = await self.upload_output(original_output)
 
-        output = output.strip()
-        if not output:
-            output = "[No output]"
+        output = output or "[No output]"
 
         return output, paste_link
 
+    async def send_eval(self, ctx: Context, code: str) -> Message:
+        """
+        Evaluate code, format it, and send the output to the corresponding channel.
+
+        Return the bot response.
+        """
+        async with ctx.typing():
+            results = await self.post_eval(code)
+            msg, error = self.get_results_message(results)
+
+            if error:
+                output, paste_link = error, None
+            else:
+                output, paste_link = await self.format_output(results["stdout"])
+
+            icon = self.get_status_emoji(results)
+            msg = f"{ctx.author.mention} {icon} {msg}.\n\n```py\n{output}\n```"
+            if paste_link:
+                msg = f"{msg}\nFull output: {paste_link}"
+
+            response = await ctx.send(msg)
+            self.bot.loop.create_task(
+                wait_for_deletion(response, user_ids=(ctx.author.id,), client=ctx.bot)
+            )
+
+            log.info(f"{ctx.author}'s job had a return code of {results['returncode']}")
+        return response
+
+    async def continue_eval(self, ctx: Context, response: Message) -> Optional[str]:
+        """
+        Check if the eval session should continue.
+
+        Return the new code to evaluate or None if the eval session should be terminated.
+        """
+        _predicate_eval_message_edit = partial(predicate_eval_message_edit, ctx)
+        _predicate_emoji_reaction = partial(predicate_eval_emoji_reaction, ctx)
+
+        with contextlib.suppress(NotFound):
+            try:
+                _, new_message = await self.bot.wait_for(
+                    'message_edit',
+                    check=_predicate_eval_message_edit,
+                    timeout=10
+                )
+                await ctx.message.add_reaction(REEVAL_EMOJI)
+                await self.bot.wait_for(
+                    'reaction_add',
+                    check=_predicate_emoji_reaction,
+                    timeout=10
+                )
+
+                code = new_message.content.split(' ', maxsplit=1)[1]
+                await ctx.message.clear_reactions()
+                with contextlib.suppress(HTTPException):
+                    await response.delete()
+
+            except asyncio.TimeoutError:
+                await ctx.message.clear_reactions()
+                return None
+
+            return code
+
     @command(name="eval", aliases=("e",))
     @guild_only()
-    @in_channel(Channels.bot, hidden_channels=(Channels.esoteric,), bypass_roles=EVAL_ROLES)
+    @in_channel(Channels.bot_commands, hidden_channels=(Channels.esoteric,), bypass_roles=EVAL_ROLES)
     async def eval_command(self, ctx: Context, *, code: str = None) -> None:
         """
         Run Python code and get the results.
 
         This command supports multiple lines of code, including code wrapped inside a formatted code
-        block. We've done our best to make this safe, but do let us know if you manage to find an
+        block. Code can be re-evaluated by editing the original message within 10 seconds and
+        clicking the reaction that subsequently appears.
+
+        We've done our best to make this sandboxed, but do let us know if you manage to find an
         issue with it!
         """
         if ctx.author.id in self.jobs:
@@ -199,32 +270,28 @@ class Snekbox(Cog):
 
         log.info(f"Received code from {ctx.author} for evaluation:\n{code}")
 
-        self.jobs[ctx.author.id] = datetime.datetime.now()
-        code = self.prepare_input(code)
+        while True:
+            self.jobs[ctx.author.id] = datetime.datetime.now()
+            code = self.prepare_input(code)
+            try:
+                response = await self.send_eval(ctx, code)
+            finally:
+                del self.jobs[ctx.author.id]
 
-        try:
-            async with ctx.typing():
-                results = await self.post_eval(code)
-                msg, error = self.get_results_message(results)
+            code = await self.continue_eval(ctx, response)
+            if not code:
+                break
+            log.info(f"Re-evaluating message {ctx.message.id}")
 
-                if error:
-                    output, paste_link = error, None
-                else:
-                    output, paste_link = await self.format_output(results["stdout"])
 
-                icon = self.get_status_emoji(results)
-                msg = f"{ctx.author.mention} {icon} {msg}.\n\n```py\n{output}\n```"
-                if paste_link:
-                    msg = f"{msg}\nFull output: {paste_link}"
+def predicate_eval_message_edit(ctx: Context, old_msg: Message, new_msg: Message) -> bool:
+    """Return True if the edited message is the context message and the content was indeed modified."""
+    return new_msg.id == ctx.message.id and old_msg.content != new_msg.content
 
-                response = await ctx.send(msg)
-                self.bot.loop.create_task(
-                    wait_for_deletion(response, user_ids=(ctx.author.id,), client=ctx.bot)
-                )
 
-                log.info(f"{ctx.author}'s job had a return code of {results['returncode']}")
-        finally:
-            del self.jobs[ctx.author.id]
+def predicate_eval_emoji_reaction(ctx: Context, reaction: Reaction, user: User) -> bool:
+    """Return True if the reaction REEVAL_EMOJI was added by the context message author on this message."""
+    return reaction.message.id == ctx.message.id and user.id == ctx.author.id and str(reaction) == REEVAL_EMOJI
 
 
 def setup(bot: Bot) -> None:

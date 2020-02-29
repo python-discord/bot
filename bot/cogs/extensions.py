@@ -221,7 +221,7 @@ class Extensions(commands.Cog):
     # This cannot be static (must have a __func__ attribute).
     def cog_check(self, ctx: Context) -> bool:
         """Only allow moderators and core developers to invoke the commands in this cog."""
-        return with_role_check(ctx, *MODERATION_ROLES, Roles.core_developer)
+        return with_role_check(ctx, *MODERATION_ROLES, Roles.core_developers)
 
     # This cannot be static (must have a __func__ attribute).
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:

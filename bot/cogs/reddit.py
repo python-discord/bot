@@ -43,12 +43,12 @@ class Reddit(Cog):
     def cog_unload(self) -> None:
         """Stop the loop task and revoke the access token when the cog is unloaded."""
         self.auto_poster_loop.cancel()
-        if self.access_token.expires_at < datetime.utcnow():
-            self.revoke_access_token()
+        if self.access_token and self.access_token.expires_at > datetime.utcnow():
+            asyncio.create_task(self.revoke_access_token())
 
     async def init_reddit_ready(self) -> None:
         """Sets the reddit webhook when the cog is loaded."""
-        await self.bot.wait_until_ready()
+        await self.bot.wait_until_guild_available()
         if not self.webhook:
             self.webhook = await self.bot.fetch_webhook(Webhooks.reddit)
 
@@ -83,7 +83,7 @@ class Reddit(Cog):
                     expires_at=datetime.utcnow() + timedelta(seconds=expiration)
                 )
 
-                log.debug(f"New token acquired; expires on {self.access_token.expires_at}")
+                log.debug(f"New token acquired; expires on UTC {self.access_token.expires_at}")
                 return
             else:
                 log.debug(
@@ -208,7 +208,7 @@ class Reddit(Cog):
 
         await asyncio.sleep(seconds_until)
 
-        await self.bot.wait_until_ready()
+        await self.bot.wait_until_guild_available()
         if not self.webhook:
             await self.bot.fetch_webhook(Webhooks.reddit)
 
@@ -290,4 +290,7 @@ class Reddit(Cog):
 
 def setup(bot: Bot) -> None:
     """Load the Reddit cog."""
+    if not RedditConfig.secret or not RedditConfig.client_id:
+        log.error("Credentials not provided, cog not loaded.")
+        return
     bot.add_cog(Reddit(bot))

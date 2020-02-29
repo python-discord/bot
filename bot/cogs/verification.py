@@ -30,15 +30,16 @@ your information removed here as well.
 Feel free to review them at any point!
 
 Additionally, if you'd like to receive notifications for the announcements we post in <#{Channels.announcements}> \
-from time to time, you can send `!subscribe` to <#{Channels.bot}> at any time to assign yourself the \
+from time to time, you can send `!subscribe` to <#{Channels.bot_commands}> at any time to assign yourself the \
 **Announcements** role. We'll mention this role every time we make an announcement.
 
-If you'd like to unsubscribe from the announcement notifications, simply send `!unsubscribe` to <#{Channels.bot}>.
+If you'd like to unsubscribe from the announcement notifications, simply send `!unsubscribe` to \
+<#{Channels.bot_commands}>.
 """
 
 PERIODIC_PING = (
     f"@everyone To verify that you have read our rules, please type `{BotConfig.prefix}accept`."
-    f" If you encounter any problems during the verification process, ping the <@&{Roles.admin}> role in this channel."
+    f" If you encounter any problems during the verification process, ping the <@&{Roles.admins}> role in this channel."
 )
 BOT_MESSAGE_DELETE_DELAY = 10
 
@@ -136,7 +137,7 @@ class Verification(Cog):
                 await ctx.message.delete()
 
     @command(name='subscribe')
-    @in_channel(Channels.bot)
+    @in_channel(Channels.bot_commands)
     async def subscribe_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
         """Subscribe to announcement notifications by assigning yourself the role."""
         has_role = False
@@ -160,7 +161,7 @@ class Verification(Cog):
         )
 
     @command(name='unsubscribe')
-    @in_channel(Channels.bot)
+    @in_channel(Channels.bot_commands)
     async def unsubscribe_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
         """Unsubscribe from announcement notifications by removing the role from yourself."""
         has_role = False
@@ -219,7 +220,7 @@ class Verification(Cog):
     @periodic_ping.before_loop
     async def before_ping(self) -> None:
         """Only start the loop when the bot is ready."""
-        await self.bot.wait_until_ready()
+        await self.bot.wait_until_guild_available()
 
     def cog_unload(self) -> None:
         """Cancel the periodic ping task when the cog is unloaded."""

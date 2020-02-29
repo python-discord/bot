@@ -22,7 +22,7 @@ class DuckPond(Cog):
 
     async def fetch_webhook(self) -> None:
         """Fetches the webhook object, so we can post to it."""
-        await self.bot.wait_until_ready()
+        await self.bot.wait_until_guild_available()
 
         try:
             self.webhook = await self.bot.fetch_webhook(self.webhook_id)

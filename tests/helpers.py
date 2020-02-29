@@ -12,6 +12,7 @@ from typing import Any, Iterable, Optional
 import discord
 from discord.ext.commands import Context
 
+from bot.api import APIClient
 from bot.bot import Bot
 
 
@@ -125,6 +126,18 @@ class AsyncMock(CustomMockMixin, unittest.mock.MagicMock):
 
     async def __call__(self, *args, **kwargs):
         return super().__call__(*args, **kwargs)
+
+
+class AsyncContextManagerMock(unittest.mock.MagicMock):
+    def __init__(self, return_value: Any):
+        super().__init__()
+        self._return_value = return_value
+
+    async def __aenter__(self):
+        return self._return_value
+
+    async def __aexit__(self, *args):
+        pass
 
 
 class AsyncIteratorMock:
@@ -269,8 +282,20 @@ class MockRole(CustomMockMixin, unittest.mock.Mock, ColourMixin, HashableMixin):
     information, see the `MockGuild` docstring.
     """
     def __init__(self, **kwargs) -> None:
-        default_kwargs = {'id': next(self.discord_id), 'name': 'role', 'position': 1}
+        default_kwargs = {
+            'id': next(self.discord_id),
+            'name': 'role',
+            'position': 1,
+            'colour': discord.Colour(0xdeadbf),
+            'permissions': discord.Permissions(),
+        }
         super().__init__(spec_set=role_instance, **collections.ChainMap(kwargs, default_kwargs))
+
+        if isinstance(self.colour, int):
+            self.colour = discord.Colour(self.colour)
+
+        if isinstance(self.permissions, int):
+            self.permissions = discord.Permissions(self.permissions)
 
         if 'mention' not in kwargs:
             self.mention = f'&{self.name}'
@@ -324,6 +349,18 @@ class MockUser(CustomMockMixin, unittest.mock.Mock, ColourMixin, HashableMixin):
             self.mention = f"@{self.name}"
 
 
+class MockAPIClient(CustomMockMixin, unittest.mock.MagicMock):
+    """
+    A MagicMock subclass to mock APIClient objects.
+
+    Instances of this class will follow the specifications of `bot.api.APIClient` instances.
+    For more information, see the `MockGuild` docstring.
+    """
+
+    def __init__(self, **kwargs) -> None:
+        super().__init__(spec_set=APIClient, **kwargs)
+
+
 # Create a Bot instance to get a realistic MagicMock of `discord.ext.commands.Bot`
 bot_instance = Bot(command_prefix=unittest.mock.MagicMock())
 bot_instance.http_session = None
@@ -340,6 +377,7 @@ class MockBot(CustomMockMixin, unittest.mock.MagicMock):
 
     def __init__(self, **kwargs) -> None:
         super().__init__(spec_set=bot_instance, **kwargs)
+        self.api_client = MockAPIClient()
 
         # self.wait_for is *not* a coroutine function, but returns a coroutine nonetheless and
         # and should therefore be awaited. (The documentation calls it a coroutine as well, which
@@ -503,6 +541,7 @@ class MockReaction(CustomMockMixin, unittest.mock.MagicMock):
         self.emoji = kwargs.get('emoji', MockEmoji())
         self.message = kwargs.get('message', MockMessage())
         self.users = AsyncIteratorMock(kwargs.get('users', []))
+        self.__str__.return_value = str(self.emoji)
 
 
 webhook_instance = discord.Webhook(data=unittest.mock.MagicMock(), adapter=unittest.mock.MagicMock())
