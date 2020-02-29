@@ -556,6 +556,10 @@ class HelpChannels(Scheduler, commands.Cog):
 
         await self.available_category.set_permissions(member, send_messages=False)
 
+        # Cancel the existing task, if any.
+        # Would mean the user somehow bypassed the lack of permissions (e.g. user is guild owner).
+        self.cancel_task(member.id, ignore_missing=True)
+
         timeout = constants.HelpChannels.claim_minutes * 60
         callback = self.available_category.set_permissions(member, send_messages=None)
 
