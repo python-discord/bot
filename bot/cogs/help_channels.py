@@ -23,6 +23,7 @@ AVAILABLE_TOPIC = ""
 IN_USE_TOPIC = ""
 DORMANT_TOPIC = ""
 ASKING_GUIDE_URL = "https://pythondiscord.com/pages/asking-good-questions/"
+MAX_CHANNELS_PER_CATEGORY = 50
 
 AVAILABLE_MSG = f"""
 This help channel is now **available**, which means that you can claim it by simply typing your \
@@ -208,6 +209,14 @@ class HelpChannels(Scheduler, commands.Cog):
     @staticmethod
     def get_names(count: int = constants.HelpChannels.max_total_channels) -> t.Dict[str, int]:
         """Return a dict with the first `count` element names and their alphabetical indices."""
+        log.trace(f"Getting the first {count} element names from JSON.")
+
+        if count > MAX_CHANNELS_PER_CATEGORY:
+            log.warning(
+                f"{count} is too many help channels to make available! "
+                f"Discord only supports at most {MAX_CHANNELS_PER_CATEGORY} channels per category."
+            )
+
         with Path("bot/resources/elements.json").open(encoding="utf-8") as elements_file:
             all_names = json.load(elements_file)
 
