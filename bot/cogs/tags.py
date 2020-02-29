@@ -31,27 +31,27 @@ class Tags(Cog):
         self.bot = bot
         self.tag_cooldowns = {}
         self._cache = {}
-        self._last_fetch: float = 0.0
 
-    async def _get_tags(self, is_forced: bool = False) -> None:
+    @Cog.listener()
+    async def on_ready(self) -> None:
+        """Runs the code before the bot has connected."""
+        await self.get_tags()
+
+    async def get_tags(self) -> None:
         """Get all tags."""
-        # refresh only when there's a more than 5m gap from last call.
-        time_now: float = time.time()
-        if is_forced or not self._last_fetch or time_now - self._last_fetch > 5 * 60:
-            tag_files = os.listdir("bot/resources/tags")
-            for file in tag_files:
-                p = Path("bot", "resources", "tags", file)
-                tag_title = os.path.splitext(file)[0].lower()
-                with p.open() as f:
-                    tag = {
-                        "title": tag_title,
-                        "embed": {
-                            "description": f.read()
-                        }
+        # Save all tags in memory.
+        tag_files = os.listdir("bot/resources/tags")
+        for file in tag_files:
+            p = Path("bot", "resources", "tags", file)
+            tag_title = os.path.splitext(file)[0].lower()
+            with p.open() as f:
+                tag = {
+                    "title": tag_title,
+                    "embed": {
+                        "description": f.read()
                     }
-                    self._cache[tag_title] = tag
-
-            self._last_fetch = time_now
+                }
+                self._cache[tag_title] = tag
 
     @staticmethod
     def _fuzzy_search(search: str, target: str) -> float:
@@ -92,7 +92,6 @@ class Tags(Cog):
 
     async def _get_tag(self, tag_name: str) -> list:
         """Get a specific tag."""
-        await self._get_tags()
         found = [self._cache.get(tag_name.lower(), None)]
         if not found[0]:
             return self._get_suggestions(tag_name)
@@ -132,8 +131,6 @@ class Tags(Cog):
                 f"Cooldown ends in {time_left:.1f} seconds."
             )
             return
-
-        await self._get_tags()
 
         if tag_name is not None:
             founds = await self._get_tag(tag_name)
