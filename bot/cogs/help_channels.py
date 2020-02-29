@@ -179,8 +179,7 @@ class HelpChannels(Scheduler, commands.Cog):
         """Make the current in-use help channel dormant."""
         log.trace("dormant command invoked; checking if the channel is in-use.")
 
-        in_use = self.get_category_channels(self.in_use_category)
-        if ctx.channel in in_use:
+        if ctx.channel.category == self.in_use_category:
             self.cancel_task(ctx.channel.id)
             await self.move_to_dormant(ctx.channel)
         else:
@@ -506,21 +505,28 @@ class HelpChannels(Scheduler, commands.Cog):
         if message.author.bot:
             return  # Ignore messages sent by bots.
 
+        channel = message.channel
+        if channel.category and channel.category.id != constants.Categories.help_available:
+            return  # Ignore messages outside the Available category.
+
         log.trace("Waiting for the cog to be ready before processing messages.")
         await self.ready.wait()
 
         log.trace("Acquiring lock to prevent a channel from being processed twice...")
         async with self.on_message_lock:
-            log.trace("on_message lock acquired.")
-            log.trace("Checking if the message was sent in an available channel.")
+            log.trace(f"on_message lock acquired for {message.id}.")
 
-            available_channels = self.get_category_channels(self.available_category)
-            if message.channel not in available_channels:
-                return  # Ignore messages outside the Available category.
+            if channel.category and channel.category.id != constants.Categories.help_available:
+                log.debug(
+                    f"Message {message.id} will not make #{channel} ({channel.id}) in-use "
+                    f"because another message in the channel already triggered that."
+                )
+                return
 
-            await self.move_to_in_use(message.channel)
+            await self.move_to_in_use(channel)
             await self.revoke_send_permissions(message.author)
-            log.trace("Releasing on_message lock.")
+
+            log.trace(f"Releasing on_message lock for {message.id}.")
 
         # Move a dormant channel to the Available category to fill in the gap.
         # This is done last and outside the lock because it may wait indefinitely for a channel to
