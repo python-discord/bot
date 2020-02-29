@@ -540,6 +540,7 @@ class HelpChannels(metaclass=YAMLGetter):
     cmd_whitelist: List[int]
     idle_minutes: int
     max_available: int
+    max_total_channels: int
     name_prefix: str
 
 
