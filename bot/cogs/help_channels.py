@@ -348,8 +348,6 @@ class HelpChannels(Scheduler, commands.Cog):
         self.channel_queue = self.create_channel_queue()
         self.name_queue = self.create_name_queue()
 
-        await self.init_available()
-
         log.trace("Moving or rescheduling in-use channels.")
         for channel in self.get_category_channels(self.in_use_category):
             await self.move_idle_channel(channel, has_task=False)
@@ -359,6 +357,8 @@ class HelpChannels(Scheduler, commands.Cog):
         # the command is invoked and the cog is ready (e.g. if move_idle_channel wasn't called yet).
         # This may confused users. So would potentially long delays for the cog to become ready.
         self.dormant_command.enabled = True
+
+        await self.init_available()
 
         log.info("Cog is ready!")
         self.ready.set()
