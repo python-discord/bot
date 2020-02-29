@@ -19,7 +19,7 @@ class InformationCogTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.moderator_role = helpers.MockRole(name="Moderator", id=constants.Roles.moderator)
+        cls.moderator_role = helpers.MockRole(name="Moderator", id=constants.Roles.moderators)
 
     def setUp(self):
         """Sets up fresh objects for each test."""
@@ -521,7 +521,7 @@ class UserCommandTests(unittest.TestCase):
         """A regular user should not be able to use this command outside of bot-commands."""
         constants.MODERATION_ROLES = [self.moderator_role.id]
         constants.STAFF_ROLES = [self.moderator_role.id]
-        constants.Channels.bot = 50
+        constants.Channels.bot_commands = 50
 
         ctx = helpers.MockContext(author=self.author, channel=helpers.MockTextChannel(id=100))
 
@@ -533,7 +533,7 @@ class UserCommandTests(unittest.TestCase):
     def test_regular_user_may_use_command_in_bot_commands_channel(self, create_embed, constants):
         """A regular user should be allowed to use `!user` targeting themselves in bot-commands."""
         constants.STAFF_ROLES = [self.moderator_role.id]
-        constants.Channels.bot = 50
+        constants.Channels.bot_commands = 50
 
         ctx = helpers.MockContext(author=self.author, channel=helpers.MockTextChannel(id=50))
 
@@ -546,7 +546,7 @@ class UserCommandTests(unittest.TestCase):
     def test_regular_user_can_explicitly_target_themselves(self, create_embed, constants):
         """A user should target itself with `!user` when a `user` argument was not provided."""
         constants.STAFF_ROLES = [self.moderator_role.id]
-        constants.Channels.bot = 50
+        constants.Channels.bot_commands = 50
 
         ctx = helpers.MockContext(author=self.author, channel=helpers.MockTextChannel(id=50))
 
@@ -559,7 +559,7 @@ class UserCommandTests(unittest.TestCase):
     def test_staff_members_can_bypass_channel_restriction(self, create_embed, constants):
         """Staff members should be able to bypass the bot-commands channel restriction."""
         constants.STAFF_ROLES = [self.moderator_role.id]
-        constants.Channels.bot = 50
+        constants.Channels.bot_commands = 50
 
         ctx = helpers.MockContext(author=self.moderator, channel=helpers.MockTextChannel(id=200))
 

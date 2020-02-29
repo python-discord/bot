@@ -82,7 +82,7 @@ class SyncerSendPromptTests(unittest.IsolatedAsyncioTestCase):
                 mock_()
                 await self.syncer._send_prompt()
 
-                method.assert_called_once_with(constants.Channels.devcore)
+                method.assert_called_once_with(constants.Channels.dev_core)
 
     async def test_send_prompt_returns_None_if_channel_fetch_fails(self):
         """None should be returned if there's an HTTPException when fetching the channel."""
@@ -130,7 +130,7 @@ class SyncerConfirmationTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.bot = helpers.MockBot()
         self.syncer = TestSyncer(self.bot)
-        self.core_dev_role = helpers.MockRole(id=constants.Roles.core_developer)
+        self.core_dev_role = helpers.MockRole(id=constants.Roles.core_developers)
 
     @staticmethod
     def get_message_reaction(emoji):
