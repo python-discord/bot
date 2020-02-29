@@ -199,7 +199,7 @@ class HelpChannels(Scheduler, commands.Cog):
             if not channel:
                 log.info("Couldn't create a candidate channel; waiting to get one from the queue.")
                 await self.notify()
-                await self.wait_for_dormant_channel()
+                channel = await self.wait_for_dormant_channel()
 
         return channel
 
