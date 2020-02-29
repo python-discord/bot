@@ -26,6 +26,6 @@ Time elapsed: 3.000307321548462
 Finished!
 ```
 
-More information:
-• [Corey Schafer's video on decorators](https://youtu.be/FsAPt_9Bf3U)
-• [Real python article](https://realpython.com/primer-on-python-decorators/)
+More information:  
+• [Corey Schafer's video on decorators](https://youtu.be/FsAPt_9Bf3U)  
+• [Real python article](https://realpython.com/primer-on-python-decorators/)  

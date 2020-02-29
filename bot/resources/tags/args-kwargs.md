@@ -8,10 +8,10 @@ These special parameters allow functions to take arbitrary amounts of positional
 **Double asterisk**
 `**kwargs` will ingest an arbitrary amount of **keyword arguments**, and store it in a dictionary. There can be **no** additional parameters **after** `**kwargs` in the parameter list.
 
-**Use cases**
-• **Decorators** (see `!tags decorators`)
-• **Inheritance** (overriding methods)
-• **Future proofing** (in the case of the first two bullet points, if the parameters change, your code won't break)
-• **Flexibility** (writing functions that behave like `dict()` or `print()`)
+**Use cases**  
+• **Decorators** (see `!tags decorators`)  
+• **Inheritance** (overriding methods)  
+• **Future proofing** (in the case of the first two bullet points, if the parameters change, your code won't break)  
+• **Flexibility** (writing functions that behave like `dict()` or `print()`)  
 
 *See* `!tags positional-keyword` *for information about positional and keyword arguments*

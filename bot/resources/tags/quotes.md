@@ -15,6 +15,6 @@ Example:
 **Note:**
 If you need both single and double quotes inside your string, use the version that would result in the least amount of escapes. In the case of a tie, use the quotation you use the most.
 
-**References:**
-• [pep-8 on quotes](https://www.python.org/dev/peps/pep-0008/#string-quotes)
+**References:**  
+• [pep-8 on quotes](https://www.python.org/dev/peps/pep-0008/#string-quotes)  
 • [convention for triple quoted strings](https://www.python.org/dev/peps/pep-0257/)

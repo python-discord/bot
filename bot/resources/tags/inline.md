@@ -10,7 +10,7 @@ And results in the following:
 
 The `__init__` method customizes the newly created instance.
 
-**Note:**
-• These are **backticks** not quotes
-• Avoid using them for multiple lines
+**Note:**  
+• These are **backticks** not quotes  
+• Avoid using them for multiple lines  
 • Useful for negating formatting you don't want

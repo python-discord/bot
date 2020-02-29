@@ -18,7 +18,7 @@ Alternatively if a variable is defined within a function block for example, it i
 >>> inner()  # prints variable foo without issue
 bar
 ```
-**Official Documentation**
-**1.** [Program structure, name binding and resolution](https://docs.python.org/3/reference/executionmodel.html#execution-model)
-**2.** [`global` statement](https://docs.python.org/3/reference/simple_stmts.html#the-global-statement)
+**Official Documentation**  
+**1.** [Program structure, name binding and resolution](https://docs.python.org/3/reference/executionmodel.html#execution-model)  
+**2.** [`global` statement](https://docs.python.org/3/reference/simple_stmts.html#the-global-statement)  
 **3.** [`nonlocal` statement](https://docs.python.org/3/reference/simple_stmts.html#the-nonlocal-statement)

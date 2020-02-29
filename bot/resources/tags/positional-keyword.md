@@ -32,7 +32,7 @@ The reverse is also true:
 2 1
 ```
 
-**More info**
-• [Keyword only arguments](https://www.python.org/dev/peps/pep-3102/)
-• [Positional only arguments](https://www.python.org/dev/peps/pep-0570/)
-• `!tags param-arg` (Parameters vs. Arguments)
+**More info**  
+• [Keyword only arguments](https://www.python.org/dev/peps/pep-3102/)  
+• [Positional only arguments](https://www.python.org/dev/peps/pep-0570/)  
+• `!tags param-arg` (Parameters vs. Arguments)  

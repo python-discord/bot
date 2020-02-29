@@ -43,6 +43,6 @@ function is **called**:
 **Note**:
 
 • This behavior can be used intentionally to maintain state between
-calls of a function (eg. when writing a caching function).
+calls of a function (eg. when writing a caching function).  
 • This behavior is not unique to mutable objects, all default
 arguments are evaulated only once when the function is defined.

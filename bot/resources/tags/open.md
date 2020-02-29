@@ -2,10 +2,10 @@
 
 The built-in function `open()` is one of several ways to open files on your computer. It accepts many different parameters, so this tag will only go over two of them (`file` and `mode`). For more extensive documentation on all these parameters, consult the [official documentation](https://docs.python.org/3/library/functions.html#open). The object returned from this function is a [file object or stream](https://docs.python.org/3/glossary.html#term-file-object), for which the full documentation can be found [here](https://docs.python.org/3/library/io.html#io.TextIOBase).
 
-See also:
-• `!tags with` for information on context managers
-• `!tags pathlib` for an alternative way of opening files
-• `!tags seek` for information on changing your position in a file
+See also:  
+• `!tags with` for information on context managers  
+• `!tags pathlib` for an alternative way of opening files  
+• `!tags seek` for information on changing your position in a file  
 
 **The `file` parameter**
 

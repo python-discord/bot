@@ -11,8 +11,8 @@ ZeroDivisionError: integer division or modulo by zero
 ```
 The best way to read your traceback is bottom to top.
 
-• Identify the exception raised (e.g. ZeroDivisonError) 
-• Make note of the line number, and navigate there in your program.
-• Try to understand why the error occurred. 
+• Identify the exception raised (e.g. ZeroDivisonError)  
+• Make note of the line number, and navigate there in your program.  
+• Try to understand why the error occurred.  
 
 To read more about exceptions and errors, please refer to the [PyDis Wiki](https://pythondiscord.com/pages/asking-good-questions/#examining-tracebacks) or the [official Python tutorial.](https://docs.python.org/3.7/tutorial/errors.html)

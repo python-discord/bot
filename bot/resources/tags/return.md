@@ -28,8 +28,8 @@ None
 >>> print(x)
 None
 ```
-**Things to note**
-• `print()` and `return` do **not** accomplish the same thing. `print()` will only print the value, it will not be accessible outside of the function afterwards.
-• A function will return `None` if it ends without reaching an explicit `return` statement.
-• When you want to print a value calculated in a function, instead of printing inside the function, it is often better to return the value and print the *function call* instead.
-• [Official documentation for `return`](https://docs.python.org/3/reference/simple_stmts.html#the-return-statement)
+**Things to note**  
+• `print()` and `return` do **not** accomplish the same thing. `print()` will only print the value, it will not be accessible outside of the function afterwards.  
+• A function will return `None` if it ends without reaching an explicit `return` statement.  
+• When you want to print a value calculated in a function, instead of printing inside the function, it is often better to return the value and print the *function call* instead.  
+• [Official documentation for `return`](https://docs.python.org/3/reference/simple_stmts.html#the-return-statement)  
