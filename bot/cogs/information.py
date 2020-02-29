@@ -13,6 +13,7 @@ from discord.utils import escape_markdown
 from bot import constants
 from bot.bot import Bot
 from bot.decorators import InChannelCheckFailure, in_channel, with_role
+from bot.pagination import LinePaginator
 from bot.utils.checks import cooldown_with_role_bypass, with_role_check
 from bot.utils.time import time_since
 
@@ -32,20 +33,18 @@ class Information(Cog):
         # Sort the roles alphabetically and remove the @everyone role
         roles = sorted(ctx.guild.roles[1:], key=lambda role: role.name)
 
-        # Build a string
-        role_string = ""
+        # Build a list
+        role_list = []
         for role in roles:
-            role_string += f"`{role.id}` - {role.mention}\n"
+            role_list.append(f"`{role.id}` - {role.mention}")
 
         # Build an embed
         embed = Embed(
-            title="Role information",
-            colour=Colour.blurple(),
-            description=role_string
+            title=f"Role information (Total {len(roles)} roles)",
+            colour=Colour.blurple()
         )
-        embed.set_footer(text=f"Total roles: {len(roles)}")
 
-        await ctx.send(embed=embed)
+        await LinePaginator.paginate(role_list, ctx, embed)
 
     @with_role(*constants.MODERATION_ROLES)
     @command(name="role")
