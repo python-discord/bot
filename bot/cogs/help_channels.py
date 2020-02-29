@@ -48,11 +48,11 @@ through [our guide for asking a good question]({ASKING_GUIDE_URL}).
 """
 
 
-class ChannelTimeout(t.NamedTuple):
-    """Data for a task scheduled to make a channel dormant."""
+class TaskData(t.NamedTuple):
+    """Data for a scheduled task."""
 
-    channel: discord.TextChannel
-    timeout: int
+    wait_time: int
+    callback: t.Awaitable
 
 
 class HelpChannels(Scheduler, commands.Cog):
@@ -390,11 +390,11 @@ class HelpChannels(Scheduler, commands.Cog):
             if has_task:
                 self.cancel_task(channel.id)
 
-            data = ChannelTimeout(channel, idle_seconds - time_elapsed)
+            data = TaskData(idle_seconds - time_elapsed, self.move_idle_channel(channel))
 
             log.info(
                 f"#{channel.name} ({channel.id}) is still active; "
-                f"scheduling it to be moved after {data.timeout} seconds."
+                f"scheduling it to be moved after {data.wait_time} seconds."
             )
 
             self.schedule_task(channel.id, data)
@@ -449,7 +449,7 @@ class HelpChannels(Scheduler, commands.Cog):
         timeout = constants.HelpChannels.idle_minutes * 60
 
         log.trace(f"Scheduling #{channel.name} ({channel.id}) to become dormant in {timeout} sec.")
-        data = ChannelTimeout(channel, timeout)
+        data = TaskData(timeout, self.move_idle_channel(channel))
         self.schedule_task(channel.id, data)
 
     async def notify(self) -> None:
@@ -562,14 +562,14 @@ class HelpChannels(Scheduler, commands.Cog):
 
         return channel
 
-    async def _scheduled_task(self, data: ChannelTimeout) -> None:
-        """Make a channel dormant after specified timeout or reschedule if it's still active."""
-        log.trace(f"Waiting {data.timeout} seconds before making #{data.channel.name} dormant.")
-        await asyncio.sleep(data.timeout)
+    async def _scheduled_task(self, data: TaskData) -> None:
+        """Await the `data.callback` coroutine after waiting for `data.wait_time` seconds."""
+        log.trace(f"Waiting {data.wait_time} seconds before awaiting callback.")
+        await asyncio.sleep(data.wait_time)
 
-        # Use asyncio.shield to prevent move_idle_channel from cancelling itself.
+        # Use asyncio.shield to prevent callback from cancelling itself.
         # The parent task (_scheduled_task) will still get cancelled.
-        await asyncio.shield(self.move_idle_channel(data.channel))
+        await asyncio.shield(data.callback)
 
 
 def validate_config() -> None:
