@@ -101,7 +101,7 @@ class HelpChannels(Scheduler, commands.Cog):
         self.channel_queue: asyncio.Queue[discord.TextChannel] = None
         self.name_queue: t.Deque[str] = None
 
-        self.elements = self.get_names()
+        self.name_positions = self.get_names()
         self.last_notification: t.Optional[datetime] = None
 
         # Asyncio stuff
@@ -167,7 +167,7 @@ class HelpChannels(Scheduler, commands.Cog):
         used_names = self.get_used_names()
 
         log.trace("Determining the available names.")
-        available_names = (name for name in self.elements if name not in used_names)
+        available_names = (name for name in self.name_positions if name not in used_names)
 
         log.trace("Populating the name queue with names.")
         return deque(available_names)
@@ -214,7 +214,7 @@ class HelpChannels(Scheduler, commands.Cog):
         log.trace(f"Getting alphabetical position for #{channel.name} ({channel.id}).")
 
         try:
-            position = self.elements[channel.name]
+            position = self.name_positions[channel.name]
         except KeyError:
             log.warning(f"Channel #{channel.name} ({channel.id}) doesn't have a valid name.")
             position = None
