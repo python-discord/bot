@@ -1,22 +1,22 @@
 import logging
+import os
 import re
 import time
+from pathlib import Path
 from typing import Dict, List, Optional
 
 from discord import Colour, Embed
 from discord.ext.commands import Cog, Context, group
 
 from bot.bot import Bot
-from bot.constants import Channels, Cooldowns, MODERATION_ROLES, Roles
-from bot.converters import TagContentConverter, TagNameConverter
-from bot.decorators import with_role
+from bot.constants import Channels, Cooldowns
+from bot.converters import TagNameConverter
 from bot.pagination import LinePaginator
 
 log = logging.getLogger(__name__)
 
 TEST_CHANNELS = (
-    Channels.devtest,
-    Channels.bot,
+    Channels.bot_commands,
     Channels.helpers
 )
 
@@ -29,7 +29,6 @@ class Tags(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.tag_cooldowns = {}
-
         self._cache = {}
         self._last_fetch: float = 0.0
 
@@ -38,12 +37,23 @@ class Tags(Cog):
         # refresh only when there's a more than 5m gap from last call.
         time_now: float = time.time()
         if is_forced or not self._last_fetch or time_now - self._last_fetch > 5 * 60:
-            tags = await self.bot.api_client.get('bot/tags')
-            self._cache = {tag['title'].lower(): tag for tag in tags}
+            tag_files = os.listdir("bot/resources/tags")
+            for file in tag_files:
+                p = Path("bot", "resources", "tags", file)
+                tag_title = os.path.splitext(file)[0].lower()
+                with p.open() as f:
+                    tag = {
+                        "title": tag_title,
+                        "embed": {
+                            "description": f.read()
+                        }
+                    }
+                    self._cache[tag_title] = tag
+
             self._last_fetch = time_now
 
     @staticmethod
-    def _fuzzy_search(search: str, target: str) -> int:
+    def _fuzzy_search(search: str, target: str) -> float:
         """A simple scoring algorithm based on how many letters are found / total, with order in mind."""
         current, index = 0, 0
         _search = REGEX_NON_ALPHABET.sub('', search.lower())
@@ -158,81 +168,6 @@ class Tags(Cog):
                     empty=False,
                     max_lines=15
                 )
-
-    @tags_group.command(name='set', aliases=('add', 's'))
-    @with_role(*MODERATION_ROLES)
-    async def set_command(
-        self,
-        ctx: Context,
-        tag_name: TagNameConverter,
-        *,
-        tag_content: TagContentConverter,
-    ) -> None:
-        """Create a new tag."""
-        body = {
-            'title': tag_name.lower().strip(),
-            'embed': {
-                'title': tag_name,
-                'description': tag_content
-            }
-        }
-
-        await self.bot.api_client.post('bot/tags', json=body)
-        self._cache[tag_name.lower()] = await self.bot.api_client.get(f'bot/tags/{tag_name}')
-
-        log.debug(f"{ctx.author} successfully added the following tag to our database: \n"
-                  f"tag_name: {tag_name}\n"
-                  f"tag_content: '{tag_content}'\n")
-
-        await ctx.send(embed=Embed(
-            title="Tag successfully added",
-            description=f"**{tag_name}** added to tag database.",
-            colour=Colour.blurple()
-        ))
-
-    @tags_group.command(name='edit', aliases=('e', ))
-    @with_role(*MODERATION_ROLES)
-    async def edit_command(
-        self,
-        ctx: Context,
-        tag_name: TagNameConverter,
-        *,
-        tag_content: TagContentConverter,
-    ) -> None:
-        """Edit an existing tag."""
-        body = {
-            'embed': {
-                'title': tag_name,
-                'description': tag_content
-            }
-        }
-
-        await self.bot.api_client.patch(f'bot/tags/{tag_name}', json=body)
-        self._cache[tag_name.lower()] = await self.bot.api_client.get(f'bot/tags/{tag_name}')
-
-        log.debug(f"{ctx.author} successfully edited the following tag in our database: \n"
-                  f"tag_name: {tag_name}\n"
-                  f"tag_content: '{tag_content}'\n")
-
-        await ctx.send(embed=Embed(
-            title="Tag successfully edited",
-            description=f"**{tag_name}** edited in the database.",
-            colour=Colour.blurple()
-        ))
-
-    @tags_group.command(name='delete', aliases=('remove', 'rm', 'd'))
-    @with_role(Roles.admin, Roles.owner)
-    async def delete_command(self, ctx: Context, *, tag_name: TagNameConverter) -> None:
-        """Remove a tag from the database."""
-        await self.bot.api_client.delete(f'bot/tags/{tag_name}')
-        self._cache.pop(tag_name.lower(), None)
-
-        log.debug(f"{ctx.author} successfully deleted the tag called '{tag_name}'")
-        await ctx.send(embed=Embed(
-            title=tag_name,
-            description=f"Tag successfully removed: {tag_name}.",
-            colour=Colour.blurple()
-        ))
 
 
 def setup(bot: Bot) -> None:
