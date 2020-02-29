@@ -112,7 +112,7 @@ class HelpChannels(Scheduler, commands.Cog):
 
     def cog_unload(self) -> None:
         """Cancel the init task and scheduled tasks when the cog unloads."""
-        log.trace("Cog unload: cancelling the cog_init task")
+        log.trace("Cog unload: cancelling the init_cog task")
         self.init_task.cancel()
 
         log.trace("Cog unload: cancelling the channel queue tasks")
@@ -170,7 +170,7 @@ class HelpChannels(Scheduler, commands.Cog):
         log.trace("Populating the name queue with names.")
         return deque(available_names)
 
-    @commands.command(name="dormant")
+    @commands.command(name="dormant", enabled=False)
     @with_role(*constants.HelpChannels.cmd_whitelist)
     async def dormant_command(self, ctx: commands.Context) -> None:
         """Make the current in-use help channel dormant."""
@@ -353,6 +353,12 @@ class HelpChannels(Scheduler, commands.Cog):
         log.trace("Moving or rescheduling in-use channels.")
         for channel in self.get_category_channels(self.in_use_category):
             await self.move_idle_channel(channel, has_task=False)
+
+        # Prevent the command from being used until ready.
+        # The ready event wasn't used because channels could change categories between the time
+        # the command is invoked and the cog is ready (e.g. if move_idle_channel wasn't called yet).
+        # This may confused users. So would potentially long delays for the cog to become ready.
+        self.dormant_command.enabled = True
 
         log.info("Cog is ready!")
         self.ready.set()
