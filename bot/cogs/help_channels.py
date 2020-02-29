@@ -396,7 +396,7 @@ class HelpChannels(Scheduler, commands.Cog):
                 f"scheduling it to be moved after {data.timeout} seconds."
             )
 
-            self.schedule_task(self.bot.loop, channel.id, data)
+            self.schedule_task(channel.id, data)
 
     async def move_to_available(self) -> None:
         """Make a channel available."""
@@ -449,7 +449,7 @@ class HelpChannels(Scheduler, commands.Cog):
 
         log.trace(f"Scheduling #{channel.name} ({channel.id}) to become dormant in {timeout} sec.")
         data = ChannelTimeout(channel, timeout)
-        self.schedule_task(self.bot.loop, channel.id, data)
+        self.schedule_task(channel.id, data)
 
     async def notify(self) -> None:
         """
