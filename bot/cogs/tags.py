@@ -16,7 +16,8 @@ from bot.pagination import LinePaginator
 log = logging.getLogger(__name__)
 
 TEST_CHANNELS = (
-    Channels.bot_commands,
+    Channels.devtest,
+    Channels.bot,
     Channels.helpers
 )
 
