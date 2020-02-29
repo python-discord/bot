@@ -119,9 +119,7 @@ class HelpChannels(Scheduler, commands.Cog):
         for task in self.queue_tasks:
             task.cancel()
 
-        log.trace("Cog unload: cancelling the scheduled tasks")
-        for task in self.scheduled_tasks.values():
-            task.cancel()
+        self.cancel_all()
 
     def create_channel_queue(self) -> asyncio.Queue:
         """
