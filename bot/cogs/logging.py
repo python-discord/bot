@@ -20,7 +20,7 @@ class Logging(Cog):
 
     async def startup_greeting(self) -> None:
         """Announce our presence to the configured devlog channel."""
-        await self.bot.wait_until_ready()
+        await self.bot.wait_until_guild_available()
         log.info("Bot connected!")
 
         embed = Embed(description="Connected!")
@@ -34,7 +34,7 @@ class Logging(Cog):
         )
 
         if not DEBUG_MODE:
-            await self.bot.get_channel(Channels.devlog).send(embed=embed)
+            await self.bot.get_channel(Channels.dev_log).send(embed=embed)
 
 
 def setup(bot: Bot) -> None:

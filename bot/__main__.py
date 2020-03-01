@@ -1,10 +1,23 @@
+import logging
+
 import discord
+import sentry_sdk
 from discord.ext.commands import when_mentioned_or
+from sentry_sdk.integrations.logging import LoggingIntegration
 
 from bot import patches
 from bot.bot import Bot
-from bot.constants import Bot as BotConfig, DEBUG_MODE
+from bot.constants import Bot as BotConfig
 
+sentry_logging = LoggingIntegration(
+    level=logging.DEBUG,
+    event_level=logging.WARNING
+)
+
+sentry_sdk.init(
+    dsn=BotConfig.sentry_dsn,
+    integrations=[sentry_logging]
+)
 
 bot = Bot(
     command_prefix=when_mentioned_or(BotConfig.prefix),
@@ -18,6 +31,7 @@ bot.load_extension("bot.cogs.error_handler")
 bot.load_extension("bot.cogs.filtering")
 bot.load_extension("bot.cogs.logging")
 bot.load_extension("bot.cogs.security")
+bot.load_extension("bot.cogs.config_verifier")
 
 # Commands, etc
 bot.load_extension("bot.cogs.antimalware")
@@ -27,10 +41,8 @@ bot.load_extension("bot.cogs.clean")
 bot.load_extension("bot.cogs.extensions")
 bot.load_extension("bot.cogs.help")
 
-# Only load this in production
-if not DEBUG_MODE:
-    bot.load_extension("bot.cogs.doc")
-    bot.load_extension("bot.cogs.verification")
+bot.load_extension("bot.cogs.doc")
+bot.load_extension("bot.cogs.verification")
 
 # Feature cogs
 bot.load_extension("bot.cogs.alias")
@@ -40,7 +52,6 @@ bot.load_extension("bot.cogs.duck_pond")
 bot.load_extension("bot.cogs.free")
 bot.load_extension("bot.cogs.information")
 bot.load_extension("bot.cogs.jams")
-bot.load_extension("bot.cogs.metrics")
 bot.load_extension("bot.cogs.moderation")
 bot.load_extension("bot.cogs.off_topic_names")
 bot.load_extension("bot.cogs.reddit")

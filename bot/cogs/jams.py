@@ -18,7 +18,7 @@ class CodeJams(commands.Cog):
         self.bot = bot
 
     @commands.command()
-    @with_role(Roles.admin)
+    @with_role(Roles.admins)
     async def createteam(self, ctx: commands.Context, team_name: str, members: commands.Greedy[Member]) -> None:
         """
         Create team channels (voice and text) in the Code Jams category, assign roles, and add overwrites for the team.
@@ -95,10 +95,10 @@ class CodeJams(commands.Cog):
         )
 
         # Assign team leader role
-        await members[0].add_roles(ctx.guild.get_role(Roles.team_leader))
+        await members[0].add_roles(ctx.guild.get_role(Roles.team_leaders))
 
         # Assign rest of roles
-        jammer_role = ctx.guild.get_role(Roles.jammer)
+        jammer_role = ctx.guild.get_role(Roles.jammers)
         for member in members:
             await member.add_roles(jammer_role)
 
