@@ -9,12 +9,15 @@ ENV PIP_NO_CACHE_DIR=false \
 # Install pipenv
 RUN pip install -U pipenv
 
-# Copy project files into working directory
+# Create the working directory
 WORKDIR /bot
-COPY . .
 
 # Install project dependencies
+COPY Pipfile* ./
 RUN pipenv install --system --deploy
+
+# Copy the source code in last to optimize rebuilding the image
+COPY . .
 
 ENTRYPOINT ["python3"]
 CMD ["-m", "bot"]
