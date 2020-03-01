@@ -492,7 +492,7 @@ class HelpChannels(Scheduler, commands.Cog):
             message = await channel.send(
                 f"{mentions} A new available help channel is needed but there "
                 f"are no more dormant ones. Consider freeing up some in-use channels manually by "
-                f"using the `!dormant` command within the channels."
+                f"using the `{constants.Bot.prefix}dormant` command within the channels."
             )
 
             self.last_notification = message.created_at
