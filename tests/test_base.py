@@ -29,7 +29,7 @@ class LoggingTestCaseTests(unittest.TestCase):
         """Test if LoggingTestCase.assertNotLogs raises AssertionError when logs were emitted."""
         msg_regex = (
             r"1 logs of DEBUG or higher were triggered on root:\n"
-            r'<LogRecord: tests\.test_base, [\d]+, .+/tests/test_base\.py, [\d]+, "Log!">'
+            r'<LogRecord: tests\.test_base, [\d]+, .+[/\\]tests[/\\]test_base\.py, [\d]+, "Log!">'
         )
         with self.assertRaisesRegex(AssertionError, msg_regex):
             with LoggingTestCase.assertNotLogs(self, level=logging.DEBUG):
