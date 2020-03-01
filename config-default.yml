@@ -284,6 +284,30 @@ filter:
     domain_blacklist:
         - pornhub.com
         - liveleak.com
+        - grabify.link
+        - bmwforum.co
+        - leancoding.co
+        - spottyfly.com
+        - stopify.co
+        - yoütu.be
+        - discörd.com
+        - minecräft.com
+        - freegiftcards.co
+        - disçordapp.com
+        - fortnight.space
+        - fortnitechat.site
+        - joinmy.site
+        - curiouscat.club
+        - catsnthings.fun
+        - yourtube.site
+        - youtubeshort.watch
+        - catsnthing.com
+        - youtubeshort.pro
+        - canadianlumberjacks.online
+        - poweredbydialup.club
+        - poweredbydialup.online
+        - poweredbysecurity.org
+        - poweredbysecurity.online
 
     word_watchlist:
         - goo+ks*
