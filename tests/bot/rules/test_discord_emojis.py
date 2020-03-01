@@ -2,7 +2,7 @@ from typing import Iterable
 
 from bot.rules import discord_emojis
 from tests.bot.rules import DisallowedCase, RuleTest
-from tests.helpers import MockMessage, async_test
+from tests.helpers import MockMessage
 
 discord_emoji = "<:abcd:1234>"  # Discord emojis follow the format <:name:id>
 
@@ -19,7 +19,6 @@ class DiscordEmojisRuleTests(RuleTest):
         self.apply = discord_emojis.apply
         self.config = {"max": 2, "interval": 10}
 
-    @async_test
     async def test_allows_messages_within_limit(self):
         """Cases with a total amount of discord emojis within limit."""
         cases = (
@@ -29,7 +28,6 @@ class DiscordEmojisRuleTests(RuleTest):
 
         await self.run_allowed(cases)
 
-    @async_test
     async def test_disallows_messages_beyond_limit(self):
         """Cases with more than the allowed amount of discord emojis."""
         cases = (

@@ -18,7 +18,7 @@ def fake_role(**kwargs):
     return kwargs
 
 
-class RoleSyncerDiffTests(unittest.TestCase):
+class RoleSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
     """Tests for determining differences between roles in the DB and roles in the Guild cache."""
 
     def setUp(self):
@@ -39,7 +39,6 @@ class RoleSyncerDiffTests(unittest.TestCase):
 
         return guild
 
-    @helpers.async_test
     async def test_empty_diff_for_identical_roles(self):
         """No differences should be found if the roles in the guild and DB are identical."""
         self.bot.api_client.get.return_value = [fake_role()]
@@ -50,7 +49,6 @@ class RoleSyncerDiffTests(unittest.TestCase):
 
         self.assertEqual(actual_diff, expected_diff)
 
-    @helpers.async_test
     async def test_diff_for_updated_roles(self):
         """Only updated roles should be added to the 'updated' set of the diff."""
         updated_role = fake_role(id=41, name="new")
@@ -63,7 +61,6 @@ class RoleSyncerDiffTests(unittest.TestCase):
 
         self.assertEqual(actual_diff, expected_diff)
 
-    @helpers.async_test
     async def test_diff_for_new_roles(self):
         """Only new roles should be added to the 'created' set of the diff."""
         new_role = fake_role(id=41, name="new")
@@ -76,7 +73,6 @@ class RoleSyncerDiffTests(unittest.TestCase):
 
         self.assertEqual(actual_diff, expected_diff)
 
-    @helpers.async_test
     async def test_diff_for_deleted_roles(self):
         """Only deleted roles should be added to the 'deleted' set of the diff."""
         deleted_role = fake_role(id=61, name="deleted")
@@ -89,7 +85,6 @@ class RoleSyncerDiffTests(unittest.TestCase):
 
         self.assertEqual(actual_diff, expected_diff)
 
-    @helpers.async_test
     async def test_diff_for_new_updated_and_deleted_roles(self):
         """When roles are added, updated, and removed, all of them are returned properly."""
         new = fake_role(id=41, name="new")
@@ -109,14 +104,13 @@ class RoleSyncerDiffTests(unittest.TestCase):
         self.assertEqual(actual_diff, expected_diff)
 
 
-class RoleSyncerSyncTests(unittest.TestCase):
+class RoleSyncerSyncTests(unittest.IsolatedAsyncioTestCase):
     """Tests for the API requests that sync roles."""
 
     def setUp(self):
         self.bot = helpers.MockBot()
         self.syncer = RoleSyncer(self.bot)
 
-    @helpers.async_test
     async def test_sync_created_roles(self):
         """Only POST requests should be made with the correct payload."""
         roles = [fake_role(id=111), fake_role(id=222)]
@@ -132,7 +126,6 @@ class RoleSyncerSyncTests(unittest.TestCase):
         self.bot.api_client.put.assert_not_called()
         self.bot.api_client.delete.assert_not_called()
 
-    @helpers.async_test
     async def test_sync_updated_roles(self):
         """Only PUT requests should be made with the correct payload."""
         roles = [fake_role(id=111), fake_role(id=222)]
@@ -148,7 +141,6 @@ class RoleSyncerSyncTests(unittest.TestCase):
         self.bot.api_client.post.assert_not_called()
         self.bot.api_client.delete.assert_not_called()
 
-    @helpers.async_test
     async def test_sync_deleted_roles(self):
         """Only DELETE requests should be made with the correct payload."""
         roles = [fake_role(id=111), fake_role(id=222)]
