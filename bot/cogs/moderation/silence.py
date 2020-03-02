@@ -139,3 +139,11 @@ class Silence(commands.Cog):
         )
         log.debug(f"Sending notice with channels: {channels_log_text}")
         await self._mod_alerts_channel.send(f"<@&{Roles.moderators}> currently silenced channels: {channels_text}")
+
+    @_notifier.before_loop
+    async def _log_notifier_start(self) -> None:
+        log.trace("Starting notifier loop.")
+
+    @_notifier.after_loop
+    async def _log_notifier_end(self) -> None:
+        log.trace("Stopping notifier loop.")
