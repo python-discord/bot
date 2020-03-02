@@ -41,7 +41,7 @@ python_version = "3.8"
 
 [scripts]
 start = "python -m bot"
-lint = "python -m flake8"
+lint = "pre-commit run --all-files"
 precommit = "pre-commit install"
 build = "docker build -t pythondiscord/bot:latest -f Dockerfile ."
 push = "docker push pythondiscord/bot:latest"

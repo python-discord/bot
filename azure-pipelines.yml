@@ -13,10 +13,12 @@ jobs:
 
     variables:
       PIP_CACHE_DIR: ".cache/pip"
+      PRE_COMMIT_HOME: $(Pipeline.Workspace)/pre-commit-cache
 
     steps:
       - task: UsePythonVersion@0
         displayName: 'Set Python version'
+        name: PythonVersion
         inputs:
           versionSpec: '3.8.x'
           addToPath: true
@@ -27,8 +29,14 @@ jobs:
       - script: pipenv install --dev --deploy --system
         displayName: 'Install project using pipenv'
 
-      - script: python -m flake8
-        displayName: 'Run linter'
+      - task: Cache@2
+        displayName: 'Restore pre-commit environment'
+        inputs:
+          key: pre-commit | .pre-commit-config.yaml | "$(PythonVersion.pythonLocation)"
+          path: $(PRE_COMMIT_HOME)
+
+      - script: pre-commit run --all-files --show-diff-on-failure
+        displayName: 'Run pre-commit hooks'
 
       - script: BOT_API_KEY=foo BOT_SENTRY_DSN=blah BOT_TOKEN=bar WOLFRAM_API_KEY=baz REDDIT_CLIENT_ID=spam REDDIT_SECRET=ham coverage run -m xmlrunner
         displayName: Run tests
