@@ -405,8 +405,6 @@ class Filtering(Cog, Scheduler):
         await wait_until(delete_at)
         await self.delete_offensive_msg(msg)
 
-        self.cancel_task(msg['id'])
-
     async def reschedule_offensive_msg_deletion(self) -> None:
         """Get all the pending message deletion from the API and reschedule them."""
         await self.bot.wait_until_ready()
