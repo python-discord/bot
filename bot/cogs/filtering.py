@@ -202,7 +202,7 @@ class Filtering(Cog, Scheduler):
                             }
 
                             await self.bot.api_client.post('bot/offensive-messages', json=data)
-                            self.schedule_task(self.bot.loop, msg.id, data)
+                            self.schedule_task(msg.id, data)
                             log.trace(f"Offensive message {msg.id} will be deleted on {delete_date}")
 
                         if isinstance(msg.channel, DMChannel):
@@ -418,7 +418,7 @@ class Filtering(Cog, Scheduler):
             if delete_at < now:
                 await self.delete_offensive_msg(msg)
             else:
-                self.schedule_task(self.bot.loop, msg['id'], msg)
+                self.schedule_task(msg['id'], msg)
 
     async def delete_offensive_msg(self, msg: Mapping[str, str]) -> None:
         """Delete an offensive message, and then delete it from the db."""
