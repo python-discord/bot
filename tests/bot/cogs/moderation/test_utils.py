@@ -1,12 +1,14 @@
 import unittest
+from unittest.mock import AsyncMock
+
+from tests.helpers import MockBot, MockContext, MockMember
 
 
-from tests.helpers import MockBot, MockContext
-
-
-class ModerationUtilsTests(unittest.TestCase):
+class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
     """Tests Moderation utils."""
 
-    def setUp(self) -> None:
+    def setUp(self):
         self.bot = MockBot()
-        self.ctx = MockContext(bot=self.bot)
+        self.member = MockMember(id=1234)
+        self.ctx = MockContext(bot=self.bot, author=self.member)
+        self.bot.api_client.get = AsyncMock()
