@@ -14,6 +14,12 @@ jobs:
     variables:
       PIP_CACHE_DIR: ".cache/pip"
       PRE_COMMIT_HOME: $(Pipeline.Workspace)/pre-commit-cache
+      BOT_API_KEY: foo
+      BOT_SENTRY_DSN: blah
+      BOT_TOKEN: bar
+      REDDIT_CLIENT_ID: spam
+      REDDIT_SECRET: ham
+      WOLFRAM_API_KEY: baz
 
     steps:
       - task: UsePythonVersion@0
@@ -50,7 +56,7 @@ jobs:
       - script: pre-commit run --all-files
         displayName: 'Run pre-commit hooks'
 
-      - script: BOT_API_KEY=foo BOT_SENTRY_DSN=blah BOT_TOKEN=bar WOLFRAM_API_KEY=baz REDDIT_CLIENT_ID=spam REDDIT_SECRET=ham coverage run -m xmlrunner
+      - script: coverage run -m xmlrunner
         displayName: Run tests
 
       - script: coverage report -m && coverage xml -o coverage.xml
