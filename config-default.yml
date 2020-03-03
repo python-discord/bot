@@ -111,78 +111,135 @@ guild:
     id: 267624335836053506
 
     categories:
-        python_help:                      356013061213126657
+        python_help:    356013061213126657
 
     channels:
-        admins:            &ADMINS        365960823622991872
-        admin_spam:        &ADMIN_SPAM    563594791770914816
-        admins_voice:      &ADMINS_VOICE  500734494840717332
-        announcements:                    354619224620138496
-        attachment_log:    &ATTCH_LOG     649243850006855680
-        big_brother_logs:  &BBLOGS        468507907357409333
-        bot:               &BOT_CMD       267659945086812160
-        checkpoint_test:                  422077681434099723
-        defcon:            &DEFCON        464469101889454091
-        devcontrib:        &DEV_CONTRIB   635950537262759947
-        devcore:                          411200599653351425
-        devlog:            &DEVLOG        622895325144940554
-        devtest:           &DEVTEST       414574275865870337
-        esoteric:                         470884583684964352
-        help_0:                           303906576991780866
-        help_1:                           303906556754395136
-        help_2:                           303906514266226689
-        help_3:                           439702951246692352
-        help_4:                           451312046647148554
-        help_5:                           454941769734422538
-        help_6:                           587375753306570782
-        help_7:                           587375768556797982
-        helpers:           &HELPERS       385474242440986624
-        message_log:       &MESSAGE_LOG   467752170159079424
-        meta:                             429409067623251969
-        mod_spam:          &MOD_SPAM      620607373828030464
-        mods:              &MODS          305126844661760000
-        mod_alerts:                       473092532147060736
-        modlog:            &MODLOG        282638479504965634
-        off_topic_0:                      291284109232308226
-        off_topic_1:                      463035241142026251
-        off_topic_2:                      463035268514185226
-        organisation:      &ORGANISATION  551789653284356126
-        python:                           267624335836053506
-        reddit:                           458224812528238616
-        staff_lounge:      &STAFF_LOUNGE  464905259261755392
-        staff_voice:       &STAFF_VOICE   412375055910043655
-        talent_pool:       &TALENT_POOL   534321732593647616
-        userlog:                          528976905546760203
-        user_event_a:      &USER_EVENT_A  592000283102674944
-        verification:                     352442727016693763
-        voice_log:                        640292421988646961
+        announcements:                              354619224620138496
+        user_event_announcements:   &USER_EVENT_A   592000283102674944
 
-    staff_channels: [*ADMINS, *ADMIN_SPAM, *MOD_SPAM, *MODS, *HELPERS, *ORGANISATION, *DEFCON]
-    ignored: [*ADMINS, *MESSAGE_LOG, *MODLOG, *ADMINS_VOICE, *STAFF_VOICE, *ATTCH_LOG]
-    reminder_whitelist: [*BOT_CMD, *DEV_CONTRIB]
+        # Development
+        dev_contrib:        &DEV_CONTRIB    635950537262759947
+        dev_core:           &DEV_CORE       411200599653351425
+        dev_log:            &DEV_LOG        622895325144940554
+
+        # Discussion
+        meta:               429409067623251969
+        python_discussion:  267624335836053506
+
+        # Logs
+        attachment_log:     &ATTACH_LOG     649243850006855680
+        message_log:        &MESSAGE_LOG    467752170159079424
+        mod_log:            &MOD_LOG        282638479504965634
+        user_log:                           528976905546760203
+        voice_log:                          640292421988646961
+
+        # Off-topic
+        off_topic_0:    291284109232308226
+        off_topic_1:    463035241142026251
+        off_topic_2:    463035268514185226
+
+        # Python Help
+        help_0:         303906576991780866
+        help_1:         303906556754395136
+        help_2:         303906514266226689
+        help_3:         439702951246692352
+        help_4:         451312046647148554
+        help_5:         454941769734422538
+        help_6:         587375753306570782
+        help_7:         587375768556797982
+
+        # Special
+        bot_commands:       &BOT_CMD        267659945086812160
+        esoteric:                           470884583684964352
+        reddit:                             458224812528238616
+        verification:                       352442727016693763
+
+        # Staff
+        admins:             &ADMINS         365960823622991872
+        admin_spam:         &ADMIN_SPAM     563594791770914816
+        defcon:             &DEFCON         464469101889454091
+        helpers:            &HELPERS        385474242440986624
+        mods:               &MODS           305126844661760000
+        mod_alerts:         &MOD_ALERTS     473092532147060736
+        mod_spam:           &MOD_SPAM       620607373828030464
+        organisation:       &ORGANISATION   551789653284356126
+        staff_lounge:       &STAFF_LOUNGE   464905259261755392
+
+        # Voice
+        admins_voice:       &ADMINS_VOICE   500734494840717332
+        staff_voice:        &STAFF_VOICE    412375055910043655
+
+        # Watch
+        big_brother_logs:   &BB_LOGS        468507907357409333
+        talent_pool:        &TALENT_POOL    534321732593647616
+
+    staff_channels:
+        - *ADMINS
+        - *ADMIN_SPAM
+        - *DEFCON
+        - *HELPERS
+        - *MODS
+        - *MOD_SPAM
+        - *ORGANISATION
+
+    moderation_channels:
+        - *ADMINS
+        - *ADMIN_SPAM
+        - *MOD_ALERTS
+        - *MODS
+        - *MOD_SPAM
+
+    # Modlog cog ignores events which occur in these channels
+    modlog_blacklist:
+        - *ADMINS
+        - *ADMINS_VOICE
+        - *ATTACH_LOG
+        - *MESSAGE_LOG
+        - *MOD_LOG
+        - *STAFF_VOICE
+
+    reminder_whitelist:
+        - *BOT_CMD
+        - *DEV_CONTRIB
 
     roles:
-        admin:             &ADMIN_ROLE      267628507062992896
-        announcements:                      463658397560995840
-        champion:                           430492892331769857
-        contributor:                        295488872404484098
-        core_developer:                     587606783669829632
-        helpers:                            267630620367257601
-        jammer:                             591786436651646989
-        moderator:         &MOD_ROLE        267629731250176001
-        muted:             &MUTED_ROLE      277914926603829249
-        owner:             &OWNER_ROLE      267627879762755584
-        partners:                           323426753857191936
-        rockstars:         &ROCKSTARS_ROLE  458226413825294336
-        team_leader:                        501324292341104650
-        verified:                           352427296948486144
+        announcements:                          463658397560995840
+        contributors:                           295488872404484098
+        muted:              &MUTED_ROLE         277914926603829249
+        partners:                               323426753857191936
+        python_community:   &PY_COMMUNITY_ROLE  458226413825294336
+
+        # This is the Developers role on PyDis, here named verified for readability reasons
+        verified:                               352427296948486144
+
+        # Staff
+        admins:             &ADMINS_ROLE    267628507062992896
+        core_developers:                    587606783669829632
+        helpers:            &HELPERS_ROLE   267630620367257601
+        moderators:         &MODS_ROLE      267629731250176001
+        owners:             &OWNERS_ROLE    267627879762755584
+
+        # Code Jam
+        jammers:        591786436651646989
+        team_leaders:   501324292341104650
+
+    moderation_roles:
+        - *OWNERS_ROLE
+        - *ADMINS_ROLE
+        - *MODS_ROLE
+
+    staff_roles:
+        - *OWNERS_ROLE
+        - *ADMINS_ROLE
+        - *MODS_ROLE
+        - *HELPERS_ROLE
 
     webhooks:
-        talent_pool:                        569145364800602132
-        big_brother:                        569133704568373283
-        reddit:                             635408384794951680
-        duck_pond:                          637821475327311927
-        dev_log:                            680501655111729222
+        talent_pool:    569145364800602132
+        big_brother:    569133704568373283
+        reddit:         635408384794951680
+        duck_pond:      637821475327311927
+        dev_log:        680501655111729222
 
 
 filter:
@@ -227,6 +284,30 @@ filter:
     domain_blacklist:
         - pornhub.com
         - liveleak.com
+        - grabify.link
+        - bmwforum.co
+        - leancoding.co
+        - spottyfly.com
+        - stopify.co
+        - yoütu.be
+        - discörd.com
+        - minecräft.com
+        - freegiftcards.co
+        - disçordapp.com
+        - fortnight.space
+        - fortnitechat.site
+        - joinmy.site
+        - curiouscat.club
+        - catsnthings.fun
+        - yourtube.site
+        - youtubeshort.watch
+        - catsnthing.com
+        - youtubeshort.pro
+        - canadianlumberjacks.online
+        - poweredbydialup.club
+        - poweredbydialup.online
+        - poweredbysecurity.org
+        - poweredbysecurity.online
 
     word_watchlist:
         - goo+ks*
@@ -260,20 +341,20 @@ filter:
     # Censor doesn't apply to these
     channel_whitelist:
         - *ADMINS
-        - *MODLOG
+        - *MOD_LOG
         - *MESSAGE_LOG
-        - *DEVLOG
-        - *BBLOGS
+        - *DEV_LOG
+        - *BB_LOGS
         - *STAFF_LOUNGE
-        - *DEVTEST
         - *TALENT_POOL
         - *USER_EVENT_A
 
     role_whitelist:
-        - *ADMIN_ROLE
-        - *MOD_ROLE
-        - *OWNER_ROLE
-        - *ROCKSTARS_ROLE
+        - *ADMINS_ROLE
+        - *MODS_ROLE
+        - *OWNERS_ROLE
+        - *HELPERS_ROLE
+        - *PY_COMMUNITY_ROLE
 
 
 keys:
@@ -441,7 +522,20 @@ sync:
 
 duck_pond:
     threshold: 5
-    custom_emojis: [*DUCKY_YELLOW, *DUCKY_BLURPLE, *DUCKY_CAMO, *DUCKY_DEVIL, *DUCKY_NINJA, *DUCKY_REGAL, *DUCKY_TUBE, *DUCKY_HUNT, *DUCKY_WIZARD, *DUCKY_PARTY, *DUCKY_ANGEL, *DUCKY_MAUL, *DUCKY_SANTA]
+    custom_emojis:
+        - *DUCKY_YELLOW
+        - *DUCKY_BLURPLE
+        - *DUCKY_CAMO
+        - *DUCKY_DEVIL
+        - *DUCKY_NINJA
+        - *DUCKY_REGAL
+        - *DUCKY_TUBE
+        - *DUCKY_HUNT
+        - *DUCKY_WIZARD
+        - *DUCKY_PARTY
+        - *DUCKY_ANGEL
+        - *DUCKY_MAUL
+        - *DUCKY_SANTA
 
 config:
     required_keys: ['bot.token']

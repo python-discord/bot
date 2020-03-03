@@ -23,7 +23,7 @@ _Diff = namedtuple('Diff', ('created', 'updated', 'deleted'))
 class Syncer(abc.ABC):
     """Base class for synchronising the database with objects in the Discord cache."""
 
-    _CORE_DEV_MENTION = f"<@&{constants.Roles.core_developer}> "
+    _CORE_DEV_MENTION = f"<@&{constants.Roles.core_developers}> "
     _REACTION_EMOJIS = (constants.Emojis.check_mark, constants.Emojis.cross_mark)
 
     def __init__(self, bot: Bot) -> None:
@@ -54,12 +54,12 @@ class Syncer(abc.ABC):
         # Send to core developers if it's an automatic sync.
         if not message:
             log.trace("Message not provided for confirmation; creating a new one in dev-core.")
-            channel = self.bot.get_channel(constants.Channels.devcore)
+            channel = self.bot.get_channel(constants.Channels.dev_core)
 
             if not channel:
                 log.debug("Failed to get the dev-core channel from cache; attempting to fetch it.")
                 try:
-                    channel = await self.bot.fetch_channel(constants.Channels.devcore)
+                    channel = await self.bot.fetch_channel(constants.Channels.dev_core)
                 except HTTPException:
                     log.exception(
                         f"Failed to fetch channel for sending sync confirmation prompt; "
@@ -93,7 +93,7 @@ class Syncer(abc.ABC):
         `author` of the prompt.
         """
         # For automatic syncs, check for the core dev role instead of an exact author
-        has_role = any(constants.Roles.core_developer == role.id for role in user.roles)
+        has_role = any(constants.Roles.core_developers == role.id for role in user.roles)
         return (
             reaction.message.id == message.id
             and not user.bot
@@ -125,17 +125,17 @@ class Syncer(abc.ABC):
         except TimeoutError:
             # reaction will remain none thus sync will be aborted in the finally block below.
             log.debug(f"The {self.name} syncer confirmation prompt timed out.")
-        finally:
-            if str(reaction) == constants.Emojis.check_mark:
-                log.trace(f"The {self.name} syncer was confirmed.")
-                await message.edit(content=f':ok_hand: {mention}{self.name} sync will proceed.')
-                return True
-            else:
-                log.warning(f"The {self.name} syncer was aborted or timed out!")
-                await message.edit(
-                    content=f':warning: {mention}{self.name} sync aborted or timed out!'
-                )
-                return False
+
+        if str(reaction) == constants.Emojis.check_mark:
+            log.trace(f"The {self.name} syncer was confirmed.")
+            await message.edit(content=f':ok_hand: {mention}{self.name} sync will proceed.')
+            return True
+        else:
+            log.warning(f"The {self.name} syncer was aborted or timed out!")
+            await message.edit(
+                content=f':warning: {mention}{self.name} sync aborted or timed out!'
+            )
+            return False
 
     @abc.abstractmethod
     async def _get_diff(self, guild: Guild) -> _Diff:

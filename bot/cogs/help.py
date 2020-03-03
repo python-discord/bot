@@ -507,7 +507,7 @@ class Help(DiscordCog):
     """Custom Embed Pagination Help feature."""
 
     @commands.command('help')
-    @redirect_output(destination_channel=Channels.bot, bypass_roles=STAFF_ROLES)
+    @redirect_output(destination_channel=Channels.bot_commands, bypass_roles=STAFF_ROLES)
     async def new_help(self, ctx: Context, *commands) -> None:
         """Shows Command Help."""
         try:
