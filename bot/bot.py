@@ -44,7 +44,7 @@ class Bot(commands.Bot):
 
         Will cause a DeprecationWarning if called outside a coroutine.
         """
-        # Because discord.py recreates the HTTPClient session, may as well follow suite and recreate
+        # Because discord.py recreates the HTTPClient session, may as well follow suit and recreate
         # our own stuff here too.
         self._recreate()
         super().clear()
