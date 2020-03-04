@@ -89,15 +89,15 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(actual, expected)
 
     @patch('bot.cogs.snekbox.Signals', side_effect=ValueError)
-    def test_get_results_message_invalid_signal(self, mock_Signals: Mock):
+    def test_get_results_message_invalid_signal(self, mock_signals: Mock):
         self.assertEqual(
             self.cog.get_results_message({'stdout': '', 'returncode': 127}),
             ('Your eval job has completed with return code 127', '')
         )
 
     @patch('bot.cogs.snekbox.Signals')
-    def test_get_results_message_valid_signal(self, mock_Signals: Mock):
-        mock_Signals.return_value.name = 'SIGTEST'
+    def test_get_results_message_valid_signal(self, mock_signals: Mock):
+        mock_signals.return_value.name = 'SIGTEST'
         self.assertEqual(
             self.cog.get_results_message({'stdout': '', 'returncode': 127}),
             ('Your eval job has completed with return code 127 (SIGTEST)', '')

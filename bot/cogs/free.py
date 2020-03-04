@@ -55,7 +55,7 @@ class Free(Cog):
                 msg = messages[seek - 1]
             # Otherwise get last message
             else:
-                msg = await channel.history(limit=1).next()  # noqa (False positive)
+                msg = await channel.history(limit=1).next()  # noqa: B305
 
             inactive = (datetime.utcnow() - msg.created_at).seconds
             if inactive > TIMEOUT:
