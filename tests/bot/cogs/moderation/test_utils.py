@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock
 
 from discord import Embed
 
-from bot.cogs.moderation.utils import has_active_infraction, notify_infraction
+from bot.cogs.moderation.utils import has_active_infraction, notify_infraction, notify_pardon
 from bot.constants import Colours, Icons
 from tests.helpers import MockBot, MockContext, MockMember, MockUser
 
@@ -20,6 +20,8 @@ INFRACTION_DESCRIPTION_TEMPLATE = (
     "**Expires:** {expires}\n"
     "**Reason:** {reason}\n"
 )
+
+PARDON_COLOR = Colours.soft_green
 
 
 class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
@@ -112,7 +114,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
             args = case["args"]
             expected = case["expected_output"]
 
-            with self.subTest(args=case["args"], expected=case["expected_output"]):
+            with self.subTest(args=args, expected=expected):
                 await notify_infraction(*args)
 
                 embed: Embed = self.user.send.call_args[1]["embed"]
@@ -125,3 +127,38 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(embed.author.icon_url, expected["icon_url"])
                 self.assertEqual(embed.footer.text, expected["footer"])
                 self.assertEqual(embed.description, expected["description"])
+
+    async def test_notify_pardon(self):
+        """Test does `notify_pardon` create correct embed."""
+        test_cases = [
+            {
+                "args": (self.user, "Test title", "Example content"),
+                "expected_output": {
+                    "description": "Example content",
+                    "title": "Test title",
+                    "icon_url": Icons.user_verified
+                }
+            },
+            {
+                "args": (self.user, "Test title 1", "Example content 1", Icons.user_update),
+                "expected_output": {
+                    "description": "Example content 1",
+                    "title": "Test title 1",
+                    "icon_url": Icons.user_update
+                }
+            }
+        ]
+
+        for case in test_cases:
+            args = case["args"]
+            expected = case["expected_output"]
+
+            with self.subTest(args=args, expected=expected):
+                await notify_pardon(*args)
+
+                embed: Embed = self.user.send.call_args[1]["embed"]
+
+                self.assertEqual(embed.description, expected["description"])
+                self.assertEqual(embed.colour.value, PARDON_COLOR)
+                self.assertEqual(embed.author.name, expected["title"])
+                self.assertEqual(embed.author.icon_url, expected["icon_url"])
