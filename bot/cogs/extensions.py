@@ -69,7 +69,7 @@ class Extensions(commands.Cog):
 
     @extensions_group.command(name="load", aliases=("l",))
     async def load_command(self, ctx: Context, *extensions: Extension) -> None:
-        """
+        r"""
         Load extensions given their fully qualified or unqualified names.
 
         If '\*' or '\*\*' is given as the name, all unloaded extensions will be loaded.
@@ -86,7 +86,7 @@ class Extensions(commands.Cog):
 
     @extensions_group.command(name="unload", aliases=("ul",))
     async def unload_command(self, ctx: Context, *extensions: Extension) -> None:
-        """
+        r"""
         Unload currently loaded extensions given their fully qualified or unqualified names.
 
         If '\*' or '\*\*' is given as the name, all loaded extensions will be unloaded.
@@ -109,7 +109,7 @@ class Extensions(commands.Cog):
 
     @extensions_group.command(name="reload", aliases=("r",))
     async def reload_command(self, ctx: Context, *extensions: Extension) -> None:
-        """
+        r"""
         Reload extensions given their fully qualified or unqualified names.
 
         If an extension fails to be reloaded, it will be rolled-back to the prior working state.
