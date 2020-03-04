@@ -28,16 +28,12 @@ class Tags(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.tag_cooldowns = {}
-        self._cache = {}
+        self._cache = self.get_tags()
 
-    @Cog.listener()
-    async def on_ready(self) -> None:
-        """Runs the code before the bot has connected."""
-        await self.get_tags()
-
-    async def get_tags(self) -> None:
+    def get_tags(self) -> dict:
         """Get all tags."""
         # Save all tags in memory.
+        cache = {}
         tag_files = Path("bot", "resources", "tags").iterdir()
         for file in tag_files:
             file_path = Path(file)
@@ -48,7 +44,8 @@ class Tags(Cog):
                     "description": file_path.read_text()
                 }
             }
-            self._cache[tag_title] = tag
+            cache[tag_title] = tag
+        return cache
 
     @staticmethod
     def _fuzzy_search(search: str, target: str) -> float:
@@ -87,7 +84,7 @@ class Tags(Cog):
 
         return []
 
-    async def _get_tag(self, tag_name: str) -> list:
+    def _get_tag(self, tag_name: str) -> list:
         """Get a specific tag."""
         found = [self._cache.get(tag_name.lower(), None)]
         if not found[0]:
@@ -130,7 +127,7 @@ class Tags(Cog):
             return
 
         if tag_name is not None:
-            founds = await self._get_tag(tag_name)
+            founds = self._get_tag(tag_name)
 
             if len(founds) == 1:
                 tag = founds[0]
