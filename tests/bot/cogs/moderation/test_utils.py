@@ -1,10 +1,13 @@
 import unittest
+from typing import Union
 from unittest.mock import AsyncMock
 
-from discord import Embed
+from discord import Embed, Forbidden, HTTPException, NotFound
 
 from bot.api import ResponseCodeError
-from bot.cogs.moderation.utils import has_active_infraction, notify_infraction, notify_pardon, post_user
+from bot.cogs.moderation.utils import (
+    has_active_infraction, notify_infraction, notify_pardon, post_user, send_private_embed
+)
 from bot.constants import Colours, Icons
 from tests.helpers import MockBot, MockContext, MockMember, MockUser
 
@@ -212,7 +215,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 self.ctx.bot.api_client.post.return_value = expected
 
                 if error:
-                    self.ctx.bot.api_client.post.side_effect = ResponseCodeError(AsyncMock(response_code=400), expected)
+                    self.ctx.bot.api_client.post.side_effect = ResponseCodeError(AsyncMock(), expected)
 
                 result = await post_user(*args)
 
@@ -220,3 +223,41 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     self.assertIsNone(result)
                 else:
                     self.assertEqual(result, expected)
+
+    async def test_send_private_embed(self):
+        """Test does `send_private_embed` return correct value."""
+        test_cases = [
+            {
+                "args": (self.user, Embed(title="Test", description="Test val")),
+                "expected_output": True,
+                "raised_exception": None
+            },
+            {
+                "args": (self.user, Embed(title="Test", description="Test val")),
+                "expected_output": False,
+                "raised_exception": HTTPException
+            },
+            {
+                "args": (self.user, Embed(title="Test", description="Test val")),
+                "expected_output": False,
+                "raised_exception": Forbidden
+            },
+            {
+                "args": (self.user, Embed(title="Test", description="Test val")),
+                "expected_output": False,
+                "raised_exception": NotFound
+            }
+        ]
+
+        for case in test_cases:
+            args = case["args"]
+            expected = case["expected_output"]
+            raised: Union[Forbidden, HTTPException, NotFound, None] = case["raised_exception"]
+
+            with self.subTest(args=args, expected=expected, raised=raised):
+                if raised:
+                    self.user.send.side_effect = raised(AsyncMock(), AsyncMock())
+
+                result = await send_private_embed(*args)
+
+                self.assertEqual(result, expected)
