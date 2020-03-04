@@ -3,7 +3,8 @@ from unittest.mock import AsyncMock
 
 from discord import Embed
 
-from bot.cogs.moderation.utils import has_active_infraction, notify_infraction, notify_pardon
+from bot.api import ResponseCodeError
+from bot.cogs.moderation.utils import has_active_infraction, notify_infraction, notify_pardon, post_user
 from bot.constants import Colours, Icons
 from tests.helpers import MockBot, MockContext, MockMember, MockUser
 
@@ -162,3 +163,60 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(embed.colour.value, PARDON_COLOR)
                 self.assertEqual(embed.author.name, expected["title"])
                 self.assertEqual(embed.author.icon_url, expected["icon_url"])
+
+    async def test_post_user(self):
+        """Test does `post_user` work correctly."""
+        test_cases = [
+            {
+                "args": (self.ctx, self.user),
+                "post_result": [
+                    {
+                        "id": 1234,
+                        "avatar": "test",
+                        "name": "Test",
+                        "discriminator": 1234,
+                        "roles": [
+                            1234,
+                            5678
+                        ],
+                        "in_guild": True
+                    }
+                ],
+                "raise_error": False
+            },
+            {
+                "args": (self.ctx, self.user),
+                "post_result": [
+                    {
+                        "id": 1234,
+                        "avatar": "test",
+                        "name": "Test",
+                        "discriminator": 1234,
+                        "roles": [
+                            1234,
+                            5678
+                        ],
+                        "in_guild": True
+                    }
+                ],
+                "raise_error": True
+            }
+        ]
+
+        for case in test_cases:
+            args = case["args"]
+            expected = case["post_result"]
+            error = case["raise_error"]
+
+            with self.subTest(args=args, result=expected, error=error):
+                self.ctx.bot.api_client.post.return_value = expected
+
+                if error:
+                    self.ctx.bot.api_client.post.side_effect = ResponseCodeError(AsyncMock(response_code=400), expected)
+
+                result = await post_user(*args)
+
+                if error:
+                    self.assertIsNone(result)
+                else:
+                    self.assertEqual(result, expected)
