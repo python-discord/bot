@@ -31,7 +31,7 @@ class LoggingTestsMixin:
     """
 
     @contextmanager
-    def assertNotLogs(self, logger=None, level=None, msg=None):
+    def assertNotLogs(self, logger=None, level=None, msg=None):  # noqa: N802
         """
         Asserts that no logs of `level` and higher were emitted by `logger`.
 
@@ -81,7 +81,7 @@ class LoggingTestsMixin:
 class CommandTestCase(unittest.IsolatedAsyncioTestCase):
     """TestCase with additional assertions that are useful for testing Discord commands."""
 
-    async def assertHasPermissionsCheck(
+    async def assertHasPermissionsCheck(  # noqa: N802
         self,
         cmd: commands.Command,
         permissions: Dict[str, bool],
