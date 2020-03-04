@@ -1,5 +1,5 @@
 from abc import ABCMeta
-from typing import Any, Generator, Hashable, Iterable
+from typing import Any, Hashable
 
 from discord.ext.commands import CogMeta
 
@@ -64,13 +64,3 @@ class CaseInsensitiveDict(dict):
         for k in list(self.keys()):
             v = super(CaseInsensitiveDict, self).pop(k)
             self.__setitem__(k, v)
-
-
-def chunks(iterable: Iterable, size: int) -> Generator[Any, None, None]:
-    """
-    Generator that allows you to iterate over any indexable collection in `size`-length chunks.
-
-    Found: https://stackoverflow.com/a/312464/4022104
-    """
-    for i in range(0, len(iterable), size):
-        yield iterable[i:i + size]

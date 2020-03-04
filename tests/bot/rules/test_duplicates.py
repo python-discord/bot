@@ -2,7 +2,7 @@ from typing import Iterable
 
 from bot.rules import duplicates
 from tests.bot.rules import DisallowedCase, RuleTest
-from tests.helpers import MockMessage, async_test
+from tests.helpers import MockMessage
 
 
 def make_msg(author: str, content: str) -> MockMessage:
@@ -17,7 +17,6 @@ class DuplicatesRuleTests(RuleTest):
         self.apply = duplicates.apply
         self.config = {"max": 2, "interval": 10}
 
-    @async_test
     async def test_allows_messages_within_limit(self):
         """Cases which do not violate the rule."""
         cases = (
@@ -28,7 +27,6 @@ class DuplicatesRuleTests(RuleTest):
 
         await self.run_allowed(cases)
 
-    @async_test
     async def test_disallows_messages_beyond_limit(self):
         """Cases with too many duplicate messages from the same author."""
         cases = (

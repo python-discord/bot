@@ -68,7 +68,7 @@ class ConverterTests(unittest.TestCase):
             ('👋', "Don't be ridiculous, you can't use that character!"),
             ('', "Tag names should not be empty, or filled with whitespace."),
             ('  ', "Tag names should not be empty, or filled with whitespace."),
-            ('42', "Tag names can't be numbers."),
+            ('42', "Tag names must contain at least one letter."),
             ('x' * 128, "Are you insane? That's way too long!"),
         )
 

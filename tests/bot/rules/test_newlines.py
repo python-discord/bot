@@ -2,7 +2,7 @@ from typing import Iterable, List
 
 from bot.rules import newlines
 from tests.bot.rules import DisallowedCase, RuleTest
-from tests.helpers import MockMessage, async_test
+from tests.helpers import MockMessage
 
 
 def make_msg(author: str, newline_groups: List[int]) -> MockMessage:
@@ -29,7 +29,6 @@ class TotalNewlinesRuleTests(RuleTest):
             "interval": 10,
         }
 
-    @async_test
     async def test_allows_messages_within_limit(self):
         """Cases which do not violate the rule."""
         cases = (
@@ -41,7 +40,6 @@ class TotalNewlinesRuleTests(RuleTest):
 
         await self.run_allowed(cases)
 
-    @async_test
     async def test_disallows_messages_total(self):
         """Cases which violate the rule by having too many newlines in total."""
         cases = (
@@ -79,7 +77,6 @@ class GroupNewlinesRuleTests(RuleTest):
         self.apply = newlines.apply
         self.config = {"max": 5, "max_consecutive": 3, "interval": 10}
 
-    @async_test
     async def test_disallows_messages_consecutive(self):
         """Cases which violate the rule due to having too many consecutive newlines."""
         cases = (

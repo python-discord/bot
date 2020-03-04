@@ -2,7 +2,7 @@ from typing import Iterable
 
 from bot.rules import mentions
 from tests.bot.rules import DisallowedCase, RuleTest
-from tests.helpers import MockMessage, async_test
+from tests.helpers import MockMessage
 
 
 def make_msg(author: str, total_mentions: int) -> MockMessage:
@@ -20,7 +20,6 @@ class TestMentions(RuleTest):
             "interval": 10,
         }
 
-    @async_test
     async def test_mentions_within_limit(self):
         """Messages with an allowed amount of mentions."""
         cases = (
@@ -32,7 +31,6 @@ class TestMentions(RuleTest):
 
         await self.run_allowed(cases)
 
-    @async_test
     async def test_mentions_exceeding_limit(self):
         """Messages with a higher than allowed amount of mentions."""
         cases = (
