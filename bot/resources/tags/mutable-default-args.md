@@ -11,7 +11,7 @@ and returns it. `foo` is set to an empty list by default.
 >>> def append_one(foo=[]):
 ...     foo.append(1)
 ...     return foo
-... 
+...
 ```
 See what happens when we call it a few times:
 ```python
@@ -33,7 +33,7 @@ function is **called**:
 ...         foo = []
 ...     foo.append(1)
 ...     return foo
-... 
+...
 >>> append_one()
 [1]
 >>> append_one()

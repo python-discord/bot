@@ -25,7 +25,7 @@ The reverse is also true:
 ```py
 >>> def foo(a, b):
 ...     print(a, b)
-... 
+...
 >>> foo(a=1, b=2)
 1 2
 >>> foo(b=1, a=2)

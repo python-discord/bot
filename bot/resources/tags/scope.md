@@ -13,7 +13,7 @@ Alternatively if a variable is defined within a function block for example, it i
 ...     def inner():
 ...         print(foo)  # has access to foo from scope of outer
 ...     return inner    # brings inner to scope of caller
-... 
+...
 >>> inner = outer()  # get inner function
 >>> inner()  # prints variable foo without issue
 bar

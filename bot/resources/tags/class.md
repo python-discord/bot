@@ -10,7 +10,7 @@ Here is an example class:
 class Foo:
     def __init__(self, somedata):
         self.my_attrib = somedata
-        
+
     def show(self):
         print(self.my_attrib)
 ```

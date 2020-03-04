@@ -16,13 +16,13 @@ If we wanted to store 5 squared in a variable called `x`, we could do that like 
 ```py
 >>> def square(n):
 ...     n*n  # calculates then throws away, returns None
-... 
+...
 >>> x = square(5)
 >>> print(x)
 None
 >>> def square(n):
 ...     print(n*n)  # calculates and prints, then throws away and returns None
-... 
+...
 >>> x = square(5)
 25
 >>> print(x)

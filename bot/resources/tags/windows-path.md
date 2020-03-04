@@ -1,6 +1,6 @@
 **PATH on Windows**
 
-If you have installed Python but you forgot to check the *Add Python to PATH* option during the installation you may still be able to access your installation with ease. 
+If you have installed Python but you forgot to check the *Add Python to PATH* option during the installation you may still be able to access your installation with ease.
 
 If you did not uncheck the option to install the Python launcher then you will find a `py` command on your system. If you want to be able to open your Python installation by running `python` then your best option is to re-install Python.
 

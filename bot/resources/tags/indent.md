@@ -12,7 +12,7 @@ def foo():
         print('ham')  # indented two levels
     return bar  # indented one level
 ```
-The first line is not indented. The next two lines are indented to be inside of the function definition. They will only run when the function is called. The fourth line is indented to be inside the `if` statement, and will only run if the `if` statement evaluates to `True`. The fifth and last line is like the 2nd and 3rd and will always run when the function is called. It effectively closes the `if` statement above as no more lines can be inside the `if` statement below that line. 
+The first line is not indented. The next two lines are indented to be inside of the function definition. They will only run when the function is called. The fourth line is indented to be inside the `if` statement, and will only run if the `if` statement evaluates to `True`. The fifth and last line is like the 2nd and 3rd and will always run when the function is called. It effectively closes the `if` statement above as no more lines can be inside the `if` statement below that line.
 
 **Indentation is used after:**
 **1.** [Compound statements](https://docs.python.org/3/reference/compound_stmts.html) (eg. `if`, `while`, `for`, `try`, `with`, `def`, `class`, and their counterparts)

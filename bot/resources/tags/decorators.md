@@ -12,12 +12,12 @@ Consider the following example of a timer decorator:
 ...         print('Time elapsed:', time.time() - start)
 ...         return result
 ...     return inner
-... 
+...
 >>> @timer
 ... def slow(delay=1):
 ...     time.sleep(delay)
 ...     return 'Finished!'
-... 
+...
 >>> print(slow())
 Time elapsed: 1.0011568069458008
 Finished!

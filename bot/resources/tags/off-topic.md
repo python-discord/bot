@@ -1,7 +1,7 @@
 **Off-topic channels**
 
-There are three off-topic channels:    
-• <#291284109232308226>   
+There are three off-topic channels:  
+• <#291284109232308226>  
 • <#463035241142026251>  
 • <#463035268514185226>  
 

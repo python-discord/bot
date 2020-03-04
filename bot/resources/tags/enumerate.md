@@ -4,7 +4,7 @@ index = 0
 for item in my_list:
     print(f"{index}: {item}")
     index += 1
-``` 
+```
 into beautiful, _pythonic_ code:
 ```py
 for index, item in enumerate(my_list):
