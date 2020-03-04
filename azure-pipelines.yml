@@ -9,7 +9,7 @@ jobs:
   - job: test
     displayName: 'Lint & Test'
     pool:
-      vmImage: ubuntu-16.04
+      vmImage: ubuntu-18.04
 
     variables:
       PIP_CACHE_DIR: ".cache/pip"
@@ -18,7 +18,7 @@ jobs:
       - task: UsePythonVersion@0
         displayName: 'Set Python version'
         inputs:
-          versionSpec: '3.7.x'
+          versionSpec: '3.8.x'
           addToPath: true
 
       - script: pip install pipenv
