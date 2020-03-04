@@ -1,5 +1,4 @@
 import logging
-import os
 import re
 import time
 from pathlib import Path
@@ -39,18 +38,17 @@ class Tags(Cog):
     async def get_tags(self) -> None:
         """Get all tags."""
         # Save all tags in memory.
-        tag_files = os.listdir("bot/resources/tags")
+        tag_files = Path("bot", "resources", "tags").iterdir()
         for file in tag_files:
-            p = Path("bot", "resources", "tags", file)
-            tag_title = os.path.splitext(file)[0].lower()
-            with p.open() as f:
-                tag = {
-                    "title": tag_title,
-                    "embed": {
-                        "description": f.read()
-                    }
+            file_path = Path(file)
+            tag_title = file_path.stem
+            tag = {
+                "title": tag_title,
+                "embed": {
+                    "description": file_path.read_text()
                 }
-                self._cache[tag_title] = tag
+            }
+            self._cache[tag_title] = tag
 
     @staticmethod
     def _fuzzy_search(search: str, target: str) -> float:
