@@ -9,7 +9,7 @@ from typing import Optional
 
 import dateutil.parser
 import discord
-from discord import Color, Embed, HTTPException, Message, errors
+from discord import Color, DMChannel, Embed, HTTPException, Message, errors
 from discord.ext.commands import Cog, Context
 
 from bot.api import ResponseCodeError
@@ -273,7 +273,14 @@ class WatchChannel(metaclass=CogABCMeta):
 
         reason = self.watched_users[user_id]['reason']
 
-        embed = Embed(description=f"{msg.author.mention} in [#{msg.channel.name}]({msg.jump_url})")
+        if isinstance(msg.channel, DMChannel):
+            # If a watched user DMs the bot there won't be a channel name or jump URL
+            # This could technically include a GroupChannel but bot's can't be in those
+            message_jump = "via DM"
+        else:
+            message_jump = f"in [#{msg.channel.name}]({msg.jump_url})"
+
+        embed = Embed(description=f"{msg.author.mention} {message_jump}")
         embed.set_footer(text=f"Added {time_delta} by {actor} | Reason: {reason}")
 
         await self.webhook_send(embed=embed, username=msg.author.display_name, avatar_url=msg.author.avatar_url)
