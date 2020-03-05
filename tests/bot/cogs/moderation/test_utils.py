@@ -43,7 +43,13 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
             {
                 "args": (self.ctx, self.member, "ban"),
                 "get_return_value": [],
-                "expected_output": False
+                "expected_output": False,
+                "get_call": {
+                    "active": "true",
+                    "type": "ban",
+                    "user__id": str(self.member.id)
+                },
+                "send_params": None
             },
             {
                 "args": (self.ctx, self.member, "ban"),
@@ -58,7 +64,16 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     "reason": "Test",
                     "hidden": False
                 }],
-                "expected_output": True
+                "expected_output": True,
+                "get_call": {
+                    "active": "true",
+                    "type": "ban",
+                    "user__id": str(self.member.id)
+                },
+                "send_params": (
+                    f":x: According to my records, this user already has a ban infraction. "
+                    f"See infraction **#1**."
+                )
             }
         ]
 
@@ -66,12 +81,21 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
             args = case["args"]
             return_value = case["get_return_value"]
             expected = case["expected_output"]
+            get = case["get_call"]
+            send_vals = case["send_params"]
 
-            with self.subTest(args=args, return_value=return_value, expected=expected):
+            with self.subTest(args=args, return_value=return_value, expected=expected, get=get, send_vals=send_vals):
                 self.bot.api_client.get.return_value = return_value
 
                 result = await has_active_infraction(*args)
                 self.assertEqual(result, expected)
+                self.bot.api_client.get.assert_awaited_once_with("bot/infractions", params=get)
+
+                if result:
+                    self.ctx.send.assert_awaited_once_with(send_vals)
+
+                self.bot.api_client.get.reset_mock()
+                self.ctx.send.reset_mock()
 
     async def test_notify_infraction(self):
         """Test does `notify_infraction` create correct embed."""
