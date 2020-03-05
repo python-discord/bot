@@ -44,7 +44,7 @@ class Information(Cog):
             colour=Colour.blurple()
         )
 
-        await LinePaginator.paginate(role_list, ctx, embed)
+        await LinePaginator.paginate(role_list, ctx, embed, empty=False)
 
     @with_role(*constants.MODERATION_ROLES)
     @command(name="role")
