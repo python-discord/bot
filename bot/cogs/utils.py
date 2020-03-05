@@ -1,14 +1,15 @@
+import difflib
 import logging
 import re
 import unicodedata
 from asyncio import TimeoutError, sleep
 from email.parser import HeaderParser
 from io import StringIO
-from typing import Tuple
+from typing import Tuple, Union
 
 from dateutil import relativedelta
 from discord import Colour, Embed, Message, Role
-from discord.ext.commands import Cog, Context, command
+from discord.ext.commands import BadArgument, Cog, Context, command
 
 from bot.bot import Bot
 from bot.constants import Channels, MODERATION_ROLES, Mention, STAFF_ROLES
@@ -16,6 +17,28 @@ from bot.decorators import in_channel, with_role
 from bot.utils.time import humanize_delta
 
 log = logging.getLogger(__name__)
+
+ZEN_OF_PYTHON = """\
+Beautiful is better than ugly.
+Explicit is better than implicit.
+Simple is better than complex.
+Complex is better than complicated.
+Flat is better than nested.
+Sparse is better than dense.
+Readability counts.
+Special cases aren't special enough to break the rules.
+Although practicality beats purity.
+Errors should never pass silently.
+Unless explicitly silenced.
+In the face of ambiguity, refuse the temptation to guess.
+There should be one-- and preferably only one --obvious way to do it.
+Although that way may not be obvious at first unless you're Dutch.
+Now is better than never.
+Although never is often better than *right* now.
+If the implementation is hard to explain, it's a bad idea.
+If the implementation is easy to explain, it may be a good idea.
+Namespaces are one honking great idea -- let's do more of those!
+"""
 
 
 class Utils(Cog):
@@ -172,6 +195,67 @@ class Utils(Cog):
             f"{ctx.author.mention}, I have reset {role} to be unmentionable "
             f"as I detected unauthorised use by {msg.author} (ID: {msg.author.id})."
         )
+
+    @command()
+    async def zen(self, ctx: Context, *, search_value: Union[int, str, None] = None) -> None:
+        """
+        Show the Zen of Python.
+
+        Without any arguments, the full Zen will be produced.
+        If an integer is provided, the line with that index will be produced.
+        If a string is provided, the line which matches best will be produced.
+        """
+        embed = Embed(
+            colour=Colour.blurple(),
+            title="The Zen of Python",
+            description=ZEN_OF_PYTHON
+        )
+
+        if search_value is None:
+            embed.title += ", by Tim Peters"
+            await ctx.send(embed=embed)
+            return
+
+        zen_lines = ZEN_OF_PYTHON.splitlines()
+
+        # handle if it's an index int
+        if isinstance(search_value, int):
+            upper_bound = len(zen_lines) - 1
+            lower_bound = -1 * upper_bound
+            if not (lower_bound <= search_value <= upper_bound):
+                raise BadArgument(f"Please provide an index between {lower_bound} and {upper_bound}.")
+
+            embed.title += f" (line {search_value % len(zen_lines)}):"
+            embed.description = zen_lines[search_value]
+            await ctx.send(embed=embed)
+            return
+
+        # handle if it's a search string
+        matcher = difflib.SequenceMatcher(None, search_value.lower())
+
+        best_match = ""
+        match_index = 0
+        best_ratio = 0
+
+        for index, line in enumerate(zen_lines):
+            matcher.set_seq2(line.lower())
+
+            # the match ratio needs to be adjusted because, naturally,
+            # longer lines will have worse ratios than shorter lines when
+            # fuzzy searching for keywords. this seems to work okay.
+            adjusted_ratio = (len(line) - 5) ** 0.5 * matcher.ratio()
+
+            if adjusted_ratio > best_ratio:
+                best_ratio = adjusted_ratio
+                best_match = line
+                match_index = index
+
+        if not best_match:
+            raise BadArgument("I didn't get a match! Please try again with a different search term.")
+
+        embed.title += f" (line {match_index}):"
+        embed.description = best_match
+        await ctx.send(embed=embed)
 
 
 def setup(bot: Bot) -> None:
