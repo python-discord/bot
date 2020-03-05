@@ -40,7 +40,7 @@ class Information(Cog):
 
         # Build an embed
         embed = Embed(
-            title=f"Role information (Total {len(roles)} roles)",
+            title=f"Role information (Total {len(roles)} role{'s' * (len(role_list) > 1)})",
             colour=Colour.blurple()
         )
 
