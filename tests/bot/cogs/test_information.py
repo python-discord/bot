@@ -45,7 +45,7 @@ class InformationCogTests(unittest.TestCase):
         _, kwargs = self.ctx.send.call_args
         embed = kwargs.pop('embed')
 
-        self.assertEqual(embed.title, "Role information (Total 1 roles)")
+        self.assertEqual(embed.title, "Role information (Total 1 role)")
         self.assertEqual(embed.colour, discord.Colour.blurple())
         self.assertEqual(embed.description, f"\n`{self.moderator_role.id}` - {self.moderator_role.mention}\n")
 
