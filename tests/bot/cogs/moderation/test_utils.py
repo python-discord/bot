@@ -236,17 +236,17 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
             {
                 "args": (self.user, Embed(title="Test", description="Test val")),
                 "expected_output": False,
-                "raised_exception": HTTPException
+                "raised_exception": HTTPException(AsyncMock(), AsyncMock())
             },
             {
                 "args": (self.user, Embed(title="Test", description="Test val")),
                 "expected_output": False,
-                "raised_exception": Forbidden
+                "raised_exception": Forbidden(AsyncMock(), AsyncMock())
             },
             {
                 "args": (self.user, Embed(title="Test", description="Test val")),
                 "expected_output": False,
-                "raised_exception": NotFound
+                "raised_exception": NotFound(AsyncMock(), AsyncMock())
             }
         ]
 
@@ -257,11 +257,13 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
 
             with self.subTest(args=args, expected=expected, raised=raised):
                 if raised:
-                    self.user.send.side_effect = raised(AsyncMock(), AsyncMock())
+                    self.user.send.side_effect = raised
 
                 result = await send_private_embed(*args)
 
                 self.assertEqual(result, expected)
+
+                self.user.send.reset_mock(side_effect=True)
 
     async def test_post_infraction(self):
         """Test does `post_infraction` return correct value."""
