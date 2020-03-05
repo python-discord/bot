@@ -144,7 +144,7 @@ def format_infraction_with_duration(
     if absolute:
         delta = abs(delta)
 
-    duration = humanize_delta(delta, max_units=max_units) + datetime.timedelta(seconds=1)
+    duration = humanize_delta(delta + datetime.timedelta(seconds=1), max_units=max_units)
     duration_formatted = f" ({duration})" if duration else ""
 
     return f"{date_to_formatted}{duration_formatted}"
