@@ -190,8 +190,9 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 self.ctx.send.reset_mock(side_effect=True)
                 send_private_embed_mock.reset_mock()
 
-    async def test_notify_pardon(self):
-        """Test does `notify_pardon` create correct embed."""
+    @patch("bot.cogs.moderation.utils.send_private_embed")
+    async def test_notify_pardon(self, send_private_embed_mock):
+        """Test does `notify_pardon` create correct result."""
         test_cases = [
             {
                 "args": (self.user, "Test title", "Example content"),
@@ -199,7 +200,9 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     "description": "Example content",
                     "title": "Test title",
                     "icon_url": Icons.user_verified
-                }
+                },
+                "send_result": True,
+                "send_raise": None
             },
             {
                 "args": (self.user, "Test title 1", "Example content 1", Icons.user_update),
@@ -207,23 +210,38 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     "description": "Example content 1",
                     "title": "Test title 1",
                     "icon_url": Icons.user_update
-                }
+                },
+                "send_result": False,
+                "send_raise": NotFound(AsyncMock(), AsyncMock())
             }
         ]
 
         for case in test_cases:
             args = case["args"]
             expected = case["expected_output"]
+            send, send_raise = case["send_result"], case["send_raise"]
 
             with self.subTest(args=args, expected=expected):
-                await notify_pardon(*args)
+                if send_raise:
+                    self.ctx.send.side_effect = send_raise
 
-                embed: Embed = self.user.send.call_args[1]["embed"]
+                send_private_embed_mock.return_value = send
+
+                result = await notify_pardon(*args)
+
+                self.assertEqual(send, result)
+
+                embed = send_private_embed_mock.call_args[0][1]
 
                 self.assertEqual(embed.description, expected["description"])
                 self.assertEqual(embed.colour.value, PARDON_COLOR)
                 self.assertEqual(embed.author.name, expected["title"])
                 self.assertEqual(embed.author.icon_url, expected["icon_url"])
+
+                send_private_embed_mock.assert_awaited_once_with(args[0], embed)
+
+                self.ctx.send.reset_mock(side_effect=True)
+                send_private_embed_mock.reset_mock()
 
     async def test_post_user(self):
         """Test does `post_user` work correctly."""
