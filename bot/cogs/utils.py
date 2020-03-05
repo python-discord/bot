@@ -1,19 +1,18 @@
 import difflib
 import logging
-import random
 import re
 import unicodedata
 from asyncio import TimeoutError, sleep
 from email.parser import HeaderParser
 from io import StringIO
-from typing import Optional, Tuple
+from typing import Tuple, Union
 
 from dateutil import relativedelta
 from discord import Colour, Embed, Message, Role
-from discord.ext.commands import Cog, Context, command
+from discord.ext.commands import BadArgument, Cog, Context, command
 
 from bot.bot import Bot
-from bot.constants import Channels, MODERATION_ROLES, Mention, NEGATIVE_REPLIES, STAFF_ROLES
+from bot.constants import Channels, MODERATION_ROLES, Mention, STAFF_ROLES
 from bot.decorators import in_channel, with_role
 from bot.utils.time import humanize_delta
 
@@ -198,7 +197,7 @@ class Utils(Cog):
         )
 
     @command()
-    async def zen(self, ctx: Context, *, search_value: Optional[str] = None) -> None:
+    async def zen(self, ctx: Context, *, search_value: Union[int, str, None] = None) -> None:
         """
         Show the Zen of Python.
 
@@ -206,42 +205,32 @@ class Utils(Cog):
         If an integer is provided, the line with that index will be produced.
         If a string is provided, the line which matches best will be produced.
         """
-        if search_value is None:
-            embed = Embed(
-                colour=Colour.blurple(),
-                title="The Zen of Python, by Tim Peters",
-                description=ZEN_OF_PYTHON
-            )
+        embed = Embed(
+            colour=Colour.blurple(),
+            title="The Zen of Python",
+            description=ZEN_OF_PYTHON
+        )
 
+        if search_value is None:
+            embed.title += ", by Tim Peters"
             await ctx.send(embed=embed)
             return
 
         zen_lines = ZEN_OF_PYTHON.splitlines()
 
-        # check if it's an integer. could be negative. why not.
-        is_negative_integer = search_value[0] == "-" and search_value[1:].isdigit()
-        if search_value.isdigit() or is_negative_integer:
-            index = int(search_value)
+        # handle if it's an index int
+        if isinstance(search_value, int):
+            upper_bound = len(zen_lines) - 1
+            lower_bound = -1 * upper_bound
+            if not (lower_bound <= search_value <= upper_bound):
+                raise BadArgument(f"Please provide an index between {lower_bound} and {upper_bound}.")
 
-            try:
-                line = zen_lines[index]
-            except IndexError:
-                embed = Embed(
-                    colour=Colour.red(),
-                    title=random.choice(NEGATIVE_REPLIES),
-                    description=f"Please provide an index between {-len(zen_lines)} and {len(zen_lines) - 1}."
-                )
-            else:
-                embed = Embed(
-                    colour=Colour.blurple(),
-                    title=f"The Zen of Python (line {index % len(zen_lines)}):",
-                    description=line
-                )
-
+            embed.title += f" (line {search_value % len(zen_lines)}):"
+            embed.description = zen_lines[search_value]
             await ctx.send(embed=embed)
             return
 
-        # at this point, we must be dealing with a string search.
+        # handle if it's a search string
         matcher = difflib.SequenceMatcher(None, search_value.lower())
 
         best_match = ""
@@ -261,12 +250,8 @@ class Utils(Cog):
                 best_match = line
                 match_index = index
 
-        embed = Embed(
-            colour=Colour.blurple(),
-            title=f"The Zen of Python (line {match_index}):",
-            description=best_match
-        )
-
+        embed.title += f" (line {match_index}):"
+        embed.description = best_match
         await ctx.send(embed=embed)
 
 
