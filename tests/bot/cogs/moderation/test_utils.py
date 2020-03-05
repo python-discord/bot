@@ -258,10 +258,18 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                             1234,
                             5678
                         ],
-                        "in_guild": True
+                        "in_guild": False
                     }
                 ],
-                "raise_error": False
+                "raise_error": False,
+                "payload": {
+                    "avatar_hash": getattr(self.user, "avatar", 0),
+                    "discriminator": int(getattr(self.user, "discriminator", 0)),
+                    "id": self.user.id,
+                    "in_guild": False,
+                    "name": getattr(self.user, "name", "Name unknown"),
+                    "roles": []
+                }
             },
             {
                 "args": (self.ctx, self.user),
@@ -275,10 +283,18 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                             1234,
                             5678
                         ],
-                        "in_guild": True
+                        "in_guild": False
                     }
                 ],
-                "raise_error": True
+                "raise_error": True,
+                "payload": {
+                    "avatar_hash": getattr(self.user, "avatar", 0),
+                    "discriminator": int(getattr(self.user, "discriminator", 0)),
+                    "id": self.user.id,
+                    "in_guild": False,
+                    "name": getattr(self.user, "name", "Name unknown"),
+                    "roles": []
+                }
             }
         ]
 
@@ -286,8 +302,9 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
             args = case["args"]
             expected = case["post_result"]
             error = case["raise_error"]
+            payload = case["payload"]
 
-            with self.subTest(args=args, result=expected, error=error):
+            with self.subTest(args=args, result=expected, error=error, payload=payload):
                 self.ctx.bot.api_client.post.return_value = expected
 
                 if error:
@@ -299,6 +316,8 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     self.assertIsNone(result)
                 else:
                     self.assertEqual(result, expected)
+
+                self.bot.api_client.post.assert_awaited_once_with("bot/users", json=payload)
 
     async def test_send_private_embed(self):
         """Test does `send_private_embed` return correct value."""
