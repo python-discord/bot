@@ -84,7 +84,7 @@ class SyncerSendPromptTests(unittest.IsolatedAsyncioTestCase):
 
                 method.assert_called_once_with(constants.Channels.dev_core)
 
-    async def test_send_prompt_returns_None_if_channel_fetch_fails(self):
+    async def test_send_prompt_returns_none_if_channel_fetch_fails(self):
         """None should be returned if there's an HTTPException when fetching the channel."""
         self.bot.get_channel.return_value = None
         self.bot.fetch_channel.side_effect = discord.HTTPException(mock.MagicMock(), "test error!")
