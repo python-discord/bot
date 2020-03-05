@@ -250,6 +250,9 @@ class Utils(Cog):
                 best_match = line
                 match_index = index
 
+        if not best_match:
+            raise BadArgument("I didn't get a match! Please try again with a different search term.")
+
         embed.title += f" (line {match_index}):"
         embed.description = best_match
         await ctx.send(embed=embed)
