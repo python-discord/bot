@@ -356,6 +356,8 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 result = await send_private_embed(*args)
 
                 self.assertEqual(result, expected)
+                if expected:
+                    args[0].send.assert_awaited_once_with(embed=args[1])
 
                 self.user.send.reset_mock(side_effect=True)
 
