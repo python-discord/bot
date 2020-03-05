@@ -361,8 +361,10 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
 
                 self.user.send.reset_mock(side_effect=True)
 
-    async def test_post_infraction(self):
+    @patch("bot.cogs.moderation.utils.post_user")
+    async def test_post_infraction(self, post_user_mock):
         """Test does `post_infraction` return correct value."""
+        now = datetime.now()
         test_cases = [
             {
                 "args": (self.ctx, self.member, "ban", "Test Ban"),
@@ -379,20 +381,44 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                         "hidden": False
                     }
                 ],
-                "raised_error": None
+                "raised_error": None,
+                "payload": {
+                    "actor": self.ctx.message.author.id,
+                    "hidden": False,
+                    "reason": "Test Ban",
+                    "type": "ban",
+                    "user": self.member.id,
+                    "active": True
+                }
             },
             {
                 "args": (self.ctx, self.member, "note", "Test Ban"),
                 "expected_output": None,
-                "raised_error": ResponseCodeError(AsyncMock(), AsyncMock())
+                "raised_error": ResponseCodeError(AsyncMock(), AsyncMock()),
+                "payload": {
+                    "actor": self.ctx.message.author.id,
+                    "hidden": False,
+                    "reason": "Test Ban",
+                    "type": "note",
+                    "user": self.member.id,
+                    "active": True
+                }
             },
             {
                 "args": (self.ctx, self.member, "mute", "Test Ban"),
                 "expected_output": None,
-                "raised_error": ResponseCodeError(AsyncMock(), {'user': 1234})
+                "raised_error": ResponseCodeError(AsyncMock(status=400), {'user': 1234}),
+                "payload": {
+                    "actor": self.ctx.message.author.id,
+                    "hidden": False,
+                    "reason": "Test Ban",
+                    "type": "mute",
+                    "user": self.member.id,
+                    "active": True
+                }
             },
             {
-                "args": (self.ctx, self.member, "ban", "Test Ban", datetime.now()),
+                "args": (self.ctx, self.member, "ban", "Test Ban", now, True, False),
                 "expected_output": [
                     {
                         "id": 1,
@@ -406,7 +432,16 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                         "hidden": False
                     }
                 ],
-                "raised_error": None
+                "raised_error": None,
+                "payload": {
+                    "actor": self.ctx.message.author.id,
+                    "hidden": True,
+                    "reason": "Test Ban",
+                    "type": "ban",
+                    "user": self.member.id,
+                    "active": False,
+                    "expires_at": now.isoformat()
+                }
             },
         ]
 
@@ -414,10 +449,16 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
             args = case["args"]
             expected = case["expected_output"]
             raised = case["raised_error"]
+            payload = case["payload"]
 
-            with self.subTest(args=args, expected=expected, raised=raised):
+            with self.subTest(args=args, expected=expected, raised=raised, payload=payload):
+                self.ctx.bot.api_client.post.reset_mock(side_effect=True)
+                post_user_mock.reset_mock()
+
                 if raised:
                     self.ctx.bot.api_client.post.side_effect = raised
+
+                post_user_mock.return_value = "foo"
 
                 self.ctx.bot.api_client.post.return_value = expected
 
@@ -425,4 +466,9 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
 
                 self.assertEqual(result, expected)
 
-                self.ctx.bot.api_client.post.reset_mock(side_effect=True)
+                if not raised:
+                    self.bot.api_client.post.assert_awaited_once_with("bot/infractions", json=payload)
+
+                if hasattr(raised, "status") and hasattr(raised, "response_json"):
+                    if raised.status == 400 and "user" in raised.response_json:
+                        post_user_mock.assert_awaited_once_with(args[0], args[1])
