@@ -7,12 +7,11 @@ from discord import Embed, Forbidden, HTTPException, NotFound
 
 from bot.api import ResponseCodeError
 from bot.cogs.moderation.utils import (
-    has_active_infraction, notify_infraction, notify_pardon, post_infraction, post_user, send_private_embed
+    RULES_URL, has_active_infraction, notify_infraction, notify_pardon, post_infraction, post_user, send_private_embed
 )
 from bot.constants import Colours, Icons
 from tests.helpers import MockBot, MockContext, MockMember, MockUser
 
-RULES_URL = "https://pythondiscord.com/pages/rules"
 APPEAL_EMAIL = "appeals@pythondiscord.com"
 
 INFRACTION_TITLE = f"Please review our rules over at {RULES_URL}"
