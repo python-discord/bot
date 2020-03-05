@@ -1,7 +1,7 @@
 import unittest
 from datetime import datetime
 from typing import Union
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 from discord import Embed, Forbidden, HTTPException, NotFound
 
@@ -97,8 +97,9 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 self.bot.api_client.get.reset_mock()
                 self.ctx.send.reset_mock()
 
-    async def test_notify_infraction(self):
-        """Test does `notify_infraction` create correct embed."""
+    @patch("bot.cogs.moderation.utils.send_private_embed")
+    async def test_notify_infraction(self, send_private_embed_mock):
+        """Test does `notify_infraction` create correct result."""
         test_cases = [
             {
                 "args": (self.user, "ban", "2020-02-26 09:20 (23 hours and 59 minutes)"),
@@ -109,8 +110,10 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                         "reason": "No reason provided."
                     }),
                     "icon_url": Icons.token_removed,
-                    "footer": INFRACTION_APPEAL_FOOTER
-                }
+                    "footer": INFRACTION_APPEAL_FOOTER,
+                },
+                "send_result": True,
+                "send_raise": None
             },
             {
                 "args": (self.user, "warning", None, "Test reason."),
@@ -122,7 +125,9 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     }),
                     "icon_url": Icons.token_removed,
                     "footer": Embed.Empty
-                }
+                },
+                "send_result": False,
+                "send_raise": Forbidden(AsyncMock(), AsyncMock())
             },
             {
                 "args": (self.user, "note", None, None, Icons.defcon_denied),
@@ -134,7 +139,9 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     }),
                     "icon_url": Icons.defcon_denied,
                     "footer": Embed.Empty
-                }
+                },
+                "send_result": False,
+                "send_raise": NotFound(AsyncMock(), AsyncMock())
             },
             {
                 "args": (self.user, "mute", "2020-02-26 09:20 (23 hours and 59 minutes)", "Test", Icons.defcon_denied),
@@ -146,18 +153,28 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     }),
                     "icon_url": Icons.defcon_denied,
                     "footer": INFRACTION_APPEAL_FOOTER
-                }
+                },
+                "send_result": False,
+                "send_raise": HTTPException(AsyncMock(), AsyncMock())
             }
         ]
 
         for case in test_cases:
             args = case["args"]
             expected = case["expected_output"]
+            send, send_raise = case["send_result"], case["send_raise"]
 
-            with self.subTest(args=args, expected=expected):
-                await notify_infraction(*args)
+            with self.subTest(args=args, expected=expected, send=send, send_raise=send_raise):
+                if send_raise:
+                    self.ctx.send.side_effect = send_raise
 
-                embed: Embed = self.user.send.call_args[1]["embed"]
+                send_private_embed_mock.return_value = send
+
+                result = await notify_infraction(*args)
+
+                self.assertEqual(send, result)
+
+                embed = send_private_embed_mock.call_args[0][1]
 
                 self.assertEqual(embed.title, INFRACTION_TITLE)
                 self.assertEqual(embed.colour.value, INFRACTION_COLOR)
@@ -167,6 +184,11 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(embed.author.icon_url, expected["icon_url"])
                 self.assertEqual(embed.footer.text, expected["footer"])
                 self.assertEqual(embed.description, expected["description"])
+
+                send_private_embed_mock.assert_awaited_once_with(args[0], embed)
+
+                self.ctx.send.reset_mock(side_effect=True)
+                send_private_embed_mock.reset_mock()
 
     async def test_notify_pardon(self):
         """Test does `notify_pardon` create correct embed."""
