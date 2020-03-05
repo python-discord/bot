@@ -317,7 +317,10 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 else:
                     self.assertEqual(result, expected)
 
-                self.bot.api_client.post.assert_awaited_once_with("bot/users", json=payload)
+                if not error:
+                    self.bot.api_client.post.assert_awaited_once_with("bot/users", json=payload)
+
+                self.bot.api_client.post.reset_mock(side_effect=True)
 
     async def test_send_private_embed(self):
         """Test does `send_private_embed` return correct value."""
