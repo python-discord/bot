@@ -37,7 +37,6 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
         self.member = MockMember(id=1234)
         self.user = MockUser(id=1234)
         self.ctx = MockContext(bot=self.bot, author=self.member)
-        self.bot.api_client.get = AsyncMock()
 
     async def test_user_has_active_infraction(self):
         """Test does `has_active_infraction` return correct value."""
