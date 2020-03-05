@@ -47,7 +47,7 @@ class InformationCogTests(unittest.TestCase):
 
         self.assertEqual(embed.title, "Role information (Total 1 roles)")
         self.assertEqual(embed.colour, discord.Colour.blurple())
-        self.assertEqual(embed.description, f"\n`{self.moderator_role.id}` - {self.moderator_role.mention}\n\n")
+        self.assertEqual(embed.description, f"\n`{self.moderator_role.id}` - {self.moderator_role.mention}\n")
 
     def test_role_info_command(self):
         """Tests the `role info` command."""
