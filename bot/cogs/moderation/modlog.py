@@ -4,6 +4,7 @@ import itertools
 import logging
 import typing as t
 from datetime import datetime
+from itertools import zip_longest
 
 import discord
 from dateutil.relativedelta import relativedelta
@@ -15,7 +16,6 @@ from discord.ext.commands import Cog, Context
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, URLs
 from bot.utils.time import humanize_delta
-from .utils import UserTypes
 
 log = logging.getLogger(__name__)
 
@@ -25,6 +25,12 @@ CHANNEL_CHANGES_UNSUPPORTED = ("permissions",)
 CHANNEL_CHANGES_SUPPRESSED = ("_overwrites", "position")
 MEMBER_CHANGES_SUPPRESSED = ("status", "activities", "_client_status", "nick")
 ROLE_CHANGES_UNSUPPORTED = ("colour", "permissions")
+
+VOICE_STATE_ATTRIBUTES = {
+    "channel.name": "Channel",
+    "self_stream": "Streaming",
+    "self_video": "Broadcasting",
+}
 
 
 class ModLog(Cog, name="ModLog"):
@@ -37,14 +43,16 @@ class ModLog(Cog, name="ModLog"):
         self._cached_deletes = []
         self._cached_edits = []
 
-    async def upload_log(self, messages: t.List[discord.Message], actor_id: int) -> str:
-        """
-        Uploads the log data to the database via an API endpoint for uploading logs.
+    async def upload_log(
+        self,
+        messages: t.Iterable[discord.Message],
+        actor_id: int,
+        attachments: t.Iterable[t.List[str]] = None
+    ) -> str:
+        """Upload message logs to the database and return a URL to a page for viewing the logs."""
+        if attachments is None:
+            attachments = []
 
-        Used in several mod log embeds.
-
-        Returns a URL that can be used to view the log.
-        """
         response = await self.bot.api_client.post(
             'bot/deleted-messages',
             json={
@@ -56,9 +64,10 @@ class ModLog(Cog, name="ModLog"):
                         'author': message.author.id,
                         'channel_id': message.channel.id,
                         'content': message.content,
-                        'embeds': [embed.to_dict() for embed in message.embeds]
+                        'embeds': [embed.to_dict() for embed in message.embeds],
+                        'attachments': attachment,
                     }
-                    for message in messages
+                    for message, attachment in zip_longest(messages, attachments)
                 ]
             }
         )
@@ -78,7 +87,7 @@ class ModLog(Cog, name="ModLog"):
         title: t.Optional[str],
         text: str,
         thumbnail: t.Optional[t.Union[str, discord.Asset]] = None,
-        channel_id: int = Channels.modlog,
+        channel_id: int = Channels.mod_log,
         ping_everyone: bool = False,
         files: t.Optional[t.List[discord.File]] = None,
         content: t.Optional[str] = None,
@@ -206,7 +215,7 @@ class ModLog(Cog, name="ModLog"):
                 new = value["new_value"]
                 old = value["old_value"]
 
-                changes.append(f"**{key.title()}:** `{old}` **->** `{new}`")
+                changes.append(f"**{key.title()}:** `{old}` **→** `{new}`")
 
             done.append(key)
 
@@ -284,7 +293,7 @@ class ModLog(Cog, name="ModLog"):
                 new = value["new_value"]
                 old = value["old_value"]
 
-                changes.append(f"**{key.title()}:** `{old}` **->** `{new}`")
+                changes.append(f"**{key.title()}:** `{old}` **→** `{new}`")
 
             done.append(key)
 
@@ -334,7 +343,7 @@ class ModLog(Cog, name="ModLog"):
             new = value["new_value"]
             old = value["old_value"]
 
-            changes.append(f"**{key.title()}:** `{old}` **->** `{new}`")
+            changes.append(f"**{key.title()}:** `{old}` **→** `{new}`")
 
             done.append(key)
 
@@ -355,7 +364,7 @@ class ModLog(Cog, name="ModLog"):
         )
 
     @Cog.listener()
-    async def on_member_ban(self, guild: discord.Guild, member: UserTypes) -> None:
+    async def on_member_ban(self, guild: discord.Guild, member: discord.Member) -> None:
         """Log ban event to user log."""
         if guild.id != GuildConstant.id:
             return
@@ -368,7 +377,7 @@ class ModLog(Cog, name="ModLog"):
             Icons.user_ban, Colours.soft_red,
             "User banned", f"{member} (`{member.id}`)",
             thumbnail=member.avatar_url_as(static_format="png"),
-            channel_id=Channels.userlog
+            channel_id=Channels.user_log
         )
 
     @Cog.listener()
@@ -390,7 +399,7 @@ class ModLog(Cog, name="ModLog"):
             Icons.sign_in, Colours.soft_green,
             "User joined", message,
             thumbnail=member.avatar_url_as(static_format="png"),
-            channel_id=Channels.userlog
+            channel_id=Channels.user_log
         )
 
     @Cog.listener()
@@ -407,7 +416,7 @@ class ModLog(Cog, name="ModLog"):
             Icons.sign_out, Colours.soft_red,
             "User left", f"{member} (`{member.id}`)",
             thumbnail=member.avatar_url_as(static_format="png"),
-            channel_id=Channels.userlog
+            channel_id=Channels.user_log
         )
 
     @Cog.listener()
@@ -424,7 +433,7 @@ class ModLog(Cog, name="ModLog"):
             Icons.user_unban, Colour.blurple(),
             "User unbanned", f"{member} (`{member.id}`)",
             thumbnail=member.avatar_url_as(static_format="png"),
-            channel_id=Channels.modlog
+            channel_id=Channels.mod_log
         )
 
     @Cog.listener()
@@ -487,23 +496,23 @@ class ModLog(Cog, name="ModLog"):
                 old = value.get("old_value")
 
                 if new and old:
-                    changes.append(f"**{key.title()}:** `{old}` **->** `{new}`")
+                    changes.append(f"**{key.title()}:** `{old}` **→** `{new}`")
 
             done.append(key)
 
         if before.name != after.name:
             changes.append(
-                f"**Username:** `{before.name}` **->** `{after.name}`"
+                f"**Username:** `{before.name}` **→** `{after.name}`"
             )
 
         if before.discriminator != after.discriminator:
             changes.append(
-                f"**Discriminator:** `{before.discriminator}` **->** `{after.discriminator}`"
+                f"**Discriminator:** `{before.discriminator}` **→** `{after.discriminator}`"
             )
 
         if before.display_name != after.display_name:
             changes.append(
-                f"**Display name:** `{before.display_name}` **->** `{after.display_name}`"
+                f"**Display name:** `{before.display_name}` **→** `{after.display_name}`"
             )
 
         if not changes:
@@ -520,7 +529,7 @@ class ModLog(Cog, name="ModLog"):
             Icons.user_update, Colour.blurple(),
             "Member updated", message,
             thumbnail=after.avatar_url_as(static_format="png"),
-            channel_id=Channels.userlog
+            channel_id=Channels.user_log
         )
 
     @Cog.listener()
@@ -529,7 +538,7 @@ class ModLog(Cog, name="ModLog"):
         channel = message.channel
         author = message.author
 
-        if message.guild.id != GuildConstant.id or channel.id in GuildConstant.ignored:
+        if message.guild.id != GuildConstant.id or channel.id in GuildConstant.modlog_blacklist:
             return
 
         self._cached_deletes.append(message.id)
@@ -582,7 +591,7 @@ class ModLog(Cog, name="ModLog"):
     @Cog.listener()
     async def on_raw_message_delete(self, event: discord.RawMessageDeleteEvent) -> None:
         """Log raw message delete event to message change log."""
-        if event.guild_id != GuildConstant.id or event.channel_id in GuildConstant.ignored:
+        if event.guild_id != GuildConstant.id or event.channel_id in GuildConstant.modlog_blacklist:
             return
 
         await asyncio.sleep(1)  # Wait here in case the normal event was fired
@@ -626,7 +635,7 @@ class ModLog(Cog, name="ModLog"):
         if (
             not msg_before.guild
             or msg_before.guild.id != GuildConstant.id
-            or msg_before.channel.id in GuildConstant.ignored
+            or msg_before.channel.id in GuildConstant.modlog_blacklist
             or msg_before.author.bot
         ):
             return
@@ -708,7 +717,7 @@ class ModLog(Cog, name="ModLog"):
         if (
             not message.guild
             or message.guild.id != GuildConstant.id
-            or message.channel.id in GuildConstant.ignored
+            or message.channel.id in GuildConstant.modlog_blacklist
             or message.author.bot
         ):
             return
@@ -748,4 +757,77 @@ class ModLog(Cog, name="ModLog"):
         await self.send_log_message(
             Icons.message_edit, Colour.blurple(), "Message edited (After)",
             after_response, channel_id=Channels.message_log
+        )
+
+    @Cog.listener()
+    async def on_voice_state_update(
+        self,
+        member: discord.Member,
+        before: discord.VoiceState,
+        after: discord.VoiceState
+    ) -> None:
+        """Log member voice state changes to the voice log channel."""
+        if (
+            member.guild.id != GuildConstant.id
+            or (before.channel and before.channel.id in GuildConstant.modlog_blacklist)
+        ):
+            return
+
+        if member.id in self._ignored[Event.voice_state_update]:
+            self._ignored[Event.voice_state_update].remove(member.id)
+            return
+
+        # Exclude all channel attributes except the name.
+        diff = DeepDiff(
+            before,
+            after,
+            exclude_paths=("root.session_id", "root.afk"),
+            exclude_regex_paths=r"root\.channel\.(?!name)",
+        )
+
+        # A type change seems to always take precedent over a value change. Furthermore, it will
+        # include the value change along with the type change anyway. Therefore, it's OK to
+        # "overwrite" values_changed; in practice there will never even be anything to overwrite.
+        diff_values = {**diff.get("values_changed", {}), **diff.get("type_changes", {})}
+
+        icon = Icons.voice_state_blue
+        colour = Colour.blurple()
+        changes = []
+
+        for attr, values in diff_values.items():
+            if not attr:  # Not sure why, but it happens.
+                continue
+
+            old = values["old_value"]
+            new = values["new_value"]
+
+            attr = attr[5:]  # Remove "root." prefix.
+            attr = VOICE_STATE_ATTRIBUTES.get(attr, attr.replace("_", " ").capitalize())
+
+            changes.append(f"**{attr}:** `{old}` **→** `{new}`")
+
+            # Set the embed icon and colour depending on which attribute changed.
+            if any(name in attr for name in ("Channel", "deaf", "mute")):
+                if new is None or new is True:
+                    # Left a channel or was muted/deafened.
+                    icon = Icons.voice_state_red
+                    colour = Colours.soft_red
+                elif old is None or old is True:
+                    # Joined a channel or was unmuted/undeafened.
+                    icon = Icons.voice_state_green
+                    colour = Colours.soft_green
+
+        if not changes:
+            return
+
+        message = "\n".join(f"{Emojis.bullet} {item}" for item in sorted(changes))
+        message = f"**{member}** (`{member.id}`)\n{message}"
+
+        await self.send_log_message(
+            icon_url=icon,
+            colour=colour,
+            title="Voice state updated",
+            text=message,
+            thumbnail=member.avatar_url_as(static_format="png"),
+            channel_id=Channels.voice_log
         )

@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import textwrap
 import typing as t
@@ -17,7 +18,7 @@ from bot.utils import time
 from bot.utils.scheduling import Scheduler
 from . import utils
 from .modlog import ModLog
-from .utils import MemberObject
+from .utils import UserSnowflake
 
 log = logging.getLogger(__name__)
 
@@ -38,7 +39,7 @@ class InfractionScheduler(Scheduler):
 
     async def reschedule_infractions(self, supported_infractions: t.Container[str]) -> None:
         """Schedule expiration for previous infractions."""
-        await self.bot.wait_until_ready()
+        await self.bot.wait_until_guild_available()
 
         log.trace(f"Rescheduling infractions for {self.__class__.__name__}.")
 
@@ -48,7 +49,7 @@ class InfractionScheduler(Scheduler):
         )
         for infraction in infractions:
             if infraction["expires_at"] is not None and infraction["type"] in supported_infractions:
-                self.schedule_task(self.bot.loop, infraction["id"], infraction)
+                self.schedule_task(infraction["id"], infraction)
 
     async def reapply_infraction(
         self,
@@ -77,7 +78,7 @@ class InfractionScheduler(Scheduler):
         self,
         ctx: Context,
         infraction: utils.Infraction,
-        user: MemberObject,
+        user: UserSnowflake,
         action_coro: t.Optional[t.Awaitable] = None
     ) -> None:
         """Apply an infraction to the user, log the infraction, and optionally notify the user."""
@@ -106,16 +107,20 @@ class InfractionScheduler(Scheduler):
 
         # DM the user about the infraction if it's not a shadow/hidden infraction.
         if not infraction["hidden"]:
-            # Sometimes user is a discord.Object; make it a proper user.
-            user = await self.bot.fetch_user(user.id)
+            dm_result = f"{constants.Emojis.failmail} "
+            dm_log_text = "\nDM: **Failed**"
 
-            # Accordingly display whether the user was successfully notified via DM.
-            if await utils.notify_infraction(user, infr_type, expiry, reason, icon):
-                dm_result = ":incoming_envelope: "
-                dm_log_text = "\nDM: Sent"
+            # Sometimes user is a discord.Object; make it a proper user.
+            try:
+                if not isinstance(user, (discord.Member, discord.User)):
+                    user = await self.bot.fetch_user(user.id)
+            except discord.HTTPException as e:
+                log.error(f"Failed to DM {user.id}: could not fetch user (status {e.status})")
             else:
-                dm_log_text = "\nDM: **Failed**"
-                log_content = ctx.author.mention
+                # Accordingly display whether the user was successfully notified via DM.
+                if await utils.notify_infraction(user, infr_type, expiry, reason, icon):
+                    dm_result = ":incoming_envelope: "
+                    dm_log_text = "\nDM: Sent"
 
         if infraction["actor"] == self.bot.user.id:
             log.trace(
@@ -146,7 +151,7 @@ class InfractionScheduler(Scheduler):
                 await action_coro
                 if expiry:
                     # Schedule the expiration of the infraction.
-                    self.schedule_task(ctx.bot.loop, infraction["id"], infraction)
+                    self.schedule_task(infraction["id"], infraction)
             except discord.HTTPException as e:
                 # Accordingly display that applying the infraction failed.
                 confirm_msg = f":x: failed to apply"
@@ -185,7 +190,7 @@ class InfractionScheduler(Scheduler):
 
         log.info(f"Applied {infr_type} infraction #{id_} to {user}.")
 
-    async def pardon_infraction(self, ctx: Context, infr_type: str, user: MemberObject) -> None:
+    async def pardon_infraction(self, ctx: Context, infr_type: str, user: UserSnowflake) -> None:
         """Prematurely end an infraction for a user and log the action in the mod log."""
         log.trace(f"Pardoning {infr_type} infraction for {user}.")
 
@@ -255,8 +260,7 @@ class InfractionScheduler(Scheduler):
         if log_text.get("DM") == "Sent":
             dm_emoji = ":incoming_envelope: "
         elif "DM" in log_text:
-            # Mention the actor because the DM failed to send.
-            log_content = ctx.author.mention
+            dm_emoji = f"{constants.Emojis.failmail} "
 
         # Accordingly display whether the pardon failed.
         if "Failure" in log_text:
@@ -304,18 +308,25 @@ class InfractionScheduler(Scheduler):
         Infractions of unsupported types will raise a ValueError.
         """
         guild = self.bot.get_guild(constants.Guild.id)
-        mod_role = guild.get_role(constants.Roles.moderator)
+        mod_role = guild.get_role(constants.Roles.moderators)
         user_id = infraction["user"]
+        actor = infraction["actor"]
         type_ = infraction["type"]
         id_ = infraction["id"]
+        inserted_at = infraction["inserted_at"]
+        expiry = infraction["expires_at"]
 
         log.info(f"Marking infraction #{id_} as inactive (expired).")
 
+        expiry = dateutil.parser.isoparse(expiry).replace(tzinfo=None) if expiry else None
+        created = time.format_infraction_with_duration(inserted_at, expiry)
+
         log_content = None
         log_text = {
-            "Member": str(user_id),
-            "Actor": str(self.bot.user),
-            "Reason": infraction["reason"]
+            "Member": f"<@{user_id}>",
+            "Actor": str(self.bot.get_user(actor) or actor),
+            "Reason": infraction["reason"],
+            "Created": created,
         }
 
         try:
@@ -381,14 +392,19 @@ class InfractionScheduler(Scheduler):
         if send_log:
             log_title = f"expiration failed" if "Failure" in log_text else "expired"
 
+            user = self.bot.get_user(user_id)
+            avatar = user.avatar_url_as(static_format="png") if user else None
+
             log.trace(f"Sending deactivation mod log for infraction #{id_}.")
             await self.mod_log.send_log_message(
                 icon_url=utils.INFRACTION_ICONS[type_][1],
                 colour=Colours.soft_green,
                 title=f"Infraction {log_title}: {type_}",
+                thumbnail=avatar,
                 text="\n".join(f"{k}: {v}" for k, v in log_text.items()),
                 footer=f"ID: {id_}",
                 content=log_content,
+
             )
 
         return log_text
@@ -412,4 +428,6 @@ class InfractionScheduler(Scheduler):
         expiry = dateutil.parser.isoparse(infraction["expires_at"]).replace(tzinfo=None)
         await time.wait_until(expiry)
 
-        await self.deactivate_infraction(infraction)
+        # Because deactivate_infraction() explicitly cancels this scheduled task, it is shielded
+        # to avoid prematurely cancelling itself.
+        await asyncio.shield(self.deactivate_infraction(infraction))

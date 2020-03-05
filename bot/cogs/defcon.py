@@ -59,7 +59,7 @@ class Defcon(Cog):
 
     async def sync_settings(self) -> None:
         """On cog load, try to synchronize DEFCON settings to the API."""
-        await self.bot.wait_until_ready()
+        await self.bot.wait_until_guild_available()
         self.channel = await self.bot.fetch_channel(Channels.defcon)
 
         try:
@@ -68,20 +68,20 @@ class Defcon(Cog):
 
         except Exception:  # Yikes!
             log.exception("Unable to get DEFCON settings!")
-            await self.bot.get_channel(Channels.devlog).send(
-                f"<@&{Roles.admin}> **WARNING**: Unable to get DEFCON settings!"
+            await self.bot.get_channel(Channels.dev_log).send(
+                f"<@&{Roles.admins}> **WARNING**: Unable to get DEFCON settings!"
             )
 
         else:
             if data["enabled"]:
                 self.enabled = True
                 self.days = timedelta(days=data["days"])
-                log.warning(f"DEFCON enabled: {self.days.days} days")
+                log.info(f"DEFCON enabled: {self.days.days} days")
 
             else:
                 self.enabled = False
                 self.days = timedelta(days=0)
-                log.warning(f"DEFCON disabled")
+                log.info(f"DEFCON disabled")
 
             await self.update_channel_topic()
 
@@ -118,7 +118,7 @@ class Defcon(Cog):
                 )
 
     @group(name='defcon', aliases=('dc',), invoke_without_command=True)
-    @with_role(Roles.admin, Roles.owner)
+    @with_role(Roles.admins, Roles.owners)
     async def defcon_group(self, ctx: Context) -> None:
         """Check the DEFCON status or run a subcommand."""
         await ctx.invoke(self.bot.get_command("help"), "defcon")
@@ -146,7 +146,7 @@ class Defcon(Cog):
             await self.send_defcon_log(action, ctx.author, error)
 
     @defcon_group.command(name='enable', aliases=('on', 'e'))
-    @with_role(Roles.admin, Roles.owner)
+    @with_role(Roles.admins, Roles.owners)
     async def enable_command(self, ctx: Context) -> None:
         """
         Enable DEFCON mode. Useful in a pinch, but be sure you know what you're doing!
@@ -159,7 +159,7 @@ class Defcon(Cog):
         await self.update_channel_topic()
 
     @defcon_group.command(name='disable', aliases=('off', 'd'))
-    @with_role(Roles.admin, Roles.owner)
+    @with_role(Roles.admins, Roles.owners)
     async def disable_command(self, ctx: Context) -> None:
         """Disable DEFCON mode. Useful in a pinch, but be sure you know what you're doing!"""
         self.enabled = False
@@ -167,7 +167,7 @@ class Defcon(Cog):
         await self.update_channel_topic()
 
     @defcon_group.command(name='status', aliases=('s',))
-    @with_role(Roles.admin, Roles.owner)
+    @with_role(Roles.admins, Roles.owners)
     async def status_command(self, ctx: Context) -> None:
         """Check the current status of DEFCON mode."""
         embed = Embed(
@@ -179,7 +179,7 @@ class Defcon(Cog):
         await ctx.send(embed=embed)
 
     @defcon_group.command(name='days')
-    @with_role(Roles.admin, Roles.owner)
+    @with_role(Roles.admins, Roles.owners)
     async def days_command(self, ctx: Context, days: int) -> None:
         """Set how old an account must be to join the server, in days, with DEFCON mode enabled."""
         self.days = timedelta(days=days)

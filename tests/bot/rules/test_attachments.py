@@ -1,52 +1,69 @@
-import asyncio
-import unittest
-from dataclasses import dataclass
-from typing import Any, List
+from typing import Iterable
 
 from bot.rules import attachments
+from tests.bot.rules import DisallowedCase, RuleTest
+from tests.helpers import MockMessage
 
 
-# Using `MagicMock` sadly doesn't work for this usecase
-# since it's __eq__ compares the MagicMock's ID. We just
-# want to compare the actual attributes we set.
-@dataclass
-class FakeMessage:
-    author: str
-    attachments: List[Any]
+def make_msg(author: str, total_attachments: int) -> MockMessage:
+    """Builds a message with `total_attachments` attachments."""
+    return MockMessage(author=author, attachments=list(range(total_attachments)))
 
 
-def msg(total_attachments: int) -> FakeMessage:
-    return FakeMessage(author='lemon', attachments=list(range(total_attachments)))
+class AttachmentRuleTests(RuleTest):
+    """Tests applying the `attachments` antispam rule."""
 
+    def setUp(self):
+        self.apply = attachments.apply
+        self.config = {"max": 5, "interval": 10}
 
-class AttachmentRuleTests(unittest.TestCase):
-    """Tests applying the `attachment` antispam rule."""
-
-    def test_allows_messages_without_too_many_attachments(self):
+    async def test_allows_messages_without_too_many_attachments(self):
         """Messages without too many attachments are allowed as-is."""
         cases = (
-            (msg(0), msg(0), msg(0)),
-            (msg(2), msg(2)),
-            (msg(0),),
+            [make_msg("bob", 0), make_msg("bob", 0), make_msg("bob", 0)],
+            [make_msg("bob", 2), make_msg("bob", 2)],
+            [make_msg("bob", 2), make_msg("alice", 2), make_msg("bob", 2)],
         )
 
-        for last_message, *recent_messages in cases:
-            with self.subTest(last_message=last_message, recent_messages=recent_messages):
-                coro = attachments.apply(last_message, recent_messages, {'max': 5})
-                self.assertIsNone(asyncio.run(coro))
+        await self.run_allowed(cases)
 
-    def test_disallows_messages_with_too_many_attachments(self):
+    async def test_disallows_messages_with_too_many_attachments(self):
         """Messages with too many attachments trigger the rule."""
         cases = (
-            ((msg(4), msg(0), msg(6)), [msg(4), msg(6)], 10),
-            ((msg(6),), [msg(6)], 6),
-            ((msg(1),) * 6, [msg(1)] * 6, 6),
+            DisallowedCase(
+                [make_msg("bob", 4), make_msg("bob", 0), make_msg("bob", 6)],
+                ("bob",),
+                10,
+            ),
+            DisallowedCase(
+                [make_msg("bob", 4), make_msg("alice", 6), make_msg("bob", 2)],
+                ("bob",),
+                6,
+            ),
+            DisallowedCase(
+                [make_msg("alice", 6)],
+                ("alice",),
+                6,
+            ),
+            DisallowedCase(
+                [make_msg("alice", 1) for _ in range(6)],
+                ("alice",),
+                6,
+            ),
         )
-        for messages, relevant_messages, total in cases:
-            with self.subTest(messages=messages, relevant_messages=relevant_messages, total=total):
-                last_message, *recent_messages = messages
-                coro = attachments.apply(last_message, recent_messages, {'max': 5})
-                self.assertEqual(
-                    asyncio.run(coro),
-                    (f"sent {total} attachments in 5s", ('lemon',), relevant_messages)
-                )
+
+        await self.run_disallowed(cases)
+
+    def relevant_messages(self, case: DisallowedCase) -> Iterable[MockMessage]:
+        last_message = case.recent_messages[0]
+        return tuple(
+            msg
+            for msg in case.recent_messages
+            if (
+                msg.author == last_message.author
+                and len(msg.attachments) > 0
+            )
+        )
+
+    def get_report(self, case: DisallowedCase) -> str:
+        return f"sent {case.n_violations} attachments in {self.config['interval']}s"

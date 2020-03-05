@@ -19,6 +19,7 @@ from bot.constants import (
     STAFF_ROLES,
 )
 from bot.converters import Duration
+from bot.utils.messages import send_attachments
 
 
 log = logging.getLogger(__name__)
@@ -45,8 +46,9 @@ class DeletionContext:
     members: Dict[int, Member] = field(default_factory=dict)
     rules: Set[str] = field(default_factory=set)
     messages: Dict[int, Message] = field(default_factory=dict)
+    attachments: List[List[str]] = field(default_factory=list)
 
-    def add(self, rule_name: str, members: Iterable[Member], messages: Iterable[Message]) -> None:
+    async def add(self, rule_name: str, members: Iterable[Member], messages: Iterable[Message]) -> None:
         """Adds new rule violation events to the deletion context."""
         self.rules.add(rule_name)
 
@@ -57,6 +59,11 @@ class DeletionContext:
         for message in messages:
             if message.id not in self.messages:
                 self.messages[message.id] = message
+
+                # Re-upload attachments
+                destination = message.guild.get_channel(Channels.attachment_log)
+                urls = await send_attachments(message, destination, link_large=False)
+                self.attachments.append(urls)
 
     async def upload_messages(self, actor_id: int, modlog: ModLog) -> None:
         """Method that takes care of uploading the queue and posting modlog alert."""
@@ -70,7 +77,7 @@ class DeletionContext:
 
         # For multiple messages or those with excessive newlines, use the logs API
         if len(self.messages) > 1 or 'newlines' in self.rules:
-            url = await modlog.upload_log(self.messages.values(), actor_id)
+            url = await modlog.upload_log(self.messages.values(), actor_id, self.attachments)
             mod_alert_message += f"A complete log of the offending messages can be found [here]({url})"
         else:
             mod_alert_message += "Message:\n"
@@ -98,7 +105,7 @@ class DeletionContext:
 class AntiSpam(Cog):
     """Cog that controls our anti-spam measures."""
 
-    def __init__(self, bot: Bot, validation_errors: bool) -> None:
+    def __init__(self, bot: Bot, validation_errors: Dict[str, str]) -> None:
         self.bot = bot
         self.validation_errors = validation_errors
         role_id = AntiSpamConfig.punishment['role_id']
@@ -106,7 +113,6 @@ class AntiSpam(Cog):
         self.expiration_date_converter = Duration()
 
         self.message_deletion_queue = dict()
-        self.queue_consumption_tasks = dict()
 
         self.bot.loop.create_task(self.alert_on_validation_error())
 
@@ -117,7 +123,7 @@ class AntiSpam(Cog):
 
     async def alert_on_validation_error(self) -> None:
         """Unloads the cog and alerts admins if configuration validation failed."""
-        await self.bot.wait_until_ready()
+        await self.bot.wait_until_guild_available()
         if self.validation_errors:
             body = "**The following errors were encountered:**\n"
             body += "\n".join(f"- {error}" for error in self.validation_errors.values())
@@ -180,15 +186,14 @@ class AntiSpam(Cog):
                 full_reason = f"`{rule_name}` rule: {reason}"
 
                 # If there's no spam event going on for this channel, start a new Message Deletion Context
-                if message.channel.id not in self.message_deletion_queue:
-                    log.trace(f"Creating queue for channel `{message.channel.id}`")
-                    self.message_deletion_queue[message.channel.id] = DeletionContext(channel=message.channel)
-                    self.queue_consumption_tasks = self.bot.loop.create_task(
-                        self._process_deletion_context(message.channel.id)
-                    )
+                channel = message.channel
+                if channel.id not in self.message_deletion_queue:
+                    log.trace(f"Creating queue for channel `{channel.id}`")
+                    self.message_deletion_queue[message.channel.id] = DeletionContext(channel)
+                    self.bot.loop.create_task(self._process_deletion_context(message.channel.id))
 
                 # Add the relevant of this trigger to the Deletion Context
-                self.message_deletion_queue[message.channel.id].add(
+                await self.message_deletion_queue[message.channel.id].add(
                     rule_name=rule_name,
                     members=members,
                     messages=relevant_messages
@@ -202,7 +207,7 @@ class AntiSpam(Cog):
                         self.punish(message, member, full_reason)
                     )
 
-                await self.maybe_delete_messages(message.channel, relevant_messages)
+                await self.maybe_delete_messages(channel, relevant_messages)
                 break
 
     async def punish(self, msg: Message, member: Member, reason: str) -> None:
@@ -255,10 +260,10 @@ class AntiSpam(Cog):
         await deletion_context.upload_messages(self.bot.user.id, self.mod_log)
 
 
-def validate_config(rules: Mapping = AntiSpamConfig.rules) -> Dict[str, str]:
+def validate_config(rules_: Mapping = AntiSpamConfig.rules) -> Dict[str, str]:
     """Validates the antispam configs."""
     validation_errors = {}
-    for name, config in rules.items():
+    for name, config in rules_.items():
         if name not in RULE_FUNCTION_MAPPING:
             log.error(
                 f"Unrecognized antispam rule `{name}`. "

@@ -1,18 +1,37 @@
 import logging
 import re
+import typing as t
 from datetime import datetime
 from ssl import CertificateError
-from typing import Union
 
 import dateutil.parser
 import dateutil.tz
 import discord
 from aiohttp import ClientConnectorError
 from dateutil.relativedelta import relativedelta
-from discord.ext.commands import BadArgument, Context, Converter
+from discord.ext.commands import BadArgument, Context, Converter, UserConverter
 
 
 log = logging.getLogger(__name__)
+
+
+def allowed_strings(*values, preserve_case: bool = False) -> t.Callable[[str], str]:
+    """
+    Return a converter which only allows arguments equal to one of the given values.
+
+    Unless preserve_case is True, the argument is converted to lowercase. All values are then
+    expected to have already been given in lowercase too.
+    """
+    def converter(arg: str) -> str:
+        if not preserve_case:
+            arg = arg.lower()
+
+        if arg not in values:
+            raise BadArgument(f"Only the following values are allowed:\n```{', '.join(values)}```")
+        else:
+            return arg
+
+    return converter
 
 
 class ValidPythonIdentifier(Converter):
@@ -70,7 +89,7 @@ class InfractionSearchQuery(Converter):
     """A converter that checks if the argument is a Discord user, and if not, falls back to a string."""
 
     @staticmethod
-    async def convert(ctx: Context, arg: str) -> Union[discord.Member, str]:
+    async def convert(ctx: Context, arg: str) -> t.Union[discord.Member, str]:
         """Check if the argument is a Discord user, and if not, falls back to a string."""
         try:
             maybe_snowflake = arg.strip("<@!>")
@@ -122,39 +141,23 @@ class TagNameConverter(Converter):
     @staticmethod
     async def convert(ctx: Context, tag_name: str) -> str:
         """Lowercase & strip whitespace from proposed tag_name & ensure it's valid."""
-        def is_number(value: str) -> bool:
-            """Check to see if the input string is numeric."""
-            try:
-                float(value)
-            except ValueError:
-                return False
-            return True
-
         tag_name = tag_name.lower().strip()
 
         # The tag name has at least one invalid character.
         if ascii(tag_name)[1:-1] != tag_name:
-            log.warning(f"{ctx.author} tried to put an invalid character in a tag name. "
-                        "Rejecting the request.")
             raise BadArgument("Don't be ridiculous, you can't use that character!")
 
         # The tag name is either empty, or consists of nothing but whitespace.
         elif not tag_name:
-            log.warning(f"{ctx.author} tried to create a tag with a name consisting only of whitespace. "
-                        "Rejecting the request.")
             raise BadArgument("Tag names should not be empty, or filled with whitespace.")
-
-        # The tag name is a number of some kind, we don't allow that.
-        elif is_number(tag_name):
-            log.warning(f"{ctx.author} tried to create a tag with a digit as its name. "
-                        "Rejecting the request.")
-            raise BadArgument("Tag names can't be numbers.")
 
         # The tag name is longer than 127 characters.
         elif len(tag_name) > 127:
-            log.warning(f"{ctx.author} tried to request a tag name with over 127 characters. "
-                        "Rejecting the request.")
             raise BadArgument("Are you insane? That's way too long!")
+
+        # The tag name is ascii but does not contain any letters.
+        elif not any(character.isalpha() for character in tag_name):
+            raise BadArgument("Tag names must contain at least one letter.")
 
         return tag_name
 
@@ -173,8 +176,6 @@ class TagContentConverter(Converter):
 
         # The tag contents should not be empty, or filled with whitespace.
         if not tag_content:
-            log.warning(f"{ctx.author} tried to create a tag containing only whitespace. "
-                        "Rejecting the request.")
             raise BadArgument("Tag contents should not be empty, or filled with whitespace.")
 
         return tag_content
@@ -259,3 +260,75 @@ class ISODateTime(Converter):
             dt = dt.replace(tzinfo=None)
 
         return dt
+
+
+def proxy_user(user_id: str) -> discord.Object:
+    """
+    Create a proxy user object from the given id.
+
+    Used when a Member or User object cannot be resolved.
+    """
+    log.trace(f"Attempting to create a proxy user for the user id {user_id}.")
+
+    try:
+        user_id = int(user_id)
+    except ValueError:
+        log.debug(f"Failed to create proxy user {user_id}: could not convert to int.")
+        raise BadArgument(f"User ID `{user_id}` is invalid - could not convert to an integer.")
+
+    user = discord.Object(user_id)
+    user.mention = user.id
+    user.display_name = f"<@{user.id}>"
+    user.avatar_url_as = lambda static_format: None
+    user.bot = False
+
+    return user
+
+
+class FetchedUser(UserConverter):
+    """
+    Converts to a `discord.User` or, if it fails, a `discord.Object`.
+
+    Unlike the default `UserConverter`, which only does lookups via the global user cache, this
+    converter attempts to fetch the user via an API call to Discord when the using the cache is
+    unsuccessful.
+
+    If the fetch also fails and the error doesn't imply the user doesn't exist, then a
+    `discord.Object` is returned via the `user_proxy` converter.
+
+    The lookup strategy is as follows (in order):
+
+    1. Lookup by ID.
+    2. Lookup by mention.
+    3. Lookup by name#discrim
+    4. Lookup by name
+    5. Lookup via API
+    6. Create a proxy user with discord.Object
+    """
+
+    async def convert(self, ctx: Context, arg: str) -> t.Union[discord.User, discord.Object]:
+        """Convert the `arg` to a `discord.User` or `discord.Object`."""
+        try:
+            return await super().convert(ctx, arg)
+        except BadArgument:
+            pass
+
+        try:
+            user_id = int(arg)
+            log.trace(f"Fetching user {user_id}...")
+            return await ctx.bot.fetch_user(user_id)
+        except ValueError:
+            log.debug(f"Failed to fetch user {arg}: could not convert to int.")
+            raise BadArgument(f"The provided argument can't be turned into integer: `{arg}`")
+        except discord.HTTPException as e:
+            # If the Discord error isn't `Unknown user`, return a proxy instead
+            if e.code != 10013:
+                log.warning(f"Failed to fetch user, returning a proxy instead: status {e.status}")
+                return proxy_user(arg)
+
+            log.debug(f"Failed to fetch user {arg}: user does not exist.")
+            raise BadArgument(f"User `{arg}` does not exist")
+
+
+Expiry = t.Union[Duration, ISODateTime]
+FetchedMember = t.Union[discord.Member, FetchedUser]

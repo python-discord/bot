@@ -9,8 +9,8 @@ from typing import Optional
 
 import dateutil.parser
 import discord
-from discord import Color, Embed, HTTPException, Message, Object, errors
-from discord.ext.commands import BadArgument, Cog, Context
+from discord import Color, DMChannel, Embed, HTTPException, Message, errors
+from discord.ext.commands import Cog, Context
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
@@ -23,22 +23,6 @@ from bot.utils.time import time_since
 log = logging.getLogger(__name__)
 
 URL_RE = re.compile(r"(https?://[^\s]+)")
-
-
-def proxy_user(user_id: str) -> Object:
-    """A proxy user object that mocks a real User instance for when the later is not available."""
-    try:
-        user_id = int(user_id)
-    except ValueError:
-        raise BadArgument
-
-    user = Object(user_id)
-    user.mention = user.id
-    user.display_name = f"<@{user.id}>"
-    user.avatar_url_as = lambda static_format: None
-    user.bot = False
-
-    return user
 
 
 @dataclass
@@ -107,7 +91,7 @@ class WatchChannel(metaclass=CogABCMeta):
 
     async def start_watchchannel(self) -> None:
         """Starts the watch channel by getting the channel, webhook, and user cache ready."""
-        await self.bot.wait_until_ready()
+        await self.bot.wait_until_guild_available()
 
         try:
             self.channel = await self.bot.fetch_channel(self.destination)
@@ -289,7 +273,14 @@ class WatchChannel(metaclass=CogABCMeta):
 
         reason = self.watched_users[user_id]['reason']
 
-        embed = Embed(description=f"{msg.author.mention} in [#{msg.channel.name}]({msg.jump_url})")
+        if isinstance(msg.channel, DMChannel):
+            # If a watched user DMs the bot there won't be a channel name or jump URL
+            # This could technically include a GroupChannel but bot's can't be in those
+            message_jump = "via DM"
+        else:
+            message_jump = f"in [#{msg.channel.name}]({msg.jump_url})"
+
+        embed = Embed(description=f"{msg.author.mention} {message_jump}")
         embed.set_footer(text=f"Added {time_delta} by {actor} | Reason: {reason}")
 
         await self.webhook_send(embed=embed, username=msg.author.display_name, avatar_url=msg.author.avatar_url)

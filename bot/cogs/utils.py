@@ -86,14 +86,12 @@ class Utils(Cog):
                 pep_embed.set_thumbnail(url="https://www.python.org/static/opengraph-icon-200x200.png")
 
                 # Add the interesting information
-                if "Status" in pep_header:
-                    pep_embed.add_field(name="Status", value=pep_header["Status"])
-                if "Python-Version" in pep_header:
-                    pep_embed.add_field(name="Python-Version", value=pep_header["Python-Version"])
-                if "Created" in pep_header:
-                    pep_embed.add_field(name="Created", value=pep_header["Created"])
-                if "Type" in pep_header:
-                    pep_embed.add_field(name="Type", value=pep_header["Type"])
+                fields_to_check = ("Status", "Python-Version", "Created", "Type")
+                for field in fields_to_check:
+                    # Check for a PEP metadata field that is present but has an empty value
+                    # embed field values can't contain an empty string
+                    if pep_header.get(field, ""):
+                        pep_embed.add_field(name=field, value=pep_header[field])
 
             elif response.status != 404:
                 # any response except 200 and 404 is expected
@@ -115,7 +113,7 @@ class Utils(Cog):
         await ctx.message.channel.send(embed=pep_embed)
 
     @command()
-    @in_channel(Channels.bot, bypass_roles=STAFF_ROLES)
+    @in_channel(Channels.bot_commands, bypass_roles=STAFF_ROLES)
     async def charinfo(self, ctx: Context, *, characters: str) -> None:
         """Shows you information on up to 25 unicode characters."""
         match = re.match(r"<(a?):(\w+):(\d+)>", characters)

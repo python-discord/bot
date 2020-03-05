@@ -1,6 +1,12 @@
 import logging
 import unittest
 from contextlib import contextmanager
+from typing import Dict
+
+import discord
+from discord.ext import commands
+
+from tests import helpers
 
 
 class _CaptureLogHandler(logging.Handler):
@@ -16,11 +22,16 @@ class _CaptureLogHandler(logging.Handler):
         self.records.append(record)
 
 
-class LoggingTestCase(unittest.TestCase):
-    """TestCase subclass that adds more logging assertion tools."""
+class LoggingTestsMixin:
+    """
+    A mixin that defines additional test methods for logging behavior.
+
+    This mixin relies on the availability of the `fail` attribute defined by the
+    test classes included in Python's unittest method to signal test failure.
+    """
 
     @contextmanager
-    def assertNotLogs(self, logger=None, level=None, msg=None):
+    def assertNotLogs(self, logger=None, level=None, msg=None):  # noqa: N802
         """
         Asserts that no logs of `level` and higher were emitted by `logger`.
 
@@ -65,3 +76,30 @@ class LoggingTestCase(unittest.TestCase):
             standard_message = self._truncateMessage(base_message, record_message)
             msg = self._formatMessage(msg, standard_message)
             self.fail(msg)
+
+
+class CommandTestCase(unittest.IsolatedAsyncioTestCase):
+    """TestCase with additional assertions that are useful for testing Discord commands."""
+
+    async def assertHasPermissionsCheck(  # noqa: N802
+        self,
+        cmd: commands.Command,
+        permissions: Dict[str, bool],
+    ) -> None:
+        """
+        Test that `cmd` raises a `MissingPermissions` exception if author lacks `permissions`.
+
+        Every permission in `permissions` is expected to be reported as missing. In other words, do
+        not include permissions which should not raise an exception along with those which should.
+        """
+        # Invert permission values because it's more intuitive to pass to this assertion the same
+        # permissions as those given to the check decorator.
+        permissions = {k: not v for k, v in permissions.items()}
+
+        ctx = helpers.MockContext()
+        ctx.channel.permissions_for.return_value = discord.Permissions(**permissions)
+
+        with self.assertRaises(commands.MissingPermissions) as cm:
+            await cmd.can_run(ctx)
+
+        self.assertCountEqual(permissions.keys(), cm.exception.missing_perms)

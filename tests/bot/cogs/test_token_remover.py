@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 from discord import Colour
 
@@ -11,7 +11,7 @@ from bot.cogs.token_remover import (
     setup as setup_cog,
 )
 from bot.constants import Channels, Colours, Event, Icons
-from tests.helpers import AsyncMock, MockBot, MockMessage
+from tests.helpers import MockBot, MockMessage
 
 
 class TokenRemoverTests(unittest.TestCase):

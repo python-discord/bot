@@ -10,6 +10,7 @@ from discord.ext.commands import Cog, Context, command
 
 from bot import constants
 from bot.bot import Bot
+from bot.converters import Expiry
 from bot.utils.checks import with_role_check
 from bot.utils.time import format_infraction
 from . import utils
@@ -107,8 +108,9 @@ class Superstarify(InfractionScheduler, Cog):
         self,
         ctx: Context,
         member: Member,
-        duration: utils.Expiry,
-        reason: str = None
+        duration: Expiry,
+        *,
+        reason: str = None,
     ) -> None:
         """
         Temporarily force a random superstar name (like Taylor Swift) to be the user's nickname.
@@ -133,7 +135,7 @@ class Superstarify(InfractionScheduler, Cog):
 
         # Post the infraction to the API
         reason = reason or f"old nick: {member.display_name}"
-        infraction = await utils.post_infraction(ctx, member, "superstar", reason, duration)
+        infraction = await utils.post_infraction(ctx, member, "superstar", reason, duration, active=True)
         id_ = infraction["id"]
 
         old_nick = member.display_name
@@ -144,7 +146,7 @@ class Superstarify(InfractionScheduler, Cog):
         log.debug(f"Changing nickname of {member} to {forced_nick}.")
         self.mod_log.ignore(constants.Event.member_update, member.id)
         await member.edit(nick=forced_nick, reason=reason)
-        self.schedule_task(ctx.bot.loop, id_, infraction)
+        self.schedule_task(id_, infraction)
 
         # Send a DM to the user to notify them of their new infraction.
         await utils.notify_infraction(
