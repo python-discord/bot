@@ -1,4 +1,5 @@
 import unittest
+from datetime import datetime
 from typing import Union
 from unittest.mock import AsyncMock
 
@@ -6,7 +7,7 @@ from discord import Embed, Forbidden, HTTPException, NotFound
 
 from bot.api import ResponseCodeError
 from bot.cogs.moderation.utils import (
-    has_active_infraction, notify_infraction, notify_pardon, post_user, send_private_embed
+    has_active_infraction, notify_infraction, notify_pardon, post_infraction, post_user, send_private_embed
 )
 from bot.constants import Colours, Icons
 from tests.helpers import MockBot, MockContext, MockMember, MockUser
@@ -261,3 +262,69 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 result = await send_private_embed(*args)
 
                 self.assertEqual(result, expected)
+
+    async def test_post_infraction(self):
+        """Test does `post_infraction` return correct value."""
+        test_cases = [
+            {
+                "args": (self.ctx, self.member, "ban", "Test Ban"),
+                "expected_output": [
+                    {
+                        "id": 1,
+                        "inserted_at": "2018-11-22T07:24:06.132307Z",
+                        "expires_at": "5018-11-20T15:52:00Z",
+                        "active": True,
+                        "user": 1234,
+                        "actor": 1234,
+                        "type": "ban",
+                        "reason": "Test Ban",
+                        "hidden": False
+                    }
+                ],
+                "raised_error": None
+            },
+            {
+                "args": (self.ctx, self.member, "note", "Test Ban"),
+                "expected_output": None,
+                "raised_error": ResponseCodeError(AsyncMock(), AsyncMock())
+            },
+            {
+                "args": (self.ctx, self.member, "mute", "Test Ban"),
+                "expected_output": None,
+                "raised_error": ResponseCodeError(AsyncMock(), {'user': 1234})
+            },
+            {
+                "args": (self.ctx, self.member, "ban", "Test Ban", datetime.now()),
+                "expected_output": [
+                    {
+                        "id": 1,
+                        "inserted_at": "2018-11-22T07:24:06.132307Z",
+                        "expires_at": "5018-11-20T15:52:00Z",
+                        "active": True,
+                        "user": 1234,
+                        "actor": 1234,
+                        "type": "ban",
+                        "reason": "Test Ban",
+                        "hidden": False
+                    }
+                ],
+                "raised_error": None
+            },
+        ]
+
+        for case in test_cases:
+            args = case["args"]
+            expected = case["expected_output"]
+            raised = case["raised_error"]
+
+            with self.subTest(args=args, expected=expected, raised=raised):
+                if raised:
+                    self.ctx.bot.api_client.post.side_effect = raised
+
+                self.ctx.bot.api_client.post.return_value = expected
+
+                result = await post_infraction(*args)
+
+                self.assertEqual(result, expected)
+
+                self.ctx.bot.api_client.post.reset_mock(side_effect=True)
