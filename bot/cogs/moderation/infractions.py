@@ -67,7 +67,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
     @command()
     async def ban(self, ctx: Context, user: FetchedMember, *, reason: str = None) -> None:
-        """Permanently ban a user for the given reason."""
+        """Permanently ban a user for the given reason.  Also removes them from the BigBrother watch list."""
         await self.apply_ban(ctx, user, reason)
 
     # endregion
@@ -242,6 +242,17 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         action = ctx.guild.ban(user, reason=reason, delete_message_days=0)
         await self.apply_infraction(ctx, infraction, user, action)
+
+        # Remove perma banned users from the watch list
+        if 'expires_at' not in kwargs:
+            bb_cog = self.bot.get_cog("BigBrother")
+            if bb_cog:
+                await bb_cog.apply_unwatch(
+                    ctx,
+                    user,
+                    "User has been permanently banned from the server.  Automatically removed.",
+                    banned=True
+                )
 
     # endregion
     # region: Base pardon functions
