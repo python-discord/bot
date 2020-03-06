@@ -52,6 +52,16 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
         A `reason` for adding the user to Big Brother is required and will be displayed
         in the header when relaying messages of this user to the watchchannel.
         """
+        await self.apply_watch(ctx, user, reason)
+
+    @bigbrother_group.command(name='unwatch', aliases=('uw',))
+    @with_role(*MODERATION_ROLES)
+    async def unwatch_command(self, ctx: Context, user: FetchedMember, *, reason: str) -> None:
+        """Stop relaying messages by the given `user`."""
+        await self.apply_unwatch(ctx, user, reason)
+
+    async def apply_watch(self, ctx: Context, user: FetchedMember, reason: str) -> None:
+        """Handles adding a user to the watch list."""
         if user.bot:
             await ctx.send(f":x: I'm sorry {ctx.author}, I'm afraid I can't do that. I only watch humans.")
             return
@@ -90,10 +100,8 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
 
         await ctx.send(msg)
 
-    @bigbrother_group.command(name='unwatch', aliases=('uw',))
-    @with_role(*MODERATION_ROLES)
-    async def unwatch_command(self, ctx: Context, user: FetchedMember, *, reason: str) -> None:
-        """Stop relaying messages by the given `user`."""
+    async def apply_unwatch(self, ctx: Context, user: FetchedMember, reason: str, banned: bool = False) -> None:
+        """Handles the actual user removal from the watch list."""
         active_watches = await self.bot.api_client.get(
             self.api_endpoint,
             params=ChainMap(
@@ -111,8 +119,10 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
 
             await post_infraction(ctx, user, 'watch', f"Unwatched: {reason}", hidden=True, active=False)
 
-            await ctx.send(f":white_check_mark: Messages sent by {user} will no longer be relayed.")
+            if not banned:  # Prevents a message being sent to the channel if part of a permanent ban
+                await ctx.send(f":white_check_mark: Messages sent by {user} will no longer be relayed.")
 
             self._remove_user(user.id)
         else:
-            await ctx.send(":x: The specified user is currently not being watched.")
+            if not banned:  # Prevents a message being sent to the channel if part of a permanent ban
+                await ctx.send(":x: The specified user is currently not being watched.")
