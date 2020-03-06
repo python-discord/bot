@@ -47,7 +47,7 @@ jobs:
             pre-commit | "$(PythonVersion.pythonLocation)"
           path: $(PRE_COMMIT_HOME)
 
-      - script: pre-commit run --all-files --show-diff-on-failure
+      - script: pre-commit run --all-files
         displayName: 'Run pre-commit hooks'
 
       - script: BOT_API_KEY=foo BOT_SENTRY_DSN=blah BOT_TOKEN=bar WOLFRAM_API_KEY=baz REDDIT_CLIENT_ID=spam REDDIT_SECRET=ham coverage run -m xmlrunner
