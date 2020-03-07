@@ -100,16 +100,14 @@ class Tags(Cog):
         """
         now = time.time()
 
-        cooldown_conditions = (
+        is_on_cooldown = (
             tag_name
             and tag_name in self.tag_cooldowns
             and (now - self.tag_cooldowns[tag_name]["time"]) < Cooldowns.tags
             and self.tag_cooldowns[tag_name]["channel"] == ctx.channel.id
         )
 
-        if cooldown_conditions:
-            return True
-        return False
+        return is_on_cooldown
 
     async def display_tag(self, ctx: Context, tag_name: str = None) -> bool:
         """
