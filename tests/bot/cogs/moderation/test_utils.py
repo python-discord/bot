@@ -6,15 +6,13 @@ from unittest.mock import AsyncMock, patch
 from discord import Embed, Forbidden, HTTPException, NotFound
 
 from bot.api import ResponseCodeError
-from bot.cogs.moderation.utils import (
-    RULES_URL, has_active_infraction, notify_infraction, notify_pardon, post_infraction, post_user, send_private_embed
-)
+from bot.cogs.moderation import utils
 from bot.constants import Colours, Icons
 from tests.helpers import MockBot, MockContext, MockMember, MockUser
 
 APPEAL_EMAIL = "appeals@pythondiscord.com"
 
-INFRACTION_TITLE = f"Please review our rules over at {RULES_URL}"
+INFRACTION_TITLE = f"Please review our rules over at {utils.RULES_URL}"
 INFRACTION_APPEAL_FOOTER = f"To appeal this infraction, send an e-mail to {APPEAL_EMAIL}"
 INFRACTION_AUTHOR_NAME = "Infraction information"
 INFRACTION_COLOR = Colours.soft_red
@@ -89,7 +87,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(args=args, return_value=return_value, expected=expected, get=get, send_vals=send_vals):
                 self.bot.api_client.get.return_value = return_value
 
-                result = await has_active_infraction(*args)
+                result = await utils.has_active_infraction(*args)
                 self.assertEqual(result, expected)
                 self.bot.api_client.get.assert_awaited_once_with("bot/infractions", params=get)
 
@@ -172,7 +170,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
 
                 send_private_embed_mock.return_value = send
 
-                result = await notify_infraction(*args)
+                result = await utils.notify_infraction(*args)
 
                 self.assertEqual(send, result)
 
@@ -180,9 +178,9 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
 
                 self.assertEqual(embed.title, INFRACTION_TITLE)
                 self.assertEqual(embed.colour.value, INFRACTION_COLOR)
-                self.assertEqual(embed.url, RULES_URL)
+                self.assertEqual(embed.url, utils.RULES_URL)
                 self.assertEqual(embed.author.name, INFRACTION_AUTHOR_NAME)
-                self.assertEqual(embed.author.url, RULES_URL)
+                self.assertEqual(embed.author.url, utils.RULES_URL)
                 self.assertEqual(embed.author.icon_url, expected["icon_url"])
                 self.assertEqual(embed.footer.text, expected["footer"])
                 self.assertEqual(embed.description, expected["description"])
@@ -229,7 +227,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
 
                 send_private_embed_mock.return_value = send
 
-                result = await notify_pardon(*args)
+                result = await utils.notify_pardon(*args)
 
                 self.assertEqual(send, result)
 
@@ -312,7 +310,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 if error:
                     self.ctx.bot.api_client.post.side_effect = ResponseCodeError(AsyncMock(), expected)
 
-                result = await post_user(*args)
+                result = await utils.post_user(*args)
 
                 if error:
                     self.assertIsNone(result)
@@ -358,7 +356,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 if raised:
                     self.user.send.side_effect = raised
 
-                result = await send_private_embed(*args)
+                result = await utils.send_private_embed(*args)
 
                 self.assertEqual(result, expected)
                 if expected:
@@ -467,7 +465,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
 
                 self.ctx.bot.api_client.post.return_value = expected
 
-                result = await post_infraction(*args)
+                result = await utils.post_infraction(*args)
 
                 self.assertEqual(result, expected)
 
