@@ -1,6 +1,7 @@
 import unittest
 
-from bot.cogs.moderation.silence import FirstHash
+from bot.cogs.moderation.silence import FirstHash, Silence
+from tests.helpers import MockBot, MockContext
 
 
 class FirstHashTests(unittest.TestCase):
@@ -23,3 +24,11 @@ class FirstHashTests(unittest.TestCase):
         for tuple1, tuple2 in self.test_cases:
             with self.subTest(tuple1=tuple1, tuple2=tuple2):
                 self.assertTrue(tuple1 == tuple2)
+
+
+class SilenceTests(unittest.TestCase):
+    def setUp(self) -> None:
+
+        self.bot = MockBot()
+        self.cog = Silence(self.bot)
+        self.ctx = MockContext()
