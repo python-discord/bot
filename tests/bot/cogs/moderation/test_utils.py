@@ -38,7 +38,9 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
         self.ctx = MockContext(bot=self.bot, author=self.member)
 
     async def test_user_has_active_infraction(self):
-        """Test does `has_active_infraction` return correct value."""
+        """
+        Test does `has_active_infraction` return call at least once `ctx.send` API get, check does return correct bool.
+        """
         test_cases = [
             {
                 "args": (self.ctx, self.member, "ban"),
@@ -99,7 +101,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
 
     @patch("bot.cogs.moderation.utils.send_private_embed")
     async def test_notify_infraction(self, send_private_embed_mock):
-        """Test does `notify_infraction` create correct result."""
+        """Test does `notify_infraction` create correct embed and return correct boolean."""
         test_cases = [
             {
                 "args": (self.user, "ban", "2020-02-26 09:20 (23 hours and 59 minutes)"),
@@ -192,7 +194,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
 
     @patch("bot.cogs.moderation.utils.send_private_embed")
     async def test_notify_pardon(self, send_private_embed_mock):
-        """Test does `notify_pardon` create correct result."""
+        """Test does `notify_pardon` create correct embed and return correct bool."""
         test_cases = [
             {
                 "args": (self.user, "Test title", "Example content"),
@@ -244,7 +246,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 send_private_embed_mock.reset_mock()
 
     async def test_post_user(self):
-        """Test does `post_user` work correctly."""
+        """Test does `post_user` handle errors and results correctly."""
         test_cases = [
             {
                 "args": (self.ctx, self.user),
@@ -323,7 +325,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 self.bot.api_client.post.reset_mock(side_effect=True)
 
     async def test_send_private_embed(self):
-        """Test does `send_private_embed` return correct value."""
+        """Test does `send_private_embed` return correct bool."""
         test_cases = [
             {
                 "args": (self.user, Embed(title="Test", description="Test val")),
@@ -366,7 +368,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
 
     @patch("bot.cogs.moderation.utils.post_user")
     async def test_post_infraction(self, post_user_mock):
-        """Test does `post_infraction` return correct value."""
+        """Test does `post_infraction` call functions correctly and return `None` or `Dict`."""
         now = datetime.now()
         test_cases = [
             {
