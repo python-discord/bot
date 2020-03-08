@@ -248,6 +248,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
             payload = case["payload"]
 
             with self.subTest(args=args, result=expected, error=error, payload=payload):
+                self.bot.api_client.post.reset_mock(side_effect=True)
                 self.ctx.bot.api_client.post.return_value = expected
 
                 if error:
@@ -266,8 +267,6 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     self.bot.api_client.post.assert_awaited_once_with("bot/users", json=payload)
                 else:
                     self.assertTrue(str(err.status) in self.ctx.send.call_args[0][0])
-
-                self.bot.api_client.post.reset_mock(side_effect=True)
 
     async def test_send_private_embed(self):
         """Test does `send_private_embed` return correct bool."""
@@ -297,6 +296,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
             raised = case["raised_exception"]
 
             with self.subTest(expected=expected, raised=raised):
+                self.user.send.reset_mock(side_effect=True)
                 self.user.send.side_effect = raised
 
                 result = await utils.send_private_embed(self.user, embed)
@@ -304,8 +304,6 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(result, expected)
                 if expected:
                     self.user.send.assert_awaited_once_with(embed=embed)
-
-                self.user.send.reset_mock(side_effect=True)
 
     @patch("bot.cogs.moderation.utils.post_user")
     async def test_post_infraction(self, post_user_mock):
