@@ -63,7 +63,7 @@ class Silence(commands.Cog):
             await ctx.send(f"{Emojis.cross_mark} {channel.mention} is already silenced.")
             return
         if duration is None:
-            await ctx.send(f"{Emojis.check_mark} Channel {channel.mention} silenced indefinitely.")
+            await ctx.send(f"{Emojis.check_mark} {channel.mention} silenced indefinitely.")
             return
 
         await ctx.send(f"{Emojis.check_mark} {channel.mention} silenced for {duration} minute(s).")
