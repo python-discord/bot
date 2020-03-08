@@ -86,8 +86,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     "icon_url": Icons.token_removed,
                     "footer": INFRACTION_APPEAL_FOOTER,
                 },
-                "send_result": True,
-                "send_raise": None
+                "send_result": True
             },
             {
                 "args": (self.user, "warning", None, "Test reason."),
@@ -100,8 +99,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     "icon_url": Icons.token_removed,
                     "footer": Embed.Empty
                 },
-                "send_result": False,
-                "send_raise": Forbidden(AsyncMock(), AsyncMock())
+                "send_result": False
             },
             {
                 "args": (self.user, "note", None, None, Icons.defcon_denied),
@@ -114,8 +112,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     "icon_url": Icons.defcon_denied,
                     "footer": Embed.Empty
                 },
-                "send_result": False,
-                "send_raise": NotFound(AsyncMock(), AsyncMock())
+                "send_result": False
             },
             {
                 "args": (self.user, "mute", "2020-02-26 09:20 (23 hours and 59 minutes)", "Test", Icons.defcon_denied),
@@ -128,19 +125,16 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     "icon_url": Icons.defcon_denied,
                     "footer": INFRACTION_APPEAL_FOOTER
                 },
-                "send_result": False,
-                "send_raise": HTTPException(AsyncMock(), AsyncMock())
+                "send_result": False
             }
         ]
 
         for case in test_cases:
             args = case["args"]
             expected = case["expected_output"]
-            send, send_raise = case["send_result"], case["send_raise"]
+            send = case["send_result"]
 
-            with self.subTest(args=args, expected=expected, send=send, send_raise=send_raise):
-                if send_raise:
-                    self.ctx.send.side_effect = send_raise
+            with self.subTest(args=args, expected=expected, send=send):
 
                 send_private_embed_mock.return_value = send
 
