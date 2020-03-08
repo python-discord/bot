@@ -94,7 +94,8 @@ class Tags(Cog):
         """
         await self._get_tags()
 
-        keywords_processed: Tuple[str] = tuple(query.strip().casefold() for query in keywords.split(','))
+        keywords_processed: Tuple[str] = tuple(query.strip().casefold() for query in keywords.split(',') if query)
+        keywords_processed = keywords_processed or (keywords,)
         founds: list = [
             tag
             for tag in self._cache.values()
@@ -106,10 +107,13 @@ class Tags(Cog):
         elif len(founds) == 1:
             return Embed().from_dict(founds[0]['embed'])
         else:
-            return Embed(
-                title='Did you mean ...',
+            is_plural: bool = len(keywords_processed) > 1 or any(kw.count(' ') for kw in keywords_processed)
+            embed = Embed(
+                title=f"Here are the tags containing the given keyword{'s' * is_plural}:",
                 description='\n'.join(tag['title'] for tag in founds[:10])
             )
+            embed.set_footer(text=f"Keyword{'s' * is_plural} used: {keywords}"[:1024])
+            return embed
 
     @group(name='tags', aliases=('tag', 't'), invoke_without_command=True)
     async def tags_group(self, ctx: Context, *, tag_name: TagNameConverter = None) -> None:
