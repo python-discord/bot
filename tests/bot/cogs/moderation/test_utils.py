@@ -135,9 +135,9 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
             send = case["send_result"]
 
             with self.subTest(args=args, expected=expected, send=send):
+                send_private_embed_mock.reset_mock()
 
                 send_private_embed_mock.return_value = send
-
                 result = await utils.notify_infraction(*args)
 
                 self.assertEqual(send, result)
@@ -154,9 +154,6 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(embed.description, expected["description"])
 
                 send_private_embed_mock.assert_awaited_once_with(args[0], embed)
-
-                self.ctx.send.reset_mock(side_effect=True)
-                send_private_embed_mock.reset_mock()
 
     @patch("bot.cogs.moderation.utils.send_private_embed")
     async def test_notify_pardon(self, send_private_embed_mock):
