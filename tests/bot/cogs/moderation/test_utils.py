@@ -212,54 +212,31 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_post_user(self):
         """Test does `post_user` handle errors and results correctly."""
+        user = MockUser(avatar="abc", discriminator=5678, id=1234, name="Test user")
         test_cases = [
             {
-                "args": (self.ctx, self.user),
-                "post_result": [
-                    {
-                        "id": 1234,
-                        "avatar": "test",
-                        "name": "Test",
-                        "discriminator": 1234,
-                        "roles": [
-                            1234,
-                            5678
-                        ],
-                        "in_guild": False
-                    }
-                ],
+                "args": (self.ctx, user),
+                "post_result": "bar",
                 "raise_error": False,
                 "payload": {
-                    "avatar_hash": getattr(self.user, "avatar", 0),
-                    "discriminator": int(getattr(self.user, "discriminator", 0)),
+                    "avatar_hash": "abc",
+                    "discriminator": 5678,
                     "id": self.user.id,
                     "in_guild": False,
-                    "name": getattr(self.user, "name", "Name unknown"),
+                    "name": "Test user",
                     "roles": []
                 }
             },
             {
-                "args": (self.ctx, self.user),
-                "post_result": [
-                    {
-                        "id": 1234,
-                        "avatar": "test",
-                        "name": "Test",
-                        "discriminator": 1234,
-                        "roles": [
-                            1234,
-                            5678
-                        ],
-                        "in_guild": False
-                    }
-                ],
+                "args": (self.ctx, self.member),
+                "post_result": "foo",
                 "raise_error": True,
                 "payload": {
-                    "avatar_hash": getattr(self.user, "avatar", 0),
-                    "discriminator": int(getattr(self.user, "discriminator", 0)),
-                    "id": self.user.id,
+                    "avatar_hash": 0,
+                    "discriminator": 0,
+                    "id": self.member.id,
                     "in_guild": False,
-                    "name": getattr(self.user, "name", "Name unknown"),
+                    "name": "Name unknown",
                     "roles": []
                 }
             }
@@ -276,6 +253,8 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
 
                 if error:
                     self.ctx.bot.api_client.post.side_effect = ResponseCodeError(AsyncMock(), expected)
+                    err = self.ctx.bot.api_client.post.side_effect
+                    err.status = 400
 
                 result = await utils.post_user(*args)
 
@@ -286,6 +265,8 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
 
                 if not error:
                     self.bot.api_client.post.assert_awaited_once_with("bot/users", json=payload)
+                else:
+                    self.assertTrue(str(err.status) in self.ctx.send.call_args[0][0])
 
                 self.bot.api_client.post.reset_mock(side_effect=True)
 
