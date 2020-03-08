@@ -78,11 +78,11 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
             {
                 "args": (self.user, "ban", "2020-02-26 09:20 (23 hours and 59 minutes)"),
                 "expected_output": {
-                    "description": INFRACTION_DESCRIPTION_TEMPLATE.format(**{
-                        "type": "Ban",
-                        "expires": "2020-02-26 09:20 (23 hours and 59 minutes)",
-                        "reason": "No reason provided."
-                    }),
+                    "description": INFRACTION_DESCRIPTION_TEMPLATE.format(
+                        type="Ban",
+                        expires="2020-02-26 09:20 (23 hours and 59 minutes)",
+                        reason="No reason provided."
+                    ),
                     "icon_url": Icons.token_removed,
                     "footer": INFRACTION_APPEAL_FOOTER,
                 },
@@ -92,11 +92,11 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
             {
                 "args": (self.user, "warning", None, "Test reason."),
                 "expected_output": {
-                    "description": INFRACTION_DESCRIPTION_TEMPLATE.format(**{
-                        "type": "Warning",
-                        "expires": "N/A",
-                        "reason": "Test reason."
-                    }),
+                    "description": INFRACTION_DESCRIPTION_TEMPLATE.format(
+                        type="Warning",
+                        expires="N/A",
+                        reason="Test reason."
+                    ),
                     "icon_url": Icons.token_removed,
                     "footer": Embed.Empty
                 },
@@ -106,11 +106,11 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
             {
                 "args": (self.user, "note", None, None, Icons.defcon_denied),
                 "expected_output": {
-                    "description": INFRACTION_DESCRIPTION_TEMPLATE.format(**{
-                        "type": "Note",
-                        "expires": "N/A",
-                        "reason": "No reason provided."
-                    }),
+                    "description": INFRACTION_DESCRIPTION_TEMPLATE.format(
+                        type="Note",
+                        expires="N/A",
+                        reason="No reason provided."
+                    ),
                     "icon_url": Icons.defcon_denied,
                     "footer": Embed.Empty
                 },
@@ -120,11 +120,11 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
             {
                 "args": (self.user, "mute", "2020-02-26 09:20 (23 hours and 59 minutes)", "Test", Icons.defcon_denied),
                 "expected_output": {
-                    "description": INFRACTION_DESCRIPTION_TEMPLATE.format(**{
-                        "type": "Mute",
-                        "expires": "2020-02-26 09:20 (23 hours and 59 minutes)",
-                        "reason": "Test"
-                    }),
+                    "description": INFRACTION_DESCRIPTION_TEMPLATE.format(
+                        type="Mute",
+                        expires="2020-02-26 09:20 (23 hours and 59 minutes)",
+                        reason="Test"
+                    ),
                     "icon_url": Icons.defcon_denied,
                     "footer": INFRACTION_APPEAL_FOOTER
                 },
