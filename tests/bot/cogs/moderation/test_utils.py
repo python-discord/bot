@@ -77,54 +77,76 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
         test_cases = [
             {
                 "args": (self.user, "ban", "2020-02-26 09:20 (23 hours and 59 minutes)"),
-                "expected_output": {
-                    "description": INFRACTION_DESCRIPTION_TEMPLATE.format(
+                "expected_output": Embed(
+                    title=INFRACTION_TITLE,
+                    description=INFRACTION_DESCRIPTION_TEMPLATE.format(
                         type="Ban",
                         expires="2020-02-26 09:20 (23 hours and 59 minutes)",
                         reason="No reason provided."
                     ),
-                    "icon_url": Icons.token_removed,
-                    "footer": INFRACTION_APPEAL_FOOTER,
-                },
+                    colour=INFRACTION_COLOR,
+                    url=utils.RULES_URL
+                ).set_author(
+                    name=INFRACTION_AUTHOR_NAME,
+                    url=utils.RULES_URL,
+                    icon_url=Icons.token_removed
+                ).set_footer(text=INFRACTION_APPEAL_FOOTER),
                 "send_result": True
             },
             {
                 "args": (self.user, "warning", None, "Test reason."),
-                "expected_output": {
-                    "description": INFRACTION_DESCRIPTION_TEMPLATE.format(
+                "expected_output": Embed(
+                    title=INFRACTION_TITLE,
+                    description=INFRACTION_DESCRIPTION_TEMPLATE.format(
                         type="Warning",
                         expires="N/A",
                         reason="Test reason."
                     ),
-                    "icon_url": Icons.token_removed,
-                    "footer": Embed.Empty
-                },
+                    colour=INFRACTION_COLOR,
+                    url=utils.RULES_URL
+                ).set_author(
+                    name=INFRACTION_AUTHOR_NAME,
+                    url=utils.RULES_URL,
+                    icon_url=Icons.token_removed
+                ),
                 "send_result": False
             },
             {
                 "args": (self.user, "note", None, None, Icons.defcon_denied),
-                "expected_output": {
-                    "description": INFRACTION_DESCRIPTION_TEMPLATE.format(
+                "expected_output": Embed(
+                    title=INFRACTION_TITLE,
+                    description=INFRACTION_DESCRIPTION_TEMPLATE.format(
                         type="Note",
                         expires="N/A",
                         reason="No reason provided."
                     ),
-                    "icon_url": Icons.defcon_denied,
-                    "footer": Embed.Empty
-                },
+                    colour=INFRACTION_COLOR,
+                    url=utils.RULES_URL
+                ).set_author(
+                    name=INFRACTION_AUTHOR_NAME,
+                    url=utils.RULES_URL,
+                    icon_url=Icons.defcon_denied
+                ),
                 "send_result": False
             },
             {
                 "args": (self.user, "mute", "2020-02-26 09:20 (23 hours and 59 minutes)", "Test", Icons.defcon_denied),
-                "expected_output": {
-                    "description": INFRACTION_DESCRIPTION_TEMPLATE.format(
+                "expected_output": Embed(
+                    title=INFRACTION_TITLE,
+                    description=INFRACTION_DESCRIPTION_TEMPLATE.format(
                         type="Mute",
                         expires="2020-02-26 09:20 (23 hours and 59 minutes)",
                         reason="Test"
                     ),
-                    "icon_url": Icons.defcon_denied,
-                    "footer": INFRACTION_APPEAL_FOOTER
-                },
+                    colour=INFRACTION_COLOR,
+                    url=utils.RULES_URL
+                ).set_author(
+                    name=INFRACTION_AUTHOR_NAME,
+                    url=utils.RULES_URL,
+                    icon_url=Icons.defcon_denied
+                ).set_footer(
+                    text=INFRACTION_APPEAL_FOOTER
+                ),
                 "send_result": False
             }
         ]
@@ -144,14 +166,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
 
                 embed = send_private_embed_mock.call_args[0][1]
 
-                self.assertEqual(embed.title, INFRACTION_TITLE)
-                self.assertEqual(embed.colour.value, INFRACTION_COLOR)
-                self.assertEqual(embed.url, utils.RULES_URL)
-                self.assertEqual(embed.author.name, INFRACTION_AUTHOR_NAME)
-                self.assertEqual(embed.author.url, utils.RULES_URL)
-                self.assertEqual(embed.author.icon_url, expected["icon_url"])
-                self.assertEqual(embed.footer.text, expected["footer"])
-                self.assertEqual(embed.description, expected["description"])
+                self.assertEqual(embed.to_dict(), expected.to_dict())
 
                 send_private_embed_mock.assert_awaited_once_with(args[0], embed)
 
