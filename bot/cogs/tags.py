@@ -1,7 +1,7 @@
 import logging
 import re
 import time
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from discord import Colour, Embed
 from discord.ext.commands import Cog, Context, group
@@ -86,10 +86,59 @@ class Tags(Cog):
             return self._get_suggestions(tag_name)
         return found
 
+    async def _get_tags_via_content(self, check: callable, keywords: str) -> Optional[Embed]:
+        """
+        Search for tags via contents.
+
+        `predicate` will be either any or all, or a custom callable to search. Must return a bool.
+        """
+        await self._get_tags()
+
+        keywords_processed: Tuple[str] = tuple(query.strip().casefold() for query in keywords.split(','))
+        founds: list = [
+            tag
+            for tag in self._cache.values()
+            if check(query in tag['embed']['description'] for query in keywords_processed)
+        ]
+
+        if not founds:
+            return None
+        elif len(founds) == 1:
+            return Embed().from_dict(founds[0]['embed'])
+        else:
+            return Embed(
+                title='Did you mean ...',
+                description='\n'.join(tag['title'] for tag in founds[:10])
+            )
+
     @group(name='tags', aliases=('tag', 't'), invoke_without_command=True)
     async def tags_group(self, ctx: Context, *, tag_name: TagNameConverter = None) -> None:
         """Show all known tags, a single tag, or run a subcommand."""
         await ctx.invoke(self.get_command, tag_name=tag_name)
+
+    @tags_group.group(name='search', invoke_without_command=True)
+    async def search_tag_content(self, ctx: Context, *, keywords: str) -> None:
+        """
+        Search inside tags' contents for tags. Allow searching for multiple keywords separated by comma.
+
+        Only search for tags that has ALL the keywords.
+        """
+        result = await self._get_tags_via_content(all, keywords)
+        if not result:
+            return
+        await ctx.send(embed=result)
+
+    @search_tag_content.command(name='any')
+    async def search_tag_content_any_keyword(self, ctx: Context, *, keywords: Optional[str] = None) -> None:
+        """
+        Search inside tags' contents for tags. Allow searching for multiple keywords separated by comma.
+
+        Search for tags that has ANY of the keywords.
+        """
+        result = await self._get_tags_via_content(any, keywords or 'any')
+        if not result:
+            return
+        await ctx.send(embed=result)
 
     @tags_group.command(name='get', aliases=('show', 'g'))
     async def get_command(self, ctx: Context, *, tag_name: TagNameConverter = None) -> None:
