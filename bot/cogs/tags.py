@@ -117,7 +117,7 @@ class Tags(Cog):
         elif len(matching_tags) == 1:
             return Embed().from_dict(matching_tags[0]['embed'])
         else:
-            is_plural = len(keywords_processed) > 1 or keywords.strip().count(' ') > 1
+            is_plural = len(keywords_processed) > 1 or keywords.strip().count(' ') > 0
             embed = Embed(
                 title=f"Here are the tags containing the given keyword{'s' * is_plural}:",
                 description='\n'.join(tag['title'] for tag in matching_tags[:10])
