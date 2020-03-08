@@ -8,8 +8,9 @@ from discord.ext import commands, tasks
 from discord.ext.commands import Context, TextChannelConverter
 
 from bot.bot import Bot
-from bot.constants import Channels, Emojis, Guild, Roles
+from bot.constants import Channels, Emojis, Guild, MODERATION_ROLES, Roles
 from bot.converters import HushDurationConverter
+from bot.utils.checks import with_role_check
 
 log = logging.getLogger(__name__)
 
@@ -147,3 +148,8 @@ class Silence(commands.Cog):
     @_notifier.after_loop
     async def _log_notifier_end(self) -> None:
         log.trace("Stopping notifier loop.")
+
+    # This cannot be static (must have a __func__ attribute).
+    def cog_check(self, ctx: Context) -> bool:
+        """Only allow moderators to invoke the commands in this cog."""
+        return with_role_check(ctx, *MODERATION_ROLES)
