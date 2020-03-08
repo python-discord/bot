@@ -1,6 +1,5 @@
 import unittest
 from datetime import datetime
-from typing import Union
 from unittest.mock import AsyncMock, patch
 
 from discord import Embed, Forbidden, HTTPException, NotFound
@@ -272,43 +271,40 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_send_private_embed(self):
         """Test does `send_private_embed` return correct bool."""
+        embed = Embed(title="Test", description="Test val")
+
         test_cases = [
             {
-                "args": (self.user, Embed(title="Test", description="Test val")),
                 "expected_output": True,
                 "raised_exception": None
             },
             {
-                "args": (self.user, Embed(title="Test", description="Test val")),
                 "expected_output": False,
                 "raised_exception": HTTPException(AsyncMock(), AsyncMock())
             },
             {
-                "args": (self.user, Embed(title="Test", description="Test val")),
                 "expected_output": False,
                 "raised_exception": Forbidden(AsyncMock(), AsyncMock())
             },
             {
-                "args": (self.user, Embed(title="Test", description="Test val")),
                 "expected_output": False,
                 "raised_exception": NotFound(AsyncMock(), AsyncMock())
             }
         ]
 
         for case in test_cases:
-            args = case["args"]
             expected = case["expected_output"]
-            raised: Union[Forbidden, HTTPException, NotFound, None] = case["raised_exception"]
+            raised = case["raised_exception"]
 
-            with self.subTest(args=args, expected=expected, raised=raised):
+            with self.subTest(expected=expected, raised=raised):
                 if raised:
                     self.user.send.side_effect = raised
 
-                result = await utils.send_private_embed(*args)
+                result = await utils.send_private_embed(self.user, embed)
 
                 self.assertEqual(result, expected)
                 if expected:
-                    args[0].send.assert_awaited_once_with(embed=args[1])
+                    self.user.send.assert_awaited_once_with(embed=embed)
 
                 self.user.send.reset_mock(side_effect=True)
 
