@@ -1,7 +1,7 @@
 import logging
 import re
 import time
-from typing import Callable, Dict, Iterable, List, Optional, Tuple
+from typing import Callable, Dict, Iterable, List, Optional
 
 from discord import Colour, Embed
 from discord.ext.commands import Cog, Context, group
@@ -90,27 +90,37 @@ class Tags(Cog):
         """
         Search for tags via contents.
 
-        `predicate` will be either any or all, or a custom callable to search. Must return a bool.
+        `predicate` will be the built-in any, all, or a custom callable. Must return a bool.
         """
         await self._get_tags()
 
-        keywords_processed: Tuple[str] = tuple(query.strip().casefold() for query in keywords.split(',') if query)
-        keywords_processed = keywords_processed or (keywords,)
-        founds: list = [
-            tag
-            for tag in self._cache.values()
-            if check(query in tag['embed']['description'] for query in keywords_processed)
-        ]
+        keywords_processed: List[str] = []
+        for keyword in keywords.split(','):
+            keyword_sanitized = keyword.strip().casefold()
+            if not keyword_sanitized:
+                # this happens when there are leading / trailing / consecutive comma.
+                continue
+            keywords_processed.append(keyword_sanitized)
 
-        if not founds:
+        if not keywords_processed:
+            # after sanitizing, we can end up with an empty list, for example when keywords is ','
+            # in that case, we simply want to search for such keywords directly instead.
+            keywords_processed = [keywords]
+
+        matching_tags = []
+        for tag in self._cache.values():
+            if check(query in tag['embed']['description'].casefold() for query in keywords_processed):
+                matching_tags.append(tag)
+
+        if not matching_tags:
             return None
-        elif len(founds) == 1:
-            return Embed().from_dict(founds[0]['embed'])
+        elif len(matching_tags) == 1:
+            return Embed().from_dict(matching_tags[0]['embed'])
         else:
-            is_plural: bool = len(keywords_processed) > 1 or any(kw.count(' ') for kw in keywords_processed)
+            is_plural = len(keywords_processed) > 1 or keywords.strip().count(' ') > 1
             embed = Embed(
                 title=f"Here are the tags containing the given keyword{'s' * is_plural}:",
-                description='\n'.join(tag['title'] for tag in founds[:10])
+                description='\n'.join(tag['title'] for tag in matching_tags[:10])
             )
             embed.set_footer(text=f"Keyword{'s' * is_plural} used: {keywords}"[:1024])
             return embed
