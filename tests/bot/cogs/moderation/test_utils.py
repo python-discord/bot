@@ -44,11 +44,6 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 "args": (self.ctx, self.member, "ban"),
                 "get_return_value": [],
                 "expected_output": False,
-                "get_call": {
-                    "active": "true",
-                    "type": "ban",
-                    "user__id": str(self.member.id)
-                },
                 "send_params": None
             },
             {
@@ -65,11 +60,6 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     "hidden": False
                 }],
                 "expected_output": True,
-                "get_call": {
-                    "active": "true",
-                    "type": "ban",
-                    "user__id": str(self.member.id)
-                },
                 "send_params": (
                     f":x: According to my records, this user already has a ban infraction. "
                     f"See infraction **#1**."
@@ -81,15 +71,18 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
             args = case["args"]
             return_value = case["get_return_value"]
             expected = case["expected_output"]
-            get = case["get_call"]
             send_vals = case["send_params"]
 
-            with self.subTest(args=args, return_value=return_value, expected=expected, get=get, send_vals=send_vals):
+            with self.subTest(args=args, return_value=return_value, expected=expected, send_vals=send_vals):
                 self.bot.api_client.get.return_value = return_value
 
                 result = await utils.has_active_infraction(*args)
                 self.assertEqual(result, expected)
-                self.bot.api_client.get.assert_awaited_once_with("bot/infractions", params=get)
+                self.bot.api_client.get.assert_awaited_once_with("bot/infractions", params={
+                    "active": "true",
+                    "type": "ban",
+                    "user__id": str(self.member.id)
+                })
 
                 if result:
                     self.ctx.send.assert_awaited_once_with(send_vals)
