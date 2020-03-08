@@ -41,43 +41,26 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
         """
         test_cases = [
             {
-                "args": (self.ctx, self.member, "ban"),
                 "get_return_value": [],
                 "expected_output": False,
-                "send_params": None
+                "infraction_nr": None
             },
             {
-                "args": (self.ctx, self.member, "ban"),
-                "get_return_value": [{
-                    "id": 1,
-                    "inserted_at": "2018-11-22T07:24:06.132307Z",
-                    "expires_at": "5018-11-20T15:52:00Z",
-                    "active": True,
-                    "user": 1234,
-                    "actor": 1234,
-                    "type": "ban",
-                    "reason": "Test",
-                    "hidden": False
-                }],
+                "get_return_value": [{"id": 1}],
                 "expected_output": True,
-                "send_params": (
-                    f":x: According to my records, this user already has a ban infraction. "
-                    f"See infraction **#1**."
-                )
+                "infraction_nr": "**#1**"
             }
         ]
 
         for case in test_cases:
-            args = case["args"]
-            return_value = case["get_return_value"]
-            expected = case["expected_output"]
-            send_vals = case["send_params"]
+            with self.subTest(return_value=case["get_return_value"], expected=case["expected_output"]):
+                self.bot.api_client.get.reset_mock()
+                self.ctx.send.reset_mock()
 
-            with self.subTest(args=args, return_value=return_value, expected=expected, send_vals=send_vals):
-                self.bot.api_client.get.return_value = return_value
+                self.bot.api_client.get.return_value = case["get_return_value"]
 
-                result = await utils.has_active_infraction(*args)
-                self.assertEqual(result, expected)
+                result = await utils.has_active_infraction(self.ctx, self.member, "ban")
+                self.assertEqual(result, case["expected_output"])
                 self.bot.api_client.get.assert_awaited_once_with("bot/infractions", params={
                     "active": "true",
                     "type": "ban",
@@ -85,10 +68,8 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 })
 
                 if result:
-                    self.ctx.send.assert_awaited_once_with(send_vals)
-
-                self.bot.api_client.get.reset_mock()
-                self.ctx.send.reset_mock()
+                    self.assertTrue(case["infraction_nr"] in self.ctx.send.call_args[0][0])
+                    self.assertTrue("ban" in self.ctx.send.call_args[0][0])
 
     @patch("bot.cogs.moderation.utils.send_private_embed")
     async def test_notify_infraction(self, send_private_embed_mock):
