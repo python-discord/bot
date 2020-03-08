@@ -297,8 +297,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
             raised = case["raised_exception"]
 
             with self.subTest(expected=expected, raised=raised):
-                if raised:
-                    self.user.send.side_effect = raised
+                self.user.send.side_effect = raised
 
                 result = await utils.send_private_embed(self.user, embed)
 
