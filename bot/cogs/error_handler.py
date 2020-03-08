@@ -31,7 +31,9 @@ class ErrorHandler(Cog):
         Error handling emits a single error message in the invoking context `ctx` and a log message,
         prioritised as follows:
 
-        1. If the name fails to match a command but matches a tag, the tag is invoked
+        1. If the name fails to match a command:
+            If it matches shh+ or unshh+, the channel is silenced or unsilenced respectively.
+            otherwise if it matches a tag, the tag is invoked
             * If CommandNotFound is raised when invoking the tag (determined by the presence of the
               `invoked_from_error_handler` attribute), this error is treated as being unexpected
               and therefore sends an error message
@@ -49,10 +51,14 @@ class ErrorHandler(Cog):
             return
 
         # Try to look for a tag with the command's name if the command isn't found.
-        if isinstance(e, errors.CommandNotFound) and not hasattr(ctx, "invoked_from_error_handler"):
-            if ctx.channel.id != Channels.verification:
+        if isinstance(e, errors.CommandNotFound):
+            if (
+                    not await self.try_silence(ctx)
+                    and not hasattr(ctx, "invoked_from_error_handler")
+                    and ctx.channel.id != Channels.verification
+            ):
                 await self.try_get_tag(ctx)
-                return  # Exit early to avoid logging.
+            return  # Exit early to avoid logging.
         elif isinstance(e, errors.UserInputError):
             await self.handle_user_input_error(ctx, e)
         elif isinstance(e, errors.CheckFailure):
@@ -88,6 +94,28 @@ class ErrorHandler(Cog):
             return self.bot.get_command("help"), command.name
         else:
             return self.bot.get_command("help")
+
+    async def try_silence(self, ctx: Context) -> bool:
+        """
+        Attempt to invoke the silence or unsilence command if invoke with matches a pattern.
+
+        Respecting the checks if:
+                                  invoked with `shh+` silence channel for amount of h's*2 with max of 15.
+                                  invoked with `unshh+` unsilence channel
+        Return bool depending on success of command.
+        """
+        command = ctx.invoked_with.lower()
+        silence_command = self.bot.get_command("silence")
+        if not await silence_command.can_run(ctx):
+            log.debug("Cancelling attempt to invoke silence/unsilence due to failed checks.")
+            return False
+        if command.startswith("shh"):
+            await ctx.invoke(silence_command, duration=min(command.count("h")*2, 15))
+            return True
+        elif command.startswith("unshh"):
+            await ctx.invoke(self.bot.get_command("unsilence"))
+            return True
+        return False
 
     async def try_get_tag(self, ctx: Context) -> None:
         """
