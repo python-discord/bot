@@ -176,20 +176,18 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
         test_cases = [
             {
                 "args": (self.user, "Test title", "Example content"),
-                "expected_output": {
-                    "description": "Example content",
-                    "title": "Test title",
-                    "icon_url": Icons.user_verified
-                },
+                "expected_output": Embed(
+                    description="Example content",
+                    colour=PARDON_COLOR
+                ).set_author(name="Test title", icon_url=Icons.user_verified),
                 "send_result": True
             },
             {
                 "args": (self.user, "Test title 1", "Example content 1", Icons.user_update),
-                "expected_output": {
-                    "description": "Example content 1",
-                    "title": "Test title 1",
-                    "icon_url": Icons.user_update
-                },
+                "expected_output": Embed(
+                    description="Example content 1",
+                    colour=PARDON_COLOR
+                ).set_author(name="Test title 1", icon_url=Icons.user_update),
                 "send_result": False
             }
         ]
@@ -208,11 +206,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(send, result)
 
                 embed = send_private_embed_mock.call_args[0][1]
-
-                self.assertEqual(embed.description, expected["description"])
-                self.assertEqual(embed.colour.value, PARDON_COLOR)
-                self.assertEqual(embed.author.name, expected["title"])
-                self.assertEqual(embed.author.icon_url, expected["icon_url"])
+                self.assertEqual(embed.to_dict(), expected.to_dict())
 
                 send_private_embed_mock.assert_awaited_once_with(args[0], embed)
 
