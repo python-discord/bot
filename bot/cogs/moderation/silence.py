@@ -29,21 +29,59 @@ class FirstHash(tuple):
         return self[0] == other[0]
 
 
+class SilenceNotifier(tasks.Loop):
+    """Loop notifier for posting notices to `alert_channel` containing added channels."""
+
+    def __init__(self, alert_channel: TextChannel):
+        super().__init__(self._notifier, seconds=1, minutes=0, hours=0, count=None, reconnect=True, loop=None)
+        self._silenced_channels = set()
+        self._alert_channel = alert_channel
+
+    def add_channel(self, channel: TextChannel) -> None:
+        """Add channel to `_silenced_channels` and start loop if not launched."""
+        if not self._silenced_channels:
+            self.start()
+            log.trace("Starting notifier loop.")
+        self._silenced_channels.add(FirstHash(channel, self._current_loop))
+
+    def remove_channel(self, channel: TextChannel) -> None:
+        """Remove channel from `_silenced_channels` and stop loop if no channels remain."""
+        with suppress(KeyError):
+            self._silenced_channels.remove(FirstHash(channel))
+            if not self._silenced_channels:
+                self.stop()
+                log.trace("Stopping notifier loop.")
+
+    async def _notifier(self) -> None:
+        """Post notice of `_silenced_channels` with their silenced duration to `_alert_channel` periodically."""
+        # Wait for 15 minutes between notices with pause at start of loop.
+        if self._current_loop and not self._current_loop/60 % 15:
+            log.debug(
+                f"Sending notice with channels: "
+                f"{', '.join(f'#{channel} ({channel.id})' for channel, _ in self._silenced_channels)}."
+            )
+            channels_text = ', '.join(
+                f"{channel.mention} for {(self._current_loop-start)//60} min"
+                for channel, start in self._silenced_channels
+            )
+            await self._alert_channel.send(f"<@&{Roles.moderators}> currently silenced channels: {channels_text}")
+
+
 class Silence(commands.Cog):
     """Commands for stopping channel messages for `verified` role in a channel."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.loop_alert_channels = set()
-        self.bot.loop.create_task(self._get_server_values())
+        self.bot.loop.create_task(self._get_instance_vars())
 
-    async def _get_server_values(self) -> None:
-        """Fetch required internal values after they're available."""
+    async def _get_instance_vars(self) -> None:
+        """Get instance variables after they're available to get from the guild."""
         await self.bot.wait_until_guild_available()
         guild = self.bot.get_guild(Guild.id)
         self._verified_role = guild.get_role(Roles.verified)
         self._mod_alerts_channel = self.bot.get_channel(Channels.mod_alerts)
         self._mod_log_channel = self.bot.get_channel(Channels.mod_log)
+        self.notifier = SilenceNotifier(self._mod_log_channel)
 
     @commands.command(aliases=("hush",))
     async def silence(
@@ -87,8 +125,7 @@ class Silence(commands.Cog):
         """
         Silence `channel` for `self._verified_role`.
 
-        If `persistent` is `True` add `channel` with current iteration of `self._notifier`
-        to `self.self.loop_alert_channels` and attempt to start notifier.
+        If `persistent` is `True` add `channel` to notifier.
         `duration` is only used for logging; if None is passed `persistent` should be True to not log None.
         """
         if channel.overwrites_for(self._verified_role).send_messages is False:
@@ -97,9 +134,7 @@ class Silence(commands.Cog):
         await channel.set_permissions(self._verified_role, overwrite=PermissionOverwrite(send_messages=False))
         if persistent:
             log.debug(f"Silenced #{channel} ({channel.id}) indefinitely.")
-            self.loop_alert_channels.add(FirstHash(channel, self._notifier.current_loop))
-            with suppress(RuntimeError):
-                self._notifier.start()
+            self.notifier.add_channel(channel)
             return True
 
         log.debug(f"Silenced #{channel} ({channel.id}) for {duration} minute(s).")
@@ -110,44 +145,15 @@ class Silence(commands.Cog):
         Unsilence `channel`.
 
         Check if `channel` is silenced through a `PermissionOverwrite`,
-        if it is unsilence it, attempt to remove it from `self.loop_alert_channels`
-        and if `self.loop_alert_channels` are left empty, stop the `self._notifier`
+        if it is unsilence it and remove it from the notifier.
         """
         if channel.overwrites_for(self._verified_role).send_messages is False:
             await channel.set_permissions(self._verified_role, overwrite=None)
             log.debug(f"Unsilenced channel #{channel} ({channel.id}).")
-
-            with suppress(KeyError):
-                self.loop_alert_channels.remove(FirstHash(channel))
-                if not self.loop_alert_channels:
-                    self._notifier.cancel()
+            self.notifier.remove_channel(channel)
             return True
         log.debug(f"Tried to unsilence channel #{channel} ({channel.id}) but the channel was not silenced.")
         return False
-
-    @tasks.loop()
-    async def _notifier(self) -> None:
-        """Post notice of permanently silenced channels to `mod_alerts` periodically."""
-        # Wait for 15 minutes between notices with pause at start of loop.
-        await asyncio.sleep(15*60)
-        current_iter = self._notifier.current_loop+1
-        channels_text = ', '.join(
-            f"{channel.mention} for {current_iter-start} min"
-            for channel, start in self.loop_alert_channels
-        )
-        channels_log_text = ', '.join(
-            f'#{channel} ({channel.id})' for channel, _ in self.loop_alert_channels
-        )
-        log.debug(f"Sending notice with channels: {channels_log_text}")
-        await self._mod_alerts_channel.send(f"<@&{Roles.moderators}> currently silenced channels: {channels_text}")
-
-    @_notifier.before_loop
-    async def _log_notifier_start(self) -> None:
-        log.trace("Starting notifier loop.")
-
-    @_notifier.after_loop
-    async def _log_notifier_end(self) -> None:
-        log.trace("Stopping notifier loop.")
 
     # This cannot be static (must have a __func__ attribute).
     def cog_check(self, ctx: Context) -> bool:
