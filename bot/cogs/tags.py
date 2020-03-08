@@ -1,7 +1,7 @@
 import logging
 import re
 import time
-from typing import Dict, List, Optional, Tuple
+from typing import Callable, Dict, Iterable, List, Optional, Tuple
 
 from discord import Colour, Embed
 from discord.ext.commands import Cog, Context, group
@@ -86,7 +86,7 @@ class Tags(Cog):
             return self._get_suggestions(tag_name)
         return found
 
-    async def _get_tags_via_content(self, check: callable, keywords: str) -> Optional[Embed]:
+    async def _get_tags_via_content(self, check: Callable[[Iterable], bool], keywords: str) -> Optional[Embed]:
         """
         Search for tags via contents.
 
@@ -124,9 +124,8 @@ class Tags(Cog):
         Only search for tags that has ALL the keywords.
         """
         result = await self._get_tags_via_content(all, keywords)
-        if not result:
-            return
-        await ctx.send(embed=result)
+        if result:
+            await ctx.send(embed=result)
 
     @search_tag_content.command(name='any')
     async def search_tag_content_any_keyword(self, ctx: Context, *, keywords: Optional[str] = None) -> None:
@@ -136,9 +135,8 @@ class Tags(Cog):
         Search for tags that has ANY of the keywords.
         """
         result = await self._get_tags_via_content(any, keywords or 'any')
-        if not result:
-            return
-        await ctx.send(embed=result)
+        if result:
+            await ctx.send(embed=result)
 
     @tags_group.command(name='get', aliases=('show', 'g'))
     async def get_command(self, ctx: Context, *, tag_name: TagNameConverter = None) -> None:
