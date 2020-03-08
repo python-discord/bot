@@ -181,8 +181,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     "title": "Test title",
                     "icon_url": Icons.user_verified
                 },
-                "send_result": True,
-                "send_raise": None
+                "send_result": True
             },
             {
                 "args": (self.user, "Test title 1", "Example content 1", Icons.user_update),
@@ -191,24 +190,21 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     "title": "Test title 1",
                     "icon_url": Icons.user_update
                 },
-                "send_result": False,
-                "send_raise": NotFound(AsyncMock(), AsyncMock())
+                "send_result": False
             }
         ]
 
         for case in test_cases:
             args = case["args"]
             expected = case["expected_output"]
-            send, send_raise = case["send_result"], case["send_raise"]
+            send = case["send_result"]
 
             with self.subTest(args=args, expected=expected):
-                if send_raise:
-                    self.ctx.send.side_effect = send_raise
+                send_private_embed_mock.reset_mock()
 
                 send_private_embed_mock.return_value = send
 
                 result = await utils.notify_pardon(*args)
-
                 self.assertEqual(send, result)
 
                 embed = send_private_embed_mock.call_args[0][1]
@@ -219,9 +215,6 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(embed.author.icon_url, expected["icon_url"])
 
                 send_private_embed_mock.assert_awaited_once_with(args[0], embed)
-
-                self.ctx.send.reset_mock(side_effect=True)
-                send_private_embed_mock.reset_mock()
 
     async def test_post_user(self):
         """Test does `post_user` handle errors and results correctly."""
