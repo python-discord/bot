@@ -4,6 +4,7 @@ import importlib
 import pkgutil
 import typing as t
 import unittest
+from collections import defaultdict
 from types import ModuleType
 
 from discord.ext import commands
@@ -56,3 +57,19 @@ class CommandNameTests(unittest.TestCase):
             for cog in self.walk_cogs(module):
                 for cmd in self.walk_commands(cog):
                     yield cmd
+
+    def test_names_dont_shadow(self):
+        """Names and aliases of commands should be unique."""
+        all_names = defaultdict(list)
+        for cmd in self.get_all_commands():
+            func_name = f"{cmd.module}.{cmd.callback.__qualname__}"
+
+            for name in self.get_qualified_names(cmd):
+                with self.subTest(cmd=func_name, name=name):
+                    if name in all_names:
+                        conflicts = ", ".join(all_names.get(name, ""))
+                        self.fail(
+                            f"Name '{name}' of the command {func_name} conflicts with {conflicts}."
+                        )
+
+                all_names[name].append(func_name)
