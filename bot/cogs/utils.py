@@ -266,6 +266,8 @@ class Utils(Cog):
         A maximum of 20 options can be provided, as Discord supports a max of 20
         reactions on a single message.
         """
+        if len(options) < 2:
+            raise BadArgument("Please provide at least 2 options.")
         if len(options) > 20:
             raise BadArgument("I can only handle 20 options!")
 
