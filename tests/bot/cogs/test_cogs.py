@@ -35,3 +35,11 @@ class CommandNameTests(unittest.TestCase):
         for name, cls in extension.__dict__.items():
             if isinstance(cls, commands.Cog):
                 yield getattr(extension, name)
+
+    @staticmethod
+    def get_qualified_names(command: commands.Command) -> t.List[str]:
+        """Return a list of all qualified names, including aliases, for the `command`."""
+        names = [f"{command.full_parent_name} {alias}" for alias in command.aliases]
+        names.append(command.qualified_name)
+
+        return names
