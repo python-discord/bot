@@ -43,3 +43,10 @@ class CommandNameTests(unittest.TestCase):
         names.append(command.qualified_name)
 
         return names
+
+    def get_all_commands(self) -> t.Iterator[commands.Command]:
+        """Yield all commands for all cogs in all extensions."""
+        for extension in self.walk_extensions():
+            for cog in self.walk_cogs(extension):
+                for cmd in self.walk_commands(cog):
+                    yield cmd
