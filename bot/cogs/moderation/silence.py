@@ -128,10 +128,14 @@ class Silence(commands.Cog):
         If `persistent` is `True` add `channel` to notifier.
         `duration` is only used for logging; if None is passed `persistent` should be True to not log None.
         """
-        if channel.overwrites_for(self._verified_role).send_messages is False:
+        current_overwrite = channel.overwrites_for(self._verified_role)
+        if current_overwrite.send_messages is False:
             log.debug(f"Tried to silence channel #{channel} ({channel.id}) but the channel was already silenced.")
             return False
-        await channel.set_permissions(self._verified_role, overwrite=PermissionOverwrite(send_messages=False))
+        await channel.set_permissions(
+            self._verified_role,
+            overwrite=PermissionOverwrite(**dict(current_overwrite, send_messages=False))
+        )
         if persistent:
             log.debug(f"Silenced #{channel} ({channel.id}) indefinitely.")
             self.notifier.add_channel(channel)
@@ -147,8 +151,12 @@ class Silence(commands.Cog):
         Check if `channel` is silenced through a `PermissionOverwrite`,
         if it is unsilence it and remove it from the notifier.
         """
-        if channel.overwrites_for(self._verified_role).send_messages is False:
-            await channel.set_permissions(self._verified_role, overwrite=None)
+        current_overwrite = channel.overwrites_for(self._verified_role)
+        if current_overwrite.send_messages is False:
+            await channel.set_permissions(
+                self._verified_role,
+                overwrite=PermissionOverwrite(**dict(current_overwrite, send_messages=True))
+            )
             log.debug(f"Unsilenced channel #{channel} ({channel.id}).")
             self.notifier.remove_channel(channel)
             return True
