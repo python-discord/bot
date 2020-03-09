@@ -271,7 +271,8 @@ class Utils(Cog):
         if len(options) > 20:
             raise BadArgument("I can only handle 20 options!")
 
-        options = {chr(i): f"{chr(i)} - {v}" for i, v in enumerate(options, start=127462)}
+        codepoint_start = 127462  # represents "regional_indicator_a" unicode value
+        options = {chr(i): f"{chr(i)} - {v}" for i, v in enumerate(options, start=codepoint_start)}
         embed = Embed(title=title, description="\n".join(options.values()))
         message = await ctx.send(embed=embed)
         for reaction in options:
