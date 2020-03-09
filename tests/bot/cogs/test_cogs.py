@@ -28,3 +28,10 @@ class CommandNameTests(unittest.TestCase):
         """Yield imported extensions (modules) from the bot.cogs subpackage."""
         for module in pkgutil.iter_modules(cogs.__path__, "bot.cogs."):
             yield importlib.import_module(module.name)
+
+    @staticmethod
+    def walk_cogs(extension: ModuleType) -> t.Iterator[commands.Cog]:
+        """Yield all cogs defined in an extension."""
+        for name, cls in extension.__dict__.items():
+            if isinstance(cls, commands.Cog):
+                yield getattr(extension, name)
