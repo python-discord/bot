@@ -21,7 +21,8 @@ class CommandNameTests(unittest.TestCase):
             if command.parent is None:
                 yield command
                 if isinstance(command, commands.GroupMixin):
-                    yield from command.walk_commands()
+                    # Annoyingly it returns duplicates for each alias so use a set to fix that
+                    yield from set(command.walk_commands())
 
     @staticmethod
     def walk_modules() -> t.Iterator[ModuleType]:
