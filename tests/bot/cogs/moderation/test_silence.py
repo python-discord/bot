@@ -1,6 +1,5 @@
 import asyncio
 import unittest
-from functools import partial
 from unittest import mock
 
 from bot.cogs.moderation.silence import FirstHash, Silence
@@ -50,18 +49,12 @@ class SilenceTests(unittest.TestCase):
                     result_message=result_message,
                     starting_unsilenced_state=_silence_patch_return
             ):
-                with mock.patch(
-                        "bot.cogs.moderation.silence.Silence._silence",
-                        new_callable=partial(mock.AsyncMock, return_value=_silence_patch_return)
-                ):
+                with mock.patch.object(self.cog, "_silence", return_value=_silence_patch_return):
                     asyncio.run(self.cog.silence.callback(*silence_call_args))
                     self.ctx.send.call_args.assert_called_once_with(result_message)
 
     def test_unsilence_sent_correct_discord_message(self):
         """Check if proper message was sent to `alert_chanel`."""
-        with mock.patch(
-                "bot.cogs.moderation.silence.Silence._unsilence",
-                new_callable=partial(mock.AsyncMock, return_value=True)
-        ):
+        with mock.patch.object(self.cog, "_unsilence", return_value=True):
             asyncio.run(self.cog.unsilence.callback(self.cog, self.ctx))
             self.ctx.channel.send.call_args.assert_called_once_with(f"{Emojis.check_mark} Unsilenced #channel.")
