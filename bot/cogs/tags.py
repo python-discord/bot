@@ -86,7 +86,7 @@ class Tags(Cog):
             return self._get_suggestions(tag_name)
         return found
 
-    async def _get_tags_via_content(self, check: Callable[[Iterable], bool], keywords: str) -> Optional[Embed]:
+    async def _get_tags_via_content(self, check: Callable[[Iterable], bool], keywords: str) -> list:
         """
         Search for tags via contents.
 
@@ -112,18 +112,28 @@ class Tags(Cog):
             if check(query in tag['embed']['description'].casefold() for query in keywords_processed):
                 matching_tags.append(tag)
 
+        return matching_tags
+
+    async def _send_matching_tags(self, ctx: Context, keywords: str, matching_tags: list) -> None:
+        """Send the result of matching tags to user."""
         if not matching_tags:
-            return None
+            pass
         elif len(matching_tags) == 1:
-            return Embed().from_dict(matching_tags[0]['embed'])
+            await ctx.send(embed=Embed().from_dict(matching_tags[0]['embed']))
         else:
-            is_plural = len(keywords_processed) > 1 or keywords.strip().count(' ') > 0
+            is_plural = keywords.strip().count(' ') > 0 or keywords.strip().count(',') > 0
             embed = Embed(
                 title=f"Here are the tags containing the given keyword{'s' * is_plural}:",
                 description='\n'.join(tag['title'] for tag in matching_tags[:10])
             )
-            embed.set_footer(text=f"Keyword{'s' * is_plural} used: {keywords}"[:1024])
-            return embed
+            await LinePaginator.paginate(
+                sorted(f"**»**   {tag['title']}" for tag in matching_tags),
+                ctx,
+                embed,
+                footer_text="To show a tag, type !tags <tagname>.",
+                empty=False,
+                max_lines=15
+            )
 
     @group(name='tags', aliases=('tag', 't'), invoke_without_command=True)
     async def tags_group(self, ctx: Context, *, tag_name: TagNameConverter = None) -> None:
@@ -137,9 +147,8 @@ class Tags(Cog):
 
         Only search for tags that has ALL the keywords.
         """
-        result = await self._get_tags_via_content(all, keywords)
-        if result:
-            await ctx.send(embed=result)
+        matching_tags = await self._get_tags_via_content(all, keywords)
+        await self._send_matching_tags(ctx, keywords, matching_tags)
 
     @search_tag_content.command(name='any')
     async def search_tag_content_any_keyword(self, ctx: Context, *, keywords: Optional[str] = None) -> None:
@@ -148,9 +157,8 @@ class Tags(Cog):
 
         Search for tags that has ANY of the keywords.
         """
-        result = await self._get_tags_via_content(any, keywords or 'any')
-        if result:
-            await ctx.send(embed=result)
+        matching_tags = await self._get_tags_via_content(any, keywords or 'any')
+        await self._send_matching_tags(ctx, keywords, matching_tags)
 
     @tags_group.command(name='get', aliases=('show', 'g'))
     async def get_command(self, ctx: Context, *, tag_name: TagNameConverter = None) -> None:
