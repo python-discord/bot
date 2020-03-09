@@ -1,9 +1,14 @@
 """Test suite for general tests which apply to all cogs."""
 
+import importlib
+import pkgutil
 import typing as t
 import unittest
+from types import ModuleType
 
 from discord.ext import commands
+
+from bot import cogs
 
 
 class CommandNameTests(unittest.TestCase):
@@ -17,3 +22,9 @@ class CommandNameTests(unittest.TestCase):
                 yield command
                 if isinstance(command, commands.GroupMixin):
                     yield from command.walk_commands()
+
+    @staticmethod
+    def walk_extensions() -> t.Iterator[ModuleType]:
+        """Yield imported extensions (modules) from the bot.cogs subpackage."""
+        for module in pkgutil.iter_modules(cogs.__path__, "bot.cogs."):
+            yield importlib.import_module(module.name)
