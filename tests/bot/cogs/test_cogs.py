@@ -33,7 +33,8 @@ class CommandNameTests(unittest.TestCase):
     def walk_cogs(extension: ModuleType) -> t.Iterator[commands.Cog]:
         """Yield all cogs defined in an extension."""
         for obj in extension.__dict__.values():
-            if isinstance(obj, type) and issubclass(obj, commands.Cog):
+            is_cog = isinstance(obj, type) and issubclass(obj, commands.Cog)
+            if is_cog and obj.__module__ == extension.__name__:
                 yield obj
 
     @staticmethod
