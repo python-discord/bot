@@ -2,6 +2,7 @@
 
 variables:
   PIP_NO_CACHE_DIR: false
+  PIP_USER: 1
   PIPENV_HIDE_EMOJIS: 1
   PIPENV_IGNORE_VIRTUALENVS: 1
   PIPENV_NOSPIN: 1
@@ -41,17 +42,16 @@ jobs:
           cacheHitVar: PY_ENV_RESTORED
           path: $(PYTHONUSERBASE)
 
+      - script: echo '##vso[task.prependpath]$(PYTHONUSERBASE)/bin'
+        displayName: 'Prepend PATH'
+
       - script: pip install pipenv
         displayName: 'Install pipenv'
         condition: and(succeeded(), ne(variables.PY_ENV_RESTORED, 'true'))
 
-      # PIP_USER=1 will install packages to the user site.
-      - script: export PIP_USER=1; pipenv install --dev --deploy --system
+      - script: pipenv install --dev --deploy --system
         displayName: 'Install project using pipenv'
         condition: and(succeeded(), ne(variables.PY_ENV_RESTORED, 'true'))
-
-      - script: echo '##vso[task.prependpath]$(PYTHONUSERBASE)/bin'
-        displayName: 'Prepend PATH'
 
       # Create an executable shell script which replaces the original pipenv binary.
       # The shell script ignores the first argument and executes the rest of the args as a command.
