@@ -5,6 +5,8 @@ variables:
   PIPENV_HIDE_EMOJIS: 1
   PIPENV_IGNORE_VIRTUALENVS: 1
   PIPENV_NOSPIN: 1
+  PRE_COMMIT_HOME: $(Pipeline.Workspace)/pre-commit-cache
+  PYTHONUSERBASE: $(Pipeline.Workspace)/py-user-base
 
 jobs:
   - job: test
@@ -13,7 +15,6 @@ jobs:
       vmImage: ubuntu-18.04
 
     variables:
-      PRE_COMMIT_HOME: $(Pipeline.Workspace)/pre-commit-cache
       BOT_API_KEY: foo
       BOT_SENTRY_DSN: blah
       BOT_TOKEN: bar
@@ -38,13 +39,14 @@ jobs:
             python | "$(PythonVersion.pythonLocation)" | ./Pipfile
             python | "$(PythonVersion.pythonLocation)"
           cacheHitVar: PY_ENV_RESTORED
-          path: $(PythonVersion.pythonLocation)
+          path: $(PYTHONUSERBASE)
 
       - script: pip install pipenv
         displayName: 'Install pipenv'
         condition: and(succeeded(), ne(variables.PY_ENV_RESTORED, 'true'))
 
-      - script: pipenv install --dev --deploy --system
+      # PIP_USER=1 will install packages to the user site.
+      - script: export PIP_USER=1; pipenv install --dev --deploy --system
         displayName: 'Install project using pipenv'
         condition: and(succeeded(), ne(variables.PY_ENV_RESTORED, 'true'))
 
