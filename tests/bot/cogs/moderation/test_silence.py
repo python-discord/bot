@@ -39,9 +39,9 @@ class SilenceTests(unittest.TestCase):
     def test_silence_sent_correct_discord_message(self):
         """Check if proper message was sent when called with duration in channel with previous state."""
         test_cases = (
-            (0.0001, f"{Emojis.check_mark} #channel silenced for 0.0001 minute(s).", True,),
-            (None, f"{Emojis.check_mark} #channel silenced indefinitely.", True,),
-            (5, f"{Emojis.cross_mark} #channel is already silenced.", False,),
+            (0.0001, f"{Emojis.check_mark} silenced current channel for 0.0001 minute(s).", True,),
+            (None, f"{Emojis.check_mark} silenced current channel indefinitely.", True,),
+            (5, f"{Emojis.cross_mark} current channel is already silenced.", False,),
         )
         for duration, result_message, _silence_patch_return in test_cases:
             with self.subTest(
@@ -57,4 +57,4 @@ class SilenceTests(unittest.TestCase):
         """Check if proper message was sent to `alert_chanel`."""
         with mock.patch.object(self.cog, "_unsilence", return_value=True):
             asyncio.run(self.cog.unsilence.callback(self.cog, self.ctx))
-            self.ctx.channel.send.call_args.assert_called_once_with(f"{Emojis.check_mark} Unsilenced #channel.")
+            self.ctx.send.call_args.assert_called_once_with(f"{Emojis.check_mark} unsilenced current channel.")
