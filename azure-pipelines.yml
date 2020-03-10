@@ -50,6 +50,9 @@ jobs:
         displayName: 'Install project using pipenv'
         condition: and(succeeded(), ne(variables.PY_ENV_RESTORED, 'true'))
 
+      - script: echo '##vso[task.prependpath]$(PYTHONUSERBASE)/bin'
+        displayName: 'Prepend PATH'
+
       # Create an executable shell script which replaces the original pipenv binary.
       # The shell script ignores the first argument and executes the rest of the args as a command.
       # It makes the `pipenv run flake8` command in the pre-commit hook work by circumventing
