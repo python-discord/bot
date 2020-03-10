@@ -561,7 +561,7 @@ class HelpChannels(Scheduler, commands.Cog):
         self.cancel_task(member.id, ignore_missing=True)
 
         timeout = constants.HelpChannels.claim_minutes * 60
-        callback = self.available_category.set_permissions(member, send_messages=None)
+        callback = self.available_category.set_permissions(member, overwrite=None)
 
         log.trace(f"Scheduling {member}'s ({member.id}) send message permissions to be reinstated.")
         self.schedule_task(member.id, TaskData(timeout, callback))
