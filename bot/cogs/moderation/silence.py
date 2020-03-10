@@ -5,7 +5,7 @@ from typing import Optional
 
 from discord import PermissionOverwrite, TextChannel
 from discord.ext import commands, tasks
-from discord.ext.commands import Context, TextChannelConverter
+from discord.ext.commands import Context
 
 from bot.bot import Bot
 from bot.constants import Channels, Emojis, Guild, MODERATION_ROLES, Roles
@@ -84,42 +84,32 @@ class Silence(commands.Cog):
         self.notifier = SilenceNotifier(self._mod_log_channel)
 
     @commands.command(aliases=("hush",))
-    async def silence(
-            self,
-            ctx: Context,
-            duration: HushDurationConverter = 10,
-            channel: TextChannelConverter = None
-    ) -> None:
+    async def silence(self, ctx: Context, duration: HushDurationConverter = 10) -> None:
         """
         Silence `channel` for `duration` minutes or `"forever"`.
 
         If duration is forever, start a notifier loop that triggers every 15 minutes.
         """
-        channel = channel or ctx.channel
-
-        if not await self._silence(channel, persistent=(duration is None), duration=duration):
-            await ctx.send(f"{Emojis.cross_mark} {channel.mention} is already silenced.")
+        if not await self._silence(ctx.channel, persistent=(duration is None), duration=duration):
+            await ctx.send(f"{Emojis.cross_mark} {ctx.channel.mention} is already silenced.")
             return
         if duration is None:
-            await ctx.send(f"{Emojis.check_mark} {channel.mention} silenced indefinitely.")
+            await ctx.send(f"{Emojis.check_mark} {ctx.channel.mention} silenced indefinitely.")
             return
 
-        await ctx.send(f"{Emojis.check_mark} {channel.mention} silenced for {duration} minute(s).")
+        await ctx.send(f"{Emojis.check_mark} {ctx.channel.mention} silenced for {duration} minute(s).")
         await asyncio.sleep(duration*60)
-        await ctx.invoke(self.unsilence, channel=channel)
+        await ctx.invoke(self.unsilence)
 
     @commands.command(aliases=("unhush",))
-    async def unsilence(self, ctx: Context, channel: TextChannelConverter = None) -> None:
+    async def unsilence(self, ctx: Context) -> None:
         """
         Unsilence `channel`.
 
         Unsilence a previously silenced `channel` and remove it from indefinitely muted channels notice if applicable.
         """
-        channel = channel or ctx.channel
-        alert_channel = self._mod_log_channel if ctx.invoked_with == "hush" else ctx.channel
-
-        if await self._unsilence(channel):
-            await alert_channel.send(f"{Emojis.check_mark} Unsilenced {channel.mention}.")
+        if await self._unsilence(ctx.channel):
+            await ctx.send(f"{Emojis.check_mark} Unsilenced {ctx.channel.mention}.")
 
     async def _silence(self, channel: TextChannel, persistent: bool, duration: Optional[int]) -> bool:
         """
