@@ -71,7 +71,8 @@ jobs:
             pre-commit | "$(PythonVersion.pythonLocation)" | 0
           path: $(PRE_COMMIT_HOME)
 
-      - script: pre-commit run --all-files
+      # pre-commit's venv doesn't allow user installs - not that they're really needed anyway.
+      - script: export PIP_USER=0; pre-commit run --all-files
         displayName: 'Run pre-commit hooks'
 
       - script: coverage run -m xmlrunner
