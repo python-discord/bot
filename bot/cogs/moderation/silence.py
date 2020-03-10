@@ -72,6 +72,7 @@ class Silence(commands.Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
+        self.muted_channels = set()
         self.bot.loop.create_task(self._get_instance_vars())
 
     async def _get_instance_vars(self) -> None:
@@ -131,6 +132,7 @@ class Silence(commands.Cog):
             self.notifier.add_channel(channel)
             return True
 
+        self.muted_channels.add(channel)
         log.debug(f"Silenced #{channel} ({channel.id}) for {duration} minute(s).")
         return True
 
@@ -149,9 +151,18 @@ class Silence(commands.Cog):
             )
             log.debug(f"Unsilenced channel #{channel} ({channel.id}).")
             self.notifier.remove_channel(channel)
+            with suppress(KeyError):
+                self.muted_channels.remove(channel)
             return True
         log.debug(f"Tried to unsilence channel #{channel} ({channel.id}) but the channel was not silenced.")
         return False
+
+    def cog_unload(self) -> None:
+        """Send alert with silenced channels on unload."""
+        if self.muted_channels:
+            channels_string = ''.join(channel.mention for channel in self.muted_channels)
+            message = f"<@&{Roles.moderators}> channels left silenced on cog unload: {channels_string}"
+            asyncio.create_task(self._mod_alerts_channel.send(message))
 
     # This cannot be static (must have a __func__ attribute).
     def cog_check(self, ctx: Context) -> bool:
