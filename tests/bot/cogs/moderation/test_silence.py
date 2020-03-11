@@ -54,6 +54,24 @@ class SilenceNotifierTests(unittest.IsolatedAsyncioTestCase):
             self.notifier.add_channel(Mock())
         self.notifier_start_mock.assert_not_called()
 
+    def test_remove_channel_removes_channel(self):
+        """Channel in FirstHash is removed from `_silenced_channels`."""
+        channel = Mock()
+        with mock.patch.object(self.notifier, "_silenced_channels") as silenced_channels:
+            self.notifier.remove_channel(channel)
+        silenced_channels.remove.assert_called_with(FirstHash(channel))
+
+    def test_remove_channel_stops_loop(self):
+        """Notifier loop is stopped if `_silenced_channels` is empty after remove."""
+        with mock.patch.object(self.notifier, "_silenced_channels", __bool__=lambda _: False):
+            self.notifier.remove_channel(Mock())
+        self.notifier_stop_mock.assert_called_once()
+
+    def test_remove_channel_skips_stop_with_channels(self):
+        """Notifier loop is not stopped if `_silenced_channels` is not empty after remove."""
+        self.notifier.remove_channel(Mock())
+        self.notifier_stop_mock.assert_not_called()
+
 
 class SilenceTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self) -> None:
