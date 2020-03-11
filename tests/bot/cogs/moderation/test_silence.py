@@ -3,7 +3,7 @@ from unittest import mock
 from unittest.mock import MagicMock, Mock
 
 from bot.cogs.moderation.silence import FirstHash, Silence
-from bot.constants import Emojis
+from bot.constants import Emojis, Roles
 from tests.helpers import MockBot, MockContext, MockTextChannel
 
 
@@ -124,3 +124,19 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         with mock.patch.object(self.cog, "muted_channels") as muted_channels:
             await self.cog._unsilence(channel)
         muted_channels.remove.call_args.assert_called_once_with(channel)
+
+    @mock.patch("bot.cogs.moderation.silence.asyncio")
+    @mock.patch.object(Silence, "_mod_alerts_channel", create=True)
+    def test_cog_unload(self, alert_channel, asyncio_mock):
+        """Task for sending an alert was created with present `muted_channels`."""
+        with mock.patch.object(self.cog, "muted_channels"):
+            self.cog.cog_unload()
+            asyncio_mock.create_task.call_args.assert_called_once_with(
+                alert_channel.send(f"<@&{Roles.moderators}> channels left silenced on cog unload: ")
+            )
+
+    @mock.patch("bot.cogs.moderation.silence.asyncio")
+    def test_cog_unload1(self, asyncio_mock):
+        """No task created with no channels."""
+        self.cog.cog_unload()
+        asyncio_mock.create_task.assert_not_called()
