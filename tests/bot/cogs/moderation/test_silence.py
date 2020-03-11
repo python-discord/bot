@@ -140,3 +140,10 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         """No task created with no channels."""
         self.cog.cog_unload()
         asyncio_mock.create_task.assert_not_called()
+
+    @mock.patch("bot.cogs.moderation.silence.with_role_check")
+    @mock.patch("bot.cogs.moderation.silence.MODERATION_ROLES", new=(1, 2, 3))
+    def test_cog_check(self, role_check):
+        """Role check is called with `MODERATION_ROLES`"""
+        self.cog.cog_check(self.ctx)
+        role_check.assert_called_once_with(self.ctx, *(1, 2, 3))
