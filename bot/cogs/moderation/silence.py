@@ -41,7 +41,7 @@ class SilenceNotifier(tasks.Loop):
         """Add channel to `_silenced_channels` and start loop if not launched."""
         if not self._silenced_channels:
             self.start()
-            log.trace("Starting notifier loop.")
+            log.info("Starting notifier loop.")
         self._silenced_channels.add(FirstHash(channel, self._current_loop))
 
     def remove_channel(self, channel: TextChannel) -> None:
@@ -50,7 +50,7 @@ class SilenceNotifier(tasks.Loop):
             self._silenced_channels.remove(FirstHash(channel))
             if not self._silenced_channels:
                 self.stop()
-                log.trace("Stopping notifier loop.")
+                log.info("Stopping notifier loop.")
 
     async def _notifier(self) -> None:
         """Post notice of `_silenced_channels` with their silenced duration to `_alert_channel` periodically."""
@@ -121,7 +121,7 @@ class Silence(commands.Cog):
         """
         current_overwrite = channel.overwrites_for(self._verified_role)
         if current_overwrite.send_messages is False:
-            log.debug(f"Tried to silence channel #{channel} ({channel.id}) but the channel was already silenced.")
+            log.info(f"Tried to silence channel #{channel} ({channel.id}) but the channel was already silenced.")
             return False
         await channel.set_permissions(
             self._verified_role,
@@ -129,11 +129,11 @@ class Silence(commands.Cog):
         )
         self.muted_channels.add(channel)
         if persistent:
-            log.debug(f"Silenced #{channel} ({channel.id}) indefinitely.")
+            log.info(f"Silenced #{channel} ({channel.id}) indefinitely.")
             self.notifier.add_channel(channel)
             return True
 
-        log.debug(f"Silenced #{channel} ({channel.id}) for {duration} minute(s).")
+        log.info(f"Silenced #{channel} ({channel.id}) for {duration} minute(s).")
         return True
 
     async def _unsilence(self, channel: TextChannel) -> bool:
@@ -149,12 +149,12 @@ class Silence(commands.Cog):
                 self._verified_role,
                 overwrite=PermissionOverwrite(**dict(current_overwrite, send_messages=True))
             )
-            log.debug(f"Unsilenced channel #{channel} ({channel.id}).")
+            log.info(f"Unsilenced channel #{channel} ({channel.id}).")
             self.notifier.remove_channel(channel)
             with suppress(KeyError):
                 self.muted_channels.remove(channel)
             return True
-        log.debug(f"Tried to unsilence channel #{channel} ({channel.id}) but the channel was not silenced.")
+        log.info(f"Tried to unsilence channel #{channel} ({channel.id}) but the channel was not silenced.")
         return False
 
     def cog_unload(self) -> None:
