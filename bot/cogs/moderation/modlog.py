@@ -12,6 +12,7 @@ from deepdiff import DeepDiff
 from discord import Colour
 from discord.abc import GuildChannel
 from discord.ext.commands import Cog, Context
+from discord.utils import escape_markdown
 
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, URLs
@@ -523,7 +524,8 @@ class ModLog(Cog, name="ModLog"):
         for item in sorted(changes):
             message += f"{Emojis.bullet} {item}\n"
 
-        message = f"**{after}** (`{after.id}`)\n{message}"
+        member_str = escape_markdown(str(after))
+        message = f"**{member_str}** (`{after.id}`)\n{message}"
 
         await self.send_log_message(
             Icons.user_update, Colour.blurple(),
