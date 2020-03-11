@@ -72,6 +72,25 @@ class SilenceNotifierTests(unittest.IsolatedAsyncioTestCase):
         self.notifier.remove_channel(Mock())
         self.notifier_stop_mock.assert_not_called()
 
+    async def test_notifier_private_sends_alert(self):
+        """Alert is sent on 15 min intervals."""
+        test_cases = (900, 1800, 2700)
+        for current_loop in test_cases:
+            with self.subTest(current_loop=current_loop):
+                with mock.patch.object(self.notifier, "_current_loop", new=current_loop):
+                    await self.notifier._notifier()
+                self.alert_channel.send.assert_called_once_with(f"<@&{Roles.moderators}> currently silenced channels: ")
+            self.alert_channel.send.reset_mock()
+
+    async def test_notifier_skips_alert(self):
+        """Alert is skipped on first loop or not an increment of 900."""
+        test_cases = (0, 15, 5000)
+        for current_loop in test_cases:
+            with self.subTest(current_loop=current_loop):
+                with mock.patch.object(self.notifier, "_current_loop", new=current_loop):
+                    await self.notifier._notifier()
+                    self.alert_channel.send.assert_not_called()
+
 
 class SilenceTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self) -> None:
