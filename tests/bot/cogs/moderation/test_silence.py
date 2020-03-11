@@ -33,6 +33,27 @@ class SilenceNotifierTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.alert_channel = MockTextChannel()
         self.notifier = SilenceNotifier(self.alert_channel)
+        self.notifier.stop = self.notifier_stop_mock = Mock()
+        self.notifier.start = self.notifier_start_mock = Mock()
+        self.notifier._current_loop = self.current_loop_mock = Mock()
+
+    def test_add_channel_adds_channel(self):
+        """Channel in FirstHash with current loop is added to internal set."""
+        channel = Mock()
+        with mock.patch.object(self.notifier, "_silenced_channels") as silenced_channels:
+            self.notifier.add_channel(channel)
+        silenced_channels.add.assert_called_with(FirstHash(channel, self.current_loop_mock))
+
+    def test_add_channel_starts_loop(self):
+        """Loop is started if `_silenced_channels` was empty."""
+        self.notifier.add_channel(Mock())
+        self.notifier_start_mock.assert_called_once()
+
+    def test_add_channel_skips_start_with_channels(self):
+        """Loop start is not called when `_silenced_channels` is not empty."""
+        with mock.patch.object(self.notifier, "_silenced_channels"):
+            self.notifier.add_channel(Mock())
+        self.notifier_start_mock.assert_not_called()
 
 
 class SilenceTests(unittest.IsolatedAsyncioTestCase):
