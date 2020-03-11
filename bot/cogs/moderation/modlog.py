@@ -67,7 +67,7 @@ class ModLog(Cog, name="ModLog"):
                         'embeds': [embed.to_dict() for embed in message.embeds],
                         'attachments': attachment,
                     }
-                    for message, attachment in zip_longest(messages, attachments)
+                    for message, attachment in zip_longest(messages, attachments, fillvalue=[])
                 ]
             }
         )

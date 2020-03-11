@@ -125,17 +125,17 @@ class Syncer(abc.ABC):
         except TimeoutError:
             # reaction will remain none thus sync will be aborted in the finally block below.
             log.debug(f"The {self.name} syncer confirmation prompt timed out.")
-        finally:
-            if str(reaction) == constants.Emojis.check_mark:
-                log.trace(f"The {self.name} syncer was confirmed.")
-                await message.edit(content=f':ok_hand: {mention}{self.name} sync will proceed.')
-                return True
-            else:
-                log.warning(f"The {self.name} syncer was aborted or timed out!")
-                await message.edit(
-                    content=f':warning: {mention}{self.name} sync aborted or timed out!'
-                )
-                return False
+
+        if str(reaction) == constants.Emojis.check_mark:
+            log.trace(f"The {self.name} syncer was confirmed.")
+            await message.edit(content=f':ok_hand: {mention}{self.name} sync will proceed.')
+            return True
+        else:
+            log.warning(f"The {self.name} syncer was aborted or timed out!")
+            await message.edit(
+                content=f':warning: {mention}{self.name} sync aborted or timed out!'
+            )
+            return False
 
     @abc.abstractmethod
     async def _get_diff(self, guild: Guild) -> _Diff:
