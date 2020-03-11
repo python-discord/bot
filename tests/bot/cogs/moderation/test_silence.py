@@ -52,6 +52,7 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
                 with mock.patch.object(self.cog, "_silence", return_value=_silence_patch_return):
                     await self.cog.silence.callback(self.cog, self.ctx, duration)
                     self.ctx.send.assert_called_once_with(result_message)
+            self.ctx.reset_mock()
 
     async def test_unsilence_sent_correct_discord_message(self):
         """Check if proper message was sent to `alert_chanel`."""
