@@ -2,7 +2,7 @@ import unittest
 from unittest import mock
 from unittest.mock import MagicMock, Mock
 
-from bot.cogs.moderation.silence import FirstHash, Silence
+from bot.cogs.moderation.silence import FirstHash, Silence, SilenceNotifier
 from bot.constants import Channels, Emojis, Guild, Roles
 from tests.helpers import MockBot, MockContext, MockTextChannel
 
@@ -27,6 +27,12 @@ class FirstHashTests(unittest.TestCase):
         for tuple1, tuple2 in self.test_cases:
             with self.subTest(tuple1=tuple1, tuple2=tuple2):
                 self.assertTrue(tuple1 == tuple2)
+
+
+class SilenceNotifierTests(unittest.IsolatedAsyncioTestCase):
+    def setUp(self) -> None:
+        self.alert_channel = MockTextChannel()
+        self.notifier = SilenceNotifier(self.alert_channel)
 
 
 class SilenceTests(unittest.IsolatedAsyncioTestCase):
