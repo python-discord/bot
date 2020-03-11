@@ -68,14 +68,11 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         channel.set_permissions.assert_not_called()
 
     async def test_silence_private_silenced_channel(self):
-        """Channel had `send_message` permissions revoked and was added to `muted_channels`."""
+        """Channel had `send_message` permissions revoked."""
         channel = MockTextChannel()
-        muted_channels = Mock()
-        with mock.patch.object(self.cog, "muted_channels", new=muted_channels, create=True):
-            self.assertTrue(await self.cog._silence(channel, False, None))
+        self.assertTrue(await self.cog._silence(channel, False, None))
         channel.set_permissions.assert_called_once()
         self.assertFalse(channel.set_permissions.call_args.kwargs['overwrite'].send_messages)
-        muted_channels.add.call_args.assert_called_once_with(channel)
 
     async def test_silence_private_notifier(self):
         """Channel should be added to notifier with `persistent` set to `True`, and the other way around."""
@@ -89,6 +86,12 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(persistent=False):
                 await self.cog._silence(channel, False, None)
                 self.cog.notifier.add_channel.assert_not_called()
+
+    async def test_silence_private_removed_muted_channel(self):
+        channel = MockTextChannel()
+        with mock.patch.object(self.cog, "muted_channels") as muted_channels:
+            await self.cog._silence(MockTextChannel(), False, None)
+        muted_channels.add.call_args.assert_called_once_with(channel)
 
     async def test_unsilence_private_for_false(self):
         """Permissions are not set and `False` is returned in an unsilenced channel."""
