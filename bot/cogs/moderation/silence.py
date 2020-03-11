@@ -127,12 +127,12 @@ class Silence(commands.Cog):
             self._verified_role,
             overwrite=PermissionOverwrite(**dict(current_overwrite, send_messages=False))
         )
+        self.muted_channels.add(channel)
         if persistent:
             log.debug(f"Silenced #{channel} ({channel.id}) indefinitely.")
             self.notifier.add_channel(channel)
             return True
 
-        self.muted_channels.add(channel)
         log.debug(f"Silenced #{channel} ({channel.id}) for {duration} minute(s).")
         return True
 
