@@ -91,6 +91,7 @@ class Silence(commands.Cog):
 
         If duration is forever, start a notifier loop that triggers every 15 minutes.
         """
+        log.debug(f"{ctx.author} is silencing channel #{ctx.channel}.")
         if not await self._silence(ctx.channel, persistent=(duration is None), duration=duration):
             await ctx.send(f"{Emojis.cross_mark} current channel is already silenced.")
             return
@@ -100,6 +101,7 @@ class Silence(commands.Cog):
 
         await ctx.send(f"{Emojis.check_mark} silenced current channel for {duration} minute(s).")
         await asyncio.sleep(duration*60)
+        log.info(f"Unsilencing channel after set delay.")
         await ctx.invoke(self.unsilence)
 
     @commands.command(aliases=("unhush",))
@@ -109,6 +111,7 @@ class Silence(commands.Cog):
 
         Unsilence a previously silenced `channel` and remove it from indefinitely muted channels notice if applicable.
         """
+        log.debug(f"Unsilencing channel #{ctx.channel} from {ctx.author}'s command.")
         if await self._unsilence(ctx.channel):
             await ctx.send(f"{Emojis.check_mark} unsilenced current channel.")
 
