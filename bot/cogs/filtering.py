@@ -6,6 +6,7 @@ import discord.errors
 from dateutil.relativedelta import relativedelta
 from discord import Colour, DMChannel, Member, Message, TextChannel
 from discord.ext.commands import Cog
+from discord.utils import escape_markdown
 
 from bot.bot import Bot
 from bot.cogs.moderation import ModLog
@@ -195,8 +196,8 @@ class Filtering(Cog):
                             surroundings = match.string[max(match.start() - 10, 0): match.end() + 10]
                             message_content = (
                                 f"**Match:** '{match[0]}'\n"
-                                f"**Location:** '...{surroundings}...'\n"
-                                f"\n**Original Message:**\n{msg.content}"
+                                f"**Location:** '...{escape_markdown(surroundings)}...'\n"
+                                f"\n**Original Message:**\n{escape_markdown(msg.content)}"
                             )
                         else:  # Use content of discord Message
                             message_content = msg.content
