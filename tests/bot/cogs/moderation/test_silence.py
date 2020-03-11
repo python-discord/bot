@@ -1,4 +1,3 @@
-import asyncio
 import unittest
 from unittest import mock
 from unittest.mock import Mock
@@ -30,15 +29,14 @@ class FirstHashTests(unittest.TestCase):
                 self.assertTrue(tuple1 == tuple2)
 
 
-class SilenceTests(unittest.TestCase):
+class SilenceTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self) -> None:
-
         self.bot = MockBot()
         self.cog = Silence(self.bot)
         self.ctx = MockContext()
         self.cog._verified_role = None
 
-    def test_silence_sent_correct_discord_message(self):
+    async def test_silence_sent_correct_discord_message(self):
         """Check if proper message was sent when called with duration in channel with previous state."""
         test_cases = (
             (0.0001, f"{Emojis.check_mark} silenced current channel for 0.0001 minute(s).", True,),
@@ -52,42 +50,42 @@ class SilenceTests(unittest.TestCase):
                     starting_unsilenced_state=_silence_patch_return
             ):
                 with mock.patch.object(self.cog, "_silence", return_value=_silence_patch_return):
-                    asyncio.run(self.cog.silence.callback(self.cog, self.ctx, duration))
+                    await self.cog.silence.callback(self.cog, self.ctx, duration)
                     self.ctx.send.call_args.assert_called_once_with(result_message)
 
-    def test_unsilence_sent_correct_discord_message(self):
+    async def test_unsilence_sent_correct_discord_message(self):
         """Check if proper message was sent to `alert_chanel`."""
         with mock.patch.object(self.cog, "_unsilence", return_value=True):
-            asyncio.run(self.cog.unsilence.callback(self.cog, self.ctx))
+            await self.cog.unsilence.callback(self.cog, self.ctx)
             self.ctx.send.call_args.assert_called_once_with(f"{Emojis.check_mark} unsilenced current channel.")
 
-    def test_silence_private_for_false(self):
+    async def test_silence_private_for_false(self):
         """Permissions are not set and `False` is returned in an already silenced channel."""
         perm_overwrite = Mock(send_messages=False)
         channel = Mock(overwrites_for=Mock(return_value=perm_overwrite))
 
-        self.assertFalse(asyncio.run(self.cog._silence(channel, True, None)))
+        self.assertFalse(await self.cog._silence(channel, True, None))
         channel.set_permissions.assert_not_called()
 
-    def test_silence_private_silenced_channel(self):
+    async def test_silence_private_silenced_channel(self):
         """Channel had `send_message` permissions revoked and was added to `muted_channels`."""
         channel = MockTextChannel()
         muted_channels = Mock()
         with mock.patch.object(self.cog, "muted_channels", new=muted_channels, create=True):
-            self.assertTrue(asyncio.run(self.cog._silence(channel, False, None)))
+            self.assertTrue(await self.cog._silence(channel, False, None))
         channel.set_permissions.assert_called_once()
         self.assertFalse(channel.set_permissions.call_args.kwargs['overwrite'].send_messages)
         muted_channels.add.call_args.assert_called_once_with(channel)
 
-    def test_silence_private_notifier(self):
+    async def test_silence_private_notifier(self):
         """Channel should be added to notifier with `persistent` set to `True`, and the other way around."""
         channel = MockTextChannel()
         with mock.patch.object(self.cog, "notifier", create=True):
             with self.subTest(persistent=True):
-                asyncio.run(self.cog._silence(channel, True, None))
+                await self.cog._silence(channel, True, None)
                 self.cog.notifier.add_channel.assert_called_once()
 
         with mock.patch.object(self.cog, "notifier", create=True):
             with self.subTest(persistent=False):
-                asyncio.run(self.cog._silence(channel, False, None))
+                await self.cog._silence(channel, False, None)
                 self.cog.notifier.add_channel.assert_not_called()
