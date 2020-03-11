@@ -1,6 +1,6 @@
 import unittest
 from unittest import mock
-from unittest.mock import Mock
+from unittest.mock import MagicMock, Mock
 
 from bot.cogs.moderation.silence import FirstHash, Silence
 from bot.constants import Emojis
@@ -89,3 +89,35 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(persistent=False):
                 await self.cog._silence(channel, False, None)
                 self.cog.notifier.add_channel.assert_not_called()
+
+    async def test_unsilence_private_for_false(self):
+        """Permissions are not set and `False` is returned in an unsilenced channel."""
+        channel = Mock()
+        self.assertFalse(await self.cog._unsilence(channel))
+        channel.set_permissions.assert_not_called()
+
+    async def test_unsilence_private_unsilenced_channel(self):
+        """Channel had `send_message` permissions restored"""
+        perm_overwrite = MagicMock(send_messages=False)
+        channel = MockTextChannel(overwrites_for=Mock(return_value=perm_overwrite))
+        with mock.patch.object(self.cog, "notifier", create=True):
+            self.assertTrue(await self.cog._unsilence(channel))
+        channel.set_permissions.assert_called_once()
+        self.assertTrue(channel.set_permissions.call_args.kwargs['overwrite'].send_messages)
+
+    async def test_unsilence_private_removed_notifier(self):
+        """Channel was removed from `notifier` on unsilence."""
+        perm_overwrite = MagicMock(send_messages=False)
+        channel = MockTextChannel(overwrites_for=Mock(return_value=perm_overwrite))
+        with mock.patch.object(self.cog, "notifier", create=True):
+            await self.cog._unsilence(channel)
+            self.cog.notifier.remove_channel.call_args.assert_called_once_with(channel)
+
+    async def test_unsilence_private_removed_muted_channel(self):
+        """Channel was removed from `muted_channels` on unsilence."""
+        perm_overwrite = MagicMock(send_messages=False)
+        channel = MockTextChannel(overwrites_for=Mock(return_value=perm_overwrite))
+        with mock.patch.object(self.cog, "muted_channels", create=True),\
+             mock.patch.object(self.cog, "notifier", create=True):  # noqa E127
+            await self.cog._unsilence(channel)
+            self.cog.muted_channels.remove.call_args.assert_called_once_with(channel)
