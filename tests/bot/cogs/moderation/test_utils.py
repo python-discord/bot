@@ -214,7 +214,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
         user = MockUser(avatar="abc", discriminator=5678, id=1234, name="Test user")
         test_cases = [
             {
-                "args": (self.ctx, user),
+                "user": user,
                 "post_result": "bar",
                 "raise_error": False,
                 "payload": {
@@ -227,7 +227,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 }
             },
             {
-                "args": (self.ctx, self.member),
+                "user": self.member,
                 "post_result": "foo",
                 "raise_error": True,
                 "payload": {
@@ -242,12 +242,12 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
         ]
 
         for case in test_cases:
-            args = case["args"]
+            test_user = case["user"]
             expected = case["post_result"]
             error = case["raise_error"]
             payload = case["payload"]
 
-            with self.subTest(args=args, result=expected, error=error, payload=payload):
+            with self.subTest(user=test_user, result=expected, error=error, payload=payload):
                 self.bot.api_client.post.reset_mock(side_effect=True)
                 self.ctx.bot.api_client.post.return_value = expected
 
@@ -256,7 +256,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     err = self.ctx.bot.api_client.post.side_effect
                     err.status = 400
 
-                result = await utils.post_user(*args)
+                result = await utils.post_user(self.ctx, test_user)
 
                 if error:
                     self.assertIsNone(result)
