@@ -110,6 +110,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
             )
         )
         if active_watches:
+            log.trace("Active watches for user found.  Attempting to remove.")
             [infraction] = active_watches
 
             await self.bot.api_client.patch(
@@ -120,9 +121,12 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
             await post_infraction(ctx, user, 'watch', f"Unwatched: {reason}", hidden=True, active=False)
 
             if not banned:  # Prevents a message being sent to the channel if part of a permanent ban
+                log.trace("User is not banned.  Sending message to channel")
                 await ctx.send(f":white_check_mark: Messages sent by {user} will no longer be relayed.")
 
             self._remove_user(user.id)
         else:
+            log.trace("No active watches found for user.")
             if not banned:  # Prevents a message being sent to the channel if part of a permanent ban
+                log.trace("User is not perma banned. Send the error message.")
                 await ctx.send(":x: The specified user is currently not being watched.")

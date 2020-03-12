@@ -244,15 +244,18 @@ class Infractions(InfractionScheduler, commands.Cog):
         await self.apply_infraction(ctx, infraction, user, action)
 
         # Remove perma banned users from the watch list
-        if 'expires_at' not in kwargs:
-            bb_cog = self.bot.get_cog("BigBrother")
+        if infraction.get('expires_at') is None:
+            log.trace("Ban was a permanent one.  Attempt to remove from watched list.")
+            bb_cog = self.bot.get_cog("Big Brother")
             if bb_cog:
+                log.trace("Cog loaded.  Attempting to remove from list.")
                 await bb_cog.apply_unwatch(
                     ctx,
                     user,
                     "User has been permanently banned from the server.  Automatically removed.",
                     banned=True
                 )
+                log.debug("Perma banned user removed from watch list.")
 
     # endregion
     # region: Base pardon functions
