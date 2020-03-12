@@ -1,5 +1,4 @@
 import asyncio
-import inspect
 import unittest
 import unittest.mock
 
@@ -214,6 +213,11 @@ class DiscordMocksTests(unittest.TestCase):
         with self.assertRaises(RuntimeError, msg="cannot reuse already awaited coroutine"):
             asyncio.run(coroutine_object)
 
+    def test_user_mock_uses_explicitly_passed_mention_attribute(self):
+        """MockUser should use an explicitly passed value for user.mention."""
+        user = helpers.MockUser(mention="hello")
+        self.assertEqual(user.mention, "hello")
+
 
 class MockObjectTests(unittest.TestCase):
     """Tests the mock objects and mixins we've defined."""
@@ -341,65 +345,10 @@ class MockObjectTests(unittest.TestCase):
                 attribute = getattr(mock, valid_attribute)
                 self.assertTrue(isinstance(attribute, mock_type.child_mock_type))
 
-    def test_extract_coroutine_methods_from_spec_instance_should_extract_all_and_only_coroutines(self):
-        """Test if all coroutine functions are extracted, but not regular methods or attributes."""
-        class CoroutineDonor:
-            def __init__(self):
-                self.some_attribute = 'alpha'
-
-            async def first_coroutine():
-                """This coroutine function should be extracted."""
-
-            async def second_coroutine():
-                """This coroutine function should be extracted."""
-
-            def regular_method():
-                """This regular function should not be extracted."""
-
-        class Receiver:
+    def test_custom_mock_mixin_mocks_async_magic_methods_with_async_mock(self):
+        """The CustomMockMixin should mock async magic methods with an AsyncMock."""
+        class MyMock(helpers.CustomMockMixin, unittest.mock.MagicMock):
             pass
 
-        donor = CoroutineDonor()
-        receiver = Receiver()
-
-        helpers.CustomMockMixin._extract_coroutine_methods_from_spec_instance(receiver, donor)
-
-        self.assertIsInstance(receiver.first_coroutine, helpers.AsyncMock)
-        self.assertIsInstance(receiver.second_coroutine, helpers.AsyncMock)
-        self.assertFalse(hasattr(receiver, 'regular_method'))
-        self.assertFalse(hasattr(receiver, 'some_attribute'))
-
-    @unittest.mock.patch("builtins.super", new=unittest.mock.MagicMock())
-    @unittest.mock.patch("tests.helpers.CustomMockMixin._extract_coroutine_methods_from_spec_instance")
-    def test_custom_mock_mixin_init_with_spec(self, extract_method_mock):
-        """Test if CustomMockMixin correctly passes on spec/kwargs and calls the extraction method."""
-        spec_set = "pydis"
-
-        helpers.CustomMockMixin(spec_set=spec_set)
-
-        extract_method_mock.assert_called_once_with(spec_set)
-
-    @unittest.mock.patch("builtins.super", new=unittest.mock.MagicMock())
-    @unittest.mock.patch("tests.helpers.CustomMockMixin._extract_coroutine_methods_from_spec_instance")
-    def test_custom_mock_mixin_init_without_spec(self, extract_method_mock):
-        """Test if CustomMockMixin correctly passes on spec/kwargs and calls the extraction method."""
-        helpers.CustomMockMixin()
-
-        extract_method_mock.assert_not_called()
-
-    def test_async_mock_provides_coroutine_for_dunder_call(self):
-        """Test if AsyncMock objects have a coroutine for their __call__ method."""
-        async_mock = helpers.AsyncMock()
-        self.assertTrue(inspect.iscoroutinefunction(async_mock.__call__))
-
-        coroutine = async_mock()
-        self.assertTrue(inspect.iscoroutine(coroutine))
-        self.assertIsNotNone(asyncio.run(coroutine))
-
-    def test_async_test_decorator_allows_synchronous_call_to_async_def(self):
-        """Test if the `async_test` decorator allows an `async def` to be called synchronously."""
-        @helpers.async_test
-        async def kosayoda():
-            return "return value"
-
-        self.assertEqual(kosayoda(), "return value")
+        mock = MyMock()
+        self.assertIsInstance(mock.__aenter__, unittest.mock.AsyncMock)

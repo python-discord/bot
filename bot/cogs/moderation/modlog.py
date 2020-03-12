@@ -67,7 +67,7 @@ class ModLog(Cog, name="ModLog"):
                         'embeds': [embed.to_dict() for embed in message.embeds],
                         'attachments': attachment,
                     }
-                    for message, attachment in zip_longest(messages, attachments)
+                    for message, attachment in zip_longest(messages, attachments, fillvalue=[])
                 ]
             }
         )
@@ -87,7 +87,7 @@ class ModLog(Cog, name="ModLog"):
         title: t.Optional[str],
         text: str,
         thumbnail: t.Optional[t.Union[str, discord.Asset]] = None,
-        channel_id: int = Channels.modlog,
+        channel_id: int = Channels.mod_log,
         ping_everyone: bool = False,
         files: t.Optional[t.List[discord.File]] = None,
         content: t.Optional[str] = None,
@@ -377,7 +377,7 @@ class ModLog(Cog, name="ModLog"):
             Icons.user_ban, Colours.soft_red,
             "User banned", f"{member} (`{member.id}`)",
             thumbnail=member.avatar_url_as(static_format="png"),
-            channel_id=Channels.userlog
+            channel_id=Channels.user_log
         )
 
     @Cog.listener()
@@ -399,7 +399,7 @@ class ModLog(Cog, name="ModLog"):
             Icons.sign_in, Colours.soft_green,
             "User joined", message,
             thumbnail=member.avatar_url_as(static_format="png"),
-            channel_id=Channels.userlog
+            channel_id=Channels.user_log
         )
 
     @Cog.listener()
@@ -416,7 +416,7 @@ class ModLog(Cog, name="ModLog"):
             Icons.sign_out, Colours.soft_red,
             "User left", f"{member} (`{member.id}`)",
             thumbnail=member.avatar_url_as(static_format="png"),
-            channel_id=Channels.userlog
+            channel_id=Channels.user_log
         )
 
     @Cog.listener()
@@ -433,7 +433,7 @@ class ModLog(Cog, name="ModLog"):
             Icons.user_unban, Colour.blurple(),
             "User unbanned", f"{member} (`{member.id}`)",
             thumbnail=member.avatar_url_as(static_format="png"),
-            channel_id=Channels.modlog
+            channel_id=Channels.mod_log
         )
 
     @Cog.listener()
@@ -529,7 +529,7 @@ class ModLog(Cog, name="ModLog"):
             Icons.user_update, Colour.blurple(),
             "Member updated", message,
             thumbnail=after.avatar_url_as(static_format="png"),
-            channel_id=Channels.userlog
+            channel_id=Channels.user_log
         )
 
     @Cog.listener()
@@ -538,7 +538,7 @@ class ModLog(Cog, name="ModLog"):
         channel = message.channel
         author = message.author
 
-        if message.guild.id != GuildConstant.id or channel.id in GuildConstant.ignored:
+        if message.guild.id != GuildConstant.id or channel.id in GuildConstant.modlog_blacklist:
             return
 
         self._cached_deletes.append(message.id)
@@ -591,7 +591,7 @@ class ModLog(Cog, name="ModLog"):
     @Cog.listener()
     async def on_raw_message_delete(self, event: discord.RawMessageDeleteEvent) -> None:
         """Log raw message delete event to message change log."""
-        if event.guild_id != GuildConstant.id or event.channel_id in GuildConstant.ignored:
+        if event.guild_id != GuildConstant.id or event.channel_id in GuildConstant.modlog_blacklist:
             return
 
         await asyncio.sleep(1)  # Wait here in case the normal event was fired
@@ -635,7 +635,7 @@ class ModLog(Cog, name="ModLog"):
         if (
             not msg_before.guild
             or msg_before.guild.id != GuildConstant.id
-            or msg_before.channel.id in GuildConstant.ignored
+            or msg_before.channel.id in GuildConstant.modlog_blacklist
             or msg_before.author.bot
         ):
             return
@@ -717,7 +717,7 @@ class ModLog(Cog, name="ModLog"):
         if (
             not message.guild
             or message.guild.id != GuildConstant.id
-            or message.channel.id in GuildConstant.ignored
+            or message.channel.id in GuildConstant.modlog_blacklist
             or message.author.bot
         ):
             return
@@ -769,7 +769,7 @@ class ModLog(Cog, name="ModLog"):
         """Log member voice state changes to the voice log channel."""
         if (
             member.guild.id != GuildConstant.id
-            or (before.channel and before.channel.id in GuildConstant.ignored)
+            or (before.channel and before.channel.id in GuildConstant.modlog_blacklist)
         ):
             return
 

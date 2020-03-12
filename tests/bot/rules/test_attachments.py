@@ -1,98 +1,69 @@
-import unittest
-from typing import List, NamedTuple, Tuple
+from typing import Iterable
 
 from bot.rules import attachments
-from tests.helpers import MockMessage, async_test
+from tests.bot.rules import DisallowedCase, RuleTest
+from tests.helpers import MockMessage
 
 
-class Case(NamedTuple):
-    recent_messages: List[MockMessage]
-    culprit: Tuple[str]
-    total_attachments: int
-
-
-def msg(author: str, total_attachments: int) -> MockMessage:
+def make_msg(author: str, total_attachments: int) -> MockMessage:
     """Builds a message with `total_attachments` attachments."""
     return MockMessage(author=author, attachments=list(range(total_attachments)))
 
 
-class AttachmentRuleTests(unittest.TestCase):
+class AttachmentRuleTests(RuleTest):
     """Tests applying the `attachments` antispam rule."""
 
     def setUp(self):
-        self.config = {"max": 5}
+        self.apply = attachments.apply
+        self.config = {"max": 5, "interval": 10}
 
-    @async_test
     async def test_allows_messages_without_too_many_attachments(self):
         """Messages without too many attachments are allowed as-is."""
         cases = (
-            [msg("bob", 0), msg("bob", 0), msg("bob", 0)],
-            [msg("bob", 2), msg("bob", 2)],
-            [msg("bob", 2), msg("alice", 2), msg("bob", 2)],
+            [make_msg("bob", 0), make_msg("bob", 0), make_msg("bob", 0)],
+            [make_msg("bob", 2), make_msg("bob", 2)],
+            [make_msg("bob", 2), make_msg("alice", 2), make_msg("bob", 2)],
         )
 
-        for recent_messages in cases:
-            last_message = recent_messages[0]
+        await self.run_allowed(cases)
 
-            with self.subTest(
-                last_message=last_message,
-                recent_messages=recent_messages,
-                config=self.config
-            ):
-                self.assertIsNone(
-                    await attachments.apply(last_message, recent_messages, self.config)
-                )
-
-    @async_test
     async def test_disallows_messages_with_too_many_attachments(self):
         """Messages with too many attachments trigger the rule."""
         cases = (
-            Case(
-                [msg("bob", 4), msg("bob", 0), msg("bob", 6)],
+            DisallowedCase(
+                [make_msg("bob", 4), make_msg("bob", 0), make_msg("bob", 6)],
                 ("bob",),
-                10
+                10,
             ),
-            Case(
-                [msg("bob", 4), msg("alice", 6), msg("bob", 2)],
+            DisallowedCase(
+                [make_msg("bob", 4), make_msg("alice", 6), make_msg("bob", 2)],
                 ("bob",),
-                6
+                6,
             ),
-            Case(
-                [msg("alice", 6)],
+            DisallowedCase(
+                [make_msg("alice", 6)],
                 ("alice",),
-                6
+                6,
             ),
-            (
-                [msg("alice", 1) for _ in range(6)],
+            DisallowedCase(
+                [make_msg("alice", 1) for _ in range(6)],
                 ("alice",),
-                6
+                6,
             ),
         )
 
-        for recent_messages, culprit, total_attachments in cases:
-            last_message = recent_messages[0]
-            relevant_messages = tuple(
-                msg
-                for msg in recent_messages
-                if (
-                    msg.author == last_message.author
-                    and len(msg.attachments) > 0
-                )
-            )
+        await self.run_disallowed(cases)
 
-            with self.subTest(
-                last_message=last_message,
-                recent_messages=recent_messages,
-                relevant_messages=relevant_messages,
-                total_attachments=total_attachments,
-                config=self.config
-            ):
-                desired_output = (
-                    f"sent {total_attachments} attachments in {self.config['max']}s",
-                    culprit,
-                    relevant_messages
-                )
-                self.assertTupleEqual(
-                    await attachments.apply(last_message, recent_messages, self.config),
-                    desired_output
-                )
+    def relevant_messages(self, case: DisallowedCase) -> Iterable[MockMessage]:
+        last_message = case.recent_messages[0]
+        return tuple(
+            msg
+            for msg in case.recent_messages
+            if (
+                msg.author == last_message.author
+                and len(msg.attachments) > 0
+            )
+        )
+
+    def get_report(self, case: DisallowedCase) -> str:
+        return f"sent {case.n_violations} attachments in {self.config['interval']}s"
