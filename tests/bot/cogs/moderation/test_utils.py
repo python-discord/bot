@@ -177,26 +177,26 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
         test_cases = [
             {
                 "args": (self.user, "Test title", "Example content"),
-                "expected_output": Embed(
-                    description="Example content",
-                    colour=PARDON_COLOR
-                ).set_author(name="Test title", icon_url=Icons.user_verified),
+                "icon": Icons.user_verified,
                 "send_result": True
             },
             {
-                "args": (self.user, "Test title 1", "Example content 1", Icons.user_update),
-                "expected_output": Embed(
-                    description="Example content 1",
-                    colour=PARDON_COLOR
-                ).set_author(name="Test title 1", icon_url=Icons.user_update),
+                "args": (self.user, "Test title", "Example content", Icons.user_update),
+                "icon": Icons.user_update,
                 "send_result": False
             }
         ]
 
         for case in test_cases:
             args = case["args"]
-            expected = case["expected_output"]
             send = case["send_result"]
+
+            expected = Embed(
+                description="Example content",
+                colour=PARDON_COLOR).set_author(
+                name="Test title",
+                icon_url=case["icon"]
+            )
 
             with self.subTest(args=args, expected=expected):
                 send_private_embed_mock.reset_mock()
