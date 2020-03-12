@@ -36,12 +36,11 @@ class Tags(Cog):
         cache = {}
         tag_files = Path("bot", "resources", "tags").iterdir()
         for file in tag_files:
-            file_path = Path(file)
-            tag_title = file_path.stem
+            tag_title = file.stem
             tag = {
                 "title": tag_title,
                 "embed": {
-                    "description": file_path.read_text()
+                    "description": file.read_text()
                 }
             }
             cache[tag_title] = tag
