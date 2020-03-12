@@ -96,12 +96,19 @@ class TokenRemover(Cog):
         if msg.author.bot:
             return False
 
-        maybe_match = TOKEN_RE.search(msg.content)
-        if maybe_match is None:
+        # Use findall rather than search to guard against method calls prematurely returning the
+        # token check (e.g. `message.channel.send` also matches our token pattern)
+        maybe_matches = TOKEN_RE.findall(msg.content)
+        if not maybe_matches:
             return False
 
+        return any(cls.is_maybe_token(substr) for substr in maybe_matches)
+
+    @classmethod
+    def is_maybe_token(cls, test_str: str) -> bool:
+        """Check the provided string to see if it is a seemingly valid token."""
         try:
-            user_id, creation_timestamp, hmac = maybe_match.group(0).split('.')
+            user_id, creation_timestamp, hmac = test_str.split('.')
         except ValueError:
             return False
 
