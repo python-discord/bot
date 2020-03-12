@@ -371,5 +371,5 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
 
         actual = await utils.post_infraction(self.ctx, self.user, "mute", "Test reason")
         self.assertEqual(actual, "foo")
-        self.bot.api_client.post.assert_awaited_once_with("bot/infractions", json=payload)
+        self.bot.api_client.post.assert_awaited_with("bot/infractions", json=payload)
         post_user_mock.assert_awaited_once_with(self.ctx, self.user)
