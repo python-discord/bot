@@ -45,9 +45,9 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 "infraction_nr": None
             },
             {
-                "get_return_value": [{"id": 1}],
+                "get_return_value": [{"id": 123987}],
                 "expected_output": True,
-                "infraction_nr": "**#1**"
+                "infraction_nr": "123987"
             }
         ]
 
