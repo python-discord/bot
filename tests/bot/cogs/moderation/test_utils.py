@@ -263,6 +263,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 if not error:
                     self.bot.api_client.post.assert_awaited_once_with("bot/users", json=payload)
                 else:
+                    self.ctx.send.assert_awaited_once()
                     self.assertTrue(str(error.status) in self.ctx.send.call_args[0][0])
 
     async def test_send_private_embed(self):
