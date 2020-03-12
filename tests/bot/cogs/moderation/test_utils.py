@@ -1,6 +1,6 @@
 import unittest
 from datetime import datetime
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from discord import Embed, Forbidden, HTTPException, NotFound
 
@@ -305,114 +305,71 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 if expected:
                     self.user.send.assert_awaited_once_with(embed=embed)
 
-    @patch("bot.cogs.moderation.utils.post_user")
-    async def test_post_infraction(self, post_user_mock):
-        """Test does `post_infraction` call functions correctly and return `None` or `Dict`."""
+
+class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
+    """Tests for `post_infraction` function."""
+
+    def setUp(self):
+        self.bot = MockBot()
+        self.member = MockMember(id=1234)
+        self.user = MockUser(id=1234)
+        self.ctx = MockContext(bot=self.bot, author=self.member)
+
+    async def test_normal_post_infraction(self):
+        """Test does `post_infraction` return correct value when no errors raise."""
         now = datetime.now()
-        test_cases = [
-            {
-                "args": (self.ctx, self.member, "ban", "Test Ban"),
-                "expected_output": [
-                    {
-                        "id": 1,
-                        "inserted_at": "2018-11-22T07:24:06.132307Z",
-                        "expires_at": "5018-11-20T15:52:00Z",
-                        "active": True,
-                        "user": 1234,
-                        "actor": 1234,
-                        "type": "ban",
-                        "reason": "Test Ban",
-                        "hidden": False
-                    }
-                ],
-                "raised_error": None,
-                "payload": {
-                    "actor": self.ctx.message.author.id,
-                    "hidden": False,
-                    "reason": "Test Ban",
-                    "type": "ban",
-                    "user": self.member.id,
-                    "active": True
-                }
-            },
-            {
-                "args": (self.ctx, self.member, "note", "Test Ban"),
-                "expected_output": None,
-                "raised_error": ResponseCodeError(AsyncMock(), AsyncMock()),
-                "payload": {
-                    "actor": self.ctx.message.author.id,
-                    "hidden": False,
-                    "reason": "Test Ban",
-                    "type": "note",
-                    "user": self.member.id,
-                    "active": True
-                }
-            },
-            {
-                "args": (self.ctx, self.member, "mute", "Test Ban"),
-                "expected_output": None,
-                "raised_error": ResponseCodeError(AsyncMock(status=400), {'user': 1234}),
-                "payload": {
-                    "actor": self.ctx.message.author.id,
-                    "hidden": False,
-                    "reason": "Test Ban",
-                    "type": "mute",
-                    "user": self.member.id,
-                    "active": True
-                }
-            },
-            {
-                "args": (self.ctx, self.member, "ban", "Test Ban", now, True, False),
-                "expected_output": [
-                    {
-                        "id": 1,
-                        "inserted_at": "2018-11-22T07:24:06.132307Z",
-                        "expires_at": "5018-11-20T15:52:00Z",
-                        "active": True,
-                        "user": 1234,
-                        "actor": 1234,
-                        "type": "ban",
-                        "reason": "Test Ban",
-                        "hidden": False
-                    }
-                ],
-                "raised_error": None,
-                "payload": {
-                    "actor": self.ctx.message.author.id,
-                    "hidden": True,
-                    "reason": "Test Ban",
-                    "type": "ban",
-                    "user": self.member.id,
-                    "active": False,
-                    "expires_at": now.isoformat()
-                }
-            },
-        ]
+        payload = {
+            "actor": self.ctx.message.author.id,
+            "hidden": True,
+            "reason": "Test reason",
+            "type": "ban",
+            "user": self.member.id,
+            "active": False,
+            "expires_at": now.isoformat()
+        }
 
-        for case in test_cases:
-            args = case["args"]
-            expected = case["expected_output"]
-            raised = case["raised_error"]
-            payload = case["payload"]
+        self.ctx.bot.api_client.post.return_value = "foo"
+        actual = await utils.post_infraction(self.ctx, self.member, "ban", "Test reason", now, True, False)
 
-            with self.subTest(args=args, expected=expected, raised=raised, payload=payload):
-                self.ctx.bot.api_client.post.reset_mock(side_effect=True)
-                post_user_mock.reset_mock()
+        self.assertEqual(actual, "foo")
+        self.ctx.bot.api_client.post.assert_awaited_once_with("bot/infractions", json=payload)
 
-                if raised:
-                    self.ctx.bot.api_client.post.side_effect = raised
+    async def test_unknown_error_post_infraction(self):
+        """Test does `post_infraction` send info about fail to chat (`ctx.send`)."""
+        self.ctx.bot.api_client.post.side_effect = ResponseCodeError(AsyncMock(), AsyncMock())
+        self.ctx.bot.api_client.post.side_effect.status = 500
 
-                post_user_mock.return_value = "foo"
+        actual = await utils.post_infraction(self.ctx, self.user, "ban", "Test reason")
+        self.assertIsNone(actual)
 
-                self.ctx.bot.api_client.post.return_value = expected
+        self.assertTrue("500" in self.ctx.send.call_args[0][0])
 
-                result = await utils.post_infraction(*args)
+    @patch("bot.cogs.moderation.utils.post_user")
+    async def test_user_not_found_none_post_infraction(self, post_user_mock):
+        """Test does `post_infraction` return `None` correctly due can't create new user."""
+        self.bot.api_client.post.side_effect = ResponseCodeError(MagicMock(status=400), {"user": "foo"})
+        post_user_mock.return_value = None
 
-                self.assertEqual(result, expected)
+        actual = await utils.post_infraction(self.ctx, self.user, "mute", "Test reason")
+        self.assertIsNone(actual)
+        post_user_mock.assert_awaited_once_with(self.ctx, self.user)
 
-                if not raised:
-                    self.bot.api_client.post.assert_awaited_once_with("bot/infractions", json=payload)
+    @patch("bot.cogs.moderation.utils.post_user")
+    async def test_first_fail_second_success_user_post_infraction(self, post_user_mock):
+        """Test does `post_infraction` fail first time and return correct result 2nd time when new user posted."""
+        payload = {
+            "actor": self.ctx.message.author.id,
+            "hidden": False,
+            "reason": "Test reason",
+            "type": "mute",
+            "user": self.user.id,
+            "active": True
+        }
 
-                if hasattr(raised, "status") and hasattr(raised, "response_json"):
-                    if raised.status == 400 and "user" in raised.response_json:
-                        post_user_mock.assert_awaited_once_with(args[0], args[1])
+        self.bot.api_client.post.side_effect = [ResponseCodeError(MagicMock(status=400), {"user": "foo"}), "foo"]
+        post_user_mock.return_value = "bar"
+
+        actual = await utils.post_infraction(self.ctx, self.user, "mute", "Test reason")
+        self.assertEqual(actual, "foo")
+        self.bot.api_client.post.assert_awaited_once_with("bot/infractions", json=payload)
+        post_user_mock.assert_awaited_once_with(self.ctx, self.user)
