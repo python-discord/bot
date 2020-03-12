@@ -56,15 +56,17 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 self.bot.api_client.get.reset_mock()
                 self.ctx.send.reset_mock()
 
+                params = {
+                    "active": "true",
+                    "type": "ban",
+                    "user__id": str(self.member.id)
+                }
+
                 self.bot.api_client.get.return_value = case["get_return_value"]
 
                 result = await utils.has_active_infraction(self.ctx, self.member, "ban")
                 self.assertEqual(result, case["expected_output"])
-                self.bot.api_client.get.assert_awaited_once_with("bot/infractions", params={
-                    "active": "true",
-                    "type": "ban",
-                    "user__id": str(self.member.id)
-                })
+                self.bot.api_client.get.assert_awaited_once_with("bot/infractions", params=params)
 
                 if result:
                     self.assertTrue(case["infraction_nr"] in self.ctx.send.call_args[0][0])
