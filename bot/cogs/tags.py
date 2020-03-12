@@ -30,7 +30,8 @@ class Tags(Cog):
         self.tag_cooldowns = {}
         self._cache = self.get_tags()
 
-    def get_tags(self) -> dict:
+    @staticmethod
+    def get_tags() -> dict:
         """Get all tags."""
         # Save all tags in memory.
         cache = {}
