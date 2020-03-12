@@ -355,6 +355,8 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
     @patch("bot.cogs.moderation.utils.post_user")
     async def test_first_fail_second_success_user_post_infraction(self, post_user_mock):
         """Test does `post_infraction` fail first time and return correct result 2nd time when new user posted."""
+        self.bot.api_client.post.reset_mock()
+
         payload = {
             "actor": self.ctx.message.author.id,
             "hidden": False,
