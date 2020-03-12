@@ -145,9 +145,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     name=INFRACTION_AUTHOR_NAME,
                     url=utils.RULES_URL,
                     icon_url=Icons.defcon_denied
-                ).set_footer(
-                    text=INFRACTION_APPEAL_FOOTER
-                ),
+                ).set_footer(text=INFRACTION_APPEAL_FOOTER),
                 "send_result": False
             }
         ]
