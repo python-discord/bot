@@ -216,7 +216,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
             {
                 "user": user,
                 "post_result": "bar",
-                "raise_error": False,
+                "raise_error": None,
                 "payload": {
                     "avatar_hash": "abc",
                     "discriminator": 5678,
@@ -229,7 +229,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
             {
                 "user": self.member,
                 "post_result": "foo",
-                "raise_error": True,
+                "raise_error": ResponseCodeError(MagicMock(status=400), "foo"),
                 "payload": {
                     "avatar_hash": 0,
                     "discriminator": 0,
@@ -251,10 +251,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 self.bot.api_client.post.reset_mock(side_effect=True)
                 self.ctx.bot.api_client.post.return_value = expected
 
-                if error:
-                    self.ctx.bot.api_client.post.side_effect = ResponseCodeError(AsyncMock(), expected)
-                    err = self.ctx.bot.api_client.post.side_effect
-                    err.status = 400
+                self.ctx.bot.api_client.post.side_effect = error
 
                 result = await utils.post_user(self.ctx, test_user)
 
@@ -266,7 +263,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 if not error:
                     self.bot.api_client.post.assert_awaited_once_with("bot/users", json=payload)
                 else:
-                    self.assertTrue(str(err.status) in self.ctx.send.call_args[0][0])
+                    self.assertTrue(str(error.status) in self.ctx.send.call_args[0][0])
 
     async def test_send_private_embed(self):
         """Test does `send_private_embed` return correct bool."""
