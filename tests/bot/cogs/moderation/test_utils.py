@@ -36,7 +36,9 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_user_has_active_infraction(self):
         """
-        Test does `has_active_infraction` return call at least once `ctx.send` API get, check does return correct bool.
+        Should request the API for active infractions and return `True` if the user has one or `False` otherwise.
+
+        A message should be sent to the context indicating a user already has an infraction, if that's the case.
         """
         test_cases = [
             {
@@ -74,7 +76,11 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
 
     @patch("bot.cogs.moderation.utils.send_private_embed")
     async def test_notify_infraction(self, send_private_embed_mock):
-        """Test does `notify_infraction` create correct embed and return correct boolean."""
+        """
+        Should send an embed of a certain format as a DM and return `True` if DM successful.
+
+        Appealable infractions should have the appeal message in the embed's footer.
+        """
         test_cases = [
             {
                 "args": (self.user, "ban", "2020-02-26 09:20 (23 hours and 59 minutes)"),
@@ -171,7 +177,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
 
     @patch("bot.cogs.moderation.utils.send_private_embed")
     async def test_notify_pardon(self, send_private_embed_mock):
-        """Test does `notify_pardon` create correct embed and return correct bool."""
+        """Should send an embed of a certain format as a DM and return `True` if DM successful."""
         test_cases = [
             {
                 "args": (self.user, "Test title", "Example content"),
@@ -210,7 +216,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 send_private_embed_mock.assert_awaited_once_with(args[0], embed)
 
     async def test_post_user(self):
-        """Test does `post_user` handle errors and results correctly."""
+        """Should POST a new user and return the response if successful or otherwise send an error message."""
         user = MockUser(avatar="abc", discriminator=5678, id=1234, name="Test user")
         test_cases = [
             {
@@ -267,7 +273,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     self.assertTrue(str(error.status) in self.ctx.send.call_args[0][0])
 
     async def test_send_private_embed(self):
-        """Test does `send_private_embed` return correct bool."""
+        """Should DM the user and return `True` on success or `False` on failure."""
         embed = Embed(title="Test", description="Test val")
 
         test_cases = [
@@ -305,7 +311,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
 
 
 class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
-    """Tests for `post_infraction` function."""
+    """Tests for the `post_infraction` function."""
 
     def setUp(self):
         self.bot = MockBot()
@@ -314,7 +320,7 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
         self.ctx = MockContext(bot=self.bot, author=self.member)
 
     async def test_normal_post_infraction(self):
-        """Test does `post_infraction` return correct value when no errors raise."""
+        """Should return response from POST request if there are no errors."""
         now = datetime.now()
         payload = {
             "actor": self.ctx.message.author.id,
@@ -333,7 +339,7 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
         self.ctx.bot.api_client.post.assert_awaited_once_with("bot/infractions", json=payload)
 
     async def test_unknown_error_post_infraction(self):
-        """Test does `post_infraction` send info about fail to chat (`ctx.send`)."""
+        """Should send an error message to chat when a non-400 error occurs."""
         self.ctx.bot.api_client.post.side_effect = ResponseCodeError(AsyncMock(), AsyncMock())
         self.ctx.bot.api_client.post.side_effect.status = 500
 
@@ -344,7 +350,7 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
 
     @patch("bot.cogs.moderation.utils.post_user")
     async def test_user_not_found_none_post_infraction(self, post_user_mock):
-        """Test does `post_infraction` return `None` correctly due can't create new user."""
+        """Should abort and return `None` when a new user fails to be posted."""
         self.bot.api_client.post.side_effect = ResponseCodeError(MagicMock(status=400), {"user": "foo"})
         post_user_mock.return_value = None
 
@@ -354,7 +360,7 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
 
     @patch("bot.cogs.moderation.utils.post_user")
     async def test_first_fail_second_success_user_post_infraction(self, post_user_mock):
-        """Test does `post_infraction` fail first time and return correct result 2nd time when new user posted."""
+        """Should post the user if they don't exist, POST infraction again, and return the response if successful."""
         self.bot.api_client.post.reset_mock()
 
         payload = {
