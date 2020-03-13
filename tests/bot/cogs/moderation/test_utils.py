@@ -21,8 +21,6 @@ INFRACTION_DESCRIPTION_TEMPLATE = (
     "**Reason:** {reason}\n"
 )
 
-PARDON_COLOR = Colours.soft_green
-
 
 class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
     """Tests Moderation utils."""
@@ -196,7 +194,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
 
             expected = Embed(
                 description="Example content",
-                colour=PARDON_COLOR
+                colour=Colours.soft_green
             ).set_author(
                 name="Test title",
                 icon_url=case["icon"]
