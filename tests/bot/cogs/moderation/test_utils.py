@@ -348,17 +348,16 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
 
         self.assertTrue("500" in self.ctx.send.call_args[0][0])
 
-    @patch("bot.cogs.moderation.utils.post_user")
+    @patch("bot.cogs.moderation.utils.post_user", return_value=None)
     async def test_user_not_found_none_post_infraction(self, post_user_mock):
         """Should abort and return `None` when a new user fails to be posted."""
         self.bot.api_client.post.side_effect = ResponseCodeError(MagicMock(status=400), {"user": "foo"})
-        post_user_mock.return_value = None
 
         actual = await utils.post_infraction(self.ctx, self.user, "mute", "Test reason")
         self.assertIsNone(actual)
         post_user_mock.assert_awaited_once_with(self.ctx, self.user)
 
-    @patch("bot.cogs.moderation.utils.post_user")
+    @patch("bot.cogs.moderation.utils.post_user", return_value="bar")
     async def test_first_fail_second_success_user_post_infraction(self, post_user_mock):
         """Should post the user if they don't exist, POST infraction again, and return the response if successful."""
         payload = {
@@ -371,7 +370,6 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
         }
 
         self.bot.api_client.post.side_effect = [ResponseCodeError(MagicMock(status=400), {"user": "foo"}), "foo"]
-        post_user_mock.return_value = "bar"
 
         actual = await utils.post_infraction(self.ctx, self.user, "mute", "Test reason")
         self.assertEqual(actual, "foo")
