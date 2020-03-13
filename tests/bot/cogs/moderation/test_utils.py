@@ -1,6 +1,6 @@
 import unittest
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, call, patch
 
 from discord import Embed, Forbidden, HTTPException, NotFound
 
@@ -377,5 +377,5 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
 
         actual = await utils.post_infraction(self.ctx, self.user, "mute", "Test reason")
         self.assertEqual(actual, "foo")
-        self.bot.api_client.post.assert_awaited_with("bot/infractions", json=payload)
+        self.bot.api_client.post.assert_has_awaits([call("bot/infractions", json=payload)] * 2)
         post_user_mock.assert_awaited_once_with(self.ctx, self.user)
