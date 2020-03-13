@@ -361,8 +361,6 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
     @patch("bot.cogs.moderation.utils.post_user")
     async def test_first_fail_second_success_user_post_infraction(self, post_user_mock):
         """Should post the user if they don't exist, POST infraction again, and return the response if successful."""
-        self.bot.api_client.post.reset_mock()
-
         payload = {
             "actor": self.ctx.message.author.id,
             "hidden": False,
