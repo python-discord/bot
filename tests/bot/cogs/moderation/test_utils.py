@@ -14,7 +14,6 @@ APPEAL_EMAIL = "appeals@pythondiscord.com"
 INFRACTION_TITLE = f"Please review our rules over at {utils.RULES_URL}"
 INFRACTION_APPEAL_FOOTER = f"To appeal this infraction, send an e-mail to {APPEAL_EMAIL}"
 INFRACTION_AUTHOR_NAME = "Infraction information"
-INFRACTION_COLOR = Colours.soft_red
 
 INFRACTION_DESCRIPTION_TEMPLATE = (
     "\n**Type:** {type}\n"
@@ -91,7 +90,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                         expires="2020-02-26 09:20 (23 hours and 59 minutes)",
                         reason="No reason provided."
                     ),
-                    colour=INFRACTION_COLOR,
+                    colour=Colours.soft_red,
                     url=utils.RULES_URL
                 ).set_author(
                     name=INFRACTION_AUTHOR_NAME,
@@ -109,7 +108,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                         expires="N/A",
                         reason="Test reason."
                     ),
-                    colour=INFRACTION_COLOR,
+                    colour=Colours.soft_red,
                     url=utils.RULES_URL
                 ).set_author(
                     name=INFRACTION_AUTHOR_NAME,
@@ -127,7 +126,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                         expires="N/A",
                         reason="No reason provided."
                     ),
-                    colour=INFRACTION_COLOR,
+                    colour=Colours.soft_red,
                     url=utils.RULES_URL
                 ).set_author(
                     name=INFRACTION_AUTHOR_NAME,
@@ -145,7 +144,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                         expires="2020-02-26 09:20 (23 hours and 59 minutes)",
                         reason="Test"
                     ),
-                    colour=INFRACTION_COLOR,
+                    colour=Colours.soft_red,
                     url=utils.RULES_URL
                 ).set_author(
                     name=INFRACTION_AUTHOR_NAME,
