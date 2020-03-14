@@ -6,6 +6,7 @@ import typing as t
 import unittest
 from collections import defaultdict
 from types import ModuleType
+from unittest import mock
 
 from discord.ext import commands
 
@@ -31,9 +32,10 @@ class CommandNameTests(unittest.TestCase):
         def on_error(name: str) -> t.NoReturn:
             raise ImportError(name=name)
 
-        for module in pkgutil.walk_packages(cogs.__path__, "bot.cogs.", onerror=on_error):
-            if not module.ispkg:
-                yield importlib.import_module(module.name)
+        with mock.patch("discord.ext.tasks.loop"):
+            for module in pkgutil.walk_packages(cogs.__path__, "bot.cogs.", onerror=on_error):
+                if not module.ispkg:
+                    yield importlib.import_module(module.name)
 
     @staticmethod
     def walk_cogs(module: ModuleType) -> t.Iterator[commands.Cog]:
