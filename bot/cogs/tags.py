@@ -97,8 +97,6 @@ class Tags(Cog):
 
         `predicate` will be the built-in any, all, or a custom callable. Must return a bool.
         """
-        await self._get_tags()
-
         keywords_processed: List[str] = []
         for keyword in keywords.split(','):
             keyword_sanitized = keyword.strip().casefold()
