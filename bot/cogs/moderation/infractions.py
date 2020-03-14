@@ -67,7 +67,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
     @command()
     async def ban(self, ctx: Context, user: FetchedMember, *, reason: str = None) -> None:
-        """Permanently ban a user for the given reason.  Also removes them from the BigBrother watch list."""
+        """Permanently ban a user for the given reason and stop watching them with Big Brother."""
         await self.apply_ban(ctx, user, reason)
 
     # endregion
