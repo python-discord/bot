@@ -46,7 +46,7 @@ class CommandNameTests(unittest.TestCase):
     @staticmethod
     def get_qualified_names(command: commands.Command) -> t.List[str]:
         """Return a list of all qualified names, including aliases, for the `command`."""
-        names = [f"{command.full_parent_name} {alias}" for alias in command.aliases]
+        names = [f"{command.full_parent_name} {alias}".strip() for alias in command.aliases]
         names.append(command.qualified_name)
 
         return names
