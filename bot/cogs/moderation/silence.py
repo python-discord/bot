@@ -59,7 +59,7 @@ class Silence(commands.Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.muted_channels = set()
-        self.bot.loop.create_task(self._get_instance_vars())
+        self._get_instance_vars_task = self.bot.loop.create_task(self._get_instance_vars())
 
     async def _get_instance_vars(self) -> None:
         """Get instance variables after they're available to get from the guild."""
