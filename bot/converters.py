@@ -286,7 +286,7 @@ class HushDurationConverter(Converter):
 
         duration = int(match.group(1))
         if duration > 15:
-            raise BadArgument("Duration must be below 15 minutes.")
+            raise BadArgument("Duration must be at most 15 minutes.")
         return duration
 
 
