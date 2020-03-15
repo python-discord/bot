@@ -32,8 +32,8 @@ class ErrorHandler(Cog):
         prioritised as follows:
 
         1. If the name fails to match a command:
-            If it matches shh+ or unshh+, the channel is silenced or unsilenced respectively.
-            otherwise if it matches a tag, the tag is invoked
+            * If it matches shh+ or unshh+, the channel is silenced or unsilenced respectively.
+              Otherwise if it matches a tag, the tag is invoked
             * If CommandNotFound is raised when invoking the tag (determined by the presence of the
               `invoked_from_error_handler` attribute), this error is treated as being unexpected
               and therefore sends an error message
