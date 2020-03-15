@@ -155,7 +155,7 @@ class Tags(Cog):
         await self._send_matching_tags(ctx, keywords, matching_tags)
 
     @search_tag_content.command(name='any')
-    async def search_tag_content_any_keyword(self, ctx: Context, *, keywords: Optional[str] = None) -> None:
+    async def search_tag_content_any_keyword(self, ctx: Context, *, keywords: Optional[str] = 'any') -> None:
         """
         Search inside tags' contents for tags. Allow searching for multiple keywords separated by comma.
 
