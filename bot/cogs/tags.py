@@ -151,7 +151,7 @@ class Tags(Cog):
 
         Only search for tags that has ALL the keywords.
         """
-        matching_tags = await self._get_tags_via_content(all, keywords)
+        matching_tags = self._get_tags_via_content(all, keywords)
         await self._send_matching_tags(ctx, keywords, matching_tags)
 
     @search_tag_content.command(name='any')
@@ -161,7 +161,7 @@ class Tags(Cog):
 
         Search for tags that has ANY of the keywords.
         """
-        matching_tags = await self._get_tags_via_content(any, keywords or 'any')
+        matching_tags = self._get_tags_via_content(any, keywords or 'any')
         await self._send_matching_tags(ctx, keywords, matching_tags)
 
     @tags_group.command(name='get', aliases=('show', 'g'))
