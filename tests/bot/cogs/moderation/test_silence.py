@@ -141,7 +141,7 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         channel = MockTextChannel()
         self.assertTrue(await self.cog._silence(channel, False, None))
         channel.set_permissions.assert_called_once()
-        self.assertFalse(channel.set_permissions.call_args.kwargs['overwrite'].send_messages)
+        self.assertFalse(channel.set_permissions.call_args.kwargs['send_messages'])
 
     async def test_silence_private_notifier(self):
         """Channel should be added to notifier with `persistent` set to `True`, and the other way around."""
@@ -175,7 +175,7 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         channel = MockTextChannel(overwrites_for=Mock(return_value=perm_overwrite))
         self.assertTrue(await self.cog._unsilence(channel))
         channel.set_permissions.assert_called_once()
-        self.assertTrue(channel.set_permissions.call_args.kwargs['overwrite'].send_messages)
+        self.assertTrue(channel.set_permissions.call_args.kwargs['send_messages'])
 
     @mock.patch.object(Silence, "notifier", create=True)
     async def test_unsilence_private_removed_notifier(self, notifier):
