@@ -273,10 +273,10 @@ class HushDurationConverter(Converter):
 
         If `"forever"` is passed, None is returned; otherwise an int of the extracted time.
         Accepted formats are:
-                              <duration>,
-                              <duration>m,
-                              <duration>M,
-                              forever.
+        * <duration>,
+        * <duration>m,
+        * <duration>M,
+        * forever.
         """
         if argument == "forever":
             return None

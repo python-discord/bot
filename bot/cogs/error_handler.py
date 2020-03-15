@@ -98,8 +98,8 @@ class ErrorHandler(Cog):
         Attempt to invoke the silence or unsilence command if invoke with matches a pattern.
 
         Respecting the checks if:
-                                  invoked with `shh+` silence channel for amount of h's*2 with max of 15.
-                                  invoked with `unshh+` unsilence channel
+        * invoked with `shh+` silence channel for amount of h's*2 with max of 15.
+        * invoked with `unshh+` unsilence channel
         Return bool depending on success of command.
         """
         command = ctx.invoked_with.lower()
