@@ -76,6 +76,8 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         self.cog = Silence(self.bot)
         self.ctx = MockContext()
         self.cog._verified_role = None
+        # Set event so command callbacks can continue.
+        self.cog._get_instance_vars_event.set()
 
     async def test_instance_vars_got_guild(self):
         """Bot got guild after it became available."""
