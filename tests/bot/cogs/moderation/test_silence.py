@@ -2,31 +2,9 @@ import unittest
 from unittest import mock
 from unittest.mock import MagicMock, Mock
 
-from bot.cogs.moderation.silence import FirstHash, Silence, SilenceNotifier
+from bot.cogs.moderation.silence import Silence, SilenceNotifier
 from bot.constants import Channels, Emojis, Guild, Roles
 from tests.helpers import MockBot, MockContext, MockTextChannel
-
-
-class FirstHashTests(unittest.TestCase):
-    def setUp(self) -> None:
-        self.test_cases = (
-            (FirstHash(0, 4), FirstHash(0, 5)),
-            (FirstHash("string", None), FirstHash("string", True))
-        )
-
-    def test_hashes_equal(self):
-        """Check hashes equal with same first item."""
-
-        for tuple1, tuple2 in self.test_cases:
-            with self.subTest(tuple1=tuple1, tuple2=tuple2):
-                self.assertEqual(hash(tuple1), hash(tuple2))
-
-    def test_eq(self):
-        """Check objects are equal with same first item."""
-
-        for tuple1, tuple2 in self.test_cases:
-            with self.subTest(tuple1=tuple1, tuple2=tuple2):
-                self.assertTrue(tuple1 == tuple2)
 
 
 class SilenceNotifierTests(unittest.IsolatedAsyncioTestCase):
@@ -41,7 +19,7 @@ class SilenceNotifierTests(unittest.IsolatedAsyncioTestCase):
         channel = Mock()
         with mock.patch.object(self.notifier, "_silenced_channels") as silenced_channels:
             self.notifier.add_channel(channel)
-        silenced_channels.add.assert_called_with(FirstHash(channel, self.notifier._current_loop))
+        silenced_channels.__setitem__.assert_called_with(channel, self.notifier._current_loop)
 
     def test_add_channel_starts_loop(self):
         """Loop is started if `_silenced_channels` was empty."""
@@ -59,7 +37,7 @@ class SilenceNotifierTests(unittest.IsolatedAsyncioTestCase):
         channel = Mock()
         with mock.patch.object(self.notifier, "_silenced_channels") as silenced_channels:
             self.notifier.remove_channel(channel)
-        silenced_channels.remove.assert_called_with(FirstHash(channel))
+        silenced_channels.__delitem__.assert_called_with(channel)
 
     def test_remove_channel_stops_loop(self):
         """Notifier loop is stopped if `_silenced_channels` is empty after remove."""

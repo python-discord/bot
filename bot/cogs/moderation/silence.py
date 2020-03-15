@@ -15,26 +15,12 @@ from bot.utils.checks import with_role_check
 log = logging.getLogger(__name__)
 
 
-class FirstHash(tuple):
-    """Tuple with only first item used for hash and eq."""
-
-    def __new__(cls, *args):
-        """Construct tuple from `args`."""
-        return super().__new__(cls, args)
-
-    def __hash__(self):
-        return hash((self[0],))
-
-    def __eq__(self, other: "FirstHash"):
-        return self[0] == other[0]
-
-
 class SilenceNotifier(tasks.Loop):
     """Loop notifier for posting notices to `alert_channel` containing added channels."""
 
     def __init__(self, alert_channel: TextChannel):
         super().__init__(self._notifier, seconds=1, minutes=0, hours=0, count=None, reconnect=True, loop=None)
-        self._silenced_channels = set()
+        self._silenced_channels = {}
         self._alert_channel = alert_channel
 
     def add_channel(self, channel: TextChannel) -> None:
@@ -42,12 +28,12 @@ class SilenceNotifier(tasks.Loop):
         if not self._silenced_channels:
             self.start()
             log.info("Starting notifier loop.")
-        self._silenced_channels.add(FirstHash(channel, self._current_loop))
+        self._silenced_channels[channel] = self._current_loop
 
     def remove_channel(self, channel: TextChannel) -> None:
         """Remove channel from `_silenced_channels` and stop loop if no channels remain."""
         with suppress(KeyError):
-            self._silenced_channels.remove(FirstHash(channel))
+            del self._silenced_channels[channel]
             if not self._silenced_channels:
                 self.stop()
                 log.info("Stopping notifier loop.")
@@ -58,11 +44,11 @@ class SilenceNotifier(tasks.Loop):
         if self._current_loop and not self._current_loop/60 % 15:
             log.debug(
                 f"Sending notice with channels: "
-                f"{', '.join(f'#{channel} ({channel.id})' for channel, _ in self._silenced_channels)}."
+                f"{', '.join(f'#{channel} ({channel.id})' for channel in self._silenced_channels)}."
             )
             channels_text = ', '.join(
                 f"{channel.mention} for {(self._current_loop-start)//60} min"
-                for channel, start in self._silenced_channels
+                for channel, start in self._silenced_channels.items()
             )
             await self._alert_channel.send(f"<@&{Roles.moderators}> currently silenced channels: {channels_text}")
 
