@@ -91,7 +91,7 @@ class Tags(Cog):
             return self._get_suggestions(tag_name)
         return found
 
-    async def _get_tags_via_content(self, check: Callable[[Iterable], bool], keywords: str) -> list:
+    def _get_tags_via_content(self, check: Callable[[Iterable], bool], keywords: str) -> list:
         """
         Search for tags via contents.
 
