@@ -50,15 +50,13 @@ class ErrorHandler(Cog):
             log.trace(f"Command {command} had its error already handled locally; ignoring.")
             return
 
-        # Try to look for a tag with the command's name if the command isn't found.
-        if isinstance(e, errors.CommandNotFound):
-            if (
-                    not await self.try_silence(ctx)
-                    and not hasattr(ctx, "invoked_from_error_handler")
-                    and ctx.channel.id != Channels.verification
-            ):
+        if isinstance(e, errors.CommandNotFound) and not hasattr(ctx, "invoked_from_error_handler"):
+            if await self.try_silence(ctx):
+                return
+            if ctx.channel.id != Channels.verification:
+                # Try to look for a tag with the command's name
                 await self.try_get_tag(ctx)
-            return  # Exit early to avoid logging.
+                return  # Exit early to avoid logging.
         elif isinstance(e, errors.UserInputError):
             await self.handle_user_input_error(ctx, e)
         elif isinstance(e, errors.CheckFailure):
