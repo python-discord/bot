@@ -60,6 +60,7 @@ class Silence(commands.Cog):
         self.bot = bot
         self.muted_channels = set()
         self._get_instance_vars_task = self.bot.loop.create_task(self._get_instance_vars())
+        self._get_instance_vars_event = asyncio.Event()
 
     async def _get_instance_vars(self) -> None:
         """Get instance variables after they're available to get from the guild."""
@@ -69,6 +70,7 @@ class Silence(commands.Cog):
         self._mod_alerts_channel = self.bot.get_channel(Channels.mod_alerts)
         self._mod_log_channel = self.bot.get_channel(Channels.mod_log)
         self.notifier = SilenceNotifier(self._mod_log_channel)
+        self._get_instance_vars_event.set()
 
     @commands.command(aliases=("hush",))
     async def silence(self, ctx: Context, duration: HushDurationConverter = 10) -> None:
@@ -78,6 +80,7 @@ class Silence(commands.Cog):
         Duration is capped at 15 minutes, passing forever makes the silence indefinite.
         Indefinitely silenced channels get added to a notifier which posts notices every 15 minutes from the start.
         """
+        await self._get_instance_vars_event.wait()
         log.debug(f"{ctx.author} is silencing channel #{ctx.channel}.")
         if not await self._silence(ctx.channel, persistent=(duration is None), duration=duration):
             await ctx.send(f"{Emojis.cross_mark} current channel is already silenced.")
@@ -99,6 +102,7 @@ class Silence(commands.Cog):
         Unsilence a previously silenced `channel`,
         remove it from notifier of indefinitely silenced channels and cancel the notifier if empty.
         """
+        await self._get_instance_vars_event.wait()
         log.debug(f"Unsilencing channel #{ctx.channel} from {ctx.author}'s command.")
         if await self._unsilence(ctx.channel):
             await ctx.send(f"{Emojis.check_mark} unsilenced current channel.")
