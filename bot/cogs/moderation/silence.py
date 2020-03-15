@@ -3,7 +3,7 @@ import logging
 from contextlib import suppress
 from typing import Optional
 
-from discord import PermissionOverwrite, TextChannel
+from discord import TextChannel
 from discord.ext import commands, tasks
 from discord.ext.commands import Context
 
@@ -114,10 +114,7 @@ class Silence(commands.Cog):
         if current_overwrite.send_messages is False:
             log.info(f"Tried to silence channel #{channel} ({channel.id}) but the channel was already silenced.")
             return False
-        await channel.set_permissions(
-            self._verified_role,
-            overwrite=PermissionOverwrite(**dict(current_overwrite, send_messages=False))
-        )
+        await channel.set_permissions(self._verified_role, **dict(current_overwrite, send_messages=False))
         self.muted_channels.add(channel)
         if persistent:
             log.info(f"Silenced #{channel} ({channel.id}) indefinitely.")
@@ -136,10 +133,7 @@ class Silence(commands.Cog):
         """
         current_overwrite = channel.overwrites_for(self._verified_role)
         if current_overwrite.send_messages is False:
-            await channel.set_permissions(
-                self._verified_role,
-                overwrite=PermissionOverwrite(**dict(current_overwrite, send_messages=True))
-            )
+            await channel.set_permissions(self._verified_role, **dict(current_overwrite, send_messages=True))
             log.info(f"Unsilenced channel #{channel} ({channel.id}).")
             self.notifier.remove_channel(channel)
             with suppress(KeyError):
