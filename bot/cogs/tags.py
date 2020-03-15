@@ -7,19 +7,20 @@ from typing import Callable, Dict, Iterable, List, Optional
 from discord import Colour, Embed
 from discord.ext.commands import Cog, Context, group
 
+from bot import constants
 from bot.bot import Bot
-from bot.constants import Channels, Cooldowns
 from bot.converters import TagNameConverter
 from bot.pagination import LinePaginator
 
 log = logging.getLogger(__name__)
 
 TEST_CHANNELS = (
-    Channels.bot_commands,
-    Channels.helpers
+    constants.Channels.bot_commands,
+    constants.Channels.helpers
 )
 
 REGEX_NON_ALPHABET = re.compile(r"[^a-z]", re.MULTILINE & re.IGNORECASE)
+FOOTER_TEXT = f"To show a tag, type {constants.Bot.prefix}tags <tagname>."
 
 
 class Tags(Cog):
@@ -133,7 +134,7 @@ class Tags(Cog):
                 sorted(f"**»**   {tag['title']}" for tag in matching_tags),
                 ctx,
                 embed,
-                footer_text="To show a tag, type !tags <tagname>.",
+                footer_text=FOOTER_TEXT,
                 empty=False,
                 max_lines=15
             )
@@ -177,7 +178,7 @@ class Tags(Cog):
             cooldown_conditions = (
                 tag_name
                 and tag_name in self.tag_cooldowns
-                and (now - self.tag_cooldowns[tag_name]["time"]) < Cooldowns.tags
+                and (now - self.tag_cooldowns[tag_name]["time"]) < constants.Cooldowns.tags
                 and self.tag_cooldowns[tag_name]["channel"] == ctx.channel.id
             )
 
@@ -186,7 +187,8 @@ class Tags(Cog):
             return False
 
         if _command_on_cooldown(tag_name):
-            time_left = Cooldowns.tags - (time.time() - self.tag_cooldowns[tag_name]["time"])
+            time_elapsed = time.time() - self.tag_cooldowns[tag_name]["time"]
+            time_left = constants.Cooldowns.tags - time_elapsed
             log.info(
                 f"{ctx.author} tried to get the '{tag_name}' tag, but the tag is on cooldown. "
                 f"Cooldown ends in {time_left:.1f} seconds."
@@ -223,7 +225,7 @@ class Tags(Cog):
                     sorted(f"**»**   {tag['title']}" for tag in tags),
                     ctx,
                     embed,
-                    footer_text="To show a tag, type !tags <tagname>.",
+                    footer_text=FOOTER_TEXT,
                     empty=False,
                     max_lines=15
                 )
