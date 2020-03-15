@@ -113,6 +113,7 @@ class Silence(commands.Cog):
 
         If `persistent` is `True` add `channel` to notifier.
         `duration` is only used for logging; if None is passed `persistent` should be True to not log None.
+        Return `True` if channel permissions were changed, `False` otherwise.
         """
         current_overwrite = channel.overwrites_for(self._verified_role)
         if current_overwrite.send_messages is False:
@@ -134,6 +135,7 @@ class Silence(commands.Cog):
 
         Check if `channel` is silenced through a `PermissionOverwrite`,
         if it is unsilence it and remove it from the notifier.
+        Return `True` if channel permissions were changed, `False` otherwise.
         """
         current_overwrite = channel.overwrites_for(self._verified_role)
         if current_overwrite.send_messages is False:
