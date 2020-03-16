@@ -19,6 +19,7 @@ class CommandNameTests(unittest.TestCase):
     @staticmethod
     def walk_commands(cog: commands.Cog) -> t.Iterator[commands.Command]:
         """An iterator that recursively walks through `cog`'s commands and subcommands."""
+        # Can't use Bot.walk_commands() or Cog.get_commands() cause those are instance methods.
         for command in cog.__cog_commands__:
             if command.parent is None:
                 yield command
@@ -32,6 +33,7 @@ class CommandNameTests(unittest.TestCase):
         def on_error(name: str) -> t.NoReturn:
             raise ImportError(name=name)
 
+        # The mock prevents asyncio.get_event_loop() from being called.
         with mock.patch("discord.ext.tasks.loop"):
             for module in pkgutil.walk_packages(cogs.__path__, "bot.cogs.", onerror=on_error):
                 if not module.ispkg:
@@ -41,6 +43,7 @@ class CommandNameTests(unittest.TestCase):
     def walk_cogs(module: ModuleType) -> t.Iterator[commands.Cog]:
         """Yield all cogs defined in an extension."""
         for obj in module.__dict__.values():
+            # Check if it's a class type cause otherwise issubclass() may raise a TypeError.
             is_cog = isinstance(obj, type) and issubclass(obj, commands.Cog)
             if is_cog and obj.__module__ == module.__name__:
                 yield obj
