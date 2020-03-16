@@ -215,7 +215,7 @@ class ModLog(Cog, name="ModLog"):
                 new = value["new_value"]
                 old = value["old_value"]
 
-                changes.append(f"**{key.title()}:** `{old}` **→** `{new}`")
+                changes.append(f"**{key.title()}:** `{old or 'None'}` **→** `{new or 'None'}`")
 
             done.append(key)
 
