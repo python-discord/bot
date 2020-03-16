@@ -215,6 +215,8 @@ class ModLog(Cog, name="ModLog"):
                 new = value["new_value"]
                 old = value["old_value"]
 
+                # `or` is required here on `old` and `new` due otherwise, when one of them is empty,
+                # formatting in Discord will break.
                 changes.append(f"**{key.title()}:** `{old or 'None'}` **→** `{new or 'None'}`")
 
             done.append(key)
