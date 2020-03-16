@@ -244,18 +244,21 @@ class Infractions(InfractionScheduler, commands.Cog):
         await self.apply_infraction(ctx, infraction, user, action)
 
         # Remove perma banned users from the watch list
-        if infraction.get('expires_at') is None:
-            log.trace("Ban was a permanent one.  Attempt to remove from watched list.")
-            bb_cog = self.bot.get_cog("Big Brother")
-            if bb_cog:
-                log.trace("Cog loaded.  Attempting to remove from list.")
-                await bb_cog.apply_unwatch(
-                    ctx,
-                    user,
-                    "User has been permanently banned from the server.  Automatically removed.",
-                    banned=True
-                )
-                log.debug("Perma banned user removed from watch list.")
+        if infraction.get('expires_at') is not None:
+            log.trace(f"Ban isn't permanent; user {user} won't be unwatched by Big Brother.")
+            return
+
+        bb_cog = self.bot.get_cog("Big Brother")
+        if not bb_cog:
+            log.trace(f"Big Brother cog not loaded; perma-banned user {user} won't be unwatched.")
+            return
+
+        log.trace(f"Big Brother cog loaded; attempting to unwatch perma-banned user {user}.")
+
+        bb_reason = "User has been permanently banned from the server. Automatically removed."
+        await bb_cog.apply_unwatch(ctx, user, bb_reason banned=True)
+
+        log.debug(f"Perma-banned user {user} was unwatched.")
 
     # endregion
     # region: Base pardon functions
