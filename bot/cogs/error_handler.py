@@ -104,7 +104,12 @@ class ErrorHandler(Cog):
         """
         command = ctx.invoked_with.lower()
         silence_command = self.bot.get_command("silence")
-        if not await silence_command.can_run(ctx):
+        ctx.invoked_from_error_handler = True
+        try:
+            if not await silence_command.can_run(ctx):
+                log.debug("Cancelling attempt to invoke silence/unsilence due to failed checks.")
+                return False
+        except errors.CommandError:
             log.debug("Cancelling attempt to invoke silence/unsilence due to failed checks.")
             return False
         if command.startswith("shh"):
