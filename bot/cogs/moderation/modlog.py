@@ -215,7 +215,10 @@ class ModLog(Cog, name="ModLog"):
                 new = value["new_value"]
                 old = value["old_value"]
 
-                changes.append(f"**{key.title()}:** `{old}` **→** `{new}`")
+                # Discord does not treat consecutive backticks ("``") as an empty inline code block, so the markdown
+                # formatting is broken when `new` and/or `old` are empty values. "None" is used for these cases so
+                # formatting is preserved.
+                changes.append(f"**{key.title()}:** `{old or 'None'}` **→** `{new or 'None'}`")
 
             done.append(key)
 
