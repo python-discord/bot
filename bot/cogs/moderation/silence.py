@@ -141,8 +141,7 @@ class Silence(commands.Cog):
             await channel.set_permissions(self._verified_role, **dict(current_overwrite, send_messages=True))
             log.info(f"Unsilenced channel #{channel} ({channel.id}).")
             self.notifier.remove_channel(channel)
-            with suppress(KeyError):
-                self.muted_channels.remove(channel)
+            self.muted_channels.discard(channel)
             return True
         log.info(f"Tried to unsilence channel #{channel} ({channel.id}) but the channel was not silenced.")
         return False

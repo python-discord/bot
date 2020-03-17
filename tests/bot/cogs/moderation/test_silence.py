@@ -195,7 +195,7 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         channel = MockTextChannel(overwrites_for=Mock(return_value=perm_overwrite))
         with mock.patch.object(self.cog, "muted_channels") as muted_channels:
             await self.cog._unsilence(channel)
-        muted_channels.remove.assert_called_once_with(channel)
+        muted_channels.discard.assert_called_once_with(channel)
 
     @mock.patch("bot.cogs.moderation.silence.asyncio")
     @mock.patch.object(Silence, "_mod_alerts_channel", create=True)
