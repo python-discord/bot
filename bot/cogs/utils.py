@@ -230,7 +230,16 @@ class Utils(Cog):
             await ctx.send(embed=embed)
             return
 
-        # handle if it's a search string
+        # Try to handle first exact word due difflib.SequenceMatched may use some other similar word instead
+        # exact word.
+        for i, line in enumerate(zen_lines):
+            if search_value.lower() in line.lower():
+                embed.title += f" (line {i}):"
+                embed.description = line
+                await ctx.send(embed=embed)
+                return
+
+        # handle if it's a search string and not exact word
         matcher = difflib.SequenceMatcher(None, search_value.lower())
 
         best_match = ""
