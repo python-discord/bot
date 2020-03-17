@@ -202,8 +202,8 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         """Task for sending an alert was created with present `muted_channels`."""
         with mock.patch.object(self.cog, "muted_channels"):
             self.cog.cog_unload()
+            alert_channel.send.assert_called_once_with(f"<@&{Roles.moderators}> channels left silenced on cog unload: ")
             asyncio_mock.create_task.assert_called_once_with(alert_channel.send())
-            alert_channel.send.called_once_with(f"<@&{Roles.moderators}> chandnels left silenced on cog unload: ")
 
     @mock.patch("bot.cogs.moderation.silence.asyncio")
     def test_cog_unload1(self, asyncio_mock):
