@@ -2,6 +2,8 @@ import unittest
 from unittest import mock
 from unittest.mock import MagicMock, Mock
 
+from discord import PermissionOverwrite
+
 from bot.cogs.moderation.silence import Silence, SilenceNotifier
 from bot.constants import Channels, Emojis, Guild, Roles
 from tests.helpers import MockBot, MockContext, MockTextChannel
@@ -145,6 +147,20 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         channel.set_permissions.assert_called_once()
         self.assertFalse(channel.set_permissions.call_args.kwargs['send_messages'])
 
+    async def test_silence_private_preserves_permissions(self):
+        """Previous permissions were preserved when channel was silenced."""
+        channel = MockTextChannel()
+        # Set up mock channel permission state.
+        mock_permissions = PermissionOverwrite()
+        mock_permissions_dict = dict(mock_permissions)
+        channel.overwrites_for.return_value = mock_permissions
+        await self.cog._silence(channel, False, None)
+        new_permissions = channel.set_permissions.call_args.kwargs
+        # Remove 'send_messages' key because it got changed in the method.
+        del new_permissions['send_messages']
+        del mock_permissions_dict['send_messages']
+        self.assertDictEqual(mock_permissions_dict, new_permissions)
+
     async def test_silence_private_notifier(self):
         """Channel should be added to notifier with `persistent` set to `True`, and the other way around."""
         channel = MockTextChannel()
@@ -196,6 +212,21 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         with mock.patch.object(self.cog, "muted_channels") as muted_channels:
             await self.cog._unsilence(channel)
         muted_channels.discard.assert_called_once_with(channel)
+
+    @mock.patch.object(Silence, "notifier", create=True)
+    async def test_unsilence_private_preserves_permissions(self, _):
+        """Previous permissions were preserved when channel was unsilenced."""
+        channel = MockTextChannel()
+        # Set up mock channel permission state.
+        mock_permissions = PermissionOverwrite(send_messages=False)
+        mock_permissions_dict = dict(mock_permissions)
+        channel.overwrites_for.return_value = mock_permissions
+        await self.cog._unsilence(channel)
+        new_permissions = channel.set_permissions.call_args.kwargs
+        # Remove 'send_messages' key because it got changed in the method.
+        del new_permissions['send_messages']
+        del mock_permissions_dict['send_messages']
+        self.assertDictEqual(mock_permissions_dict, new_permissions)
 
     @mock.patch("bot.cogs.moderation.silence.asyncio")
     @mock.patch.object(Silence, "_mod_alerts_channel", create=True)
