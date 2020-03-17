@@ -99,8 +99,7 @@ class Silence(commands.Cog):
         """
         Unsilence the current channel.
 
-        Unsilence a previously silenced `channel`,
-        remove it from notifier of indefinitely silenced channels and cancel the notifier if empty.
+        If the channel was silenced indefinitely, notifications for the channel will stop.
         """
         await self._get_instance_vars_event.wait()
         log.debug(f"Unsilencing channel #{ctx.channel} from {ctx.author}'s command.")
