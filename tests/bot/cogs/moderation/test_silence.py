@@ -158,7 +158,7 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
                 await self.cog._silence(channel, False, None)
                 self.cog.notifier.add_channel.assert_not_called()
 
-    async def test_silence_private_removed_muted_channel(self):
+    async def test_silence_private_added_muted_channel(self):
         channel = MockTextChannel()
         with mock.patch.object(self.cog, "muted_channels") as muted_channels:
             await self.cog._silence(channel, False, None)
