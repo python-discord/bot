@@ -75,7 +75,7 @@ class Silence(commands.Cog):
     @commands.command(aliases=("hush",))
     async def silence(self, ctx: Context, duration: HushDurationConverter = 10) -> None:
         """
-        Silence `channel` for `duration` minutes or `forever`.
+        Silence the current channel for `duration` minutes or `forever`.
 
         Duration is capped at 15 minutes, passing forever makes the silence indefinite.
         Indefinitely silenced channels get added to a notifier which posts notices every 15 minutes from the start.
@@ -97,7 +97,7 @@ class Silence(commands.Cog):
     @commands.command(aliases=("unhush",))
     async def unsilence(self, ctx: Context) -> None:
         """
-        Unsilence `channel`.
+        Unsilence the current channel.
 
         Unsilence a previously silenced `channel`,
         remove it from notifier of indefinitely silenced channels and cancel the notifier if empty.
