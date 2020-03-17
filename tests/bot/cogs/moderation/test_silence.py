@@ -198,7 +198,7 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
 
     @mock.patch("bot.cogs.moderation.silence.asyncio")
     @mock.patch.object(Silence, "_mod_alerts_channel", create=True)
-    def test_cog_unload(self, alert_channel, asyncio_mock):
+    def test_cog_unload_starts_task(self, alert_channel, asyncio_mock):
         """Task for sending an alert was created with present `muted_channels`."""
         with mock.patch.object(self.cog, "muted_channels"):
             self.cog.cog_unload()
@@ -206,7 +206,7 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
             asyncio_mock.create_task.assert_called_once_with(alert_channel.send())
 
     @mock.patch("bot.cogs.moderation.silence.asyncio")
-    def test_cog_unload1(self, asyncio_mock):
+    def test_cog_unload_skips_task_start(self, asyncio_mock):
         """No task created with no channels."""
         self.cog.cog_unload()
         asyncio_mock.create_task.assert_not_called()
