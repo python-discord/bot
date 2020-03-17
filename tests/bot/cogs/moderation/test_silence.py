@@ -115,9 +115,9 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         )
         for duration, result_message, _silence_patch_return in test_cases:
             with self.subTest(
-                    silence_duration=duration,
-                    result_message=result_message,
-                    starting_unsilenced_state=_silence_patch_return
+                silence_duration=duration,
+                result_message=result_message,
+                starting_unsilenced_state=_silence_patch_return
             ):
                 with mock.patch.object(self.cog, "_silence", return_value=_silence_patch_return):
                     await self.cog.silence.callback(self.cog, self.ctx, duration)
