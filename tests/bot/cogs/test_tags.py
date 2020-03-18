@@ -20,7 +20,7 @@ class TagsBaseTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(len(actual), sum(1 for _ in tags_files))
         for k, v in actual.items():
-            with self.subTest("Should have following keys: `title`, `embed`, `description`", tag=k, values=v):
+            with self.subTest("Should have following keys: `title`, `embed` (under it `description`)", tag=k, values=v):
                 self.assertTrue("title" in v)
                 self.assertTrue("embed" in v)
                 self.assertTrue("description" in v["embed"])
