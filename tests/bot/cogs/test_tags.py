@@ -57,3 +57,21 @@ class TagsBaseTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(actual, case["expected_output"])
                 regex.sub.called_once_with("", case["args"][0].lower())
                 regex.split.called_once_with(case["args"][1].lower())
+
+    async def test_get_tag(self):
+        """Should return correct tag from Cog cache."""
+        cache = self.cog._cache
+        test_cases = [
+            {"name": tag_name, "expected": tag} for tag_name, tag in cache.items()
+        ]
+        test_cases.append(
+            {
+                "name": "retur",
+                "expected": cache["return"]
+            }
+        )
+
+        for case in test_cases:
+            with self.subTest(tag_name=case["name"], expected=case["expected"]):
+                actual = self.cog._get_tag(case["name"])
+                self.assertEqual(actual[0], case["expected"])
