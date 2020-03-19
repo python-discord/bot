@@ -3,7 +3,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from bot.cogs import tags
-from tests.helpers import MockBot
+from tests.helpers import MockBot, MockContext
 
 
 class TagsBaseTests(unittest.IsolatedAsyncioTestCase):
@@ -105,3 +105,17 @@ class TagsBaseTests(unittest.IsolatedAsyncioTestCase):
                 actual = self.cog._get_suggestions(*case["args"])
 
                 self.assertEqual(actual, case["expected"])
+
+
+class TagsCommandsTests(unittest.IsolatedAsyncioTestCase):
+    """`Tags` cog commands tests."""
+
+    def setUp(self) -> None:
+        self.bot = MockBot()
+        self.cog = tags.Tags(self.bot)
+        self.ctx = MockContext(bot=self.bot)
+
+    async def test_head_command(self):
+        """Should invoke `!tags get` command from `!tag` command."""
+        self.assertIsNone(await self.cog.tags_group.callback(self.cog, self.ctx, tag_name="class"))
+        self.ctx.invoke.assert_awaited_once_with(self.cog.get_command, tag_name="class")
