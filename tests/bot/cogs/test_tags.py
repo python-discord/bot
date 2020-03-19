@@ -70,8 +70,38 @@ class TagsBaseTests(unittest.IsolatedAsyncioTestCase):
                 "expected": cache["return"]
             }
         )
-
         for case in test_cases:
             with self.subTest(tag_name=case["name"], expected=case["expected"]):
                 actual = self.cog._get_tag(case["name"])
                 self.assertEqual(actual[0], case["expected"])
+
+    async def test_get_suggestions(self):
+        """Should return correct list of tags and interact with `_fuzzy_search`."""
+        cache = self.cog._cache
+        test_cases = [
+            {
+                "args": ("codeblck", None),
+                "expected": [cache["codeblock"]]
+            },
+            {
+                "args": ("pep", None),
+                "expected": [cache["pep8"]]
+            },
+            {
+                "args": ("class", None),
+                "expected": [cache["class"], cache["classmethod"]]
+            },
+            {
+                "args": ("o-topc", [100, 90, 80, 70, 60, 50, 40, 30, 20, 10]),
+                "expected": [cache["off-topic"]]
+            },
+            {
+                "args": ("my-test-string", None),
+                "expected": []
+            }
+        ]
+        for case in test_cases:
+            with self.subTest(args=case["args"], expected=case["expected"]):
+                actual = self.cog._get_suggestions(*case["args"])
+
+                self.assertEqual(actual, case["expected"])
