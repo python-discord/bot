@@ -191,7 +191,8 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
         embed = self.ctx.send.call_args[1]["embed"]
 
         self.assertEqual(embed.title, "**Current tags**")
-        self.assertEqual(embed.description, "\n" + "\n".join(sorted(f"**»**   {tag}" for tag in cog._cache)) + "\n")
+        tags_string = "\n".join(sorted(f"**»**   {tag}" for tag in cog._cache))
+        self.assertEqual(embed.description, f"\n{tags_string}\n")
         self.assertEqual(embed.footer.text, "To show a tag, type !tags <tagname>.")
 
     async def test_tag(self):
