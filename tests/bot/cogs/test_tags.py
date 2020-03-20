@@ -109,6 +109,39 @@ class TagsBaseTests(unittest.IsolatedAsyncioTestCase):
 
                 self.assertEqual(actual, case["expected"])
 
+    async def test_get_tags_via_content(self):
+        """Should return list of correct tags."""
+        cache = self.cog._cache
+        # Create tags names list for visual formatting
+        tag_names_for_any_test = [
+            "class",
+            "classmethod",
+            "functions-are-objects",
+            "global",
+            "indent",
+            "names",
+            "repl",
+            "scope",
+            "self"
+        ]
+        test_cases = [
+            {
+                "keywords": "youtube,audio",
+                "check": all,
+                "expected": [cache["ytdl"]]
+            },
+            {
+                "keywords": "class",
+                "check": any,
+                "expected": [tag for tag_name, tag in cache.items() if tag_name in tag_names_for_any_test]
+            }
+        ]
+
+        for case in test_cases:
+            with self.subTest(keywords=case["keywords"], expected=case["expected"], check=case["check"]):
+                actual = self.cog._get_tags_via_content(case["check"], case["keywords"])
+                self.assertEqual(actual, case["expected"])
+
 
 class TagsCommandsTests(unittest.IsolatedAsyncioTestCase):
     """`Tags` cog commands tests."""
