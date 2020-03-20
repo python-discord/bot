@@ -105,7 +105,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
 
         await ctx.send(msg)
 
-    async def apply_unwatch(self, ctx: Context, user: FetchedMember, reason: str, banned: bool = False) -> None:
+    async def apply_unwatch(self, ctx: Context, user: FetchedMember, reason: str, send_message: bool = True) -> None:
         """
         Remove `user` from watched users and mark their infraction as inactive with `reason`.
 
@@ -130,13 +130,20 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
 
             await post_infraction(ctx, user, 'watch', f"Unwatched: {reason}", hidden=True, active=False)
 
-            if not banned:  # Prevents a message being sent to the channel if part of a permanent ban
-                log.trace("User is not banned.  Sending message to channel")
-                await ctx.send(f":white_check_mark: Messages sent by {user} will no longer be relayed.")
-
             self._remove_user(user.id)
+
+            if not send_message:  # Prevents a message being sent to the channel if part of a permanent ban
+                log.debug(f"Perma-banned user {user} was unwatched.")
+                return
+            log.trace("User is not banned.  Sending message to channel")
+            message = f":white_check_mark: Messages sent by {user} will no longer be relayed."
+
         else:
             log.trace("No active watches found for user.")
-            if not banned:  # Prevents a message being sent to the channel if part of a permanent ban
-                log.trace("User is not perma banned. Send the error message.")
-                await ctx.send(":x: The specified user is currently not being watched.")
+            if not send_message:  # Prevents a message being sent to the channel if part of a permanent ban
+                log.debug(f"{user} was not on the watch list; no removal necessary.")
+                return
+            log.trace("User is not perma banned. Send the error message.")
+            message = ":x: The specified user is currently not being watched."
+
+        await ctx.send(message)

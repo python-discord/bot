@@ -230,7 +230,11 @@ class Infractions(InfractionScheduler, commands.Cog):
 
     @respect_role_hierarchy()
     async def apply_ban(self, ctx: Context, user: UserSnowflake, reason: str, **kwargs) -> None:
-        """Apply a ban infraction with kwargs passed to `post_infraction`."""
+        """
+        Apply a ban infraction with kwargs passed to `post_infraction`.
+
+        Will also remove the banned user from the Big Brother watch list if applicable.
+        """
         if await utils.has_active_infraction(ctx, user, "ban"):
             return
 
@@ -243,7 +247,6 @@ class Infractions(InfractionScheduler, commands.Cog):
         action = ctx.guild.ban(user, reason=reason, delete_message_days=0)
         await self.apply_infraction(ctx, infraction, user, action)
 
-        # Remove perma banned users from the watch list
         if infraction.get('expires_at') is not None:
             log.trace(f"Ban isn't permanent; user {user} won't be unwatched by Big Brother.")
             return
@@ -256,9 +259,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         log.trace(f"Big Brother cog loaded; attempting to unwatch perma-banned user {user}.")
 
         bb_reason = "User has been permanently banned from the server. Automatically removed."
-        await bb_cog.apply_unwatch(ctx, user, bb_reason banned=True)
-
-        log.debug(f"Perma-banned user {user} was unwatched.")
+        await bb_cog.apply_unwatch(ctx, user, bb_reason, send_message=False)
 
     # endregion
     # region: Base pardon functions
