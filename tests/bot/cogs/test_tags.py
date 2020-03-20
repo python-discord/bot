@@ -1,6 +1,6 @@
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from bot.cogs import tags
 from tests.helpers import MockBot, MockContext
@@ -119,3 +119,13 @@ class TagsCommandsTests(unittest.IsolatedAsyncioTestCase):
         """Should invoke `!tags get` command from `!tag` command."""
         self.assertIsNone(await self.cog.tags_group.callback(self.cog, self.ctx, tag_name="class"))
         self.ctx.invoke.assert_awaited_once_with(self.cog.get_command, tag_name="class")
+
+    async def test_search_tags_with_keyword(self):
+        """Should call `Tags._get_tags_via_content` and `Tags._send_matching_tags` with correct parameters."""
+        cog = tags.Tags(self.bot)
+        cog._get_tags_via_content = MagicMock(return_value="foo")
+        cog._send_matching_tags = AsyncMock()
+
+        self.assertIsNone(await cog.search_tag_content.callback(cog, self.ctx, keywords="youtube,audio"))
+        cog._get_tags_via_content.assert_called_once_with(all, "youtube,audio")
+        cog._send_matching_tags.assert_awaited_once_with(self.ctx, "youtube,audio", "foo")
