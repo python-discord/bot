@@ -180,3 +180,16 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(embed.description, "**There are no tags in the database!**")
         self.assertEqual(embed.colour, Colour.red())
+
+    async def test_tags_list(self):
+        """Should send to chat (`LinePaginator.paginate`) embed that contains all tags."""
+        cog = tags.Tags(self.bot)
+        keys = cog._cache.keys()
+        cog._cache = {key: cog._cache[key] for key in list(keys)[:3]}
+
+        self.assertIsNone(await cog.get_command.callback(cog, self.ctx, tag_name=None))
+        embed = self.ctx.send.call_args[1]["embed"]
+
+        self.assertEqual(embed.title, "**Current tags**")
+        self.assertEqual(embed.description, "\n" + "\n".join(sorted(f"**»**   {tag}" for tag in cog._cache)) + "\n")
+        self.assertEqual(embed.footer.text, "To show a tag, type !tags <tagname>.")
