@@ -136,8 +136,7 @@ class TagsCommandsTests(unittest.IsolatedAsyncioTestCase):
         """Should call `Tags._get_tags_via_content` and `Tags._send_matching_tags` with correct parameters."""
         test_cases = [
             {"keywords": "youtube,discord,foo"},
-            {"keywords": "any"},
-            {"keywords": ""}
+            {"keywords": "any"}
         ]
 
         for case in test_cases:

@@ -179,7 +179,7 @@ class Tags(Cog):
 
         Search for tags that has ANY of the keywords.
         """
-        matching_tags = self._get_tags_via_content(any, keywords or 'any', ctx.author)
+        matching_tags = self._get_tags_via_content(any, keywords, ctx.author)
         await self._send_matching_tags(ctx, keywords, matching_tags)
 
     @tags_group.command(name='get', aliases=('show', 'g'))
