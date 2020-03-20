@@ -9,14 +9,14 @@ from bot.cogs import tags
 from tests.helpers import MockBot, MockContext, MockTextChannel
 
 
-class TagsBaseTests(unittest.IsolatedAsyncioTestCase):
+class TagsBaseTests(unittest.TestCase):
     """Basic function tests in `Tags` cog that don't need very specific testing."""
 
     def setUp(self) -> None:
         self.bot = MockBot()
         self.cog = tags.Tags(self.bot)
 
-    async def test_get_tags(self):
+    def test_get_tags(self):
         """Should return `Dict` of tags, fetched from resources and have correct keys."""
         actual = tags.Tags.get_tags()
 
@@ -30,7 +30,7 @@ class TagsBaseTests(unittest.IsolatedAsyncioTestCase):
                 self.assertTrue("description" in v["embed"])
 
     @patch("bot.cogs.tags.REGEX_NON_ALPHABET")
-    async def test_fuzzy_search(self, regex):
+    def test_fuzzy_search(self, regex):
         """Should return correct words match rate."""
         test_cases = [
             {
@@ -61,7 +61,7 @@ class TagsBaseTests(unittest.IsolatedAsyncioTestCase):
                 regex.sub.called_once_with("", case["args"][0].lower())
                 regex.split.called_once_with(case["args"][1].lower())
 
-    async def test_get_tag(self):
+    def test_get_tag(self):
         """Should return correct tag from Cog cache."""
         cache = self.cog._cache
         test_cases = [
@@ -78,7 +78,7 @@ class TagsBaseTests(unittest.IsolatedAsyncioTestCase):
                 actual = self.cog._get_tag(case["name"])
                 self.assertEqual(actual[0], case["expected"])
 
-    async def test_get_suggestions(self):
+    def test_get_suggestions(self):
         """Should return correct list of tags and interact with `_fuzzy_search`."""
         cache = self.cog._cache
         test_cases = [
@@ -109,7 +109,7 @@ class TagsBaseTests(unittest.IsolatedAsyncioTestCase):
 
                 self.assertEqual(actual, case["expected"])
 
-    async def test_get_tags_via_content(self):
+    def test_get_tags_via_content(self):
         """Should return list of correct tags."""
         cache = self.cog._cache
         # Create tags names list for visual formatting
