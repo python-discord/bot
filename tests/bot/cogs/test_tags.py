@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from discord import Colour
+from discord import Colour, Embed
 
 from bot.cogs import tags
 from tests.helpers import MockBot, MockContext, MockTextChannel
@@ -185,6 +185,47 @@ class TagsCommandsTests(unittest.IsolatedAsyncioTestCase):
                 )
                 cog._get_tags_via_content.assert_called_once_with(any, case["keywords"] or "any")
                 cog._send_matching_tags.assert_awaited_once_with(self.ctx, case["keywords"], "foo")
+
+    async def test_send_matching_tags(self):
+        """Should return `None` and send correct embed."""
+        cog = tags.Tags(self.bot)
+        test_cases = [
+            {
+                "args": (self.ctx, "youtube,audio", [cog._cache["ytdl"]]),
+                "expected": Embed.from_dict(cog._cache["ytdl"]["embed"])
+            },
+            {
+                "args": (self.ctx, "foo", []),
+                "expected": None
+            },
+            {
+                "args": (self.ctx, "bar", [cog._cache["ytdl"], cog._cache["class"], cog._cache["classmethod"]]),
+                "expected": Embed.from_dict({
+                    "description": (
+                        "\n**»**   class\n"
+                        "**»**   classmethod\n"
+                        "**»**   ytdl\n"
+                    ),
+                    "footer": {"text": tags.FOOTER_TEXT},
+                    "title": "Here are the tags containing the given keyword:"
+                })
+            }
+        ]
+
+        for case in test_cases:
+            with self.subTest(args=case["args"], expected=case["expected"]):
+                self.ctx.send.reset_mock()
+
+                self.assertIsNone(await cog._send_matching_tags(*case["args"]))
+                if case["expected"] is None:
+                    self.ctx.send.assert_not_awaited()
+                else:
+                    embed = self.ctx.send.call_args[1]["embed"]
+                    self.ctx.send.assert_awaited_once_with(embed=embed)
+
+                    self.assertEqual(embed.title, case["expected"].title)
+                    self.assertEqual(embed.description, case["expected"].description)
+                    self.assertEqual(embed.footer.text, case["expected"].footer.text)
 
 
 class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
