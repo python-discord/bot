@@ -145,8 +145,7 @@ class Tags(Cog):
         else:
             is_plural = keywords.strip().count(' ') > 0 or keywords.strip().count(',') > 0
             embed = Embed(
-                title=f"Here are the tags containing the given keyword{'s' * is_plural}:",
-                description='\n'.join(tag['title'] for tag in matching_tags[:10])
+                title=f"Here are the tags containing the given keyword{'s' * is_plural}:"
             )
             await LinePaginator.paginate(
                 sorted(f"**»**   {tag['title']}" for tag in matching_tags),
