@@ -121,7 +121,7 @@ class TagsCommandsTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(await cog.tags_group.callback(cog, self.ctx, tag_name="class"))
         self.ctx.invoke.assert_awaited_once_with(cog.get_command, tag_name="class")
 
-    async def test_search_tags_with_keyword(self):
+    async def test_search_tags_with_keyword_command(self):
         """Should call `Tags._get_tags_via_content` and `Tags._send_matching_tags` with correct parameters."""
         cog = tags.Tags(self.bot)
         cog._get_tags_via_content = MagicMock(return_value="foo")
