@@ -3,6 +3,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from discord import Colour
+
 from bot.cogs import tags
 from tests.helpers import MockBot, MockContext, MockTextChannel
 
@@ -166,3 +168,15 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertIsNone(await cog.get_command.callback(cog, self.ctx, tag_name="ytdl"))
         self.ctx.send.assert_not_awaited()
+
+    async def test_tags_list_empty(self):
+        """Should send to chat (`ctx.send`) correct embed with information about no tags."""
+        cog = tags.Tags(self.bot)
+        cog._cache = {}
+
+        self.assertIsNone(await cog.get_command.callback(cog, self.ctx, tag_name=None))
+        embed = self.ctx.send.call_args[1]["embed"]
+        self.ctx.send.assert_awaited_once_with(embed=embed)
+
+        self.assertEqual(embed.description, "**There are no tags in the database!**")
+        self.assertEqual(embed.colour, Colour.red())
