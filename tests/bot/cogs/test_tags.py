@@ -130,3 +130,23 @@ class TagsCommandsTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(await cog.search_tag_content.callback(cog, self.ctx, keywords="youtube,audio"))
         cog._get_tags_via_content.assert_called_once_with(all, "youtube,audio")
         cog._send_matching_tags.assert_awaited_once_with(self.ctx, "youtube,audio", "foo")
+
+    async def test_search_tags_any_command(self):
+        """Should call `Tags._get_tags_via_content` and `Tags._send_matching_tags` with correct parameters."""
+        test_cases = [
+            {"keywords": "youtube,discord,foo"},
+            {"keywords": "any"},
+            {"keywords": ""}
+        ]
+
+        for case in test_cases:
+            with self.subTest(keywords=case["keywords"]):
+                cog = tags.Tags(self.bot)
+                cog._get_tags_via_content = MagicMock(return_value="foo")
+                cog._send_matching_tags = AsyncMock()
+
+                self.assertIsNone(
+                    await cog.search_tag_content_any_keyword.callback(cog, self.ctx, keywords=case["keywords"])
+                )
+                cog._get_tags_via_content.assert_called_once_with(any, case["keywords"] or "any")
+                cog._send_matching_tags.assert_awaited_once_with(self.ctx, case["keywords"], "foo")
