@@ -61,7 +61,12 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
         await self.apply_unwatch(ctx, user, reason)
 
     async def apply_watch(self, ctx: Context, user: FetchedMember, reason: str) -> None:
-        """Handles adding a user to the watch list."""
+        """
+        Add `user` to watched users and apply a watch infraction with `reason`.
+
+        A message indicating the result of the operation is sent to `ctx`.
+        The message will include `user`'s previous watch infraction history, if it exists.
+        """
         if user.bot:
             await ctx.send(f":x: I'm sorry {ctx.author}, I'm afraid I can't do that. I only watch humans.")
             return
@@ -101,7 +106,12 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
         await ctx.send(msg)
 
     async def apply_unwatch(self, ctx: Context, user: FetchedMember, reason: str, banned: bool = False) -> None:
-        """Handles the actual user removal from the watch list."""
+        """
+        Remove `user` from watched users and mark their infraction as inactive with `reason`.
+
+        If `send_message` is True, a message indicating the result of the operation is sent to
+        `ctx`.
+        """
         active_watches = await self.bot.api_client.get(
             self.api_endpoint,
             params=ChainMap(
