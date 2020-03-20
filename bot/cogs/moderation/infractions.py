@@ -253,7 +253,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         bb_cog = self.bot.get_cog("Big Brother")
         if not bb_cog:
-            log.trace(f"Big Brother cog not loaded; perma-banned user {user} won't be unwatched.")
+            log.error(f"Big Brother cog not loaded; perma-banned user {user} won't be unwatched.")
             return
 
         log.trace(f"Big Brother cog loaded; attempting to unwatch perma-banned user {user}.")
