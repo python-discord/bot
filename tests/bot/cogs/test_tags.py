@@ -193,3 +193,38 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(embed.title, "**Current tags**")
         self.assertEqual(embed.description, "\n" + "\n".join(sorted(f"**»**   {tag}" for tag in cog._cache)) + "\n")
         self.assertEqual(embed.footer.text, "To show a tag, type !tags <tagname>.")
+
+    async def test_tag(self):
+        """Should send correct embed to chat (`ctx.send`) with tag content."""
+        cog = tags.Tags(self.bot)
+        test_cases = [
+            {"tag": tag["title"], "expected": tag["embed"]} for tag in cog._cache.values()
+        ]
+        test_cases.extend(
+            [
+                {
+                    "tag": "clas",
+                    "expected": {
+                        "title": "Did you mean ...",
+                        "description": "class\nclassmethod",
+                        "type": "rich"
+                    }
+                },
+                {
+                    "tag": "clss",
+                    "expected": None
+                }
+            ]
+        )
+
+        for case in test_cases:
+            with self.subTest(tag_name=case["tag"], expected=case["expected"]):
+                self.ctx.send.reset_mock()
+                self.assertIsNone(await cog.get_command.callback(cog, self.ctx, tag_name=case["tag"]))
+                if case["expected"] is None:
+                    self.ctx.send.assert_not_awaited()
+                else:
+                    embed = self.ctx.send.call_args[1]["embed"]
+
+                    self.assertEqual(embed.to_dict(), case["expected"])
+                    self.ctx.send.assert_awaited_once_with(embed=embed)
