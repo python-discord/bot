@@ -92,7 +92,7 @@ class TagsBaseTests(unittest.TestCase):
             },
             {
                 "args": ("class", None),
-                "expected": [cache["class"], cache["classmethod"]]
+                "expected": [cache["classmethod"], cache["class"]]
             },
             {
                 "args": ("o-topc", [100, 90, 80, 70, 60, 50, 40, 30, 20, 10]),
@@ -281,7 +281,7 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
                     "tag": "clas",
                     "expected": {
                         "title": "Did you mean ...",
-                        "description": "class\nclassmethod",
+                        "description": "classmethod\nclass",
                         "type": "rich"
                     }
                 },
