@@ -1,9 +1,10 @@
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from bot.cogs import tags
-from tests.helpers import MockBot, MockContext
+from tests.helpers import MockBot, MockContext, MockTextChannel
 
 
 class TagsBaseTests(unittest.IsolatedAsyncioTestCase):
@@ -150,3 +151,19 @@ class TagsCommandsTests(unittest.IsolatedAsyncioTestCase):
                 )
                 cog._get_tags_via_content.assert_called_once_with(any, case["keywords"] or "any")
                 cog._send_matching_tags.assert_awaited_once_with(self.ctx, case["keywords"], "foo")
+
+
+class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
+    """Tests for `!tags get` command."""
+
+    def setUp(self) -> None:
+        self.bot = MockBot()
+        self.ctx = MockContext(bot=self.bot, channel=MockTextChannel(id=1234))
+
+    async def test_tag_on_cooldown(self):
+        """Should not respond to chat due tag is under cooldown."""
+        cog = tags.Tags(self.bot)
+        cog.tag_cooldowns["ytdl"] = {"channel": 1234, "time": time.time()}
+
+        self.assertIsNone(await cog.get_command.callback(cog, self.ctx, tag_name="ytdl"))
+        self.ctx.send.assert_not_awaited()
