@@ -112,13 +112,14 @@ class TagsCommandsTests(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self) -> None:
         self.bot = MockBot()
-        self.cog = tags.Tags(self.bot)
         self.ctx = MockContext(bot=self.bot)
 
     async def test_head_command(self):
         """Should invoke `!tags get` command from `!tag` command."""
-        self.assertIsNone(await self.cog.tags_group.callback(self.cog, self.ctx, tag_name="class"))
-        self.ctx.invoke.assert_awaited_once_with(self.cog.get_command, tag_name="class")
+        cog = tags.Tags(self.bot)
+
+        self.assertIsNone(await cog.tags_group.callback(cog, self.ctx, tag_name="class"))
+        self.ctx.invoke.assert_awaited_once_with(cog.get_command, tag_name="class")
 
     async def test_search_tags_with_keyword(self):
         """Should call `Tags._get_tags_via_content` and `Tags._send_matching_tags` with correct parameters."""
