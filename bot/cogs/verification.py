@@ -95,7 +95,7 @@ class Verification(Cog):
                 ping_everyone=constants.Filter.ping_everyone,
             )
 
-        ctx: Context = await self.get_context(message)
+        ctx: Context = await self.bot.get_context(message)
         if ctx.command is not None and ctx.command.name == "accept":
             return
 
