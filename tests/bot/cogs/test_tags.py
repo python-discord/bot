@@ -8,6 +8,51 @@ from discord import Colour, Embed
 from bot.cogs import tags
 from tests.helpers import MockBot, MockContext, MockTextChannel
 
+CACHE = {
+    "ytdl": {
+        "title": "ytdl",
+        "embed": {
+            "description": "youtube,audio"
+        }
+    },
+    "class": {
+        "title": "class",
+        "embed": {
+            "description": "class"
+        }
+    },
+    "classmethod": {
+        "title": "classmethod",
+        "embed": {
+            "description": "classmethod"
+        }
+    },
+    "return": {
+        "title": "return",
+        "embed": {
+            "description": "return"
+        }
+    },
+    "codeblock": {
+        "title": "codeblock",
+        "embed": {
+            "description": "codeblock"
+        }
+    },
+    "pep8": {
+        "title": "pep8",
+        "embed": {
+            "description": "pep8"
+        }
+    },
+    "off-topic": {
+        "title": "off-topic",
+        "embed": {
+            "description": "off-topic"
+        }
+    }
+}
+
 
 class TagsBaseTests(unittest.TestCase):
     """Basic function tests in `Tags` cog that don't need very specific testing."""
@@ -15,6 +60,7 @@ class TagsBaseTests(unittest.TestCase):
     def setUp(self) -> None:
         self.bot = MockBot()
         self.cog = tags.Tags(self.bot)
+        self.cog._cache = CACHE.copy()
 
     def test_get_tags(self):
         """Should return `Dict` of tags, fetched from resources and have correct keys."""
@@ -115,14 +161,7 @@ class TagsBaseTests(unittest.TestCase):
         # Create tags names list for visual formatting
         tag_names_for_any_test = [
             "class",
-            "classmethod",
-            "functions-are-objects",
-            "global",
-            "indent",
-            "names",
-            "repl",
-            "scope",
-            "self"
+            "classmethod"
         ]
         test_cases = [
             {
@@ -189,6 +228,7 @@ class TagsCommandsTests(unittest.IsolatedAsyncioTestCase):
     async def test_send_matching_tags(self):
         """Should return `None` and send correct embed."""
         cog = tags.Tags(self.bot)
+        cog._cache = CACHE.copy()
         test_cases = [
             {
                 "args": (self.ctx, "youtube,audio", [cog._cache["ytdl"]]),
@@ -258,8 +298,7 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
     async def test_tags_list(self):
         """Should send to chat (`LinePaginator.paginate`) embed that contains all tags."""
         cog = tags.Tags(self.bot)
-        keys = cog._cache.keys()
-        cog._cache = {key: cog._cache[key] for key in list(keys)[:3]}
+        cog._cache = CACHE.copy()
 
         self.assertIsNone(await cog.get_command.callback(cog, self.ctx, tag_name=None))
         embed = self.ctx.send.call_args[1]["embed"]
@@ -272,6 +311,7 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
     async def test_tag(self):
         """Should send correct embed to chat (`ctx.send`) with tag content."""
         cog = tags.Tags(self.bot)
+        cog._cache = CACHE.copy()
         test_cases = [
             {"tag": tag["title"], "expected": tag["embed"]} for tag in cog._cache.values()
         ]
