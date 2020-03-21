@@ -137,7 +137,7 @@ class TagsBaseTests(unittest.TestCase):
                 "expected": [cache["pep8"]]
             },
             {
-                "args": ("class", None),
+                "args": ("clas", None),
                 "expected": [cache["classmethod"], cache["class"]]
             },
             {
