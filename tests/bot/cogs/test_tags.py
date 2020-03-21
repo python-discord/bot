@@ -91,7 +91,7 @@ class TagsBaseTests(unittest.TestCase):
             },
             {
                 "args": ("foo", "fuu"),
-                "expected_output": 33.33333333333333,
+                "expected_output": 33.33,
                 "regex_split": iter(["fuu"])
             }
         ]
@@ -103,7 +103,7 @@ class TagsBaseTests(unittest.TestCase):
 
                 actual = tags.Tags._fuzzy_search(*case["args"])
 
-                self.assertEqual(actual, case["expected_output"])
+                self.assertAlmostEqual(actual, case["expected_output"], 2)
                 regex.sub.called_once_with("", case["args"][0].lower())
                 regex.split.called_once_with(case["args"][1].lower())
 
