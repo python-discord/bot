@@ -322,7 +322,7 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
                     "tag": "clas",
                     "expected": {
                         "title": "Did you mean ...",
-                        "description": "classmethod\nclass",
+                        "description": "class\nclassmethod",
                         "type": "rich"
                     }
                 },
