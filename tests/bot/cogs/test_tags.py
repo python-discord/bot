@@ -153,7 +153,8 @@ class TagsBaseTests(unittest.TestCase):
             with self.subTest(args=case["args"], expected=case["expected"]):
                 actual = self.cog._get_suggestions(*case["args"])
 
-                self.assertEqual(actual, case["expected"])
+                for expected_tag in case["expected"]:
+                    self.assertTrue(any(expected_tag["title"] == actual_tag["title"] for actual_tag in actual))
 
     def test_get_tags_via_content(self):
         """Should return list of correct tags."""
