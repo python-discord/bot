@@ -82,6 +82,7 @@ class HelpChannels(Scheduler, commands.Cog):
         * Prioritise using the channels which have been dormant for the longest amount of time
         * If there are no more dormant channels, the bot will automatically create a new one
         * Configurable with `constants.HelpChannels.max_available`
+        * If there are no dormant channels to move, helpers will be notified (see `notify()`)
     * When a channel becomes available, the dormant embed will be edited to show `AVAILABLE_MSG`
 
     In Use Category
