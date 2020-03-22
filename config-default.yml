@@ -505,6 +505,8 @@ mention:
     reset_delay: 5
 
 help_channels:
+    enable: false
+
     # Minimum interval before allowing a certain user to claim a new help channel
     claim_minutes: 15
 
