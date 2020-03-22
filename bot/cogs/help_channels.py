@@ -19,12 +19,22 @@ from bot.utils.scheduling import Scheduler
 
 log = logging.getLogger(__name__)
 
-# TODO: write the channel topics
-AVAILABLE_TOPIC = ""
-IN_USE_TOPIC = ""
-DORMANT_TOPIC = ""
 ASKING_GUIDE_URL = "https://pythondiscord.com/pages/asking-good-questions/"
 MAX_CHANNELS_PER_CATEGORY = 50
+
+AVAILABLE_TOPIC = """
+This channel is available. Feel free to ask a question in order to claim this channel!
+"""
+
+IN_USE_TOPIC = """
+This channel is currently in use. If you'd like to discuss a different problem, please claim a new \
+channel from the Help: Available category.
+"""
+
+DORMANT_TOPIC = """
+This channel is temporarily archived. If you'd like to ask a question, please use one of the \
+channels in the Help: Available category.
+"""
 
 AVAILABLE_MSG = f"""
 This help channel is now **available**, which means that you can claim it by simply typing your \
