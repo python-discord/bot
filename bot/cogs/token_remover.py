@@ -95,7 +95,7 @@ class TokenRemover(Cog):
 
     @classmethod
     def find_token_in_message(cls, msg: Message) -> t.Optional[str]:
-        """Check for a seemingly valid token in the provided `Message` instance."""
+        """Return a seemingly valid token found in `msg` or `None` if no token is found."""
         if msg.author.bot:
             return
 
