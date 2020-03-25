@@ -35,10 +35,6 @@ jobs:
         displayName: 'Restore Python environment'
         inputs:
           key: python | $(Agent.OS) | "$(python.pythonLocation)" | 0 | ./Pipfile | ./Pipfile.lock
-          restoreKeys: |
-            python | "$(python.pythonLocation)" | 0 | ./Pipfile.lock
-            python | "$(python.pythonLocation)" | 0 | ./Pipfile
-            python | "$(python.pythonLocation)" | 0
           cacheHitVar: PY_ENV_RESTORED
           path: $(PYTHONUSERBASE)
 
@@ -67,8 +63,6 @@ jobs:
         displayName: 'Restore pre-commit environment'
         inputs:
           key: pre-commit | "$(python.pythonLocation)" | 0 | .pre-commit-config.yaml
-          restoreKeys: |
-            pre-commit | "$(python.pythonLocation)" | 0
           path: $(PRE_COMMIT_HOME)
 
       # pre-commit's venv doesn't allow user installs - not that they're really needed anyway.
