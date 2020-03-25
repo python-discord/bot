@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import unittest
-from unittest.mock import AsyncMock, MagicMock, Mock, call, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, call, create_autospec, patch
 
 from discord.ext import commands
 
@@ -281,11 +281,14 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         """Test that the continue_eval function does continue if required conditions are met."""
         ctx = MockContext(message=MockMessage(add_reaction=AsyncMock(), clear_reactions=AsyncMock()))
         response = MockMessage(delete=AsyncMock())
-        new_msg = MockMessage(content='!e NewCode')
+        new_msg = MockMessage()
         self.bot.wait_for.side_effect = ((None, new_msg), None)
+        expected = "NewCode"
+        self.cog.get_code = create_autospec(self.cog.get_code, spec_set=True, return_value=expected)
 
         actual = await self.cog.continue_eval(ctx, response)
-        self.assertEqual(actual, 'NewCode')
+        self.cog.get_code.assert_awaited_once_with(new_msg)
+        self.assertEqual(actual, expected)
         self.bot.wait_for.assert_has_awaits(
             (
                 call('message_edit', check=partial_mock(snekbox.predicate_eval_message_edit, ctx), timeout=10),
