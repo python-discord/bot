@@ -6,6 +6,7 @@ import discord.errors
 from dateutil.relativedelta import relativedelta
 from discord import Colour, DMChannel, Member, Message, TextChannel
 from discord.ext.commands import Cog
+from discord.utils import escape_markdown
 
 from bot.bot import Bot
 from bot.cogs.moderation import ModLog
@@ -27,6 +28,7 @@ INVITE_RE = re.compile(
     flags=re.IGNORECASE
 )
 
+SPOILER_RE = re.compile(r"(\|\|.+?\|\|)", re.DOTALL)
 URL_RE = re.compile(r"(https?://[^\s]+)", flags=re.IGNORECASE)
 ZALGO_RE = re.compile(r"[\u0300-\u036F\u0489]")
 
@@ -36,6 +38,14 @@ WORD_WATCHLIST_PATTERNS = [
 TOKEN_WATCHLIST_PATTERNS = [
     re.compile(fr'{expression}', flags=re.IGNORECASE) for expression in Filter.token_watchlist
 ]
+
+
+def expand_spoilers(text: str) -> str:
+    """Return a string containing all interpretations of a spoilered message."""
+    split_text = SPOILER_RE.split(text)
+    return ''.join(
+        split_text[0::2] + split_text[1::2] + split_text
+    )
 
 
 class Filtering(Cog):
@@ -186,8 +196,8 @@ class Filtering(Cog):
                             surroundings = match.string[max(match.start() - 10, 0): match.end() + 10]
                             message_content = (
                                 f"**Match:** '{match[0]}'\n"
-                                f"**Location:** '...{surroundings}...'\n"
-                                f"\n**Original Message:**\n{msg.content}"
+                                f"**Location:** '...{escape_markdown(surroundings)}...'\n"
+                                f"\n**Original Message:**\n{escape_markdown(msg.content)}"
                             )
                         else:  # Use content of discord Message
                             message_content = msg.content
@@ -244,6 +254,8 @@ class Filtering(Cog):
 
         Only matches words with boundaries before and after the expression.
         """
+        if SPOILER_RE.search(text):
+            text = expand_spoilers(text)
         for regex_pattern in WORD_WATCHLIST_PATTERNS:
             match = regex_pattern.search(text)
             if match:
