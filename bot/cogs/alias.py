@@ -34,6 +34,14 @@ class Alias (Cog):
 
         await ctx.invoke(cmd, *args, **kwargs)
 
+    async def test_alias_can_run(self, ctx: Context, alias: str) -> bool:
+        """Check can user use this specific alias."""
+        # We don't want arguments, only command itself and max command parts in aliases is 2.
+        if len(alias.split()) >= 3:
+            alias = " ".join(alias.split()[0:2])
+        # Force allow `get group` due it's not actual command.
+        return alias == "get group" or await self.bot.get_command(alias).can_run(ctx)
+
     @command(name='aliases')
     async def aliases_command(self, ctx: Context) -> None:
         """Show configured aliases on the bot."""
@@ -41,6 +49,7 @@ class Alias (Cog):
             title='Configured aliases',
             colour=Colour.blue()
         )
+
         await LinePaginator.paginate(
             (
                 f"• `{ctx.prefix}{value.name}` "
