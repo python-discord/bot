@@ -75,6 +75,13 @@ class WebhookRemover(Cog):
         if is_url_in:
             await self.delete_and_respond(msg, url)
 
+    @Cog.listener()
+    async def on_message_edit(self, before: Message, after: Message) -> None:
+        """Check is Discord Webhook URL in new message content when message changed."""
+        is_url_in, url = await self.scan_message(after)
+        if is_url_in:
+            await self.delete_and_respond(after, url)
+
 
 def setup(bot: Bot) -> None:
     """Load `WebhookRemover` cog."""
