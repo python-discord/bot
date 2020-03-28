@@ -49,13 +49,17 @@ class Alias (Cog):
             title='Configured aliases',
             colour=Colour.blue()
         )
-
+        aliases = {
+            name: value for name, value in inspect.getmembers(self)
+            if isinstance(value, Command)
+            and name.endswith("_alias")
+            and await self.test_alias_can_run(ctx, name[:-len('_alias')].replace('_', ' '))
+        }
         await LinePaginator.paginate(
             (
                 f"• `{ctx.prefix}{value.name}` "
                 f"=> `{ctx.prefix}{name[:-len('_alias')].replace('_', ' ')}`"
-                for name, value in inspect.getmembers(self)
-                if isinstance(value, Command) and name.endswith('_alias')
+                for name, value in aliases.items()
             ),
             ctx, embed, empty=False, max_lines=20
         )
