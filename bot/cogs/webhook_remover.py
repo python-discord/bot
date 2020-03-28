@@ -8,13 +8,13 @@ from bot.bot import Bot
 from bot.cogs.moderation.modlog import ModLog
 from bot.constants import Channels, Colours, Event, Icons
 
-WEBHOOK_URL_RE = re.compile(r"(discordapp\.com/api/webhooks/)(\d+/)(\S+/?)")
+WEBHOOK_URL_RE = re.compile(r"((?:https?://)?discordapp\.com/api/webhooks/\d+/)\S+/?", re.I)
 
 ALERT_MESSAGE_TEMPLATE = (
-    "{user}, looks like you posted Discord Webhook URL to chat. "
-    "I removed this, but we **strongly** suggest to change this now "
-    "to prevent any spam abuse to channel. Please avoid doing this in future. "
-    "If you believe this was mistake, please let us know."
+    "{user}, looks like you posted a Discord webhook URL. Therefore, your "
+    "message has been removed. Your webhook may have been **compromised** so "
+    "please re-create the webhook **immediately**. If you believe this was "
+    "mistake, please let us know."
 )
 
 log = logging.getLogger(__name__)
@@ -32,14 +32,14 @@ class WebhookRemover(Cog):
         return self.bot.get_cog("ModLog")
 
     async def delete_and_respond(self, msg: Message, redacted_url: str) -> None:
-        """Delete message and show warning when message contains Discord Webhook URL."""
+        """Delete `msg` and send a warning that it contained the Discord webhook `redacted_url`."""
         # Don't log this, due internal delete, not by user. Will make different entry.
         self.mod_log.ignore(Event.message_delete, msg.id)
         await msg.delete()
         await msg.channel.send(ALERT_MESSAGE_TEMPLATE.format(user=msg.author.mention))
 
         message = (
-            f"{msg.author} (`{msg.author.id}`) posted Discord Webhook URL "
+            f"{msg.author} (`{msg.author.id}`) posted a Discord webhook URL "
             f"to #{msg.channel}. Webhook URL was `{redacted_url}`"
         )
         log.debug(message)
@@ -48,7 +48,7 @@ class WebhookRemover(Cog):
         await self.mod_log.send_log_message(
             icon_url=Icons.token_removed,
             colour=Colour(Colours.soft_red),
-            title="Discord Webhook URL removed!",
+            title="Discord webhook URL removed!",
             text=message,
             thumbnail=msg.author.avatar_url_as(static_format="png"),
             channel_id=Channels.mod_alerts
@@ -59,7 +59,7 @@ class WebhookRemover(Cog):
         """Check if a Discord webhook URL is in `message`."""
         matches = WEBHOOK_URL_RE.search(msg.content)
         if matches:
-            await self.delete_and_respond(msg, "".join(matches.groups()[:-1]) + "xxx")
+            await self.delete_and_respond(msg, matches[1] + "xxx")
 
     @Cog.listener()
     async def on_message_edit(self, before: Message, after: Message) -> None:
