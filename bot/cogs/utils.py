@@ -40,6 +40,14 @@ If the implementation is easy to explain, it may be a good idea.
 Namespaces are one honking great idea -- let's do more of those!
 """
 
+PEP0_TITLE = "Index of Python Enhancement Proposals (PEPs)"
+PEP0_INFO = {
+    "Status": "Active",
+    "Created": "13-Jul-2000",
+    "Type": "Informational"
+}
+PEP0_LINK = "https://www.python.org/dev/peps/"
+
 
 class Utils(Cog):
     """A selection of utilities which don't have a clear category."""
@@ -57,6 +65,19 @@ class Utils(Cog):
             pep_number = int(pep_number)
         else:
             await ctx.invoke(self.bot.get_command("help"), "pep")
+            return
+
+        # Handle PEP 0 directly due it's not available like other PEPs (use constants)
+        if pep_number == 0:
+            pep_embed = Embed(
+                title=f"**PEP 0 - {PEP0_TITLE}**",
+                description=f"[Link]({PEP0_LINK})"
+            )
+            pep_embed.set_thumbnail(url="https://www.python.org/static/opengraph-icon-200x200.png")
+            for field, value in PEP0_INFO.items():
+                pep_embed.add_field(name=field, value=value)
+
+            await ctx.send(embed=pep_embed)
             return
 
         possible_extensions = ['.txt', '.rst']
