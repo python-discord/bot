@@ -131,7 +131,7 @@ class Syncer(abc.ABC):
             await message.edit(content=f':ok_hand: {mention}{self.name} sync will proceed.')
             return True
         else:
-            log.trace(f"The {self.name} syncer was aborted or timed out!")
+            log.info(f"The {self.name} syncer was aborted or timed out!")
             await message.edit(
                 content=f':warning: {mention}{self.name} sync aborted or timed out!'
             )
