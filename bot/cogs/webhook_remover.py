@@ -1,6 +1,5 @@
 import logging
 import re
-import typing as t
 
 from discord import Colour, Message
 from discord.ext.commands import Cog
@@ -9,7 +8,7 @@ from bot.bot import Bot
 from bot.cogs.moderation.modlog import ModLog
 from bot.constants import Channels, Colours, Event, Icons
 
-WEBHOOK_URL_RE = re.compile(r"discordapp\.com/api/webhooks/\d+/\S+/?")
+WEBHOOK_URL_RE = re.compile(r"(discordapp\.com/api/webhooks/)(\d+/)(\S+/?)")
 
 ALERT_MESSAGE_TEMPLATE = (
     "{user}, looks like you posted Discord Webhook URL to chat. "
@@ -31,14 +30,6 @@ class WebhookRemover(Cog):
     def mod_log(self) -> ModLog:
         """Get current instance of `ModLog`."""
         return self.bot.get_cog("ModLog")
-
-    async def scan_message(self, msg: Message) -> t.Tuple[bool, t.Optional[str]]:
-        """Scan message content to detect Webhook URLs. Return `bool` about does this have Discord webhook URL."""
-        matches = WEBHOOK_URL_RE.search(msg.content)
-        if matches:
-            return True, matches[0]
-        else:
-            return False, None
 
     async def delete_and_respond(self, msg: Message, url: str) -> None:
         """Delete message and show warning when message contains Discord Webhook URL."""
@@ -71,9 +62,9 @@ class WebhookRemover(Cog):
     @Cog.listener()
     async def on_message(self, msg: Message) -> None:
         """Check is Discord Webhook URL in sent message."""
-        is_url_in, url = await self.scan_message(msg)
-        if is_url_in:
-            await self.delete_and_respond(msg, url)
+        matches = WEBHOOK_URL_RE.search(msg.content)
+        if matches:
+            await self.delete_and_respond(msg, "".join(matches.groups()[:-1]) + "xxx")
 
     @Cog.listener()
     async def on_message_edit(self, before: Message, after: Message) -> None:
