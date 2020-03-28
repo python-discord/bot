@@ -67,7 +67,8 @@ class Utils(Cog):
             await ctx.invoke(self.bot.get_command("help"), "pep")
             return
 
-        # Handle PEP 0 directly due it's not available like other PEPs (use constants)
+        # Handle PEP 0 directly due it's static constant in PEPs GitHub repo in Python file, not .rst or .txt so it
+        # can't be accessed like other PEPs.
         if pep_number == 0:
             pep_embed = Embed(
                 title=f"**PEP 0 - {PEP0_TITLE}**",
