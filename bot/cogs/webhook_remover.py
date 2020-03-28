@@ -31,7 +31,7 @@ class WebhookRemover(Cog):
         """Get current instance of `ModLog`."""
         return self.bot.get_cog("ModLog")
 
-    async def delete_and_respond(self, msg: Message, url: str) -> None:
+    async def delete_and_respond(self, msg: Message, redacted_url: str) -> None:
         """Delete message and show warning when message contains Discord Webhook URL."""
         # Don't log this, due internal delete, not by user. Will make different entry.
         self.mod_log.ignore(Event.message_delete, msg.id)
@@ -40,7 +40,7 @@ class WebhookRemover(Cog):
 
         message = (
             f"{msg.author} (`{msg.author.id}`) posted Discord Webhook URL "
-            f"to #{msg.channel}. Webhook URL was `{url}`"
+            f"to #{msg.channel}. Webhook URL was `{redacted_url}`"
         )
         log.debug(message)
 
