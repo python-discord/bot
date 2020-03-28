@@ -53,8 +53,8 @@ class WebhookRemover(Cog):
         await msg.channel.send(ALERT_MESSAGE_TEMPLATE.format(user=msg.author.mention))
 
         message = (
-            f"{msg.author} ({msg.author.id}) posted Discord Webhook URL "
-            f"to {msg.channel}. Webhook URL was {url}"
+            f"{msg.author} (`{msg.author.id}`) posted Discord Webhook URL "
+            f"to #{msg.channel}. Webhook URL was `{url}`"
         )
         log.debug(message)
 
@@ -67,6 +67,13 @@ class WebhookRemover(Cog):
             thumbnail=msg.author.avatar_url_as(static_format="png"),
             channel_id=Channels.mod_alerts
         )
+
+    @Cog.listener()
+    async def on_message(self, msg: Message) -> None:
+        """Check is Discord Webhook URL in sent message."""
+        is_url_in, url = await self.scan_message(msg)
+        if is_url_in:
+            await self.delete_and_respond(msg, url)
 
 
 def setup(bot: Bot) -> None:
