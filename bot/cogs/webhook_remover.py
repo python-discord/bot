@@ -1,5 +1,6 @@
 import logging
 import re
+import typing as t
 
 from discord import Colour, Message
 from discord.ext.commands import Cog
@@ -31,13 +32,13 @@ class WebhookRemover(Cog):
         """Get current instance of `ModLog`."""
         return self.bot.get_cog("ModLog")
 
-    async def scan_message(self, msg: Message) -> bool:
+    async def scan_message(self, msg: Message) -> t.Tuple[bool, t.Optional[str]]:
         """Scan message content to detect Webhook URLs. Return `bool` about does this have Discord webhook URL."""
         matches = WEBHOOK_URL_RE.search(msg.content)
         if matches:
-            return True
+            return True, matches[0]
         else:
-            return False
+            return False, None
 
     async def delete_and_respond(self, msg: Message, url: str) -> None:
         """Delete message and show warning when message contains Discord Webhook URL."""
