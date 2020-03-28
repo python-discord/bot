@@ -1,6 +1,10 @@
+import re
+
 from discord.ext.commands import Cog
 
 from bot.bot import Bot
+
+WEBHOOK_URL_RE = re.compile(r"discordapp\.com/api/webhooks/\d+/\S+/?")
 
 
 class WebhookRemover(Cog):
