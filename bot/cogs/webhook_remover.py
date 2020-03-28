@@ -33,11 +33,6 @@ class WebhookRemover(Cog):
 
     async def delete_and_respond(self, msg: Message, url: str) -> None:
         """Delete message and show warning when message contains Discord Webhook URL."""
-        # Create URL that will be sent to logs, remove token
-        parts = url.split("/")
-        parts[-1] = "xxx"
-        url = "/".join(parts)
-
         # Don't log this, due internal delete, not by user. Will make different entry.
         self.mod_log.ignore(Event.message_delete, msg.id)
         await msg.delete()
