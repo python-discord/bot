@@ -77,7 +77,7 @@ class Bot(commands.Bot):
 
         # Its __del__ does send a warning but it doesn't always show up for some reason.
         if self._connector and not self._connector._closed:
-            log.info(
+            log.warning(
                 "The previous connector was not closed; it will remain open and be overwritten"
             )
 
@@ -94,7 +94,7 @@ class Bot(commands.Bot):
 
         # Its __del__ does send a warning but it doesn't always show up for some reason.
         if self.http_session and not self.http_session.closed:
-            log.info(
+            log.warning(
                 "The previous session was not closed; it will remain open and be overwritten"
             )
 

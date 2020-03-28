@@ -92,7 +92,7 @@ async def send_attachments(
             elif link_large:
                 large.append(attachment)
             else:
-                log.warning(f"{failure_msg} because it's too large.")
+                log.info(f"{failure_msg} because it's too large.")
         except HTTPException as e:
             if link_large and e.status == 413:
                 large.append(attachment)
