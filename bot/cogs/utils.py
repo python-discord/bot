@@ -40,14 +40,6 @@ If the implementation is easy to explain, it may be a good idea.
 Namespaces are one honking great idea -- let's do more of those!
 """
 
-PEP0_TITLE = "Index of Python Enhancement Proposals (PEPs)"
-PEP0_INFO = {
-    "Status": "Active",
-    "Created": "13-Jul-2000",
-    "Type": "Informational"
-}
-PEP0_LINK = "https://www.python.org/dev/peps/"
-
 ICON_URL = "https://www.python.org/static/opengraph-icon-200x200.png"
 
 
@@ -72,16 +64,7 @@ class Utils(Cog):
         # Handle PEP 0 directly due it's static constant in PEPs GitHub repo in Python file, not .rst or .txt so it
         # can't be accessed like other PEPs.
         if pep_number == 0:
-            pep_embed = Embed(
-                title=f"**PEP 0 - {PEP0_TITLE}**",
-                description=f"[Link]({PEP0_LINK})"
-            )
-            pep_embed.set_thumbnail(url=ICON_URL)
-            for field, value in PEP0_INFO.items():
-                pep_embed.add_field(name=field, value=value)
-
-            await ctx.send(embed=pep_embed)
-            return
+            return await self.send_pep_zero(ctx)
 
         possible_extensions = ['.txt', '.rst']
         found_pep = False
@@ -301,6 +284,19 @@ class Utils(Cog):
         message = await ctx.send(embed=embed)
         for reaction in options:
             await message.add_reaction(reaction)
+
+    async def send_pep_zero(self, ctx: Context) -> None:
+        """Send information about PEP 0."""
+        pep_embed = Embed(
+            title=f"**PEP 0 - Index of Python Enhancement Proposals (PEPs)**",
+            description=f"[Link](https://www.python.org/dev/peps/)"
+        )
+        pep_embed.set_thumbnail(url=ICON_URL)
+        pep_embed.add_field(name="Status", value="Active")
+        pep_embed.add_field(name="Created", value="13-Jul-2000")
+        pep_embed.add_field(name="Type", value="Informational")
+
+        await ctx.send(embed=pep_embed)
 
 
 def setup(bot: Bot) -> None:
