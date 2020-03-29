@@ -48,6 +48,8 @@ PEP0_INFO = {
 }
 PEP0_LINK = "https://www.python.org/dev/peps/"
 
+ICON_URL = "https://www.python.org/static/opengraph-icon-200x200.png"
+
 
 class Utils(Cog):
     """A selection of utilities which don't have a clear category."""
@@ -74,7 +76,7 @@ class Utils(Cog):
                 title=f"**PEP 0 - {PEP0_TITLE}**",
                 description=f"[Link]({PEP0_LINK})"
             )
-            pep_embed.set_thumbnail(url="https://www.python.org/static/opengraph-icon-200x200.png")
+            pep_embed.set_thumbnail(url=ICON_URL)
             for field, value in PEP0_INFO.items():
                 pep_embed.add_field(name=field, value=value)
 
@@ -104,7 +106,7 @@ class Utils(Cog):
                     description=f"[Link]({self.base_pep_url}{pep_number:04})",
                 )
 
-                pep_embed.set_thumbnail(url="https://www.python.org/static/opengraph-icon-200x200.png")
+                pep_embed.set_thumbnail(url=ICON_URL)
 
                 # Add the interesting information
                 fields_to_check = ("Status", "Python-Version", "Created", "Type")
