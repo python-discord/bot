@@ -61,8 +61,7 @@ class Utils(Cog):
             await ctx.invoke(self.bot.get_command("help"), "pep")
             return
 
-        # Handle PEP 0 directly due it's static constant in PEPs GitHub repo in Python file, not .rst or .txt so it
-        # can't be accessed like other PEPs.
+        # Handle PEP 0 directly because it's not in .rst or .txt so it can't be accessed like other PEPs.
         if pep_number == 0:
             return await self.send_pep_zero(ctx)
 
