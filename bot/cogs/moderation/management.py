@@ -100,7 +100,9 @@ class ModManagement(commands.Cog):
         confirm_messages = []
         log_text = ""
 
-        if isinstance(duration, str):
+        if duration is not None and not old_infraction['active']:
+            confirm_messages.append("expiry unchanged (infraction already expired)")
+        elif isinstance(duration, str):
             request_data['expires_at'] = None
             confirm_messages.append("marked as permanent")
         elif duration is not None:
