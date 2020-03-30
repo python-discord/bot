@@ -1,7 +1,6 @@
 import asyncio
 import bisect
 import inspect
-import itertools
 import json
 import logging
 import random
@@ -259,9 +258,9 @@ class HelpChannels(Scheduler, commands.Cog):
                 yield channel
 
     @staticmethod
-    def get_names() -> t.Dict[str, int]:
+    def get_names() -> t.List[str]:
         """
-        Return a truncated dict of prefixed element names and their alphabetical indices.
+        Return a truncated list of prefixed element names.
 
         The amount of names if configured with `HelpChannels.max_total_channels`.
         The prefix is configured with `HelpChannels.name_prefix`.
@@ -274,11 +273,10 @@ class HelpChannels(Scheduler, commands.Cog):
         with Path("bot/resources/elements.json").open(encoding="utf-8") as elements_file:
             all_names = json.load(elements_file)
 
-        names = itertools.islice(all_names.items(), count)
         if prefix:
-            names = ((prefix + name, pos) for name, pos in names)
-
-        return dict(names)
+            return [prefix + name for name in all_names[:count]]
+        else:
+            return all_names[:count]
 
     def get_used_names(self) -> t.Set[str]:
         """Return channels names which are already being used."""
