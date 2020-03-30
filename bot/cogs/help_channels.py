@@ -1,4 +1,5 @@
 import asyncio
+import bisect
 import inspect
 import itertools
 import json
@@ -218,22 +219,30 @@ class HelpChannels(Scheduler, commands.Cog):
 
         return channel
 
-    def get_alphabetical_position(self, channel: discord.TextChannel) -> t.Optional[int]:
-        """
-        Return the position to move `channel` to so alphabetic order is maintained.
-
-        If the channel does not have a valid name with a chemical element, return None.
-        """
+    @staticmethod
+    def get_position(channel: discord.TextChannel, destination: discord.CategoryChannel) -> int:
+        """Return alphabetical position for `channel` if moved to `destination`."""
         log.trace(f"Getting alphabetical position for #{channel} ({channel.id}).")
 
-        try:
-            position = self.name_positions[channel.name]
-        except KeyError:
-            log.warning(f"Channel #{channel} ({channel.id}) doesn't have a valid name.")
-            position = None
+        # If the destination category is empty, use the first position
+        if not destination.channels:
+            position = 1
+        else:
+            # Make a sorted list of channel names for bisect.
+            channel_names = [c.name for c in destination.channels]
+
+            # Get location which would maintain sorted order if channel was inserted into the list.
+            rank = bisect.bisect(channel_names, channel.name)
+
+            if rank == len(destination.channels):
+                # Channel should be moved to the end of the category.
+                position = destination.channels[-1].position + 1
+            else:
+                # Channel should be moved to the position of its alphabetical successor.
+                position = destination.channels[rank].position
 
         log.trace(
-            f"Position of #{channel} ({channel.id}) in Dormant will be {position} "
+            f"Position of #{channel} ({channel.id}) in {destination.name} will be {position} "
             f"(was {channel.position})."
         )
 
@@ -438,7 +447,7 @@ class HelpChannels(Scheduler, commands.Cog):
             category=self.dormant_category,
             sync_permissions=True,
             topic=DORMANT_TOPIC,
-            position=self.get_alphabetical_position(channel),
+            position=self.get_position(channel, self.dormant_category),
         )
 
         log.trace(f"Position of #{channel} ({channel.id}) is actually {channel.position}.")
