@@ -262,7 +262,7 @@ class HelpChannels(Scheduler, commands.Cog):
         """
         Return a truncated list of prefixed element names.
 
-        The amount of names if configured with `HelpChannels.max_total_channels`.
+        The amount of names is configured with `HelpChannels.max_total_channels`.
         The prefix is configured with `HelpChannels.name_prefix`.
         """
         count = constants.HelpChannels.max_total_channels
