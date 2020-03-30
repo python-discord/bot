@@ -78,20 +78,19 @@ class HelpChannels(Scheduler, commands.Cog):
     Available Category
 
     * Contains channels which are ready to be occupied by someone who needs help
-    * Will always contain 2 channels; refilled automatically from the pool of dormant channels
+    * Will always contain `constants.HelpChannels.max_available` channels; refilled automatically
+      from the pool of dormant channels
         * Prioritise using the channels which have been dormant for the longest amount of time
         * If there are no more dormant channels, the bot will automatically create a new one
-        * Configurable with `constants.HelpChannels.max_available`
         * If there are no dormant channels to move, helpers will be notified (see `notify()`)
     * When a channel becomes available, the dormant embed will be edited to show `AVAILABLE_MSG`
 
     In Use Category
 
     * Contains all channels which are occupied by someone needing help
-    * Channel moves to dormant category after 45 minutes of being idle
-        * Configurable with `constants.HelpChannels.idle_minutes`
-    * Helpers+ command can prematurely mark a channel as dormant
-        * Configurable with `constants.HelpChannels.cmd_whitelist`
+    * Channel moves to dormant category after `constants.HelpChannels.idle_minutes` of being idle
+    * Command can prematurely mark a channel as dormant
+        * Allowed roles for the command are configurable with `constants.HelpChannels.cmd_whitelist`
     * When a channel becomes dormant, an embed with `DORMANT_MSG` will be sent
 
     Dormant Category
