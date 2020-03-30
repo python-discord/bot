@@ -194,7 +194,7 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         channel = MockTextChannel(overwrites_for=Mock(return_value=perm_overwrite))
         self.assertTrue(await self.cog._unsilence(channel))
         channel.set_permissions.assert_called_once()
-        self.assertTrue(channel.set_permissions.call_args.kwargs['send_messages'])
+        self.assertIsNone(channel.set_permissions.call_args.kwargs['send_messages'])
 
     @mock.patch.object(Silence, "notifier", create=True)
     async def test_unsilence_private_removed_notifier(self, notifier):

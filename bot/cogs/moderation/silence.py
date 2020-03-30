@@ -138,7 +138,7 @@ class Silence(commands.Cog):
         """
         current_overwrite = channel.overwrites_for(self._verified_role)
         if current_overwrite.send_messages is False:
-            await channel.set_permissions(self._verified_role, **dict(current_overwrite, send_messages=True))
+            await channel.set_permissions(self._verified_role, **dict(current_overwrite, send_messages=None))
             log.info(f"Unsilenced channel #{channel} ({channel.id}).")
             self.notifier.remove_channel(channel)
             self.muted_channels.discard(channel)
