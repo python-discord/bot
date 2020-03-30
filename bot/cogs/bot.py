@@ -225,7 +225,7 @@ class BotCog(Cog, name="Bot"):
         properly formatted Python syntax highlighting codeblocks.
         """
         is_help_channel = (
-            msg.channel.category
+            getattr(msg.channel, "category", None)
             and msg.channel.category.id in (Categories.help_available, Categories.help_in_use)
         )
         parse_codeblock = (
