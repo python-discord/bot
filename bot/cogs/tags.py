@@ -225,12 +225,14 @@ class Tags(Cog):
                         "time": time.time(),
                         "channel": ctx.channel.id
                     }
-                await ctx.send(embed=Embed.from_dict(tag['embed']))
+                msg = await ctx.send(embed=Embed.from_dict(tag['embed']))
+                await self.handle_trashcan_react(ctx, msg)
             elif founds and len(tag_name) >= 3:
-                await ctx.send(embed=Embed(
+                msg = await ctx.send(embed=Embed(
                     title='Did you mean ...',
                     description='\n'.join(tag['title'] for tag in founds[:10])
                 ))
+                await self.handle_trashcan_react(ctx, msg)
 
         else:
             tags = self._cache.values()
