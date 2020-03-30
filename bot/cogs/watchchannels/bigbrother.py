@@ -52,6 +52,21 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
         A `reason` for adding the user to Big Brother is required and will be displayed
         in the header when relaying messages of this user to the watchchannel.
         """
+        await self.apply_watch(ctx, user, reason)
+
+    @bigbrother_group.command(name='unwatch', aliases=('uw',))
+    @with_role(*MODERATION_ROLES)
+    async def unwatch_command(self, ctx: Context, user: FetchedMember, *, reason: str) -> None:
+        """Stop relaying messages by the given `user`."""
+        await self.apply_unwatch(ctx, user, reason)
+
+    async def apply_watch(self, ctx: Context, user: FetchedMember, reason: str) -> None:
+        """
+        Add `user` to watched users and apply a watch infraction with `reason`.
+
+        A message indicating the result of the operation is sent to `ctx`.
+        The message will include `user`'s previous watch infraction history, if it exists.
+        """
         if user.bot:
             await ctx.send(f":x: I'm sorry {ctx.author}, I'm afraid I can't do that. I only watch humans.")
             return
@@ -90,10 +105,13 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
 
         await ctx.send(msg)
 
-    @bigbrother_group.command(name='unwatch', aliases=('uw',))
-    @with_role(*MODERATION_ROLES)
-    async def unwatch_command(self, ctx: Context, user: FetchedMember, *, reason: str) -> None:
-        """Stop relaying messages by the given `user`."""
+    async def apply_unwatch(self, ctx: Context, user: FetchedMember, reason: str, send_message: bool = True) -> None:
+        """
+        Remove `user` from watched users and mark their infraction as inactive with `reason`.
+
+        If `send_message` is True, a message indicating the result of the operation is sent to
+        `ctx`.
+        """
         active_watches = await self.bot.api_client.get(
             self.api_endpoint,
             params=ChainMap(
@@ -102,6 +120,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
             )
         )
         if active_watches:
+            log.trace("Active watches for user found.  Attempting to remove.")
             [infraction] = active_watches
 
             await self.bot.api_client.patch(
@@ -111,8 +130,20 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
 
             await post_infraction(ctx, user, 'watch', f"Unwatched: {reason}", hidden=True, active=False)
 
-            await ctx.send(f":white_check_mark: Messages sent by {user} will no longer be relayed.")
-
             self._remove_user(user.id)
+
+            if not send_message:  # Prevents a message being sent to the channel if part of a permanent ban
+                log.debug(f"Perma-banned user {user} was unwatched.")
+                return
+            log.trace("User is not banned.  Sending message to channel")
+            message = f":white_check_mark: Messages sent by {user} will no longer be relayed."
+
         else:
-            await ctx.send(":x: The specified user is currently not being watched.")
+            log.trace("No active watches found for user.")
+            if not send_message:  # Prevents a message being sent to the channel if part of a permanent ban
+                log.debug(f"{user} was not on the watch list; no removal necessary.")
+                return
+            log.trace("User is not perma banned. Send the error message.")
+            message = ":x: The specified user is currently not being watched."
+
+        await ctx.send(message)

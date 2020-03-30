@@ -6,13 +6,9 @@ from discord import Colour, Forbidden, Message, NotFound, Object
 from discord.ext import tasks
 from discord.ext.commands import Cog, Context, command
 
+from bot import constants
 from bot.bot import Bot
 from bot.cogs.moderation import ModLog
-from bot.constants import (
-    Bot as BotConfig,
-    Channels, Colours, Event,
-    Filter, Icons, MODERATION_ROLES, Roles
-)
 from bot.decorators import InChannelCheckFailure, in_channel, without_role
 from bot.utils.checks import without_role_check
 
@@ -29,18 +25,23 @@ your information removed here as well.
 
 Feel free to review them at any point!
 
-Additionally, if you'd like to receive notifications for the announcements we post in <#{Channels.announcements}> \
-from time to time, you can send `!subscribe` to <#{Channels.bot_commands}> at any time to assign yourself the \
-**Announcements** role. We'll mention this role every time we make an announcement.
+Additionally, if you'd like to receive notifications for the announcements \
+we post in <#{constants.Channels.announcements}>
+from time to time, you can send `!subscribe` to <#{constants.Channels.bot_commands}> at any time \
+to assign yourself the **Announcements** role. We'll mention this role every time we make an announcement.
 
 If you'd like to unsubscribe from the announcement notifications, simply send `!unsubscribe` to \
-<#{Channels.bot_commands}>.
+<#{constants.Channels.bot_commands}>.
 """
 
-PERIODIC_PING = (
-    f"@everyone To verify that you have read our rules, please type `{BotConfig.prefix}accept`."
-    f" If you encounter any problems during the verification process, ping the <@&{Roles.admins}> role in this channel."
-)
+if constants.DEBUG_MODE:
+    PERIODIC_PING = "Periodic checkpoint message successfully sent."
+else:
+    PERIODIC_PING = (
+        f"@everyone To verify that you have read our rules, please type `{constants.Bot.prefix}accept`."
+        " If you encounter any problems during the verification process, "
+        f"ping the <@&{constants.Roles.admins}> role in this channel."
+    )
 BOT_MESSAGE_DELETE_DELAY = 10
 
 
@@ -59,7 +60,7 @@ class Verification(Cog):
     @Cog.listener()
     async def on_message(self, message: Message) -> None:
         """Check new message event for messages to the checkpoint channel & process."""
-        if message.channel.id != Channels.verification:
+        if message.channel.id != constants.Channels.verification:
             return  # Only listen for #checkpoint messages
 
         if message.author.bot:
@@ -85,20 +86,20 @@ class Verification(Cog):
 
             # Send pretty mod log embed to mod-alerts
             await self.mod_log.send_log_message(
-                icon_url=Icons.filtering,
-                colour=Colour(Colours.soft_red),
+                icon_url=constants.Icons.filtering,
+                colour=Colour(constants.Colours.soft_red),
                 title=f"User/Role mentioned in {message.channel.name}",
                 text=embed_text,
                 thumbnail=message.author.avatar_url_as(static_format="png"),
-                channel_id=Channels.mod_alerts,
-                ping_everyone=Filter.ping_everyone,
+                channel_id=constants.Channels.mod_alerts,
+                ping_everyone=constants.Filter.ping_everyone,
             )
 
         ctx: Context = await self.bot.get_context(message)
         if ctx.command is not None and ctx.command.name == "accept":
             return
 
-        if any(r.id == Roles.verified for r in ctx.author.roles):
+        if any(r.id == constants.Roles.verified for r in ctx.author.roles):
             log.info(
                 f"{ctx.author} posted '{ctx.message.content}' "
                 "in the verification channel, but is already verified."
@@ -120,12 +121,12 @@ class Verification(Cog):
             await ctx.message.delete()
 
     @command(name='accept', aliases=('verify', 'verified', 'accepted'), hidden=True)
-    @without_role(Roles.verified)
-    @in_channel(Channels.verification)
+    @without_role(constants.Roles.verified)
+    @in_channel(constants.Channels.verification)
     async def accept_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
         """Accept our rules and gain access to the rest of the server."""
         log.debug(f"{ctx.author} called !accept. Assigning the 'Developer' role.")
-        await ctx.author.add_roles(Object(Roles.verified), reason="Accepted the rules")
+        await ctx.author.add_roles(Object(constants.Roles.verified), reason="Accepted the rules")
         try:
             await ctx.author.send(WELCOME_MESSAGE)
         except Forbidden:
@@ -133,17 +134,17 @@ class Verification(Cog):
         finally:
             log.trace(f"Deleting accept message by {ctx.author}.")
             with suppress(NotFound):
-                self.mod_log.ignore(Event.message_delete, ctx.message.id)
+                self.mod_log.ignore(constants.Event.message_delete, ctx.message.id)
                 await ctx.message.delete()
 
     @command(name='subscribe')
-    @in_channel(Channels.bot_commands)
+    @in_channel(constants.Channels.bot_commands)
     async def subscribe_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
         """Subscribe to announcement notifications by assigning yourself the role."""
         has_role = False
 
         for role in ctx.author.roles:
-            if role.id == Roles.announcements:
+            if role.id == constants.Roles.announcements:
                 has_role = True
                 break
 
@@ -152,22 +153,22 @@ class Verification(Cog):
             return
 
         log.debug(f"{ctx.author} called !subscribe. Assigning the 'Announcements' role.")
-        await ctx.author.add_roles(Object(Roles.announcements), reason="Subscribed to announcements")
+        await ctx.author.add_roles(Object(constants.Roles.announcements), reason="Subscribed to announcements")
 
         log.trace(f"Deleting the message posted by {ctx.author}.")
 
         await ctx.send(
-            f"{ctx.author.mention} Subscribed to <#{Channels.announcements}> notifications.",
+            f"{ctx.author.mention} Subscribed to <#{constants.Channels.announcements}> notifications.",
         )
 
     @command(name='unsubscribe')
-    @in_channel(Channels.bot_commands)
+    @in_channel(constants.Channels.bot_commands)
     async def unsubscribe_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
         """Unsubscribe from announcement notifications by removing the role from yourself."""
         has_role = False
 
         for role in ctx.author.roles:
-            if role.id == Roles.announcements:
+            if role.id == constants.Roles.announcements:
                 has_role = True
                 break
 
@@ -176,12 +177,12 @@ class Verification(Cog):
             return
 
         log.debug(f"{ctx.author} called !unsubscribe. Removing the 'Announcements' role.")
-        await ctx.author.remove_roles(Object(Roles.announcements), reason="Unsubscribed from announcements")
+        await ctx.author.remove_roles(Object(constants.Roles.announcements), reason="Unsubscribed from announcements")
 
         log.trace(f"Deleting the message posted by {ctx.author}.")
 
         await ctx.send(
-            f"{ctx.author.mention} Unsubscribed from <#{Channels.announcements}> notifications."
+            f"{ctx.author.mention} Unsubscribed from <#{constants.Channels.announcements}> notifications."
         )
 
     # This cannot be static (must have a __func__ attribute).
@@ -193,7 +194,7 @@ class Verification(Cog):
     @staticmethod
     def bot_check(ctx: Context) -> bool:
         """Block any command within the verification channel that is not !accept."""
-        if ctx.channel.id == Channels.verification and without_role_check(ctx, *MODERATION_ROLES):
+        if ctx.channel.id == constants.Channels.verification and without_role_check(ctx, *constants.MODERATION_ROLES):
             return ctx.command.name == "accept"
         else:
             return True
@@ -201,7 +202,7 @@ class Verification(Cog):
     @tasks.loop(hours=12)
     async def periodic_ping(self) -> None:
         """Every week, mention @everyone to remind them to verify."""
-        messages = self.bot.get_channel(Channels.verification).history(limit=10)
+        messages = self.bot.get_channel(constants.Channels.verification).history(limit=10)
         need_to_post = True  # True if a new message needs to be sent.
 
         async for message in messages:
@@ -215,7 +216,7 @@ class Verification(Cog):
                 break
 
         if need_to_post:
-            await self.bot.get_channel(Channels.verification).send(PERIODIC_PING)
+            await self.bot.get_channel(constants.Channels.verification).send(PERIODIC_PING)
 
     @periodic_ping.before_loop
     async def before_ping(self) -> None:

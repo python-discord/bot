@@ -1,25 +1,26 @@
 import logging
 import re
 import time
-from typing import Dict, List, Optional
+from pathlib import Path
+from typing import Callable, Dict, Iterable, List, Optional
 
 from discord import Colour, Embed
 from discord.ext.commands import Cog, Context, group
 
+from bot import constants
 from bot.bot import Bot
-from bot.constants import Channels, Cooldowns, MODERATION_ROLES, Roles
-from bot.converters import TagContentConverter, TagNameConverter
-from bot.decorators import with_role
+from bot.converters import TagNameConverter
 from bot.pagination import LinePaginator
 
 log = logging.getLogger(__name__)
 
 TEST_CHANNELS = (
-    Channels.bot_commands,
-    Channels.helpers
+    constants.Channels.bot_commands,
+    constants.Channels.helpers
 )
 
 REGEX_NON_ALPHABET = re.compile(r"[^a-z]", re.MULTILINE & re.IGNORECASE)
+FOOTER_TEXT = f"To show a tag, type {constants.Bot.prefix}tags <tagname>."
 
 
 class Tags(Cog):
@@ -28,21 +29,27 @@ class Tags(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.tag_cooldowns = {}
-
-        self._cache = {}
-        self._last_fetch: float = 0.0
-
-    async def _get_tags(self, is_forced: bool = False) -> None:
-        """Get all tags."""
-        # refresh only when there's a more than 5m gap from last call.
-        time_now: float = time.time()
-        if is_forced or not self._last_fetch or time_now - self._last_fetch > 5 * 60:
-            tags = await self.bot.api_client.get('bot/tags')
-            self._cache = {tag['title'].lower(): tag for tag in tags}
-            self._last_fetch = time_now
+        self._cache = self.get_tags()
 
     @staticmethod
-    def _fuzzy_search(search: str, target: str) -> int:
+    def get_tags() -> dict:
+        """Get all tags."""
+        # Save all tags in memory.
+        cache = {}
+        tag_files = Path("bot", "resources", "tags").iterdir()
+        for file in tag_files:
+            tag_title = file.stem
+            tag = {
+                "title": tag_title,
+                "embed": {
+                    "description": file.read_text()
+                }
+            }
+            cache[tag_title] = tag
+        return cache
+
+    @staticmethod
+    def _fuzzy_search(search: str, target: str) -> float:
         """A simple scoring algorithm based on how many letters are found / total, with order in mind."""
         current, index = 0, 0
         _search = REGEX_NON_ALPHABET.sub('', search.lower())
@@ -78,18 +85,84 @@ class Tags(Cog):
 
         return []
 
-    async def _get_tag(self, tag_name: str) -> list:
+    def _get_tag(self, tag_name: str) -> list:
         """Get a specific tag."""
-        await self._get_tags()
         found = [self._cache.get(tag_name.lower(), None)]
         if not found[0]:
             return self._get_suggestions(tag_name)
         return found
 
+    def _get_tags_via_content(self, check: Callable[[Iterable], bool], keywords: str) -> list:
+        """
+        Search for tags via contents.
+
+        `predicate` will be the built-in any, all, or a custom callable. Must return a bool.
+        """
+        keywords_processed: List[str] = []
+        for keyword in keywords.split(','):
+            keyword_sanitized = keyword.strip().casefold()
+            if not keyword_sanitized:
+                # this happens when there are leading / trailing / consecutive comma.
+                continue
+            keywords_processed.append(keyword_sanitized)
+
+        if not keywords_processed:
+            # after sanitizing, we can end up with an empty list, for example when keywords is ','
+            # in that case, we simply want to search for such keywords directly instead.
+            keywords_processed = [keywords]
+
+        matching_tags = []
+        for tag in self._cache.values():
+            if check(query in tag['embed']['description'].casefold() for query in keywords_processed):
+                matching_tags.append(tag)
+
+        return matching_tags
+
+    async def _send_matching_tags(self, ctx: Context, keywords: str, matching_tags: list) -> None:
+        """Send the result of matching tags to user."""
+        if not matching_tags:
+            pass
+        elif len(matching_tags) == 1:
+            await ctx.send(embed=Embed().from_dict(matching_tags[0]['embed']))
+        else:
+            is_plural = keywords.strip().count(' ') > 0 or keywords.strip().count(',') > 0
+            embed = Embed(
+                title=f"Here are the tags containing the given keyword{'s' * is_plural}:",
+                description='\n'.join(tag['title'] for tag in matching_tags[:10])
+            )
+            await LinePaginator.paginate(
+                sorted(f"**»**   {tag['title']}" for tag in matching_tags),
+                ctx,
+                embed,
+                footer_text=FOOTER_TEXT,
+                empty=False,
+                max_lines=15
+            )
+
     @group(name='tags', aliases=('tag', 't'), invoke_without_command=True)
     async def tags_group(self, ctx: Context, *, tag_name: TagNameConverter = None) -> None:
         """Show all known tags, a single tag, or run a subcommand."""
         await ctx.invoke(self.get_command, tag_name=tag_name)
+
+    @tags_group.group(name='search', invoke_without_command=True)
+    async def search_tag_content(self, ctx: Context, *, keywords: str) -> None:
+        """
+        Search inside tags' contents for tags. Allow searching for multiple keywords separated by comma.
+
+        Only search for tags that has ALL the keywords.
+        """
+        matching_tags = self._get_tags_via_content(all, keywords)
+        await self._send_matching_tags(ctx, keywords, matching_tags)
+
+    @search_tag_content.command(name='any')
+    async def search_tag_content_any_keyword(self, ctx: Context, *, keywords: Optional[str] = 'any') -> None:
+        """
+        Search inside tags' contents for tags. Allow searching for multiple keywords separated by comma.
+
+        Search for tags that has ANY of the keywords.
+        """
+        matching_tags = self._get_tags_via_content(any, keywords or 'any')
+        await self._send_matching_tags(ctx, keywords, matching_tags)
 
     @tags_group.command(name='get', aliases=('show', 'g'))
     async def get_command(self, ctx: Context, *, tag_name: TagNameConverter = None) -> None:
@@ -105,7 +178,7 @@ class Tags(Cog):
             cooldown_conditions = (
                 tag_name
                 and tag_name in self.tag_cooldowns
-                and (now - self.tag_cooldowns[tag_name]["time"]) < Cooldowns.tags
+                and (now - self.tag_cooldowns[tag_name]["time"]) < constants.Cooldowns.tags
                 and self.tag_cooldowns[tag_name]["channel"] == ctx.channel.id
             )
 
@@ -114,17 +187,16 @@ class Tags(Cog):
             return False
 
         if _command_on_cooldown(tag_name):
-            time_left = Cooldowns.tags - (time.time() - self.tag_cooldowns[tag_name]["time"])
+            time_elapsed = time.time() - self.tag_cooldowns[tag_name]["time"]
+            time_left = constants.Cooldowns.tags - time_elapsed
             log.info(
                 f"{ctx.author} tried to get the '{tag_name}' tag, but the tag is on cooldown. "
                 f"Cooldown ends in {time_left:.1f} seconds."
             )
             return
 
-        await self._get_tags()
-
         if tag_name is not None:
-            founds = await self._get_tag(tag_name)
+            founds = self._get_tag(tag_name)
 
             if len(founds) == 1:
                 tag = founds[0]
@@ -153,85 +225,10 @@ class Tags(Cog):
                     sorted(f"**»**   {tag['title']}" for tag in tags),
                     ctx,
                     embed,
-                    footer_text="To show a tag, type !tags <tagname>.",
+                    footer_text=FOOTER_TEXT,
                     empty=False,
                     max_lines=15
                 )
-
-    @tags_group.command(name='set', aliases=('add', 's'))
-    @with_role(*MODERATION_ROLES)
-    async def set_command(
-        self,
-        ctx: Context,
-        tag_name: TagNameConverter,
-        *,
-        tag_content: TagContentConverter,
-    ) -> None:
-        """Create a new tag."""
-        body = {
-            'title': tag_name.lower().strip(),
-            'embed': {
-                'title': tag_name,
-                'description': tag_content
-            }
-        }
-
-        await self.bot.api_client.post('bot/tags', json=body)
-        self._cache[tag_name.lower()] = await self.bot.api_client.get(f'bot/tags/{tag_name}')
-
-        log.debug(f"{ctx.author} successfully added the following tag to our database: \n"
-                  f"tag_name: {tag_name}\n"
-                  f"tag_content: '{tag_content}'\n")
-
-        await ctx.send(embed=Embed(
-            title="Tag successfully added",
-            description=f"**{tag_name}** added to tag database.",
-            colour=Colour.blurple()
-        ))
-
-    @tags_group.command(name='edit', aliases=('e', ))
-    @with_role(*MODERATION_ROLES)
-    async def edit_command(
-        self,
-        ctx: Context,
-        tag_name: TagNameConverter,
-        *,
-        tag_content: TagContentConverter,
-    ) -> None:
-        """Edit an existing tag."""
-        body = {
-            'embed': {
-                'title': tag_name,
-                'description': tag_content
-            }
-        }
-
-        await self.bot.api_client.patch(f'bot/tags/{tag_name}', json=body)
-        self._cache[tag_name.lower()] = await self.bot.api_client.get(f'bot/tags/{tag_name}')
-
-        log.debug(f"{ctx.author} successfully edited the following tag in our database: \n"
-                  f"tag_name: {tag_name}\n"
-                  f"tag_content: '{tag_content}'\n")
-
-        await ctx.send(embed=Embed(
-            title="Tag successfully edited",
-            description=f"**{tag_name}** edited in the database.",
-            colour=Colour.blurple()
-        ))
-
-    @tags_group.command(name='delete', aliases=('remove', 'rm', 'd'))
-    @with_role(Roles.admins, Roles.owners)
-    async def delete_command(self, ctx: Context, *, tag_name: TagNameConverter) -> None:
-        """Remove a tag from the database."""
-        await self.bot.api_client.delete(f'bot/tags/{tag_name}')
-        self._cache.pop(tag_name.lower(), None)
-
-        log.debug(f"{ctx.author} successfully deleted the tag called '{tag_name}'")
-        await ctx.send(embed=Embed(
-            title=tag_name,
-            description=f"Tag successfully removed: {tag_name}.",
-            colour=Colour.blurple()
-        ))
 
 
 def setup(bot: Bot) -> None:
