@@ -148,8 +148,8 @@ class Tags(Cog):
         def check_trashcan(reaction: Reaction, user: User) -> bool:
             return (
                 reaction.emoji == Emojis.trashcan
-                and user.id == ctx.author.id
-                and reaction.message == msg
+                and user == ctx.author
+                and reaction.message.id == msg.id
             )
         try:
             await self.bot.wait_for("reaction_add", timeout=60.0, check=check_trashcan)
