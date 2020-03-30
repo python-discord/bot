@@ -279,7 +279,7 @@ class HelpChannels(Scheduler, commands.Cog):
             return all_names[:count]
 
     def get_used_names(self) -> t.Set[str]:
-        """Return channels names which are already being used."""
+        """Return channel names which are already being used."""
         log.trace("Getting channel names which are already being used.")
 
         names = set()
@@ -371,7 +371,7 @@ class HelpChannels(Scheduler, commands.Cog):
         # Prevent the command from being used until ready.
         # The ready event wasn't used because channels could change categories between the time
         # the command is invoked and the cog is ready (e.g. if move_idle_channel wasn't called yet).
-        # This may confused users. So would potentially long delays for the cog to become ready.
+        # This may confuse users. So would potentially long delays for the cog to become ready.
         self.dormant_command.enabled = True
 
         await self.init_available()
