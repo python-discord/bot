@@ -15,7 +15,7 @@ from discord.ext.commands import Cog, Context
 from discord.utils import escape_markdown
 
 from bot.bot import Bot
-from bot.constants import Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, URLs
+from bot.constants import Categories, Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, URLs
 from bot.utils.time import humanize_delta
 
 log = logging.getLogger(__name__)
@@ -186,6 +186,12 @@ class ModLog(Cog, name="ModLog"):
 
         if before.id in self._ignored[Event.guild_channel_update]:
             self._ignored[Event.guild_channel_update].remove(before.id)
+            return
+
+        # Two channel updates are sent for a single edit: 1 for topic and 1 for category change.
+        # TODO: remove once support is added for ignoring multiple occurrences for the same channel.
+        help_categories = (Categories.help_available, Categories.help_dormant, Categories.help_in_use)
+        if after.category and after.category.id in help_categories:
             return
 
         diff = DeepDiff(before, after)
