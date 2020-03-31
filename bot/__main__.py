@@ -63,6 +63,7 @@ bot.load_extension("bot.cogs.tags")
 bot.load_extension("bot.cogs.token_remover")
 bot.load_extension("bot.cogs.utils")
 bot.load_extension("bot.cogs.watchchannels")
+bot.load_extension("bot.cogs.webhook_remover")
 bot.load_extension("bot.cogs.wolfram")
 
 # Apply `message_edited_at` patch if discord.py did not yet release a bug fix.

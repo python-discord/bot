@@ -67,7 +67,6 @@ class BotCog(Cog, name="Bot"):
             icon_url=URLs.bot_avatar
         )
 
-        log.info(f"{ctx.author} called !about. Returning information about the bot.")
         await ctx.send(embed=embed)
 
     @command(name='echo', aliases=('print',))
