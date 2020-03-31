@@ -29,7 +29,7 @@ class Alias (Cog):
             return log.info(f'Did not find command "{cmd_name}" to invoke.')
         elif not await cmd.can_run(ctx):
             return log.info(
-                f'{str(ctx.author)} tried to run the command "{cmd_name}"'
+                f'{str(ctx.author)} tried to run the command "{cmd_name}" but lacks permission.'
             )
 
         await ctx.invoke(cmd, *args, **kwargs)

@@ -248,9 +248,8 @@ filter:
     filter_zalgo:       false
     filter_invites:     true
     filter_domains:     true
+    watch_regex:        true
     watch_rich_embeds:  true
-    watch_words:        true
-    watch_tokens:       true
 
     # Notify user on filter?
     # Notifications are not expected for "watchlist" type filters
