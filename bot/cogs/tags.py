@@ -42,7 +42,7 @@ class Tags(Cog):
             tag = {
                 "title": tag_title,
                 "embed": {
-                    "description": file.read_text()
+                    "description": file.read_text(encoding="utf-8")
                 }
             }
             cache[tag_title] = tag

@@ -111,67 +111,67 @@ guild:
     id: 692564853189247026
 
     categories:
-        python_help:    356013061213126657
+        python_help:    694301685190754335
 
     channels:
-        announcements:                              354619224620138496
-        user_event_announcements:   &USER_EVENT_A   592000283102674944
+        announcements:                              694301880699977830
+        user_event_announcements:   &USER_EVENT_A   694301971821363309
 
         # Development
-        dev_contrib:        &DEV_CONTRIB    635950537262759947
-        dev_core:           &DEV_CORE       411200599653351425
-        dev_log:            &DEV_LOG        622895325144940554
+        dev_contrib:        &DEV_CONTRIB    694302093460242502
+        dev_core:           &DEV_CORE       694302228139475174
+        dev_log:            &DEV_LOG        694302294899949579
 
         # Discussion
-        meta:               429409067623251969
-        python_discussion:  267624335836053506
+        meta:               694302360914362449
+        python_discussion:  694302463439667290
 
         # Logs
-        attachment_log:     &ATTACH_LOG     649243850006855680
-        message_log:        &MESSAGE_LOG    467752170159079424
+        attachment_log:     &ATTACH_LOG     694302463439667290
+        message_log:        &MESSAGE_LOG    694302730822615080
         mod_log:            &MOD_LOG        282638479504965634
         user_log:                           528976905546760203
-        voice_log:                          640292421988646961
+        voice_log:                          694302859776360549
 
         # Off-topic
-        off_topic_0:    291284109232308226
-        off_topic_1:    463035241142026251
-        off_topic_2:    463035268514185226
+        off_topic_0:    694306294022144070
+        off_topic_1:    694306387748061295
+        off_topic_2:    694306447747711037
 
         # Python Help
-        help_0:         303906576991780866
-        help_1:         303906556754395136
-        help_2:         303906514266226689
-        help_3:         439702951246692352
-        help_4:         451312046647148554
-        help_5:         454941769734422538
-        help_6:         587375753306570782
-        help_7:         587375768556797982
+        help_0:         694306541809041468
+        help_1:         694306595609378857
+        help_2:         694306668380422285
+        help_3:         694306691000303737
+        help_4:         694306712793907261
+        help_5:         694306738886934629
+        help_6:         694306768607510548
+        help_7:         694306794427908170
 
         # Special
-        bot_commands:       &BOT_CMD        267659945086812160
-        esoteric:                           470884583684964352
-        reddit:                             458224812528238616
-        verification:                       352442727016693763
+        bot_commands:       &BOT_CMD        692573330653315123
+        esoteric:                           694307305453518868
+        reddit:                             694307363313811618
+        verification:                       694298599369998357
 
         # Staff
-        admins:             &ADMINS         365960823622991872
-        admin_spam:         &ADMIN_SPAM     563594791770914816
-        defcon:             &DEFCON         464469101889454091
-        helpers:            &HELPERS        385474242440986624
-        mods:               &MODS           305126844661760000
-        mod_alerts:         &MOD_ALERTS     473092532147060736
-        mod_spam:           &MOD_SPAM       620607373828030464
-        organisation:       &ORGANISATION   551789653284356126
-        staff_lounge:       &STAFF_LOUNGE   464905259261755392
+        admins:             &ADMINS         694307487079202866
+        admin_spam:         &ADMIN_SPAM     694307553672167564
+        defcon:             &DEFCON         694307601072259193
+        helpers:            &HELPERS        694307660211683350
+        mods:               &MODS           692573407266603038
+        mod_alerts:         &MOD_ALERTS     692573444105175141
+        mod_spam:           &MOD_SPAM       694307815946190939
+        organisation:       &ORGANISATION   694307919188983881
+        staff_lounge:       &STAFF_LOUNGE   694307981118144552
 
         # Voice
-        admins_voice:       &ADMINS_VOICE   500734494840717332
-        staff_voice:        &STAFF_VOICE    412375055910043655
+        admins_voice:       &ADMINS_VOICE   694308131433611338
+        staff_voice:        &STAFF_VOICE    694308214652796939
 
         # Watch
-        big_brother_logs:   &BB_LOGS        468507907357409333
-        talent_pool:        &TALENT_POOL    534321732593647616
+        big_brother_logs:   &BB_LOGS        694308336887136277
+        talent_pool:        &TALENT_POOL    692573469887430696
 
     staff_channels:
         - *ADMINS
@@ -363,7 +363,7 @@ keys:
 
 urls:
     # PyDis site vars
-    site:        &DOMAIN       "pythondiscord.local:8000"
+    site:        &DOMAIN       "web:8000"
     site_api:    &API    !JOIN ["api.", *DOMAIN]
     site_paste:  &PASTE  !JOIN ["paste.", *DOMAIN]
     site_staff:  &STAFF  !JOIN ["staff.", *DOMAIN]
@@ -390,7 +390,7 @@ urls:
     paste_service:                      !JOIN [*SCHEMA, *PASTE, "/{key}"]
 
     # Snekbox
-    snekbox_eval_api: "http://snekbox:8060/eval"
+    snekbox_eval_api: "http://192.168.99.100:8060/eval"
 
     # Discord API URLs
     discord_api:        &DISCORD_API "https://discordapp.com/api/v7/"
