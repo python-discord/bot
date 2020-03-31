@@ -1,16 +1,14 @@
-import asyncio
 import logging
 import re
 import time
 from pathlib import Path
 from typing import Callable, Dict, Iterable, List, Optional
 
-from discord import Colour, Embed, Reaction, User
+from discord import Colour, Embed
 from discord.ext.commands import Cog, Context, group
 
 from bot import constants
 from bot.bot import Bot
-from bot.constants import Emojis
 from bot.converters import TagNameConverter
 from bot.pagination import LinePaginator
 from bot.utils.messages import wait_for_deletion
@@ -141,26 +139,6 @@ class Tags(Cog):
                 empty=False,
                 max_lines=15
             )
-
-    async def send_embed_with_trashcan(self, ctx: Context, embed: Embed) -> None:
-        """Send embed and handle it's and command message deletion with `trashcan` emoji."""
-        msg = await ctx.send(embed=embed)
-        await msg.add_reaction(Emojis.trashcan)
-
-        def check_trashcan(reaction: Reaction, user: User) -> bool:
-            return (
-                reaction.emoji == Emojis.trashcan
-                and user == ctx.author
-                and reaction.message.id == msg.id
-            )
-
-        try:
-            await self.bot.wait_for("reaction_add", timeout=60.0, check=check_trashcan)
-        except asyncio.TimeoutError:
-            await msg.remove_reaction(Emojis.trashcan, msg.author)
-        else:
-            await ctx.message.delete()
-            await msg.delete()
 
     @group(name='tags', aliases=('tag', 't'), invoke_without_command=True)
     async def tags_group(self, ctx: Context, *, tag_name: TagNameConverter = None) -> None:
