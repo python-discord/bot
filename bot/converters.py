@@ -351,7 +351,7 @@ class FetchedUser(UserConverter):
         except discord.HTTPException as e:
             # If the Discord error isn't `Unknown user`, return a proxy instead
             if e.code != 10013:
-                log.warning(f"Failed to fetch user, returning a proxy instead: status {e.status}")
+                log.info(f"Failed to fetch user, returning a proxy instead: status {e.status}")
                 return proxy_user(arg)
 
             log.debug(f"Failed to fetch user {arg}: user does not exist.")
