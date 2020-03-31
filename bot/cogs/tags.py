@@ -152,6 +152,7 @@ class Tags(Cog):
                 and user == ctx.author
                 and reaction.message.id == msg.id
             )
+
         try:
             await self.bot.wait_for("reaction_add", timeout=60.0, check=check_trashcan)
         except asyncio.TimeoutError:
