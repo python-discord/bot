@@ -101,6 +101,11 @@ class ModManagement(commands.Cog):
         log_text = ""
 
         if duration is not None and not old_infraction['active']:
+            if reason is None:
+                await ctx.send(
+                    "Expiry can't be changed (infraction already expired) and new reason not specified."
+                )
+                return
             confirm_messages.append("expiry unchanged (infraction already expired)")
         elif isinstance(duration, str):
             request_data['expires_at'] = None
