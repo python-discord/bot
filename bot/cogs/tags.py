@@ -1,7 +1,7 @@
+import asyncio
 import logging
 import re
 import time
-from asyncio import TimeoutError
 from pathlib import Path
 from typing import Callable, Dict, Iterable, List, Optional
 
@@ -154,7 +154,7 @@ class Tags(Cog):
             )
         try:
             await self.bot.wait_for("reaction_add", timeout=60.0, check=check_trashcan)
-        except TimeoutError:
+        except asyncio.TimeoutError:
             await msg.remove_reaction(Emojis.trashcan, msg.author)
         else:
             await ctx.message.delete()
