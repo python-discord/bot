@@ -59,7 +59,7 @@ class Superstarify(InfractionScheduler, Cog):
             return  # Nick change was triggered by this event. Ignore.
 
         log.info(
-            f"{after.display_name} is currently in superstar-prison. "
+            f"{after.display_name} ({after.id}) tried to escape superstar prison. "
             f"Changing the nick back to {before.display_name}."
         )
         await after.edit(
@@ -80,7 +80,7 @@ class Superstarify(InfractionScheduler, Cog):
         )
 
         if not notified:
-            log.warning("Failed to DM user about why they cannot change their nickname.")
+            log.info("Failed to DM user about why they cannot change their nickname.")
 
     @Cog.listener()
     async def on_member_join(self, member: Member) -> None:
