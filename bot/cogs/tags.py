@@ -5,7 +5,7 @@ from asyncio import TimeoutError
 from pathlib import Path
 from typing import Callable, Dict, Iterable, List, Optional
 
-from discord import Colour, Embed, Message, Reaction, User
+from discord import Colour, Embed, Reaction, User
 from discord.ext.commands import Cog, Context, group
 
 from bot import constants
@@ -141,8 +141,9 @@ class Tags(Cog):
                 max_lines=15
             )
 
-    async def handle_trashcan_react(self, ctx: Context, msg: Message) -> None:
-        """Add `trashcan` emoji to Tag and handle deletion when user react to it."""
+    async def send_embed_with_trashcan(self, ctx: Context, embed: Embed) -> None:
+        """Send embed and handle it's and command message deletion with `trashcan` emoji."""
+        msg = await ctx.send(embed=embed)
         await msg.add_reaction(Emojis.trashcan)
 
         def check_trashcan(reaction: Reaction, user: User) -> bool:
@@ -225,14 +226,12 @@ class Tags(Cog):
                         "time": time.time(),
                         "channel": ctx.channel.id
                     }
-                msg = await ctx.send(embed=Embed.from_dict(tag['embed']))
-                await self.handle_trashcan_react(ctx, msg)
+                await self.send_embed_with_trashcan(ctx, Embed.from_dict(tag['embed']))
             elif founds and len(tag_name) >= 3:
-                msg = await ctx.send(embed=Embed(
+                await self.send_embed_with_trashcan(ctx, Embed(
                     title='Did you mean ...',
                     description='\n'.join(tag['title'] for tag in founds[:10])
                 ))
-                await self.handle_trashcan_react(ctx, msg)
 
         else:
             tags = self._cache.values()
