@@ -1,5 +1,10 @@
 **Python Generators**
 
+A generator is a function that returns a sequence of values,
+producing them on demand, i.e. without storing them in a list.
+
+---
+
 Often you'll need to return a list of values from a function.
 
 Imagine how you would implement a function that behaves like `map`,
@@ -27,6 +32,5 @@ def my_map(function, old_list):
     for element in old_list:
         yield function(element)
 ```
-A generator can produce new elements on demand without storing them in a list.
 
 You can try to run the loop in the example, and it gives the same result.
