@@ -301,7 +301,7 @@ class Snekbox(Cog):
             code = await self.continue_eval(ctx, response)
             if not code:
                 break
-            log.info(f"Re-evaluating message {ctx.message.id}")
+            log.info(f"Re-evaluating code from message {ctx.message.id}:\n{code}")
 
 
 def predicate_eval_message_edit(ctx: Context, old_msg: Message, new_msg: Message) -> bool:
