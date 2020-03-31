@@ -5,7 +5,7 @@ from collections import namedtuple
 from contextlib import suppress
 from typing import List
 
-from discord import Colour, Embed, HTTPException, Member, Message, Reaction, User
+from discord import Colour, Embed, NotFound, Member, Message, Reaction, User
 from discord.ext.commands import Bot, Cog, Command, Context, Group, HelpCommand
 from fuzzywuzzy import fuzz, process
 
@@ -39,11 +39,10 @@ async def help_cleanup(bot: Bot, author: Member, message: Message) -> None:
     try:
         await bot.wait_for("reaction_add", check=check, timeout=300)
         await message.delete()
-        return
-    except (HTTPException, TimeoutError):
+    except TimeoutError:
+        await message.remove_reaction(DELETE_EMOJI, bot.user)
+    except NotFound:
         pass
-
-    await message.remove_reaction(DELETE_EMOJI, bot.user)
 
 
 class HelpQueryNotFound(ValueError):
@@ -75,7 +74,7 @@ class CustomHelpCommand(HelpCommand):
     def __init__(self):
         super().__init__(command_attrs={"help": "Shows help for bot commands"})
 
-    @redirect_output(destination_channel=Channels.bot, bypass_roles=STAFF_ROLES)
+    @redirect_output(destination_channel=Channels.bot_commands, bypass_roles=STAFF_ROLES)
     async def prepare_help_command(self, ctx: Context, command: str = None) -> None:
         """Adjust context to redirect to a new channel if required."""
         self.context = ctx
@@ -143,7 +142,7 @@ class CustomHelpCommand(HelpCommand):
         choices.update(self.context.bot.cogs)
 
         # all category names
-        choices.update(n.category for n in self.context.bot.cogs if hasattr(n, "category"))
+        choices.update(n.category for n in self.context.bot.cogs.values() if hasattr(n, "category"))
         return choices
 
     async def command_not_found(self, string: str) -> "HelpQueryNotFound":
@@ -153,7 +152,7 @@ class CustomHelpCommand(HelpCommand):
         Will return an instance of the `HelpQueryNotFound` exception with the error message and possible matches.
         """
         choices = await self.get_all_help_choices()
-        result = process.extractBests(string, choices, scorer=fuzz.ratio, score_cutoff=90)
+        result = process.extractBests(string, choices, scorer=fuzz.ratio, score_cutoff=80)
 
         return HelpQueryNotFound(f'Query "{string}" not found.', dict(result))
 
@@ -214,10 +213,8 @@ class CustomHelpCommand(HelpCommand):
         """Formats the prefix, command name and signature, and short doc for an iterable of commands."""
         details = ""
         for c in commands_:
-            if c.signature:
-                details += f"\n**`{PREFIX}{c.qualified_name} {c.signature}`**\n*{c.short_doc or 'No details provided'}*"
-            else:
-                details += f"\n**`{PREFIX}{c.qualified_name}`**\n*{c.short_doc or 'No details provided.'}*"
+            signature = f" {c.signature}" if c.signature else ""
+            details += f"\n**`{PREFIX}{c.qualified_name}{signature}`**\n*{c.short_doc or 'No details provided'}*"
 
         return details
 
