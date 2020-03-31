@@ -1,9 +1,9 @@
-# Python Generators
+**Python Generators**
 
 Often you'll need to return a list of values from a function.
 
 Imagine how you would implement a function that behaves like `map`,
-that is, it applies a function to each element in a list.:
+that is, it applies a function to each element in a list:
 ```python
 def my_map(function, old_list):
     new_list = []
@@ -17,9 +17,9 @@ for i in my_map(abs, [-1, -2, 3, -4]):
 ```
 However, there are two main issues with this approach:
 
-1. Initializing a list, appending to it and returning it is noisy boilerplate code.
+1. Initializing a list, appending to it, and returning it is noisy boilerplate code.
 
-2. You will have to compute the result (which might even be infinite) first, and this can take a lot of time and memory.
+2. You will have to compute the result (which might even be infinite) first. This can take a lot of time and memory.
 
 All of this can be solved with a _generator_:
 ```python
