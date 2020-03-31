@@ -5,7 +5,7 @@ from collections import namedtuple
 from contextlib import suppress
 from typing import List
 
-from discord import Colour, Embed, NotFound, Member, Message, Reaction, User
+from discord import Colour, Embed, Member, Message, NotFound, Reaction, User
 from discord.ext.commands import Bot, Cog, Command, Context, Group, HelpCommand
 from fuzzywuzzy import fuzz, process
 
