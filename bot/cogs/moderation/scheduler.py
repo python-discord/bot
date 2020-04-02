@@ -222,7 +222,7 @@ class InfractionScheduler(Scheduler):
         # If multiple active infractions were found, mark them as inactive in the database
         # and cancel their expiration tasks.
         if len(response) > 1:
-            log.warning(
+            log.info(
                 f"Found more than one active {infr_type} infraction for user {user.id}; "
                 "deactivating the extra active infractions too."
             )

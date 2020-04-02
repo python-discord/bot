@@ -232,7 +232,7 @@ class Snekbox(Cog):
                     timeout=10
                 )
 
-                code = new_message.content.split(' ', maxsplit=1)[1]
+                code = await self.get_code(new_message)
                 await ctx.message.clear_reactions()
                 with contextlib.suppress(HTTPException):
                     await response.delete()
@@ -242,6 +242,26 @@ class Snekbox(Cog):
                 return None
 
             return code
+
+    async def get_code(self, message: Message) -> Optional[str]:
+        """
+        Return the code from `message` to be evaluated.
+
+        If the message is an invocation of the eval command, return the first argument or None if it
+        doesn't exist. Otherwise, return the full content of the message.
+        """
+        log.trace(f"Getting context for message {message.id}.")
+        new_ctx = await self.bot.get_context(message)
+
+        if new_ctx.command is self.eval_command:
+            log.trace(f"Message {message.id} invokes eval command.")
+            split = message.content.split(maxsplit=1)
+            code = split[1] if len(split) > 1 else None
+        else:
+            log.trace(f"Message {message.id} does not invoke eval command.")
+            code = message.content
+
+        return code
 
     @command(name="eval", aliases=("e",))
     @guild_only()
@@ -281,7 +301,7 @@ class Snekbox(Cog):
             code = await self.continue_eval(ctx, response)
             if not code:
                 break
-            log.info(f"Re-evaluating message {ctx.message.id}")
+            log.info(f"Re-evaluating code from message {ctx.message.id}:\n{code}")
 
 
 def predicate_eval_message_edit(ctx: Context, old_msg: Message, new_msg: Message) -> bool:

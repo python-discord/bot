@@ -67,7 +67,6 @@ class BotCog(Cog, name="Bot"):
             icon_url=URLs.bot_avatar
         )
 
-        log.info(f"{ctx.author} called !about. Returning information about the bot.")
         await ctx.send(embed=embed)
 
     @command(name='echo', aliases=('print',))
@@ -239,7 +238,7 @@ class BotCog(Cog, name="Bot"):
             )
             and not msg.author.bot
             and len(msg.content.splitlines()) > 3
-            and not TokenRemover.is_token_in_message(msg)
+            and not TokenRemover.find_token_in_message(msg)
         )
 
         if parse_codeblock:  # no token in the msg

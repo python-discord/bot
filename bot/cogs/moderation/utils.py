@@ -38,7 +38,7 @@ async def post_user(ctx: Context, user: UserSnowflake) -> t.Optional[dict]:
     log.trace(f"Attempting to add user {user.id} to the database.")
 
     if not isinstance(user, (discord.Member, discord.User)):
-        log.warning("The user being added to the DB is not a Member or User object.")
+        log.debug("The user being added to the DB is not a Member or User object.")
 
     payload = {
         'avatar_hash': getattr(user, 'avatar', 0),
