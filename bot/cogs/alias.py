@@ -32,7 +32,7 @@ class Alias (Cog):
                 f'{str(ctx.author)} tried to run the command "{cmd_name}" but lacks permission.'
             )
 
-        await ctx.invoke(cmd, *args, **kwargs)
+        await cmd(ctx, *args, **kwargs)
 
     @command(name='aliases')
     async def aliases_command(self, ctx: Context) -> None:
