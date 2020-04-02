@@ -34,7 +34,7 @@ class Alias (Cog):
 
         await ctx.invoke(cmd, *args, **kwargs)
 
-    async def test_alias_can_run(self, ctx: Context, alias: str) -> bool:
+    async def check_can_run_alias(self, ctx: Context, alias: str) -> bool:
         """Check can user use this specific alias."""
         # We don't want arguments, only command itself and max command parts in aliases is 2.
         if len(alias.split()) >= 3:
@@ -53,7 +53,7 @@ class Alias (Cog):
             name: value for name, value in inspect.getmembers(self)
             if isinstance(value, Command)
             and name.endswith("_alias")
-            and await self.test_alias_can_run(ctx, name[:-len('_alias')].replace('_', ' '))
+            and await self.check_can_run_alias(ctx, name[:-len('_alias')].replace('_', ' '))
         }
         await LinePaginator.paginate(
             (
