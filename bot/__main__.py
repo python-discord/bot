@@ -5,7 +5,6 @@ import sentry_sdk
 from discord.ext.commands import when_mentioned_or
 from sentry_sdk.integrations.logging import LoggingIntegration
 
-from bot import patches
 from bot.bot import Bot
 from bot.constants import Bot as BotConfig
 
@@ -65,9 +64,5 @@ bot.load_extension("bot.cogs.utils")
 bot.load_extension("bot.cogs.watchchannels")
 bot.load_extension("bot.cogs.webhook_remover")
 bot.load_extension("bot.cogs.wolfram")
-
-# Apply `message_edited_at` patch if discord.py did not yet release a bug fix.
-if not hasattr(discord.message.Message, '_handle_edited_timestamp'):
-    patches.message_edited_at.apply_patch()
 
 bot.run(BotConfig.token)
