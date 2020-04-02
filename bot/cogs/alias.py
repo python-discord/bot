@@ -35,7 +35,12 @@ class Alias (Cog):
         await ctx.invoke(cmd, *args, **kwargs)
 
     async def check_can_run_alias(self, ctx: Context, alias: str) -> bool:
-        """Check can user use this specific alias."""
+        """
+        Check can user use this specific alias.
+
+        Function force allow `get group` alias, due there is no command `get`: it's only to allow
+        use `get tags|docs`, `get` itself is not command and group is basically argument (`tags` or `docs`).
+        """
         # We don't want arguments, only command itself and max command parts in aliases is 2.
         if len(alias.split()) >= 3:
             alias = " ".join(alias.split()[0:2])
