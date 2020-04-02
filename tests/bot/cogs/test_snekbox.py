@@ -296,7 +296,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
             )
         )
         ctx.message.add_reaction.assert_called_once_with(snekbox.REEVAL_EMOJI)
-        ctx.message.clear_reactions.assert_called_once()
+        ctx.message.clear_reaction.assert_called_once_with(snekbox.REEVAL_EMOJI)
         response.delete.assert_called_once()
 
     async def test_continue_eval_does_not_continue(self):
@@ -305,7 +305,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
 
         actual = await self.cog.continue_eval(ctx, MockMessage())
         self.assertEqual(actual, None)
-        ctx.message.clear_reactions.assert_called_once()
+        ctx.message.clear_reaction.assert_called_once_with(snekbox.REEVAL_EMOJI)
 
     async def test_get_code(self):
         """Should return 1st arg (or None) if eval cmd in message, otherwise return full content."""
