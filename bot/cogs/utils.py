@@ -40,6 +40,8 @@ If the implementation is easy to explain, it may be a good idea.
 Namespaces are one honking great idea -- let's do more of those!
 """
 
+ICON_URL = "https://www.python.org/static/opengraph-icon-200x200.png"
+
 
 class Utils(Cog):
     """A selection of utilities which don't have a clear category."""
@@ -58,6 +60,10 @@ class Utils(Cog):
         else:
             await ctx.invoke(self.bot.get_command("help"), "pep")
             return
+
+        # Handle PEP 0 directly because it's not in .rst or .txt so it can't be accessed like other PEPs.
+        if pep_number == 0:
+            return await self.send_pep_zero(ctx)
 
         possible_extensions = ['.txt', '.rst']
         found_pep = False
@@ -82,7 +88,7 @@ class Utils(Cog):
                     description=f"[Link]({self.base_pep_url}{pep_number:04})",
                 )
 
-                pep_embed.set_thumbnail(url="https://www.python.org/static/opengraph-icon-200x200.png")
+                pep_embed.set_thumbnail(url=ICON_URL)
 
                 # Add the interesting information
                 fields_to_check = ("Status", "Python-Version", "Created", "Type")
@@ -230,7 +236,17 @@ class Utils(Cog):
             await ctx.send(embed=embed)
             return
 
-        # handle if it's a search string
+        # Try to handle first exact word due difflib.SequenceMatched may use some other similar word instead
+        # exact word.
+        for i, line in enumerate(zen_lines):
+            for word in line.split():
+                if word.lower() == search_value.lower():
+                    embed.title += f" (line {i}):"
+                    embed.description = line
+                    await ctx.send(embed=embed)
+                    return
+
+        # handle if it's a search string and not exact word
         matcher = difflib.SequenceMatcher(None, search_value.lower())
 
         best_match = ""
@@ -277,6 +293,19 @@ class Utils(Cog):
         message = await ctx.send(embed=embed)
         for reaction in options:
             await message.add_reaction(reaction)
+
+    async def send_pep_zero(self, ctx: Context) -> None:
+        """Send information about PEP 0."""
+        pep_embed = Embed(
+            title=f"**PEP 0 - Index of Python Enhancement Proposals (PEPs)**",
+            description=f"[Link](https://www.python.org/dev/peps/)"
+        )
+        pep_embed.set_thumbnail(url=ICON_URL)
+        pep_embed.add_field(name="Status", value="Active")
+        pep_embed.add_field(name="Created", value="13-Jul-2000")
+        pep_embed.add_field(name="Type", value="Informational")
+
+        await ctx.send(embed=pep_embed)
 
 
 def setup(bot: Bot) -> None:

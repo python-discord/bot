@@ -206,9 +206,8 @@ class Filter(metaclass=YAMLGetter):
     filter_zalgo: bool
     filter_invites: bool
     filter_domains: bool
+    watch_regex: bool
     watch_rich_embeds: bool
-    watch_words: bool
-    watch_tokens: bool
 
     # Notifications are not expected for "watchlist" type filters
     notify_user_zalgo: bool
