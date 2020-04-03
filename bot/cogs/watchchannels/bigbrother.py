@@ -30,7 +30,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
     @with_role(*MODERATION_ROLES)
     async def bigbrother_group(self, ctx: Context) -> None:
         """Monitors users by relaying their messages to the Big Brother watch channel."""
-        await ctx.invoke(self.bot.get_command("help"), "bigbrother")
+        await ctx.send_help("bigbrother")
 
     @bigbrother_group.command(name='watched', aliases=('all', 'list'))
     @with_role(*MODERATION_ROLES)
