@@ -43,7 +43,7 @@ class ModManagement(commands.Cog):
     @commands.group(name='infraction', aliases=('infr', 'infractions', 'inf'), invoke_without_command=True)
     async def infraction_group(self, ctx: Context) -> None:
         """Infraction manipulation commands."""
-        await ctx.invoke(self.bot.get_command("help"), "infraction")
+        await ctx.send_help("infraction")
 
     @infraction_group.command(name='edit')
     async def infraction_edit(
@@ -183,9 +183,9 @@ class ModManagement(commands.Cog):
     async def infraction_search_group(self, ctx: Context, query: InfractionSearchQuery) -> None:
         """Searches for infractions in the database."""
         if isinstance(query, discord.User):
-            await ctx.invoke(self.search_user, query)
+            await self.search_user(ctx, query)
         else:
-            await ctx.invoke(self.search_reason, query)
+            await self.search_reason(ctx, query)
 
     @infraction_search_group.command(name="user", aliases=("member", "id"))
     async def search_user(self, ctx: Context, user: t.Union[discord.User, proxy_user]) -> None:
