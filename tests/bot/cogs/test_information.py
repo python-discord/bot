@@ -37,7 +37,7 @@ class InformationCogTests(unittest.IsolatedAsyncioTestCase):
         self.cog.roles_info.can_run = unittest.mock.AsyncMock()
         self.cog.roles_info.can_run.return_value = True
 
-        self.assertIsNone(await self.cog.roles_info(self.ctx))
+        self.assertIsNone(await self.cog.roles_info(self.cog, self.ctx))
         self.ctx.send.assert_called_once()
 
         _, kwargs = self.ctx.send.call_args
@@ -72,7 +72,7 @@ class InformationCogTests(unittest.IsolatedAsyncioTestCase):
         self.cog.role_info.can_run = unittest.mock.AsyncMock()
         self.cog.role_info.can_run.return_value = True
 
-        self.assertIsNone(await self.cog.role_info(self.ctx, dummy_role, admin_role))
+        self.assertIsNone(await self.cog.role_info(self.cog, self.ctx, dummy_role, admin_role))
 
         self.assertEqual(self.ctx.send.call_count, 2)
 
@@ -129,7 +129,7 @@ class InformationCogTests(unittest.IsolatedAsyncioTestCase):
             icon_url='a-lemon.jpg',
         )
 
-        self.assertIsNone(await self.cog.server_info(self.ctx))
+        self.assertIsNone(await self.cog.server_info(self.cog, self.ctx))
 
         time_since_patch.assert_called_once_with(self.ctx.guild.created_at, precision='days')
         _, kwargs = self.ctx.send.call_args
