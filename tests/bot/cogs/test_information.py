@@ -1,4 +1,3 @@
-import asyncio
 import textwrap
 import unittest
 import unittest.mock
@@ -511,7 +510,7 @@ class UserCommandTests(unittest.IsolatedAsyncioTestCase):
 
         ctx = helpers.MockContext(author=self.author)
 
-        asyncio.run(self.cog.user_info.callback(self.cog, ctx, self.target))
+        await self.cog.user_info(self.cog, ctx, self.target)
 
         ctx.send.assert_called_once_with("You may not use this command on users other than yourself.")
 
@@ -525,7 +524,7 @@ class UserCommandTests(unittest.IsolatedAsyncioTestCase):
 
         msg = "Sorry, but you may only use this command within <#50>."
         with self.assertRaises(InChannelCheckFailure, msg=msg):
-            asyncio.run(self.cog.user_info.callback(self.cog, ctx))
+            await self.cog.user_info(self.cog, ctx)
 
     @unittest.mock.patch("bot.cogs.information.Information.create_user_embed", new_callable=unittest.mock.AsyncMock)
     async def test_regular_user_may_use_command_in_bot_commands_channel(self, create_embed, constants):
@@ -535,7 +534,7 @@ class UserCommandTests(unittest.IsolatedAsyncioTestCase):
 
         ctx = helpers.MockContext(author=self.author, channel=helpers.MockTextChannel(id=50))
 
-        asyncio.run(self.cog.user_info.callback(self.cog, ctx))
+        await self.cog.user_info(self.cog, ctx)
 
         create_embed.assert_called_once_with(ctx, self.author)
         ctx.send.assert_called_once()
@@ -548,7 +547,7 @@ class UserCommandTests(unittest.IsolatedAsyncioTestCase):
 
         ctx = helpers.MockContext(author=self.author, channel=helpers.MockTextChannel(id=50))
 
-        asyncio.run(self.cog.user_info.callback(self.cog, ctx, self.author))
+        await self.cog.user_info(self.cog, ctx, self.author)
 
         create_embed.assert_called_once_with(ctx, self.author)
         ctx.send.assert_called_once()
@@ -561,7 +560,7 @@ class UserCommandTests(unittest.IsolatedAsyncioTestCase):
 
         ctx = helpers.MockContext(author=self.moderator, channel=helpers.MockTextChannel(id=200))
 
-        asyncio.run(self.cog.user_info.callback(self.cog, ctx))
+        await self.cog.user_info(self.cog, ctx)
 
         create_embed.assert_called_once_with(ctx, self.moderator)
         ctx.send.assert_called_once()
@@ -574,7 +573,7 @@ class UserCommandTests(unittest.IsolatedAsyncioTestCase):
 
         ctx = helpers.MockContext(author=self.moderator, channel=helpers.MockTextChannel(id=50))
 
-        asyncio.run(self.cog.user_info.callback(self.cog, ctx, self.target))
+        await self.cog.user_info(self.cog, ctx, self.target)
 
         create_embed.assert_called_once_with(ctx, self.target)
         ctx.send.assert_called_once()
