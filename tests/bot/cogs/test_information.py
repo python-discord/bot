@@ -37,9 +37,7 @@ class InformationCogTests(unittest.IsolatedAsyncioTestCase):
         self.cog.roles_info.can_run = unittest.mock.AsyncMock()
         self.cog.roles_info.can_run.return_value = True
 
-        coroutine = self.cog.roles_info.callback(self.cog, self.ctx)
-
-        self.assertIsNone(asyncio.run(coroutine))
+        self.assertIsNone(await self.cog.roles_info(self.ctx))
         self.ctx.send.assert_called_once()
 
         _, kwargs = self.ctx.send.call_args
@@ -74,9 +72,7 @@ class InformationCogTests(unittest.IsolatedAsyncioTestCase):
         self.cog.role_info.can_run = unittest.mock.AsyncMock()
         self.cog.role_info.can_run.return_value = True
 
-        coroutine = self.cog.role_info.callback(self.cog, self.ctx, dummy_role, admin_role)
-
-        self.assertIsNone(asyncio.run(coroutine))
+        self.assertIsNone(await self.cog.role_info(self.ctx, dummy_role, admin_role))
 
         self.assertEqual(self.ctx.send.call_count, 2)
 
@@ -133,8 +129,7 @@ class InformationCogTests(unittest.IsolatedAsyncioTestCase):
             icon_url='a-lemon.jpg',
         )
 
-        coroutine = self.cog.server_info.callback(self.cog, self.ctx)
-        self.assertIsNone(asyncio.run(coroutine))
+        self.assertIsNone(await self.cog.server_info(self.ctx))
 
         time_since_patch.assert_called_once_with(self.ctx.guild.created_at, precision='days')
         _, kwargs = self.ctx.send.call_args
