@@ -175,7 +175,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.cog.send_eval = AsyncMock(return_value=response)
         self.cog.continue_eval = AsyncMock(return_value=None)
 
-        await self.cog.eval_command.callback(self.cog, ctx=ctx, code='MyAwesomeCode')
+        await self.cog.eval_command(self.cog, ctx=ctx, code='MyAwesomeCode')
         self.cog.prepare_input.assert_called_once_with('MyAwesomeCode')
         self.cog.send_eval.assert_called_once_with(ctx, 'MyAwesomeFormattedCode')
         self.cog.continue_eval.assert_called_once_with(ctx, response)
@@ -189,7 +189,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.cog.continue_eval = AsyncMock()
         self.cog.continue_eval.side_effect = ('MyAwesomeCode-2', None)
 
-        await self.cog.eval_command.callback(self.cog, ctx=ctx, code='MyAwesomeCode')
+        await self.cog.eval_command(self.cog, ctx=ctx, code='MyAwesomeCode')
         self.cog.prepare_input.has_calls(call('MyAwesomeCode'), call('MyAwesomeCode-2'))
         self.cog.send_eval.assert_called_with(ctx, 'MyAwesomeFormattedCode')
         self.cog.continue_eval.assert_called_with(ctx, response)
@@ -201,7 +201,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         ctx.author.mention = '@LemonLemonishBeard#0042'
         ctx.send = AsyncMock()
         self.cog.jobs = (42,)
-        await self.cog.eval_command.callback(self.cog, ctx=ctx, code='MyAwesomeCode')
+        await self.cog.eval_command(self.cog, ctx=ctx, code='MyAwesomeCode')
         ctx.send.assert_called_once_with(
             "@LemonLemonishBeard#0042 You've already got a job running - please wait for it to finish!"
         )
@@ -210,7 +210,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         """Test if the eval command call the help command if no code is provided."""
         ctx = MockContext()
         ctx.invoke = AsyncMock()
-        await self.cog.eval_command.callback(self.cog, ctx=ctx, code='')
+        await self.cog.eval_command(self.cog, ctx=ctx, code='')
         ctx.invoke.assert_called_once_with(self.bot.get_command("help"), "eval")
 
     async def test_send_eval(self):
