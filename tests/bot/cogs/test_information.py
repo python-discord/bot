@@ -350,7 +350,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         user.nick = None
         user.__str__ = unittest.mock.Mock(return_value="Mr. Hemlock")
 
-        embed = asyncio.run(self.cog.create_user_embed(ctx, user))
+        embed = await self.cog.create_user_embed(ctx, user)
 
         self.assertEqual(embed.title, "Mr. Hemlock")
 
@@ -362,7 +362,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         user.nick = "Cat lover"
         user.__str__ = unittest.mock.Mock(return_value="Mr. Hemlock")
 
-        embed = asyncio.run(self.cog.create_user_embed(ctx, user))
+        embed = await self.cog.create_user_embed(ctx, user)
 
         self.assertEqual(embed.title, "Cat lover (Mr. Hemlock)")
 
@@ -376,7 +376,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         # A `MockMember` has the @Everyone role by default; we add the Admins to that.
         user = helpers.MockMember(roles=[admins_role], top_role=admins_role)
 
-        embed = asyncio.run(self.cog.create_user_embed(ctx, user))
+        embed = await self.cog.create_user_embed(ctx, user)
 
         self.assertIn("&Admins", embed.description)
         self.assertNotIn("&Everyone", embed.description)
@@ -398,7 +398,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         nomination_counts.return_value = "nomination info"
 
         user = helpers.MockMember(id=314, roles=[moderators_role], top_role=moderators_role)
-        embed = asyncio.run(self.cog.create_user_embed(ctx, user))
+        embed = await self.cog.create_user_embed(ctx, user)
 
         infraction_counts.assert_called_once_with(user)
         nomination_counts.assert_called_once_with(user)
@@ -432,7 +432,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         infraction_counts.return_value = "basic infractions info"
 
         user = helpers.MockMember(id=314, roles=[moderators_role], top_role=moderators_role)
-        embed = asyncio.run(self.cog.create_user_embed(ctx, user))
+        embed = await self.cog.create_user_embed(ctx, user)
 
         infraction_counts.assert_called_once_with(user)
 
@@ -461,7 +461,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         moderators_role.colour = 100
 
         user = helpers.MockMember(id=314, roles=[moderators_role], top_role=moderators_role)
-        embed = asyncio.run(self.cog.create_user_embed(ctx, user))
+        embed = await self.cog.create_user_embed(ctx, user)
 
         self.assertEqual(embed.colour, discord.Colour(moderators_role.colour))
 
@@ -471,7 +471,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         ctx = helpers.MockContext()
 
         user = helpers.MockMember(id=217)
-        embed = asyncio.run(self.cog.create_user_embed(ctx, user))
+        embed = await self.cog.create_user_embed(ctx, user)
 
         self.assertEqual(embed.colour, discord.Colour.blurple())
 
@@ -482,7 +482,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
 
         user = helpers.MockMember(id=217)
         user.avatar_url_as.return_value = "avatar url"
-        embed = asyncio.run(self.cog.create_user_embed(ctx, user))
+        embed = await self.cog.create_user_embed(ctx, user)
 
         user.avatar_url_as.assert_called_once_with(format="png")
         self.assertEqual(embed.thumbnail.url, "avatar url")
