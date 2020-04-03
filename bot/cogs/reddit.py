@@ -246,7 +246,7 @@ class Reddit(Cog):
     @group(name="reddit", invoke_without_command=True)
     async def reddit_group(self, ctx: Context) -> None:
         """View the top posts from various subreddits."""
-        await ctx.invoke(self.bot.get_command("help"), "reddit")
+        await ctx.send_help("reddit")
 
     @reddit_group.command(name="top")
     async def top_command(self, ctx: Context, subreddit: Subreddit = "r/Python") -> None:
