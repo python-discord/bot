@@ -194,7 +194,7 @@ class UserInfractionHelperMethodTests(unittest.IsolatedAsyncioTestCase):
             endpoint, params = test_value["expected_args"]
 
             with self.subTest(method=helper_method, endpoint=endpoint, params=params):
-                asyncio.run(helper_method(self.member))
+                await helper_method(self.member)
                 self.bot.api_client.get.assert_called_once_with(endpoint, params=params)
                 self.bot.api_client.get.reset_mock()
 
@@ -208,7 +208,7 @@ class UserInfractionHelperMethodTests(unittest.IsolatedAsyncioTestCase):
                 self.bot.api_client.get.return_value = api_response
 
                 expected_output = "\n".join(default_header + expected_lines)
-                actual_output = asyncio.run(method(self.member))
+                actual_output = await method(self.member)
 
                 self.assertEqual(expected_output, actual_output)
 
