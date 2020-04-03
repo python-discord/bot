@@ -111,7 +111,7 @@ guild:
     id: 692564853189247026
 
     categories:
-        python_help:    694301685190754335
+        python_help:    694258273083195442
 
     channels:
         announcements:                              694301880699977830
@@ -127,10 +127,10 @@ guild:
         python_discussion:  694302463439667290
 
         # Logs
-        attachment_log:     &ATTACH_LOG     694302463439667290
+        attachment_log:     &ATTACH_LOG     694302598928400424
         message_log:        &MESSAGE_LOG    694302730822615080
-        mod_log:            &MOD_LOG        282638479504965634
-        user_log:                           528976905546760203
+        mod_log:            &MOD_LOG        692573513684353036
+        user_log:                           692573528872189964
         voice_log:                          694302859776360549
 
         # Off-topic
