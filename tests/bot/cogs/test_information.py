@@ -14,7 +14,7 @@ from tests import helpers
 COG_PATH = "bot.cogs.information.Information"
 
 
-class InformationCogTests(unittest.TestCase):
+class InformationCogTests(unittest.IsolatedAsyncioTestCase):
     """Tests the Information cog."""
 
     @classmethod
@@ -30,7 +30,7 @@ class InformationCogTests(unittest.TestCase):
         self.ctx = helpers.MockContext()
         self.ctx.author.roles.append(self.moderator_role)
 
-    def test_roles_command_command(self):
+    async def test_roles_command_command(self):
         """Test if the `role_info` command correctly returns the `moderator_role`."""
         self.ctx.guild.roles.append(self.moderator_role)
 
@@ -49,7 +49,7 @@ class InformationCogTests(unittest.TestCase):
         self.assertEqual(embed.colour, discord.Colour.blurple())
         self.assertEqual(embed.description, f"\n`{self.moderator_role.id}` - {self.moderator_role.mention}\n")
 
-    def test_role_info_command(self):
+    async def test_role_info_command(self):
         """Tests the `role info` command."""
         dummy_role = helpers.MockRole(
             name="Dummy",
@@ -99,7 +99,7 @@ class InformationCogTests(unittest.TestCase):
         self.assertEqual(admin_embed.colour, discord.Colour.red())
 
     @unittest.mock.patch('bot.cogs.information.time_since')
-    def test_server_info_command(self, time_since_patch):
+    async def test_server_info_command(self, time_since_patch):
         time_since_patch.return_value = '2 days ago'
 
         self.ctx.guild = helpers.MockGuild(
