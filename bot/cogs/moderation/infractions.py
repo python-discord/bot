@@ -244,7 +244,14 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         self.mod_log.ignore(Event.member_remove, user.id)
 
-        action = ctx.guild.ban(user, reason=reason, delete_message_days=0)
+        if len(reason) > 512:
+            log.info("Ban reason is longer than 512 characters. Reason will be truncated for Audit Log.")
+
+        action = ctx.guild.ban(
+            user,
+            reason=f"{reason[:509]}..." if len(reason) > 512 else reason,
+            delete_message_days=0
+        )
         await self.apply_infraction(ctx, infraction, user, action)
 
         if infraction.get('expires_at') is not None:
