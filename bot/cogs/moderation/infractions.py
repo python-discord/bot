@@ -225,7 +225,10 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         self.mod_log.ignore(Event.member_remove, user.id)
 
-        action = user.kick(reason=reason)
+        if len(reason) > 512:
+            log.info("Kick reason is longer than 512 characters. Reason will be truncated for Audit Log.")
+
+        action = user.kick(reason=f"{reason[:509]}..." if len(reason) > 512 else reason)
         await self.apply_infraction(ctx, infraction, user, action)
 
     @respect_role_hierarchy()
