@@ -196,6 +196,7 @@ class HelpChannels(Scheduler, commands.Cog):
         if ctx.channel.category == self.in_use_category:
             self.cancel_task(ctx.channel.id)
             await self.move_to_dormant(ctx.channel)
+            await ctx.message.delete()
         else:
             log.debug(f"{ctx.author} invoked command 'dormant' outside an in-use help channel")
 
