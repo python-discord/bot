@@ -84,7 +84,8 @@ class InfractionScheduler(Scheduler):
         """Apply an infraction to the user, log the infraction, and optionally notify the user."""
         infr_type = infraction["type"]
         icon = utils.INFRACTION_ICONS[infr_type][0]
-        reason = infraction["reason"]
+        # Truncate reason when it's too long to avoid raising error on sending ModLog entry
+        reason = textwrap.shorten(infraction["reason"], width=1900, placeholder="...")
         expiry = time.format_infraction_with_duration(infraction["expires_at"])
         id_ = infraction['id']
 
