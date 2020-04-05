@@ -49,8 +49,7 @@ class Tags(Cog):
                     "restricted_to": "developers"
                 }
                 if len(file_path) == 5:
-                    restricted_to = file_path[3]
-                    tag["restricted_to"] = restricted_to
+                    tag["restricted_to"] = file_path[3]
 
                 cache[tag_title] = tag
         return cache
@@ -127,9 +126,11 @@ class Tags(Cog):
 
         matching_tags = []
         for tag in self._cache.values():
-            if self.check_accessibility(user, tag):
-                if check(query in tag['embed']['description'].casefold() for query in keywords_processed):
-                    matching_tags.append(tag)
+            if (
+                self.check_accessibility(user, tag)
+                and check(query in tag['embed']['description'].casefold() for query in keywords_processed)
+            ):
+                matching_tags.append(tag)
 
         return matching_tags
 
