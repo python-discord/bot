@@ -184,7 +184,7 @@ class HelpChannels(Scheduler, commands.Cog):
         log.trace("Populating the name queue with names.")
         return deque(available_names)
 
-    @commands.command(name="dormant", enabled=False)
+    @commands.command(name="dormant", aliases=["close"], enabled=False)
     @with_role(*constants.HelpChannels.cmd_whitelist)
     async def dormant_command(self, ctx: commands.Context) -> None:
         """Make the current in-use help channel dormant."""
