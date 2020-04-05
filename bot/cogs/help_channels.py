@@ -47,7 +47,7 @@ currently cannot send a message in this channel, it means you are on cooldown an
 
 Try to write the best question you can by providing a detailed description and telling us what \
 you've tried already. For more information on asking a good question, \
-[check out our guide on asking good questions]({ASKING_GUIDE_URL}).
+check out our guide on [asking good questions]({ASKING_GUIDE_URL}).
 """
 
 DORMANT_MSG = f"""
@@ -58,7 +58,7 @@ channel until it becomes available again.
 If your question wasn't answered yet, you can claim a new help channel from the \
 **Help: Available** category by simply asking your question again. Consider rephrasing the \
 question to maximize your chance of getting a good answer. If you're not sure how, have a look \
-through [our guide for asking a good question]({ASKING_GUIDE_URL}).
+through our guide for [asking a good question]({ASKING_GUIDE_URL}).
 """
 
 
