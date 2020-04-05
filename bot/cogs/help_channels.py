@@ -13,7 +13,7 @@ from discord.ext import commands
 
 from bot import constants
 from bot.bot import Bot
-from bot.decorators import with_role
+from bot.utils.checks import with_role_check
 from bot.utils.scheduling import Scheduler
 
 log = logging.getLogger(__name__)
@@ -108,6 +108,7 @@ class HelpChannels(Scheduler, commands.Cog):
         super().__init__()
 
         self.bot = bot
+        self.help_channel_users: t.Dict[discord.User, discord.TextChannel] = {}
 
         # Categories
         self.available_category: discord.CategoryChannel = None
@@ -187,16 +188,24 @@ class HelpChannels(Scheduler, commands.Cog):
         log.trace("Populating the name queue with names.")
         return deque(available_names)
 
+    async def dormant_check(self, ctx: commands.Context) -> bool:
+        """Return True if the user started the help channel session or passes the role check."""
+        if self.help_channel_users.get(ctx.author) == ctx.channel:
+            log.trace(f"{ctx.author} started the help session, passing the check for dormant.")
+            return True
+
+        log.trace(f"{ctx.author} did not start the help session, checking roles.")
+        return with_role_check(ctx, *constants.HelpChannels.cmd_whitelist)
+
     @commands.command(name="dormant", aliases=["close"], enabled=False)
-    @with_role(*constants.HelpChannels.cmd_whitelist)
     async def dormant_command(self, ctx: commands.Context) -> None:
         """Make the current in-use help channel dormant."""
         log.trace("dormant command invoked; checking if the channel is in-use.")
-
         if ctx.channel.category == self.in_use_category:
-            self.cancel_task(ctx.channel.id)
-            await self.move_to_dormant(ctx.channel)
-            await ctx.message.delete()
+            if await self.dormant_check(ctx):
+                self.cancel_task(ctx.channel.id)
+                await self.move_to_dormant(ctx.channel)
+                await ctx.message.delete()
         else:
             log.debug(f"{ctx.author} invoked command 'dormant' outside an in-use help channel")
 
@@ -543,6 +552,8 @@ class HelpChannels(Scheduler, commands.Cog):
 
             await self.move_to_in_use(channel)
             await self.revoke_send_permissions(message.author)
+            # Add user with channel for dormant check.
+            self.help_channel_users[message.author] = channel
 
             log.trace(f"Releasing on_message lock for {message.id}.")
 
