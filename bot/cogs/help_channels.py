@@ -1,5 +1,4 @@
 import asyncio
-import bisect
 import inspect
 import json
 import logging
@@ -219,25 +218,15 @@ class HelpChannels(Scheduler, commands.Cog):
 
     @staticmethod
     def get_position(channel: discord.TextChannel, destination: discord.CategoryChannel) -> int:
-        """Return alphabetical position for `channel` if moved to `destination`."""
-        log.trace(f"Getting alphabetical position for #{channel} ({channel.id}).")
+        """Return the position to sort the `channel` at the bottom if moved to `destination`."""
+        log.trace(f"Getting bottom position for #{channel} ({channel.id}).")
 
-        # If the destination category is empty, use the first position
         if not destination.channels:
+            # If the destination category is empty, use the first position
             position = 1
         else:
-            # Make a sorted list of channel names for bisect.
-            channel_names = [c.name for c in destination.channels]
-
-            # Get location which would maintain sorted order if channel was inserted into the list.
-            rank = bisect.bisect(channel_names, channel.name)
-
-            if rank == len(destination.channels):
-                # Channel should be moved to the end of the category.
-                position = destination.channels[-1].position + 1
-            else:
-                # Channel should be moved to the position of its alphabetical successor.
-                position = destination.channels[rank].position
+            # Else use the maximum position int + 1
+            position = max(c.position for c in destination.channels) + 1
 
         log.trace(
             f"Position of #{channel} ({channel.id}) in {destination.name} will be {position} "
@@ -464,7 +453,7 @@ class HelpChannels(Scheduler, commands.Cog):
             category=self.in_use_category,
             sync_permissions=True,
             topic=IN_USE_TOPIC,
-            position=0,
+            position=self.get_position(channel, self.in_use_category),
         )
 
         timeout = constants.HelpChannels.idle_minutes * 60
