@@ -206,6 +206,7 @@ class HelpChannels(Scheduler, commands.Cog):
                 self.cancel_task(ctx.channel.id)
                 await self.move_to_dormant(ctx.channel)
                 await ctx.message.delete()
+                await self.reset_send_permissions_for_help_user(ctx.channel)
         else:
             log.debug(f"{ctx.author} invoked command 'dormant' outside an in-use help channel")
 
@@ -609,6 +610,19 @@ class HelpChannels(Scheduler, commands.Cog):
 
         log.trace(f"Ensuring channels in `Help: Available` are synchronized after permissions reset.")
         await self.ensure_permissions_synchronization(self.available_category)
+
+    async def reset_send_permissions_for_help_user(self, channel: discord.TextChannel) -> None:
+        """Reset send permissions in the Available category for member that started the help session in `channel`."""
+        # Get mapping of channels to users that started the help session in them.
+        channels_to_users = {value: key for key, value in self.help_channel_users.items()}
+        log.trace(f"Attempting to find user for help session in #{channel.name} ({channel.id}).")
+        try:
+            member: discord.Member = channels_to_users[channel]
+        except KeyError:
+            log.trace(f"Channel #{channel.name} ({channel.id}) not in help session cache, permissions unchanged.")
+            return
+        log.trace(f"Resetting send permissions for {member} ({member.id}).")
+        await self.available_category.set_permissions(member, send_messages=None)
 
     async def revoke_send_permissions(self, member: discord.Member) -> None:
         """
