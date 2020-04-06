@@ -628,6 +628,7 @@ class HelpChannels(Scheduler, commands.Cog):
         except KeyError:
             log.trace(f"Channel #{channel.name} ({channel.id}) not in claimant cache, permissions unchanged.")
             return
+
         log.trace(f"Resetting send permissions for {member} ({member.id}).")
         await self.available_category.set_permissions(member, overwrite=None)
         # Cancel task, ignore no task existing when the claim time passed but idle time has not.
