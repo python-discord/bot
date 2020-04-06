@@ -199,7 +199,13 @@ class HelpChannels(Scheduler, commands.Cog):
 
     @commands.command(name="dormant", aliases=["close"], enabled=False)
     async def dormant_command(self, ctx: commands.Context) -> None:
-        """Make the current in-use help channel dormant."""
+        """
+        Make the current in-use help channel dormant.
+
+        Make the channel dormant if the user passes the `dormant_check`,
+        delete the message that invoked this,
+        and reset the send permissions cooldown for the user who started the session.
+        """
         log.trace("dormant command invoked; checking if the channel is in-use.")
         if ctx.channel.category == self.in_use_category:
             if await self.dormant_check(ctx):
