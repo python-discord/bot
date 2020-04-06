@@ -5,6 +5,7 @@ import logging
 import random
 import typing as t
 from collections import deque
+from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
 
@@ -211,7 +212,9 @@ class HelpChannels(Scheduler, commands.Cog):
             if await self.dormant_check(ctx):
                 self.cancel_task(ctx.channel.id)
                 await self.move_to_dormant(ctx.channel)
-                await ctx.message.delete()
+                with suppress(discord.errors.NotFound):
+                    await ctx.message.delete()
+                    log.trace("Deleting dormant invokation message.")
                 await self.reset_send_permissions_for_help_user(ctx.channel)
         else:
             log.debug(f"{ctx.author} invoked command 'dormant' outside an in-use help channel")
