@@ -229,7 +229,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         if len(reason) > 512:
             log.info("Kick reason is longer than 512 characters. Reason will be truncated for Audit Log.")
 
-        action = user.kick(reason=textwrap.shorten(reason, width=509, placeholder="..."))
+        action = user.kick(reason=textwrap.shorten(reason, width=512, placeholder="..."))
         await self.apply_infraction(ctx, infraction, user, action)
 
     @respect_role_hierarchy()
@@ -253,7 +253,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         action = ctx.guild.ban(
             user,
-            reason=textwrap.shorten(reason, width=509, placeholder="..."),
+            reason=textwrap.shorten(reason, width=512, placeholder="..."),
             delete_message_days=0
         )
         await self.apply_infraction(ctx, infraction, user, action)
