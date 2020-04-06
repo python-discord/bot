@@ -273,7 +273,7 @@ class HelpChannels(Scheduler, commands.Cog):
         names = set()
         for cat in (self.available_category, self.in_use_category, self.dormant_category):
             for channel in self.get_category_channels(cat):
-                names.add(channel.name)
+                names.add(self.get_clean_channel_name(channel))
 
         if len(names) > MAX_CHANNELS_PER_CATEGORY:
             log.warning(
