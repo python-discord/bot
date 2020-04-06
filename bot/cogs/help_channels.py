@@ -109,7 +109,7 @@ class HelpChannels(Scheduler, commands.Cog):
         super().__init__()
 
         self.bot = bot
-        self.help_channel_users: t.Dict[discord.TextChannel, discord.User] = {}
+        self.help_channel_claimants: t.Dict[discord.TextChannel, discord.User] = {}
 
         # Categories
         self.available_category: discord.CategoryChannel = None
@@ -191,7 +191,7 @@ class HelpChannels(Scheduler, commands.Cog):
 
     async def dormant_check(self, ctx: commands.Context) -> bool:
         """Return True if the user started the help channel session or passes the role check."""
-        if self.help_channel_users.get(ctx.channel) == ctx.author:
+        if self.help_channel_claimants.get(ctx.channel) == ctx.author:
             log.trace(f"{ctx.author} started the help session, passing the check for dormant.")
             return True
 
@@ -215,7 +215,7 @@ class HelpChannels(Scheduler, commands.Cog):
                 with suppress(discord.errors.NotFound):
                     await ctx.message.delete()
                     log.trace("Deleting dormant invokation message.")
-                await self.reset_send_permissions_for_help_user(ctx.channel)
+                await self.reset_claimant_send_permission(ctx.channel)
         else:
             log.debug(f"{ctx.author} invoked command 'dormant' outside an in-use help channel")
 
@@ -563,7 +563,7 @@ class HelpChannels(Scheduler, commands.Cog):
             await self.move_to_in_use(channel)
             await self.revoke_send_permissions(message.author)
             # Add user with channel for dormant check.
-            self.help_channel_users[channel] = message.author
+            self.help_channel_claimants[channel] = message.author
 
             log.trace(f"Releasing on_message lock for {message.id}.")
 
@@ -620,11 +620,11 @@ class HelpChannels(Scheduler, commands.Cog):
         log.trace(f"Ensuring channels in `Help: Available` are synchronized after permissions reset.")
         await self.ensure_permissions_synchronization(self.available_category)
 
-    async def reset_send_permissions_for_help_user(self, channel: discord.TextChannel) -> None:
+    async def reset_claimant_send_permission(self, channel: discord.TextChannel) -> None:
         """Reset send permissions in the Available category for member that started the help session in `channel`."""
         log.trace(f"Attempting to find user for help session in #{channel.name} ({channel.id}).")
         try:
-            member = self.help_channel_users[channel]
+            member = self.help_channel_claimants[channel]
         except KeyError:
             log.trace(f"Channel #{channel.name} ({channel.id}) not in help session cache, permissions unchanged.")
             return
