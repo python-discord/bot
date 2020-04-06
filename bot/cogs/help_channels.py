@@ -190,12 +190,12 @@ class HelpChannels(Scheduler, commands.Cog):
         return deque(available_names)
 
     async def dormant_check(self, ctx: commands.Context) -> bool:
-        """Return True if the user started the help channel session or passes the role check."""
+        """Return True if the user is the help channel claimant or passes the role check."""
         if self.help_channel_claimants.get(ctx.channel) == ctx.author:
-            log.trace(f"{ctx.author} started the help session, passing the check for dormant.")
+            log.trace(f"{ctx.author} is the help channel claimant, passing the check for dormant.")
             return True
 
-        log.trace(f"{ctx.author} did not start the help session, checking roles.")
+        log.trace(f"{ctx.author} is not the help channel claimant, checking roles.")
         return with_role_check(ctx, *constants.HelpChannels.cmd_whitelist)
 
     @commands.command(name="dormant", aliases=["close"], enabled=False)
@@ -621,12 +621,12 @@ class HelpChannels(Scheduler, commands.Cog):
         await self.ensure_permissions_synchronization(self.available_category)
 
     async def reset_claimant_send_permission(self, channel: discord.TextChannel) -> None:
-        """Reset send permissions in the Available category for member that started the help session in `channel`."""
-        log.trace(f"Attempting to find user for help session in #{channel.name} ({channel.id}).")
+        """Reset send permissions in the Available category for the help `channel` claimant."""
+        log.trace(f"Attempting to find claimant for #{channel.name} ({channel.id}).")
         try:
             member = self.help_channel_claimants[channel]
         except KeyError:
-            log.trace(f"Channel #{channel.name} ({channel.id}) not in help session cache, permissions unchanged.")
+            log.trace(f"Channel #{channel.name} ({channel.id}) not in claimant cache, permissions unchanged.")
             return
         log.trace(f"Resetting send permissions for {member} ({member.id}).")
         await self.available_category.set_permissions(member, overwrite=None)
