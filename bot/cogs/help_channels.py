@@ -221,25 +221,6 @@ class HelpChannels(Scheduler, commands.Cog):
         return channel
 
     @staticmethod
-    def get_position(channel: discord.TextChannel, destination: discord.CategoryChannel) -> int:
-        """Return the position to sort the `channel` at the bottom if moved to `destination`."""
-        log.trace(f"Getting bottom position for #{channel} ({channel.id}).")
-
-        if not destination.channels:
-            # If the destination category is empty, use the first position
-            position = 1
-        else:
-            # Else use the maximum position int + 1
-            position = max(c.position for c in destination.channels) + 1
-
-        log.trace(
-            f"Position of #{channel} ({channel.id}) in {destination.name} will be {position} "
-            f"(was {channel.position})."
-        )
-
-        return position
-
-    @staticmethod
     def get_clean_channel_name(channel: discord.TextChannel) -> str:
         """Return a clean channel name without status emojis prefix."""
         try:
@@ -454,7 +435,7 @@ class HelpChannels(Scheduler, commands.Cog):
             category=self.dormant_category,
             sync_permissions=True,
             topic=DORMANT_TOPIC,
-            position=self.get_position(channel, self.dormant_category),
+            position=10000,
         )
 
         log.trace(f"Position of #{channel} ({channel.id}) is actually {channel.position}.")
@@ -475,7 +456,7 @@ class HelpChannels(Scheduler, commands.Cog):
             category=self.in_use_category,
             sync_permissions=True,
             topic=IN_USE_TOPIC,
-            position=self.get_position(channel, self.in_use_category),
+            position=10000,
         )
 
         timeout = constants.HelpChannels.idle_minutes * 60
