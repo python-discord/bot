@@ -60,6 +60,10 @@ question to maximize your chance of getting a good answer. If you're not sure ho
 through our guide for [asking a good question]({ASKING_GUIDE_URL}).
 """
 
+AVAILABLE_EMOJI = "✅"
+IN_USE_EMOJI = "⌛"
+NAME_SEPARATOR = "｜"
+
 
 class TaskData(t.NamedTuple):
     """Data for a scheduled task."""
@@ -234,6 +238,20 @@ class HelpChannels(Scheduler, commands.Cog):
         )
 
         return position
+
+    @staticmethod
+    def get_clean_channel_name(channel: discord.TextChannel) -> str:
+        """Return a clean channel name without status emojis prefix."""
+        try:
+            # Try to remove the status prefix using the index of "help-"
+            name = channel.name[channel.name.index("help-"):]
+            log.trace(f"The clean name for `{channel}` is `{name}`")
+        except ValueError:
+            # If, for some reason, the channel name does not contain "help-" fall back gracefully
+            log.info(f"Can't get clean name as `{channel}` does not follow the `help-` naming convention.")
+            name = channel.name
+
+        return name
 
     @staticmethod
     def get_category_channels(category: discord.CategoryChannel) -> t.Iterable[discord.TextChannel]:
@@ -419,7 +437,9 @@ class HelpChannels(Scheduler, commands.Cog):
         await self.send_available_message(channel)
 
         log.trace(f"Moving #{channel} ({channel.id}) to the Available category.")
+
         await channel.edit(
+            name=f"{AVAILABLE_EMOJI}{NAME_SEPARATOR}{self.get_clean_channel_name(channel)}",
             category=self.available_category,
             sync_permissions=True,
             topic=AVAILABLE_TOPIC,
@@ -430,6 +450,7 @@ class HelpChannels(Scheduler, commands.Cog):
         log.info(f"Moving #{channel} ({channel.id}) to the Dormant category.")
 
         await channel.edit(
+            name=self.get_clean_channel_name(channel),
             category=self.dormant_category,
             sync_permissions=True,
             topic=DORMANT_TOPIC,
@@ -450,6 +471,7 @@ class HelpChannels(Scheduler, commands.Cog):
         log.info(f"Moving #{channel} ({channel.id}) to the In Use category.")
 
         await channel.edit(
+            name=f"{IN_USE_EMOJI}{NAME_SEPARATOR}{self.get_clean_channel_name(channel)}",
             category=self.in_use_category,
             sync_permissions=True,
             topic=IN_USE_TOPIC,
