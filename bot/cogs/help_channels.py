@@ -631,7 +631,7 @@ class HelpChannels(Scheduler, commands.Cog):
 
         log.trace(f"Resetting send permissions for {member} ({member.id}).")
         await self.available_category.set_permissions(member, overwrite=None)
-        # Cancel task, ignore no task existing when the claim time passed but idle time has not.
+        # Ignore missing task when claim cooldown has passed but the channel still isn't dormant.
         self.cancel_task(member.id, ignore_missing=True)
 
     async def revoke_send_permissions(self, member: discord.Member) -> None:
