@@ -253,7 +253,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         action = ctx.guild.ban(
             user,
-            reason=textwrap.shorten(reason, width=512, placeholder="..."),
+            reason=textwrap.shorten(reason, width=512, placeholder=" ..."),
             delete_message_days=0
         )
         await self.apply_infraction(ctx, infraction, user, action)
