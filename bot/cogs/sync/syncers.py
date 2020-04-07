@@ -95,10 +95,9 @@ class Syncer(abc.ABC):
         # For automatic syncs, check for the core dev role instead of an exact author
         has_role = any(constants.Roles.core_developers == role.id for role in user.roles)
         return (
-            reaction.message.id == message.id
-            and not user.bot
-            and (has_role if author.bot else user == author)
-            and str(reaction.emoji) in self._REACTION_EMOJIS
+            reaction.message.id == message.id and not user.bot and (
+                has_role if author.bot else user == author
+            ) and str(reaction.emoji) in self._REACTION_EMOJIS
         )
 
     async def _wait_for_confirmation(self, author: Member, message: Message) -> bool:

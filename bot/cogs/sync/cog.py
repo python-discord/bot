@@ -66,8 +66,8 @@ class Sync(Cog):
     async def on_guild_role_update(self, before: Role, after: Role) -> None:
         """Syncs role with the database if any of the stored attributes were updated."""
         was_updated = (
-            before.name != after.name or before.colour != after.colour or before.permissions != after.permissions or
-            before.position != after.position
+            before.name != after.name or before.colour != after.colour or before.permissions !=
+            after.permissions or before.position != after.position
         )
 
         if was_updated:
