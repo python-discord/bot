@@ -60,6 +60,10 @@ question to maximize your chance of getting a good answer. If you're not sure ho
 through our guide for [asking a good question]({ASKING_GUIDE_URL}).
 """
 
+AVAILABLE_EMOJI = "✅"
+IN_USE_EMOJI = "⌛"
+NAME_SEPARATOR = "｜"
+
 
 class TaskData(t.NamedTuple):
     """Data for a scheduled task."""
@@ -217,23 +221,19 @@ class HelpChannels(Scheduler, commands.Cog):
         return channel
 
     @staticmethod
-    def get_position(channel: discord.TextChannel, destination: discord.CategoryChannel) -> int:
-        """Return the position to sort the `channel` at the bottom if moved to `destination`."""
-        log.trace(f"Getting bottom position for #{channel} ({channel.id}).")
+    def get_clean_channel_name(channel: discord.TextChannel) -> str:
+        """Return a clean channel name without status emojis prefix."""
+        prefix = constants.HelpChannels.name_prefix
+        try:
+            # Try to remove the status prefix using the index of the channel prefix
+            name = channel.name[channel.name.index(prefix):]
+            log.trace(f"The clean name for `{channel}` is `{name}`")
+        except ValueError:
+            # If, for some reason, the channel name does not contain "help-" fall back gracefully
+            log.info(f"Can't get clean name as `{channel}` does not follow the `{prefix}` naming convention.")
+            name = channel.name
 
-        if not destination.channels:
-            # If the destination category is empty, use the first position
-            position = 1
-        else:
-            # Else use the maximum position int + 1
-            position = max(c.position for c in destination.channels) + 1
-
-        log.trace(
-            f"Position of #{channel} ({channel.id}) in {destination.name} will be {position} "
-            f"(was {channel.position})."
-        )
-
-        return position
+        return name
 
     @staticmethod
     def get_category_channels(category: discord.CategoryChannel) -> t.Iterable[discord.TextChannel]:
@@ -273,7 +273,7 @@ class HelpChannels(Scheduler, commands.Cog):
         names = set()
         for cat in (self.available_category, self.in_use_category, self.dormant_category):
             for channel in self.get_category_channels(cat):
-                names.add(channel.name)
+                names.add(self.get_clean_channel_name(channel))
 
         if len(names) > MAX_CHANNELS_PER_CATEGORY:
             log.warning(
@@ -419,7 +419,9 @@ class HelpChannels(Scheduler, commands.Cog):
         await self.send_available_message(channel)
 
         log.trace(f"Moving #{channel} ({channel.id}) to the Available category.")
+
         await channel.edit(
+            name=f"{AVAILABLE_EMOJI}{NAME_SEPARATOR}{self.get_clean_channel_name(channel)}",
             category=self.available_category,
             sync_permissions=True,
             topic=AVAILABLE_TOPIC,
@@ -430,10 +432,11 @@ class HelpChannels(Scheduler, commands.Cog):
         log.info(f"Moving #{channel} ({channel.id}) to the Dormant category.")
 
         await channel.edit(
+            name=self.get_clean_channel_name(channel),
             category=self.dormant_category,
             sync_permissions=True,
             topic=DORMANT_TOPIC,
-            position=self.get_position(channel, self.dormant_category),
+            position=10000,
         )
 
         log.trace(f"Position of #{channel} ({channel.id}) is actually {channel.position}.")
@@ -450,10 +453,11 @@ class HelpChannels(Scheduler, commands.Cog):
         log.info(f"Moving #{channel} ({channel.id}) to the In Use category.")
 
         await channel.edit(
+            name=f"{IN_USE_EMOJI}{NAME_SEPARATOR}{self.get_clean_channel_name(channel)}",
             category=self.in_use_category,
             sync_permissions=True,
             topic=IN_USE_TOPIC,
-            position=self.get_position(channel, self.in_use_category),
+            position=10000,
         )
 
         timeout = constants.HelpChannels.idle_minutes * 60
