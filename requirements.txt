@@ -1,0 +1,17 @@
+discord-py
+aiodns
+aiohttp
+sphinx
+markdownify
+lxml
+pyyaml
+fuzzywuzzy
+aio-pika
+python-dateutil
+deepdiff
+requests
+more_itertools
+sentry-sdk
+coloredlogs
+colorama
+jsonpickle
