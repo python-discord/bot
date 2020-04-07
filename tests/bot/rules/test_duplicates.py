@@ -55,8 +55,8 @@ class DuplicatesRuleTests(RuleTest):
             msg
             for msg in case.recent_messages
             if (
-                msg.author == last_message.author
-                and msg.content == last_message.content
+                msg.author == last_message.author and
+                msg.content == last_message.content
             )
         )
 

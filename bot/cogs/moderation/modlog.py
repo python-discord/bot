@@ -642,10 +642,10 @@ class ModLog(Cog, name="ModLog"):
     async def on_message_edit(self, msg_before: discord.Message, msg_after: discord.Message) -> None:
         """Log message edit event to message change log."""
         if (
-            not msg_before.guild
-            or msg_before.guild.id != GuildConstant.id
-            or msg_before.channel.id in GuildConstant.modlog_blacklist
-            or msg_before.author.bot
+            not msg_before.guild or
+                msg_before.guild.id != GuildConstant.id or
+                msg_before.channel.id in GuildConstant.modlog_blacklist or
+                msg_before.author.bot
         ):
             return
 
@@ -726,10 +726,10 @@ class ModLog(Cog, name="ModLog"):
             return
 
         if (
-            not message.guild
-            or message.guild.id != GuildConstant.id
-            or message.channel.id in GuildConstant.modlog_blacklist
-            or message.author.bot
+            not message.guild or
+                message.guild.id != GuildConstant.id or
+                message.channel.id in GuildConstant.modlog_blacklist or
+                message.author.bot
         ):
             return
 
@@ -779,8 +779,8 @@ class ModLog(Cog, name="ModLog"):
     ) -> None:
         """Log member voice state changes to the voice log channel."""
         if (
-            member.guild.id != GuildConstant.id
-            or (before.channel and before.channel.id in GuildConstant.modlog_blacklist)
+            member.guild.id != GuildConstant.id or
+                (before.channel and before.channel.id in GuildConstant.modlog_blacklist)
         ):
             return
 
