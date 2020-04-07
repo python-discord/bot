@@ -24,6 +24,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+        pip intall pipenv
     - name: Lint with flake8
       run: |
         pip install flake8
@@ -31,11 +32,10 @@ jobs:
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         # Talked with Professor Santore about having 9 functions being to complex, told me to ignore C901 errors
-        flake8 . --count  --max-complexity=10 --max-line-length=127 --statistics --ignore=C901
+        flake8 . --count  --max-complexity=10 --max-line-length=127 --statistics --ignore=C901 --exit-zero
     - name: Test with pytest
       run: |
-        pip install unittest
-        pytest
+        pipenv run test
       env:
           BOT_API_KEY: ${{ secrets.BOT_API_KEY }}
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
