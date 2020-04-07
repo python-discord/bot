@@ -114,9 +114,7 @@ class CodeEval(Cog):
                 # Text too long, shorten
                 li = pretty.split("\n")
 
-                pretty = ("\n".join(li[:3])  # First 3 lines
-                          + "\n ...\n"  # Ellipsis to indicate removed lines
-                          + "\n".join(li[-3:]))  # last 3 lines
+                pretty = ("\n".join(li[:3]) + "\n ...\n" + "\n".join(li[-3:]))
 
             # Add the output
             res += pretty
