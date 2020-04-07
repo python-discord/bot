@@ -142,9 +142,9 @@ class Filtering(Cog):
                     role_whitelisted = True
 
         filter_message = (
-            msg.channel.id not in Filter.channel_whitelist  # Channel not in whitelist
-            and not role_whitelisted                        # Role not in whitelist
-            and not msg.author.bot                          # Author not a bot
+            msg.channel.id not in Filter.channel_whitelist and not  # Channel not in whitelist
+            role_whitelisted and not                                # Role not in whitelist
+            msg.author.bot                                          # Author not a bot
         )
 
         # If none of the above, we can start filtering.
