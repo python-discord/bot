@@ -11,8 +11,7 @@ async def apply(
         msg
         for msg in recent_messages
         if (
-            msg.author == last_message.author
-            and msg.content == last_message.content
+            msg.author == last_message.author and msg.content == last_message.content
         )
     )
 

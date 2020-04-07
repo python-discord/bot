@@ -11,8 +11,7 @@ async def apply(
         msg
         for msg in recent_messages
         if (
-            msg.author == last_message.author
-            and len(msg.attachments) > 0
+            msg.author == last_message.author and len(msg.attachments) > 0
         )
     )
     total_recent_attachments = sum(len(msg.attachments) for msg in relevant_messages)

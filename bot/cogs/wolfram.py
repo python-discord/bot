@@ -24,7 +24,7 @@ WOLF_IMAGE = "https://www.symbols.com/gi.php?type=1&id=2886&i=1"
 MAX_PODS = 20
 
 # Allows for 10 wolfram calls pr user pr day
-usercd = commands.CooldownMapping.from_cooldown(Wolfram.user_limit_day, 60*60*24, BucketType.user)
+usercd = commands.CooldownMapping.from_cooldown(Wolfram.user_limit_day, 60 * 60 * 24, BucketType.user)
 
 # Allows for max api requests / days in month per day for the entire guild (Temporary)
 guildcd = commands.CooldownMapping.from_cooldown(Wolfram.guild_limit_day, 60*60*24, BucketType.guild)
