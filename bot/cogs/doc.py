@@ -187,8 +187,8 @@ class Doc(commands.Cog):
                     group_name = group.split(":")[1]
                     symbol_base_url = self.inventories[symbol].split("/", 3)[2]
                     if (
-                        group_name in NO_OVERRIDE_GROUPS or
-                        any(package in symbol_base_url for package in NO_OVERRIDE_PACKAGES)
+                        group_name in NO_OVERRIDE_GROUPS or any(package in symbol_base_url
+                                                                for package in NO_OVERRIDE_PACKAGES)
                     ):
 
                         symbol = f"{group_name}.{symbol}"
