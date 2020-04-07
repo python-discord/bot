@@ -15,11 +15,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python 3.8
       env:
         BOT_API_KEY: ${{ secrets.BOT_API_KEY }}
         BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.8
       uses: actions/setup-python@v1
       with:
         python-version: 3.8
