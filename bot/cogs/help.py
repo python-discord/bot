@@ -476,7 +476,7 @@ class HelpSession:
     @property
     def is_last_page(self) -> bool:
         """Check if the session is currently showing the last page."""
-        return self._current_page == (len(self._pages)-1)
+        return self._current_page == (len(self._pages) - 1)
 
     async def do_first(self) -> None:
         """Event that is called when the user requests the first page."""
@@ -486,17 +486,17 @@ class HelpSession:
     async def do_back(self) -> None:
         """Event that is called when the user requests the previous page."""
         if not self.is_first_page:
-            await self.update_page(self._current_page-1)
+            await self.update_page(self._current_page - 1)
 
     async def do_next(self) -> None:
         """Event that is called when the user requests the next page."""
         if not self.is_last_page:
-            await self.update_page(self._current_page+1)
+            await self.update_page(self._current_page + 1)
 
     async def do_end(self) -> None:
         """Event that is called when the user requests the last page."""
         if not self.is_last_page:
-            await self.update_page(len(self._pages)-1)
+            await self.update_page(len(self._pages) - 1)
 
     async def do_stop(self) -> None:
         """Event that is called when the user requests to stop the help session."""
