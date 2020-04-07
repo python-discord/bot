@@ -32,8 +32,8 @@ jobs:
         # stop the build if there are Python syntax errors or undefined names
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        # Talked with Professor Santore about having 9 functions being to complex, told me to ignore C901 errors
-        flake8 . --count  --max-complexity=10 --max-line-length=127 --statistics --ignore=C901
+        # Talked with Professor Santore about having 9 functions being to complex, told me to ignore C901 and W504 errors
+        flake8 . --count  --max-complexity=10 --max-line-length=127 --statistics --ignore=C901,W504
     - name: Test with Unit Tests
       run: |
         pipenv run test
