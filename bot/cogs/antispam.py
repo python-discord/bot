@@ -144,11 +144,9 @@ class AntiSpam(Cog):
     async def on_message(self, message: Message) -> None:
         """Applies the antispam rules to each received message."""
         if (
-            not message.guild
-            or message.guild.id != GuildConfig.id
-            or message.author.bot
-            or (message.channel.id in Filter.channel_whitelist and not DEBUG_MODE)
-            or (any(role.id in STAFF_ROLES for role in message.author.roles) and not DEBUG_MODE)
+            not message.guild or message.guild.id != GuildConfig.id or message.author.bot or (
+                message.channel.id in Filter.channel_whitelist and not DEBUG_MODE
+            ) or (any(role.id in STAFF_ROLES for role in message.author.roles) and not DEBUG_MODE)
         ):
             return
 

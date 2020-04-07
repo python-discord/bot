@@ -217,8 +217,9 @@ class WatchChannel(metaclass=CogABCMeta):
         limit = BigBrotherConfig.header_message_limit
 
         if (
-            msg.author.id != self.message_history.last_author or msg.channel.id !=
-                self.message_history.last_channel or self.message_history.message_count >= limit
+            msg.author.id != self.message_history.last_author or (
+                msg.channel.id != self.message_history.last_channel
+            ) or self.message_history.message_count >= limit
         ):
             self.message_history = MessageHistory(last_author=msg.author.id, last_channel=msg.channel.id)
 

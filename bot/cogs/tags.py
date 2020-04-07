@@ -178,7 +178,7 @@ class Tags(Cog):
             cooldown_conditions = (
                 tag_name and tag_name
                 in self.tag_cooldowns and (
-                        now - self.tag_cooldowns[tag_name]["time"]
+                    now - self.tag_cooldowns[tag_name]["time"]
                 ) < constants.Cooldowns.tags and self.tag_cooldowns[tag_name]["channel"] == ctx.channel.id
             )
 
