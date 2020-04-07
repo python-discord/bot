@@ -26,7 +26,7 @@ Since consistency is an important consideration for collaborative projects, we h
 
 ### File and directory structure
 
-To organize our test suite, we have chosen to mirror the directory structure of [`bot`](/bot/) in the [`tests`](/tests/) subdirectory. This makes it easy to find the relevant tests by providing a natural grouping of files. More general testing files, such as [`helpers.py`](/tests/helpers.py) are located directly in the `tests` subdirectory.
+To  organize our test suite, we have chosen to mirror the directory structure of [`bot`](/bot/) in the [`tests`](/tests/) subdirectory. This makes it easy to find the relevant tests by providing a natural grouping of files. More general testing files, such as [`helpers.py`](/tests/helpers.py) are located directly in the `tests` subdirectory.
 
 All files containing tests should have a filename starting with `test_` to make sure `unittest` will discover them. This prefix is typically followed by the name of the file the tests are written for. If needed, a test file can contain multiple test classes, both to provide structure and to be able to provide different fixtures/set-up methods for different groups of tests.
 
