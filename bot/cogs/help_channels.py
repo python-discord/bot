@@ -37,9 +37,9 @@ channels in the Help: Available category.
 
 AVAILABLE_MSG = f"""
 This help channel is now **available**, which means that you can claim it by simply typing your \
-question into it. Once claimed, the channel will move into the **Help: In Use** category, and will \
-be yours until it has been inactive for {constants.HelpChannels.idle_minutes} minutes. When that \
-happens, it will be set to **dormant** and moved into the **Help: Dormant** category.
+question into it. Once claimed, the channel will move into the **Python Help: Occupied** category, \
+and will be yours until it has been inactive for {constants.HelpChannels.idle_minutes} minutes. When \
+that happens, it will be set to **dormant** and moved into the **Help: Dormant** category.
 
 You may claim a new channel once every {constants.HelpChannels.claim_minutes} minutes. If you \
 currently cannot send a message in this channel, it means you are on cooldown and need to wait.
@@ -427,6 +427,12 @@ class HelpChannels(Scheduler, commands.Cog):
             topic=AVAILABLE_TOPIC,
         )
 
+        log.trace(
+            f"Ensuring that all channels in `{self.available_category}` have "
+            f"synchronized permissions after moving `{channel}` into it."
+        )
+        await self.ensure_permissions_synchronization(self.available_category)
+
     async def move_to_dormant(self, channel: discord.TextChannel) -> None:
         """Make the `channel` dormant."""
         log.info(f"Moving #{channel} ({channel.id}) to the Dormant category.")
@@ -544,6 +550,39 @@ class HelpChannels(Scheduler, commands.Cog):
         # be put in the queue.
         await self.move_to_available()
 
+    @staticmethod
+    async def ensure_permissions_synchronization(category: discord.CategoryChannel) -> None:
+        """
+        Ensure that all channels in the `category` have their permissions synchronized.
+
+        This method mitigates an issue we have yet to find the cause for: Every so often, a channel in the
+        `Help: Available` category gets in a state in which it will no longer synchronizes its permissions
+        with the category. To prevent that, we iterate over the channels in the category and edit the channels
+        that are observed to be in such a state. If no "out of sync" channels are observed, this method will
+        not make API calls and should be fairly inexpensive to run.
+        """
+        for channel in category.channels:
+            if not channel.permissions_synced:
+                log.info(f"The permissions of channel `{channel}` were out of sync with category `{category}`.")
+                await channel.edit(sync_permissions=True)
+
+    async def update_category_permissions(
+        self, category: discord.CategoryChannel, member: discord.Member, **permissions
+    ) -> None:
+        """
+        Update the permissions of the given `member` for the given `category` with `permissions` passed.
+
+        After updating the permissions for the member in the category, this helper function will call the
+        `ensure_permissions_synchronization` method to ensure that all channels are still synchronizing their
+        permissions with the category. It's currently unknown why some channels get "out of sync", but this
+        hopefully mitigates the issue.
+        """
+        log.trace(f"Updating permissions for `{member}` in `{category}` with {permissions}.")
+        await category.set_permissions(member, **permissions)
+
+        log.trace(f"Ensuring that all channels in `{category}` are synchronized after permissions update.")
+        await self.ensure_permissions_synchronization(category)
+
     async def reset_send_permissions(self) -> None:
         """Reset send permissions for members with it set to False in the Available category."""
         log.trace("Resetting send permissions in the Available category.")
@@ -551,7 +590,13 @@ class HelpChannels(Scheduler, commands.Cog):
         for member, overwrite in self.available_category.overwrites.items():
             if isinstance(member, discord.Member) and overwrite.send_messages is False:
                 log.trace(f"Resetting send permissions for {member} ({member.id}).")
-                await self.available_category.set_permissions(member, send_messages=None)
+
+                # We don't use the permissions helper function here as we may have to reset multiple overwrites
+                # and we don't want to enforce the permissions synchronization in each iteration.
+                await self.available_category.set_permissions(member, overwrite=None)
+
+        log.trace(f"Ensuring channels in `Help: Available` are synchronized after permissions reset.")
+        await self.ensure_permissions_synchronization(self.available_category)
 
     async def revoke_send_permissions(self, member: discord.Member) -> None:
         """
@@ -564,14 +609,14 @@ class HelpChannels(Scheduler, commands.Cog):
             f"Revoking {member}'s ({member.id}) send message permissions in the Available category."
         )
 
-        await self.available_category.set_permissions(member, send_messages=False)
+        await self.update_category_permissions(self.available_category, member, send_messages=False)
 
         # Cancel the existing task, if any.
         # Would mean the user somehow bypassed the lack of permissions (e.g. user is guild owner).
         self.cancel_task(member.id, ignore_missing=True)
 
         timeout = constants.HelpChannels.claim_minutes * 60
-        callback = self.available_category.set_permissions(member, overwrite=None)
+        callback = self.update_category_permissions(self.available_category, member, overwrite=None)
 
         log.trace(f"Scheduling {member}'s ({member.id}) send message permissions to be reinstated.")
         self.schedule_task(member.id, TaskData(timeout, callback))
