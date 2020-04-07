@@ -123,9 +123,7 @@ class LinePaginator(Paginator):
             """Make sure that this reaction is what we want to operate on."""
             no_restrictions = (
                 # Pagination is not restricted
-                not restrict_to_user
-                # The reaction was by a whitelisted user
-                or user_.id == restrict_to_user.id
+                not restrict_to_user or user_.id == restrict_to_user.id
             )
 
             return (
