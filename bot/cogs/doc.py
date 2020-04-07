@@ -187,8 +187,8 @@ class Doc(commands.Cog):
                     group_name = group.split(":")[1]
                     symbol_base_url = self.inventories[symbol].split("/", 3)[2]
                     if (
-                        group_name in NO_OVERRIDE_GROUPS
-                        or any(package in symbol_base_url for package in NO_OVERRIDE_PACKAGES)
+                        group_name in NO_OVERRIDE_GROUPS or
+                        any(package in symbol_base_url for package in NO_OVERRIDE_PACKAGES)
                     ):
 
                         symbol = f"{group_name}.{symbol}"
@@ -472,7 +472,7 @@ class Doc(commands.Cog):
     async def _fetch_inventory(self, inventory_url: str) -> Optional[dict]:
         """Get and return inventory from `inventory_url`. If fetching fails, return None."""
         fetch_func = functools.partial(intersphinx.fetch_inventory, SPHINX_MOCK_APP, '', inventory_url)
-        for retry in range(1, FAILED_REQUEST_RETRY_AMOUNT+1):
+        for retry in range(1, FAILED_REQUEST_RETRY_AMOUNT + 1):
             try:
                 package = await self.bot.loop.run_in_executor(None, fetch_func)
             except ConnectTimeout:

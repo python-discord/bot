@@ -27,7 +27,7 @@ MAX_PODS = 20
 usercd = commands.CooldownMapping.from_cooldown(Wolfram.user_limit_day, 60 * 60 * 24, BucketType.user)
 
 # Allows for max api requests / days in month per day for the entire guild (Temporary)
-guildcd = commands.CooldownMapping.from_cooldown(Wolfram.guild_limit_day, 60*60*24, BucketType.guild)
+guildcd = commands.CooldownMapping.from_cooldown(Wolfram.guild_limit_day, 60 * 60 * 24, BucketType.guild)
 
 
 async def send_embed(

@@ -234,12 +234,12 @@ class BotCog(Cog, name="Bot"):
         """
         parse_codeblock = (
             (
-                msg.channel.id in self.channel_cooldowns
-                or msg.channel.id in self.channel_whitelist
-            )
-            and not msg.author.bot
-            and len(msg.content.splitlines()) > 3
-            and not TokenRemover.is_token_in_message(msg)
+                msg.channel.id in self.channel_cooldowns or
+                msg.channel.id in self.channel_whitelist
+            ) and not
+            msg.author.bot and
+            len(msg.content.splitlines()) > 3 and not
+            TokenRemover.is_token_in_message(msg)
         )
 
         if parse_codeblock:  # no token in the msg
@@ -355,11 +355,11 @@ class BotCog(Cog, name="Bot"):
         """Check to see if an edited message (previously called out) still contains poorly formatted code."""
         if (
             # Checks to see if the message was called out by the bot
-            payload.message_id not in self.codeblock_message_ids
+            payload.message_id not in self.codeblock_message_ids or
             # Makes sure that there is content in the message
-            or payload.data.get("content") is None
+            payload.data.get("content") is None or
             # Makes sure there's a channel id in the message payload
-            or payload.data.get("channel_id") is None
+            payload.data.get("channel_id") is None
         ):
             return
 
