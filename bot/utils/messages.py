@@ -42,9 +42,9 @@ async def wait_for_deletion(
     def check(reaction: Reaction, user: Member) -> bool:
         """Check that the deletion emoji is reacted by the appropriate user."""
         return (
-            reaction.message.id == message.id
-            and str(reaction.emoji) in deletion_emojis
-            and user.id in user_ids
+            reaction.message.id == message.id and
+            str(reaction.emoji) in deletion_emojis and
+            user.id in user_ids
         )
 
     with contextlib.suppress(asyncio.TimeoutError):
