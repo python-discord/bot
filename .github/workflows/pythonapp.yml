@@ -36,5 +36,5 @@ jobs:
         pip install pytest
         pytest
       env:
-           BOT_API_KEY: ${{ secrets.BOT_API_KEY }}
-            BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          BOT_API_KEY: ${{ secrets.BOT_API_KEY }}
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
