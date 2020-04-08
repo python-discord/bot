@@ -85,7 +85,7 @@ class InfractionScheduler(Scheduler):
         infr_type = infraction["type"]
         icon = utils.INFRACTION_ICONS[infr_type][0]
         # Truncate reason when it's too long to avoid raising error on sending ModLog entry
-        reason = textwrap.shorten(infraction["reason"], width=1500, placeholder="...")
+        reason = infraction["reason"]
         expiry = time.format_infraction_with_duration(infraction["expires_at"])
         id_ = infraction['id']
 
@@ -182,8 +182,8 @@ class InfractionScheduler(Scheduler):
             text=textwrap.dedent(f"""
                 Member: {user.mention} (`{user.id}`)
                 Actor: {ctx.message.author}{dm_log_text}
-                Reason: {reason}
                 {expiry_log_text}
+                Reason: {reason}
             """),
             content=log_content,
             footer=f"ID {infraction['id']}"
