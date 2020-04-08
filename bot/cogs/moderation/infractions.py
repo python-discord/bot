@@ -226,9 +226,6 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         self.mod_log.ignore(Event.member_remove, user.id)
 
-        if len(reason) > 512:
-            log.info("Kick reason is longer than 512 characters. Reason will be truncated for Audit Log.")
-
         action = user.kick(reason=textwrap.shorten(reason, width=512, placeholder="..."))
         await self.apply_infraction(ctx, infraction, user, action)
 
@@ -247,9 +244,6 @@ class Infractions(InfractionScheduler, commands.Cog):
             return
 
         self.mod_log.ignore(Event.member_remove, user.id)
-
-        if len(reason) > 512:
-            log.info("Ban reason is longer than 512 characters. Reason will be truncated for Audit Log.")
 
         action = ctx.guild.ban(
             user,
