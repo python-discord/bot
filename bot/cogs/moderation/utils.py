@@ -135,7 +135,7 @@ async def notify_infraction(
         description=textwrap.dedent(f"""
             **Type:** {infr_type.capitalize()}
             **Expires:** {expires_at or "N/A"}
-            **Reason:** {reason or "No reason provided."}
+            **Reason:** {textwrap.shorten(reason, width=1500, placeholder="...") or "No reason provided."}
             """),
         colour=Colours.soft_red
     )
