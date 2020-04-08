@@ -85,7 +85,7 @@ class InfractionScheduler(Scheduler):
         infr_type = infraction["type"]
         icon = utils.INFRACTION_ICONS[infr_type][0]
         # Truncate reason when it's too long to avoid raising error on sending ModLog entry
-        reason = textwrap.shorten(infraction["reason"], width=1900, placeholder="...")
+        reason = textwrap.shorten(infraction["reason"], width=1500, placeholder="...")
         expiry = time.format_infraction_with_duration(infraction["expires_at"])
         id_ = infraction['id']
 
@@ -128,7 +128,7 @@ class InfractionScheduler(Scheduler):
                 f"Infraction #{id_} actor is bot; including the reason in the confirmation message."
             )
 
-            end_msg = f" (reason: {infraction['reason']})"
+            end_msg = f" (reason: {textwrap.shorten(infraction['reason'], width=1500, placeholder='...')})"
         elif ctx.channel.id not in STAFF_CHANNELS:
             log.trace(
                 f"Infraction #{id_} context is not in a staff channel; omitting infraction count."
