@@ -2,6 +2,7 @@ import asyncio
 import difflib
 import itertools
 import logging
+import textwrap
 import typing as t
 from datetime import datetime
 from itertools import zip_longest
@@ -98,7 +99,7 @@ class ModLog(Cog, name="ModLog"):
         footer: t.Optional[str] = None,
     ) -> Context:
         """Generate log embed and send to logging channel."""
-        embed = discord.Embed(description=text)
+        embed = discord.Embed(description=textwrap.shorten(text, width=2048, placeholder="..."))
 
         if title and icon_url:
             embed.set_author(name=title, icon_url=icon_url)
