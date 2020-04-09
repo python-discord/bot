@@ -283,6 +283,9 @@ class InfractionScheduler(Scheduler):
             f"{log_text.get('Failure', '')}"
         )
 
+        # Move reason to end of entry to avoid cutting out some keys
+        log_text["Reason"] = log_text.pop("Reason")
+
         # Send a log message to the mod log.
         await self.mod_log.send_log_message(
             icon_url=utils.INFRACTION_ICONS[infr_type][1],
@@ -326,7 +329,7 @@ class InfractionScheduler(Scheduler):
         log_text = {
             "Member": f"<@{user_id}>",
             "Actor": str(self.bot.get_user(actor) or actor),
-            "Reason": textwrap.shorten(infraction["reason"], width=1500, placeholder="..."),
+            "Reason": infraction["reason"],
             "Created": created,
         }
 
@@ -396,6 +399,9 @@ class InfractionScheduler(Scheduler):
             user = self.bot.get_user(user_id)
             avatar = user.avatar_url_as(static_format="png") if user else None
 
+            # Move reason to end so when reason is too long, this is not gonna cut out required items.
+            log_text["Reason"] = log_text.pop("Reason")
+
             log.trace(f"Sending deactivation mod log for infraction #{id_}.")
             await self.mod_log.send_log_message(
                 icon_url=utils.INFRACTION_ICONS[type_][1],
@@ -405,7 +411,6 @@ class InfractionScheduler(Scheduler):
                 text="\n".join(f"{k}: {v}" for k, v in log_text.items()),
                 footer=f"ID: {id_}",
                 content=log_content,
-
             )
 
         return log_text
