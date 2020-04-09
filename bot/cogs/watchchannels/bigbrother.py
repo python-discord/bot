@@ -1,4 +1,5 @@
 import logging
+import textwrap
 from collections import ChainMap
 
 from discord.ext.commands import Cog, Context, group
@@ -97,8 +98,8 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
 
             if len(history) > 1:
                 total = f"({len(history) // 2} previous infractions in total)"
-                end_reason = history[0]["reason"]
-                start_reason = f"Watched: {history[1]['reason']}"
+                end_reason = textwrap.shorten(history[0]["reason"], width=500, placeholder="...")
+                start_reason = f"Watched: {textwrap.shorten(history[1]['reason'], width=500, placeholder='...')}"
                 msg += f"\n\nUser's previous watch reasons {total}:```{start_reason}\n\n{end_reason}```"
         else:
             msg = ":x: Failed to post the infraction: response was empty."
