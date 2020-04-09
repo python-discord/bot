@@ -280,8 +280,9 @@ class WatchChannel(metaclass=CogABCMeta):
         else:
             message_jump = f"in [#{msg.channel.name}]({msg.jump_url})"
 
+        footer = f"Added {time_delta} by {actor} | Reason: {reason}"
         embed = Embed(description=f"{msg.author.mention} {message_jump}")
-        embed.set_footer(text=f"Added {time_delta} by {actor} | Reason: {reason}")
+        embed.set_footer(text=textwrap.shorten(footer, width=128, placeholder="..."))
 
         await self.webhook_send(embed=embed, username=msg.author.display_name, avatar_url=msg.author.avatar_url)
 
