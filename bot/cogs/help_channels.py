@@ -217,8 +217,8 @@ class HelpChannels(Scheduler, commands.Cog):
                 with suppress(discord.errors.HTTPException, discord.errors.NotFound):
                     await self.reset_claimant_send_permission(ctx.channel)
 
-                self.cancel_task(ctx.channel.id)
                 await self.move_to_dormant(ctx.channel)
+                self.cancel_task(ctx.channel.id)
         else:
             log.debug(f"{ctx.author} invoked command 'dormant' outside an in-use help channel")
 
