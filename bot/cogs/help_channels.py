@@ -210,11 +210,12 @@ class HelpChannels(Scheduler, commands.Cog):
         log.trace("dormant command invoked; checking if the channel is in-use.")
         if ctx.channel.category == self.in_use_category:
             if await self.dormant_check(ctx):
+                with suppress(discord.errors.NotFound):
+                    log.trace("Deleting dormant invokation message.")
+                    await ctx.message.delete()
+
                 self.cancel_task(ctx.channel.id)
                 await self.move_to_dormant(ctx.channel)
-                with suppress(discord.errors.NotFound):
-                    await ctx.message.delete()
-                    log.trace("Deleting dormant invokation message.")
                 await self.reset_claimant_send_permission(ctx.channel)
         else:
             log.debug(f"{ctx.author} invoked command 'dormant' outside an in-use help channel")
