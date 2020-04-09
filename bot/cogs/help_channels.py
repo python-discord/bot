@@ -390,14 +390,13 @@ class HelpChannels(Scheduler, commands.Cog):
         log.info("Cog is ready!")
         self.ready.set()
 
-    @staticmethod
-    def is_dormant_message(message: t.Optional[discord.Message]) -> bool:
+    def is_dormant_message(self, message: t.Optional[discord.Message]) -> bool:
         """Return True if the contents of the `message` match `DORMANT_MSG`."""
         if not message or not message.embeds:
             return False
 
         embed = message.embeds[0]
-        return embed.description.strip() == DORMANT_MSG.strip()
+        return message.author == self.bot.user and embed.description.strip() == DORMANT_MSG.strip()
 
     async def move_idle_channel(self, channel: discord.TextChannel, has_task: bool = True) -> None:
         """
