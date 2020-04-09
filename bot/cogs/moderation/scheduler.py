@@ -128,7 +128,7 @@ class InfractionScheduler(Scheduler):
                 f"Infraction #{id_} actor is bot; including the reason in the confirmation message."
             )
 
-            end_msg = f" (reason: {textwrap.shorten(infraction['reason'], width=1500, placeholder='...')})"
+            end_msg = f" (reason: {textwrap.shorten(reason, width=1500, placeholder='...')})"
         elif ctx.channel.id not in STAFF_CHANNELS:
             log.trace(
                 f"Infraction #{id_} context is not in a staff channel; omitting infraction count."
