@@ -210,6 +210,9 @@ class HelpChannels(Scheduler, commands.Cog):
         log.trace("dormant command invoked; checking if the channel is in-use.")
         if ctx.channel.category == self.in_use_category:
             if await self.dormant_check(ctx):
+                with suppress(KeyError):
+                    del self.help_channel_claimants[ctx.channel]
+
                 with suppress(discord.errors.NotFound):
                     log.trace("Deleting dormant invokation message.")
                     await ctx.message.delete()
