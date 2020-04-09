@@ -214,7 +214,8 @@ class HelpChannels(Scheduler, commands.Cog):
                     log.trace("Deleting dormant invokation message.")
                     await ctx.message.delete()
 
-                await self.reset_claimant_send_permission(ctx.channel)
+                with suppress(discord.errors.HTTPException, discord.errors.NotFound):
+                    await self.reset_claimant_send_permission(ctx.channel)
 
                 self.cancel_task(ctx.channel.id)
                 await self.move_to_dormant(ctx.channel)
