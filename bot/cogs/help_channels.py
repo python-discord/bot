@@ -635,7 +635,7 @@ class HelpChannels(Scheduler, commands.Cog):
             return
 
         log.trace(f"Resetting send permissions for {member} ({member.id}).")
-        await self.available_category.set_permissions(member, overwrite=None)
+        await self.update_category_permissions(self.available_category, member, overwrite=None)
         # Ignore missing task when claim cooldown has passed but the channel still isn't dormant.
         self.cancel_task(member.id, ignore_missing=True)
 
