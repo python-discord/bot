@@ -109,7 +109,9 @@ class HelpChannels(Scheduler, commands.Cog):
         super().__init__()
 
         self.bot = bot
-        self.help_channel_claimants: t.Dict[discord.TextChannel, discord.User] = {}
+        self.help_channel_claimants: (
+            t.Dict[discord.TextChannel, t.Union[discord.Member, discord.User]]
+        ) = {}
 
         # Categories
         self.available_category: discord.CategoryChannel = None
