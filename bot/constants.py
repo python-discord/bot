@@ -199,6 +199,7 @@ class Bot(metaclass=YAMLGetter):
     prefix: str
     token: str
     sentry_dsn: str
+    statsd_host: str
 
 class Filter(metaclass=YAMLGetter):
     section = "filter"

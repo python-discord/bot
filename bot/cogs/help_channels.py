@@ -127,6 +127,9 @@ class HelpChannels(Scheduler, commands.Cog):
         self.on_message_lock = asyncio.Lock()
         self.init_task = self.bot.loop.create_task(self.init_cog())
 
+        # Stats
+        self.claim_times = {}
+
     def cog_unload(self) -> None:
         """Cancel the init task and scheduled tasks when the cog unloads."""
         log.trace("Cog unload: cancelling the init_cog task")
@@ -195,7 +198,7 @@ class HelpChannels(Scheduler, commands.Cog):
 
         if ctx.channel.category == self.in_use_category:
             self.cancel_task(ctx.channel.id)
-            await self.move_to_dormant(ctx.channel)
+            await self.move_to_dormant(ctx.channel, "command")
         else:
             log.debug(f"{ctx.author} invoked command 'dormant' outside an in-use help channel")
 
@@ -367,6 +370,18 @@ class HelpChannels(Scheduler, commands.Cog):
         log.info("Cog is ready!")
         self.ready.set()
 
+        self.report_stats()
+
+    def report_stats(self) -> None:
+        """Report the channel count stats."""
+        total_in_use = sum(1 for _ in self.get_category_channels(self.in_use_category))
+        total_available = sum(1 for _ in self.get_category_channels(self.available_category))
+        total_dormant = sum(1 for _ in self.get_category_channels(self.dormant_category))
+
+        self.bot.stats.gauge("help.total.in_use", total_in_use)
+        self.bot.stats.gauge("help.total.available", total_available)
+        self.bot.stats.gauge("help.total.dormant", total_dormant)
+
     @staticmethod
     def is_dormant_message(message: t.Optional[discord.Message]) -> bool:
         """Return True if the contents of the `message` match `DORMANT_MSG`."""
@@ -394,7 +409,7 @@ class HelpChannels(Scheduler, commands.Cog):
                 f"and will be made dormant."
             )
 
-            await self.move_to_dormant(channel)
+            await self.move_to_dormant(channel, "auto")
         else:
             # Cancel the existing task, if any.
             if has_task:
@@ -432,9 +447,14 @@ class HelpChannels(Scheduler, commands.Cog):
             f"synchronized permissions after moving `{channel}` into it."
         )
         await self.ensure_permissions_synchronization(self.available_category)
+        self.report_stats()
 
-    async def move_to_dormant(self, channel: discord.TextChannel) -> None:
-        """Make the `channel` dormant."""
+    async def move_to_dormant(self, channel: discord.TextChannel, caller: str) -> None:
+        """
+        Make the `channel` dormant.
+
+        A caller argument is provided for metrics.
+        """
         log.info(f"Moving #{channel} ({channel.id}) to the Dormant category.")
 
         await channel.edit(
@@ -444,6 +464,13 @@ class HelpChannels(Scheduler, commands.Cog):
             topic=DORMANT_TOPIC,
         )
 
+        self.bot.stats.incr(f"help.dormant_calls.{caller}")
+
+        if channel.id in self.claim_times:
+            claimed = self.claim_times[channel.id]
+            in_use_time = datetime.now() - claimed
+            self.bot.stats.timer("help.in_use_time", in_use_time)
+
         log.trace(f"Position of #{channel} ({channel.id}) is actually {channel.position}.")
 
         log.trace(f"Sending dormant message for #{channel} ({channel.id}).")
@@ -452,6 +479,7 @@ class HelpChannels(Scheduler, commands.Cog):
 
         log.trace(f"Pushing #{channel} ({channel.id}) into the channel queue.")
         self.channel_queue.put_nowait(channel)
+        self.report_stats()
 
     async def move_to_in_use(self, channel: discord.TextChannel) -> None:
         """Make a channel in-use and schedule it to be made dormant."""
@@ -469,6 +497,7 @@ class HelpChannels(Scheduler, commands.Cog):
         log.trace(f"Scheduling #{channel} ({channel.id}) to become dormant in {timeout} sec.")
         data = TaskData(timeout, self.move_idle_channel(channel))
         self.schedule_task(channel.id, data)
+        self.report_stats()
 
     async def notify(self) -> None:
         """
@@ -509,6 +538,8 @@ class HelpChannels(Scheduler, commands.Cog):
                 f"using the `{constants.Bot.prefix}dormant` command within the channels."
             )
 
+            self.bot.stats.incr("help.out_of_channel_alerts")
+
             self.last_notification = message.created_at
         except Exception:
             # Handle it here cause this feature isn't critical for the functionality of the system.
@@ -540,6 +571,10 @@ class HelpChannels(Scheduler, commands.Cog):
 
             await self.move_to_in_use(channel)
             await self.revoke_send_permissions(message.author)
+
+            self.bot.stats.incr("help.claimed")
+
+            self.claim_times[channel.id] = datetime.now()
 
             log.trace(f"Releasing on_message lock for {message.id}.")
 
