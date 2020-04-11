@@ -374,9 +374,9 @@ class HelpChannels(Scheduler, commands.Cog):
 
     def report_stats(self) -> None:
         """Report the channel count stats."""
-        total_in_use = len(list(self.get_category_channels(self.in_use_category)))
-        total_available = len(list(self.get_category_channels(self.available_category)))
-        total_dormant = len(list(self.get_category_channels(self.dormant_category)))
+        total_in_use = sum(1 for _ in self.get_category_channels(self.in_use_category))
+        total_available = sum(1 for _ in self.get_category_channels(self.available_category))
+        total_dormant = sum(1 for _ in self.get_category_channels(self.dormant_category))
 
         self.bot.stats.gauge("help.total.in_use", total_in_use)
         self.bot.stats.gauge("help.total.available", total_available)
