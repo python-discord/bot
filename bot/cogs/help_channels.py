@@ -127,6 +127,9 @@ class HelpChannels(Scheduler, commands.Cog):
         self.on_message_lock = asyncio.Lock()
         self.init_task = self.bot.loop.create_task(self.init_cog())
 
+        # Stats
+        self.claim_times = {}
+
     def cog_unload(self) -> None:
         """Cancel the init task and scheduled tasks when the cog unloads."""
         log.trace("Cog unload: cancelling the init_cog task")
@@ -195,7 +198,7 @@ class HelpChannels(Scheduler, commands.Cog):
 
         if ctx.channel.category == self.in_use_category:
             self.cancel_task(ctx.channel.id)
-            await self.move_to_dormant(ctx.channel)
+            await self.move_to_dormant(ctx.channel, "command")
         else:
             log.debug(f"{ctx.author} invoked command 'dormant' outside an in-use help channel")
 
@@ -406,7 +409,7 @@ class HelpChannels(Scheduler, commands.Cog):
                 f"and will be made dormant."
             )
 
-            await self.move_to_dormant(channel)
+            await self.move_to_dormant(channel, "auto")
         else:
             # Cancel the existing task, if any.
             if has_task:
@@ -446,8 +449,12 @@ class HelpChannels(Scheduler, commands.Cog):
         await self.ensure_permissions_synchronization(self.available_category)
         self.report_stats()
 
-    async def move_to_dormant(self, channel: discord.TextChannel) -> None:
-        """Make the `channel` dormant."""
+    async def move_to_dormant(self, channel: discord.TextChannel, caller: str) -> None:
+        """
+        Make the `channel` dormant.
+
+        A caller argument is provided for metrics.
+        """
         log.info(f"Moving #{channel} ({channel.id}) to the Dormant category.")
 
         await channel.edit(
@@ -456,6 +463,13 @@ class HelpChannels(Scheduler, commands.Cog):
             sync_permissions=True,
             topic=DORMANT_TOPIC,
         )
+
+        self.bot.stats.incr(f"help.dormant_calls.{caller}")
+
+        if self.claim_times.get(channel.id):
+            claimed = self.claim_times[channel.id]
+            in_use_time = datetime.now() - claimed
+            self.bot.stats.timer("help.in_use_time", in_use_time)
 
         log.trace(f"Position of #{channel} ({channel.id}) is actually {channel.position}.")
 
@@ -559,6 +573,8 @@ class HelpChannels(Scheduler, commands.Cog):
             await self.revoke_send_permissions(message.author)
 
             self.bot.stats.incr("help.claimed")
+
+            self.claim_times[channel.id] = datetime.now()
 
             log.trace(f"Releasing on_message lock for {message.id}.")
 

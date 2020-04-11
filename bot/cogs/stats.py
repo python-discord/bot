@@ -1,3 +1,5 @@
+import string
+
 from discord import Member, Message, Status
 from discord.ext.commands import Bot, Cog, Context
 
@@ -10,6 +12,8 @@ CHANNEL_NAME_OVERRIDES = {
     Channels.off_topic_2: "off_topic_2",
     Channels.staff_lounge: "staff_lounge"
 }
+
+ALLOWED_CHARS = string.ascii_letters + string.digits
 
 
 class Stats(Cog):
@@ -31,6 +35,8 @@ class Stats(Cog):
 
         if CHANNEL_NAME_OVERRIDES.get(message.channel.id):
             reformatted_name = CHANNEL_NAME_OVERRIDES.get(message.channel.id)
+
+        reformatted_name = "".join([char for char in reformatted_name if char in ALLOWED_CHARS])
 
         stat_name = f"channels.{reformatted_name}"
         self.bot.stats.incr(stat_name)
@@ -73,13 +79,13 @@ class Stats(Cog):
         offline = 0
 
         for member in after.guild.members:
-            if member.status == Status.online:
+            if member.status is Status.online:
                 online += 1
-            elif member.status == Status.dnd:
+            elif member.status is Status.dnd:
                 dnd += 1
-            elif member.status == Status.idle:
+            elif member.status is Status.idle:
                 idle += 1
-            else:
+            elif member.status is Status.offline:
                 offline += 1
 
         self.bot.stats.gauge("guild.status.online", online)

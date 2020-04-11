@@ -171,19 +171,25 @@ class ErrorHandler(Cog):
         if isinstance(e, errors.MissingRequiredArgument):
             await ctx.send(f"Missing required argument `{e.param.name}`.")
             await ctx.invoke(*help_command)
+            self.bot.stats.incr("errors.missing_required_argument")
         elif isinstance(e, errors.TooManyArguments):
             await ctx.send(f"Too many arguments provided.")
             await ctx.invoke(*help_command)
+            self.bot.stats.incr("errors.too_many_arguments")
         elif isinstance(e, errors.BadArgument):
             await ctx.send(f"Bad argument: {e}\n")
             await ctx.invoke(*help_command)
+            self.bot.stats.incr("errors.bad_argument")
         elif isinstance(e, errors.BadUnionArgument):
             await ctx.send(f"Bad argument: {e}\n```{e.errors[-1]}```")
+            self.bot.stats.incr("errors.bad_union_argument")
         elif isinstance(e, errors.ArgumentParsingError):
             await ctx.send(f"Argument parsing error: {e}")
+            self.bot.stats.incr("errors.argument_parsing_error")
         else:
             await ctx.send("Something about your input seems off. Check the arguments:")
             await ctx.invoke(*help_command)
+            self.bot.stats.incr("errors.other_user_input_error")
 
     @staticmethod
     async def handle_check_failure(ctx: Context, e: errors.CheckFailure) -> None:
@@ -205,10 +211,12 @@ class ErrorHandler(Cog):
         )
 
         if isinstance(e, bot_missing_errors):
+            ctx.bot.stats.incr("errors.bot_permission_error")
             await ctx.send(
                 f"Sorry, it looks like I don't have the permissions or roles I need to do that."
             )
         elif isinstance(e, (InChannelCheckFailure, errors.NoPrivateMessage)):
+            ctx.bot.stats.incr("errors.wrong_channel_or_dm_error")
             await ctx.send(e)
 
     @staticmethod
@@ -217,16 +225,20 @@ class ErrorHandler(Cog):
         if e.status == 404:
             await ctx.send("There does not seem to be anything matching your query.")
             log.debug(f"API responded with 404 for command {ctx.command}")
+            ctx.bot.stats.incr("errors.api_error_404")
         elif e.status == 400:
             content = await e.response.json()
             log.debug(f"API responded with 400 for command {ctx.command}: %r.", content)
             await ctx.send("According to the API, your request is malformed.")
+            ctx.bot.stats.incr("errors.api_error_400")
         elif 500 <= e.status < 600:
             await ctx.send("Sorry, there seems to be an internal issue with the API.")
             log.warning(f"API responded with {e.status} for command {ctx.command}")
+            ctx.bot.stats.incr("errors.api_internal_server_error")
         else:
             await ctx.send(f"Got an unexpected status code from the API (`{e.status}`).")
             log.warning(f"Unexpected API response for command {ctx.command}: {e.status}")
+            ctx.bot.stats.incr(f"errors.api_error_{e.status}")
 
     @staticmethod
     async def handle_unexpected_error(ctx: Context, e: errors.CommandError) -> None:
@@ -236,7 +248,7 @@ class ErrorHandler(Cog):
             f"```{e.__class__.__name__}: {e}```"
         )
 
-        ctx.bot.stats.incr("errors.commands")
+        ctx.bot.stats.incr("errors.unexpected")
 
         with push_scope() as scope:
             scope.user = {

@@ -146,6 +146,8 @@ class Defcon(Cog):
             await ctx.send(self.build_defcon_msg(action, error))
             await self.send_defcon_log(action, ctx.author, error)
 
+            self.bot.stats.gauge("defcon.days", days)
+
     @defcon_group.command(name='enable', aliases=('on', 'e'))
     @with_role(Roles.admins, Roles.owners)
     async def enable_command(self, ctx: Context) -> None:
