@@ -6,10 +6,10 @@ from typing import Optional
 
 import aiohttp
 import discord
-import statsd
 from discord.ext import commands
 
 from bot import DEBUG_MODE, api, constants
+from bot.async_stats import AsyncStatsClient
 
 log = logging.getLogger('bot')
 
@@ -41,7 +41,7 @@ class Bot(commands.Bot):
             # will effectively disable stats.
             statsd_url = "127.0.0.1"
 
-        self.stats = statsd.StatsClient(statsd_url, 8125, prefix="bot")
+        self.stats = AsyncStatsClient(self.loop, statsd_url, 8125, prefix="bot")
 
     def add_cog(self, cog: commands.Cog) -> None:
         """Adds a "cog" to the bot and logs the operation."""
@@ -60,7 +60,7 @@ class Bot(commands.Bot):
         super().clear()
 
     async def close(self) -> None:
-        """Close the Discord connection and the aiohttp session, connector, and resolver."""
+        """Close the Discord connection and the aiohttp session, connector, statsd client, and resolver."""
         await super().close()
 
         await self.api_client.close()
@@ -73,6 +73,9 @@ class Bot(commands.Bot):
 
         if self._resolver:
             await self._resolver.close()
+
+        if self.stats._transport:
+            await self.stats._transport.close()
 
     async def login(self, *args, **kwargs) -> None:
         """Re-create the connector and set up sessions before logging into Discord."""
@@ -110,6 +113,10 @@ class Bot(commands.Bot):
 
         self.http_session = aiohttp.ClientSession(connector=self._connector)
         self.api_client.recreate(force=True, connector=self._connector)
+
+    async def on_ready(self) -> None:
+        """Construct an asynchronous transport for the statsd client."""
+        await self.stats.create_socket()
 
     async def on_guild_available(self, guild: discord.Guild) -> None:
         """
