@@ -207,7 +207,7 @@ class Filtering(Cog):
 
                         log.debug(message)
 
-                        self.bot.stats.incr(f"bot.filters.{filter_name}")
+                        self.bot.stats.incr(f"filters.{filter_name}")
 
                         additional_embeds = None
                         additional_embeds_msg = None
