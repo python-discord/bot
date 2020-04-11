@@ -521,7 +521,8 @@ class HelpChannels(Scheduler, commands.Cog):
             return  # Ignore messages sent by bots.
 
         channel = message.channel
-        if channel.category and channel.category.id != constants.Categories.help_available:
+        category = getattr(channel, "category", None)
+        if category and category.id != constants.Categories.help_available:
             return  # Ignore messages outside the Available category.
 
         log.trace("Waiting for the cog to be ready before processing messages.")
@@ -531,7 +532,8 @@ class HelpChannels(Scheduler, commands.Cog):
         async with self.on_message_lock:
             log.trace(f"on_message lock acquired for {message.id}.")
 
-            if channel.category and channel.category.id != constants.Categories.help_available:
+            category = getattr(channel, "category", None)
+            if category and category.id != constants.Categories.help_available:
                 log.debug(
                     f"Message {message.id} will not make #{channel} ({channel.id}) in-use "
                     f"because another message in the channel already triggered that."
