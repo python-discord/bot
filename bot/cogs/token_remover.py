@@ -93,6 +93,8 @@ class TokenRemover(Cog):
             channel_id=Channels.mod_alerts,
         )
 
+        self.bot.stats.incr("tokens.removed_tokens")
+
     @classmethod
     def find_token_in_message(cls, msg: Message) -> t.Optional[str]:
         """Return a seemingly valid token found in `msg` or `None` if no token is found."""

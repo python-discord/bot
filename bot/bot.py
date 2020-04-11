@@ -6,10 +6,10 @@ from typing import Optional
 
 import aiohttp
 import discord
+import statsd
 from discord.ext import commands
 
-from bot import api
-from bot import constants
+from bot import DEBUG_MODE, api, constants
 
 log = logging.getLogger('bot')
 
@@ -32,6 +32,16 @@ class Bot(commands.Bot):
         self._connector = None
         self._resolver = None
         self._guild_available = asyncio.Event()
+
+        statsd_url = constants.Bot.statsd_host
+
+        if DEBUG_MODE:
+            # Since statsd is UDP, there are no errors for sending to a down port.
+            # For this reason, setting the statsd host to 127.0.0.1 for development
+            # will effectively disable stats.
+            statsd_url = "127.0.0.1"
+
+        self.stats = statsd.StatsClient(statsd_url, 8125, prefix="bot")
 
     def add_cog(self, cog: commands.Cog) -> None:
         """Adds a "cog" to the bot and logs the operation."""

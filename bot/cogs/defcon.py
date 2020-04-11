@@ -104,6 +104,7 @@ class Defcon(Cog):
                     log.exception(f"Unable to send rejection message to user: {member}")
 
                 await member.kick(reason="DEFCON active, user is too new")
+                self.bot.stats.incr("defcon_leaves")
 
                 message = (
                     f"{member} (`{member.id}`) was denied entry because their account is too new."

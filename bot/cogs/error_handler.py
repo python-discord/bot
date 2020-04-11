@@ -236,6 +236,8 @@ class ErrorHandler(Cog):
             f"```{e.__class__.__name__}: {e}```"
         )
 
+        ctx.bot.stats.incr("command_error_count")
+
         with push_scope() as scope:
             scope.user = {
                 "id": ctx.author.id,
