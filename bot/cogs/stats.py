@@ -1,14 +1,14 @@
 from discord import Member, Message, Status
 from discord.ext.commands import Bot, Cog, Context
 
-from bot.constants import Guild
+from bot.constants import Channels, Guild
 
 
 CHANNEL_NAME_OVERRIDES = {
-    Guild.channels.off_topic_0: "off_topic_0",
-    Guild.channels.off_topic_1: "off_topic_1",
-    Guild.channels.off_topic_2: "off_topic_2",
-    Guild.channels.staff_lounge: "staff_lounge"
+    Channels.off_topic_0: "off_topic_0",
+    Channels.off_topic_1: "off_topic_1",
+    Channels.off_topic_2: "off_topic_2",
+    Channels.staff_lounge: "staff_lounge"
 }
 
 
