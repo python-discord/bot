@@ -80,6 +80,7 @@ class Bot(commands.Bot):
     async def login(self, *args, **kwargs) -> None:
         """Re-create the connector and set up sessions before logging into Discord."""
         self._recreate()
+        await self.stats.create_socket()
         await super().login(*args, **kwargs)
 
     def _recreate(self) -> None:
@@ -113,10 +114,6 @@ class Bot(commands.Bot):
 
         self.http_session = aiohttp.ClientSession(connector=self._connector)
         self.api_client.recreate(force=True, connector=self._connector)
-
-    async def on_ready(self) -> None:
-        """Construct an asynchronous transport for the statsd client."""
-        await self.stats.create_socket()
 
     async def on_guild_available(self, guild: discord.Guild) -> None:
         """
