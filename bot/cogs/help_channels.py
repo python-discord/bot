@@ -466,7 +466,7 @@ class HelpChannels(Scheduler, commands.Cog):
 
         self.bot.stats.incr(f"help.dormant_calls.{caller}")
 
-        if self.claim_times.get(channel.id):
+        if channel.id in self.claim_times:
             claimed = self.claim_times[channel.id]
             in_use_time = datetime.now() - claimed
             self.bot.stats.timer("help.in_use_time", in_use_time)
