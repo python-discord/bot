@@ -376,6 +376,12 @@ class HelpChannels(Scheduler, commands.Cog):
         embed = message.embeds[0]
         return embed.description.strip() == DORMANT_MSG.strip()
 
+    @staticmethod
+    def is_in_category(channel: discord.TextChannel, category_id: int) -> bool:
+        """Return True if `channel` is within a category with `category_id`."""
+        actual_category = getattr(channel, "category", None)
+        return actual_category and actual_category.id == category_id
+
     async def move_idle_channel(self, channel: discord.TextChannel, has_task: bool = True) -> None:
         """
         Make the `channel` dormant if idle or schedule the move if still active.
@@ -521,8 +527,7 @@ class HelpChannels(Scheduler, commands.Cog):
             return  # Ignore messages sent by bots.
 
         channel = message.channel
-        category = getattr(channel, "category", None)
-        if category and category.id != constants.Categories.help_available:
+        if not self.is_in_category(channel, constants.Categories.help_available):
             return  # Ignore messages outside the Available category.
 
         log.trace("Waiting for the cog to be ready before processing messages.")
@@ -532,8 +537,7 @@ class HelpChannels(Scheduler, commands.Cog):
         async with self.on_message_lock:
             log.trace(f"on_message lock acquired for {message.id}.")
 
-            category = getattr(channel, "category", None)
-            if category and category.id != constants.Categories.help_available:
+            if not self.is_in_category(channel, constants.Categories.help_available):
                 log.debug(
                     f"Message {message.id} will not make #{channel} ({channel.id}) in-use "
                     f"because another message in the channel already triggered that."
