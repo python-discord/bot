@@ -36,7 +36,7 @@ class Stats(Cog):
         if CHANNEL_NAME_OVERRIDES.get(message.channel.id):
             reformatted_name = CHANNEL_NAME_OVERRIDES.get(message.channel.id)
 
-        reformatted_name = "".join([char for char in reformatted_name if char in ALLOWED_CHARS])
+        reformatted_name = "".join(char for char in reformatted_name if char in ALLOWED_CHARS)
 
         stat_name = f"channels.{reformatted_name}"
         self.bot.stats.incr(stat_name)
