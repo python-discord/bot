@@ -33,7 +33,7 @@ class Bot(commands.Bot):
         self._resolver = None
         self._guild_available = asyncio.Event()
 
-        statsd_url = constants.Bot.statsd_host
+        statsd_url = constants.Stats.statsd_host
 
         if DEBUG_MODE:
             # Since statsd is UDP, there are no errors for sending to a down port.

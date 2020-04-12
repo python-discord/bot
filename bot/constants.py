@@ -199,7 +199,6 @@ class Bot(metaclass=YAMLGetter):
     prefix: str
     token: str
     sentry_dsn: str
-    statsd_host: str
 
 class Filter(metaclass=YAMLGetter):
     section = "filter"
@@ -350,6 +349,13 @@ class CleanMessages(metaclass=YAMLGetter):
     subsection = "clean"
 
     message_limit: int
+
+class Stats(metaclass=YAMLGetter):
+    section = "bot"
+    subsection = "stats"
+
+    presence_update_timeout: int
+    statsd_host: str
 
 
 class Categories(metaclass=YAMLGetter):

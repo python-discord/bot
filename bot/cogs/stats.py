@@ -1,9 +1,10 @@
 import string
+from datetime import datetime
 
 from discord import Member, Message, Status
 from discord.ext.commands import Bot, Cog, Context
 
-from bot.constants import Channels, Guild
+from bot.constants import Channels, Guild, Stats as StatConf
 
 
 CHANNEL_NAME_OVERRIDES = {
@@ -13,7 +14,7 @@ CHANNEL_NAME_OVERRIDES = {
     Channels.staff_lounge: "staff_lounge"
 }
 
-ALLOWED_CHARS = string.ascii_letters + string.digits
+ALLOWED_CHARS = string.ascii_letters + string.digits + "-"
 
 
 class Stats(Cog):
@@ -21,6 +22,7 @@ class Stats(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
+        self.last_presence_update = None
 
     @Cog.listener()
     async def on_message(self, message: Message) -> None:
@@ -72,6 +74,12 @@ class Stats(Cog):
         """Update presence estimates on member update."""
         if after.guild.id != Guild.id:
             return
+
+        if self.last_presence_update:
+            if (datetime.now() - self.last_presence_update).seconds < StatConf.presence_update_timeout:
+                return
+
+        self.last_presence_update = datetime.now()
 
         online = 0
         idle = 0
