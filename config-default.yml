@@ -201,6 +201,7 @@ guild:
     roles:
         announcements:                          463658397560995840
         contributors:                           295488872404484098
+        help_cooldown:                          699189276025421825
         muted:              &MUTED_ROLE         277914926603829249
         partners:                               323426753857191936
         python_community:   &PY_COMMUNITY_ROLE  458226413825294336
