@@ -135,7 +135,7 @@ class Defcon(Cog):
 
                 delta = datetime.now() - enabled
 
-                self.bot.stats.timer("defcon.enabled", delta)
+                self.bot.stats.timing("defcon.enabled", delta)
         except Exception:
             pass
 

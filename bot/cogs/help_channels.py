@@ -469,7 +469,7 @@ class HelpChannels(Scheduler, commands.Cog):
         if channel.id in self.claim_times:
             claimed = self.claim_times[channel.id]
             in_use_time = datetime.now() - claimed
-            self.bot.stats.timer("help.in_use_time", in_use_time)
+            self.bot.stats.timing("help.in_use_time", in_use_time)
 
         log.trace(f"Position of #{channel} ({channel.id}) is actually {channel.position}.")
 
