@@ -1,6 +1,6 @@
 import colorsys
 import logging
-import os
+import socket
 import pprint
 import textwrap
 import datetime
@@ -376,14 +376,18 @@ class Information(Cog):
 
     @command(name="ping", aliases=["pong", "bing"])
     async def ping(self, ctx: Context) -> None:
+        """Pings all servers to check latency."""
         embed = Embed()
         embed.colour = Colour.blurple()
         embed.title = "Ping results"
         embed.add_field(name="Bot Latency", value=str(time_difference_milliseconds(ctx.message))+" milliseconds",
                         inline=False)
-        embed.add_field(name="Site Latency", value=str(pythonping.ping(URLs.site_api).rtt_avg_ms)+" milliseconds",
+        embed.add_field(name="Site Latency", value=str(pythonping.ping(
+            socket.gethostbyname(URLs.site.split(":", 1)[0])).rtt_avg_ms)+" milliseconds",
+                       inline=False)
+        embed.add_field(name="Discord Latency", value=str(pythonping.ping(
+            socket.gethostbyname("discord.com")).rtt_avg_ms) + " milliseconds",
                         inline=False)
-
         await ctx.send(embed=embed)
 
         return
