@@ -14,7 +14,7 @@ CHANNEL_NAME_OVERRIDES = {
     Channels.staff_lounge: "staff_lounge"
 }
 
-ALLOWED_CHARS = string.ascii_letters + string.digits + "-"
+ALLOWED_CHARS = string.ascii_letters + string.digits + "_"
 
 
 class Stats(Cog):
