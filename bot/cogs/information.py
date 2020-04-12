@@ -1,11 +1,14 @@
 import colorsys
 import logging
+import os
 import pprint
 import textwrap
 import datetime
+import pythonping
 from collections import Counter, defaultdict
 from string import Template
 from typing import Any, Mapping, Optional, Union
+from bot.constants import Keys, URLs
 
 from discord import Colour, Embed, Member, Message, Role, Status, utils
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group
@@ -19,6 +22,7 @@ from bot.utils.checks import cooldown_with_role_bypass, with_role_check
 from bot.utils.time import time_since
 
 log = logging.getLogger(__name__)
+
 
 
 def time_difference_milliseconds(message: Message):
@@ -375,7 +379,10 @@ class Information(Cog):
         embed = Embed()
         embed.colour = Colour.blurple()
         embed.title = "Ping results"
-        embed.add_field(name="Bot Latency", value=str(time_difference_milliseconds(ctx.message))+" microseconds", inline=True)
+        embed.add_field(name="Bot Latency", value=str(time_difference_milliseconds(ctx.message))+" milliseconds",
+                        inline=False)
+        embed.add_field(name="Site Latency", value=str(pythonping.ping(URLs.site_api).rtt_avg_ms)+" milliseconds",
+                        inline=False)
 
         await ctx.send(embed=embed)
 

@@ -16,3 +16,4 @@ coloredlogs
 colorama
 jsonpickle
 pytest-asyncio
+pythonping

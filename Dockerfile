@@ -16,6 +16,7 @@ WORKDIR /bot
 COPY Pipfile* ./
 RUN pipenv install --system --deploy
 
+
 # Copy the source code in last to optimize rebuilding the image
 COPY . .
 
