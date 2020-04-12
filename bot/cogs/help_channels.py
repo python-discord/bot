@@ -5,6 +5,7 @@ import logging
 import random
 import typing as t
 from collections import deque
+from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
 
@@ -13,7 +14,7 @@ from discord.ext import commands
 
 from bot import constants
 from bot.bot import Bot
-from bot.decorators import with_role
+from bot.utils.checks import with_role_check
 from bot.utils.scheduling import Scheduler
 
 log = logging.getLogger(__name__)
@@ -108,6 +109,9 @@ class HelpChannels(Scheduler, commands.Cog):
         super().__init__()
 
         self.bot = bot
+        self.help_channel_claimants: (
+            t.Dict[discord.TextChannel, t.Union[discord.Member, discord.User]]
+        ) = {}
 
         # Categories
         self.available_category: discord.CategoryChannel = None
@@ -190,15 +194,39 @@ class HelpChannels(Scheduler, commands.Cog):
         log.trace("Populating the name queue with names.")
         return deque(available_names)
 
-    @commands.command(name="dormant", aliases=["close"], enabled=False)
-    @with_role(*constants.HelpChannels.cmd_whitelist)
-    async def dormant_command(self, ctx: commands.Context) -> None:
-        """Make the current in-use help channel dormant."""
-        log.trace("dormant command invoked; checking if the channel is in-use.")
+    async def dormant_check(self, ctx: commands.Context) -> bool:
+        """Return True if the user is the help channel claimant or passes the role check."""
+        if self.help_channel_claimants.get(ctx.channel) == ctx.author:
+            log.trace(f"{ctx.author} is the help channel claimant, passing the check for dormant.")
+            return True
 
+        log.trace(f"{ctx.author} is not the help channel claimant, checking roles.")
+        return with_role_check(ctx, *constants.HelpChannels.cmd_whitelist)
+
+    @commands.command(name="dormant", aliases=["close"], enabled=False)
+    async def dormant_command(self, ctx: commands.Context) -> None:
+        """
+        Make the current in-use help channel dormant.
+
+        Make the channel dormant if the user passes the `dormant_check`,
+        delete the message that invoked this,
+        and reset the send permissions cooldown for the user who started the session.
+        """
+        log.trace("dormant command invoked; checking if the channel is in-use.")
         if ctx.channel.category == self.in_use_category:
-            self.cancel_task(ctx.channel.id)
-            await self.move_to_dormant(ctx.channel, "command")
+            if await self.dormant_check(ctx):
+                with suppress(KeyError):
+                    del self.help_channel_claimants[ctx.channel]
+
+                with suppress(discord.errors.NotFound):
+                    log.trace("Deleting dormant invokation message.")
+                    await ctx.message.delete()
+
+                with suppress(discord.errors.HTTPException, discord.errors.NotFound):
+                    await self.reset_claimant_send_permission(ctx.channel)
+
+                await self.move_to_dormant(ctx.channel, "command")
+                self.cancel_task(ctx.channel.id)
         else:
             log.debug(f"{ctx.author} invoked command 'dormant' outside an in-use help channel")
 
@@ -382,14 +410,13 @@ class HelpChannels(Scheduler, commands.Cog):
         self.bot.stats.gauge("help.total.available", total_available)
         self.bot.stats.gauge("help.total.dormant", total_dormant)
 
-    @staticmethod
-    def is_dormant_message(message: t.Optional[discord.Message]) -> bool:
+    def is_dormant_message(self, message: t.Optional[discord.Message]) -> bool:
         """Return True if the contents of the `message` match `DORMANT_MSG`."""
         if not message or not message.embeds:
             return False
 
         embed = message.embeds[0]
-        return embed.description.strip() == DORMANT_MSG.strip()
+        return message.author == self.bot.user and embed.description.strip() == DORMANT_MSG.strip()
 
     async def move_idle_channel(self, channel: discord.TextChannel, has_task: bool = True) -> None:
         """
@@ -571,6 +598,8 @@ class HelpChannels(Scheduler, commands.Cog):
 
             await self.move_to_in_use(channel)
             await self.revoke_send_permissions(message.author)
+            # Add user with channel for dormant check.
+            self.help_channel_claimants[channel] = message.author
 
             self.bot.stats.incr("help.claimed")
 
@@ -630,6 +659,20 @@ class HelpChannels(Scheduler, commands.Cog):
 
         log.trace(f"Ensuring channels in `Help: Available` are synchronized after permissions reset.")
         await self.ensure_permissions_synchronization(self.available_category)
+
+    async def reset_claimant_send_permission(self, channel: discord.TextChannel) -> None:
+        """Reset send permissions in the Available category for the help `channel` claimant."""
+        log.trace(f"Attempting to find claimant for #{channel.name} ({channel.id}).")
+        try:
+            member = self.help_channel_claimants[channel]
+        except KeyError:
+            log.trace(f"Channel #{channel.name} ({channel.id}) not in claimant cache, permissions unchanged.")
+            return
+
+        log.trace(f"Resetting send permissions for {member} ({member.id}).")
+        await self.update_category_permissions(self.available_category, member, overwrite=None)
+        # Ignore missing task when claim cooldown has passed but the channel still isn't dormant.
+        self.cancel_task(member.id, ignore_missing=True)
 
     async def revoke_send_permissions(self, member: discord.Member) -> None:
         """
