@@ -198,10 +198,16 @@ class HelpChannels(Scheduler, commands.Cog):
         """Return True if the user is the help channel claimant or passes the role check."""
         if self.help_channel_claimants.get(ctx.channel) == ctx.author:
             log.trace(f"{ctx.author} is the help channel claimant, passing the check for dormant.")
+            self.bot.stats.incr("help.dormant_invoke.claimant")
             return True
 
         log.trace(f"{ctx.author} is not the help channel claimant, checking roles.")
-        return with_role_check(ctx, *constants.HelpChannels.cmd_whitelist)
+        role_check = with_role_check(ctx, *constants.HelpChannels.cmd_whitelist)
+
+        if role_check:
+            self.bot.stats.incr("help.dormant_invoke.staff")
+
+        return role_check
 
     @commands.command(name="dormant", aliases=["close"], enabled=False)
     async def dormant_command(self, ctx: commands.Context) -> None:
