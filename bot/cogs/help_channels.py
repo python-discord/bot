@@ -481,7 +481,6 @@ class HelpChannels(Scheduler, commands.Cog):
             f"Ensuring that all channels in `{self.available_category}` have "
             f"synchronized permissions after moving `{channel}` into it."
         )
-        await self.ensure_permissions_synchronization(self.available_category)
         self.report_stats()
 
     async def move_to_dormant(self, channel: discord.TextChannel, caller: str) -> None:
@@ -620,38 +619,12 @@ class HelpChannels(Scheduler, commands.Cog):
         # be put in the queue.
         await self.move_to_available()
 
-    @staticmethod
-    async def ensure_permissions_synchronization(category: discord.CategoryChannel) -> None:
-        """
-        Ensure that all channels in the `category` have their permissions synchronized.
-
-        This method mitigates an issue we have yet to find the cause for: Every so often, a channel in the
-        `Help: Available` category gets in a state in which it will no longer synchronizes its permissions
-        with the category. To prevent that, we iterate over the channels in the category and edit the channels
-        that are observed to be in such a state. If no "out of sync" channels are observed, this method will
-        not make API calls and should be fairly inexpensive to run.
-        """
-        for channel in category.channels:
-            if not channel.permissions_synced:
-                log.info(f"The permissions of channel `{channel}` were out of sync with category `{category}`.")
-                await channel.edit(sync_permissions=True)
-
     async def update_category_permissions(
         self, category: discord.CategoryChannel, member: discord.Member, **permissions
     ) -> None:
-        """
-        Update the permissions of the given `member` for the given `category` with `permissions` passed.
-
-        After updating the permissions for the member in the category, this helper function will call the
-        `ensure_permissions_synchronization` method to ensure that all channels are still synchronizing their
-        permissions with the category. It's currently unknown why some channels get "out of sync", but this
-        hopefully mitigates the issue.
-        """
+        """Update the permissions of the given `member` for the given `category` with `permissions` passed."""
         log.trace(f"Updating permissions for `{member}` in `{category}` with {permissions}.")
         await category.set_permissions(member, **permissions)
-
-        log.trace(f"Ensuring that all channels in `{category}` are synchronized after permissions update.")
-        await self.ensure_permissions_synchronization(category)
 
     async def reset_send_permissions(self) -> None:
         """Reset send permissions for members with it set to False in the Available category."""
@@ -666,7 +639,6 @@ class HelpChannels(Scheduler, commands.Cog):
                 await self.available_category.set_permissions(member, overwrite=None)
 
         log.trace(f"Ensuring channels in `Help: Available` are synchronized after permissions reset.")
-        await self.ensure_permissions_synchronization(self.available_category)
 
     async def reset_claimant_send_permission(self, channel: discord.TextChannel) -> None:
         """Reset send permissions in the Available category for the help `channel` claimant."""
