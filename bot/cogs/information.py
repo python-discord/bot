@@ -2,6 +2,7 @@ import colorsys
 import logging
 import pprint
 import textwrap
+import datetime
 from collections import Counter, defaultdict
 from string import Template
 from typing import Any, Mapping, Optional, Union
@@ -18,6 +19,10 @@ from bot.utils.checks import cooldown_with_role_bypass, with_role_check
 from bot.utils.time import time_since
 
 log = logging.getLogger(__name__)
+
+
+def time_difference_milliseconds(message: Message):
+    return (datetime.datetime.now() - message.created_at).microseconds/1000
 
 
 class Information(Cog):
@@ -364,6 +369,19 @@ class Information(Cog):
 
         for page in paginator.pages:
             await ctx.send(page)
+
+    @command(name="ping", aliases=["pong", "bing"])
+    async def ping(self, ctx: Context) -> None:
+        embed = Embed()
+        embed.colour = Colour.blurple()
+        embed.title = "Ping results"
+        embed.add_field(name="Bot Latency", value=str(time_difference_milliseconds(ctx.message))+" microseconds", inline=True)
+
+        await ctx.send(embed=embed)
+
+        return
+
+
 
     @raw.command()
     async def json(self, ctx: Context, message: Message) -> None:
