@@ -208,7 +208,7 @@ class Tags(Cog):
                         "channel": ctx.channel.id
                     }
 
-                self.bot.stats.incr(f"tags.usages.{tag_name.replace('-', '_')}")
+                self.bot.stats.incr(f"tags.usages.{tag['title'].replace('-', '_')}")
 
                 await wait_for_deletion(
                     await ctx.send(embed=Embed.from_dict(tag['embed'])),
