@@ -412,6 +412,11 @@ class HelpChannels(Scheduler, commands.Cog):
         self.bot.stats.gauge("help.total.available", total_available)
         self.bot.stats.gauge("help.total.dormant", total_dormant)
 
+    @staticmethod
+    def is_claimant(member: discord.Member) -> bool:
+        """Return True if `member` has the 'Help Cooldown' role."""
+        return any(constants.Roles.help_cooldown == role.id for role in member.roles)
+
     def is_dormant_message(self, message: t.Optional[discord.Message]) -> bool:
         """Return True if the contents of the `message` match `DORMANT_MSG`."""
         if not message or not message.embeds:
