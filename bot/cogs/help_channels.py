@@ -632,18 +632,16 @@ class HelpChannels(Scheduler, commands.Cog):
         await category.set_permissions(member, **permissions)
 
     async def reset_send_permissions(self) -> None:
-        """Reset send permissions for members with it set to False in the Available category."""
+        """Reset send permissions in the Available category for claimants."""
         log.trace("Resetting send permissions in the Available category.")
+        guild = self.bot.get_guild(constants.Guild.id)
 
-        for member, overwrite in self.available_category.overwrites.items():
-            if isinstance(member, discord.Member) and overwrite.send_messages is False:
+        # TODO: replace with a persistent cache cause checking every member is quite slow
+        for member in guild.members:
+            if self.is_claimant(member):
                 log.trace(f"Resetting send permissions for {member} ({member.id}).")
-
-                # We don't use the permissions helper function here as we may have to reset multiple overwrites
-                # and we don't want to enforce the permissions synchronization in each iteration.
-                await self.available_category.set_permissions(member, overwrite=None)
-
-        log.trace(f"Ensuring channels in `Help: Available` are synchronized after permissions reset.")
+                role = discord.Object(constants.Roles.help_cooldown)
+                await member.remove_roles(role)
 
     async def reset_claimant_send_permission(self, channel: discord.TextChannel) -> None:
         """Reset send permissions in the Available category for the help `channel` claimant."""
