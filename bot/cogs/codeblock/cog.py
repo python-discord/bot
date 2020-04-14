@@ -182,6 +182,14 @@ class CodeBlockCog(Cog, name="Code Block"):
             and channel.category.id in (Categories.help_available, Categories.help_in_use)
         )
 
+    def is_valid_channel(self, channel: discord.TextChannel) -> bool:
+        """Return True if `channel` is a help channel, may be on cooldown, or is whitelisted."""
+        return (
+            self.is_help_channel(channel)
+            or channel.id in self.channel_cooldowns
+            or channel.id in self.channel_whitelist
+        )
+
     @Cog.listener()
     async def on_message(self, msg: Message) -> None:
         """
@@ -191,11 +199,7 @@ class CodeBlockCog(Cog, name="Code Block"):
         properly formatted Python syntax highlighting codeblocks.
         """
         parse_codeblock = (
-            (
-                self.is_help_channel(msg.channel)
-                or msg.channel.id in self.channel_cooldowns
-                or msg.channel.id in self.channel_whitelist
-            )
+            self.is_valid_channel(msg.channel)
             and not msg.author.bot
             and len(msg.content.splitlines()) > 3
             and not TokenRemover.find_token_in_message(msg)
