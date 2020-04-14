@@ -224,112 +224,117 @@ class CodeBlockCog(Cog, name="Code Block"):
         If poorly formatted code is detected, send the user a helpful message explaining how to do
         properly formatted Python syntax highlighting codeblocks.
         """
-        if self.should_parse(msg):  # no token in the msg
-            if not self.is_on_cooldown(msg.channel) or DEBUG_MODE:
-                try:
-                    if self.has_bad_ticks(msg):
-                        ticks = msg.content[:3]
-                        content = self.codeblock_stripping(f"```{msg.content[3:-3]}```", True)
-                        if content is None:
-                            return
+        if not self.should_parse(msg):
+            return
 
-                        content, repl_code = content
+        # When debugging, ignore cooldowns.
+        if self.is_on_cooldown(msg.channel) and not DEBUG_MODE:
+            return
 
-                        if len(content) == 2:
-                            content = content[1]
-                        else:
-                            content = content[0]
+        try:
+            if self.has_bad_ticks(msg):
+                ticks = msg.content[:3]
+                content = self.codeblock_stripping(f"```{msg.content[3:-3]}```", True)
+                if content is None:
+                    return
 
-                        space_left = 204
-                        if len(content) >= space_left:
-                            current_length = 0
-                            lines_walked = 0
-                            for line in content.splitlines(keepends=True):
-                                if current_length + len(line) > space_left or lines_walked == 10:
-                                    break
-                                current_length += len(line)
-                                lines_walked += 1
-                            content = content[:current_length] + "#..."
-                        content_escaped_markdown = RE_MARKDOWN.sub(r'\\\1', content)
-                        howto = (
-                            "It looks like you are trying to paste code into this channel.\n\n"
-                            "You seem to be using the wrong symbols to indicate where the codeblock should start. "
-                            f"The correct symbols would be \\`\\`\\`, not `{ticks}`.\n\n"
-                            "**Here is an example of how it should look:**\n"
-                            f"\\`\\`\\`python\n{content_escaped_markdown}\n\\`\\`\\`\n\n"
-                            "**This will result in the following:**\n"
-                            f"```python\n{content}\n```"
-                        )
+                content, repl_code = content
 
+                if len(content) == 2:
+                    content = content[1]
+                else:
+                    content = content[0]
+
+                space_left = 204
+                if len(content) >= space_left:
+                    current_length = 0
+                    lines_walked = 0
+                    for line in content.splitlines(keepends=True):
+                        if current_length + len(line) > space_left or lines_walked == 10:
+                            break
+                        current_length += len(line)
+                        lines_walked += 1
+                    content = content[:current_length] + "#..."
+                content_escaped_markdown = RE_MARKDOWN.sub(r'\\\1', content)
+                howto = (
+                    "It looks like you are trying to paste code into this channel.\n\n"
+                    "You seem to be using the wrong symbols to indicate where the codeblock should start. "
+                    f"The correct symbols would be \\`\\`\\`, not `{ticks}`.\n\n"
+                    "**Here is an example of how it should look:**\n"
+                    f"\\`\\`\\`python\n{content_escaped_markdown}\n\\`\\`\\`\n\n"
+                    "**This will result in the following:**\n"
+                    f"```python\n{content}\n```"
+                )
+
+            else:
+                howto = ""
+                content = self.codeblock_stripping(msg.content, False)
+                if content is None:
+                    return
+
+                content, repl_code = content
+                # Attempts to parse the message into an AST node.
+                # Invalid Python code will raise a SyntaxError.
+                tree = ast.parse(content[0])
+
+                # Multiple lines of single words could be interpreted as expressions.
+                # This check is to avoid all nodes being parsed as expressions.
+                # (e.g. words over multiple lines)
+                if not all(isinstance(node, ast.Expr) for node in tree.body) or repl_code:
+                    # Shorten the code to 10 lines and/or 204 characters.
+                    space_left = 204
+                    if content and repl_code:
+                        content = content[1]
                     else:
-                        howto = ""
-                        content = self.codeblock_stripping(msg.content, False)
-                        if content is None:
-                            return
+                        content = content[0]
 
-                        content, repl_code = content
-                        # Attempts to parse the message into an AST node.
-                        # Invalid Python code will raise a SyntaxError.
-                        tree = ast.parse(content[0])
+                    if len(content) >= space_left:
+                        current_length = 0
+                        lines_walked = 0
+                        for line in content.splitlines(keepends=True):
+                            if current_length + len(line) > space_left or lines_walked == 10:
+                                break
+                            current_length += len(line)
+                            lines_walked += 1
+                        content = content[:current_length] + "#..."
 
-                        # Multiple lines of single words could be interpreted as expressions.
-                        # This check is to avoid all nodes being parsed as expressions.
-                        # (e.g. words over multiple lines)
-                        if not all(isinstance(node, ast.Expr) for node in tree.body) or repl_code:
-                            # Shorten the code to 10 lines and/or 204 characters.
-                            space_left = 204
-                            if content and repl_code:
-                                content = content[1]
-                            else:
-                                content = content[0]
-
-                            if len(content) >= space_left:
-                                current_length = 0
-                                lines_walked = 0
-                                for line in content.splitlines(keepends=True):
-                                    if current_length + len(line) > space_left or lines_walked == 10:
-                                        break
-                                    current_length += len(line)
-                                    lines_walked += 1
-                                content = content[:current_length] + "#..."
-
-                            content_escaped_markdown = RE_MARKDOWN.sub(r'\\\1', content)
-                            howto += (
-                                "It looks like you're trying to paste code into this channel.\n\n"
-                                "Discord has support for Markdown, which allows you to post code with full "
-                                "syntax highlighting. Please use these whenever you paste code, as this "
-                                "helps improve the legibility and makes it easier for us to help you.\n\n"
-                                f"**To do this, use the following method:**\n"
-                                f"\\`\\`\\`python\n{content_escaped_markdown}\n\\`\\`\\`\n\n"
-                                "**This will result in the following:**\n"
-                                f"```python\n{content}\n```"
-                            )
-
-                            log.debug(f"{msg.author} posted something that needed to be put inside python code "
-                                      "blocks. Sending the user some instructions.")
-                        else:
-                            log.trace("The code consists only of expressions, not sending instructions")
-
-                    if howto != "":
-                        howto_embed = Embed(description=howto)
-                        bot_message = await msg.channel.send(f"Hey {msg.author.mention}!", embed=howto_embed)
-                        self.codeblock_message_ids[msg.id] = bot_message.id
-
-                        self.bot.loop.create_task(
-                            wait_for_deletion(bot_message, user_ids=(msg.author.id,), client=self.bot)
-                        )
-                    else:
-                        return
-
-                    if msg.channel.id not in self.channel_whitelist:
-                        self.channel_cooldowns[msg.channel.id] = time.time()
-
-                except SyntaxError:
-                    log.trace(
-                        f"{msg.author} posted in a help channel, and when we tried to parse it as Python code, "
-                        "ast.parse raised a SyntaxError. This probably just means it wasn't Python code. "
-                        f"The message that was posted was:\n\n{msg.content}\n\n"
+                    content_escaped_markdown = RE_MARKDOWN.sub(r'\\\1', content)
+                    howto += (
+                        "It looks like you're trying to paste code into this channel.\n\n"
+                        "Discord has support for Markdown, which allows you to post code with full "
+                        "syntax highlighting. Please use these whenever you paste code, as this "
+                        "helps improve the legibility and makes it easier for us to help you.\n\n"
+                        f"**To do this, use the following method:**\n"
+                        f"\\`\\`\\`python\n{content_escaped_markdown}\n\\`\\`\\`\n\n"
+                        "**This will result in the following:**\n"
+                        f"```python\n{content}\n```"
                     )
+
+                    log.debug(f"{msg.author} posted something that needed to be put inside python code "
+                              "blocks. Sending the user some instructions.")
+                else:
+                    log.trace("The code consists only of expressions, not sending instructions")
+
+            if howto != "":
+                howto_embed = Embed(description=howto)
+                bot_message = await msg.channel.send(f"Hey {msg.author.mention}!", embed=howto_embed)
+                self.codeblock_message_ids[msg.id] = bot_message.id
+
+                self.bot.loop.create_task(
+                    wait_for_deletion(bot_message, user_ids=(msg.author.id,), client=self.bot)
+                )
+            else:
+                return
+
+            if msg.channel.id not in self.channel_whitelist:
+                self.channel_cooldowns[msg.channel.id] = time.time()
+
+        except SyntaxError:
+            log.trace(
+                f"{msg.author} posted in a help channel, and when we tried to parse it as Python code, "
+                "ast.parse raised a SyntaxError. This probably just means it wasn't Python code. "
+                f"The message that was posted was:\n\n{msg.content}\n\n"
+            )
 
     @Cog.listener()
     async def on_raw_message_edit(self, payload: RawMessageUpdateEvent) -> None:
