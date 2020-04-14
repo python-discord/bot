@@ -190,6 +190,24 @@ class CodeBlockCog(Cog, name="Code Block"):
             or channel.id in self.channel_whitelist
         )
 
+    def should_parse(self, message: discord.Message) -> bool:
+        """
+        Return True if `message` should be parsed.
+
+        A qualifying message:
+
+        1. Is not authored by a bot
+        2. Is in a valid channel
+        3. Has more than 3 lines
+        4. Has no bot token
+        """
+        return (
+            not message.author.bot
+            and self.is_valid_channel(message.channel)
+            and len(message.content.splitlines()) > 3
+            and not TokenRemover.find_token_in_message(message)
+        )
+
     @Cog.listener()
     async def on_message(self, msg: Message) -> None:
         """
@@ -198,14 +216,7 @@ class CodeBlockCog(Cog, name="Code Block"):
         If poorly formatted code is detected, send the user a helpful message explaining how to do
         properly formatted Python syntax highlighting codeblocks.
         """
-        parse_codeblock = (
-            self.is_valid_channel(msg.channel)
-            and not msg.author.bot
-            and len(msg.content.splitlines()) > 3
-            and not TokenRemover.find_token_in_message(msg)
-        )
-
-        if parse_codeblock:  # no token in the msg
+        if self.should_parse(msg):  # no token in the msg
             on_cooldown = (time.time() - self.channel_cooldowns.get(msg.channel.id, 0)) < 300
             if not on_cooldown or DEBUG_MODE:
                 try:
