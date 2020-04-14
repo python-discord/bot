@@ -127,10 +127,8 @@ class Tags(Cog):
 
         matching_tags = []
         for tag in self._cache.values():
-            if (
-                self.check_accessibility(user, tag)
-                and check(query in tag['embed']['description'].casefold() for query in keywords_processed)
-            ):
+            matches = (query in tag['embed']['description'].casefold() for query in keywords_processed)
+            if self.check_accessibility(user, tag) and check(matches):
                 matching_tags.append(tag)
 
         return matching_tags
