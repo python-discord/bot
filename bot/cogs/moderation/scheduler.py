@@ -102,7 +102,7 @@ class InfractionScheduler(Scheduler):
 
         dm_result = ""
         dm_log_text = ""
-        expiry_log_text = f"Expires: {expiry}" if expiry else ""
+        expiry_log_text = f"\nExpires: {expiry}" if expiry else ""
         log_title = "applied"
         log_content = None
 
@@ -181,8 +181,7 @@ class InfractionScheduler(Scheduler):
             thumbnail=user.avatar_url_as(static_format="png"),
             text=textwrap.dedent(f"""
                 Member: {user.mention} (`{user.id}`)
-                Actor: {ctx.message.author}{dm_log_text}
-                {expiry_log_text}
+                Actor: {ctx.message.author}{dm_log_text} {expiry_log_text}
                 Reason: {reason}
             """),
             content=log_content,
