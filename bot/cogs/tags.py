@@ -58,9 +58,7 @@ class Tags(Cog):
     @staticmethod
     def check_accessibility(user: Member, tag: dict) -> bool:
         """Check if user can access a tag."""
-        if tag["restricted_to"].lower() in [role.name.lower() for role in user.roles]:
-            return True
-        return False
+        return tag["restricted_to"].lower() in [role.name.lower() for role in user.roles]
 
     @staticmethod
     def _fuzzy_search(search: str, target: str) -> float:
