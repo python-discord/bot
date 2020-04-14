@@ -328,21 +328,18 @@ class CodeBlockCog(Cog, name="Code Block"):
                               "blocks. Sending the user some instructions.")
                 else:
                     log.trace("The code consists only of expressions, not sending instructions")
-
-            if howto != "":
-                await self.send_guide_embed(msg, howto)
-            else:
-                return
-
-            if msg.channel.id not in self.channel_whitelist:
-                self.channel_cooldowns[msg.channel.id] = time.time()
-
         except SyntaxError:
             log.trace(
                 f"{msg.author} posted in a help channel, and when we tried to parse it as Python code, "
                 "ast.parse raised a SyntaxError. This probably just means it wasn't Python code. "
                 f"The message that was posted was:\n\n{msg.content}\n\n"
             )
+            return
+
+        if howto:
+            await self.send_guide_embed(msg, howto)
+            if msg.channel.id not in self.channel_whitelist:
+                self.channel_cooldowns[msg.channel.id] = time.time()
 
     @Cog.listener()
     async def on_raw_message_edit(self, payload: RawMessageUpdateEvent) -> None:
