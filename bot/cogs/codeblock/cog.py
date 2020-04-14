@@ -105,6 +105,42 @@ class CodeBlockCog(Cog, name="Code Block"):
                     log.trace(f"Returning message.\n\n{content}\n\n")
                     return (content,), repl_code
 
+    def format_bad_ticks_message(self, message: discord.Message) -> Optional[str]:
+        """Return the guide message to output for bad code block ticks in `message`."""
+        ticks = message.content[:3]
+        content = self.codeblock_stripping(f"```{message.content[3:-3]}```", True)
+        if content is None:
+            return
+
+        content, repl_code = content
+
+        if len(content) == 2:
+            content = content[1]
+        else:
+            content = content[0]
+
+        space_left = 204
+        if len(content) >= space_left:
+            current_length = 0
+            lines_walked = 0
+            for line in content.splitlines(keepends=True):
+                if current_length + len(line) > space_left or lines_walked == 10:
+                    break
+                current_length += len(line)
+                lines_walked += 1
+            content = content[:current_length] + "#..."
+        content_escaped_markdown = RE_MARKDOWN.sub(r'\\\1', content)
+
+        return (
+            "It looks like you are trying to paste code into this channel.\n\n"
+            "You seem to be using the wrong symbols to indicate where the codeblock should start. "
+            f"The correct symbols would be \\`\\`\\`, not `{ticks}`.\n\n"
+            "**Here is an example of how it should look:**\n"
+            f"\\`\\`\\`python\n{content_escaped_markdown}\n\\`\\`\\`\n\n"
+            "**This will result in the following:**\n"
+            f"```python\n{content}\n```"
+        )
+
     def fix_indentation(self, msg: str) -> str:
         """Attempts to fix badly indented code."""
         def unindent(code: str, skip_spaces: int = 0) -> str:
@@ -247,39 +283,7 @@ class CodeBlockCog(Cog, name="Code Block"):
 
         try:
             if self.has_bad_ticks(msg):
-                ticks = msg.content[:3]
-                content = self.codeblock_stripping(f"```{msg.content[3:-3]}```", True)
-                if content is None:
-                    return
-
-                content, repl_code = content
-
-                if len(content) == 2:
-                    content = content[1]
-                else:
-                    content = content[0]
-
-                space_left = 204
-                if len(content) >= space_left:
-                    current_length = 0
-                    lines_walked = 0
-                    for line in content.splitlines(keepends=True):
-                        if current_length + len(line) > space_left or lines_walked == 10:
-                            break
-                        current_length += len(line)
-                        lines_walked += 1
-                    content = content[:current_length] + "#..."
-                content_escaped_markdown = RE_MARKDOWN.sub(r'\\\1', content)
-                howto = (
-                    "It looks like you are trying to paste code into this channel.\n\n"
-                    "You seem to be using the wrong symbols to indicate where the codeblock should start. "
-                    f"The correct symbols would be \\`\\`\\`, not `{ticks}`.\n\n"
-                    "**Here is an example of how it should look:**\n"
-                    f"\\`\\`\\`python\n{content_escaped_markdown}\n\\`\\`\\`\n\n"
-                    "**This will result in the following:**\n"
-                    f"```python\n{content}\n```"
-                )
-
+                howto = self.format_bad_ticks_message(msg)
             else:
                 howto = ""
                 content = self.codeblock_stripping(msg.content, False)
