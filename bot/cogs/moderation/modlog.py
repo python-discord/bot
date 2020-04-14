@@ -99,7 +99,10 @@ class ModLog(Cog, name="ModLog"):
         footer: t.Optional[str] = None,
     ) -> Context:
         """Generate log embed and send to logging channel."""
-        embed = discord.Embed(description=textwrap.shorten(text, width=2048, placeholder="..."))
+        # Truncate string directly here to avoid removing newlines
+        embed = discord.Embed(
+            description=text[:2046] + "..." if len(text) > 2048 else text
+        )
 
         if title and icon_url:
             embed.set_author(name=title, icon_url=icon_url)
