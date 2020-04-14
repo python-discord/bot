@@ -38,7 +38,7 @@ class Tags(Cog):
         cache = {}
         tag_files = Path("bot", "resources", "tags").glob("**/*")
         for file in tag_files:
-            file_path = str(file).split("/")
+
             if file.is_file():
                 tag_title = file.stem
                 tag = {
@@ -48,8 +48,9 @@ class Tags(Cog):
                     },
                     "restricted_to": "developers"
                 }
-                if len(file_path) == 5:
-                    tag["restricted_to"] = file_path[3]
+                parent_folder = file.parent.stem
+                if parent_folder != "tags":
+                    tag["restricted_to"] = parent_folder
 
                 cache[tag_title] = tag
         return cache
@@ -212,11 +213,13 @@ class Tags(Cog):
             return
 
         if tag_name is not None:
-            founds = self._get_tag(tag_name)
+            temp_founds = self._get_tag(tag_name)
 
-            for found_tag in founds:
-                if not self.check_accessibility(ctx.author, found_tag):
-                    founds.remove(found_tag)
+            founds = []
+
+            for found_tag in temp_founds:
+                if self.check_accessibility(ctx.author, found_tag):
+                    founds.append(found_tag)
 
             if len(founds) == 1:
                 tag = founds[0]
