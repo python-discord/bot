@@ -182,6 +182,14 @@ class CodeBlockCog(Cog, name="Code Block"):
             and channel.category.id in (Categories.help_available, Categories.help_in_use)
         )
 
+    def is_on_cooldown(self, channel: discord.TextChannel) -> bool:
+        """
+        Return True if an embed was sent for `channel` in the last 300 seconds.
+
+        Note: only channels in the `channel_cooldowns` have cooldowns enabled.
+        """
+        return (time.time() - self.channel_cooldowns.get(channel.id, 0)) < 300
+
     def is_valid_channel(self, channel: discord.TextChannel) -> bool:
         """Return True if `channel` is a help channel, may be on cooldown, or is whitelisted."""
         return (
@@ -217,8 +225,7 @@ class CodeBlockCog(Cog, name="Code Block"):
         properly formatted Python syntax highlighting codeblocks.
         """
         if self.should_parse(msg):  # no token in the msg
-            on_cooldown = (time.time() - self.channel_cooldowns.get(msg.channel.id, 0)) < 300
-            if not on_cooldown or DEBUG_MODE:
+            if not self.is_on_cooldown(msg.channel) or DEBUG_MODE:
                 try:
                     if self.has_bad_ticks(msg):
                         ticks = msg.content[:3]
