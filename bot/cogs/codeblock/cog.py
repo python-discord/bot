@@ -15,6 +15,18 @@ from bot.utils.messages import wait_for_deletion
 log = logging.getLogger(__name__)
 
 RE_MARKDOWN = re.compile(r'([*_~`|>])')
+INVALID_BACKTICKS = {
+    "'''",
+    '"""',
+    "\u00b4\u00b4\u00b4",  # ACUTE ACCENT
+    "\u2018\u2018\u2018",  # LEFT SINGLE QUOTATION MARK
+    "\u2019\u2019\u2019",  # RIGHT SINGLE QUOTATION MARK
+    "\u2032\u2032\u2032",  # PRIME
+    "\u201c\u201c\u201c",  # LEFT DOUBLE QUOTATION MARK
+    "\u201d\u201d\u201d",  # RIGHT DOUBLE QUOTATION MARK
+    "\u2033\u2033\u2033",  # DOUBLE PRIME
+    "\u3003\u3003\u3003",  # VERTICAL KANA REPEAT MARK UPPER HALF
+}
 
 
 class CodeBlockCog(Cog, name="Code Block"):
@@ -251,15 +263,10 @@ class CodeBlockCog(Cog, name="Code Block"):
             log.trace(f"Found REPL code in \n\n{msg}\n\n")
             return final.rstrip(), True
 
-    def has_bad_ticks(self, msg: Message) -> bool:
-        """Check to see if msg contains ticks that aren't '`'."""
-        not_backticks = [
-            "'''", '"""', "\u00b4\u00b4\u00b4", "\u2018\u2018\u2018", "\u2019\u2019\u2019",
-            "\u2032\u2032\u2032", "\u201c\u201c\u201c", "\u201d\u201d\u201d", "\u2033\u2033\u2033",
-            "\u3003\u3003\u3003"
-        ]
-
-        return msg.content[:3] in not_backticks
+    @staticmethod
+    def has_bad_ticks(message: discord.Message) -> bool:
+        """Return True if `message` starts with 3 characters which look like but aren't '`'."""
+        return message.content[:3] in INVALID_BACKTICKS
 
     @staticmethod
     def is_help_channel(channel: discord.TextChannel) -> bool:
