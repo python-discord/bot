@@ -346,9 +346,8 @@ class CodeBlockCog(Cog, name="Code Block"):
                 description = self.format_guide_message(msg)
         except SyntaxError:
             log.trace(
-                f"{msg.author} posted in a help channel, and when we tried to parse it as Python code, "
-                "ast.parse raised a SyntaxError. This probably just means it wasn't Python code. "
-                f"The message that was posted was:\n\n{msg.content}\n\n"
+                f"SyntaxError while parsing code block sent by {msg.author}; "
+                f"code posted probably just wasn't Python:\n\n{msg.content}\n\n"
             )
             return
 
