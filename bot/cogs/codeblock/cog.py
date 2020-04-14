@@ -4,6 +4,7 @@ import re
 import time
 from typing import Optional, Tuple
 
+import discord
 from discord import Embed, Message, RawMessageUpdateEvent
 from discord.ext.commands import Bot, Cog
 
@@ -173,6 +174,14 @@ class CodeBlockCog(Cog, name="Code Block"):
 
         return msg.content[:3] in not_backticks
 
+    @staticmethod
+    def is_help_channel(channel: discord.TextChannel) -> bool:
+        """Return True if `channel` is in one of the help categories."""
+        return (
+            getattr(channel, "category", None)
+            and channel.category.id in (Categories.help_available, Categories.help_in_use)
+        )
+
     @Cog.listener()
     async def on_message(self, msg: Message) -> None:
         """
@@ -181,13 +190,9 @@ class CodeBlockCog(Cog, name="Code Block"):
         If poorly formatted code is detected, send the user a helpful message explaining how to do
         properly formatted Python syntax highlighting codeblocks.
         """
-        is_help_channel = (
-            getattr(msg.channel, "category", None)
-            and msg.channel.category.id in (Categories.help_available, Categories.help_in_use)
-        )
         parse_codeblock = (
             (
-                is_help_channel
+                self.is_help_channel(msg.channel)
                 or msg.channel.id in self.channel_cooldowns
                 or msg.channel.id in self.channel_whitelist
             )
