@@ -198,6 +198,20 @@ class CodeBlockCog(Cog, name="Code Block"):
             or channel.id in self.channel_whitelist
         )
 
+    async def send_guide_embed(self, message: discord.Message, description: str) -> None:
+        """
+        Send an embed with `description` as a guide for an improperly formatted `message`.
+
+        The embed will be deleted automatically after 5 minutes.
+        """
+        embed = Embed(description=description)
+        bot_message = await message.channel.send(f"Hey {message.author.mention}!", embed=embed)
+        self.codeblock_message_ids[message.id] = bot_message.id
+
+        self.bot.loop.create_task(
+            wait_for_deletion(bot_message, user_ids=(message.author.id,), client=self.bot)
+        )
+
     def should_parse(self, message: discord.Message) -> bool:
         """
         Return True if `message` should be parsed.
@@ -316,13 +330,7 @@ class CodeBlockCog(Cog, name="Code Block"):
                     log.trace("The code consists only of expressions, not sending instructions")
 
             if howto != "":
-                howto_embed = Embed(description=howto)
-                bot_message = await msg.channel.send(f"Hey {msg.author.mention}!", embed=howto_embed)
-                self.codeblock_message_ids[msg.id] = bot_message.id
-
-                self.bot.loop.create_task(
-                    wait_for_deletion(bot_message, user_ids=(msg.author.id,), client=self.bot)
-                )
+                await self.send_guide_embed(msg, howto)
             else:
                 return
 
