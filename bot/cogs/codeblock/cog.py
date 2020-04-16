@@ -15,6 +15,7 @@ from bot.utils.messages import wait_for_deletion
 log = logging.getLogger(__name__)
 
 RE_MARKDOWN = re.compile(r'([*_~`|>])')
+RE_CODE_BLOCK_LANGUAGE = re.compile(r"```(?:[^\W_])\n(.*?)```", re.DOTALL)
 INVALID_BACKTICKS = {
     "'''",
     '"""',
@@ -57,11 +58,8 @@ class CodeBlockCog(Cog, name="Code Block"):
         """
         if msg.count("\n") >= 3:
             # Filtering valid Python codeblocks and exiting if a valid Python codeblock is found.
-            if re.search("```(?:py|python)\n(.*?)```", msg, re.IGNORECASE | re.DOTALL) and not bad_ticks:
-                log.trace(
-                    "Someone wrote a message that was already a "
-                    "valid Python syntax highlighted code block. No action taken."
-                )
+            if RE_CODE_BLOCK_LANGUAGE.search(msg) and not bad_ticks:
+                log.trace("Code block already has valid syntax highlighting; no action taken")
                 return None
 
             else:
