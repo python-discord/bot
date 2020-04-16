@@ -6,8 +6,8 @@ from bot.cogs.moderation.infractions import Infractions
 from tests.helpers import MockBot, MockContext, MockGuild, MockMember, MockRole
 
 
-class ShorteningTests(unittest.IsolatedAsyncioTestCase):
-    """Tests for ban and kick command reason shortening."""
+class TruncationTests(unittest.IsolatedAsyncioTestCase):
+    """Tests for ban and kick command reason truncation."""
 
     def setUp(self):
         self.bot = MockBot()
@@ -19,7 +19,7 @@ class ShorteningTests(unittest.IsolatedAsyncioTestCase):
 
     @patch("bot.cogs.moderation.utils.has_active_infraction")
     @patch("bot.cogs.moderation.utils.post_infraction")
-    async def test_apply_ban_reason_shortening(self, post_infraction_mock, has_active_mock):
+    async def test_apply_ban_reason_truncation(self, post_infraction_mock, has_active_mock):
         """Should truncate reason for `ctx.guild.ban`."""
         has_active_mock.return_value = False
         post_infraction_mock.return_value = {"foo": "bar"}
@@ -38,7 +38,7 @@ class ShorteningTests(unittest.IsolatedAsyncioTestCase):
         await ban
 
     @patch("bot.cogs.moderation.utils.post_infraction")
-    async def test_apply_kick_reason_shortening(self, post_infraction_mock) -> None:
+    async def test_apply_kick_reason_truncation(self, post_infraction_mock):
         """Should truncate reason for `Member.kick`."""
         post_infraction_mock.return_value = {"foo": "bar"}
 
@@ -51,4 +51,5 @@ class ShorteningTests(unittest.IsolatedAsyncioTestCase):
             kick.cr_frame.f_locals["kwargs"]["reason"],
             textwrap.shorten("foo bar" * 3000, 512, placeholder="...")
         )
+        # Await kick to avoid warning
         await kick

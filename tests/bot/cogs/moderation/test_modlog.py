@@ -14,7 +14,7 @@ class ModLogTests(unittest.IsolatedAsyncioTestCase):
         self.cog = ModLog(self.bot)
         self.channel = MockTextChannel()
 
-    async def test_log_entry_description_shortening(self):
+    async def test_log_entry_description_truncation(self):
         """Should truncate embed description for ModLog entry."""
         self.bot.get_channel.return_value = self.channel
         await self.cog.send_log_message(
