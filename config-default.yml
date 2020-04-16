@@ -475,7 +475,6 @@ anti_malware:
         - '.mp3'
         - '.wav'
         - '.ogg'
-        - '.md'
 
 
 reddit:
