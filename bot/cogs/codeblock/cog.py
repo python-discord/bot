@@ -56,64 +56,66 @@ class CodeBlockCog(Cog, name="Code Block"):
         Tries to strip out Python code out of msg and returns the stripped block or
         None if the block is a valid Python codeblock.
         """
-        if msg.count("\n") >= 3:
-            # Filtering valid Python codeblocks and exiting if a valid Python codeblock is found.
-            if RE_CODE_BLOCK_LANGUAGE.search(msg) and not bad_ticks:
-                log.trace("Code block already has valid syntax highlighting; no action taken")
-                return None
+        if len(msg.split("\n", 3)) <= 3:
+            return None
 
-            else:
-                # Stripping backticks from every line of the message.
-                log.trace(f"Stripping backticks from message.\n\n{msg}\n\n")
-                content = ""
-                for line in msg.splitlines(keepends=True):
-                    content += line.strip("`")
+        # Filtering valid Python codeblocks and exiting if a valid Python codeblock is found.
+        if RE_CODE_BLOCK_LANGUAGE.search(msg) and not bad_ticks:
+            log.trace("Code block already has valid syntax highlighting; no action taken")
+            return None
 
-                content = content.strip()
+        else:
+            # Stripping backticks from every line of the message.
+            log.trace(f"Stripping backticks from message.\n\n{msg}\n\n")
+            content = ""
+            for line in msg.splitlines(keepends=True):
+                content += line.strip("`")
 
-                # Remove "Python" or "Py" from start of the message if it exists.
-                log.trace(f"Removing 'py' or 'python' from message.\n\n{content}\n\n")
-                pycode = False
-                if content.lower().startswith("python"):
-                    content = content[6:]
-                    pycode = True
-                elif content.lower().startswith("py"):
-                    content = content[2:]
-                    pycode = True
+            content = content.strip()
 
-                if pycode:
-                    content = content.splitlines(keepends=True)
+            # Remove "Python" or "Py" from start of the message if it exists.
+            log.trace(f"Removing 'py' or 'python' from message.\n\n{content}\n\n")
+            pycode = False
+            if content.lower().startswith("python"):
+                content = content[6:]
+                pycode = True
+            elif content.lower().startswith("py"):
+                content = content[2:]
+                pycode = True
 
-                    # Check if there might be code in the first line, and preserve it.
-                    first_line = content[0]
-                    if " " in content[0]:
-                        first_space = first_line.index(" ")
-                        content[0] = first_line[first_space:]
-                        content = "".join(content)
+            if pycode:
+                content = content.splitlines(keepends=True)
 
-                    # If there's no code we can just get rid of the first line.
-                    else:
-                        content = "".join(content[1:])
+                # Check if there might be code in the first line, and preserve it.
+                first_line = content[0]
+                if " " in content[0]:
+                    first_space = first_line.index(" ")
+                    content[0] = first_line[first_space:]
+                    content = "".join(content)
 
-                # Strip it again to remove any leading whitespace. This is neccessary
-                # if the first line of the message looked like ```python <code>
-                old = content.strip()
-
-                # Strips REPL code out of the message if there is any.
-                content, repl_code = self.repl_stripping(old)
-                if old != content:
-                    return (content, old), repl_code
-
-                # Try to apply indentation fixes to the code.
-                content = self.fix_indentation(content)
-
-                # Check if the code contains backticks, if it does ignore the message.
-                if "`" in content:
-                    log.trace("Detected ` inside the code, won't reply")
-                    return None
+                # If there's no code we can just get rid of the first line.
                 else:
-                    log.trace(f"Returning message.\n\n{content}\n\n")
-                    return (content,), repl_code
+                    content = "".join(content[1:])
+
+            # Strip it again to remove any leading whitespace. This is neccessary
+            # if the first line of the message looked like ```python <code>
+            old = content.strip()
+
+            # Strips REPL code out of the message if there is any.
+            content, repl_code = self.repl_stripping(old)
+            if old != content:
+                return (content, old), repl_code
+
+            # Try to apply indentation fixes to the code.
+            content = self.fix_indentation(content)
+
+            # Check if the code contains backticks, if it does ignore the message.
+            if "`" in content:
+                log.trace("Detected ` inside the code, won't reply")
+                return None
+            else:
+                log.trace(f"Returning message.\n\n{content}\n\n")
+                return (content,), repl_code
 
     def format_bad_ticks_message(self, message: discord.Message) -> Optional[str]:
         """Return the guide message to output for bad code block ticks in `message`."""
@@ -318,7 +320,7 @@ class CodeBlockCog(Cog, name="Code Block"):
         return (
             not message.author.bot
             and self.is_valid_channel(message.channel)
-            and len(message.content.splitlines()) > 3
+            and len(message.content.split("\n", 3)) > 3
             and not TokenRemover.find_token_in_message(message)
         )
 
