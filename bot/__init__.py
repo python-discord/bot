@@ -33,7 +33,7 @@ log_format = logging.Formatter(format_string)
 
 log_file = Path("logs", "bot.log")
 log_file.parent.mkdir(exist_ok=True)
-file_handler = handlers.RotatingFileHandler(log_file, maxBytes=5242880, backupCount=7)
+file_handler = handlers.RotatingFileHandler(log_file, maxBytes=5242880, backupCount=7, encoding="utf8")
 file_handler.setFormatter(log_format)
 
 root_log = logging.getLogger()
