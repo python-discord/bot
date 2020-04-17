@@ -40,8 +40,9 @@ channels in the Help: Available category.
 AVAILABLE_MSG = f"""
 This help channel is now **available**, which means that you can claim it by simply typing your \
 question into it. Once claimed, the channel will move into the **Python Help: Occupied** category, \
-and will be yours until it has been inactive for {constants.HelpChannels.idle_minutes} minutes. When \
-that happens, it will be set to **dormant** and moved into the **Help: Dormant** category.
+and will be yours until it has been inactive for {constants.HelpChannels.idle_minutes} minutes or \
+is closed manually with `!close`. When that happens, it will be set to **dormant** and moved into \
+the **Help: Dormant** category.
 
 You may claim a new channel once every {constants.HelpChannels.claim_minutes} minutes. If you \
 currently cannot send a message in this channel, it means you are on cooldown and need to wait.
