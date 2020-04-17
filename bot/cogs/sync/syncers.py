@@ -1,4 +1,5 @@
 import abc
+import asyncio
 import logging
 import typing as t
 from collections import namedtuple
@@ -122,7 +123,7 @@ class Syncer(abc.ABC):
                 check=partial(self._reaction_check, author, message),
                 timeout=constants.Sync.confirm_timeout
             )
-        except TimeoutError:
+        except asyncio.TimeoutError:
             # reaction will remain none thus sync will be aborted in the finally block below.
             log.debug(f"The {self.name} syncer confirmation prompt timed out.")
 
