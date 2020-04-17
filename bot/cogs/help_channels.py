@@ -21,6 +21,7 @@ log = logging.getLogger(__name__)
 
 ASKING_GUIDE_URL = "https://pythondiscord.com/pages/asking-good-questions/"
 MAX_CHANNELS_PER_CATEGORY = 50
+COOLDOWN_ROLE = discord.Object(constants.Roles.help_cooldown)
 
 AVAILABLE_TOPIC = """
 This channel is available. Feel free to ask a question in order to claim this channel!
@@ -624,13 +625,6 @@ class HelpChannels(Scheduler, commands.Cog):
         # be put in the queue.
         await self.move_to_available()
 
-    async def update_category_permissions(
-        self, category: discord.CategoryChannel, member: discord.Member, **permissions
-    ) -> None:
-        """Update the permissions of the given `member` for the given `category` with `permissions` passed."""
-        log.trace(f"Updating permissions for `{member}` in `{category}` with {permissions}.")
-        await category.set_permissions(member, **permissions)
-
     async def reset_send_permissions(self) -> None:
         """Reset send permissions in the Available category for claimants."""
         log.trace("Resetting send permissions in the Available category.")
@@ -640,8 +634,7 @@ class HelpChannels(Scheduler, commands.Cog):
         for member in guild.members:
             if self.is_claimant(member):
                 log.trace(f"Resetting send permissions for {member} ({member.id}).")
-                role = discord.Object(constants.Roles.help_cooldown)
-                await member.remove_roles(role)
+                await member.remove_roles(COOLDOWN_ROLE)
 
     async def reset_claimant_send_permission(self, channel: discord.TextChannel) -> None:
         """Reset send permissions in the Available category for the help `channel` claimant."""
@@ -649,11 +642,15 @@ class HelpChannels(Scheduler, commands.Cog):
         try:
             member = self.help_channel_claimants[channel]
         except KeyError:
-            log.trace(f"Channel #{channel.name} ({channel.id}) not in claimant cache, permissions unchanged.")
+            log.trace(
+                f"Channel #{channel.name} ({channel.id}) not in claimant cache, "
+                f"permissions unchanged."
+            )
             return
 
         log.trace(f"Resetting send permissions for {member} ({member.id}).")
-        await self.update_category_permissions(self.available_category, member, overwrite=None)
+        await member.remove_roles(COOLDOWN_ROLE)
+
         # Ignore missing task when claim cooldown has passed but the channel still isn't dormant.
         self.cancel_task(member.id, ignore_missing=True)
 
@@ -668,14 +665,14 @@ class HelpChannels(Scheduler, commands.Cog):
             f"Revoking {member}'s ({member.id}) send message permissions in the Available category."
         )
 
-        await self.update_category_permissions(self.available_category, member, send_messages=False)
+        await member.add_roles(COOLDOWN_ROLE)
 
         # Cancel the existing task, if any.
         # Would mean the user somehow bypassed the lack of permissions (e.g. user is guild owner).
         self.cancel_task(member.id, ignore_missing=True)
 
         timeout = constants.HelpChannels.claim_minutes * 60
-        callback = self.update_category_permissions(self.available_category, member, overwrite=None)
+        callback = member.remove_roles(COOLDOWN_ROLE)
 
         log.trace(f"Scheduling {member}'s ({member.id}) send message permissions to be reinstated.")
         self.schedule_task(member.id, TaskData(timeout, callback))
