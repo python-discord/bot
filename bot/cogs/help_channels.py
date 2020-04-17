@@ -230,7 +230,7 @@ class HelpChannels(Scheduler, commands.Cog):
                     del self.help_channel_claimants[ctx.channel]
 
                 with suppress(discord.errors.HTTPException, discord.errors.NotFound):
-                    await self.reset_claimant_send_permission(ctx.channel)
+                    await self.reset_claimant_send_permission(ctx.author)
 
                 await self.move_to_dormant(ctx.channel, "command")
                 self.cancel_task(ctx.channel.id)
@@ -640,18 +640,8 @@ class HelpChannels(Scheduler, commands.Cog):
                 log.trace(f"Resetting send permissions for {member} ({member.id}).")
                 await member.remove_roles(COOLDOWN_ROLE)
 
-    async def reset_claimant_send_permission(self, channel: discord.TextChannel) -> None:
-        """Reset send permissions in the Available category for the help `channel` claimant."""
-        log.trace(f"Attempting to find claimant for #{channel.name} ({channel.id}).")
-        try:
-            member = self.help_channel_claimants[channel]
-        except KeyError:
-            log.trace(
-                f"Channel #{channel.name} ({channel.id}) not in claimant cache, "
-                f"permissions unchanged."
-            )
-            return
-
+    async def reset_claimant_send_permission(self, member: discord.Member) -> None:
+        """Reset send permissions in the Available category for `member`."""
         log.trace(f"Resetting send permissions for {member} ({member.id}).")
         await member.remove_roles(COOLDOWN_ROLE)
 
