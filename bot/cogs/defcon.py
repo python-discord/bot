@@ -104,6 +104,7 @@ class Defcon(Cog):
                     log.exception(f"Unable to send rejection message to user: {member}")
 
                 await member.kick(reason="DEFCON active, user is too new")
+                self.bot.stats.incr("defcon.leaves")
 
                 message = (
                     f"{member} (`{member.id}`) was denied entry because their account is too new."
@@ -125,6 +126,19 @@ class Defcon(Cog):
 
     async def _defcon_action(self, ctx: Context, days: int, action: Action) -> None:
         """Providing a structured way to do an defcon action."""
+        try:
+            response = await self.bot.api_client.get('bot/bot-settings/defcon')
+            data = response['data']
+
+            if "enable_date" in data and action is Action.DISABLED:
+                enabled = datetime.fromisoformat(data["enable_date"])
+
+                delta = datetime.now() - enabled
+
+                self.bot.stats.timing("defcon.enabled", delta)
+        except Exception:
+            pass
+
         error = None
         try:
             await self.bot.api_client.put(
@@ -135,6 +149,7 @@ class Defcon(Cog):
                         # TODO: retrieve old days count
                         'days': days,
                         'enabled': action is not Action.DISABLED,
+                        'enable_date': datetime.now().isoformat()
                     }
                 }
             )
@@ -144,6 +159,8 @@ class Defcon(Cog):
         finally:
             await ctx.send(self.build_defcon_msg(action, error))
             await self.send_defcon_log(action, ctx.author, error)
+
+            self.bot.stats.gauge("defcon.threshold", days)
 
     @defcon_group.command(name='enable', aliases=('on', 'e'))
     @with_role(Roles.admins, Roles.owners)

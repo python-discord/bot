@@ -350,6 +350,13 @@ class CleanMessages(metaclass=YAMLGetter):
 
     message_limit: int
 
+class Stats(metaclass=YAMLGetter):
+    section = "bot"
+    subsection = "stats"
+
+    presence_update_timeout: int
+    statsd_host: str
+
 
 class Categories(metaclass=YAMLGetter):
     section = "guild"

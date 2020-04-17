@@ -3,6 +3,10 @@ bot:
     token:       !ENV "BOT_TOKEN"
     sentry_dsn:  !ENV "BOT_SENTRY_DSN"
 
+    stats:
+        statsd_host: "graphite"
+        presence_update_timeout: 300
+
     cooldowns:
         # Per channel, per tag.
         tags: 60
@@ -471,7 +475,6 @@ anti_malware:
         - '.mp3'
         - '.wav'
         - '.ogg'
-        - '.md'
 
 
 reddit:
