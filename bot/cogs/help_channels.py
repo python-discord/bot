@@ -380,7 +380,7 @@ class HelpChannels(Scheduler, commands.Cog):
     def is_in_category(channel: discord.TextChannel, category_id: int) -> bool:
         """Return True if `channel` is within a category with `category_id`."""
         actual_category = getattr(channel, "category", None)
-        return actual_category and actual_category.id == category_id
+        return actual_category is not None and actual_category.id == category_id
 
     async def move_idle_channel(self, channel: discord.TextChannel, has_task: bool = True) -> None:
         """
