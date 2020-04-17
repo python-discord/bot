@@ -89,12 +89,15 @@ class HelpChannels(Scheduler, commands.Cog):
         * If there are no more dormant channels, the bot will automatically create a new one
         * If there are no dormant channels to move, helpers will be notified (see `notify()`)
     * When a channel becomes available, the dormant embed will be edited to show `AVAILABLE_MSG`
+    * User can only claim a channel at an interval `constants.HelpChannels.claim_minutes`
+        * To keep track of cooldowns, user which claimed a channel will have a temporary role
 
     In Use Category
 
     * Contains all channels which are occupied by someone needing help
     * Channel moves to dormant category after `constants.HelpChannels.idle_minutes` of being idle
     * Command can prematurely mark a channel as dormant
+        * Channel claimant is allowed to use the command
         * Allowed roles for the command are configurable with `constants.HelpChannels.cmd_whitelist`
     * When a channel becomes dormant, an embed with `DORMANT_MSG` will be sent
 
