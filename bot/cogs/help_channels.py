@@ -229,8 +229,9 @@ class HelpChannels(Scheduler, commands.Cog):
                 with suppress(KeyError):
                     del self.help_channel_claimants[ctx.channel]
 
-                with suppress(discord.errors.HTTPException, discord.errors.NotFound):
-                    await self.reset_claimant_send_permission(ctx.author)
+                await self.remove_cooldown_role(ctx.author)
+                # Ignore missing task when cooldown has passed but the channel still isn't dormant.
+                self.cancel_task(ctx.author.id, ignore_missing=True)
 
                 await self.move_to_dormant(ctx.channel, "command")
                 self.cancel_task(ctx.channel.id)
@@ -637,16 +638,38 @@ class HelpChannels(Scheduler, commands.Cog):
         # TODO: replace with a persistent cache cause checking every member is quite slow
         for member in guild.members:
             if self.is_claimant(member):
-                log.trace(f"Resetting send permissions for {member} ({member.id}).")
-                await member.remove_roles(COOLDOWN_ROLE)
+                await self.remove_cooldown_role(member)
 
-    async def reset_claimant_send_permission(self, member: discord.Member) -> None:
-        """Reset send permissions in the Available category for `member`."""
-        log.trace(f"Resetting send permissions for {member} ({member.id}).")
-        await member.remove_roles(COOLDOWN_ROLE)
+    @classmethod
+    async def add_cooldown_role(cls, member: discord.Member) -> None:
+        """Add the help cooldown role to `member`."""
+        log.trace(f"Adding cooldown role for {member} ({member.id}).")
+        await cls._change_cooldown_role(member, member.add_roles(COOLDOWN_ROLE))
 
-        # Ignore missing task when claim cooldown has passed but the channel still isn't dormant.
-        self.cancel_task(member.id, ignore_missing=True)
+    @classmethod
+    async def remove_cooldown_role(cls, member: discord.Member) -> None:
+        """Remove the help cooldown role from `member`."""
+        log.trace(f"Removing cooldown role for {member} ({member.id}).")
+        await cls._change_cooldown_role(member, member.remove_roles(COOLDOWN_ROLE))
+
+    @staticmethod
+    async def _change_cooldown_role(member: discord.Member, coro: t.Awaitable) -> None:
+        """
+        Change `member`'s cooldown role via awaiting `coro` and handle errors.
+
+        `coro` is intended to be `discord.Member.add_roles` or `discord.Member.remove_roles`.
+        """
+        try:
+            await coro
+        except discord.NotFound:
+            log.debug(f"Failed to change role for {member} ({member.id}): member not found")
+        except discord.Forbidden:
+            log.debug(
+                f"Forbidden to change role for {member} ({member.id}); "
+                f"possibly due to role hierarchy"
+            )
+        except discord.HTTPException as e:
+            log.error(f"Failed to change role for {member} ({member.id}): {e.status} {e.code}")
 
     async def revoke_send_permissions(self, member: discord.Member) -> None:
         """
@@ -659,14 +682,14 @@ class HelpChannels(Scheduler, commands.Cog):
             f"Revoking {member}'s ({member.id}) send message permissions in the Available category."
         )
 
-        await member.add_roles(COOLDOWN_ROLE)
+        await self.add_cooldown_role(member)
 
         # Cancel the existing task, if any.
         # Would mean the user somehow bypassed the lack of permissions (e.g. user is guild owner).
         self.cancel_task(member.id, ignore_missing=True)
 
         timeout = constants.HelpChannels.claim_minutes * 60
-        callback = member.remove_roles(COOLDOWN_ROLE)
+        callback = self.remove_cooldown_role(member)
 
         log.trace(f"Scheduling {member}'s ({member.id}) send message permissions to be reinstated.")
         self.schedule_task(member.id, TaskData(timeout, callback))
