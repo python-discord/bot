@@ -221,11 +221,11 @@ class HelpChannels(Scheduler, commands.Cog):
         log.trace("dormant command invoked; checking if the channel is in-use.")
         if ctx.channel.category == self.in_use_category:
             if await self.dormant_check(ctx):
-                with suppress(KeyError):
-                    del self.help_channel_claimants[ctx.channel]
-
                 with suppress(discord.errors.HTTPException, discord.errors.NotFound):
                     await self.reset_claimant_send_permission(ctx.channel)
+
+                with suppress(KeyError):
+                    del self.help_channel_claimants[ctx.channel]
 
                 await self.move_to_dormant(ctx.channel, "command")
                 self.cancel_task(ctx.channel.id)
