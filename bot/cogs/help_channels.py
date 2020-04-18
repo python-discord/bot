@@ -221,8 +221,7 @@ class HelpChannels(Scheduler, commands.Cog):
         log.trace("dormant command invoked; checking if the channel is in-use.")
         if ctx.channel.category == self.in_use_category:
             if await self.dormant_check(ctx):
-                with suppress(discord.errors.HTTPException, discord.errors.NotFound):
-                    await self.reset_claimant_send_permission(ctx.channel)
+                await self.reset_claimant_send_permission(ctx.channel)
 
                 with suppress(KeyError):
                     del self.help_channel_claimants[ctx.channel]
@@ -678,7 +677,13 @@ class HelpChannels(Scheduler, commands.Cog):
             return
 
         log.trace(f"Resetting send permissions for {member} ({member.id}).")
-        await self.update_category_permissions(self.available_category, member, overwrite=None)
+        try:
+            await self.update_category_permissions(self.available_category, member, overwrite=None)
+        except discord.errors.NotFound:
+            log.debug(f"User {member} ({member.id}) not found when resetting send permissions.")
+        except discord.errors.HTTPException:
+            log.info(f"Resetting send permissions of {member} ({member.id}) failed, falling back to scheduled task.")
+            return
         # Ignore missing task when claim cooldown has passed but the channel still isn't dormant.
         self.cancel_task(member.id, ignore_missing=True)
 
