@@ -11,6 +11,7 @@ from bot import constants
 from bot.bot import Bot
 from bot.converters import TagNameConverter
 from bot.pagination import LinePaginator
+from bot.utils.messages import wait_for_deletion
 
 log = logging.getLogger(__name__)
 
@@ -167,6 +168,7 @@ class Tags(Cog):
     @tags_group.command(name='get', aliases=('show', 'g'))
     async def get_command(self, ctx: Context, *, tag_name: TagNameConverter = None) -> None:
         """Get a specified tag, or a list of all tags if no tag is specified."""
+
         def _command_on_cooldown(tag_name: str) -> bool:
             """
             Check if the command is currently on cooldown, on a per-tag, per-channel basis.
@@ -205,12 +207,25 @@ class Tags(Cog):
                         "time": time.time(),
                         "channel": ctx.channel.id
                     }
-                await ctx.send(embed=Embed.from_dict(tag['embed']))
+
+                self.bot.stats.incr(f"tags.usages.{tag['title'].replace('-', '_')}")
+
+                await wait_for_deletion(
+                    await ctx.send(embed=Embed.from_dict(tag['embed'])),
+                    [ctx.author.id],
+                    client=self.bot
+                )
             elif founds and len(tag_name) >= 3:
-                await ctx.send(embed=Embed(
-                    title='Did you mean ...',
-                    description='\n'.join(tag['title'] for tag in founds[:10])
-                ))
+                await wait_for_deletion(
+                    await ctx.send(
+                        embed=Embed(
+                            title='Did you mean ...',
+                            description='\n'.join(tag['title'] for tag in founds[:10])
+                        )
+                    ),
+                    [ctx.author.id],
+                    client=self.bot
+                )
 
         else:
             tags = self._cache.values()

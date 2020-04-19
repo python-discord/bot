@@ -262,6 +262,34 @@ class ISODateTime(Converter):
         return dt
 
 
+class HushDurationConverter(Converter):
+    """Convert passed duration to `int` minutes or `None`."""
+
+    MINUTES_RE = re.compile(r"(\d+)(?:M|m|$)")
+
+    async def convert(self, ctx: Context, argument: str) -> t.Optional[int]:
+        """
+        Convert `argument` to a duration that's max 15 minutes or None.
+
+        If `"forever"` is passed, None is returned; otherwise an int of the extracted time.
+        Accepted formats are:
+        * <duration>,
+        * <duration>m,
+        * <duration>M,
+        * forever.
+        """
+        if argument == "forever":
+            return None
+        match = self.MINUTES_RE.match(argument)
+        if not match:
+            raise BadArgument(f"{argument} is not a valid minutes duration.")
+
+        duration = int(match.group(1))
+        if duration > 15:
+            raise BadArgument("Duration must be at most 15 minutes.")
+        return duration
+
+
 def proxy_user(user_id: str) -> discord.Object:
     """
     Create a proxy user object from the given id.
@@ -323,7 +351,7 @@ class FetchedUser(UserConverter):
         except discord.HTTPException as e:
             # If the Discord error isn't `Unknown user`, return a proxy instead
             if e.code != 10013:
-                log.warning(f"Failed to fetch user, returning a proxy instead: status {e.status}")
+                log.info(f"Failed to fetch user, returning a proxy instead: status {e.status}")
                 return proxy_user(arg)
 
             log.debug(f"Failed to fetch user {arg}: user does not exist.")

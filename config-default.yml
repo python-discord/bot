@@ -3,6 +3,10 @@ bot:
     token:       !ENV "BOT_TOKEN"
     sentry_dsn:  !ENV "BOT_SENTRY_DSN"
 
+    stats:
+        statsd_host: "graphite"
+        presence_update_timeout: 300
+
     cooldowns:
         # Per channel, per tag.
         tags: 60
@@ -111,7 +115,9 @@ guild:
     id: 267624335836053506
 
     categories:
-        python_help:    356013061213126657
+        help_available:                     691405807388196926
+        help_in_use:                        696958401460043776
+        help_dormant:                       691405908919451718
 
     channels:
         announcements:                              354619224620138496
@@ -137,16 +143,6 @@ guild:
         off_topic_0:    291284109232308226
         off_topic_1:    463035241142026251
         off_topic_2:    463035268514185226
-
-        # Python Help
-        help_0:         303906576991780866
-        help_1:         303906556754395136
-        help_2:         303906514266226689
-        help_3:         439702951246692352
-        help_4:         451312046647148554
-        help_5:         454941769734422538
-        help_6:         587375753306570782
-        help_7:         587375768556797982
 
         # Special
         bot_commands:       &BOT_CMD        267659945086812160
@@ -248,9 +244,8 @@ filter:
     filter_zalgo:       false
     filter_invites:     true
     filter_domains:     true
+    watch_regex:        true
     watch_rich_embeds:  true
-    watch_words:        true
-    watch_tokens:       true
 
     # Notify user on filter?
     # Notifications are not expected for "watchlist" type filters
@@ -280,6 +275,7 @@ filter:
         - 524691714909274162  # Panda3D
         - 336642139381301249  # discord.py
         - 405403391410438165  # Sentdex
+        - 172018499005317120  # The Coding Den
 
     domain_blacklist:
         - pornhub.com
@@ -479,7 +475,6 @@ anti_malware:
         - '.mp3'
         - '.wav'
         - '.ogg'
-        - '.md'
 
 
 reddit:
@@ -511,6 +506,42 @@ free:
 mention:
     message_timeout: 300
     reset_delay: 5
+
+help_channels:
+    enable: true
+
+    # Minimum interval before allowing a certain user to claim a new help channel
+    claim_minutes: 15
+
+    # Roles which are allowed to use the command which makes channels dormant
+    cmd_whitelist:
+        - *HELPERS_ROLE
+
+    # Allowed duration of inactivity before making a channel dormant
+    idle_minutes: 30
+
+    # Maximum number of channels to put in the available category
+    max_available: 2
+
+    # Maximum number of channels across all 3 categories
+    # Note Discord has a hard limit of 50 channels per category, so this shouldn't be > 50
+    max_total_channels: 32
+
+    # Prefix for help channel names
+    name_prefix: 'help-'
+
+    # Notify if more available channels are needed but there are no more dormant ones
+    notify: true
+
+    # Channel in which to send notifications
+    notify_channel: *HELPERS
+
+    # Minimum interval between helper notifications
+    notify_minutes: 15
+
+    # Mention these roles in notifications
+    notify_roles:
+        - *HELPERS_ROLE
 
 redirect_output:
     delete_invocation: true

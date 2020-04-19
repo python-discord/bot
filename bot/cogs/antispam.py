@@ -180,6 +180,7 @@ class AntiSpam(Cog):
             # which contains the reason for why the message violated the rule and
             # an iterable of all members that violated the rule.
             if result is not None:
+                self.bot.stats.incr(f"mod_alerts.{rule_name}")
                 reason, members, relevant_messages = result
                 full_reason = f"`{rule_name}` rule: {reason}"
 

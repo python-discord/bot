@@ -206,9 +206,8 @@ class Filter(metaclass=YAMLGetter):
     filter_zalgo: bool
     filter_invites: bool
     filter_domains: bool
+    watch_regex: bool
     watch_rich_embeds: bool
-    watch_words: bool
-    watch_tokens: bool
 
     # Notifications are not expected for "watchlist" type filters
     notify_user_zalgo: bool
@@ -351,12 +350,21 @@ class CleanMessages(metaclass=YAMLGetter):
 
     message_limit: int
 
+class Stats(metaclass=YAMLGetter):
+    section = "bot"
+    subsection = "stats"
+
+    presence_update_timeout: int
+    statsd_host: str
+
 
 class Categories(metaclass=YAMLGetter):
     section = "guild"
     subsection = "categories"
 
-    python_help: int
+    help_available: int
+    help_in_use: int
+    help_dormant: int
 
 
 class Channels(metaclass=YAMLGetter):
@@ -374,14 +382,6 @@ class Channels(metaclass=YAMLGetter):
     dev_core: int
     dev_log: int
     esoteric: int
-    help_0: int
-    help_1: int
-    help_2: int
-    help_3: int
-    help_4: int
-    help_5: int
-    help_6: int
-    help_7: int
     helpers: int
     message_log: int
     meta: int
@@ -530,6 +530,22 @@ class Free(metaclass=YAMLGetter):
     activity_timeout: int
     cooldown_rate: int
     cooldown_per: float
+
+
+class HelpChannels(metaclass=YAMLGetter):
+    section = 'help_channels'
+
+    enable: bool
+    claim_minutes: int
+    cmd_whitelist: List[int]
+    idle_minutes: int
+    max_available: int
+    max_total_channels: int
+    name_prefix: str
+    notify: bool
+    notify_channel: int
+    notify_minutes: int
+    notify_roles: List[int]
 
 
 class Mention(metaclass=YAMLGetter):

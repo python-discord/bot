@@ -5,9 +5,8 @@ import sentry_sdk
 from discord.ext.commands import when_mentioned_or
 from sentry_sdk.integrations.logging import LoggingIntegration
 
-from bot import patches
+from bot import constants, patches
 from bot.bot import Bot
-from bot.constants import Bot as BotConfig
 
 sentry_logging = LoggingIntegration(
     level=logging.DEBUG,
@@ -15,12 +14,12 @@ sentry_logging = LoggingIntegration(
 )
 
 sentry_sdk.init(
-    dsn=BotConfig.sentry_dsn,
+    dsn=constants.Bot.sentry_dsn,
     integrations=[sentry_logging]
 )
 
 bot = Bot(
-    command_prefix=when_mentioned_or(BotConfig.prefix),
+    command_prefix=when_mentioned_or(constants.Bot.prefix),
     activity=discord.Game(name="Commands: !help"),
     case_insensitive=True,
     max_messages=10_000,
@@ -47,9 +46,8 @@ bot.load_extension("bot.cogs.verification")
 # Feature cogs
 bot.load_extension("bot.cogs.alias")
 bot.load_extension("bot.cogs.defcon")
-bot.load_extension("bot.cogs.eval")
 bot.load_extension("bot.cogs.duck_pond")
-bot.load_extension("bot.cogs.free")
+bot.load_extension("bot.cogs.eval")
 bot.load_extension("bot.cogs.information")
 bot.load_extension("bot.cogs.jams")
 bot.load_extension("bot.cogs.moderation")
@@ -58,15 +56,20 @@ bot.load_extension("bot.cogs.reddit")
 bot.load_extension("bot.cogs.reminders")
 bot.load_extension("bot.cogs.site")
 bot.load_extension("bot.cogs.snekbox")
+bot.load_extension("bot.cogs.stats")
 bot.load_extension("bot.cogs.sync")
 bot.load_extension("bot.cogs.tags")
 bot.load_extension("bot.cogs.token_remover")
 bot.load_extension("bot.cogs.utils")
 bot.load_extension("bot.cogs.watchchannels")
+bot.load_extension("bot.cogs.webhook_remover")
 bot.load_extension("bot.cogs.wolfram")
+
+if constants.HelpChannels.enable:
+    bot.load_extension("bot.cogs.help_channels")
 
 # Apply `message_edited_at` patch if discord.py did not yet release a bug fix.
 if not hasattr(discord.message.Message, '_handle_edited_timestamp'):
     patches.message_edited_at.apply_patch()
 
-bot.run(BotConfig.token)
+bot.run(constants.Bot.token)
