@@ -34,25 +34,28 @@ class Tags(Cog):
     @staticmethod
     def get_tags() -> dict:
         """Get all tags."""
-        # Save all tags in memory.
         cache = {}
-        tag_files = Path("bot", "resources", "tags").glob("**/*")
-        for file in tag_files:
 
+        base_path = Path("bot", "resources", "tags")
+        for file in base_path.glob("**/*"):
             if file.is_file():
                 tag_title = file.stem
                 tag = {
                     "title": tag_title,
                     "embed": {
-                        "description": file.read_text()
+                        "description": file.read_text(),
                     },
-                    "restricted_to": "developers"
+                    "restricted_to": "developers",
                 }
-                parent_folder = file.parent.stem
-                if parent_folder != "tags":
-                    tag["restricted_to"] = parent_folder
+
+                # Convert to a list to allow negative indexing.
+                parents = list(file.relative_to(base_path).parents)
+                if len(parents) > 1:
+                    # -1 would be '.' hence -2 is used as the index.
+                    tag["restricted_to"] = parents[-2].name
 
                 cache[tag_title] = tag
+
         return cache
 
     @staticmethod
