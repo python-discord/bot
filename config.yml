@@ -363,7 +363,7 @@ keys:
 
 urls:
     # PyDis site vars
-    site:        &DOMAIN       "web:8000"
+    site:        &DOMAIN       "pythondiscord.local:8000"
     site_api:    &API    !JOIN ["api.", *DOMAIN]
     site_paste:  &PASTE  !JOIN ["paste.", *DOMAIN]
     site_staff:  &STAFF  !JOIN ["staff.", *DOMAIN]

@@ -2,7 +2,7 @@ import asyncio
 import textwrap
 import unittest
 import unittest.mock
-import datetime
+from datetime import datetime
 import discord
 
 from bot import constants
@@ -584,6 +584,7 @@ class UserCommandTests(unittest.TestCase):
 @unittest.mock.patch("bot.cogs.information.constants")
 class PingCommandTests(unittest.TestCase):
     """Tests for the `!ping` command."""
+
     def setUp(self):
         """Set up steps executed before each test is run."""
         self.bot = helpers.MockBot()
@@ -596,16 +597,16 @@ class PingCommandTests(unittest.TestCase):
         self.author = helpers.MockMember(id=1, name="syntaxaire")
         self.moderator = helpers.MockMember(id=2, name="riffautae", roles=[self.moderator_role])
         self.target = helpers.MockMember(id=3, name="__fluzz__")
+
     # Kevin's tests for Ping
-    # @unittest.mock.patch("bot.cogs.information.Information.ping", new_callable=unittest.mock.AsyncMock)
-    # def test_bot_latency_correct_context(self, create_embed, constants):
-    #     """Ping should return correct ping responses dependent on message sent."""
-    #     ctx = helpers.MockContext()
-    #     ctx.message = helpers.MockMessage();
-    #     ctx.message.created_at = "D"
-    #
-    #     coroutine = self.cog.ping.callback(self.cog, ctx)
-    #     self.assertFalse(asyncio.run(coroutine))
+    @unittest.mock.patch("bot.cogs.information.Information.ping", new_callable=unittest.mock.AsyncMock)
+    def test_bot_latency_correct_context(self, create_embed, constants):
+        """Ping should return correct ping responses dependent on message sent."""
+        ctx = helpers.MockContext()
+        ctx.message = helpers.MockMessage();
+        ctx.message.created_at = "D"
+        coroutine = self.cog.ping.callback(self.cog, ctx)
+        self.assertFalse(asyncio.run(coroutine))
 
     @unittest.mock.patch("bot.cogs.information.Information.ping", new_callable=unittest.mock.AsyncMock)
     def test_bot_latency_correct_time(self, create_embed, constants):
@@ -613,7 +614,6 @@ class PingCommandTests(unittest.TestCase):
         ctx = helpers.MockContext()
         ctx.message = helpers.MockMessage();
         timestamp = 1587263832
-        print(type(datetime.datetime.fromtimestamp(timestamp)))
-        ctx.message.created_at = datetime.datetime.fromtimestamp(timestamp)
-        coroutine = self.cog.ping.callback(self.cog, ctx)
-        self.assertTrue(asyncio.run(coroutine))
+        ctx.message.created_at = datetime.fromtimestamp(timestamp)
+        self.assertEqual(
+            information.time_difference_milliseconds(datetime.fromtimestamp(1587263836), ctx.message), 4000)

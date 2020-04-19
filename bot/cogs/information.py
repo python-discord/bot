@@ -3,7 +3,7 @@ import logging
 import socket
 import pprint
 import textwrap
-import datetime
+from datetime import datetime
 import pythonping
 from collections import Counter, defaultdict
 from string import Template
@@ -24,9 +24,8 @@ from bot.utils.time import time_since
 log = logging.getLogger(__name__)
 
 
-def time_difference_milliseconds(message: Message):
-    print(type(message.created_at))
-    return (datetime.datetime.now() - message.created_at).microseconds / 1000
+def time_difference_milliseconds(time, message: Message):
+    return (time.timestamp() - message.created_at.timestamp()) * 1000
 
 
 class Information(Cog):
@@ -383,24 +382,25 @@ class Information(Cog):
         embed.title = "Ping results"
 
         try:
-            time_difference = time_difference_milliseconds(ctx.message)
-            embed.add_field(name="Bot Latency", value=str() + " milliseconds",
+            time_difference = time_difference_milliseconds(datetime.now(), ctx.message)
+            embed.add_field(name="Bot Latency", value=str(time_difference) + " milliseconds",
                             inline=False)
         except TypeError as err:
-            print(format(err))
+            embed.add_field(name="Error", value="Incorrect Context setup",
+                            inline=False)
+            return_value = False
+        except AttributeError:
             embed.add_field(name="Error", value="Incorrect Context setup",
                             inline=False)
             return_value = False
         try:
-            print(socket.gethostbyname(URLs.site))
             embed.add_field(name="Site Latency", value=str(pythonping.ping(
-                socket.gethostbyname(URLs.site.split(":", 1)[0])).rtt_avg_ms) + " milliseconds",
+                socket.gethostbyname(URLs.site_api.split(":", 1)[0])).rtt_avg_ms) + " milliseconds",
                             inline=False)
             embed.add_field(name="Discord Latency", value=str(pythonping.ping(
                 socket.gethostbyname("discord.com")).rtt_avg_ms) + " milliseconds",
                             inline=False)
         except socket.gaierror as err:
-            print(format(err))
             embed.add_field(name="Error", value="Something went wrong with getting correct timestamps",
                             inline=False)
             return_value = False
