@@ -2,14 +2,14 @@ import asyncio
 import textwrap
 import unittest
 import unittest.mock
-
+import datetime
 import discord
 
 from bot import constants
-from bot.cogs import information
+from bot.cogs import information, alias
 from bot.decorators import InChannelCheckFailure
 from tests import helpers
-
+from tests.helpers import MockGuild
 
 COG_PATH = "bot.cogs.information.Information"
 
@@ -579,3 +579,41 @@ class UserCommandTests(unittest.TestCase):
 
         create_embed.assert_called_once_with(ctx, self.target)
         ctx.send.assert_called_once()
+
+
+@unittest.mock.patch("bot.cogs.information.constants")
+class PingCommandTests(unittest.TestCase):
+    """Tests for the `!ping` command."""
+    def setUp(self):
+        """Set up steps executed before each test is run."""
+        self.bot = helpers.MockBot()
+        self.cog = information.Information(self.bot)
+
+        self.moderator_role = helpers.MockRole(name="Moderators", id=2, position=10)
+        self.flautist_role = helpers.MockRole(name="Flautists", id=3, position=2)
+        self.bassist_role = helpers.MockRole(name="Bassists", id=4, position=3)
+
+        self.author = helpers.MockMember(id=1, name="syntaxaire")
+        self.moderator = helpers.MockMember(id=2, name="riffautae", roles=[self.moderator_role])
+        self.target = helpers.MockMember(id=3, name="__fluzz__")
+    # Kevin's tests for Ping
+    # @unittest.mock.patch("bot.cogs.information.Information.ping", new_callable=unittest.mock.AsyncMock)
+    # def test_bot_latency_correct_context(self, create_embed, constants):
+    #     """Ping should return correct ping responses dependent on message sent."""
+    #     ctx = helpers.MockContext()
+    #     ctx.message = helpers.MockMessage();
+    #     ctx.message.created_at = "D"
+    #
+    #     coroutine = self.cog.ping.callback(self.cog, ctx)
+    #     self.assertFalse(asyncio.run(coroutine))
+
+    @unittest.mock.patch("bot.cogs.information.Information.ping", new_callable=unittest.mock.AsyncMock)
+    def test_bot_latency_correct_time(self, create_embed, constants):
+        """Ping should return correct ping responses dependent on message sent."""
+        ctx = helpers.MockContext()
+        ctx.message = helpers.MockMessage();
+        timestamp = 1587263832
+        print(type(datetime.datetime.fromtimestamp(timestamp)))
+        ctx.message.created_at = datetime.datetime.fromtimestamp(timestamp)
+        coroutine = self.cog.ping.callback(self.cog, ctx)
+        self.assertTrue(asyncio.run(coroutine))

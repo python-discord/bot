@@ -24,9 +24,9 @@ from bot.utils.time import time_since
 log = logging.getLogger(__name__)
 
 
-
 def time_difference_milliseconds(message: Message):
-    return (datetime.datetime.now() - message.created_at).microseconds/1000
+    print(type(message.created_at))
+    return (datetime.datetime.now() - message.created_at).microseconds / 1000
 
 
 class Information(Cog):
@@ -377,22 +377,36 @@ class Information(Cog):
     @command(name="ping", aliases=["pong", "bing"])
     async def ping(self, ctx: Context) -> None:
         """Pings all servers to check latency."""
+        return_value = True
         embed = Embed()
         embed.colour = Colour.blurple()
         embed.title = "Ping results"
-        embed.add_field(name="Bot Latency", value=str(time_difference_milliseconds(ctx.message))+" milliseconds",
-                        inline=False)
-        embed.add_field(name="Site Latency", value=str(pythonping.ping(
-            socket.gethostbyname(URLs.site.split(":", 1)[0])).rtt_avg_ms)+" milliseconds",
-                       inline=False)
-        embed.add_field(name="Discord Latency", value=str(pythonping.ping(
-            socket.gethostbyname("discord.com")).rtt_avg_ms) + " milliseconds",
-                        inline=False)
+
+        try:
+            time_difference = time_difference_milliseconds(ctx.message)
+            embed.add_field(name="Bot Latency", value=str() + " milliseconds",
+                            inline=False)
+        except TypeError as err:
+            print(format(err))
+            embed.add_field(name="Error", value="Incorrect Context setup",
+                            inline=False)
+            return_value = False
+        try:
+            print(socket.gethostbyname(URLs.site))
+            embed.add_field(name="Site Latency", value=str(pythonping.ping(
+                socket.gethostbyname(URLs.site.split(":", 1)[0])).rtt_avg_ms) + " milliseconds",
+                            inline=False)
+            embed.add_field(name="Discord Latency", value=str(pythonping.ping(
+                socket.gethostbyname("discord.com")).rtt_avg_ms) + " milliseconds",
+                            inline=False)
+        except socket.gaierror as err:
+            print(format(err))
+            embed.add_field(name="Error", value="Something went wrong with getting correct timestamps",
+                            inline=False)
+            return_value = False
+
         await ctx.send(embed=embed)
-
-        return
-
-
+        return return_value
 
     @raw.command()
     async def json(self, ctx: Context, message: Message) -> None:
