@@ -58,4 +58,5 @@ coloredlogs.install(logger=root_log, stream=sys.stdout)
 
 logging.getLogger("discord").setLevel(logging.WARNING)
 logging.getLogger("websockets").setLevel(logging.WARNING)
+logging.getLogger("chardet").setLevel(logging.WARNING)
 logging.getLogger(__name__)
