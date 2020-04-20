@@ -12,7 +12,7 @@ from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
-from bot.decorators import InChannelCheckFailure, in_channel, with_role
+from bot.decorators import InWhitelistedContextCheckFailure, in_whitelisted_context, with_role
 from bot.pagination import LinePaginator
 from bot.utils.checks import cooldown_with_role_bypass, with_role_check
 from bot.utils.time import time_since
@@ -152,7 +152,7 @@ class Information(Cog):
         # Non-staff may only do this in #bot-commands
         if not with_role_check(ctx, *constants.STAFF_ROLES):
             if not ctx.channel.id == constants.Channels.bot_commands:
-                raise InChannelCheckFailure(constants.Channels.bot_commands)
+                raise InWhitelistedContextCheckFailure(constants.Channels.bot_commands)
 
         embed = await self.create_user_embed(ctx, user)
 
@@ -331,7 +331,11 @@ class Information(Cog):
 
     @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=constants.STAFF_ROLES)
     @group(invoke_without_command=True)
-    @in_channel(constants.Channels.bot_commands, bypass_roles=constants.STAFF_ROLES)
+    @in_whitelisted_context(
+        whitelisted_channels=(constants.Channels.bot_commands,),
+        whitelisted_roles=constants.STAFF_ROLES,
+        redirect_channel=constants.Channels.bot_commands,
+    )
     async def raw(self, ctx: Context, *, message: Message, json: bool = False) -> None:
         """Shows information about the raw API response."""
         # I *guess* it could be deleted right as the command is invoked but I felt like it wasn't worth handling
