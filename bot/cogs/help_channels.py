@@ -594,7 +594,7 @@ class HelpChannels(Scheduler, commands.Cog):
             return  # Ignore messages sent by bots.
 
         channel = message.channel
-        if not self.is_in_category(channel, constants.Categories.help_in_use):
+        if self.is_in_category(channel, constants.Categories.help_in_use):
             if channel.id in self.unanswered:
                 claimant_id = self.help_channel_claimants[channel].id
 
