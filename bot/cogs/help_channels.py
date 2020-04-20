@@ -67,6 +67,8 @@ AVAILABLE_EMOJI = "✅"
 IN_USE_EMOJI = "⌛"
 NAME_SEPARATOR = "｜"
 
+CoroutineFunc = t.Callable[..., t.Coroutine]
+
 
 class TaskData(t.NamedTuple):
     """Data for a scheduled task."""
@@ -640,23 +642,23 @@ class HelpChannels(Scheduler, commands.Cog):
     async def add_cooldown_role(cls, member: discord.Member) -> None:
         """Add the help cooldown role to `member`."""
         log.trace(f"Adding cooldown role for {member} ({member.id}).")
-        await cls._change_cooldown_role(member, member.add_roles(COOLDOWN_ROLE))
+        await cls._change_cooldown_role(member, member.add_roles)
 
     @classmethod
     async def remove_cooldown_role(cls, member: discord.Member) -> None:
         """Remove the help cooldown role from `member`."""
         log.trace(f"Removing cooldown role for {member} ({member.id}).")
-        await cls._change_cooldown_role(member, member.remove_roles(COOLDOWN_ROLE))
+        await cls._change_cooldown_role(member, member.remove_roles)
 
     @staticmethod
-    async def _change_cooldown_role(member: discord.Member, coro: t.Awaitable) -> None:
+    async def _change_cooldown_role(member: discord.Member, coro_func: CoroutineFunc) -> None:
         """
-        Change `member`'s cooldown role via awaiting `coro` and handle errors.
+        Change `member`'s cooldown role via awaiting `coro_func` and handle errors.
 
-        `coro` is intended to be `discord.Member.add_roles` or `discord.Member.remove_roles`.
+        `coro_func` is intended to be `discord.Member.add_roles` or `discord.Member.remove_roles`.
         """
         try:
-            await coro
+            await coro_func(COOLDOWN_ROLE)
         except discord.NotFound:
             log.debug(f"Failed to change role for {member} ({member.id}): member not found")
         except discord.Forbidden:
