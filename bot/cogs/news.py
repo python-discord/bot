@@ -1,8 +1,10 @@
 import logging
-from datetime import datetime
+import typing as t
+from datetime import date, datetime
 
 import discord
 import feedparser
+from bs4 import BeautifulSoup
 from discord.ext.commands import Cog
 from discord.ext.tasks import loop
 
@@ -10,6 +12,13 @@ from bot import constants
 from bot.bot import Bot
 
 PEPS_RSS_URL = "https://www.python.org/dev/peps/peps.rss/"
+
+RECENT_THREADS_TEMPLATE = "https://mail.python.org/archives/list/{name}@python.org/recent-threads"
+THREAD_TEMPLATE_URL = "https://mail.python.org/archives/api/list/{name}@python.org/thread/{id}/"
+MAILMAN_PROFILE_URL = "https://mail.python.org/archives/users/{id}/"
+THREAD_URL = "https://mail.python.org/archives/list/{list}@python.org/thread/{id}/"
+
+AVATAR_URL = "https://www.python.org/static/opengraph-icon-200x200.png"
 
 log = logging.getLogger(__name__)
 
@@ -24,6 +33,7 @@ class News(Cog):
         self.bot.loop.create_task(self.get_webhook_names())
 
         self.post_pep_news.start()
+        self.post_maillist_news.start()
 
     async def sync_maillists(self) -> None:
         """Sync currently in-use maillists with API."""
@@ -74,8 +84,8 @@ class News(Cog):
             if message is None:
                 message = await news_channel.fetch_message(pep_id)
                 if message is None:
-                    log.warning(f"Can't fetch news message with ID {pep_id}. Deleting it entry from DB.")
-                    payload["data"]["pep"].remove(pep_id)
+                    log.warning("Can't fetch PEP new message ID.")
+                    continue
             pep_news.append((message.embeds[0].title, message.embeds[0].timestamp))
 
         # Reverse entries to send oldest first
@@ -87,29 +97,131 @@ class News(Cog):
                 log.warning(f"Wrong datetime format passed in PEP new: {new['published']}")
                 continue
             if (
-                any(pep_new[0] == new["title"] for pep_new in pep_news)
-                and any(pep_new[1] == new_datetime for pep_new in pep_news)
+                    (any(pep_new[0] == new["title"] for pep_new in pep_news)
+                     and any(pep_new[1] == new_datetime for pep_new in pep_news))
+                    or new_datetime.date() < date.today()
             ):
                 continue
 
-            embed = discord.Embed(
-                title=new["title"],
-                description=new["summary"],
-                timestamp=new_datetime,
-                url=new["link"],
-                colour=constants.Colours.soft_green
+            msg_id = await self.send_webhook(
+                webhook,
+                new["title"],
+                new["summary"],
+                new_datetime,
+                new["link"],
+                None,
+                None,
+                data["feed"]["title"]
             )
-
-            pep_msg = await webhook.send(
-                embed=embed,
-                username=data["feed"]["title"],
-                avatar_url="https://www.python.org/static/opengraph-icon-200x200.png",
-                wait=True
-            )
-            payload["data"]["pep"].append(pep_msg.id)
+            payload["data"]["pep"].append(msg_id)
 
         # Apply new sent news to DB to avoid duplicate sending
         await self.bot.api_client.put("bot/bot-settings/news", json=payload)
+
+    @loop(minutes=20)
+    async def post_maillist_news(self) -> None:
+        """Send new maillist threads to #python-news that is listed in configuration."""
+        await self.bot.wait_until_guild_available()
+        webhook = await self.bot.fetch_webhook(constants.PythonNews.webhook)
+        existing_news = await self.bot.api_client.get("bot/bot-settings/news")
+        payload = existing_news.copy()
+
+        for maillist in constants.PythonNews.mail_lists:
+            async with self.bot.http_session.get(RECENT_THREADS_TEMPLATE.format(name=maillist)) as resp:
+                recents = BeautifulSoup(await resp.text())
+
+            for thread in recents.html.body.div.find_all("a", href=True):
+                # We want only these threads that have identifiers
+                if "latest" in thread["href"]:
+                    continue
+
+                thread_information, email_information = await self.get_thread_and_first_mail(
+                    maillist, thread["href"].split("/")[-2]
+                )
+
+                try:
+                    new_date = datetime.strptime(email_information["date"], "%Y-%m-%dT%X%z")
+                except ValueError:
+                    log.warning(f"Invalid datetime from Thread email: {email_information['date']}")
+                    continue
+
+                if (
+                        await self.check_new_exist(thread_information["subject"], new_date, maillist, existing_news)
+                        or new_date.date() < date.today()
+                ):
+                    continue
+
+                content = email_information["content"]
+                link = THREAD_URL.format(id=thread["href"].split("/")[-2], list=maillist)
+                msg_id = await self.send_webhook(
+                    webhook,
+                    thread_information["subject"],
+                    content[:500] + f"... [continue reading]({link})" if len(content) > 500 else content,
+                    new_date,
+                    link,
+                    f"{email_information['sender_name']} ({email_information['sender']['address']})",
+                    MAILMAN_PROFILE_URL.format(id=email_information["sender"]["mailman_id"]),
+                    self.webhook_names[maillist]
+                )
+                payload["data"][maillist].append(msg_id)
+
+        await self.bot.api_client.put("bot/bot-settings/news", json=payload)
+
+    async def check_new_exist(self, title: str, timestamp: datetime, maillist: str, news: t.Dict[str, t.Any]) -> bool:
+        """Check does this new title + timestamp already exist in #python-news."""
+        channel = await self.bot.fetch_channel(constants.PythonNews.channel)
+
+        for new in news["data"][maillist]:
+            message = discord.utils.get(self.bot.cached_messages, id=new)
+            if message is None:
+                message = await channel.fetch_message(new)
+                if message is None:
+                    return False
+
+            if message.embeds[0].title == title and message.embeds[0].timestamp == timestamp:
+                return True
+        return False
+
+    async def send_webhook(self,
+                           webhook: discord.Webhook,
+                           title: str,
+                           description: str,
+                           timestamp: datetime,
+                           url: str,
+                           author: str,
+                           author_url: str,
+                           webhook_profile_name: str
+                           ) -> int:
+        """Send webhook entry and return ID of message."""
+        embed = discord.Embed(
+            title=title,
+            description=description,
+            timestamp=timestamp,
+            url=url,
+            colour=constants.Colours.soft_green
+        )
+        embed.set_author(
+            name=author,
+            url=author_url
+        )
+        msg = await webhook.send(
+            embed=embed,
+            username=webhook_profile_name,
+            avatar_url=AVATAR_URL,
+            wait=True
+        )
+        return msg.id
+
+    async def get_thread_and_first_mail(self, maillist: str, thread_identifier: str) -> t.Tuple[t.Any, t.Any]:
+        """Get mail thread and first mail from mail.python.org based on `maillist` and `thread_identifier`."""
+        async with self.bot.http_session.get(
+                THREAD_TEMPLATE_URL.format(name=maillist, id=thread_identifier)
+        ) as resp:
+            thread_information = await resp.json()
+
+        async with self.bot.http_session.get(thread_information["starting_email"]) as resp:
+            email_information = await resp.json()
+        return thread_information, email_information
 
 
 def setup(bot: Bot) -> None:
