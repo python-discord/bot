@@ -412,6 +412,7 @@ class Webhooks(metaclass=YAMLGetter):
     reddit: int
     duck_pond: int
     dev_log: int
+    python_news: int
 
 
 class Roles(metaclass=YAMLGetter):
