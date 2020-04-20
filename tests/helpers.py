@@ -315,7 +315,7 @@ class MockTextChannel(CustomMockMixin, unittest.mock.Mock, HashableMixin):
     """
     spec_set = channel_instance
 
-    def __init__(self, name: str = 'channel', channel_id: int = 1, **kwargs) -> None:
+    def __init__(self, **kwargs) -> None:
         default_kwargs = {'id': next(self.discord_id), 'name': 'channel', 'guild': MockGuild()}
         super().__init__(**collections.ChainMap(kwargs, default_kwargs))
 
