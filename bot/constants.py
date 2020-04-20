@@ -394,7 +394,6 @@ class Channels(metaclass=YAMLGetter):
     off_topic_2: int
     organisation: int
     python_discussion: int
-    python_news: int
     reddit: int
     talent_pool: int
     user_event_announcements: int
@@ -412,7 +411,6 @@ class Webhooks(metaclass=YAMLGetter):
     reddit: int
     duck_pond: int
     dev_log: int
-    python_news: int
 
 
 class Roles(metaclass=YAMLGetter):
@@ -569,6 +567,14 @@ class Sync(metaclass=YAMLGetter):
 
     confirm_timeout: int
     max_diff: int
+
+
+class PythonNews(metaclass=YAMLGetter):
+    section = 'python_news'
+
+    mail_lists: List[str]
+    channel: int
+    webhook: int
 
 
 class Event(Enum):
