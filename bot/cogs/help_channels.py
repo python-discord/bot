@@ -215,8 +215,8 @@ class HelpChannels(Scheduler, commands.Cog):
 
         return role_check
 
-    @commands.command(name="dormant", aliases=["close"], enabled=False)
-    async def dormant_command(self, ctx: commands.Context) -> None:
+    @commands.command(name="close", aliases=["dormant"], enabled=False)
+    async def close_command(self, ctx: commands.Context) -> None:
         """
         Make the current in-use help channel dormant.
 
@@ -224,7 +224,7 @@ class HelpChannels(Scheduler, commands.Cog):
         delete the message that invoked this,
         and reset the send permissions cooldown for the user who started the session.
         """
-        log.trace("dormant command invoked; checking if the channel is in-use.")
+        log.trace("close command invoked; checking if the channel is in-use.")
         if ctx.channel.category == self.in_use_category:
             if await self.dormant_check(ctx):
                 with suppress(KeyError):
@@ -400,7 +400,7 @@ class HelpChannels(Scheduler, commands.Cog):
         # The ready event wasn't used because channels could change categories between the time
         # the command is invoked and the cog is ready (e.g. if move_idle_channel wasn't called yet).
         # This may confuse users. So would potentially long delays for the cog to become ready.
-        self.dormant_command.enabled = True
+        self.close_command.enabled = True
 
         await self.init_available()
 
