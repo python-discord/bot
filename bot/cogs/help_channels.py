@@ -62,7 +62,8 @@ through our guide for [asking a good question]({ASKING_GUIDE_URL}).
 """
 
 AVAILABLE_EMOJI = "✅"
-IN_USE_EMOJI = "⌛"
+IN_USE_ANSWERED_EMOJI = "⌛"
+IN_USE_UNANSWERED_EMOJI = "⏳"
 NAME_SEPARATOR = "｜"
 
 
@@ -528,7 +529,7 @@ class HelpChannels(Scheduler, commands.Cog):
         log.info(f"Moving #{channel} ({channel.id}) to the In Use category.")
 
         await channel.edit(
-            name=f"{IN_USE_EMOJI}{NAME_SEPARATOR}{self.get_clean_channel_name(channel)}",
+            name=f"{IN_USE_UNANSWERED_EMOJI}{NAME_SEPARATOR}{self.get_clean_channel_name(channel)}",
             category=self.in_use_category,
             sync_permissions=True,
             topic=IN_USE_TOPIC,
@@ -600,6 +601,10 @@ class HelpChannels(Scheduler, commands.Cog):
 
                 if claimant_id != message.author.id:
                     self.unanswered[channel.id] = False
+
+                    await channel.edit(
+                        name=f"{IN_USE_ANSWERED_EMOJI}{NAME_SEPARATOR}{self.get_clean_channel_name(channel)}"
+                    )
 
         if not self.is_in_category(channel, constants.Categories.help_available):
             return  # Ignore messages outside the Available category.
