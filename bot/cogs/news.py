@@ -4,12 +4,6 @@ from discord.ext.commands import Cog
 from bot import constants
 from bot.bot import Bot
 
-MAIL_LISTS = [
-    "python-ideas",
-    "python-announce-list",
-    "pypi-announce"
-]
-
 
 class News(Cog):
     """Post new PEPs and Python News to `#python-news`."""
@@ -25,7 +19,7 @@ class News(Cog):
         await self.bot.wait_until_guild_available()
 
         response = await self.bot.api_client.get("bot/bot-settings/news")
-        for mail in MAIL_LISTS:
+        for mail in constants.PythonNews.mail_lists:
             if mail not in response["data"]:
                 response["data"][mail] = []
 
@@ -37,7 +31,7 @@ class News(Cog):
 
     async def get_webhook(self) -> discord.Webhook:
         """Get #python-news channel webhook."""
-        return await self.bot.fetch_webhook(constants.Webhooks.python_news)
+        return await self.bot.fetch_webhook(constants.PythonNews.webhook)
 
 
 def setup(bot: Bot) -> None:
