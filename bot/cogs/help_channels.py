@@ -21,7 +21,6 @@ log = logging.getLogger(__name__)
 
 ASKING_GUIDE_URL = "https://pythondiscord.com/pages/asking-good-questions/"
 MAX_CHANNELS_PER_CATEGORY = 50
-COOLDOWN_ROLE = discord.Object(constants.Roles.help_cooldown)
 
 AVAILABLE_TOPIC = """
 This channel is available. Feel free to ask a question in order to claim this channel!
@@ -638,27 +637,30 @@ class HelpChannels(Scheduler, commands.Cog):
             if self.is_claimant(member):
                 await self.remove_cooldown_role(member)
 
-    @classmethod
-    async def add_cooldown_role(cls, member: discord.Member) -> None:
+    async def add_cooldown_role(self, member: discord.Member) -> None:
         """Add the help cooldown role to `member`."""
         log.trace(f"Adding cooldown role for {member} ({member.id}).")
-        await cls._change_cooldown_role(member, member.add_roles)
+        await self._change_cooldown_role(member, member.add_roles)
 
-    @classmethod
-    async def remove_cooldown_role(cls, member: discord.Member) -> None:
+    async def remove_cooldown_role(self, member: discord.Member) -> None:
         """Remove the help cooldown role from `member`."""
         log.trace(f"Removing cooldown role for {member} ({member.id}).")
-        await cls._change_cooldown_role(member, member.remove_roles)
+        await self._change_cooldown_role(member, member.remove_roles)
 
-    @staticmethod
-    async def _change_cooldown_role(member: discord.Member, coro_func: CoroutineFunc) -> None:
+    async def _change_cooldown_role(self, member: discord.Member, coro_func: CoroutineFunc) -> None:
         """
         Change `member`'s cooldown role via awaiting `coro_func` and handle errors.
 
         `coro_func` is intended to be `discord.Member.add_roles` or `discord.Member.remove_roles`.
         """
+        guild = self.bot.get_guild(constants.Guild.id)
+        role = guild.get_role(constants.Roles.help_cooldown)
+        if role is None:
+            log.warning(f"Help cooldown role ({constants.Roles.help_cooldown}) could not be found!")
+            return
+
         try:
-            await coro_func(COOLDOWN_ROLE)
+            await coro_func(role)
         except discord.NotFound:
             log.debug(f"Failed to change role for {member} ({member.id}): member not found")
         except discord.Forbidden:
