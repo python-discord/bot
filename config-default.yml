@@ -122,6 +122,7 @@ guild:
     channels:
         announcements:                              354619224620138496
         user_event_announcements:   &USER_EVENT_A   592000283102674944
+        python_news:                &PYNEWS_CHANNEL 701667765102051398
 
         # Development
         dev_contrib:        &DEV_CONTRIB    635950537262759947
@@ -231,11 +232,12 @@ guild:
         - *HELPERS_ROLE
 
     webhooks:
-        talent_pool:    569145364800602132
-        big_brother:    569133704568373283
-        reddit:         635408384794951680
-        duck_pond:      637821475327311927
-        dev_log:        680501655111729222
+        talent_pool:                  569145364800602132
+        big_brother:                  569133704568373283
+        reddit:                       635408384794951680
+        duck_pond:                    637821475327311927
+        dev_log:                      680501655111729222
+        python_news: &PYNEWS_WEBHOOK  701731296342179850
 
 
 filter:
@@ -567,6 +569,14 @@ duck_pond:
         - *DUCKY_ANGEL
         - *DUCKY_MAUL
         - *DUCKY_SANTA
+
+python_news:
+    mail_lists:
+        - 'python-ideas'
+        - 'python-announce-list'
+        - 'pypi-announce'
+    channel: *PYNEWS_CHANNEL
+    webhook: *PYNEWS_WEBHOOK
 
 config:
     required_keys: ['bot.token']
