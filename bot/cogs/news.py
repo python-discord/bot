@@ -19,7 +19,9 @@ class News(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
+        self.webhook_names = {}
         self.bot.loop.create_task(self.sync_maillists())
+        self.bot.loop.create_task(self.get_webhook_names())
 
         self.post_pep_news.start()
 
@@ -38,6 +40,17 @@ class News(Cog):
             response["data"]["pep"] = []
 
         await self.bot.api_client.put("bot/bot-settings/news", json=response)
+
+    async def get_webhook_names(self) -> None:
+        """Get webhook author names from maillist API."""
+        await self.bot.wait_until_guild_available()
+
+        async with self.bot.http_session.get("https://mail.python.org/archives/api/lists") as resp:
+            lists = await resp.json()
+
+        for mail in lists:
+            if mail["name"].split("@")[0] in constants.PythonNews.mail_lists:
+                self.webhook_names[mail["name"].split("@")[0]] = mail["display_name"]
 
     @loop(minutes=20)
     async def post_pep_news(self) -> None:
