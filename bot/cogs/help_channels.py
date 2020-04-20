@@ -597,6 +597,7 @@ class HelpChannels(Scheduler, commands.Cog):
     async def check_for_answer(self, message: discord.Message) -> None:
         """Checks for whether new content in a help channel comes from non-claimants."""
         channel = message.channel
+        log.trace(f"Checking if #{channel} ({channel.id}) has been answered.")
 
         # Confirm the channel is an in use help channel
         if self.is_in_category(channel, constants.Categories.help_in_use):
@@ -610,9 +611,9 @@ class HelpChannels(Scheduler, commands.Cog):
                     self.unanswered[channel.id] = False
 
                     # Change the emoji in the channel name to signify activity
-                    await channel.edit(
-                        name=f"{IN_USE_ANSWERED_EMOJI}{NAME_SEPARATOR}{self.get_clean_channel_name(channel)}"
-                    )
+                    log.trace(f"#{channel} ({channel.id}) has been answered; changing its emoji")
+                    name = self.get_clean_channel_name(channel)
+                    await channel.edit(name=f"{IN_USE_ANSWERED_EMOJI}{NAME_SEPARATOR}{name}")
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
