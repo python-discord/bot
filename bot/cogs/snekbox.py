@@ -12,7 +12,7 @@ from discord import HTTPException, Message, NotFound, Reaction, User
 from discord.ext.commands import Cog, Context, command, guild_only
 
 from bot.bot import Bot
-from bot.constants import Channels, Roles, URLs
+from bot.constants import Categories, Channels, Roles, URLs
 from bot.decorators import in_whitelisted_context
 from bot.utils.messages import wait_for_deletion
 
@@ -41,6 +41,7 @@ MAX_PASTE_LEN = 1000
 
 # `!eval` command whitelists
 EVAL_CHANNELS = (Channels.bot_commands, Channels.esoteric)
+EVAL_CATEGORIES = (Categories.help_available, Categories.help_in_use)
 EVAL_ROLES = (Roles.helpers, Roles.moderators, Roles.admins, Roles.owners, Roles.python_community, Roles.partners)
 
 SIGKILL = 9
@@ -270,6 +271,7 @@ class Snekbox(Cog):
     @guild_only()
     @in_whitelisted_context(
         whitelisted_channels=EVAL_CHANNELS,
+        whitelisted_categories=EVAL_CATEGORIES,
         whitelisted_roles=EVAL_ROLES,
         redirect_channel=Channels.bot_commands,
     )
