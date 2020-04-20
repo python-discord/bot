@@ -1,5 +1,7 @@
+import discord
 from discord.ext.commands import Cog
 
+from bot import constants
 from bot.bot import Bot
 
 MAIL_LISTS = [
@@ -15,10 +17,11 @@ class News(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.bot.loop.create_task(self.sync_maillists())
+        self.webhook = self.bot.loop.create_task(self.get_webhook())
 
     async def sync_maillists(self) -> None:
         """Sync currently in-use maillists with API."""
-        # Wait until guild is available to avoid running before API is ready
+        # Wait until guild is available to avoid running before everything is ready
         await self.bot.wait_until_guild_available()
 
         response = await self.bot.api_client.get("bot/bot-settings/news")
@@ -31,6 +34,10 @@ class News(Cog):
             response["data"]["pep"] = []
 
         await self.bot.api_client.put("bot/bot-settings/news", json=response)
+
+    async def get_webhook(self) -> discord.Webhook:
+        """Get #python-news channel webhook."""
+        return await self.bot.fetch_webhook(constants.Webhooks.python_news)
 
 
 def setup(bot: Bot) -> None:
