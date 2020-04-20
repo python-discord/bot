@@ -133,6 +133,7 @@ class HelpChannels(Scheduler, commands.Cog):
 
         # Stats
         self.claim_times = {}
+        self.unanswered = {}
 
     def cog_unload(self) -> None:
         """Cancel the init task and scheduled tasks when the cog unloads."""
@@ -506,6 +507,12 @@ class HelpChannels(Scheduler, commands.Cog):
             in_use_time = datetime.now() - claimed
             self.bot.stats.timing("help.in_use_time", in_use_time)
 
+        if channel.id in self.unanswered:
+            if self.unanswered[channel.id]:
+                self.bot.stats.incr("help.sessions.unanswered")
+            else:
+                self.bot.stats.incr("help.sessions.answered")
+
         log.trace(f"Position of #{channel} ({channel.id}) is actually {channel.position}.")
 
         log.trace(f"Sending dormant message for #{channel} ({channel.id}).")
@@ -587,6 +594,13 @@ class HelpChannels(Scheduler, commands.Cog):
             return  # Ignore messages sent by bots.
 
         channel = message.channel
+        if not self.is_in_category(channel, constants.Categories.help_in_use):
+            if channel.id in self.unanswered:
+                claimant_id = self.help_channel_claimants[channel].id
+
+                if claimant_id != message.author.id:
+                    self.unanswered[channel.id] = False
+
         if not self.is_in_category(channel, constants.Categories.help_available):
             return  # Ignore messages outside the Available category.
 
@@ -612,6 +626,7 @@ class HelpChannels(Scheduler, commands.Cog):
             self.bot.stats.incr("help.claimed")
 
             self.claim_times[channel.id] = datetime.now()
+            self.unanswered[channel.id] = True
 
             log.trace(f"Releasing on_message lock for {message.id}.")
 
