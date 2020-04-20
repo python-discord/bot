@@ -269,7 +269,7 @@ class HelpChannels(Scheduler, commands.Cog):
             log.trace(f"The clean name for `{channel}` is `{name}`")
         except ValueError:
             # If, for some reason, the channel name does not contain "help-" fall back gracefully
-            log.info(f"Can't get clean name as `{channel}` does not follow the `{prefix}` naming convention.")
+            log.info(f"Can't get clean name because `{channel}` isn't prefixed by `{prefix}`.")
             name = channel.name
 
         return name
@@ -488,10 +488,6 @@ class HelpChannels(Scheduler, commands.Cog):
             topic=AVAILABLE_TOPIC,
         )
 
-        log.trace(
-            f"Ensuring that all channels in `{self.available_category}` have "
-            f"synchronized permissions after moving `{channel}` into it."
-        )
         self.report_stats()
 
     async def move_to_dormant(self, channel: discord.TextChannel, caller: str) -> None:
