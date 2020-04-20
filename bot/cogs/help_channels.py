@@ -133,8 +133,14 @@ class HelpChannels(Scheduler, commands.Cog):
         self.init_task = self.bot.loop.create_task(self.init_cog())
 
         # Stats
-        self.claim_times = {}
-        self.unanswered = {}
+
+        # This dictionary maps a help channel to the time it was claimed
+        self.claim_times: t.Dict[int, datetime] = {}
+
+        # This dictionary maps a help channel to whether it has had any
+        # activity other than the original claimant. True being no other
+        # activity and False being other activity.
+        self.unanswered: t.Dict[int, bool] = {}
 
     def cog_unload(self) -> None:
         """Cancel the init task and scheduled tasks when the cog unloads."""
@@ -588,6 +594,26 @@ class HelpChannels(Scheduler, commands.Cog):
             # Handle it here cause this feature isn't critical for the functionality of the system.
             log.exception("Failed to send notification about lack of dormant channels!")
 
+    async def check_for_answer(self, message: discord.Message) -> None:
+        """Checks for whether new content in a help channel comes from non-claimants."""
+        channel = message.channel
+
+        # Confirm the channel is an in use help channel
+        if self.is_in_category(channel, constants.Categories.help_in_use):
+            # Check if there is an entry in unanswered (does not persist across restarts)
+            if channel.id in self.unanswered:
+                claimant_id = self.help_channel_claimants[channel].id
+
+                # Check the message did not come from the claimant
+                if claimant_id != message.author.id:
+                    # Mark the channel as answered
+                    self.unanswered[channel.id] = False
+
+                    # Change the emoji in the channel name to signify activity
+                    await channel.edit(
+                        name=f"{IN_USE_ANSWERED_EMOJI}{NAME_SEPARATOR}{self.get_clean_channel_name(channel)}"
+                    )
+
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
         """Move an available channel to the In Use category and replace it with a dormant one."""
@@ -595,16 +621,8 @@ class HelpChannels(Scheduler, commands.Cog):
             return  # Ignore messages sent by bots.
 
         channel = message.channel
-        if self.is_in_category(channel, constants.Categories.help_in_use):
-            if channel.id in self.unanswered:
-                claimant_id = self.help_channel_claimants[channel].id
 
-                if claimant_id != message.author.id:
-                    self.unanswered[channel.id] = False
-
-                    await channel.edit(
-                        name=f"{IN_USE_ANSWERED_EMOJI}{NAME_SEPARATOR}{self.get_clean_channel_name(channel)}"
-                    )
+        await self.check_for_answer(message)
 
         if not self.is_in_category(channel, constants.Categories.help_available):
             return  # Ignore messages outside the Available category.
