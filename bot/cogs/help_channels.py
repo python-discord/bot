@@ -62,7 +62,8 @@ through our guide for [asking a good question]({ASKING_GUIDE_URL}).
 """
 
 AVAILABLE_EMOJI = "✅"
-IN_USE_EMOJI = "⌛"
+IN_USE_ANSWERED_EMOJI = "⌛"
+IN_USE_UNANSWERED_EMOJI = "⏳"
 NAME_SEPARATOR = "｜"
 
 
@@ -132,7 +133,14 @@ class HelpChannels(Scheduler, commands.Cog):
         self.init_task = self.bot.loop.create_task(self.init_cog())
 
         # Stats
-        self.claim_times = {}
+
+        # This dictionary maps a help channel to the time it was claimed
+        self.claim_times: t.Dict[int, datetime] = {}
+
+        # This dictionary maps a help channel to whether it has had any
+        # activity other than the original claimant. True being no other
+        # activity and False being other activity.
+        self.unanswered: t.Dict[int, bool] = {}
 
     def cog_unload(self) -> None:
         """Cancel the init task and scheduled tasks when the cog unloads."""
@@ -268,13 +276,12 @@ class HelpChannels(Scheduler, commands.Cog):
 
         return name
 
-    @staticmethod
-    def get_category_channels(category: discord.CategoryChannel) -> t.Iterable[discord.TextChannel]:
+    def get_category_channels(self, category: discord.CategoryChannel) -> t.Iterable[discord.TextChannel]:
         """Yield the text channels of the `category` in an unsorted manner."""
         log.trace(f"Getting text channels in the category '{category}' ({category.id}).")
 
         # This is faster than using category.channels because the latter sorts them.
-        for channel in category.guild.channels:
+        for channel in self.bot.get_guild(constants.Guild.id).channels:
             if channel.category_id == category.id and isinstance(channel, discord.TextChannel):
                 yield channel
 
@@ -506,6 +513,12 @@ class HelpChannels(Scheduler, commands.Cog):
             in_use_time = datetime.now() - claimed
             self.bot.stats.timing("help.in_use_time", in_use_time)
 
+        if channel.id in self.unanswered:
+            if self.unanswered[channel.id]:
+                self.bot.stats.incr("help.sessions.unanswered")
+            else:
+                self.bot.stats.incr("help.sessions.answered")
+
         log.trace(f"Position of #{channel} ({channel.id}) is actually {channel.position}.")
 
         log.trace(f"Sending dormant message for #{channel} ({channel.id}).")
@@ -521,7 +534,7 @@ class HelpChannels(Scheduler, commands.Cog):
         log.info(f"Moving #{channel} ({channel.id}) to the In Use category.")
 
         await channel.edit(
-            name=f"{IN_USE_EMOJI}{NAME_SEPARATOR}{self.get_clean_channel_name(channel)}",
+            name=f"{IN_USE_UNANSWERED_EMOJI}{NAME_SEPARATOR}{self.get_clean_channel_name(channel)}",
             category=self.in_use_category,
             sync_permissions=True,
             topic=IN_USE_TOPIC,
@@ -580,6 +593,27 @@ class HelpChannels(Scheduler, commands.Cog):
             # Handle it here cause this feature isn't critical for the functionality of the system.
             log.exception("Failed to send notification about lack of dormant channels!")
 
+    async def check_for_answer(self, message: discord.Message) -> None:
+        """Checks for whether new content in a help channel comes from non-claimants."""
+        channel = message.channel
+        log.trace(f"Checking if #{channel} ({channel.id}) has been answered.")
+
+        # Confirm the channel is an in use help channel
+        if self.is_in_category(channel, constants.Categories.help_in_use):
+            # Check if there is an entry in unanswered (does not persist across restarts)
+            if channel.id in self.unanswered:
+                claimant_id = self.help_channel_claimants[channel].id
+
+                # Check the message did not come from the claimant
+                if claimant_id != message.author.id:
+                    # Mark the channel as answered
+                    self.unanswered[channel.id] = False
+
+                    # Change the emoji in the channel name to signify activity
+                    log.trace(f"#{channel} ({channel.id}) has been answered; changing its emoji")
+                    name = self.get_clean_channel_name(channel)
+                    await channel.edit(name=f"{IN_USE_ANSWERED_EMOJI}{NAME_SEPARATOR}{name}")
+
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
         """Move an available channel to the In Use category and replace it with a dormant one."""
@@ -587,6 +621,9 @@ class HelpChannels(Scheduler, commands.Cog):
             return  # Ignore messages sent by bots.
 
         channel = message.channel
+
+        await self.check_for_answer(message)
+
         if not self.is_in_category(channel, constants.Categories.help_available):
             return  # Ignore messages outside the Available category.
 
@@ -612,6 +649,7 @@ class HelpChannels(Scheduler, commands.Cog):
             self.bot.stats.incr("help.claimed")
 
             self.claim_times[channel.id] = datetime.now()
+            self.unanswered[channel.id] = True
 
             log.trace(f"Releasing on_message lock for {message.id}.")
 
