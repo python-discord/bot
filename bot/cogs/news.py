@@ -29,8 +29,11 @@ class News(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.webhook_names = {}
-        self.bot.loop.create_task(self.sync_maillists())
+        self.webhook: t.Optional[discord.Webhook] = None
+        self.channel: t.Optional[discord.TextChannel] = None
+
         self.bot.loop.create_task(self.get_webhook_names())
+        self.bot.loop.create_task(self.get_webhook_and_channel())
 
         self.post_pep_news.start()
         self.post_maillist_news.start()
@@ -71,9 +74,6 @@ class News(Cog):
         async with self.bot.http_session.get(PEPS_RSS_URL) as resp:
             data = feedparser.parse(await resp.text())
 
-        news_channel = self.bot.get_channel(constants.PythonNews.channel)
-        webhook = await self.bot.fetch_webhook(constants.PythonNews.webhook)
-
         news_listing = await self.bot.api_client.get("bot/bot-settings/news")
         payload = news_listing.copy()
         pep_news_ids = news_listing["data"]["pep"]
@@ -82,11 +82,11 @@ class News(Cog):
         for pep_id in pep_news_ids:
             message = discord.utils.get(self.bot.cached_messages, id=pep_id)
             if message is None:
-                message = await news_channel.fetch_message(pep_id)
+                message = await self.channel.fetch_message(pep_id)
                 if message is None:
                     log.warning("Can't fetch PEP new message ID.")
                     continue
-            pep_news.append((message.embeds[0].title, message.embeds[0].timestamp))
+            pep_news.append(message.embeds[0].title)
 
         # Reverse entries to send oldest first
         data["entries"].reverse()
@@ -97,21 +97,17 @@ class News(Cog):
                 log.warning(f"Wrong datetime format passed in PEP new: {new['published']}")
                 continue
             if (
-                    (any(pep_new[0] == new["title"] for pep_new in pep_news)
-                     and any(pep_new[1] == new_datetime for pep_new in pep_news))
+                    any(pep_new == new["title"] for pep_new in pep_news)
                     or new_datetime.date() < date.today()
             ):
                 continue
 
             msg_id = await self.send_webhook(
-                webhook,
-                new["title"],
-                new["summary"],
-                new_datetime,
-                new["link"],
-                None,
-                None,
-                data["feed"]["title"]
+                title=new["title"],
+                description=new["summary"],
+                timestamp=new_datetime,
+                url=new["link"],
+                webhook_profile_name=data["feed"]["title"]
             )
             payload["data"]["pep"].append(msg_id)
 
@@ -122,7 +118,7 @@ class News(Cog):
     async def post_maillist_news(self) -> None:
         """Send new maillist threads to #python-news that is listed in configuration."""
         await self.bot.wait_until_guild_available()
-        webhook = await self.bot.fetch_webhook(constants.PythonNews.webhook)
+        await self.sync_maillists()
         existing_news = await self.bot.api_client.get("bot/bot-settings/news")
         payload = existing_news.copy()
 
@@ -154,14 +150,13 @@ class News(Cog):
                 content = email_information["content"]
                 link = THREAD_URL.format(id=thread["href"].split("/")[-2], list=maillist)
                 msg_id = await self.send_webhook(
-                    webhook,
-                    thread_information["subject"],
-                    content[:500] + f"... [continue reading]({link})" if len(content) > 500 else content,
-                    new_date,
-                    link,
-                    f"{email_information['sender_name']} ({email_information['sender']['address']})",
-                    MAILMAN_PROFILE_URL.format(id=email_information["sender"]["mailman_id"]),
-                    self.webhook_names[maillist]
+                    title=thread_information["subject"],
+                    description=content[:500] + f"... [continue reading]({link})" if len(content) > 500 else content,
+                    timestamp=new_date,
+                    url=link,
+                    author=f"{email_information['sender_name']} ({email_information['sender']['address']})",
+                    author_url=MAILMAN_PROFILE_URL.format(id=email_information["sender"]["mailman_id"]),
+                    webhook_profile_name=self.webhook_names[maillist]
                 )
                 payload["data"][maillist].append(msg_id)
 
@@ -169,12 +164,10 @@ class News(Cog):
 
     async def check_new_exist(self, title: str, timestamp: datetime, maillist: str, news: t.Dict[str, t.Any]) -> bool:
         """Check does this new title + timestamp already exist in #python-news."""
-        channel = await self.bot.fetch_channel(constants.PythonNews.channel)
-
         for new in news["data"][maillist]:
             message = discord.utils.get(self.bot.cached_messages, id=new)
             if message is None:
-                message = await channel.fetch_message(new)
+                message = await self.channel.fetch_message(new)
                 if message is None:
                     return False
 
@@ -183,14 +176,13 @@ class News(Cog):
         return False
 
     async def send_webhook(self,
-                           webhook: discord.Webhook,
                            title: str,
                            description: str,
                            timestamp: datetime,
                            url: str,
-                           author: str,
-                           author_url: str,
-                           webhook_profile_name: str
+                           webhook_profile_name: str,
+                           author: t.Optional[str] = None,
+                           author_url: t.Optional[str] = None,
                            ) -> int:
         """Send webhook entry and return ID of message."""
         embed = discord.Embed(
@@ -200,11 +192,12 @@ class News(Cog):
             url=url,
             colour=constants.Colours.soft_green
         )
-        embed.set_author(
-            name=author,
-            url=author_url
-        )
-        msg = await webhook.send(
+        if author and author_url:
+            embed.set_author(
+                name=author,
+                url=author_url
+            )
+        msg = await self.webhook.send(
             embed=embed,
             username=webhook_profile_name,
             avatar_url=AVATAR_URL,
@@ -222,6 +215,12 @@ class News(Cog):
         async with self.bot.http_session.get(thread_information["starting_email"]) as resp:
             email_information = await resp.json()
         return thread_information, email_information
+
+    async def get_webhook_and_channel(self) -> None:
+        """Storage #python-news channel Webhook and `TextChannel` to `News.webhook` and `channel`."""
+        await self.bot.wait_until_guild_available()
+        self.webhook = await self.bot.fetch_webhook(constants.PythonNews.webhook)
+        self.channel = await self.bot.fetch_channel(constants.PythonNews.channel)
 
 
 def setup(bot: Bot) -> None:
