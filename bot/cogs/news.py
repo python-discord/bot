@@ -97,7 +97,7 @@ class News(Cog):
                 log.warning(f"Wrong datetime format passed in PEP new: {new['published']}")
                 continue
             if (
-                    any(pep_new == new["title"] for pep_new in pep_news)
+                    new["title"] in pep_news
                     or new_datetime.date() < date.today()
             ):
                 continue
