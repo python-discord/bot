@@ -53,13 +53,10 @@ class Utils(Cog):
         self.base_github_pep_url = "https://raw.githubusercontent.com/python/peps/master/pep-"
 
     @command(name='pep', aliases=('get_pep', 'p'))
-    async def pep_command(self, ctx: Context, pep_number: str) -> None:
+    async def pep_command(self, ctx: Context, pep_number: int) -> None:
         """Fetches information about a PEP and sends it to the channel."""
-        if pep_number.isdigit():
-            pep_number = int(pep_number)
-        else:
-            await ctx.invoke(self.bot.get_command("help"), "pep")
-            return
+        # Trigger typing in chat to show users that bot is responding
+        await ctx.trigger_typing()
 
         # Handle PEP 0 directly because it's not in .rst or .txt so it can't be accessed like other PEPs.
         if pep_number == 0:
