@@ -9,7 +9,7 @@ from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Channels
 from bot.converters import TagNameConverter
-from bot.decorators import InWhitelistedContextCheckFailure
+from bot.decorators import InWhitelistCheckFailure
 
 log = logging.getLogger(__name__)
 
@@ -202,7 +202,7 @@ class ErrorHandler(Cog):
         * BotMissingRole
         * BotMissingAnyRole
         * NoPrivateMessage
-        * InWhitelistedContextCheckFailure
+        * InWhitelistCheckFailure
         """
         bot_missing_errors = (
             errors.BotMissingPermissions,
@@ -215,7 +215,7 @@ class ErrorHandler(Cog):
             await ctx.send(
                 f"Sorry, it looks like I don't have the permissions or roles I need to do that."
             )
-        elif isinstance(e, (InWhitelistedContextCheckFailure, errors.NoPrivateMessage)):
+        elif isinstance(e, (InWhitelistCheckFailure, errors.NoPrivateMessage)):
             ctx.bot.stats.incr("errors.wrong_channel_or_dm_error")
             await ctx.send(e)
 

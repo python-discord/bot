@@ -11,30 +11,34 @@ from discord.errors import NotFound
 from discord.ext import commands
 from discord.ext.commands import CheckFailure, Cog, Context
 
-from bot.constants import ERROR_REPLIES, RedirectOutput
+from bot.constants import Channels, ERROR_REPLIES, RedirectOutput
 from bot.utils.checks import with_role_check, without_role_check
 
 log = logging.getLogger(__name__)
 
 
-class InWhitelistedContextCheckFailure(CheckFailure):
+class InWhitelistCheckFailure(CheckFailure):
     """Raised when the `in_whitelist` check fails."""
 
-    def __init__(self, redirect_channel: Optional[int] = None):
-        error_message = "Sorry, but you are not allowed to use that command here."
+    def __init__(self, redirect_channel: Optional[int]) -> None:
+        self.redirect_channel = redirect_channel
 
         if redirect_channel:
-            error_message += f" Please use the <#{redirect_channel}> channel instead."
+            redirect_message = f" here. Please use the <#{redirect_channel}> channel instead"
+        else:
+            redirect_message = ""
+
+        error_message = f"You are not allowed to use that command{redirect_message}."
 
         super().__init__(error_message)
 
 
-def in_whitelisted_context(
+def in_whitelist(
     *,
-    whitelisted_channels: Container[int] = (),
-    whitelisted_categories: Container[int] = (),
-    whitelisted_roles: Container[int] = (),
-    redirect_channel: Optional[int] = None,
+    channels: Container[int] = (),
+    categories: Container[int] = (),
+    roles: Container[int] = (),
+    redirect: Optional[int] = Channels.bot_commands,
 
 ) -> Callable:
     """
@@ -46,45 +50,40 @@ def in_whitelisted_context(
     - `categories`: a container with category ids for whitelisted categories
     - `roles`: a container with with role ids for whitelisted roles
 
-    An optional `redirect_channel` can be provided to redirect users that are not
-    authorized to use the command in the current context. If no such channel is
-    provided, the users are simply told that they are not authorized to use the
-    command.
+    If the command was invoked in a context that was not whitelisted, the member is either
+    redirected to the `redirect` channel that was passed (default: #bot-commands) or simply
+    told that they're not allowed to use this particular command (if `None` was passed).
     """
-    if redirect_channel and redirect_channel not in whitelisted_channels:
+    if redirect and redirect not in channels:
         # It does not make sense for the channel whitelist to not contain the redirection
-        # channel (if provided). That's why we add the redirection channel to the `channels`
+        # channel (if applicable). That's why we add the redirection channel to the `channels`
         # container if it's not already in it. As we allow any container type to be passed,
         # we first create a tuple in order to safely add the redirection channel.
         #
         # Note: It's possible for the redirect channel to be in a whitelisted category, but
         # there's no easy way to check that and as a channel can easily be moved in and out of
         # categories, it's probably not wise to rely on its category in any case.
-        whitelisted_channels = tuple(whitelisted_channels) + (redirect_channel,)
+        channels = tuple(channels) + (redirect,)
 
     def predicate(ctx: Context) -> bool:
         """Check if a command was issued in a whitelisted context."""
-        if whitelisted_channels and ctx.channel.id in whitelisted_channels:
+        if channels and ctx.channel.id in channels:
             log.trace(f"{ctx.author} may use the `{ctx.command.name}` command as they are in a whitelisted channel.")
             return True
 
         # Only check the category id if we have a category whitelist and the channel has a `category_id`
-        if (
-            whitelisted_categories
-            and hasattr(ctx.channel, "category_id")
-            and ctx.channel.category_id in whitelisted_categories
-        ):
+        if categories and hasattr(ctx.channel, "category_id") and ctx.channel.category_id in categories:
             log.trace(f"{ctx.author} may use the `{ctx.command.name}` command as they are in a whitelisted category.")
             return True
 
         # Only check the roles whitelist if we have one and ensure the author's roles attribute returns
         # an iterable to prevent breakage in DM channels (for if we ever decide to enable commands there).
-        if whitelisted_roles and any(r.id in whitelisted_roles for r in getattr(ctx.author, "roles", ())):
+        if roles and any(r.id in roles for r in getattr(ctx.author, "roles", ())):
             log.trace(f"{ctx.author} may use the `{ctx.command.name}` command as they have a whitelisted role.")
             return True
 
         log.trace(f"{ctx.author} may not use the `{ctx.command.name}` command within this context.")
-        raise InWhitelistedContextCheckFailure(redirect_channel)
+        raise InWhitelistCheckFailure(redirect)
 
     return commands.check(predicate)
 
