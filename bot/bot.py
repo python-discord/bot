@@ -75,7 +75,7 @@ class Bot(commands.Bot):
             await self._resolver.close()
 
         if self.stats._transport:
-            await self.stats._transport.close()
+            self.stats._transport.close()
 
     async def login(self, *args, **kwargs) -> None:
         """Re-create the connector and set up sessions before logging into Discord."""
