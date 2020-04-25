@@ -58,9 +58,9 @@ class Utils(Cog):
         self.peps: Dict[int, str] = {}
         self.refresh_peps_urls.start()
 
-    @loop(hours=24)
+    @loop(hours=3)
     async def refresh_peps_urls(self) -> None:
-        """Refresh PEP URLs listing every day at once."""
+        """Refresh PEP URLs listing in every 3 hours."""
         # Wait until HTTP client is available
         await self.bot.wait_until_guild_available()
 
