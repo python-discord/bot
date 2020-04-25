@@ -15,6 +15,7 @@ from discord.ext.tasks import loop
 from bot.bot import Bot
 from bot.constants import Channels, MODERATION_ROLES, Mention, STAFF_ROLES
 from bot.decorators import in_channel, with_role
+from bot.utils.cache import async_cache
 from bot.utils.time import humanize_delta
 
 log = logging.getLogger(__name__)
@@ -79,59 +80,10 @@ class Utils(Cog):
 
         # Handle PEP 0 directly because it's not in .rst or .txt so it can't be accessed like other PEPs.
         if pep_number == 0:
-            return await self.send_pep_zero(ctx)
-
-        possible_extensions = ['.txt', '.rst']
-        found_pep = False
-        for extension in possible_extensions:
-            # Attempt to fetch the PEP
-            pep_url = f"{self.base_github_pep_url}{pep_number:04}{extension}"
-            log.trace(f"Requesting PEP {pep_number} with {pep_url}")
-            response = await self.bot.http_session.get(pep_url)
-
-            if response.status == 200:
-                log.trace("PEP found")
-                found_pep = True
-
-                pep_content = await response.text()
-
-                # Taken from https://github.com/python/peps/blob/master/pep0/pep.py#L179
-                pep_header = HeaderParser().parse(StringIO(pep_content))
-
-                # Assemble the embed
-                pep_embed = Embed(
-                    title=f"**PEP {pep_number} - {pep_header['Title']}**",
-                    description=f"[Link]({self.base_pep_url}{pep_number:04})",
-                )
-
-                pep_embed.set_thumbnail(url=ICON_URL)
-
-                # Add the interesting information
-                fields_to_check = ("Status", "Python-Version", "Created", "Type")
-                for field in fields_to_check:
-                    # Check for a PEP metadata field that is present but has an empty value
-                    # embed field values can't contain an empty string
-                    if pep_header.get(field, ""):
-                        pep_embed.add_field(name=field, value=pep_header[field])
-
-            elif response.status != 404:
-                # any response except 200 and 404 is expected
-                found_pep = True  # actually not, but it's easier to display this way
-                log.trace(f"The user requested PEP {pep_number}, but the response had an unexpected status code: "
-                          f"{response.status}.\n{response.text}")
-
-                error_message = "Unexpected HTTP error during PEP search. Please let us know."
-                pep_embed = Embed(title="Unexpected error", description=error_message)
-                pep_embed.colour = Colour.red()
-                break
-
-        if not found_pep:
-            log.trace("PEP was not found")
-            not_found = f"PEP {pep_number} does not exist."
-            pep_embed = Embed(title="PEP not found", description=not_found)
-            pep_embed.colour = Colour.red()
-
-        await ctx.message.channel.send(embed=pep_embed)
+            pep_embed = await self.get_pep_zero_embed()
+        else:
+            pep_embed = await self.get_pep_embed(pep_number)
+        await ctx.send(embed=pep_embed)
 
     @command()
     @in_channel(Channels.bot_commands, bypass_roles=STAFF_ROLES)
@@ -310,7 +262,7 @@ class Utils(Cog):
         for reaction in options:
             await message.add_reaction(reaction)
 
-    async def send_pep_zero(self, ctx: Context) -> None:
+    async def get_pep_zero_embed(self) -> Embed:
         """Send information about PEP 0."""
         pep_embed = Embed(
             title=f"**PEP 0 - Index of Python Enhancement Proposals (PEPs)**",
@@ -321,7 +273,46 @@ class Utils(Cog):
         pep_embed.add_field(name="Created", value="13-Jul-2000")
         pep_embed.add_field(name="Type", value="Informational")
 
-        await ctx.send(embed=pep_embed)
+        return pep_embed
+
+    @async_cache(arg_offset=1)
+    async def get_pep_embed(self, pep_nr: int) -> Embed:
+        """Fetch, generate and return PEP embed. Implement `async_cache`."""
+        if pep_nr not in self.peps:
+            log.trace(f"PEP {pep_nr} was not found")
+            not_found = f"PEP {pep_nr} does not exist."
+            return Embed(title="PEP not found", description=not_found, colour=Colour.red())
+        response = await self.bot.http_session.get(self.peps[pep_nr])
+
+        if response.status == 200:
+            log.trace(f"PEP {pep_nr} found")
+            pep_content = await response.text()
+
+            # Taken from https://github.com/python/peps/blob/master/pep0/pep.py#L179
+            pep_header = HeaderParser().parse(StringIO(pep_content))
+
+            # Assemble the embed
+            pep_embed = Embed(
+                title=f"**PEP {pep_nr} - {pep_header['Title']}**",
+                description=f"[Link]({self.base_pep_url}{pep_nr:04})",
+            )
+
+            pep_embed.set_thumbnail(url=ICON_URL)
+
+            # Add the interesting information
+            fields_to_check = ("Status", "Python-Version", "Created", "Type")
+            for field in fields_to_check:
+                # Check for a PEP metadata field that is present but has an empty value
+                # embed field values can't contain an empty string
+                if pep_header.get(field, ""):
+                    pep_embed.add_field(name=field, value=pep_header[field])
+            return pep_embed
+        else:
+            log.trace(f"The user requested PEP {pep_nr}, but the response had an unexpected status code: "
+                      f"{response.status}.\n{response.text}")
+
+            error_message = "Unexpected HTTP error during PEP search. Please let us know."
+            return Embed(title="Unexpected error", description=error_message, colour=Colour.red())
 
 
 def setup(bot: Bot) -> None:
