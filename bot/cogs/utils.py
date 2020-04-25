@@ -5,11 +5,12 @@ import unicodedata
 from asyncio import TimeoutError, sleep
 from email.parser import HeaderParser
 from io import StringIO
-from typing import Tuple, Union
+from typing import Dict, Tuple, Union
 
 from dateutil import relativedelta
 from discord import Colour, Embed, Message, Role
 from discord.ext.commands import BadArgument, Cog, Context, command
+from discord.ext.tasks import loop
 
 from bot.bot import Bot
 from bot.constants import Channels, MODERATION_ROLES, Mention, STAFF_ROLES
@@ -51,6 +52,24 @@ class Utils(Cog):
 
         self.base_pep_url = "http://www.python.org/dev/peps/pep-"
         self.base_github_pep_url = "https://raw.githubusercontent.com/python/peps/master/pep-"
+        self.peps_listing_api_url = "https://api.github.com/repos/python/peps/contents?ref=master"
+
+        self.peps: Dict[int, str] = {}
+        self.refresh_peps_urls.start()
+
+    @loop(hours=24)
+    async def refresh_peps_urls(self) -> None:
+        """Refresh PEP URLs listing every day at once."""
+        # Wait until HTTP client is available
+        await self.bot.wait_until_guild_available()
+
+        async with self.bot.http_session.get(self.peps_listing_api_url) as resp:
+            listing = await resp.json()
+
+        for file in listing:
+            name = file["name"]
+            if name.startswith("pep-") and (name.endswith(".txt") or name.endswith(".rst")):
+                self.peps[int(name.split(".")[0].split("-")[1])] = file["download_url"]
 
     @command(name='pep', aliases=('get_pep', 'p'))
     async def pep_command(self, ctx: Context, pep_number: int) -> None:
