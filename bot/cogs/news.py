@@ -102,14 +102,17 @@ class News(Cog):
             ):
                 continue
 
-            msg_id = await self.send_webhook(
+            msg = await self.send_webhook(
                 title=new["title"],
                 description=new["summary"],
                 timestamp=new_datetime,
                 url=new["link"],
-                webhook_profile_name=data["feed"]["title"]
+                webhook_profile_name=data["feed"]["title"],
+                footer=data["feed"]["title"]
             )
-            payload["data"]["pep"].append(msg_id)
+            payload["data"]["pep"].append(msg.id)
+
+            await msg.publish()
 
         # Apply new sent news to DB to avoid duplicate sending
         await self.bot.api_client.put("bot/bot-settings/news", json=payload)
@@ -149,16 +152,19 @@ class News(Cog):
 
                 content = email_information["content"]
                 link = THREAD_URL.format(id=thread["href"].split("/")[-2], list=maillist)
-                msg_id = await self.send_webhook(
+                msg = await self.send_webhook(
                     title=thread_information["subject"],
                     description=content[:500] + f"... [continue reading]({link})" if len(content) > 500 else content,
                     timestamp=new_date,
                     url=link,
                     author=f"{email_information['sender_name']} ({email_information['sender']['address']})",
                     author_url=MAILMAN_PROFILE_URL.format(id=email_information["sender"]["mailman_id"]),
-                    webhook_profile_name=self.webhook_names[maillist]
+                    webhook_profile_name=self.webhook_names[maillist],
+                    footer=f"Posted to {self.webhook_names[maillist]}"
                 )
-                payload["data"][maillist].append(msg_id)
+                payload["data"][maillist].append(msg.id)
+
+                await msg.publish()
 
         await self.bot.api_client.put("bot/bot-settings/news", json=payload)
 
@@ -181,10 +187,11 @@ class News(Cog):
                            timestamp: datetime,
                            url: str,
                            webhook_profile_name: str,
+                           footer: str,
                            author: t.Optional[str] = None,
                            author_url: t.Optional[str] = None,
-                           ) -> int:
-        """Send webhook entry and return ID of message."""
+                           ) -> discord.Message:
+        """Send webhook entry and return sent message."""
         embed = discord.Embed(
             title=title,
             description=description,
@@ -197,13 +204,18 @@ class News(Cog):
                 name=author,
                 url=author_url
             )
-        msg = await self.webhook.send(
+        embed.set_footer(text=footer, icon_url=AVATAR_URL)
+
+        # Wait until Webhook is available
+        while not self.webhook:
+            pass
+
+        return await self.webhook.send(
             embed=embed,
             username=webhook_profile_name,
             avatar_url=AVATAR_URL,
             wait=True
         )
-        return msg.id
 
     async def get_thread_and_first_mail(self, maillist: str, thread_identifier: str) -> t.Tuple[t.Any, t.Any]:
         """Get mail thread and first mail from mail.python.org based on `maillist` and `thread_identifier`."""
