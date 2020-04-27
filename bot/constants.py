@@ -421,6 +421,7 @@ class Roles(metaclass=YAMLGetter):
     announcements: int
     contributors: int
     core_developers: int
+    help_cooldown: int
     helpers: int
     jammers: int
     moderators: int
