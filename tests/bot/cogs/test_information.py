@@ -7,7 +7,7 @@ import discord
 
 from bot import constants
 from bot.cogs import information
-from bot.decorators import InChannelCheckFailure
+from bot.decorators import InWhitelistCheckFailure
 from tests import helpers
 
 
@@ -525,7 +525,7 @@ class UserCommandTests(unittest.TestCase):
         ctx = helpers.MockContext(author=self.author, channel=helpers.MockTextChannel(id=100))
 
         msg = "Sorry, but you may only use this command within <#50>."
-        with self.assertRaises(InChannelCheckFailure, msg=msg):
+        with self.assertRaises(InWhitelistCheckFailure, msg=msg):
             asyncio.run(self.cog.user_info.callback(self.cog, ctx))
 
     @unittest.mock.patch("bot.cogs.information.Information.create_user_embed", new_callable=unittest.mock.AsyncMock)
