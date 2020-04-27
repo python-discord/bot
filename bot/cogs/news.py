@@ -171,7 +171,7 @@ class News(Cog):
                 payload["data"][maillist].append(msg.id)
 
                 if msg.channel.type is discord.ChannelType.news:
-                    log.trace("Publishing PEP annnouncement because it was in a news channel")
+                    log.trace("Publishing mailing list message because it was in a news channel")
                     await msg.publish()
 
         await self.bot.api_client.put("bot/bot-settings/news", json=payload)
