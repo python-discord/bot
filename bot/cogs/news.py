@@ -5,6 +5,7 @@ from datetime import date, datetime
 import discord
 import feedparser
 from bs4 import BeautifulSoup
+from dateutil import tz
 from discord.ext.commands import Cog
 from discord.ext.tasks import loop
 
@@ -35,6 +36,8 @@ class News(Cog):
         self.bot.loop.create_task(self.get_webhook_names())
         self.bot.loop.create_task(self.get_webhook_and_channel())
 
+    async def start_tasks(self) -> None:
+        """Start the tasks for fetching new PEPs and mailing list messages."""
         self.post_pep_news.start()
         self.post_maillist_news.start()
 
@@ -70,6 +73,7 @@ class News(Cog):
         """Fetch new PEPs and when they don't have announcement in #python-news, create it."""
         # Wait until everything is ready and http_session available
         await self.bot.wait_until_guild_available()
+        await self.sync_maillists()
 
         async with self.bot.http_session.get(PEPS_RSS_URL) as resp:
             data = feedparser.parse(await resp.text())
@@ -112,7 +116,9 @@ class News(Cog):
             )
             payload["data"]["pep"].append(msg.id)
 
-            await msg.publish()
+            if msg.channel.type is discord.ChannelType.news:
+                log.trace("Publishing PEP annnouncement because it was in a news channel")
+                await msg.publish()
 
         # Apply new sent news to DB to avoid duplicate sending
         await self.bot.api_client.put("bot/bot-settings/news", json=payload)
@@ -164,7 +170,9 @@ class News(Cog):
                 )
                 payload["data"][maillist].append(msg.id)
 
-                await msg.publish()
+                if msg.channel.type is discord.ChannelType.news:
+                    log.trace("Publishing PEP annnouncement because it was in a news channel")
+                    await msg.publish()
 
         await self.bot.api_client.put("bot/bot-settings/news", json=payload)
 
@@ -175,10 +183,19 @@ class News(Cog):
             if message is None:
                 message = await self.channel.fetch_message(new)
                 if message is None:
+                    log.trace(f"Could not find message for {new} on mailing list {maillist}")
                     return False
 
-            if message.embeds[0].title == title and message.embeds[0].timestamp == timestamp:
+            embed_time = message.embeds[0].timestamp.replace(tzinfo=tz.gettz("UTC"))
+
+            if (
+                message.embeds[0].title == title
+                and embed_time == timestamp.astimezone(tz.gettz("UTC"))
+            ):
+                log.trace(f"Found existing message for '{title}'")
                 return True
+
+        log.trace(f"Found no existing message for '{title}'")
         return False
 
     async def send_webhook(self,
@@ -233,6 +250,8 @@ class News(Cog):
         await self.bot.wait_until_guild_available()
         self.webhook = await self.bot.fetch_webhook(constants.PythonNews.webhook)
         self.channel = await self.bot.fetch_channel(constants.PythonNews.channel)
+
+        await self.start_tasks()
 
 
 def setup(bot: Bot) -> None:
