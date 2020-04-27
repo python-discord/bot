@@ -127,7 +127,7 @@ class News(Cog):
 
         for maillist in constants.PythonNews.mail_lists:
             async with self.bot.http_session.get(RECENT_THREADS_TEMPLATE.format(name=maillist)) as resp:
-                recents = BeautifulSoup(await resp.text())
+                recents = BeautifulSoup(await resp.text(), features="lxml")
 
             for thread in recents.html.body.div.find_all("a", href=True):
                 # We want only these threads that have identifiers
