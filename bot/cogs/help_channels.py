@@ -694,6 +694,7 @@ class HelpChannels(Scheduler, commands.Cog):
                 )
                 return
 
+            log.info(f"Channel #{channel} was claimed by `{message.author.id}`.")
             await self.move_to_in_use(channel)
             await self.revoke_send_permissions(message.author)
             # Add user with channel for dormant check.
