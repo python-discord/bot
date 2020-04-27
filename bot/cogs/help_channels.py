@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 
 import discord
+import discord.abc
 from discord.ext import commands
 
 from bot import constants
@@ -21,6 +22,7 @@ log = logging.getLogger(__name__)
 
 ASKING_GUIDE_URL = "https://pythondiscord.com/pages/asking-good-questions/"
 MAX_CHANNELS_PER_CATEGORY = 50
+EXCLUDED_CHANNELS = (constants.Channels.how_to_get_help,)
 
 AVAILABLE_TOPIC = """
 This channel is available. Feel free to ask a question in order to claim this channel!
@@ -283,13 +285,18 @@ class HelpChannels(Scheduler, commands.Cog):
 
         return name
 
+    @staticmethod
+    def is_excluded_channel(channel: discord.abc.GuildChannel) -> bool:
+        """Check if a channel should be excluded from the help channel system."""
+        return not isinstance(channel, discord.TextChannel) or channel.id in EXCLUDED_CHANNELS
+
     def get_category_channels(self, category: discord.CategoryChannel) -> t.Iterable[discord.TextChannel]:
         """Yield the text channels of the `category` in an unsorted manner."""
         log.trace(f"Getting text channels in the category '{category}' ({category.id}).")
 
         # This is faster than using category.channels because the latter sorts them.
         for channel in self.bot.get_guild(constants.Guild.id).channels:
-            if channel.category_id == category.id and isinstance(channel, discord.TextChannel):
+            if channel.category_id == category.id and not self.is_excluded_channel(channel):
                 yield channel
 
     @staticmethod
@@ -670,8 +677,8 @@ class HelpChannels(Scheduler, commands.Cog):
 
         await self.check_for_answer(message)
 
-        if not self.is_in_category(channel, constants.Categories.help_available):
-            return  # Ignore messages outside the Available category.
+        if not self.is_in_category(channel, constants.Categories.help_available) or self.is_excluded_channel(channel):
+            return  # Ignore messages outside the Available category or in excluded channels.
 
         log.trace("Waiting for the cog to be ready before processing messages.")
         await self.ready.wait()

@@ -132,6 +132,9 @@ guild:
         meta:               429409067623251969
         python_discussion:  267624335836053506
 
+        # Python Help: Available
+        how_to_get_help:    704250143020417084
+
         # Logs
         attachment_log:     &ATTACH_LOG     649243850006855680
         message_log:        &MESSAGE_LOG    467752170159079424
