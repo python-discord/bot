@@ -116,7 +116,7 @@ class News(Cog):
             )
             payload["data"]["pep"].append(msg.id)
 
-            if msg.channel.type is discord.ChannelType.news:
+            if msg.channel.is_news():
                 log.trace("Publishing PEP annnouncement because it was in a news channel")
                 await msg.publish()
 
@@ -170,7 +170,7 @@ class News(Cog):
                 )
                 payload["data"][maillist].append(msg.id)
 
-                if msg.channel.type is discord.ChannelType.news:
+                if msg.channel.is_news():
                     log.trace("Publishing mailing list message because it was in a news channel")
                     await msg.publish()
 
@@ -222,10 +222,6 @@ class News(Cog):
                 url=author_url
             )
         embed.set_footer(text=footer, icon_url=AVATAR_URL)
-
-        # Wait until Webhook is available
-        while not self.webhook:
-            pass
 
         return await self.webhook.send(
             embed=embed,
