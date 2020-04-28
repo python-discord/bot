@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 
 import discord
+import discord.abc
 from discord.ext import commands
 
 from bot import constants
@@ -21,6 +22,7 @@ log = logging.getLogger(__name__)
 
 ASKING_GUIDE_URL = "https://pythondiscord.com/pages/asking-good-questions/"
 MAX_CHANNELS_PER_CATEGORY = 50
+EXCLUDED_CHANNELS = (constants.Channels.how_to_get_help,)
 
 AVAILABLE_TOPIC = """
 This channel is available. Feel free to ask a question in order to claim this channel!
@@ -283,13 +285,18 @@ class HelpChannels(Scheduler, commands.Cog):
 
         return name
 
+    @staticmethod
+    def is_excluded_channel(channel: discord.abc.GuildChannel) -> bool:
+        """Check if a channel should be excluded from the help channel system."""
+        return not isinstance(channel, discord.TextChannel) or channel.id in EXCLUDED_CHANNELS
+
     def get_category_channels(self, category: discord.CategoryChannel) -> t.Iterable[discord.TextChannel]:
         """Yield the text channels of the `category` in an unsorted manner."""
         log.trace(f"Getting text channels in the category '{category}' ({category.id}).")
 
         # This is faster than using category.channels because the latter sorts them.
         for channel in self.bot.get_guild(constants.Guild.id).channels:
-            if channel.category_id == category.id and isinstance(channel, discord.TextChannel):
+            if channel.category_id == category.id and not self.is_excluded_channel(channel):
                 yield channel
 
     @staticmethod
@@ -478,6 +485,45 @@ class HelpChannels(Scheduler, commands.Cog):
 
             self.schedule_task(channel.id, data)
 
+    async def move_to_bottom_position(self, channel: discord.TextChannel, category_id: int, **options) -> None:
+        """
+        Move the `channel` to the bottom position of `category` and edit channel attributes.
+
+        To ensure "stable sorting", we use the `bulk_channel_update` endpoint and provide the current
+        positions of the other channels in the category as-is. This should make sure that the channel
+        really ends up at the bottom of the category.
+
+        If `options` are provided, the channel will be edited after the move is completed. This is the
+        same order of operations that `discord.TextChannel.edit` uses. For information on available
+        options, see the documention on `discord.TextChannel.edit`. While possible, position-related
+        options should be avoided, as it may interfere with the category move we perform.
+        """
+        # Get a fresh copy of the category from the bot to avoid the cache mismatch issue we had.
+        category = await self.try_get_channel(category_id)
+
+        payload = [{"id": c.id, "position": c.position} for c in category.channels]
+
+        # Calculate the bottom position based on the current highest position in the category. If the
+        # category is currently empty, we simply use the current position of the channel to avoid making
+        # unnecessary changes to positions in the guild.
+        bottom_position = payload[-1]["position"] + 1 if payload else channel.position
+
+        payload.append(
+            {
+                "id": channel.id,
+                "position": bottom_position,
+                "parent_id": category.id,
+                "lock_permissions": True,
+            }
+        )
+
+        # We use d.py's method to ensure our request is processed by d.py's rate limit manager
+        await self.bot.http.bulk_channel_update(category.guild.id, payload)
+
+        # Now that the channel is moved, we can edit the other attributes
+        if options:
+            await channel.edit(**options)
+
     async def move_to_available(self) -> None:
         """Make a channel available."""
         log.trace("Making a channel available.")
@@ -489,10 +535,10 @@ class HelpChannels(Scheduler, commands.Cog):
 
         log.trace(f"Moving #{channel} ({channel.id}) to the Available category.")
 
-        await channel.edit(
+        await self.move_to_bottom_position(
+            channel=channel,
+            category_id=constants.Categories.help_available,
             name=f"{AVAILABLE_EMOJI}{NAME_SEPARATOR}{self.get_clean_channel_name(channel)}",
-            category=self.available_category,
-            sync_permissions=True,
             topic=AVAILABLE_TOPIC,
         )
 
@@ -506,10 +552,10 @@ class HelpChannels(Scheduler, commands.Cog):
         """
         log.info(f"Moving #{channel} ({channel.id}) to the Dormant category.")
 
-        await channel.edit(
+        await self.move_to_bottom_position(
+            channel=channel,
+            category_id=constants.Categories.help_dormant,
             name=self.get_clean_channel_name(channel),
-            category=self.dormant_category,
-            sync_permissions=True,
             topic=DORMANT_TOPIC,
         )
 
@@ -540,10 +586,10 @@ class HelpChannels(Scheduler, commands.Cog):
         """Make a channel in-use and schedule it to be made dormant."""
         log.info(f"Moving #{channel} ({channel.id}) to the In Use category.")
 
-        await channel.edit(
+        await self.move_to_bottom_position(
+            channel=channel,
+            category_id=constants.Categories.help_in_use,
             name=f"{IN_USE_UNANSWERED_EMOJI}{NAME_SEPARATOR}{self.get_clean_channel_name(channel)}",
-            category=self.in_use_category,
-            sync_permissions=True,
             topic=IN_USE_TOPIC,
         )
 
@@ -631,8 +677,8 @@ class HelpChannels(Scheduler, commands.Cog):
 
         await self.check_for_answer(message)
 
-        if not self.is_in_category(channel, constants.Categories.help_available):
-            return  # Ignore messages outside the Available category.
+        if not self.is_in_category(channel, constants.Categories.help_available) or self.is_excluded_channel(channel):
+            return  # Ignore messages outside the Available category or in excluded channels.
 
         log.trace("Waiting for the cog to be ready before processing messages.")
         await self.ready.wait()
@@ -648,6 +694,7 @@ class HelpChannels(Scheduler, commands.Cog):
                 )
                 return
 
+            log.info(f"Channel #{channel} was claimed by `{message.author.id}`.")
             await self.move_to_in_use(channel)
             await self.revoke_send_permissions(message.author)
             # Add user with channel for dormant check.
