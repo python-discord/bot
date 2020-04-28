@@ -1,4 +1,3 @@
-import asyncio
 import datetime
 import unittest
 from unittest.mock import MagicMock, patch
@@ -16,7 +15,7 @@ from bot.converters import (
 )
 
 
-class ConverterTests(unittest.TestCase):
+class ConverterTests(unittest.IsolatedAsyncioTestCase):
     """Tests our custom argument converters."""
 
     @classmethod
@@ -26,7 +25,7 @@ class ConverterTests(unittest.TestCase):
 
         cls.fixed_utc_now = datetime.datetime.fromisoformat('2019-01-01T00:00:00')
 
-    def test_tag_content_converter_for_valid(self):
+    async def test_tag_content_converter_for_valid(self):
         """TagContentConverter should return correct values for valid input."""
         test_values = (
             ('hello', 'hello'),
@@ -35,10 +34,10 @@ class ConverterTests(unittest.TestCase):
 
         for content, expected_conversion in test_values:
             with self.subTest(content=content, expected_conversion=expected_conversion):
-                conversion = asyncio.run(TagContentConverter.convert(self.context, content))
+                conversion = await TagContentConverter.convert(self.context, content)
                 self.assertEqual(conversion, expected_conversion)
 
-    def test_tag_content_converter_for_invalid(self):
+    async def test_tag_content_converter_for_invalid(self):
         """TagContentConverter should raise the proper exception for invalid input."""
         test_values = (
             ('', "Tag contents should not be empty, or filled with whitespace."),
@@ -48,9 +47,9 @@ class ConverterTests(unittest.TestCase):
         for value, exception_message in test_values:
             with self.subTest(tag_content=value, exception_message=exception_message):
                 with self.assertRaises(BadArgument, msg=exception_message):
-                    asyncio.run(TagContentConverter.convert(self.context, value))
+                    await TagContentConverter.convert(self.context, value)
 
-    def test_tag_name_converter_for_valid(self):
+    async def test_tag_name_converter_for_valid(self):
         """TagNameConverter should return the correct values for valid tag names."""
         test_values = (
             ('tracebacks', 'tracebacks'),
@@ -60,10 +59,10 @@ class ConverterTests(unittest.TestCase):
 
         for name, expected_conversion in test_values:
             with self.subTest(name=name, expected_conversion=expected_conversion):
-                conversion = asyncio.run(TagNameConverter.convert(self.context, name))
+                conversion = await TagNameConverter.convert(self.context, name)
                 self.assertEqual(conversion, expected_conversion)
 
-    def test_tag_name_converter_for_invalid(self):
+    async def test_tag_name_converter_for_invalid(self):
         """TagNameConverter should raise the correct exception for invalid tag names."""
         test_values = (
             ('👋', "Don't be ridiculous, you can't use that character!"),
@@ -76,18 +75,18 @@ class ConverterTests(unittest.TestCase):
         for invalid_name, exception_message in test_values:
             with self.subTest(invalid_name=invalid_name, exception_message=exception_message):
                 with self.assertRaises(BadArgument, msg=exception_message):
-                    asyncio.run(TagNameConverter.convert(self.context, invalid_name))
+                    await TagNameConverter.convert(self.context, invalid_name)
 
-    def test_valid_python_identifier_for_valid(self):
+    async def test_valid_python_identifier_for_valid(self):
         """ValidPythonIdentifier returns valid identifiers unchanged."""
         test_values = ('foo', 'lemon')
 
         for name in test_values:
             with self.subTest(identifier=name):
-                conversion = asyncio.run(ValidPythonIdentifier.convert(self.context, name))
+                conversion = await ValidPythonIdentifier.convert(self.context, name)
                 self.assertEqual(name, conversion)
 
-    def test_valid_python_identifier_for_invalid(self):
+    async def test_valid_python_identifier_for_invalid(self):
         """ValidPythonIdentifier raises the proper exception for invalid identifiers."""
         test_values = ('nested.stuff', '#####')
 
@@ -95,9 +94,9 @@ class ConverterTests(unittest.TestCase):
             with self.subTest(identifier=name):
                 exception_message = f'`{name}` is not a valid Python identifier'
                 with self.assertRaises(BadArgument, msg=exception_message):
-                    asyncio.run(ValidPythonIdentifier.convert(self.context, name))
+                    await ValidPythonIdentifier.convert(self.context, name)
 
-    def test_duration_converter_for_valid(self):
+    async def test_duration_converter_for_valid(self):
         """Duration returns the correct `datetime` for valid duration strings."""
         test_values = (
             # Simple duration strings
@@ -159,10 +158,10 @@ class ConverterTests(unittest.TestCase):
                 mock_datetime.utcnow.return_value = self.fixed_utc_now
 
                 with self.subTest(duration=duration, duration_dict=duration_dict):
-                    converted_datetime = asyncio.run(converter.convert(self.context, duration))
+                    converted_datetime = await converter.convert(self.context, duration)
                     self.assertEqual(converted_datetime, expected_datetime)
 
-    def test_duration_converter_for_invalid(self):
+    async def test_duration_converter_for_invalid(self):
         """Duration raises the right exception for invalid duration strings."""
         test_values = (
             # Units in wrong order
@@ -196,10 +195,10 @@ class ConverterTests(unittest.TestCase):
             with self.subTest(invalid_duration=invalid_duration):
                 exception_message = f'`{invalid_duration}` is not a valid duration string.'
                 with self.assertRaises(BadArgument, msg=exception_message):
-                    asyncio.run(converter.convert(self.context, invalid_duration))
+                    await converter.convert(self.context, invalid_duration)
 
     @patch("bot.converters.datetime")
-    def test_duration_converter_out_of_range(self, mock_datetime):
+    async def test_duration_converter_out_of_range(self, mock_datetime):
         """Duration converter should raise BadArgument if datetime raises a ValueError."""
         mock_datetime.__add__.side_effect = ValueError
         mock_datetime.utcnow.return_value = mock_datetime
@@ -207,9 +206,9 @@ class ConverterTests(unittest.TestCase):
         duration = f"{datetime.MAXYEAR}y"
         exception_message = f"`{duration}` results in a datetime outside the supported range."
         with self.assertRaisesRegex(BadArgument, exception_message):
-            asyncio.run(Duration().convert(self.context, duration))
+            await Duration().convert(self.context, duration)
 
-    def test_isodatetime_converter_for_valid(self):
+    async def test_isodatetime_converter_for_valid(self):
         """ISODateTime converter returns correct datetime for valid datetime string."""
         test_values = (
             # `YYYY-mm-ddTHH:MM:SSZ` | `YYYY-mm-dd HH:MM:SSZ`
@@ -254,11 +253,11 @@ class ConverterTests(unittest.TestCase):
 
         for datetime_string, expected_dt in test_values:
             with self.subTest(datetime_string=datetime_string, expected_dt=expected_dt):
-                converted_dt = asyncio.run(converter.convert(self.context, datetime_string))
+                converted_dt = await converter.convert(self.context, datetime_string)
                 self.assertIsNone(converted_dt.tzinfo)
                 self.assertEqual(converted_dt, expected_dt)
 
-    def test_isodatetime_converter_for_invalid(self):
+    async def test_isodatetime_converter_for_invalid(self):
         """ISODateTime converter raises the correct exception for invalid datetime strings."""
         test_values = (
             # Make sure it doesn't interfere with the Duration converter
@@ -282,9 +281,9 @@ class ConverterTests(unittest.TestCase):
             with self.subTest(datetime_string=datetime_string):
                 exception_message = f"`{datetime_string}` is not a valid ISO-8601 datetime string"
                 with self.assertRaises(BadArgument, msg=exception_message):
-                    asyncio.run(converter.convert(self.context, datetime_string))
+                    await converter.convert(self.context, datetime_string)
 
-    def test_hush_duration_converter_for_valid(self):
+    async def test_hush_duration_converter_for_valid(self):
         """HushDurationConverter returns correct value for minutes duration or `"forever"` strings."""
         test_values = (
             ("0", 0),
@@ -297,10 +296,10 @@ class ConverterTests(unittest.TestCase):
         converter = HushDurationConverter()
         for minutes_string, expected_minutes in test_values:
             with self.subTest(minutes_string=minutes_string, expected_minutes=expected_minutes):
-                converted = asyncio.run(converter.convert(self.context, minutes_string))
+                converted = await converter.convert(self.context, minutes_string)
                 self.assertEqual(expected_minutes, converted)
 
-    def test_hush_duration_converter_for_invalid(self):
+    async def test_hush_duration_converter_for_invalid(self):
         """HushDurationConverter raises correct exception for invalid minutes duration strings."""
         test_values = (
             ("16", "Duration must be at most 15 minutes."),
@@ -311,4 +310,4 @@ class ConverterTests(unittest.TestCase):
         for invalid_minutes_string, exception_message in test_values:
             with self.subTest(invalid_minutes_string=invalid_minutes_string, exception_message=exception_message):
                 with self.assertRaisesRegex(BadArgument, exception_message):
-                    asyncio.run(converter.convert(self.context, invalid_minutes_string))
+                    await converter.convert(self.context, invalid_minutes_string)
