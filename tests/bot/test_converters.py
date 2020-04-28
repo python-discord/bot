@@ -198,6 +198,17 @@ class ConverterTests(unittest.TestCase):
                 with self.assertRaises(BadArgument, msg=exception_message):
                     asyncio.run(converter.convert(self.context, invalid_duration))
 
+    @patch("bot.converters.datetime")
+    def test_duration_converter_out_of_range(self, mock_datetime):
+        """Duration converter should raise BadArgument if datetime raises a ValueError."""
+        mock_datetime.__add__.side_effect = ValueError
+        mock_datetime.utcnow.return_value = mock_datetime
+
+        duration = f"{datetime.MAXYEAR}y"
+        exception_message = f"`{duration}` results in a datetime outside the supported range."
+        with self.assertRaisesRegex(BadArgument, exception_message):
+            asyncio.run(Duration().convert(self.context, duration))
+
     def test_isodatetime_converter_for_valid(self):
         """ISODateTime converter returns correct datetime for valid datetime string."""
         test_values = (
