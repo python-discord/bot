@@ -1,4 +1,5 @@
 import datetime
+import re
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -46,7 +47,7 @@ class ConverterTests(unittest.IsolatedAsyncioTestCase):
 
         for value, exception_message in test_values:
             with self.subTest(tag_content=value, exception_message=exception_message):
-                with self.assertRaises(BadArgument, msg=exception_message):
+                with self.assertRaisesRegex(BadArgument, re.escape(exception_message)):
                     await TagContentConverter.convert(self.context, value)
 
     async def test_tag_name_converter_for_valid(self):
@@ -74,7 +75,7 @@ class ConverterTests(unittest.IsolatedAsyncioTestCase):
 
         for invalid_name, exception_message in test_values:
             with self.subTest(invalid_name=invalid_name, exception_message=exception_message):
-                with self.assertRaises(BadArgument, msg=exception_message):
+                with self.assertRaisesRegex(BadArgument, re.escape(exception_message)):
                     await TagNameConverter.convert(self.context, invalid_name)
 
     async def test_valid_python_identifier_for_valid(self):
@@ -93,7 +94,7 @@ class ConverterTests(unittest.IsolatedAsyncioTestCase):
         for name in test_values:
             with self.subTest(identifier=name):
                 exception_message = f'`{name}` is not a valid Python identifier'
-                with self.assertRaises(BadArgument, msg=exception_message):
+                with self.assertRaisesRegex(BadArgument, re.escape(exception_message)):
                     await ValidPythonIdentifier.convert(self.context, name)
 
     async def test_duration_converter_for_valid(self):
@@ -194,7 +195,7 @@ class ConverterTests(unittest.IsolatedAsyncioTestCase):
         for invalid_duration in test_values:
             with self.subTest(invalid_duration=invalid_duration):
                 exception_message = f'`{invalid_duration}` is not a valid duration string.'
-                with self.assertRaises(BadArgument, msg=exception_message):
+                with self.assertRaisesRegex(BadArgument, re.escape(exception_message)):
                     await converter.convert(self.context, invalid_duration)
 
     @patch("bot.converters.datetime")
@@ -205,7 +206,7 @@ class ConverterTests(unittest.IsolatedAsyncioTestCase):
 
         duration = f"{datetime.MAXYEAR}y"
         exception_message = f"`{duration}` results in a datetime outside the supported range."
-        with self.assertRaisesRegex(BadArgument, exception_message):
+        with self.assertRaisesRegex(BadArgument, re.escape(exception_message)):
             await Duration().convert(self.context, duration)
 
     async def test_isodatetime_converter_for_valid(self):
@@ -280,7 +281,7 @@ class ConverterTests(unittest.IsolatedAsyncioTestCase):
         for datetime_string in test_values:
             with self.subTest(datetime_string=datetime_string):
                 exception_message = f"`{datetime_string}` is not a valid ISO-8601 datetime string"
-                with self.assertRaises(BadArgument, msg=exception_message):
+                with self.assertRaisesRegex(BadArgument, re.escape(exception_message)):
                     await converter.convert(self.context, datetime_string)
 
     async def test_hush_duration_converter_for_valid(self):
@@ -309,5 +310,5 @@ class ConverterTests(unittest.IsolatedAsyncioTestCase):
         converter = HushDurationConverter()
         for invalid_minutes_string, exception_message in test_values:
             with self.subTest(invalid_minutes_string=invalid_minutes_string, exception_message=exception_message):
-                with self.assertRaisesRegex(BadArgument, exception_message):
+                with self.assertRaisesRegex(BadArgument, re.escape(exception_message)):
                     await converter.convert(self.context, invalid_minutes_string)
