@@ -166,28 +166,28 @@ class ConverterTests(unittest.TestCase):
         """Duration raises the right exception for invalid duration strings."""
         test_values = (
             # Units in wrong order
-            ('1d1w'),
-            ('1s1y'),
+            '1d1w',
+            '1s1y',
 
             # Duplicated units
-            ('1 year 2 years'),
-            ('1 M 10 minutes'),
+            '1 year 2 years',
+            '1 M 10 minutes',
 
             # Unknown substrings
-            ('1MVes'),
-            ('1y3breads'),
+            '1MVes',
+            '1y3breads',
 
             # Missing amount
-            ('ym'),
+            'ym',
 
             # Incorrect whitespace
-            (" 1y"),
-            ("1S "),
-            ("1y  1m"),
+            " 1y",
+            "1S ",
+            "1y  1m",
 
             # Garbage
-            ('Guido van Rossum'),
-            ('lemon lemon lemon lemon lemon lemon lemon'),
+            'Guido van Rossum',
+            'lemon lemon lemon lemon lemon lemon lemon',
         )
 
         converter = Duration()
@@ -262,19 +262,19 @@ class ConverterTests(unittest.TestCase):
         """ISODateTime converter raises the correct exception for invalid datetime strings."""
         test_values = (
             # Make sure it doesn't interfere with the Duration converter
-            ('1Y'),
-            ('1d'),
-            ('1H'),
+            '1Y',
+            '1d',
+            '1H',
 
             # Check if it fails when only providing the optional time part
-            ('10:10:10'),
-            ('10:00'),
+            '10:10:10',
+            '10:00',
 
             # Invalid date format
-            ('19-01-01'),
+            '19-01-01',
 
             # Other non-valid strings
-            ('fisk the tag master'),
+            'fisk the tag master',
         )
 
         converter = ISODateTime()
