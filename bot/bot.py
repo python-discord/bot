@@ -7,6 +7,7 @@ from typing import Optional
 import aiohttp
 import discord
 from discord.ext import commands
+from sentry_sdk import push_scope
 
 from bot import DEBUG_MODE, api, constants
 from bot.async_stats import AsyncStatsClient
@@ -155,3 +156,14 @@ class Bot(commands.Bot):
         gateway event before giving up and thus not populating the cache for unavailable guilds.
         """
         await self._guild_available.wait()
+
+    async def on_error(self, event: str, *args, **kwargs) -> None:
+        """Log errors raised in event listeners rather than printing them to stderr."""
+        self.stats.incr(f"errors.event.{event}")
+
+        with push_scope() as scope:
+            scope.set_tag("event", event)
+            scope.set_extra("args", args)
+            scope.set_extra("kwargs", kwargs)
+
+            log.exception(f"Unhandled exception in {event}.")
