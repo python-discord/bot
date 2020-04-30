@@ -649,10 +649,11 @@ class HelpChannels(Scheduler, commands.Cog):
     async def check_for_answer(self, message: discord.Message) -> None:
         """Checks for whether new content in a help channel comes from non-claimants."""
         channel = message.channel
-        log.trace(f"Checking if #{channel} ({channel.id}) has been answered.")
 
         # Confirm the channel is an in use help channel
         if self.is_in_category(channel, constants.Categories.help_in_use):
+            log.trace(f"Checking if #{channel} ({channel.id}) has been answered.")
+
             # Check if there is an entry in unanswered (does not persist across restarts)
             if channel.id in self.unanswered:
                 claimant_id = self.help_channel_claimants[channel].id
