@@ -217,6 +217,11 @@ class News(Cog):
 
         await self.start_tasks()
 
+    def cog_unload(self) -> None:
+        """Stop news posting tasks on cog unload."""
+        self.post_pep_news.cancel()
+        self.post_maillist_news.cancel()
+
 
 def setup(bot: Bot) -> None:
     """Add `News` cog."""
