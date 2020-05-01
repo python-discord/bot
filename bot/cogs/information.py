@@ -206,7 +206,7 @@ class Information(Cog):
             description="\n\n".join(description)
         )
 
-        embed.set_thumbnail(url=user.avatar_url_as(format="png"))
+        embed.set_thumbnail(url=user.avatar_url_as(static_format="png"))
         embed.colour = user.top_role.colour if roles else Colour.blurple()
 
         return embed
