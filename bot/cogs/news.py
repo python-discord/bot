@@ -5,7 +5,6 @@ from datetime import date, datetime
 import discord
 import feedparser
 from bs4 import BeautifulSoup
-from dateutil import tz
 from discord.ext.commands import Cog
 from discord.ext.tasks import loop
 
@@ -80,17 +79,7 @@ class News(Cog):
 
         news_listing = await self.bot.api_client.get("bot/bot-settings/news")
         payload = news_listing.copy()
-        pep_news_ids = news_listing["data"]["pep"]
-        pep_news = []
-
-        for pep_id in pep_news_ids:
-            message = discord.utils.get(self.bot.cached_messages, id=pep_id)
-            if message is None:
-                message = await self.channel.fetch_message(pep_id)
-                if message is None:
-                    log.warning("Can't fetch PEP new message ID.")
-                    continue
-            pep_news.append(message.embeds[0].title)
+        pep_numbers = news_listing["data"]["pep"]
 
         # Reverse entries to send oldest first
         data["entries"].reverse()
@@ -100,8 +89,9 @@ class News(Cog):
             except ValueError:
                 log.warning(f"Wrong datetime format passed in PEP new: {new['published']}")
                 continue
+            pep_nr = new["title"].split(":")[0].split()[1]
             if (
-                    new["title"] in pep_news
+                    pep_nr in pep_numbers
                     or new_datetime.date() < date.today()
             ):
                 continue
@@ -114,7 +104,7 @@ class News(Cog):
                 webhook_profile_name=data["feed"]["title"],
                 footer=data["feed"]["title"]
             )
-            payload["data"]["pep"].append(msg.id)
+            payload["data"]["pep"].append(pep_nr)
 
             if msg.channel.is_news():
                 log.trace("Publishing PEP annnouncement because it was in a news channel")
@@ -151,7 +141,7 @@ class News(Cog):
                     continue
 
                 if (
-                        await self.check_new_exist(thread_information["subject"], new_date, maillist, existing_news)
+                        thread_information["thread_id"] in existing_news["data"][maillist]
                         or new_date.date() < date.today()
                 ):
                     continue
@@ -168,35 +158,13 @@ class News(Cog):
                     webhook_profile_name=self.webhook_names[maillist],
                     footer=f"Posted to {self.webhook_names[maillist]}"
                 )
-                payload["data"][maillist].append(msg.id)
+                payload["data"][maillist].append(thread_information["thread_id"])
 
                 if msg.channel.is_news():
                     log.trace("Publishing mailing list message because it was in a news channel")
                     await msg.publish()
 
         await self.bot.api_client.put("bot/bot-settings/news", json=payload)
-
-    async def check_new_exist(self, title: str, timestamp: datetime, maillist: str, news: t.Dict[str, t.Any]) -> bool:
-        """Check does this new title + timestamp already exist in #python-news."""
-        for new in news["data"][maillist]:
-            message = discord.utils.get(self.bot.cached_messages, id=new)
-            if message is None:
-                message = await self.channel.fetch_message(new)
-                if message is None:
-                    log.trace(f"Could not find message for {new} on mailing list {maillist}")
-                    return False
-
-            embed_time = message.embeds[0].timestamp.replace(tzinfo=tz.gettz("UTC"))
-
-            if (
-                message.embeds[0].title == title
-                and embed_time == timestamp.astimezone(tz.gettz("UTC"))
-            ):
-                log.trace(f"Found existing message for '{title}'")
-                return True
-
-        log.trace(f"Found no existing message for '{title}'")
-        return False
 
     async def send_webhook(self,
                            title: str,
