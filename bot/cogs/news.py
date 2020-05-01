@@ -125,6 +125,10 @@ class News(Cog):
             async with self.bot.http_session.get(RECENT_THREADS_TEMPLATE.format(name=maillist)) as resp:
                 recents = BeautifulSoup(await resp.text(), features="lxml")
 
+            # When response have <p>, this mean that no threads available
+            if recents.p:
+                continue
+
             for thread in recents.html.body.div.find_all("a", href=True):
                 # We want only these threads that have identifiers
                 if "latest" in thread["href"]:
