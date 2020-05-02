@@ -79,7 +79,7 @@ class News(Cog):
         await self.sync_maillists()
 
         async with self.bot.http_session.get(PEPS_RSS_URL) as resp:
-            data = feedparser.parse(await resp.text())
+            data = feedparser.parse(await resp.text("utf-8"))
 
         news_listing = await self.bot.api_client.get("bot/bot-settings/news")
         payload = news_listing.copy()
