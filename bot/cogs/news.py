@@ -128,7 +128,9 @@ class News(Cog):
             async with self.bot.http_session.get(RECENT_THREADS_TEMPLATE.format(name=maillist)) as resp:
                 recents = BeautifulSoup(await resp.text(), features="lxml")
 
-            # When response have <p>, this mean that no threads available
+            # When a <p> element is present in the response then the mailing list
+            # has not had any activity during the current month, so therefore it
+            # can be ignored.
             if recents.p:
                 continue
 
