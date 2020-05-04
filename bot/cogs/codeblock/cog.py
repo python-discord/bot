@@ -153,16 +153,7 @@ class CodeBlockCog(Cog, name="Code Block"):
         else:
             content = content[0]
 
-        space_left = 204
-        if len(content) >= space_left:
-            current_length = 0
-            lines_walked = 0
-            for line in content.splitlines(keepends=True):
-                if current_length + len(line) > space_left or lines_walked == 10:
-                    break
-                current_length += len(line)
-                lines_walked += 1
-            content = content[:current_length] + "#..."
+        content = self.truncate(content)
         content_escaped_markdown = RE_MARKDOWN.sub(r'\\\1', content)
 
         return (
@@ -190,22 +181,12 @@ class CodeBlockCog(Cog, name="Code Block"):
         # This check is to avoid all nodes being parsed as expressions.
         # (e.g. words over multiple lines)
         if not all(isinstance(node, ast.Expr) for node in tree.body) or repl_code:
-            # Shorten the code to 10 lines and/or 204 characters.
-            space_left = 204
             if content and repl_code:
                 content = content[1]
             else:
                 content = content[0]
 
-            if len(content) >= space_left:
-                current_length = 0
-                lines_walked = 0
-                for line in content.splitlines(keepends=True):
-                    if current_length + len(line) > space_left or lines_walked == 10:
-                        break
-                    current_length += len(line)
-                    lines_walked += 1
-                content = content[:current_length] + "#..."
+            content = self.truncate(content)
 
             log.debug(
                 f"{message.author} posted something that needed to be put inside python code "
@@ -363,6 +344,20 @@ class CodeBlockCog(Cog, name="Code Block"):
             and len(message.content.split("\n", 3)) > 3
             and not TokenRemover.find_token_in_message(message)
         )
+
+    @staticmethod
+    def truncate(content: str, max_chars: int = 204, max_lines: int = 10) -> str:
+        """Return `content` truncated to be at most `max_chars` or `max_lines` in length."""
+        current_length = 0
+        lines_walked = 0
+
+        for line in content.splitlines(keepends=True):
+            if current_length + len(line) > max_chars or lines_walked == max_lines:
+                break
+            current_length += len(line)
+            lines_walked += 1
+
+        return content[:current_length] + "#..."
 
     @Cog.listener()
     async def on_message(self, msg: Message) -> None:
