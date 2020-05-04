@@ -16,18 +16,31 @@ log = logging.getLogger(__name__)
 
 RE_MARKDOWN = re.compile(r'([*_~`|>])')
 RE_CODE_BLOCK_LANGUAGE = re.compile(r"```(?:[^\W_]+)\n(.*?)```", re.DOTALL)
-INVALID_BACKTICKS = {
-    "'''",
-    '"""',
-    "\u00b4\u00b4\u00b4",  # ACUTE ACCENT
-    "\u2018\u2018\u2018",  # LEFT SINGLE QUOTATION MARK
-    "\u2019\u2019\u2019",  # RIGHT SINGLE QUOTATION MARK
-    "\u2032\u2032\u2032",  # PRIME
-    "\u201c\u201c\u201c",  # LEFT DOUBLE QUOTATION MARK
-    "\u201d\u201d\u201d",  # RIGHT DOUBLE QUOTATION MARK
-    "\u2033\u2033\u2033",  # DOUBLE PRIME
-    "\u3003\u3003\u3003",  # VERTICAL KANA REPEAT MARK UPPER HALF
+TICKS = {
+    "`",
+    "'",
+    '"',
+    "\u00b4",  # ACUTE ACCENT
+    "\u2018",  # LEFT SINGLE QUOTATION MARK
+    "\u2019",  # RIGHT SINGLE QUOTATION MARK
+    "\u2032",  # PRIME
+    "\u201c",  # LEFT DOUBLE QUOTATION MARK
+    "\u201d",  # RIGHT DOUBLE QUOTATION MARK
+    "\u2033",  # DOUBLE PRIME
+    "\u3003",  # VERTICAL KANA REPEAT MARK UPPER HALF
 }
+RE_CODE_BLOCK = re.compile(
+    fr"""
+    (
+        ([{''.join(TICKS)}])  # Put all ticks into a character class within a group.
+        \2{{2}}               # Match the previous group 2 more times to ensure it's the same char.
+    )
+    ([^\W_]+\n)?              # Optionally match a language specifier followed by a newline.
+    (.+?)                     # Match the actual code within the block.
+    \1                        # Match the same 3 ticks used at the start of the block.
+    """,
+    re.DOTALL | re.VERBOSE
+)
 
 
 class CodeBlockCog(Cog, name="Code Block"):
@@ -266,7 +279,7 @@ class CodeBlockCog(Cog, name="Code Block"):
     @staticmethod
     def has_bad_ticks(message: discord.Message) -> bool:
         """Return True if `message` starts with 3 characters which look like but aren't '`'."""
-        return message.content[:3] in INVALID_BACKTICKS
+        return message.content[:3] in TICKS
 
     @staticmethod
     def is_help_channel(channel: discord.TextChannel) -> bool:
