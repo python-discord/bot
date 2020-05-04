@@ -2,7 +2,7 @@ import ast
 import logging
 import re
 import time
-from typing import Optional, Tuple
+from typing import NamedTuple, Optional, Sequence, Tuple
 
 import discord
 from discord import Embed, Message, RawMessageUpdateEvent
@@ -16,8 +16,9 @@ log = logging.getLogger(__name__)
 
 RE_MARKDOWN = re.compile(r'([*_~`|>])')
 RE_CODE_BLOCK_LANGUAGE = re.compile(r"```(?:[^\W_]+)\n(.*?)```", re.DOTALL)
+BACKTICK = "`"
 TICKS = {
-    "`",
+    BACKTICK,
     "'",
     '"',
     "\u00b4",  # ACUTE ACCENT
@@ -41,6 +42,14 @@ RE_CODE_BLOCK = re.compile(
     """,
     re.DOTALL | re.VERBOSE
 )
+
+
+class CodeBlock(NamedTuple):
+    """Represents a Markdown code block."""
+
+    content: str
+    language: str
+    tick: str
 
 
 class CodeBlockCog(Cog, name="Code Block"):
@@ -216,6 +225,27 @@ class CodeBlockCog(Cog, name="Code Block"):
             )
         else:
             log.trace("The code consists only of expressions, not sending instructions")
+
+    @staticmethod
+    def find_invalid_code_blocks(message: str) -> Sequence[CodeBlock]:
+        """
+        Find and return all invalid Markdown code blocks in the `message`.
+
+        An invalid code block is considered to be one which uses invalid back ticks.
+
+        If the `message` contains at least one valid code block, return an empty sequence. This is
+        based on the assumption that if the user managed to get one code block right, they already
+        know how to fix the rest themselves.
+        """
+        code_blocks = []
+        for _, tick, language, content in RE_CODE_BLOCK.finditer(message):
+            if tick == BACKTICK:
+                return ()
+            else:
+                code_block = CodeBlock(content, language.strip(), tick)
+                code_blocks.append(code_block)
+
+        return code_blocks
 
     def fix_indentation(self, msg: str) -> str:
         """Attempts to fix badly indented code."""
