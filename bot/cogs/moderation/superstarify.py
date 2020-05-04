@@ -130,7 +130,7 @@ class Superstarify(InfractionScheduler, Cog):
         An optional reason can be provided. If no reason is given, the original name will be shown
         in a generated reason.
         """
-        if await utils.has_active_infraction(ctx, member, "superstar"):
+        if await utils.get_active_infractions(ctx, member, "superstar"):
             return
 
         # Post the infraction to the API

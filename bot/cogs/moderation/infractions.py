@@ -199,7 +199,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
     async def apply_mute(self, ctx: Context, user: Member, reason: str, **kwargs) -> None:
         """Apply a mute infraction with kwargs passed to `post_infraction`."""
-        if await utils.has_active_infraction(ctx, user, "mute"):
+        if await utils.get_active_infractions(ctx, user, "mute"):
             return
 
         infraction = await utils.post_infraction(ctx, user, "mute", reason, active=True, **kwargs)
@@ -235,8 +235,32 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         Will also remove the banned user from the Big Brother watch list if applicable.
         """
-        if await utils.has_active_infraction(ctx, user, "ban"):
-            return
+        # In the case of a permanent ban, we don't need get_active_infractions to tell us if one is active
+        send_msg = "expires_at" in kwargs
+        active_infraction = await utils.get_active_infractions(ctx, user, "ban", send_msg)
+
+        if active_infraction:
+            log.trace("Active infractions found.")
+            if (
+                active_infraction.get('expires_at') is not None
+                and kwargs.get('expires_at') is None
+            ):
+                log.trace("Active ban is a temporary and being called by a perma.  Removing temporary.")
+                await self.pardon_infraction(ctx, "ban", user, send_msg)
+
+            elif (
+                active_infraction.get('expires_at') is None
+                and kwargs.get('expires_at') is None
+            ):
+                log.trace("Active ban is a perma ban and being called by a perma.  Send bounce back message.")
+                await ctx.send(
+                    f":x: According to my records, this user is already permanently banned. "
+                    f"See infraction **#{active_infraction['id']}**."
+                )
+                return
+            else:
+                log.trace("Active ban is a temp ban being called by a temp or a perma being called by a temp. Ignore.")
+                return
 
         infraction = await utils.post_infraction(ctx, user, "ban", reason, active=True, **kwargs)
         if infraction is None:

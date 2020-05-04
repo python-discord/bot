@@ -190,7 +190,13 @@ class InfractionScheduler(Scheduler):
 
         log.info(f"Applied {infr_type} infraction #{id_} to {user}.")
 
-    async def pardon_infraction(self, ctx: Context, infr_type: str, user: UserSnowflake) -> None:
+    async def pardon_infraction(
+            self,
+            ctx: Context,
+            infr_type: str,
+            user: UserSnowflake,
+            send_msg: bool = True
+    ) -> None:
         """Prematurely end an infraction for a user and log the action in the mod log."""
         log.trace(f"Pardoning {infr_type} infraction for {user}.")
 
@@ -277,10 +283,11 @@ class InfractionScheduler(Scheduler):
 
         # Send a confirmation message to the invoking context.
         log.trace(f"Sending infraction #{id_} pardon confirmation message.")
-        await ctx.send(
-            f"{dm_emoji}{confirm_msg} infraction **{infr_type}** for {user.mention}. "
-            f"{log_text.get('Failure', '')}"
-        )
+        if send_msg:
+            await ctx.send(
+                f"{dm_emoji}{confirm_msg} infraction **{infr_type}** for {user.mention}. "
+                f"{log_text.get('Failure', '')}"
+            )
 
         # Send a log message to the mod log.
         await self.mod_log.send_log_message(
