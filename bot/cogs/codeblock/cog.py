@@ -227,25 +227,22 @@ class CodeBlockCog(Cog, name="Code Block"):
             log.trace("The code consists only of expressions, not sending instructions")
 
     @staticmethod
-    def find_invalid_code_blocks(message: str) -> Sequence[CodeBlock]:
+    def find_code_blocks(message: str) -> Sequence[CodeBlock]:
         """
-        Find and return all invalid Markdown code blocks in the `message`.
+        Find and return all Markdown code blocks in the `message`.
 
-        An invalid code block is considered to be one which uses invalid back ticks.
-
-        If the `message` contains at least one valid code block, return an empty sequence. This is
-        based on the assumption that if the user managed to get one code block right, they already
-        know how to fix the rest themselves.
+        If the `message` contains at least one code block with valid ticks and a specified language,
+        return an empty sequence. This is based on the assumption that if the user managed to get
+        one code block right, they already know how to fix the rest themselves.
         """
         code_blocks = []
         for _, tick, language, content in RE_CODE_BLOCK.finditer(message):
-            if tick == BACKTICK:
+            language = language.strip()
+            if tick == BACKTICK and language:
                 return ()
             else:
-                code_block = CodeBlock(content, language.strip(), tick)
+                code_block = CodeBlock(content, language, tick)
                 code_blocks.append(code_block)
-
-        return code_blocks
 
     def fix_indentation(self, msg: str) -> str:
         """Attempts to fix badly indented code."""
