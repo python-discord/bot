@@ -1,9 +1,42 @@
+import logging
 from abc import ABCMeta
+from typing import Optional
 
+from aiohttp import ClientConnectorError, ClientSession
 from discord.ext.commands import CogMeta
+
+from bot.constants import URLs
+
+log = logging.getLogger(__name__)
 
 
 class CogABCMeta(CogMeta, ABCMeta):
     """Metaclass for ABCs meant to be implemented as Cogs."""
 
     pass
+
+
+async def send_to_paste_service(http_session: ClientSession, contents: str, *, extension: str = "") -> Optional[str]:
+    """
+    Upload `contents` to the paste service.
+
+    `http_session` should be the current running ClientSession from aiohttp
+    `extension` is added to the output URL
+
+    When an error occurs, `None` is returned, otherwise the generated URL with the suffix.
+    """
+    extension = extension and f".{extension}"
+    log.debug(f"Sending contents of size {len(contents.encode())} bytes to paste service.")
+    paste_url = URLs.paste_service.format(key="documents")
+    try:
+        async with http_session.post(paste_url, data=contents) as response:
+            response_json = await response.json()
+    except ClientConnectorError:
+        log.warning(f"Failed to connect to paste service at url {paste_url}.")
+        return
+    if "message" in response_json:
+        log.warning(f"Paste service returned error {response_json['message']} with status code {response.status}.")
+        return
+    elif "key" in response_json:
+        log.trace(f"Successfully uploaded contents to paste service behind key {response_json['key']}.")
+        return URLs.paste_service.format(key=response_json['key']) + extension
