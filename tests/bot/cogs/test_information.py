@@ -485,7 +485,7 @@ class UserEmbedTests(unittest.TestCase):
         user.avatar_url_as.return_value = "avatar url"
         embed = asyncio.run(self.cog.create_user_embed(ctx, user))
 
-        user.avatar_url_as.assert_called_once_with(format="png")
+        user.avatar_url_as.assert_called_once_with(static_format="png")
         self.assertEqual(embed.thumbnail.url, "avatar url")
 
 
