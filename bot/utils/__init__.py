@@ -9,6 +9,8 @@ from bot.constants import URLs
 
 log = logging.getLogger(__name__)
 
+FAILED_REQUEST_ATTEMPTS = 3
+
 
 class CogABCMeta(CogMeta, ABCMeta):
     """Metaclass for ABCs meant to be implemented as Cogs."""
@@ -28,15 +30,18 @@ async def send_to_paste_service(http_session: ClientSession, contents: str, *, e
     extension = extension and f".{extension}"
     log.debug(f"Sending contents of size {len(contents.encode())} bytes to paste service.")
     paste_url = URLs.paste_service.format(key="documents")
-    try:
-        async with http_session.post(paste_url, data=contents) as response:
-            response_json = await response.json()
-    except ClientConnectorError:
-        log.warning(f"Failed to connect to paste service at url {paste_url}.")
-        return
-    if "message" in response_json:
-        log.warning(f"Paste service returned error {response_json['message']} with status code {response.status}.")
-        return
-    elif "key" in response_json:
-        log.trace(f"Successfully uploaded contents to paste service behind key {response_json['key']}.")
-        return URLs.paste_service.format(key=response_json['key']) + extension
+    for attempt in range(1, FAILED_REQUEST_ATTEMPTS + 1):
+        try:
+            async with http_session.post(paste_url, data=contents) as response:
+                response_json = await response.json()
+        except ClientConnectorError:
+            log.warning(
+                f"Failed to connect to paste service at url {paste_url}, "
+                f"trying again ({attempt}/{FAILED_REQUEST_ATTEMPTS})."
+            )
+        if "message" in response_json:
+            log.warning(f"Paste service returned error {response_json['message']} with status code {response.status}.")
+            return
+        elif "key" in response_json:
+            log.trace(f"Successfully uploaded contents to paste service behind key {response_json['key']}.")
+            return URLs.paste_service.format(key=response_json['key']) + extension
