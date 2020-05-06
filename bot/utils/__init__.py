@@ -40,6 +40,13 @@ async def send_to_paste_service(http_session: ClientSession, contents: str, *, e
                 f"trying again ({attempt}/{FAILED_REQUEST_ATTEMPTS})."
             )
             continue
+        except Exception:
+            log.exception(
+                f"An unexpected error has occurred during handling of the request, "
+                f"trying again ({attempt}/{FAILED_REQUEST_ATTEMPTS})."
+            )
+            continue
+
         if "message" in response_json:
             log.warning(f"Paste service returned error {response_json['message']} with status code {response.status}.")
             return
