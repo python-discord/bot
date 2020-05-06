@@ -51,6 +51,7 @@ bot.load_extension("bot.cogs.verification")
 
 # Feature cogs
 bot.load_extension("bot.cogs.alias")
+bot.load_extension("bot.cogs.codeblock")
 bot.load_extension("bot.cogs.defcon")
 bot.load_extension("bot.cogs.duck_pond")
 bot.load_extension("bot.cogs.eval")
