@@ -260,25 +260,18 @@ class CodeBlockCog(Cog, name="Code Block"):
             msg = f"{first_line}\n{unindent(code, 4)}"
         return msg
 
-    def repl_stripping(self, msg: str) -> Tuple[str, bool]:
-        """
-        Strip msg in order to extract Python code out of REPL output.
+    @staticmethod
+    def is_repl_code(content: str, threshold: int = 3) -> bool:
+        """Return True if `content` has at least `threshold` number of Python REPL-like lines."""
+        repl_lines = 0
+        for line in content.splitlines():
+            if line.startswith(">>> ") or line.startswith("... "):
+                repl_lines += 1
 
-        Tries to strip out REPL Python code out of msg and returns the stripped msg.
+            if repl_lines == threshold:
+                return True
 
-        Returns True for the boolean if REPL code was found in the input msg.
-        """
-        final = ""
-        for line in msg.splitlines(keepends=True):
-            if line.startswith(">>>") or line.startswith("..."):
-                final += line[4:]
-        log.trace(f"Formatted: \n\n{msg}\n\n to \n\n{final}\n\n")
-        if not final:
-            log.trace(f"Found no REPL code in \n\n{msg}\n\n")
-            return msg, False
-        else:
-            log.trace(f"Found REPL code in \n\n{msg}\n\n")
-            return final.rstrip(), True
+        return False
 
     @staticmethod
     def has_bad_ticks(message: discord.Message) -> bool:
