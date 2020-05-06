@@ -99,17 +99,3 @@ def is_repl_code(content: str, threshold: int = 3) -> bool:
             return True
 
     return False
-
-
-def truncate(content: str, max_chars: int = 204, max_lines: int = 10) -> str:
-    """Return `content` truncated to be at most `max_chars` or `max_lines` in length."""
-    current_length = 0
-    lines_walked = 0
-
-    for line in content.splitlines(keepends=True):
-        if current_length + len(line) > max_chars or lines_walked == max_lines:
-            break
-        current_length += len(line)
-        lines_walked += 1
-
-    return content[:current_length] + "#..."
