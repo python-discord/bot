@@ -48,7 +48,7 @@ def get_bad_ticks_message(code_block: parsing.CodeBlock) -> Optional[str]:
         else:
             content = "Hello, world!"
 
-        example_blocks = EXAMPLE_CODE_BLOCKS.format(content)
+        example_blocks = EXAMPLE_CODE_BLOCKS.format(content=content)
         instructions += f"\n\n**Here is an example of how it should look:**\n{example_blocks}"
 
     return instructions
@@ -57,7 +57,7 @@ def get_bad_ticks_message(code_block: parsing.CodeBlock) -> Optional[str]:
 def get_no_ticks_message(content: str) -> Optional[str]:
     """If `content` is Python/REPL code, return instructions on using code blocks."""
     if parsing.is_repl_code(content) or parsing.is_python_code(content):
-        example_blocks = EXAMPLE_CODE_BLOCKS.format(EXAMPLE_PY)
+        example_blocks = EXAMPLE_CODE_BLOCKS.format(content=EXAMPLE_PY)
         return (
             "It looks like you're trying to paste code into this channel.\n\n"
             "Discord has support for Markdown, which allows you to post code with full "
@@ -89,7 +89,7 @@ def get_bad_lang_message(content: str) -> Optional[str]:
                 f"There must not be any spaces after `{lang}`."
             )
 
-        example_blocks = EXAMPLE_CODE_BLOCKS.format(EXAMPLE_PY)
+        example_blocks = EXAMPLE_CODE_BLOCKS.format(content=EXAMPLE_PY)
         lines.append(f"\n**Here is an example of how it should look:**\n{example_blocks}")
 
         return "\n".join(lines)
@@ -102,7 +102,7 @@ def get_no_lang_message(content: str) -> Optional[str]:
     If `content` is not valid Python or Python REPL code, return None.
     """
     if parsing.is_repl_code(content) or parsing.is_python_code(content):
-        example_blocks = EXAMPLE_CODE_BLOCKS.format(EXAMPLE_PY)
+        example_blocks = EXAMPLE_CODE_BLOCKS.format(content=EXAMPLE_PY)
 
         # Note that get_bad_ticks_message expects the first line to have an extra newline.
         return (
