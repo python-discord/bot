@@ -174,9 +174,14 @@ async def func():  # (None,) -> Any
         out, embed = self._format(code, res)
         if len(out) > 1500 or out.count("\n") > 15:
             paste_link = await send_to_paste_service(self.bot.http_session, out, extension="py")
+            if paste_link is not None:
+                paste_text = f"full contents at {paste_link}"
+            else:
+                paste_text = "failed to upload contents to paste service."
+
             await ctx.send(
                 f"```py\n{out[:1500]}\n```"
-                f"... response truncated; full contents at {paste_link}",
+                f"... response truncated; {paste_text}",
                 embed=embed
             )
             return
