@@ -23,7 +23,7 @@ AVATAR_URL = "https://www.python.org/static/opengraph-icon-200x200.png"
 log = logging.getLogger(__name__)
 
 
-class News(Cog):
+class PythonNews(Cog):
     """Post new PEPs and Python News to `#python-news`."""
 
     def __init__(self, bot: Bot):
@@ -229,4 +229,4 @@ class News(Cog):
 
 def setup(bot: Bot) -> None:
     """Add `News` cog."""
-    bot.add_cog(News(bot))
+    bot.add_cog(PythonNews(bot))
