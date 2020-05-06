@@ -107,7 +107,7 @@ def get_no_lang_message(content: str) -> Optional[str]:
         # Note that get_bad_ticks_message expects the first line to have an extra newline.
         return (
             "It looks like you pasted Python code without syntax highlighting.\n\n"
-            "Please use syntax highlighting to improve the legibility of your code and make"
+            "Please use syntax highlighting to improve the legibility of your code and make "
             "it easier for us to help you.\n\n"
             f"**To do this, use the following method:**\n{example_blocks}"
         )
