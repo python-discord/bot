@@ -34,10 +34,10 @@ def get_bad_ticks_message(code_block: parsing.CodeBlock) -> Optional[str]:
     # already have an example code block.
     if addition_msg:
         # The first line has a double line break which is not desirable when appending the msg.
-        addition_msg = addition_msg.replace("\n\n", "\n", 1)
+        addition_msg = addition_msg.replace("\n\n", " ", 1)
 
         # Make the first character of the addition lower case.
-        instructions += "Furthermore, " + addition_msg[0].lower() + addition_msg[1:]
+        instructions += "\n\nFurthermore, " + addition_msg[0].lower() + addition_msg[1:]
     else:
         # Determine the example code to put in the code block based on the language specifier.
         if code_block.language.lower() in PY_LANG_CODES:
