@@ -7,8 +7,6 @@ import discord
 
 log = logging.getLogger(__name__)
 
-RE_MARKDOWN = re.compile(r'([*_~`|>])')
-RE_CODE_BLOCK_LANGUAGE = re.compile(r"```(?:[^\W_]+)\n(.*?)```", re.DOTALL)
 BACKTICK = "`"
 TICKS = {
     BACKTICK,
