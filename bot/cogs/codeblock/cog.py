@@ -173,39 +173,33 @@ class CodeBlockCog(Cog, name="Code Block"):
             return
 
         content, repl_code = content
-        # Attempts to parse the message into an AST node.
-        # Invalid Python code will raise a SyntaxError.
-        tree = ast.parse(content[0])
 
-        # Multiple lines of single words could be interpreted as expressions.
-        # This check is to avoid all nodes being parsed as expressions.
-        # (e.g. words over multiple lines)
-        if not all(isinstance(node, ast.Expr) for node in tree.body) or repl_code:
-            if content and repl_code:
-                content = content[1]
-            else:
-                content = content[0]
+        if not repl_code and not self.is_python_code(content[0]):
+            return
 
-            content = self.truncate(content)
-
-            log.debug(
-                f"{message.author} posted something that needed to be put inside python code "
-                f"blocks. Sending the user some instructions."
-            )
-
-            content_escaped_markdown = RE_MARKDOWN.sub(r'\\\1', content)
-            return (
-                "It looks like you're trying to paste code into this channel.\n\n"
-                "Discord has support for Markdown, which allows you to post code with full "
-                "syntax highlighting. Please use these whenever you paste code, as this "
-                "helps improve the legibility and makes it easier for us to help you.\n\n"
-                f"**To do this, use the following method:**\n"
-                f"\\`\\`\\`python\n{content_escaped_markdown}\n\\`\\`\\`\n\n"
-                "**This will result in the following:**\n"
-                f"```python\n{content}\n```"
-            )
+        if content and repl_code:
+            content = content[1]
         else:
-            log.trace("The code consists only of expressions, not sending instructions")
+            content = content[0]
+
+        content = self.truncate(content)
+
+        log.debug(
+            f"{message.author} posted something that needed to be put inside python code "
+            f"blocks. Sending the user some instructions."
+        )
+
+        content_escaped_markdown = RE_MARKDOWN.sub(r'\\\1', content)
+        return (
+            "It looks like you're trying to paste code into this channel.\n\n"
+            "Discord has support for Markdown, which allows you to post code with full "
+            "syntax highlighting. Please use these whenever you paste code, as this "
+            "helps improve the legibility and makes it easier for us to help you.\n\n"
+            f"**To do this, use the following method:**\n"
+            f"\\`\\`\\`python\n{content_escaped_markdown}\n\\`\\`\\`\n\n"
+            "**This will result in the following:**\n"
+            f"```python\n{content}\n```"
+        )
 
     @staticmethod
     def find_code_blocks(message: str) -> Sequence[CodeBlock]:
@@ -304,6 +298,26 @@ class CodeBlockCog(Cog, name="Code Block"):
         Note: only channels in the `channel_cooldowns` have cooldowns enabled.
         """
         return (time.time() - self.channel_cooldowns.get(channel.id, 0)) < 300
+
+    @staticmethod
+    def is_python_code(content: str) -> bool:
+        """Return True if `content` is valid Python consisting of more than just expressions."""
+        try:
+            # Attempt to parse the message into an AST node.
+            # Invalid Python code will raise a SyntaxError.
+            tree = ast.parse(content)
+        except SyntaxError:
+            log.trace("Code is not valid Python.")
+            return False
+
+        # Multiple lines of single words could be interpreted as expressions.
+        # This check is to avoid all nodes being parsed as expressions.
+        # (e.g. words over multiple lines)
+        if not all(isinstance(node, ast.Expr) for node in tree.body):
+            return True
+        else:
+            log.trace("Code consists only of expressions.")
+            return False
 
     def is_valid_channel(self, channel: discord.TextChannel) -> bool:
         """Return True if `channel` is a help channel, may be on cooldown, or is whitelisted."""
