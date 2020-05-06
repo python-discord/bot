@@ -15,6 +15,7 @@ from bot.bot import Bot
 from bot.constants import Roles
 from bot.decorators import with_role
 from bot.interpreter import Interpreter
+from bot.utils import send_to_paste_service
 
 log = logging.getLogger(__name__)
 
@@ -171,6 +172,15 @@ async def func():  # (None,) -> Any
             res = traceback.format_exc()
 
         out, embed = self._format(code, res)
+        if len(out) > 1500 or out.count("\n") > 15:
+            paste_link = await send_to_paste_service(self.bot.http_session, out, extension="py")
+            await ctx.send(
+                f"```py\n{out[:1500]}\n```"
+                f"... response truncated; full contents at {paste_link}",
+                embed=embed
+            )
+            return
+
         await ctx.send(f"```py\n{out}```", embed=embed)
 
     @group(name='internal', aliases=('int',))
