@@ -36,8 +36,13 @@ class PythonNews(Cog):
 
     async def start_tasks(self) -> None:
         """Start the tasks for fetching new PEPs and mailing list messages."""
-        self.post_pep_news.start()
-        self.post_maillist_news.start()
+        self.fetch_new_media.start()
+
+    @loop(minutes=20)
+    async def fetch_new_media(self) -> None:
+        """Fetch new mailing list messages and then new PEPs."""
+        await self.post_maillist_news()
+        await self.post_pep_news()
 
     async def sync_maillists(self) -> None:
         """Sync currently in-use maillists with API."""
@@ -66,7 +71,6 @@ class PythonNews(Cog):
             if mail["name"].split("@")[0] in constants.PythonNews.mail_lists:
                 self.webhook_names[mail["name"].split("@")[0]] = mail["display_name"]
 
-    @loop(minutes=20)
     async def post_pep_news(self) -> None:
         """Fetch new PEPs and when they don't have announcement in #python-news, create it."""
         # Wait until everything is ready and http_session available
@@ -74,7 +78,7 @@ class PythonNews(Cog):
         await self.sync_maillists()
 
         async with self.bot.http_session.get(PEPS_RSS_URL) as resp:
-            data = feedparser.parse(await resp.text())
+            data = feedparser.parse(await resp.text("utf-8"))
 
         news_listing = await self.bot.api_client.get("bot/bot-settings/news")
         payload = news_listing.copy()
@@ -112,7 +116,6 @@ class PythonNews(Cog):
         # Apply new sent news to DB to avoid duplicate sending
         await self.bot.api_client.put("bot/bot-settings/news", json=payload)
 
-    @loop(minutes=20)
     async def post_maillist_news(self) -> None:
         """Send new maillist threads to #python-news that is listed in configuration."""
         await self.bot.wait_until_guild_available()
@@ -124,7 +127,9 @@ class PythonNews(Cog):
             async with self.bot.http_session.get(RECENT_THREADS_TEMPLATE.format(name=maillist)) as resp:
                 recents = BeautifulSoup(await resp.text(), features="lxml")
 
-            # When response have <p>, this mean that no threads available
+            # When a <p> element is present in the response then the mailing list
+            # has not had any activity during the current month, so therefore it
+            # can be ignored.
             if recents.p:
                 continue
 
@@ -221,8 +226,7 @@ class PythonNews(Cog):
 
     def cog_unload(self) -> None:
         """Stop news posting tasks on cog unload."""
-        self.post_pep_news.cancel()
-        self.post_maillist_news.cancel()
+        self.fetch_new_media.cancel()
 
 
 def setup(bot: Bot) -> None:
