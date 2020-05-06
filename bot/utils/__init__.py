@@ -39,6 +39,7 @@ async def send_to_paste_service(http_session: ClientSession, contents: str, *, e
                 f"Failed to connect to paste service at url {paste_url}, "
                 f"trying again ({attempt}/{FAILED_REQUEST_ATTEMPTS})."
             )
+            continue
         if "message" in response_json:
             log.warning(f"Paste service returned error {response_json['message']} with status code {response.status}.")
             return
