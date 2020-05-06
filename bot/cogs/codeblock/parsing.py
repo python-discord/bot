@@ -3,8 +3,6 @@ import logging
 import re
 from typing import NamedTuple, Sequence
 
-import discord
-
 log = logging.getLogger(__name__)
 
 BACKTICK = "`"
@@ -61,11 +59,6 @@ def find_code_blocks(message: str) -> Sequence[CodeBlock]:
         elif len(content.split("\n", 3)) > 3:
             code_block = CodeBlock(content, language, tick)
             code_blocks.append(code_block)
-
-
-def has_bad_ticks(message: discord.Message) -> bool:
-    """Return True if `message` starts with 3 characters which look like but aren't '`'."""
-    return message.content[:3] in TICKS
 
 
 def is_python_code(content: str) -> bool:
