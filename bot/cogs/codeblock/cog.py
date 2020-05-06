@@ -206,6 +206,8 @@ class CodeBlockCog(Cog, name="Code Block"):
         """
         Find and return all Markdown code blocks in the `message`.
 
+        Code blocks with 3 or less lines are excluded.
+
         If the `message` contains at least one code block with valid ticks and a specified language,
         return an empty sequence. This is based on the assumption that if the user managed to get
         one code block right, they already know how to fix the rest themselves.
@@ -215,7 +217,7 @@ class CodeBlockCog(Cog, name="Code Block"):
             language = language.strip()
             if tick == BACKTICK and language:
                 return ()
-            else:
+            elif len(content.split("\n", 3)) > 3:
                 code_block = CodeBlock(content, language, tick)
                 code_blocks.append(code_block)
 
