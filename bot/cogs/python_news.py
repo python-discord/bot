@@ -30,7 +30,6 @@ class PythonNews(Cog):
         self.bot = bot
         self.webhook_names = {}
         self.webhook: t.Optional[discord.Webhook] = None
-        self.channel: t.Optional[discord.TextChannel] = None
 
         self.bot.loop.create_task(self.get_webhook_names())
         self.bot.loop.create_task(self.get_webhook_and_channel())
@@ -217,7 +216,6 @@ class PythonNews(Cog):
         """Storage #python-news channel Webhook and `TextChannel` to `News.webhook` and `channel`."""
         await self.bot.wait_until_guild_available()
         self.webhook = await self.bot.fetch_webhook(constants.PythonNews.webhook)
-        self.channel = await self.bot.fetch_channel(constants.PythonNews.channel)
 
         await self.start_tasks()
 
