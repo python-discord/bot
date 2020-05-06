@@ -56,3 +56,7 @@ async def send_to_paste_service(http_session: ClientSession, contents: str, *, e
         elif "key" in response_json:
             log.info(f"Successfully uploaded contents to paste service behind key {response_json['key']}.")
             return URLs.paste_service.format(key=response_json['key']) + extension
+        log.warning(
+            f"Got unexpected JSON response from paste service: {response_json}\n"
+            f"trying again ({attempt}/{FAILED_REQUEST_ATTEMPTS})."
+        )
