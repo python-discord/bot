@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import unittest
 from unittest.mock import AsyncMock, MagicMock, Mock, call, create_autospec, patch
 
@@ -52,20 +51,6 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
             data="My awesome output",
             raise_for_status=True
         )
-
-    async def test_upload_output_gracefully_fallback_if_exception_during_request(self):
-        """Output upload gracefully fallback if the upload fail."""
-        resp = MagicMock()
-        resp.json = AsyncMock(side_effect=Exception)
-        self.bot.http_session.post().__aenter__.return_value = resp
-
-        log = logging.getLogger("bot.cogs.snekbox")
-        with self.assertLogs(logger=log, level='ERROR'):
-            await self.cog.upload_output('My awesome output!')
-
-    async def test_upload_output_gracefully_fallback_if_no_key_in_response(self):
-        """Output upload gracefully fallback if there is no key entry in the response body."""
-        self.assertEqual((await self.cog.upload_output('My awesome output!')), None)
 
     def test_prepare_input(self):
         cases = (
