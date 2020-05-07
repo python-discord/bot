@@ -133,3 +133,34 @@ def get_no_lang_message(content: str) -> Optional[str]:
         )
     else:
         log.trace("Aborting missing language instructions: content is not Python code.")
+
+
+def get_instructions(content: str) -> Optional[str]:
+    """Return code block formatting instructions for `content` or None if nothing's wrong."""
+    log.trace("Getting formatting instructions.")
+
+    blocks = parsing.find_code_blocks(content)
+    if blocks is None:
+        log.trace("At least one valid code block found; no instructions to return.")
+        return
+
+    if not blocks:
+        log.trace(f"No code blocks were found in message.")
+        return get_no_ticks_message(content)
+    else:
+        log.trace("Searching results for a code block with invalid ticks.")
+        block = next((block for block in blocks if block.tick != parsing.BACKTICK), None)
+
+        if block:
+            log.trace(f"A code block exists but has invalid ticks.")
+            return get_bad_ticks_message(block)
+        else:
+            log.trace(f"A code block exists but is missing a language.")
+            block = blocks[0]
+
+            # Check for a bad language first to avoid parsing content into an AST.
+            description = get_bad_lang_message(block.content)
+            if not description:
+                description = get_no_lang_message(block.content)
+
+            return description

@@ -8,7 +8,8 @@ from discord.ext.commands import Bot, Cog
 from bot.cogs.token_remover import TokenRemover
 from bot.constants import Categories, Channels, DEBUG_MODE
 from bot.utils.messages import wait_for_deletion
-from . import instructions, parsing
+from . import parsing
+from .instructions import get_instructions
 
 log = logging.getLogger(__name__)
 
@@ -120,31 +121,10 @@ class CodeBlockCog(Cog, name="Code Block"):
             log.trace(f"Skipping code block detection of {msg.id}: #{msg.channel} is on cooldown.")
             return
 
-        blocks = parsing.find_code_blocks(msg.content)
-        if blocks is None:
-            # None is returned when there's at least one valid block with a language.
-            return
-        if not blocks:
-            log.trace(f"No code blocks were found in message {msg.id}.")
-            description = instructions.get_no_ticks_message(msg.content)
-        else:
-            log.trace("Searching results for a code block with invalid ticks.")
-            block = next((block for block in blocks if block.tick != parsing.BACKTICK), None)
+        instructions = get_instructions(msg.content)
+        if instructions:
+            await self.send_guide_embed(msg, instructions)
 
-            if block:
-                log.trace(f"A code block exists in {msg.id} but has invalid ticks.")
-                description = instructions.get_bad_ticks_message(block)
-            else:
-                log.trace(f"A code block exists in {msg.id} but is missing a language.")
-                block = blocks[0]
-
-                # Check for a bad language first to avoid parsing content into an AST.
-                description = instructions.get_bad_lang_message(block.content)
-                if not description:
-                    description = instructions.get_no_lang_message(block.content)
-
-        if description:
-            await self.send_guide_embed(msg, description)
             if msg.channel.id not in self.channel_whitelist:
                 log.trace(f"Adding #{msg.channel} to the channel cooldowns.")
                 self.channel_cooldowns[msg.channel.id] = time.time()
