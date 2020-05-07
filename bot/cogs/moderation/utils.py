@@ -97,13 +97,19 @@ async def post_infraction(
                 return
 
 
-async def get_active_infractions(
+async def get_active_infraction(
         ctx: Context,
         user: UserSnowflake,
         infr_type: str,
         send_msg: bool = True
 ) -> t.Optional[dict]:
-    """Retrieves active infractions of the given type for the user."""
+    """
+    Retrieves an active infraction of the given type for the user.
+
+    If `send_msg` is True and the user has an active infraction matching the `infr_type` parameter,
+    then a message for the moderator will be sent to the context channel letting them know.
+    Otherwise, no message will be sent.
+    """
     log.trace(f"Checking if {user} has active infractions of type {infr_type}.")
 
     active_infractions = await ctx.bot.api_client.get(
