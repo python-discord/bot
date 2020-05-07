@@ -106,6 +106,9 @@ class CodeBlockCog(Cog, name="Code Block"):
             return
 
         blocks = parsing.find_code_blocks(msg.content)
+        if blocks is None:
+            # None is returned when there's at least one valid block with a language.
+            return
         if not blocks:
             log.trace(f"No code blocks were found in message {msg.id}.")
             description = instructions.get_no_ticks_message(msg.content)

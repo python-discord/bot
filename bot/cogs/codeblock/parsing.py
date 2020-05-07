@@ -1,7 +1,7 @@
 import ast
 import logging
 import re
-from typing import NamedTuple, Sequence
+from typing import NamedTuple, Optional, Sequence
 
 log = logging.getLogger(__name__)
 
@@ -41,15 +41,15 @@ class CodeBlock(NamedTuple):
     tick: str
 
 
-def find_code_blocks(message: str) -> Sequence[CodeBlock]:
+def find_code_blocks(message: str) -> Optional[Sequence[CodeBlock]]:
     """
     Find and return all Markdown code blocks in the `message`.
 
     Code blocks with 3 or less lines are excluded.
 
     If the `message` contains at least one code block with valid ticks and a specified language,
-    return an empty sequence. This is based on the assumption that if the user managed to get
-    one code block right, they already know how to fix the rest themselves.
+    return None. This is based on the assumption that if the user managed to get one code block
+    right, they already know how to fix the rest themselves.
     """
     log.trace("Finding all code blocks in a message.")
 
@@ -60,8 +60,8 @@ def find_code_blocks(message: str) -> Sequence[CodeBlock]:
         language = groups["lang"].strip()  # Strip the newline cause it's included in the group.
 
         if groups["tick"] == BACKTICK and language:
-            log.trace("Message has a valid code block with a language; returning empty tuple.")
-            return ()
+            log.trace("Message has a valid code block with a language; returning None.")
+            return None
         elif len(groups["code"].split("\n", 3)) > 3:
             code_block = CodeBlock(groups["code"], language, groups["tick"])
             code_blocks.append(code_block)
