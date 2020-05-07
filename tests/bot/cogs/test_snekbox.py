@@ -35,21 +35,12 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         result = await self.cog.upload_output("-" * (snekbox.MAX_PASTE_LEN + 1))
         self.assertEqual(result, "too long to upload")
 
-    async def test_upload_output(self):
+    @patch("bot.cogs.snekbox.send_to_paste_service")
+    async def test_upload_output(self, mock_paste_util):
         """Upload the eval output to the URLs.paste_service.format(key="documents") endpoint."""
-        key = "MarkDiamond"
-        resp = MagicMock()
-        resp.json = AsyncMock(return_value={"key": key})
-        self.bot.http_session.post().__aenter__.return_value = resp
-
-        self.assertEqual(
-            await self.cog.upload_output("My awesome output"),
-            constants.URLs.paste_service.format(key=key)
-        )
-        self.bot.http_session.post.assert_called_with(
-            constants.URLs.paste_service.format(key="documents"),
-            data="My awesome output",
-            raise_for_status=True
+        await self.cog.upload_output("Test output.")
+        mock_paste_util.assert_called_once_with(
+            self.bot.http_session, "Test output.", extension="txt"
         )
 
     def test_prepare_input(self):
