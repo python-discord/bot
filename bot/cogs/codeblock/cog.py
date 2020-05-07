@@ -76,15 +76,15 @@ class CodeBlockCog(Cog, name="Code Block"):
             or channel.id in self.channel_whitelist
         )
 
-    async def send_guide_embed(self, message: discord.Message, description: str) -> None:
+    async def send_instructions(self, message: discord.Message, instructions: str) -> None:
         """
-        Send an embed with `description` as a guide for an improperly formatted `message`.
+        Send an embed with `instructions` on fixing an incorrect code block in a `message`.
 
         The embed will be deleted automatically after 5 minutes.
         """
         log.trace("Sending an embed with code block formatting instructions.")
 
-        embed = Embed(description=description)
+        embed = Embed(description=instructions)
         bot_message = await message.channel.send(f"Hey {message.author.mention}!", embed=embed)
         self.codeblock_message_ids[message.id] = bot_message.id
 
@@ -124,7 +124,7 @@ class CodeBlockCog(Cog, name="Code Block"):
 
         instructions = get_instructions(msg.content)
         if instructions:
-            await self.send_guide_embed(msg, instructions)
+            await self.send_instructions(msg, instructions)
 
             if msg.channel.id not in self.channel_whitelist:
                 log.trace(f"Adding #{msg.channel} to the channel cooldowns.")
