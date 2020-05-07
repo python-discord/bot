@@ -123,15 +123,12 @@ class CodeBlockCog(Cog, name="Code Block"):
     @Cog.listener()
     async def on_raw_message_edit(self, payload: RawMessageUpdateEvent) -> None:
         """Delete the instructions message if an edited message had its code blocks fixed."""
-        if (
-            # Checks to see if the message was called out by the bot
-            payload.message_id not in self.codeblock_message_ids
-            # Makes sure that there is content in the message
-            or payload.data.get("content") is None
-            # Makes sure there's a channel id in the message payload
-            or payload.data.get("channel_id") is None
-        ):
-            log.trace("Message edit does not qualify for code block detection.")
+        if payload.message_id not in self.codeblock_message_ids:
+            log.trace(f"Ignoring message edit {payload.message_id}: message isn't being tracked.")
+            return
+
+        if payload.data.get("content") is None or payload.data.get("channel_id") is None:
+            log.trace(f"Ignoring message edit {payload.message_id}: missing content or channel ID.")
             return
 
         # Parse the message to see if the code blocks have been fixed.
