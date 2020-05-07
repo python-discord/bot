@@ -236,25 +236,25 @@ class Infractions(InfractionScheduler, commands.Cog):
         Will also remove the banned user from the Big Brother watch list if applicable.
         """
         # In the case of a permanent ban, we don't need get_active_infractions to tell us if one is active
-        send_msg = kwargs.get("expires_at") is None
-        active_infraction = await utils.get_active_infraction(ctx, user, "ban", send_msg)
+        is_temporary = kwargs.get("expires_at") is not None
+        active_infraction = await utils.get_active_infraction(ctx, user, "ban", is_temporary)
 
         if active_infraction:
             log.trace("Active infractions found.")
-            if kwargs.get('expires_at') is None:
-                if active_infraction.get('expires_at') is not None:
-                    log.trace("Active ban is a temporary and being called by a perma.  Removing temporary.")
-                    await self.pardon_infraction(ctx, "ban", user, send_msg)
-
-                elif active_infraction.get('expires_at') is None:
-                    log.trace("Active ban is a perma ban and being called by a perma.  Send bounce back message.")
-                    await ctx.send(
-                        f":x: According to my records, this user is already permanently banned. "
-                        f"See infraction **#{active_infraction['id']}**."
-                    )
-                    return
-            else:
+            if is_temporary:
                 log.trace("Active ban is a temp ban being called by a temp or a perma being called by a temp. Ignore.")
+                return
+
+            if active_infraction.get('expires_at') is not None:
+                log.trace("Active ban is a temporary and being called by a perma.  Removing temporary.")
+                await self.pardon_infraction(ctx, "ban", user, is_temporary)
+
+            else:
+                log.trace("Active ban is a perma ban and being called by a perma.  Send bounce back message.")
+                await ctx.send(
+                    f":x: According to my records, this user is already permanently banned. "
+                    f"See infraction **#{active_infraction['id']}**."
+                )
                 return
 
         infraction = await utils.post_infraction(ctx, user, "ban", reason, active=True, **kwargs)
