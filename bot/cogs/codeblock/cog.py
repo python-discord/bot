@@ -59,6 +59,21 @@ class CodeBlockCog(Cog, name="Code Block"):
             or channel.id in self.channel_whitelist
         )
 
+    async def remove_instructions(self, payload: RawMessageUpdateEvent) -> None:
+        """
+        Remove the code block instructions message.
+
+        `payload` is the data for the message edit event performed by a user which resulted in their
+        code blocks being corrected.
+        """
+        log.trace("User's incorrect code block has been fixed. Removing instructions message.")
+
+        channel = self.bot.get_channel(int(payload.data.get("channel_id")))
+        bot_message = await channel.fetch_message(self.codeblock_message_ids[payload.message_id])
+
+        await bot_message.delete()
+        del self.codeblock_message_ids[payload.message_id]
+
     async def send_guide_embed(self, message: discord.Message, description: str) -> None:
         """
         Send an embed with `description` as a guide for an improperly formatted `message`.
@@ -153,10 +168,4 @@ class CodeBlockCog(Cog, name="Code Block"):
 
         # If the message is fixed, delete the bot message and the entry from the id dictionary.
         if not code_blocks:
-            log.trace("User's incorrect code block has been fixed. Removing bot formatting message.")
-
-            channel = self.bot.get_channel(int(payload.data.get("channel_id")))
-            bot_message = await channel.fetch_message(self.codeblock_message_ids[payload.message_id])
-
-            await bot_message.delete()
-            del self.codeblock_message_ids[payload.message_id]
+            await self.remove_instructions(payload)
