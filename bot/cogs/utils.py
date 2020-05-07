@@ -13,7 +13,7 @@ from discord.ext.commands import BadArgument, Cog, Context, command
 
 from bot.bot import Bot
 from bot.constants import Channels, MODERATION_ROLES, Mention, STAFF_ROLES
-from bot.decorators import in_channel, with_role
+from bot.decorators import in_whitelist, with_role
 from bot.utils.time import humanize_delta
 
 log = logging.getLogger(__name__)
@@ -118,7 +118,7 @@ class Utils(Cog):
         await ctx.message.channel.send(embed=pep_embed)
 
     @command()
-    @in_channel(Channels.bot_commands, bypass_roles=STAFF_ROLES)
+    @in_whitelist(channels=(Channels.bot_commands,), roles=STAFF_ROLES)
     async def charinfo(self, ctx: Context, *, characters: str) -> None:
         """Shows you information on up to 25 unicode characters."""
         match = re.match(r"<(a?):(\w+):(\d+)>", characters)
