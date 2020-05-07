@@ -1,5 +1,6 @@
 import logging
 import time
+from typing import Optional
 
 import discord
 from discord import Embed, Message, RawMessageUpdateEvent
@@ -32,12 +33,21 @@ class CodeBlockCog(Cog, name="Code Block"):
         # Stores improperly formatted Python codeblock message ids and the corresponding bot message
         self.codeblock_message_ids = {}
 
-    async def get_sent_instructions(self, payload: RawMessageUpdateEvent) -> discord.Message:
-        """Return the bot's sent instructions message using the user message ID from a `payload`."""
-        log.trace(f"Retrieving instructions message for ID {payload.message_id}")
+    async def get_sent_instructions(self, payload: RawMessageUpdateEvent) -> Optional[Message]:
+        """
+        Return the bot's sent instructions message associated with a user's message `payload`.
 
+        Return None if the message cannot be found. In this case, it's likely the message was
+        deleted either manually via a reaction or automatically by a timer.
+        """
+        log.trace(f"Retrieving instructions message for ID {payload.message_id}")
         channel = self.bot.get_channel(int(payload.data.get("channel_id")))
-        return await channel.fetch_message(self.codeblock_message_ids[payload.message_id])
+
+        try:
+            return await channel.fetch_message(self.codeblock_message_ids[payload.message_id])
+        except discord.NotFound:
+            log.debug("Could not find instructions message; it was probably deleted.")
+            return None
 
     @staticmethod
     def is_help_channel(channel: discord.TextChannel) -> bool:
@@ -134,7 +144,10 @@ class CodeBlockCog(Cog, name="Code Block"):
         # Parse the message to see if the code blocks have been fixed.
         content = payload.data.get("content")
         instructions = get_instructions(content)
+
         bot_message = await self.get_sent_instructions(payload)
+        if not bot_message:
+            return
 
         if not instructions:
             log.trace("User's incorrect code block has been fixed. Removing instructions message.")
