@@ -6,7 +6,7 @@ from typing import NamedTuple, Optional, Sequence
 log = logging.getLogger(__name__)
 
 BACKTICK = "`"
-TICKS = {
+_TICKS = {
     BACKTICK,
     "'",
     '"',
@@ -19,10 +19,10 @@ TICKS = {
     "\u2033",  # DOUBLE PRIME
     "\u3003",  # VERTICAL KANA REPEAT MARK UPPER HALF
 }
-RE_CODE_BLOCK = re.compile(
+_RE_CODE_BLOCK = re.compile(
     fr"""
     (?P<ticks>
-        (?P<tick>[{''.join(TICKS)}])  # Put all ticks into a character class within a group.
+        (?P<tick>[{''.join(_TICKS)}])  # Put all ticks into a character class within a group.
         \2{{2}}                       # Match previous group 2 more times to ensure the same char.
     )
     (?P<lang>[^\W_]+\n)?              # Optionally match a language specifier followed by a newline.
@@ -54,7 +54,7 @@ def find_code_blocks(message: str) -> Optional[Sequence[CodeBlock]]:
     log.trace("Finding all code blocks in a message.")
 
     code_blocks = []
-    for match in RE_CODE_BLOCK.finditer(message):
+    for match in _RE_CODE_BLOCK.finditer(message):
         # Used to ensure non-matched groups have an empty string as the default value.
         groups = match.groupdict("")
         language = groups["lang"].strip()  # Strip the newline cause it's included in the group.
