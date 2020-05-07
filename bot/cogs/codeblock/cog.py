@@ -33,6 +33,13 @@ class CodeBlockCog(Cog, name="Code Block"):
         # Stores improperly formatted Python codeblock message ids and the corresponding bot message
         self.codeblock_message_ids = {}
 
+    async def get_sent_instructions(self, payload: RawMessageUpdateEvent) -> discord.Message:
+        """Return the bot's sent instructions message using the user message ID from a `payload`."""
+        log.trace(f"Retrieving instructions message for ID {payload.message_id}")
+
+        channel = self.bot.get_channel(int(payload.data.get("channel_id")))
+        return await channel.fetch_message(self.codeblock_message_ids[payload.message_id])
+
     @staticmethod
     def is_help_channel(channel: discord.TextChannel) -> bool:
         """Return True if `channel` is in one of the help categories."""
@@ -59,21 +66,6 @@ class CodeBlockCog(Cog, name="Code Block"):
             or channel.id in self.channel_cooldowns
             or channel.id in self.channel_whitelist
         )
-
-    async def remove_instructions(self, payload: RawMessageUpdateEvent) -> None:
-        """
-        Remove the code block instructions message.
-
-        `payload` is the data for the message edit event performed by a user which resulted in their
-        code blocks being corrected.
-        """
-        log.trace("User's incorrect code block has been fixed. Removing instructions message.")
-
-        channel = self.bot.get_channel(int(payload.data.get("channel_id")))
-        bot_message = await channel.fetch_message(self.codeblock_message_ids[payload.message_id])
-
-        await bot_message.delete()
-        del self.codeblock_message_ids[payload.message_id]
 
     async def send_guide_embed(self, message: discord.Message, description: str) -> None:
         """
@@ -148,4 +140,7 @@ class CodeBlockCog(Cog, name="Code Block"):
 
         # If the message is fixed, delete the bot message and the entry from the id dictionary.
         if not code_blocks:
-            await self.remove_instructions(payload)
+            log.trace("User's incorrect code block has been fixed. Removing instructions message.")
+            bot_message = await self.get_sent_instructions(payload)
+            await bot_message.delete()
+            del self.codeblock_message_ids[payload.message_id]
