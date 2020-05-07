@@ -35,6 +35,7 @@ class CodeBlockCog(Cog, name="Code Block"):
     @staticmethod
     def is_help_channel(channel: discord.TextChannel) -> bool:
         """Return True if `channel` is in one of the help categories."""
+        log.trace(f"Checking if #{channel} is a help channel.")
         return (
             getattr(channel, "category", None)
             and channel.category.id in (Categories.help_available, Categories.help_in_use)
@@ -46,10 +47,12 @@ class CodeBlockCog(Cog, name="Code Block"):
 
         Note: only channels in the `channel_cooldowns` have cooldowns enabled.
         """
+        log.trace(f"Checking if #{channel} is on cooldown.")
         return (time.time() - self.channel_cooldowns.get(channel.id, 0)) < 300
 
     def is_valid_channel(self, channel: discord.TextChannel) -> bool:
         """Return True if `channel` is a help channel, may be on cooldown, or is whitelisted."""
+        log.trace(f"Checking if #{channel} qualifies for code block detection.")
         return (
             self.is_help_channel(channel)
             or channel.id in self.channel_cooldowns
@@ -62,6 +65,8 @@ class CodeBlockCog(Cog, name="Code Block"):
 
         The embed will be deleted automatically after 5 minutes.
         """
+        log.trace("Sending an embed with code block formatting instructions.")
+
         embed = Embed(description=description)
         bot_message = await message.channel.send(f"Hey {message.author.mention}!", embed=embed)
         self.codeblock_message_ids[message.id] = bot_message.id
@@ -92,25 +97,27 @@ class CodeBlockCog(Cog, name="Code Block"):
     async def on_message(self, msg: Message) -> None:
         """Detect incorrect Markdown code blocks in `msg` and send instructions to fix them."""
         if not self.should_parse(msg):
+            log.trace(f"Skipping code block detection of {msg.id}: message doesn't qualify.")
             return
 
         # When debugging, ignore cooldowns.
         if self.is_on_cooldown(msg.channel) and not DEBUG_MODE:
+            log.trace(f"Skipping code block detection of {msg.id}: #{msg.channel} is on cooldown.")
             return
 
         blocks = parsing.find_code_blocks(msg.content)
         if not blocks:
-            # No code blocks found in the message.
+            log.trace(f"No code blocks were found in message {msg.id}.")
             description = instructions.get_no_ticks_message(msg.content)
         else:
-            # Get the first code block with invalid ticks.
+            log.trace("Searching results for a code block with invalid ticks.")
             block = next((block for block in blocks if block.tick != parsing.BACKTICK), None)
 
             if block:
-                # A code block exists but has invalid ticks.
+                log.trace(f"A code block exists in {msg.id} but has invalid ticks.")
                 description = instructions.get_bad_ticks_message(block)
             else:
-                # Only other possibility is a block with valid ticks but a missing language.
+                log.trace(f"A code block exists in {msg.id} but is missing a language.")
                 block = blocks[0]
 
                 # Check for a bad language first to avoid parsing content into an AST.
@@ -121,6 +128,7 @@ class CodeBlockCog(Cog, name="Code Block"):
         if description:
             await self.send_guide_embed(msg, description)
             if msg.channel.id not in self.channel_whitelist:
+                log.trace(f"Adding #{msg.channel} to the channel cooldowns.")
                 self.channel_cooldowns[msg.channel.id] = time.time()
 
     @Cog.listener()
@@ -134,6 +142,7 @@ class CodeBlockCog(Cog, name="Code Block"):
             # Makes sure there's a channel id in the message payload
             or payload.data.get("channel_id") is None
         ):
+            log.trace("Message edit does not qualify for code block detection.")
             return
 
         # Parse the message to see if the code blocks have been fixed.
