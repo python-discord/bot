@@ -1,3 +1,5 @@
+"""This module provides functions for parsing Markdown code blocks."""
+
 import ast
 import logging
 import re
@@ -63,7 +65,7 @@ def find_code_blocks(message: str) -> Optional[Sequence[CodeBlock]]:
     """
     Find and return all Markdown code blocks in the `message`.
 
-    Code blocks with 3 or less lines are excluded.
+    Code blocks with 3 or fewer lines are excluded.
 
     If the `message` contains at least one code block with valid ticks and a specified language,
     return None. This is based on the assumption that if the user managed to get one code block

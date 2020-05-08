@@ -1,3 +1,5 @@
+"""This module generates and formats instructional messages about fixing Markdown code blocks."""
+
 import logging
 from typing import Optional
 

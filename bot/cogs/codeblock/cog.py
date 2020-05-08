@@ -15,22 +15,53 @@ log = logging.getLogger(__name__)
 
 
 class CodeBlockCog(Cog, name="Code Block"):
-    """Detect improperly formatted code blocks and suggest proper formatting."""
+    """
+    Detect improperly formatted Markdown code blocks and suggest proper formatting.
+
+    There are four basic ways in which a code block is considered improperly formatted:
+
+    1. The code is not within a code block at all
+        * Ignored if the code is not valid Python or Python REPL code
+    2. Incorrect characters are used for backticks
+    3. A language for syntax highlighting is not specified
+        * Ignored if the code is not valid Python or Python REPL code
+    4. A syntax highlighting language is incorrectly specified
+        * Ignored if the language specified doesn't look like it was meant for Python
+        * This can go wrong in two ways:
+            1. Spaces before the language
+            2. No newline immediately following the language
+
+    Messages with 3 or fewer lines overall are ignored. Each code block is subject to this threshold
+    as well i.e. the text between the ticks must be greater than 3 lines. Detecting multiple code
+    blocks is supported. However, if at least one code block is correct, then instructions will not
+    be sent even if others are incorrect. When multiple incorrect code blocks are found, only the
+    first one is used as the basis for the instructions sent.
+
+    When an issue is detected, an embed is sent containing specific instructions on fixing what
+    is wrong. If the user edits their message to fix the code block, the instructions will be
+    removed. If they fail to fix the code block with an edit, the instructions will be updated to
+    show what is still incorrect after the user's edit. The embed can be manually deleted with a
+    reaction. Otherwise, it will automatically be removed after 5 minutes.
+
+    The cog only detects messages in whitelisted channels. Channels may also have a 300-second
+    cooldown on the instructions being sent. See `__init__` for which channels are whitelisted or
+    have cooldowns enabled. Note that all help channels are also whitelisted with cooldowns enabled.
+    """
 
     def __init__(self, bot: Bot):
         self.bot = bot
 
-        # Stores allowed channels plus epoch time since last call.
+        # Stores allowed channels plus epoch times since the last instructional messages sent.
         self.channel_cooldowns = {
             Channels.python_discussion: 0,
         }
 
-        # These channels will also work, but will not be subject to cooldown
+        # These channels will also work, but will not be subject to a cooldown.
         self.channel_whitelist = (
             Channels.bot_commands,
         )
 
-        # Stores improperly formatted Python codeblock message ids and the corresponding bot message
+        # Maps users' messages to the messages the bot sent with instructions.
         self.codeblock_message_ids = {}
 
     @staticmethod
@@ -73,7 +104,7 @@ class CodeBlockCog(Cog, name="Code Block"):
         return (time.time() - self.channel_cooldowns.get(channel.id, 0)) < 300
 
     def is_valid_channel(self, channel: discord.TextChannel) -> bool:
-        """Return True if `channel` is a help channel, may be on cooldown, or is whitelisted."""
+        """Return True if `channel` is a help channel, may be on a cooldown, or is whitelisted."""
         log.trace(f"Checking if #{channel} qualifies for code block detection.")
         return (
             self.is_help_channel(channel)
@@ -137,7 +168,7 @@ class CodeBlockCog(Cog, name="Code Block"):
 
     @Cog.listener()
     async def on_raw_message_edit(self, payload: RawMessageUpdateEvent) -> None:
-        """Delete the instructions message if an edited message had its code blocks fixed."""
+        """Delete the instructional message if an edited message had its code blocks fixed."""
         if payload.message_id not in self.codeblock_message_ids:
             log.trace(f"Ignoring message edit {payload.message_id}: message isn't being tracked.")
             return
