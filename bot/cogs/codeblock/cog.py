@@ -3,7 +3,7 @@ import time
 from typing import Optional
 
 import discord
-from discord import Embed, Message, RawMessageUpdateEvent
+from discord import Message, RawMessageUpdateEvent
 from discord.ext.commands import Bot, Cog
 
 from bot.cogs.token_remover import TokenRemover
@@ -32,6 +32,11 @@ class CodeBlockCog(Cog, name="Code Block"):
 
         # Stores improperly formatted Python codeblock message ids and the corresponding bot message
         self.codeblock_message_ids = {}
+
+    @staticmethod
+    def create_embed(instructions: str) -> discord.Embed:
+        """Return an embed which displays code block formatting `instructions`."""
+        return discord.Embed(description=instructions)
 
     async def get_sent_instructions(self, payload: RawMessageUpdateEvent) -> Optional[Message]:
         """
@@ -84,7 +89,7 @@ class CodeBlockCog(Cog, name="Code Block"):
         """
         log.trace("Sending an embed with code block formatting instructions.")
 
-        embed = Embed(description=instructions)
+        embed = self.create_embed(instructions)
         bot_message = await message.channel.send(f"Hey {message.author.mention}!", embed=embed)
         self.codeblock_message_ids[message.id] = bot_message.id
 
