@@ -14,6 +14,25 @@ _EXAMPLE_CODE_BLOCKS = (
 )
 
 
+def _get_example(language: str) -> str:
+    """Return an example of a correct code block using `language` for syntax highlighting."""
+    language_lower = language.lower()  # It's only valid if it's all lowercase.
+
+    # Determine the example code to put in the code block based on the language specifier.
+    if language_lower in _PY_LANG_CODES:
+        log.trace(f"Code block has a Python language specifier `{language}`.")
+        content = _EXAMPLE_PY.format(lang=language_lower)
+    elif language_lower:
+        log.trace(f"Code block has a foreign language specifier `{language}`.")
+        # It's not feasible to determine what would be a valid example for other languages.
+        content = f"{language_lower}\n..."
+    else:
+        log.trace("Code block has no language specifier.")
+        content = "Hello, world!"
+
+    return _EXAMPLE_CODE_BLOCKS.format(content=content)
+
+
 def _get_bad_ticks_message(code_block: parsing.CodeBlock) -> Optional[str]:
     """Return instructions on using the correct ticks for `code_block`."""
     log.trace("Creating instructions for incorrect code block ticks.")
@@ -43,20 +62,7 @@ def _get_bad_ticks_message(code_block: parsing.CodeBlock) -> Optional[str]:
         instructions += "\n\nFurthermore, " + addition_msg[0].lower() + addition_msg[1:]
     else:
         log.trace("No issues with the language specifier found.")
-
-        # Determine the example code to put in the code block based on the language specifier.
-        if code_block.language.lower() in _PY_LANG_CODES:
-            log.trace(f"Code block has a Python language specifier `{code_block.language}`.")
-            content = _EXAMPLE_PY.format(lang=code_block.language)
-        elif code_block.language:
-            log.trace(f"Code block has a foreign language specifier `{code_block.language}`.")
-            # It's not feasible to determine what would be a valid example for other languages.
-            content = f"{code_block.language}\n..."
-        else:
-            log.trace("Code block has no language specifier (and the code isn't valid Python).")
-            content = "Hello, world!"
-
-        example_blocks = _EXAMPLE_CODE_BLOCKS.format(content=content)
+        example_blocks = _get_example(code_block.language)
         instructions += f"\n\n**Here is an example of how it should look:**\n{example_blocks}"
 
     return instructions
@@ -67,7 +73,7 @@ def _get_no_ticks_message(content: str) -> Optional[str]:
     log.trace("Creating instructions for a missing code block.")
 
     if parsing.is_repl_code(content) or parsing.is_python_code(content):
-        example_blocks = _EXAMPLE_CODE_BLOCKS.format(content=_EXAMPLE_PY.format(lang="python"))
+        example_blocks = _get_example("python")
         return (
             "It looks like you're trying to paste code into this channel.\n\n"
             "Discord has support for Markdown, which allows you to post code with full "
@@ -105,7 +111,7 @@ def _get_bad_lang_message(content: str) -> Optional[str]:
                 f"There must not be any spaces after `{lang}`."
             )
 
-        example_blocks = _EXAMPLE_CODE_BLOCKS.format(content=_EXAMPLE_PY.format(lang=lang))
+        example_blocks = _get_example(lang)
         lines.append(f"\n**Here is an example of how it should look:**\n{example_blocks}")
 
         return "\n".join(lines)
@@ -122,7 +128,7 @@ def _get_no_lang_message(content: str) -> Optional[str]:
     log.trace("Creating instructions for a missing language.")
 
     if parsing.is_repl_code(content) or parsing.is_python_code(content):
-        example_blocks = _EXAMPLE_CODE_BLOCKS.format(content=_EXAMPLE_PY.format(lang="python"))
+        example_blocks = _get_example("python")
 
         # Note that _get_bad_ticks_message expects the first line to have an extra newline.
         return (
