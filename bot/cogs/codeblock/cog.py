@@ -160,4 +160,4 @@ class CodeBlockCog(Cog, name="Code Block"):
             del self.codeblock_message_ids[payload.message_id]
         else:
             log.trace("Message edited but still has invalid code blocks; editing the instructions.")
-            await bot_message.edit(content=instructions)
+            await bot_message.edit(embed=self.create_embed(instructions))
