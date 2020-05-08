@@ -15,6 +15,7 @@ from discord.ext import commands
 
 from bot import constants
 from bot.bot import Bot
+from bot.utils import channel as channel_utils
 from bot.utils.checks import with_role_check
 from bot.utils.scheduling import Scheduler
 
@@ -370,11 +371,18 @@ class HelpChannels(Scheduler, commands.Cog):
         log.trace("Getting the CategoryChannel objects for the help categories.")
 
         try:
-            self.available_category = await self.try_get_channel(
-                constants.Categories.help_available
+            self.available_category = await channel_utils.try_get_channel(
+                constants.Categories.help_available,
+                self.bot
             )
-            self.in_use_category = await self.try_get_channel(constants.Categories.help_in_use)
-            self.dormant_category = await self.try_get_channel(constants.Categories.help_dormant)
+            self.in_use_category = await channel_utils.try_get_channel(
+                constants.Categories.help_in_use,
+                self.bot
+            )
+            self.dormant_category = await channel_utils.try_get_channel(
+                constants.Categories.help_dormant,
+                self.bot
+            )
         except discord.HTTPException:
             log.exception("Failed to get a category; cog will be removed")
             self.bot.remove_cog(self.qualified_name)
@@ -431,12 +439,6 @@ class HelpChannels(Scheduler, commands.Cog):
         embed = message.embeds[0]
         return message.author == self.bot.user and embed.description.strip() == description.strip()
 
-    @staticmethod
-    def is_in_category(channel: discord.TextChannel, category_id: int) -> bool:
-        """Return True if `channel` is within a category with `category_id`."""
-        actual_category = getattr(channel, "category", None)
-        return actual_category is not None and actual_category.id == category_id
-
     async def move_idle_channel(self, channel: discord.TextChannel, has_task: bool = True) -> None:
         """
         Make the `channel` dormant if idle or schedule the move if still active.
@@ -488,7 +490,7 @@ class HelpChannels(Scheduler, commands.Cog):
         options should be avoided, as it may interfere with the category move we perform.
         """
         # Get a fresh copy of the category from the bot to avoid the cache mismatch issue we had.
-        category = await self.try_get_channel(category_id)
+        category = await channel_utils.try_get_channel(category_id, self.bot)
 
         payload = [{"id": c.id, "position": c.position} for c in category.channels]
 
@@ -634,7 +636,7 @@ class HelpChannels(Scheduler, commands.Cog):
         channel = message.channel
 
         # Confirm the channel is an in use help channel
-        if self.is_in_category(channel, constants.Categories.help_in_use):
+        if channel_utils.is_in_category(channel, constants.Categories.help_in_use):
             log.trace(f"Checking if #{channel} ({channel.id}) has been answered.")
 
             # Check if there is an entry in unanswered (does not persist across restarts)
@@ -659,7 +661,8 @@ class HelpChannels(Scheduler, commands.Cog):
 
         await self.check_for_answer(message)
 
-        if not self.is_in_category(channel, constants.Categories.help_available) or self.is_excluded_channel(channel):
+        is_available = channel_utils.is_in_category(channel, constants.Categories.help_available)
+        if not is_available or self.is_excluded_channel(channel):
             return  # Ignore messages outside the Available category or in excluded channels.
 
         log.trace("Waiting for the cog to be ready before processing messages.")
@@ -669,7 +672,7 @@ class HelpChannels(Scheduler, commands.Cog):
         async with self.on_message_lock:
             log.trace(f"on_message lock acquired for {message.id}.")
 
-            if not self.is_in_category(channel, constants.Categories.help_available):
+            if not channel_utils.is_in_category(channel, constants.Categories.help_available):
                 log.debug(
                     f"Message {message.id} will not make #{channel} ({channel.id}) in-use "
                     f"because another message in the channel already triggered that."
@@ -801,18 +804,6 @@ class HelpChannels(Scheduler, commands.Cog):
         else:
             log.trace(f"Dormant message not found in {channel_info}; sending a new message.")
             await channel.send(embed=embed)
-
-    async def try_get_channel(self, channel_id: int) -> discord.abc.GuildChannel:
-        """Attempt to get or fetch a channel and return it."""
-        log.trace(f"Getting the channel {channel_id}.")
-
-        channel = self.bot.get_channel(channel_id)
-        if not channel:
-            log.debug(f"Channel {channel_id} is not in cache; fetching from API.")
-            channel = await self.bot.fetch_channel(channel_id)
-
-        log.trace(f"Channel #{channel} ({channel_id}) retrieved.")
-        return channel
 
     async def wait_for_dormant_channel(self) -> discord.TextChannel:
         """Wait for a dormant channel to become available in the queue and return it."""

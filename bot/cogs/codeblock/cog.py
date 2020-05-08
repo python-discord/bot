@@ -7,7 +7,8 @@ from discord import Message, RawMessageUpdateEvent
 from discord.ext.commands import Bot, Cog
 
 from bot.cogs.token_remover import TokenRemover
-from bot.constants import Categories, Channels, DEBUG_MODE
+from bot.constants import Channels, DEBUG_MODE
+from bot.utils.channel import is_help_channel
 from bot.utils.messages import wait_for_deletion
 from .instructions import get_instructions
 
@@ -85,15 +86,6 @@ class CodeBlockCog(Cog, name="Code Block"):
             log.debug("Could not find instructions message; it was probably deleted.")
             return None
 
-    @staticmethod
-    def is_help_channel(channel: discord.TextChannel) -> bool:
-        """Return True if `channel` is in one of the help categories."""
-        log.trace(f"Checking if #{channel} is a help channel.")
-        return (
-            getattr(channel, "category", None)
-            and channel.category.id in (Categories.help_available, Categories.help_in_use)
-        )
-
     def is_on_cooldown(self, channel: discord.TextChannel) -> bool:
         """
         Return True if an embed was sent for `channel` in the last 300 seconds.
@@ -107,7 +99,7 @@ class CodeBlockCog(Cog, name="Code Block"):
         """Return True if `channel` is a help channel, may be on a cooldown, or is whitelisted."""
         log.trace(f"Checking if #{channel} qualifies for code block detection.")
         return (
-            self.is_help_channel(channel)
+            is_help_channel(channel)
             or channel.id in self.channel_cooldowns
             or channel.id in self.channel_whitelist
         )
