@@ -110,7 +110,7 @@ class CodeBlockCog(Cog, name="Code Block"):
 
         The embed will be deleted automatically after 5 minutes.
         """
-        log.trace("Sending an embed with code block formatting instructions.")
+        log.info(f"Sending code block formatting instructions for message {message.id}.")
 
         embed = self.create_embed(instructions)
         bot_message = await message.channel.send(f"Hey {message.author.mention}!", embed=embed)
@@ -155,7 +155,7 @@ class CodeBlockCog(Cog, name="Code Block"):
             await self.send_instructions(msg, instructions)
 
             if msg.channel.id not in self.channel_whitelist:
-                log.trace(f"Adding #{msg.channel} to the channel cooldowns.")
+                log.debug(f"Adding #{msg.channel} to the channel cooldowns.")
                 self.channel_cooldowns[msg.channel.id] = time.time()
 
     @Cog.listener()
@@ -178,9 +178,9 @@ class CodeBlockCog(Cog, name="Code Block"):
             return
 
         if not instructions:
-            log.trace("User's incorrect code block has been fixed. Removing instructions message.")
+            log.info("User's incorrect code block has been fixed. Removing instructions message.")
             await bot_message.delete()
             del self.codeblock_message_ids[payload.message_id]
         else:
-            log.trace("Message edited but still has invalid code blocks; editing the instructions.")
+            log.info("Message edited but still has invalid code blocks; editing the instructions.")
             await bot_message.edit(embed=self.create_embed(instructions))
