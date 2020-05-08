@@ -85,26 +85,31 @@ def _get_bad_lang_message(content: str) -> Optional[str]:
     """
     Return instructions on fixing the Python language specifier for a code block.
 
-    If `content` doesn't start with "python" or "py" as the language specifier, return None.
+    If `code_block` does not have a Python language specifier, return None.
+    If there's nothing wrong with the language specifier, return None.
     """
     log.trace("Creating instructions for a poorly specified language.")
+
     info = parsing.parse_bad_language(content)
+    if not info:
+        log.trace("Aborting bad language instructions: language specified isn't Python.")
+        return
 
-    if info:
-        lines = []
-        language = info.language
+    lines = []
+    language = info.language
 
-        if info.leading_spaces:
-            log.trace("Language specifier was preceded by a space.")
-            lines.append(f"Make sure there are no spaces between the back ticks and `{language}`.")
+    if info.leading_spaces:
+        log.trace("Language specifier was preceded by a space.")
+        lines.append(f"Make sure there are no spaces between the back ticks and `{language}`.")
 
-        if not info.terminal_newline:
-            log.trace("Language specifier was not followed by a newline.")
-            lines.append(
-                f"Make sure you put your code on a new line following `{language}`. "
-                f"There must not be any spaces after `{language}`."
-            )
+    if not info.terminal_newline:
+        log.trace("Language specifier was not followed by a newline.")
+        lines.append(
+            f"Make sure you put your code on a new line following `{language}`. "
+            f"There must not be any spaces after `{language}`."
+        )
 
+    if lines:
         lines = " ".join(lines)
         example_blocks = _get_example(language)
 
@@ -114,7 +119,7 @@ def _get_bad_lang_message(content: str) -> Optional[str]:
             f"\n\n**Here is an example of how it should look:**\n{example_blocks}"
         )
     else:
-        log.trace("Aborting bad language instructions: language specified isn't Python.")
+        log.trace("Nothing wrong with the language specifier; no instructions to return.")
 
 
 def _get_no_lang_message(content: str) -> Optional[str]:
