@@ -550,13 +550,6 @@ class HelpChannels(metaclass=YAMLGetter):
     notify_roles: List[int]
 
 
-class Mention(metaclass=YAMLGetter):
-    section = 'mention'
-
-    message_timeout: int
-    reset_delay: int
-
-
 class RedirectOutput(metaclass=YAMLGetter):
     section = 'redirect_output'
 

@@ -507,9 +507,6 @@ free:
     cooldown_rate: 1
     cooldown_per: 60.0
 
-mention:
-    message_timeout: 300
-    reset_delay: 5
 
 help_channels:
     enable: true
