@@ -5,7 +5,6 @@ from . import parsing
 
 log = logging.getLogger(__name__)
 
-_PY_LANG_CODES = ("python", "py")  # Order is important; "py" is second cause it's a subset.
 _EXAMPLE_PY = "{lang}\nprint('Hello, world!')"  # Make sure to escape any Markdown symbols here.
 _EXAMPLE_CODE_BLOCKS = (
     "\\`\\`\\`{content}\n\\`\\`\\`\n\n"
@@ -16,16 +15,14 @@ _EXAMPLE_CODE_BLOCKS = (
 
 def _get_example(language: str) -> str:
     """Return an example of a correct code block using `language` for syntax highlighting."""
-    language_lower = language.lower()  # It's only valid if it's all lowercase.
-
     # Determine the example code to put in the code block based on the language specifier.
-    if language_lower in _PY_LANG_CODES:
+    if language.lower() in parsing.PY_LANG_CODES:
         log.trace(f"Code block has a Python language specifier `{language}`.")
-        content = _EXAMPLE_PY.format(lang=language_lower)
-    elif language_lower:
+        content = _EXAMPLE_PY.format(lang=language)
+    elif language:
         log.trace(f"Code block has a foreign language specifier `{language}`.")
         # It's not feasible to determine what would be a valid example for other languages.
-        content = f"{language_lower}\n..."
+        content = f"{language}\n..."
     else:
         log.trace("Code block has no language specifier.")
         content = "Hello, world!"
@@ -92,26 +89,25 @@ def _get_bad_lang_message(content: str) -> Optional[str]:
     If `content` doesn't start with "python" or "py" as the language specifier, return None.
     """
     log.trace("Creating instructions for a poorly specified language.")
+    info = parsing.parse_bad_language(content)
 
-    stripped = content.lstrip().lower()
-    lang = next((lang for lang in _PY_LANG_CODES if stripped.startswith(lang)), None)
-
-    if lang:
+    if info:
         # Note that _get_bad_ticks_message expects the first line to have an extra newline.
         lines = ["It looks like you incorrectly specified a language for your code block.\n"]
+        language = info.language
 
-        if content.startswith(" "):
+        if info.leading_spaces:
             log.trace("Language specifier was preceded by a space.")
-            lines.append(f"Make sure there are no spaces between the back ticks and `{lang}`.")
+            lines.append(f"Make sure there are no spaces between the back ticks and `{language}`.")
 
-        if stripped[len(lang)] != "\n":
+        if not info.terminal_newline:
             log.trace("Language specifier was not followed by a newline.")
             lines.append(
-                f"Make sure you put your code on a new line following `{lang}`. "
-                f"There must not be any spaces after `{lang}`."
+                f"Make sure you put your code on a new line following `{language}`. "
+                f"There must not be any spaces after `{language}`."
             )
 
-        example_blocks = _get_example(lang)
+        example_blocks = _get_example(language)
         lines.append(f"\n**Here is an example of how it should look:**\n{example_blocks}")
 
         return "\n".join(lines)

@@ -22,7 +22,7 @@ _TICKS = {
 _RE_CODE_BLOCK = re.compile(
     fr"""
     (?P<ticks>
-        (?P<tick>[{''.join(_TICKS)}])  # Put all ticks into a character class within a group.
+        (?P<tick>[{''.join(_TICKS)}]) # Put all ticks into a character class within a group.
         \2{{2}}                       # Match previous group 2 more times to ensure the same char.
     )
     (?P<lang>[^\W_]+\n)?              # Optionally match a language specifier followed by a newline.
@@ -32,6 +32,16 @@ _RE_CODE_BLOCK = re.compile(
     re.DOTALL | re.VERBOSE
 )
 
+PY_LANG_CODES = ("python", "py")  # Order is important; "py" is second cause it's a subset.
+_RE_LANGUAGE = re.compile(
+    fr"""
+    ^(?P<spaces>\s+)?                    # Optionally match leading spaces from the beginning.
+    (?P<lang>{'|'.join(PY_LANG_CODES)})  # Match a Python language.
+    (?P<newline>\n)?                     # Optionally match a newline following the language.
+    """,
+    re.IGNORECASE | re.VERBOSE
+)
+
 
 class CodeBlock(NamedTuple):
     """Represents a Markdown code block."""
@@ -39,6 +49,14 @@ class CodeBlock(NamedTuple):
     content: str
     language: str
     tick: str
+
+
+class BadLanguage(NamedTuple):
+    """Parsed information about a poorly formatted language specifier."""
+
+    language: str
+    leading_spaces: bool
+    terminal_newline: bool
 
 
 def find_code_blocks(message: str) -> Optional[Sequence[CodeBlock]]:
@@ -108,3 +126,22 @@ def is_repl_code(content: str, threshold: int = 3) -> bool:
 
     log.trace("Content is not Python REPL code.")
     return False
+
+
+def parse_bad_language(content: str) -> Optional[BadLanguage]:
+    """
+    Return information about a poorly formatted Python language in code block `content`.
+
+    If the language is not Python, return None.
+    """
+    log.trace("Parsing bad language.")
+
+    match = _RE_LANGUAGE.match(content)
+    if not match:
+        return None
+
+    return BadLanguage(
+        language=match["lang"],
+        leading_spaces=match["spaces"] is not None,
+        terminal_newline=match["newline"] is not None,
+    )
