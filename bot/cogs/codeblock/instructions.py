@@ -33,13 +33,12 @@ def _get_example(language: str) -> str:
 def _get_bad_ticks_message(code_block: parsing.CodeBlock) -> Optional[str]:
     """Return instructions on using the correct ticks for `code_block`."""
     log.trace("Creating instructions for incorrect code block ticks.")
-    valid_ticks = f"\\{parsing.BACKTICK}" * 3
 
-    # The space at the end is important here because something may be appended!
+    valid_ticks = f"\\{parsing.BACKTICK}" * 3
     instructions = (
         "It looks like you are trying to paste code into this channel.\n\n"
         "You seem to be using the wrong symbols to indicate where the code block should start. "
-        f"The correct symbols would be {valid_ticks}, not `{code_block.tick * 3}`. "
+        f"The correct symbols would be {valid_ticks}, not `{code_block.tick * 3}`."
     )
 
     log.trace("Check if the bad ticks code block also has issues with the language specifier.")
@@ -52,7 +51,7 @@ def _get_bad_ticks_message(code_block: parsing.CodeBlock) -> Optional[str]:
     if addition_msg:
         log.trace("Language specifier issue found; appending additional instructions.")
 
-        # The first line has a double line break which is not desirable when appending the msg.
+        # The first line has double newlines which are not desirable when appending the msg.
         addition_msg = addition_msg.replace("\n\n", " ", 1)
 
         # Make the first character of the addition lower case.
@@ -92,8 +91,7 @@ def _get_bad_lang_message(content: str) -> Optional[str]:
     info = parsing.parse_bad_language(content)
 
     if info:
-        # Note that _get_bad_ticks_message expects the first line to have an extra newline.
-        lines = ["It looks like you incorrectly specified a language for your code block.\n"]
+        lines = []
         language = info.language
 
         if info.leading_spaces:
@@ -107,10 +105,14 @@ def _get_bad_lang_message(content: str) -> Optional[str]:
                 f"There must not be any spaces after `{language}`."
             )
 
+        lines = " ".join(lines)
         example_blocks = _get_example(language)
-        lines.append(f"\n**Here is an example of how it should look:**\n{example_blocks}")
 
-        return "\n".join(lines)
+        # Note that _get_bad_ticks_message expects the first line to have two newlines.
+        return (
+            f"It looks like you incorrectly specified a language for your code block.\n\n{lines}"
+            f"\n\n**Here is an example of how it should look:**\n{example_blocks}"
+        )
     else:
         log.trace("Aborting bad language instructions: language specified isn't Python.")
 
@@ -126,7 +128,7 @@ def _get_no_lang_message(content: str) -> Optional[str]:
     if parsing.is_repl_code(content) or parsing.is_python_code(content):
         example_blocks = _get_example("python")
 
-        # Note that _get_bad_ticks_message expects the first line to have an extra newline.
+        # Note that _get_bad_ticks_message expects the first line to have two newlines.
         return (
             "It looks like you pasted Python code without syntax highlighting.\n\n"
             "Please use syntax highlighting to improve the legibility of your code and make "
