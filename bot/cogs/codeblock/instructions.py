@@ -27,7 +27,7 @@ def _get_example(language: str) -> str:
         content = f"{language}\n..."
     else:
         log.trace("Code block has no language specifier.")
-        content = "Hello, world!"
+        content = "\nHello, world!"
 
     return _EXAMPLE_CODE_BLOCKS.format(content=content)
 
