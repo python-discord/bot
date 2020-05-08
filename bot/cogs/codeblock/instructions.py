@@ -43,7 +43,7 @@ def _get_bad_ticks_message(code_block: parsing.CodeBlock) -> Optional[str]:
 
     log.trace("Check if the bad ticks code block also has issues with the language specifier.")
     addition_msg = _get_bad_lang_message(code_block.content)
-    if not addition_msg:
+    if not addition_msg and not code_block.language:
         addition_msg = _get_no_lang_message(code_block.content)
 
     # Combine the back ticks message with the language specifier message. The latter will
