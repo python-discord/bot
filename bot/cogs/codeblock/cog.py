@@ -8,6 +8,7 @@ from discord.ext.commands import Bot, Cog
 
 from bot.cogs.token_remover import TokenRemover
 from bot.constants import Channels, DEBUG_MODE
+from bot.utils import has_lines
 from bot.utils.channel import is_help_channel
 from bot.utils.messages import wait_for_deletion
 from .instructions import get_instructions
@@ -134,7 +135,7 @@ class CodeBlockCog(Cog, name="Code Block"):
         return (
             not message.author.bot
             and self.is_valid_channel(message.channel)
-            and len(message.content.split("\n", 3)) > 3
+            and has_lines(message.content, 4)
             and not TokenRemover.find_token_in_message(message)
         )
 
