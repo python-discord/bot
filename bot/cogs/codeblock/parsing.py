@@ -5,6 +5,7 @@ import logging
 import re
 from typing import NamedTuple, Optional, Sequence
 
+from bot import constants
 from bot.utils import has_lines
 
 log = logging.getLogger(__name__)
@@ -84,7 +85,7 @@ def find_code_blocks(message: str) -> Optional[Sequence[CodeBlock]]:
         if groups["tick"] == BACKTICK and language:
             log.trace("Message has a valid code block with a language; returning None.")
             return None
-        elif has_lines(groups["code"], 4):
+        elif has_lines(groups["code"], constants.CodeBlock.minimum_lines):
             code_block = CodeBlock(groups["code"], language, groups["tick"])
             code_blocks.append(code_block)
         else:

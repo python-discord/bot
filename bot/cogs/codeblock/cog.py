@@ -6,8 +6,8 @@ import discord
 from discord import Message, RawMessageUpdateEvent
 from discord.ext.commands import Bot, Cog
 
+from bot import constants
 from bot.cogs.token_remover import TokenRemover
-from bot.constants import Channels, DEBUG_MODE
 from bot.utils import has_lines
 from bot.utils.channel import is_help_channel
 from bot.utils.messages import wait_for_deletion
@@ -33,8 +33,7 @@ class CodeBlockCog(Cog, name="Code Block"):
             1. Spaces before the language
             2. No newline immediately following the language
 
-    Messages with 3 or fewer lines overall are ignored. Each code block is subject to this threshold
-    as well i.e. the text between the ticks must be greater than 3 lines. Detecting multiple code
+    Messages or code blocks must meet a minimum line count to be detected. Detecting multiple code
     blocks is supported. However, if at least one code block is correct, then instructions will not
     be sent even if others are incorrect. When multiple incorrect code blocks are found, only the
     first one is used as the basis for the instructions sent.
@@ -45,23 +44,17 @@ class CodeBlockCog(Cog, name="Code Block"):
     show what is still incorrect after the user's edit. The embed can be manually deleted with a
     reaction. Otherwise, it will automatically be removed after 5 minutes.
 
-    The cog only detects messages in whitelisted channels. Channels may also have a 300-second
-    cooldown on the instructions being sent. See `__init__` for which channels are whitelisted or
-    have cooldowns enabled. Note that all help channels are also whitelisted with cooldowns enabled.
+    The cog only detects messages in whitelisted channels. Channels may also have a cooldown on the
+    instructions being sent. Note all help channels are also whitelisted with cooldowns enabled.
+
+    For configurable parameters, see the `code_block` section in config-default.py.
     """
 
     def __init__(self, bot: Bot):
         self.bot = bot
 
         # Stores allowed channels plus epoch times since the last instructional messages sent.
-        self.channel_cooldowns = {
-            Channels.python_discussion: 0,
-        }
-
-        # These channels will also work, but will not be subject to a cooldown.
-        self.channel_whitelist = (
-            Channels.bot_commands,
-        )
+        self.channel_cooldowns = {channel: 0.0 for channel in constants.CodeBlock.cooldown_channels}
 
         # Maps users' messages to the messages the bot sent with instructions.
         self.codeblock_message_ids = {}
@@ -102,7 +95,7 @@ class CodeBlockCog(Cog, name="Code Block"):
         return (
             is_help_channel(channel)
             or channel.id in self.channel_cooldowns
-            or channel.id in self.channel_whitelist
+            or channel.id in constants.CodeBlock.channel_whitelist
         )
 
     async def send_instructions(self, message: discord.Message, instructions: str) -> None:
@@ -135,7 +128,7 @@ class CodeBlockCog(Cog, name="Code Block"):
         return (
             not message.author.bot
             and self.is_valid_channel(message.channel)
-            and has_lines(message.content, 4)
+            and has_lines(message.content, constants.CodeBlock.minimum_lines)
             and not TokenRemover.find_token_in_message(message)
         )
 
@@ -147,7 +140,7 @@ class CodeBlockCog(Cog, name="Code Block"):
             return
 
         # When debugging, ignore cooldowns.
-        if self.is_on_cooldown(msg.channel) and not DEBUG_MODE:
+        if self.is_on_cooldown(msg.channel) and not constants.DEBUG_MODE:
             log.trace(f"Skipping code block detection of {msg.id}: #{msg.channel} is on cooldown.")
             return
 
@@ -155,7 +148,7 @@ class CodeBlockCog(Cog, name="Code Block"):
         if instructions:
             await self.send_instructions(msg, instructions)
 
-            if msg.channel.id not in self.channel_whitelist:
+            if msg.channel.id not in constants.CodeBlock.channel_whitelist:
                 log.debug(f"Adding #{msg.channel} to the channel cooldowns.")
                 self.channel_cooldowns[msg.channel.id] = time.time()
 
