@@ -114,6 +114,30 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         token_re.findall.assert_called_once_with(self.msg.content)
         is_maybe_token.assert_not_called()
 
+    @autospec(TokenRemover, "is_maybe_token")
+    @autospec("bot.cogs.token_remover", "TOKEN_RE")
+    def test_find_token_returns_found_token(self, token_re, is_maybe_token):
+        """The found token should be returned."""
+        true_index = 1
+        matches = ("foo", "bar", "baz")
+        side_effects = [False] * len(matches)
+        side_effects[true_index] = True
+
+        cog = TokenRemover(self.bot)
+        self.msg.content = "foobar"
+        token_re.findall.return_value = matches
+        is_maybe_token.side_effect = side_effects
+
+        return_value = cog.find_token_in_message(self.msg)
+
+        self.assertEqual(return_value, matches[true_index])
+        token_re.findall.assert_called_once_with(self.msg.content)
+
+        # assert_has_calls isn't used cause it'd allow for extra calls before or after.
+        # The function should short-circuit, so nothing past true_index should have been used.
+        calls = [mock.call(match) for match in matches[:true_index + 1]]
+        self.assertEqual(is_maybe_token.mock_calls, calls)
+
     def test_ignores_messages_without_tokens(self):
         """Messages without anything looking like a token are ignored."""
         for content in ('', 'lemon wins'):
