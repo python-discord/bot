@@ -212,7 +212,9 @@ class Filtering(Cog):
                         additional_embeds = None
                         additional_embeds_msg = None
 
-                        if filter_name == "filter_invites":
+                        # The function returns True for invalid invites.
+                        # They have no data so additional embeds can't be created for them.
+                        if filter_name == "filter_invites" and match is not True:
                             additional_embeds = []
                             for invite, data in match.items():
                                 embed = discord.Embed(description=(
