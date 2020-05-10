@@ -12,7 +12,7 @@ from bot.cogs.token_remover import (
     setup as setup_cog,
 )
 from bot.constants import Channels, Colours, Event, Icons
-from tests.helpers import MockBot, MockMessage
+from tests.helpers import MockBot, MockMessage, autospec
 
 
 class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
@@ -65,6 +65,18 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
 
         await self.cog.on_message_edit(MockMessage(), self.msg)
         self.cog.on_message.assert_awaited_once_with(self.msg)
+
+    @autospec(TokenRemover, "find_token_in_message", "take_action")
+    async def test_on_message_takes_action(self, find_token_in_message, take_action):
+        """Should take action if a valid token is found when a message is sent."""
+        cog = TokenRemover(self.bot)
+        found_token = "foobar"
+        find_token_in_message.return_value = found_token
+
+        await cog.on_message(self.msg)
+
+        find_token_in_message.assert_called_once_with(self.msg)
+        take_action.assert_awaited_once_with(cog, self.msg, found_token)
 
     def test_ignores_bot_messages(self):
         """When the message event handler is called with a bot message, nothing is done."""
