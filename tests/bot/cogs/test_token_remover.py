@@ -89,11 +89,16 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         find_token_in_message.assert_called_once_with(self.msg)
         take_action.assert_not_awaited()
 
-    def test_ignores_bot_messages(self):
-        """When the message event handler is called with a bot message, nothing is done."""
+    @autospec("bot.cogs.token_remover", "TOKEN_RE")
+    def test_find_token_ignores_bot_messages(self, token_re):
+        """The token finder should ignore messages authored by bots."""
+        cog = TokenRemover(self.bot)
         self.msg.author.bot = True
-        coroutine = self.cog.on_message(self.msg)
-        self.assertIsNone(asyncio.run(coroutine))
+
+        return_value = cog.find_token_in_message(self.msg)
+
+        self.assertIsNone(return_value)
+        token_re.findall.assert_not_called()
 
     def test_ignores_messages_without_tokens(self):
         """Messages without anything looking like a token are ignored."""
