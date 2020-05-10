@@ -8,6 +8,7 @@ from discord import Colour
 
 from bot.cogs.token_remover import (
     DELETION_MESSAGE_TEMPLATE,
+    TOKEN_RE,
     TokenRemover,
     setup as setup_cog,
 )
@@ -138,13 +139,30 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         calls = [mock.call(match) for match in matches[:true_index + 1]]
         self.assertEqual(is_maybe_token.mock_calls, calls)
 
-    def test_ignores_messages_without_tokens(self):
-        """Messages without anything looking like a token are ignored."""
-        for content in ('', 'lemon wins'):
-            with self.subTest(content=content):
-                self.msg.content = content
-                coroutine = self.cog.on_message(self.msg)
-                self.assertIsNone(asyncio.run(coroutine))
+    def test_regex_invalid_tokens(self):
+        """Messages without anything looking like a token are not matched."""
+        tokens = (
+            "",
+            "lemon wins",
+            "..",
+            "x.y",
+            "x.y.",
+            ".y.z",
+            ".y.",
+            "..z",
+            "x..z",
+            " . . ",
+            "\n.\n.\n",
+            "'.'.'",
+            '"."."',
+            "(.(.(",
+            ").).)"
+        )
+
+        for token in tokens:
+            with self.subTest(token=token):
+                results = TOKEN_RE.findall(token)
+                self.assertEquals(len(results), 0)
 
     def test_ignores_messages_with_invalid_tokens(self):
         """Messages with values that are invalid tokens are ignored."""
