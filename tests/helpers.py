@@ -23,6 +23,15 @@ for logger in logging.Logger.manager.loggerDict.values():
     logger.setLevel(logging.CRITICAL)
 
 
+def autospec(target, *attributes: str, **kwargs) -> unittest.mock._patch:
+    """Patch multiple `attributes` of a `target` with autospecced mocks and `spec_set` as True."""
+    # Caller's kwargs should take priority and overwrite the defaults.
+    kwargs = {'spec_set': True, 'autospec': True, **kwargs}
+    attributes = {attribute: unittest.mock.DEFAULT for attribute in attributes}
+
+    return unittest.mock.patch.multiple(target, **attributes, **kwargs)
+
+
 class HashableMixin(discord.mixins.EqualityComparable):
     """
     Mixin that provides similar hashing and equality functionality as discord.py's `Hashable` mixin.
