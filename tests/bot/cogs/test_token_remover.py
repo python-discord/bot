@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import unittest
+from unittest import mock
 from unittest.mock import AsyncMock, MagicMock
 
 from discord import Colour
@@ -14,7 +15,7 @@ from bot.constants import Channels, Colours, Event, Icons
 from tests.helpers import MockBot, MockMessage
 
 
-class TokenRemoverTests(unittest.TestCase):
+class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
     """Tests the `TokenRemover` cog."""
 
     def setUp(self):
@@ -58,6 +59,13 @@ class TokenRemoverTests(unittest.TestCase):
         self.assertEqual(self.cog.mod_log, self.bot.get_cog.return_value)
         self.bot.get_cog.assert_called_once_with('ModLog')
 
+    async def test_on_message_edit_uses_on_message(self):
+        """The edit listener should delegate handling of the message to the normal listener."""
+        self.cog.on_message = mock.create_autospec(self.cog.on_message, spec_set=True)
+
+        await self.cog.on_message_edit(MockMessage(), self.msg)
+        self.cog.on_message.assert_awaited_once_with(self.msg)
+
     def test_ignores_bot_messages(self):
         """When the message event handler is called with a bot message, nothing is done."""
         self.msg.author.bot = True
@@ -77,7 +85,7 @@ class TokenRemoverTests(unittest.TestCase):
         for content in ('foo.bar.baz', 'x.y.'):
             with self.subTest(content=content):
                 self.msg.content = content
-                coroutine = self.cog.on_message(self.msg)
+                coroutine = self.cog.is_maybe_token(self.msg)
                 self.assertIsNone(asyncio.run(coroutine))
 
     def test_censors_valid_tokens(self):
