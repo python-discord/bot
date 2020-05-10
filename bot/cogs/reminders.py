@@ -158,7 +158,7 @@ class Reminders(Scheduler, Cog):
         )
         await self._delete_reminder(reminder["id"])
 
-    @group(name="remind", aliases=("reminder", "reminders"), invoke_without_command=True)
+    @group(name="remind", aliases=("reminder", "reminders", "remindme"), invoke_without_command=True)
     async def remind_group(self, ctx: Context, expiration: Duration, *, content: str) -> None:
         """Commands for managing your reminders."""
         await ctx.invoke(self.new_reminder, expiration=expiration, content=content)
