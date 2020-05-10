@@ -65,9 +65,7 @@ class TokenRemover(Cog):
 
         See: https://discordapp.com/developers/docs/reference#snowflakes
         """
-        found_token = self.find_token_in_message(after)
-        if found_token:
-            await self.take_action(after, found_token)
+        await self.on_message(after)
 
     async def take_action(self, msg: Message, found_token: str) -> None:
         """Remove the `msg` containing a token an send a mod_log message."""
