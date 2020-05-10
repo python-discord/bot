@@ -135,7 +135,7 @@ class TokenRemover(Cog):
         try:
             content: bytes = base64.b64decode(b64_content)
             return content.decode('utf-8').isnumeric()
-        except (binascii.Error, UnicodeDecodeError):
+        except (binascii.Error, ValueError):
             return False
 
     @staticmethod
@@ -150,7 +150,7 @@ class TokenRemover(Cog):
         try:
             content = base64.urlsafe_b64decode(b64_content)
             snowflake = struct.unpack('i', content)[0]
-        except (binascii.Error, struct.error):
+        except (binascii.Error, struct.error, ValueError):
             return False
         return snowflake_time(snowflake + TOKEN_EPOCH) < DISCORD_EPOCH_TIMESTAMP
 
