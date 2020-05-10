@@ -100,6 +100,20 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(return_value)
         token_re.findall.assert_not_called()
 
+    @autospec(TokenRemover, "is_maybe_token")
+    @autospec("bot.cogs.token_remover", "TOKEN_RE")
+    def test_find_token_no_matches_returns_none(self, token_re, is_maybe_token):
+        """None should be returned if the regex matches no tokens in a message."""
+        cog = TokenRemover(self.bot)
+        token_re.findall.return_value = ()
+        self.msg.content = "foobar"
+
+        return_value = cog.find_token_in_message(self.msg)
+
+        self.assertIsNone(return_value)
+        token_re.findall.assert_called_once_with(self.msg.content)
+        is_maybe_token.assert_not_called()
+
     def test_ignores_messages_without_tokens(self):
         """Messages without anything looking like a token are ignored."""
         for content in ('', 'lemon wins'):
