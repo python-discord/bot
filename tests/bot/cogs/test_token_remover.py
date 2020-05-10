@@ -78,6 +78,17 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         find_token_in_message.assert_called_once_with(self.msg)
         take_action.assert_awaited_once_with(cog, self.msg, found_token)
 
+    @autospec(TokenRemover, "find_token_in_message", "take_action")
+    async def test_on_message_skips_missing_token(self, find_token_in_message, take_action):
+        """Shouldn't take action if a valid token isn't found when a message is sent."""
+        cog = TokenRemover(self.bot)
+        find_token_in_message.return_value = False
+
+        await cog.on_message(self.msg)
+
+        find_token_in_message.assert_called_once_with(self.msg)
+        take_action.assert_not_awaited()
+
     def test_ignores_bot_messages(self):
         """When the message event handler is called with a bot message, nothing is done."""
         self.msg.author.bot = True
