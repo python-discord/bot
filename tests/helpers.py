@@ -24,25 +24,21 @@ for logger in logging.Logger.manager.loggerDict.values():
 
 
 def autospec(target, *attributes: str, **kwargs) -> unittest.mock._patch:
-    """
-    Patch multiple `attributes` of a `target` with autospecced mocks and `spec_set` as True.
-
-    To allow for arbitrary parameter names to be used by the decorated function, the patchers have
-    no attribute names associated with them. As a consequence, it will not be possible to retrieve
-    mocks by their attribute names when using this as a context manager,
-    """
+    """Patch multiple `attributes` of a `target` with autospecced mocks and `spec_set` as True."""
     # Caller's kwargs should take priority and overwrite the defaults.
     kwargs = {'spec_set': True, 'autospec': True, **kwargs}
-    attributes = {attribute: unittest.mock.DEFAULT for attribute in attributes}
 
-    patcher = unittest.mock.patch.multiple(target, **attributes, **kwargs)
+    # Import the target if it's a string.
+    # This is to support both object and string targets like patch.multiple.
+    if type(target) is str:
+        target = unittest.mock._importer(target)
 
-    # Unset attribute names to allow arbitrary parameter names for the decorator function.
-    patcher.attribute_name = None
-    for additional_patcher in patcher.additional_patchers:
-        additional_patcher.attribute_name = None
-
-    return patcher
+    def decorator(func):
+        for attribute in attributes:
+            patcher = unittest.mock.patch.object(target, attribute, **kwargs)
+            func = patcher(func)
+        return func
+    return decorator
 
 
 class HashableMixin(discord.mixins.EqualityComparable):
