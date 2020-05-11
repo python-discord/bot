@@ -164,6 +164,16 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
                 results = TOKEN_RE.findall(token)
                 self.assertEquals(len(results), 0)
 
+    @autospec(TokenRemover, "is_valid_user_id", "is_valid_timestamp")
+    def test_is_maybe_token_missing_part_returns_false(self, valid_user, valid_time):
+        """False should be returned for tokens which do not have all 3 parts."""
+        cog = TokenRemover(self.bot)
+        return_value = cog.is_maybe_token("x.y")
+
+        self.assertFalse(return_value)
+        valid_user.assert_not_called()
+        valid_time.assert_not_called()
+
     def test_ignores_messages_with_invalid_tokens(self):
         """Messages with values that are invalid tokens are ignored."""
         for content in ('foo.bar.baz', 'x.y.'):
