@@ -93,10 +93,9 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
     @autospec("bot.cogs.token_remover", "TOKEN_RE")
     def test_find_token_ignores_bot_messages(self, token_re):
         """The token finder should ignore messages authored by bots."""
-        cog = TokenRemover(self.bot)
         self.msg.author.bot = True
 
-        return_value = cog.find_token_in_message(self.msg)
+        return_value = TokenRemover.find_token_in_message(self.msg)
 
         self.assertIsNone(return_value)
         token_re.findall.assert_not_called()
@@ -105,11 +104,10 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
     @autospec("bot.cogs.token_remover", "TOKEN_RE")
     def test_find_token_no_matches_returns_none(self, token_re, is_maybe_token):
         """None should be returned if the regex matches no tokens in a message."""
-        cog = TokenRemover(self.bot)
         token_re.findall.return_value = ()
         self.msg.content = "foobar"
 
-        return_value = cog.find_token_in_message(self.msg)
+        return_value = TokenRemover.find_token_in_message(self.msg)
 
         self.assertIsNone(return_value)
         token_re.findall.assert_called_once_with(self.msg.content)
@@ -124,12 +122,11 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         side_effects = [False] * len(matches)
         side_effects[true_index] = True
 
-        cog = TokenRemover(self.bot)
         self.msg.content = "foobar"
         token_re.findall.return_value = matches
         is_maybe_token.side_effect = side_effects
 
-        return_value = cog.find_token_in_message(self.msg)
+        return_value = TokenRemover.find_token_in_message(self.msg)
 
         self.assertEqual(return_value, matches[true_index])
         token_re.findall.assert_called_once_with(self.msg.content)
@@ -188,8 +185,7 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
     @autospec(TokenRemover, "is_valid_user_id", "is_valid_timestamp")
     def test_is_maybe_token_missing_part_returns_false(self, valid_user, valid_time):
         """False should be returned for tokens which do not have all 3 parts."""
-        cog = TokenRemover(self.bot)
-        return_value = cog.is_maybe_token("x.y")
+        return_value = TokenRemover.is_maybe_token("x.y")
 
         self.assertFalse(return_value)
         valid_user.assert_not_called()
@@ -198,7 +194,6 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
     @autospec(TokenRemover, "is_valid_user_id", "is_valid_timestamp")
     def test_is_maybe_token(self, valid_user, valid_time):
         """Should return True if the user ID and timestamp are valid or return False otherwise."""
-        cog = TokenRemover(self.bot)
         subtests = (
             (False, True, False),
             (True, False, False),
@@ -213,7 +208,7 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
                 valid_user.return_value = user_return
                 valid_time.return_value = time_return
 
-                actual = cog.is_maybe_token("x.y.z")
+                actual = TokenRemover.is_maybe_token("x.y.z")
                 self.assertIs(actual, expected)
 
                 valid_user.assert_called_once_with("x")
