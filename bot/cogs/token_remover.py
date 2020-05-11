@@ -68,30 +68,40 @@ class TokenRemover(Cog):
         await self.on_message(after)
 
     async def take_action(self, msg: Message, found_token: str) -> None:
-        """Remove the `msg` containing a token an send a mod_log message."""
-        user_id, creation_timestamp, hmac = found_token.split('.')
+        """Remove the `msg` containing the `found_token` and send a mod log message."""
         self.mod_log.ignore(Event.message_delete, msg.id)
-        await msg.delete()
-        await msg.channel.send(DELETION_MESSAGE_TEMPLATE.format(mention=msg.author.mention))
+        await self.delete_message(msg)
 
-        message = (
-            "Censored a seemingly valid token sent by "
-            f"{msg.author} (`{msg.author.id}`) in {msg.channel.mention}, token was "
-            f"`{user_id}.{creation_timestamp}.{'x' * len(hmac)}`"
-        )
-        log.debug(message)
+        log_message = self.format_log_message(msg, found_token)
+        log.debug(log_message)
 
         # Send pretty mod log embed to mod-alerts
         await self.mod_log.send_log_message(
             icon_url=Icons.token_removed,
             colour=Colour(Colours.soft_red),
             title="Token removed!",
-            text=message,
+            text=log_message,
             thumbnail=msg.author.avatar_url_as(static_format="png"),
             channel_id=Channels.mod_alerts,
         )
 
         self.bot.stats.incr("tokens.removed_tokens")
+
+    @staticmethod
+    async def delete_message(msg: Message) -> None:
+        """Remove a `msg` containing a token and send an explanatory message in the same channel."""
+        await msg.delete()
+        await msg.channel.send(DELETION_MESSAGE_TEMPLATE.format(mention=msg.author.mention))
+
+    @staticmethod
+    def format_log_message(msg: Message, found_token: str) -> str:
+        """Return the log message to send for `found_token` being censored in `msg`."""
+        user_id, creation_timestamp, hmac = found_token.split('.')
+        return (
+            "Censored a seemingly valid token sent by "
+            f"{msg.author} (`{msg.author.id}`) in {msg.channel.mention}, token was "
+            f"`{user_id}.{creation_timestamp}.{'x' * len(hmac)}`"
+        )
 
     @classmethod
     def find_token_in_message(cls, msg: Message) -> t.Optional[str]:
