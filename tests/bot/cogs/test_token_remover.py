@@ -164,6 +164,27 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
                 results = TOKEN_RE.findall(token)
                 self.assertEquals(len(results), 0)
 
+    def test_regex_valid_tokens(self):
+        """Messages that look like tokens should be matched."""
+        # Don't worry, the token's been invalidated.
+        tokens = (
+            "x1.y2.z_3",
+            "NDcyMjY1OTQzMDYyNDEzMzMy.Xrim9Q.Ysnu2wacjaKs7qnoo46S8Dm2us8"
+        )
+
+        for token in tokens:
+            with self.subTest(token=token):
+                results = TOKEN_RE.findall(token)
+                self.assertIn(token, results)
+
+    def test_regex_matches_multiple_valid(self):
+        """Should support multiple matches in the middle of a string."""
+        tokens = ["x.y.z", "a.b.c"]
+        message = f"garbage {tokens[0]} hello {tokens[1]} world"
+
+        results = TOKEN_RE.findall(message)
+        self.assertEquals(tokens, results)
+
     @autospec(TokenRemover, "is_valid_user_id", "is_valid_timestamp")
     def test_is_maybe_token_missing_part_returns_false(self, valid_user, valid_time):
         """False should be returned for tokens which do not have all 3 parts."""
