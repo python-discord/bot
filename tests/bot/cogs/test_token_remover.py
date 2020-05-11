@@ -150,7 +150,7 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         for token in tokens:
             with self.subTest(token=token):
                 results = TOKEN_RE.findall(token)
-                self.assertEquals(len(results), 0)
+                self.assertEqual(len(results), 0)
 
     def test_regex_valid_tokens(self):
         """Messages that look like tokens should be matched."""
@@ -171,7 +171,7 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         message = f"garbage {tokens[0]} hello {tokens[1]} world"
 
         results = TOKEN_RE.findall(message)
-        self.assertEquals(tokens, results)
+        self.assertEqual(tokens, results)
 
     @autospec(TokenRemover, "is_valid_user_id", "is_valid_timestamp")
     def test_is_maybe_token_missing_part_returns_false(self, valid_user, valid_time):
