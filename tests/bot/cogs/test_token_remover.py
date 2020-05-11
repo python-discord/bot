@@ -4,14 +4,10 @@ from unittest.mock import MagicMock
 
 from discord import Colour
 
+from bot import constants
+from bot.cogs import token_remover
 from bot.cogs.moderation import ModLog
-from bot.cogs.token_remover import (
-    DELETION_MESSAGE_TEMPLATE,
-    TOKEN_RE,
-    TokenRemover,
-    setup as setup_cog,
-)
-from bot.constants import Channels, Colours, Event, Icons
+from bot.cogs.token_remover import TokenRemover
 from tests.helpers import MockBot, MockMessage, autospec
 
 
@@ -149,7 +145,7 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
 
         for token in tokens:
             with self.subTest(token=token):
-                results = TOKEN_RE.findall(token)
+                results = token_remover.TOKEN_RE.findall(token)
                 self.assertEqual(len(results), 0)
 
     def test_regex_valid_tokens(self):
@@ -162,7 +158,7 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
 
         for token in tokens:
             with self.subTest(token=token):
-                results = TOKEN_RE.findall(token)
+                results = token_remover.TOKEN_RE.findall(token)
                 self.assertIn(token, results)
 
     def test_regex_matches_multiple_valid(self):
@@ -170,7 +166,7 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         tokens = ["x.y.z", "a.b.c"]
         message = f"garbage {tokens[0]} hello {tokens[1]} world"
 
-        results = TOKEN_RE.findall(message)
+        results = token_remover.TOKEN_RE.findall(message)
         self.assertEqual(tokens, results)
 
     @autospec(TokenRemover, "is_valid_user_id", "is_valid_timestamp")
@@ -212,7 +208,7 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
 
         self.msg.delete.assert_called_once_with()
         self.msg.channel.send.assert_called_once_with(
-            DELETION_MESSAGE_TEMPLATE.format(mention=self.msg.author.mention)
+            token_remover.DELETION_MESSAGE_TEMPLATE.format(mention=self.msg.author.mention)
         )
 
     @autospec("bot.cogs.token_remover", "LOG_MESSAGE")
@@ -251,14 +247,14 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         logger.debug.assert_called_with(log_msg)
         self.bot.stats.incr.assert_called_once_with("tokens.removed_tokens")
 
-        mod_log.ignore.assert_called_once_with(Event.message_delete, self.msg.id)
+        mod_log.ignore.assert_called_once_with(constants.Event.message_delete, self.msg.id)
         mod_log.send_log_message.assert_called_once_with(
-            icon_url=Icons.token_removed,
-            colour=Colour(Colours.soft_red),
+            icon_url=constants.Icons.token_removed,
+            colour=Colour(constants.Colours.soft_red),
             title="Token removed!",
             text=log_msg,
             thumbnail=self.msg.author.avatar_url_as.return_value,
-            channel_id=Channels.mod_alerts
+            channel_id=constants.Channels.mod_alerts
         )
 
 
@@ -269,7 +265,7 @@ class TokenRemoverExtensionTests(unittest.TestCase):
     def test_extension_setup(self, cog):
         """The TokenRemover cog should be added."""
         bot = MockBot()
-        setup_cog(bot)
+        token_remover.setup(bot)
 
         cog.assert_called_once_with(bot)
         bot.add_cog.assert_called_once()
