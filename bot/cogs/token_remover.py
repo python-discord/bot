@@ -16,6 +16,10 @@ from bot.constants import Channels, Colours, Event, Icons
 
 log = logging.getLogger(__name__)
 
+LOG_MESSAGE = (
+    "Censored a seemingly valid token sent by {author} (`{author_id}`) in {channel},"
+    "token was `{user_id}.{timestamp}.{hmac}`"
+)
 DELETION_MESSAGE_TEMPLATE = (
     "Hey {mention}! I noticed you posted a seemingly valid Discord API "
     "token in your message and have removed your message. "
@@ -97,10 +101,13 @@ class TokenRemover(Cog):
     def format_log_message(msg: Message, found_token: str) -> str:
         """Return the log message to send for `found_token` being censored in `msg`."""
         user_id, creation_timestamp, hmac = found_token.split('.')
-        return (
-            "Censored a seemingly valid token sent by "
-            f"{msg.author} (`{msg.author.id}`) in {msg.channel.mention}, token was "
-            f"`{user_id}.{creation_timestamp}.{'x' * len(hmac)}`"
+        return LOG_MESSAGE.format(
+            author=msg.author,
+            author_id=msg.author.id,
+            channel=msg.channel.mention,
+            user_id=user_id,
+            timestamp=creation_timestamp,
+            hmac='x' * len(hmac),
         )
 
     @classmethod
