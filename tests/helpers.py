@@ -4,7 +4,7 @@ import collections
 import itertools
 import logging
 import unittest.mock
-from typing import Iterable, Optional
+from typing import Callable, Iterable, Optional
 
 import discord
 from discord.ext.commands import Context
@@ -23,7 +23,7 @@ for logger in logging.Logger.manager.loggerDict.values():
     logger.setLevel(logging.CRITICAL)
 
 
-def autospec(target, *attributes: str, **kwargs) -> unittest.mock._patch:
+def autospec(target, *attributes: str, **kwargs) -> Callable:
     """Patch multiple `attributes` of a `target` with autospecced mocks and `spec_set` as True."""
     # Caller's kwargs should take priority and overwrite the defaults.
     kwargs = {'spec_set': True, 'autospec': True, **kwargs}
