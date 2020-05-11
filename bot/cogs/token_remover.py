@@ -121,6 +121,8 @@ class TokenRemover(Cog):
         if cls.is_valid_user_id(user_id) and cls.is_valid_timestamp(creation_timestamp):
             return True
 
+        return False
+
     @staticmethod
     def is_valid_user_id(b64_content: str) -> bool:
         """
