@@ -218,6 +218,22 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
             DELETION_MESSAGE_TEMPLATE.format(mention=self.msg.author.mention)
         )
 
+    @autospec("bot.cogs.token_remover", "LOG_MESSAGE")
+    async def test_format_log_message(self, log_message):
+        """Should correctly format the log message with info from the message and token."""
+        log_message.format.return_value = "Howdy"
+        return_value = TokenRemover.format_log_message(self.msg, "MTIz.DN9R_A.xyz")
+
+        self.assertEqual(return_value, log_message.format.return_value)
+        log_message.format.assert_called_once_with(
+            author=self.msg.author,
+            author_id=self.msg.author.id,
+            channel=self.msg.channel.mention,
+            user_id="MTIz",
+            timestamp="DN9R_A",
+            hmac="xxx",
+        )
+
     def test_censors_valid_tokens(self):
         """Valid tokens are censored."""
         cases = (
