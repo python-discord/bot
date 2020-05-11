@@ -174,13 +174,30 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         valid_user.assert_not_called()
         valid_time.assert_not_called()
 
-    def test_ignores_messages_with_invalid_tokens(self):
-        """Messages with values that are invalid tokens are ignored."""
-        for content in ('foo.bar.baz', 'x.y.'):
-            with self.subTest(content=content):
-                self.msg.content = content
-                coroutine = self.cog.is_maybe_token(self.msg)
-                self.assertIsNone(asyncio.run(coroutine))
+    @autospec(TokenRemover, "is_valid_user_id", "is_valid_timestamp")
+    def test_is_maybe_token(self, valid_user, valid_time):
+        """Should return True if the user ID and timestamp are valid or return False otherwise."""
+        cog = TokenRemover(self.bot)
+        subtests = (
+            (False, True, False),
+            (True, False, False),
+            (True, True, True),
+        )
+
+        for user_return, time_return, expected in subtests:
+            valid_user.reset_mock()
+            valid_time.reset_mock()
+
+            with self.subTest(user_return=user_return, time_return=time_return, expected=expected):
+                valid_user.return_value = user_return
+                valid_time.return_value = time_return
+
+                actual = cog.is_maybe_token("x.y.z")
+                self.assertIs(actual, expected)
+
+                valid_user.assert_called_once_with("x")
+                if user_return:
+                    valid_time.assert_called_once_with("y")
 
     def test_censors_valid_tokens(self):
         """Valid tokens are censored."""
