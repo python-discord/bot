@@ -240,22 +240,17 @@ class Infractions(InfractionScheduler, commands.Cog):
         active_infraction = await utils.get_active_infraction(ctx, user, "ban", is_temporary)
 
         if active_infraction:
-            log.trace("Active infractions found.")
             if is_temporary:
-                log.trace("Active ban is a temp ban being called by a temp or a perma being called by a temp. Ignore.")
+                log.trace("Tempban ignored as it cannot overwrite an active ban.")
                 return
 
-            if active_infraction.get('expires_at') is not None:
-                log.trace("Active ban is a temporary and being called by a perma.  Removing temporary.")
-                await self.pardon_infraction(ctx, "ban", user, is_temporary)
-
-            else:
-                log.trace("Active ban is a perma ban and being called by a perma.  Send bounce back message.")
-                await ctx.send(
-                    f":x: According to my records, this user is already permanently banned. "
-                    f"See infraction **#{active_infraction['id']}**."
-                )
+            if active_infraction.get('expires_at') is None:
+                log.trace("Permaban already exists, notify.")
+                await ctx.send(f":x: User is already permanently banned (#{active_infraction['id']}).")
                 return
+
+            log.trace("Old tempban is being replaced by new permaban.")
+            await self.pardon_infraction(ctx, "ban", user, is_temporary)
 
         infraction = await utils.post_infraction(ctx, user, "ban", reason, active=True, **kwargs)
         if infraction is None:
