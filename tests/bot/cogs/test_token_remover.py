@@ -24,24 +24,31 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         self.msg.author.__str__ = MagicMock(return_value=self.msg.author.name)
         self.msg.author.avatar_url_as.return_value = "picture-lemon.png"
 
-    def test_is_valid_user_id_is_true_for_numeric_content(self):
-        """A string decoding to numeric characters is a valid user ID."""
-        # MTIz = base64(123)
-        self.assertTrue(TokenRemover.is_valid_user_id('MTIz'))
+    def test_is_valid_user_id(self):
+        """Should correctly discern valid user IDs and ignore non-numeric and non-ASCII IDs."""
+        subtests = (
+            ("MTIz", True),  # base64(123)
+            ("YWJj", False),  # base64(abc)
+            ("λδµ", False),
+        )
 
-    def test_is_valid_user_id_is_false_for_alphabetic_content(self):
-        """A string decoding to alphabetic characters is not a valid user ID."""
-        # YWJj = base64(abc)
-        self.assertFalse(TokenRemover.is_valid_user_id('YWJj'))
+        for user_id, is_valid in subtests:
+            with self.subTest(user_id=user_id, is_valid=is_valid):
+                result = TokenRemover.is_valid_user_id(user_id)
+                self.assertIs(result, is_valid)
 
-    def test_is_valid_timestamp_is_true_for_valid_timestamps(self):
-        """A string decoding to a valid timestamp should be recognized as such."""
-        self.assertTrue(TokenRemover.is_valid_timestamp('DN9r_A'))
+    def test_is_valid_timestamp(self):
+        """Should correctly discern valid timestamps."""
+        subtests = (
+            ("DN9r_A", True),
+            ("MTIz", False),  # base64(123)
+            ("λδµ", False),
+        )
 
-    def test_is_valid_timestamp_is_false_for_invalid_values(self):
-        """A string not decoding to a valid timestamp should not be recognized as such."""
-        # MTIz = base64(123)
-        self.assertFalse(TokenRemover.is_valid_timestamp('MTIz'))
+        for timestamp, is_valid in subtests:
+            with self.subTest(timestamp=timestamp, is_valid=is_valid):
+                result = TokenRemover.is_valid_timestamp(timestamp)
+                self.assertIs(result, is_valid)
 
     def test_mod_log_property(self):
         """The `mod_log` property should ask the bot to return the `ModLog` cog."""
