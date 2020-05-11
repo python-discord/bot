@@ -262,11 +262,15 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         )
 
 
-class TokenRemoverSetupTests(unittest.TestCase):
-    """Tests setup of the `TokenRemover` cog."""
+class TokenRemoverExtensionTests(unittest.TestCase):
+    """Tests for the token_remover extension."""
 
-    def test_setup(self):
-        """Setup of the extension should call add_cog."""
+    @autospec("bot.cogs.token_remover", "TokenRemover")
+    def test_extension_setup(self, cog):
+        """The TokenRemover cog should be added."""
         bot = MockBot()
         setup_cog(bot)
+
+        cog.assert_called_once_with(bot)
         bot.add_cog.assert_called_once()
+        self.assertTrue(isinstance(bot.add_cog.call_args.args[0], TokenRemover))
