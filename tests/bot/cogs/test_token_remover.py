@@ -209,6 +209,15 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
                 if user_return:
                     valid_time.assert_called_once_with("y")
 
+    async def test_delete_message(self):
+        """The message should be deleted, and a message should be sent to the same channel."""
+        await TokenRemover.delete_message(self.msg)
+
+        self.msg.delete.assert_called_once_with()
+        self.msg.channel.send.assert_called_once_with(
+            DELETION_MESSAGE_TEMPLATE.format(mention=self.msg.author.mention)
+        )
+
     def test_censors_valid_tokens(self):
         """Valid tokens are censored."""
         cases = (
