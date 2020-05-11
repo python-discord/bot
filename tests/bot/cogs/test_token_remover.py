@@ -26,14 +26,10 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         self.bot.get_cog.return_value.send_log_message = AsyncMock()
         self.cog = TokenRemover(bot=self.bot)
 
-        self.msg = MockMessage(id=555, content='')
-        self.msg.author.__str__ = MagicMock()
-        self.msg.author.__str__.return_value = 'lemon'
-        self.msg.author.bot = False
-        self.msg.author.avatar_url_as.return_value = 'picture-lemon.png'
-        self.msg.author.id = 42
-        self.msg.author.mention = '@lemon'
+        self.msg = MockMessage(id=555, content="hello world")
         self.msg.channel.mention = "#lemonade-stand"
+        self.msg.author.__str__ = MagicMock(return_value=self.msg.author.name)
+        self.msg.author.avatar_url_as.return_value = "picture-lemon.png"
 
     def test_is_valid_user_id_is_true_for_numeric_content(self):
         """A string decoding to numeric characters is a valid user ID."""
@@ -105,7 +101,6 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
     def test_find_token_no_matches_returns_none(self, token_re, is_maybe_token):
         """None should be returned if the regex matches no tokens in a message."""
         token_re.findall.return_value = ()
-        self.msg.content = "foobar"
 
         return_value = TokenRemover.find_token_in_message(self.msg)
 
@@ -122,7 +117,6 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         side_effects = [False] * len(matches)
         side_effects[true_index] = True
 
-        self.msg.content = "foobar"
         token_re.findall.return_value = matches
         is_maybe_token.side_effect = side_effects
 
