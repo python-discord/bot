@@ -1,11 +1,10 @@
-import asyncio
-import logging
 import unittest
 from unittest import mock
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 from discord import Colour
 
+from bot.cogs.moderation import ModLog
 from bot.cogs.token_remover import (
     DELETION_MESSAGE_TEMPLATE,
     TOKEN_RE,
@@ -22,8 +21,6 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """Adds the cog, a bot, and a message to the instance for usage in tests."""
         self.bot = MockBot()
-        self.bot.get_cog.return_value = MagicMock()
-        self.bot.get_cog.return_value.send_log_message = AsyncMock()
         self.cog = TokenRemover(bot=self.bot)
 
         self.msg = MockMessage(id=555, content="hello world")
@@ -234,45 +231,35 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
             hmac="xxx",
         )
 
-    def test_censors_valid_tokens(self):
-        """Valid tokens are censored."""
-        cases = (
-            # (content, censored_token)
-            ('MTIz.DN9R_A.xyz', 'MTIz.DN9R_A.xxx'),
+    @mock.patch.object(TokenRemover, "mod_log", new_callable=mock.PropertyMock)
+    @autospec("bot.cogs.token_remover", "log")
+    @autospec(TokenRemover, "delete_message", "format_log_message")
+    async def test_take_action(self, delete_message, format_log_message, logger, mod_log_property):
+        """Should delete the message and send a mod log."""
+        cog = TokenRemover(self.bot)
+        mod_log = mock.create_autospec(ModLog, spec_set=True, instance=True)
+        token = "MTIz.DN9R_A.xyz"
+        log_msg = "testing123"
+
+        mod_log_property.return_value = mod_log
+        format_log_message.return_value = log_msg
+
+        await cog.take_action(self.msg, token)
+
+        delete_message.assert_awaited_once_with(self.msg)
+        format_log_message.assert_called_once_with(self.msg, token)
+        logger.debug.assert_called_with(log_msg)
+        self.bot.stats.incr.assert_called_once_with("tokens.removed_tokens")
+
+        mod_log.ignore.assert_called_once_with(Event.message_delete, self.msg.id)
+        mod_log.send_log_message.assert_called_once_with(
+            icon_url=Icons.token_removed,
+            colour=Colour(Colours.soft_red),
+            title="Token removed!",
+            text=log_msg,
+            thumbnail=self.msg.author.avatar_url_as.return_value,
+            channel_id=Channels.mod_alerts
         )
-
-        for content, censored_token in cases:
-            with self.subTest(content=content, censored_token=censored_token):
-                self.msg.content = content
-                coroutine = self.cog.on_message(self.msg)
-                with self.assertLogs(logger='bot.cogs.token_remover', level=logging.DEBUG) as cm:
-                    self.assertIsNone(asyncio.run(coroutine))  # no return value
-
-                [line] = cm.output
-                log_message = (
-                    "Censored a seemingly valid token sent by "
-                    "lemon (`42`) in #lemonade-stand, "
-                    f"token was `{censored_token}`"
-                )
-                self.assertIn(log_message, line)
-
-                self.msg.delete.assert_called_once_with()
-                self.msg.channel.send.assert_called_once_with(
-                    DELETION_MESSAGE_TEMPLATE.format(mention='@lemon')
-                )
-                self.bot.get_cog.assert_called_with('ModLog')
-                self.msg.author.avatar_url_as.assert_called_once_with(static_format='png')
-
-                mod_log = self.bot.get_cog.return_value
-                mod_log.ignore.assert_called_once_with(Event.message_delete, self.msg.id)
-                mod_log.send_log_message.assert_called_once_with(
-                    icon_url=Icons.token_removed,
-                    colour=Colour(Colours.soft_red),
-                    title="Token removed!",
-                    text=log_message,
-                    thumbnail='picture-lemon.png',
-                    channel_id=Channels.mod_alerts
-                )
 
 
 class TokenRemoverSetupTests(unittest.TestCase):
