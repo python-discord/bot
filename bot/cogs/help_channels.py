@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 
 import discord
+import discord.abc
 from discord.ext import commands
 
 from bot import constants
@@ -21,6 +22,7 @@ log = logging.getLogger(__name__)
 
 ASKING_GUIDE_URL = "https://pythondiscord.com/pages/asking-good-questions/"
 MAX_CHANNELS_PER_CATEGORY = 50
+EXCLUDED_CHANNELS = (constants.Channels.how_to_get_help,)
 
 AVAILABLE_TOPIC = """
 This channel is available. Feel free to ask a question in order to claim this channel!
@@ -39,8 +41,9 @@ channels in the Help: Available category.
 AVAILABLE_MSG = f"""
 This help channel is now **available**, which means that you can claim it by simply typing your \
 question into it. Once claimed, the channel will move into the **Python Help: Occupied** category, \
-and will be yours until it has been inactive for {constants.HelpChannels.idle_minutes} minutes. When \
-that happens, it will be set to **dormant** and moved into the **Help: Dormant** category.
+and will be yours until it has been inactive for {constants.HelpChannels.idle_minutes} minutes or \
+is closed manually with `!close`. When that happens, it will be set to **dormant** and moved into \
+the **Help: Dormant** category.
 
 You may claim a new channel once every {constants.HelpChannels.claim_minutes} minutes. If you \
 currently cannot send a message in this channel, it means you are on cooldown and need to wait.
@@ -62,8 +65,11 @@ through our guide for [asking a good question]({ASKING_GUIDE_URL}).
 """
 
 AVAILABLE_EMOJI = "✅"
-IN_USE_EMOJI = "⌛"
+IN_USE_ANSWERED_EMOJI = "⌛"
+IN_USE_UNANSWERED_EMOJI = "⏳"
 NAME_SEPARATOR = "｜"
+
+CoroutineFunc = t.Callable[..., t.Coroutine]
 
 
 class TaskData(t.NamedTuple):
@@ -88,12 +94,15 @@ class HelpChannels(Scheduler, commands.Cog):
         * If there are no more dormant channels, the bot will automatically create a new one
         * If there are no dormant channels to move, helpers will be notified (see `notify()`)
     * When a channel becomes available, the dormant embed will be edited to show `AVAILABLE_MSG`
+    * User can only claim a channel at an interval `constants.HelpChannels.claim_minutes`
+        * To keep track of cooldowns, user which claimed a channel will have a temporary role
 
     In Use Category
 
     * Contains all channels which are occupied by someone needing help
     * Channel moves to dormant category after `constants.HelpChannels.idle_minutes` of being idle
     * Command can prematurely mark a channel as dormant
+        * Channel claimant is allowed to use the command
         * Allowed roles for the command are configurable with `constants.HelpChannels.cmd_whitelist`
     * When a channel becomes dormant, an embed with `DORMANT_MSG` will be sent
 
@@ -132,7 +141,14 @@ class HelpChannels(Scheduler, commands.Cog):
         self.init_task = self.bot.loop.create_task(self.init_cog())
 
         # Stats
-        self.claim_times = {}
+
+        # This dictionary maps a help channel to the time it was claimed
+        self.claim_times: t.Dict[int, datetime] = {}
+
+        # This dictionary maps a help channel to whether it has had any
+        # activity other than the original claimant. True being no other
+        # activity and False being other activity.
+        self.unanswered: t.Dict[int, bool] = {}
 
     def cog_unload(self) -> None:
         """Cancel the init task and scheduled tasks when the cog unloads."""
@@ -209,8 +225,8 @@ class HelpChannels(Scheduler, commands.Cog):
 
         return role_check
 
-    @commands.command(name="dormant", aliases=["close"], enabled=False)
-    async def dormant_command(self, ctx: commands.Context) -> None:
+    @commands.command(name="close", aliases=["dormant"], enabled=False)
+    async def close_command(self, ctx: commands.Context) -> None:
         """
         Make the current in-use help channel dormant.
 
@@ -218,14 +234,15 @@ class HelpChannels(Scheduler, commands.Cog):
         delete the message that invoked this,
         and reset the send permissions cooldown for the user who started the session.
         """
-        log.trace("dormant command invoked; checking if the channel is in-use.")
+        log.trace("close command invoked; checking if the channel is in-use.")
         if ctx.channel.category == self.in_use_category:
             if await self.dormant_check(ctx):
                 with suppress(KeyError):
                     del self.help_channel_claimants[ctx.channel]
 
-                with suppress(discord.errors.HTTPException, discord.errors.NotFound):
-                    await self.reset_claimant_send_permission(ctx.channel)
+                await self.remove_cooldown_role(ctx.author)
+                # Ignore missing task when cooldown has passed but the channel still isn't dormant.
+                self.cancel_task(ctx.author.id, ignore_missing=True)
 
                 await self.move_to_dormant(ctx.channel, "command")
                 self.cancel_task(ctx.channel.id)
@@ -263,19 +280,23 @@ class HelpChannels(Scheduler, commands.Cog):
             log.trace(f"The clean name for `{channel}` is `{name}`")
         except ValueError:
             # If, for some reason, the channel name does not contain "help-" fall back gracefully
-            log.info(f"Can't get clean name as `{channel}` does not follow the `{prefix}` naming convention.")
+            log.info(f"Can't get clean name because `{channel}` isn't prefixed by `{prefix}`.")
             name = channel.name
 
         return name
 
     @staticmethod
-    def get_category_channels(category: discord.CategoryChannel) -> t.Iterable[discord.TextChannel]:
+    def is_excluded_channel(channel: discord.abc.GuildChannel) -> bool:
+        """Check if a channel should be excluded from the help channel system."""
+        return not isinstance(channel, discord.TextChannel) or channel.id in EXCLUDED_CHANNELS
+
+    def get_category_channels(self, category: discord.CategoryChannel) -> t.Iterable[discord.TextChannel]:
         """Yield the text channels of the `category` in an unsorted manner."""
         log.trace(f"Getting text channels in the category '{category}' ({category.id}).")
 
         # This is faster than using category.channels because the latter sorts them.
-        for channel in category.guild.channels:
-            if channel.category_id == category.id and isinstance(channel, discord.TextChannel):
+        for channel in self.bot.get_guild(constants.Guild.id).channels:
+            if channel.category_id == category.id and not self.is_excluded_channel(channel):
                 yield channel
 
     @staticmethod
@@ -393,7 +414,7 @@ class HelpChannels(Scheduler, commands.Cog):
         # The ready event wasn't used because channels could change categories between the time
         # the command is invoked and the cog is ready (e.g. if move_idle_channel wasn't called yet).
         # This may confuse users. So would potentially long delays for the cog to become ready.
-        self.dormant_command.enabled = True
+        self.close_command.enabled = True
 
         await self.init_available()
 
@@ -411,6 +432,11 @@ class HelpChannels(Scheduler, commands.Cog):
         self.bot.stats.gauge("help.total.in_use", total_in_use)
         self.bot.stats.gauge("help.total.available", total_available)
         self.bot.stats.gauge("help.total.dormant", total_dormant)
+
+    @staticmethod
+    def is_claimant(member: discord.Member) -> bool:
+        """Return True if `member` has the 'Help Cooldown' role."""
+        return any(constants.Roles.help_cooldown == role.id for role in member.roles)
 
     def is_dormant_message(self, message: t.Optional[discord.Message]) -> bool:
         """Return True if the contents of the `message` match `DORMANT_MSG`."""
@@ -459,6 +485,45 @@ class HelpChannels(Scheduler, commands.Cog):
 
             self.schedule_task(channel.id, data)
 
+    async def move_to_bottom_position(self, channel: discord.TextChannel, category_id: int, **options) -> None:
+        """
+        Move the `channel` to the bottom position of `category` and edit channel attributes.
+
+        To ensure "stable sorting", we use the `bulk_channel_update` endpoint and provide the current
+        positions of the other channels in the category as-is. This should make sure that the channel
+        really ends up at the bottom of the category.
+
+        If `options` are provided, the channel will be edited after the move is completed. This is the
+        same order of operations that `discord.TextChannel.edit` uses. For information on available
+        options, see the documention on `discord.TextChannel.edit`. While possible, position-related
+        options should be avoided, as it may interfere with the category move we perform.
+        """
+        # Get a fresh copy of the category from the bot to avoid the cache mismatch issue we had.
+        category = await self.try_get_channel(category_id)
+
+        payload = [{"id": c.id, "position": c.position} for c in category.channels]
+
+        # Calculate the bottom position based on the current highest position in the category. If the
+        # category is currently empty, we simply use the current position of the channel to avoid making
+        # unnecessary changes to positions in the guild.
+        bottom_position = payload[-1]["position"] + 1 if payload else channel.position
+
+        payload.append(
+            {
+                "id": channel.id,
+                "position": bottom_position,
+                "parent_id": category.id,
+                "lock_permissions": True,
+            }
+        )
+
+        # We use d.py's method to ensure our request is processed by d.py's rate limit manager
+        await self.bot.http.bulk_channel_update(category.guild.id, payload)
+
+        # Now that the channel is moved, we can edit the other attributes
+        if options:
+            await channel.edit(**options)
+
     async def move_to_available(self) -> None:
         """Make a channel available."""
         log.trace("Making a channel available.")
@@ -470,18 +535,13 @@ class HelpChannels(Scheduler, commands.Cog):
 
         log.trace(f"Moving #{channel} ({channel.id}) to the Available category.")
 
-        await channel.edit(
+        await self.move_to_bottom_position(
+            channel=channel,
+            category_id=constants.Categories.help_available,
             name=f"{AVAILABLE_EMOJI}{NAME_SEPARATOR}{self.get_clean_channel_name(channel)}",
-            category=self.available_category,
-            sync_permissions=True,
             topic=AVAILABLE_TOPIC,
         )
 
-        log.trace(
-            f"Ensuring that all channels in `{self.available_category}` have "
-            f"synchronized permissions after moving `{channel}` into it."
-        )
-        await self.ensure_permissions_synchronization(self.available_category)
         self.report_stats()
 
     async def move_to_dormant(self, channel: discord.TextChannel, caller: str) -> None:
@@ -492,10 +552,10 @@ class HelpChannels(Scheduler, commands.Cog):
         """
         log.info(f"Moving #{channel} ({channel.id}) to the Dormant category.")
 
-        await channel.edit(
+        await self.move_to_bottom_position(
+            channel=channel,
+            category_id=constants.Categories.help_dormant,
             name=self.get_clean_channel_name(channel),
-            category=self.dormant_category,
-            sync_permissions=True,
             topic=DORMANT_TOPIC,
         )
 
@@ -505,6 +565,12 @@ class HelpChannels(Scheduler, commands.Cog):
             claimed = self.claim_times[channel.id]
             in_use_time = datetime.now() - claimed
             self.bot.stats.timing("help.in_use_time", in_use_time)
+
+        if channel.id in self.unanswered:
+            if self.unanswered[channel.id]:
+                self.bot.stats.incr("help.sessions.unanswered")
+            else:
+                self.bot.stats.incr("help.sessions.answered")
 
         log.trace(f"Position of #{channel} ({channel.id}) is actually {channel.position}.")
 
@@ -520,10 +586,10 @@ class HelpChannels(Scheduler, commands.Cog):
         """Make a channel in-use and schedule it to be made dormant."""
         log.info(f"Moving #{channel} ({channel.id}) to the In Use category.")
 
-        await channel.edit(
-            name=f"{IN_USE_EMOJI}{NAME_SEPARATOR}{self.get_clean_channel_name(channel)}",
-            category=self.in_use_category,
-            sync_permissions=True,
+        await self.move_to_bottom_position(
+            channel=channel,
+            category_id=constants.Categories.help_in_use,
+            name=f"{IN_USE_UNANSWERED_EMOJI}{NAME_SEPARATOR}{self.get_clean_channel_name(channel)}",
             topic=IN_USE_TOPIC,
         )
 
@@ -580,6 +646,28 @@ class HelpChannels(Scheduler, commands.Cog):
             # Handle it here cause this feature isn't critical for the functionality of the system.
             log.exception("Failed to send notification about lack of dormant channels!")
 
+    async def check_for_answer(self, message: discord.Message) -> None:
+        """Checks for whether new content in a help channel comes from non-claimants."""
+        channel = message.channel
+
+        # Confirm the channel is an in use help channel
+        if self.is_in_category(channel, constants.Categories.help_in_use):
+            log.trace(f"Checking if #{channel} ({channel.id}) has been answered.")
+
+            # Check if there is an entry in unanswered (does not persist across restarts)
+            if channel.id in self.unanswered:
+                claimant_id = self.help_channel_claimants[channel].id
+
+                # Check the message did not come from the claimant
+                if claimant_id != message.author.id:
+                    # Mark the channel as answered
+                    self.unanswered[channel.id] = False
+
+                    # Change the emoji in the channel name to signify activity
+                    log.trace(f"#{channel} ({channel.id}) has been answered; changing its emoji")
+                    name = self.get_clean_channel_name(channel)
+                    await channel.edit(name=f"{IN_USE_ANSWERED_EMOJI}{NAME_SEPARATOR}{name}")
+
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
         """Move an available channel to the In Use category and replace it with a dormant one."""
@@ -587,8 +675,11 @@ class HelpChannels(Scheduler, commands.Cog):
             return  # Ignore messages sent by bots.
 
         channel = message.channel
-        if not self.is_in_category(channel, constants.Categories.help_available):
-            return  # Ignore messages outside the Available category.
+
+        await self.check_for_answer(message)
+
+        if not self.is_in_category(channel, constants.Categories.help_available) or self.is_excluded_channel(channel):
+            return  # Ignore messages outside the Available category or in excluded channels.
 
         log.trace("Waiting for the cog to be ready before processing messages.")
         await self.ready.wait()
@@ -604,6 +695,7 @@ class HelpChannels(Scheduler, commands.Cog):
                 )
                 return
 
+            log.info(f"Channel #{channel} was claimed by `{message.author.id}`.")
             await self.move_to_in_use(channel)
             await self.revoke_send_permissions(message.author)
             # Add user with channel for dormant check.
@@ -612,6 +704,7 @@ class HelpChannels(Scheduler, commands.Cog):
             self.bot.stats.incr("help.claimed")
 
             self.claim_times[channel.id] = datetime.now()
+            self.unanswered[channel.id] = True
 
             log.trace(f"Releasing on_message lock for {message.id}.")
 
@@ -620,67 +713,49 @@ class HelpChannels(Scheduler, commands.Cog):
         # be put in the queue.
         await self.move_to_available()
 
-    @staticmethod
-    async def ensure_permissions_synchronization(category: discord.CategoryChannel) -> None:
-        """
-        Ensure that all channels in the `category` have their permissions synchronized.
-
-        This method mitigates an issue we have yet to find the cause for: Every so often, a channel in the
-        `Help: Available` category gets in a state in which it will no longer synchronizes its permissions
-        with the category. To prevent that, we iterate over the channels in the category and edit the channels
-        that are observed to be in such a state. If no "out of sync" channels are observed, this method will
-        not make API calls and should be fairly inexpensive to run.
-        """
-        for channel in category.channels:
-            if not channel.permissions_synced:
-                log.info(f"The permissions of channel `{channel}` were out of sync with category `{category}`.")
-                await channel.edit(sync_permissions=True)
-
-    async def update_category_permissions(
-        self, category: discord.CategoryChannel, member: discord.Member, **permissions
-    ) -> None:
-        """
-        Update the permissions of the given `member` for the given `category` with `permissions` passed.
-
-        After updating the permissions for the member in the category, this helper function will call the
-        `ensure_permissions_synchronization` method to ensure that all channels are still synchronizing their
-        permissions with the category. It's currently unknown why some channels get "out of sync", but this
-        hopefully mitigates the issue.
-        """
-        log.trace(f"Updating permissions for `{member}` in `{category}` with {permissions}.")
-        await category.set_permissions(member, **permissions)
-
-        log.trace(f"Ensuring that all channels in `{category}` are synchronized after permissions update.")
-        await self.ensure_permissions_synchronization(category)
-
     async def reset_send_permissions(self) -> None:
-        """Reset send permissions for members with it set to False in the Available category."""
+        """Reset send permissions in the Available category for claimants."""
         log.trace("Resetting send permissions in the Available category.")
+        guild = self.bot.get_guild(constants.Guild.id)
 
-        for member, overwrite in self.available_category.overwrites.items():
-            if isinstance(member, discord.Member) and overwrite.send_messages is False:
-                log.trace(f"Resetting send permissions for {member} ({member.id}).")
+        # TODO: replace with a persistent cache cause checking every member is quite slow
+        for member in guild.members:
+            if self.is_claimant(member):
+                await self.remove_cooldown_role(member)
 
-                # We don't use the permissions helper function here as we may have to reset multiple overwrites
-                # and we don't want to enforce the permissions synchronization in each iteration.
-                await self.available_category.set_permissions(member, overwrite=None)
+    async def add_cooldown_role(self, member: discord.Member) -> None:
+        """Add the help cooldown role to `member`."""
+        log.trace(f"Adding cooldown role for {member} ({member.id}).")
+        await self._change_cooldown_role(member, member.add_roles)
 
-        log.trace(f"Ensuring channels in `Help: Available` are synchronized after permissions reset.")
-        await self.ensure_permissions_synchronization(self.available_category)
+    async def remove_cooldown_role(self, member: discord.Member) -> None:
+        """Remove the help cooldown role from `member`."""
+        log.trace(f"Removing cooldown role for {member} ({member.id}).")
+        await self._change_cooldown_role(member, member.remove_roles)
 
-    async def reset_claimant_send_permission(self, channel: discord.TextChannel) -> None:
-        """Reset send permissions in the Available category for the help `channel` claimant."""
-        log.trace(f"Attempting to find claimant for #{channel.name} ({channel.id}).")
-        try:
-            member = self.help_channel_claimants[channel]
-        except KeyError:
-            log.trace(f"Channel #{channel.name} ({channel.id}) not in claimant cache, permissions unchanged.")
+    async def _change_cooldown_role(self, member: discord.Member, coro_func: CoroutineFunc) -> None:
+        """
+        Change `member`'s cooldown role via awaiting `coro_func` and handle errors.
+
+        `coro_func` is intended to be `discord.Member.add_roles` or `discord.Member.remove_roles`.
+        """
+        guild = self.bot.get_guild(constants.Guild.id)
+        role = guild.get_role(constants.Roles.help_cooldown)
+        if role is None:
+            log.warning(f"Help cooldown role ({constants.Roles.help_cooldown}) could not be found!")
             return
 
-        log.trace(f"Resetting send permissions for {member} ({member.id}).")
-        await self.update_category_permissions(self.available_category, member, overwrite=None)
-        # Ignore missing task when claim cooldown has passed but the channel still isn't dormant.
-        self.cancel_task(member.id, ignore_missing=True)
+        try:
+            await coro_func(role)
+        except discord.NotFound:
+            log.debug(f"Failed to change role for {member} ({member.id}): member not found")
+        except discord.Forbidden:
+            log.debug(
+                f"Forbidden to change role for {member} ({member.id}); "
+                f"possibly due to role hierarchy"
+            )
+        except discord.HTTPException as e:
+            log.error(f"Failed to change role for {member} ({member.id}): {e.status} {e.code}")
 
     async def revoke_send_permissions(self, member: discord.Member) -> None:
         """
@@ -693,14 +768,14 @@ class HelpChannels(Scheduler, commands.Cog):
             f"Revoking {member}'s ({member.id}) send message permissions in the Available category."
         )
 
-        await self.update_category_permissions(self.available_category, member, send_messages=False)
+        await self.add_cooldown_role(member)
 
         # Cancel the existing task, if any.
         # Would mean the user somehow bypassed the lack of permissions (e.g. user is guild owner).
         self.cancel_task(member.id, ignore_missing=True)
 
         timeout = constants.HelpChannels.claim_minutes * 60
-        callback = self.update_category_permissions(self.available_category, member, overwrite=None)
+        callback = self.remove_cooldown_role(member)
 
         log.trace(f"Scheduling {member}'s ({member.id}) send message permissions to be reinstated.")
         self.schedule_task(member.id, TaskData(timeout, callback))

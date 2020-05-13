@@ -383,6 +383,7 @@ class Channels(metaclass=YAMLGetter):
     dev_log: int
     esoteric: int
     helpers: int
+    how_to_get_help: int
     message_log: int
     meta: int
     mod_alerts: int
@@ -421,6 +422,7 @@ class Roles(metaclass=YAMLGetter):
     announcements: int
     contributors: int
     core_developers: int
+    help_cooldown: int
     helpers: int
     jammers: int
     moderators: int
@@ -546,13 +548,6 @@ class HelpChannels(metaclass=YAMLGetter):
     notify_channel: int
     notify_minutes: int
     notify_roles: List[int]
-
-
-class Mention(metaclass=YAMLGetter):
-    section = 'mention'
-
-    message_timeout: int
-    reset_delay: int
 
 
 class RedirectOutput(metaclass=YAMLGetter):
