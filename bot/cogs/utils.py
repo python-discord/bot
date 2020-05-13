@@ -241,7 +241,7 @@ class Utils(Cog):
     async def refresh_peps_urls(self) -> None:
         """Refresh PEP URLs listing in every 3 hours."""
         # Wait until HTTP client is available
-        await self.bot.wait_until_guild_available()
+        await self.bot.wait_until_ready()
 
         async with self.bot.http_session.get(self.peps_listing_api_url) as resp:
             listing = await resp.json()
