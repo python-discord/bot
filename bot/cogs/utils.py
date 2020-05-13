@@ -242,14 +242,17 @@ class Utils(Cog):
         """Refresh PEP URLs listing in every 3 hours."""
         # Wait until HTTP client is available
         await self.bot.wait_until_ready()
+        log.trace("Started refreshing PEP URLs.")
 
         async with self.bot.http_session.get(self.peps_listing_api_url) as resp:
             listing = await resp.json()
+        log.trace("Got PEP URLs listing from GitHub API")
 
         for file in listing:
             name = file["name"]
             if name.startswith("pep-") and (name.endswith(".txt") or name.endswith(".rst")):
                 self.peps[int(name.split(".")[0].split("-")[1])] = file["download_url"]
+        log.info("Successfully refreshed PEP URLs listing.")
 
     @command(name='pep', aliases=('get_pep', 'p'))
     async def pep_command(self, ctx: Context, pep_number: int) -> None:
