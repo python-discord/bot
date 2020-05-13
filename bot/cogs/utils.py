@@ -264,7 +264,8 @@ class Utils(Cog):
             pep_embed = await self.get_pep_embed(pep_number)
         await ctx.send(embed=pep_embed)
 
-    async def get_pep_zero_embed(self) -> Embed:
+    @staticmethod
+    async def get_pep_zero_embed() -> Embed:
         """Send information about PEP 0."""
         pep_embed = Embed(
             title=f"**PEP 0 - Index of Python Enhancement Proposals (PEPs)**",
