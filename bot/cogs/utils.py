@@ -58,33 +58,6 @@ class Utils(Cog):
         self.peps: Dict[int, str] = {}
         self.refresh_peps_urls.start()
 
-    @loop(hours=3)
-    async def refresh_peps_urls(self) -> None:
-        """Refresh PEP URLs listing in every 3 hours."""
-        # Wait until HTTP client is available
-        await self.bot.wait_until_guild_available()
-
-        async with self.bot.http_session.get(self.peps_listing_api_url) as resp:
-            listing = await resp.json()
-
-        for file in listing:
-            name = file["name"]
-            if name.startswith("pep-") and (name.endswith(".txt") or name.endswith(".rst")):
-                self.peps[int(name.split(".")[0].split("-")[1])] = file["download_url"]
-
-    @command(name='pep', aliases=('get_pep', 'p'))
-    async def pep_command(self, ctx: Context, pep_number: int) -> None:
-        """Fetches information about a PEP and sends it to the channel."""
-        # Trigger typing in chat to show users that bot is responding
-        await ctx.trigger_typing()
-
-        # Handle PEP 0 directly because it's not in .rst or .txt so it can't be accessed like other PEPs.
-        if pep_number == 0:
-            pep_embed = await self.get_pep_zero_embed()
-        else:
-            pep_embed = await self.get_pep_embed(pep_number)
-        await ctx.send(embed=pep_embed)
-
     @command()
     @in_channel(Channels.bot_commands, bypass_roles=STAFF_ROLES)
     async def charinfo(self, ctx: Context, *, characters: str) -> None:
@@ -261,6 +234,35 @@ class Utils(Cog):
         message = await ctx.send(embed=embed)
         for reaction in options:
             await message.add_reaction(reaction)
+
+    # PEPs area
+
+    @loop(hours=3)
+    async def refresh_peps_urls(self) -> None:
+        """Refresh PEP URLs listing in every 3 hours."""
+        # Wait until HTTP client is available
+        await self.bot.wait_until_guild_available()
+
+        async with self.bot.http_session.get(self.peps_listing_api_url) as resp:
+            listing = await resp.json()
+
+        for file in listing:
+            name = file["name"]
+            if name.startswith("pep-") and (name.endswith(".txt") or name.endswith(".rst")):
+                self.peps[int(name.split(".")[0].split("-")[1])] = file["download_url"]
+
+    @command(name='pep', aliases=('get_pep', 'p'))
+    async def pep_command(self, ctx: Context, pep_number: int) -> None:
+        """Fetches information about a PEP and sends it to the channel."""
+        # Trigger typing in chat to show users that bot is responding
+        await ctx.trigger_typing()
+
+        # Handle PEP 0 directly because it's not in .rst or .txt so it can't be accessed like other PEPs.
+        if pep_number == 0:
+            pep_embed = await self.get_pep_zero_embed()
+        else:
+            pep_embed = await self.get_pep_embed(pep_number)
+        await ctx.send(embed=pep_embed)
 
     async def get_pep_zero_embed(self) -> Embed:
         """Send information about PEP 0."""
