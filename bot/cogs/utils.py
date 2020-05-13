@@ -250,8 +250,10 @@ class Utils(Cog):
 
         for file in listing:
             name = file["name"]
-            if name.startswith("pep-") and (name.endswith(".txt") or name.endswith(".rst")):
-                self.peps[int(name.split(".")[0].split("-")[1])] = file["download_url"]
+            name: str
+            if name.startswith("pep-") and name.endswith((".rst", ".txt")):
+                pep_number = name.replace("pep-", "").split(".")[0]
+                self.peps[int(pep_number)] = file["download_url"]
         log.info("Successfully refreshed PEP URLs listing.")
 
     @command(name='pep', aliases=('get_pep', 'p'))
