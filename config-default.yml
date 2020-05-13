@@ -263,7 +263,8 @@ filter:
     guild_invite_whitelist:
         - 280033776820813825  # Functional Programming
         - 267624335836053506  # Python Discord
-        - 440186186024222721  # Python Discord: ModLog Emojis
+        - 440186186024222721  # Python Discord: Emojis 1
+        - 578587418123304970  # Python Discord: Emojis 2
         - 273944235143593984  # STEM
         - 348658686962696195  # RLBot
         - 531221516914917387  # Pallets
@@ -280,6 +281,11 @@ filter:
         - 336642139381301249  # discord.py
         - 405403391410438165  # Sentdex
         - 172018499005317120  # The Coding Den
+        - 666560367173828639  # PyWeek
+        - 702724176489873509  # Microsoft Python
+        - 81384788765712384   # Discord API
+        - 613425648685547541  # Discord Developers
+        - 185590609631903755  # Blender Hub
 
     domain_blacklist:
         - pornhub.com
