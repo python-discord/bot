@@ -122,6 +122,7 @@ guild:
     channels:
         announcements:                              354619224620138496
         user_event_announcements:   &USER_EVENT_A   592000283102674944
+        python_news:                &PYNEWS_CHANNEL 704372456592506880
 
         # Development
         dev_contrib:        &DEV_CONTRIB    635950537262759947
@@ -131,6 +132,9 @@ guild:
         # Discussion
         meta:               429409067623251969
         python_discussion:  267624335836053506
+
+        # Python Help: Available
+        how_to_get_help:    704250143020417084
 
         # Logs
         attachment_log:     &ATTACH_LOG     649243850006855680
@@ -201,6 +205,7 @@ guild:
     roles:
         announcements:                          463658397560995840
         contributors:                           295488872404484098
+        help_cooldown:                          699189276025421825
         muted:              &MUTED_ROLE         277914926603829249
         partners:                               323426753857191936
         python_community:   &PY_COMMUNITY_ROLE  458226413825294336
@@ -231,11 +236,12 @@ guild:
         - *HELPERS_ROLE
 
     webhooks:
-        talent_pool:    569145364800602132
-        big_brother:    569133704568373283
-        reddit:         635408384794951680
-        duck_pond:      637821475327311927
-        dev_log:        680501655111729222
+        talent_pool:                    569145364800602132
+        big_brother:                    569133704568373283
+        reddit:                         635408384794951680
+        duck_pond:                      637821475327311927
+        dev_log:                        680501655111729222
+        python_news:    &PYNEWS_WEBHOOK 704381182279942324
 
 
 filter:
@@ -259,7 +265,8 @@ filter:
     guild_invite_whitelist:
         - 280033776820813825  # Functional Programming
         - 267624335836053506  # Python Discord
-        - 440186186024222721  # Python Discord: ModLog Emojis
+        - 440186186024222721  # Python Discord: Emojis 1
+        - 578587418123304970  # Python Discord: Emojis 2
         - 273944235143593984  # STEM
         - 348658686962696195  # RLBot
         - 531221516914917387  # Pallets
@@ -276,6 +283,11 @@ filter:
         - 336642139381301249  # discord.py
         - 405403391410438165  # Sentdex
         - 172018499005317120  # The Coding Den
+        - 666560367173828639  # PyWeek
+        - 702724176489873509  # Microsoft Python
+        - 81384788765712384   # Discord API
+        - 613425648685547541  # Discord Developers
+        - 185590609631903755  # Blender Hub
 
     domain_blacklist:
         - pornhub.com
@@ -503,9 +515,6 @@ free:
     cooldown_rate: 1
     cooldown_per: 60.0
 
-mention:
-    message_timeout: 300
-    reset_delay: 5
 
 help_channels:
     enable: true
@@ -567,6 +576,14 @@ duck_pond:
         - *DUCKY_ANGEL
         - *DUCKY_MAUL
         - *DUCKY_SANTA
+
+python_news:
+    mail_lists:
+        - 'python-ideas'
+        - 'python-announce-list'
+        - 'pypi-announce'
+    channel: *PYNEWS_CHANNEL
+    webhook: *PYNEWS_WEBHOOK
 
 config:
     required_keys: ['bot.token']
