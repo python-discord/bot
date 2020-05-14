@@ -219,7 +219,7 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         )
 
     @autospec("bot.cogs.token_remover", "LOG_MESSAGE")
-    async def test_format_log_message(self, log_message):
+    def test_format_log_message(self, log_message):
         """Should correctly format the log message with info from the message and token."""
         log_message.format.return_value = "Howdy"
         return_value = TokenRemover.format_log_message(self.msg, "MTIz.DN9R_A.xyz")
