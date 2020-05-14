@@ -92,7 +92,6 @@ class Verification(Cog):
                 text=embed_text,
                 thumbnail=message.author.avatar_url_as(static_format="png"),
                 channel_id=constants.Channels.mod_alerts,
-                ping_everyone=constants.Filter.ping_everyone,
             )
 
         ctx: Context = await self.bot.get_context(message)
