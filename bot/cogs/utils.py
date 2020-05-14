@@ -12,7 +12,7 @@ from discord.ext.tasks import loop
 
 from bot.bot import Bot
 from bot.constants import Channels, MODERATION_ROLES, STAFF_ROLES
-from bot.decorators import in_channel, with_role
+from bot.decorators import in_whitelist, with_role
 from bot.utils.cache import async_cache
 
 log = logging.getLogger(__name__)
