@@ -40,7 +40,7 @@ else:
     PERIODIC_PING = (
         f"@everyone To verify that you have read our rules, please type `{constants.Bot.prefix}accept`."
         " If you encounter any problems during the verification process, "
-        f"ping the <@&{constants.Roles.admins}> role in this channel."
+        f"send a direct message to a staff member."
     )
 BOT_MESSAGE_DELETE_DELAY = 10
 
@@ -92,7 +92,6 @@ class Verification(Cog):
                 text=embed_text,
                 thumbnail=message.author.avatar_url_as(static_format="png"),
                 channel_id=constants.Channels.mod_alerts,
-                ping_everyone=constants.Filter.ping_everyone,
             )
 
         ctx: Context = await self.bot.get_context(message)
