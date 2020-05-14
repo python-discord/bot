@@ -19,21 +19,21 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
         self.user = MockUser(id=1234)
         self.ctx = MockContext(bot=self.bot, author=self.member)
 
-    async def test_user_has_active_infraction(self):
+    async def test_user_get_active_infraction(self):
         """
-        Should request the API for active infractions and return `True` if the user has one or `False` otherwise.
+        Should request the API for active infractions and return infraction if the user has one or `None` otherwise.
 
         A message should be sent to the context indicating a user already has an infraction, if that's the case.
         """
         test_cases = [
             {
                 "get_return_value": [],
-                "expected_output": False,
+                "expected_output": None,
                 "infraction_nr": None
             },
             {
                 "get_return_value": [{"id": 123987}],
-                "expected_output": True,
+                "expected_output": {"id": 123987},
                 "infraction_nr": "123987"
             }
         ]
@@ -51,7 +51,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
 
                 self.bot.api_client.get.return_value = case["get_return_value"]
 
-                result = await utils.has_active_infraction(self.ctx, self.member, "ban")
+                result = await utils.get_active_infraction(self.ctx, self.member, "ban")
                 self.assertEqual(result, case["expected_output"])
                 self.bot.api_client.get.assert_awaited_once_with("bot/infractions", params=params)
 
