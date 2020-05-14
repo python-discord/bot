@@ -45,6 +45,20 @@ Namespaces are one honking great idea -- let's do more of those!
 ICON_URL = "https://www.python.org/static/opengraph-icon-200x200.png"
 
 
+def get_pep_zero_embed() -> Embed:
+    """Send information about PEP 0."""
+    pep_embed = Embed(
+        title=f"**PEP 0 - Index of Python Enhancement Proposals (PEPs)**",
+        description=f"[Link](https://www.python.org/dev/peps/)"
+    )
+    pep_embed.set_thumbnail(url=ICON_URL)
+    pep_embed.add_field(name="Status", value="Active")
+    pep_embed.add_field(name="Created", value="13-Jul-2000")
+    pep_embed.add_field(name="Type", value="Informational")
+
+    return pep_embed
+
+
 class Utils(Cog):
     """A selection of utilities which don't have a clear category."""
 
@@ -264,7 +278,7 @@ class Utils(Cog):
 
         # Handle PEP 0 directly because it's not in .rst or .txt so it can't be accessed like other PEPs.
         if pep_number == 0:
-            pep_embed = await self.get_pep_zero_embed()
+            pep_embed = get_pep_zero_embed()
             success = True
         else:
             pep_embed, success = await self.get_pep_embed(pep_number)
@@ -273,19 +287,6 @@ class Utils(Cog):
         if success:
             log.trace(f"PEP {pep_number} getting and sending finished successfully. Increasing stat.")
             self.bot.stats.incr(f"pep_fetches.{pep_number}")
-
-    async def get_pep_zero_embed(self) -> Embed:
-        """Send information about PEP 0."""
-        pep_embed = Embed(
-            title=f"**PEP 0 - Index of Python Enhancement Proposals (PEPs)**",
-            description=f"[Link](https://www.python.org/dev/peps/)"
-        )
-        pep_embed.set_thumbnail(url=ICON_URL)
-        pep_embed.add_field(name="Status", value="Active")
-        pep_embed.add_field(name="Created", value="13-Jul-2000")
-        pep_embed.add_field(name="Type", value="Informational")
-
-        return pep_embed
 
     @async_cache(arg_offset=1)
     async def get_pep_embed(self, pep_nr: int) -> Tuple[Embed, bool]:
