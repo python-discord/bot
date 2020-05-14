@@ -40,7 +40,7 @@ else:
     PERIODIC_PING = (
         f"@everyone To verify that you have read our rules, please type `{constants.Bot.prefix}accept`."
         " If you encounter any problems during the verification process, "
-        f"ping the <@&{constants.Roles.admins}> role in this channel."
+        f"send a direct message to a staff member."
     )
 BOT_MESSAGE_DELETE_DELAY = 10
 
