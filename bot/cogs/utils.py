@@ -265,12 +265,16 @@ class Utils(Cog):
         # Handle PEP 0 directly because it's not in .rst or .txt so it can't be accessed like other PEPs.
         if pep_number == 0:
             pep_embed = await self.get_pep_zero_embed()
+            success = True
         else:
-            pep_embed = await self.get_pep_embed(pep_number)
+            pep_embed, success = await self.get_pep_embed(pep_number)
         await ctx.send(embed=pep_embed)
 
-    @staticmethod
-    async def get_pep_zero_embed() -> Embed:
+        if success:
+            log.trace(f"PEP {pep_number} getting and sending finished successfully. Increasing stat.")
+            self.bot.stats.incr(f"pep_fetches.{pep_number}")
+
+    async def get_pep_zero_embed(self) -> Embed:
         """Send information about PEP 0."""
         pep_embed = Embed(
             title=f"**PEP 0 - Index of Python Enhancement Proposals (PEPs)**",
@@ -284,12 +288,12 @@ class Utils(Cog):
         return pep_embed
 
     @async_cache(arg_offset=1)
-    async def get_pep_embed(self, pep_nr: int) -> Embed:
+    async def get_pep_embed(self, pep_nr: int) -> Tuple[Embed, bool]:
         """Fetch, generate and return PEP embed. Implement `async_cache`."""
         if pep_nr not in self.peps:
             log.trace(f"PEP {pep_nr} was not found")
             not_found = f"PEP {pep_nr} does not exist."
-            return Embed(title="PEP not found", description=not_found, colour=Colour.red())
+            return Embed(title="PEP not found", description=not_found, colour=Colour.red()), False
         response = await self.bot.http_session.get(self.peps[pep_nr])
 
         if response.status == 200:
@@ -314,13 +318,13 @@ class Utils(Cog):
                 # embed field values can't contain an empty string
                 if pep_header.get(field, ""):
                     pep_embed.add_field(name=field, value=pep_header[field])
-            return pep_embed
+            return pep_embed, True
         else:
             log.trace(f"The user requested PEP {pep_nr}, but the response had an unexpected status code: "
                       f"{response.status}.\n{response.text}")
 
             error_message = "Unexpected HTTP error during PEP search. Please let us know."
-            return Embed(title="Unexpected error", description=error_message, colour=Colour.red())
+            return Embed(title="Unexpected error", description=error_message, colour=Colour.red()), False
 
 
 def setup(bot: Bot) -> None:
