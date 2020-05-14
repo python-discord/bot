@@ -72,7 +72,7 @@ class CodeBlockCog(Cog, name="Code Block"):
         deleted either manually via a reaction or automatically by a timer.
         """
         log.trace(f"Retrieving instructions message for ID {payload.message_id}")
-        channel = self.bot.get_channel(int(payload.data.get("channel_id")))
+        channel = self.bot.get_channel(payload.channel_id)
 
         try:
             return await channel.fetch_message(self.codeblock_message_ids[payload.message_id])
