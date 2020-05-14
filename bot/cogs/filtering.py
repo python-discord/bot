@@ -6,6 +6,7 @@ import discord.errors
 from dateutil.relativedelta import relativedelta
 from discord import Colour, DMChannel, Member, Message, TextChannel
 from discord.ext.commands import Cog
+from discord.utils import escape_markdown
 
 from bot.bot import Bot
 from bot.cogs.moderation import ModLog
@@ -27,6 +28,7 @@ INVITE_RE = re.compile(
     flags=re.IGNORECASE
 )
 
+SPOILER_RE = re.compile(r"(\|\|.+?\|\|)", re.DOTALL)
 URL_RE = re.compile(r"(https?://[^\s]+)", flags=re.IGNORECASE)
 ZALGO_RE = re.compile(r"[\u0300-\u036F\u0489]")
 
@@ -36,6 +38,15 @@ WORD_WATCHLIST_PATTERNS = [
 TOKEN_WATCHLIST_PATTERNS = [
     re.compile(fr'{expression}', flags=re.IGNORECASE) for expression in Filter.token_watchlist
 ]
+WATCHLIST_PATTERNS = WORD_WATCHLIST_PATTERNS + TOKEN_WATCHLIST_PATTERNS
+
+
+def expand_spoilers(text: str) -> str:
+    """Return a string containing all interpretations of a spoilered message."""
+    split_text = SPOILER_RE.split(text)
+    return ''.join(
+        split_text[0::2] + split_text[1::2] + split_text
+    )
 
 
 class Filtering(Cog):
@@ -78,23 +89,17 @@ class Filtering(Cog):
                     f"Your URL has been removed because it matched a blacklisted domain. {staff_mistake_str}"
                 )
             },
+            "watch_regex": {
+                "enabled": Filter.watch_regex,
+                "function": self._has_watch_regex_match,
+                "type": "watchlist",
+                "content_only": True,
+            },
             "watch_rich_embeds": {
                 "enabled": Filter.watch_rich_embeds,
                 "function": self._has_rich_embed,
                 "type": "watchlist",
                 "content_only": False,
-            },
-            "watch_words": {
-                "enabled": Filter.watch_words,
-                "function": self._has_watchlist_words,
-                "type": "watchlist",
-                "content_only": True,
-            },
-            "watch_tokens": {
-                "enabled": Filter.watch_tokens,
-                "function": self._has_watchlist_tokens,
-                "type": "watchlist",
-                "content_only": True,
             },
         }
 
@@ -181,13 +186,13 @@ class Filtering(Cog):
                         else:
                             channel_str = f"in {msg.channel.mention}"
 
-                        # Word and match stats for watch_words and watch_tokens
-                        if filter_name in ("watch_words", "watch_tokens"):
+                        # Word and match stats for watch_regex
+                        if filter_name == "watch_regex":
                             surroundings = match.string[max(match.start() - 10, 0): match.end() + 10]
                             message_content = (
                                 f"**Match:** '{match[0]}'\n"
-                                f"**Location:** '...{surroundings}...'\n"
-                                f"\n**Original Message:**\n{msg.content}"
+                                f"**Location:** '...{escape_markdown(surroundings)}...'\n"
+                                f"\n**Original Message:**\n{escape_markdown(msg.content)}"
                             )
                         else:  # Use content of discord Message
                             message_content = msg.content
@@ -201,6 +206,8 @@ class Filtering(Cog):
                         )
 
                         log.debug(message)
+
+                        self.bot.stats.incr(f"filters.{filter_name}")
 
                         additional_embeds = None
                         additional_embeds_msg = None
@@ -238,35 +245,24 @@ class Filtering(Cog):
                         break  # We don't want multiple filters to trigger
 
     @staticmethod
-    async def _has_watchlist_words(text: str) -> Union[bool, re.Match]:
+    async def _has_watch_regex_match(text: str) -> Union[bool, re.Match]:
         """
-        Returns True if the text contains one of the regular expressions from the word_watchlist in our filter config.
+        Return True if `text` matches any regex from `word_watchlist` or `token_watchlist` configs.
 
-        Only matches words with boundaries before and after the expression.
+        `word_watchlist`'s patterns are placed between word boundaries while `token_watchlist` is
+        matched as-is. Spoilers are expanded, if any, and URLs are ignored.
         """
-        for regex_pattern in WORD_WATCHLIST_PATTERNS:
-            match = regex_pattern.search(text)
+        if SPOILER_RE.search(text):
+            text = expand_spoilers(text)
+
+        # Make sure it's not a URL
+        if URL_RE.search(text):
+            return False
+
+        for pattern in WATCHLIST_PATTERNS:
+            match = pattern.search(text)
             if match:
-                return match  # match objects always have a boolean value of True
-
-        return False
-
-    @staticmethod
-    async def _has_watchlist_tokens(text: str) -> Union[bool, re.Match]:
-        """
-        Returns True if the text contains one of the regular expressions from the token_watchlist in our filter config.
-
-        This will match the expression even if it does not have boundaries before and after.
-        """
-        for regex_pattern in TOKEN_WATCHLIST_PATTERNS:
-            match = regex_pattern.search(text)
-            if match:
-
-                # Make sure it's not a URL
-                if not URL_RE.search(text):
-                    return match  # match objects always have a boolean value of True
-
-        return False
+                return match
 
     @staticmethod
     async def _has_urls(text: str) -> bool:

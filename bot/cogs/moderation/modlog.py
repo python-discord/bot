@@ -12,9 +12,10 @@ from deepdiff import DeepDiff
 from discord import Colour
 from discord.abc import GuildChannel
 from discord.ext.commands import Cog, Context
+from discord.utils import escape_markdown
 
 from bot.bot import Bot
-from bot.constants import Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, URLs
+from bot.constants import Categories, Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, URLs
 from bot.utils.time import humanize_delta
 
 log = logging.getLogger(__name__)
@@ -67,7 +68,7 @@ class ModLog(Cog, name="ModLog"):
                         'embeds': [embed.to_dict() for embed in message.embeds],
                         'attachments': attachment,
                     }
-                    for message, attachment in zip_longest(messages, attachments)
+                    for message, attachment in zip_longest(messages, attachments, fillvalue=[])
                 ]
             }
         )
@@ -187,6 +188,12 @@ class ModLog(Cog, name="ModLog"):
             self._ignored[Event.guild_channel_update].remove(before.id)
             return
 
+        # Two channel updates are sent for a single edit: 1 for topic and 1 for category change.
+        # TODO: remove once support is added for ignoring multiple occurrences for the same channel.
+        help_categories = (Categories.help_available, Categories.help_dormant, Categories.help_in_use)
+        if after.category and after.category.id in help_categories:
+            return
+
         diff = DeepDiff(before, after)
         changes = []
         done = []
@@ -215,7 +222,10 @@ class ModLog(Cog, name="ModLog"):
                 new = value["new_value"]
                 old = value["old_value"]
 
-                changes.append(f"**{key.title()}:** `{old}` **→** `{new}`")
+                # Discord does not treat consecutive backticks ("``") as an empty inline code block, so the markdown
+                # formatting is broken when `new` and/or `old` are empty values. "None" is used for these cases so
+                # formatting is preserved.
+                changes.append(f"**{key.title()}:** `{old or 'None'}` **→** `{new or 'None'}`")
 
             done.append(key)
 
@@ -386,7 +396,8 @@ class ModLog(Cog, name="ModLog"):
         if member.guild.id != GuildConstant.id:
             return
 
-        message = f"{member} (`{member.id}`)"
+        member_str = escape_markdown(str(member))
+        message = f"{member_str} (`{member.id}`)"
         now = datetime.utcnow()
         difference = abs(relativedelta(now, member.created_at))
 
@@ -412,9 +423,10 @@ class ModLog(Cog, name="ModLog"):
             self._ignored[Event.member_remove].remove(member.id)
             return
 
+        member_str = escape_markdown(str(member))
         await self.send_log_message(
             Icons.sign_out, Colours.soft_red,
-            "User left", f"{member} (`{member.id}`)",
+            "User left", f"{member_str} (`{member.id}`)",
             thumbnail=member.avatar_url_as(static_format="png"),
             channel_id=Channels.user_log
         )
@@ -429,9 +441,10 @@ class ModLog(Cog, name="ModLog"):
             self._ignored[Event.member_unban].remove(member.id)
             return
 
+        member_str = escape_markdown(str(member))
         await self.send_log_message(
             Icons.user_unban, Colour.blurple(),
-            "User unbanned", f"{member} (`{member.id}`)",
+            "User unbanned", f"{member_str} (`{member.id}`)",
             thumbnail=member.avatar_url_as(static_format="png"),
             channel_id=Channels.mod_log
         )
@@ -523,7 +536,8 @@ class ModLog(Cog, name="ModLog"):
         for item in sorted(changes):
             message += f"{Emojis.bullet} {item}\n"
 
-        message = f"**{after}** (`{after.id}`)\n{message}"
+        member_str = escape_markdown(str(after))
+        message = f"**{member_str}** (`{after.id}`)\n{message}"
 
         await self.send_log_message(
             Icons.user_update, Colour.blurple(),
@@ -550,16 +564,17 @@ class ModLog(Cog, name="ModLog"):
         if author.bot:
             return
 
+        author_str = escape_markdown(str(author))
         if channel.category:
             response = (
-                f"**Author:** {author} (`{author.id}`)\n"
+                f"**Author:** {author_str} (`{author.id}`)\n"
                 f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{message.id}`\n"
                 "\n"
             )
         else:
             response = (
-                f"**Author:** {author} (`{author.id}`)\n"
+                f"**Author:** {author_str} (`{author.id}`)\n"
                 f"**Channel:** #{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{message.id}`\n"
                 "\n"
@@ -646,6 +661,8 @@ class ModLog(Cog, name="ModLog"):
             return
 
         author = msg_before.author
+        author_str = escape_markdown(str(author))
+
         channel = msg_before.channel
         channel_name = f"{channel.category}/#{channel.name}" if channel.category else f"#{channel.name}"
 
@@ -677,7 +694,7 @@ class ModLog(Cog, name="ModLog"):
                 content_after.append(sub)
 
         response = (
-            f"**Author:** {author} (`{author.id}`)\n"
+            f"**Author:** {author_str} (`{author.id}`)\n"
             f"**Channel:** {channel_name} (`{channel.id}`)\n"
             f"**Message ID:** `{msg_before.id}`\n"
             "\n"
@@ -820,8 +837,9 @@ class ModLog(Cog, name="ModLog"):
         if not changes:
             return
 
+        member_str = escape_markdown(str(member))
         message = "\n".join(f"{Emojis.bullet} {item}" for item in sorted(changes))
-        message = f"**{member}** (`{member.id}`)\n{message}"
+        message = f"**{member_str}** (`{member.id}`)\n{message}"
 
         await self.send_log_message(
             icon_url=icon,

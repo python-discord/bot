@@ -67,7 +67,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
     @command()
     async def ban(self, ctx: Context, user: FetchedMember, *, reason: str = None) -> None:
-        """Permanently ban a user for the given reason."""
+        """Permanently ban a user for the given reason and stop watching them with Big Brother."""
         await self.apply_ban(ctx, user, reason)
 
     # endregion
@@ -199,7 +199,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
     async def apply_mute(self, ctx: Context, user: Member, reason: str, **kwargs) -> None:
         """Apply a mute infraction with kwargs passed to `post_infraction`."""
-        if await utils.has_active_infraction(ctx, user, "mute"):
+        if await utils.get_active_infraction(ctx, user, "mute"):
             return
 
         infraction = await utils.post_infraction(ctx, user, "mute", reason, active=True, **kwargs)
@@ -230,9 +230,27 @@ class Infractions(InfractionScheduler, commands.Cog):
 
     @respect_role_hierarchy()
     async def apply_ban(self, ctx: Context, user: UserSnowflake, reason: str, **kwargs) -> None:
-        """Apply a ban infraction with kwargs passed to `post_infraction`."""
-        if await utils.has_active_infraction(ctx, user, "ban"):
-            return
+        """
+        Apply a ban infraction with kwargs passed to `post_infraction`.
+
+        Will also remove the banned user from the Big Brother watch list if applicable.
+        """
+        # In the case of a permanent ban, we don't need get_active_infractions to tell us if one is active
+        is_temporary = kwargs.get("expires_at") is not None
+        active_infraction = await utils.get_active_infraction(ctx, user, "ban", is_temporary)
+
+        if active_infraction:
+            if is_temporary:
+                log.trace("Tempban ignored as it cannot overwrite an active ban.")
+                return
+
+            if active_infraction.get('expires_at') is None:
+                log.trace("Permaban already exists, notify.")
+                await ctx.send(f":x: User is already permanently banned (#{active_infraction['id']}).")
+                return
+
+            log.trace("Old tempban is being replaced by new permaban.")
+            await self.pardon_infraction(ctx, "ban", user, is_temporary)
 
         infraction = await utils.post_infraction(ctx, user, "ban", reason, active=True, **kwargs)
         if infraction is None:
@@ -242,6 +260,20 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         action = ctx.guild.ban(user, reason=reason, delete_message_days=0)
         await self.apply_infraction(ctx, infraction, user, action)
+
+        if infraction.get('expires_at') is not None:
+            log.trace(f"Ban isn't permanent; user {user} won't be unwatched by Big Brother.")
+            return
+
+        bb_cog = self.bot.get_cog("Big Brother")
+        if not bb_cog:
+            log.error(f"Big Brother cog not loaded; perma-banned user {user} won't be unwatched.")
+            return
+
+        log.trace(f"Big Brother cog loaded; attempting to unwatch perma-banned user {user}.")
+
+        bb_reason = "User has been permanently banned from the server. Automatically removed."
+        await bb_cog.apply_unwatch(ctx, user, bb_reason, send_message=False)
 
     # endregion
     # region: Base pardon functions

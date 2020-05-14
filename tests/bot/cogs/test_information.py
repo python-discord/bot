@@ -7,7 +7,7 @@ import discord
 
 from bot import constants
 from bot.cogs import information
-from bot.decorators import InChannelCheckFailure
+from bot.decorators import InWhitelistCheckFailure
 from tests import helpers
 
 
@@ -45,10 +45,9 @@ class InformationCogTests(unittest.TestCase):
         _, kwargs = self.ctx.send.call_args
         embed = kwargs.pop('embed')
 
-        self.assertEqual(embed.title, "Role information")
+        self.assertEqual(embed.title, "Role information (Total 1 role)")
         self.assertEqual(embed.colour, discord.Colour.blurple())
-        self.assertEqual(embed.description, f"`{self.moderator_role.id}` - {self.moderator_role.mention}\n")
-        self.assertEqual(embed.footer.text, "Total roles: 1")
+        self.assertEqual(embed.description, f"\n`{self.moderator_role.id}` - {self.moderator_role.mention}\n")
 
     def test_role_info_command(self):
         """Tests the `role info` command."""
@@ -486,7 +485,7 @@ class UserEmbedTests(unittest.TestCase):
         user.avatar_url_as.return_value = "avatar url"
         embed = asyncio.run(self.cog.create_user_embed(ctx, user))
 
-        user.avatar_url_as.assert_called_once_with(format="png")
+        user.avatar_url_as.assert_called_once_with(static_format="png")
         self.assertEqual(embed.thumbnail.url, "avatar url")
 
 
@@ -526,7 +525,7 @@ class UserCommandTests(unittest.TestCase):
         ctx = helpers.MockContext(author=self.author, channel=helpers.MockTextChannel(id=100))
 
         msg = "Sorry, but you may only use this command within <#50>."
-        with self.assertRaises(InChannelCheckFailure, msg=msg):
+        with self.assertRaises(InWhitelistCheckFailure, msg=msg):
             asyncio.run(self.cog.user_info.callback(self.cog, ctx))
 
     @unittest.mock.patch("bot.cogs.information.Information.create_user_embed", new_callable=unittest.mock.AsyncMock)

@@ -8,6 +8,7 @@ from discord.ext.commands import BadArgument
 
 from bot.converters import (
     Duration,
+    HushDurationConverter,
     ISODateTime,
     TagContentConverter,
     TagNameConverter,
@@ -271,3 +272,32 @@ class ConverterTests(unittest.TestCase):
                 exception_message = f"`{datetime_string}` is not a valid ISO-8601 datetime string"
                 with self.assertRaises(BadArgument, msg=exception_message):
                     asyncio.run(converter.convert(self.context, datetime_string))
+
+    def test_hush_duration_converter_for_valid(self):
+        """HushDurationConverter returns correct value for minutes duration or `"forever"` strings."""
+        test_values = (
+            ("0", 0),
+            ("15", 15),
+            ("10", 10),
+            ("5m", 5),
+            ("5M", 5),
+            ("forever", None),
+        )
+        converter = HushDurationConverter()
+        for minutes_string, expected_minutes in test_values:
+            with self.subTest(minutes_string=minutes_string, expected_minutes=expected_minutes):
+                converted = asyncio.run(converter.convert(self.context, minutes_string))
+                self.assertEqual(expected_minutes, converted)
+
+    def test_hush_duration_converter_for_invalid(self):
+        """HushDurationConverter raises correct exception for invalid minutes duration strings."""
+        test_values = (
+            ("16", "Duration must be at most 15 minutes."),
+            ("10d", "10d is not a valid minutes duration."),
+            ("-1", "-1 is not a valid minutes duration."),
+        )
+        converter = HushDurationConverter()
+        for invalid_minutes_string, exception_message in test_values:
+            with self.subTest(invalid_minutes_string=invalid_minutes_string, exception_message=exception_message):
+                with self.assertRaisesRegex(BadArgument, exception_message):
+                    asyncio.run(converter.convert(self.context, invalid_minutes_string))

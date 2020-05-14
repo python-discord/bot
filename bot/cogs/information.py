@@ -12,7 +12,8 @@ from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
-from bot.decorators import InChannelCheckFailure, in_channel, with_role
+from bot.decorators import InWhitelistCheckFailure, in_whitelist, with_role
+from bot.pagination import LinePaginator
 from bot.utils.checks import cooldown_with_role_bypass, with_role_check
 from bot.utils.time import time_since
 
@@ -32,20 +33,18 @@ class Information(Cog):
         # Sort the roles alphabetically and remove the @everyone role
         roles = sorted(ctx.guild.roles[1:], key=lambda role: role.name)
 
-        # Build a string
-        role_string = ""
+        # Build a list
+        role_list = []
         for role in roles:
-            role_string += f"`{role.id}` - {role.mention}\n"
+            role_list.append(f"`{role.id}` - {role.mention}")
 
         # Build an embed
         embed = Embed(
-            title="Role information",
-            colour=Colour.blurple(),
-            description=role_string
+            title=f"Role information (Total {len(roles)} role{'s' * (len(role_list) > 1)})",
+            colour=Colour.blurple()
         )
-        embed.set_footer(text=f"Total roles: {len(roles)}")
 
-        await ctx.send(embed=embed)
+        await LinePaginator.paginate(role_list, ctx, embed, empty=False)
 
     @with_role(*constants.MODERATION_ROLES)
     @command(name="role")
@@ -153,7 +152,7 @@ class Information(Cog):
         # Non-staff may only do this in #bot-commands
         if not with_role_check(ctx, *constants.STAFF_ROLES):
             if not ctx.channel.id == constants.Channels.bot_commands:
-                raise InChannelCheckFailure(constants.Channels.bot_commands)
+                raise InWhitelistCheckFailure(constants.Channels.bot_commands)
 
         embed = await self.create_user_embed(ctx, user)
 
@@ -207,7 +206,7 @@ class Information(Cog):
             description="\n\n".join(description)
         )
 
-        embed.set_thumbnail(url=user.avatar_url_as(format="png"))
+        embed.set_thumbnail(url=user.avatar_url_as(static_format="png"))
         embed.colour = user.top_role.colour if roles else Colour.blurple()
 
         return embed
@@ -332,7 +331,7 @@ class Information(Cog):
 
     @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=constants.STAFF_ROLES)
     @group(invoke_without_command=True)
-    @in_channel(constants.Channels.bot_commands, bypass_roles=constants.STAFF_ROLES)
+    @in_whitelist(channels=(constants.Channels.bot_commands,), roles=constants.STAFF_ROLES)
     async def raw(self, ctx: Context, *, message: Message, json: bool = False) -> None:
         """Shows information about the raw API response."""
         # I *guess* it could be deleted right as the command is invoked but I felt like it wasn't worth handling
