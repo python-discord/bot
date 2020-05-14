@@ -133,12 +133,14 @@ class TokenRemover(Cog):
         try:
             user_id, creation_timestamp, hmac = test_str.split('.')
         except ValueError:
+            log.debug(f"Invalid token format in '{test_str}': does not have all 3 parts.")
             return False
 
         if cls.is_valid_user_id(user_id) and cls.is_valid_timestamp(creation_timestamp):
             return True
-
-        return False
+        else:
+            log.debug(f"Invalid user ID or timestamp in '{test_str}'.")
+            return False
 
     @staticmethod
     def is_valid_user_id(b64_content: str) -> bool:
