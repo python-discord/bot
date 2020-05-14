@@ -17,7 +17,7 @@ from bot.constants import Channels, Colours, Event, Icons
 log = logging.getLogger(__name__)
 
 LOG_MESSAGE = (
-    "Censored a seemingly valid token sent by {author} (`{author_id}`) in {channel},"
+    "Censored a seemingly valid token sent by {author} (`{author_id}`) in {channel}, "
     "token was `{user_id}.{timestamp}.{hmac}`"
 )
 DELETION_MESSAGE_TEMPLATE = (
