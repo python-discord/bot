@@ -149,8 +149,11 @@ class TokenRemover(Cog):
         b64_content += '=' * (-len(b64_content) % 4)
 
         try:
-            content: bytes = base64.b64decode(b64_content)
-            return content.decode('utf-8').isnumeric()
+            decoded_bytes: bytes = base64.b64decode(b64_content)
+            string = decoded_bytes.decode('utf-8')
+
+            # isdigit on its own would match a lot of other Unicode characters, hence the isascii.
+            return string.isascii() and string.isdigit()
         except (binascii.Error, ValueError):
             return False
 
