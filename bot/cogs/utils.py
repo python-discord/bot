@@ -4,7 +4,7 @@ import re
 import unicodedata
 from email.parser import HeaderParser
 from io import StringIO
-from typing import Dict, Tuple, Union
+from typing import Dict, Optional, Tuple, Union
 
 from discord import Colour, Embed
 from discord.ext.commands import BadArgument, Cog, Context, command
@@ -220,12 +220,11 @@ class Utils(Cog):
         # Handle PEP 0 directly because it's not in .rst or .txt so it can't be accessed like other PEPs.
         if pep_number == 0:
             pep_embed = self.get_pep_zero_embed()
-            success = True
         else:
-            pep_embed, success = await self.get_pep_embed(pep_number)
-        await ctx.send(embed=pep_embed)
+            pep_embed = await self.get_pep_embed(pep_number, ctx)
 
-        if success:
+        if pep_embed:
+            await ctx.send(embed=pep_embed)
             log.trace(f"PEP {pep_number} getting and sending finished successfully. Increasing stat.")
             self.bot.stats.incr(f"pep_fetches.{pep_number}")
 
@@ -244,12 +243,15 @@ class Utils(Cog):
         return pep_embed
 
     @async_cache(arg_offset=1)
-    async def get_pep_embed(self, pep_nr: int) -> Tuple[Embed, bool]:
+    async def get_pep_embed(self, pep_nr: int, ctx: Context) -> Optional[Embed]:
         """Fetch, generate and return PEP embed."""
         if pep_nr not in self.peps:
             log.trace(f"PEP {pep_nr} was not found")
             not_found = f"PEP {pep_nr} does not exist."
-            return Embed(title="PEP not found", description=not_found, colour=Colour.red()), False
+            await ctx.send(
+                embed=Embed(title="PEP not found", description=not_found, colour=Colour.red())
+            )
+            return
         response = await self.bot.http_session.get(self.peps[pep_nr])
 
         if response.status == 200:
@@ -274,7 +276,7 @@ class Utils(Cog):
                 # embed field values can't contain an empty string
                 if pep_header.get(field, ""):
                     pep_embed.add_field(name=field, value=pep_header[field])
-            return pep_embed, True
+            return pep_embed
         else:
             log.trace(
                 f"The user requested PEP {pep_nr}, but the response had an unexpected status code: "
@@ -282,7 +284,10 @@ class Utils(Cog):
             )
 
             error_message = "Unexpected HTTP error during PEP search. Please let us know."
-            return Embed(title="Unexpected error", description=error_message, colour=Colour.red()), False
+            await ctx.send(
+                embed=Embed(title="Unexpected error", description=error_message, colour=Colour.red())
+            )
+            return
 
 
 def setup(bot: Bot) -> None:
