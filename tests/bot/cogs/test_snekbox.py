@@ -291,7 +291,11 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(actual, expected)
         self.bot.wait_for.assert_has_awaits(
             (
-                call('message_edit', check=partial_mock(snekbox.predicate_eval_message_edit, ctx), timeout=10),
+                call(
+                    'message_edit',
+                    check=partial_mock(snekbox.predicate_eval_message_edit, ctx),
+                    timeout=snekbox.REEVAL_TIMEOUT,
+                ),
                 call('reaction_add', check=partial_mock(snekbox.predicate_eval_emoji_reaction, ctx), timeout=10)
             )
         )
