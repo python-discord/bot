@@ -220,7 +220,6 @@ class Utils(Cog):
 
         for file in listing:
             name = file["name"]
-            name: str
             if name.startswith("pep-") and name.endswith((".rst", ".txt")):
                 pep_number = name.replace("pep-", "").split(".")[0]
                 self.peps[int(pep_number)] = file["download_url"]
