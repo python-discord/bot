@@ -245,7 +245,7 @@ class Utils(Cog):
 
     @async_cache(arg_offset=1)
     async def get_pep_embed(self, pep_nr: int) -> Tuple[Embed, bool]:
-        """Fetch, generate and return PEP embed. Implement `async_cache`."""
+        """Fetch, generate and return PEP embed."""
         if pep_nr not in self.peps:
             log.trace(f"PEP {pep_nr} was not found")
             not_found = f"PEP {pep_nr} does not exist."
