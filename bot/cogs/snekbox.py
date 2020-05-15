@@ -227,7 +227,7 @@ class Snekbox(Cog):
                 _, new_message = await self.bot.wait_for(
                     'message_edit',
                     check=_predicate_eval_message_edit,
-                    timeout=10
+                    timeout=30
                 )
                 await ctx.message.add_reaction(REEVAL_EMOJI)
                 await self.bot.wait_for(
