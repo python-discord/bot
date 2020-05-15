@@ -276,8 +276,10 @@ class Utils(Cog):
                     pep_embed.add_field(name=field, value=pep_header[field])
             return pep_embed, True
         else:
-            log.trace(f"The user requested PEP {pep_nr}, but the response had an unexpected status code: "
-                      f"{response.status}.\n{response.text}")
+            log.trace(
+                f"The user requested PEP {pep_nr}, but the response had an unexpected status code: "
+                f"{response.status}.\n{response.text}"
+            )
 
             error_message = "Unexpected HTTP error during PEP search. Please let us know."
             return Embed(title="Unexpected error", description=error_message, colour=Colour.red()), False
