@@ -231,7 +231,7 @@ class Utils(Cog):
 
     @staticmethod
     def get_pep_zero_embed() -> Embed:
-        """Send information about PEP 0."""
+        """Get information embed about PEP 0."""
         pep_embed = Embed(
             title=f"**PEP 0 - Index of Python Enhancement Proposals (PEPs)**",
             description=f"[Link](https://www.python.org/dev/peps/)"
