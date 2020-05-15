@@ -1,3 +1,4 @@
+import asyncio
 import unittest
 from unittest import mock
 
@@ -211,7 +212,7 @@ class SyncerConfirmationTests(unittest.IsolatedAsyncioTestCase):
         subtests = (
             (constants.Emojis.check_mark, True, None),
             ("InVaLiD", False, None),
-            (None, False, TimeoutError),
+            (None, False, asyncio.TimeoutError),
         )
 
         for emoji, ret_val, side_effect in subtests:

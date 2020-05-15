@@ -19,7 +19,10 @@ requests = "~=2.22"
 more_itertools = "~=8.2"
 sentry-sdk = "~=0.14"
 coloredlogs = "~=14.0"
-colorama = {version = "~=0.4.3", sys_platform = "== 'win32'"}
+colorama = {version = "~=0.4.3",sys_platform = "== 'win32'"}
+statsd = "~=3.3"
+feedparser = "~=5.2"
+beautifulsoup4 = "~=4.9"
 
 [dev-packages]
 coverage = "~=5.0"

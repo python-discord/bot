@@ -31,7 +31,7 @@ class CommandNameTests(unittest.TestCase):
     def walk_modules() -> t.Iterator[ModuleType]:
         """Yield imported modules from the bot.cogs subpackage."""
         def on_error(name: str) -> t.NoReturn:
-            raise ImportError(name=name)
+            raise ImportError(name=name)  # pragma: no cover
 
         # The mock prevents asyncio.get_event_loop() from being called.
         with mock.patch("discord.ext.tasks.loop"):
@@ -71,7 +71,7 @@ class CommandNameTests(unittest.TestCase):
 
             for name in self.get_qualified_names(cmd):
                 with self.subTest(cmd=func_name, name=name):
-                    if name in all_names:
+                    if name in all_names:  # pragma: no cover
                         conflicts = ", ".join(all_names.get(name, ""))
                         self.fail(
                             f"Name '{name}' of the command {func_name} conflicts with {conflicts}."

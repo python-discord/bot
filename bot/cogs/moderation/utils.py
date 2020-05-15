@@ -38,7 +38,7 @@ async def post_user(ctx: Context, user: UserSnowflake) -> t.Optional[dict]:
     log.trace(f"Attempting to add user {user.id} to the database.")
 
     if not isinstance(user, (discord.Member, discord.User)):
-        log.warning("The user being added to the DB is not a Member or User object.")
+        log.debug("The user being added to the DB is not a Member or User object.")
 
     payload = {
         'avatar_hash': getattr(user, 'avatar', 0),
@@ -97,8 +97,19 @@ async def post_infraction(
                 return
 
 
-async def has_active_infraction(ctx: Context, user: UserSnowflake, infr_type: str) -> bool:
-    """Checks if a user already has an active infraction of the given type."""
+async def get_active_infraction(
+        ctx: Context,
+        user: UserSnowflake,
+        infr_type: str,
+        send_msg: bool = True
+) -> t.Optional[dict]:
+    """
+    Retrieves an active infraction of the given type for the user.
+
+    If `send_msg` is True and the user has an active infraction matching the `infr_type` parameter,
+    then a message for the moderator will be sent to the context channel letting them know.
+    Otherwise, no message will be sent.
+    """
     log.trace(f"Checking if {user} has active infractions of type {infr_type}.")
 
     active_infractions = await ctx.bot.api_client.get(
@@ -110,15 +121,16 @@ async def has_active_infraction(ctx: Context, user: UserSnowflake, infr_type: st
         }
     )
     if active_infractions:
-        log.trace(f"{user} has active infractions of type {infr_type}.")
-        await ctx.send(
-            f":x: According to my records, this user already has a {infr_type} infraction. "
-            f"See infraction **#{active_infractions[0]['id']}**."
-        )
-        return True
+        # Checks to see if the moderator should be told there is an active infraction
+        if send_msg:
+            log.trace(f"{user} has active infractions of type {infr_type}.")
+            await ctx.send(
+                f":x: According to my records, this user already has a {infr_type} infraction. "
+                f"See infraction **#{active_infractions[0]['id']}**."
+            )
+        return active_infractions[0]
     else:
         log.trace(f"{user} does not have active infractions of type {infr_type}.")
-        return False
 
 
 async def notify_infraction(

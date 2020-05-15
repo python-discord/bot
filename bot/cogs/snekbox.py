@@ -12,8 +12,8 @@ from discord import HTTPException, Message, NotFound, Reaction, User
 from discord.ext.commands import Cog, Context, command, guild_only
 
 from bot.bot import Bot
-from bot.constants import Channels, Roles, URLs
-from bot.decorators import in_channel
+from bot.constants import Categories, Channels, Roles, URLs
+from bot.decorators import in_whitelist
 from bot.utils.messages import wait_for_deletion
 
 log = logging.getLogger(__name__)
@@ -38,6 +38,10 @@ RAW_CODE_REGEX = re.compile(
 )
 
 MAX_PASTE_LEN = 1000
+
+# `!eval` command whitelists
+EVAL_CHANNELS = (Channels.bot_commands, Channels.esoteric)
+EVAL_CATEGORIES = (Categories.help_available, Categories.help_in_use)
 EVAL_ROLES = (Roles.helpers, Roles.moderators, Roles.admins, Roles.owners, Roles.python_community, Roles.partners)
 
 SIGKILL = 9
@@ -265,7 +269,7 @@ class Snekbox(Cog):
 
     @command(name="eval", aliases=("e",))
     @guild_only()
-    @in_channel(Channels.bot_commands, hidden_channels=(Channels.esoteric,), bypass_roles=EVAL_ROLES)
+    @in_whitelist(channels=EVAL_CHANNELS, categories=EVAL_CATEGORIES, roles=EVAL_ROLES)
     async def eval_command(self, ctx: Context, *, code: str = None) -> None:
         """
         Run Python code and get the results.
@@ -301,7 +305,7 @@ class Snekbox(Cog):
             code = await self.continue_eval(ctx, response)
             if not code:
                 break
-            log.info(f"Re-evaluating message {ctx.message.id}")
+            log.info(f"Re-evaluating code from message {ctx.message.id}:\n{code}")
 
 
 def predicate_eval_message_edit(ctx: Context, old_msg: Message, new_msg: Message) -> bool:
