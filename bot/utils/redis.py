@@ -77,4 +77,4 @@ class RedisDict(MutableMapping):
 
     def copy(self) -> Dict:
         """Convert to dict and return."""
-        return dict(self)
+        return dict(self.items())
