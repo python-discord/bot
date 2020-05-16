@@ -1,12 +1,12 @@
 import logging
 import random
-from asyncio import Lock, sleep
+from asyncio import Lock, create_task, sleep
 from contextlib import suppress
 from functools import wraps
 from typing import Callable, Container, Optional, Union
 from weakref import WeakValueDictionary
 
-from discord import Colour, Embed, Member, Message
+from discord import Colour, Embed, Member
 from discord.errors import NotFound
 from discord.ext import commands
 from discord.ext.commands import CheckFailure, Cog, Context
@@ -135,20 +135,6 @@ def locked() -> Callable:
     return wrap
 
 
-async def delete_invocation(ctx: Context, message: Message) -> None:
-    """Task to delete the invocation and user redirection messages."""
-    if RedirectOutput.delete_invocation:
-        await sleep(RedirectOutput.delete_delay)
-
-        with suppress(NotFound):
-            await message.delete()
-            log.trace("Redirect output: Deleted user redirection message")
-
-        with suppress(NotFound):
-            await ctx.message.delete()
-            log.trace("Redirect output: Deleted invocation message")
-
-
 def redirect_output(destination_channel: int, bypass_roles: Container[int] = None) -> Callable:
     """
     Changes the channel in the context of the command to redirect the output to a certain channel.
@@ -176,14 +162,23 @@ def redirect_output(destination_channel: int, bypass_roles: Container[int] = Non
             log.trace(f"Redirecting output of {ctx.author}'s command '{ctx.command.name}' to {redirect_channel.name}")
             ctx.channel = redirect_channel
             await ctx.channel.send(f"Here's the output of your command, {ctx.author.mention}")
-            await func(self, ctx, *args, **kwargs)
+            create_task(func(self, ctx, *args, **kwargs))
 
             message = await old_channel.send(
                 f"Hey, {ctx.author.mention}, you can find the output of your command here: "
                 f"{redirect_channel.mention}"
             )
-            # we need to run it in a task for the help command - which gets held up if waiting for invocation deletion.
-            ctx.bot.loop.create_task(delete_invocation(ctx, message))
+            if RedirectOutput.delete_invocation:
+                await sleep(RedirectOutput.delete_delay)
+
+                with suppress(NotFound):
+                    await message.delete()
+                    log.trace("Redirect output: Deleted user redirection message")
+
+                with suppress(NotFound):
+                    await ctx.message.delete()
+                    log.trace("Redirect output: Deleted invocation message")
+
         return inner
     return wrap
 

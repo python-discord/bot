@@ -3,7 +3,7 @@ import logging
 from asyncio import TimeoutError
 from collections import namedtuple
 from contextlib import suppress
-from typing import List
+from typing import List, Union
 
 from discord import Colour, Embed, Member, Message, NotFound, Reaction, User
 from discord.ext.commands import Bot, Cog, Command, Context, Group, HelpCommand
@@ -30,9 +30,9 @@ async def help_cleanup(bot: Bot, author: Member, message: Message) -> None:
     Adds the :trashcan: reaction that, when clicked, will delete the help message.
     After a 300 second timeout, the reaction will be removed.
     """
-    def check(r: Reaction, u: User) -> bool:
+    def check(reaction: Reaction, user: User) -> bool:
         """Checks the reaction is :trashcan:, the author is original author and messages are the same."""
-        return str(r) == DELETE_EMOJI and u.id == author.id and r.message.id == message.id
+        return str(reaction) == DELETE_EMOJI and user.id == author.id and reaction.message.id == message.id
 
     await message.add_reaction(DELETE_EMOJI)
 
@@ -75,17 +75,11 @@ class CustomHelpCommand(HelpCommand):
         super().__init__(command_attrs={"help": "Shows help for bot commands"})
 
     @redirect_output(destination_channel=Channels.bot_commands, bypass_roles=STAFF_ROLES)
-    async def prepare_help_command(self, ctx: Context, command: str = None) -> None:
-        """Adjust context to redirect to a new channel if required."""
-        self.context = ctx
-
     async def command_callback(self, ctx: Context, *, command: str = None) -> None:
         """Attempts to match the provided query with a valid command or cog."""
         # the only reason we need to tamper with this is because d.py does not support "categories",
         # so we need to deal with them ourselves.
 
-        # handle any command redirection and adjust context channel accordingly.
-        await self.prepare_help_command(ctx, command=command)
         bot = ctx.bot
 
         if command is None:
@@ -107,7 +101,7 @@ class CustomHelpCommand(HelpCommand):
             await self.send_category_help(category)
             return
 
-        # it's either a cog, group, command or subcommand, let super deal with it
+        # it's either a cog, group, command or subcommand; let the parent class deal with it
         await super().command_callback(ctx, command=command)
 
     async def get_all_help_choices(self) -> set:
@@ -127,22 +121,22 @@ class CustomHelpCommand(HelpCommand):
         """
         # first get all commands including subcommands and full command name aliases
         choices = set()
-        for c in await self.filter_commands(self.context.bot.walk_commands()):
+        for command in await self.filter_commands(self.context.bot.walk_commands()):
             # the the command or group name
-            choices.add(str(c))
+            choices.add(str(command))
 
-            if isinstance(c, Command):
+            if isinstance(command, Command):
                 # all aliases if it's just a command
-                choices.update(c.aliases)
+                choices.update(command.aliases)
             else:
                 # otherwise we need to add the parent name in
-                choices.update(f"{c.full_parent_name} {a}" for a in c.aliases)
+                choices.update(f"{command.full_parent_name} {alias}" for alias in command.aliases)
 
         # all cog names
         choices.update(self.context.bot.cogs)
 
         # all category names
-        choices.update(n.category for n in self.context.bot.cogs.values() if hasattr(n, "category"))
+        choices.update(cog.category for cog in self.context.bot.cogs.values() if hasattr(cog, "category"))
         return choices
 
     async def command_not_found(self, string: str) -> "HelpQueryNotFound":
@@ -169,7 +163,7 @@ class CustomHelpCommand(HelpCommand):
         embed = Embed(colour=Colour.red(), title=str(error))
 
         if getattr(error, "possible_matches", None):
-            matches = "\n".join(f"`{n}`" for n in error.possible_matches)
+            matches = "\n".join(f"`{match}`" for match in error.possible_matches)
             embed.description = f"**Did you mean:**\n{matches}"
 
         await self.context.send(embed=embed)
@@ -186,19 +180,19 @@ class CustomHelpCommand(HelpCommand):
         parent = command.full_parent_name
 
         name = str(command) if not parent else f"{parent} {command.name}"
-        fmt = f"**```{PREFIX}{name} {command.signature}```**\n"
+        command_details = f"**```{PREFIX}{name} {command.signature}```**\n"
 
         # show command aliases
-        aliases = ", ".join(f"`{a}`" if not parent else f"`{parent} {a}`" for a in command.aliases)
+        aliases = ", ".join(f"`{alias}`" if not parent else f"`{parent} {alias}`" for alias in command.aliases)
         if aliases:
-            fmt += f"**Can also use:** {aliases}\n\n"
+            command_details += f"**Can also use:** {aliases}\n\n"
 
         # check if the user is allowed to run this command
         if not await command.can_run(self.context):
-            fmt += "***You cannot run this command.***\n\n"
+            command_details += "***You cannot run this command.***\n\n"
 
-        fmt += f"*{command.help or 'No details provided.'}*\n"
-        embed.description = fmt
+        command_details += f"*{command.help or 'No details provided.'}*\n"
+        embed.description = command_details
 
         return embed
 
@@ -209,14 +203,22 @@ class CustomHelpCommand(HelpCommand):
         await help_cleanup(self.context.bot, self.context.author, message)
 
     @staticmethod
-    def get_commands_brief_details(commands_: List[Command]) -> str:
-        """Formats the prefix, command name and signature, and short doc for an iterable of commands."""
-        details = ""
-        for c in commands_:
-            signature = f" {c.signature}" if c.signature else ""
-            details += f"\n**`{PREFIX}{c.qualified_name}{signature}`**\n*{c.short_doc or 'No details provided'}*"
+    def get_commands_brief_details(commands_: List[Command], return_as_list: bool = False) -> Union[List[str], str]:
+        """
+        Formats the prefix, command name and signature, and short doc for an iterable of commands.
 
-        return details
+        return_as_list is helpful for passing these command details into the paginator as a list of command details.
+        """
+        details = []
+        for command in commands_:
+            signature = f" {command.signature}" if command.signature else ""
+            details.append(
+                f"\n**`{PREFIX}{command.qualified_name}{signature}`**\n*{command.short_doc or 'No details provided'}*"
+            )
+        if return_as_list:
+            return details
+        else:
+            return "".join(details)
 
     async def send_group_help(self, group: Group) -> None:
         """Sends help for a group command."""
@@ -256,17 +258,17 @@ class CustomHelpCommand(HelpCommand):
         await help_cleanup(self.context.bot, self.context.author, message)
 
     @staticmethod
-    def _category_key(cmd: Command) -> str:
+    def _category_key(command: Command) -> str:
         """
         Returns a cog name of a given command for use as a key for `sorted` and `groupby`.
 
         A zero width space is used as a prefix for results with no cogs to force them last in ordering.
         """
-        if cmd.cog:
+        if command.cog:
             with suppress(AttributeError):
-                if cmd.cog.category:
-                    return f"**{cmd.cog.category}**"
-            return f"**{cmd.cog_name}**"
+                if command.cog.category:
+                    return f"**{command.cog.category}**"
+            return f"**{command.cog_name}**"
         else:
             return "**\u200bNo Category:**"
 
@@ -280,28 +282,24 @@ class CustomHelpCommand(HelpCommand):
         embed.set_author(name="Command Help", icon_url=constants.Icons.questionmark)
 
         all_commands = []
-        for c in category.cogs:
-            all_commands.extend(c.get_commands())
+        for cog in category.cogs:
+            all_commands.extend(cog.get_commands())
 
         filtered_commands = await self.filter_commands(all_commands, sort=True)
 
-        lines = [
-            f"`{PREFIX}{c.qualified_name}{f' {c.signature}' if c.signature else ''}`"
-            f"\n*{c.short_doc or 'No details provided.'}*" for c in filtered_commands
-        ]
-
+        command_detail_lines = self.get_commands_brief_details(filtered_commands, return_as_list=True)
         description = f"**{category.name}**\n*{category.description}*"
 
-        if lines:
+        if command_detail_lines:
             description += "\n\n**Commands:**"
 
         await LinePaginator.paginate(
-            lines,
+            command_detail_lines,
             self.context,
             embed,
             prefix=description,
             max_lines=COMMANDS_PER_PAGE,
-            max_size=2040
+            max_size=2040,
         )
 
     async def send_bot_help(self, mapping: dict) -> None:
@@ -321,31 +319,28 @@ class CustomHelpCommand(HelpCommand):
             if len(sorted_commands) == 0:
                 continue
 
-            command_details = [
-                f"`{PREFIX}{c.qualified_name}{f' {c.signature}' if c.signature else ''}`"
-                f"\n*{c.short_doc or 'No details provided.'}*" for c in sorted_commands
-            ]
+            command_detail_lines = self.get_commands_brief_details(sorted_commands, return_as_list=True)
 
             # Split cogs or categories which have too many commands to fit in one page.
             # The length of commands is included for later use when aggregating into pages for the paginator.
-            for i in range(0, len(sorted_commands), COMMANDS_PER_PAGE):
-                truncated_fmt = command_details[i:i + COMMANDS_PER_PAGE]
-                joined_fmt = "\n".join(truncated_fmt)
-                cog_or_category_pages.append((f"**{cog_or_category}**\n{joined_fmt}", len(truncated_fmt)))
+            for index in range(0, len(sorted_commands), COMMANDS_PER_PAGE):
+                truncated_lines = command_detail_lines[index:index + COMMANDS_PER_PAGE]
+                joined_lines = "".join(truncated_lines)
+                cog_or_category_pages.append((f"**{cog_or_category}**{joined_lines}", len(truncated_lines)))
 
         pages = []
         counter = 0
         page = ""
-        for fmt, length in cog_or_category_pages:
+        for page_details, length in cog_or_category_pages:
             counter += length
             if counter > COMMANDS_PER_PAGE:
                 # force a new page on paginator even if it falls short of the max pages
                 # since we still want to group categories/cogs.
                 counter = length
                 pages.append(page)
-                page = f"{fmt}\n\n"
+                page = f"{page_details}\n\n"
             else:
-                page += f"{fmt}\n\n"
+                page += f"{page_details}\n\n"
 
         if page:
             # add any remaining command help that didn't get added in the last iteration above.
