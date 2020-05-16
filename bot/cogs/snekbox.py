@@ -303,6 +303,13 @@ class Snekbox(Cog):
         else:
             self.bot.stats.incr("evals.roles.developers")
 
+        if ctx.channel.category_id == Categories.help_in_use:
+            self.bot.stats.incr("evals.channels.help")
+        elif ctx.channel.id == Channels.bot_commands:
+            self.bot.stats.incr("evals.channels.bot_commands")
+        else:
+            self.bot.stats.incr("evals.channels.topical")
+
         log.info(f"Received code from {ctx.author} for evaluation:\n{code}")
 
         while True:
