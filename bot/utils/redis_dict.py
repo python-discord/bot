@@ -78,3 +78,7 @@ class RedisDict(MutableMapping):
     def copy(self) -> Dict:
         """Convert to dict and return."""
         return dict(self.items())
+
+    def clear(self) -> None:
+        """Deletes the entire hash from the Redis cache."""
+        self._redis.delete(self._namespace)
