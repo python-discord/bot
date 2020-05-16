@@ -298,6 +298,11 @@ class Snekbox(Cog):
             await ctx.invoke(self.bot.get_command("help"), "eval")
             return
 
+        if Roles.helpers in (role.id for role in ctx.author.roles):
+            self.bot.stats.incr("evals.roles.helpers")
+        else:
+            self.bot.stats.incr("evals.roles.developers")
+
         log.info(f"Received code from {ctx.author} for evaluation:\n{code}")
 
         while True:
