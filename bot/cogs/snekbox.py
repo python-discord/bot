@@ -205,6 +205,12 @@ class Snekbox(Cog):
             if paste_link:
                 msg = f"{msg}\nFull output: {paste_link}"
 
+            # Collect stats of eval fails + successes
+            if icon == ":x:":
+                self.bot.stats.incr("evals.fail")
+            elif icon in (":warning:", ":white_check_mark:"):
+                self.bot.stats.incr("evals.success")
+
             response = await ctx.send(msg)
             self.bot.loop.create_task(
                 wait_for_deletion(response, user_ids=(ctx.author.id,), client=ctx.bot)
