@@ -7,6 +7,7 @@ import typing as t
 from discord import Colour, Message
 from discord.ext.commands import Cog
 
+from bot import utils
 from bot.bot import Bot
 from bot.cogs.moderation import ModLog
 from bot.constants import Channels, Colours, Event, Icons
@@ -146,7 +147,7 @@ class TokenRemover(Cog):
 
         See: https://discordapp.com/developers/docs/reference#snowflakes
         """
-        b64_content += '=' * (-len(b64_content) % 4)
+        b64_content = utils.pad_base64(b64_content)
 
         try:
             decoded_bytes: bytes = base64.b64decode(b64_content)
@@ -165,7 +166,7 @@ class TokenRemover(Cog):
         If the timestamp is greater than the Discord epoch, it's probably valid.
         See: https://i.imgur.com/7WdehGn.png
         """
-        b64_content += '=' * (-len(b64_content) % 4)
+        b64_content = utils.pad_base64(b64_content)
 
         try:
             decoded_bytes = base64.urlsafe_b64decode(b64_content)
