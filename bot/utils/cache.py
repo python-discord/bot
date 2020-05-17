@@ -21,8 +21,7 @@ def async_cache(max_size: int = 128, arg_offset: int = 0) -> Callable:
             """Decorator wrapper for the caching logic."""
             key = ':'.join(str(args[arg_offset:]))
 
-            value = async_cache.cache.get(key)
-            if value is None:
+            if key in async_cache.cache:
                 if len(async_cache.cache) > max_size:
                     async_cache.cache.popitem(last=False)
 
