@@ -11,14 +11,14 @@ print(string) # abcd
 
 `string` didn't change. Why is that so?
 
-That's because strings in Python are _immutable_. You can't change them, you can only pass around existing strings or create new oness.
+That's because strings in Python are _immutable_. You can't change them, you can only pass around existing strings or create new ones.
 
 ```python
 string = "abcd"
 string = string.upper()
 ```
 
-`string.upper()` creates a new string which is like the old one, but with allthe letters turned to upper case.
+`string.upper()` creates and returns a new string which is like the old one, but with all the letters turned to upper case.
 
 `int`, `float`, `complex`, `tuple`, `frozenset` are other examples of immutable data types in Python.
 
@@ -29,4 +29,4 @@ my_list.append(4)
 print(my_list) # [1, 2, 3, 4]
 ```
 
-`dict` and `set` are other examples of mutable data types in Python.
+Other examples of mutable data types in Python are `dict` and `set`.
