@@ -2,13 +2,13 @@ import difflib
 import logging
 import re
 import unicodedata
+from datetime import datetime, timedelta
 from email.parser import HeaderParser
 from io import StringIO
 from typing import Dict, Optional, Tuple, Union
 
 from discord import Colour, Embed
 from discord.ext.commands import BadArgument, Cog, Context, command
-from discord.ext.tasks import loop
 
 from bot.bot import Bot
 from bot.constants import Channels, MODERATION_ROLES, STAFF_ROLES
@@ -53,7 +53,8 @@ class Utils(Cog):
         self.peps_listing_api_url = "https://api.github.com/repos/python/peps/contents?ref=master"
 
         self.peps: Dict[int, str] = {}
-        self.refresh_peps_urls.start()
+        self.last_refreshed_peps: Optional[datetime] = None
+        self.bot.loop.create_task(self.refresh_peps_urls())
 
     @command()
     @in_whitelist(channels=(Channels.bot_commands,), roles=STAFF_ROLES)
@@ -193,7 +194,6 @@ class Utils(Cog):
 
     # PEPs area
 
-    @loop(hours=3)
     async def refresh_peps_urls(self) -> None:
         """Refresh PEP URLs listing in every 3 hours."""
         # Wait until HTTP client is available
@@ -211,6 +211,7 @@ class Utils(Cog):
                 pep_number = name.replace("pep-", "").split(".")[0]
                 self.peps[int(pep_number)] = file["download_url"]
 
+        self.last_refreshed_peps = datetime.now()
         log.info("Successfully refreshed PEP URLs listing.")
 
     @command(name='pep', aliases=('get_pep', 'p'))
@@ -223,7 +224,7 @@ class Utils(Cog):
         if pep_number == 0:
             pep_embed = self.get_pep_zero_embed()
         else:
-            pep_embed = await self.get_pep_embed(pep_number, ctx)
+            pep_embed = await self.get_pep_embed(ctx, pep_number)
 
         if pep_embed:
             await ctx.send(embed=pep_embed)
@@ -244,15 +245,20 @@ class Utils(Cog):
 
         return pep_embed
 
-    @async_cache(arg_offset=1)
-    async def get_pep_embed(self, pep_nr: int, ctx: Context) -> Optional[Embed]:
+    @async_cache(arg_offset=2)
+    async def get_pep_embed(self, ctx: Context, pep_nr: int) -> Optional[Embed]:
         """Fetch, generate and return PEP embed."""
-        if pep_nr not in self.peps:
-            log.trace(f"PEP {pep_nr} was not found")
-            not_found = f"PEP {pep_nr} does not exist."
-            embed = Embed(title="PEP not found", description=not_found, colour=Colour.red())
-            await ctx.send(embed=embed)
-            return
+        while True:
+            if pep_nr not in self.peps and (self.last_refreshed_peps + timedelta(minutes=30)) > datetime.now():
+                log.trace(f"PEP {pep_nr} was not found")
+                not_found = f"PEP {pep_nr} does not exist."
+                embed = Embed(title="PEP not found", description=not_found, colour=Colour.red())
+                await ctx.send(embed=embed)
+                return
+            elif pep_nr not in self.peps:
+                await self.refresh_peps_urls()
+            else:
+                break
 
         response = await self.bot.http_session.get(self.peps[pep_nr])
 
