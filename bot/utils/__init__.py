@@ -2,7 +2,7 @@ from abc import ABCMeta
 
 from discord.ext.commands import CogMeta
 
-from bot.utils.redis import RedisDict
+from bot.utils.redis_dict import RedisDict
 
 __all__ = ['RedisDict', 'CogABCMeta']
 
