@@ -4,11 +4,11 @@ Imagine that you want to make all letters in a string upper case. Conveniently, 
 
 You might think that this would work:
 ```python
->>> string = "abcd"
->>> string.upper()
-'ABCD'
->>> string
-'abcd'
+>>> greeting = "hello"
+>>> greeting.upper()
+'HELLO'
+>>> greeting
+'hello'
 ```
 
 `string` didn't change. Why is that so?
@@ -16,13 +16,13 @@ You might think that this would work:
 That's because strings in Python are _immutable_. You can't change them, you can only pass around existing strings or create new ones.
 
 ```python
->>> string = "abcd"
->>> string = string.upper()
->>> string
-'ABCD'
+>>> greeting = "hello"
+>>> greeting = greeting.upper()
+>>> greeting
+'HELLO'
 ```
 
-`string.upper()` creates and returns a new string which is like the old one, but with all the letters turned to upper case.
+`greeting.upper()` creates and returns a new string which is like the old one, but with all the letters turned to upper case.
 
 `int`, `float`, `complex`, `tuple`, `frozenset` are other examples of immutable data types in Python.
 
