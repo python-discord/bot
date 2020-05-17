@@ -39,7 +39,7 @@ class RedisDict(MutableMapping):
         if self._has_custom_namespace:
             self._set_namespace(namespace)
         else:
-            self.namespace = "general"
+            self.namespace = "global"
 
     def _set_namespace(self, namespace: str) -> None:
         """Try to set the namespace, but do not permit collisions."""
