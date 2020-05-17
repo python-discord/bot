@@ -225,7 +225,7 @@ class HelpChannels(Scheduler, commands.Cog):
 
         return role_check
 
-    @commands.command(name="close", aliases=["dormant"], enabled=False)
+    @commands.command(name="close", aliases=["dormant", "solved"], enabled=False)
     async def close_command(self, ctx: commands.Context) -> None:
         """
         Make the current in-use help channel dormant.
