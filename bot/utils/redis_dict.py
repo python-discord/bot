@@ -89,7 +89,8 @@ class RedisDict(MutableMapping):
 
     def __iter__(self):
         """Iterate all the items in the Redis cache."""
-        return iter(self._redis.hkeys(self._namespace))
+        keys = self._redis.hkeys(self._namespace)
+        return iter([key.decode('utf-8') for key in keys])
 
     def __len__(self):
         """Return the number of items in the Redis cache."""
@@ -103,9 +104,28 @@ class RedisDict(MutableMapping):
         """Deletes the entire hash from the Redis cache."""
         self._redis.delete(self._namespace)
 
-    def get(self, key: ValidRedisKey, default: Optional[str] = None) -> JSONSerializableType:
+    def get(self, key: ValidRedisKey, default: Optional[JSONSerializableType] = None) -> JSONSerializableType:
         """Get the item, but provide a default if not found."""
         if key in self:
             return self[key]
         else:
+            return default
+
+    def pop(self, key: ValidRedisKey, default: Optional[JSONSerializableType] = None) -> JSONSerializableType:
+        """Get the item, remove it from the cache, and provide a default if not found."""
+        value = self.get(key, default)
+        del self[key]
+        return value
+
+    def popitem(self) -> JSONSerializableType:
+        """Get the last item added to the cache."""
+        key = list(self.keys())[-1]
+        return self.pop(key)
+
+    def setdefault(self, key: ValidRedisKey, default: Optional[JSONSerializableType] = None) -> JSONSerializableType:
+        """Try to get the item. If the item does not exist, set it to `default` and return that."""
+        value = self.get(key)
+
+        if value is None:
+            self[key] = default
             return default
