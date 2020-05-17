@@ -9,7 +9,7 @@ from discord.ext.commands import Cog, Context, command
 from bot import constants
 from bot.bot import Bot
 from bot.cogs.moderation import ModLog
-from bot.decorators import InChannelCheckFailure, in_channel, without_role
+from bot.decorators import InWhitelistCheckFailure, in_whitelist, without_role
 from bot.utils.checks import without_role_check
 
 log = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ else:
     PERIODIC_PING = (
         f"@everyone To verify that you have read our rules, please type `{constants.Bot.prefix}accept`."
         " If you encounter any problems during the verification process, "
-        f"ping the <@&{constants.Roles.admins}> role in this channel."
+        f"send a direct message to a staff member."
     )
 BOT_MESSAGE_DELETE_DELAY = 10
 
@@ -92,7 +92,6 @@ class Verification(Cog):
                 text=embed_text,
                 thumbnail=message.author.avatar_url_as(static_format="png"),
                 channel_id=constants.Channels.mod_alerts,
-                ping_everyone=constants.Filter.ping_everyone,
             )
 
         ctx: Context = await self.bot.get_context(message)
@@ -122,7 +121,7 @@ class Verification(Cog):
 
     @command(name='accept', aliases=('verify', 'verified', 'accepted'), hidden=True)
     @without_role(constants.Roles.verified)
-    @in_channel(constants.Channels.verification)
+    @in_whitelist(channels=(constants.Channels.verification,))
     async def accept_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
         """Accept our rules and gain access to the rest of the server."""
         log.debug(f"{ctx.author} called !accept. Assigning the 'Developer' role.")
@@ -138,7 +137,7 @@ class Verification(Cog):
                 await ctx.message.delete()
 
     @command(name='subscribe')
-    @in_channel(constants.Channels.bot_commands)
+    @in_whitelist(channels=(constants.Channels.bot_commands,))
     async def subscribe_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
         """Subscribe to announcement notifications by assigning yourself the role."""
         has_role = False
@@ -162,7 +161,7 @@ class Verification(Cog):
         )
 
     @command(name='unsubscribe')
-    @in_channel(constants.Channels.bot_commands)
+    @in_whitelist(channels=(constants.Channels.bot_commands,))
     async def unsubscribe_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
         """Unsubscribe from announcement notifications by removing the role from yourself."""
         has_role = False
@@ -187,8 +186,8 @@ class Verification(Cog):
 
     # This cannot be static (must have a __func__ attribute).
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:
-        """Check for & ignore any InChannelCheckFailure."""
-        if isinstance(error, InChannelCheckFailure):
+        """Check for & ignore any InWhitelistCheckFailure."""
+        if isinstance(error, InWhitelistCheckFailure):
             error.handled = True
 
     @staticmethod
