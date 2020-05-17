@@ -289,7 +289,7 @@ class Snekbox(Cog):
             return
 
         if not code:  # None or empty string
-            await ctx.send_help("eval")
+            await ctx.send_help(ctx.command)
             return
 
         log.info(f"Received code from {ctx.author} for evaluation:\n{code}")

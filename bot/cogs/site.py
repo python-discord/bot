@@ -21,7 +21,7 @@ class Site(Cog):
     @group(name="site", aliases=("s",), invoke_without_command=True)
     async def site_group(self, ctx: Context) -> None:
         """Commands for getting info about our website."""
-        await ctx.send_help("site")
+        await ctx.send_help(ctx.command)
 
     @site_group.command(name="home", aliases=("about",))
     async def site_main(self, ctx: Context) -> None:

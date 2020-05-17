@@ -83,7 +83,7 @@ class ErrorHandler(Cog):
     def get_help_command(ctx: Context) -> t.Coroutine:
         """Return a prepared `help` command invocation coroutine."""
         if ctx.command:
-            return ctx.send_help(ctx.command.qualified_name)
+            return ctx.send_help(ctx.command)
 
         return ctx.send_help()
 
