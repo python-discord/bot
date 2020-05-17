@@ -91,7 +91,7 @@ class Silence(commands.Cog):
 
         await ctx.send(f"{Emojis.check_mark} silenced current channel for {duration} minute(s).")
         await asyncio.sleep(duration*60)
-        log.info(f"Unsilencing channel after set delay.")
+        log.info("Unsilencing channel after set delay.")
         await ctx.invoke(self.unsilence)
 
     @commands.command(aliases=("unhush",))

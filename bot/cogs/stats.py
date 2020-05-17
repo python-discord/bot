@@ -59,7 +59,7 @@ class Stats(Cog):
         if member.guild.id != Guild.id:
             return
 
-        self.bot.stats.gauge(f"guild.total_members", len(member.guild.members))
+        self.bot.stats.gauge("guild.total_members", len(member.guild.members))
 
     @Cog.listener()
     async def on_member_leave(self, member: Member) -> None:
@@ -67,7 +67,7 @@ class Stats(Cog):
         if member.guild.id != Guild.id:
             return
 
-        self.bot.stats.gauge(f"guild.total_members", len(member.guild.members))
+        self.bot.stats.gauge("guild.total_members", len(member.guild.members))
 
     @Cog.listener()
     async def on_member_update(self, _before: Member, after: Member) -> None:
