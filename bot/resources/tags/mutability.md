@@ -34,4 +34,4 @@ Mutable data types like `list`, on the other hand, can be changed in-place:
 [1, 2, 3, 4]
 ```
 
-Other examples of mutable data types in Python are `dict` and `set`.
+Other examples of mutable data types in Python are `dict` and `set`. Instances of user-defined classes are also mutable.
