@@ -202,6 +202,7 @@ class Utils(Cog):
 
         async with self.bot.http_session.get(self.peps_listing_api_url) as resp:
             listing = await resp.json()
+
         log.trace("Got PEP URLs listing from GitHub API")
 
         for file in listing:
@@ -209,6 +210,7 @@ class Utils(Cog):
             if name.startswith("pep-") and name.endswith((".rst", ".txt")):
                 pep_number = name.replace("pep-", "").split(".")[0]
                 self.peps[int(pep_number)] = file["download_url"]
+
         log.info("Successfully refreshed PEP URLs listing.")
 
     @command(name='pep', aliases=('get_pep', 'p'))
