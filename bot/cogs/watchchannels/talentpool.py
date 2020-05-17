@@ -61,7 +61,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
             return
 
         if isinstance(user, Member) and any(role.id in STAFF_ROLES for role in user.roles):
-            await ctx.send(f":x: Nominating staff members, eh? Here's a cookie :cookie:")
+            await ctx.send(":x: Nominating staff members, eh? Here's a cookie :cookie:")
             return
 
         if not await self.fetch_user_cache():

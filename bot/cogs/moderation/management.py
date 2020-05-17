@@ -49,8 +49,8 @@ class ModManagement(commands.Cog):
     async def infraction_edit(
         self,
         ctx: Context,
-        infraction_id: t.Union[int, allowed_strings("l", "last", "recent")],
-        duration: t.Union[Expiry, allowed_strings("p", "permanent"), None],
+        infraction_id: t.Union[int, allowed_strings("l", "last", "recent")],  # noqa: F821
+        duration: t.Union[Expiry, allowed_strings("p", "permanent"), None],   # noqa: F821
         *,
         reason: str = None
     ) -> None:
@@ -83,14 +83,14 @@ class ModManagement(commands.Cog):
                 "actor__id": ctx.author.id,
                 "ordering": "-inserted_at"
             }
-            infractions = await self.bot.api_client.get(f"bot/infractions", params=params)
+            infractions = await self.bot.api_client.get("bot/infractions", params=params)
 
             if infractions:
                 old_infraction = infractions[0]
                 infraction_id = old_infraction["id"]
             else:
                 await ctx.send(
-                    f":x: Couldn't find most recent infraction; you have never given an infraction."
+                    ":x: Couldn't find most recent infraction; you have never given an infraction."
                 )
                 return
         else:
@@ -224,7 +224,7 @@ class ModManagement(commands.Cog):
     ) -> None:
         """Send a paginated embed of infractions for the specified user."""
         if not infractions:
-            await ctx.send(f":warning: No infractions could be found for that query.")
+            await ctx.send(":warning: No infractions could be found for that query.")
             return
 
         lines = tuple(

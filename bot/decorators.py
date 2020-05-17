@@ -121,7 +121,7 @@ def locked() -> Callable:
                 embed = Embed()
                 embed.colour = Colour.red()
 
-                log.debug(f"User tried to invoke a locked command.")
+                log.debug("User tried to invoke a locked command.")
                 embed.description = (
                     "You're already using this command. Please wait until it is done before you use it again."
                 )
