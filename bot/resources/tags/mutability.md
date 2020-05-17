@@ -11,7 +11,7 @@ You might think that this would work:
 'hello'
 ```
 
-`string` didn't change. Why is that so?
+`greeting` didn't change. Why is that so?
 
 That's because strings in Python are _immutable_. You can't change them, you can only pass around existing strings or create new ones.
 
