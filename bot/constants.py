@@ -199,8 +199,15 @@ class Bot(metaclass=YAMLGetter):
     prefix: str
     token: str
     sentry_dsn: str
-    redis_host: str
-    redis_port: int
+
+
+class Redis(metaclass=YAMLGetter):
+    section = "bot"
+    subsection = "redis"
+
+    host: str
+    port: int
+    password: str
 
 
 class Filter(metaclass=YAMLGetter):

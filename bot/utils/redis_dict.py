@@ -27,8 +27,9 @@ class RedisDict(MutableMapping):
 
     _namespaces = []
     _redis = redis_py.Redis(
-        host=constants.Bot.redis_host,
-        port=constants.Bot.redis_port,
+        host=constants.Redis.host,
+        port=constants.Redis.port,
+        password=constants.Redis.password,
     )  # Can be overridden for testing
 
     def __init__(self, namespace: Optional[str] = None) -> None:
