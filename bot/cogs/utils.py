@@ -250,10 +250,10 @@ class Utils(Cog):
         if pep_nr not in self.peps:
             log.trace(f"PEP {pep_nr} was not found")
             not_found = f"PEP {pep_nr} does not exist."
-            await ctx.send(
-                embed=Embed(title="PEP not found", description=not_found, colour=Colour.red())
-            )
+            embed = Embed(title="PEP not found", description=not_found, colour=Colour.red())
+            await ctx.send(embed=embed)
             return
+
         response = await self.bot.http_session.get(self.peps[pep_nr])
 
         if response.status == 200:
@@ -285,9 +285,8 @@ class Utils(Cog):
             )
 
             error_message = "Unexpected HTTP error during PEP search. Please let us know."
-            await ctx.send(
-                embed=Embed(title="Unexpected error", description=error_message, colour=Colour.red())
-            )
+            embed = Embed(title="Unexpected error", description=error_message, colour=Colour.red())
+            await ctx.send(embed=embed)
             return
 
 
