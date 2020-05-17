@@ -2,7 +2,7 @@ import contextlib
 import logging
 import typing as t
 
-from discord.ext.commands import Cog, Command, Context, errors
+from discord.ext.commands import Cog, Context, errors
 from sentry_sdk import push_scope
 
 from bot.api import ResponseCodeError
@@ -79,19 +79,13 @@ class ErrorHandler(Cog):
             f"{e.__class__.__name__}: {e}"
         )
 
-    async def get_help_command(self, command: t.Optional[Command]) -> t.Tuple:
-        """Return the help command invocation args to display help for `command`."""
-        parent = None
-        if command is not None:
-            parent = command.parent
+    @staticmethod
+    def get_help_command(ctx: Context) -> t.Coroutine:
+        """Return a prepared `help` command invocation coroutine."""
+        if ctx.command:
+            return ctx.send_help(ctx.command.qualified_name)
 
-        # Retrieve the help command for the invoked command.
-        if parent and command:
-            return self.bot.get_command("help"), parent.name, command.name
-        elif command:
-            return self.bot.get_command("help"), command.name
-        else:
-            return self.bot.get_command("help")
+        return ctx.send_help()
 
     async def try_silence(self, ctx: Context) -> bool:
         """
@@ -165,20 +159,19 @@ class ErrorHandler(Cog):
         * ArgumentParsingError: send an error message
         * Other: send an error message and the help command
         """
-        # TODO: use ctx.send_help() once PR #519 is merged.
-        help_command = await self.get_help_command(ctx.command)
+        prepared_help_command = self.get_help_command(ctx)
 
         if isinstance(e, errors.MissingRequiredArgument):
             await ctx.send(f"Missing required argument `{e.param.name}`.")
-            await ctx.invoke(*help_command)
+            await prepared_help_command
             self.bot.stats.incr("errors.missing_required_argument")
         elif isinstance(e, errors.TooManyArguments):
             await ctx.send(f"Too many arguments provided.")
-            await ctx.invoke(*help_command)
+            await prepared_help_command
             self.bot.stats.incr("errors.too_many_arguments")
         elif isinstance(e, errors.BadArgument):
             await ctx.send(f"Bad argument: {e}\n")
-            await ctx.invoke(*help_command)
+            await prepared_help_command
             self.bot.stats.incr("errors.bad_argument")
         elif isinstance(e, errors.BadUnionArgument):
             await ctx.send(f"Bad argument: {e}\n```{e.errors[-1]}```")
@@ -188,7 +181,7 @@ class ErrorHandler(Cog):
             self.bot.stats.incr("errors.argument_parsing_error")
         else:
             await ctx.send("Something about your input seems off. Check the arguments:")
-            await ctx.invoke(*help_command)
+            await prepared_help_command
             self.bot.stats.incr("errors.other_user_input_error")
 
     @staticmethod

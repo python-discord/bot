@@ -55,7 +55,7 @@ class Utils(Cog):
         if pep_number.isdigit():
             pep_number = int(pep_number)
         else:
-            await ctx.invoke(self.bot.get_command("help"), "pep")
+            await ctx.send_help("pep")
             return
 
         # Handle PEP 0 directly because it's not in .rst or .txt so it can't be accessed like other PEPs.

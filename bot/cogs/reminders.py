@@ -281,7 +281,7 @@ class Reminders(Scheduler, Cog):
     @remind_group.group(name="edit", aliases=("change", "modify"), invoke_without_command=True)
     async def edit_reminder_group(self, ctx: Context) -> None:
         """Commands for modifying your current reminders."""
-        await ctx.invoke(self.bot.get_command("help"), "reminders", "edit")
+        await ctx.send_help("reminders edit")
 
     @edit_reminder_group.command(name="duration", aliases=("time",))
     async def edit_reminder_duration(self, ctx: Context, id_: int, expiration: Duration) -> None:

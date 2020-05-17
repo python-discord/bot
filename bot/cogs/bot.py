@@ -41,7 +41,7 @@ class BotCog(Cog, name="Bot"):
     @with_role(Roles.verified)
     async def botinfo_group(self, ctx: Context) -> None:
         """Bot informational commands."""
-        await ctx.invoke(self.bot.get_command("help"), "bot")
+        await ctx.send_help("bot")
 
     @botinfo_group.command(name='about', aliases=('info',), hidden=True)
     @with_role(Roles.verified)
