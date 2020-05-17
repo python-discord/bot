@@ -7,7 +7,7 @@ import discord
 
 from bot import constants
 from bot.cogs import information
-from bot.decorators import InChannelCheckFailure
+from bot.decorators import InWhitelistCheckFailure
 from tests import helpers
 
 
@@ -485,7 +485,7 @@ class UserEmbedTests(unittest.TestCase):
         user.avatar_url_as.return_value = "avatar url"
         embed = asyncio.run(self.cog.create_user_embed(ctx, user))
 
-        user.avatar_url_as.assert_called_once_with(format="png")
+        user.avatar_url_as.assert_called_once_with(static_format="png")
         self.assertEqual(embed.thumbnail.url, "avatar url")
 
 
@@ -525,7 +525,7 @@ class UserCommandTests(unittest.TestCase):
         ctx = helpers.MockContext(author=self.author, channel=helpers.MockTextChannel(id=100))
 
         msg = "Sorry, but you may only use this command within <#50>."
-        with self.assertRaises(InChannelCheckFailure, msg=msg):
+        with self.assertRaises(InWhitelistCheckFailure, msg=msg):
             asyncio.run(self.cog.user_info.callback(self.cog, ctx))
 
     @unittest.mock.patch("bot.cogs.information.Information.create_user_embed", new_callable=unittest.mock.AsyncMock)

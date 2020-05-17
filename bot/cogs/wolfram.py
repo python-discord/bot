@@ -60,6 +60,14 @@ def custom_cooldown(*ignore: List[int]) -> Callable:
     A list of roles may be provided to ignore the per-user cooldown
     """
     async def predicate(ctx: Context) -> bool:
+        if ctx.invoked_with == 'help':
+            # if the invoked command is help we don't want to increase the ratelimits since it's not actually
+            # invoking the command/making a request, so instead just check if the user/guild are on cooldown.
+            guild_cooldown = not guildcd.get_bucket(ctx.message).get_tokens() == 0  # if guild is on cooldown
+            if not any(r.id in ignore for r in ctx.author.roles):  # check user bucket if user is not ignored
+                return guild_cooldown and not usercd.get_bucket(ctx.message).get_tokens() == 0
+            return guild_cooldown
+
         user_bucket = usercd.get_bucket(ctx.message)
 
         if all(role.id not in ignore for role in ctx.author.roles):

@@ -34,7 +34,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
     @with_role(*MODERATION_ROLES)
     async def nomination_group(self, ctx: Context) -> None:
         """Highlights the activity of helper nominees by relaying their messages to the talent pool channel."""
-        await ctx.invoke(self.bot.get_command("help"), "talentpool")
+        await ctx.send_help(ctx.command)
 
     @nomination_group.command(name='watched', aliases=('all', 'list'))
     @with_role(*MODERATION_ROLES)
@@ -173,7 +173,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
     @with_role(*MODERATION_ROLES)
     async def nomination_edit_group(self, ctx: Context) -> None:
         """Commands to edit nominations."""
-        await ctx.invoke(self.bot.get_command("help"), "talentpool", "edit")
+        await ctx.send_help(ctx.command)
 
     @nomination_edit_group.command(name='reason')
     @with_role(*MODERATION_ROLES)

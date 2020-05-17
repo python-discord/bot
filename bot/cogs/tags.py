@@ -43,7 +43,7 @@ class Tags(Cog):
             tag = {
                 "title": tag_title,
                 "embed": {
-                    "description": file.read_text()
+                    "description": file.read_text(encoding="utf-8")
                 }
             }
             cache[tag_title] = tag
@@ -207,6 +207,9 @@ class Tags(Cog):
                         "time": time.time(),
                         "channel": ctx.channel.id
                     }
+
+                self.bot.stats.incr(f"tags.usages.{tag['title'].replace('-', '_')}")
+
                 await wait_for_deletion(
                     await ctx.send(embed=Embed.from_dict(tag['embed'])),
                     [ctx.author.id],

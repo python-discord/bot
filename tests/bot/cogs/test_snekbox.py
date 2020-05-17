@@ -208,10 +208,9 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_eval_command_call_help(self):
         """Test if the eval command call the help command if no code is provided."""
-        ctx = MockContext()
-        ctx.invoke = AsyncMock()
+        ctx = MockContext(command="sentinel")
         await self.cog.eval_command.callback(self.cog, ctx=ctx, code='')
-        ctx.invoke.assert_called_once_with(self.bot.get_command("help"), "eval")
+        ctx.send_help.assert_called_once_with("sentinel")
 
     async def test_send_eval(self):
         """Test the send_eval function."""
