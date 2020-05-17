@@ -281,8 +281,7 @@ class Utils(Cog):
             return pep_embed
         else:
             log.trace(
-                f"The user requested PEP {pep_nr}, but the response had an unexpected status code: "
-                f"{response.status}.\n{response.text}"
+                f"The user requested PEP {pep_nr}, but the response had an unexpected status code: {response.status}."
             )
 
             error_message = "Unexpected HTTP error during PEP search. Please let us know."
