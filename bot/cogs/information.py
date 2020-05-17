@@ -331,7 +331,10 @@ class Information(Cog):
 
     @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=constants.STAFF_ROLES)
     @group(invoke_without_command=True)
-    @in_whitelist(channels=(constants.Channels.bot_commands,), roles=constants.STAFF_ROLES)
+    @in_whitelist(
+        channels=(constants.Channels.bot_commands, constants.Channels.seasonalbot_commands),
+        roles=constants.STAFF_ROLES
+    )
     async def raw(self, ctx: Context, *, message: Message, json: bool = False) -> None:
         """Shows information about the raw API response."""
         # I *guess* it could be deleted right as the command is invoked but I felt like it wasn't worth handling

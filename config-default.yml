@@ -149,10 +149,11 @@ guild:
         off_topic_2:    463035268514185226
 
         # Special
-        bot_commands:       &BOT_CMD        267659945086812160
-        esoteric:                           470884583684964352
-        reddit:                             458224812528238616
-        verification:                       352442727016693763
+        bot_commands:         &BOT_CMD        267659945086812160
+        seasonalbot_commands: &SBOT_CMD       607247579608121354
+        esoteric:                             470884583684964352
+        reddit:                               458224812528238616
+        verification:                         352442727016693763
 
         # Staff
         admins:             &ADMINS         365960823622991872
@@ -200,6 +201,7 @@ guild:
 
     reminder_whitelist:
         - *BOT_CMD
+        - *SBOT_CMD
         - *DEV_CONTRIB
 
     roles:

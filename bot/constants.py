@@ -396,6 +396,7 @@ class Channels(metaclass=YAMLGetter):
     organisation: int
     python_discussion: int
     reddit: int
+    seasonalbot_commands: int
     talent_pool: int
     user_event_announcements: int
     user_log: int
