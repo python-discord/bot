@@ -7,6 +7,8 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import redis as redis_py
 
+from bot import constants
+
 ValidRedisKey = Union[str, int, float]
 JSONSerializableType = Optional[Union[str, float, bool, Dict, List, Tuple, Enum]]
 
@@ -24,7 +26,10 @@ class RedisDict(MutableMapping):
     """
 
     _namespaces = []
-    _redis = redis_py.Redis(host="redis")  # Can be overridden for testing
+    _redis = redis_py.Redis(
+        host=constants.Bot.redis_host,
+        port=constants.Bot.redis_port,
+    )  # Can be overridden for testing
 
     def __init__(self, namespace: Optional[str] = None) -> None:
         """Initialize the RedisDict with the right namespace."""

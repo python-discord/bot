@@ -2,6 +2,8 @@ bot:
     prefix:      "!"
     token:       !ENV "BOT_TOKEN"
     sentry_dsn:  !ENV "BOT_SENTRY_DSN"
+    redis_host:  "redis"
+    redis_port:  6379
 
     stats:
         statsd_host: "graphite"
