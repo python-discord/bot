@@ -5,6 +5,7 @@ from discord.ext.commands import errors
 
 from bot.api import ResponseCodeError
 from bot.cogs.error_handler import ErrorHandler
+from bot.cogs.moderation.silence import Silence
 from tests.helpers import MockBot, MockContext
 
 
@@ -159,3 +160,20 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
         error = errors.DisabledCommand()  # Use this just as a other error
         self.assertIsNone(await cog.on_command_error(self.ctx, error))
         log_mock.debug.assert_called_once()
+
+
+class TrySilenceTests(unittest.IsolatedAsyncioTestCase):
+    """Test for helper functions that handle `CommandNotFound` error."""
+
+    def setUp(self):
+        self.bot = MockBot()
+
+    async def test_try_silence_context_invoked_from_error_handler(self):
+        """Should set `Context.invoked_from_error_handler` to `True`."""
+        cog = ErrorHandler(self.bot)
+        ctx = MockContext(bot=self.bot)
+        ctx.invoked_with = "foo"
+        self.bot.get_command.return_value = Silence(self.bot).silence
+        await cog.try_silence(ctx)
+        self.assertTrue(hasattr(ctx, "invoked_from_error_handler"))
+        self.assertTrue(ctx.invoked_from_error_handler)
