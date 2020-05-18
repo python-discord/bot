@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import sys
@@ -58,4 +59,10 @@ coloredlogs.install(logger=root_log, stream=sys.stdout)
 
 logging.getLogger("discord").setLevel(logging.WARNING)
 logging.getLogger("websockets").setLevel(logging.WARNING)
+logging.getLogger("chardet").setLevel(logging.WARNING)
 logging.getLogger(__name__)
+
+
+# On Windows, the selector event loop is required for aiodns.
+if os.name == "nt":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
