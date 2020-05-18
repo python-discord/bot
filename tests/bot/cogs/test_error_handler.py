@@ -218,3 +218,20 @@ class TrySilenceTests(unittest.IsolatedAsyncioTestCase):
                     self.bot.get_command.return_value,
                     duration=min(case.count("h")*2, 15)
                 )
+
+    async def test_try_silence_unsilence(self):
+        """Should call unsilence command."""
+        bot = MockBot()
+        silence = Silence(bot)
+        silence.silence.can_run = AsyncMock(return_value=True)
+        cog = ErrorHandler(bot)
+        ctx = MockContext(bot=bot)
+        test_cases = ("unshh", "unshhhhh", "unshhhhhhhhh")
+
+        for case in test_cases:
+            with self.subTest(message=case):
+                bot.get_command.side_effect = (silence.silence, silence.unsilence)
+                ctx.reset_mock()
+                ctx.invoked_with = case
+                self.assertTrue(await cog.try_silence(ctx))
+                ctx.invoke.assert_awaited_once_with(silence.unsilence)
