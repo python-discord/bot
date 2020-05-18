@@ -167,77 +167,65 @@ class TrySilenceTests(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         self.bot = MockBot()
-        self.bot.get_command.return_value = Silence(self.bot).silence
+        self.silence = Silence(self.bot)
+        self.bot.get_command.return_value = self.silence.silence
+        self.ctx = MockContext(bot=self.bot)
+        self.cog = ErrorHandler(self.bot)
 
     async def test_try_silence_context_invoked_from_error_handler(self):
         """Should set `Context.invoked_from_error_handler` to `True`."""
-        cog = ErrorHandler(self.bot)
-        ctx = MockContext(bot=self.bot)
-        ctx.invoked_with = "foo"
-        await cog.try_silence(ctx)
-        self.assertTrue(hasattr(ctx, "invoked_from_error_handler"))
-        self.assertTrue(ctx.invoked_from_error_handler)
+        self.ctx.invoked_with = "foo"
+        await self.cog.try_silence(self.ctx)
+        self.assertTrue(hasattr(self.ctx, "invoked_from_error_handler"))
+        self.assertTrue(self.ctx.invoked_from_error_handler)
 
     async def test_try_silence_get_command(self):
         """Should call `get_command` with `silence`."""
-        cog = ErrorHandler(self.bot)
-        ctx = MockContext(bot=self.bot)
-        ctx.invoked_with = "foo"
-        await cog.try_silence(ctx)
+        self.ctx.invoked_with = "foo"
+        await self.cog.try_silence(self.ctx)
         self.bot.get_command.assert_called_once_with("silence")
 
     async def test_try_silence_no_permissions_to_run(self):
         """Should return `False` because missing permissions."""
-        cog = ErrorHandler(self.bot)
-        ctx = MockContext(bot=self.bot)
-        ctx.invoked_with = "foo"
+        self.ctx.invoked_with = "foo"
         self.bot.get_command.return_value.can_run = AsyncMock(return_value=False)
-        self.assertFalse(await cog.try_silence(ctx))
+        self.assertFalse(await self.cog.try_silence(self.ctx))
 
     async def test_try_silence_no_permissions_to_run_command_error(self):
         """Should return `False` because `CommandError` raised (no permissions)."""
-        cog = ErrorHandler(self.bot)
-        ctx = MockContext(bot=self.bot)
-        ctx.invoked_with = "foo"
+        self.ctx.invoked_with = "foo"
         self.bot.get_command.return_value.can_run = AsyncMock(side_effect=errors.CommandError())
-        self.assertFalse(await cog.try_silence(ctx))
+        self.assertFalse(await self.cog.try_silence(self.ctx))
 
     async def test_try_silence_silencing(self):
         """Should run silence command with correct arguments."""
-        cog = ErrorHandler(self.bot)
-        ctx = MockContext(bot=self.bot)
         self.bot.get_command.return_value.can_run = AsyncMock(return_value=True)
         test_cases = ("shh", "shhh", "shhhhhh", "shhhhhhhhhhhhhhhhhhh")
 
         for case in test_cases:
             with self.subTest(message=case):
-                ctx.reset_mock()
-                ctx.invoked_with = case
-                self.assertTrue(await cog.try_silence(ctx))
-                ctx.invoke.assert_awaited_once_with(
+                self.ctx.reset_mock()
+                self.ctx.invoked_with = case
+                self.assertTrue(await self.cog.try_silence(self.ctx))
+                self.ctx.invoke.assert_awaited_once_with(
                     self.bot.get_command.return_value,
                     duration=min(case.count("h")*2, 15)
                 )
 
     async def test_try_silence_unsilence(self):
         """Should call unsilence command."""
-        bot = MockBot()
-        silence = Silence(bot)
-        silence.silence.can_run = AsyncMock(return_value=True)
-        cog = ErrorHandler(bot)
-        ctx = MockContext(bot=bot)
+        self.silence.silence.can_run = AsyncMock(return_value=True)
         test_cases = ("unshh", "unshhhhh", "unshhhhhhhhh")
 
         for case in test_cases:
             with self.subTest(message=case):
-                bot.get_command.side_effect = (silence.silence, silence.unsilence)
-                ctx.reset_mock()
-                ctx.invoked_with = case
-                self.assertTrue(await cog.try_silence(ctx))
-                ctx.invoke.assert_awaited_once_with(silence.unsilence)
+                self.bot.get_command.side_effect = (self.silence.silence, self.silence.unsilence)
+                self.ctx.reset_mock()
+                self.ctx.invoked_with = case
+                self.assertTrue(await self.cog.try_silence(self.ctx))
+                self.ctx.invoke.assert_awaited_once_with(self.silence.unsilence)
 
     async def test_try_silence_no_match(self):
-        cog = ErrorHandler(self.bot)
-        ctx = MockContext(bot=self.bot)
-        ctx.invoked_with = "foo"
-        self.assertFalse(await cog.try_silence(ctx))
+        """Should return `False` when message don't match."""
+        self.ctx.invoked_with = "foo"
+        self.assertFalse(await self.cog.try_silence(self.ctx))
