@@ -105,3 +105,11 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
         error = errors.CheckFailure()
         self.assertIsNone(await cog.on_command_error(self.ctx, error))
         cog.handle_check_failure.assert_awaited_once_with(self.ctx, error)
+
+    async def test_error_handler_command_on_cooldown(self):
+        """Should send error with `ctx.send` when error is `CommandOnCooldown`."""
+        self.ctx.reset_mock()
+        cog = ErrorHandler(self.bot)
+        error = errors.CommandOnCooldown(10, 9)
+        self.assertIsNone(await cog.on_command_error(self.ctx, error))
+        self.ctx.send.assert_awaited_once_with(error)
