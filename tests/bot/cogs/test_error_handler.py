@@ -167,13 +167,13 @@ class TrySilenceTests(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         self.bot = MockBot()
+        self.bot.get_command.return_value = Silence(self.bot).silence
 
     async def test_try_silence_context_invoked_from_error_handler(self):
         """Should set `Context.invoked_from_error_handler` to `True`."""
         cog = ErrorHandler(self.bot)
         ctx = MockContext(bot=self.bot)
         ctx.invoked_with = "foo"
-        self.bot.get_command.return_value = Silence(self.bot).silence
         await cog.try_silence(ctx)
         self.assertTrue(hasattr(ctx, "invoked_from_error_handler"))
         self.assertTrue(ctx.invoked_from_error_handler)
@@ -183,6 +183,13 @@ class TrySilenceTests(unittest.IsolatedAsyncioTestCase):
         cog = ErrorHandler(self.bot)
         ctx = MockContext(bot=self.bot)
         ctx.invoked_with = "foo"
-        self.bot.get_command.return_value = Silence(self.bot).silence
         await cog.try_silence(ctx)
         self.bot.get_command.assert_called_once_with("silence")
+
+    async def test_try_silence_no_permissions_to_run(self):
+        """Should return `False` because missing permissions."""
+        cog = ErrorHandler(self.bot)
+        ctx = MockContext(bot=self.bot)
+        ctx.invoked_with = "foo"
+        self.bot.get_command.return_value.can_run = AsyncMock(return_value=False)
+        self.assertFalse(await cog.try_silence(ctx))
