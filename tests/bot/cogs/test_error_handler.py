@@ -16,6 +16,7 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_error_handler_already_handled(self):
         """Should not do anything when error is already handled by local error handler."""
+        self.ctx.reset_mock()
         cog = ErrorHandler(self.bot)
         error = errors.CommandError()
         error.handled = "foo"
@@ -70,3 +71,19 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
                     else:
                         cog.try_get_tag.assert_awaited_once()
                 self.ctx.send.assert_not_awaited()
+
+    async def test_error_handler_command_not_found_error_invoked_by_handler(self):
+        """Should do nothing when error is `CommandNotFound` and have attribute `invoked_from_error_handler`."""
+        ctx = MockContext(bot=self.bot, invoked_from_error_handler=True)
+
+        cog = ErrorHandler(self.bot)
+        cog.try_silence = AsyncMock()
+        cog.try_get_tag = AsyncMock()
+
+        error = errors.CommandNotFound()
+
+        self.assertIsNone(await cog.on_command_error(ctx, error))
+
+        cog.try_silence.assert_not_awaited()
+        cog.try_get_tag.assert_not_awaited()
+        self.ctx.send.assert_not_awaited()
