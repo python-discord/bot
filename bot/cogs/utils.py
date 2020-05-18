@@ -248,17 +248,15 @@ class Utils(Cog):
     @async_cache(arg_offset=2)
     async def get_pep_embed(self, ctx: Context, pep_nr: int) -> Optional[Embed]:
         """Fetch, generate and return PEP embed."""
-        while True:
-            if pep_nr not in self.peps and (self.last_refreshed_peps + timedelta(minutes=30)) > datetime.now():
-                log.trace(f"PEP {pep_nr} was not found")
-                not_found = f"PEP {pep_nr} does not exist."
-                embed = Embed(title="PEP not found", description=not_found, colour=Colour.red())
-                await ctx.send(embed=embed)
-                return
-            elif pep_nr not in self.peps:
-                await self.refresh_peps_urls()
-            else:
-                break
+        if pep_nr not in self.peps and (self.last_refreshed_peps + timedelta(minutes=30)) <= datetime.now():
+            await self.refresh_peps_urls()
+
+        if pep_nr not in self.peps:
+            log.trace(f"PEP {pep_nr} was not found")
+            not_found = f"PEP {pep_nr} does not exist."
+            embed = Embed(title="PEP not found", description=not_found, colour=Colour.red())
+            await ctx.send(embed=embed)
+            return
 
         response = await self.bot.http_session.get(self.peps[pep_nr])
 
