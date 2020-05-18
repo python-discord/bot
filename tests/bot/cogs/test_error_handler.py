@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, patch
 
 from discord.ext.commands import errors
 
+from bot.api import ResponseCodeError
 from bot.cogs.error_handler import ErrorHandler
 from tests.helpers import MockBot, MockContext
 
@@ -113,3 +114,24 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
         error = errors.CommandOnCooldown(10, 9)
         self.assertIsNone(await cog.on_command_error(self.ctx, error))
         self.ctx.send.assert_awaited_once_with(error)
+
+    async def test_error_handler_command_invoke_error(self):
+        """Should call `handle_api_error` or `handle_unexpected_error` depending on original error."""
+        cog = ErrorHandler(self.bot)
+        cog.handle_api_error = AsyncMock()
+        cog.handle_unexpected_error = AsyncMock()
+        test_cases = (
+            {
+                "args": (self.ctx, errors.CommandInvokeError(ResponseCodeError(AsyncMock()))),
+                "expect_mock_call": cog.handle_api_error
+            },
+            {
+                "args": (self.ctx, errors.CommandInvokeError(TypeError)),
+                "expect_mock_call": cog.handle_unexpected_error
+            }
+        )
+
+        for case in test_cases:
+            with self.subTest(args=case["args"], expect_mock_call=case["expect_mock_call"]):
+                self.assertIsNone(await cog.on_command_error(*case["args"]))
+                case["expect_mock_call"].assert_awaited_once_with(self.ctx, case["args"][1].original)
