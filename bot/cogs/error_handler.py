@@ -50,7 +50,7 @@ class ErrorHandler(Cog):
             log.trace(f"Command {command} had its error already handled locally; ignoring.")
             return
 
-        if isinstance(e, errors.CommandNotFound) and not hasattr(ctx, "invoked_from_error_handler"):
+        if isinstance(e, errors.CommandNotFound) and not getattr(ctx, "invoked_from_error_handler", False):
             if await self.try_silence(ctx):
                 return
             if ctx.channel.id != Channels.verification:
