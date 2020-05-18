@@ -235,3 +235,9 @@ class TrySilenceTests(unittest.IsolatedAsyncioTestCase):
                 ctx.invoked_with = case
                 self.assertTrue(await cog.try_silence(ctx))
                 ctx.invoke.assert_awaited_once_with(silence.unsilence)
+
+    async def test_try_silence_no_match(self):
+        cog = ErrorHandler(self.bot)
+        ctx = MockContext(bot=self.bot)
+        ctx.invoked_with = "foo"
+        self.assertFalse(await cog.try_silence(ctx))
