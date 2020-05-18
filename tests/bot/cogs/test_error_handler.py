@@ -193,3 +193,11 @@ class TrySilenceTests(unittest.IsolatedAsyncioTestCase):
         ctx.invoked_with = "foo"
         self.bot.get_command.return_value.can_run = AsyncMock(return_value=False)
         self.assertFalse(await cog.try_silence(ctx))
+
+    async def test_try_silence_no_permissions_to_run_command_error(self):
+        """Should return `False` because `CommandError` raised (no permissions)."""
+        cog = ErrorHandler(self.bot)
+        ctx = MockContext(bot=self.bot)
+        ctx.invoked_with = "foo"
+        self.bot.get_command.return_value.can_run = AsyncMock(side_effect=errors.CommandError())
+        self.assertFalse(await cog.try_silence(ctx))
