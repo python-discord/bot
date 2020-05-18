@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from discord.ext.commands import errors
 
@@ -135,3 +135,19 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(args=case["args"], expect_mock_call=case["expect_mock_call"]):
                 self.assertIsNone(await cog.on_command_error(*case["args"]))
                 case["expect_mock_call"].assert_awaited_once_with(self.ctx, case["args"][1].original)
+
+    async def test_error_handler_three_other_errors(self):
+        """Should call `handle_unexpected_error` when `ConversionError`, `MaxConcurrencyReached` or `ExtensionError`."""
+        cog = ErrorHandler(self.bot)
+        cog.handle_unexpected_error = AsyncMock()
+        errs = (
+            errors.ConversionError(MagicMock(), MagicMock()),
+            errors.MaxConcurrencyReached(1, MagicMock()),
+            errors.ExtensionError(name="foo")
+        )
+
+        for err in errs:
+            with self.subTest(error=err):
+                cog.handle_unexpected_error.reset_mock()
+                self.assertIsNone(await cog.on_command_error(self.ctx, err))
+                cog.handle_unexpected_error.assert_awaited_once_with(self.ctx, err)
