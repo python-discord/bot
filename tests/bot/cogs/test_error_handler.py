@@ -96,3 +96,12 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
         error = errors.UserInputError()
         self.assertIsNone(await cog.on_command_error(self.ctx, error))
         cog.handle_user_input_error.assert_awaited_once_with(self.ctx, error)
+
+    async def test_error_handler_check_failure(self):
+        """Should await `ErrorHandler.handle_check_failure` when error is `CheckFailure`."""
+        self.ctx.reset_mock()
+        cog = ErrorHandler(self.bot)
+        cog.handle_check_failure = AsyncMock()
+        error = errors.CheckFailure()
+        self.assertIsNone(await cog.on_command_error(self.ctx, error))
+        cog.handle_check_failure.assert_awaited_once_with(self.ctx, error)
