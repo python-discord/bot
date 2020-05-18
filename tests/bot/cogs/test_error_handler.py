@@ -87,3 +87,12 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
         cog.try_silence.assert_not_awaited()
         cog.try_get_tag.assert_not_awaited()
         self.ctx.send.assert_not_awaited()
+
+    async def test_error_handler_user_input_error(self):
+        """Should await `ErrorHandler.handle_user_input_error` when error is `UserInputError`."""
+        self.ctx.reset_mock()
+        cog = ErrorHandler(self.bot)
+        cog.handle_user_input_error = AsyncMock()
+        error = errors.UserInputError()
+        self.assertIsNone(await cog.on_command_error(self.ctx, error))
+        cog.handle_user_input_error.assert_awaited_once_with(self.ctx, error)
