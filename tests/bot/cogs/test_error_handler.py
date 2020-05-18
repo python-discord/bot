@@ -151,3 +151,11 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
                 cog.handle_unexpected_error.reset_mock()
                 self.assertIsNone(await cog.on_command_error(self.ctx, err))
                 cog.handle_unexpected_error.assert_awaited_once_with(self.ctx, err)
+
+    @patch("bot.cogs.error_handler.log")
+    async def test_error_handler_other_errors(self, log_mock):
+        """Should `log.debug` other errors."""
+        cog = ErrorHandler(self.bot)
+        error = errors.DisabledCommand()  # Use this just as a other error
+        self.assertIsNone(await cog.on_command_error(self.ctx, error))
+        log_mock.debug.assert_called_once()
