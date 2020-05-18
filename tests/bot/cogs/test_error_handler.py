@@ -177,3 +177,12 @@ class TrySilenceTests(unittest.IsolatedAsyncioTestCase):
         await cog.try_silence(ctx)
         self.assertTrue(hasattr(ctx, "invoked_from_error_handler"))
         self.assertTrue(ctx.invoked_from_error_handler)
+
+    async def test_try_silence_get_command(self):
+        """Should call `get_command` with `silence`."""
+        cog = ErrorHandler(self.bot)
+        ctx = MockContext(bot=self.bot)
+        ctx.invoked_with = "foo"
+        self.bot.get_command.return_value = Silence(self.bot).silence
+        await cog.try_silence(ctx)
+        self.bot.get_command.assert_called_once_with("silence")
