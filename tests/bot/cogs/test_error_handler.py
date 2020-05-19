@@ -304,8 +304,8 @@ class TryGetTagTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(await self.cog.try_get_tag(self.ctx))
 
 
-class UserInputErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
-    """Tests for `handle_user_input_error`."""
+class IndividualErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
+    """Individual error categories handler tests."""
 
     def setUp(self):
         self.bot = MockBot()
@@ -348,15 +348,8 @@ class UserInputErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
                 self.ctx.send.assert_awaited_once()
                 if case["call_prepared"]:
                     self.ctx.send_help.assert_awaited_once()
-
-
-class CheckFailureHandlingTests(unittest.IsolatedAsyncioTestCase):
-    """Tests for `handle_check_failure`."""
-
-    def setUp(self):
-        self.bot = MockBot()
-        self.ctx = MockContext(bot=self.bot)
-        self.cog = ErrorHandler(self.bot)
+                else:
+                    self.ctx.send_help.assert_not_awaited()
 
     async def test_handle_check_failure_errors(self):
         """Should await `ctx.send` when error is check failure."""
