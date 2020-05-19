@@ -289,6 +289,13 @@ class TryGetTagTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(await self.cog.try_get_tag(self.ctx))
         self.ctx.invoke.assert_not_awaited()
 
+    async def test_try_get_tag_ctx_invoke(self):
+        """Should call `ctx.invoke` with proper args/kwargs."""
+        self.ctx.reset_mock()
+        self.ctx.invoked_with = "foo"
+        self.assertIsNone(await self.cog.try_get_tag(self.ctx))
+        self.ctx.invoke.assert_awaited_once_with(self.tag.get_command, tag_name="foo")
+
 
 class OtherErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
     """Other `ErrorHandler` tests."""
