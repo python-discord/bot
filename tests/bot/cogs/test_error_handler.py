@@ -296,6 +296,12 @@ class TryGetTagTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(await self.cog.try_get_tag(self.ctx))
         self.ctx.invoke.assert_awaited_once_with(self.tag.get_command, tag_name="foo")
 
+    async def test_try_get_tag_response_code_error_suppress(self):
+        """Should suppress `ResponseCodeError` when calling `ctx.invoke`."""
+        self.ctx.invoked_with = "foo"
+        self.ctx.invoke.side_effect = ResponseCodeError(MagicMock())
+        self.assertIsNone(await self.cog.try_get_tag(self.ctx))
+
 
 class OtherErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
     """Other `ErrorHandler` tests."""
