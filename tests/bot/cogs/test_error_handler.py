@@ -7,6 +7,7 @@ from bot.api import ResponseCodeError
 from bot.cogs.error_handler import ErrorHandler
 from bot.cogs.moderation.silence import Silence
 from bot.cogs.tags import Tags
+from bot.decorators import InWhitelistCheckFailure
 from tests.helpers import MockBot, MockContext
 
 
@@ -347,6 +348,53 @@ class UserInputErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
                 self.ctx.send.assert_awaited_once()
                 if case["call_prepared"]:
                     self.ctx.send_help.assert_awaited_once()
+
+
+class CheckFailureHandlingTests(unittest.IsolatedAsyncioTestCase):
+    """Tests for `handle_check_failure`."""
+
+    def setUp(self):
+        self.bot = MockBot()
+        self.ctx = MockContext(bot=self.bot)
+        self.cog = ErrorHandler(self.bot)
+
+    async def test_handle_check_failure_errors(self):
+        """Should await `ctx.send` when error is check failure."""
+        test_cases = (
+            {
+                "error": errors.BotMissingPermissions(MagicMock()),
+                "call_ctx_send": True
+            },
+            {
+                "error": errors.BotMissingRole(MagicMock()),
+                "call_ctx_send": True
+            },
+            {
+                "error": errors.BotMissingAnyRole(MagicMock()),
+                "call_ctx_send": True
+            },
+            {
+                "error": errors.NoPrivateMessage(),
+                "call_ctx_send": True
+            },
+            {
+                "error": InWhitelistCheckFailure(1234),
+                "call_ctx_send": True
+            },
+            {
+                "error": ResponseCodeError(MagicMock()),
+                "call_ctx_send": False
+            }
+        )
+
+        for case in test_cases:
+            with self.subTest(error=case["error"], call_ctx_send=case["call_ctx_send"]):
+                self.ctx.reset_mock()
+                await self.cog.handle_check_failure(self.ctx, case["error"])
+                if case["call_ctx_send"]:
+                    self.ctx.send.assert_awaited_once()
+                else:
+                    self.ctx.send.assert_not_awaited()
 
 
 class OtherErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
