@@ -303,6 +303,22 @@ class TryGetTagTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(await self.cog.try_get_tag(self.ctx))
 
 
+class UserInputErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
+    """Tests for `handle_user_input_error`."""
+
+    def setUp(self):
+        self.bot = MockBot()
+        self.ctx = MockContext(bot=self.bot)
+        self.cog = ErrorHandler(self.bot)
+
+    @patch("bot.cogs.error_handler.ErrorHandler.get_help_command")
+    async def test_handle_input_error_handler_get_help_command_call(self, get_help_command):
+        """Should call `ErrorHandler.get_help_command`."""
+        get_help_command.return_value = self.ctx.send_help(self.ctx)
+        await self.cog.handle_user_input_error(self.ctx, errors.UserInputError())
+        get_help_command.assert_called_once_with(self.ctx)
+
+
 class OtherErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
     """Other `ErrorHandler` tests."""
 
