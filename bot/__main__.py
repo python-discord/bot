@@ -39,6 +39,7 @@ bot.load_extension("bot.cogs.bot")
 bot.load_extension("bot.cogs.clean")
 bot.load_extension("bot.cogs.extensions")
 bot.load_extension("bot.cogs.help")
+bot.load_extension("bot.cogs.regular_expressions")
 
 bot.load_extension("bot.cogs.doc")
 bot.load_extension("bot.cogs.verification")
