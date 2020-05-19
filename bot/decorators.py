@@ -1,6 +1,6 @@
 import logging
 import random
-from asyncio import Lock, sleep
+from asyncio import Lock, create_task, sleep
 from contextlib import suppress
 from functools import wraps
 from typing import Callable, Container, Optional, Union
@@ -162,13 +162,12 @@ def redirect_output(destination_channel: int, bypass_roles: Container[int] = Non
             log.trace(f"Redirecting output of {ctx.author}'s command '{ctx.command.name}' to {redirect_channel.name}")
             ctx.channel = redirect_channel
             await ctx.channel.send(f"Here's the output of your command, {ctx.author.mention}")
-            await func(self, ctx, *args, **kwargs)
+            create_task(func(self, ctx, *args, **kwargs))
 
             message = await old_channel.send(
                 f"Hey, {ctx.author.mention}, you can find the output of your command here: "
                 f"{redirect_channel.mention}"
             )
-
             if RedirectOutput.delete_invocation:
                 await sleep(RedirectOutput.delete_delay)
 
@@ -179,6 +178,7 @@ def redirect_output(destination_channel: int, bypass_roles: Container[int] = Non
                 with suppress(NotFound):
                     await ctx.message.delete()
                     log.trace("Redirect output: Deleted invocation message")
+
         return inner
     return wrap
 
