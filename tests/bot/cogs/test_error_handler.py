@@ -389,6 +389,39 @@ class IndividualErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
                 else:
                     self.ctx.send.assert_not_awaited()
 
+    @patch("bot.cogs.error_handler.log")
+    async def test_handle_api_error(self, log_mock):
+        """Should `ctx.send` on HTTP error codes, `log.debug|warning` depends on code."""
+        test_cases = (
+            {
+                "error": ResponseCodeError(AsyncMock(status=400)),
+                "log_level": "debug"
+            },
+            {
+                "error": ResponseCodeError(AsyncMock(status=404)),
+                "log_level": "debug"
+            },
+            {
+                "error": ResponseCodeError(AsyncMock(status=550)),
+                "log_level": "warning"
+            },
+            {
+                "error": ResponseCodeError(AsyncMock(status=1000)),
+                "log_level": "warning"
+            }
+        )
+
+        for case in test_cases:
+            with self.subTest(error=case["error"], log_level=case["log_level"]):
+                self.ctx.reset_mock()
+                log_mock.reset_mock()
+                await self.cog.handle_api_error(self.ctx, case["error"])
+                self.ctx.send.assert_awaited_once()
+                if case["log_level"] == "warning":
+                    log_mock.warning.assert_called_once()
+                else:
+                    log_mock.debug.assert_called_once()
+
 
 class OtherErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
     """Other `ErrorHandler` tests."""
