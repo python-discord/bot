@@ -257,10 +257,19 @@ class TryGetTagTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(self.ctx.invoked_from_error_handler)
 
     async def test_try_get_tag_no_permissions(self):
-        """Should return `False` because checks fail."""
+        """Test how to handle checks failing."""
         self.tag.get_command.can_run = AsyncMock(return_value=False)
         self.ctx.invoked_with = "foo"
-        self.assertFalse(await self.cog.try_get_tag(self.ctx))
+        self.assertIsNone(await self.cog.try_get_tag(self.ctx))
+
+    async def test_try_get_tag_command_error(self):
+        """Should call `on_command_error` when `CommandError` raised."""
+        err = errors.CommandError()
+        self.tag.get_command.can_run = AsyncMock(side_effect=err)
+        self.cog.on_command_error = AsyncMock()
+        self.ctx.invoked_with = "foo"
+        self.assertIsNone(await self.cog.try_get_tag(self.ctx))
+        self.cog.on_command_error.assert_awaited_once_with(self.ctx, err)
 
 
 class OtherErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
