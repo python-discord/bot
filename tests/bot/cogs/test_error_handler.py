@@ -245,16 +245,22 @@ class TryGetTagTests(unittest.IsolatedAsyncioTestCase):
     async def test_try_get_tag_get_command(self):
         """Should call `Bot.get_command` with `tags get` argument."""
         self.bot.get_command.reset_mock()
-        self.ctx.invoked_with = "my_some_not_existing_tag"
+        self.ctx.invoked_with = "foo"
         await self.cog.try_get_tag(self.ctx)
         self.bot.get_command.assert_called_once_with("tags get")
 
     async def test_try_get_tag_invoked_from_error_handler(self):
         """`self.ctx` should have `invoked_from_error_handler` `True`."""
         self.ctx.invoked_from_error_handler = False
-        self.ctx.invoked_with = "my_some_not_existing_tag"
+        self.ctx.invoked_with = "foo"
         await self.cog.try_get_tag(self.ctx)
         self.assertTrue(self.ctx.invoked_from_error_handler)
+
+    async def test_try_get_tag_no_permissions(self):
+        """Should return `False` because checks fail."""
+        self.tag.get_command.can_run = AsyncMock(return_value=False)
+        self.ctx.invoked_with = "foo"
+        self.assertFalse(await self.cog.try_get_tag(self.ctx))
 
 
 class OtherErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
