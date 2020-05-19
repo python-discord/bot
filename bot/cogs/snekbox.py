@@ -207,9 +207,9 @@ class Snekbox(Cog):
 
             # Collect stats of eval fails + successes
             if icon == ":x:":
-                self.bot.stats.incr("evals.fail")
+                self.bot.stats.incr("snekbox.python.fail")
             elif icon in (":warning:", ":white_check_mark:"):
-                self.bot.stats.incr("evals.success")
+                self.bot.stats.incr("snekbox.python.success")
 
             response = await ctx.send(msg)
             self.bot.loop.create_task(
@@ -299,16 +299,16 @@ class Snekbox(Cog):
             return
 
         if Roles.helpers in (role.id for role in ctx.author.roles):
-            self.bot.stats.incr("evals.roles.helpers")
+            self.bot.stats.incr("snekbox_usages.roles.helpers")
         else:
-            self.bot.stats.incr("evals.roles.developers")
+            self.bot.stats.incr("snekbox_usages.roles.developers")
 
         if ctx.channel.category_id == Categories.help_in_use:
-            self.bot.stats.incr("evals.channels.help")
+            self.bot.stats.incr("snekbox_usages.channels.help")
         elif ctx.channel.id == Channels.bot_commands:
-            self.bot.stats.incr("evals.channels.bot_commands")
+            self.bot.stats.incr("snekbox_usages.channels.bot_commands")
         else:
-            self.bot.stats.incr("evals.channels.topical")
+            self.bot.stats.incr("snekbox_usages.channels.topical")
 
         log.info(f"Received code from {ctx.author} for evaluation:\n{code}")
 
