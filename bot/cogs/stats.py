@@ -106,14 +106,14 @@ class Stats(Cog):
 
     @loop(hours=1)
     async def update_guild_boost(self) -> None:
-        """Update every hour guild boosts amount + level."""
+        """Post the server boost level and tier every hour."""
         await self.bot.wait_until_guild_available()
         g = self.bot.get_guild(Guild.id)
         self.bot.stats.gauge("boost.amount", g.premium_subscription_count)
         self.bot.stats.gauge("boost.tier", g.premium_tier)
 
     def cog_unload(self) -> None:
-        """Stop guild boost stat collecting task on Cog unload."""
+        """Stop the boost statistic task on unload of the Cog."""
         self.update_guild_boost.stop()
 
 
