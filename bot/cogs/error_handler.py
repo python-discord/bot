@@ -159,19 +159,17 @@ class ErrorHandler(Cog):
         * ArgumentParsingError: send an error message
         * Other: send an error message and the help command
         """
-        prepared_help_command = self.get_help_command(ctx)
-
         if isinstance(e, errors.MissingRequiredArgument):
             await ctx.send(f"Missing required argument `{e.param.name}`.")
-            await prepared_help_command
+            await self.get_help_command(ctx)
             self.bot.stats.incr("errors.missing_required_argument")
         elif isinstance(e, errors.TooManyArguments):
             await ctx.send(f"Too many arguments provided.")
-            await prepared_help_command
+            await self.get_help_command(ctx)
             self.bot.stats.incr("errors.too_many_arguments")
         elif isinstance(e, errors.BadArgument):
             await ctx.send(f"Bad argument: {e}\n")
-            await prepared_help_command
+            await self.get_help_command(ctx)
             self.bot.stats.incr("errors.bad_argument")
         elif isinstance(e, errors.BadUnionArgument):
             await ctx.send(f"Bad argument: {e}\n```{e.errors[-1]}```")
@@ -181,7 +179,7 @@ class ErrorHandler(Cog):
             self.bot.stats.incr("errors.argument_parsing_error")
         else:
             await ctx.send("Something about your input seems off. Check the arguments:")
-            await prepared_help_command
+            await self.get_help_command(ctx)
             self.bot.stats.incr("errors.other_user_input_error")
 
     @staticmethod
