@@ -3,7 +3,7 @@ from typing import Iterable, Optional
 
 from discord.ext.commands import BadArgument, Cog, Context, group
 
-from bot.api import Bot
+from bot.bot import Bot
 
 
 def format_error(e: re.error) -> Iterable[str]:
