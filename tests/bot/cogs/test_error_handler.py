@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from discord.ext.commands import errors
 
 from bot.api import ResponseCodeError
-from bot.cogs.error_handler import ErrorHandler
+from bot.cogs.error_handler import ErrorHandler, setup
 from bot.cogs.moderation.silence import Silence
 from bot.cogs.tags import Tags
 from bot.decorators import InWhitelistCheckFailure
@@ -453,3 +453,13 @@ class OtherErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
         # Await coroutines to avoid warnings
         await result
         await expected
+
+
+class ErrorHandlerSetupTests(unittest.TestCase):
+    """Tests for `ErrorHandler` `setup` function."""
+
+    def test_setup(self):
+        """Should call `bot.add_cog` with `ErrorHandler`."""
+        bot = MockBot()
+        setup(bot)
+        bot.add_cog.assert_called_once()
