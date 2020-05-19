@@ -6,6 +6,7 @@ from discord.ext.commands import errors
 from bot.api import ResponseCodeError
 from bot.cogs.error_handler import ErrorHandler
 from bot.cogs.moderation.silence import Silence
+from bot.cogs.tags import Tags
 from tests.helpers import MockBot, MockContext
 
 
@@ -229,6 +230,24 @@ class TrySilenceTests(unittest.IsolatedAsyncioTestCase):
         """Should return `False` when message don't match."""
         self.ctx.invoked_with = "foo"
         self.assertFalse(await self.cog.try_silence(self.ctx))
+
+
+class TryGetTagTests(unittest.IsolatedAsyncioTestCase):
+    """Tests for `try_get_tag` function."""
+
+    def setUp(self):
+        self.bot = MockBot()
+        self.ctx = MockContext()
+        self.tag = Tags(self.bot)
+        self.cog = ErrorHandler(self.bot)
+        self.bot.get_command.return_value = self.tag.get_command
+
+    async def test_try_get_tag_get_command(self):
+        """Should call `Bot.get_command` with `tags get` argument."""
+        self.bot.get_command.reset_mock()
+        self.ctx.invoked_with = "my_some_not_existing_tag"
+        await self.cog.try_get_tag(self.ctx)
+        self.bot.get_command.assert_called_once_with("tags get")
 
 
 class OtherErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
