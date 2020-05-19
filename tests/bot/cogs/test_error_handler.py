@@ -280,6 +280,15 @@ class TryGetTagTests(unittest.IsolatedAsyncioTestCase):
         tag_converter.convert.assert_awaited_once_with(self.ctx, "foo")
         self.ctx.invoke.assert_awaited_once()
 
+    @patch("bot.cogs.error_handler.TagNameConverter")
+    async def test_try_get_tag_convert_fail(self, tag_converter):
+        """Converting tag should raise `BadArgument`."""
+        self.ctx.reset_mock()
+        self.ctx.invoked_with = "bar"
+        tag_converter.convert = AsyncMock(side_effect=errors.BadArgument())
+        self.assertIsNone(await self.cog.try_get_tag(self.ctx))
+        self.ctx.invoke.assert_not_awaited()
+
 
 class OtherErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
     """Other `ErrorHandler` tests."""
