@@ -311,12 +311,42 @@ class UserInputErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
         self.ctx = MockContext(bot=self.bot)
         self.cog = ErrorHandler(self.bot)
 
-    @patch("bot.cogs.error_handler.ErrorHandler.get_help_command")
-    async def test_handle_input_error_handler_get_help_command_call(self, get_help_command):
-        """Should call `ErrorHandler.get_help_command`."""
-        get_help_command.return_value = self.ctx.send_help(self.ctx)
-        await self.cog.handle_user_input_error(self.ctx, errors.UserInputError())
-        get_help_command.assert_called_once_with(self.ctx)
+    async def test_handle_input_error_handler_errors(self):
+        """Should handle each error probably."""
+        test_cases = (
+            {
+                "error": errors.MissingRequiredArgument(MagicMock()),
+                "call_prepared": True
+            },
+            {
+                "error": errors.TooManyArguments(),
+                "call_prepared": True
+            },
+            {
+                "error": errors.BadArgument(),
+                "call_prepared": True
+            },
+            {
+                "error": errors.BadUnionArgument(MagicMock(), MagicMock(), MagicMock()),
+                "call_prepared": False
+            },
+            {
+                "error": errors.ArgumentParsingError(),
+                "call_prepared": False
+            },
+            {
+                "error": errors.UserInputError(),
+                "call_prepared": True
+            }
+        )
+
+        for case in test_cases:
+            with self.subTest(error=case["error"], call_prepared=case["call_prepared"]):
+                self.ctx.reset_mock()
+                self.assertIsNone(await self.cog.handle_user_input_error(self.ctx, case["error"]))
+                self.ctx.send.assert_awaited_once()
+                if case["call_prepared"]:
+                    self.ctx.send_help.assert_awaited_once()
 
 
 class OtherErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
