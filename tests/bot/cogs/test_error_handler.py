@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, call, patch
 
 from discord.ext.commands import errors
 
@@ -8,7 +8,7 @@ from bot.cogs.error_handler import ErrorHandler, setup
 from bot.cogs.moderation.silence import Silence
 from bot.cogs.tags import Tags
 from bot.decorators import InWhitelistCheckFailure
-from tests.helpers import MockBot, MockContext
+from tests.helpers import MockBot, MockContext, MockGuild
 
 
 class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
@@ -421,6 +421,41 @@ class IndividualErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
                     log_mock.warning.assert_called_once()
                 else:
                     log_mock.debug.assert_called_once()
+
+    @patch("bot.cogs.error_handler.push_scope")
+    @patch("bot.cogs.error_handler.log")
+    async def test_handle_unexpected_error(self, log_mock, push_scope_mock):
+        """Should `ctx.send` this error, error log this and sent to Sentry."""
+        for case in (None, MockGuild()):
+            with self.subTest(guild=case):
+                self.ctx.reset_mock()
+                log_mock.reset_mock()
+                push_scope_mock.reset_mock()
+
+                self.ctx.guild = case
+                await self.cog.handle_unexpected_error(self.ctx, errors.CommandError())
+
+                self.ctx.send.assert_awaited_once()
+                log_mock.error.assert_called_once()
+                push_scope_mock.assert_called_once()
+
+                set_tag_calls = [
+                    call("command", self.ctx.command.qualified_name),
+                    call("message_id", self.ctx.message.id),
+                    call("channel_id", self.ctx.channel.id),
+                ]
+                set_extra_calls = [
+                    call("full_message", self.ctx.message.content)
+                ]
+                if case:
+                    url = (
+                        f"https://discordapp.com/channels/"
+                        f"{self.ctx.guild.id}/{self.ctx.channel.id}/{self.ctx.message.id}"
+                    )
+                    set_extra_calls.append(call("jump_to", url))
+
+                push_scope_mock.set_tag.has_calls(set_tag_calls)
+                push_scope_mock.set_extra.has_calls(set_extra_calls)
 
 
 class OtherErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
