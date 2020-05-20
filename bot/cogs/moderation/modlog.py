@@ -100,7 +100,7 @@ class ModLog(Cog, name="ModLog"):
         """Generate log embed and send to logging channel."""
         # Truncate string directly here to avoid removing newlines
         embed = discord.Embed(
-            description=text[:2046] + "..." if len(text) > 2048 else text
+            description=text[:2045] + "..." if len(text) > 2048 else text
         )
 
         if title and icon_url:
