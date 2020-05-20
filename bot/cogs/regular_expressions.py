@@ -10,9 +10,14 @@ def format_error(e: re.error) -> Iterable[str]:
     r"""
     Format a regexp parsing error message to display in a response.
 
-    \w+(
-    ^
-    missing ), unterminated subpattern
+    >>> try: re.compile("\w+(")
+    ... except re.error as e: print(format_error(e))
+    ['\w+(', '   ^', 'missing ), unterminated subpattern']
+
+    Which will look like:
+    | \w+(
+    |    ^
+    | missing ), unterminated subpattern
     """
     line_with_regexp = e.pattern
     line_with_caret = " "*e.pos + "^"
@@ -21,13 +26,16 @@ def format_error(e: re.error) -> Iterable[str]:
 
 
 def format_match(match: Optional[re.Match]) -> Iterable[str]:
-    """
+    r"""
     Format a match result to display in a response.
 
-    Example:
-        hello1 23 456world
-    0:      ^^^^^^^^
-    2:           ^^^
+    >>> format_match(re.search("(\d\d)+", "hello123456world"))
+    ['    hello123456world', ' 0:      ^^^^^^', ' 1:          ^^']
+
+    Which will look as:
+    |    hello123456world
+    | 0:      ^^^^^^
+    | 1:          ^^
     """
     if match is None:
         return ["No match"]
@@ -72,7 +80,7 @@ class RegularExpressions(Cog):
 
     @group(name='regexp', aliases=('regex', 're'), invoke_without_command=True)
     async def regexp_group(self, ctx: Context) -> None:
-        """Commands for exploring the misterious worldof regular expressions."""
+        """Commands for exploring the misterious world of regular expressions."""
         await ctx.invoke(self.bot.get_command("help"), "regexp")
 
     @regexp_group.command(name='search', aliases=('s', '🔍'))
