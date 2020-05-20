@@ -31,9 +31,9 @@ class SourceConverter(Converter):
         if argument.lower() == "help":
             return ctx.bot.help_command
 
-        command = ctx.bot.get_command(argument)
-        if command:
-            return command
+        cmd = ctx.bot.get_command(argument)
+        if cmd:
+            return cmd
 
         cog = ctx.bot.get_cog(argument)
         if cog:
