@@ -84,9 +84,12 @@ class Source(Cog):
         if isinstance(source_object, HelpCommand):
             title = "Help"
             description = source_object.__doc__
-        else:
+        elif isinstance(source_object, Command):
             title = source_object.qualified_name
             description = source_object.help
+        else:
+            title = source_object.qualified_name
+            description = source_object.description
 
         embed = Embed(title=title, description=description, url=link)
         embed.add_field(name="Source Code", value=f"[Go to GitHub]({link})")
