@@ -52,7 +52,7 @@ class Source(Cog):
     async def source_command(self, ctx: Context, *, source_item: SourceConverter = None) -> None:
         """Get GitHub link and information about help command, command or Cog."""
         if not source_item:
-            embed = Embed(title="Bot GitHub Repository", url=URLs.github_bot_repo)
+            embed = Embed(title="Bot GitHub Repository")
             embed.add_field(name="Repository", value=f"[Go to GitHub]({URLs.github_bot_repo})")
             await ctx.send(embed=embed)
             return
@@ -91,7 +91,7 @@ class Source(Cog):
             title = source_object.qualified_name
             description = source_object.description
 
-        embed = Embed(title=title, description=description, url=link)
+        embed = Embed(title=title, description=description)
         embed.add_field(name="Source Code", value=f"[Go to GitHub]({link})")
 
         if isinstance(source_object, Command):
