@@ -66,9 +66,7 @@ def convert_regexp(supposed_regexp: str) -> re.Pattern:
         error_lines = "\n".join(format_error(e))
         raise BadArgument(
             "Syntax error in a regular expression: "
-            "```\n"
-            + error_lines
-            + "\n```"
+            f"```\n{error_lines}\n```"
         )
 
 
