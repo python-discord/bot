@@ -1,11 +1,14 @@
+import inspect
+import os
 from typing import Union
 
-from discord.ext.commands import BadArgument, Cog, Context, Converter, Command, HelpCommand
+from discord.ext.commands import BadArgument, Cog, Command, Context, Converter, HelpCommand
 
 from bot.bot import Bot
+from bot.constants import URLs
 
 
-class SourceConverted(Converter):
+class SourceConverter(Converter):
     """Convert argument to help command, command or Cog."""
 
     async def convert(self, ctx: Context, argument: str) -> Union[HelpCommand, Command, Cog]:
@@ -37,6 +40,24 @@ class Source(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
+
+    @staticmethod
+    def get_source_link(source_item: Union[HelpCommand, Command, Cog]) -> str:
+        """Build GitHub link of source item."""
+        if isinstance(source_item, HelpCommand):
+            src = type(source_item)
+            filename = inspect.getsourcefile(src)
+        elif isinstance(source_item, Command):
+            src = source_item.callback.__code__
+            filename = src.co_filename
+        else:
+            src = type(source_item)
+            filename = inspect.getsourcefile(src)
+
+        lines, first_line_no = inspect.getsourcelines(src)
+        file_location = os.path.relpath(filename)
+
+        return f"{URLs.github_bot_repo}/blob/master/{file_location}#L{first_line_no}-L{first_line_no+len(lines)-1}"
 
 
 def setup(bot: Bot) -> None:
