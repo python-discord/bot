@@ -34,7 +34,7 @@ class TruncationTests(unittest.IsolatedAsyncioTestCase):
             ban.cr_frame.f_locals["kwargs"]["reason"],
             textwrap.shorten("foo bar" * 3000, 512, placeholder="...")
         )
-        # Await ban to avoid warning
+        # Await ban to avoid not awaited coroutine warning
         await ban
 
     @patch("bot.cogs.moderation.utils.post_infraction")
@@ -51,5 +51,5 @@ class TruncationTests(unittest.IsolatedAsyncioTestCase):
             kick.cr_frame.f_locals["kwargs"]["reason"],
             textwrap.shorten("foo bar" * 3000, 512, placeholder="...")
         )
-        # Await kick to avoid warning
+        # Await kick to avoid not awaited coroutine warning
         await kick
