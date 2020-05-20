@@ -17,11 +17,11 @@ class TruncationTests(unittest.IsolatedAsyncioTestCase):
         self.guild = MockGuild(id=4567)
         self.ctx = MockContext(bot=self.bot, author=self.user, guild=self.guild)
 
-    @patch("bot.cogs.moderation.utils.has_active_infraction")
+    @patch("bot.cogs.moderation.utils.get_active_infraction")
     @patch("bot.cogs.moderation.utils.post_infraction")
-    async def test_apply_ban_reason_truncation(self, post_infraction_mock, has_active_mock):
+    async def test_apply_ban_reason_truncation(self, post_infraction_mock, get_active_mock):
         """Should truncate reason for `ctx.guild.ban`."""
-        has_active_mock.return_value = False
+        get_active_mock.return_value = 'foo'
         post_infraction_mock.return_value = {"foo": "bar"}
 
         self.cog.apply_infraction = AsyncMock()
@@ -32,7 +32,7 @@ class TruncationTests(unittest.IsolatedAsyncioTestCase):
         ban = self.cog.apply_infraction.call_args[0][3]
         self.assertEqual(
             ban.cr_frame.f_locals["kwargs"]["reason"],
-            textwrap.shorten("foo bar" * 3000, 512, placeholder=" ...")
+            textwrap.shorten("foo bar" * 3000, 512, placeholder="...")
         )
         # Await ban to avoid warning
         await ban
