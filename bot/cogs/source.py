@@ -11,9 +11,6 @@ from bot.constants import URLs
 CANT_RUN_MESSAGE = "You can't run this command here."
 CAN_RUN_MESSAGE = "You are able to run this command."
 
-COG_CHECK_FAIL = "You can't use commands what is in this Cog here."
-COG_CHECK_PASS = "You can use commands from this Cog."
-
 
 class SourceConverter(Converter):
     """Convert argument to help command, command or Cog."""
@@ -96,8 +93,6 @@ class Source(Cog):
 
         if isinstance(source_object, Command):
             embed.set_footer(text=CAN_RUN_MESSAGE if await source_object.can_run(ctx) else CANT_RUN_MESSAGE)
-        elif isinstance(source_object, Cog):
-            embed.set_footer(text=COG_CHECK_PASS if source_object.cog_check(ctx) else COG_CHECK_FAIL)
 
         return embed
 
