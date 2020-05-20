@@ -21,7 +21,7 @@ class TruncationTests(unittest.IsolatedAsyncioTestCase):
     @patch("bot.cogs.moderation.utils.post_infraction")
     async def test_apply_ban_reason_truncation(self, post_infraction_mock, get_active_mock):
         """Should truncate reason for `ctx.guild.ban`."""
-        get_active_mock.return_value = {"id": 1}
+        get_active_mock.return_value = None
         post_infraction_mock.return_value = {"foo": "bar"}
 
         self.cog.apply_infraction = AsyncMock()
