@@ -37,7 +37,7 @@ class SourceConverter(Converter):
 
 
 class BotSource(Cog):
-    """Cog of Python Discord projects source information."""
+    """Cog of Python Discord Python bot project source information."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
