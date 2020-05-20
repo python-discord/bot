@@ -259,7 +259,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         self.mod_log.ignore(Event.member_remove, user.id)
 
-        truncated_reason = textwrap.shorten(reason, width=512, placeholder=" ...")
+        truncated_reason = textwrap.shorten(reason, width=512, placeholder="...")
 
         action = ctx.guild.ban(user, reason=truncated_reason, delete_message_days=0)
         await self.apply_infraction(ctx, infraction, user, action)
