@@ -102,7 +102,7 @@ class LinePaginator(Paginator):
         timeout: int = 300,
         footer_text: str = None,
         url: str = None,
-        exception_on_empty_embed: bool = False
+        exception_on_empty_embed: bool = False,
     ) -> t.Optional[discord.Message]:
         """
         Use a paginator and set of reactions to provide pagination over a set of lines.

@@ -7,9 +7,10 @@ from typing import Optional
 import aiohttp
 import discord
 from discord.ext import commands
+from sentry_sdk import push_scope
 
-from bot import api
-from bot import constants
+from bot import DEBUG_MODE, api, constants
+from bot.async_stats import AsyncStatsClient
 
 log = logging.getLogger('bot')
 
@@ -33,6 +34,16 @@ class Bot(commands.Bot):
         self._resolver = None
         self._guild_available = asyncio.Event()
 
+        statsd_url = constants.Stats.statsd_host
+
+        if DEBUG_MODE:
+            # Since statsd is UDP, there are no errors for sending to a down port.
+            # For this reason, setting the statsd host to 127.0.0.1 for development
+            # will effectively disable stats.
+            statsd_url = "127.0.0.1"
+
+        self.stats = AsyncStatsClient(self.loop, statsd_url, 8125, prefix="bot")
+
     def add_cog(self, cog: commands.Cog) -> None:
         """Adds a "cog" to the bot and logs the operation."""
         super().add_cog(cog)
@@ -50,7 +61,7 @@ class Bot(commands.Bot):
         super().clear()
 
     async def close(self) -> None:
-        """Close the Discord connection and the aiohttp session, connector, and resolver."""
+        """Close the Discord connection and the aiohttp session, connector, statsd client, and resolver."""
         await super().close()
 
         await self.api_client.close()
@@ -64,9 +75,13 @@ class Bot(commands.Bot):
         if self._resolver:
             await self._resolver.close()
 
+        if self.stats._transport:
+            self.stats._transport.close()
+
     async def login(self, *args, **kwargs) -> None:
         """Re-create the connector and set up sessions before logging into Discord."""
         self._recreate()
+        await self.stats.create_socket()
         await super().login(*args, **kwargs)
 
     def _recreate(self) -> None:
@@ -141,3 +156,14 @@ class Bot(commands.Bot):
         gateway event before giving up and thus not populating the cache for unavailable guilds.
         """
         await self._guild_available.wait()
+
+    async def on_error(self, event: str, *args, **kwargs) -> None:
+        """Log errors raised in event listeners rather than printing them to stderr."""
+        self.stats.incr(f"errors.event.{event}")
+
+        with push_scope() as scope:
+            scope.set_tag("event", event)
+            scope.set_extra("args", args)
+            scope.set_extra("kwargs", kwargs)
+
+            log.exception(f"Unhandled exception in {event}.")

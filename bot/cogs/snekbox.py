@@ -12,8 +12,8 @@ from discord import HTTPException, Message, NotFound, Reaction, User
 from discord.ext.commands import Cog, Context, command, guild_only
 
 from bot.bot import Bot
-from bot.constants import Channels, Roles, URLs
-from bot.decorators import in_channel
+from bot.constants import Categories, Channels, Roles, URLs
+from bot.decorators import in_whitelist
 from bot.utils.messages import wait_for_deletion
 
 log = logging.getLogger(__name__)
@@ -38,11 +38,16 @@ RAW_CODE_REGEX = re.compile(
 )
 
 MAX_PASTE_LEN = 1000
+
+# `!eval` command whitelists
+EVAL_CHANNELS = (Channels.bot_commands, Channels.esoteric)
+EVAL_CATEGORIES = (Categories.help_available, Categories.help_in_use)
 EVAL_ROLES = (Roles.helpers, Roles.moderators, Roles.admins, Roles.owners, Roles.python_community, Roles.partners)
 
 SIGKILL = 9
 
 REEVAL_EMOJI = '\U0001f501'  # :repeat:
+REEVAL_TIMEOUT = 30
 
 
 class Snekbox(Cog):
@@ -223,7 +228,7 @@ class Snekbox(Cog):
                 _, new_message = await self.bot.wait_for(
                     'message_edit',
                     check=_predicate_eval_message_edit,
-                    timeout=10
+                    timeout=REEVAL_TIMEOUT
                 )
                 await ctx.message.add_reaction(REEVAL_EMOJI)
                 await self.bot.wait_for(
@@ -265,7 +270,7 @@ class Snekbox(Cog):
 
     @command(name="eval", aliases=("e",))
     @guild_only()
-    @in_channel(Channels.bot_commands, hidden_channels=(Channels.esoteric,), bypass_roles=EVAL_ROLES)
+    @in_whitelist(channels=EVAL_CHANNELS, categories=EVAL_CATEGORIES, roles=EVAL_ROLES)
     async def eval_command(self, ctx: Context, *, code: str = None) -> None:
         """
         Run Python code and get the results.
@@ -285,7 +290,7 @@ class Snekbox(Cog):
             return
 
         if not code:  # None or empty string
-            await ctx.invoke(self.bot.get_command("help"), "eval")
+            await ctx.send_help(ctx.command)
             return
 
         log.info(f"Received code from {ctx.author} for evaluation:\n{code}")
