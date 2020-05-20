@@ -1,9 +1,9 @@
 import inspect
 import os
-from typing import Optional, Union
+from typing import Union
 
 from discord import Embed
-from discord.ext.commands import Cog, Command, Context, Converter, HelpCommand, command
+from discord.ext.commands import BadArgument, Cog, Command, Context, Converter, HelpCommand, command
 
 from bot.bot import Bot
 from bot.constants import URLs
@@ -18,7 +18,7 @@ COG_CHECK_PASS = "You can use commands from this Cog."
 class SourceConverter(Converter):
     """Convert argument to help command, command or Cog."""
 
-    async def convert(self, ctx: Context, argument: str) -> Union[HelpCommand, Command, Cog, None]:
+    async def convert(self, ctx: Context, argument: str) -> Union[HelpCommand, Command, Cog]:
         """
         Convert argument into source object.
 
@@ -39,7 +39,7 @@ class SourceConverter(Converter):
         if cog:
             return cog
 
-        return None
+        raise BadArgument(f"Unable to convert `{argument}` to valid command or Cog.")
 
 
 class Source(Cog):
@@ -49,7 +49,7 @@ class Source(Cog):
         self.bot = bot
 
     @command(name="source", aliases=("src",))
-    async def source_command(self, ctx: Context, *, source_item: Optional[SourceConverter] = None) -> None:
+    async def source_command(self, ctx: Context, *, source_item: SourceConverter = None) -> None:
         """Get GitHub link and information about help command, command or Cog."""
         if not source_item:
             embed = Embed(title="Bot GitHub Repository", url=URLs.github_bot_repo)
