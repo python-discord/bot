@@ -2,10 +2,17 @@ import inspect
 import os
 from typing import Union
 
+from discord import Embed
 from discord.ext.commands import BadArgument, Cog, Command, Context, Converter, HelpCommand
 
 from bot.bot import Bot
 from bot.constants import URLs
+
+CANT_RUN_MESSAGE = "You can't run this command here."
+CAN_RUN_MESSAGE = "You are able to run this command."
+
+COG_CHECK_FAIL = "You can't use commands what is in this Cog here."
+COG_CHECK_PASS = "You can use commands from this Cog."
 
 
 class SourceConverter(Converter):
@@ -58,6 +65,26 @@ class Source(Cog):
         file_location = os.path.relpath(filename)
 
         return f"{URLs.github_bot_repo}/blob/master/{file_location}#L{first_line_no}-L{first_line_no+len(lines)-1}"
+
+    @staticmethod
+    async def build_embed(link: str, source_object: Union[HelpCommand, Command, Cog], ctx: Context) -> Embed:
+        """Build embed based on source object."""
+        if isinstance(source_object, HelpCommand):
+            title = "Help"
+            description = source_object.__doc__
+        else:
+            title = source_object.qualified_name
+            description = source_object.help
+
+        embed = Embed(title=title, description=description, url=link)
+        embed.add_field(name="Source Code", value=f"[Go to GitHub]({link})")
+
+        if isinstance(source_object, Command):
+            embed.set_footer(text=CAN_RUN_MESSAGE if await source_object.can_run(ctx) else CANT_RUN_MESSAGE)
+        elif isinstance(source_object, Cog):
+            embed.set_footer(text=COG_CHECK_PASS if source_object.cog_check(ctx) else COG_CHECK_FAIL)
+
+        return embed
 
 
 def setup(bot: Bot) -> None:
