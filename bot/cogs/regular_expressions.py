@@ -1,12 +1,13 @@
 import re
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Union
 
-from discord.ext.commands import BadArgument, Cog, Context, group
+import regex
+from discord.ext.commands import BadArgument, Cog, Context, Converter, group
 
 from bot.bot import Bot
 
 
-def format_error(e: re.error) -> Iterable[str]:
+def format_error(e: Union[re.error, regex.error]) -> Iterable[str]:
     r"""
     Format a regexp parsing error message to display in a response.
 
@@ -53,21 +54,44 @@ def format_match(match: Optional[re.Match]) -> Iterable[str]:
         return ["    " + match.string, *group_carets]
 
 
-def convert_regexp(supposed_regexp: str) -> re.Pattern:
+def match_and_format(pattern: Union[regex.Regex], test: str) -> str:
+    """Attempt to match a regex with a test string and return a formatted result."""
+    match_lines = "\n".join(format_match(pattern.search(test)))
+    return f"```\n{match_lines}\n```"
+
+
+class ConvertRegex(Converter):
     """
     Argument converter.
 
-    Attempts to interpret the given string as a regexp
+    Attempts to interpret the given string as a regex
     and returns a compiled pattern as a result.
     """
-    try:
-        return re.compile(supposed_regexp)
-    except re.error as e:
-        error_lines = "\n".join(format_error(e))
-        raise BadArgument(
-            "Syntax error in a regular expression: "
-            f"```\n{error_lines}\n```"
-        )
+
+    def __init__(self, supports_extended_features: bool = False):
+        self.supports_extended_features = supports_extended_features
+
+    async def convert(self, ctx: Context, supposed_regex: str) -> regex.Regex:
+        """
+        Attempt to parse the input string as a regular expression.
+
+        If `self.supports_extended_features` is False, then the regex is forced
+        to be compatible with `re`.
+        """
+        try:
+            if not self.supports_extended_features:
+                re.compile(supposed_regex)
+            return regex.compile(supposed_regex)
+        except (regex.error, re.error) as e:
+            error_lines = "\n".join(format_error(e))
+            raise BadArgument(
+                "\nSyntax error in a regular expression: "
+                f"```\n{error_lines}\n```"
+            )
+
+
+ReRegex = ConvertRegex(supports_extended_features=False)
+RegexRegex = ConvertRegex(supports_extended_features=True)
 
 
 class RegularExpressions(Cog):
@@ -81,11 +105,20 @@ class RegularExpressions(Cog):
         """Commands for exploring the misterious world of regular expressions."""
         await ctx.invoke(self.bot.get_command("help"), "regexp")
 
-    @regexp_group.command(name='search', aliases=('s', '🔍'))
-    async def match_command(self, ctx: Context, pattern: convert_regexp, test: str) -> None:
+    @regexp_group.command(name='search', aliases=('find', 's', '🔍'))
+    async def match_command(self, ctx: Context, pattern: ReRegex, test: str) -> None:
         """Look for the first match of a pattern in a string."""
-        match_lines = "\n".join(format_match(pattern.search(test)))
-        await ctx.send(f"```\n{match_lines}\n```")
+        await ctx.send(match_and_format(pattern, test))
+
+    @regexp_group.command(name='search+', aliases=('find+', 's+', '🔍+'))
+    async def match_plus_command(self, ctx: Context, pattern: RegexRegex, test: str) -> None:
+        """
+        Like `!re search`, but with an extended regex format.
+
+        Enables additional features from the
+        https://pypi.org/project/regex module.
+        """
+        await ctx.send(match_and_format(pattern, test))
 
 
 def setup(bot: Bot) -> None:
