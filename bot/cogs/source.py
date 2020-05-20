@@ -8,9 +8,6 @@ from discord.ext.commands import BadArgument, Cog, Command, Context, Converter, 
 from bot.bot import Bot
 from bot.constants import URLs
 
-CANT_RUN_MESSAGE = "You can't run this command here."
-CAN_RUN_MESSAGE = "You are able to run this command."
-
 
 class SourceConverter(Converter):
     """Convert argument to help command, command or Cog."""
@@ -39,7 +36,7 @@ class SourceConverter(Converter):
         raise BadArgument(f"Unable to convert `{argument}` to valid command or Cog.")
 
 
-class Source(Cog):
+class BotSource(Cog):
     """Cog of Python Discord projects source information."""
 
     def __init__(self, bot: Bot):
@@ -92,11 +89,11 @@ class Source(Cog):
         embed.add_field(name="Source Code", value=f"[Go to GitHub]({link})")
 
         if isinstance(source_object, Command):
-            embed.set_footer(text=CAN_RUN_MESSAGE if await source_object.can_run(ctx) else CANT_RUN_MESSAGE)
+            embed.add_field(name="Can be used by you here?", value=await source_object.can_run(ctx))
 
         return embed
 
 
 def setup(bot: Bot) -> None:
     """Load `Source` cog."""
-    bot.add_cog(Source(bot))
+    bot.add_cog(BotSource(bot))
