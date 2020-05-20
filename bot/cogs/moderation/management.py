@@ -43,7 +43,7 @@ class ModManagement(commands.Cog):
     @commands.group(name='infraction', aliases=('infr', 'infractions', 'inf'), invoke_without_command=True)
     async def infraction_group(self, ctx: Context) -> None:
         """Infraction manipulation commands."""
-        await ctx.invoke(self.bot.get_command("help"), "infraction")
+        await ctx.send_help(ctx.command)
 
     @infraction_group.command(name='edit')
     async def infraction_edit(
