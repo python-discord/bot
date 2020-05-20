@@ -3,7 +3,7 @@ import os
 from typing import Union
 
 from discord import Embed
-from discord.ext.commands import BadArgument, Cog, Command, Context, Converter, HelpCommand, group
+from discord.ext.commands import BadArgument, Cog, Command, Context, Converter, HelpCommand, command
 
 from bot.bot import Bot
 from bot.constants import URLs
@@ -48,7 +48,7 @@ class Source(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @group(name='source', aliases=('src',), invoke_without_command=True)
+    @command(name="source", aliases=("src",))
     async def source_command(self, ctx: Context, *, source_item: SourceConverter) -> None:
         """Get GitHub link and information about help command, command or Cog."""
         url = self.get_source_link(source_item)
