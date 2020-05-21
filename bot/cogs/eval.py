@@ -178,7 +178,7 @@ async def func():  # (None,) -> Any
     async def internal_group(self, ctx: Context) -> None:
         """Internal commands. Top secret!"""
         if not ctx.invoked_subcommand:
-            await ctx.invoke(self.bot.get_command("help"), "internal")
+            await ctx.send_help(ctx.command)
 
     @internal_group.command(name='eval', aliases=('e',))
     @with_role(Roles.admins, Roles.owners)
