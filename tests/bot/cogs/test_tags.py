@@ -307,7 +307,7 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(embed.title, "**Current tags**")
         tags_string = "\n".join(sorted(f"**»**   {tag}" for tag in cog._cache))
         self.assertEqual(embed.description, f"\n{tags_string}\n")
-        self.assertEqual(embed.footer.text, "To show a tag, type !tags <tagname>.")
+        self.assertEqual(embed.footer.text, tags.FOOTER_TEXT)
 
     async def test_tag(self):
         """Should send correct embed to chat (`ctx.send`) with tag content."""
