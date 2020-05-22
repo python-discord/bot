@@ -9,9 +9,11 @@ from typing import Iterable, Optional
 
 import aioredis.abc
 import discord
+from aiohttp import ClientSession
 from discord.ext.commands import Context
 
 from bot.api import APIClient
+from bot.async_stats import AsyncStatsClient
 from bot.bot import Bot
 
 
@@ -304,6 +306,8 @@ class MockBot(CustomMockMixin, unittest.mock.MagicMock):
 
         self.loop = _get_mock_loop()
         self.api_client = MockAPIClient(loop=self.loop)
+        self.http_session = unittest.mock.create_autospec(spec=ClientSession, spec_set=True)
+        self.stats = unittest.mock.create_autospec(spec=AsyncStatsClient, spec_set=True)
 
         # fakeredis can't be used cause it'd require awaiting a coroutine to create the pool,
         # which cannot be done here in __init__.
