@@ -21,7 +21,10 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         """Post the eval code to the URLs.snekbox_eval_api endpoint."""
         resp = MagicMock()
         resp.json = AsyncMock(return_value="return")
-        self.bot.http_session.post().__aenter__.return_value = resp
+
+        context_manager = MagicMock()
+        context_manager.__aenter__.return_value = resp
+        self.bot.http_session.post.return_value = context_manager
 
         self.assertEqual(await self.cog.post_eval("import random"), "return")
         self.bot.http_session.post.assert_called_with(
@@ -41,7 +44,10 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         key = "MarkDiamond"
         resp = MagicMock()
         resp.json = AsyncMock(return_value={"key": key})
-        self.bot.http_session.post().__aenter__.return_value = resp
+
+        context_manager = MagicMock()
+        context_manager.__aenter__.return_value = resp
+        self.bot.http_session.post.return_value = context_manager
 
         self.assertEqual(
             await self.cog.upload_output("My awesome output"),
@@ -57,7 +63,10 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         """Output upload gracefully fallback if the upload fail."""
         resp = MagicMock()
         resp.json = AsyncMock(side_effect=Exception)
-        self.bot.http_session.post().__aenter__.return_value = resp
+
+        context_manager = MagicMock()
+        context_manager.__aenter__.return_value = resp
+        self.bot.http_session.post.return_value = context_manager
 
         log = logging.getLogger("bot.cogs.snekbox")
         with self.assertLogs(logger=log, level='ERROR'):
