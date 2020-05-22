@@ -443,15 +443,15 @@ class HelpChannels(Scheduler, commands.Cog):
         if not message:
             return False
 
-        return self.embed_description_match(message, DORMANT_MSG)
+        return self.match_bot_embed(message, DORMANT_MSG)
 
-    def embed_description_match(self, message: discord.Message, text: str) -> bool:
-        """Return `True` if `message` embed description match with `text`."""
+    def match_bot_embed(self, message: discord.Message, description: str) -> bool:
+        """Return `True` if the bot's `message`'s embed description matches `description`."""
         if not message.embeds:
             return False
 
         embed = message.embeds[0]
-        return message.author == self.bot.user and embed.description.strip() == text.strip()
+        return message.author == self.bot.user and embed.description.strip() == description.strip()
 
     @staticmethod
     def is_in_category(channel: discord.TextChannel, category_id: int) -> bool:
@@ -751,7 +751,7 @@ class HelpChannels(Scheduler, commands.Cog):
         if not msg:
             return False
 
-        return self.embed_description_match(msg, AVAILABLE_MSG)
+        return self.match_bot_embed(msg, AVAILABLE_MSG)
 
     async def reset_send_permissions(self) -> None:
         """Reset send permissions in the Available category for claimants."""
