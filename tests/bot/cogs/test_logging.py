@@ -22,17 +22,7 @@ class LoggingTests(unittest.IsolatedAsyncioTestCase):
         await self.cog.startup_greeting()
         self.bot.wait_until_guild_available.assert_awaited_once_with()
         self.bot.get_channel.assert_called_once_with(constants.Channels.dev_log)
-
-        embed = self.dev_log.send.call_args[1]['embed']
-        self.dev_log.send.assert_awaited_once_with(embed=embed)
-
-        self.assertEqual(embed.description, "Connected!")
-        self.assertEqual(embed.author.name, "Python Bot")
-        self.assertEqual(embed.author.url, "https://github.com/python-discord/bot")
-        self.assertEqual(
-            embed.author.icon_url,
-            "https://raw.githubusercontent.com/python-discord/branding/master/logos/logo_circle/logo_circle_large.png"
-        )
+        self.dev_log.send.assert_awaited_once()
 
     @patch("bot.cogs.logging.DEBUG_MODE", True)
     async def test_debug_mode_true(self):
