@@ -30,8 +30,8 @@ class RedisCache:
 
     def __init__(self) -> None:
         """Raise a NotImplementedError if `__set_name__` hasn't been run."""
-        if not self._namespace:
-            raise NotImplementedError("RedisCache must be a class attribute.")
+        self._namespace = None
+        self.bot = None
 
     def _set_namespace(self, namespace: str) -> None:
         """Try to set the namespace, but do not permit collisions."""
@@ -47,8 +47,7 @@ class RedisCache:
 
         Called automatically when this class is constructed inside a class as an attribute.
         """
-        if not self._has_custom_namespace:
-            self._set_namespace(f"{owner.__name__}.{attribute_name}")
+        self._set_namespace(f"{owner.__name__}.{attribute_name}")
 
     def __get__(self, instance: RedisCache, owner: Any) -> RedisCache:
         """Fetch the Bot instance, we need it for the redis pool."""
@@ -106,9 +105,9 @@ class RedisCache:
 
     async def pop(self, key: ValidRedisKey, default: Optional[JSONSerializableType] = None) -> JSONSerializableType:
         """Get the item, remove it from the cache, and provide a default if not found."""
-        value = await self.get(key, default)
-        await self.delete(key)
-        return value
+        # value = await self.get(key, default)
+        # await self.delete(key)
+        # return value
 
     async def update(self) -> None:
         """Update the Redis cache with multiple values."""

@@ -45,8 +45,7 @@ class Bot(commands.Bot):
             # will effectively disable stats.
             statsd_url = "127.0.0.1"
 
-        asyncio.create_task(self._create_redis_session())
-
+        self.loop.create_task(self._create_redis_session())
         self.stats = AsyncStatsClient(self.loop, statsd_url, 8125, prefix="bot")
 
     async def _create_redis_session(self) -> None:
