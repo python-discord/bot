@@ -29,13 +29,12 @@ DELETION_MESSAGE_TEMPLATE = (
 )
 DISCORD_EPOCH = 1_420_070_400_000
 TOKEN_EPOCH = 1_293_840_000
-TOKEN_RE = re.compile(
-    r"[^\s\.()\"']+"  # Matches token part 1: The user ID string, encoded as base64
-    r"\."             # Matches a literal dot between the token parts
-    r"[^\s\.()\"']+"  # Matches token part 2: The creation timestamp, as an integer
-    r"\."             # Matches a literal dot between the token parts
-    r"[^\s\.()\"']+"  # Matches token part 3: The HMAC, unused by us, but check that it isn't empty
-)
+
+# Three parts delimited by dots: user ID, creation timestamp, HMAC.
+# The HMAC isn't parsed further, but it's in the regex to ensure it at least exists in the string.
+# Each part only matches base64 URL-safe characters.
+# Padding has never been observed, but the padding character '=' is matched just in case.
+TOKEN_RE = re.compile(r"[\w-=]+\.[\w-=]+\.[\w-=]+", re.ASCII)
 
 
 class TokenRemover(Cog):
