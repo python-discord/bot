@@ -208,7 +208,7 @@ class Snekbox(Cog):
             # Collect stats of eval fails + successes
             if icon == ":x:":
                 self.bot.stats.incr("snekbox.python.fail")
-            elif icon in (":warning:", ":white_check_mark:"):
+            else:
                 self.bot.stats.incr("snekbox.python.success")
 
             response = await ctx.send(msg)
