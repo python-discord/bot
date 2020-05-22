@@ -438,10 +438,6 @@ class HelpChannels(Scheduler, commands.Cog):
         """Return True if `member` has the 'Help Cooldown' role."""
         return any(constants.Roles.help_cooldown == role.id for role in member.roles)
 
-    def is_dormant_message(self, message: t.Optional[discord.Message]) -> bool:
-        """Return True if the contents of the `message` match `DORMANT_MSG`."""
-        return self.match_bot_embed(message, DORMANT_MSG)
-
     def match_bot_embed(self, message: t.Optional[discord.Message], description: str) -> bool:
         """Return `True` if the bot's `message`'s embed description matches `description`."""
         if not message or not message.embeds:
@@ -822,7 +818,7 @@ class HelpChannels(Scheduler, commands.Cog):
         embed = discord.Embed(description=AVAILABLE_MSG)
 
         msg = await self.get_last_message(channel)
-        if self.is_dormant_message(msg):
+        if self.match_bot_embed(msg, DORMANT_MSG):
             log.trace(f"Found dormant message {msg.id} in {channel_info}; editing it.")
             await msg.edit(embed=embed)
         else:
