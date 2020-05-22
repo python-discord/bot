@@ -8,72 +8,28 @@ from discord import Colour, Embed
 from bot.cogs import tags
 from tests.helpers import MockBot, MockContext, MockTextChannel
 
-CACHE = {
-    "ytdl": {
-        "title": "ytdl",
-        "embed": {
-            "description": "youtube,audio"
-        }
-    },
-    "class": {
-        "title": "class",
-        "embed": {
-            "description": "class"
-        }
-    },
-    "classmethod": {
-        "title": "classmethod",
-        "embed": {
-            "description": "classmethod"
-        }
-    },
-    "return": {
-        "title": "return",
-        "embed": {
-            "description": "return"
-        }
-    },
-    "codeblock": {
-        "title": "codeblock",
-        "embed": {
-            "description": "codeblock"
-        }
-    },
-    "pep8": {
-        "title": "pep8",
-        "embed": {
-            "description": "pep8"
-        }
-    },
-    "off-topic": {
-        "title": "off-topic",
-        "embed": {
-            "description": "off-topic"
-        }
-    }
-}
-
 
 class TagsBaseTests(unittest.TestCase):
     """Basic function tests in `Tags` cog that don't need very specific testing."""
 
     def setUp(self) -> None:
         self.bot = MockBot()
-        self.cog = tags.Tags(self.bot)
-        self.cog._cache = CACHE.copy()
+        with patch("bot.cogs.tags.Path") as path:
+            path.return_value = Path("tests", "bot", "resources", "testing-tags")
+            self.cog = tags.Tags(self.bot)
 
     def test_get_tags(self):
         """Should return `Dict` of tags, fetched from resources and have correct keys."""
-        actual = tags.Tags.get_tags()
+        testing_path = Path("tests", "bot", "resources", "testing-tags")
+        with patch("bot.cogs.tags.Path") as path:
+            path.return_value = testing_path
+            actual = tags.Tags.get_tags()
 
-        tags_files = Path("bot", "resources", "tags").iterdir()
-
-        self.assertEqual(len(actual), sum(1 for _ in tags_files))
-        for k, v in actual.items():
-            with self.subTest("Should have following keys: `title`, `embed` (under it `description`)", tag=k, values=v):
-                self.assertTrue("title" in v)
-                self.assertTrue("embed" in v)
-                self.assertTrue("description" in v["embed"])
+        self.assertEqual(len(actual), len(list(testing_path.iterdir())))
+        for file in testing_path.iterdir():
+            name = file.name.replace(".md", "")
+            self.assertIn(name, actual)
+            self.assertEqual(file.read_text(encoding="utf-8"), actual[name]["embed"]["description"])
 
     @patch("bot.cogs.tags.REGEX_NON_ALPHABET")
     def test_fuzzy_search(self, regex):
@@ -192,14 +148,18 @@ class TagsCommandsTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_head_command(self):
         """Should invoke `!tags get` command from `!tag` command."""
-        cog = tags.Tags(self.bot)
+        with patch("bot.cogs.tags.Path") as path:
+            path.return_value = Path("tests", "bot", "resources", "testing-tags")
+            cog = tags.Tags(self.bot)
 
         self.assertIsNone(await cog.tags_group.callback(cog, self.ctx, tag_name="class"))
         self.ctx.invoke.assert_awaited_once_with(cog.get_command, tag_name="class")
 
     async def test_search_tags_with_keyword_command(self):
         """Should call `Tags._get_tags_via_content` and `Tags._send_matching_tags` with correct parameters."""
-        cog = tags.Tags(self.bot)
+        with patch("bot.cogs.tags.Path") as path:
+            path.return_value = Path("tests", "bot", "resources", "testing-tags")
+            cog = tags.Tags(self.bot)
         cog._get_tags_via_content = MagicMock(return_value="foo")
         cog._send_matching_tags = AsyncMock()
 
@@ -216,7 +176,10 @@ class TagsCommandsTests(unittest.IsolatedAsyncioTestCase):
 
         for case in test_cases:
             with self.subTest(keywords=case["keywords"]):
-                cog = tags.Tags(self.bot)
+                with patch("bot.cogs.tags.Path") as path:
+                    path.return_value = Path("tests", "bot", "resources", "testing-tags")
+                    cog = tags.Tags(self.bot)
+
                 cog._get_tags_via_content = MagicMock(return_value="foo")
                 cog._send_matching_tags = AsyncMock()
 
@@ -228,8 +191,10 @@ class TagsCommandsTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_send_matching_tags(self):
         """Should return `None` and send correct embed."""
-        cog = tags.Tags(self.bot)
-        cog._cache = CACHE.copy()
+        with patch("bot.cogs.tags.Path") as path:
+            path.return_value = Path("tests", "bot", "resources", "testing-tags")
+            cog = tags.Tags(self.bot)
+
         test_cases = [
             {
                 "args": (self.ctx, "youtube,audio", [cog._cache["ytdl"]]),
@@ -278,7 +243,9 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_tag_on_cooldown(self):
         """Should not respond to chat due tag is under cooldown."""
-        cog = tags.Tags(self.bot)
+        with patch("bot.cogs.tags.Path") as path:
+            path.return_value = Path("tests", "bot", "resources", "testing-tags")
+            cog = tags.Tags(self.bot)
         cog.tag_cooldowns["ytdl"] = {"channel": 1234, "time": time.time()}
 
         self.assertIsNone(await cog.get_command.callback(cog, self.ctx, tag_name="ytdl"))
@@ -286,7 +253,9 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_tags_list_empty(self):
         """Should send to chat (`ctx.send`) correct embed with information about no tags."""
-        cog = tags.Tags(self.bot)
+        with patch("bot.cogs.tags.Path") as path:
+            path.return_value = Path("tests", "bot", "resources", "testing-tags")
+            cog = tags.Tags(self.bot)
         cog._cache = {}
 
         self.assertIsNone(await cog.get_command.callback(cog, self.ctx, tag_name=None))
@@ -298,8 +267,9 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_tags_list(self):
         """Should send to chat (`LinePaginator.paginate`) embed that contains all tags."""
-        cog = tags.Tags(self.bot)
-        cog._cache = CACHE.copy()
+        with patch("bot.cogs.tags.Path") as path:
+            path.return_value = Path("tests", "bot", "resources", "testing-tags")
+            cog = tags.Tags(self.bot)
 
         self.assertIsNone(await cog.get_command.callback(cog, self.ctx, tag_name=None))
         embed = self.ctx.send.call_args[1]["embed"]
@@ -311,8 +281,10 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_tag(self):
         """Should send correct embed to chat (`ctx.send`) with tag content."""
-        cog = tags.Tags(self.bot)
-        cog._cache = CACHE.copy()
+        with patch("bot.cogs.tags.Path") as path:
+            path.return_value = Path("tests", "bot", "resources", "testing-tags")
+            cog = tags.Tags(self.bot)
+
         test_cases = [
             {"tag": tag["title"], "expected": tag["embed"]} for tag in cog._cache.values()
         ]
