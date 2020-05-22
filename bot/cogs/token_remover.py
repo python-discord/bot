@@ -150,7 +150,7 @@ class TokenRemover(Cog):
         b64_content = utils.pad_base64(b64_content)
 
         try:
-            decoded_bytes: bytes = base64.b64decode(b64_content)
+            decoded_bytes = base64.urlsafe_b64decode(b64_content)
             string = decoded_bytes.decode('utf-8')
 
             # isdigit on its own would match a lot of other Unicode characters, hence the isascii.
