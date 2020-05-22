@@ -468,7 +468,7 @@ class HelpChannels(Scheduler, commands.Cog):
         """
         log.trace(f"Handling in-use channel #{channel} ({channel.id}).")
 
-        if not self.is_empty(channel):
+        if not await self.is_empty(channel):
             idle_seconds = constants.HelpChannels.idle_minutes * 60
         else:
             idle_seconds = constants.HelpChannels.deleted_idle_minutes * 60
@@ -731,7 +731,10 @@ class HelpChannels(Scheduler, commands.Cog):
 
         The new time for the dormant task is configured with `HelpChannels.deleted_idle_minutes`.
         """
-        if not self.is_in_category(msg.channel, constants.Categories.help_in_use) or not self.is_empty(msg.channel):
+        if not self.is_in_category(msg.channel, constants.Categories.help_in_use):
+            return
+
+        if not await self.is_empty(msg.channel):
             return
 
         log.info(f"Claimant of #{msg.channel} ({msg.author}) deleted message, channel is empty now. Rescheduling task.")
