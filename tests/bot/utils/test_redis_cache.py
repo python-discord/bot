@@ -1,11 +1,9 @@
-import asyncio
 import unittest
-from unittest.mock import MagicMock
 
 import fakeredis.aioredis
 
-from bot.bot import Bot
 from bot.utils import RedisCache
+from tests import helpers
 
 
 class RedisCacheTests(unittest.IsolatedAsyncioTestCase):
@@ -15,12 +13,8 @@ class RedisCacheTests(unittest.IsolatedAsyncioTestCase):
 
     async def asyncSetUp(self):  # noqa: N802 - this special method can't be all lowercase
         """Sets up the objects that only have to be initialized once."""
-        self.bot = MagicMock(
-            spec=Bot,
-            redis_session=await fakeredis.aioredis.create_redis_pool(),
-            _redis_ready=asyncio.Event(),
-        )
-        self.bot._redis_ready.set()
+        self.bot = helpers.MockBot()
+        self.bot.redis_session = await fakeredis.aioredis.create_redis_pool()
 
     def test_class_attribute_namespace(self):
         """Test that RedisDict creates a namespace automatically for class attributes."""

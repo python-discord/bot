@@ -7,6 +7,7 @@ import unittest.mock
 from asyncio import AbstractEventLoop
 from typing import Iterable, Optional
 
+import aioredis.abc
 import discord
 from discord.ext.commands import Context
 
@@ -265,6 +266,17 @@ class MockAPIClient(CustomMockMixin, unittest.mock.MagicMock):
     spec_set = APIClient
 
 
+class MockRedisPool(CustomMockMixin, unittest.mock.MagicMock):
+    """
+    A MagicMock subclass to mock an aioredis connection pool.
+
+    Instances of this class will follow the specifications of `aioredis.abc.AbcPool` instances.
+    For more information, see the `MockGuild` docstring.
+    """
+    spec_set = aioredis.abc.AbcPool
+    additional_spec_asyncs = ("execute", "execute_pubsub")
+
+
 def _get_mock_loop() -> unittest.mock.Mock:
     """Return a mocked asyncio.AbstractEventLoop."""
     loop = unittest.mock.create_autospec(spec=AbstractEventLoop, spec_set=True)
@@ -292,6 +304,10 @@ class MockBot(CustomMockMixin, unittest.mock.MagicMock):
 
         self.loop = _get_mock_loop()
         self.api_client = MockAPIClient(loop=self.loop)
+
+        # fakeredis can't be used cause it'd require awaiting a coroutine to create the pool,
+        # which cannot be done here in __init__.
+        self.redis_session = MockRedisPool()
 
 
 # Create a TextChannel instance to get a realistic MagicMock of `discord.TextChannel`
