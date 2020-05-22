@@ -2,9 +2,9 @@ from abc import ABCMeta
 
 from discord.ext.commands import CogMeta
 
-from bot.utils.redis_dict import RedisDict
+from bot.utils.redis_cache import RedisCache
 
-__all__ = ['RedisDict', 'CogABCMeta']
+__all__ = ['RedisCache', 'CogABCMeta']
 
 
 class CogABCMeta(CogMeta, ABCMeta):

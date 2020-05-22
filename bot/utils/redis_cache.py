@@ -61,7 +61,7 @@ class RedisCache:
         for attribute in vars(instance).values():
             if isinstance(attribute, Bot):
                 self.bot = attribute
-                self._redis = self.bot.redis_pool
+                self._redis = self.bot.redis_session
                 return self
         else:
             raise RuntimeError("Cannot initialize a RedisCache without a `Bot` instance.")
