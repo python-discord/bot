@@ -440,14 +440,11 @@ class HelpChannels(Scheduler, commands.Cog):
 
     def is_dormant_message(self, message: t.Optional[discord.Message]) -> bool:
         """Return True if the contents of the `message` match `DORMANT_MSG`."""
-        if not message:
-            return False
-
         return self.match_bot_embed(message, DORMANT_MSG)
 
-    def match_bot_embed(self, message: discord.Message, description: str) -> bool:
+    def match_bot_embed(self, message: t.Optional[discord.Message], description: str) -> bool:
         """Return `True` if the bot's `message`'s embed description matches `description`."""
-        if not message.embeds:
+        if not message or not message.embeds:
             return False
 
         embed = message.embeds[0]
@@ -748,9 +745,6 @@ class HelpChannels(Scheduler, commands.Cog):
     async def is_empty(self, channel: discord.TextChannel) -> bool:
         """Return True if the most recent message in `channel` is the bot's `AVAILABLE_MSG`."""
         msg = await self.get_last_message(channel)
-        if not msg:
-            return False
-
         return self.match_bot_embed(msg, AVAILABLE_MSG)
 
     async def reset_send_permissions(self) -> None:
