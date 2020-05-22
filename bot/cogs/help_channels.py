@@ -719,7 +719,11 @@ class HelpChannels(Scheduler, commands.Cog):
 
     @commands.Cog.listener()
     async def on_message_delete(self, msg: discord.Message) -> None:
-        """Reschedule dormant when help channel is empty."""
+        """
+        Reschedule an in-use channel to become dormant sooner if the channel is empty.
+
+        The new time for the dormant task is configured with `HelpChannels.deleted_idle_minutes`. 
+        """
         if not self.is_in_category(msg.channel, constants.Categories.help_in_use) or not self.is_empty(msg.channel):
             return
 
@@ -732,7 +736,7 @@ class HelpChannels(Scheduler, commands.Cog):
         self.schedule_task(msg.channel.id, task)
 
     async def is_empty(self, channel: discord.TextChannel) -> bool:
-        """Check is last message bot sent available message."""
+        """Return True if the most recent message in `channel` is the bot's `AVAILABLE_MSG`."""
         msg = await self.get_last_message(channel)
         if not msg or not msg.author.bot or not msg.embeds:
             return False
