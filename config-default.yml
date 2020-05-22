@@ -316,6 +316,8 @@ filter:
         - poweredbydialup.online
         - poweredbysecurity.org
         - poweredbysecurity.online
+        - ssteam.site
+        - steamwalletgift.com
 
     word_watchlist:
         - goo+ks*
