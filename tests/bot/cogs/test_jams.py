@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 from bot.cogs.jams import CodeJams
 from bot.constants import Roles
-from tests.helpers import MockBot, MockContext, MockMember, MockRole
+from tests.helpers import MockBot, MockContext, MockGuild, MockMember, MockRole
 
 
 class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
@@ -13,7 +13,8 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
         self.bot = MockBot()
         self.admin_role = MockRole(name="Admins", id=Roles.admins)
         self.command_user = MockMember([self.admin_role])
-        self.ctx = MockContext(bot=self.bot, author=self.command_user)
+        self.guild = MockGuild([self.admin_role])
+        self.ctx = MockContext(bot=self.bot, author=self.command_user, guild=self.guild)
         self.cog = CodeJams(self.bot)
 
     @patch("bot.cogs.jams.utils")
@@ -37,3 +38,14 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
         await self.cog.createteam(self.cog, self.ctx, "foo", (member for _ in range(5)))
         self.ctx.send.assert_awaited_once()
         utils_mock.get.assert_not_called()
+
+    @patch("bot.cogs.jams.utils")
+    async def test_category_dont_exist(self, utils_mock):
+        """Should create code jam category."""
+        utils_mock.get.return_value = None
+        await self.cog.createteam(self.cog, self.ctx, "foo", (MockMember() for _ in range(5)))
+        self.ctx.guild.create_category_channel.assert_awaited_once()
+        category_overwrites = self.ctx.guild.create_category_channel.call_args[1]["overwrites"]
+
+        self.assertFalse(category_overwrites[self.ctx.guild.default_role].read_messages)
+        self.assertTrue(category_overwrites[self.ctx.guild.me].read_messages)
