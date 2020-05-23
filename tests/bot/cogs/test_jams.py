@@ -59,10 +59,17 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
         utils_mock.get.assert_called_once()
         self.ctx.guild.create_category_channel.assert_not_awaited()
 
-    async def test_team_text_channel_creation(self):
+    @patch("bot.cogs.jams.utils")
+    async def test_team_text_channel_creation(self, utils_mock):
         """Should create text channel for team."""
+        utils_mock.get.return_value = "foo"
         await self.cog.createteam(self.cog, self.ctx, "bar", (MockMember() for _ in range(5)))
+        # Make sure that we awaited function before getting call arguments
         self.ctx.guild.create_text_channel.assert_awaited_once()
+
+        # All other arguments is possible to get somewhere else except this
+        overwrites = self.ctx.guild.create_text_channel.call_args[1]["overwrites"]
+        self.ctx.guild.create_text_channel.assert_awaited_once_with("bar", overwrites=overwrites, category="foo")
 
     async def test_channel_overwrites(self):
         """Should have correct permission overwrites for users and roles."""
