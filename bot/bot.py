@@ -45,7 +45,6 @@ class Bot(commands.Bot):
             # will effectively disable stats.
             statsd_url = "127.0.0.1"
 
-        self.loop.create_task(self._create_redis_session())
         self.stats = AsyncStatsClient(self.loop, statsd_url, 8125, prefix="bot")
 
     async def _create_redis_session(self) -> None:
@@ -91,6 +90,7 @@ class Bot(commands.Bot):
             self.stats._transport.close()
 
         if self.redis_session:
+            self._redis_ready.clear()
             self.redis_session.close()
             await self.redis_session.wait_closed()
 
@@ -101,7 +101,7 @@ class Bot(commands.Bot):
         await super().login(*args, **kwargs)
 
     def _recreate(self) -> None:
-        """Re-create the connector, aiohttp session, and the APIClient."""
+        """Re-create the connector, aiohttp session, the APIClient and the Redis session."""
         # Use asyncio for DNS resolution instead of threads so threads aren't spammed.
         # Doesn't seem to have any state with regards to being closed, so no need to worry?
         self._resolver = aiohttp.AsyncResolver()
@@ -111,6 +111,9 @@ class Bot(commands.Bot):
             log.warning(
                 "The previous connector was not closed; it will remain open and be overwritten"
             )
+
+        # Create the redis session
+        self.loop.create_task(self._create_redis_session())
 
         # Use AF_INET as its socket family to prevent HTTPS related problems both locally
         # and in production.
