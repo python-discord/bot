@@ -58,3 +58,8 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
         await self.cog.createteam(self.cog, self.ctx, "bar", (MockMember() for _ in range(5)))
         utils_mock.get.assert_called_once()
         self.ctx.guild.create_category_channel.assert_not_awaited()
+
+    async def test_team_text_channel_creation(self):
+        """Should create text channel for team."""
+        await self.cog.createteam(self.cog, self.ctx, "bar", (MockMember() for _ in range(5)))
+        self.ctx.guild.create_text_channel.assert_awaited_once()
