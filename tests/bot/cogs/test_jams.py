@@ -50,3 +50,11 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertFalse(category_overwrites[self.ctx.guild.default_role].read_messages)
         self.assertTrue(category_overwrites[self.ctx.guild.me].read_messages)
+
+    @patch("bot.cogs.jams.utils")
+    async def test_category_channel_exist(self, utils_mock):
+        """Should not try to create category channel."""
+        utils_mock.return_value = "foo"
+        await self.cog.createteam(self.cog, self.ctx, "bar", (MockMember() for _ in range(5)))
+        utils_mock.get.assert_called_once()
+        self.ctx.guild.create_category_channel.assert_not_awaited()
