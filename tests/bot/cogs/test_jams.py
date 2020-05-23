@@ -106,3 +106,17 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
         # All other arguments is possible to get somewhere else except this
         overwrites = self.ctx.guild.create_voice_channel.call_args[1]["overwrites"]
         self.ctx.guild.create_voice_channel.assert_awaited_once_with("My Team", overwrites=overwrites, category="foo")
+
+    async def test_jam_roles_adding(self):
+        """Should add team leader role to leader and jam role to every team member."""
+        leader_role = MockRole(name="Team Leader")
+        jam_role = MockRole(name="Jammer")
+        self.ctx.guild.get_role.side_effect = [MockRole(), leader_role, jam_role]
+
+        leader = MockMember()
+        members = [leader] + [MockMember() for _ in range(4)]
+        await self.cog.createteam(self.cog, self.ctx, "foo", members)
+
+        leader.add_roles.assert_any_await(leader_role)
+        for member in members:
+            member.add_roles.assert_any_await(jam_role)
