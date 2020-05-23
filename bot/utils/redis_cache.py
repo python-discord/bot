@@ -21,7 +21,37 @@ class RedisCache:
 
     We implement several convenient methods that are fairly similar to have a dict
     behaves, and should be familiar to Python users. The biggest difference is that
-    all the public methods in this class are coroutines.
+    all the public methods in this class are coroutines, and must be awaited.
+
+    Because of limitations in Redis, this cache will only accept strings, integers and
+    floats both for keys and values.
+
+    Simple example for how to use this:
+
+    class SomeCog(Cog):
+        # To initialize a valid RedisCache, just add it as a class attribute here.
+        # Do not add it to the __init__ method or anywhere else, it MUST be a class
+        # attribute. Do not pass any parameters.
+        cache = RedisCache()
+
+        async def my_method(self):
+            # Now we can store some stuff in the cache just by doing this.
+            # This data will persist through restarts!
+            await self.cache.set("key", "value")
+
+            # To get the data, simply do this.
+            value = await self.cache.get("key")
+
+            # Other methods work more or less like a dictionary.
+            # Checking if something is in the cache
+            await self.cache.contains("key")
+
+            # iterating the cache
+            async for key, value in self.cache.items():
+                print(value)
+
+            # We can even iterate in a comprehension!
+            consumed = [value async for key, value in self.cache.items()]
     """
 
     _namespaces = []
