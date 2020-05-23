@@ -111,7 +111,7 @@ class RedisCacheTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await self.redis.length(), 4)
 
     async def test_to_dict(self):
-        """Test that the .copy method returns a workable dictionary copy."""
+        """Test that the .to_dict method returns a workable dictionary copy."""
         copy = await self.redis.to_dict()
         local_copy = {key: value async for key, value in self.redis.items()}
         self.assertIs(type(copy), dict)
