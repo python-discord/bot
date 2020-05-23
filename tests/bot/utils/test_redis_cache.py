@@ -152,3 +152,24 @@ class RedisCacheTests(unittest.IsolatedAsyncioTestCase):
             "mega": "hungry, though",
         }
         self.assertDictEqual(await self.redis.to_dict(), result)
+
+    def test_typestring_conversion(self):
+        """Test the typestring-related helper functions."""
+        conversion_tests = (
+            (12, "i|12"),
+            (12.4, "f|12.4"),
+            ("cowabunga", "s|cowabunga"),
+        )
+
+        # Test conversion to typestring
+        for _input, expected in conversion_tests:
+            self.assertEqual(self.redis._to_typestring(_input), expected)
+
+        # Test conversion from typestrings
+        for _input, expected in conversion_tests:
+            self.assertEqual(self.redis._from_typestring(expected), _input)
+
+        # Test that exceptions are raised on invalid input
+        with self.assertRaises(TypeError):
+            self.redis._to_typestring(["internet"])
+            self.redis._from_typestring("o|firedog")
