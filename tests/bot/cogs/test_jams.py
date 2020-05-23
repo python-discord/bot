@@ -94,3 +94,15 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(overwrites[self.ctx.guild.default_role].connect)
         self.assertFalse(overwrites[self.ctx.guild.get_role(Roles.verified)].read_messages)
         self.assertFalse(overwrites[self.ctx.guild.get_role(Roles.verified)].connect)
+
+    @patch("bot.cogs.jams.utils")
+    async def test_team_voice_channel_creation(self, utils_mock):
+        """Should create new voice channel for team."""
+        utils_mock.get.return_value = "foo"
+        await self.cog.createteam(self.cog, self.ctx, "my-team", (MockMember() for _ in range(5)))
+        # Make sure that we awaited function before getting call arguments
+        self.ctx.guild.create_voice_channel.assert_awaited_once()
+
+        # All other arguments is possible to get somewhere else except this
+        overwrites = self.ctx.guild.create_voice_channel.call_args[1]["overwrites"]
+        self.ctx.guild.create_voice_channel.assert_awaited_once_with("My Team", overwrites=overwrites, category="foo")
