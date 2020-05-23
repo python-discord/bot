@@ -44,6 +44,7 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
         """Should create code jam category."""
         utils_mock.get.return_value = None
         await self.cog.createteam(self.cog, self.ctx, "foo", (MockMember() for _ in range(5)))
+        utils_mock.get.assert_called_once()
         self.ctx.guild.create_category_channel.assert_awaited_once()
         category_overwrites = self.ctx.guild.create_category_channel.call_args[1]["overwrites"]
 
