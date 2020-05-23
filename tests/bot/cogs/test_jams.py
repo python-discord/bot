@@ -63,3 +63,27 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
         """Should create text channel for team."""
         await self.cog.createteam(self.cog, self.ctx, "bar", (MockMember() for _ in range(5)))
         self.ctx.guild.create_text_channel.assert_awaited_once()
+
+    async def test_channel_overwrites(self):
+        """Should have correct permission overwrites for users and roles."""
+        leader = MockMember()
+        members = [leader] + [MockMember() for _ in range(4)]
+        await self.cog.createteam(self.cog, self.ctx, "foo", members)
+        overwrites = self.ctx.guild.create_text_channel.call_args[1]["overwrites"]
+
+        # Leader permission overwrites
+        self.assertTrue(overwrites[leader].manage_messages)
+        self.assertTrue(overwrites[leader].read_messages)
+        self.assertTrue(overwrites[leader].manage_webhooks)
+        self.assertTrue(overwrites[leader].connect)
+
+        # Other members permission overwrites
+        for member in members[1:]:
+            self.assertTrue(overwrites[member].read_messages)
+            self.assertTrue(overwrites[member].connect)
+
+        # Everyone and verified role overwrite
+        self.assertFalse(overwrites[self.ctx.guild.default_role].read_messages)
+        self.assertFalse(overwrites[self.ctx.guild.default_role].connect)
+        self.assertFalse(overwrites[self.ctx.guild.get_role(Roles.verified)].read_messages)
+        self.assertFalse(overwrites[self.ctx.guild.get_role(Roles.verified)].connect)
