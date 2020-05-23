@@ -109,6 +109,9 @@ class PythonNews(Cog):
             )
             payload["data"]["pep"].append(pep_nr)
 
+            # Increase overall PEP new stat
+            self.bot.stats.incr("python_news.posted.pep")
+
             if msg.channel.is_news():
                 log.trace("Publishing PEP annnouncement because it was in a news channel")
                 await msg.publish()
@@ -167,6 +170,9 @@ class PythonNews(Cog):
                     footer=f"Posted to {self.webhook_names[maillist]}"
                 )
                 payload["data"][maillist].append(thread_information["thread_id"])
+
+                # Increase this specific maillist counter in stats
+                self.bot.stats.incr(f"python_news.posted.{maillist.replace('-', '_')}")
 
                 if msg.channel.is_news():
                     log.trace("Publishing mailing list message because it was in a news channel")
