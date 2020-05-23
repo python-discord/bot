@@ -35,6 +35,14 @@ class RedisCache:
         cache = RedisCache()
 
         async def my_method(self):
+
+            # Now we're ready to use the RedisCache.
+            # One thing to note here is that this will not work unless
+            # we access self.cache through an _instance_ of this class.
+            #
+            # For example, attempting to use SomeCog.cache will _not_ work,
+            # you _must_ instantiate the class first and use that instance.
+            #
             # Now we can store some stuff in the cache just by doing this.
             # This data will persist through restarts!
             await self.cache.set("key", "value")
@@ -167,7 +175,13 @@ class RedisCache:
             return value
 
     async def delete(self, key: ValidRedisType) -> None:
-        """Delete an item from the Redis cache."""
+        """
+        Delete an item from the Redis cache.
+
+        If we try to delete a key that does not exist, it will simply be ignored.
+
+        See https://redis.io/commands/hdel for more info on how this works.
+        """
         await self._validate_cache()
         key = self._to_typestring(key)
         return await self._redis.hdel(self._namespace, key)
@@ -206,7 +220,12 @@ class RedisCache:
     async def pop(self, key: ValidRedisType, default: Optional[ValidRedisType] = None) -> ValidRedisType:
         """Get the item, remove it from the cache, and provide a default if not found."""
         value = await self.get(key, default)
-        await self.delete(key)
+
+        # No need to try to delete something that doesn't exist,
+        # that's just a superfluous API call.
+        if value != default:
+            await self.delete(key)
+
         return value
 
     async def update(self, items: Dict) -> None:
