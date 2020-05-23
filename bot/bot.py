@@ -112,6 +112,11 @@ class Bot(commands.Bot):
                 "The previous connector was not closed; it will remain open and be overwritten"
             )
 
+        if self.redis_session and not self.redis_session.closed:
+            log.warning(
+                "The previous redis pool was not closed; it will remain open and be overwritten"
+            )
+
         # Create the redis session
         self.loop.create_task(self._create_redis_session())
 
