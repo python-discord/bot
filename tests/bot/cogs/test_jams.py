@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from bot.cogs.jams import CodeJams
+from bot.cogs.jams import CodeJams, setup
 from bot.constants import Roles
 from tests.helpers import MockBot, MockContext, MockGuild, MockMember, MockRole
 
@@ -126,3 +126,13 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
         self.ctx.reset_mock()
         await self.cog.createteam(self.cog, self.ctx, "foo", (MockMember() for _ in range(5)))
         self.ctx.send.assert_awaited_once()
+
+
+class CodeJamSetup(unittest.TestCase):
+    """Test for `setup` function of `CodeJam` cog."""
+
+    def test_setup(self):
+        """Should call `bot.add_cog`."""
+        bot = MockBot()
+        setup(bot)
+        bot.add_cog.assert_called_once()
