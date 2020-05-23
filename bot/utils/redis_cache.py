@@ -170,7 +170,11 @@ class RedisCache:
         return await self._redis.hdel(self._namespace, key)
 
     async def contains(self, key: ValidRedisType) -> bool:
-        """Check if a key exists in the Redis cache."""
+        """
+        Check if a key exists in the Redis cache.
+
+        Return True if the key exists, otherwise False.
+        """
         await self._validate_cache()
         key = self._to_typestring(key)
         return await self._redis.hexists(self._namespace, key)
