@@ -167,7 +167,7 @@ class ErrorHandler(Cog):
             self.bot.stats.incr("errors.missing_required_argument")
         elif isinstance(e, errors.TooManyArguments):
             await ctx.send("Too many arguments provided.")
-            await ctx.invoke(*help_command)
+            await prepared_help_command
             self.bot.stats.incr("errors.too_many_arguments")
         elif isinstance(e, errors.BadArgument):
             await ctx.send(f"Bad argument: {e}\n")
