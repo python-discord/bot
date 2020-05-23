@@ -50,14 +50,24 @@ class RedisCache:
             return f"s|{value}"
 
     @staticmethod
-    def _from_typestring(value: str) -> ValidRedisType:
-        """Turn a valid Redis type into a typestring."""
+    def _from_typestring(value: Union[bytes, str]) -> ValidRedisType:
+        """Turn a typestring into a valid Redis type."""
+        if isinstance(value, bytes):
+            value = value.decode('utf-8')
         if value.startswith("f|"):
             return float(value[2:])
         if value.startswith("i|"):
             return int(value[2:])
         if value.startswith("s|"):
             return value[2:]
+
+    def _dict_from_typestring(self, dictionary: Dict) -> Dict:
+        """Turns all contents of a dict into valid Redis types."""
+        return {self._from_typestring(key): self._from_typestring(value) for key, value in dictionary.items()}
+
+    def _dict_to_typestring(self, dictionary: Dict) -> Dict:
+        """Turns all contents of a dict into typestrings."""
+        return {self._to_typestring(key): self._to_typestring(value) for key, value in dictionary.items()}
 
     async def _validate_cache(self) -> None:
         """Validate that the RedisCache is ready to be used."""
@@ -120,41 +130,49 @@ class RedisCache:
         if value is None:
             return default
         else:
-            value = self._from_typestring(value.decode("utf-8"))
+            value = self._from_typestring(value)
             return value
 
     async def delete(self, key: ValidRedisType) -> None:
         """Delete an item from the Redis cache."""
-        # await self._redis.hdel(self._namespace, key)
+        await self._validate_cache()
+        key = self._to_typestring(key)
+        return await self._redis.hdel(self._namespace, key)
 
     async def contains(self, key: ValidRedisType) -> bool:
         """Check if a key exists in the Redis cache."""
-        # return await self._redis.hexists(self._namespace, key)
+        await self._validate_cache()
+        key = self._to_typestring(key)
+        return await self._redis.hexists(self._namespace, key)
 
     async def items(self) -> AsyncIterator:
         """Iterate all the items in the Redis cache."""
-        # data = await redis.hgetall(self.get_with_namespace(key))
-        # for item in data:
-        #     yield item
+        await self._validate_cache()
+        data = await self._redis.hgetall(self._namespace)  # Get all the keys
+        for key, value in self._dict_from_typestring(data).items():
+            yield key, value
 
     async def length(self) -> int:
         """Return the number of items in the Redis cache."""
-        # return await self._redis.hlen(self._namespace)
+        await self._validate_cache()
+        return await self._redis.hlen(self._namespace)
 
     async def to_dict(self) -> Dict:
         """Convert to dict and return."""
-        # return dict(self.items())
+        return {key: value async for key, value in self.items()}
 
     async def clear(self) -> None:
         """Deletes the entire hash from the Redis cache."""
-        # await self._redis.delete(self._namespace)
+        await self._validate_cache()
+        await self._redis.delete(self._namespace)
 
     async def pop(self, key: ValidRedisType, default: Optional[ValidRedisType] = None) -> ValidRedisType:
         """Get the item, remove it from the cache, and provide a default if not found."""
-        # value = await self.get(key, default)
-        # await self.delete(key)
-        # return value
+        value = await self.get(key, default)
+        await self.delete(key)
+        return value
 
-    async def update(self) -> None:
+    async def update(self, items: Dict) -> None:
         """Update the Redis cache with multiple values."""
-        # https://aioredis.readthedocs.io/en/v1.3.0/mixins.html#aioredis.commands.HashCommandsMixin.hmset_dict
+        await self._validate_cache()
+        await self._redis.hmset_dict(self._namespace, self._dict_to_typestring(items))
