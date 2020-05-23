@@ -564,6 +564,14 @@ class Sync(metaclass=YAMLGetter):
     max_diff: int
 
 
+class PythonNews(metaclass=YAMLGetter):
+    section = 'python_news'
+
+    mail_lists: List[str]
+    channel: int
+    webhook: int
+
+
 class Event(Enum):
     """
     Event names. This does not include every event (for example, raw
