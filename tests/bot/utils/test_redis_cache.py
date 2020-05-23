@@ -7,27 +7,41 @@ from tests import helpers
 
 
 class RedisCacheTests(unittest.IsolatedAsyncioTestCase):
-    """Tests the RedisDict class from utils.redis_dict.py."""
+    """Tests the RedisCache class from utils.redis_dict.py."""
 
     redis = RedisCache()
 
-    async def asyncSetUp(self):  # noqa: N802 - this special method can't be all lowercase
+    async def asyncSetUp(self):  # noqa: N802
         """Sets up the objects that only have to be initialized once."""
         self.bot = helpers.MockBot()
         self.bot.redis_session = await fakeredis.aioredis.create_redis_pool()
 
-    def test_class_attribute_namespace(self):
+    async def test_class_attribute_namespace(self):
         """Test that RedisDict creates a namespace automatically for class attributes."""
         self.assertEqual(self.redis._namespace, "RedisCacheTests.redis")
-        # Test that errors are raised when this isn't true.
 
-    # def test_set_get_item(self):
-    #     """Test that users can set and get items from the RedisDict."""
-    #     self.redis['favorite_fruit'] = 'melon'
-    #     self.redis['favorite_number'] = 86
-    #     self.assertEqual(self.redis['favorite_fruit'], 'melon')
-    #     self.assertEqual(self.redis['favorite_number'], 86)
-    #
+        # Test that errors are raised when not assigned as a class attribute
+        bad_cache = RedisCache()
+
+        with self.assertRaises(RuntimeError):
+            await bad_cache.set("test", "me_up_deadman")
+
+    async def test_set_get_item(self):
+        """Test that users can set and get items from the RedisDict."""
+        test_cases = (
+            ('favorite_fruit', 'melon'),
+            ('favorite_number', 86),
+            ('favorite_fraction', 86.54)
+        )
+
+        # Test that we can get and set different types.
+        for test in test_cases:
+            await self.redis.set(*test)
+            self.assertEqual(await self.redis.get(test[0]), test[1])
+
+        # Test that .get allows a default value
+        self.assertEqual(await self.redis.get('favorite_nothing', "bearclaw"), "bearclaw")
+
     # def test_set_item_types(self):
     #     """Test that setitem rejects keys and values that are not strings, ints or floats."""
     #     fruits = ["lemon", "melon", "apple"]

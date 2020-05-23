@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from enum import Enum
-from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, Union
+from typing import Any, AsyncIterator, Dict, Optional, Union
 
 from bot.bot import Bot
 
-ValidRedisKey = Union[str, int, float]
-JSONSerializableType = Optional[Union[str, float, bool, Dict, List, Tuple, Enum]]
+ValidRedisType = Union[str, int, float]
 
 
 class RedisCache:
@@ -41,7 +39,39 @@ class RedisCache:
         self._namespaces.append(namespace)
         self._namespace = namespace
 
-    def __set_name__(self, owner: object, attribute_name: str) -> None:
+    @staticmethod
+    def _to_typestring(value: ValidRedisType) -> str:
+        """Turn a valid Redis type into a typestring."""
+        if isinstance(value, float):
+            return f"f|{value}"
+        elif isinstance(value, int):
+            return f"i|{value}"
+        elif isinstance(value, str):
+            return f"s|{value}"
+
+    @staticmethod
+    def _from_typestring(value: str) -> ValidRedisType:
+        """Turn a valid Redis type into a typestring."""
+        if value.startswith("f|"):
+            return float(value[2:])
+        if value.startswith("i|"):
+            return int(value[2:])
+        if value.startswith("s|"):
+            return value[2:]
+
+    async def _validate_cache(self) -> None:
+        """Validate that the RedisCache is ready to be used."""
+        if self.bot is None:
+            raise RuntimeError("Critical error: RedisCache has no `Bot` instance.")
+
+        if self._namespace is None:
+            raise RuntimeError(
+                "Critical error: RedisCache has no namespace. "
+                "Did you initialize this object as a class attribute?"
+            )
+        await self.bot._redis_ready.wait()
+
+    def __set_name__(self, owner: Any, attribute_name: str) -> None:
         """
         Set the namespace to Class.attribute_name.
 
@@ -54,8 +84,11 @@ class RedisCache:
         if self.bot:
             return self
 
+        if self._namespace is None:
+            raise RuntimeError("RedisCache must be a class attribute.")
+
         if instance is None:
-            raise NotImplementedError("You must create an instance of RedisCache to use it.")
+            raise RuntimeError("You must create an instance of RedisCache to use it.")
 
         for attribute in vars(instance).values():
             if isinstance(attribute, Bot):
@@ -69,19 +102,32 @@ class RedisCache:
         """Return a beautiful representation of this object instance."""
         return f"RedisCache(namespace={self._namespace!r})"
 
-    async def set(self, key: ValidRedisKey, value: JSONSerializableType) -> None:
+    async def set(self, key: ValidRedisType, value: ValidRedisType) -> None:
         """Store an item in the Redis cache."""
-        # await self._redis.hset(self._namespace, key, value)
+        await self._validate_cache()
 
-    async def get(self, key: ValidRedisKey, default: Optional[JSONSerializableType] = None) -> JSONSerializableType:
+        # Convert to a typestring and then set it
+        key = self._to_typestring(key)
+        value = self._to_typestring(value)
+        await self._redis.hset(self._namespace, key, value)
+
+    async def get(self, key: ValidRedisType, default: Optional[ValidRedisType] = None) -> ValidRedisType:
         """Get an item from the Redis cache."""
-        # value = await self._redis.hget(self._namespace, key)
+        await self._validate_cache()
+        key = self._to_typestring(key)
+        value = await self._redis.hget(self._namespace, key)
 
-    async def delete(self, key: ValidRedisKey) -> None:
+        if value is None:
+            return default
+        else:
+            value = self._from_typestring(value.decode("utf-8"))
+            return value
+
+    async def delete(self, key: ValidRedisType) -> None:
         """Delete an item from the Redis cache."""
         # await self._redis.hdel(self._namespace, key)
 
-    async def contains(self, key: ValidRedisKey) -> bool:
+    async def contains(self, key: ValidRedisType) -> bool:
         """Check if a key exists in the Redis cache."""
         # return await self._redis.hexists(self._namespace, key)
 
@@ -103,7 +149,7 @@ class RedisCache:
         """Deletes the entire hash from the Redis cache."""
         # await self._redis.delete(self._namespace)
 
-    async def pop(self, key: ValidRedisKey, default: Optional[JSONSerializableType] = None) -> JSONSerializableType:
+    async def pop(self, key: ValidRedisType, default: Optional[ValidRedisType] = None) -> ValidRedisType:
         """Get the item, remove it from the cache, and provide a default if not found."""
         # value = await self.get(key, default)
         # await self.delete(key)
