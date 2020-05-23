@@ -128,7 +128,10 @@ class RedisCache:
             raise RuntimeError("RedisCache must be a class attribute.")
 
         if instance is None:
-            raise RuntimeError("You must create an instance of RedisCache to use it.")
+            raise RuntimeError(
+                "You must access the RedisCache instance through the cog instance "
+                "before accessing it using the cog's class object."
+            )
 
         for attribute in vars(instance).values():
             if isinstance(attribute, Bot):
