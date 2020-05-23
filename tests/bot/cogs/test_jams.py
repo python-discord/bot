@@ -28,3 +28,12 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
                 )
                 self.ctx.send.assert_awaited_once()
                 utils_mock.get.assert_not_called()
+
+    @patch("bot.cogs.jams.utils")
+    async def test_duplicate_members_provided(self, utils_mock):
+        """Should `ctx.send` and exit early because duplicate members provided and total there is only 1 member."""
+        self.ctx.reset_mock()
+        member = MockMember()
+        await self.cog.createteam(self.cog, self.ctx, "foo", (member for _ in range(5)))
+        self.ctx.send.assert_awaited_once()
+        utils_mock.get.assert_not_called()
