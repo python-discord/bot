@@ -24,20 +24,16 @@ class RedisCache:
     """
     A simplified interface for a Redis connection.
 
-    This class must be created as a class attribute in a class. This is because it
-    uses __set_name__ to create a namespace like MyCog.my_class_attribute which is
-    used as a hash name when we store stuff in Redis, to prevent collisions.
-
-    The class this object is instantiated in must also contains an attribute with an
-    instance of Bot. This is because Bot contains our redis_pool, which is how this
-    class communicates with the Redis server.
-
     We implement several convenient methods that are fairly similar to have a dict
     behaves, and should be familiar to Python users. The biggest difference is that
     all the public methods in this class are coroutines, and must be awaited.
 
     Because of limitations in Redis, this cache will only accept strings, integers and
     floats both for keys and values.
+
+    Please note that this class MUST be created as a class attribute, and that that class
+    must also contain an attribute with an instance of our Bot. See `__get__` and `__set_name__`
+    for more information about how this works.
 
     Simple example for how to use this:
 
@@ -78,12 +74,18 @@ class RedisCache:
     _namespaces = []
 
     def __init__(self) -> None:
-        """Raise a NotImplementedError if `__set_name__` hasn't been run."""
+        """Initialize the RedisCache."""
         self._namespace = None
         self.bot = None
 
     def _set_namespace(self, namespace: str) -> None:
         """Try to set the namespace, but do not permit collisions."""
+        # We need a unique namespace, to prevent collisions. This loop
+        # will try appending underscores to the end of the namespace until
+        # it finds one that is unique.
+        #
+        # For example, if `john` and `john_`  are both taken, the namespace will
+        # be `john__` at the end of this loop.
         while namespace in self._namespaces:
             namespace += "_"
 
@@ -136,11 +138,26 @@ class RedisCache:
         Set the namespace to Class.attribute_name.
 
         Called automatically when this class is constructed inside a class as an attribute.
+
+        This class MUST be created as a class attribute in a class, otherwise it will raise
+        exceptions whenever a method is used. This is because it uses this method to create
+        a namespace like `MyCog.my_class_attribute` which is used as a hash name when we store
+        stuff in Redis, to prevent collisions.
         """
         self._set_namespace(f"{owner.__name__}.{attribute_name}")
 
     def __get__(self, instance: RedisCache, owner: Any) -> RedisCache:
-        """Fetch the Bot instance, we need it for the redis pool."""
+        """
+        This is called if the RedisCache is a class attribute, and is accessed.
+
+        The class this object is instantiated in must contain an attribute with an
+        instance of Bot. This is because Bot contains our redis_session, which is
+        the mechanism by which we will communicate with the Redis server.
+
+        Any attempt to use RedisCache in a class that does not have a Bot instance
+        will fail. It is mostly intended to be used inside of a Cog, although theoretically
+        it should work in any class that has a Bot instance.
+        """
         if self.bot:
             return self
 
