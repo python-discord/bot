@@ -139,7 +139,7 @@ class RedisCache:
                 "Critical error: RedisCache has no namespace. "
                 "Did you initialize this object as a class attribute?"
             )
-        await self.bot._redis_ready.wait()
+        await self.bot.redis_ready.wait()
 
     def __set_name__(self, owner: Any, attribute_name: str) -> None:
         """

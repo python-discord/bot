@@ -30,12 +30,12 @@ class Bot(commands.Bot):
 
         self.http_session: Optional[aiohttp.ClientSession] = None
         self.redis_session: Optional[aioredis.Redis] = None
+        self.redis_ready = asyncio.Event()
         self.api_client = api.APIClient(loop=self.loop)
 
         self._connector = None
         self._resolver = None
         self._guild_available = asyncio.Event()
-        self._redis_ready = asyncio.Event()
 
         statsd_url = constants.Stats.statsd_host
 
@@ -53,7 +53,7 @@ class Bot(commands.Bot):
             address=(constants.Redis.host, constants.Redis.port),
             password=constants.Redis.password,
         )
-        self._redis_ready.set()
+        self.redis_ready.set()
 
     def add_cog(self, cog: commands.Cog) -> None:
         """Adds a "cog" to the bot and logs the operation."""
@@ -90,7 +90,7 @@ class Bot(commands.Bot):
             self.stats._transport.close()
 
         if self.redis_session:
-            self._redis_ready.clear()
+            self.redis_ready.clear()
             self.redis_session.close()
             await self.redis_session.wait_closed()
 
