@@ -34,7 +34,7 @@ TOKEN_EPOCH = 1_293_840_000
 # The HMAC isn't parsed further, but it's in the regex to ensure it at least exists in the string.
 # Each part only matches base64 URL-safe characters.
 # Padding has never been observed, but the padding character '=' is matched just in case.
-TOKEN_RE = re.compile(r"[\w-=]+\.[\w-=]+\.[\w-=]+", re.ASCII)
+TOKEN_RE = re.compile(r"[\w\-=]+\.[\w\-=]+\.[\w\-=]+", re.ASCII)
 
 
 class TokenRemover(Cog):
