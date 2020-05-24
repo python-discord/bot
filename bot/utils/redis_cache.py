@@ -120,7 +120,7 @@ class RedisCache:
         # Now we convert our unicode string back into the type it originally was.
         for prefix, _type in TYPESTRING_PREFIXES:
             if value.startswith(prefix):
-                return _type(value[2:])
+                return _type(value[len(prefix):])
         raise TypeError(f"RedisCache._to_typestring only supports the prefixes {self._valid_typestring_prefixes()}.")
 
     def _dict_from_typestring(self, dictionary: Dict) -> Dict:
