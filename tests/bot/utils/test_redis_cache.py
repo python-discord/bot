@@ -173,3 +173,37 @@ class RedisCacheTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(TypeError):
             self.redis._to_typestring(["internet"])
             self.redis._from_typestring("o|firedog")
+
+    async def test_increment_decrement(self):
+        """Test .increment and .decrement methods."""
+        await self.redis.set("entropic", 5)
+        await self.redis.set("disentropic", 12.5)
+
+        # Test default increment
+        await self.redis.increment("entropic")
+        self.assertEqual(await self.redis.get("entropic"), 6)
+
+        # Test default decrement
+        await self.redis.decrement("entropic")
+        self.assertEqual(await self.redis.get("entropic"), 5)
+
+        # Test float increment with float
+        await self.redis.increment("disentropic", 2.0)
+        self.assertEqual(await self.redis.get("disentropic"), 14.5)
+
+        # Test float increment with int
+        await self.redis.increment("disentropic", 2)
+        self.assertEqual(await self.redis.get("disentropic"), 16.5)
+
+        # Test negative increments, because why not.
+        await self.redis.increment("entropic", -5)
+        self.assertEqual(await self.redis.get("entropic"), 0)
+
+        # Negative decrements? Sure.
+        await self.redis.decrement("entropic", -5)
+        self.assertEqual(await self.redis.get("entropic"), 5)
+
+        # What about if we use a negative float to decrement an int?
+        # This should convert the type into a float.
+        await self.redis.decrement("entropic", -2.5)
+        self.assertEqual(await self.redis.get("entropic"), 7.5)

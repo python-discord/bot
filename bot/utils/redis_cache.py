@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any, Dict, ItemsView, Optional, Union
 
 from bot.bot import Bot
@@ -77,6 +78,7 @@ class RedisCache:
         """Initialize the RedisCache."""
         self._namespace = None
         self.bot = None
+        self.increment_lock = asyncio.Lock()
 
     def _set_namespace(self, namespace: str) -> None:
         """Try to set the namespace, but do not permit collisions."""
@@ -287,3 +289,36 @@ class RedisCache:
         """Update the Redis cache with multiple values."""
         await self._validate_cache()
         await self._redis.hmset_dict(self._namespace, self._dict_to_typestring(items))
+
+    async def increment(self, key: RedisType, amount: Optional[int, float] = 1) -> None:
+        """
+        Increment the value by `amount`.
+
+        This works for both floats and ints, but will raise a TypeError
+        if you try to do it for any other type of value.
+
+        This also supports negative amounts, although it would provide better
+        readability to use .decrement() for that.
+        """
+        # Since this has several API calls, we need a lock to prevent race conditions
+        async with self.increment_lock:
+            value = await self.get(key)
+
+            # Can't increment a non-existing value
+            if value is None:
+                raise RuntimeError("The provided key does not exist!")
+
+            # If it does exist, and it's an int or a float, increment and set it.
+            if isinstance(value, int) or isinstance(value, float):
+                value += amount
+                await self.set(key, value)
+            else:
+                raise TypeError("You may only increment or decrement values that are integers or floats.")
+
+    async def decrement(self, key: RedisType, amount: Optional[int, float] = 1) -> None:
+        """
+        Decrement the value by `amount`.
+
+        Basically just does the opposite of .increment.
+        """
+        await self.increment(key, -amount)
