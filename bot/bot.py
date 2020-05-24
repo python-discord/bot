@@ -7,6 +7,7 @@ from typing import Optional
 import aiohttp
 import aioredis
 import discord
+import fakeredis.aioredis
 from discord.ext import commands
 from sentry_sdk import push_scope
 
@@ -48,11 +49,26 @@ class Bot(commands.Bot):
         self.stats = AsyncStatsClient(self.loop, statsd_url, 8125, prefix="bot")
 
     async def _create_redis_session(self) -> None:
-        """Create the Redis connection pool, and then open the redis event gate."""
-        self.redis_session = await aioredis.create_redis_pool(
-            address=(constants.Redis.host, constants.Redis.port),
-            password=constants.Redis.password,
-        )
+        """
+        Create the Redis connection pool, and then open the redis event gate.
+
+        If constants.Redis.use_fakeredis is True, we'll set up a fake redis pool instead
+        of attempting to communicate with a real Redis server. This is useful because it
+        means contributors don't necessarily need to get Redis running locally just
+        to run the bot.
+
+        The fakeredis cache won't have persistence across restarts, but that
+        usually won't matter for local bot testing.
+        """
+        if constants.Redis.use_fakeredis:
+            log.info("Using fakeredis instead of communicating with a real Redis server.")
+            self.redis_session = await fakeredis.aioredis.create_redis_pool()
+        else:
+            self.redis_session = await aioredis.create_redis_pool(
+                address=(constants.Redis.host, constants.Redis.port),
+                password=constants.Redis.password,
+            )
+
         self.redis_ready.set()
 
     def add_cog(self, cog: commands.Cog) -> None:

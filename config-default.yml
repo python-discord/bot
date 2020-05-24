@@ -7,6 +7,7 @@ bot:
         host:  "redis"
         port:  6379
         password: !ENV "REDIS_PASSWORD"
+        use_fakeredis: false
 
     stats:
         statsd_host: "graphite"

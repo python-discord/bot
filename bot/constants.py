@@ -208,6 +208,7 @@ class Redis(metaclass=YAMLGetter):
     host: str
     port: int
     password: str
+    use_fakeredis: bool  # If this is True, Bot will use fakeredis.aioredis
 
 
 class Filter(metaclass=YAMLGetter):
