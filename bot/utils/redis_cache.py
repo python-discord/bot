@@ -4,12 +4,20 @@ from typing import Any, AsyncIterator, Dict, Optional, Union
 
 from bot.bot import Bot
 
+RedisType = Union[str, int, float]
 TYPESTRING_PREFIXES = (
     ("f|", float),
     ("i|", int),
     ("s|", str),
 )
-ValidRedisType = Union[str, int, float]
+
+# Makes a nice list like "float, int, and str"
+NICE_TYPE_LIST = ", ".join(str(_type.__name__) for _, _type in TYPESTRING_PREFIXES)
+NICE_TYPE_LIST = ", and ".join(NICE_TYPE_LIST.rsplit(", ", 1))
+
+# Makes a list like "'f|', 'i|', and 's|'"
+NICE_PREFIX_LIST = ", ".join([f"'{prefix}'" for prefix, _ in TYPESTRING_PREFIXES])
+NICE_PREFIX_LIST = ", and ".join(NICE_PREFIX_LIST.rsplit(", ", 1))
 
 
 class RedisCache:
@@ -83,35 +91,15 @@ class RedisCache:
         self._namespace = namespace
 
     @staticmethod
-    def _valid_typestring_types() -> str:
-        """
-        Creates a nice, readable list of valid types for typestrings, useful for error messages.
-
-        This will be dynamically updated if we change the TYPESTRING_PREFIXES constant up top.
-        """
-        valid_types = ", ".join(str(_type.__name__) for _, _type in TYPESTRING_PREFIXES)
-        valid_types = ", and ".join(valid_types.rsplit(", ", 1))
-        return valid_types
-
-    @staticmethod
-    def _valid_typestring_prefixes() -> str:
-        """
-        Creates a nice, readable list of valid prefixes for typestrings, useful for error messages.
-
-        This will be dynamically updated if we change the TYPESTRING_PREFIXES constant up top.
-        """
-        valid_prefixes = ", ".join([f"'{prefix}'" for prefix, _ in TYPESTRING_PREFIXES])
-        valid_prefixes = ", and ".join(valid_prefixes.rsplit(", ", 1))
-        return valid_prefixes
-
-    def _to_typestring(self, value: ValidRedisType) -> str:
+    def _to_typestring(value: RedisType) -> str:
         """Turn a valid Redis type into a typestring."""
         for prefix, _type in TYPESTRING_PREFIXES:
             if isinstance(value, _type):
                 return f"{prefix}{value}"
-        raise TypeError(f"RedisCache._from_typestring only supports the types {self._valid_typestring_types()}.")
+        raise TypeError(f"RedisCache._from_typestring only supports the types {NICE_TYPE_LIST}.")
 
-    def _from_typestring(self, value: Union[bytes, str]) -> ValidRedisType:
+    @staticmethod
+    def _from_typestring(value: Union[bytes, str]) -> RedisType:
         """Turn a typestring into a valid Redis type."""
         # Stuff that comes out of Redis will be bytestrings, so let's decode those.
         if isinstance(value, bytes):
@@ -121,7 +109,7 @@ class RedisCache:
         for prefix, _type in TYPESTRING_PREFIXES:
             if value.startswith(prefix):
                 return _type(value[len(prefix):])
-        raise TypeError(f"RedisCache._to_typestring only supports the prefixes {self._valid_typestring_prefixes()}.")
+        raise TypeError(f"RedisCache._to_typestring only supports the prefixes {NICE_PREFIX_LIST}.")
 
     def _dict_from_typestring(self, dictionary: Dict) -> Dict:
         """Turns all contents of a dict into valid Redis types."""
@@ -177,7 +165,7 @@ class RedisCache:
         """Return a beautiful representation of this object instance."""
         return f"RedisCache(namespace={self._namespace!r})"
 
-    async def set(self, key: ValidRedisType, value: ValidRedisType) -> None:
+    async def set(self, key: RedisType, value: RedisType) -> None:
         """Store an item in the Redis cache."""
         await self._validate_cache()
 
@@ -186,7 +174,7 @@ class RedisCache:
         value = self._to_typestring(value)
         await self._redis.hset(self._namespace, key, value)
 
-    async def get(self, key: ValidRedisType, default: Optional[ValidRedisType] = None) -> ValidRedisType:
+    async def get(self, key: RedisType, default: Optional[RedisType] = None) -> RedisType:
         """Get an item from the Redis cache."""
         await self._validate_cache()
         key = self._to_typestring(key)
@@ -198,7 +186,7 @@ class RedisCache:
             value = self._from_typestring(value)
             return value
 
-    async def delete(self, key: ValidRedisType) -> None:
+    async def delete(self, key: RedisType) -> None:
         """
         Delete an item from the Redis cache.
 
@@ -210,7 +198,7 @@ class RedisCache:
         key = self._to_typestring(key)
         return await self._redis.hdel(self._namespace, key)
 
-    async def contains(self, key: ValidRedisType) -> bool:
+    async def contains(self, key: RedisType) -> bool:
         """
         Check if a key exists in the Redis cache.
 
@@ -241,7 +229,7 @@ class RedisCache:
         await self._validate_cache()
         await self._redis.delete(self._namespace)
 
-    async def pop(self, key: ValidRedisType, default: Optional[ValidRedisType] = None) -> ValidRedisType:
+    async def pop(self, key: RedisType, default: Optional[RedisType] = None) -> RedisType:
         """Get the item, remove it from the cache, and provide a default if not found."""
         value = await self.get(key, default)
 
