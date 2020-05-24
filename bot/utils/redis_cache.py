@@ -341,7 +341,7 @@ class RedisCache:
             # Can't increment a non-existing value
             if value is None:
                 log.exception("Attempt to increment/decrement value for non-existent key.")
-                raise RuntimeError("The provided key does not exist!")
+                raise KeyError("The provided key does not exist!")
 
             # If it does exist, and it's an int or a float, increment and set it.
             if isinstance(value, int) or isinstance(value, float):

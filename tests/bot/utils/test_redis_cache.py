@@ -207,3 +207,11 @@ class RedisCacheTests(unittest.IsolatedAsyncioTestCase):
         # This should convert the type into a float.
         await self.redis.decrement("entropic", -2.5)
         self.assertEqual(await self.redis.get("entropic"), 7.5)
+
+        # Let's test that they raise the right errors
+        with self.assertRaises(KeyError):
+            await self.redis.increment("doesn't_exist!")
+
+        await self.redis.set("stringthing", "stringthing")
+        with self.assertRaises(TypeError):
+            await self.redis.increment("stringthing")
