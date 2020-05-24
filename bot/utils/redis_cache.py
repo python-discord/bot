@@ -124,7 +124,13 @@ class RedisCache:
     async def _validate_cache(self) -> None:
         """Validate that the RedisCache is ready to be used."""
         if self.bot is None:
-            raise RuntimeError("Critical error: RedisCache has no `Bot` instance.")
+            raise RuntimeError(
+                "Critical error: RedisCache has no `Bot` instance. "
+                "This happens when the class RedisCache was created in doesn't "
+                "have a Bot instance. Please make sure that you're instantiating "
+                "the RedisCache inside a class that has a Bot instance "
+                "class attribute."
+            )
 
         if self._namespace is None:
             raise RuntimeError(
@@ -176,7 +182,13 @@ class RedisCache:
                 self._redis = self.bot.redis_session
                 return self
         else:
-            raise RuntimeError("Cannot initialize a RedisCache without a `Bot` instance.")
+            raise RuntimeError(
+                "Critical error: RedisCache has no `Bot` instance. "
+                "This happens when the class RedisCache was created in doesn't "
+                "have a Bot instance. Please make sure that you're instantiating "
+                "the RedisCache inside a class that has a Bot instance "
+                "class attribute."
+            )
 
     def __repr__(self) -> str:
         """Return a beautiful representation of this object instance."""
