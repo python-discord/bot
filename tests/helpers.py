@@ -287,7 +287,7 @@ class MockBot(CustomMockMixin, unittest.mock.MagicMock):
     For more information, see the `MockGuild` docstring.
     """
     spec_set = Bot(command_prefix=unittest.mock.MagicMock(), loop=_get_mock_loop())
-    additional_spec_asyncs = ("wait_for", "_redis_ready")
+    additional_spec_asyncs = ("wait_for", "redis_ready")
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
