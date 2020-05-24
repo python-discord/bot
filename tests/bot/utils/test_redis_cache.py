@@ -88,7 +88,7 @@ class RedisCacheTests(unittest.IsolatedAsyncioTestCase):
             await self.redis.set(key, value)
 
         # Consume the AsyncIterator into a regular list, easier to compare that way.
-        redis_items = [item async for item in self.redis.items()]
+        redis_items = [item for item in await self.redis.items()]
 
         # These sequences are probably in the same order now, but probably
         # isn't good enough for tests. Let's not rely on .hgetall always
@@ -113,7 +113,7 @@ class RedisCacheTests(unittest.IsolatedAsyncioTestCase):
     async def test_to_dict(self):
         """Test that the .to_dict method returns a workable dictionary copy."""
         copy = await self.redis.to_dict()
-        local_copy = {key: value async for key, value in self.redis.items()}
+        local_copy = {key: value for key, value in await self.redis.items()}
         self.assertIs(type(copy), dict)
         self.assertDictEqual(copy, local_copy)
 

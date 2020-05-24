@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, AsyncIterator, Dict, Optional, Union
+from typing import Any, Dict, ItemsView, Optional, Union
 
 from bot.bot import Bot
 
@@ -237,12 +237,26 @@ class RedisCache:
         key = self._to_typestring(key)
         return await self._redis.hexists(self._namespace, key)
 
-    async def items(self) -> AsyncIterator:
-        """Iterate all the items in the Redis cache."""
+    async def items(self) -> ItemsView:
+        """
+        Fetch all the key/value pairs in the cache.
+
+        Returns a normal ItemsView, like you would get from dict.items().
+
+        Keep in mind that these items are just a _copy_ of the data in the
+        RedisCache - any changes you make to them will not be reflected
+        into the RedisCache itself. If you want to change these, you need
+        to make a .set call.
+
+        Example:
+        items = await my_cache.items()
+        for key, value in items:
+            # Iterate like a normal dictionary
+        """
         await self._validate_cache()
-        data = await self._redis.hgetall(self._namespace)  # Get all the keys
-        for key, value in self._dict_from_typestring(data).items():
-            yield key, value
+        return self._dict_from_typestring(
+            await self._redis.hgetall(self._namespace)
+        ).items()
 
     async def length(self) -> int:
         """Return the number of items in the Redis cache."""
@@ -251,7 +265,7 @@ class RedisCache:
 
     async def to_dict(self) -> Dict:
         """Convert to dict and return."""
-        return {key: value async for key, value in self.items()}
+        return {key: value for key, value in await self.items()}
 
     async def clear(self) -> None:
         """Deletes the entire hash from the Redis cache."""
