@@ -438,13 +438,13 @@ class HelpChannels(Scheduler, commands.Cog):
         """Return True if `member` has the 'Help Cooldown' role."""
         return any(constants.Roles.help_cooldown == role.id for role in member.roles)
 
-    def is_dormant_message(self, message: t.Optional[discord.Message]) -> bool:
-        """Return True if the contents of the `message` match `DORMANT_MSG`."""
+    def match_bot_embed(self, message: t.Optional[discord.Message], description: str) -> bool:
+        """Return `True` if the bot's `message`'s embed description matches `description`."""
         if not message or not message.embeds:
             return False
 
         embed = message.embeds[0]
-        return message.author == self.bot.user and embed.description.strip() == DORMANT_MSG.strip()
+        return message.author == self.bot.user and embed.description.strip() == description.strip()
 
     @staticmethod
     def is_in_category(channel: discord.TextChannel, category_id: int) -> bool:
@@ -461,7 +461,11 @@ class HelpChannels(Scheduler, commands.Cog):
         """
         log.trace(f"Handling in-use channel #{channel} ({channel.id}).")
 
-        idle_seconds = constants.HelpChannels.idle_minutes * 60
+        if not await self.is_empty(channel):
+            idle_seconds = constants.HelpChannels.idle_minutes * 60
+        else:
+            idle_seconds = constants.HelpChannels.deleted_idle_minutes * 60
+
         time_elapsed = await self.get_idle_time(channel)
 
         if time_elapsed is None or time_elapsed >= idle_seconds:
@@ -713,6 +717,32 @@ class HelpChannels(Scheduler, commands.Cog):
         # be put in the queue.
         await self.move_to_available()
 
+    @commands.Cog.listener()
+    async def on_message_delete(self, msg: discord.Message) -> None:
+        """
+        Reschedule an in-use channel to become dormant sooner if the channel is empty.
+
+        The new time for the dormant task is configured with `HelpChannels.deleted_idle_minutes`.
+        """
+        if not self.is_in_category(msg.channel, constants.Categories.help_in_use):
+            return
+
+        if not await self.is_empty(msg.channel):
+            return
+
+        log.info(f"Claimant of #{msg.channel} ({msg.author}) deleted message, channel is empty now. Rescheduling task.")
+
+        # Cancel existing dormant task before scheduling new.
+        self.cancel_task(msg.channel.id)
+
+        task = TaskData(constants.HelpChannels.deleted_idle_minutes * 60, self.move_idle_channel(msg.channel))
+        self.schedule_task(msg.channel.id, task)
+
+    async def is_empty(self, channel: discord.TextChannel) -> bool:
+        """Return True if the most recent message in `channel` is the bot's `AVAILABLE_MSG`."""
+        msg = await self.get_last_message(channel)
+        return self.match_bot_embed(msg, AVAILABLE_MSG)
+
     async def reset_send_permissions(self) -> None:
         """Reset send permissions in the Available category for claimants."""
         log.trace("Resetting send permissions in the Available category.")
@@ -788,7 +818,7 @@ class HelpChannels(Scheduler, commands.Cog):
         embed = discord.Embed(description=AVAILABLE_MSG)
 
         msg = await self.get_last_message(channel)
-        if self.is_dormant_message(msg):
+        if self.match_bot_embed(msg, DORMANT_MSG):
             log.trace(f"Found dormant message {msg.id} in {channel_info}; editing it.")
             await msg.edit(embed=embed)
         else:
