@@ -4,7 +4,7 @@ from typing import Optional, Union
 
 import discord.errors
 from dateutil.relativedelta import relativedelta
-from discord import Colour, DMChannel, Member, Message, TextChannel
+from discord import Colour, Member, Message, TextChannel
 from discord.ext.commands import Cog
 from discord.utils import escape_markdown
 
@@ -161,8 +161,10 @@ class Filtering(Cog):
                         match = await _filter["function"](msg)
 
                     if match:
-                        # If this is a filter (not a watchlist), we should delete the message.
-                        if _filter["type"] == "filter":
+                        is_private = msg.channel.type is discord.ChannelType.private
+
+                        # If this is a filter (not a watchlist) and not in a DM, delete the message.
+                        if _filter["type"] == "filter" and not is_private:
                             try:
                                 # Embeds (can?) trigger both the `on_message` and `on_message_edit`
                                 # event handlers, triggering filtering twice for the same message.
@@ -181,7 +183,7 @@ class Filtering(Cog):
                             if _filter["user_notification"]:
                                 await self.notify_member(msg.author, _filter["notification_msg"], msg.channel)
 
-                        if isinstance(msg.channel, DMChannel):
+                        if is_private:
                             channel_str = "via DM"
                         else:
                             channel_str = f"in {msg.channel.mention}"
