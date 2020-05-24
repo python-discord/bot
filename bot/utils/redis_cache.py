@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import Any, Dict, ItemsView, Optional, Union
 
 from bot.bot import Bot
+
+log = logging.getLogger(__name__)
 
 RedisType = Union[str, int, float]
 TYPESTRING_PREFIXES = (
@@ -91,6 +94,7 @@ class RedisCache:
         while namespace in self._namespaces:
             namespace += "_"
 
+        log.trace(f"RedisCache setting namespace to {self._namespace}")
         self._namespaces.append(namespace)
         self._namespace = namespace
 
@@ -126,6 +130,7 @@ class RedisCache:
     async def _validate_cache(self) -> None:
         """Validate that the RedisCache is ready to be used."""
         if self.bot is None:
+            log.exception("Attempt to use RedisCache with no `Bot` instance.")
             raise RuntimeError(
                 "Critical error: RedisCache has no `Bot` instance. "
                 "This happens when the class RedisCache was created in doesn't "
@@ -135,6 +140,7 @@ class RedisCache:
             )
 
         if self._namespace is None:
+            log.exception("Attempt to use RedisCache with no namespace.")
             raise RuntimeError(
                 "Critical error: RedisCache has no namespace. "
                 "Did you initialize this object as a class attribute?"
@@ -170,9 +176,14 @@ class RedisCache:
             return self
 
         if self._namespace is None:
+            log.exception("RedisCache must be a class attribute.")
             raise RuntimeError("RedisCache must be a class attribute.")
 
         if instance is None:
+            log.exception(
+                "Attempt to access RedisCache instance through the cog's class object "
+                "before accessing it through the cog instance."
+            )
             raise RuntimeError(
                 "You must access the RedisCache instance through the cog instance "
                 "before accessing it using the cog's class object."
@@ -184,6 +195,7 @@ class RedisCache:
                 self._redis = self.bot.redis_session
                 return self
         else:
+            log.exception("Attempt to use RedisCache with no `Bot` instance.")
             raise RuntimeError(
                 "Critical error: RedisCache has no `Bot` instance. "
                 "This happens when the class RedisCache was created in doesn't "
@@ -203,18 +215,24 @@ class RedisCache:
         # Convert to a typestring and then set it
         key = self._to_typestring(key)
         value = self._to_typestring(value)
+
+        log.trace(f"Setting {key} to {value}.")
         await self._redis.hset(self._namespace, key, value)
 
     async def get(self, key: RedisType, default: Optional[RedisType] = None) -> RedisType:
         """Get an item from the Redis cache."""
         await self._validate_cache()
         key = self._to_typestring(key)
+
+        log.trace(f"Attempting to retrieve {key}.")
         value = await self._redis.hget(self._namespace, key)
 
         if value is None:
+            log.trace(f"Value not found, returning default value {default}")
             return default
         else:
             value = self._from_typestring(value)
+            log.trace(f"Value found, returning value {value}")
             return value
 
     async def delete(self, key: RedisType) -> None:
@@ -227,6 +245,8 @@ class RedisCache:
         """
         await self._validate_cache()
         key = self._to_typestring(key)
+
+        log.trace(f"Attempting to delete {key}.")
         return await self._redis.hdel(self._namespace, key)
 
     async def contains(self, key: RedisType) -> bool:
@@ -237,7 +257,10 @@ class RedisCache:
         """
         await self._validate_cache()
         key = self._to_typestring(key)
-        return await self._redis.hexists(self._namespace, key)
+        exists = await self._redis.hexists(self._namespace, key)
+
+        log.trace(f"Testing if {key} exists in the RedisCache - Result is {exists}")
+        return exists
 
     async def items(self) -> ItemsView:
         """
@@ -256,14 +279,19 @@ class RedisCache:
             # Iterate like a normal dictionary
         """
         await self._validate_cache()
-        return self._dict_from_typestring(
+        items = self._dict_from_typestring(
             await self._redis.hgetall(self._namespace)
         ).items()
+
+        log.trace(f"Retrieving all key/value pairs from cache, total of {len(items)} items.")
+        return items
 
     async def length(self) -> int:
         """Return the number of items in the Redis cache."""
         await self._validate_cache()
-        return await self._redis.hlen(self._namespace)
+        number_of_items = await self._redis.hlen(self._namespace)
+        log.trace(f"Returning length. Result is {number_of_items}.")
+        return number_of_items
 
     async def to_dict(self) -> Dict:
         """Convert to dict and return."""
@@ -272,15 +300,18 @@ class RedisCache:
     async def clear(self) -> None:
         """Deletes the entire hash from the Redis cache."""
         await self._validate_cache()
+        log.trace("Clearing the cache of all key/value pairs.")
         await self._redis.delete(self._namespace)
 
     async def pop(self, key: RedisType, default: Optional[RedisType] = None) -> RedisType:
         """Get the item, remove it from the cache, and provide a default if not found."""
+        log.trace(f"Attempting to pop {key}.")
         value = await self.get(key, default)
 
         # No need to try to delete something that doesn't exist,
         # that's just a superfluous API call.
         if value != default:
+            log.trace(f"Key {key} exists, deleting it from the cache.")
             await self.delete(key)
 
         return value
@@ -288,6 +319,7 @@ class RedisCache:
     async def update(self, items: Dict) -> None:
         """Update the Redis cache with multiple values."""
         await self._validate_cache()
+        log.trace(f"Updating the cache with the following items:\n{items}")
         await self._redis.hmset_dict(self._namespace, self._dict_to_typestring(items))
 
     async def increment(self, key: RedisType, amount: Optional[int, float] = 1) -> None:
@@ -300,12 +332,15 @@ class RedisCache:
         This also supports negative amounts, although it would provide better
         readability to use .decrement() for that.
         """
+        log.trace(f"Attempting to increment/decrement the value with the key {key} by {amount}.")
+
         # Since this has several API calls, we need a lock to prevent race conditions
         async with self.increment_lock:
             value = await self.get(key)
 
             # Can't increment a non-existing value
             if value is None:
+                log.exception("Attempt to increment/decrement value for non-existent key.")
                 raise RuntimeError("The provided key does not exist!")
 
             # If it does exist, and it's an int or a float, increment and set it.
@@ -313,6 +348,7 @@ class RedisCache:
                 value += amount
                 await self.set(key, value)
             else:
+                log.exception("Attempt to increment/decrement non-numerical value.")
                 raise TypeError("You may only increment or decrement values that are integers or floats.")
 
     async def decrement(self, key: RedisType, amount: Optional[int, float] = 1) -> None:
