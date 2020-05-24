@@ -89,7 +89,7 @@ class RedisCache:
 
         This will be dynamically updated if we change the TYPESTRING_PREFIXES constant up top.
         """
-        valid_types = ", ".join([str(_type).split("'")[1] for _, _type in TYPESTRING_PREFIXES])
+        valid_types = ", ".join(str(_type.__name__) for _, _type in TYPESTRING_PREFIXES)
         valid_types = ", and ".join(valid_types.rsplit(", ", 1))
         return valid_types
 
