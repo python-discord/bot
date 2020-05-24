@@ -318,6 +318,7 @@ filter:
         - poweredbysecurity.online
         - ssteam.site
         - steamwalletgift.com
+        - discord.gift
 
     word_watchlist:
         - goo+ks*
