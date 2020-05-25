@@ -43,7 +43,7 @@ class ConstantsTests(unittest.TestCase):
         )
         for section in sections:
             for name, annotation in section.__annotations__.items():
-                with self.subTest(section=section, name=name, annotation=annotation):
+                with self.subTest(section=section.__name__, name=name, annotation=annotation):
                     value = getattr(section, name)
                     origin = typing.get_origin(annotation)
                     annotation_args = typing.get_args(annotation)
