@@ -15,7 +15,7 @@ import os
 from collections.abc import Mapping
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import yaml
 
@@ -198,7 +198,7 @@ class Bot(metaclass=YAMLGetter):
 
     prefix: str
     token: str
-    sentry_dsn: str
+    sentry_dsn: Optional[str]
 
 
 class Redis(metaclass=YAMLGetter):
@@ -207,7 +207,7 @@ class Redis(metaclass=YAMLGetter):
 
     host: str
     port: int
-    password: str
+    password: Optional[str]
     use_fakeredis: bool  # If this is True, Bot will use fakeredis.aioredis
 
 
@@ -459,7 +459,7 @@ class Guild(metaclass=YAMLGetter):
 class Keys(metaclass=YAMLGetter):
     section = "keys"
 
-    site_api: str
+    site_api: Optional[str]
 
 
 class URLs(metaclass=YAMLGetter):
@@ -502,8 +502,8 @@ class Reddit(metaclass=YAMLGetter):
     section = "reddit"
 
     subreddits: list
-    client_id: str
-    secret: str
+    client_id: Optional[str]
+    secret: Optional[str]
 
 
 class Wolfram(metaclass=YAMLGetter):
@@ -511,7 +511,7 @@ class Wolfram(metaclass=YAMLGetter):
 
     user_limit_day: int
     guild_limit_day: int
-    key: str
+    key: Optional[str]
 
 
 class AntiSpam(metaclass=YAMLGetter):
