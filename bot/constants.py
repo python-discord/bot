@@ -541,6 +541,7 @@ class HelpChannels(metaclass=YAMLGetter):
     claim_minutes: int
     cmd_whitelist: List[int]
     idle_minutes: int
+    deleted_idle_minutes: int
     max_available: int
     max_total_channels: int
     name_prefix: str
@@ -562,6 +563,14 @@ class Sync(metaclass=YAMLGetter):
 
     confirm_timeout: int
     max_diff: int
+
+
+class PythonNews(metaclass=YAMLGetter):
+    section = 'python_news'
+
+    mail_lists: List[str]
+    channel: int
+    webhook: int
 
 
 class Event(Enum):

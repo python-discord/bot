@@ -2,8 +2,10 @@ import string
 from datetime import datetime
 
 from discord import Member, Message, Status
-from discord.ext.commands import Bot, Cog, Context
+from discord.ext.commands import Cog, Context
+from discord.ext.tasks import loop
 
+from bot.bot import Bot
 from bot.constants import Channels, Guild, Stats as StatConf
 
 
@@ -23,6 +25,7 @@ class Stats(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.last_presence_update = None
+        self.update_guild_boost.start()
 
     @Cog.listener()
     async def on_message(self, message: Message) -> None:
@@ -100,6 +103,18 @@ class Stats(Cog):
         self.bot.stats.gauge("guild.status.idle", idle)
         self.bot.stats.gauge("guild.status.do_not_disturb", dnd)
         self.bot.stats.gauge("guild.status.offline", offline)
+
+    @loop(hours=1)
+    async def update_guild_boost(self) -> None:
+        """Post the server boost level and tier every hour."""
+        await self.bot.wait_until_guild_available()
+        g = self.bot.get_guild(Guild.id)
+        self.bot.stats.gauge("boost.amount", g.premium_subscription_count)
+        self.bot.stats.gauge("boost.tier", g.premium_tier)
+
+    def cog_unload(self) -> None:
+        """Stop the boost statistic task on unload of the Cog."""
+        self.update_guild_boost.stop()
 
 
 def setup(bot: Bot) -> None:
