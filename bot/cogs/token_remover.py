@@ -34,7 +34,15 @@ TOKEN_EPOCH = 1_293_840_000
 # The HMAC isn't parsed further, but it's in the regex to ensure it at least exists in the string.
 # Each part only matches base64 URL-safe characters.
 # Padding has never been observed, but the padding character '=' is matched just in case.
-TOKEN_RE = re.compile(r"[\w\-=]+\.[\w\-=]+\.[\w\-=]+", re.ASCII)
+TOKEN_RE = re.compile(r"([\w\-=]+)\.([\w\-=]+)\.([\w\-=]+)", re.ASCII)
+
+
+class Token(t.NamedTuple):
+    """A Discord Bot token."""
+
+    user_id: str
+    timestamp: str
+    hmac: str
 
 
 class TokenRemover(Cog):
@@ -68,7 +76,7 @@ class TokenRemover(Cog):
         """
         await self.on_message(after)
 
-    async def take_action(self, msg: Message, found_token: str) -> None:
+    async def take_action(self, msg: Message, found_token: Token) -> None:
         """Remove the `msg` containing the `found_token` and send a mod log message."""
         self.mod_log.ignore(Event.message_delete, msg.id)
         await self.delete_message(msg)
@@ -95,20 +103,19 @@ class TokenRemover(Cog):
         await msg.channel.send(DELETION_MESSAGE_TEMPLATE.format(mention=msg.author.mention))
 
     @staticmethod
-    def format_log_message(msg: Message, found_token: str) -> str:
-        """Return the log message to send for `found_token` being censored in `msg`."""
-        user_id, creation_timestamp, hmac = found_token.split('.')
+    def format_log_message(msg: Message, token: Token) -> str:
+        """Return the log message to send for `token` being censored in `msg`."""
         return LOG_MESSAGE.format(
             author=msg.author,
             author_id=msg.author.id,
             channel=msg.channel.mention,
-            user_id=user_id,
-            timestamp=creation_timestamp,
-            hmac='x' * len(hmac),
+            user_id=token.user_id,
+            timestamp=token.timestamp,
+            hmac='x' * len(token.hmac),
         )
 
     @classmethod
-    def find_token_in_message(cls, msg: Message) -> t.Optional[str]:
+    def find_token_in_message(cls, msg: Message) -> t.Optional[Token]:
         """Return a seemingly valid token found in `msg` or `None` if no token is found."""
         if msg.author.bot:
             return
@@ -116,28 +123,14 @@ class TokenRemover(Cog):
         # Use findall rather than search to guard against method calls prematurely returning the
         # token check (e.g. `message.channel.send` also matches our token pattern)
         maybe_matches = TOKEN_RE.findall(msg.content)
-        for substr in maybe_matches:
-            if cls.is_maybe_token(substr):
+        for match_groups in maybe_matches:
+            token = Token(*match_groups)
+            if cls.is_valid_user_id(token.user_id) and cls.is_valid_timestamp(token.timestamp):
                 # Short-circuit on first match
-                return substr
+                return token
 
         # No matching substring
         return
-
-    @classmethod
-    def is_maybe_token(cls, test_str: str) -> bool:
-        """Check the provided string to see if it is a seemingly valid token."""
-        try:
-            user_id, creation_timestamp, hmac = test_str.split('.')
-        except ValueError:
-            log.debug(f"Invalid token format in '{test_str}': does not have all 3 parts.")
-            return False
-
-        if cls.is_valid_user_id(user_id) and cls.is_valid_timestamp(creation_timestamp):
-            return True
-        else:
-            log.debug(f"Invalid user ID or timestamp in '{test_str}'.")
-            return False
 
     @staticmethod
     def is_valid_user_id(b64_content: str) -> bool:
