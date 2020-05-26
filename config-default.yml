@@ -290,6 +290,7 @@ filter:
         - 81384788765712384   # Discord API
         - 613425648685547541  # Discord Developers
         - 185590609631903755  # Blender Hub
+        - 420324994703163402  # /r/FlutterDev
 
     domain_blacklist:
         - pornhub.com
