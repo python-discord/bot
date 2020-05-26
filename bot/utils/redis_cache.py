@@ -129,20 +129,20 @@ class RedisCache:
 
     async def _validate_cache(self) -> None:
         """Validate that the RedisCache is ready to be used."""
+        if self._namespace is None:
+            error_message = (
+                "Critical error: RedisCache has no namespace. "
+                "This object must be initialized as a class attribute."
+            )
+            log.error(error_message)
+            raise RuntimeError(error_message)
+
         if self.bot is None:
             error_message = (
                 "Critical error: RedisCache has no `Bot` instance. "
                 "This happens when the class RedisCache was created in doesn't "
                 "have a Bot instance. Please make sure that you're instantiating "
                 "the RedisCache inside a class that has a Bot instance attribute."
-            )
-            log.error(error_message)
-            raise RuntimeError(error_message)
-
-        if self._namespace is None:
-            error_message = (
-                "Critical error: RedisCache has no namespace. "
-                "This object must be initialized as a class attribute."
             )
             log.error(error_message)
             raise RuntimeError(error_message)
