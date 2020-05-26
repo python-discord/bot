@@ -156,10 +156,12 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
 
     def test_regex_valid_tokens(self):
         """Messages that look like tokens should be matched."""
-        # Don't worry, the token's been invalidated.
+        # Don't worry, these tokens have been invalidated.
         tokens = (
-            "x1.y2.z_3",
-            "NDcyMjY1OTQzMDYyNDEzMzMy.Xrim9Q.Ysnu2wacjaKs7qnoo46S8Dm2us8"
+            "NDcyMjY1OTQzMDYy_DEzMz-y.XsyRkw.VXmErH7j511turNpfURmb0rVNm8",
+            "NDcyMjY1OTQzMDYyNDEzMzMy.Xrim9Q.Ysnu2wacjaKs7qnoo46S8Dm2us8",
+            "NDc1MDczNjI5Mzk5NTQ3OTA0.XsyR-w.sJf6omBPORBPju3WJEIAcwW9Zds",
+            "NDY3MjIzMjMwNjUwNzc3NjQx.XsySD_.s45jqDV_Iisn-symw0yDRrk_jf4",
         )
 
         for token in tokens:
