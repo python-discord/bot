@@ -27,7 +27,7 @@ DELETION_MESSAGE_TEMPLATE = (
     "Feel free to re-post it with the token removed. "
     "If you believe this was a mistake, please let us know!"
 )
-DISCORD_EPOCH = 1_420_070_400_000
+DISCORD_EPOCH = 1_420_070_400
 TOKEN_EPOCH = 1_293_840_000
 
 # Three parts delimited by dots: user ID, creation timestamp, HMAC.
