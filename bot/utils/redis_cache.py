@@ -319,8 +319,18 @@ class RedisCache:
 
         return value
 
-    async def update(self, items: Dict) -> None:
-        """Update the Redis cache with multiple values."""
+    async def update(self, items: Dict[RedisType, RedisType]) -> None:
+        """
+        Update the Redis cache with multiple values.
+
+        This works exactly like dict.update from a normal dictionary. You pass
+        a dictionary with one or more key/value pairs into this method. If the keys
+        do not exist in the RedisCache, they are created. If they do exist, the values
+        are updated with the new ones from `items`.
+
+        Please note that both the keys and the values in the `items` dictionary
+        must consist of valid RedisTypes - ints, floats, or strings.
+        """
         await self._validate_cache()
         log.trace(f"Updating the cache with the following items:\n{items}")
         await self._redis.hmset_dict(self._namespace, self._dict_to_typestring(items))
