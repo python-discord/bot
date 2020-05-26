@@ -144,10 +144,9 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
             "x..z",
             " . . ",
             "\n.\n.\n",
-            "'.'.'",
-            '"."."',
-            "(.(.(",
-            ").).)"
+            "hellö.world.bye",
+            "base64.nötbåse64.morebase64",
+            "19jd3J.dfkm3d.€víł§tüff",
         )
 
         for token in tokens:
