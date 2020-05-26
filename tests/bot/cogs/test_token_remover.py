@@ -166,8 +166,8 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
 
         for token in tokens:
             with self.subTest(token=token):
-                results = token_remover.TOKEN_RE.findall(token)
-                self.assertIn(token, results)
+                results = token_remover.TOKEN_RE.fullmatch(token)
+                self.assertIsNotNone(results, f"{token} was not matched by the regex")
 
     def test_regex_matches_multiple_valid(self):
         """Should support multiple matches in the middle of a string."""
