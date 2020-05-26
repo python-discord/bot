@@ -215,3 +215,25 @@ class RedisCacheTests(unittest.IsolatedAsyncioTestCase):
         await self.redis.set("stringthing", "stringthing")
         with self.assertRaises(TypeError):
             await self.redis.increment("stringthing")
+
+    async def test_exceptions_raised(self):
+        """Testing that the various RuntimeErrors are reachable."""
+        class MyCog:
+            cache = RedisCache()
+
+            def __init__(self):
+                self.other_cache = RedisCache()
+
+        cog = MyCog()
+
+        # Raises "No Bot instance"
+        with self.assertRaises(RuntimeError):
+            await cog.cache.get("john")
+
+        # Raises "RedisCache has no namespace"
+        with self.assertRaises(RuntimeError):
+            await cog.other_cache.get("was")
+
+        # Raises "You must access the RedisCache instance through the cog instance"
+        with self.assertRaises(RuntimeError):
+            await MyCog.cache.get("afraid")
