@@ -222,7 +222,7 @@ class RedisCache:
         log.trace(f"Setting {key} to {value}.")
         await self._redis.hset(self._namespace, key, value)
 
-    async def get(self, key: RedisType, default: Optional[RedisType] = None) -> RedisType:
+    async def get(self, key: RedisType, default: Optional[RedisType] = None) -> Optional[RedisType]:
         """Get an item from the Redis cache."""
         await self._validate_cache()
         key = self._to_typestring(key)
@@ -311,11 +311,11 @@ class RedisCache:
         log.trace(f"Attempting to pop {key}.")
         value = await self.get(key, default)
 
-        # No need to try to delete something that doesn't exist,
-        # that's just a superfluous API call.
-        if value != default:
-            log.trace(f"Key {key} exists, deleting it from the cache.")
-            await self.delete(key)
+        log.trace(
+            f"Attempting to delete item with key '{key}' from the cache. "
+            "If this key doesn't exist, nothing will happen."
+        )
+        await self.delete(key)
 
         return value
 
