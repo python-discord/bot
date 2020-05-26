@@ -171,12 +171,13 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
 
     def test_regex_matches_multiple_valid(self):
         """Should support multiple matches in the middle of a string."""
-        tokens = ["x.y.z", "a.b.c"]
-        message = f"garbage {tokens[0]} hello {tokens[1]} world"
+        token_1 = "NDY3MjIzMjMwNjUwNzc3NjQx.XsyWGg.uFNEQPCc4ePwGh7egG8UicQssz8"
+        token_2 = "NDcyMjY1OTQzMDYyNDEzMzMy.XsyWMw.l8XPnDqb0lp-EiQ2g_0xVFT1pyc"
+        message = f"garbage {token_1} hello {token_2} world"
 
         results = token_remover.TOKEN_RE.finditer(message)
         results = [match[0] for match in results]
-        self.assertCountEqual(tokens, results)
+        self.assertCountEqual((token_1, token_2), results)
 
     @autospec(TokenRemover, "is_valid_user_id", "is_valid_timestamp")
     def test_is_maybe_token_missing_part_returns_false(self, valid_user, valid_time):
