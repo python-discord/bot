@@ -3,6 +3,10 @@ bot:
     token:       !ENV "BOT_TOKEN"
     sentry_dsn:  !ENV "BOT_SENTRY_DSN"
 
+    stats:
+        statsd_host: "graphite"
+        presence_update_timeout: 300
+
     cooldowns:
         # Per channel, per tag.
         tags: 60
@@ -111,11 +115,15 @@ guild:
     id: 267624335836053506
 
     categories:
-        python_help:    356013061213126657
+        help_available:                     691405807388196926
+        help_in_use:                        696958401460043776
+        help_dormant:                       691405908919451718
+        modmail:                            714494672835444826
 
     channels:
         announcements:                              354619224620138496
         user_event_announcements:   &USER_EVENT_A   592000283102674944
+        python_news:                &PYNEWS_CHANNEL 704372456592506880
 
         # Development
         dev_contrib:        &DEV_CONTRIB    635950537262759947
@@ -125,6 +133,9 @@ guild:
         # Discussion
         meta:               429409067623251969
         python_discussion:  267624335836053506
+
+        # Python Help: Available
+        how_to_get_help:    704250143020417084
 
         # Logs
         attachment_log:     &ATTACH_LOG     649243850006855680
@@ -137,16 +148,6 @@ guild:
         off_topic_0:    291284109232308226
         off_topic_1:    463035241142026251
         off_topic_2:    463035268514185226
-
-        # Python Help
-        help_0:         303906576991780866
-        help_1:         303906556754395136
-        help_2:         303906514266226689
-        help_3:         439702951246692352
-        help_4:         451312046647148554
-        help_5:         454941769734422538
-        help_6:         587375753306570782
-        help_7:         587375768556797982
 
         # Special
         bot_commands:       &BOT_CMD        267659945086812160
@@ -164,6 +165,7 @@ guild:
         mod_spam:           &MOD_SPAM       620607373828030464
         organisation:       &ORGANISATION   551789653284356126
         staff_lounge:       &STAFF_LOUNGE   464905259261755392
+        incidents:                          714214212200562749
 
         # Voice
         admins_voice:       &ADMINS_VOICE   500734494840717332
@@ -205,6 +207,7 @@ guild:
     roles:
         announcements:                          463658397560995840
         contributors:                           295488872404484098
+        help_cooldown:                          699189276025421825
         muted:              &MUTED_ROLE         277914926603829249
         partners:                               323426753857191936
         python_community:   &PY_COMMUNITY_ROLE  458226413825294336
@@ -235,11 +238,12 @@ guild:
         - *HELPERS_ROLE
 
     webhooks:
-        talent_pool:    569145364800602132
-        big_brother:    569133704568373283
-        reddit:         635408384794951680
-        duck_pond:      637821475327311927
-        dev_log:        680501655111729222
+        talent_pool:                    569145364800602132
+        big_brother:                    569133704568373283
+        reddit:                         635408384794951680
+        duck_pond:                      637821475327311927
+        dev_log:                        680501655111729222
+        python_news:    &PYNEWS_WEBHOOK 704381182279942324
 
 
 filter:
@@ -248,9 +252,8 @@ filter:
     filter_zalgo:       false
     filter_invites:     true
     filter_domains:     true
+    watch_regex:        true
     watch_rich_embeds:  true
-    watch_words:        true
-    watch_tokens:       true
 
     # Notify user on filter?
     # Notifications are not expected for "watchlist" type filters
@@ -264,7 +267,8 @@ filter:
     guild_invite_whitelist:
         - 280033776820813825  # Functional Programming
         - 267624335836053506  # Python Discord
-        - 440186186024222721  # Python Discord: ModLog Emojis
+        - 440186186024222721  # Python Discord: Emojis 1
+        - 578587418123304970  # Python Discord: Emojis 2
         - 273944235143593984  # STEM
         - 348658686962696195  # RLBot
         - 531221516914917387  # Pallets
@@ -280,6 +284,12 @@ filter:
         - 524691714909274162  # Panda3D
         - 336642139381301249  # discord.py
         - 405403391410438165  # Sentdex
+        - 172018499005317120  # The Coding Den
+        - 666560367173828639  # PyWeek
+        - 702724176489873509  # Microsoft Python
+        - 81384788765712384   # Discord API
+        - 613425648685547541  # Discord Developers
+        - 185590609631903755  # Blender Hub
 
     domain_blacklist:
         - pornhub.com
@@ -308,6 +318,9 @@ filter:
         - poweredbydialup.online
         - poweredbysecurity.org
         - poweredbysecurity.online
+        - ssteam.site
+        - steamwalletgift.com
+        - discord.gift
 
     word_watchlist:
         - goo+ks*
@@ -479,7 +492,6 @@ anti_malware:
         - '.mp3'
         - '.wav'
         - '.ogg'
-        - '.md'
 
 
 reddit:
@@ -508,9 +520,46 @@ free:
     cooldown_rate: 1
     cooldown_per: 60.0
 
-mention:
-    message_timeout: 300
-    reset_delay: 5
+
+help_channels:
+    enable: true
+
+    # Minimum interval before allowing a certain user to claim a new help channel
+    claim_minutes: 15
+
+    # Roles which are allowed to use the command which makes channels dormant
+    cmd_whitelist:
+        - *HELPERS_ROLE
+
+    # Allowed duration of inactivity before making a channel dormant
+    idle_minutes: 30
+
+    # Allowed duration of inactivity when question message deleted
+    # and no one other sent before message making channel dormant.
+    deleted_idle_minutes: 5
+
+    # Maximum number of channels to put in the available category
+    max_available: 2
+
+    # Maximum number of channels across all 3 categories
+    # Note Discord has a hard limit of 50 channels per category, so this shouldn't be > 50
+    max_total_channels: 32
+
+    # Prefix for help channel names
+    name_prefix: 'help-'
+
+    # Notify if more available channels are needed but there are no more dormant ones
+    notify: true
+
+    # Channel in which to send notifications
+    notify_channel: *HELPERS
+
+    # Minimum interval between helper notifications
+    notify_minutes: 15
+
+    # Mention these roles in notifications
+    notify_roles:
+        - *HELPERS_ROLE
 
 redirect_output:
     delete_invocation: true
@@ -536,6 +585,14 @@ duck_pond:
         - *DUCKY_ANGEL
         - *DUCKY_MAUL
         - *DUCKY_SANTA
+
+python_news:
+    mail_lists:
+        - 'python-ideas'
+        - 'python-announce-list'
+        - 'pypi-announce'
+    channel: *PYNEWS_CHANNEL
+    webhook: *PYNEWS_WEBHOOK
 
 config:
     required_keys: ['bot.token']

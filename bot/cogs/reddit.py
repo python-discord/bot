@@ -218,7 +218,10 @@ class Reddit(Cog):
 
         for subreddit in RedditConfig.subreddits:
             top_posts = await self.get_top_posts(subreddit=subreddit, time="day")
-            await self.webhook.send(username=f"{subreddit} Top Daily Posts", embed=top_posts)
+            message = await self.webhook.send(username=f"{subreddit} Top Daily Posts", embed=top_posts, wait=True)
+
+            if message.channel.is_news():
+                await message.publish()
 
     async def top_weekly_posts(self) -> None:
         """Post a summary of the top posts."""
@@ -242,10 +245,13 @@ class Reddit(Cog):
 
                 await message.pin()
 
+                if message.channel.is_news():
+                    await message.publish()
+
     @group(name="reddit", invoke_without_command=True)
     async def reddit_group(self, ctx: Context) -> None:
         """View the top posts from various subreddits."""
-        await ctx.invoke(self.bot.get_command("help"), "reddit")
+        await ctx.send_help(ctx.command)
 
     @reddit_group.command(name="top")
     async def top_command(self, ctx: Context, subreddit: Subreddit = "r/Python") -> None:

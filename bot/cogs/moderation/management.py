@@ -43,7 +43,7 @@ class ModManagement(commands.Cog):
     @commands.group(name='infraction', aliases=('infr', 'infractions', 'inf'), invoke_without_command=True)
     async def infraction_group(self, ctx: Context) -> None:
         """Infraction manipulation commands."""
-        await ctx.invoke(self.bot.get_command("help"), "infraction")
+        await ctx.send_help(ctx.command)
 
     @infraction_group.command(name='edit')
     async def infraction_edit(
@@ -100,7 +100,12 @@ class ModManagement(commands.Cog):
         confirm_messages = []
         log_text = ""
 
-        if isinstance(duration, str):
+        if duration is not None and not old_infraction['active']:
+            if reason is None:
+                await ctx.send(":x: Cannot edit the expiration of an expired infraction.")
+                return
+            confirm_messages.append("expiry unchanged (infraction already expired)")
+        elif isinstance(duration, str):
             request_data['expires_at'] = None
             confirm_messages.append("marked as permanent")
         elif duration is not None:

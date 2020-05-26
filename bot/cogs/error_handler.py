@@ -2,14 +2,14 @@ import contextlib
 import logging
 import typing as t
 
-from discord.ext.commands import Cog, Command, Context, errors
+from discord.ext.commands import Cog, Context, errors
 from sentry_sdk import push_scope
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Channels
 from bot.converters import TagNameConverter
-from bot.decorators import InChannelCheckFailure
+from bot.decorators import InWhitelistCheckFailure
 
 log = logging.getLogger(__name__)
 
@@ -79,19 +79,13 @@ class ErrorHandler(Cog):
             f"{e.__class__.__name__}: {e}"
         )
 
-    async def get_help_command(self, command: t.Optional[Command]) -> t.Tuple:
-        """Return the help command invocation args to display help for `command`."""
-        parent = None
-        if command is not None:
-            parent = command.parent
+    @staticmethod
+    def get_help_command(ctx: Context) -> t.Coroutine:
+        """Return a prepared `help` command invocation coroutine."""
+        if ctx.command:
+            return ctx.send_help(ctx.command)
 
-        # Retrieve the help command for the invoked command.
-        if parent and command:
-            return self.bot.get_command("help"), parent.name, command.name
-        elif command:
-            return self.bot.get_command("help"), command.name
-        else:
-            return self.bot.get_command("help")
+        return ctx.send_help()
 
     async def try_silence(self, ctx: Context) -> bool:
         """
@@ -165,25 +159,30 @@ class ErrorHandler(Cog):
         * ArgumentParsingError: send an error message
         * Other: send an error message and the help command
         """
-        # TODO: use ctx.send_help() once PR #519 is merged.
-        help_command = await self.get_help_command(ctx.command)
+        prepared_help_command = self.get_help_command(ctx)
 
         if isinstance(e, errors.MissingRequiredArgument):
             await ctx.send(f"Missing required argument `{e.param.name}`.")
-            await ctx.invoke(*help_command)
+            await prepared_help_command
+            self.bot.stats.incr("errors.missing_required_argument")
         elif isinstance(e, errors.TooManyArguments):
             await ctx.send(f"Too many arguments provided.")
-            await ctx.invoke(*help_command)
+            await prepared_help_command
+            self.bot.stats.incr("errors.too_many_arguments")
         elif isinstance(e, errors.BadArgument):
             await ctx.send(f"Bad argument: {e}\n")
-            await ctx.invoke(*help_command)
+            await prepared_help_command
+            self.bot.stats.incr("errors.bad_argument")
         elif isinstance(e, errors.BadUnionArgument):
             await ctx.send(f"Bad argument: {e}\n```{e.errors[-1]}```")
+            self.bot.stats.incr("errors.bad_union_argument")
         elif isinstance(e, errors.ArgumentParsingError):
             await ctx.send(f"Argument parsing error: {e}")
+            self.bot.stats.incr("errors.argument_parsing_error")
         else:
             await ctx.send("Something about your input seems off. Check the arguments:")
-            await ctx.invoke(*help_command)
+            await prepared_help_command
+            self.bot.stats.incr("errors.other_user_input_error")
 
     @staticmethod
     async def handle_check_failure(ctx: Context, e: errors.CheckFailure) -> None:
@@ -196,7 +195,7 @@ class ErrorHandler(Cog):
         * BotMissingRole
         * BotMissingAnyRole
         * NoPrivateMessage
-        * InChannelCheckFailure
+        * InWhitelistCheckFailure
         """
         bot_missing_errors = (
             errors.BotMissingPermissions,
@@ -205,10 +204,12 @@ class ErrorHandler(Cog):
         )
 
         if isinstance(e, bot_missing_errors):
+            ctx.bot.stats.incr("errors.bot_permission_error")
             await ctx.send(
                 f"Sorry, it looks like I don't have the permissions or roles I need to do that."
             )
-        elif isinstance(e, (InChannelCheckFailure, errors.NoPrivateMessage)):
+        elif isinstance(e, (InWhitelistCheckFailure, errors.NoPrivateMessage)):
+            ctx.bot.stats.incr("errors.wrong_channel_or_dm_error")
             await ctx.send(e)
 
     @staticmethod
@@ -217,16 +218,20 @@ class ErrorHandler(Cog):
         if e.status == 404:
             await ctx.send("There does not seem to be anything matching your query.")
             log.debug(f"API responded with 404 for command {ctx.command}")
+            ctx.bot.stats.incr("errors.api_error_404")
         elif e.status == 400:
             content = await e.response.json()
             log.debug(f"API responded with 400 for command {ctx.command}: %r.", content)
             await ctx.send("According to the API, your request is malformed.")
+            ctx.bot.stats.incr("errors.api_error_400")
         elif 500 <= e.status < 600:
             await ctx.send("Sorry, there seems to be an internal issue with the API.")
             log.warning(f"API responded with {e.status} for command {ctx.command}")
+            ctx.bot.stats.incr("errors.api_internal_server_error")
         else:
             await ctx.send(f"Got an unexpected status code from the API (`{e.status}`).")
             log.warning(f"Unexpected API response for command {ctx.command}: {e.status}")
+            ctx.bot.stats.incr(f"errors.api_error_{e.status}")
 
     @staticmethod
     async def handle_unexpected_error(ctx: Context, e: errors.CommandError) -> None:
@@ -235,6 +240,8 @@ class ErrorHandler(Cog):
             f"Sorry, an unexpected error occurred. Please let us know!\n\n"
             f"```{e.__class__.__name__}: {e}```"
         )
+
+        ctx.bot.stats.incr("errors.unexpected")
 
         with push_scope() as scope:
             scope.user = {

@@ -4,7 +4,7 @@ from typing import Optional, Union
 
 import discord.errors
 from dateutil.relativedelta import relativedelta
-from discord import Colour, DMChannel, Member, Message, TextChannel
+from discord import Colour, Member, Message, TextChannel
 from discord.ext.commands import Cog
 from discord.utils import escape_markdown
 
@@ -38,6 +38,7 @@ WORD_WATCHLIST_PATTERNS = [
 TOKEN_WATCHLIST_PATTERNS = [
     re.compile(fr'{expression}', flags=re.IGNORECASE) for expression in Filter.token_watchlist
 ]
+WATCHLIST_PATTERNS = WORD_WATCHLIST_PATTERNS + TOKEN_WATCHLIST_PATTERNS
 
 
 def expand_spoilers(text: str) -> str:
@@ -88,23 +89,17 @@ class Filtering(Cog):
                     f"Your URL has been removed because it matched a blacklisted domain. {staff_mistake_str}"
                 )
             },
+            "watch_regex": {
+                "enabled": Filter.watch_regex,
+                "function": self._has_watch_regex_match,
+                "type": "watchlist",
+                "content_only": True,
+            },
             "watch_rich_embeds": {
                 "enabled": Filter.watch_rich_embeds,
                 "function": self._has_rich_embed,
                 "type": "watchlist",
                 "content_only": False,
-            },
-            "watch_words": {
-                "enabled": Filter.watch_words,
-                "function": self._has_watchlist_words,
-                "type": "watchlist",
-                "content_only": True,
-            },
-            "watch_tokens": {
-                "enabled": Filter.watch_tokens,
-                "function": self._has_watchlist_tokens,
-                "type": "watchlist",
-                "content_only": True,
             },
         }
 
@@ -166,8 +161,10 @@ class Filtering(Cog):
                         match = await _filter["function"](msg)
 
                     if match:
-                        # If this is a filter (not a watchlist), we should delete the message.
-                        if _filter["type"] == "filter":
+                        is_private = msg.channel.type is discord.ChannelType.private
+
+                        # If this is a filter (not a watchlist) and not in a DM, delete the message.
+                        if _filter["type"] == "filter" and not is_private:
                             try:
                                 # Embeds (can?) trigger both the `on_message` and `on_message_edit`
                                 # event handlers, triggering filtering twice for the same message.
@@ -186,13 +183,13 @@ class Filtering(Cog):
                             if _filter["user_notification"]:
                                 await self.notify_member(msg.author, _filter["notification_msg"], msg.channel)
 
-                        if isinstance(msg.channel, DMChannel):
+                        if is_private:
                             channel_str = "via DM"
                         else:
                             channel_str = f"in {msg.channel.mention}"
 
-                        # Word and match stats for watch_words and watch_tokens
-                        if filter_name in ("watch_words", "watch_tokens"):
+                        # Word and match stats for watch_regex
+                        if filter_name == "watch_regex":
                             surroundings = match.string[max(match.start() - 10, 0): match.end() + 10]
                             message_content = (
                                 f"**Match:** '{match[0]}'\n"
@@ -212,10 +209,14 @@ class Filtering(Cog):
 
                         log.debug(message)
 
+                        self.bot.stats.incr(f"filters.{filter_name}")
+
                         additional_embeds = None
                         additional_embeds_msg = None
 
-                        if filter_name == "filter_invites":
+                        # The function returns True for invalid invites.
+                        # They have no data so additional embeds can't be created for them.
+                        if filter_name == "filter_invites" and match is not True:
                             additional_embeds = []
                             for invite, data in match.items():
                                 embed = discord.Embed(description=(
@@ -248,37 +249,24 @@ class Filtering(Cog):
                         break  # We don't want multiple filters to trigger
 
     @staticmethod
-    async def _has_watchlist_words(text: str) -> Union[bool, re.Match]:
+    async def _has_watch_regex_match(text: str) -> Union[bool, re.Match]:
         """
-        Returns True if the text contains one of the regular expressions from the word_watchlist in our filter config.
+        Return True if `text` matches any regex from `word_watchlist` or `token_watchlist` configs.
 
-        Only matches words with boundaries before and after the expression.
+        `word_watchlist`'s patterns are placed between word boundaries while `token_watchlist` is
+        matched as-is. Spoilers are expanded, if any, and URLs are ignored.
         """
         if SPOILER_RE.search(text):
             text = expand_spoilers(text)
-        for regex_pattern in WORD_WATCHLIST_PATTERNS:
-            match = regex_pattern.search(text)
+
+        # Make sure it's not a URL
+        if URL_RE.search(text):
+            return False
+
+        for pattern in WATCHLIST_PATTERNS:
+            match = pattern.search(text)
             if match:
-                return match  # match objects always have a boolean value of True
-
-        return False
-
-    @staticmethod
-    async def _has_watchlist_tokens(text: str) -> Union[bool, re.Match]:
-        """
-        Returns True if the text contains one of the regular expressions from the token_watchlist in our filter config.
-
-        This will match the expression even if it does not have boundaries before and after.
-        """
-        for regex_pattern in TOKEN_WATCHLIST_PATTERNS:
-            match = regex_pattern.search(text)
-            if match:
-
-                # Make sure it's not a URL
-                if not URL_RE.search(text):
-                    return match  # match objects always have a boolean value of True
-
-        return False
+                return match
 
     @staticmethod
     async def _has_urls(text: str) -> bool:

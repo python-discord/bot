@@ -54,6 +54,8 @@ class WebhookRemover(Cog):
             channel_id=Channels.mod_alerts
         )
 
+        self.bot.stats.incr("tokens.removed_webhooks")
+
     @Cog.listener()
     async def on_message(self, msg: Message) -> None:
         """Check if a Discord webhook URL is in `message`."""

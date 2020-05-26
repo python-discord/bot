@@ -206,9 +206,8 @@ class Filter(metaclass=YAMLGetter):
     filter_zalgo: bool
     filter_invites: bool
     filter_domains: bool
+    watch_regex: bool
     watch_rich_embeds: bool
-    watch_words: bool
-    watch_tokens: bool
 
     # Notifications are not expected for "watchlist" type filters
     notify_user_zalgo: bool
@@ -351,12 +350,22 @@ class CleanMessages(metaclass=YAMLGetter):
 
     message_limit: int
 
+class Stats(metaclass=YAMLGetter):
+    section = "bot"
+    subsection = "stats"
+
+    presence_update_timeout: int
+    statsd_host: str
+
 
 class Categories(metaclass=YAMLGetter):
     section = "guild"
     subsection = "categories"
 
-    python_help: int
+    help_available: int
+    help_in_use: int
+    help_dormant: int
+    modmail: int
 
 
 class Channels(metaclass=YAMLGetter):
@@ -374,15 +383,9 @@ class Channels(metaclass=YAMLGetter):
     dev_core: int
     dev_log: int
     esoteric: int
-    help_0: int
-    help_1: int
-    help_2: int
-    help_3: int
-    help_4: int
-    help_5: int
-    help_6: int
-    help_7: int
     helpers: int
+    how_to_get_help: int
+    incidents: int
     message_log: int
     meta: int
     mod_alerts: int
@@ -421,6 +424,7 @@ class Roles(metaclass=YAMLGetter):
     announcements: int
     contributors: int
     core_developers: int
+    help_cooldown: int
     helpers: int
     jammers: int
     moderators: int
@@ -532,11 +536,21 @@ class Free(metaclass=YAMLGetter):
     cooldown_per: float
 
 
-class Mention(metaclass=YAMLGetter):
-    section = 'mention'
+class HelpChannels(metaclass=YAMLGetter):
+    section = 'help_channels'
 
-    message_timeout: int
-    reset_delay: int
+    enable: bool
+    claim_minutes: int
+    cmd_whitelist: List[int]
+    idle_minutes: int
+    deleted_idle_minutes: int
+    max_available: int
+    max_total_channels: int
+    name_prefix: str
+    notify: bool
+    notify_channel: int
+    notify_minutes: int
+    notify_roles: List[int]
 
 
 class RedirectOutput(metaclass=YAMLGetter):
@@ -551,6 +565,14 @@ class Sync(metaclass=YAMLGetter):
 
     confirm_timeout: int
     max_diff: int
+
+
+class PythonNews(metaclass=YAMLGetter):
+    section = 'python_news'
+
+    mail_lists: List[str]
+    channel: int
+    webhook: int
 
 
 class Event(Enum):

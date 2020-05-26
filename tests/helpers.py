@@ -315,12 +315,33 @@ class MockTextChannel(CustomMockMixin, unittest.mock.Mock, HashableMixin):
     """
     spec_set = channel_instance
 
-    def __init__(self, name: str = 'channel', channel_id: int = 1, **kwargs) -> None:
+    def __init__(self, **kwargs) -> None:
         default_kwargs = {'id': next(self.discord_id), 'name': 'channel', 'guild': MockGuild()}
         super().__init__(**collections.ChainMap(kwargs, default_kwargs))
 
         if 'mention' not in kwargs:
             self.mention = f"#{self.name}"
+
+
+# Create data for the DMChannel instance
+state = unittest.mock.MagicMock()
+me = unittest.mock.MagicMock()
+dm_channel_data = {"id": 1, "recipients": [unittest.mock.MagicMock()]}
+dm_channel_instance = discord.DMChannel(me=me, state=state, data=dm_channel_data)
+
+
+class MockDMChannel(CustomMockMixin, unittest.mock.Mock, HashableMixin):
+    """
+    A MagicMock subclass to mock TextChannel objects.
+
+    Instances of this class will follow the specifications of `discord.TextChannel` instances. For
+    more information, see the `MockGuild` docstring.
+    """
+    spec_set = dm_channel_instance
+
+    def __init__(self, **kwargs) -> None:
+        default_kwargs = {'id': next(self.discord_id), 'recipient': MockUser(), "me": MockUser()}
+        super().__init__(**collections.ChainMap(kwargs, default_kwargs))
 
 
 # Create a Message instance to get a realistic MagicMock of `discord.Message`
