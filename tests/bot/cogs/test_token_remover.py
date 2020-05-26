@@ -174,8 +174,9 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         tokens = ["x.y.z", "a.b.c"]
         message = f"garbage {tokens[0]} hello {tokens[1]} world"
 
-        results = token_remover.TOKEN_RE.findall(message)
-        self.assertEqual(tokens, results)
+        results = token_remover.TOKEN_RE.finditer(message)
+        results = [match[0] for match in results]
+        self.assertCountEqual(tokens, results)
 
     @autospec(TokenRemover, "is_valid_user_id", "is_valid_timestamp")
     def test_is_maybe_token_missing_part_returns_false(self, valid_user, valid_time):
