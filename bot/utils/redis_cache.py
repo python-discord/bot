@@ -81,7 +81,7 @@ class RedisCache:
         """Initialize the RedisCache."""
         self._namespace = None
         self.bot = None
-        self.increment_lock = asyncio.Lock()
+        self._increment_lock = asyncio.Lock()
 
     def _set_namespace(self, namespace: str) -> None:
         """Try to set the namespace, but do not permit collisions."""
@@ -348,7 +348,7 @@ class RedisCache:
         log.trace(f"Attempting to increment/decrement the value with the key {key} by {amount}.")
 
         # Since this has several API calls, we need a lock to prevent race conditions
-        async with self.increment_lock:
+        async with self._increment_lock:
             value = await self.get(key)
 
             # Can't increment a non-existing value
