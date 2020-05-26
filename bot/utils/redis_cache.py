@@ -134,8 +134,7 @@ class RedisCache:
                 "Critical error: RedisCache has no `Bot` instance. "
                 "This happens when the class RedisCache was created in doesn't "
                 "have a Bot instance. Please make sure that you're instantiating "
-                "the RedisCache inside a class that has a Bot instance "
-                "class attribute."
+                "the RedisCache inside a class that has a Bot instance attribute."
             )
             log.error(error_message)
             raise RuntimeError(error_message)
@@ -143,7 +142,7 @@ class RedisCache:
         if self._namespace is None:
             error_message = (
                 "Critical error: RedisCache has no namespace. "
-                "Did you initialize this object as a class attribute?"
+                "This object must be initialized as a class attribute."
             )
             log.error(error_message)
             raise RuntimeError(error_message)
@@ -201,8 +200,7 @@ class RedisCache:
                 "Critical error: RedisCache has no `Bot` instance. "
                 "This happens when the class RedisCache was created in doesn't "
                 "have a Bot instance. Please make sure that you're instantiating "
-                "the RedisCache inside a class that has a Bot instance "
-                "class attribute."
+                "the RedisCache inside a class that has a Bot instance attribute."
             )
             log.error(error_message)
             raise RuntimeError(error_message)
