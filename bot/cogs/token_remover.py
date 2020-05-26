@@ -120,11 +120,10 @@ class TokenRemover(Cog):
         if msg.author.bot:
             return
 
-        # Use findall rather than search to guard against method calls prematurely returning the
+        # Use finditer rather than search to guard against method calls prematurely returning the
         # token check (e.g. `message.channel.send` also matches our token pattern)
-        maybe_matches = TOKEN_RE.findall(msg.content)
-        for match_groups in maybe_matches:
-            token = Token(*match_groups)
+        for match in TOKEN_RE.finditer(msg.content):
+            token = Token(*match.groups())
             if cls.is_valid_user_id(token.user_id) and cls.is_valid_timestamp(token.timestamp):
                 # Short-circuit on first match
                 return token
