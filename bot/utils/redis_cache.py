@@ -130,21 +130,24 @@ class RedisCache:
     async def _validate_cache(self) -> None:
         """Validate that the RedisCache is ready to be used."""
         if self.bot is None:
-            log.exception("Attempt to use RedisCache with no `Bot` instance.")
-            raise RuntimeError(
+            error_message = (
                 "Critical error: RedisCache has no `Bot` instance. "
                 "This happens when the class RedisCache was created in doesn't "
                 "have a Bot instance. Please make sure that you're instantiating "
                 "the RedisCache inside a class that has a Bot instance "
                 "class attribute."
             )
+            log.error(error_message)
+            raise RuntimeError(error_message)
 
         if self._namespace is None:
-            log.exception("Attempt to use RedisCache with no namespace.")
-            raise RuntimeError(
+            error_message = (
                 "Critical error: RedisCache has no namespace. "
                 "Did you initialize this object as a class attribute?"
             )
+            log.error(error_message)
+            raise RuntimeError(error_message)
+
         await self.bot.redis_ready.wait()
 
     def __set_name__(self, owner: Any, attribute_name: str) -> None:
@@ -176,18 +179,17 @@ class RedisCache:
             return self
 
         if self._namespace is None:
-            log.exception("RedisCache must be a class attribute.")
-            raise RuntimeError("RedisCache must be a class attribute.")
+            error_message = "RedisCache must be a class attribute."
+            log.error(error_message)
+            raise RuntimeError(error_message)
 
         if instance is None:
-            log.exception(
-                "Attempt to access RedisCache instance through the cog's class object "
-                "before accessing it through the cog instance."
-            )
-            raise RuntimeError(
+            error_message = (
                 "You must access the RedisCache instance through the cog instance "
                 "before accessing it using the cog's class object."
             )
+            log.error(error_message)
+            raise RuntimeError(error_message)
 
         for attribute in vars(instance).values():
             if isinstance(attribute, Bot):
@@ -195,14 +197,15 @@ class RedisCache:
                 self._redis = self.bot.redis_session
                 return self
         else:
-            log.exception("Attempt to use RedisCache with no `Bot` instance.")
-            raise RuntimeError(
+            error_message = (
                 "Critical error: RedisCache has no `Bot` instance. "
                 "This happens when the class RedisCache was created in doesn't "
                 "have a Bot instance. Please make sure that you're instantiating "
                 "the RedisCache inside a class that has a Bot instance "
                 "class attribute."
             )
+            log.error(error_message)
+            raise RuntimeError(error_message)
 
     def __repr__(self) -> str:
         """Return a beautiful representation of this object instance."""
@@ -340,16 +343,18 @@ class RedisCache:
 
             # Can't increment a non-existing value
             if value is None:
-                log.exception("Attempt to increment/decrement value for non-existent key.")
-                raise KeyError("The provided key does not exist!")
+                error_message = "The provided key does not exist!"
+                log.error(error_message)
+                raise KeyError(error_message)
 
             # If it does exist, and it's an int or a float, increment and set it.
             if isinstance(value, int) or isinstance(value, float):
                 value += amount
                 await self.set(key, value)
             else:
-                log.exception("Attempt to increment/decrement non-numerical value.")
-                raise TypeError("You may only increment or decrement values that are integers or floats.")
+                error_message = "You may only increment or decrement values that are integers or floats."
+                log.error(error_message)
+                raise TypeError(error_message)
 
     async def decrement(self, key: RedisType, amount: Optional[int, float] = 1) -> None:
         """
