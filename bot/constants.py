@@ -376,6 +376,7 @@ class Categories(metaclass=YAMLGetter):
     help_available: int
     help_in_use: int
     help_dormant: int
+    modmail: int
 
 
 class Channels(metaclass=YAMLGetter):
@@ -395,6 +396,7 @@ class Channels(metaclass=YAMLGetter):
     esoteric: int
     helpers: int
     how_to_get_help: int
+    incidents: int
     message_log: int
     meta: int
     mod_alerts: int
@@ -552,6 +554,7 @@ class HelpChannels(metaclass=YAMLGetter):
     claim_minutes: int
     cmd_whitelist: List[int]
     idle_minutes: int
+    deleted_idle_minutes: int
     max_available: int
     max_total_channels: int
     name_prefix: str

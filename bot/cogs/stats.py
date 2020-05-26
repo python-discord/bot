@@ -6,7 +6,7 @@ from discord.ext.commands import Cog, Context
 from discord.ext.tasks import loop
 
 from bot.bot import Bot
-from bot.constants import Channels, Guild, Stats as StatConf
+from bot.constants import Categories, Channels, Guild, Stats as StatConf
 
 
 CHANNEL_NAME_OVERRIDES = {
@@ -35,6 +35,12 @@ class Stats(Cog):
 
         if message.guild.id != Guild.id:
             return
+
+        if message.channel.category.id == Categories.modmail:
+            if message.channel.id != Channels.incidents:
+                # Do not report modmail channels to stats, there are too many
+                # of them for interesting statistics to be drawn out of this.
+                return
 
         reformatted_name = message.channel.name.replace('-', '_')
 

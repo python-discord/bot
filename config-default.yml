@@ -124,6 +124,7 @@ guild:
         help_available:                     691405807388196926
         help_in_use:                        696958401460043776
         help_dormant:                       691405908919451718
+        modmail:                            714494672835444826
 
     channels:
         announcements:                              354619224620138496
@@ -170,6 +171,7 @@ guild:
         mod_spam:           &MOD_SPAM       620607373828030464
         organisation:       &ORGANISATION   551789653284356126
         staff_lounge:       &STAFF_LOUNGE   464905259261755392
+        incidents:                          714214212200562749
 
         # Voice
         admins_voice:       &ADMINS_VOICE   500734494840717332
@@ -324,6 +326,7 @@ filter:
         - poweredbysecurity.online
         - ssteam.site
         - steamwalletgift.com
+        - discord.gift
 
     word_watchlist:
         - goo+ks*
@@ -536,6 +539,10 @@ help_channels:
 
     # Allowed duration of inactivity before making a channel dormant
     idle_minutes: 30
+
+    # Allowed duration of inactivity when question message deleted
+    # and no one other sent before message making channel dormant.
+    deleted_idle_minutes: 5
 
     # Maximum number of channels to put in the available category
     max_available: 2
