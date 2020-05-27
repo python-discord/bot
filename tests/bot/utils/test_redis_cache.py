@@ -70,11 +70,14 @@ class RedisCacheTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await self.cog.redis.get('favorite_nothing', "bearclaw"), "bearclaw")
 
     async def test_set_item_type(self):
-        """Test that .set rejects keys and values that are not strings, ints or floats."""
+        """Test that .set rejects keys and values that are not permitted."""
         fruits = ["lemon", "melon", "apple"]
 
         with self.assertRaises(TypeError):
             await self.cog.redis.set(fruits, "nice")
+
+        with self.assertRaises(TypeError):
+            await self.cog.redis.set(4.23, "nice")
 
     async def test_delete_item(self):
         """Test that .delete allows us to delete stuff from the RedisCache."""
@@ -176,16 +179,16 @@ class RedisCacheTests(unittest.IsolatedAsyncioTestCase):
 
         # Test conversion to typestring
         for _input, expected in conversion_tests:
-            self.assertEqual(self.cog.redis._to_typestring(_input), expected)
+            self.assertEqual(self.cog.redis._value_to_typestring(_input), expected)
 
         # Test conversion from typestrings
         for _input, expected in conversion_tests:
-            self.assertEqual(self.cog.redis._from_typestring(expected), _input)
+            self.assertEqual(self.cog.redis._value_from_typestring(expected), _input)
 
         # Test that exceptions are raised on invalid input
         with self.assertRaises(TypeError):
-            self.cog.redis._to_typestring(["internet"])
-            self.cog.redis._from_typestring("o|firedog")
+            self.cog.redis._value_to_typestring(["internet"])
+            self.cog.redis._value_from_typestring("o|firedog")
 
     async def test_increment_decrement(self):
         """Test .increment and .decrement methods."""
