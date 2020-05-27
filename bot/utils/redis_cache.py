@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import typing
+from functools import partialmethod
 from typing import Any, Dict, ItemsView, Optional, Tuple, Union
 
 from bot.bot import Bot
@@ -15,29 +16,29 @@ RedisValueType = Union[str, int, float]
 
 # Prefix tuples
 PrefixTuple = Tuple[Tuple[str, Any]]
-TYPESTRING_VALUE_PREFIXES = (
+VALUE_PREFIXES = (
     ("f|", float),
     ("i|", int),
     ("s|", str),
 )
-TYPESTRING_KEY_PREFIXES = (
+KEY_PREFIXES = (
     ("i|", int),
     ("s|", str),
 )
 
 # Makes a nice list like "float, int, and str"
-NICE_VALUE_TYPE_LIST = ", ".join(str(_type.__name__) for _type in typing.get_args(RedisValueType))
-NICE_VALUE_TYPE_LIST = ", and ".join(NICE_VALUE_TYPE_LIST.rsplit(", ", 1))
+VALUE_TYPE_LIST = ", ".join(str(_type.__name__) for _type in typing.get_args(RedisValueType))
+VALUE_TYPE_LIST = ", and ".join(VALUE_TYPE_LIST.rsplit(", ", 1))
 
-NICE_KEY_TYPE_LIST = ", ".join(str(_type.__name__) for _type in typing.get_args(RedisKeyType))
-NICE_KEY_TYPE_LIST = ", and ".join(NICE_KEY_TYPE_LIST.rsplit(", ", 1))
+KEY_TYPE_LIST = ", ".join(str(_type.__name__) for _type in typing.get_args(RedisKeyType))
+KEY_TYPE_LIST = ", and ".join(KEY_TYPE_LIST.rsplit(", ", 1))
 
 # Makes a list like "'f|', 'i|', and 's|'"
-NICE_VALUE_PREFIX_LIST = ", ".join([f"'{prefix}'" for prefix, _ in TYPESTRING_VALUE_PREFIXES])
-NICE_VALUE_PREFIX_LIST = ", and ".join(NICE_VALUE_PREFIX_LIST.rsplit(", ", 1))
+VALUE_PREFIX_LIST = ", ".join([f"'{prefix}'" for prefix, _ in VALUE_PREFIXES])
+VALUE_PREFIX_LIST = ", and ".join(VALUE_PREFIX_LIST.rsplit(", ", 1))
 
-NICE_KEY_PREFIX_LIST = ", ".join([f"'{prefix}'" for prefix, _ in TYPESTRING_KEY_PREFIXES])
-NICE_KEY_PREFIX_LIST = ", and ".join(NICE_KEY_PREFIX_LIST.rsplit(", ", 1))
+KEY_PREFIX_LIST = ", ".join([f"'{prefix}'" for prefix, _ in KEY_PREFIXES])
+KEY_PREFIX_LIST = ", and ".join(KEY_PREFIX_LIST.rsplit(", ", 1))
 
 
 class RedisCache:
@@ -118,19 +119,19 @@ class RedisCache:
     def _to_typestring(
             key_or_value: Union[RedisKeyType, RedisValueType],
             prefixes: PrefixTuple,
-            nice_type_list: str
+            types_string: str
     ) -> str:
         """Turn a valid Redis type into a typestring."""
         for prefix, _type in prefixes:
             if isinstance(key_or_value, _type):
                 return f"{prefix}{key_or_value}"
-        raise TypeError(f"RedisCache._from_typestring only supports the types {nice_type_list}.")
+        raise TypeError(f"RedisCache._from_typestring only supports the types {types_string}.")
 
     @staticmethod
     def _from_typestring(
             key_or_value: Union[bytes, str],
             prefixes: PrefixTuple,
-            nice_prefix_list: str,
+            prefixes_string: str,
     ) -> Union[RedisKeyType, RedisValueType]:
         """Deserialize a typestring into a valid Redis type."""
         # Stuff that comes out of Redis will be bytestrings, so let's decode those.
@@ -141,23 +142,16 @@ class RedisCache:
         for prefix, _type in prefixes:
             if key_or_value.startswith(prefix):
                 return _type(key_or_value[len(prefix):])
-        raise TypeError(f"RedisCache._to_typestring only supports the prefixes {nice_prefix_list}.")
+        raise TypeError(f"RedisCache._to_typestring only supports the prefixes {prefixes_string}.")
 
-    def _key_to_typestring(self, key: RedisKeyType) -> str:
-        """Serialize a RedisKeyType object into a typestring."""
-        return self._to_typestring(key, TYPESTRING_KEY_PREFIXES, NICE_KEY_TYPE_LIST)
-
-    def _value_to_typestring(self, value: RedisValueType) -> str:
-        """Serialize a RedisValueType object into a typestring."""
-        return self._to_typestring(value, TYPESTRING_VALUE_PREFIXES, NICE_VALUE_TYPE_LIST)
-
-    def _key_from_typestring(self, key: Union[bytes, str]) -> RedisKeyType:
-        """Deserialize a RedisKeyType object from a typestring."""
-        return self._from_typestring(key, TYPESTRING_KEY_PREFIXES, NICE_KEY_PREFIX_LIST)
-
-    def _value_from_typestring(self, value: Union[bytes, str]) -> RedisValueType:
-        """Deserialize a RedisValueType object from a typestring."""
-        return self._from_typestring(value, TYPESTRING_VALUE_PREFIXES, NICE_VALUE_PREFIX_LIST)
+    # Add some nice partials to call our generic typestring converters.
+    # These are basically functions that will fill in some of the parameters for you, so that
+    # any call to _key_to_typestring will be like calling _to_typestring with those two parameters
+    # pre-filled.
+    _key_to_typestring = partialmethod(_to_typestring, prefixes=KEY_PREFIXES, types_string=KEY_TYPE_LIST)
+    _value_to_typestring = partialmethod(_to_typestring, prefixes=VALUE_PREFIXES, types_string=VALUE_TYPE_LIST)
+    _key_from_typestring = partialmethod(_from_typestring, prefixes=KEY_PREFIXES, prefixes_string=KEY_PREFIX_LIST)
+    _value_from_typestring = partialmethod(_from_typestring, prefixes=VALUE_PREFIXES, prefixes_string=VALUE_PREFIX_LIST)
 
     def _dict_from_typestring(self, dictionary: Dict) -> Dict:
         """Turns all contents of a dict into valid Redis types."""
