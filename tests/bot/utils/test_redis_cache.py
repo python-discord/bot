@@ -4,6 +4,7 @@ import unittest
 import fakeredis.aioredis
 
 from bot.utils import RedisCache
+from bot.utils.redis_cache import NoBotInstanceError, NoNamespaceError, NoParentInstanceError
 from tests import helpers
 
 
@@ -260,13 +261,13 @@ class RedisCacheTests(unittest.IsolatedAsyncioTestCase):
         cog = MyCog()
 
         # Raises "No Bot instance"
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(NoBotInstanceError):
             await cog.cache.get("john")
 
         # Raises "RedisCache has no namespace"
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(NoNamespaceError):
             await cog.other_cache.get("was")
 
         # Raises "You must access the RedisCache instance through the cog instance"
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(NoParentInstanceError):
             await MyCog.cache.get("afraid")

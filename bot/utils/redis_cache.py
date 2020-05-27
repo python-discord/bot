@@ -27,6 +27,18 @@ _KEY_PREFIXES = (
 )
 
 
+class NoBotInstanceError(RuntimeError):
+    """Raised when RedisCache is created without an available bot instance on the owner class."""
+
+
+class NoNamespaceError(RuntimeError):
+    """Raised when RedisCache has no namespace, for example if it is not assigned to a class attribute."""
+
+
+class NoParentInstanceError(RuntimeError):
+    """Raised when the parent instance is available, for example if called by accessing the parent class directly."""
+
+
 class RedisCache:
     """
     A simplified interface for a Redis connection.
@@ -149,7 +161,7 @@ class RedisCache:
                 "This object must be initialized as a class attribute."
             )
             log.error(error_message)
-            raise RuntimeError(error_message)
+            raise NoNamespaceError(error_message)
 
         if self.bot is None:
             error_message = (
@@ -159,7 +171,7 @@ class RedisCache:
                 "the RedisCache inside a class that has a Bot instance attribute."
             )
             log.error(error_message)
-            raise RuntimeError(error_message)
+            raise NoBotInstanceError(error_message)
 
         await self.bot.redis_ready.wait()
 
@@ -194,7 +206,7 @@ class RedisCache:
         if self._namespace is None:
             error_message = "RedisCache must be a class attribute."
             log.error(error_message)
-            raise RuntimeError(error_message)
+            raise NoNamespaceError(error_message)
 
         if instance is None:
             error_message = (
@@ -202,7 +214,7 @@ class RedisCache:
                 "before accessing it using the cog's class object."
             )
             log.error(error_message)
-            raise RuntimeError(error_message)
+            raise NoParentInstanceError(error_message)
 
         for attribute in vars(instance).values():
             if isinstance(attribute, Bot):
@@ -217,7 +229,7 @@ class RedisCache:
                 "the RedisCache inside a class that has a Bot instance attribute."
             )
             log.error(error_message)
-            raise RuntimeError(error_message)
+            raise NoBotInstanceError(error_message)
 
     def __repr__(self) -> str:
         """Return a beautiful representation of this object instance."""
