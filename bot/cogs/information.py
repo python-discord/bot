@@ -12,9 +12,9 @@ from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
-from bot.decorators import InWhitelistCheckFailure, in_whitelist, with_role
+from bot.decorators import in_whitelist, with_role
 from bot.pagination import LinePaginator
-from bot.utils.checks import cooldown_with_role_bypass, with_role_check
+from bot.utils.checks import InWhitelistCheckFailure, cooldown_with_role_bypass, with_role_check
 from bot.utils.time import time_since
 
 log = logging.getLogger(__name__)

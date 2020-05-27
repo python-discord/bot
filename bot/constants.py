@@ -623,12 +623,9 @@ PROJECT_ROOT = os.path.abspath(os.path.join(BOT_DIR, os.pardir))
 MODERATION_ROLES = Guild.moderation_roles
 STAFF_ROLES = Guild.staff_roles
 
-# Roles combinations
+# Channel combinations
 STAFF_CHANNELS = Guild.staff_channels
-
-# Default Channel combinations
 MODERATION_CHANNELS = Guild.moderation_channels
-
 
 # Bot replies
 NEGATIVE_REPLIES = [

@@ -9,7 +9,7 @@ from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Channels
 from bot.converters import TagNameConverter
-from bot.decorators import InWhitelistCheckFailure
+from bot.utils.checks import InWhitelistCheckFailure
 
 log = logging.getLogger(__name__)
 
