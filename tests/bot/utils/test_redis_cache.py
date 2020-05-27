@@ -15,6 +15,7 @@ class RedisCacheTests(unittest.IsolatedAsyncioTestCase):
         """Sets up the objects that only have to be initialized once."""
         self.bot = helpers.MockBot()
         self.bot.redis_session = await fakeredis.aioredis.create_redis_pool()
+        await self.redis.clear()
 
     def test_class_attribute_namespace(self):
         """Test that RedisDict creates a namespace automatically for class attributes."""
@@ -76,8 +77,6 @@ class RedisCacheTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_items(self):
         """Test that the RedisDict can be iterated."""
-        await self.redis.clear()
-
         # Set up our test cases in the Redis cache
         test_cases = [
             ('favorite_turtle', 'Donatello'),
@@ -101,7 +100,6 @@ class RedisCacheTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_length(self):
         """Test that we can get the correct .length from the RedisDict."""
-        await self.redis.clear()
         await self.redis.set('one', 1)
         await self.redis.set('two', 2)
         await self.redis.set('three', 3)
@@ -119,7 +117,6 @@ class RedisCacheTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_clear(self):
         """Test that the .clear method removes the entire hash."""
-        await self.redis.clear()
         await self.redis.set('teddy', 'with me')
         await self.redis.set('in my dreams', 'you have a weird hat')
         self.assertEqual(await self.redis.length(), 2)
@@ -129,7 +126,6 @@ class RedisCacheTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_pop(self):
         """Test that we can .pop an item from the RedisDict."""
-        await self.redis.clear()
         await self.redis.set('john', 'was afraid')
 
         self.assertEqual(await self.redis.pop('john'), 'was afraid')
@@ -138,7 +134,6 @@ class RedisCacheTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_update(self):
         """Test that we can .update the RedisDict with multiple items."""
-        await self.redis.clear()
         await self.redis.set("reckfried", "lona")
         await self.redis.set("bel air", "prince")
         await self.redis.update({
