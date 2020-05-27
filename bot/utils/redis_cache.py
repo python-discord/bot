@@ -145,9 +145,11 @@ class RedisCache:
         raise TypeError(f"RedisCache._to_typestring only supports the prefixes {prefixes_string}.")
 
     # Add some nice partials to call our generic typestring converters.
-    # These are basically functions that will fill in some of the parameters for you, so that
-    # any call to _key_to_typestring will be like calling _to_typestring with those two parameters
-    # pre-filled.
+    # These are basically methods that will fill in some of the parameters for you, so that
+    # any call to _key_to_typestring will be like calling _to_typestring with the two parameters
+    # at `prefixes` and `types_string` pre-filled.
+    #
+    # See https://docs.python.org/3/library/functools.html#functools.partialmethod
     _key_to_typestring = partialmethod(_to_typestring, prefixes=KEY_PREFIXES, types_string=KEY_TYPE_LIST)
     _value_to_typestring = partialmethod(_to_typestring, prefixes=VALUE_PREFIXES, types_string=VALUE_TYPE_LIST)
     _key_from_typestring = partialmethod(_from_typestring, prefixes=KEY_PREFIXES, prefixes_string=KEY_PREFIX_LIST)
