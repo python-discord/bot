@@ -41,7 +41,6 @@ async def post_user(ctx: Context, user: UserSnowflake) -> t.Optional[dict]:
         log.debug("The user being added to the DB is not a Member or User object.")
 
     payload = {
-        'avatar_hash': getattr(user, 'avatar', 0),
         'discriminator': int(getattr(user, 'discriminator', 0)),
         'id': user.id,
         'in_guild': False,
