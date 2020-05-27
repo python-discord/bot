@@ -290,6 +290,7 @@ class ModManagement(commands.Cog):
                 ctx,
                 channels=constants.MODERATION_CHANNELS,
                 categories=[constants.Categories.modmail],
+                redirect=None,
             )
         ]
         return all(checks)
