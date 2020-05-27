@@ -81,7 +81,7 @@ class RedisCache:
         """Initialize the RedisCache."""
         self._namespace = None
         self.bot = None
-        self._increment_lock = asyncio.Lock()
+        self._increment_lock = None
 
     def _set_namespace(self, namespace: str) -> None:
         """Try to set the namespace, but do not permit collisions."""
@@ -344,6 +344,15 @@ class RedisCache:
         readability to use .decrement() for that.
         """
         log.trace(f"Attempting to increment/decrement the value with the key {key} by {amount}.")
+
+        # We initialize the lock here, because we need to ensure we get it
+        # running on the same loop as the calling coroutine.
+        #
+        # If we initialized the lock in the __init__, the loop that the coroutine this method
+        # would be called from might not exist yet, and so the lock would be on a different
+        # loop, which would raise RuntimeErrors.
+        if self._increment_lock is None:
+            self._increment_lock = asyncio.Lock()
 
         # Since this has several API calls, we need a lock to prevent race conditions
         async with self._increment_lock:
