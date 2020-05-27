@@ -15,13 +15,13 @@ RedisValueType = Union[str, int, float]
 RedisKeyOrValue = Union[RedisKeyType, RedisValueType]
 
 # Prefix tuples
-PrefixTuple = Tuple[Tuple[str, Any]]
-VALUE_PREFIXES = (
+_PrefixTuple = Tuple[Tuple[str, Any], ...]
+_VALUE_PREFIXES = (
     ("f|", float),
     ("i|", int),
     ("s|", str),
 )
-KEY_PREFIXES = (
+_KEY_PREFIXES = (
     ("i|", int),
     ("s|", str),
 )
@@ -102,7 +102,7 @@ class RedisCache:
         self._namespace = namespace
 
     @staticmethod
-    def _to_typestring(key_or_value: RedisKeyOrValue, prefixes: PrefixTuple) -> str:
+    def _to_typestring(key_or_value: RedisKeyOrValue, prefixes: _PrefixTuple) -> str:
         """Turn a valid Redis type into a typestring."""
         for prefix, _type in prefixes:
             if isinstance(key_or_value, _type):
@@ -110,7 +110,7 @@ class RedisCache:
         raise TypeError(f"RedisCache._to_typestring only supports the following: {prefixes}.")
 
     @staticmethod
-    def _from_typestring(key_or_value: Union[bytes, str], prefixes: PrefixTuple) -> RedisKeyOrValue:
+    def _from_typestring(key_or_value: Union[bytes, str], prefixes: _PrefixTuple) -> RedisKeyOrValue:
         """Deserialize a typestring into a valid Redis type."""
         # Stuff that comes out of Redis will be bytestrings, so let's decode those.
         if isinstance(key_or_value, bytes):
@@ -128,10 +128,10 @@ class RedisCache:
     # at `prefixes` and `types_string` pre-filled.
     #
     # See https://docs.python.org/3/library/functools.html#functools.partialmethod
-    _key_to_typestring = partialmethod(_to_typestring, prefixes=KEY_PREFIXES)
-    _value_to_typestring = partialmethod(_to_typestring, prefixes=VALUE_PREFIXES)
-    _key_from_typestring = partialmethod(_from_typestring, prefixes=KEY_PREFIXES)
-    _value_from_typestring = partialmethod(_from_typestring, prefixes=VALUE_PREFIXES)
+    _key_to_typestring = partialmethod(_to_typestring, prefixes=_KEY_PREFIXES)
+    _value_to_typestring = partialmethod(_to_typestring, prefixes=_VALUE_PREFIXES)
+    _key_from_typestring = partialmethod(_from_typestring, prefixes=_KEY_PREFIXES)
+    _value_from_typestring = partialmethod(_from_typestring, prefixes=_VALUE_PREFIXES)
 
     def _dict_from_typestring(self, dictionary: Dict) -> Dict:
         """Turns all contents of a dict into valid Redis types."""
