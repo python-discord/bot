@@ -291,6 +291,7 @@ class ModManagement(commands.Cog):
                 channels=constants.MODERATION_CHANNELS,
                 categories=[constants.Categories.modmail],
                 redirect=None,
+                fail_silently=True,
             )
         ]
         return all(checks)

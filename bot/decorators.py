@@ -23,6 +23,7 @@ def in_whitelist(
     categories: Container[int] = (),
     roles: Container[int] = (),
     redirect: Optional[int] = Channels.bot_commands,
+    fail_silently: bool = False,
 ) -> Callable:
     """
     Check if a command was issued in a whitelisted context.
@@ -39,7 +40,7 @@ def in_whitelist(
     """
     def predicate(ctx: Context) -> bool:
         """Check if command was issued in a whitelisted context."""
-        return in_whitelist_check(ctx, channels, categories, roles, redirect)
+        return in_whitelist_check(ctx, channels, categories, roles, redirect, fail_silently)
 
     return commands.check(predicate)
 

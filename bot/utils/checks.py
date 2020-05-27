@@ -40,6 +40,7 @@ def in_whitelist_check(
     categories: Container[int] = (),
     roles: Container[int] = (),
     redirect: Optional[int] = constants.Channels.bot_commands,
+    fail_silently: bool = False,
 ) -> bool:
     """
     Check if a command was issued in a whitelisted context.
@@ -81,7 +82,11 @@ def in_whitelist_check(
         return True
 
     log.trace(f"{ctx.author} may not use the `{ctx.command.name}` command within this context.")
-    raise InWhitelistCheckFailure(redirect)
+
+    # Some commands are secret, and should produce no feedback at all.
+    if not fail_silently:
+        raise InWhitelistCheckFailure(redirect)
+    return False
 
 
 def with_role_check(ctx: Context, *role_ids: int) -> bool:
