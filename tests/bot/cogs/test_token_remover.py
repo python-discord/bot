@@ -94,18 +94,18 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         return_value = TokenRemover.find_token_in_message(self.msg)
 
         self.assertIsNone(return_value)
-        token_re.findall.assert_not_called()
+        token_re.finditer.assert_not_called()
 
     @autospec(TokenRemover, "is_maybe_token")
     @autospec("bot.cogs.token_remover", "TOKEN_RE")
     def test_find_token_no_matches_returns_none(self, token_re, is_maybe_token):
         """None should be returned if the regex matches no tokens in a message."""
-        token_re.findall.return_value = ()
+        token_re.finditer.return_value = ()
 
         return_value = TokenRemover.find_token_in_message(self.msg)
 
         self.assertIsNone(return_value)
-        token_re.findall.assert_called_once_with(self.msg.content)
+        token_re.finditer.assert_called_once_with(self.msg.content)
         is_maybe_token.assert_not_called()
 
     @autospec(TokenRemover, "is_maybe_token")
@@ -123,7 +123,7 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         return_value = TokenRemover.find_token_in_message(self.msg)
 
         self.assertEqual(return_value, matches[true_index])
-        token_re.findall.assert_called_once_with(self.msg.content)
+        token_re.finditer.assert_called_once_with(self.msg.content)
 
         # assert_has_calls isn't used cause it'd allow for extra calls before or after.
         # The function should short-circuit, so nothing past true_index should have been used.
