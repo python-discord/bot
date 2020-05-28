@@ -173,7 +173,8 @@ class RedisCache:
             log.error(error_message)
             raise NoBotInstanceError(error_message)
 
-        await self.bot.redis_ready.wait()
+        if not self.bot.redis_closed:
+            await self.bot.redis_ready.wait()
 
     def __set_name__(self, owner: Any, attribute_name: str) -> None:
         """

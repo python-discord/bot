@@ -32,6 +32,7 @@ class Bot(commands.Bot):
         self.http_session: Optional[aiohttp.ClientSession] = None
         self.redis_session: Optional[aioredis.Redis] = None
         self.redis_ready = asyncio.Event()
+        self.redis_closed = False
         self.api_client = api.APIClient(loop=self.loop)
 
         self._connector = None
@@ -106,8 +107,9 @@ class Bot(commands.Bot):
             self.stats._transport.close()
 
         if self.redis_session:
-            self.redis_ready.clear()
+            self.redis_closed = True
             self.redis_session.close()
+            self.redis_ready.clear()
             await self.redis_session.wait_closed()
 
     async def login(self, *args, **kwargs) -> None:
@@ -135,6 +137,7 @@ class Bot(commands.Bot):
 
         # Create the redis session
         self.loop.create_task(self._create_redis_session())
+        self.redis_closed = False
 
         # Use AF_INET as its socket family to prevent HTTPS related problems both locally
         # and in production.
