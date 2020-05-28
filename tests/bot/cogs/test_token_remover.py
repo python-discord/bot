@@ -24,31 +24,65 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         self.msg.author.__str__ = MagicMock(return_value=self.msg.author.name)
         self.msg.author.avatar_url_as.return_value = "picture-lemon.png"
 
-    def test_is_valid_user_id(self):
-        """Should correctly discern valid user IDs and ignore non-numeric and non-ASCII IDs."""
-        subtests = (
-            ("MTIz", True),  # base64(123)
-            ("YWJj", False),  # base64(abc)
-            ("λδµ", False),
+    def test_is_valid_user_id_valid(self):
+        """Should consider user IDs valid if they decode entirely to ASCII digits."""
+        ids = (
+            "NDcyMjY1OTQzMDYyNDEzMzMy",
+            "NDc1MDczNjI5Mzk5NTQ3OTA0",
+            "NDY3MjIzMjMwNjUwNzc3NjQx",
         )
 
-        for user_id, is_valid in subtests:
-            with self.subTest(user_id=user_id, is_valid=is_valid):
+        for user_id in ids:
+            with self.subTest(user_id=user_id):
                 result = TokenRemover.is_valid_user_id(user_id)
-                self.assertIs(result, is_valid)
+                self.assertTrue(result)
 
-    def test_is_valid_timestamp(self):
-        """Should correctly discern valid timestamps."""
-        subtests = (
-            ("DN9r_A", True),
-            ("MTIz", False),  # base64(123)
-            ("λδµ", False),
+    def test_is_valid_user_id_invalid(self):
+        """Should consider non-digit and non-ASCII IDs invalid."""
+        ids = (
+            ("SGVsbG8gd29ybGQ", "non-digit ASCII"),
+            ("0J_RgNC40LLQtdGCINC80LjRgA", "cyrillic text"),
+            ("4pO14p6L4p6C4pG34p264pGl8J-EiOKSj-KCieKBsA", "Unicode digits"),
+            ("4oaA4oaB4oWh4oWi4Lyz4Lyq4Lyr4LG9", "Unicode numerals"),
+            ("8J2fjvCdn5nwnZ-k8J2fr_Cdn7rgravvvJngr6c", "Unicode decimals"),
+            ("{hello}[world]&(bye!)", "ASCII invalid Base64"),
+            ("Þíß-ï§-ňøẗ-våłìÐ", "Unicode invalid Base64"),
         )
 
-        for timestamp, is_valid in subtests:
-            with self.subTest(timestamp=timestamp, is_valid=is_valid):
+        for user_id, msg in ids:
+            with self.subTest(msg=msg):
+                result = TokenRemover.is_valid_user_id(user_id)
+                self.assertFalse(result)
+
+    def test_is_valid_timestamp_valid(self):
+        """Should consider timestamps valid if they're greater than the Discord epoch."""
+        timestamps = (
+            "XsyRkw",
+            "Xrim9Q",
+            "XsyR-w",
+            "XsySD_",
+            "Dn9r_A",
+        )
+
+        for timestamp in timestamps:
+            with self.subTest(timestamp=timestamp):
                 result = TokenRemover.is_valid_timestamp(timestamp)
-                self.assertIs(result, is_valid)
+                self.assertTrue(result)
+
+    def test_is_valid_timestamp_invalid(self):
+        """Should consider timestamps invalid if they're before Discord epoch or can't be parsed."""
+        timestamps = (
+            ("B4Yffw", "DISCORD_EPOCH - TOKEN_EPOCH - 1"),
+            ("ew", "123"),
+            ("AoIKgA", "42076800"),
+            ("{hello}[world]&(bye!)", "ASCII invalid Base64"),
+            ("Þíß-ï§-ňøẗ-våłìÐ", "Unicode invalid Base64"),
+        )
+
+        for timestamp, msg in timestamps:
+            with self.subTest(msg=msg):
+                result = TokenRemover.is_valid_timestamp(timestamp)
+                self.assertFalse(result)
 
     def test_mod_log_property(self):
         """The `mod_log` property should ask the bot to return the `ModLog` cog."""
