@@ -70,6 +70,7 @@ class Bot(commands.Bot):
                 password=constants.Redis.password,
             )
 
+        self.redis_closed = False
         self.redis_ready.set()
 
     def add_cog(self, cog: commands.Cog) -> None:
@@ -137,7 +138,6 @@ class Bot(commands.Bot):
 
         # Create the redis session
         self.loop.create_task(self._create_redis_session())
-        self.redis_closed = False
 
         # Use AF_INET as its socket family to prevent HTTPS related problems both locally
         # and in production.
