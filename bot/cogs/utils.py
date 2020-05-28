@@ -253,8 +253,8 @@ class Utils(Cog):
     async def send_pep_zero(self, ctx: Context) -> None:
         """Send information about PEP 0."""
         pep_embed = Embed(
-            title=f"**PEP 0 - Index of Python Enhancement Proposals (PEPs)**",
-            description=f"[Link](https://www.python.org/dev/peps/)"
+            title="**PEP 0 - Index of Python Enhancement Proposals (PEPs)**",
+            description="[Link](https://www.python.org/dev/peps/)"
         )
         pep_embed.set_thumbnail(url=ICON_URL)
         pep_embed.add_field(name="Status", value="Active")

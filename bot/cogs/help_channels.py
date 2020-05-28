@@ -391,7 +391,7 @@ class HelpChannels(Scheduler, commands.Cog):
             self.in_use_category = await self.try_get_channel(constants.Categories.help_in_use)
             self.dormant_category = await self.try_get_channel(constants.Categories.help_dormant)
         except discord.HTTPException:
-            log.exception(f"Failed to get a category; cog will be removed")
+            log.exception("Failed to get a category; cog will be removed")
             self.bot.remove_cog(self.qualified_name)
 
     async def init_cog(self) -> None:
