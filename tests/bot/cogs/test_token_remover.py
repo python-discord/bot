@@ -7,7 +7,7 @@ from discord import Colour
 from bot import constants
 from bot.cogs import token_remover
 from bot.cogs.moderation import ModLog
-from bot.cogs.token_remover import TokenRemover
+from bot.cogs.token_remover import Token, TokenRemover
 from tests.helpers import MockBot, MockMessage, autospec
 
 
@@ -224,17 +224,19 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
     @autospec("bot.cogs.token_remover", "LOG_MESSAGE")
     def test_format_log_message(self, log_message):
         """Should correctly format the log message with info from the message and token."""
+        token = Token("NDY3MjIzMjMwNjUwNzc3NjQx", "XsySD_", "s45jqDV_Iisn-symw0yDRrk_jf4")
         log_message.format.return_value = "Howdy"
-        return_value = TokenRemover.format_log_message(self.msg, "MTIz.DN9R_A.xyz")
+
+        return_value = TokenRemover.format_log_message(self.msg, token)
 
         self.assertEqual(return_value, log_message.format.return_value)
         log_message.format.assert_called_once_with(
             author=self.msg.author,
             author_id=self.msg.author.id,
             channel=self.msg.channel.mention,
-            user_id="MTIz",
-            timestamp="DN9R_A",
-            hmac="xxx",
+            user_id=token.user_id,
+            timestamp=token.timestamp,
+            hmac="x" * len(token.hmac),
         )
 
     @mock.patch.object(TokenRemover, "mod_log", new_callable=mock.PropertyMock)
@@ -244,7 +246,7 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         """Should delete the message and send a mod log."""
         cog = TokenRemover(self.bot)
         mod_log = mock.create_autospec(ModLog, spec_set=True, instance=True)
-        token = "MTIz.DN9R_A.xyz"
+        token = mock.create_autospec(Token, spec_set=True, instance=True)
         log_msg = "testing123"
 
         mod_log_property.return_value = mod_log
