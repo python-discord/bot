@@ -130,6 +130,9 @@ class Information(Cog):
         statuses = Counter(member.status for member in ctx.guild.members)
         embed = Embed(colour=Colour.blurple())
 
+        # How many staff members?
+        staff_members = len(ctx.guild.get_role(constants.Roles.helpers).members)
+
         # Because channel_counts lacks leading whitespace, it breaks the dedent if it's inserted directly by the
         # f-string. While this is correctly formated by Discord, it makes unit testing difficult. To keep the formatting
         # without joining a tuple of strings we can use a Template string to insert the already-formatted channel_counts
@@ -141,13 +144,16 @@ class Information(Cog):
                 Voice region: {region}
                 Features: {features}
 
-                **Counts**
-                Members: {member_count:,}
-                Roles: {roles}
+                **Channel counts**
                 $channel_counts
                 Staff channels: {hidden_channels}
 
-                **Members**
+                **Member counts**
+                Members: {member_count:,}
+                Staff members: {staff_members}
+                Roles: {roles}
+
+                **Member statuses**
                 {constants.Emojis.status_online} {statuses[Status.online]:,}
                 {constants.Emojis.status_idle} {statuses[Status.idle]:,}
                 {constants.Emojis.status_dnd} {statuses[Status.dnd]:,}
