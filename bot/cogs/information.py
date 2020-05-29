@@ -104,8 +104,27 @@ class Information(Cog):
         member_count = ctx.guild.member_count
 
         # How many of each type of channel?
-        channels = Counter(c.type for c in ctx.guild.channels)
-        channel_counts = "".join(sorted(f"{str(ch).title()} channels: {channels[ch]}\n" for ch in channels)).strip()
+        channel_counter = Counter(c.type for c in ctx.guild.channels)
+        channel_type_list = []
+        for channel in channel_counter:
+            channel_type = str(channel).title()
+            channel_type_list.append(f"{channel_type} channels: {channel_counter[channel]}")
+
+        channel_type_list = sorted(channel_type_list)
+        channel_counts = "\n".join(channel_type_list).strip()
+
+        # How many channels are for staff only?
+        everyone_role = ctx.guild.roles[0]
+        hidden_channels = 0
+
+        for channel in ctx.guild.channels:
+            overwrites = channel.overwrites_for(everyone_role)
+            if overwrites.is_empty():
+                continue
+
+            for perm, value in overwrites:
+                if perm == 'read_messages' and value is False:
+                    hidden_channels += 1
 
         # How many of each user status?
         statuses = Counter(member.status for member in ctx.guild.members)
@@ -126,6 +145,7 @@ class Information(Cog):
                 Members: {member_count:,}
                 Roles: {roles}
                 $channel_counts
+                Staff channels: {hidden_channels}
 
                 **Members**
                 {constants.Emojis.status_online} {statuses[Status.online]:,}
