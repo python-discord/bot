@@ -213,39 +213,6 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         results = [match[0] for match in results]
         self.assertCountEqual((token_1, token_2), results)
 
-    @autospec(TokenRemover, "is_valid_user_id", "is_valid_timestamp")
-    def test_is_maybe_token_missing_part_returns_false(self, valid_user, valid_time):
-        """False should be returned for tokens which do not have all 3 parts."""
-        return_value = TokenRemover.is_maybe_token("x.y")
-
-        self.assertFalse(return_value)
-        valid_user.assert_not_called()
-        valid_time.assert_not_called()
-
-    @autospec(TokenRemover, "is_valid_user_id", "is_valid_timestamp")
-    def test_is_maybe_token(self, valid_user, valid_time):
-        """Should return True if the user ID and timestamp are valid or return False otherwise."""
-        subtests = (
-            (False, True, False),
-            (True, False, False),
-            (True, True, True),
-        )
-
-        for user_return, time_return, expected in subtests:
-            valid_user.reset_mock()
-            valid_time.reset_mock()
-
-            with self.subTest(user_return=user_return, time_return=time_return, expected=expected):
-                valid_user.return_value = user_return
-                valid_time.return_value = time_return
-
-                actual = TokenRemover.is_maybe_token("x.y.z")
-                self.assertIs(actual, expected)
-
-                valid_user.assert_called_once_with("x")
-                if user_return:
-                    valid_time.assert_called_once_with("y")
-
     async def test_delete_message(self):
         """The message should be deleted, and a message should be sent to the same channel."""
         await TokenRemover.delete_message(self.msg)
