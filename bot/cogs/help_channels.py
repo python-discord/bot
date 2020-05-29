@@ -660,10 +660,13 @@ class HelpChannels(Scheduler, commands.Cog):
 
             # Check if there is an entry in unanswered (does not persist across restarts)
             if channel.id in self.unanswered:
-                claimant_id = self.help_channel_claimants[channel].id
+                claimant = self.help_channel_claimants.get(channel)
+                if not claimant:
+                    # The mapping for this channel was lost, we can't do anything.
+                    return
 
                 # Check the message did not come from the claimant
-                if claimant_id != message.author.id:
+                if claimant.id != message.author.id:
                     # Mark the channel as answered
                     self.unanswered[channel.id] = False
 
