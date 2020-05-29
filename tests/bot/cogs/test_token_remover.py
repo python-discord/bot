@@ -1,4 +1,5 @@
 import unittest
+from re import Match
 from unittest import mock
 from unittest.mock import MagicMock
 
@@ -130,9 +131,8 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(return_value)
         token_re.finditer.assert_not_called()
 
-    @autospec(TokenRemover, "is_maybe_token")
     @autospec("bot.cogs.token_remover", "TOKEN_RE")
-    def test_find_token_no_matches_returns_none(self, token_re, is_maybe_token):
+    def test_find_token_no_matches(self, token_re):
         """None should be returned if the regex matches no tokens in a message."""
         token_re.finditer.return_value = ()
 
@@ -140,29 +140,30 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertIsNone(return_value)
         token_re.finditer.assert_called_once_with(self.msg.content)
-        is_maybe_token.assert_not_called()
 
-    @autospec(TokenRemover, "is_maybe_token")
+    @autospec(TokenRemover, "is_valid_user_id", "is_valid_timestamp")
+    @autospec("bot.cogs.token_remover", "Token")
     @autospec("bot.cogs.token_remover", "TOKEN_RE")
-    def test_find_token_returns_found_token(self, token_re, is_maybe_token):
-        """The found token should be returned."""
-        true_index = 1
-        matches = ("foo", "bar", "baz")
-        side_effects = [False] * len(matches)
-        side_effects[true_index] = True
+    def test_find_token_valid_match(self, token_re, token_cls, is_valid_id, is_valid_timestamp):
+        """The first match with a valid user ID and timestamp should be returned as a `Token`."""
+        matches = [
+            mock.create_autospec(Match, spec_set=True, instance=True),
+            mock.create_autospec(Match, spec_set=True, instance=True),
+        ]
+        tokens = [
+            mock.create_autospec(Token, spec_set=True, instance=True),
+            mock.create_autospec(Token, spec_set=True, instance=True),
+        ]
 
-        token_re.findall.return_value = matches
-        is_maybe_token.side_effect = side_effects
+        token_re.finditer.return_value = matches
+        token_cls.side_effect = tokens
+        is_valid_id.side_effect = (False, True)  # The 1st match will be invalid, 2nd one valid.
+        is_valid_timestamp.return_value = True
 
         return_value = TokenRemover.find_token_in_message(self.msg)
 
-        self.assertEqual(return_value, matches[true_index])
+        self.assertEqual(tokens[1], return_value)
         token_re.finditer.assert_called_once_with(self.msg.content)
-
-        # assert_has_calls isn't used cause it'd allow for extra calls before or after.
-        # The function should short-circuit, so nothing past true_index should have been used.
-        calls = [mock.call(match) for match in matches[:true_index + 1]]
-        self.assertEqual(is_maybe_token.mock_calls, calls)
 
     def test_regex_invalid_tokens(self):
         """Messages without anything looking like a token are not matched."""
