@@ -1,8 +1,10 @@
 import logging
 import re
+from datetime import datetime, timedelta
 from typing import Optional, Union
 
 import discord.errors
+from dateutil import parser
 from dateutil.relativedelta import relativedelta
 from discord import Colour, Member, Message, TextChannel
 from discord.ext.commands import Cog
@@ -14,6 +16,7 @@ from bot.constants import (
     Channels, Colours,
     Filter, Icons, URLs
 )
+from bot.utils.redis_cache import RedisCache
 
 log = logging.getLogger(__name__)
 
@@ -51,6 +54,9 @@ def expand_spoilers(text: str) -> str:
 
 class Filtering(Cog):
     """Filtering out invites, blacklisting domains, and warning us of certain regular expressions."""
+
+    # Redis cache for last bad words in nickname alert sent per user.
+    name_alerts = RedisCache()
 
     def __init__(self, bot: Bot):
         self.bot = bot
@@ -125,6 +131,41 @@ class Filtering(Cog):
         else:
             delta = relativedelta(after.edited_at, before.edited_at).microseconds
         await self._filter_message(after, delta)
+
+    @Cog.listener('on_message')
+    async def bad_words_in_name(self, msg: Message) -> None:
+        """Check bad words from user display name. When there is more than 3 days after last alert, send new alert."""
+        if await self.name_alerts.contains(msg.author.id):
+            last_alert = parser.isoparse(await self.name_alerts.get(msg.author.id))
+
+            # When there is less than 3 days after last alert, return
+            if datetime.now() - timedelta(days=3) < last_alert:
+                return
+
+        # Check does nickname have match in filters.
+        matches = []
+        for pattern in WATCHLIST_PATTERNS:
+            match = pattern.search(msg.author.display_name)
+            if match:
+                matches.append(match)
+
+        # When there is any match, then send alert to mods.
+        if matches:
+            log_string = (
+                f"**User:** {msg.author.mention} (`{msg.author.id}`)\n"
+                f"**Display Name:** {msg.author.display_name}\n"
+                f"**Bad Matches:** {', '.join(match.group() for match in matches)}"
+            )
+            await self.mod_log.send_log_message(
+                icon_url=Icons.token_removed,
+                colour=Colours.soft_red,
+                title="Username filtering alert",
+                text=log_string,
+                channel_id=Channels.mod_alerts
+            )
+
+            # Update time when alert sent
+            await self.name_alerts.set(msg.author.id, datetime.now().isoformat())
 
     async def _filter_message(self, msg: Message, delta: Optional[int] = None) -> None:
         """Filter the input message to see if it violates any of our rules, and then respond accordingly."""
