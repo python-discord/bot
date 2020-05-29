@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import re
 from datetime import datetime, timedelta
@@ -60,6 +61,7 @@ class Filtering(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
+        self.name_lock: Optional[asyncio.Lock] = None
 
         staff_mistake_str = "If you believe this was a mistake, please let staff know!"
         self.filters = {
@@ -118,6 +120,7 @@ class Filtering(Cog):
     async def on_message(self, msg: Message) -> None:
         """Invoke message filter for new messages."""
         await self._filter_message(msg)
+        await self.bad_words_in_name(msg)
 
     @Cog.listener()
     async def on_message_edit(self, before: Message, after: Message) -> None:
@@ -132,40 +135,42 @@ class Filtering(Cog):
             delta = relativedelta(after.edited_at, before.edited_at).microseconds
         await self._filter_message(after, delta)
 
-    @Cog.listener('on_message')
     async def bad_words_in_name(self, msg: Message) -> None:
         """Check bad words from user display name. When there is more than 3 days after last alert, send new alert."""
-        if await self.name_alerts.contains(msg.author.id):
-            last_alert = parser.isoparse(await self.name_alerts.get(msg.author.id))
+        if not self.name_lock:
+            self.name_lock = asyncio.Lock()
 
-            # When there is less than 3 days after last alert, return
-            if datetime.now() - timedelta(days=3) < last_alert:
-                return
+        # Use lock to avoid race conditions
+        async with self.name_lock:
+            # Check does nickname have match in filters.
+            matches = []
+            for pattern in WATCHLIST_PATTERNS:
+                match = pattern.search(msg.author.display_name)
+                if match:
+                    matches.append(match)
 
-        # Check does nickname have match in filters.
-        matches = []
-        for pattern in WATCHLIST_PATTERNS:
-            match = pattern.search(msg.author.display_name)
-            if match:
-                matches.append(match)
+            if matches:
+                last_alert = await self.name_alerts.get(msg.author.id)
+                if last_alert:
+                    last_alert = parser.isoparse(last_alert)
+                    if datetime.now() - timedelta(days=3) < last_alert:
+                        return
 
-        # When there is any match, then send alert to mods.
-        if matches:
-            log_string = (
-                f"**User:** {msg.author.mention} (`{msg.author.id}`)\n"
-                f"**Display Name:** {msg.author.display_name}\n"
-                f"**Bad Matches:** {', '.join(match.group() for match in matches)}"
-            )
-            await self.mod_log.send_log_message(
-                icon_url=Icons.token_removed,
-                colour=Colours.soft_red,
-                title="Username filtering alert",
-                text=log_string,
-                channel_id=Channels.mod_alerts
-            )
+                log_string = (
+                    f"**User:** {msg.author.mention} (`{msg.author.id}`)\n"
+                    f"**Display Name:** {msg.author.display_name}\n"
+                    f"**Bad Matches:** {', '.join(match.group() for match in matches)}"
+                )
+                await self.mod_log.send_log_message(
+                    icon_url=Icons.token_removed,
+                    colour=Colours.soft_red,
+                    title="Username filtering alert",
+                    text=log_string,
+                    channel_id=Channels.mod_alerts
+                )
 
-            # Update time when alert sent
-            await self.name_alerts.set(msg.author.id, datetime.now().isoformat())
+                # Update time when alert sent
+                await self.name_alerts.set(msg.author.id, datetime.now().isoformat())
 
     async def _filter_message(self, msg: Message, delta: Optional[int] = None) -> None:
         """Filter the input message to see if it violates any of our rules, and then respond accordingly."""
