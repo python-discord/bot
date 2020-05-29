@@ -24,18 +24,8 @@ ASKING_GUIDE_URL = "https://pythondiscord.com/pages/asking-good-questions/"
 MAX_CHANNELS_PER_CATEGORY = 50
 EXCLUDED_CHANNELS = (constants.Channels.how_to_get_help,)
 
-AVAILABLE_TOPIC = """
-This channel is available. Feel free to ask a question in order to claim this channel!
-"""
-
-IN_USE_TOPIC = """
-This channel is currently in use. If you'd like to discuss a different problem, please claim a new \
-channel from the Help: Available category.
-"""
-
-DORMANT_TOPIC = """
-This channel is temporarily archived. If you'd like to ask a question, please use one of the \
-channels in the Help: Available category.
+HELP_CHANNEL_TOPIC = """
+This is a Python help channel. You can claim your own help channel in the Python Help: Available category.
 """
 
 AVAILABLE_MSG = f"""
@@ -63,11 +53,6 @@ If your question wasn't answered yet, you can claim a new help channel from the 
 question to maximize your chance of getting a good answer. If you're not sure how, have a look \
 through our guide for [asking a good question]({ASKING_GUIDE_URL}).
 """
-
-AVAILABLE_EMOJI = "✅"
-IN_USE_ANSWERED_EMOJI = "⌛"
-IN_USE_UNANSWERED_EMOJI = "⏳"
-NAME_SEPARATOR = "｜"
 
 CoroutineFunc = t.Callable[..., t.Coroutine]
 
@@ -196,7 +181,7 @@ class HelpChannels(Scheduler, commands.Cog):
             return None
 
         log.debug(f"Creating a new dormant channel named {name}.")
-        return await self.dormant_category.create_text_channel(name)
+        return await self.dormant_category.create_text_channel(name, topic=HELP_CHANNEL_TOPIC)
 
     def create_name_queue(self) -> deque:
         """Return a queue of element names to use for creating new channels."""
@@ -542,8 +527,6 @@ class HelpChannels(Scheduler, commands.Cog):
         await self.move_to_bottom_position(
             channel=channel,
             category_id=constants.Categories.help_available,
-            name=f"{AVAILABLE_EMOJI}{NAME_SEPARATOR}{self.get_clean_channel_name(channel)}",
-            topic=AVAILABLE_TOPIC,
         )
 
         self.report_stats()
@@ -559,8 +542,6 @@ class HelpChannels(Scheduler, commands.Cog):
         await self.move_to_bottom_position(
             channel=channel,
             category_id=constants.Categories.help_dormant,
-            name=self.get_clean_channel_name(channel),
-            topic=DORMANT_TOPIC,
         )
 
         self.bot.stats.incr(f"help.dormant_calls.{caller}")
@@ -593,8 +574,6 @@ class HelpChannels(Scheduler, commands.Cog):
         await self.move_to_bottom_position(
             channel=channel,
             category_id=constants.Categories.help_in_use,
-            name=f"{IN_USE_UNANSWERED_EMOJI}{NAME_SEPARATOR}{self.get_clean_channel_name(channel)}",
-            topic=IN_USE_TOPIC,
         )
 
         timeout = constants.HelpChannels.idle_minutes * 60
@@ -669,11 +648,6 @@ class HelpChannels(Scheduler, commands.Cog):
                 if claimant.id != message.author.id:
                     # Mark the channel as answered
                     self.unanswered[channel.id] = False
-
-                    # Change the emoji in the channel name to signify activity
-                    log.trace(f"#{channel} ({channel.id}) has been answered; changing its emoji")
-                    name = self.get_clean_channel_name(channel)
-                    await channel.edit(name=f"{IN_USE_ANSWERED_EMOJI}{NAME_SEPARATOR}{name}")
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
