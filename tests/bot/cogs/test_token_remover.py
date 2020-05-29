@@ -165,6 +165,21 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(tokens[1], return_value)
         token_re.finditer.assert_called_once_with(self.msg.content)
 
+    @autospec(TokenRemover, "is_valid_user_id", "is_valid_timestamp")
+    @autospec("bot.cogs.token_remover", "Token")
+    @autospec("bot.cogs.token_remover", "TOKEN_RE")
+    def test_find_token_invalid_matches(self, token_re, token_cls, is_valid_id, is_valid_timestamp):
+        """None should be returned if no matches have valid user IDs or timestamps."""
+        token_re.finditer.return_value = [mock.create_autospec(Match, spec_set=True, instance=True)]
+        token_cls.return_value = mock.create_autospec(Token, spec_set=True, instance=True)
+        is_valid_id.return_value = False
+        is_valid_timestamp.return_value = False
+
+        return_value = TokenRemover.find_token_in_message(self.msg)
+
+        self.assertIsNone(return_value)
+        token_re.finditer.assert_called_once_with(self.msg.content)
+
     def test_regex_invalid_tokens(self):
         """Messages without anything looking like a token are not matched."""
         tokens = (
