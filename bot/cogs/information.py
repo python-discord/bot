@@ -1,11 +1,13 @@
 import colorsys
+import functools
 import logging
 import pprint
 import textwrap
 from collections import Counter, defaultdict
 from string import Template
-from typing import Any, Mapping, Optional, Union
+from typing import Any, List, Mapping, Optional, Union
 
+import more_itertools
 from discord import Colour, Embed, Member, Message, Role, Status, utils
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group
 from discord.utils import escape_markdown
@@ -25,6 +27,34 @@ class Information(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
+
+    @staticmethod
+    def _get_channels_with_role_permission(ctx: Context, role: Role, perm: str, value: Optional[bool]) -> List[int]:
+        """Get a list of channel IDs where a role has a specific permission set to a specific value."""
+        channel_ids = []
+
+        for channel in ctx.guild.channels:
+            overwrites = channel.overwrites_for(role)
+            if overwrites.is_empty():
+                continue
+
+            for _perm, _value in overwrites:
+                if _perm == perm and _value is value:
+                    channel_ids.append(channel.id)
+
+        return channel_ids
+
+    _get_channels_where_role_can_read = functools.partialmethod(
+        _get_channels_with_role_permission,
+        perm='read_messages',
+        value=True
+    )
+
+    _get_channels_where_role_cannot_read = functools.partialmethod(
+        _get_channels_with_role_permission,
+        perm='read_messages',
+        value=False
+    )
 
     @with_role(*constants.MODERATION_ROLES)
     @command(name="roles")
@@ -114,17 +144,27 @@ class Information(Cog):
         channel_counts = "\n".join(channel_type_list).strip()
 
         # How many channels are for staff only?
-        everyone_role = ctx.guild.roles[0]
-        hidden_channels = 0
+        # We need to know two things about a channel:
+        # - Does the @everyone role have explicit read deny permissions?
+        # - Do staff roles have explicit read allow permissions?
+        #
+        # If the answer to both of these questions is yes, it's a staff channel.
+        helpers = ctx.guild.get_role(constants.Roles.helpers)
+        moderators = ctx.guild.get_role(constants.Roles.moderators)
+        admins = ctx.guild.get_role(constants.Roles.admins)
+        everyone = ctx.guild.roles[0]
 
-        for channel in ctx.guild.channels:
-            overwrites = channel.overwrites_for(everyone_role)
-            if overwrites.is_empty():
-                continue
+        # Let's build some lists of channels.
+        everyone_denied = self._get_channels_where_role_cannot_read(ctx, everyone)
+        staff_allowed = more_itertools.flatten([
+            self._get_channels_where_role_can_read(ctx, admins),       # Admins has explicit read message allow
+            self._get_channels_where_role_can_read(ctx, moderators),   # Moderators has explicit read message allow
+            self._get_channels_where_role_can_read(ctx, helpers),      # Helpers has explicit read message allow
+        ])
 
-            for perm, value in overwrites:
-                if perm == 'read_messages' and value is False:
-                    hidden_channels += 1
+        # Now we need to check which channels are both denied for everyone and permitted for staff
+        staff_channels = [cid for cid in staff_allowed if cid in everyone_denied]
+        staff_channel_count = len(staff_channels)
 
         # How many of each user status?
         statuses = Counter(member.status for member in ctx.guild.members)
@@ -146,7 +186,7 @@ class Information(Cog):
 
                 **Channel counts**
                 $channel_counts
-                Staff channels: {hidden_channels}
+                Staff channels: {staff_channel_count}
 
                 **Member counts**
                 Members: {member_count:,}
