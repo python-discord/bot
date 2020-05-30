@@ -172,7 +172,15 @@ async def func():  # (None,) -> Any
             res = traceback.format_exc()
 
         out, embed = self._format(code, res)
-        if len(out) > 1500 or out.count("\n") > 15:
+        # Truncate output to max 15 lines or 1500 characters
+        newline_truncate_index = find_nth_occurrence(out, "\n", 15)
+
+        if newline_truncate_index is None or newline_truncate_index > 1500:
+            truncate_index = 1500
+        else:
+            truncate_index = newline_truncate_index
+
+        if len(out) > truncate_index:
             paste_link = await send_to_paste_service(self.bot.http_session, out, extension="py")
             if paste_link is not None:
                 paste_text = f"full contents at {paste_link}"
@@ -180,7 +188,7 @@ async def func():  # (None,) -> Any
                 paste_text = "failed to upload contents to paste service."
 
             await ctx.send(
-                f"```py\n{out[:1500]}\n```"
+                f"```py\n{out[:truncate_index]}\n```"
                 f"... response truncated; {paste_text}",
                 embed=embed
             )
@@ -210,6 +218,16 @@ async def func():  # (None,) -> Any
             code = "_ = " + code
 
         await self._eval(ctx, code)
+
+
+def find_nth_occurrence(string: str, substring: str, n: int) -> Optional[int]:
+    """Return index of `n`th occurrence of `substring` in `string`, or None if not found."""
+    index = 0
+    for _ in range(n):
+        index = string.find(substring, index+1)
+        if index == -1:
+            return None
+    return index
 
 
 def setup(bot: Bot) -> None:
