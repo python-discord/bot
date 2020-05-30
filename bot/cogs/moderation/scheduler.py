@@ -175,7 +175,7 @@ class InfractionScheduler(Scheduler):
             try:
                 await self.bot.api_client.delete(f"bot/infractions/{id_}")
             except ResponseCodeError as e:
-                confirm_msg += f" and failed to delete"
+                confirm_msg += " and failed to delete"
                 log_title += " and failed to delete"
                 log.error(f"Deletion of {infr_type} infraction #{id_} failed with error code {e.status}.")
             infr_message = ""
