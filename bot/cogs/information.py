@@ -1,14 +1,13 @@
 import colorsys
-import functools
 import logging
 import pprint
 import textwrap
 from collections import Counter, defaultdict
 from string import Template
-from typing import Any, List, Mapping, Optional, Union
+from typing import Any, Mapping, Optional, Union
 
-import more_itertools
-from discord import Colour, Embed, Member, Message, Role, Status, utils
+from discord import ChannelType, Colour, Embed, Guild, Member, Message, Role, Status, utils
+from discord.abc import GuildChannel
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group
 from discord.utils import escape_markdown
 
@@ -29,36 +28,14 @@ class Information(Cog):
         self.bot = bot
 
     @staticmethod
-    def _get_channels_with_role_permission(ctx: Context, role: Role, perm: str, value: Optional[bool]) -> List[int]:
-        """Get a list of channel IDs where one of the specified roles can read."""
-        channel_ids = []
+    def role_can_read(channel: GuildChannel, role: Role) -> bool:
+        """Return True if `role` can read messages in `channel`."""
+        overwrites = channel.overwrites_for(role)
+        return overwrites.read_messages is True
 
-        for channel in ctx.guild.channels:
-            overwrites = channel.overwrites_for(role)
-            if overwrites.is_empty():
-                continue
-
-            for _perm, _value in overwrites:
-                if _perm == perm and _value is value:
-                    channel_ids.append(channel.id)
-
-        return channel_ids
-
-    _get_channels_where_role_can_read = functools.partialmethod(
-        _get_channels_with_role_permission,
-        perm='read_messages',
-        value=True
-    )
-
-    _get_channels_where_role_cannot_read = functools.partialmethod(
-        _get_channels_with_role_permission,
-        perm='read_messages',
-        value=False
-    )
-
-    def _get_staff_channel_count(self, ctx: Context) -> int:
+    def get_staff_channel_count(self, guild: Guild) -> int:
         """
-        Get number of channels that are staff-only.
+        Get the number of channels that are staff-only.
 
         We need to know two things about a channel:
         - Does the @everyone role have explicit read deny permissions?
@@ -66,22 +43,22 @@ class Information(Cog):
 
         If the answer to both of these questions is yes, it's a staff channel.
         """
-        helpers = ctx.guild.get_role(constants.Roles.helpers)
-        moderators = ctx.guild.get_role(constants.Roles.moderators)
-        admins = ctx.guild.get_role(constants.Roles.admins)
-        everyone = ctx.guild.default_role
+        channel_ids = set()
+        for channel in guild.channels:
+            if channel.type is ChannelType.category:
+                continue
 
-        # Let's build some lists of channels.
-        everyone_denied = self._get_channels_where_role_cannot_read(ctx, everyone)
-        staff_allowed = more_itertools.flatten([
-            self._get_channels_where_role_can_read(ctx, admins),       # Admins has explicit read message allow
-            self._get_channels_where_role_can_read(ctx, moderators),   # Moderators has explicit read message allow
-            self._get_channels_where_role_can_read(ctx, helpers),      # Helpers has explicit read message allow
-        ])
+            if channel in channel_ids:
+                continue  # Only one of the roles has to have read permissions, not all
 
-        # Now we need to check which channels are both denied for @everyone and permitted for staff
-        staff_channels = set(cid for cid in staff_allowed if cid in everyone_denied)
-        return len(staff_channels)
+            everyone_can_read = self.role_can_read(channel, guild.default_role)
+
+            for role in constants.STAFF_ROLES:
+                role_can_read = self.role_can_read(channel, guild.get_role(role))
+                if role_can_read and everyone_can_read is False:
+                    channel_ids.add(channel.id)
+
+        return len(channel_ids)
 
     @with_role(*constants.MODERATION_ROLES)
     @command(name="roles")
@@ -176,7 +153,7 @@ class Information(Cog):
 
         # How many staff members and staff channels do we have?
         staff_member_count = len(ctx.guild.get_role(constants.Roles.helpers).members)
-        staff_channel_count = self._get_staff_channel_count(ctx)
+        staff_channel_count = self.get_staff_channel_count(ctx.guild)
 
         # Because channel_counts lacks leading whitespace, it breaks the dedent if it's inserted directly by the
         # f-string. While this is correctly formated by Discord, it makes unit testing difficult. To keep the formatting
