@@ -80,7 +80,7 @@ class Information(Cog):
         ])
 
         # Now we need to check which channels are both denied for @everyone and permitted for staff
-        staff_channels = set(cid for cid in everyone_denied if cid in staff_allowed)
+        staff_channels = set(cid for cid in staff_allowed if cid in everyone_denied)
         return len(staff_channels)
 
     @with_role(*constants.MODERATION_ROLES)
@@ -176,7 +176,7 @@ class Information(Cog):
 
         # How many staff members and staff channels do we have?
         staff_member_count = len(ctx.guild.get_role(constants.Roles.helpers).members)
-        staff_channel_count = self._get_staff_channel_count()
+        staff_channel_count = self._get_staff_channel_count(ctx)
 
         # Because channel_counts lacks leading whitespace, it breaks the dedent if it's inserted directly by the
         # f-string. While this is correctly formated by Discord, it makes unit testing difficult. To keep the formatting
