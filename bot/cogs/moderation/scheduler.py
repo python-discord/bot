@@ -174,12 +174,15 @@ class InfractionScheduler(Scheduler):
             dm_result = f"{constants.Emojis.failmail} "
             log.trace(f"Deleted infraction {infraction['id']} from database because applying infraction failed.")
             await self.bot.api_client.delete(f"bot/infractions/{infraction['id']}")
+            infr_message = ""
+        else:
+            infr_message = f"**{infr_type}** to {user.mention}{expiry_msg}{end_msg}"
 
         # Send a confirmation message to the invoking context.
         log.trace(f"Sending infraction #{id_} confirmation message.")
         await ctx.send(
             f"{dm_result}{confirm_msg} "
-            f"{f'**{infr_type}** to {user.mention}{expiry_msg}{end_msg}' if not failed else ''}."
+            f"{infr_message}."
         )
 
         # Send a log message to the mod log.
