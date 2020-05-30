@@ -44,7 +44,7 @@ class Tags(Cog):
                 tag = {
                     "title": tag_title,
                     "embed": {
-                        "description": file.read_text(),
+                        "description": file.read_text(encoding="utf8"),
                     },
                     "restricted_to": "developers",
                 }

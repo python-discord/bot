@@ -1,4 +1,5 @@
 import logging
+import textwrap
 import typing as t
 
 import discord
@@ -225,7 +226,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         self.mod_log.ignore(Event.member_remove, user.id)
 
-        action = user.kick(reason=reason)
+        action = user.kick(reason=textwrap.shorten(reason, width=512, placeholder="..."))
         await self.apply_infraction(ctx, infraction, user, action)
 
     @respect_role_hierarchy()
@@ -258,7 +259,9 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         self.mod_log.ignore(Event.member_remove, user.id)
 
-        action = ctx.guild.ban(user, reason=reason, delete_message_days=0)
+        truncated_reason = textwrap.shorten(reason, width=512, placeholder="...")
+
+        action = ctx.guild.ban(user, reason=truncated_reason, delete_message_days=0)
         await self.apply_infraction(ctx, infraction, user, action)
 
         if infraction.get('expires_at') is not None:
