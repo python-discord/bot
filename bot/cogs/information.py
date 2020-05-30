@@ -30,7 +30,7 @@ class Information(Cog):
 
     @staticmethod
     def _get_channels_with_role_permission(ctx: Context, role: Role, perm: str, value: Optional[bool]) -> List[int]:
-        """Get a list of channel IDs where a role has a specific permission set to a specific value."""
+        """Get a list of channel IDs where one of the specified roles can read."""
         channel_ids = []
 
         for channel in ctx.guild.channels:
@@ -55,6 +55,33 @@ class Information(Cog):
         perm='read_messages',
         value=False
     )
+
+    def _get_staff_channel_count(self, ctx: Context) -> int:
+        """
+        Get number of channels that are staff-only.
+
+        We need to know two things about a channel:
+        - Does the @everyone role have explicit read deny permissions?
+        - Do staff roles have explicit read allow permissions?
+
+        If the answer to both of these questions is yes, it's a staff channel.
+        """
+        helpers = ctx.guild.get_role(constants.Roles.helpers)
+        moderators = ctx.guild.get_role(constants.Roles.moderators)
+        admins = ctx.guild.get_role(constants.Roles.admins)
+        everyone = ctx.guild.default_role
+
+        # Let's build some lists of channels.
+        everyone_denied = self._get_channels_where_role_cannot_read(ctx, everyone)
+        staff_allowed = more_itertools.flatten([
+            self._get_channels_where_role_can_read(ctx, admins),       # Admins has explicit read message allow
+            self._get_channels_where_role_can_read(ctx, moderators),   # Moderators has explicit read message allow
+            self._get_channels_where_role_can_read(ctx, helpers),      # Helpers has explicit read message allow
+        ])
+
+        # Now we need to check which channels are both denied for @everyone and permitted for staff
+        staff_channels = set(cid for cid in everyone_denied if cid in staff_allowed)
+        return len(staff_channels)
 
     @with_role(*constants.MODERATION_ROLES)
     @command(name="roles")
@@ -143,35 +170,13 @@ class Information(Cog):
         channel_type_list = sorted(channel_type_list)
         channel_counts = "\n".join(channel_type_list).strip()
 
-        # How many channels are for staff only?
-        # We need to know two things about a channel:
-        # - Does the @everyone role have explicit read deny permissions?
-        # - Do staff roles have explicit read allow permissions?
-        #
-        # If the answer to both of these questions is yes, it's a staff channel.
-        helpers = ctx.guild.get_role(constants.Roles.helpers)
-        moderators = ctx.guild.get_role(constants.Roles.moderators)
-        admins = ctx.guild.get_role(constants.Roles.admins)
-        everyone = ctx.guild.roles[0]
-
-        # Let's build some lists of channels.
-        everyone_denied = self._get_channels_where_role_cannot_read(ctx, everyone)
-        staff_allowed = more_itertools.flatten([
-            self._get_channels_where_role_can_read(ctx, admins),       # Admins has explicit read message allow
-            self._get_channels_where_role_can_read(ctx, moderators),   # Moderators has explicit read message allow
-            self._get_channels_where_role_can_read(ctx, helpers),      # Helpers has explicit read message allow
-        ])
-
-        # Now we need to check which channels are both denied for everyone and permitted for staff
-        staff_channels = [cid for cid in staff_allowed if cid in everyone_denied]
-        staff_channel_count = len(staff_channels)
-
         # How many of each user status?
         statuses = Counter(member.status for member in ctx.guild.members)
         embed = Embed(colour=Colour.blurple())
 
-        # How many staff members?
-        staff_members = len(ctx.guild.get_role(constants.Roles.helpers).members)
+        # How many staff members and staff channels do we have?
+        staff_member_count = len(ctx.guild.get_role(constants.Roles.helpers).members)
+        staff_channel_count = self._get_staff_channel_count()
 
         # Because channel_counts lacks leading whitespace, it breaks the dedent if it's inserted directly by the
         # f-string. While this is correctly formated by Discord, it makes unit testing difficult. To keep the formatting
@@ -190,7 +195,7 @@ class Information(Cog):
 
                 **Member counts**
                 Members: {member_count:,}
-                Staff members: {staff_members}
+                Staff members: {staff_member_count}
                 Roles: {roles}
 
                 **Member statuses**
