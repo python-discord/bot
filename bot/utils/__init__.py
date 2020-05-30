@@ -6,10 +6,14 @@ from aiohttp import ClientConnectorError, ClientSession
 from discord.ext.commands import CogMeta
 
 from bot.constants import URLs
+from bot.utils.redis_cache import RedisCache
 
 log = logging.getLogger(__name__)
 
 FAILED_REQUEST_ATTEMPTS = 3
+
+
+__all__ = ['RedisCache', 'CogABCMeta', "send_to_paste_service"]
 
 
 class CogABCMeta(CogMeta, ABCMeta):

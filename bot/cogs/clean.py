@@ -180,7 +180,7 @@ class Clean(Cog):
     @with_role(*MODERATION_ROLES)
     async def clean_group(self, ctx: Context) -> None:
         """Commands for cleaning messages in channels."""
-        await ctx.invoke(self.bot.get_command("help"), "clean")
+        await ctx.send_help(ctx.command)
 
     @clean_group.command(name="user", aliases=["users"])
     @with_role(*MODERATION_ROLES)

@@ -91,7 +91,7 @@ class InfractionScheduler(Scheduler):
         log.trace(f"Applying {infr_type} infraction #{id_} to {user}.")
 
         # Default values for the confirmation message and mod log.
-        confirm_msg = f":ok_hand: applied"
+        confirm_msg = ":ok_hand: applied"
 
         # Specifying an expiry for a note or warning makes no sense.
         if infr_type in ("note", "warning"):
@@ -154,7 +154,7 @@ class InfractionScheduler(Scheduler):
                     self.schedule_task(infraction["id"], infraction)
             except discord.HTTPException as e:
                 # Accordingly display that applying the infraction failed.
-                confirm_msg = f":x: failed to apply"
+                confirm_msg = ":x: failed to apply"
                 expiry_msg = ""
                 log_content = ctx.author.mention
                 log_title = "failed to apply"
@@ -190,8 +190,19 @@ class InfractionScheduler(Scheduler):
 
         log.info(f"Applied {infr_type} infraction #{id_} to {user}.")
 
-    async def pardon_infraction(self, ctx: Context, infr_type: str, user: UserSnowflake) -> None:
-        """Prematurely end an infraction for a user and log the action in the mod log."""
+    async def pardon_infraction(
+            self,
+            ctx: Context,
+            infr_type: str,
+            user: UserSnowflake,
+            send_msg: bool = True
+    ) -> None:
+        """
+        Prematurely end an infraction for a user and log the action in the mod log.
+
+        If `send_msg` is True, then a pardoning confirmation message will be sent to
+        the context channel.  Otherwise, no such message will be sent.
+        """
         log.trace(f"Pardoning {infr_type} infraction for {user}.")
 
         # Check the current active infraction
@@ -270,17 +281,18 @@ class InfractionScheduler(Scheduler):
 
             log.warning(f"Failed to pardon {infr_type} infraction #{id_} for {user}.")
         else:
-            confirm_msg = f":ok_hand: pardoned"
+            confirm_msg = ":ok_hand: pardoned"
             log_title = "pardoned"
 
             log.info(f"Pardoned {infr_type} infraction #{id_} for {user}.")
 
         # Send a confirmation message to the invoking context.
-        log.trace(f"Sending infraction #{id_} pardon confirmation message.")
-        await ctx.send(
-            f"{dm_emoji}{confirm_msg} infraction **{infr_type}** for {user.mention}. "
-            f"{log_text.get('Failure', '')}"
-        )
+        if send_msg:
+            log.trace(f"Sending infraction #{id_} pardon confirmation message.")
+            await ctx.send(
+                f"{dm_emoji}{confirm_msg} infraction **{infr_type}** for {user.mention}. "
+                f"{log_text.get('Failure', '')}"
+            )
 
         # Send a log message to the mod log.
         await self.mod_log.send_log_message(
@@ -341,7 +353,7 @@ class InfractionScheduler(Scheduler):
                 )
         except discord.Forbidden:
             log.warning(f"Failed to deactivate infraction #{id_} ({type_}): bot lacks permissions.")
-            log_text["Failure"] = f"The bot lacks permissions to do this (role hierarchy?)"
+            log_text["Failure"] = "The bot lacks permissions to do this (role hierarchy?)"
             log_content = mod_role.mention
         except discord.HTTPException as e:
             log.exception(f"Failed to deactivate infraction #{id_} ({type_})")
@@ -390,7 +402,7 @@ class InfractionScheduler(Scheduler):
 
         # Send a log message to the mod log.
         if send_log:
-            log_title = f"expiration failed" if "Failure" in log_text else "expired"
+            log_title = "expiration failed" if "Failure" in log_text else "expired"
 
             user = self.bot.get_user(user_id)
             avatar = user.avatar_url_as(static_format="png") if user else None

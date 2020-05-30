@@ -9,8 +9,8 @@ from discord.ext.commands import Cog, Context, command
 from bot import constants
 from bot.bot import Bot
 from bot.cogs.moderation import ModLog
-from bot.decorators import InWhitelistCheckFailure, in_whitelist, without_role
-from bot.utils.checks import without_role_check
+from bot.decorators import in_whitelist, without_role
+from bot.utils.checks import InWhitelistCheckFailure, without_role_check
 
 log = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ else:
     PERIODIC_PING = (
         f"@everyone To verify that you have read our rules, please type `{constants.Bot.prefix}accept`."
         " If you encounter any problems during the verification process, "
-        f"ping the <@&{constants.Roles.admins}> role in this channel."
+        f"send a direct message to a staff member."
     )
 BOT_MESSAGE_DELETE_DELAY = 10
 
@@ -92,7 +92,6 @@ class Verification(Cog):
                 text=embed_text,
                 thumbnail=message.author.avatar_url_as(static_format="png"),
                 channel_id=constants.Channels.mod_alerts,
-                ping_everyone=constants.Filter.ping_everyone,
             )
 
         ctx: Context = await self.bot.get_context(message)
