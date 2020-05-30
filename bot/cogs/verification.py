@@ -55,6 +55,7 @@ class Verification(Cog):
         if message.author.bot:
             # They're a bot, delete their message after the delay.
             await message.delete(delay=BOT_MESSAGE_DELETE_DELAY)
+            return
 
         # if a user mentions a role or guild member
         # alert the mods in mod-alerts channel
