@@ -1,9 +1,7 @@
 import logging
 from contextlib import suppress
-from datetime import datetime
 
 from discord import Colour, Forbidden, Message, NotFound, Object
-from discord.ext import tasks
 from discord.ext.commands import Cog, Context, command
 
 from bot import constants
@@ -34,14 +32,6 @@ If you'd like to unsubscribe from the announcement notifications, simply send `!
 <#{constants.Channels.bot_commands}>.
 """
 
-if constants.DEBUG_MODE:
-    PERIODIC_PING = "Periodic checkpoint message successfully sent."
-else:
-    PERIODIC_PING = (
-        f"@everyone To verify that you have read our rules, please type `{constants.Bot.prefix}accept`."
-        " If you encounter any problems during the verification process, "
-        f"send a direct message to a staff member."
-    )
 BOT_MESSAGE_DELETE_DELAY = 10
 
 
@@ -50,7 +40,6 @@ class Verification(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.periodic_ping.start()
 
     @property
     def mod_log(self) -> ModLog:
@@ -65,9 +54,7 @@ class Verification(Cog):
 
         if message.author.bot:
             # They're a bot, delete their message after the delay.
-            # But not the periodic ping; we like that one.
-            if message.content != PERIODIC_PING:
-                await message.delete(delay=BOT_MESSAGE_DELETE_DELAY)
+            await message.delete(delay=BOT_MESSAGE_DELETE_DELAY)
             return
 
         # if a user mentions a role or guild member
@@ -197,34 +184,6 @@ class Verification(Cog):
             return ctx.command.name == "accept"
         else:
             return True
-
-    @tasks.loop(hours=12)
-    async def periodic_ping(self) -> None:
-        """Every week, mention @everyone to remind them to verify."""
-        messages = self.bot.get_channel(constants.Channels.verification).history(limit=10)
-        need_to_post = True  # True if a new message needs to be sent.
-
-        async for message in messages:
-            if message.author == self.bot.user and message.content == PERIODIC_PING:
-                delta = datetime.utcnow() - message.created_at  # Time since last message.
-                if delta.days >= 7:  # Message is older than a week.
-                    await message.delete()
-                else:
-                    need_to_post = False
-
-                break
-
-        if need_to_post:
-            await self.bot.get_channel(constants.Channels.verification).send(PERIODIC_PING)
-
-    @periodic_ping.before_loop
-    async def before_ping(self) -> None:
-        """Only start the loop when the bot is ready."""
-        await self.bot.wait_until_guild_available()
-
-    def cog_unload(self) -> None:
-        """Cancel the periodic ping task when the cog is unloaded."""
-        self.periodic_ping.cancel()
 
 
 def setup(bot: Bot) -> None:
