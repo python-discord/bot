@@ -172,7 +172,12 @@ class InfractionScheduler(Scheduler):
             dm_log_text = "\nDM: **Canceled**"
             dm_result = f"{constants.Emojis.failmail} "
             log.trace(f"Deleted infraction {infraction['id']} from database because applying infraction failed.")
-            await self.bot.api_client.delete(f"bot/infractions/{infraction['id']}")
+            try:
+                await self.bot.api_client.delete(f"bot/infractions/{id_}")
+            except ResponseCodeError as e:
+                confirm_msg += f" and failed to delete"
+                log_title += " and failed to delete"
+                log.error(f"Deletion of {infr_type} infraction #{id_} failed with error code {e.status}.")
             infr_message = ""
         else:
             infr_message = f"**{infr_type}** to {user.mention}{expiry_msg}{end_msg}"
