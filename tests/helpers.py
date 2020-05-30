@@ -4,12 +4,15 @@ import collections
 import itertools
 import logging
 import unittest.mock
+from asyncio import AbstractEventLoop
 from typing import Iterable, Optional
 
 import discord
+from aiohttp import ClientSession
 from discord.ext.commands import Context
 
 from bot.api import APIClient
+from bot.async_stats import AsyncStatsClient
 from bot.bot import Bot
 
 
@@ -268,10 +271,16 @@ class MockAPIClient(CustomMockMixin, unittest.mock.MagicMock):
     spec_set = APIClient
 
 
-# Create a Bot instance to get a realistic MagicMock of `discord.ext.commands.Bot`
-bot_instance = Bot(command_prefix=unittest.mock.MagicMock())
-bot_instance.http_session = None
-bot_instance.api_client = None
+def _get_mock_loop() -> unittest.mock.Mock:
+    """Return a mocked asyncio.AbstractEventLoop."""
+    loop = unittest.mock.create_autospec(spec=AbstractEventLoop, spec_set=True)
+
+    # Since calling `create_task` on our MockBot does not actually schedule the coroutine object
+    # as a task in the asyncio loop, this `side_effect` calls `close()` on the coroutine object
+    # to prevent "has not been awaited"-warnings.
+    loop.create_task.side_effect = lambda coroutine: coroutine.close()
+
+    return loop
 
 
 class MockBot(CustomMockMixin, unittest.mock.MagicMock):
@@ -281,17 +290,16 @@ class MockBot(CustomMockMixin, unittest.mock.MagicMock):
     Instances of this class will follow the specifications of `discord.ext.commands.Bot` instances.
     For more information, see the `MockGuild` docstring.
     """
-    spec_set = bot_instance
-    additional_spec_asyncs = ("wait_for",)
+    spec_set = Bot(command_prefix=unittest.mock.MagicMock(), loop=_get_mock_loop())
+    additional_spec_asyncs = ("wait_for", "redis_ready")
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
-        self.api_client = MockAPIClient()
 
-        # Since calling `create_task` on our MockBot does not actually schedule the coroutine object
-        # as a task in the asyncio loop, this `side_effect` calls `close()` on the coroutine object
-        # to prevent "has not been awaited"-warnings.
-        self.loop.create_task.side_effect = lambda coroutine: coroutine.close()
+        self.loop = _get_mock_loop()
+        self.api_client = MockAPIClient(loop=self.loop)
+        self.http_session = unittest.mock.create_autospec(spec=ClientSession, spec_set=True)
+        self.stats = unittest.mock.create_autospec(spec=AsyncStatsClient, spec_set=True)
 
 
 # Create a TextChannel instance to get a realistic MagicMock of `discord.TextChannel`

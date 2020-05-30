@@ -82,7 +82,7 @@ class WatchChannel(metaclass=CogABCMeta):
             exc = self._consume_task.exception()
             if exc:
                 self.log.exception(
-                    f"The message queue consume task has failed with:",
+                    "The message queue consume task has failed with:",
                     exc_info=exc
                 )
             return False
@@ -146,7 +146,7 @@ class WatchChannel(metaclass=CogABCMeta):
         try:
             data = await self.bot.api_client.get(self.api_endpoint, params=self.api_default_params)
         except ResponseCodeError as err:
-            self.log.exception(f"Failed to fetch the watched users from the API", exc_info=err)
+            self.log.exception("Failed to fetch the watched users from the API", exc_info=err)
             return False
 
         self.watched_users = defaultdict(dict)
@@ -173,7 +173,7 @@ class WatchChannel(metaclass=CogABCMeta):
             self.log.trace(f"Sleeping {BigBrotherConfig.log_delay} seconds before consuming message queue")
             await asyncio.sleep(BigBrotherConfig.log_delay)
 
-        self.log.trace(f"Started consuming the message queue")
+        self.log.trace("Started consuming the message queue")
 
         # If the previous consumption Task failed, first consume the existing comsumption_queue
         if not self.consumption_queue:
@@ -208,7 +208,7 @@ class WatchChannel(metaclass=CogABCMeta):
             await self.webhook.send(content=content, username=username, avatar_url=avatar_url, embed=embed)
         except discord.HTTPException as exc:
             self.log.exception(
-                f"Failed to send a message to the webhook",
+                "Failed to send a message to the webhook",
                 exc_info=exc
             )
 
@@ -254,7 +254,7 @@ class WatchChannel(metaclass=CogABCMeta):
                 )
             except discord.HTTPException as exc:
                 self.log.exception(
-                    f"Failed to send an attachment to the webhook",
+                    "Failed to send an attachment to the webhook",
                     exc_info=exc
                 )
 
@@ -327,13 +327,13 @@ class WatchChannel(metaclass=CogABCMeta):
 
     def cog_unload(self) -> None:
         """Takes care of unloading the cog and canceling the consumption task."""
-        self.log.trace(f"Unloading the cog")
+        self.log.trace("Unloading the cog")
         if self._consume_task and not self._consume_task.done():
             self._consume_task.cancel()
             try:
                 self._consume_task.result()
             except asyncio.CancelledError as e:
                 self.log.exception(
-                    f"The consume task was canceled. Messages may be lost.",
+                    "The consume task was canceled. Messages may be lost.",
                     exc_info=e
                 )

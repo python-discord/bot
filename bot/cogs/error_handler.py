@@ -9,7 +9,7 @@ from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Channels
 from bot.converters import TagNameConverter
-from bot.decorators import InWhitelistCheckFailure
+from bot.utils.checks import InWhitelistCheckFailure
 
 log = logging.getLogger(__name__)
 
@@ -166,7 +166,7 @@ class ErrorHandler(Cog):
             await prepared_help_command
             self.bot.stats.incr("errors.missing_required_argument")
         elif isinstance(e, errors.TooManyArguments):
-            await ctx.send(f"Too many arguments provided.")
+            await ctx.send("Too many arguments provided.")
             await prepared_help_command
             self.bot.stats.incr("errors.too_many_arguments")
         elif isinstance(e, errors.BadArgument):
@@ -206,7 +206,7 @@ class ErrorHandler(Cog):
         if isinstance(e, bot_missing_errors):
             ctx.bot.stats.incr("errors.bot_permission_error")
             await ctx.send(
-                f"Sorry, it looks like I don't have the permissions or roles I need to do that."
+                "Sorry, it looks like I don't have the permissions or roles I need to do that."
             )
         elif isinstance(e, (InWhitelistCheckFailure, errors.NoPrivateMessage)):
             ctx.bot.stats.incr("errors.wrong_channel_or_dm_error")
