@@ -46,7 +46,6 @@ class Clean(Cog):
         bots_only: bool = False,
         user: User = None,
         regex: Optional[str] = None,
-
     ) -> None:
         """A helper function that does the actual message cleaning."""
         def predicate_bots_only(message: Message) -> bool:
