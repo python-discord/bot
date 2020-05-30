@@ -180,11 +180,11 @@ class InfractionScheduler(Scheduler):
                 log.error(f"Deletion of {infr_type} infraction #{id_} failed with error code {e.status}.")
             infr_message = ""
         else:
-            infr_message = f"**{infr_type}** to {user.mention}{expiry_msg}{end_msg}"
+            infr_message = f" **{infr_type}** to {user.mention}{expiry_msg}{end_msg}"
 
         # Send a confirmation message to the invoking context.
         log.trace(f"Sending infraction #{id_} confirmation message.")
-        await ctx.send(f"{dm_result}{confirm_msg} {infr_message}.")
+        await ctx.send(f"{dm_result}{confirm_msg}{infr_message}.")
 
         # Send a log message to the mod log.
         log.trace(f"Sending apply mod log for infraction #{id_}.")
