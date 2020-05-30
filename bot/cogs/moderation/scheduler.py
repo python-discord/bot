@@ -184,10 +184,7 @@ class InfractionScheduler(Scheduler):
 
         # Send a confirmation message to the invoking context.
         log.trace(f"Sending infraction #{id_} confirmation message.")
-        await ctx.send(
-            f"{dm_result}{confirm_msg} "
-            f"{infr_message}."
-        )
+        await ctx.send(f"{dm_result}{confirm_msg} {infr_message}.")
 
         # Send a log message to the mod log.
         log.trace(f"Sending apply mod log for infraction #{id_}.")
