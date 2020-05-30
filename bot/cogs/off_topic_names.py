@@ -97,7 +97,7 @@ class OffTopicNames(Cog):
     @with_role(*MODERATION_ROLES)
     async def otname_group(self, ctx: Context) -> None:
         """Add or list items from the off-topic channel name rotation."""
-        await ctx.invoke(self.bot.get_command("help"), "otname")
+        await ctx.send_help(ctx.command)
 
     @otname_group.command(name='add', aliases=('a',))
     @with_role(*MODERATION_ROLES)
