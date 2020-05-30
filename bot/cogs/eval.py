@@ -172,6 +172,8 @@ async def func():  # (None,) -> Any
             res = traceback.format_exc()
 
         out, embed = self._format(code, res)
+        out = out.rstrip("\n")  # Strip empty lines from output
+
         # Truncate output to max 15 lines or 1500 characters
         newline_truncate_index = find_nth_occurrence(out, "\n", 15)
 
