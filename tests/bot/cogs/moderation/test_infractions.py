@@ -27,15 +27,14 @@ class TruncationTests(unittest.IsolatedAsyncioTestCase):
         self.cog.apply_infraction = AsyncMock()
         self.bot.get_cog.return_value = AsyncMock()
         self.cog.mod_log.ignore = Mock()
+        self.ctx.guild.ban = Mock()
 
         await self.cog.apply_ban(self.ctx, self.target, "foo bar" * 3000)
-        ban = self.cog.apply_infraction.call_args[0][3]
-        self.assertEqual(
-            ban.cr_frame.f_locals["kwargs"]["reason"],
-            textwrap.shorten("foo bar" * 3000, 512, placeholder="...")
+        self.ctx.guild.ban.assert_called_once_with(
+            self.target,
+            reason=textwrap.shorten("foo bar" * 3000, 512, placeholder="..."),
+            delete_message_days=0
         )
-        # Await ban to avoid not awaited coroutine warning
-        await ban
 
     @patch("bot.cogs.moderation.utils.post_infraction")
     async def test_apply_kick_reason_truncation(self, post_infraction_mock):
@@ -44,12 +43,7 @@ class TruncationTests(unittest.IsolatedAsyncioTestCase):
 
         self.cog.apply_infraction = AsyncMock()
         self.cog.mod_log.ignore = Mock()
+        self.target.kick = Mock()
 
         await self.cog.apply_kick(self.ctx, self.target, "foo bar" * 3000)
-        kick = self.cog.apply_infraction.call_args[0][3]
-        self.assertEqual(
-            kick.cr_frame.f_locals["kwargs"]["reason"],
-            textwrap.shorten("foo bar" * 3000, 512, placeholder="...")
-        )
-        # Await kick to avoid not awaited coroutine warning
-        await kick
+        self.target.kick.assert_called_once_with(reason=textwrap.shorten("foo bar" * 3000, 512, placeholder="..."))
