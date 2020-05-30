@@ -60,6 +60,18 @@ class Information(Cog):
 
         return len(channel_ids)
 
+    @staticmethod
+    def get_channel_type_counts(guild: Guild) -> str:
+        """Return the total amounts of the various types of channels in `guild`."""
+        channel_counter = Counter(c.type for c in guild.channels)
+        channel_type_list = []
+        for channel in channel_counter:
+            channel_type = str(channel).title()
+            channel_type_list.append(f"{channel_type} channels: {channel_counter[channel]}")
+
+        channel_type_list = sorted(channel_type_list)
+        return "\n".join(channel_type_list).strip()
+
     @with_role(*constants.MODERATION_ROLES)
     @command(name="roles")
     async def roles_info(self, ctx: Context) -> None:
@@ -136,16 +148,7 @@ class Information(Cog):
 
         roles = len(ctx.guild.roles)
         member_count = ctx.guild.member_count
-
-        # How many of each type of channel?
-        channel_counter = Counter(c.type for c in ctx.guild.channels)
-        channel_type_list = []
-        for channel in channel_counter:
-            channel_type = str(channel).title()
-            channel_type_list.append(f"{channel_type} channels: {channel_counter[channel]}")
-
-        channel_type_list = sorted(channel_type_list)
-        channel_counts = "\n".join(channel_type_list).strip()
+        channel_counts = self.get_channel_type_counts(ctx.guild)
 
         # How many of each user status?
         statuses = Counter(member.status for member in ctx.guild.members)
