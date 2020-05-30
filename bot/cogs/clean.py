@@ -1,9 +1,10 @@
 import logging
 import random
 import re
-from typing import Optional
+from typing import Iterable, Optional
 
 from discord import Colour, Embed, Message, TextChannel, User
+from discord.ext import commands
 from discord.ext.commands import Cog, Context, group
 
 from bot.bot import Bot
@@ -41,10 +42,11 @@ class Clean(Cog):
         self,
         amount: int,
         ctx: Context,
+        channels: Iterable[TextChannel],
         bots_only: bool = False,
         user: User = None,
         regex: Optional[str] = None,
-        channel: Optional[TextChannel] = None
+
     ) -> None:
         """A helper function that does the actual message cleaning."""
         def predicate_bots_only(message: Message) -> bool:
@@ -110,8 +112,8 @@ class Clean(Cog):
             predicate = None                     # Delete all messages
 
         # Default to using the invoking context's channel
-        if not channel:
-            channel = ctx.channel
+        if not channels:
+            channels = [ctx.channel]
 
         # Look through the history and retrieve message data
         messages = []
@@ -120,23 +122,24 @@ class Clean(Cog):
         invocation_deleted = False
 
         # To account for the invocation message, we index `amount + 1` messages.
-        async for message in channel.history(limit=amount + 1):
+        for channel in channels:
+            async for message in channel.history(limit=amount + 1):
 
-            # If at any point the cancel command is invoked, we should stop.
-            if not self.cleaning:
-                return
+                # If at any point the cancel command is invoked, we should stop.
+                if not self.cleaning:
+                    return
 
-            # Always start by deleting the invocation
-            if not invocation_deleted:
-                self.mod_log.ignore(Event.message_delete, message.id)
-                await message.delete()
-                invocation_deleted = True
-                continue
+                # Always start by deleting the invocation
+                if not invocation_deleted:
+                    self.mod_log.ignore(Event.message_delete, message.id)
+                    await message.delete()
+                    invocation_deleted = True
+                    continue
 
-            # If the message passes predicate, let's save it.
-            if predicate is None or predicate(message):
-                message_ids.append(message.id)
-                messages.append(message)
+                # If the message passes predicate, let's save it.
+                if predicate is None or predicate(message):
+                    message_ids.append(message.id)
+                    messages.append(message)
 
         self.cleaning = False
 
@@ -144,10 +147,11 @@ class Clean(Cog):
         self.mod_log.ignore(Event.message_delete, *message_ids)
 
         # Use bulk delete to actually do the cleaning. It's far faster.
-        await channel.purge(
-            limit=amount,
-            check=predicate
-        )
+        for channel in channels:
+            await channel.purge(
+                limit=amount,
+                check=predicate
+            )
 
         # Reverse the list to restore chronological order
         if messages:
@@ -163,8 +167,12 @@ class Clean(Cog):
             return
 
         # Build the embed and send it
+        if len(channels) > 1:
+            target_channels = ", ".join([f"<#{channel.id}>" for channel in channels])
+        else:
+            target_channels = f"<#{channels[0].id}>"
         message = (
-            f"**{len(message_ids)}** messages deleted in <#{channel.id}> by **{ctx.author.name}**\n\n"
+            f"**{len(message_ids)}** messages deleted in {target_channels} by **{ctx.author.name}**\n\n"
             f"A log of the deleted messages can be found [here]({log_url})."
         )
 
@@ -189,10 +197,10 @@ class Clean(Cog):
         ctx: Context,
         user: User,
         amount: Optional[int] = 10,
-        channel: TextChannel = None
+        channels: commands.Greedy[TextChannel] = None
     ) -> None:
         """Delete messages posted by the provided user, stop cleaning after traversing `amount` messages."""
-        await self._clean_messages(amount, ctx, user=user, channel=channel)
+        await self._clean_messages(amount, ctx, user=user, channels=channels)
 
     @clean_group.command(name="all", aliases=["everything"])
     @with_role(*MODERATION_ROLES)
@@ -200,10 +208,10 @@ class Clean(Cog):
         self,
         ctx: Context,
         amount: Optional[int] = 10,
-        channel: TextChannel = None
+        channels: commands.Greedy[TextChannel] = None
     ) -> None:
         """Delete all messages, regardless of poster, stop cleaning after traversing `amount` messages."""
-        await self._clean_messages(amount, ctx, channel=channel)
+        await self._clean_messages(amount, ctx, channels=channels)
 
     @clean_group.command(name="bots", aliases=["bot"])
     @with_role(*MODERATION_ROLES)
@@ -211,10 +219,10 @@ class Clean(Cog):
         self,
         ctx: Context,
         amount: Optional[int] = 10,
-        channel: TextChannel = None
+        channels: commands.Greedy[TextChannel] = None
     ) -> None:
         """Delete all messages posted by a bot, stop cleaning after traversing `amount` messages."""
-        await self._clean_messages(amount, ctx, bots_only=True, channel=channel)
+        await self._clean_messages(amount, ctx, bots_only=True, channels=channels)
 
     @clean_group.command(name="regex", aliases=["word", "expression"])
     @with_role(*MODERATION_ROLES)
@@ -223,10 +231,10 @@ class Clean(Cog):
         ctx: Context,
         regex: str,
         amount: Optional[int] = 10,
-        channel: TextChannel = None
+        channels: commands.Greedy[TextChannel] = None
     ) -> None:
         """Delete all messages that match a certain regex, stop cleaning after traversing `amount` messages."""
-        await self._clean_messages(amount, ctx, regex=regex, channel=channel)
+        await self._clean_messages(amount, ctx, regex=regex, channels=channels)
 
     @clean_group.command(name="stop", aliases=["cancel", "abort"])
     @with_role(*MODERATION_ROLES)
