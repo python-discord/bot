@@ -35,6 +35,9 @@ class TruncationTests(unittest.IsolatedAsyncioTestCase):
             reason=textwrap.shorten("foo bar" * 3000, 512, placeholder="..."),
             delete_message_days=0
         )
+        self.cog.apply_infraction.assert_awaited_once_with(
+            self.ctx, {"foo": "bar"}, self.target, self.ctx.guild.ban.return_value
+        )
 
     @patch("bot.cogs.moderation.utils.post_infraction")
     async def test_apply_kick_reason_truncation(self, post_infraction_mock):
@@ -47,3 +50,6 @@ class TruncationTests(unittest.IsolatedAsyncioTestCase):
 
         await self.cog.apply_kick(self.ctx, self.target, "foo bar" * 3000)
         self.target.kick.assert_called_once_with(reason=textwrap.shorten("foo bar" * 3000, 512, placeholder="..."))
+        self.cog.apply_infraction.assert_awaited_once_with(
+            self.ctx, {"foo": "bar"}, self.target, self.target.kick.return_value
+        )
