@@ -28,13 +28,13 @@ class SourceConverter(Converter):
             else:
                 return f"/bot/bot/resources/tags/{tag}.md"
 
-        cmd = ctx.bot.get_command(argument)
-        if cmd:
-            return cmd
-
         cog = ctx.bot.get_cog(argument)
         if cog:
             return cog
+
+        cmd = ctx.bot.get_command(argument)
+        if cmd:
+            return cmd
 
         raise BadArgument(f"Unable to convert `{argument}` to valid command or Cog.")
 
