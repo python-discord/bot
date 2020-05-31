@@ -51,6 +51,7 @@ class BotSource(Cog):
         if not source_item:
             embed = Embed(title="Bot GitHub Repository")
             embed.add_field(name="Repository", value=f"[Go to GitHub]({URLs.github_bot_repo})")
+            embed.set_thumbnail(url="https://avatars1.githubusercontent.com/u/9919")
             await ctx.send(embed=embed)
             return
 
