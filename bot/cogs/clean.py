@@ -167,7 +167,7 @@ class Clean(Cog):
 
         # Build the embed and send it
         if len(channels) > 1:
-            target_channels = ", ".join([f"<#{channel.id}>" for channel in channels])
+            target_channels = ", ".join(channel.mention for channel in channels)
         else:
             target_channels = f"<#{channels[0].id}>"
         message = (
