@@ -48,15 +48,13 @@ class Information(Cog):
             if channel.type is ChannelType.category:
                 continue
 
-            if channel in channel_ids:
-                continue  # Only one of the roles has to have read permissions, not all
-
             everyone_can_read = self.role_can_read(channel, guild.default_role)
 
             for role in constants.STAFF_ROLES:
                 role_can_read = self.role_can_read(channel, guild.get_role(role))
-                if role_can_read and everyone_can_read is False:
+                if role_can_read and not everyone_can_read:
                     channel_ids.add(channel.id)
+                    break
 
         return len(channel_ids)
 
@@ -65,12 +63,12 @@ class Information(Cog):
         """Return the total amounts of the various types of channels in `guild`."""
         channel_counter = Counter(c.type for c in guild.channels)
         channel_type_list = []
-        for channel in channel_counter:
+        for channel, count in channel_counter.items():
             channel_type = str(channel).title()
-            channel_type_list.append(f"{channel_type} channels: {channel_counter[channel]}")
+            channel_type_list.append(f"{channel_type} channels: {count}")
 
         channel_type_list = sorted(channel_type_list)
-        return "\n".join(channel_type_list).strip()
+        return "\n".join(channel_type_list)
 
     @with_role(*constants.MODERATION_ROLES)
     @command(name="roles")
