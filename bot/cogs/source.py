@@ -103,12 +103,12 @@ class BotSource(Cog):
             else:
                 description = source_object.short_doc
 
-            title = source_object.qualified_name
+            title = f"Command: {source_object.qualified_name}"
         elif isinstance(source_object, str):
             title = f"Tag: {source_object.split('/')[-1].split('.')[0]}"
             description = ""
         else:
-            title = source_object.qualified_name
+            title = f"Cog: {source_object.qualified_name}"
             description = source_object.description.splitlines()[0]
 
         embed = Embed(title=title, description=description)
