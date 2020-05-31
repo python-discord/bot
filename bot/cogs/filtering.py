@@ -163,25 +163,24 @@ class Filtering(Cog):
             # Check does nickname have match in filters.
             matches = self.get_name_matches(member.display_name)
 
-            if matches:
-                if not self.check_send_alert(member):
-                    return
+            if not matches or not await self.check_send_alert(member):
+                return
 
-                log_string = (
-                    f"**User:** {member.mention} (`{member.id}`)\n"
-                    f"**Display Name:** {member.display_name}\n"
-                    f"**Bad Matches:** {', '.join(match.group() for match in matches)}"
-                )
-                await self.mod_log.send_log_message(
-                    icon_url=Icons.token_removed,
-                    colour=Colours.soft_red,
-                    title="Username filtering alert",
-                    text=log_string,
-                    channel_id=Channels.mod_alerts
-                )
+            log_string = (
+                f"**User:** {member.mention} (`{member.id}`)\n"
+                f"**Display Name:** {member.display_name}\n"
+                f"**Bad Matches:** {', '.join(match.group() for match in matches)}"
+            )
+            await self.mod_log.send_log_message(
+                icon_url=Icons.token_removed,
+                colour=Colours.soft_red,
+                title="Username filtering alert",
+                text=log_string,
+                channel_id=Channels.mod_alerts
+            )
 
-                # Update time when alert sent
-                await self.name_alerts.set(member.id, datetime.utcnow().timestamp())
+            # Update time when alert sent
+            await self.name_alerts.set(member.id, datetime.utcnow().timestamp())
 
     async def _filter_message(self, msg: Message, delta: Optional[int] = None) -> None:
         """Filter the input message to see if it violates any of our rules, and then respond accordingly."""
