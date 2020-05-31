@@ -62,7 +62,7 @@ class Filtering(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.name_lock: Optional[asyncio.Lock] = None
+        self.name_lock = asyncio.Lock()
 
         staff_mistake_str = "If you believe this was a mistake, please let staff know!"
         self.filters = {
@@ -158,9 +158,6 @@ class Filtering(Cog):
 
     async def check_is_bad_words_in_name(self, member: Member) -> None:
         """Check bad words from user display name. When there is more than 3 days after last alert, send new alert."""
-        if not self.name_lock:
-            self.name_lock = asyncio.Lock()
-
         # Use lock to avoid race conditions
         async with self.name_lock:
             # Check does nickname have match in filters.
