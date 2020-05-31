@@ -15,7 +15,7 @@ import os
 from collections.abc import Mapping
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import yaml
 
@@ -198,7 +198,18 @@ class Bot(metaclass=YAMLGetter):
 
     prefix: str
     token: str
-    sentry_dsn: str
+    sentry_dsn: Optional[str]
+
+
+class Redis(metaclass=YAMLGetter):
+    section = "bot"
+    subsection = "redis"
+
+    host: str
+    port: int
+    password: Optional[str]
+    use_fakeredis: bool  # If this is True, Bot will use fakeredis.aioredis
+
 
 class Filter(metaclass=YAMLGetter):
     section = "filter"
@@ -450,7 +461,7 @@ class Guild(metaclass=YAMLGetter):
 class Keys(metaclass=YAMLGetter):
     section = "keys"
 
-    site_api: str
+    site_api: Optional[str]
 
 
 class URLs(metaclass=YAMLGetter):
@@ -493,8 +504,8 @@ class Reddit(metaclass=YAMLGetter):
     section = "reddit"
 
     subreddits: list
-    client_id: str
-    secret: str
+    client_id: Optional[str]
+    secret: Optional[str]
 
 
 class Wolfram(metaclass=YAMLGetter):
@@ -502,7 +513,7 @@ class Wolfram(metaclass=YAMLGetter):
 
     user_limit_day: int
     guild_limit_day: int
-    key: str
+    key: Optional[str]
 
 
 class AntiSpam(metaclass=YAMLGetter):
@@ -612,12 +623,9 @@ PROJECT_ROOT = os.path.abspath(os.path.join(BOT_DIR, os.pardir))
 MODERATION_ROLES = Guild.moderation_roles
 STAFF_ROLES = Guild.staff_roles
 
-# Roles combinations
+# Channel combinations
 STAFF_CHANNELS = Guild.staff_channels
-
-# Default Channel combinations
 MODERATION_CHANNELS = Guild.moderation_channels
-
 
 # Bot replies
 NEGATIVE_REPLIES = [

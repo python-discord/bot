@@ -3,6 +3,12 @@ bot:
     token:       !ENV "BOT_TOKEN"
     sentry_dsn:  !ENV "BOT_SENTRY_DSN"
 
+    redis:
+        host:  "redis"
+        port:  6379
+        password: !ENV "REDIS_PASSWORD"
+        use_fakeredis: false
+
     stats:
         statsd_host: "graphite"
         presence_update_timeout: 300
