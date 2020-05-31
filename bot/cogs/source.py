@@ -8,11 +8,13 @@ from discord.ext.commands import BadArgument, Cog, Command, Context, Converter, 
 from bot.bot import Bot
 from bot.constants import URLs
 
+SourceType = Union[HelpCommand, Command, Cog, str]
+
 
 class SourceConverter(Converter):
     """Convert an argument into a help command, tag, command, or cog."""
 
-    async def convert(self, ctx: Context, argument: str) -> Union[HelpCommand, Command, Cog, str]:
+    async def convert(self, ctx: Context, argument: str) -> SourceType:
         """Convert argument into source object."""
         if argument.lower() == "help":
             return ctx.bot.help_command
@@ -55,7 +57,7 @@ class BotSource(Cog):
         url = self.get_source_link(source_item)
         await ctx.send(embed=await self.build_embed(url, source_item))
 
-    def get_source_link(self, source_item: Union[HelpCommand, Command, Cog, str]) -> str:
+    def get_source_link(self, source_item: SourceType) -> str:
         """Build GitHub link of source item."""
         if isinstance(source_item, HelpCommand):
             src = type(source_item)
@@ -87,7 +89,7 @@ class BotSource(Cog):
 
         return f"{URLs.github_bot_repo}/blob/master/{file_location}{lines_extension}"
 
-    async def build_embed(self, link: str, source_object: Union[HelpCommand, Command, Cog]) -> Embed:
+    async def build_embed(self, link: str, source_object: SourceType) -> Embed:
         """Build embed based on source object."""
         if isinstance(source_object, HelpCommand):
             title = "Help"
