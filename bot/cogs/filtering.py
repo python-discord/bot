@@ -121,7 +121,7 @@ class Filtering(Cog):
     async def on_message(self, msg: Message) -> None:
         """Invoke message filter for new messages."""
         await self._filter_message(msg)
-        await self.check_is_bad_words_in_name(msg.author)
+        await self.check_bad_words_in_name(msg.author)
 
     @Cog.listener()
     async def on_message_edit(self, before: Message, after: Message) -> None:
@@ -150,13 +150,13 @@ class Filtering(Cog):
         """When there is less than 3 days after last alert, return `False`, otherwise `True`."""
         last_alert = await self.name_alerts.get(member.id)
         if last_alert:
-            last_alert = datetime.fromtimestamp(last_alert)
-            if datetime.now() - timedelta(days=DAYS_BETWEEN_ALERTS) < last_alert:
+            last_alert = datetime.utcfromtimestamp(last_alert)
+            if datetime.utcnow() - timedelta(days=DAYS_BETWEEN_ALERTS) < last_alert:
                 return False
 
         return True
 
-    async def check_is_bad_words_in_name(self, member: Member) -> None:
+    async def check_bad_words_in_name(self, member: Member) -> None:
         """Send a mod alert every 3 days if a username still matches a watchlist pattern."""
         # Use lock to avoid race conditions
         async with self.name_lock:
@@ -181,7 +181,7 @@ class Filtering(Cog):
                 )
 
                 # Update time when alert sent
-                await self.name_alerts.set(member.id, datetime.now().timestamp())
+                await self.name_alerts.set(member.id, datetime.utcnow().timestamp())
 
     async def _filter_message(self, msg: Message, delta: Optional[int] = None) -> None:
         """Filter the input message to see if it violates any of our rules, and then respond accordingly."""
