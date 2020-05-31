@@ -1,6 +1,6 @@
 import inspect
 from pathlib import Path
-from typing import Union
+from typing import Optional, Tuple, Union
 
 from discord import Embed
 from discord.ext.commands import BadArgument, Cog, Command, Context, Converter, HelpCommand, command
@@ -54,10 +54,10 @@ class BotSource(Cog):
             await ctx.send(embed=embed)
             return
 
-        url = self.get_source_link(source_item)
-        await ctx.send(embed=await self.build_embed(url, source_item))
+        url, location, first_line = self.get_source_link(source_item)
+        await ctx.send(embed=await self.build_embed(url, source_item, location, first_line))
 
-    def get_source_link(self, source_item: SourceType) -> str:
+    def get_source_link(self, source_item: SourceType) -> Tuple[str, str, Optional[int]]:
         """Build GitHub link of source item."""
         if isinstance(source_item, HelpCommand):
             src = type(source_item)
@@ -82,14 +82,15 @@ class BotSource(Cog):
             lines, first_line_no = inspect.getsourcelines(src)
             lines_extension = f"#L{first_line_no}-L{first_line_no+len(lines)-1}"
         else:
+            first_line_no = None
             lines_extension = ""
 
         file_location = Path(filename).relative_to("/bot/")
-        print(file_location)
+        url = f"{URLs.github_bot_repo}/blob/master/{file_location}{lines_extension}"
 
-        return f"{URLs.github_bot_repo}/blob/master/{file_location}{lines_extension}"
+        return url, file_location, first_line_no or None
 
-    async def build_embed(self, link: str, source_object: SourceType) -> Embed:
+    async def build_embed(self, link: str, source_object: SourceType, loc: str, first_line: Optional[int]) -> Embed:
         """Build embed based on source object."""
         if isinstance(source_object, HelpCommand):
             title = "Help"
@@ -112,6 +113,8 @@ class BotSource(Cog):
 
         embed = Embed(title=title, description=description)
         embed.add_field(name="Source Code", value=f"[Go to GitHub]({link})")
+        line_text = f":{first_line}" if first_line else ""
+        embed.set_footer(text=f"{loc}{line_text}")
 
         return embed
 
