@@ -10,20 +10,21 @@ from bot.constants import URLs
 
 
 class SourceConverter(Converter):
-    """Convert an argument into a help command, command, or cog."""
+    """Convert an argument into a help command, tag, command, or cog."""
 
-    async def convert(self, ctx: Context, argument: str) -> Union[HelpCommand, Command, Cog]:
-        """
-        Convert argument into source object.
-
-        Order how arguments is checked:
-        1. When argument is `help`, return bot help command
-        2. When argument is valid command, return this command
-        3. When argument is valid Cog, return this Cog
-        4. Otherwise raise `BadArgument` error
-        """
+    async def convert(self, ctx: Context, argument: str) -> Union[HelpCommand, Command, Cog, str]:
+        """Convert argument into source object."""
         if argument.lower() == "help":
             return ctx.bot.help_command
+
+        tags_cog = ctx.bot.get_cog("Tags")
+
+        if argument.lower() in tags_cog._cache:
+            tag = argument.lower()
+            if tags_cog._cache[tag]["restricted_to"] != "developers":
+                return f"bot/resources/tags/{tags_cog._cache[tag]['restricted_to']}/{tag}.md"
+            else:
+                return f"bot/resources/tags/{tag}.md"
 
         cmd = ctx.bot.get_command(argument)
         if cmd:
@@ -44,7 +45,7 @@ class BotSource(Cog):
 
     @command(name="source", aliases=("src",))
     async def source_command(self, ctx: Context, *, source_item: SourceConverter = None) -> None:
-        """Display information and a GitHub link to the source code of a command or cog."""
+        """Display information and a GitHub link to the source code of a command, tag, or cog."""
         if not source_item:
             embed = Embed(title="Bot GitHub Repository")
             embed.add_field(name="Repository", value=f"[Go to GitHub]({URLs.github_bot_repo})")
@@ -54,7 +55,7 @@ class BotSource(Cog):
         url = self.get_source_link(source_item)
         await ctx.send(embed=await self.build_embed(url, source_item))
 
-    def get_source_link(self, source_item: Union[HelpCommand, Command, Cog]) -> str:
+    def get_source_link(self, source_item: Union[HelpCommand, Command, Cog, str]) -> str:
         """Build GitHub link of source item."""
         if isinstance(source_item, HelpCommand):
             src = type(source_item)
@@ -68,14 +69,21 @@ class BotSource(Cog):
             else:
                 src = source_item.callback.__code__
                 filename = src.co_filename
+        elif isinstance(source_item, str):
+            filename = source_item
         else:
             src = type(source_item)
             filename = inspect.getsourcefile(src)
 
-        lines, first_line_no = inspect.getsourcelines(src)
+        if not isinstance(source_item, str):
+            lines, first_line_no = inspect.getsourcelines(src)
+            lines_extension = f"#L{first_line_no}-L{first_line_no+len(lines)-1}"
+        else:
+            lines_extension = ""
+
         file_location = os.path.relpath(filename)
 
-        return f"{URLs.github_bot_repo}/blob/master/{file_location}#L{first_line_no}-L{first_line_no+len(lines)-1}"
+        return f"{URLs.github_bot_repo}/blob/master/{file_location}{lines_extension}"
 
     async def build_embed(self, link: str, source_object: Union[HelpCommand, Command, Cog]) -> Embed:
         """Build embed based on source object."""
@@ -91,6 +99,9 @@ class BotSource(Cog):
                 description = source_object.help
 
             title = source_object.qualified_name
+        elif isinstance(source_object, str):
+            title = f"Tag: {source_object.split('/')[-1].split('.')[0]}"
+            description = ""
         else:
             title = source_object.qualified_name
             description = source_object.description
