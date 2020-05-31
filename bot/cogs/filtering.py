@@ -2,7 +2,7 @@ import asyncio
 import logging
 import re
 from datetime import datetime, timedelta
-from typing import Optional, Union
+from typing import List, Optional, Union
 
 import discord.errors
 from dateutil.relativedelta import relativedelta
@@ -136,6 +136,26 @@ class Filtering(Cog):
             delta = relativedelta(after.edited_at, before.edited_at).microseconds
         await self._filter_message(after, delta)
 
+    @staticmethod
+    def get_name_matches(name: str) -> List[re.Match]:
+        """Check bad words from passed string (name). Return list of matches."""
+        matches = []
+        for pattern in WATCHLIST_PATTERNS:
+            match = pattern.search(name)
+            if match:
+                matches.append(match)
+        return matches
+
+    async def check_send_alert(self, member: Member) -> bool:
+        """When there is less than 3 days after last alert, return `False`, otherwise `True`."""
+        last_alert = await self.name_alerts.get(member.id)
+        if last_alert:
+            last_alert = datetime.fromtimestamp(last_alert)
+            if datetime.now() - timedelta(days=DAYS_BETWEEN_ALERTS) < last_alert:
+                return False
+
+        return True
+
     async def check_is_bad_words_in_name(self, member: Member) -> None:
         """Check bad words from user display name. When there is more than 3 days after last alert, send new alert."""
         if not self.name_lock:
@@ -144,18 +164,11 @@ class Filtering(Cog):
         # Use lock to avoid race conditions
         async with self.name_lock:
             # Check does nickname have match in filters.
-            matches = []
-            for pattern in WATCHLIST_PATTERNS:
-                match = pattern.search(member.display_name)
-                if match:
-                    matches.append(match)
+            matches = self.get_name_matches(member.display_name)
 
             if matches:
-                last_alert = await self.name_alerts.get(member.id)
-                if last_alert:
-                    last_alert = datetime.fromtimestamp(last_alert)
-                    if datetime.now() - timedelta(days=DAYS_BETWEEN_ALERTS) < last_alert:
-                        return
+                if not self.check_send_alert(member):
+                    return
 
                 log_string = (
                     f"**User:** {member.mention} (`{member.id}`)\n"
