@@ -121,7 +121,7 @@ class Filtering(Cog):
     async def on_message(self, msg: Message) -> None:
         """Invoke message filter for new messages."""
         await self._filter_message(msg)
-        await self.check_is_bad_words_in_name(msg)
+        await self.check_is_bad_words_in_name(msg.author)
 
     @Cog.listener()
     async def on_message_edit(self, before: Message, after: Message) -> None:
@@ -136,7 +136,7 @@ class Filtering(Cog):
             delta = relativedelta(after.edited_at, before.edited_at).microseconds
         await self._filter_message(after, delta)
 
-    async def check_is_bad_words_in_name(self, msg: Message) -> None:
+    async def check_is_bad_words_in_name(self, member: Member) -> None:
         """Check bad words from user display name. When there is more than 3 days after last alert, send new alert."""
         if not self.name_lock:
             self.name_lock = asyncio.Lock()
@@ -146,20 +146,20 @@ class Filtering(Cog):
             # Check does nickname have match in filters.
             matches = []
             for pattern in WATCHLIST_PATTERNS:
-                match = pattern.search(msg.author.display_name)
+                match = pattern.search(member.display_name)
                 if match:
                     matches.append(match)
 
             if matches:
-                last_alert = await self.name_alerts.get(msg.author.id)
+                last_alert = await self.name_alerts.get(member.id)
                 if last_alert:
                     last_alert = datetime.fromtimestamp(last_alert)
                     if datetime.now() - timedelta(days=DAYS_BETWEEN_ALERTS) < last_alert:
                         return
 
                 log_string = (
-                    f"**User:** {msg.author.mention} (`{msg.author.id}`)\n"
-                    f"**Display Name:** {msg.author.display_name}\n"
+                    f"**User:** {member.mention} (`{member.id}`)\n"
+                    f"**Display Name:** {member.display_name}\n"
                     f"**Bad Matches:** {', '.join(match.group() for match in matches)}"
                 )
                 await self.mod_log.send_log_message(
@@ -171,7 +171,7 @@ class Filtering(Cog):
                 )
 
                 # Update time when alert sent
-                await self.name_alerts.set(msg.author.id, datetime.now().timestamp())
+                await self.name_alerts.set(member.id, datetime.now().timestamp())
 
     async def _filter_message(self, msg: Message, delta: Optional[int] = None) -> None:
         """Filter the input message to see if it violates any of our rules, and then respond accordingly."""
