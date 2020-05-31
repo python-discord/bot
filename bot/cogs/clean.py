@@ -10,8 +10,7 @@ from discord.ext.commands import Cog, Context, group
 from bot.bot import Bot
 from bot.cogs.moderation import ModLog
 from bot.constants import (
-    Channels, CleanMessages, Colours, Event,
-    Icons, MODERATION_ROLES, NEGATIVE_REPLIES
+    Channels, CleanMessages, Colours, Icons, MODERATION_ROLES, NEGATIVE_REPLIES
 )
 from bot.decorators import with_role
 
@@ -114,26 +113,22 @@ class Clean(Cog):
         if not channels:
             channels = [ctx.channel]
 
+        # Delete the invocation first
+        with self.mod_log.ignore_all():
+            await ctx.message.delete()
+
         # Look through the history and retrieve message data
+        # This is only done so we can create a log to upload.
         messages = []
         message_ids = []
         self.cleaning = True
-        invocation_deleted = False
 
-        # To account for the invocation message, we index `amount + 1` messages.
         for channel in channels:
-            async for message in channel.history(limit=amount + 1):
+            async for message in channel.history(limit=amount):
 
                 # If at any point the cancel command is invoked, we should stop.
                 if not self.cleaning:
                     return
-
-                # Always start by deleting the invocation
-                if not invocation_deleted:
-                    self.mod_log.ignore(Event.message_delete, message.id)
-                    await message.delete()
-                    invocation_deleted = True
-                    continue
 
                 # If the message passes predicate, let's save it.
                 if predicate is None or predicate(message):
@@ -142,15 +137,13 @@ class Clean(Cog):
 
         self.cleaning = False
 
-        # We should ignore the ID's we stored, so we don't get mod-log spam.
-        self.mod_log.ignore(Event.message_delete, *message_ids)
-
-        # Use bulk delete to actually do the cleaning. It's far faster.
-        for channel in channels:
-            await channel.purge(
-                limit=amount,
-                check=predicate
-            )
+        # Now let's delete the actual messages with purge.
+        with self.mod_log.ignore_all():
+            for channel in channels:
+                await channel.purge(
+                    limit=amount,
+                    check=predicate
+                )
 
         # Reverse the list to restore chronological order
         if messages:
