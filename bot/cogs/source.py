@@ -76,7 +76,6 @@ class BotSource(Cog):
         else:
             src = type(source_item)
             filename = inspect.getsourcefile(src)
-            print(filename)
 
         if not isinstance(source_item, str):
             lines, first_line_no = inspect.getsourcelines(src)
@@ -94,14 +93,14 @@ class BotSource(Cog):
         """Build embed based on source object."""
         if isinstance(source_object, HelpCommand):
             title = "Help"
-            description = source_object.__doc__
+            description = source_object.__doc__.splitlines()[1]
         elif isinstance(source_object, Command):
             if source_object.cog_name == "Alias":
                 cmd_name = source_object.callback.__name__.replace("_alias", "")
                 cmd = self.bot.get_command(cmd_name.replace("_", " "))
-                description = cmd.help
+                description = cmd.short_doc
             else:
-                description = source_object.help
+                description = source_object.short_doc
 
             title = source_object.qualified_name
         elif isinstance(source_object, str):
@@ -109,7 +108,7 @@ class BotSource(Cog):
             description = ""
         else:
             title = source_object.qualified_name
-            description = source_object.description
+            description = source_object.description.splitlines()[0]
 
         embed = Embed(title=title, description=description)
         embed.add_field(name="Source Code", value=f"[Go to GitHub]({link})")
