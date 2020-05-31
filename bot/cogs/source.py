@@ -3,18 +3,18 @@ from pathlib import Path
 from typing import Optional, Tuple, Union
 
 from discord import Embed
-from discord.ext.commands import BadArgument, Cog, Command, Context, Converter, HelpCommand, command
+from discord.ext import commands
 
 from bot.bot import Bot
 from bot.constants import URLs
 
-SourceType = Union[HelpCommand, Command, Cog, str]
+SourceType = Union[commands.HelpCommand, commands.Command, commands.Cog, str]
 
 
-class SourceConverter(Converter):
+class SourceConverter(commands.Converter):
     """Convert an argument into a help command, tag, command, or cog."""
 
-    async def convert(self, ctx: Context, argument: str) -> SourceType:
+    async def convert(self, ctx: commands.Context, argument: str) -> SourceType:
         """Convert argument into source object."""
         if argument.lower().startswith("help"):
             return ctx.bot.help_command
@@ -36,17 +36,17 @@ class SourceConverter(Converter):
         if cmd:
             return cmd
 
-        raise BadArgument(f"Unable to convert `{argument}` to valid command or Cog.")
+        raise commands.BadArgument(f"Unable to convert `{argument}` to valid command or Cog.")
 
 
-class BotSource(Cog):
+class BotSource(commands.Cog):
     """Displays information about the bot's source code."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @command(name="source", aliases=("src",))
-    async def source_command(self, ctx: Context, *, source_item: SourceConverter = None) -> None:
+    @commands.command(name="source", aliases=("src",))
+    async def source_command(self, ctx: commands.Context, *, source_item: SourceConverter = None) -> None:
         """Display information and a GitHub link to the source code of a command, tag, or cog."""
         if not source_item:
             embed = Embed(title="Bot's GitHub Repository")
@@ -60,10 +60,10 @@ class BotSource(Cog):
 
     def get_source_link(self, source_item: SourceType) -> Tuple[str, str, Optional[int]]:
         """Build GitHub link of source item."""
-        if isinstance(source_item, HelpCommand):
+        if isinstance(source_item, commands.HelpCommand):
             src = type(source_item)
             filename = inspect.getsourcefile(src)
-        elif isinstance(source_item, Command):
+        elif isinstance(source_item, commands.Command):
             if source_item.cog_name == "Alias":
                 cmd_name = source_item.callback.__name__.replace("_alias", "")
                 cmd = self.bot.get_command(cmd_name.replace("_", " "))
@@ -92,10 +92,10 @@ class BotSource(Cog):
 
     async def build_embed(self, link: str, source_object: SourceType, loc: str, first_line: Optional[int]) -> Embed:
         """Build embed based on source object."""
-        if isinstance(source_object, HelpCommand):
+        if isinstance(source_object, commands.HelpCommand):
             title = "Help Command"
             description = source_object.__doc__.splitlines()[1]
-        elif isinstance(source_object, Command):
+        elif isinstance(source_object, commands.Command):
             if source_object.cog_name == "Alias":
                 cmd_name = source_object.callback.__name__.replace("_alias", "")
                 cmd = self.bot.get_command(cmd_name.replace("_", " "))
