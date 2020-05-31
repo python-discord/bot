@@ -54,15 +54,20 @@ class BotSource(Cog):
         url = self.get_source_link(source_item)
         await ctx.send(embed=await self.build_embed(url, source_item))
 
-    @staticmethod
-    def get_source_link(source_item: Union[HelpCommand, Command, Cog]) -> str:
+    def get_source_link(self, source_item: Union[HelpCommand, Command, Cog]) -> str:
         """Build GitHub link of source item."""
         if isinstance(source_item, HelpCommand):
             src = type(source_item)
             filename = inspect.getsourcefile(src)
         elif isinstance(source_item, Command):
-            src = source_item.callback.__code__
-            filename = src.co_filename
+            if source_item.cog_name == "Alias":
+                cmd_name = source_item.callback.__name__.replace("_alias", "")
+                cmd = self.bot.get_command(cmd_name.replace("_", " "))
+                src = cmd.callback.__code__
+                filename = src.co_filename
+            else:
+                src = source_item.callback.__code__
+                filename = src.co_filename
         else:
             src = type(source_item)
             filename = inspect.getsourcefile(src)
@@ -72,15 +77,20 @@ class BotSource(Cog):
 
         return f"{URLs.github_bot_repo}/blob/master/{file_location}#L{first_line_no}-L{first_line_no+len(lines)-1}"
 
-    @staticmethod
-    async def build_embed(link: str, source_object: Union[HelpCommand, Command, Cog]) -> Embed:
+    async def build_embed(self, link: str, source_object: Union[HelpCommand, Command, Cog]) -> Embed:
         """Build embed based on source object."""
         if isinstance(source_object, HelpCommand):
             title = "Help"
             description = source_object.__doc__
         elif isinstance(source_object, Command):
+            if source_object.cog_name == "Alias":
+                cmd_name = source_object.callback.__name__.replace("_alias", "")
+                cmd = self.bot.get_command(cmd_name.replace("_", " "))
+                description = cmd.help
+            else:
+                description = source_object.help
+
             title = source_object.qualified_name
-            description = source_object.help
         else:
             title = source_object.qualified_name
             description = source_object.description
