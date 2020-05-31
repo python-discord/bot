@@ -157,7 +157,7 @@ class Filtering(Cog):
         return True
 
     async def check_is_bad_words_in_name(self, member: Member) -> None:
-        """Check bad words from user display name. When there is more than 3 days after last alert, send new alert."""
+        """Send a mod alert every 3 days if a username still matches a watchlist pattern."""
         # Use lock to avoid race conditions
         async with self.name_lock:
             # Check does nickname have match in filters.
