@@ -119,7 +119,7 @@ class Filtering(Cog):
     async def on_message(self, msg: Message) -> None:
         """Invoke message filter for new messages."""
         await self._filter_message(msg)
-        await self.bad_words_in_name(msg)
+        await self.check_is_bad_words_in_name(msg)
 
     @Cog.listener()
     async def on_message_edit(self, before: Message, after: Message) -> None:
@@ -134,7 +134,7 @@ class Filtering(Cog):
             delta = relativedelta(after.edited_at, before.edited_at).microseconds
         await self._filter_message(after, delta)
 
-    async def bad_words_in_name(self, msg: Message) -> None:
+    async def check_is_bad_words_in_name(self, msg: Message) -> None:
         """Check bad words from user display name. When there is more than 3 days after last alert, send new alert."""
         if not self.name_lock:
             self.name_lock = asyncio.Lock()
