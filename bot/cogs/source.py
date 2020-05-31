@@ -36,7 +36,7 @@ class SourceConverter(commands.Converter):
         if cmd:
             return cmd
 
-        raise commands.BadArgument(f"Unable to convert `{argument}` to valid command or Cog.")
+        raise commands.BadArgument(f"Unable to convert `{argument}` to valid command, tag, or Cog.")
 
 
 class BotSource(commands.Cog):
