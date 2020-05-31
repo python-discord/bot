@@ -43,6 +43,8 @@ TOKEN_WATCHLIST_PATTERNS = [
 ]
 WATCHLIST_PATTERNS = WORD_WATCHLIST_PATTERNS + TOKEN_WATCHLIST_PATTERNS
 
+DAYS_BETWEEN_ALERTS = 3
+
 
 def expand_spoilers(text: str) -> str:
     """Return a string containing all interpretations of a spoilered message."""
@@ -152,7 +154,7 @@ class Filtering(Cog):
                 last_alert = await self.name_alerts.get(msg.author.id)
                 if last_alert:
                     last_alert = datetime.fromtimestamp(last_alert)
-                    if datetime.now() - timedelta(days=3) < last_alert:
+                    if datetime.now() - timedelta(days=DAYS_BETWEEN_ALERTS) < last_alert:
                         return
 
                 log_string = (
