@@ -3,6 +3,7 @@ import difflib
 import itertools
 import logging
 import typing as t
+from contextlib import contextmanager
 from datetime import datetime
 from itertools import zip_longest
 
@@ -40,6 +41,7 @@ class ModLog(Cog, name="ModLog"):
     def __init__(self, bot: Bot):
         self.bot = bot
         self._ignored = {event: [] for event in Event}
+        self._ignore_all = False
 
         self._cached_deletes = []
         self._cached_edits = []
@@ -80,6 +82,15 @@ class ModLog(Cog, name="ModLog"):
         for item in items:
             if item not in self._ignored[event]:
                 self._ignored[event].append(item)
+
+    @contextmanager
+    def ignore_all(self) -> None:
+        """Ignore all events while inside this context scope."""
+        self._ignore_all = True
+        try:
+            yield
+        finally:
+            self._ignore_all = False
 
     async def send_log_message(
         self,
@@ -189,6 +200,9 @@ class ModLog(Cog, name="ModLog"):
 
         if before.id in self._ignored[Event.guild_channel_update]:
             self._ignored[Event.guild_channel_update].remove(before.id)
+            return
+
+        if self._ignore_all:
             return
 
         # Two channel updates are sent for a single edit: 1 for topic and 1 for category change.
@@ -386,6 +400,9 @@ class ModLog(Cog, name="ModLog"):
             self._ignored[Event.member_ban].remove(member.id)
             return
 
+        if self._ignore_all:
+            return
+
         await self.send_log_message(
             Icons.user_ban, Colours.soft_red,
             "User banned", f"{member} (`{member.id}`)",
@@ -426,6 +443,9 @@ class ModLog(Cog, name="ModLog"):
             self._ignored[Event.member_remove].remove(member.id)
             return
 
+        if self._ignore_all:
+            return
+
         member_str = escape_markdown(str(member))
         await self.send_log_message(
             Icons.sign_out, Colours.soft_red,
@@ -444,6 +464,9 @@ class ModLog(Cog, name="ModLog"):
             self._ignored[Event.member_unban].remove(member.id)
             return
 
+        if self._ignore_all:
+            return
+
         member_str = escape_markdown(str(member))
         await self.send_log_message(
             Icons.user_unban, Colour.blurple(),
@@ -460,6 +483,9 @@ class ModLog(Cog, name="ModLog"):
 
         if before.id in self._ignored[Event.member_update]:
             self._ignored[Event.member_update].remove(before.id)
+            return
+
+        if self._ignore_all:
             return
 
         diff = DeepDiff(before, after)
@@ -564,6 +590,9 @@ class ModLog(Cog, name="ModLog"):
             self._ignored[Event.message_delete].remove(message.id)
             return
 
+        if self._ignore_all:
+            return
+
         if author.bot:
             return
 
@@ -621,6 +650,9 @@ class ModLog(Cog, name="ModLog"):
 
         if event.message_id in self._ignored[Event.message_delete]:
             self._ignored[Event.message_delete].remove(event.message_id)
+            return
+
+        if self._ignore_all:
             return
 
         channel = self.bot.get_channel(event.channel_id)
@@ -795,6 +827,9 @@ class ModLog(Cog, name="ModLog"):
 
         if member.id in self._ignored[Event.voice_state_update]:
             self._ignored[Event.voice_state_update].remove(member.id)
+            return
+
+        if self._ignore_all:
             return
 
         # Exclude all channel attributes except the name.
