@@ -183,10 +183,10 @@ class Superstarify(InfractionScheduler, Cog):
             text=textwrap.dedent(f"""
                 Member: {member.mention} (`{member.id}`)
                 Actor: {ctx.message.author}
-                Reason: {reason}
                 Expires: {expiry_str}
                 Old nickname: `{old_nick}`
                 New nickname: `{forced_nick}`
+                Reason: {reason}
             """),
             footer=f"ID {id_}"
         )
