@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from distutils.util import strtobool
 from functools import partialmethod
 from typing import Any, Dict, ItemsView, Optional, Tuple, Union
 
@@ -11,7 +12,7 @@ log = logging.getLogger(__name__)
 
 # Type aliases
 RedisKeyType = Union[str, int]
-RedisValueType = Union[str, int, float]
+RedisValueType = Union[str, int, float, bool]
 RedisKeyOrValue = Union[RedisKeyType, RedisValueType]
 
 # Prefix tuples
@@ -20,6 +21,7 @@ _VALUE_PREFIXES = (
     ("f|", float),
     ("i|", int),
     ("s|", str),
+    ("b|", bool),
 )
 _KEY_PREFIXES = (
     ("i|", int),
@@ -117,7 +119,8 @@ class RedisCache:
     def _to_typestring(key_or_value: RedisKeyOrValue, prefixes: _PrefixTuple) -> str:
         """Turn a valid Redis type into a typestring."""
         for prefix, _type in prefixes:
-            if isinstance(key_or_value, _type):
+            # isinstance is a bad idea here, because isintance(False, int) == True.
+            if type(key_or_value) is _type:
                 return f"{prefix}{key_or_value}"
         raise TypeError(f"RedisCache._to_typestring only supports the following: {prefixes}.")
 
@@ -131,6 +134,13 @@ class RedisCache:
         # Now we convert our unicode string back into the type it originally was.
         for prefix, _type in prefixes:
             if key_or_value.startswith(prefix):
+
+                # For booleans, we need special handling because bool("False") is True.
+                if prefix == "b|":
+                    value = key_or_value[len(prefix):]
+                    return bool(strtobool(value))
+
+                # Otherwise we can just convert normally.
                 return _type(key_or_value[len(prefix):])
         raise TypeError(f"RedisCache._from_typestring only supports the following: {prefixes}.")
 
