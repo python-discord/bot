@@ -1,5 +1,5 @@
 import inspect
-import os
+from pathlib import Path
 from typing import Union
 
 from discord import Embed
@@ -22,9 +22,9 @@ class SourceConverter(Converter):
         if argument.lower() in tags_cog._cache:
             tag = argument.lower()
             if tags_cog._cache[tag]["restricted_to"] != "developers":
-                return f"bot/resources/tags/{tags_cog._cache[tag]['restricted_to']}/{tag}.md"
+                return f"/bot/bot/resources/tags/{tags_cog._cache[tag]['restricted_to']}/{tag}.md"
             else:
-                return f"bot/resources/tags/{tag}.md"
+                return f"/bot/bot/resources/tags/{tag}.md"
 
         cmd = ctx.bot.get_command(argument)
         if cmd:
@@ -74,6 +74,7 @@ class BotSource(Cog):
         else:
             src = type(source_item)
             filename = inspect.getsourcefile(src)
+            print(filename)
 
         if not isinstance(source_item, str):
             lines, first_line_no = inspect.getsourcelines(src)
@@ -81,7 +82,8 @@ class BotSource(Cog):
         else:
             lines_extension = ""
 
-        file_location = os.path.relpath(filename)
+        file_location = Path(filename).relative_to("/bot/")
+        print(file_location)
 
         return f"{URLs.github_bot_repo}/blob/master/{file_location}{lines_extension}"
 
