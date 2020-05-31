@@ -117,11 +117,11 @@ class Clean(Cog):
         self.mod_log.ignore(Event.message_delete, ctx.message.id)
         await ctx.message.delete()
 
-        # Look through the history and retrieve message data
         messages = []
         message_ids = []
         self.cleaning = True
 
+        # Find the IDs of the messages to delete. IDs are needed in order to ignore mod log events.
         for channel in channels:
             async for message in channel.history(limit=amount):
 
@@ -132,21 +132,17 @@ class Clean(Cog):
                 # If the message passes predicate, let's save it.
                 if predicate is None or predicate(message):
                     message_ids.append(message.id)
-                    messages.append(message)
 
         self.cleaning = False
 
         # Now let's delete the actual messages with purge.
         self.mod_log.ignore(Event.message_delete, *message_ids)
         for channel in channels:
-            await channel.purge(
-                limit=amount,
-                check=predicate
-            )
+            messages += await channel.purge(limit=amount, check=predicate)
 
         # Reverse the list to restore chronological order
         if messages:
-            messages = list(reversed(messages))
+            messages = reversed(messages)
             log_url = await self.mod_log.upload_log(messages, ctx.author.id)
         else:
             # Can't build an embed, nothing to clean!
