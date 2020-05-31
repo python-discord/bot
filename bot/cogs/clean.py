@@ -10,7 +10,7 @@ from discord.ext.commands import Cog, Context, group
 from bot.bot import Bot
 from bot.cogs.moderation import ModLog
 from bot.constants import (
-    Channels, CleanMessages, Colours, Icons, MODERATION_ROLES, NEGATIVE_REPLIES
+    Channels, CleanMessages, Colours, Event, Icons, MODERATION_ROLES, NEGATIVE_REPLIES
 )
 from bot.decorators import with_role
 
@@ -114,11 +114,10 @@ class Clean(Cog):
             channels = [ctx.channel]
 
         # Delete the invocation first
-        with self.mod_log.ignore_all():
-            await ctx.message.delete()
+        self.mod_log.ignore(Event.message_delete, ctx.message.id)
+        await ctx.message.delete()
 
         # Look through the history and retrieve message data
-        # This is only done so we can create a log to upload.
         messages = []
         message_ids = []
         self.cleaning = True
@@ -138,12 +137,12 @@ class Clean(Cog):
         self.cleaning = False
 
         # Now let's delete the actual messages with purge.
-        with self.mod_log.ignore_all():
-            for channel in channels:
-                await channel.purge(
-                    limit=amount,
-                    check=predicate
-                )
+        self.mod_log.ignore(Event.message_delete, *message_ids)
+        for channel in channels:
+            await channel.purge(
+                limit=amount,
+                check=predicate
+            )
 
         # Reverse the list to restore chronological order
         if messages:
