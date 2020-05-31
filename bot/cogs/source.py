@@ -10,7 +10,7 @@ from bot.constants import URLs
 
 
 class SourceConverter(Converter):
-    """Convert argument to help command, command or Cog."""
+    """Convert an argument into a help command, command, or cog."""
 
     async def convert(self, ctx: Context, argument: str) -> Union[HelpCommand, Command, Cog]:
         """
@@ -37,14 +37,14 @@ class SourceConverter(Converter):
 
 
 class BotSource(Cog):
-    """Cog of Python Discord Python bot project source information."""
+    """Displays information about the bot's source code."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
 
     @command(name="source", aliases=("src",))
     async def source_command(self, ctx: Context, *, source_item: SourceConverter = None) -> None:
-        """Get GitHub link and information about help command, command or Cog."""
+        """Display information and a GitHub link to the source code of a command or cog."""
         if not source_item:
             embed = Embed(title="Bot GitHub Repository")
             embed.add_field(name="Repository", value=f"[Go to GitHub]({URLs.github_bot_repo})")
@@ -95,5 +95,5 @@ class BotSource(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Load `Source` cog."""
+    """Load the BotSource cog."""
     bot.add_cog(BotSource(bot))
