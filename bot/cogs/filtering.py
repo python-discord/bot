@@ -152,6 +152,7 @@ class Filtering(Cog):
         if last_alert:
             last_alert = datetime.utcfromtimestamp(last_alert)
             if datetime.utcnow() - timedelta(days=DAYS_BETWEEN_ALERTS) < last_alert:
+                log.trace(f"Last alert was too recent for {member}'s nickname.")
                 return False
 
         return True
@@ -166,6 +167,7 @@ class Filtering(Cog):
             if not matches or not await self.check_send_alert(member):
                 return
 
+            log.info(f"Sending bad nickname alert for '{member.display_name}' ({member.id}).")
             log_string = (
                 f"**User:** {member.mention} (`{member.id}`)\n"
                 f"**Display Name:** {member.display_name}\n"
