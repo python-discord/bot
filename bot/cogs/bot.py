@@ -326,6 +326,8 @@ class BotCog(Cog, name="Bot"):
                             log.trace("The code consists only of expressions, not sending instructions")
 
                     if howto != "":
+                        # Increase amount of codeblock correction in stats
+                        self.bot.stats.incr("codeblock_corrections")
                         howto_embed = Embed(description=howto)
                         bot_message = await msg.channel.send(f"Hey {msg.author.mention}!", embed=howto_embed)
                         self.codeblock_message_ids[msg.id] = bot_message.id

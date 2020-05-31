@@ -7,9 +7,8 @@ import discord
 
 from bot import constants
 from bot.cogs import information
-from bot.decorators import InWhitelistCheckFailure
+from bot.utils.checks import InWhitelistCheckFailure
 from tests import helpers
-
 
 COG_PATH = "bot.cogs.information.Information"
 
