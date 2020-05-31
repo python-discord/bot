@@ -52,7 +52,7 @@ class BotSource(Cog):
             return
 
         url = self.get_source_link(source_item)
-        await ctx.send(embed=await self.build_embed(url, source_item, ctx))
+        await ctx.send(embed=await self.build_embed(url, source_item))
 
     @staticmethod
     def get_source_link(source_item: Union[HelpCommand, Command, Cog]) -> str:
@@ -73,7 +73,7 @@ class BotSource(Cog):
         return f"{URLs.github_bot_repo}/blob/master/{file_location}#L{first_line_no}-L{first_line_no+len(lines)-1}"
 
     @staticmethod
-    async def build_embed(link: str, source_object: Union[HelpCommand, Command, Cog], ctx: Context) -> Embed:
+    async def build_embed(link: str, source_object: Union[HelpCommand, Command, Cog]) -> Embed:
         """Build embed based on source object."""
         if isinstance(source_object, HelpCommand):
             title = "Help"
@@ -87,9 +87,6 @@ class BotSource(Cog):
 
         embed = Embed(title=title, description=description)
         embed.add_field(name="Source Code", value=f"[Go to GitHub]({link})")
-
-        if isinstance(source_object, Command):
-            embed.add_field(name="Can be used by you here?", value=await source_object.can_run(ctx))
 
         return embed
 
