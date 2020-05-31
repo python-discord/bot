@@ -166,10 +166,8 @@ class Clean(Cog):
             return
 
         # Build the embed and send it
-        if len(channels) > 1:
-            target_channels = ", ".join(channel.mention for channel in channels)
-        else:
-            target_channels = f"<#{channels[0].id}>"
+        target_channels = ", ".join(channel.mention for channel in channels)
+
         message = (
             f"**{len(message_ids)}** messages deleted in {target_channels} by **{ctx.author.name}**\n\n"
             f"A log of the deleted messages can be found [here]({log_url})."
