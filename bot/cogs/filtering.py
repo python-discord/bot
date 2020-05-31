@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 from typing import Optional, Union
 
 import discord.errors
-from dateutil import parser
 from dateutil.relativedelta import relativedelta
 from discord import Colour, Member, Message, TextChannel
 from discord.ext.commands import Cog
@@ -152,7 +151,7 @@ class Filtering(Cog):
             if matches:
                 last_alert = await self.name_alerts.get(msg.author.id)
                 if last_alert:
-                    last_alert = parser.isoparse(last_alert)
+                    last_alert = datetime.fromtimestamp(last_alert)
                     if datetime.now() - timedelta(days=3) < last_alert:
                         return
 
@@ -170,7 +169,7 @@ class Filtering(Cog):
                 )
 
                 # Update time when alert sent
-                await self.name_alerts.set(msg.author.id, datetime.now().isoformat())
+                await self.name_alerts.set(msg.author.id, datetime.now().timestamp())
 
     async def _filter_message(self, msg: Message, delta: Optional[int] = None) -> None:
         """Filter the input message to see if it violates any of our rules, and then respond accordingly."""
