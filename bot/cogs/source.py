@@ -113,8 +113,7 @@ class BotSource(commands.Cog):
             else:
                 description = source_object.short_doc
 
-            aliases_string = f" (or {', '.join(source_object.aliases)})" if source_object.aliases else ""
-            title = f"Command: {source_object.qualified_name}{aliases_string}"
+            title = f"Command: {source_object.qualified_name}"
         elif isinstance(source_object, str):
             title = f"Tag: {source_object}"
             description = ""
