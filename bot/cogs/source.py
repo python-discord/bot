@@ -51,14 +51,11 @@ class BotSource(commands.Cog):
             await ctx.send(embed=embed)
             return
 
-        url, location, first_line = self.get_source_link(source_item)
+        embed = await self.build_embed(source_item, ctx)
 
-        # There is no URL only when bot can't fetch Tags cog
-        if not url:
-            await ctx.send("Unable to get `Tags` cog.")
-            return
-
-        await ctx.send(embed=await self.build_embed(url, source_item, location, first_line))
+        # When embed don't exist, then there was error and this is already handled.
+        if embed:
+            await ctx.send(embed=await self.build_embed(source_item, ctx))
 
     def get_source_link(self, source_item: SourceType) -> Tuple[str, str, Optional[int]]:
         """Build GitHub link of source item."""
@@ -96,8 +93,15 @@ class BotSource(commands.Cog):
 
         return url, file_location, first_line_no or None
 
-    async def build_embed(self, link: str, source_object: SourceType, loc: str, first_line: Optional[int]) -> Embed:
+    async def build_embed(self, source_object: SourceType, ctx: commands.Context) -> Optional[Embed]:
         """Build embed based on source object."""
+        url, location, first_line = self.get_source_link(source_object)
+
+        # There is no URL only when bot can't fetch Tags cog
+        if not url:
+            await ctx.send("Unable to get `Tags` cog.")
+            return
+
         if isinstance(source_object, commands.HelpCommand):
             title = "Help Command"
             description = source_object.__doc__.splitlines()[1]
@@ -119,9 +123,9 @@ class BotSource(commands.Cog):
             description = source_object.description.splitlines()[0]
 
         embed = Embed(title=title, description=description)
-        embed.add_field(name="Source Code", value=f"[Go to GitHub]({link})")
+        embed.add_field(name="Source Code", value=f"[Go to GitHub]({url})")
         line_text = f":{first_line}" if first_line else ""
-        embed.set_footer(text=f"{loc}{line_text}")
+        embed.set_footer(text=f"{location}{line_text}")
 
         return embed
 
