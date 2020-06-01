@@ -1,18 +1,53 @@
 import asyncio
+import datetime
 import logging
+from collections import namedtuple
 from contextlib import suppress
 from typing import Optional
 
+from bot.bot import Bot
+from bot.constants import MODERATION_ROLES, Channels, Emojis, Guild, Roles
+from bot.converters import HushDurationConverter
+from bot.utils import time
+from bot.utils.checks import with_role_check
+from bot.utils.scheduling import Scheduler
 from discord import TextChannel
 from discord.ext import commands, tasks
 from discord.ext.commands import Context
 
-from bot.bot import Bot
-from bot.constants import Channels, Emojis, Guild, MODERATION_ROLES, Roles
-from bot.converters import HushDurationConverter
-from bot.utils.checks import with_role_check
-
 log = logging.getLogger(__name__)
+
+SilencedChannel = namedtuple(
+    "SilencedChannel", ("id", "ctx", "silence", "stop")
+)
+
+
+class UnsilenceScheduler(Scheduler):
+    """Scheduler for unsilencing channels"""
+
+    def __init__(self, bot: Bot):
+        super().__init__()
+
+        self.bot = bot
+
+    async def schedule_unsilence(self, channel: SilencedChannel) -> None:
+        """Schedule expiration for silenced channels"""
+        await self.bot.wait_until_guild_available()
+        log.debug("Scheduling unsilencer")
+        self.schedule_task(channel.id, channel)
+
+    async def _scheduled_task(self, channel: SilencedChannel) -> None:
+        """
+        Removes expired silenced channel from `silence.muted_channels`
+        and calls `silence.unsilence` to unsilence the channel
+        after the silence expires
+        """
+        await time.wait_until(channel.stop)
+        log.info("Unsilencing channel after set delay.")
+
+        # Because `silence.unsilence` explicitly cancels this scheduled task, it is shielded
+        # to avoid prematurely cancelling itself.
+        await asyncio.shield(channel.ctx.invoke(channel.silence.unsilence))
 
 
 class SilenceNotifier(tasks.Loop):
@@ -61,6 +96,7 @@ class Silence(commands.Cog):
         self.muted_channels = set()
         self._get_instance_vars_task = self.bot.loop.create_task(self._get_instance_vars())
         self._get_instance_vars_event = asyncio.Event()
+        self.scheduler = UnsilenceScheduler(bot)
 
     async def _get_instance_vars(self) -> None:
         """Get instance variables after they're available to get from the guild."""
@@ -90,9 +126,15 @@ class Silence(commands.Cog):
             return
 
         await ctx.send(f"{Emojis.check_mark} silenced current channel for {duration} minute(s).")
-        await asyncio.sleep(duration*60)
-        log.info("Unsilencing channel after set delay.")
-        await ctx.invoke(self.unsilence)
+
+        channel = SilencedChannel(
+            id=ctx.channel.id,
+            ctx=ctx,
+            silence=self,
+            stop=datetime.datetime.now() + datetime.timedelta(minutes=duration),
+        )
+
+        await self.scheduler.schedule_unsilence(channel)
 
     @commands.command(aliases=("unhush",))
     async def unsilence(self, ctx: Context) -> None:
@@ -103,8 +145,11 @@ class Silence(commands.Cog):
         """
         await self._get_instance_vars_event.wait()
         log.debug(f"Unsilencing channel #{ctx.channel} from {ctx.author}'s command.")
-        if await self._unsilence(ctx.channel):
-            await ctx.send(f"{Emojis.check_mark} unsilenced current channel.")
+        if not await self._unsilence(ctx.channel):
+            await ctx.send(f"{Emojis.cross_mark} current channel is not silenced.")
+            return
+
+        await ctx.send(f"{Emojis.check_mark} unsilenced current channel.")
 
     async def _silence(self, channel: TextChannel, persistent: bool, duration: Optional[int]) -> bool:
         """
@@ -141,6 +186,7 @@ class Silence(commands.Cog):
             await channel.set_permissions(self._verified_role, **dict(current_overwrite, send_messages=None))
             log.info(f"Unsilenced channel #{channel} ({channel.id}).")
             self.notifier.remove_channel(channel)
+            self.scheduler.cancel_task(channel.id)
             self.muted_channels.discard(channel)
             return True
         log.info(f"Tried to unsilence channel #{channel} ({channel.id}) but the channel was not silenced.")
