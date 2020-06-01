@@ -6,11 +6,12 @@ from contextlib import suppress
 from typing import Optional
 
 from bot.bot import Bot
-from bot.constants import MODERATION_ROLES, Channels, Emojis, Guild, Roles
+from bot.constants import Channels, Emojis, Guild, MODERATION_ROLES, Roles
 from bot.converters import HushDurationConverter
 from bot.utils import time
 from bot.utils.checks import with_role_check
 from bot.utils.scheduling import Scheduler
+
 from discord import TextChannel
 from discord.ext import commands, tasks
 from discord.ext.commands import Context
@@ -23,7 +24,7 @@ SilencedChannel = namedtuple(
 
 
 class UnsilenceScheduler(Scheduler):
-    """Scheduler for unsilencing channels"""
+    """Scheduler for unsilencing channels."""
 
     def __init__(self, bot: Bot):
         super().__init__()
@@ -31,17 +32,13 @@ class UnsilenceScheduler(Scheduler):
         self.bot = bot
 
     async def schedule_unsilence(self, channel: SilencedChannel) -> None:
-        """Schedule expiration for silenced channels"""
+        """Schedule expiration for silenced channels."""
         await self.bot.wait_until_guild_available()
         log.debug("Scheduling unsilencer")
         self.schedule_task(channel.id, channel)
 
     async def _scheduled_task(self, channel: SilencedChannel) -> None:
-        """
-        Removes expired silenced channel from `silence.muted_channels`
-        and calls `silence.unsilence` to unsilence the channel
-        after the silence expires
-        """
+        """Calls `silence.unsilence` on expired silenced channel to unsilence it."""
         await time.wait_until(channel.stop)
         log.info("Unsilencing channel after set delay.")
 
