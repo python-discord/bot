@@ -8,7 +8,7 @@ from discord.ext import commands
 from bot.bot import Bot
 from bot.constants import URLs
 
-SourceType = Union[commands.HelpCommand, commands.Command, commands.Cog, str]
+SourceType = Union[commands.HelpCommand, commands.Command, commands.Cog, str, commands.ExtensionNotLoaded]
 
 
 class SourceConverter(commands.Converter):
@@ -19,11 +19,6 @@ class SourceConverter(commands.Converter):
         if argument.lower().startswith("help"):
             return ctx.bot.help_command
 
-        tags_cog = ctx.bot.get_cog("Tags")
-
-        if tags_cog and argument.lower() in tags_cog._cache:
-            return argument.lower()
-
         cog = ctx.bot.get_cog(argument)
         if cog:
             return cog
@@ -31,6 +26,14 @@ class SourceConverter(commands.Converter):
         cmd = ctx.bot.get_command(argument)
         if cmd:
             return cmd
+
+        tags_cog = ctx.bot.get_cog("Tags")
+
+        if not tags_cog:
+            await ctx.send("Unable to get `Tags` cog.")
+            return commands.ExtensionNotLoaded("bot.cogs.tags")
+        elif argument.lower() in tags_cog._cache:
+            return argument.lower()
 
         raise commands.BadArgument(f"Unable to convert `{argument}` to valid command, tag, or Cog.")
 
@@ -44,6 +47,10 @@ class BotSource(commands.Cog):
     @commands.command(name="source", aliases=("src",))
     async def source_command(self, ctx: commands.Context, *, source_item: SourceConverter = None) -> None:
         """Display information and a GitHub link to the source code of a command, tag, or cog."""
+        # When we have problem to get Tags cog, exit early
+        if isinstance(source_item, commands.ExtensionNotLoaded):
+            return
+
         if not source_item:
             embed = Embed(title="Bot's GitHub Repository")
             embed.add_field(name="Repository", value=f"[Go to GitHub]({URLs.github_bot_repo})")
@@ -51,11 +58,8 @@ class BotSource(commands.Cog):
             await ctx.send(embed=embed)
             return
 
-        embed = await self.build_embed(source_item, ctx)
-
-        # When embed don't exist, then there was error and this is already handled.
-        if embed:
-            await ctx.send(embed=await self.build_embed(source_item, ctx))
+        embed = await self.build_embed(source_item)
+        await ctx.send(embed=embed)
 
     def get_source_link(self, source_item: SourceType) -> Tuple[str, str, Optional[int]]:
         """Build GitHub link of source item, return this link, file location and first line number."""
@@ -73,9 +77,6 @@ class BotSource(commands.Cog):
                 filename = src.co_filename
         elif isinstance(source_item, str):
             tags_cog = self.bot.get_cog("Tags")
-            if not tags_cog:
-                return "", "", None
-
             filename = tags_cog._cache[source_item]["location"]
         else:
             src = type(source_item)
@@ -93,14 +94,9 @@ class BotSource(commands.Cog):
 
         return url, file_location, first_line_no or None
 
-    async def build_embed(self, source_object: SourceType, ctx: commands.Context) -> Optional[Embed]:
+    async def build_embed(self, source_object: SourceType) -> Optional[Embed]:
         """Build embed based on source object."""
         url, location, first_line = self.get_source_link(source_object)
-
-        # There is no URL only when bot can't fetch Tags cog
-        if not url:
-            await ctx.send("Unable to get `Tags` cog.")
-            return
 
         if isinstance(source_object, commands.HelpCommand):
             title = "Help Command"
