@@ -58,7 +58,7 @@ class BotSource(commands.Cog):
             await ctx.send(embed=await self.build_embed(source_item, ctx))
 
     def get_source_link(self, source_item: SourceType) -> Tuple[str, str, Optional[int]]:
-        """Build GitHub link of source item."""
+        """Build GitHub link of source item, return this link, file location and first line number."""
         if isinstance(source_item, commands.HelpCommand):
             src = type(source_item)
             filename = inspect.getsourcefile(src)
