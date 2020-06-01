@@ -21,12 +21,8 @@ class SourceConverter(commands.Converter):
 
         tags_cog = ctx.bot.get_cog("Tags")
 
-        if argument.lower() in tags_cog._cache:
-            tag = argument.lower()
-            if tags_cog._cache[tag]["restricted_to"] != "developers":
-                return f"/bot/bot/resources/tags/{tags_cog._cache[tag]['restricted_to']}/{tag}.md"
-            else:
-                return f"/bot/bot/resources/tags/{tag}.md"
+        if tags_cog and argument.lower() in tags_cog._cache:
+            return argument.lower()
 
         cog = ctx.bot.get_cog(argument)
         if cog:
@@ -56,6 +52,12 @@ class BotSource(commands.Cog):
             return
 
         url, location, first_line = self.get_source_link(source_item)
+
+        # There is no URL only when bot can't fetch Tags cog
+        if not url:
+            await ctx.send("Unable to get `Tags` cog.")
+            return
+
         await ctx.send(embed=await self.build_embed(url, source_item, location, first_line))
 
     def get_source_link(self, source_item: SourceType) -> Tuple[str, str, Optional[int]]:
@@ -73,7 +75,11 @@ class BotSource(commands.Cog):
                 src = source_item.callback.__code__
                 filename = src.co_filename
         elif isinstance(source_item, str):
-            filename = source_item
+            tags_cog = self.bot.get_cog("Tags")
+            if not tags_cog:
+                return "", "", None
+
+            filename = tags_cog._cache[source_item]["location"]
         else:
             src = type(source_item)
             filename = inspect.getsourcefile(src)
@@ -106,7 +112,7 @@ class BotSource(commands.Cog):
             aliases_string = f" (or {', '.join(source_object.aliases)})" if source_object.aliases else ""
             title = f"Command: {source_object.qualified_name}{aliases_string}"
         elif isinstance(source_object, str):
-            title = f"Tag: {source_object.split('/')[-1].split('.')[0]}"
+            title = f"Tag: {source_object}"
             description = ""
         else:
             title = f"Cog: {source_object.qualified_name}"
