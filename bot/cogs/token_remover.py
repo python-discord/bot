@@ -79,7 +79,8 @@ class TokenRemover(Cog):
     async def take_action(self, msg: Message, found_token: Token) -> None:
         """Remove the `msg` containing the `found_token` and send a mod log message."""
         self.mod_log.ignore(Event.message_delete, msg.id)
-        await self.delete_message(msg)
+        await msg.delete()
+        await msg.channel.send(DELETION_MESSAGE_TEMPLATE.format(mention=msg.author.mention))
 
         log_message = self.format_log_message(msg, found_token)
         log.debug(log_message)
@@ -95,12 +96,6 @@ class TokenRemover(Cog):
         )
 
         self.bot.stats.incr("tokens.removed_tokens")
-
-    @staticmethod
-    async def delete_message(msg: Message) -> None:
-        """Remove a `msg` containing a token and send an explanatory message in the same channel."""
-        await msg.delete()
-        await msg.channel.send(DELETION_MESSAGE_TEMPLATE.format(mention=msg.author.mention))
 
     @staticmethod
     def format_log_message(msg: Message, token: Token) -> str:

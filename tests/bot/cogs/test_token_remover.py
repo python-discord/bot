@@ -229,15 +229,6 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         results = [match[0] for match in results]
         self.assertCountEqual((token_1, token_2), results)
 
-    async def test_delete_message(self):
-        """The message should be deleted, and a message should be sent to the same channel."""
-        await TokenRemover.delete_message(self.msg)
-
-        self.msg.delete.assert_called_once_with()
-        self.msg.channel.send.assert_called_once_with(
-            token_remover.DELETION_MESSAGE_TEMPLATE.format(mention=self.msg.author.mention)
-        )
-
     @autospec("bot.cogs.token_remover", "LOG_MESSAGE")
     def test_format_log_message(self, log_message):
         """Should correctly format the log message with info from the message and token."""
@@ -258,8 +249,8 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
 
     @mock.patch.object(TokenRemover, "mod_log", new_callable=mock.PropertyMock)
     @autospec("bot.cogs.token_remover", "log")
-    @autospec(TokenRemover, "delete_message", "format_log_message")
-    async def test_take_action(self, delete_message, format_log_message, logger, mod_log_property):
+    @autospec(TokenRemover, "format_log_message")
+    async def test_take_action(self, format_log_message, logger, mod_log_property):
         """Should delete the message and send a mod log."""
         cog = TokenRemover(self.bot)
         mod_log = mock.create_autospec(ModLog, spec_set=True, instance=True)
@@ -271,7 +262,11 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
 
         await cog.take_action(self.msg, token)
 
-        delete_message.assert_awaited_once_with(self.msg)
+        self.msg.delete.assert_called_once_with()
+        self.msg.channel.send.assert_called_once_with(
+            token_remover.DELETION_MESSAGE_TEMPLATE.format(mention=self.msg.author.mention)
+        )
+
         format_log_message.assert_called_once_with(self.msg, token)
         logger.debug.assert_called_with(log_msg)
         self.bot.stats.incr.assert_called_once_with("tokens.removed_tokens")
