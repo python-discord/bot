@@ -90,8 +90,8 @@ class ConvertRegex(Converter):
             )
 
 
-ReRegex = ConvertRegex(supports_extended_features=False)
-RegexRegex = ConvertRegex(supports_extended_features=True)
+Regex = ConvertRegex(supports_extended_features=False)
+ExtendedRegex = ConvertRegex(supports_extended_features=True)
 
 
 class RegularExpressions(Cog):
@@ -102,18 +102,18 @@ class RegularExpressions(Cog):
 
     @group(name='regexp', aliases=('regex', 're'), invoke_without_command=True)
     async def regexp_group(self, ctx: Context) -> None:
-        """Commands for exploring the misterious world of regular expressions."""
+        """Commands for exploring the mysterious world of regular expressions."""
         await ctx.invoke(self.bot.get_command("help"), "regexp")
 
-    @regexp_group.command(name='search', aliases=('find', 's', '🔍'))
-    async def match_command(self, ctx: Context, pattern: ReRegex, test: str) -> None:
+    @regexp_group.command(name='search', aliases=('find', 's'))
+    async def match_command(self, ctx: Context, pattern: Regex, test: str) -> None:
         """Look for the first match of a pattern in a string."""
         await ctx.send(match_and_format(pattern, test))
 
-    @regexp_group.command(name='search+', aliases=('find+', 's+', '🔍+'))
-    async def match_plus_command(self, ctx: Context, pattern: RegexRegex, test: str) -> None:
+    @regexp_group.command(name='search+', aliases=('find+', 's+'))
+    async def match_plus_command(self, ctx: Context, pattern: ExtendedRegex, test: str) -> None:
         """
-        Like `!re search`, but with an extended regex format.
+        Look for the first match of a pattern in a string.
 
         Enables additional features from the
         https://pypi.org/project/regex module.
