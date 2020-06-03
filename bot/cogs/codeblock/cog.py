@@ -4,9 +4,10 @@ from typing import Optional
 
 import discord
 from discord import Message, RawMessageUpdateEvent
-from discord.ext.commands import Bot, Cog
+from discord.ext.commands import Cog
 
 from bot import constants
+from bot.bot import Bot
 from bot.cogs.token_remover import TokenRemover
 from bot.utils import has_lines
 from bot.utils.channel import is_help_channel
@@ -113,6 +114,9 @@ class CodeBlockCog(Cog, name="Code Block"):
         self.bot.loop.create_task(
             wait_for_deletion(bot_message, user_ids=(message.author.id,), client=self.bot)
         )
+
+        # Increase amount of codeblock correction in stats
+        self.bot.stats.incr("codeblock_corrections")
 
     def should_parse(self, message: discord.Message) -> bool:
         """
