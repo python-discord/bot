@@ -7,6 +7,9 @@ from discord.ext.commands import BadArgument, Cog, Context, Converter, group
 from bot.bot import Bot
 
 
+REGEX_TIMEOUT = 0.05  # maximum time until
+
+
 def format_error(e: Union[re.error, regex.error]) -> Iterable[str]:
     r"""
     Format a regexp parsing error message to display in a response.
@@ -54,10 +57,13 @@ def format_match(match: Optional[re.Match]) -> Iterable[str]:
         return ["    " + match.string, *group_carets]
 
 
-def match_and_format(pattern: Union[regex.Regex], test: str) -> str:
+def match_and_format(pattern: regex.Regex, test: str) -> str:
     """Attempt to match a regex with a test string and return a formatted result."""
-    match_lines = "\n".join(format_match(pattern.search(test)))
-    return f"```\n{match_lines}\n```"
+    try:
+        match_lines = "\n".join(format_match(pattern.search(test, timeout=REGEX_TIMEOUT)))
+        return f"```\n{match_lines}\n```"
+    except TimeoutError:
+        return ":x: Searching with this regular expression took too much time"
 
 
 class ConvertRegex(Converter):
