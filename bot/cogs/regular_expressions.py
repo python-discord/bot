@@ -16,16 +16,17 @@ def format_error(e: Union[re.error, regex.error]) -> Iterable[str]:
 
     >>> try: re.compile("\w+(")
     ... except re.error as e: print(format_error(e))
-    ['\w+(', '   ^', 'missing ), unterminated subpattern']
+    ['- \w+(', '-    ^', '- missing ), unterminated subpattern']
 
     Which will look like:
     | \w+(
     |    ^
     | missing ), unterminated subpattern
+    (everything colored red)
     """
-    line_with_regexp = e.pattern
-    line_with_caret = " "*e.pos + "^"
-    line_with_explanation = e.msg
+    line_with_regexp = "- " + e.pattern
+    line_with_caret = "- " + " "*e.pos + "^"
+    line_with_explanation = "- " + e.msg
     return [line_with_regexp, line_with_caret, line_with_explanation]
 
 
@@ -34,12 +35,13 @@ def format_match(match: Optional[re.Match]) -> Iterable[str]:
     Format a match result to display in a response.
 
     >>> format_match(re.search("(\d\d)+", "hello123456world"))
-    ['    hello123456world', ' 0:      ^^^^^^', ' 1:          ^^']
+    ['    hello123456world', '+  0:      123456', '+  1:          56']
 
     Which will look as:
     |    hello123456world
-    | 0:      ^^^^^^
-    | 1:          ^^
+    | 0:      123456
+    | 1:          56
+    (the last two lines will be green)
     """
     if match is None:
         return ["No match"]
@@ -50,18 +52,19 @@ def format_match(match: Optional[re.Match]) -> Iterable[str]:
         for group_index, (start, end) in enumerate(captured_positions):
             group_is_missing = (start, end) == (-1, -1)
             if not group_is_missing:
+                # TODO: display zero-width groups (how?)
                 group_carets.append(
-                    f"{group_index:>2}: " + " "*start + "^"*(end - start)
+                    f"+ {group_index:>2}: " + " "*start + match.string[start:end]
                 )
 
-        return ["    " + match.string, *group_carets]
+        return ["      " + match.string, *group_carets]
 
 
 def match_and_format(pattern: regex.Regex, test: str) -> str:
     """Attempt to match a regex with a test string and return a formatted result."""
     try:
         match_lines = "\n".join(format_match(pattern.search(test, timeout=REGEX_TIMEOUT)))
-        return f"```\n{match_lines}\n```"
+        return f"\n```diff\n{match_lines}\n```"
     except TimeoutError:
         return ":x: Searching with this regular expression took too much time"
 
@@ -91,8 +94,8 @@ class ConvertRegex(Converter):
         except (regex.error, re.error) as e:
             error_lines = "\n".join(format_error(e))
             raise BadArgument(
-                "\nSyntax error in a regular expression: "
-                f"```\n{error_lines}\n```"
+                ":x: Syntax error in a regular expression: \n"
+                f"```diff\n{error_lines}\n```"
             )
 
 
