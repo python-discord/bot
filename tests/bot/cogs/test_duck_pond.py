@@ -45,7 +45,7 @@ class DuckPondTests(base.LoggingTestsMixin, unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(cog.bot, bot)
         self.assertEqual(cog.webhook_id, constants.Webhooks.duck_pond)
-        bot.loop.create_loop.called_once_with(cog.fetch_webhook())
+        bot.loop.create_task.assert_called_once_with(cog.fetch_webhook())
 
     def test_fetch_webhook_succeeds_without_connectivity_issues(self):
         """The `fetch_webhook` method waits until `READY` event and sets the `webhook` attribute."""
