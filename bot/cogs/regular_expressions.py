@@ -115,19 +115,19 @@ class RegularExpressions(Cog):
         await ctx.invoke(self.bot.get_command("help"), "regexp")
 
     @regexp_group.command(name='search', aliases=('find', 's'))
-    async def match_command(self, ctx: Context, pattern: Regex, test: str) -> None:
+    async def match_command(self, ctx: Context, pattern: Regex, *, string: str) -> None:
         """Look for the first match of a pattern in a string."""
-        await ctx.send(match_and_format(pattern, test))
+        await ctx.send(match_and_format(pattern, string))
 
     @regexp_group.command(name='search+', aliases=('find+', 's+'))
-    async def match_plus_command(self, ctx: Context, pattern: ExtendedRegex, test: str) -> None:
+    async def match_plus_command(self, ctx: Context, pattern: ExtendedRegex, *, string: str) -> None:
         """
         Look for the first match of a pattern in a string.
 
         Enables additional features from the
         https://pypi.org/project/regex module.
         """
-        await ctx.send(match_and_format(pattern, test))
+        await ctx.send(match_and_format(pattern, string))
 
 
 def setup(bot: Bot) -> None:
