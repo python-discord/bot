@@ -83,14 +83,14 @@ class ModManagement(commands.Cog):
                 "actor__id": ctx.author.id,
                 "ordering": "-inserted_at"
             }
-            infractions = await self.bot.api_client.get(f"bot/infractions", params=params)
+            infractions = await self.bot.api_client.get("bot/infractions", params=params)
 
             if infractions:
                 old_infraction = infractions[0]
                 infraction_id = old_infraction["id"]
             else:
                 await ctx.send(
-                    f":x: Couldn't find most recent infraction; you have never given an infraction."
+                    ":x: Couldn't find most recent infraction; you have never given an infraction."
                 )
                 return
         else:
@@ -224,7 +224,7 @@ class ModManagement(commands.Cog):
     ) -> None:
         """Send a paginated embed of infractions for the specified user."""
         if not infractions:
-            await ctx.send(f":warning: No infractions could be found for that query.")
+            await ctx.send(":warning: No infractions could be found for that query.")
             return
 
         lines = tuple(
@@ -268,12 +268,12 @@ class ModManagement(commands.Cog):
             User: {self.bot.get_user(user_id)} (`{user_id}`)
             Type: **{infraction["type"]}**
             Shadow: {hidden}
-            Reason: {infraction["reason"] or "*None*"}
             Created: {created}
             Expires: {expires}
             Remaining: {remaining}
             Actor: {actor.mention if actor else actor_id}
             ID: `{infraction["id"]}`
+            Reason: {infraction["reason"] or "*None*"}
             {"**===============**" if active else "==============="}
         """)
 

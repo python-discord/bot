@@ -37,12 +37,19 @@ class LinePaginator(Paginator):
         The suffix appended at the end of every page. e.g. three backticks.
     * max_size: `int`
         The maximum amount of codepoints allowed in a page.
+    * scale_to_size: `int`
+        The maximum amount of characters a single line can scale up to.
     * max_lines: `int`
         The maximum amount of lines allowed in a page.
     """
 
     def __init__(
-        self, prefix: str = '```', suffix: str = '```', max_size: int = 2000, max_lines: int = None
+        self,
+        prefix: str = '```',
+        suffix: str = '```',
+        max_size: int = 2000,
+        scale_to_size: int = 2000,
+        max_lines: t.Optional[int] = None
     ) -> None:
         """
         This function overrides the Paginator.__init__ from inside discord.ext.commands.
@@ -52,6 +59,10 @@ class LinePaginator(Paginator):
         self.prefix = prefix
         self.suffix = suffix
         self.max_size = max_size - len(suffix)
+        if scale_to_size < max_size:
+            raise ValueError("scale_to_size must be >= max_size.")
+
+        self.scale_to_size = scale_to_size
         self.max_lines = max_lines
         self._current_page = [prefix]
         self._linecount = 0
@@ -62,14 +73,26 @@ class LinePaginator(Paginator):
         """
         Adds a line to the current page.
 
-        If the line exceeds the `self.max_size` then an exception is raised.
+        If the line exceeds `self.max_size`, then `self.max_size` will go up to `scale_to_size` for
+        a single line before creating a new page. If it is still exceeded, the excess characters
+        are stored and placed on the next pages until there are none remaining (by word boundary).
+
+        Raises a RuntimeError if `self.max_size` is still exceeded after attempting to continue
+        onto the next page.
 
         This function overrides the `Paginator.add_line` from inside `discord.ext.commands`.
 
         It overrides in order to allow us to configure the maximum number of lines per page.
         """
-        if len(line) > self.max_size - len(self.prefix) - 2:
-            raise RuntimeError('Line exceeds maximum page size %s' % (self.max_size - len(self.prefix) - 2))
+        remaining_words = None
+        if len(line) > (max_chars := self.max_size - len(self.prefix) - 2):
+            if len(line) > self.scale_to_size:
+                line, remaining_words = self._split_remaining_words(line, max_chars)
+                # If line still exceeds scale_to_size, we were unable to split into a second
+                # page without truncating.
+                if len(line) > self.scale_to_size:
+                    raise RuntimeError(f'Line exceeds maximum scale_to_size {self.scale_to_size}'
+                                       ' and could not be split.')
 
         if self.max_lines is not None:
             if self._linecount >= self.max_lines:
@@ -87,6 +110,36 @@ class LinePaginator(Paginator):
             self._current_page.append('')
             self._count += 1
 
+        if remaining_words:
+            self.add_line(remaining_words)
+
+    def _split_remaining_words(self, line: str, max_chars: int) -> t.Tuple[str, t.Optional[str]]:
+        """Internal: split a line into two strings; one that fits within *max_chars* characters
+        (reduced_words) and another for the remaining (remaining_words), rounding down to the
+        nearest word.
+
+        Return a tuple in the format (reduced_words, remaining_words).
+        """
+        reduced_words = []
+        # "(Continued)" is used on a line by itself to indicate the continuation of last page
+        remaining_words = ["(Continued)\n", "---------------\n"]
+        reduced_char_count = 0
+        is_full = False
+
+        for word in line.split(" "):
+            if not is_full:
+                if len(word) + reduced_char_count <= max_chars:
+                    reduced_words.append(word)
+                    reduced_char_count += len(word)
+                else:
+                    is_full = True
+                    remaining_words.append(word)
+            else:
+                remaining_words.append(word)
+
+        return " ".join(reduced_words), " ".join(remaining_words) if len(remaining_words) > 2 \
+               else None
+
     @classmethod
     async def paginate(
         cls,
@@ -97,6 +150,7 @@ class LinePaginator(Paginator):
         suffix: str = "",
         max_lines: t.Optional[int] = None,
         max_size: int = 500,
+        scale_to_size: int = 2000,
         empty: bool = True,
         restrict_to_user: User = None,
         timeout: int = 300,
@@ -147,7 +201,7 @@ class LinePaginator(Paginator):
 
         if not lines:
             if exception_on_empty_embed:
-                log.exception(f"Pagination asked for empty lines iterable")
+                log.exception("Pagination asked for empty lines iterable")
                 raise EmptyPaginatorEmbed("No lines to paginate")
 
             log.debug("No lines to add to paginator, adding '(nothing to display)' message")
@@ -357,7 +411,7 @@ class ImagePaginator(Paginator):
 
         if not pages:
             if exception_on_empty_embed:
-                log.exception(f"Pagination asked for empty image list")
+                log.exception("Pagination asked for empty image list")
                 raise EmptyPaginatorEmbed("No images to paginate")
 
             log.debug("No images to add to paginator, adding '(no images to display)' message")
