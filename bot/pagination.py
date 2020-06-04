@@ -114,9 +114,13 @@ class LinePaginator(Paginator):
             self.add_line(remaining_words)
 
     def _split_remaining_words(self, line: str, max_chars: int) -> t.Tuple[str, t.Optional[str]]:
-        """Internal: split a line into two strings; one that fits within *max_chars* characters
-        (reduced_words) and another for the remaining (remaining_words), rounding down to the
-        nearest word.
+        """Internal: split a line into two strings -- reduced_words and remaining_words.
+
+        reduced_words: the remaining words in `line`, after attempting to remove all words that
+            exceed `max_chars` (rounding down to the nearest word boundary).
+
+        remaining_words: the words in `line` which exceed `max_chars`. This value is None if
+            no words could be split from `line`.
 
         Return a tuple in the format (reduced_words, remaining_words).
         """
