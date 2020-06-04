@@ -12,7 +12,7 @@ from bot.bot import Bot
 from bot.converters import Expiry, InfractionSearchQuery, allowed_strings, proxy_user
 from bot.pagination import LinePaginator
 from bot.utils import time
-from bot.utils.checks import in_channel_check, with_role_check
+from bot.utils.checks import in_whitelist_check, with_role_check
 from . import utils
 from .infractions import Infractions
 from .modlog import ModLog
@@ -43,14 +43,14 @@ class ModManagement(commands.Cog):
     @commands.group(name='infraction', aliases=('infr', 'infractions', 'inf'), invoke_without_command=True)
     async def infraction_group(self, ctx: Context) -> None:
         """Infraction manipulation commands."""
-        await ctx.invoke(self.bot.get_command("help"), "infraction")
+        await ctx.send_help(ctx.command)
 
     @infraction_group.command(name='edit')
     async def infraction_edit(
         self,
         ctx: Context,
-        infraction_id: t.Union[int, allowed_strings("l", "last", "recent")],
-        duration: t.Union[Expiry, allowed_strings("p", "permanent"), None],
+        infraction_id: t.Union[int, allowed_strings("l", "last", "recent")],  # noqa: F821
+        duration: t.Union[Expiry, allowed_strings("p", "permanent"), None],   # noqa: F821
         *,
         reason: str = None
     ) -> None:
@@ -283,10 +283,16 @@ class ModManagement(commands.Cog):
 
     # This cannot be static (must have a __func__ attribute).
     def cog_check(self, ctx: Context) -> bool:
-        """Only allow moderators from moderator channels to invoke the commands in this cog."""
+        """Only allow moderators inside moderator channels to invoke the commands in this cog."""
         checks = [
             with_role_check(ctx, *constants.MODERATION_ROLES),
-            in_channel_check(ctx, *constants.MODERATION_CHANNELS)
+            in_whitelist_check(
+                ctx,
+                channels=constants.MODERATION_CHANNELS,
+                categories=[constants.Categories.modmail],
+                redirect=None,
+                fail_silently=True,
+            )
         ]
         return all(checks)
 

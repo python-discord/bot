@@ -117,7 +117,7 @@ class DuckPond(Cog):
                     avatar_url=message.author.avatar_url
                 )
             except discord.HTTPException:
-                log.exception(f"Failed to send an attachment to the webhook")
+                log.exception("Failed to send an attachment to the webhook")
 
         await message.add_reaction("✅")
 

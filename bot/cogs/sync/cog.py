@@ -94,7 +94,6 @@ class Sync(Cog):
         the database, the user is added.
         """
         packed = {
-            'avatar_hash': member.avatar,
             'discriminator': int(member.discriminator),
             'id': member.id,
             'in_guild': True,
@@ -135,12 +134,11 @@ class Sync(Cog):
     @Cog.listener()
     async def on_user_update(self, before: User, after: User) -> None:
         """Update the user information in the database if a relevant change is detected."""
-        attrs = ("name", "discriminator", "avatar")
+        attrs = ("name", "discriminator")
         if any(getattr(before, attr) != getattr(after, attr) for attr in attrs):
             updated_information = {
                 "name": after.name,
                 "discriminator": int(after.discriminator),
-                "avatar_hash": after.avatar,
             }
             await self.patch_user(after.id, updated_information=updated_information)
 
