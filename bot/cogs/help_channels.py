@@ -9,12 +9,14 @@ from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
 
+import dateutil
 import discord
 import discord.abc
 from discord.ext import commands
 
 from bot import constants
 from bot.bot import Bot
+from bot.utils import RedisCache
 from bot.utils.checks import with_role_check
 from bot.utils.scheduling import Scheduler
 
@@ -99,13 +101,24 @@ class HelpChannels(Scheduler, commands.Cog):
     Help channels are named after the chemical elements in `bot/resources/elements.json`.
     """
 
+    # This cache tracks which channels are claimed by which members.
+    # RedisCache[discord.TextChannel.id, t.Union[discord.User.id, discord.Member.id]]
+    help_channel_claimants = RedisCache()
+
+    # This cache maps a help channel to whether it has had any
+    # activity other than the original claimant. True being no other
+    # activity and False being other activity.
+    # RedisCache[discord.TextChannel.id, bool]
+    unanswered = RedisCache()
+
+    # This dictionary maps a help channel to the time it was claimed
+    # RedisCache[discord.TextChannel.id, datetime.datetime]
+    claim_times = RedisCache()
+
     def __init__(self, bot: Bot):
         super().__init__()
 
         self.bot = bot
-        self.help_channel_claimants: (
-            t.Dict[discord.TextChannel, t.Union[discord.Member, discord.User]]
-        ) = {}
 
         # Categories
         self.available_category: discord.CategoryChannel = None
@@ -124,16 +137,6 @@ class HelpChannels(Scheduler, commands.Cog):
         self.ready = asyncio.Event()
         self.on_message_lock = asyncio.Lock()
         self.init_task = self.bot.loop.create_task(self.init_cog())
-
-        # Stats
-
-        # This dictionary maps a help channel to the time it was claimed
-        self.claim_times: t.Dict[int, datetime] = {}
-
-        # This dictionary maps a help channel to whether it has had any
-        # activity other than the original claimant. True being no other
-        # activity and False being other activity.
-        self.unanswered: t.Dict[int, bool] = {}
 
     def cog_unload(self) -> None:
         """Cancel the init task and scheduled tasks when the cog unloads."""
@@ -197,7 +200,7 @@ class HelpChannels(Scheduler, commands.Cog):
 
     async def dormant_check(self, ctx: commands.Context) -> bool:
         """Return True if the user is the help channel claimant or passes the role check."""
-        if self.help_channel_claimants.get(ctx.channel) == ctx.author:
+        if await self.help_channel_claimants.get(ctx.channel.id) == ctx.author.id:
             log.trace(f"{ctx.author} is the help channel claimant, passing the check for dormant.")
             self.bot.stats.incr("help.dormant_invoke.claimant")
             return True
@@ -223,7 +226,7 @@ class HelpChannels(Scheduler, commands.Cog):
         if ctx.channel.category == self.in_use_category:
             if await self.dormant_check(ctx):
                 with suppress(KeyError):
-                    del self.help_channel_claimants[ctx.channel]
+                    await self.help_channel_claimants.delete(ctx.channel.id)
 
                 await self.remove_cooldown_role(ctx.author)
                 # Ignore missing task when cooldown has passed but the channel still isn't dormant.
@@ -546,13 +549,14 @@ class HelpChannels(Scheduler, commands.Cog):
 
         self.bot.stats.incr(f"help.dormant_calls.{caller}")
 
-        if channel.id in self.claim_times:
-            claimed = self.claim_times[channel.id]
+        if await self.claim_times.contains(channel.id):
+            claimed_datestring = await self.claim_times.get(channel.id)
+            claimed = dateutil.parser.parse(claimed_datestring)
             in_use_time = datetime.now() - claimed
             self.bot.stats.timing("help.in_use_time", in_use_time)
 
-        if channel.id in self.unanswered:
-            if self.unanswered[channel.id]:
+        if await self.unanswered.contains(channel.id):
+            if await self.unanswered.get(channel.id):
                 self.bot.stats.incr("help.sessions.unanswered")
             else:
                 self.bot.stats.incr("help.sessions.answered")
@@ -638,16 +642,16 @@ class HelpChannels(Scheduler, commands.Cog):
             log.trace(f"Checking if #{channel} ({channel.id}) has been answered.")
 
             # Check if there is an entry in unanswered (does not persist across restarts)
-            if channel.id in self.unanswered:
-                claimant = self.help_channel_claimants.get(channel)
-                if not claimant:
-                    # The mapping for this channel was lost, we can't do anything.
+            if await self.unanswered.contains(channel.id):
+                claimant_id = await self.help_channel_claimants.get(channel.id)
+                if not claimant_id:
+                    # The mapping for this channel doesn't exist, we can't do anything.
                     return
 
                 # Check the message did not come from the claimant
-                if claimant.id != message.author.id:
+                if claimant_id != message.author.id:
                     # Mark the channel as answered
-                    self.unanswered[channel.id] = False
+                    await self.unanswered.set(channel.id, False)
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
@@ -680,12 +684,12 @@ class HelpChannels(Scheduler, commands.Cog):
             await self.move_to_in_use(channel)
             await self.revoke_send_permissions(message.author)
             # Add user with channel for dormant check.
-            self.help_channel_claimants[channel] = message.author
+            await self.help_channel_claimants.set(channel.id, message.author.id)
 
             self.bot.stats.incr("help.claimed")
 
-            self.claim_times[channel.id] = datetime.now()
-            self.unanswered[channel.id] = True
+            await self.claim_times.set(channel.id, str(datetime.now()))
+            await self.unanswered.set(channel.id, True)
 
             log.trace(f"Releasing on_message lock for {message.id}.")
 
