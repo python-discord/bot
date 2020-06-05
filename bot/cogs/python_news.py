@@ -153,6 +153,7 @@ class PythonNews(Cog):
 
                 if (
                         thread_information["thread_id"] in existing_news["data"][maillist]
+                        or 'Re: ' in thread_information["subject"]
                         or new_date.date() < date.today()
                 ):
                     continue
