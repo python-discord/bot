@@ -9,7 +9,6 @@ from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
 
-import dateutil
 import discord
 import discord.abc
 from discord.ext import commands
@@ -550,9 +549,9 @@ class HelpChannels(Scheduler, commands.Cog):
         self.bot.stats.incr(f"help.dormant_calls.{caller}")
 
         if await self.claim_times.contains(channel.id):
-            claimed_datestring = await self.claim_times.get(channel.id)
-            claimed = dateutil.parser.parse(claimed_datestring)
-            in_use_time = datetime.now() - claimed
+            claimed_timestamp = await self.claim_times.get(channel.id)
+            claimed = datetime.fromtimestamp(claimed_timestamp)
+            in_use_time = datetime.utcnow() - claimed
             self.bot.stats.timing("help.in_use_time", in_use_time)
 
         if await self.unanswered.contains(channel.id):
@@ -688,7 +687,7 @@ class HelpChannels(Scheduler, commands.Cog):
 
             self.bot.stats.incr("help.claimed")
 
-            await self.claim_times.set(channel.id, str(datetime.now()))
+            await self.claim_times.set(channel.id, datetime.utcnow().timestamp())
             await self.unanswered.set(channel.id, True)
 
             log.trace(f"Releasing on_message lock for {message.id}.")
