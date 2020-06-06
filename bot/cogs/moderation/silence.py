@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from contextlib import suppress
-from typing import Optional, NamedTuple
+from typing import NamedTuple, Optional
 
 from discord import TextChannel
 from discord.ext import commands, tasks
