@@ -1,9 +1,7 @@
 import asyncio
-import datetime
 import logging
-from collections import namedtuple
 from contextlib import suppress
-from typing import Optional
+from typing import Optional, NamedTuple
 
 from discord import TextChannel
 from discord.ext import commands, tasks
@@ -12,14 +10,13 @@ from discord.ext.commands import Context
 from bot.bot import Bot
 from bot.constants import Channels, Emojis, Guild, MODERATION_ROLES, Roles
 from bot.converters import HushDurationConverter
-from bot.utils import time
 from bot.utils.checks import with_role_check
 from bot.utils.scheduling import Scheduler
 
 log = logging.getLogger(__name__)
 
-SilencedChannel = namedtuple(
-    "SilencedChannel", ("id", "ctx", "stop")
+SilencedChannel = NamedTuple(
+    "SilencedChannel", [("ctx", Context), ("delay", int)]
 )
 
 
@@ -65,11 +62,11 @@ class Silence(Scheduler, commands.Cog):
     """Commands for stopping channel messages for `verified` role in a channel."""
 
     def __init__(self, bot: Bot):
+        super().__init__()
         self.bot = bot
         self.muted_channels = set()
         self._get_instance_vars_task = self.bot.loop.create_task(self._get_instance_vars())
         self._get_instance_vars_event = asyncio.Event()
-        super().__init__()
 
     async def schedule_unsilence(self, channel: SilencedChannel) -> None:
         """Schedule expiration for silenced channels."""
@@ -79,10 +76,10 @@ class Silence(Scheduler, commands.Cog):
 
     async def _scheduled_task(self, channel: SilencedChannel) -> None:
         """Calls `self.unsilence` on expired silenced channel to unsilence it."""
-        await time.wait_until(channel.stop)
+        await asyncio.sleep(channel.delay)
         log.info("Unsilencing channel after set delay.")
 
-        # Because `self.unsilence` explicitly cancels this scheduled tas, it is shielded
+        # Because `self.unsilence` explicitly cancels this scheduled task, it is shielded
         # to avoid prematurely cancelling itself
         await asyncio.shield(channel.ctx.invoke(self.unsilence))
 
@@ -116,12 +113,11 @@ class Silence(Scheduler, commands.Cog):
         await ctx.send(f"{Emojis.check_mark} silenced current channel for {duration} minute(s).")
 
         channel = SilencedChannel(
-            id=ctx.channel.id,
             ctx=ctx,
-            stop=datetime.datetime.now() + datetime.timedelta(minutes=duration),
+            stop=duration*60,
         )
 
-        await self.schedule_unsilence(channel)
+        await self.schedule_task(ctx.channel.id, channel)
 
     @commands.command(aliases=("unhush",))
     async def unsilence(self, ctx: Context) -> None:
@@ -134,9 +130,8 @@ class Silence(Scheduler, commands.Cog):
         log.debug(f"Unsilencing channel #{ctx.channel} from {ctx.author}'s command.")
         if not await self._unsilence(ctx.channel):
             await ctx.send(f"{Emojis.cross_mark} current channel is not silenced.")
-            return
-
-        await ctx.send(f"{Emojis.check_mark} unsilenced current channel.")
+        else:
+            await ctx.send(f"{Emojis.check_mark} unsilenced current channel.")
 
     async def _silence(self, channel: TextChannel, persistent: bool, duration: Optional[int]) -> bool:
         """
