@@ -161,8 +161,8 @@ class Silence(Scheduler, commands.Cog):
         if current_overwrite.send_messages is False:
             await channel.set_permissions(self._verified_role, **dict(current_overwrite, send_messages=None))
             log.info(f"Unsilenced channel #{channel} ({channel.id}).")
-            self.notifier.remove_channel(channel)
             self.cancel_task(channel.id)
+            self.notifier.remove_channel(channel)
             self.muted_channels.discard(channel)
             return True
         log.info(f"Tried to unsilence channel #{channel} ({channel.id}) but the channel was not silenced.")
