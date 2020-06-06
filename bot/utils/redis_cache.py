@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from distutils.util import strtobool
 from functools import partialmethod
 from typing import Any, Dict, ItemsView, Optional, Tuple, Union
 
@@ -119,9 +118,15 @@ class RedisCache:
     def _to_typestring(key_or_value: RedisKeyOrValue, prefixes: _PrefixTuple) -> str:
         """Turn a valid Redis type into a typestring."""
         for prefix, _type in prefixes:
+            # Convert bools into integers before storing them.
+            if type(key_or_value) is bool:
+                bool_int = int(key_or_value)
+                return f"{prefix}{bool_int}"
+
             # isinstance is a bad idea here, because isintance(False, int) == True.
             if type(key_or_value) is _type:
                 return f"{prefix}{key_or_value}"
+
         raise TypeError(f"RedisCache._to_typestring only supports the following: {prefixes}.")
 
     @staticmethod
@@ -138,7 +143,7 @@ class RedisCache:
                 # For booleans, we need special handling because bool("False") is True.
                 if prefix == "b|":
                     value = key_or_value[len(prefix):]
-                    return bool(strtobool(value))
+                    return bool(int(value))
 
                 # Otherwise we can just convert normally.
                 return _type(key_or_value[len(prefix):])
