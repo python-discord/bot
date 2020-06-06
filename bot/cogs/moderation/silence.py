@@ -111,7 +111,7 @@ class Silence(Scheduler, commands.Cog):
             delay=duration*60,
         )
 
-        await self.schedule_task(ctx.channel.id, channel)
+        self.schedule_task(ctx.channel.id, channel)
 
     @commands.command(aliases=("unhush",))
     async def unsilence(self, ctx: Context) -> None:
