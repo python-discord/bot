@@ -15,9 +15,12 @@ from bot.utils.scheduling import Scheduler
 
 log = logging.getLogger(__name__)
 
-SilencedChannel = NamedTuple(
-    "SilencedChannel", [("ctx", Context), ("delay", int)]
-)
+
+class TaskData(NamedTuple):
+    """Data for a scheduled task."""
+
+    delay: int
+    ctx: Context
 
 
 class SilenceNotifier(tasks.Loop):
@@ -68,14 +71,14 @@ class Silence(Scheduler, commands.Cog):
         self._get_instance_vars_task = self.bot.loop.create_task(self._get_instance_vars())
         self._get_instance_vars_event = asyncio.Event()
 
-    async def _scheduled_task(self, channel: SilencedChannel) -> None:
+    async def _scheduled_task(self, task: TaskData) -> None:
         """Calls `self.unsilence` on expired silenced channel to unsilence it."""
-        await asyncio.sleep(channel.delay)
+        await asyncio.sleep(task.delay)
         log.info("Unsilencing channel after set delay.")
 
         # Because `self.unsilence` explicitly cancels this scheduled task, it is shielded
         # to avoid prematurely cancelling itself
-        await asyncio.shield(channel.ctx.invoke(self.unsilence))
+        await asyncio.shield(task.ctx.invoke(self.unsilence))
 
     async def _get_instance_vars(self) -> None:
         """Get instance variables after they're available to get from the guild."""
@@ -106,12 +109,12 @@ class Silence(Scheduler, commands.Cog):
 
         await ctx.send(f"{Emojis.check_mark} silenced current channel for {duration} minute(s).")
 
-        channel = SilencedChannel(
-            ctx=ctx,
+        task_data = TaskData(
             delay=duration*60,
+            ctx=ctx
         )
 
-        self.schedule_task(ctx.channel.id, channel)
+        self.schedule_task(ctx.channel.id, task_data)
 
     @commands.command(aliases=("unhush",))
     async def unsilence(self, ctx: Context) -> None:
