@@ -548,20 +548,20 @@ class HelpChannels(Scheduler, commands.Cog):
 
         self.bot.stats.incr(f"help.dormant_calls.{caller}")
 
-        if await self.claim_times.contains(channel.id):
-            claimed_timestamp = await self.claim_times.get(channel.id)
+        claimed_timestamp = await self.claim_times.get(channel.id)
+        if claimed_timestamp:
             claimed = datetime.fromtimestamp(claimed_timestamp)
             in_use_time = datetime.utcnow() - claimed
             self.bot.stats.timing("help.in_use_time", in_use_time)
 
-        if await self.unanswered.contains(channel.id):
-            if await self.unanswered.get(channel.id):
+        unanswered = await self.unanswered.get(channel.id)
+        if unanswered is not None:
+            if unanswered:
                 self.bot.stats.incr("help.sessions.unanswered")
             else:
                 self.bot.stats.incr("help.sessions.answered")
 
         log.trace(f"Position of #{channel} ({channel.id}) is actually {channel.position}.")
-
         log.trace(f"Sending dormant message for #{channel} ({channel.id}).")
         embed = discord.Embed(description=DORMANT_MSG)
         await channel.send(embed=embed)
