@@ -68,12 +68,6 @@ class Silence(Scheduler, commands.Cog):
         self._get_instance_vars_task = self.bot.loop.create_task(self._get_instance_vars())
         self._get_instance_vars_event = asyncio.Event()
 
-    async def schedule_unsilence(self, channel: SilencedChannel) -> None:
-        """Schedule expiration for silenced channels."""
-        await self.bot.wait_until_guild_available()
-        log.debug("Scheduling unsilencer")
-        self.schedule_task(channel.id, channel)
-
     async def _scheduled_task(self, channel: SilencedChannel) -> None:
         """Calls `self.unsilence` on expired silenced channel to unsilence it."""
         await asyncio.sleep(channel.delay)
@@ -114,7 +108,7 @@ class Silence(Scheduler, commands.Cog):
 
         channel = SilencedChannel(
             ctx=ctx,
-            stop=duration*60,
+            delay=duration*60,
         )
 
         await self.schedule_task(ctx.channel.id, channel)
