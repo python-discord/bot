@@ -5,7 +5,6 @@ import logging
 import random
 import typing as t
 from collections import deque
-from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
 
@@ -224,10 +223,11 @@ class HelpChannels(Scheduler, commands.Cog):
         log.trace("close command invoked; checking if the channel is in-use.")
         if ctx.channel.category == self.in_use_category:
             if await self.dormant_check(ctx):
-                with suppress(KeyError):
-                    await self.help_channel_claimants.delete(ctx.channel.id)
 
+                # Remove the claimant and the cooldown role
+                await self.help_channel_claimants.delete(ctx.channel.id)
                 await self.remove_cooldown_role(ctx.author)
+
                 # Ignore missing task when cooldown has passed but the channel still isn't dormant.
                 self.cancel_task(ctx.author.id, ignore_missing=True)
 
