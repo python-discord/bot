@@ -1,7 +1,7 @@
 **Cooldowns**
 
 Cooldowns are used in discord.py to rate-limit.
- 
+
 ```python
 from discord.ext import commands
 
