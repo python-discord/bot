@@ -133,6 +133,9 @@ class Site(Cog):
             await ctx.send(f":x: Invalid rule indices: {indices}")
             return
 
+        for rule in rules:
+            self.bot.stats.incr(f"rule_uses.{rule}")
+
         final_rules = tuple(f"**{pick}.** {full_rules[pick - 1]}" for pick in rules)
 
         await LinePaginator.paginate(final_rules, ctx, rules_embed, max_lines=3)
