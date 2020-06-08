@@ -271,6 +271,10 @@ class Emojis(metaclass=YAMLGetter):
     status_idle: str
     status_dnd: str
 
+    incident_actioned: str
+    incident_unactioned: str
+    incident_investigating: str
+
     failmail: str
     trashcan: str
 
