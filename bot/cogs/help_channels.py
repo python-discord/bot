@@ -397,7 +397,7 @@ class HelpChannels(Scheduler, commands.Cog):
 
         log.trace("Initialising the cog.")
         await self.init_categories()
-        await self.reset_send_permissions()
+        await self.check_cooldowns()
 
         self.channel_queue = self.create_channel_queue()
         self.name_queue = self.create_name_queue()
@@ -733,15 +733,28 @@ class HelpChannels(Scheduler, commands.Cog):
         msg = await self.get_last_message(channel)
         return self.match_bot_embed(msg, AVAILABLE_MSG)
 
-    async def reset_send_permissions(self) -> None:
-        """Reset send permissions in the Available category for claimants."""
-        log.trace("Resetting send permissions in the Available category.")
+    async def check_cooldowns(self) -> None:
+        """Remove expired cooldowns and re-schedule active ones."""
+        log.trace("Checking all cooldowns to remove or re-schedule them.")
         guild = self.bot.get_guild(constants.Guild.id)
+        cooldown = constants.HelpChannels.claim_minutes * 60
 
-        # TODO: replace with a persistent cache cause checking every member is quite slow
-        for member in guild.members:
-            if self.is_claimant(member):
+        for channel_id, member_id in await self.help_channel_claimants.items():
+            member = guild.get_member(member_id)
+            if not member:
+                continue  # Member probably left the guild.
+
+            in_use_time = await self.get_in_use_time(channel_id)
+
+            if not in_use_time or in_use_time.seconds > cooldown:
+                # Remove the role if no claim time could be retrieved or if the cooldown expired.
+                # Since the channel is in the claimants cache, it is definitely strange for a time
+                # to not exist. However, it isn't a reason to keep the user stuck with a cooldown.
                 await self.remove_cooldown_role(member)
+            else:
+                # The member is still on a cooldown; re-schedule it for the remaining time.
+                remaining = cooldown - in_use_time.seconds
+                await self.schedule_cooldown_expiration(member, remaining)
 
     async def add_cooldown_role(self, member: discord.Member) -> None:
         """Add the help cooldown role to `member`."""
