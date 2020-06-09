@@ -794,11 +794,14 @@ class HelpChannels(Scheduler, commands.Cog):
         # Would mean the user somehow bypassed the lack of permissions (e.g. user is guild owner).
         self.cancel_task(member.id, ignore_missing=True)
 
-        timeout = constants.HelpChannels.claim_minutes * 60
-        callback = self.remove_cooldown_role(member)
+        await self.schedule_cooldown_expiration(member, constants.HelpChannels.claim_minutes * 60)
 
-        log.trace(f"Scheduling {member}'s ({member.id}) send message permissions to be reinstated.")
-        self.schedule_task(member.id, TaskData(timeout, callback))
+    async def schedule_cooldown_expiration(self, member: discord.Member, seconds: int) -> None:
+        """Schedule the cooldown role for `member` to be removed after a duration of `seconds`."""
+        log.trace(f"Scheduling removal of {member}'s ({member.id}) cooldown.")
+
+        callback = self.remove_cooldown_role(member)
+        self.schedule_task(member.id, TaskData(seconds, callback))
 
     async def send_available_message(self, channel: discord.TextChannel) -> None:
         """Send the available message by editing a dormant message or sending a new message."""
