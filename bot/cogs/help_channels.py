@@ -5,7 +5,7 @@ import logging
 import random
 import typing as t
 from collections import deque
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import discord
@@ -110,7 +110,7 @@ class HelpChannels(Scheduler, commands.Cog):
     unanswered = RedisCache()
 
     # This dictionary maps a help channel to the time it was claimed
-    # RedisCache[discord.TextChannel.id, datetime.datetime]
+    # RedisCache[discord.TextChannel.id, UtcPosixTimestamp]
     claim_times = RedisCache()
 
     def __init__(self, bot: Bot):
@@ -550,7 +550,7 @@ class HelpChannels(Scheduler, commands.Cog):
 
         claimed_timestamp = await self.claim_times.get(channel.id)
         if claimed_timestamp:
-            claimed = datetime.fromtimestamp(claimed_timestamp)
+            claimed = datetime.utcfromtimestamp(claimed_timestamp)
             in_use_time = datetime.utcnow() - claimed
             self.bot.stats.timing("help.in_use_time", in_use_time)
 
@@ -687,7 +687,10 @@ class HelpChannels(Scheduler, commands.Cog):
 
             self.bot.stats.incr("help.claimed")
 
-            await self.claim_times.set(channel.id, datetime.utcnow().timestamp())
+            # Must use a timezone-aware datetime to ensure a correct POSIX timestamp.
+            timestamp = datetime.now(timezone.utc).timestamp()
+            await self.claim_times.set(channel.id, timestamp)
+
             await self.unanswered.set(channel.id, True)
 
             log.trace(f"Releasing on_message lock for {message.id}.")
