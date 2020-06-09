@@ -647,7 +647,7 @@ class HelpChannels(Scheduler, commands.Cog):
         if self.is_in_category(channel, constants.Categories.help_in_use):
             log.trace(f"Checking if #{channel} ({channel.id}) has been answered.")
 
-            # Check if there is an entry in unanswered (does not persist across restarts)
+            # Check if there is an entry in unanswered
             if await self.unanswered.contains(channel.id):
                 claimant_id = await self.help_channel_claimants.get(channel.id)
                 if not claimant_id:
