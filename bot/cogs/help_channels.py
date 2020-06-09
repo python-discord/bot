@@ -5,7 +5,7 @@ import logging
 import random
 import typing as t
 from collections import deque
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import discord
@@ -286,6 +286,15 @@ class HelpChannels(Scheduler, commands.Cog):
             if channel.category_id == category.id and not self.is_excluded_channel(channel):
                 yield channel
 
+    async def get_in_use_time(self, channel_id: int) -> t.Optional[timedelta]:
+        """Return the duration `channel_id` has been in use. Return None if it's not in use."""
+        log.trace(f"Calculating in use time for channel {channel_id}.")
+
+        claimed_timestamp = await self.claim_times.get(channel_id)
+        if claimed_timestamp:
+            claimed = datetime.utcfromtimestamp(claimed_timestamp)
+            return datetime.utcnow() - claimed
+
     @staticmethod
     def get_names() -> t.List[str]:
         """
@@ -548,10 +557,8 @@ class HelpChannels(Scheduler, commands.Cog):
 
         self.bot.stats.incr(f"help.dormant_calls.{caller}")
 
-        claimed_timestamp = await self.claim_times.get(channel.id)
-        if claimed_timestamp:
-            claimed = datetime.utcfromtimestamp(claimed_timestamp)
-            in_use_time = datetime.utcnow() - claimed
+        in_use_time = await self.get_in_use_time(channel.id)
+        if in_use_time:
             self.bot.stats.timing("help.in_use_time", in_use_time)
 
         unanswered = await self.unanswered.get(channel.id)
