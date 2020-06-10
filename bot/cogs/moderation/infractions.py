@@ -1,4 +1,5 @@
 import logging
+import textwrap
 import typing as t
 
 import discord
@@ -199,7 +200,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
     async def apply_mute(self, ctx: Context, user: Member, reason: str, **kwargs) -> None:
         """Apply a mute infraction with kwargs passed to `post_infraction`."""
-        if await utils.has_active_infraction(ctx, user, "mute"):
+        if await utils.get_active_infraction(ctx, user, "mute"):
             return
 
         infraction = await utils.post_infraction(ctx, user, "mute", reason, active=True, **kwargs)
@@ -225,7 +226,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         self.mod_log.ignore(Event.member_remove, user.id)
 
-        action = user.kick(reason=reason)
+        action = user.kick(reason=textwrap.shorten(reason, width=512, placeholder="..."))
         await self.apply_infraction(ctx, infraction, user, action)
 
     @respect_role_hierarchy()
@@ -235,8 +236,22 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         Will also remove the banned user from the Big Brother watch list if applicable.
         """
-        if await utils.has_active_infraction(ctx, user, "ban"):
-            return
+        # In the case of a permanent ban, we don't need get_active_infractions to tell us if one is active
+        is_temporary = kwargs.get("expires_at") is not None
+        active_infraction = await utils.get_active_infraction(ctx, user, "ban", is_temporary)
+
+        if active_infraction:
+            if is_temporary:
+                log.trace("Tempban ignored as it cannot overwrite an active ban.")
+                return
+
+            if active_infraction.get('expires_at') is None:
+                log.trace("Permaban already exists, notify.")
+                await ctx.send(f":x: User is already permanently banned (#{active_infraction['id']}).")
+                return
+
+            log.trace("Old tempban is being replaced by new permaban.")
+            await self.pardon_infraction(ctx, "ban", user, is_temporary)
 
         infraction = await utils.post_infraction(ctx, user, "ban", reason, active=True, **kwargs)
         if infraction is None:
@@ -244,7 +259,9 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         self.mod_log.ignore(Event.member_remove, user.id)
 
-        action = ctx.guild.ban(user, reason=reason, delete_message_days=0)
+        truncated_reason = textwrap.shorten(reason, width=512, placeholder="...")
+
+        action = ctx.guild.ban(user, reason=truncated_reason, delete_message_days=0)
         await self.apply_infraction(ctx, infraction, user, action)
 
         if infraction.get('expires_at') is not None:

@@ -3,7 +3,9 @@ import logging
 import discord
 import sentry_sdk
 from discord.ext.commands import when_mentioned_or
+from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
+from sentry_sdk.integrations.redis import RedisIntegration
 
 from bot import constants, patches
 from bot.bot import Bot
@@ -15,7 +17,11 @@ sentry_logging = LoggingIntegration(
 
 sentry_sdk.init(
     dsn=constants.Bot.sentry_dsn,
-    integrations=[sentry_logging]
+    integrations=[
+        sentry_logging,
+        AioHttpIntegration(),
+        RedisIntegration(),
+    ]
 )
 
 bot = Bot(
@@ -51,6 +57,7 @@ bot.load_extension("bot.cogs.eval")
 bot.load_extension("bot.cogs.information")
 bot.load_extension("bot.cogs.jams")
 bot.load_extension("bot.cogs.moderation")
+bot.load_extension("bot.cogs.python_news")
 bot.load_extension("bot.cogs.off_topic_names")
 bot.load_extension("bot.cogs.reddit")
 bot.load_extension("bot.cogs.reminders")

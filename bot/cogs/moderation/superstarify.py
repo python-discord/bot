@@ -130,7 +130,7 @@ class Superstarify(InfractionScheduler, Cog):
         An optional reason can be provided. If no reason is given, the original name will be shown
         in a generated reason.
         """
-        if await utils.has_active_infraction(ctx, member, "superstar"):
+        if await utils.get_active_infraction(ctx, member, "superstar"):
             return
 
         # Post the infraction to the API
@@ -183,10 +183,10 @@ class Superstarify(InfractionScheduler, Cog):
             text=textwrap.dedent(f"""
                 Member: {member.mention} (`{member.id}`)
                 Actor: {ctx.message.author}
-                Reason: {reason}
                 Expires: {expiry_str}
                 Old nickname: `{old_nick}`
                 New nickname: `{forced_nick}`
+                Reason: {reason}
             """),
             footer=f"ID {id_}"
         )
