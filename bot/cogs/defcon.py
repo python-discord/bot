@@ -81,7 +81,7 @@ class Defcon(Cog):
             else:
                 self.enabled = False
                 self.days = timedelta(days=0)
-                log.info(f"DEFCON disabled")
+                log.info("DEFCON disabled")
 
             await self.update_channel_topic()
 
@@ -122,7 +122,7 @@ class Defcon(Cog):
     @with_role(Roles.admins, Roles.owners)
     async def defcon_group(self, ctx: Context) -> None:
         """Check the DEFCON status or run a subcommand."""
-        await ctx.invoke(self.bot.get_command("help"), "defcon")
+        await ctx.send_help(ctx.command)
 
     async def _defcon_action(self, ctx: Context, days: int, action: Action) -> None:
         """Providing a structured way to do an defcon action."""

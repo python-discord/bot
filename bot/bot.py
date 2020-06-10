@@ -5,8 +5,11 @@ import warnings
 from typing import Optional
 
 import aiohttp
+import aioredis
 import discord
+import fakeredis.aioredis
 from discord.ext import commands
+from sentry_sdk import push_scope
 
 from bot import DEBUG_MODE, api, constants
 from bot.async_stats import AsyncStatsClient
@@ -27,6 +30,9 @@ class Bot(commands.Bot):
         super().__init__(*args, **kwargs)
 
         self.http_session: Optional[aiohttp.ClientSession] = None
+        self.redis_session: Optional[aioredis.Redis] = None
+        self.redis_ready = asyncio.Event()
+        self.redis_closed = False
         self.api_client = api.APIClient(loop=self.loop)
 
         self._connector = None
@@ -42,6 +48,30 @@ class Bot(commands.Bot):
             statsd_url = "127.0.0.1"
 
         self.stats = AsyncStatsClient(self.loop, statsd_url, 8125, prefix="bot")
+
+    async def _create_redis_session(self) -> None:
+        """
+        Create the Redis connection pool, and then open the redis event gate.
+
+        If constants.Redis.use_fakeredis is True, we'll set up a fake redis pool instead
+        of attempting to communicate with a real Redis server. This is useful because it
+        means contributors don't necessarily need to get Redis running locally just
+        to run the bot.
+
+        The fakeredis cache won't have persistence across restarts, but that
+        usually won't matter for local bot testing.
+        """
+        if constants.Redis.use_fakeredis:
+            log.info("Using fakeredis instead of communicating with a real Redis server.")
+            self.redis_session = await fakeredis.aioredis.create_redis_pool()
+        else:
+            self.redis_session = await aioredis.create_redis_pool(
+                address=(constants.Redis.host, constants.Redis.port),
+                password=constants.Redis.password,
+            )
+
+        self.redis_closed = False
+        self.redis_ready.set()
 
     def add_cog(self, cog: commands.Cog) -> None:
         """Adds a "cog" to the bot and logs the operation."""
@@ -75,7 +105,13 @@ class Bot(commands.Bot):
             await self._resolver.close()
 
         if self.stats._transport:
-            await self.stats._transport.close()
+            self.stats._transport.close()
+
+        if self.redis_session:
+            self.redis_closed = True
+            self.redis_session.close()
+            self.redis_ready.clear()
+            await self.redis_session.wait_closed()
 
     async def login(self, *args, **kwargs) -> None:
         """Re-create the connector and set up sessions before logging into Discord."""
@@ -84,7 +120,7 @@ class Bot(commands.Bot):
         await super().login(*args, **kwargs)
 
     def _recreate(self) -> None:
-        """Re-create the connector, aiohttp session, and the APIClient."""
+        """Re-create the connector, aiohttp session, the APIClient and the Redis session."""
         # Use asyncio for DNS resolution instead of threads so threads aren't spammed.
         # Doesn't seem to have any state with regards to being closed, so no need to worry?
         self._resolver = aiohttp.AsyncResolver()
@@ -94,6 +130,14 @@ class Bot(commands.Bot):
             log.warning(
                 "The previous connector was not closed; it will remain open and be overwritten"
             )
+
+        if self.redis_session and not self.redis_session.closed:
+            log.warning(
+                "The previous redis pool was not closed; it will remain open and be overwritten"
+            )
+
+        # Create the redis session
+        self.loop.create_task(self._create_redis_session())
 
         # Use AF_INET as its socket family to prevent HTTPS related problems both locally
         # and in production.
@@ -155,3 +199,14 @@ class Bot(commands.Bot):
         gateway event before giving up and thus not populating the cache for unavailable guilds.
         """
         await self._guild_available.wait()
+
+    async def on_error(self, event: str, *args, **kwargs) -> None:
+        """Log errors raised in event listeners rather than printing them to stderr."""
+        self.stats.incr(f"errors.event.{event}")
+
+        with push_scope() as scope:
+            scope.set_tag("event", event)
+            scope.set_extra("args", args)
+            scope.set_extra("kwargs", kwargs)
+
+            log.exception(f"Unhandled exception in {event}.")

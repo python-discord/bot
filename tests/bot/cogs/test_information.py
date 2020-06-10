@@ -7,9 +7,8 @@ import discord
 
 from bot import constants
 from bot.cogs import information
-from bot.decorators import InChannelCheckFailure
+from bot.utils.checks import InWhitelistCheckFailure
 from tests import helpers
-
 
 COG_PATH = "bot.cogs.information.Information"
 
@@ -149,14 +148,18 @@ class InformationCogTests(unittest.TestCase):
                 Voice region: {self.ctx.guild.region}
                 Features: {', '.join(self.ctx.guild.features)}
 
-                **Counts**
-                Members: {self.ctx.guild.member_count:,}
-                Roles: {len(self.ctx.guild.roles)}
+                **Channel counts**
                 Category channels: 1
                 Text channels: 1
                 Voice channels: 1
+                Staff channels: 0
 
-                **Members**
+                **Member counts**
+                Members: {self.ctx.guild.member_count:,}
+                Staff members: 0
+                Roles: {len(self.ctx.guild.roles)}
+
+                **Member statuses**
                 {constants.Emojis.status_online} 2
                 {constants.Emojis.status_idle} 1
                 {constants.Emojis.status_dnd} 4
@@ -485,7 +488,7 @@ class UserEmbedTests(unittest.TestCase):
         user.avatar_url_as.return_value = "avatar url"
         embed = asyncio.run(self.cog.create_user_embed(ctx, user))
 
-        user.avatar_url_as.assert_called_once_with(format="png")
+        user.avatar_url_as.assert_called_once_with(static_format="png")
         self.assertEqual(embed.thumbnail.url, "avatar url")
 
 
@@ -525,7 +528,7 @@ class UserCommandTests(unittest.TestCase):
         ctx = helpers.MockContext(author=self.author, channel=helpers.MockTextChannel(id=100))
 
         msg = "Sorry, but you may only use this command within <#50>."
-        with self.assertRaises(InChannelCheckFailure, msg=msg):
+        with self.assertRaises(InWhitelistCheckFailure, msg=msg):
             asyncio.run(self.cog.user_info.callback(self.cog, ctx))
 
     @unittest.mock.patch("bot.cogs.information.Information.create_user_embed", new_callable=unittest.mock.AsyncMock)

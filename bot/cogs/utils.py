@@ -2,19 +2,16 @@ import difflib
 import logging
 import re
 import unicodedata
-from asyncio import TimeoutError, sleep
 from email.parser import HeaderParser
 from io import StringIO
 from typing import Tuple, Union
 
-from dateutil import relativedelta
-from discord import Colour, Embed, Message, Role
+from discord import Colour, Embed
 from discord.ext.commands import BadArgument, Cog, Context, command
 
 from bot.bot import Bot
-from bot.constants import Channels, MODERATION_ROLES, Mention, STAFF_ROLES
-from bot.decorators import in_channel, with_role
-from bot.utils.time import humanize_delta
+from bot.constants import Channels, MODERATION_ROLES, STAFF_ROLES
+from bot.decorators import in_whitelist, with_role
 
 log = logging.getLogger(__name__)
 
@@ -58,7 +55,7 @@ class Utils(Cog):
         if pep_number.isdigit():
             pep_number = int(pep_number)
         else:
-            await ctx.invoke(self.bot.get_command("help"), "pep")
+            await ctx.send_help(ctx.command)
             return
 
         # Handle PEP 0 directly because it's not in .rst or .txt so it can't be accessed like other PEPs.
@@ -118,7 +115,7 @@ class Utils(Cog):
         await ctx.message.channel.send(embed=pep_embed)
 
     @command()
-    @in_channel(Channels.bot_commands, bypass_roles=STAFF_ROLES)
+    @in_whitelist(channels=(Channels.bot_commands,), roles=STAFF_ROLES)
     async def charinfo(self, ctx: Context, *, characters: str) -> None:
         """Shows you information on up to 25 unicode characters."""
         match = re.match(r"<(a?):(\w+):(\d+)>", characters)
@@ -160,47 +157,6 @@ class Utils(Cog):
             embed.add_field(name='Raw', value=f"`{''.join(rawlist)}`", inline=False)
 
         await ctx.send(embed=embed)
-
-    @command()
-    @with_role(*MODERATION_ROLES)
-    async def mention(self, ctx: Context, *, role: Role) -> None:
-        """Set a role to be mentionable for a limited time."""
-        if role.mentionable:
-            await ctx.send(f"{role} is already mentionable!")
-            return
-
-        await role.edit(reason=f"Role unlocked by {ctx.author}", mentionable=True)
-
-        human_time = humanize_delta(relativedelta.relativedelta(seconds=Mention.message_timeout))
-        await ctx.send(
-            f"{role} has been made mentionable. I will reset it in {human_time}, or when someone mentions this role."
-        )
-
-        def check(m: Message) -> bool:
-            """Checks that the message contains the role mention."""
-            return role in m.role_mentions
-
-        try:
-            msg = await self.bot.wait_for("message", check=check, timeout=Mention.message_timeout)
-        except TimeoutError:
-            await role.edit(mentionable=False, reason="Automatic role lock - timeout.")
-            await ctx.send(f"{ctx.author.mention}, you took too long. I have reset {role} to be unmentionable.")
-            return
-
-        if any(r.id in MODERATION_ROLES for r in msg.author.roles):
-            await sleep(Mention.reset_delay)
-            await role.edit(mentionable=False, reason=f"Automatic role lock by {msg.author}")
-            await ctx.send(
-                f"{ctx.author.mention}, I have reset {role} to be unmentionable as "
-                f"{msg.author if msg.author != ctx.author else 'you'} sent a message mentioning it."
-            )
-            return
-
-        await role.edit(mentionable=False, reason=f"Automatic role lock - unauthorised use by {msg.author}")
-        await ctx.send(
-            f"{ctx.author.mention}, I have reset {role} to be unmentionable "
-            f"as I detected unauthorised use by {msg.author} (ID: {msg.author.id})."
-        )
 
     @command()
     async def zen(self, ctx: Context, *, search_value: Union[int, str, None] = None) -> None:
@@ -297,8 +253,8 @@ class Utils(Cog):
     async def send_pep_zero(self, ctx: Context) -> None:
         """Send information about PEP 0."""
         pep_embed = Embed(
-            title=f"**PEP 0 - Index of Python Enhancement Proposals (PEPs)**",
-            description=f"[Link](https://www.python.org/dev/peps/)"
+            title="**PEP 0 - Index of Python Enhancement Proposals (PEPs)**",
+            description="[Link](https://www.python.org/dev/peps/)"
         )
         pep_embed.set_thumbnail(url=ICON_URL)
         pep_embed.add_field(name="Status", value="Active")

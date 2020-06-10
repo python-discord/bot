@@ -12,6 +12,19 @@ services:
       POSTGRES_PASSWORD: pysite
       POSTGRES_USER: pysite
 
+  redis:
+    image: redis:5.0.9
+    ports:
+      - "127.0.0.1:6379:6379"
+
+  snekbox:
+    image: pythondiscord/snekbox:latest
+    init: true
+    ipc: none
+    ports:
+     - "127.0.0.1:8060:8060"
+    privileged: true
+
   web:
     image: pythondiscord/site:latest
     command: ["run", "--debug"]
@@ -41,6 +54,8 @@ services:
     tty: true
     depends_on:
       - web
+      - redis
+      - snekbox
     environment:
       BOT_TOKEN: ${BOT_TOKEN}
       BOT_API_KEY: badbot13m0n8f570f942013fc818f234916ca531

@@ -41,7 +41,7 @@ class BotCog(Cog, name="Bot"):
     @with_role(Roles.verified)
     async def botinfo_group(self, ctx: Context) -> None:
         """Bot informational commands."""
-        await ctx.invoke(self.bot.get_command("help"), "bot")
+        await ctx.send_help(ctx.command)
 
     @botinfo_group.command(name='about', aliases=('info',), hidden=True)
     @with_role(Roles.verified)
@@ -326,6 +326,8 @@ class BotCog(Cog, name="Bot"):
                             log.trace("The code consists only of expressions, not sending instructions")
 
                     if howto != "":
+                        # Increase amount of codeblock correction in stats
+                        self.bot.stats.incr("codeblock_corrections")
                         howto_embed = Embed(description=howto)
                         bot_message = await msg.channel.send(f"Hey {msg.author.mention}!", embed=howto_embed)
                         self.codeblock_message_ids[msg.id] = bot_message.id

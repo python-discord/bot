@@ -1,16 +1,14 @@
 import logging
 from contextlib import suppress
-from datetime import datetime
 
 from discord import Colour, Forbidden, Message, NotFound, Object
-from discord.ext import tasks
 from discord.ext.commands import Cog, Context, command
 
 from bot import constants
 from bot.bot import Bot
 from bot.cogs.moderation import ModLog
-from bot.decorators import InChannelCheckFailure, in_channel, without_role
-from bot.utils.checks import without_role_check
+from bot.decorators import in_whitelist, without_role
+from bot.utils.checks import InWhitelistCheckFailure, without_role_check
 
 log = logging.getLogger(__name__)
 
@@ -34,14 +32,6 @@ If you'd like to unsubscribe from the announcement notifications, simply send `!
 <#{constants.Channels.bot_commands}>.
 """
 
-if constants.DEBUG_MODE:
-    PERIODIC_PING = "Periodic checkpoint message successfully sent."
-else:
-    PERIODIC_PING = (
-        f"@everyone To verify that you have read our rules, please type `{constants.Bot.prefix}accept`."
-        " If you encounter any problems during the verification process, "
-        f"ping the <@&{constants.Roles.admins}> role in this channel."
-    )
 BOT_MESSAGE_DELETE_DELAY = 10
 
 
@@ -50,7 +40,6 @@ class Verification(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.periodic_ping.start()
 
     @property
     def mod_log(self) -> ModLog:
@@ -65,9 +54,7 @@ class Verification(Cog):
 
         if message.author.bot:
             # They're a bot, delete their message after the delay.
-            # But not the periodic ping; we like that one.
-            if message.content != PERIODIC_PING:
-                await message.delete(delay=BOT_MESSAGE_DELETE_DELAY)
+            await message.delete(delay=BOT_MESSAGE_DELETE_DELAY)
             return
 
         # if a user mentions a role or guild member
@@ -92,7 +79,6 @@ class Verification(Cog):
                 text=embed_text,
                 thumbnail=message.author.avatar_url_as(static_format="png"),
                 channel_id=constants.Channels.mod_alerts,
-                ping_everyone=constants.Filter.ping_everyone,
             )
 
         ctx: Context = await self.bot.get_context(message)
@@ -122,7 +108,7 @@ class Verification(Cog):
 
     @command(name='accept', aliases=('verify', 'verified', 'accepted'), hidden=True)
     @without_role(constants.Roles.verified)
-    @in_channel(constants.Channels.verification)
+    @in_whitelist(channels=(constants.Channels.verification,))
     async def accept_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
         """Accept our rules and gain access to the rest of the server."""
         log.debug(f"{ctx.author} called !accept. Assigning the 'Developer' role.")
@@ -138,7 +124,7 @@ class Verification(Cog):
                 await ctx.message.delete()
 
     @command(name='subscribe')
-    @in_channel(constants.Channels.bot_commands)
+    @in_whitelist(channels=(constants.Channels.bot_commands,))
     async def subscribe_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
         """Subscribe to announcement notifications by assigning yourself the role."""
         has_role = False
@@ -162,7 +148,7 @@ class Verification(Cog):
         )
 
     @command(name='unsubscribe')
-    @in_channel(constants.Channels.bot_commands)
+    @in_whitelist(channels=(constants.Channels.bot_commands,))
     async def unsubscribe_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
         """Unsubscribe from announcement notifications by removing the role from yourself."""
         has_role = False
@@ -187,8 +173,8 @@ class Verification(Cog):
 
     # This cannot be static (must have a __func__ attribute).
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:
-        """Check for & ignore any InChannelCheckFailure."""
-        if isinstance(error, InChannelCheckFailure):
+        """Check for & ignore any InWhitelistCheckFailure."""
+        if isinstance(error, InWhitelistCheckFailure):
             error.handled = True
 
     @staticmethod
@@ -198,34 +184,6 @@ class Verification(Cog):
             return ctx.command.name == "accept"
         else:
             return True
-
-    @tasks.loop(hours=12)
-    async def periodic_ping(self) -> None:
-        """Every week, mention @everyone to remind them to verify."""
-        messages = self.bot.get_channel(constants.Channels.verification).history(limit=10)
-        need_to_post = True  # True if a new message needs to be sent.
-
-        async for message in messages:
-            if message.author == self.bot.user and message.content == PERIODIC_PING:
-                delta = datetime.utcnow() - message.created_at  # Time since last message.
-                if delta.days >= 7:  # Message is older than a week.
-                    await message.delete()
-                else:
-                    need_to_post = False
-
-                break
-
-        if need_to_post:
-            await self.bot.get_channel(constants.Channels.verification).send(PERIODIC_PING)
-
-    @periodic_ping.before_loop
-    async def before_ping(self) -> None:
-        """Only start the loop when the bot is ready."""
-        await self.bot.wait_until_guild_available()
-
-    def cog_unload(self) -> None:
-        """Cancel the periodic ping task when the cog is unloaded."""
-        self.periodic_ping.cancel()
 
 
 def setup(bot: Bot) -> None:

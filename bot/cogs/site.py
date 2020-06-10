@@ -21,7 +21,7 @@ class Site(Cog):
     @group(name="site", aliases=("s",), invoke_without_command=True)
     async def site_group(self, ctx: Context) -> None:
         """Commands for getting info about our website."""
-        await ctx.invoke(self.bot.get_command("help"), "site")
+        await ctx.send_help(ctx.command)
 
     @site_group.command(name="home", aliases=("about",))
     async def site_main(self, ctx: Context) -> None:
@@ -132,6 +132,9 @@ class Site(Cog):
             indices = ', '.join(map(str, invalid_indices))
             await ctx.send(f":x: Invalid rule indices: {indices}")
             return
+
+        for rule in rules:
+            self.bot.stats.incr(f"rule_uses.{rule}")
 
         final_rules = tuple(f"**{pick}.** {full_rules[pick - 1]}" for pick in rules)
 

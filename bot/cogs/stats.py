@@ -2,9 +2,11 @@ import string
 from datetime import datetime
 
 from discord import Member, Message, Status
-from discord.ext.commands import Bot, Cog, Context
+from discord.ext.commands import Cog, Context
+from discord.ext.tasks import loop
 
-from bot.constants import Channels, Guild, Stats as StatConf
+from bot.bot import Bot
+from bot.constants import Categories, Channels, Guild, Stats as StatConf
 
 
 CHANNEL_NAME_OVERRIDES = {
@@ -23,6 +25,7 @@ class Stats(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.last_presence_update = None
+        self.update_guild_boost.start()
 
     @Cog.listener()
     async def on_message(self, message: Message) -> None:
@@ -32,6 +35,13 @@ class Stats(Cog):
 
         if message.guild.id != Guild.id:
             return
+
+        cat = getattr(message.channel, "category", None)
+        if cat is not None and cat.id == Categories.modmail:
+            if message.channel.id != Channels.incidents:
+                # Do not report modmail channels to stats, there are too many
+                # of them for interesting statistics to be drawn out of this.
+                return
 
         reformatted_name = message.channel.name.replace('-', '_')
 
@@ -59,7 +69,7 @@ class Stats(Cog):
         if member.guild.id != Guild.id:
             return
 
-        self.bot.stats.gauge(f"guild.total_members", len(member.guild.members))
+        self.bot.stats.gauge("guild.total_members", len(member.guild.members))
 
     @Cog.listener()
     async def on_member_leave(self, member: Member) -> None:
@@ -67,7 +77,7 @@ class Stats(Cog):
         if member.guild.id != Guild.id:
             return
 
-        self.bot.stats.gauge(f"guild.total_members", len(member.guild.members))
+        self.bot.stats.gauge("guild.total_members", len(member.guild.members))
 
     @Cog.listener()
     async def on_member_update(self, _before: Member, after: Member) -> None:
@@ -100,6 +110,18 @@ class Stats(Cog):
         self.bot.stats.gauge("guild.status.idle", idle)
         self.bot.stats.gauge("guild.status.do_not_disturb", dnd)
         self.bot.stats.gauge("guild.status.offline", offline)
+
+    @loop(hours=1)
+    async def update_guild_boost(self) -> None:
+        """Post the server boost level and tier every hour."""
+        await self.bot.wait_until_guild_available()
+        g = self.bot.get_guild(Guild.id)
+        self.bot.stats.gauge("boost.amount", g.premium_subscription_count)
+        self.bot.stats.gauge("boost.tier", g.premium_tier)
+
+    def cog_unload(self) -> None:
+        """Stop the boost statistic task on unload of the Cog."""
+        self.update_guild_boost.stop()
 
 
 def setup(bot: Bot) -> None:
