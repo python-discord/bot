@@ -5,11 +5,11 @@ Cooldowns can be used in discord.py to rate-limit. In this example, we're using 
 ```python
 from discord.ext import commands
 
-_cd = commands.CooldownMapping.from_cooldown(1.0, 60.0, commands.BucketType.user)
+message_cooldown = commands.CooldownMapping.from_cooldown(1.0, 60.0, commands.BucketType.user)
 
 @bot.event
 async def on_message(message):
-    bucket = _cd.get_bucket(message)
+    bucket = message_cooldown.get_bucket(message)
     retry_after = bucket.update_rate_limit()
     if retry_after:
         await message.channel.send("Slow down! You're sending messages too fast")
