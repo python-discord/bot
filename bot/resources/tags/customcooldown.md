@@ -14,9 +14,7 @@ async def on_message(message):
     if retry_after:
         await message.channel.send("Slow down! You're sending messages too fast")
     else:
-        # you're not rate limited
-        pass
-    # more code here
+        await message.channel.send("Not ratelimited!")
 ```
 
 `from_cooldown` takes the amount of `update_rate_limit()`s needed to trigger the cooldown, the time in which the cooldown is triggered, and a [`BucketType`](discordpy.readthedocs.io/en/latest/ext/commands/api.html#discord.discord.ext.commands.BucketType).
