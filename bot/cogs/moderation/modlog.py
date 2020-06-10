@@ -555,6 +555,10 @@ class ModLog(Cog, name="ModLog"):
         channel = message.channel
         author = message.author
 
+        # Ignore DMs.
+        if not message.guild:
+            return
+
         if message.guild.id != GuildConstant.id or channel.id in GuildConstant.modlog_blacklist:
             return
 
