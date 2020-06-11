@@ -48,8 +48,7 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
     async def test_category_dont_exist(self):
         """Should create code jam category."""
         self.utils_mock.get.return_value = None
-        await self.cog.createteam(self.cog, self.ctx, "foo", (MockMember() for _ in range(5)))
-        self.utils_mock.get.assert_called_once()
+        await self.cog.get_category(self.ctx)
         self.ctx.guild.create_category_channel.assert_awaited_once()
         category_overwrites = self.ctx.guild.create_category_channel.call_args[1]["overwrites"]
 
