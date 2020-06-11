@@ -178,7 +178,8 @@ class Filtering(Cog):
                 colour=Colours.soft_red,
                 title="Username filtering alert",
                 text=log_string,
-                channel_id=Channels.mod_alerts
+                channel_id=Channels.mod_alerts,
+                thumbnail=member.avatar_url
             )
 
             # Update time when alert sent
