@@ -17,6 +17,7 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
         self.ctx = MockContext(bot=self.bot, author=self.command_user, guild=self.guild)
         self.cog = CodeJams(self.bot)
         self.utils_mock = patch("bot.cogs.jams.utils").start()
+        self.default_args = [self.cog, self.ctx, "foo"]
 
     def tearDown(self):
         self.utils_mock.stop()
@@ -30,9 +31,8 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
 
                 self.ctx.reset_mock()
                 self.utils_mock.reset_mock()
-                await self.cog.createteam(
-                    self.cog, self.ctx, team_name="foo", members=(MockMember() for _ in range(case))
-                )
+                await self.cog.createteam(*self.default_args, (MockMember() for _ in range(case)))
+
                 self.ctx.send.assert_awaited_once()
                 self.cog.create_channels.assert_not_awaited()
                 self.cog.add_roles.assert_not_awaited()
@@ -41,7 +41,7 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
         """Should `ctx.send` and exit early because duplicate members provided and total there is only 1 member."""
         self.ctx.reset_mock()
         member = MockMember()
-        await self.cog.createteam(self.cog, self.ctx, "foo", (member for _ in range(5)))
+        await self.cog.createteam(*self.default_args, (member for _ in range(5)))
         self.ctx.send.assert_awaited_once()
         self.utils_mock.get.assert_not_called()
 
