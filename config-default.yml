@@ -142,6 +142,7 @@ guild:
 
         # Python Help: Available
         how_to_get_help:    704250143020417084
+        cooldown:           720603994149486673
 
         # Logs
         attachment_log:     &ATTACH_LOG     649243850006855680
