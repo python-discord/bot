@@ -57,7 +57,7 @@ def expand_spoilers(text: str) -> str:
 class Filtering(Cog):
     """Filtering out invites, blacklisting domains, and warning us of certain regular expressions."""
 
-    # Redis cache for last bad words in nickname alert sent per user.
+    # Redis cache mapping a user ID to the last timestamp a bad nickname alert was sent
     name_alerts = RedisCache()
 
     def __init__(self, bot: Bot):
@@ -161,7 +161,7 @@ class Filtering(Cog):
         """Send a mod alert every 3 days if a username still matches a watchlist pattern."""
         # Use lock to avoid race conditions
         async with self.name_lock:
-            # Check does nickname have match in filters.
+            # Check whether the users display name contains any words in our blacklist
             matches = self.get_name_matches(member.display_name)
 
             if not matches or not await self.check_send_alert(member):
