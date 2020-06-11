@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from bot.cogs.jams import CodeJams, setup
 from bot.constants import Roles
@@ -25,13 +25,17 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
         """Should `ctx.send` and exit early when too small amount of members."""
         for case in (1, 2):
             with self.subTest(amount_of_members=case):
+                self.cog.create_channels = AsyncMock()
+                self.cog.add_roles = AsyncMock()
+
                 self.ctx.reset_mock()
                 self.utils_mock.reset_mock()
                 await self.cog.createteam(
                     self.cog, self.ctx, team_name="foo", members=(MockMember() for _ in range(case))
                 )
                 self.ctx.send.assert_awaited_once()
-                self.utils_mock.get.assert_not_called()
+                self.cog.create_channels.assert_not_awaited()
+                self.cog.add_roles.assert_not_awaited()
 
     async def test_duplicate_members_provided(self):
         """Should `ctx.send` and exit early because duplicate members provided and total there is only 1 member."""
