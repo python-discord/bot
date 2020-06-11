@@ -156,17 +156,17 @@ def get_instructions(content: str) -> Optional[str]:
         return
 
     if not blocks:
-        log.trace(f"No code blocks were found in message.")
+        log.trace("No code blocks were found in message.")
         return _get_no_ticks_message(content)
     else:
         log.trace("Searching results for a code block with invalid ticks.")
         block = next((block for block in blocks if block.tick != parsing.BACKTICK), None)
 
         if block:
-            log.trace(f"A code block exists but has invalid ticks.")
+            log.trace("A code block exists but has invalid ticks.")
             return _get_bad_ticks_message(block)
         else:
-            log.trace(f"A code block exists but is missing a language.")
+            log.trace("A code block exists but is missing a language.")
             block = blocks[0]
 
             # Check for a bad language first to avoid parsing content into an AST.
