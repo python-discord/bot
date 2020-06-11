@@ -41,24 +41,7 @@ class CodeJams(commands.Cog):
             )
             return
 
-        code_jam_category = await self.get_category(ctx)
-        team_channel_overwrites = self.get_overwrites(members, ctx)
-
-        # Create a text channel for the team
-        team_channel = await ctx.guild.create_text_channel(
-            team_name,
-            overwrites=team_channel_overwrites,
-            category=code_jam_category
-        )
-
-        # Create a voice channel for the team
-        team_voice_name = " ".join(team_name.split("-")).title()
-
-        await ctx.guild.create_voice_channel(
-            team_voice_name,
-            overwrites=team_channel_overwrites,
-            category=code_jam_category
-        )
+        team_channel = await self.create_channels(ctx, team_name, members)
 
         # Assign team leader role
         await members[0].add_roles(ctx.guild.get_role(Roles.team_leaders))
@@ -69,7 +52,7 @@ class CodeJams(commands.Cog):
             await member.add_roles(jammer_role)
 
         await ctx.send(
-            f":ok_hand: Team created: {team_channel.mention}\n"
+            f":ok_hand: Team created: {team_channel}\n"
             f"**Team Leader:** {members[0].mention}\n"
             f"**Team Members:** {' '.join(member.mention for member in members[1:])}"
         )
@@ -119,6 +102,30 @@ class CodeJams(commands.Cog):
             )
 
         return team_channel_overwrites
+
+    async def create_channels(self, ctx: commands.Context, team_name: str, members: t.List[Member]) -> str:
+        """Create team text and voice channel. Return name of text channel."""
+        # Get permission overwrites and category
+        team_channel_overwrites = self.get_overwrites(members, ctx)
+        code_jam_category = await self.get_category(ctx)
+
+        # Create a text channel for the team
+        team_channel = await ctx.guild.create_text_channel(
+            team_name,
+            overwrites=team_channel_overwrites,
+            category=code_jam_category
+        )
+
+        # Create a voice channel for the team
+        team_voice_name = " ".join(team_name.split("-")).title()
+
+        await ctx.guild.create_voice_channel(
+            team_voice_name,
+            overwrites=team_channel_overwrites,
+            category=code_jam_category
+        )
+
+        return str(team_channel)
 
 
 def setup(bot: Bot) -> None:
