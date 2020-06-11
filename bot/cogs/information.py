@@ -6,15 +6,16 @@ from collections import Counter, defaultdict
 from string import Template
 from typing import Any, Mapping, Optional, Union
 
-from discord import Colour, Embed, Member, Message, Role, Status, utils
+from discord import ChannelType, Colour, Embed, Guild, Member, Message, Role, Status, utils
+from discord.abc import GuildChannel
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group
 from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
-from bot.decorators import InWhitelistCheckFailure, in_whitelist, with_role
+from bot.decorators import in_whitelist, with_role
 from bot.pagination import LinePaginator
-from bot.utils.checks import cooldown_with_role_bypass, with_role_check
+from bot.utils.checks import InWhitelistCheckFailure, cooldown_with_role_bypass, with_role_check
 from bot.utils.time import time_since
 
 log = logging.getLogger(__name__)
@@ -25,6 +26,49 @@ class Information(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
+
+    @staticmethod
+    def role_can_read(channel: GuildChannel, role: Role) -> bool:
+        """Return True if `role` can read messages in `channel`."""
+        overwrites = channel.overwrites_for(role)
+        return overwrites.read_messages is True
+
+    def get_staff_channel_count(self, guild: Guild) -> int:
+        """
+        Get the number of channels that are staff-only.
+
+        We need to know two things about a channel:
+        - Does the @everyone role have explicit read deny permissions?
+        - Do staff roles have explicit read allow permissions?
+
+        If the answer to both of these questions is yes, it's a staff channel.
+        """
+        channel_ids = set()
+        for channel in guild.channels:
+            if channel.type is ChannelType.category:
+                continue
+
+            everyone_can_read = self.role_can_read(channel, guild.default_role)
+
+            for role in constants.STAFF_ROLES:
+                role_can_read = self.role_can_read(channel, guild.get_role(role))
+                if role_can_read and not everyone_can_read:
+                    channel_ids.add(channel.id)
+                    break
+
+        return len(channel_ids)
+
+    @staticmethod
+    def get_channel_type_counts(guild: Guild) -> str:
+        """Return the total amounts of the various types of channels in `guild`."""
+        channel_counter = Counter(c.type for c in guild.channels)
+        channel_type_list = []
+        for channel, count in channel_counter.items():
+            channel_type = str(channel).title()
+            channel_type_list.append(f"{channel_type} channels: {count}")
+
+        channel_type_list = sorted(channel_type_list)
+        return "\n".join(channel_type_list)
 
     @with_role(*constants.MODERATION_ROLES)
     @command(name="roles")
@@ -102,14 +146,15 @@ class Information(Cog):
 
         roles = len(ctx.guild.roles)
         member_count = ctx.guild.member_count
-
-        # How many of each type of channel?
-        channels = Counter(c.type for c in ctx.guild.channels)
-        channel_counts = "".join(sorted(f"{str(ch).title()} channels: {channels[ch]}\n" for ch in channels)).strip()
+        channel_counts = self.get_channel_type_counts(ctx.guild)
 
         # How many of each user status?
         statuses = Counter(member.status for member in ctx.guild.members)
         embed = Embed(colour=Colour.blurple())
+
+        # How many staff members and staff channels do we have?
+        staff_member_count = len(ctx.guild.get_role(constants.Roles.helpers).members)
+        staff_channel_count = self.get_staff_channel_count(ctx.guild)
 
         # Because channel_counts lacks leading whitespace, it breaks the dedent if it's inserted directly by the
         # f-string. While this is correctly formated by Discord, it makes unit testing difficult. To keep the formatting
@@ -122,12 +167,16 @@ class Information(Cog):
                 Voice region: {region}
                 Features: {features}
 
-                **Counts**
-                Members: {member_count:,}
-                Roles: {roles}
+                **Channel counts**
                 $channel_counts
+                Staff channels: {staff_channel_count}
 
-                **Members**
+                **Member counts**
+                Members: {member_count:,}
+                Staff members: {staff_member_count}
+                Roles: {roles}
+
+                **Member statuses**
                 {constants.Emojis.status_online} {statuses[Status.online]:,}
                 {constants.Emojis.status_idle} {statuses[Status.idle]:,}
                 {constants.Emojis.status_dnd} {statuses[Status.dnd]:,}

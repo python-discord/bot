@@ -100,7 +100,7 @@ async def send_attachments(
                 log.warning(f"{failure_msg} with status {e.status}.")
 
     if link_large and large:
-        desc = f"\n".join(f"[{attachment.filename}]({attachment.url})" for attachment in large)
+        desc = "\n".join(f"[{attachment.filename}]({attachment.url})" for attachment in large)
         embed = Embed(description=desc)
         embed.set_footer(text="Attachments exceed upload size limit.")
 
