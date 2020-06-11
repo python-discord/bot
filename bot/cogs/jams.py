@@ -125,7 +125,7 @@ class CodeJams(commands.Cog):
             category=code_jam_category
         )
 
-        return str(team_channel)
+        return team_channel.mention
 
 
 def setup(bot: Bot) -> None:
