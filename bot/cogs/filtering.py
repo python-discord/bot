@@ -141,15 +141,13 @@ class Filtering(Cog):
         """Check bad words from passed string (name). Return list of matches."""
         matches = []
         for pattern in WATCHLIST_PATTERNS:
-            match = pattern.search(name)
-            if match:
+            if match := pattern.search(name):
                 matches.append(match)
         return matches
 
     async def check_send_alert(self, member: Member) -> bool:
         """When there is less than 3 days after last alert, return `False`, otherwise `True`."""
-        last_alert = await self.name_alerts.get(member.id)
-        if last_alert:
+        if last_alert := await self.name_alerts.get(member.id):
             last_alert = datetime.utcfromtimestamp(last_alert)
             if datetime.utcnow() - timedelta(days=DAYS_BETWEEN_ALERTS) < last_alert:
                 log.trace(f"Last alert was too recent for {member}'s nickname.")
