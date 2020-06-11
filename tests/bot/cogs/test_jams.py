@@ -111,11 +111,11 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
         """Should add team leader role to leader and jam role to every team member."""
         leader_role = MockRole(name="Team Leader")
         jam_role = MockRole(name="Jammer")
-        self.ctx.guild.get_role.side_effect = [MockRole(), leader_role, jam_role]
+        self.ctx.guild.get_role.side_effect = [leader_role, jam_role]
 
         leader = MockMember()
         members = [leader] + [MockMember() for _ in range(4)]
-        await self.cog.createteam(self.cog, self.ctx, "foo", members)
+        await self.cog.add_roles(self.ctx, members)
 
         leader.add_roles.assert_any_await(leader_role)
         for member in members:
