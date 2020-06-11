@@ -146,6 +146,7 @@ guild:
 
         # Python Help: Available
         how_to_get_help:    704250143020417084
+        cooldown:           720603994149486673
 
         # Logs
         attachment_log:     &ATTACH_LOG     649243850006855680
@@ -302,6 +303,7 @@ filter:
         - 613425648685547541  # Discord Developers
         - 185590609631903755  # Blender Hub
         - 420324994703163402  # /r/FlutterDev
+        - 488751051629920277  # Python Atlanta
 
     domain_blacklist:
         - pornhub.com
