@@ -1,4 +1,5 @@
 import logging
+import typing as t
 
 from discord import CategoryChannel, Member, PermissionOverwrite, utils
 from discord.ext import commands
@@ -41,28 +42,7 @@ class CodeJams(commands.Cog):
             return
 
         code_jam_category = await self.get_category(ctx)
-
-        # First member is always the team leader
-        team_channel_overwrites = {
-            members[0]: PermissionOverwrite(
-                manage_messages=True,
-                read_messages=True,
-                manage_webhooks=True,
-                connect=True
-            ),
-            ctx.guild.default_role: PermissionOverwrite(read_messages=False, connect=False),
-            ctx.guild.get_role(Roles.verified): PermissionOverwrite(
-                read_messages=False,
-                connect=False
-            )
-        }
-
-        # Rest of members should just have read_messages
-        for member in members[1:]:
-            team_channel_overwrites[member] = PermissionOverwrite(
-                read_messages=True,
-                connect=True
-            )
+        team_channel_overwrites = self.get_overwrites(members, ctx)
 
         # Create a text channel for the team
         team_channel = await ctx.guild.create_text_channel(
@@ -113,6 +93,32 @@ class CodeJams(commands.Cog):
             )
 
         return code_jam_category
+
+    def get_overwrites(self, members: t.List[Member], ctx: commands.Context) -> t.Dict[Member, PermissionOverwrite]:
+        """Get Code Jam team channels permission overwrites."""
+        # First member is always the team leader
+        team_channel_overwrites = {
+            members[0]: PermissionOverwrite(
+                manage_messages=True,
+                read_messages=True,
+                manage_webhooks=True,
+                connect=True
+            ),
+            ctx.guild.default_role: PermissionOverwrite(read_messages=False, connect=False),
+            ctx.guild.get_role(Roles.verified): PermissionOverwrite(
+                read_messages=False,
+                connect=False
+            )
+        }
+
+        # Rest of members should just have read_messages
+        for member in members[1:]:
+            team_channel_overwrites[member] = PermissionOverwrite(
+                read_messages=True,
+                connect=True
+            )
+
+        return team_channel_overwrites
 
 
 def setup(bot: Bot) -> None:
