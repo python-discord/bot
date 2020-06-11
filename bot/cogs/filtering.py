@@ -168,11 +168,13 @@ class Filtering(Cog):
                 return
 
             log.info(f"Sending bad nickname alert for '{member.display_name}' ({member.id}).")
+
             log_string = (
                 f"**User:** {member.mention} (`{member.id}`)\n"
                 f"**Display Name:** {member.display_name}\n"
                 f"**Bad Matches:** {', '.join(match.group() for match in matches)}"
             )
+
             await self.mod_log.send_log_message(
                 icon_url=Icons.token_removed,
                 colour=Colours.soft_red,
