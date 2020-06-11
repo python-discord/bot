@@ -16,53 +16,52 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
         self.guild = MockGuild([self.admin_role])
         self.ctx = MockContext(bot=self.bot, author=self.command_user, guild=self.guild)
         self.cog = CodeJams(self.bot)
+        self.utils_mock = patch("bot.cogs.jams.utils").start()
 
-    @patch("bot.cogs.jams.utils")
-    async def test_too_small_amount_of_team_members_passed(self, utils_mock):
+    def tearDown(self):
+        self.utils_mock.stop()
+
+    async def test_too_small_amount_of_team_members_passed(self):
         """Should `ctx.send` and exit early when too small amount of members."""
         for case in (1, 2):
             with self.subTest(amount_of_members=case):
                 self.ctx.reset_mock()
-                utils_mock.reset_mock()
+                self.utils_mock.reset_mock()
                 await self.cog.createteam(
                     self.cog, self.ctx, team_name="foo", members=(MockMember() for _ in range(case))
                 )
                 self.ctx.send.assert_awaited_once()
-                utils_mock.get.assert_not_called()
+                self.utils_mock.get.assert_not_called()
 
-    @patch("bot.cogs.jams.utils")
-    async def test_duplicate_members_provided(self, utils_mock):
+    async def test_duplicate_members_provided(self):
         """Should `ctx.send` and exit early because duplicate members provided and total there is only 1 member."""
         self.ctx.reset_mock()
         member = MockMember()
         await self.cog.createteam(self.cog, self.ctx, "foo", (member for _ in range(5)))
         self.ctx.send.assert_awaited_once()
-        utils_mock.get.assert_not_called()
+        self.utils_mock.get.assert_not_called()
 
-    @patch("bot.cogs.jams.utils")
-    async def test_category_dont_exist(self, utils_mock):
+    async def test_category_dont_exist(self):
         """Should create code jam category."""
-        utils_mock.get.return_value = None
+        self.utils_mock.get.return_value = None
         await self.cog.createteam(self.cog, self.ctx, "foo", (MockMember() for _ in range(5)))
-        utils_mock.get.assert_called_once()
+        self.utils_mock.get.assert_called_once()
         self.ctx.guild.create_category_channel.assert_awaited_once()
         category_overwrites = self.ctx.guild.create_category_channel.call_args[1]["overwrites"]
 
         self.assertFalse(category_overwrites[self.ctx.guild.default_role].read_messages)
         self.assertTrue(category_overwrites[self.ctx.guild.me].read_messages)
 
-    @patch("bot.cogs.jams.utils")
-    async def test_category_channel_exist(self, utils_mock):
+    async def test_category_channel_exist(self):
         """Should not try to create category channel."""
-        utils_mock.return_value = "foo"
+        self.utils_mock.return_value = "foo"
         await self.cog.createteam(self.cog, self.ctx, "bar", (MockMember() for _ in range(5)))
-        utils_mock.get.assert_called_once()
+        self.utils_mock.get.assert_called_once()
         self.ctx.guild.create_category_channel.assert_not_awaited()
 
-    @patch("bot.cogs.jams.utils")
-    async def test_team_text_channel_creation(self, utils_mock):
+    async def test_team_text_channel_creation(self):
         """Should create text channel for team."""
-        utils_mock.get.return_value = "foo"
+        self.utils_mock.get.return_value = "foo"
         await self.cog.createteam(self.cog, self.ctx, "bar", (MockMember() for _ in range(5)))
         # Make sure that we awaited function before getting call arguments
         self.ctx.guild.create_text_channel.assert_awaited_once()
@@ -95,10 +94,9 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(overwrites[self.ctx.guild.get_role(Roles.verified)].read_messages)
         self.assertFalse(overwrites[self.ctx.guild.get_role(Roles.verified)].connect)
 
-    @patch("bot.cogs.jams.utils")
-    async def test_team_voice_channel_creation(self, utils_mock):
+    async def test_team_voice_channel_creation(self):
         """Should create new voice channel for team."""
-        utils_mock.get.return_value = "foo"
+        self.utils_mock.get.return_value = "foo"
         await self.cog.createteam(self.cog, self.ctx, "my-team", (MockMember() for _ in range(5)))
         # Make sure that we awaited function before getting call arguments
         self.ctx.guild.create_voice_channel.assert_awaited_once()
