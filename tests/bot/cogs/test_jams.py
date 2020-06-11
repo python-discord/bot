@@ -122,7 +122,7 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
             member.add_roles.assert_any_await(jam_role)
 
     async def test_result_sending(self):
-        """Should call `ctx.send` when everything go right."""
+        """Should call `ctx.send` when everything goes right."""
         self.ctx.reset_mock()
         await self.cog.createteam(self.cog, self.ctx, "foo", (MockMember() for _ in range(5)))
         self.ctx.send.assert_awaited_once()
