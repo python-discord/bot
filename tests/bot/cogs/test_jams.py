@@ -78,8 +78,7 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
         """Should have correct permission overwrites for users and roles."""
         leader = MockMember()
         members = [leader] + [MockMember() for _ in range(4)]
-        await self.cog.createteam(self.cog, self.ctx, "foo", members)
-        overwrites = self.ctx.guild.create_text_channel.call_args[1]["overwrites"]
+        overwrites = self.cog.get_overwrites(members, self.ctx)
 
         # Leader permission overwrites
         self.assertTrue(overwrites[leader].manage_messages)
