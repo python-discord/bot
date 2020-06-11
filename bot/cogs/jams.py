@@ -1,6 +1,6 @@
 import logging
 
-from discord import Member, PermissionOverwrite, utils
+from discord import CategoryChannel, Member, PermissionOverwrite, utils
 from discord.ext import commands
 from more_itertools import unique_everseen
 
@@ -40,21 +40,7 @@ class CodeJams(commands.Cog):
             )
             return
 
-        code_jam_category = utils.get(ctx.guild.categories, name="Code Jam")
-
-        if code_jam_category is None:
-            log.info("Code Jam category not found, creating it.")
-
-            category_overwrites = {
-                ctx.guild.default_role: PermissionOverwrite(read_messages=False),
-                ctx.guild.me: PermissionOverwrite(read_messages=True)
-            }
-
-            code_jam_category = await ctx.guild.create_category_channel(
-                "Code Jam",
-                overwrites=category_overwrites,
-                reason="It's code jam time!"
-            )
+        code_jam_category = await self.get_category(ctx)
 
         # First member is always the team leader
         team_channel_overwrites = {
@@ -107,6 +93,26 @@ class CodeJams(commands.Cog):
             f"**Team Leader:** {members[0].mention}\n"
             f"**Team Members:** {' '.join(member.mention for member in members[1:])}"
         )
+
+    async def get_category(self, ctx: commands.Context) -> CategoryChannel:
+        """Create Code Jam category when this don't exist and return this."""
+        code_jam_category = utils.get(ctx.guild.categories, name="Code Jam")
+
+        if code_jam_category is None:
+            log.info("Code Jam category not found, creating it.")
+
+            category_overwrites = {
+                ctx.guild.default_role: PermissionOverwrite(read_messages=False),
+                ctx.guild.me: PermissionOverwrite(read_messages=True)
+            }
+
+            code_jam_category = await ctx.guild.create_category_channel(
+                "Code Jam",
+                overwrites=category_overwrites,
+                reason="It's code jam time!"
+            )
+
+        return code_jam_category
 
 
 def setup(bot: Bot) -> None:
