@@ -126,8 +126,14 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
     async def test_result_sending(self):
         """Should call `ctx.send` when everything goes right."""
         self.ctx.reset_mock()
-        await self.cog.createteam(self.cog, self.ctx, "foo", (MockMember() for _ in range(5)))
+        members = [MockMember() for _ in range(5)]
+        await self.cog.createteam(self.cog, self.ctx, "foo", members)
         self.ctx.send.assert_awaited_once()
+        sent_string = self.ctx.send.call_args[0][0]
+
+        self.assertIn(str(self.ctx.guild.create_text_channel.return_value.mention), sent_string)
+        self.assertIn(members[0].mention, sent_string)
+        self.assertIn(" ".join(member.mention for member in members[1:]), sent_string)
 
 
 class CodeJamSetup(unittest.TestCase):
