@@ -50,7 +50,8 @@ class CodeJams(commands.Cog):
             f"**Team Members:** {' '.join(member.mention for member in members[1:])}"
         )
 
-    async def get_category(self, ctx: commands.Context) -> CategoryChannel:
+    @staticmethod
+    async def get_category(ctx: commands.Context) -> CategoryChannel:
         """Create Code Jam category when this don't exist and return this."""
         code_jam_category = utils.get(ctx.guild.categories, name="Code Jam")
 
@@ -70,7 +71,8 @@ class CodeJams(commands.Cog):
 
         return code_jam_category
 
-    def get_overwrites(self, members: t.List[Member], ctx: commands.Context) -> t.Dict[Member, PermissionOverwrite]:
+    @staticmethod
+    def get_overwrites(members: t.List[Member], ctx: commands.Context) -> t.Dict[Member, PermissionOverwrite]:
         """Get Code Jam team channels permission overwrites."""
         # First member is always the team leader
         team_channel_overwrites = {
@@ -120,7 +122,8 @@ class CodeJams(commands.Cog):
 
         return team_channel.mention
 
-    async def add_roles(self, ctx: commands.Context, members: t.List[Member]) -> None:
+    @staticmethod
+    async def add_roles(ctx: commands.Context, members: t.List[Member]) -> None:
         """Assign team leader and jammer roles."""
         # Assign team leader role
         await members[0].add_roles(ctx.guild.get_role(Roles.team_leaders))
