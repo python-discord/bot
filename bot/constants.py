@@ -401,6 +401,7 @@ class Channels(metaclass=YAMLGetter):
     helpers: int
     how_to_get_help: int
     incidents: int
+    incidents_archive: int
     message_log: int
     meta: int
     mod_alerts: int
