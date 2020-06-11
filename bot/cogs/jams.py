@@ -42,14 +42,7 @@ class CodeJams(commands.Cog):
             return
 
         team_channel = await self.create_channels(ctx, team_name, members)
-
-        # Assign team leader role
-        await members[0].add_roles(ctx.guild.get_role(Roles.team_leaders))
-
-        # Assign rest of roles
-        jammer_role = ctx.guild.get_role(Roles.jammers)
-        for member in members:
-            await member.add_roles(jammer_role)
+        await self.add_roles(ctx, members)
 
         await ctx.send(
             f":ok_hand: Team created: {team_channel}\n"
@@ -126,6 +119,16 @@ class CodeJams(commands.Cog):
         )
 
         return team_channel.mention
+
+    async def add_roles(self, ctx: commands.Context, members: t.List[Member]) -> None:
+        """Assign team leader and jammer roles."""
+        # Assign team leader role
+        await members[0].add_roles(ctx.guild.get_role(Roles.team_leaders))
+
+        # Assign rest of roles
+        jammer_role = ctx.guild.get_role(Roles.jammers)
+        for member in members:
+            await member.add_roles(jammer_role)
 
 
 def setup(bot: Bot) -> None:
