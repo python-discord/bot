@@ -39,7 +39,6 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_duplicate_members_provided(self):
         """Should `ctx.send` and exit early because duplicate members provided and total there is only 1 member."""
-        self.ctx.reset_mock()
         member = MockMember()
         await self.cog.createteam(*self.default_args, (member for _ in range(5)))
         self.ctx.send.assert_awaited_once()
@@ -124,7 +123,6 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_result_sending(self):
         """Should call `ctx.send` when everything goes right."""
-        self.ctx.reset_mock()
         members = [MockMember() for _ in range(5)]
         await self.cog.createteam(self.cog, self.ctx, "foo", members)
         self.ctx.send.assert_awaited_once()
