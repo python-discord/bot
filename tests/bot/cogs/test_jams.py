@@ -1,9 +1,9 @@
 import unittest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from bot.cogs.jams import CodeJams, setup
 from bot.constants import Roles
-from tests.helpers import MockBot, MockContext, MockGuild, MockMember, MockRole
+from tests.helpers import MockBot, MockContext, MockGuild, MockMember, MockRole, MockTextChannel
 
 
 class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
@@ -63,17 +63,6 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
         self.utils_mock.get.assert_called_once()
         self.ctx.guild.create_category_channel.assert_not_awaited()
 
-    async def test_team_text_channel_creation(self):
-        """Should create text channel for team."""
-        self.utils_mock.get.return_value = "foo"
-        await self.cog.createteam(self.cog, self.ctx, "bar", (MockMember() for _ in range(5)))
-        # Make sure that we awaited function before getting call arguments
-        self.ctx.guild.create_text_channel.assert_awaited_once()
-
-        # All other arguments is possible to get somewhere else except this
-        overwrites = self.ctx.guild.create_text_channel.call_args[1]["overwrites"]
-        self.ctx.guild.create_text_channel.assert_awaited_once_with("bar", overwrites=overwrites, category="foo")
-
     async def test_channel_overwrites(self):
         """Should have correct permission overwrites for users and roles."""
         leader = MockMember()
@@ -97,16 +86,30 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(overwrites[self.ctx.guild.get_role(Roles.verified)].read_messages)
         self.assertFalse(overwrites[self.ctx.guild.get_role(Roles.verified)].connect)
 
-    async def test_team_voice_channel_creation(self):
-        """Should create new voice channel for team."""
+    async def test_team_channels_creation(self):
+        """Should create new voice and text channel for team."""
         self.utils_mock.get.return_value = "foo"
-        await self.cog.createteam(self.cog, self.ctx, "my-team", (MockMember() for _ in range(5)))
-        # Make sure that we awaited function before getting call arguments
-        self.ctx.guild.create_voice_channel.assert_awaited_once()
+        members = [MockMember() for _ in range(5)]
 
-        # All other arguments is possible to get somewhere else except this
-        overwrites = self.ctx.guild.create_voice_channel.call_args[1]["overwrites"]
-        self.ctx.guild.create_voice_channel.assert_awaited_once_with("My Team", overwrites=overwrites, category="foo")
+        self.cog.get_overwrites = MagicMock()
+        self.cog.get_category = AsyncMock()
+        self.ctx.guild.create_text_channel.return_value = MockTextChannel(mention="foobar-channel")
+        actual = await self.cog.create_channels(self.ctx, "my-team", members)
+
+        self.assertEqual("foobar-channel", actual)
+        self.cog.get_overwrites.assert_called_once_with(members, self.ctx)
+        self.cog.get_category.assert_awaited_once_with(self.ctx)
+
+        self.ctx.guild.create_text_channel.assert_awaited_once_with(
+            "my-team",
+            overwrites=self.cog.get_overwrites.return_value,
+            category=self.cog.get_category.return_value
+        )
+        self.ctx.guild.create_voice_channel.assert_awaited_once_with(
+            "My Team",
+            overwrites=self.cog.get_overwrites.return_value,
+            category=self.cog.get_category.return_value
+        )
 
     async def test_jam_roles_adding(self):
         """Should add team leader role to leader and jam role to every team member."""
