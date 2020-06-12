@@ -35,6 +35,11 @@ def is_incident(message: discord.Message) -> bool:
     return all(conditions)
 
 
+def own_reactions(message: discord.Message) -> t.Set[str]:
+    """Get the set of reactions placed on `message` by the bot itself."""
+    return {str(reaction.emoji) for reaction in message.reactions if reaction.me}
+
+
 class Incidents(Cog):
     """Automation for the #incidents channel."""
 
@@ -77,7 +82,7 @@ class Incidents(Cog):
     @staticmethod
     async def add_signals(incident: discord.Message) -> None:
         """Add `Signal` member emoji to `incident` as reactions."""
-        existing_reacts = {str(reaction.emoji) for reaction in incident.reactions if reaction.me}
+        existing_reacts = own_reactions(incident)
 
         for signal_emoji in Signal:
 
