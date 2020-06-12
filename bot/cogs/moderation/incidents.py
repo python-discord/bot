@@ -24,6 +24,17 @@ ALLOWED_ROLES: t.Set[int] = {Roles.moderators, Roles.admins, Roles.owners}
 ALLOWED_EMOJI: t.Set[str] = {signal.value for signal in Signal}
 
 
+def is_incident(message: discord.Message) -> bool:
+    """True if `message` qualifies as an incident, False otherwise."""
+    conditions = (
+        message.channel.id == Channels.incidents,  # Message sent in #incidents
+        not message.author.bot,                    # Not by a bot
+        not message.content.startswith("#"),       # Doesn't start with a hash
+        not message.pinned,                        # And isn't header
+    )
+    return all(conditions)
+
+
 class Incidents(Cog):
     """Automation for the #incidents channel."""
 
@@ -80,27 +91,6 @@ class Incidents(Cog):
 
     @Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
-        """
-        Pass each incident sent in #incidents to `add_signals`.
-
-        We recognize several exceptions. The following will be ignored:
-            * Messages sent outside of #incidents
-            * Messages Sent by bots
-            * Messages starting with the hash symbol #
-            * Pinned (header) messages
-
-        Prefix message with # in situations where a verbal response is necessary.
-        Each such message must be deleted manually.
-        """
-        if message.channel.id != Channels.incidents or message.author.bot:
-            return
-
-        if message.content.startswith("#"):
-            log.debug(f"Ignoring comment message: {message.content=}")
-            return
-
-        if message.pinned:
-            log.debug(f"Ignoring header message: {message.pinned=}")
-            return
-
-        await self.add_signals(message)
+        """Pass `message` to `add_signals` if and only if it satisfies `is_incident`."""
+        if is_incident(message):
+            await self.add_signals(message)
