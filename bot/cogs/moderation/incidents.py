@@ -64,9 +64,17 @@ class Incidents(Cog):
     @staticmethod
     async def add_signals(incident: discord.Message) -> None:
         """Add `Signal` member emoji to `incident` as reactions."""
+        existing_reacts = {str(reaction.emoji) for reaction in incident.reactions if reaction.me}
+
         for signal_emoji in Signal:
-            log.debug(f"Adding reaction: {signal_emoji.value}")
-            await incident.add_reaction(signal_emoji.value)
+
+            # This will not raise, but it is a superfluous API call that can be avoided
+            if signal_emoji.value in existing_reacts:
+                log.debug(f"Skipping emoji as it's already been placed: {signal_emoji}")
+
+            else:
+                log.debug(f"Adding reaction: {signal_emoji}")
+                await incident.add_reaction(signal_emoji.value)
 
     @Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
