@@ -30,12 +30,20 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
             {
                 "get_return_value": [],
                 "expected_output": None,
-                "infraction_nr": None
+                "infraction_nr": None,
+                "send_msg": True
             },
             {
                 "get_return_value": [{"id": 123987}],
                 "expected_output": {"id": 123987},
-                "infraction_nr": "123987"
+                "infraction_nr": "123987",
+                "send_msg": False
+            },
+            {
+                "get_return_value": [{"id": 123987}],
+                "expected_output": {"id": 123987},
+                "infraction_nr": "123987",
+                "send_msg": True
             }
         ]
 
@@ -52,13 +60,16 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
 
                 self.bot.api_client.get.return_value = case["get_return_value"]
 
-                result = await utils.get_active_infraction(self.ctx, self.member, "ban")
+                result = await utils.get_active_infraction(self.ctx, self.member, "ban", send_msg=case["send_msg"])
                 self.assertEqual(result, case["expected_output"])
                 self.bot.api_client.get.assert_awaited_once_with("bot/infractions", params=params)
 
-                if result:
+                if case["send_msg"] and case["get_return_value"]:
+                    self.ctx.send.assert_awaited_once()
                     self.assertTrue(case["infraction_nr"] in self.ctx.send.call_args[0][0])
                     self.assertTrue("ban" in self.ctx.send.call_args[0][0])
+                else:
+                    self.ctx.send.assert_not_awaited()
 
     @patch("bot.cogs.moderation.utils.send_private_embed")
     async def test_notify_infraction(self, send_private_embed_mock):
@@ -220,9 +231,11 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
 
                 send_private_embed_mock.assert_awaited_once_with(args[0], embed)
 
-    async def test_post_user(self):
+    @patch("bot.cogs.moderation.utils.log")
+    async def test_post_user(self, log_mock):
         """Should POST a new user and return the response if successful or otherwise send an error message."""
         user = MockUser(discriminator=5678, id=1234, name="Test user")
+        some_mock = MagicMock(discriminator=3333)
         test_cases = [
             {
                 "user": user,
@@ -247,6 +260,18 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     "name": "Name unknown",
                     "roles": []
                 }
+            },
+            {
+                "user": some_mock,
+                "post_result": "bar",
+                "raise_error": None,
+                "payload": {
+                    "discriminator": some_mock.discriminator,
+                    "id": some_mock.id,
+                    "in_guild": False,
+                    "name": some_mock.name,
+                    "roles": []
+                }
             }
         ]
 
@@ -257,6 +282,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
             payload = case["payload"]
 
             with self.subTest(user=test_user, result=expected, error=error, payload=payload):
+                log_mock.reset_mock()
                 self.bot.api_client.post.reset_mock(side_effect=True)
                 self.ctx.bot.api_client.post.return_value = expected
 
@@ -274,6 +300,11 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 else:
                     self.ctx.send.assert_awaited_once()
                     self.assertTrue(str(error.status) in self.ctx.send.call_args[0][0])
+
+                if isinstance(test_user, MagicMock):
+                    log_mock.debug.assert_called_once()
+                else:
+                    log_mock.debug.assert_not_called()
 
     async def test_send_private_embed(self):
         """Should DM the user and return `True` on success or `False` on failure."""
