@@ -76,12 +76,10 @@ class Incidents(Cog):
         Crawl #incidents and add missing emoji where necessary.
 
         This is to catch-up should an incident be reported while the bot wasn't listening.
-        Internally, we simply walk the channel history and pass each message to `on_message`.
+        After adding reactions, we take a short break to avoid drowning in ratelimits.
 
-        In order to avoid drowning in ratelimits, we take breaks after each message.
-
-        Once this task is scheduled, listeners should await it. The crawl assumes that
-        the channel history doesn't change as we go over it.
+        Once this task is scheduled, listeners that change messages should await it.
+        The crawl assumes that the channel history doesn't change as we go over it.
         """
         await self.bot.wait_until_guild_available()
         incidents: discord.TextChannel = self.bot.get_channel(Channels.incidents)
@@ -95,7 +93,16 @@ class Incidents(Cog):
 
         log.debug(f"Crawling messages in #incidents: {limit=}, {sleep=}")
         async for message in incidents.history(limit=limit):
-            await self.on_message(message)
+
+            if not is_incident(message):
+                log.debug("Skipping message: not an incident")
+                continue
+
+            if has_signals(message):
+                log.debug("Skipping message: already has all signals")
+                continue
+
+            await add_signals(message)
             await asyncio.sleep(sleep)
 
         log.debug("Crawl task finished!")
