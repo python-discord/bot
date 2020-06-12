@@ -248,7 +248,8 @@ class Incidents(Cog):
         """
         Pre-process `payload` and pass it to `process_event` if appropriate.
 
-        We abort instantly if `payload` doesn't relate to a message sent in #incidents.
+        We abort instantly if `payload` doesn't relate to a message sent in #incidents,
+        or if it was sent by a bot.
 
         If `payload` relates to a message in #incidents, we first ensure that `crawl_task` has
         finished, to make sure we don't mutate channel state as we're crawling it.
@@ -266,7 +267,7 @@ class Incidents(Cog):
         which were not cached in the current session. As a result, a certain amount of
         complexity is introduced, but at the moment this doesn't appear to be avoidable.
         """
-        if payload.channel_id != Channels.incidents:
+        if payload.channel_id != Channels.incidents or payload.member.bot:
             return
 
         log.debug(f"Received reaction add event in #incidents, waiting for crawler: {self.crawl_task.done()=}")
