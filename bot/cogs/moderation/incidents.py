@@ -107,6 +107,37 @@ class Incidents(Cog):
 
         log.debug("Crawl task finished!")
 
+    async def resolve_message(self, message_id: int) -> t.Optional[discord.Message]:
+        """
+        Get `discord.Message` for `message_id` from cache, or API.
+
+        We first look into the local cache to see if the message is present.
+
+        If not, we try to fetch the message from the API. This is necessary for messages
+        which were sent before the bot's current session.
+
+        However, in an edge-case, it is also possible that the message was already deleted,
+        and the API will return a 404. In such a case, None will be returned. This signals
+        that the event for `message_id` should be ignored.
+        """
+        await self.bot.wait_until_guild_available()  # First make sure that the cache is ready
+        log.debug(f"Resolving message for: {message_id=}")
+        message: discord.Message = self.bot._connection._get_message(message_id)  # noqa: Private attribute
+
+        if message is not None:
+            log.debug("Message was found in cache")
+            return message
+
+        log.debug("Message not found, attempting to fetch")
+        try:
+            message = await self.bot.get_channel(Channels.incidents).fetch_message(message_id)
+        except Exception as exc:
+            log.debug(f"Failed to fetch message: {exc}")
+            return None
+        else:
+            log.debug("Message fetched successfully!")
+            return message
+
     @Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
         """Pass `message` to `add_signals` if and only if it satisfies `is_incident`."""
