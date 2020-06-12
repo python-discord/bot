@@ -1,4 +1,4 @@
-**Cooldowns**
+**Cooldowns in discord.py**
 
 Cooldowns can be used in discord.py to rate-limit. In this example, we're using it in an on_message.
 
