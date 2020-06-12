@@ -1,6 +1,7 @@
 import logging
 from enum import Enum
 
+import discord
 from discord.ext.commands import Cog
 
 from bot.bot import Bot
@@ -26,3 +27,12 @@ class Incidents(Cog):
 
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
+
+    async def add_signals(self, incident: discord.Message) -> None:
+        """Add `Signal` member emoji to `incident` as reactions."""
+        ...
+
+    @Cog.listener()
+    async def on_message(self, message: discord.Message) -> None:
+        """Pass each incident sent in #incidents to `add_signals`."""
+        ...
