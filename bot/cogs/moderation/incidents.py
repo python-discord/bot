@@ -1,4 +1,5 @@
 import logging
+import typing as t
 from enum import Enum
 
 import discord
@@ -28,9 +29,12 @@ class Incidents(Cog):
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
 
-    async def add_signals(self, incident: discord.Message) -> None:
+    @staticmethod
+    async def add_signals(incident: discord.Message) -> None:
         """Add `Signal` member emoji to `incident` as reactions."""
-        ...
+        for signal_emoji in Signal:
+            log.debug(f"Adding reaction: {signal_emoji.value}")
+            await incident.add_reaction(signal_emoji.value)
 
     @Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
