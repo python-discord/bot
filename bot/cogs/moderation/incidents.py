@@ -138,6 +138,52 @@ class Incidents(Cog):
             log.debug("Message fetched successfully!")
             return message
 
+    async def process_event(self, reaction: str, message: discord.Message, member: discord.Member) -> None:
+        log.debug("Processing event...")
+
+    @Cog.listener()
+    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent) -> None:
+        """
+        Pre-process `payload` and pass it to `process_event` if appropriate.
+
+        We abort instantly if `payload` doesn't relate to a message sent in #incidents.
+
+        If `payload` relates to a message in #incidents, we first ensure that `crawl_task` has
+        finished, to make sure we don't mutate channel state as we're crawling it.
+
+        Next, we acquire `event_lock` - to prevent racing, events are processed one at a time.
+
+        Once we have the lock, the `discord.Message` object for this event must be resolved.
+        If the lock was previously held by an event which successfully relayed the incident,
+        this will fail and we abort the current event.
+
+        Finally, with both the lock and the `discord.Message` instance in our hands, we delegate
+        to `process_event` to handle the event.
+
+        The justification for using a raw listener is the need to receive events for messages
+        which were not cached in the current session. As a result, a certain amount of
+        complexity is introduced, but at the moment this doesn't appear to be avoidable.
+        """
+        if payload.channel_id != Channels.incidents:
+            return
+
+        log.debug(f"Received reaction add event in #incidents, waiting for crawler: {self.crawl_task.done()=}")
+        await self.crawl_task
+
+        log.debug(f"Acquiring event lock: {self.event_lock.locked()=}")
+        async with self.event_lock:
+            message = await self.resolve_message(payload.message_id)
+
+            if message is None:
+                log.debug("Listener will abort as related message does not exist!")
+                return
+
+            if not is_incident(message):
+                log.debug("Ignoring event for a non-incident message")
+                return
+
+            await self.process_event(str(payload.emoji), message, payload.member)
+
     @Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
         """Pass `message` to `add_signals` if and only if it satisfies `is_incident`."""
