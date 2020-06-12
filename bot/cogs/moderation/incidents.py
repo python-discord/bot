@@ -13,13 +13,19 @@ log = logging.getLogger(__name__)
 
 
 class Signal(Enum):
-    """Recognized incident status signals."""
+    """
+    Recognized incident status signals.
+
+    This binds emoji to actions. The bot will only react to emoji linked here.
+    All other signals are seen as invalid.
+    """
 
     ACTIONED = Emojis.incident_actioned
     NOT_ACTIONED = Emojis.incident_unactioned
     INVESTIGATING = Emojis.incident_investigating
 
 
+# Reactions from roles not listed here, or using emoji not listed here, will be removed
 ALLOWED_ROLES: t.Set[int] = {Roles.moderators, Roles.admins, Roles.owners}
 ALLOWED_EMOJI: t.Set[str] = {signal.value for signal in Signal}
 
@@ -42,12 +48,16 @@ def own_reactions(message: discord.Message) -> t.Set[str]:
 
 def has_signals(message: discord.Message) -> bool:
     """True if `message` already has all `Signal` reactions, False otherwise."""
-    missing_signals = ALLOWED_EMOJI - own_reactions(message)
+    missing_signals = ALLOWED_EMOJI - own_reactions(message)  # In `ALLOWED_EMOJI` but not in `own_reactions(message)`
     return not missing_signals
 
 
 async def add_signals(incident: discord.Message) -> None:
-    """Add `Signal` member emoji to `incident` as reactions."""
+    """
+    Add `Signal` member emoji to `incident` as reactions.
+
+    If the emoji has already been placed on `incident` by the bot, it will be skipped.
+    """
     existing_reacts = own_reactions(incident)
 
     for signal_emoji in Signal:
@@ -62,7 +72,34 @@ async def add_signals(incident: discord.Message) -> None:
 
 
 class Incidents(Cog):
-    """Automation for the #incidents channel."""
+    """
+    Automation for the #incidents channel.
+
+    This cog does not provide a command API, it only reacts to the following events.
+
+    On start-up:
+        * Crawl #incidents and add missing `Signal` emoji where appropriate
+        * This is to retro-actively add the available options for messages which
+          were sent while the bot wasn't listening
+        * Pinned messages and message starting with # do not qualify as incidents
+        * See: `crawl_incidents`
+
+    On message:
+        * Add `Signal` member emoji if message qualifies as an incident
+        * Ignore messages starting with #
+            * Use this if verbal communication is necessary
+            * Each such message must be deleted manually once appropriate
+        * See: `on_message`
+
+    On reaction:
+        * Remove reaction if not permitted (`ALLOWED_EMOJI`, `ALLOWED_ROLES`)
+        * If `Signal.ACTIONED` or `Signal.NOT_ACTIONED` were chosen, attempt to
+          relay the incident message to #incidents-archive
+        * If relay successful, delete original message
+        * See: `on_raw_reaction_add`
+
+    Please refer to function docstrings for implementation details.
+    """
 
     def __init__(self, bot: Bot) -> None:
         """Prepare `event_lock` and schedule `crawl_task` on start-up."""
@@ -76,7 +113,7 @@ class Incidents(Cog):
         Crawl #incidents and add missing emoji where necessary.
 
         This is to catch-up should an incident be reported while the bot wasn't listening.
-        After adding reactions, we take a short break to avoid drowning in ratelimits.
+        After adding each reaction, we take a short break to avoid drowning in ratelimits.
 
         Once this task is scheduled, listeners that change messages should await it.
         The crawl assumes that the channel history doesn't change as we go over it.
@@ -88,7 +125,7 @@ class Incidents(Cog):
         # and if there are, something has likely gone very wrong
         limit = 50
 
-        # Seconds to sleep after each message
+        # Seconds to sleep after adding reactions to a message
         sleep = 2
 
         log.debug(f"Crawling messages in #incidents: {limit=}, {sleep=}")
@@ -162,7 +199,7 @@ class Incidents(Cog):
 
     async def process_event(self, reaction: str, incident: discord.Message, member: discord.Member) -> None:
         """
-        Process a valid `reaction_add` event in #incidents.
+        Process a `reaction_add` event in #incidents.
 
         First, we check that the reaction is a recognized `Signal` member, and that it was sent by
         a permitted user (at least one role in `ALLOWED_ROLES`). If not, the reaction is removed.
@@ -172,7 +209,8 @@ class Incidents(Cog):
 
         We do not release `event_lock` until we receive the corresponding `message_delete` event.
         This ensures that if there is a racing event awaiting the lock, it will fail to find the
-        message, and will abort.
+        message, and will abort. There is a `timeout` to ensure that this doesn't hold the lock
+        forever should something go wrong.
         """
         members_roles: t.Set[int] = {role.id for role in member.roles}
         if not members_roles & ALLOWED_ROLES:  # Intersection is truthy on at least 1 common element
@@ -221,9 +259,9 @@ class Incidents(Cog):
         If not, we try to fetch the message from the API. This is necessary for messages
         which were sent before the bot's current session.
 
-        However, in an edge-case, it is also possible that the message was already deleted,
-        and the API will return a 404. In such a case, None will be returned. This signals
-        that the event for `message_id` should be ignored.
+        In an edge-case, it is also possible that the message was already deleted, and
+        the API will respond with a 404. In such a case, None will be returned.
+        This signals that the event for `message_id` should be ignored.
         """
         await self.bot.wait_until_guild_available()  # First make sure that the cache is ready
         log.debug(f"Resolving message for: {message_id=}")
