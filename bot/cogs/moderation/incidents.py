@@ -6,7 +6,7 @@ import discord
 from discord.ext.commands import Cog
 
 from bot.bot import Bot
-from bot.constants import Emojis, Roles
+from bot.constants import Channels, Emojis, Roles
 
 log = logging.getLogger(__name__)
 
@@ -38,5 +38,22 @@ class Incidents(Cog):
 
     @Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
-        """Pass each incident sent in #incidents to `add_signals`."""
-        ...
+        """
+        Pass each incident sent in #incidents to `add_signals`.
+
+        We recognize several exceptions. The following will be ignored:
+            * Messages sent outside of #incidents
+            * Messages Sent by bots
+            * Messages starting with the hash symbol #
+
+        Prefix message with # in situations where a verbal response is necessary.
+        Each such message must be deleted manually.
+        """
+        if message.channel.id != Channels.incidents or message.author.bot:
+            return
+
+        if message.content.startswith("#"):
+            log.debug(f"Ignoring comment message: {message.content=}")
+            return
+
+        await self.add_signals(message)
