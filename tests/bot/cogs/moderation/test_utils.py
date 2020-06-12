@@ -203,14 +203,13 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_post_user(self):
         """Should POST a new user and return the response if successful or otherwise send an error message."""
-        user = MockUser(avatar="abc", discriminator=5678, id=1234, name="Test user")
+        user = MockUser(discriminator=5678, id=1234, name="Test user")
         test_cases = [
             {
                 "user": user,
                 "post_result": "bar",
                 "raise_error": None,
                 "payload": {
-                    "avatar_hash": "abc",
                     "discriminator": 5678,
                     "id": self.user.id,
                     "in_guild": False,
@@ -223,7 +222,6 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 "post_result": "foo",
                 "raise_error": ResponseCodeError(MagicMock(status=400), "foo"),
                 "payload": {
-                    "avatar_hash": 0,
                     "discriminator": 0,
                     "id": self.member.id,
                     "in_guild": False,
