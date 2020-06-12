@@ -7,7 +7,7 @@ import discord
 from discord.ext.commands import Cog
 
 from bot.bot import Bot
-from bot.constants import Channels, Emojis, Roles
+from bot.constants import Channels, Emojis, Roles, Webhooks
 
 log = logging.getLogger(__name__)
 
@@ -106,6 +106,44 @@ class Incidents(Cog):
             await asyncio.sleep(sleep)
 
         log.debug("Crawl task finished!")
+
+    async def archive(self, incident: discord.Message, outcome: Signal) -> bool:
+        """
+        Relay `incident` to the #incidents-archive channel.
+
+        The following pieces of information are relayed:
+            * Incident message content (clean, pingless)
+            * Incident author name (as webhook author)
+            * Incident author avatar (as webhook avatar)
+            * Resolution signal (`outcome`)
+
+        Return True if the relay finishes successfully. If anything goes wrong, meaning
+        not all information was relayed, return False. This signals that the original
+        message is not safe to be deleted, as we will lose some information.
+        """
+        log.debug(f"Archiving incident: {incident.id} with outcome: {outcome}")
+        try:
+            # First we try to grab the webhook
+            webhook: discord.Webhook = await self.bot.fetch_webhook(Webhooks.incidents_archive)
+
+            # Now relay the incident
+            message: discord.Message = await webhook.send(
+                content=incident.clean_content,  # Clean content will prevent mentions from pinging
+                username=incident.author.name,
+                avatar_url=incident.author.avatar_url,
+                wait=True,  # This makes the method return the sent Message object
+            )
+
+            # Finally add the `outcome` emoji
+            await message.add_reaction(outcome.value)
+
+        except Exception as exc:
+            log.exception("Failed to archive incident to #incidents-archive", exc_info=exc)
+            return False
+
+        else:
+            log.debug("Message archived successfully!")
+            return True
 
     async def resolve_message(self, message_id: int) -> t.Optional[discord.Message]:
         """
