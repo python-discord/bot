@@ -160,6 +160,58 @@ class Incidents(Cog):
         )
         return self.bot.loop.create_task(coroutine)
 
+    async def process_event(self, reaction: str, incident: discord.Message, member: discord.Member) -> None:
+        """
+        Process a valid `reaction_add` event in #incidents.
+
+        First, we check that the reaction is a recognized `Signal` member, and that it was sent by
+        a permitted user (at least one role in `ALLOWED_ROLES`). If not, the reaction is removed.
+
+        If the reaction was either `Signal.ACTIONED` or `Signal.NOT_ACTIONED`, we attempt to relay
+        the report to #incidents-archive. If successful, the original message is deleted.
+
+        We do not release `event_lock` until we receive the corresponding `message_delete` event.
+        This ensures that if there is a racing event awaiting the lock, it will fail to find the
+        message, and will abort.
+        """
+        members_roles: t.Set[int] = {role.id for role in member.roles}
+        if not members_roles & ALLOWED_ROLES:  # Intersection is truthy on at least 1 common element
+            log.debug(f"Removing invalid reaction: user {member} is not permitted to send signals")
+            await incident.remove_reaction(reaction, member)
+            return
+
+        if reaction not in ALLOWED_EMOJI:
+            log.debug(f"Removing invalid reaction: emoji {reaction} is not a valid signal")
+            await incident.remove_reaction(reaction, member)
+            return
+
+        # If we reach this point, we know that `emoji` is a `Signal` member
+        signal = Signal(reaction)
+        log.debug(f"Received signal: {signal}")
+
+        if signal not in (Signal.ACTIONED, Signal.NOT_ACTIONED):
+            log.debug("Reaction was valid, but no action is currently defined for it")
+            return
+
+        relay_successful = await self.archive(incident, signal)
+        if not relay_successful:
+            log.debug("Original message will not be deleted as we failed to relay it to the archive")
+            return
+
+        timeout = 5  # Seconds
+        confirmation_task = self.make_confirmation_task(incident, timeout)
+
+        log.debug("Deleting original message")
+        await incident.delete()
+
+        log.debug(f"Awaiting deletion confirmation: {timeout=} seconds")
+        try:
+            await confirmation_task
+        except asyncio.TimeoutError:
+            log.warning(f"Did not receive incident deletion confirmation within {timeout} seconds!")
+        else:
+            log.debug("Deletion was confirmed")
+
     async def resolve_message(self, message_id: int) -> t.Optional[discord.Message]:
         """
         Get `discord.Message` for `message_id` from cache, or API.
@@ -190,9 +242,6 @@ class Incidents(Cog):
         else:
             log.debug("Message fetched successfully!")
             return message
-
-    async def process_event(self, reaction: str, message: discord.Message, member: discord.Member) -> None:
-        log.debug("Processing event...")
 
     @Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent) -> None:
