@@ -40,6 +40,12 @@ def own_reactions(message: discord.Message) -> t.Set[str]:
     return {str(reaction.emoji) for reaction in message.reactions if reaction.me}
 
 
+def has_signals(message: discord.Message) -> bool:
+    """True if `message` already has all `Signal` reactions, False otherwise."""
+    missing_signals = ALLOWED_EMOJI - own_reactions(message)
+    return not missing_signals
+
+
 class Incidents(Cog):
     """Automation for the #incidents channel."""
 
