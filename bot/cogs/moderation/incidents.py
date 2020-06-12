@@ -46,6 +46,21 @@ def has_signals(message: discord.Message) -> bool:
     return not missing_signals
 
 
+async def add_signals(incident: discord.Message) -> None:
+    """Add `Signal` member emoji to `incident` as reactions."""
+    existing_reacts = own_reactions(incident)
+
+    for signal_emoji in Signal:
+
+        # This will not raise, but it is a superfluous API call that can be avoided
+        if signal_emoji.value in existing_reacts:
+            log.debug(f"Skipping emoji as it's already been placed: {signal_emoji}")
+
+        else:
+            log.debug(f"Adding reaction: {signal_emoji}")
+            await incident.add_reaction(signal_emoji.value)
+
+
 class Incidents(Cog):
     """Automation for the #incidents channel."""
 
@@ -85,23 +100,8 @@ class Incidents(Cog):
 
         log.debug("Crawl task finished!")
 
-    @staticmethod
-    async def add_signals(incident: discord.Message) -> None:
-        """Add `Signal` member emoji to `incident` as reactions."""
-        existing_reacts = own_reactions(incident)
-
-        for signal_emoji in Signal:
-
-            # This will not raise, but it is a superfluous API call that can be avoided
-            if signal_emoji.value in existing_reacts:
-                log.debug(f"Skipping emoji as it's already been placed: {signal_emoji}")
-
-            else:
-                log.debug(f"Adding reaction: {signal_emoji}")
-                await incident.add_reaction(signal_emoji.value)
-
     @Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
         """Pass `message` to `add_signals` if and only if it satisfies `is_incident`."""
         if is_incident(message):
-            await self.add_signals(message)
+            await add_signals(message)
