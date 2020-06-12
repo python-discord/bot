@@ -1,6 +1,8 @@
+import asyncio
 import logging
 import re
-from typing import Optional, Union
+from datetime import datetime, timedelta
+from typing import List, Optional, Union
 
 import discord.errors
 from dateutil.relativedelta import relativedelta
@@ -14,6 +16,7 @@ from bot.constants import (
     Channels, Colours,
     Filter, Icons, URLs
 )
+from bot.utils.redis_cache import RedisCache
 
 log = logging.getLogger(__name__)
 
@@ -40,6 +43,8 @@ TOKEN_WATCHLIST_PATTERNS = [
 ]
 WATCHLIST_PATTERNS = WORD_WATCHLIST_PATTERNS + TOKEN_WATCHLIST_PATTERNS
 
+DAYS_BETWEEN_ALERTS = 3
+
 
 def expand_spoilers(text: str) -> str:
     """Return a string containing all interpretations of a spoilered message."""
@@ -52,8 +57,12 @@ def expand_spoilers(text: str) -> str:
 class Filtering(Cog):
     """Filtering out invites, blacklisting domains, and warning us of certain regular expressions."""
 
+    # Redis cache mapping a user ID to the last timestamp a bad nickname alert was sent
+    name_alerts = RedisCache()
+
     def __init__(self, bot: Bot):
         self.bot = bot
+        self.name_lock = asyncio.Lock()
 
         staff_mistake_str = "If you believe this was a mistake, please let staff know!"
         self.filters = {
@@ -112,6 +121,7 @@ class Filtering(Cog):
     async def on_message(self, msg: Message) -> None:
         """Invoke message filter for new messages."""
         await self._filter_message(msg)
+        await self.check_bad_words_in_name(msg.author)
 
     @Cog.listener()
     async def on_message_edit(self, before: Message, after: Message) -> None:
@@ -125,6 +135,55 @@ class Filtering(Cog):
         else:
             delta = relativedelta(after.edited_at, before.edited_at).microseconds
         await self._filter_message(after, delta)
+
+    @staticmethod
+    def get_name_matches(name: str) -> List[re.Match]:
+        """Check bad words from passed string (name). Return list of matches."""
+        matches = []
+        for pattern in WATCHLIST_PATTERNS:
+            if match := pattern.search(name):
+                matches.append(match)
+        return matches
+
+    async def check_send_alert(self, member: Member) -> bool:
+        """When there is less than 3 days after last alert, return `False`, otherwise `True`."""
+        if last_alert := await self.name_alerts.get(member.id):
+            last_alert = datetime.utcfromtimestamp(last_alert)
+            if datetime.utcnow() - timedelta(days=DAYS_BETWEEN_ALERTS) < last_alert:
+                log.trace(f"Last alert was too recent for {member}'s nickname.")
+                return False
+
+        return True
+
+    async def check_bad_words_in_name(self, member: Member) -> None:
+        """Send a mod alert every 3 days if a username still matches a watchlist pattern."""
+        # Use lock to avoid race conditions
+        async with self.name_lock:
+            # Check whether the users display name contains any words in our blacklist
+            matches = self.get_name_matches(member.display_name)
+
+            if not matches or not await self.check_send_alert(member):
+                return
+
+            log.info(f"Sending bad nickname alert for '{member.display_name}' ({member.id}).")
+
+            log_string = (
+                f"**User:** {member.mention} (`{member.id}`)\n"
+                f"**Display Name:** {member.display_name}\n"
+                f"**Bad Matches:** {', '.join(match.group() for match in matches)}"
+            )
+
+            await self.mod_log.send_log_message(
+                icon_url=Icons.token_removed,
+                colour=Colours.soft_red,
+                title="Username filtering alert",
+                text=log_string,
+                channel_id=Channels.mod_alerts,
+                thumbnail=member.avatar_url
+            )
+
+            # Update time when alert sent
+            await self.name_alerts.set(member.id, datetime.utcnow().timestamp())
 
     async def _filter_message(self, msg: Message, delta: Optional[int] = None) -> None:
         """Filter the input message to see if it violates any of our rules, and then respond accordingly."""
