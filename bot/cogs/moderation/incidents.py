@@ -153,11 +153,11 @@ class Incidents(Cog):
         been able to confirm that the message was deleted.
         """
         log.debug(f"Confirmation task will wait {timeout=} seconds for {incident.id=} to be deleted")
-        coroutine = self.bot.wait_for(
-            event="raw_message_delete",
-            check=lambda payload: payload.message_id == incident.id,
-            timeout=timeout,
-        )
+
+        def check(payload: discord.RawReactionActionEvent) -> bool:
+            return payload.message_id == incident.id
+
+        coroutine = self.bot.wait_for(event="raw_message_delete", check=check, timeout=timeout)
         return self.bot.loop.create_task(coroutine)
 
     async def process_event(self, reaction: str, incident: discord.Message, member: discord.Member) -> None:
