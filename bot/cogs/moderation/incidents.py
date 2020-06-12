@@ -77,6 +77,7 @@ class Incidents(Cog):
             * Messages sent outside of #incidents
             * Messages Sent by bots
             * Messages starting with the hash symbol #
+            * Pinned (header) messages
 
         Prefix message with # in situations where a verbal response is necessary.
         Each such message must be deleted manually.
@@ -86,6 +87,10 @@ class Incidents(Cog):
 
         if message.content.startswith("#"):
             log.debug(f"Ignoring comment message: {message.content=}")
+            return
+
+        if message.pinned:
+            log.debug(f"Ignoring header message: {message.pinned=}")
             return
 
         await self.add_signals(message)
