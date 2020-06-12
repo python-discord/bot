@@ -145,6 +145,21 @@ class Incidents(Cog):
             log.debug("Message archived successfully!")
             return True
 
+    def make_confirmation_task(self, incident: discord.Message, timeout: int = 5) -> asyncio.Task:
+        """
+        Create a task to wait `timeout` seconds for `incident` to be deleted.
+
+        If `timeout` passes, this will raise `asyncio.TimeoutError`, signaling that we haven't
+        been able to confirm that the message was deleted.
+        """
+        log.debug(f"Confirmation task will wait {timeout=} seconds for {incident.id=} to be deleted")
+        coroutine = self.bot.wait_for(
+            event="raw_message_delete",
+            check=lambda payload: payload.message_id == incident.id,
+            timeout=timeout,
+        )
+        return self.bot.loop.create_task(coroutine)
+
     async def resolve_message(self, message_id: int) -> t.Optional[discord.Message]:
         """
         Get `discord.Message` for `message_id` from cache, or API.
