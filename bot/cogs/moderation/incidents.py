@@ -286,6 +286,7 @@ class Incidents(Cog):
                 return
 
             await self.process_event(str(payload.emoji), message, payload.member)
+            log.debug("Releasing event lock")
 
     @Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
