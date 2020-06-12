@@ -28,8 +28,10 @@ class Incidents(Cog):
     """Automation for the #incidents channel."""
 
     def __init__(self, bot: Bot) -> None:
-        """Schedule `crawl_task` on start-up."""
+        """Prepare `event_lock` and schedule `crawl_task` on start-up."""
         self.bot = bot
+
+        self.event_lock = asyncio.Lock()
         self.crawl_task = self.bot.loop.create_task(self.crawl_incidents())
 
     async def crawl_incidents(self) -> None:
