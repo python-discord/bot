@@ -39,10 +39,12 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_duplicate_members_provided(self):
         """Should `ctx.send` and exit early because duplicate members provided and total there is only 1 member."""
+        self.cog.create_channels = AsyncMock()
+        self.cog.add_roles = AsyncMock()
         member = MockMember()
         await self.cog.createteam(*self.default_args, (member for _ in range(5)))
         self.ctx.send.assert_awaited_once()
-        self.cog.create_channels.assert_now_awaited()
+        self.cog.create_channels.assert_not_awaited()
         self.cog.add_roles.assert_not_awaited()
 
     async def test_category_dont_exist(self):
