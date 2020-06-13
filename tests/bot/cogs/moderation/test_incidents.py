@@ -288,3 +288,30 @@ class TestResolveMessage(TestIncidents):
 
         with self.assertLogs(logger=incidents.log, level=logging.ERROR):
             self.assertIsNone(await self.cog_instance.resolve_message(123))
+
+
+class TestOnMessage(TestIncidents):
+    """
+    Tests for the `Incidents.on_message` listener.
+
+    Notice the decorators mocking the `is_incident` return value. The `is_incidents`
+    function is tested in `TestIsIncident` - here we do not worry about it.
+    """
+
+    @patch("bot.cogs.moderation.incidents.is_incident", MagicMock(return_value=True))
+    async def test_on_message_incident(self):
+        """Messages qualifying as incidents are passed to `add_signals`."""
+        incident = MockMessage()
+
+        with patch("bot.cogs.moderation.incidents.add_signals", AsyncMock()) as mock_add_signals:
+            await self.cog_instance.on_message(incident)
+
+        mock_add_signals.assert_called_once_with(incident)
+
+    @patch("bot.cogs.moderation.incidents.is_incident", MagicMock(return_value=False))
+    async def test_on_message_non_incident(self):
+        """Messages not qualifying as incidents are ignored."""
+        with patch("bot.cogs.moderation.incidents.add_signals", AsyncMock()) as mock_add_signals:
+            await self.cog_instance.on_message(MockMessage())
+
+        mock_add_signals.assert_not_called()
