@@ -42,7 +42,8 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
         member = MockMember()
         await self.cog.createteam(*self.default_args, (member for _ in range(5)))
         self.ctx.send.assert_awaited_once()
-        self.utils_mock.get.assert_not_called()
+        self.cog.create_channels.assert_now_awaited()
+        self.cog.add_roles.assert_not_awaited()
 
     async def test_category_dont_exist(self):
         """Should create code jam category."""
@@ -125,12 +126,9 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
         """Should call `ctx.send` when everything goes right."""
         members = [MockMember() for _ in range(5)]
         await self.cog.createteam(self.cog, self.ctx, "foo", members)
+        self.cog.create_channel.assert_awaited_once()
+        self.cog.add_roles.assert_awaited_once()
         self.ctx.send.assert_awaited_once()
-        sent_string = self.ctx.send.call_args[0][0]
-
-        self.assertIn(str(self.ctx.guild.create_text_channel.return_value.mention), sent_string)
-        self.assertIn(members[0].mention, sent_string)
-        self.assertIn(" ".join(member.mention for member in members[1:]), sent_string)
 
 
 class CodeJamSetup(unittest.TestCase):
