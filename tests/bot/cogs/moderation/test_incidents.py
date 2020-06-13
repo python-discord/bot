@@ -1,4 +1,5 @@
 import enum
+import logging
 import unittest
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
@@ -268,3 +269,22 @@ class TestResolveMessage(TestIncidents):
         self.cog_instance.bot.get_channel = MagicMock(return_value=MockTextChannel(fetch_message=fetch_message))
 
         self.assertIsNone(await self.cog_instance.resolve_message(123))
+
+    async def test_resolve_message_fetch_fails(self):
+        """
+        Non-404 errors are handled, logged & None is returned.
+
+        In contrast with a 404, this should make an error-level log. We assert that at least
+        one such log was made - we do not make any assertions about the log's message.
+        """
+        self.cog_instance.bot._connection._get_message = MagicMock(return_value=None)  # Cache returns None
+
+        arbitrary_error = discord.HTTPException(
+            response=MagicMock(aiohttp.ClientResponse),
+            message="Arbitrary error",
+        )
+        fetch_message = AsyncMock(side_effect=arbitrary_error)
+        self.cog_instance.bot.get_channel = MagicMock(return_value=MockTextChannel(fetch_message=fetch_message))
+
+        with self.assertLogs(logger=incidents.log, level=logging.ERROR):
+            self.assertIsNone(await self.cog_instance.resolve_message(123))
