@@ -1,7 +1,7 @@
 import logging
 import typing as t
 
-from discord import CategoryChannel, Guild, Member, PermissionOverwrite, utils
+from discord import CategoryChannel, Guild, Member, PermissionOverwrite, Role, utils
 from discord.ext import commands
 from more_itertools import unique_everseen
 
@@ -72,7 +72,7 @@ class CodeJams(commands.Cog):
         return code_jam_category
 
     @staticmethod
-    def get_overwrites(members: t.List[Member], guild: Guild) -> t.Dict[Member, PermissionOverwrite]:
+    def get_overwrites(members: t.List[Member], guild: Guild) -> t.Dict[t.Union[Member, Role], PermissionOverwrite]:
         """Get Code Jam team channels permission overwrites."""
         # First member is always the team leader
         team_channel_overwrites = {
