@@ -215,6 +215,41 @@ class TestArchive(TestIncidents):
         self.assertTrue(archive_return)
 
 
+class TestMakeConfirmationTask(TestIncidents):
+    """
+    Tests for the `Incidents.make_confirmation_task` method.
+
+    Writing tests for this method is difficult, as it mostly just delegates the provided
+    information elsewhere. There is very little internal logic. Whether our approach
+    works conceptually is difficult to prove using unit tests.
+    """
+
+    def test_make_confirmation_task_check(self):
+        """
+        The internal check will recognize the passed incident.
+
+        This is a little tricky - we first pass a message with a specific `id` in, and then
+        retrieve the built check from the `call_args` of the `wait_for` method. This relies
+        on the check being passed as a kwarg.
+
+        Once the check is retrieved, we assert that it gives True for our incident's `id`,
+        and False for any other.
+
+        If this function begins to fail, first check that `created_check` is being retrieved
+        correctly. It should be the function that is built locally in the tested method.
+        """
+        self.cog_instance.make_confirmation_task(MockMessage(id=123))
+
+        self.cog_instance.bot.wait_for.assert_called_once()
+        created_check = self.cog_instance.bot.wait_for.call_args.kwargs["check"]
+
+        # The `message_id` matches the `id` of our incident
+        self.assertTrue(created_check(payload=MagicMock(message_id=123)))
+
+        # This `message_id` does not match
+        self.assertFalse(created_check(payload=MagicMock(message_id=0)))
+
+
 class TestResolveMessage(TestIncidents):
     """Tests for the `Incidents.resolve_message` coroutine."""
 
