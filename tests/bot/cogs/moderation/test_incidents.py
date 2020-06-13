@@ -1,9 +1,12 @@
 import enum
 import unittest
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import AsyncMock, MagicMock, call, patch
+
+import aiohttp
+import discord
 
 from bot.cogs.moderation import Incidents, incidents
-from tests.helpers import MockBot, MockMessage, MockReaction, MockTextChannel, MockUser
+from tests.helpers import MockAsyncWebhook, MockBot, MockMessage, MockReaction, MockTextChannel, MockUser
 
 
 class MockSignal(enum.Enum):
@@ -150,3 +153,61 @@ class TestIncidents(unittest.IsolatedAsyncioTestCase):
         is being mocked. The `crawl_task` attribute will end up being None.
         """
         self.cog_instance = Incidents(MockBot())
+
+
+class TestArchive(TestIncidents):
+    """Tests for the `Incidents.archive` coroutine."""
+
+    async def test_archive_webhook_not_found(self):
+        """
+        Method recovers and returns False when the webhook is not found.
+
+        Implicitly, this also tests that the error is handled internally and doesn't
+        propagate out of the method, which is just as important.
+        """
+        mock_404 = discord.NotFound(
+            response=MagicMock(aiohttp.ClientResponse),  # Mock the erroneous response
+            message="Webhook not found",
+        )
+
+        self.cog_instance.bot.fetch_webhook = AsyncMock(side_effect=mock_404)
+        self.assertFalse(await self.cog_instance.archive(incident=MockMessage(), outcome=MagicMock()))
+
+    async def test_archive_relays_incident(self):
+        """
+        If webhook is found, method relays `incident` properly.
+
+        This test will assert the following:
+            * The fetched webhook's `send` method is fed the correct arguments
+            * The message returned by `send` will have `outcome` reaction added
+            * Finally, the `archive` method returns True
+
+        Assertions are made specifically in this order.
+        """
+        webhook_message = MockMessage()  # The message that will be returned by the webhook's `send` method
+        webhook = MockAsyncWebhook(send=AsyncMock(return_value=webhook_message))
+
+        self.cog_instance.bot.fetch_webhook = AsyncMock(return_value=webhook)  # Patch in our webhook
+
+        # Now we'll pas our own `incident` to `archive` and capture the return value
+        incident = MockMessage(
+            clean_content="pingless message",
+            content="pingful message",
+            author=MockUser(name="author_name", avatar_url="author_avatar"),
+            id=123,
+        )
+        archive_return = await self.cog_instance.archive(incident, outcome=MagicMock(value="A"))
+
+        # Check that the webhook was dispatched correctly
+        webhook.send.assert_called_once_with(
+            content="pingless message",
+            username="author_name",
+            avatar_url="author_avatar",
+            wait=True,
+        )
+
+        # Now check that the correct emoji was added to the relayed message
+        webhook_message.add_reaction.assert_called_once_with("A")
+
+        # Finally check that the method returned True
+        self.assertTrue(archive_return)
