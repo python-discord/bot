@@ -2,8 +2,8 @@ import enum
 import unittest
 from unittest.mock import MagicMock, call, patch
 
-from bot.cogs.moderation import incidents
-from tests.helpers import MockMessage, MockReaction, MockTextChannel, MockUser
+from bot.cogs.moderation import Incidents, incidents
+from tests.helpers import MockBot, MockMessage, MockReaction, MockTextChannel, MockUser
 
 
 class MockSignal(enum.Enum):
@@ -131,3 +131,22 @@ class TestAddSignals(unittest.IsolatedAsyncioTestCase):
         """No emoji are added when all are present."""
         await incidents.add_signals(self.incident)
         self.incident.add_reaction.assert_not_called()
+
+
+class TestIncidents(unittest.IsolatedAsyncioTestCase):
+    """
+    Tests for bound methods of the `Incidents` cog.
+
+    Use this as a base class for `Incidents` tests - it will prepare a fresh instance
+    for each test function, but not make any assertions on its own. Tests can mutate
+    the instance as they wish.
+    """
+
+    def setUp(self):
+        """
+        Prepare a fresh `Incidents` instance for each test.
+
+        Note that this will not schedule `crawl_incidents` in the background, as everything
+        is being mocked. The `crawl_task` attribute will end up being None.
+        """
+        self.cog_instance = Incidents(MockBot())
