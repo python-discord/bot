@@ -212,3 +212,59 @@ class TestArchive(TestIncidents):
 
         # Finally check that the method returned True
         self.assertTrue(archive_return)
+
+
+class TestResolveMessage(TestIncidents):
+    """Tests for the `Incidents.resolve_message` coroutine."""
+
+    async def test_resolve_message_pass_message_id(self):
+        """Method will call `_get_message` with the passed `message_id`."""
+        await self.cog_instance.resolve_message(123)
+        self.cog_instance.bot._connection._get_message.assert_called_once_with(123)
+
+    async def test_resolve_message_in_cache(self):
+        """
+        No API call is made if the queried message exists in the cache.
+
+        We mock the `_get_message` return value regardless of input. Whether it finds the message
+        internally is considered d.py's responsibility, not ours.
+        """
+        cached_message = MockMessage(id=123)
+        self.cog_instance.bot._connection._get_message = MagicMock(return_value=cached_message)
+
+        return_value = await self.cog_instance.resolve_message(123)
+
+        self.assertIs(return_value, cached_message)
+        self.cog_instance.bot.get_channel.assert_not_called()  # The `fetch_message` line was never hit
+
+    async def test_resolve_message_not_in_cache(self):
+        """
+        The message is retrieved from the API if it isn't cached.
+
+        This is desired behaviour for messages which exist, but were sent before the bot's
+        current session.
+        """
+        self.cog_instance.bot._connection._get_message = MagicMock(return_value=None)  # Cache returns None
+
+        # API returns our message
+        uncached_message = MockMessage()
+        fetch_message = AsyncMock(return_value=uncached_message)
+        self.cog_instance.bot.get_channel = MagicMock(return_value=MockTextChannel(fetch_message=fetch_message))
+
+        retrieved_message = await self.cog_instance.resolve_message(123)
+        self.assertIs(retrieved_message, uncached_message)
+
+    async def test_resolve_message_doesnt_exist(self):
+        """
+        If the API returns a 404, the function handles it gracefully and returns None.
+
+        This is an edge-case happening with racing events - event A will relay the message
+        to the archive and delete the original. Once event B acquires the `event_lock`,
+        it will not find the message in the cache, and will ask the API.
+        """
+        self.cog_instance.bot._connection._get_message = MagicMock(return_value=None)  # Cache returns None
+
+        fetch_message = AsyncMock(side_effect=mock_404)
+        self.cog_instance.bot.get_channel = MagicMock(return_value=MockTextChannel(fetch_message=fetch_message))
+
+        self.assertIsNone(await self.cog_instance.resolve_message(123))
