@@ -274,9 +274,10 @@ class Incidents(Cog):
         log.debug("Message not found, attempting to fetch")
         try:
             message = await self.bot.get_channel(Channels.incidents).fetch_message(message_id)
+        except discord.NotFound:
+            log.debug("Message doesn't exist, it was likely already relayed")
         except Exception as exc:
-            log.debug(f"Failed to fetch message: {exc}")
-            return None
+            log.exception("Failed to fetch message!", exc_info=exc)
         else:
             log.debug("Message fetched successfully!")
             return message
