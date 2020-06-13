@@ -124,9 +124,11 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_result_sending(self):
         """Should call `ctx.send` when everything goes right."""
+        self.cog.create_channels = AsyncMock()
+        self.cog.add_roles = AsyncMock()
         members = [MockMember() for _ in range(5)]
         await self.cog.createteam(self.cog, self.ctx, "foo", members)
-        self.cog.create_channel.assert_awaited_once()
+        self.cog.create_channels.assert_awaited_once()
         self.cog.add_roles.assert_awaited_once()
         self.ctx.send.assert_awaited_once()
 
