@@ -1,10 +1,9 @@
 import enum
 import unittest
-from unittest.mock import AsyncMock, MagicMock, call, patch
-
-import discord
+from unittest.mock import MagicMock, call, patch
 
 from bot.cogs.moderation import incidents
+from tests.helpers import MockMessage, MockReaction, MockTextChannel, MockUser
 
 
 @patch("bot.constants.Channels.incidents", 123)
@@ -20,11 +19,10 @@ class TestIsIncident(unittest.TestCase):
 
     def setUp(self) -> None:
         """Prepare a mock message which should qualify as an incident."""
-        self.incident = MagicMock(
-            discord.Message,
-            channel=MagicMock(discord.TextChannel, id=123),
+        self.incident = MockMessage(
+            channel=MockTextChannel(id=123),
             content="this is an incident",
-            author=MagicMock(discord.User, bot=False),
+            author=MockUser(bot=False),
             pinned=False,
         )
 
@@ -38,7 +36,7 @@ class TestIsIncident(unittest.TestCase):
 
     def test_is_incident_false_channel(self):
         """Message doesn't qualify if sent outside of #incidents."""
-        self.incident.channel = MagicMock(discord.TextChannel, id=456)
+        self.incident.channel = MockTextChannel(id=456)
         self.check_false()
 
     def test_is_incident_false_content(self):
@@ -48,7 +46,7 @@ class TestIsIncident(unittest.TestCase):
 
     def test_is_incident_false_author(self):
         """Message doesn't qualify if author is a bot."""
-        self.incident.author = MagicMock(discord.User, bot=True)
+        self.incident.author = MockUser(bot=True)
         self.check_false()
 
     def test_is_incident_false_pinned(self):
@@ -63,11 +61,11 @@ class TestOwnReactions(unittest.TestCase):
     def test_own_reactions(self):
         """Only bot's own emoji are extracted from the input incident."""
         reactions = (
-            MagicMock(discord.Reaction, emoji="A", me=True),
-            MagicMock(discord.Reaction, emoji="B", me=True),
-            MagicMock(discord.Reaction, emoji="C", me=False),
+            MockReaction(emoji="A", me=True),
+            MockReaction(emoji="B", me=True),
+            MockReaction(emoji="C", me=False),
         )
-        message = MagicMock(discord.Message, reactions=reactions)
+        message = MockMessage(reactions=reactions)
         self.assertSetEqual(incidents.own_reactions(message), {"A", "B"})
 
 
@@ -82,7 +80,7 @@ class TestHasSignals(unittest.TestCase):
 
     def test_has_signals_true(self):
         """True when `own_reactions` returns all emoji in `ALLOWED_EMOJI`."""
-        message = MagicMock(discord.Message)
+        message = MockMessage()
         own_reactions = MagicMock(return_value={"A", "B"})
 
         with patch("bot.cogs.moderation.incidents.own_reactions", own_reactions):
@@ -90,7 +88,7 @@ class TestHasSignals(unittest.TestCase):
 
     def test_has_signals_false(self):
         """False when `own_reactions` does not return all emoji in `ALLOWED_EMOJI`."""
-        message = MagicMock(discord.Message)
+        message = MockMessage()
         own_reactions = MagicMock(return_value={"A", "C"})
 
         with patch("bot.cogs.moderation.incidents.own_reactions", own_reactions):
@@ -114,7 +112,7 @@ class TestAddSignals(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         """Prepare a mock incident message for tests to use."""
-        self.incident = MagicMock(discord.Message, add_reaction=AsyncMock())
+        self.incident = MockMessage()
 
     @patch("bot.cogs.moderation.incidents.own_reactions", MagicMock(return_value=set()))
     async def test_add_signals_missing(self):
