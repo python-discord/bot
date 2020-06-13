@@ -14,6 +14,12 @@ class MockSignal(enum.Enum):
     B = "B"
 
 
+mock_404 = discord.NotFound(
+    response=MagicMock(aiohttp.ClientResponse),  # Mock the erroneous response
+    message="Not found",
+)
+
+
 @patch("bot.constants.Channels.incidents", 123)
 class TestIsIncident(unittest.TestCase):
     """
@@ -165,11 +171,6 @@ class TestArchive(TestIncidents):
         Implicitly, this also tests that the error is handled internally and doesn't
         propagate out of the method, which is just as important.
         """
-        mock_404 = discord.NotFound(
-            response=MagicMock(aiohttp.ClientResponse),  # Mock the erroneous response
-            message="Webhook not found",
-        )
-
         self.cog_instance.bot.fetch_webhook = AsyncMock(side_effect=mock_404)
         self.assertFalse(await self.cog_instance.archive(incident=MockMessage(), outcome=MagicMock()))
 
