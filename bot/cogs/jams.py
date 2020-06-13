@@ -52,7 +52,7 @@ class CodeJams(commands.Cog):
 
     @staticmethod
     async def get_category(ctx: commands.Context) -> CategoryChannel:
-        """Create Code Jam category when this don't exist and return this."""
+        """Create a Code Jam category if it doesn't exist and return it."""
         code_jam_category = utils.get(ctx.guild.categories, name="Code Jam")
 
         if code_jam_category is None:
@@ -99,7 +99,7 @@ class CodeJams(commands.Cog):
         return team_channel_overwrites
 
     async def create_channels(self, ctx: commands.Context, team_name: str, members: t.List[Member]) -> str:
-        """Create team text and voice channel. Return name of text channel."""
+        """Create team text and voice channels. Return the mention for the text channel."""
         # Get permission overwrites and category
         team_channel_overwrites = self.get_overwrites(members, ctx)
         code_jam_category = await self.get_category(ctx)
