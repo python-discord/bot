@@ -6,6 +6,11 @@ from bot.cogs.moderation import incidents
 from tests.helpers import MockMessage, MockReaction, MockTextChannel, MockUser
 
 
+class MockSignal(enum.Enum):
+    A = "A"
+    B = "B"
+
+
 @patch("bot.constants.Channels.incidents", 123)
 class TestIsIncident(unittest.TestCase):
     """
@@ -95,12 +100,7 @@ class TestHasSignals(unittest.TestCase):
             self.assertFalse(incidents.has_signals(message))
 
 
-class Signal(enum.Enum):
-    A = "A"
-    B = "B"
-
-
-@patch("bot.cogs.moderation.incidents.Signal", Signal)
+@patch("bot.cogs.moderation.incidents.Signal", MockSignal)
 class TestAddSignals(unittest.IsolatedAsyncioTestCase):
     """
     Assertions for the `add_signals` coroutine.
