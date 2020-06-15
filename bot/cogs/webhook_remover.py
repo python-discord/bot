@@ -1,7 +1,7 @@
 import logging
 import re
 
-from discord import Colour, Message
+from discord import Colour, Message, NotFound
 from discord.ext.commands import Cog
 
 from bot.bot import Bot
@@ -35,7 +35,13 @@ class WebhookRemover(Cog):
         """Delete `msg` and send a warning that it contained the Discord webhook `redacted_url`."""
         # Don't log this, due internal delete, not by user. Will make different entry.
         self.mod_log.ignore(Event.message_delete, msg.id)
-        await msg.delete()
+
+        try:
+            await msg.delete()
+        except NotFound:
+            log.debug(f"Failed to remove webhook in message {msg.id}: message already deleted.")
+            return
+
         await msg.channel.send(ALERT_MESSAGE_TEMPLATE.format(user=msg.author.mention))
 
         message = (
