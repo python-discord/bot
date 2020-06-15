@@ -452,6 +452,21 @@ class ModLog(Cog, name="ModLog"):
             channel_id=Channels.mod_log
         )
 
+    @staticmethod
+    def get_role_diff(before: t.List[discord.Role], after: t.List[discord.Role]) -> t.List[str]:
+        """Return a list of strings describing the roles added and removed."""
+        changes = []
+        before_roles = set(before)
+        after_roles = set(after)
+
+        for role in (before_roles - after_roles):
+            changes.append(f"**Role removed:** {role.name} (`{role.id}`)")
+
+        for role in (after_roles - before_roles):
+            changes.append(f"**Role added:** {role.name} (`{role.id}`)")
+
+        return changes
+
     @Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member) -> None:
         """Log member update event to user log."""
@@ -463,22 +478,18 @@ class ModLog(Cog, name="ModLog"):
             return
 
         diff = DeepDiff(before, after)
-        changes = []
+        changes = self.get_role_diff(before.roles, after.roles)
         done = []
 
         diff_values = {}
 
         diff_values.update(diff.get("values_changed", {}))
         diff_values.update(diff.get("type_changes", {}))
-        diff_values.update(diff.get("iterable_item_removed", {}))
-        diff_values.update(diff.get("iterable_item_added", {}))
 
         diff_user = DeepDiff(before._user, after._user)
 
         diff_values.update(diff_user.get("values_changed", {}))
         diff_values.update(diff_user.get("type_changes", {}))
-        diff_values.update(diff_user.get("iterable_item_removed", {}))
-        diff_values.update(diff_user.get("iterable_item_added", {}))
 
         for key, value in diff_values.items():
             if not key:  # Not sure why, but it happens
@@ -495,24 +506,11 @@ class ModLog(Cog, name="ModLog"):
             if key in done or key in MEMBER_CHANGES_SUPPRESSED:
                 continue
 
-            if key == "_roles":
-                new_roles = after.roles
-                old_roles = before.roles
+            new = value.get("new_value")
+            old = value.get("old_value")
 
-                for role in old_roles:
-                    if role not in new_roles:
-                        changes.append(f"**Role removed:** {role.name} (`{role.id}`)")
-
-                for role in new_roles:
-                    if role not in old_roles:
-                        changes.append(f"**Role added:** {role.name} (`{role.id}`)")
-
-            else:
-                new = value.get("new_value")
-                old = value.get("old_value")
-
-                if new and old:
-                    changes.append(f"**{key.title()}:** `{old}` **→** `{new}`")
+            if new and old:
+                changes.append(f"**{key.title()}:** `{old}` **→** `{new}`")
 
             done.append(key)
 
