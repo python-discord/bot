@@ -24,7 +24,7 @@ GUILD_CHANNEL = t.Union[discord.CategoryChannel, discord.TextChannel, discord.Vo
 
 CHANNEL_CHANGES_UNSUPPORTED = ("permissions",)
 CHANNEL_CHANGES_SUPPRESSED = ("_overwrites", "position")
-MEMBER_CHANGES_SUPPRESSED = ("status", "activities", "_client_status", "nick")
+MEMBER_CHANGES_SUPPRESSED = ("status", "activities", "_client_status")
 ROLE_CHANGES_UNSUPPORTED = ("colour", "permissions")
 
 VOICE_STATE_ATTRIBUTES = {
@@ -486,11 +486,6 @@ class ModLog(Cog, name="ModLog"):
         diff_values.update(diff.get("values_changed", {}))
         diff_values.update(diff.get("type_changes", {}))
 
-        diff_user = DeepDiff(before._user, after._user)
-
-        diff_values.update(diff_user.get("values_changed", {}))
-        diff_values.update(diff_user.get("type_changes", {}))
-
         for key, value in diff_values.items():
             if not key:  # Not sure why, but it happens
                 continue
@@ -513,21 +508,6 @@ class ModLog(Cog, name="ModLog"):
                 changes.append(f"**{key.title()}:** `{old}` **→** `{new}`")
 
             done.append(key)
-
-        if before.name != after.name:
-            changes.append(
-                f"**Username:** `{before.name}` **→** `{after.name}`"
-            )
-
-        if before.discriminator != after.discriminator:
-            changes.append(
-                f"**Discriminator:** `{before.discriminator}` **→** `{after.discriminator}`"
-            )
-
-        if before.display_name != after.display_name:
-            changes.append(
-                f"**Display name:** `{before.display_name}` **→** `{after.display_name}`"
-            )
 
         if not changes:
             return
