@@ -63,8 +63,9 @@ class TokenRemover(Cog):
 
         See: https://discordapp.com/developers/docs/reference#snowflakes
         """
-        if not msg.guild:
-            return  # Ignore DMs; can't delete messages in there anyway.
+        # Ignore DMs; can't delete messages in there anyway.
+        if not msg.guild or msg.author.bot:
+            return
 
         found_token = self.find_token_in_message(msg)
         if found_token:
@@ -115,9 +116,6 @@ class TokenRemover(Cog):
     @classmethod
     def find_token_in_message(cls, msg: Message) -> t.Optional[Token]:
         """Return a seemingly valid token found in `msg` or `None` if no token is found."""
-        if msg.author.bot:
-            return
-
         # Use finditer rather than search to guard against method calls prematurely returning the
         # token check (e.g. `message.channel.send` also matches our token pattern)
         for match in TOKEN_RE.finditer(msg.content):
