@@ -504,8 +504,7 @@ class ModLog(Cog, name="ModLog"):
             new = value.get("new_value")
             old = value.get("old_value")
 
-            if new and old:
-                changes.append(f"**{key.title()}:** `{old}` **→** `{new}`")
+            changes.append(f"**{key.title()}:** `{old}` **→** `{new}`")
 
             done.append(key)
 
