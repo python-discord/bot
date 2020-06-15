@@ -299,6 +299,7 @@ filter:
         - 185590609631903755  # Blender Hub
         - 420324994703163402  # /r/FlutterDev
         - 488751051629920277  # Python Atlanta
+        - 143867839282020352  # C#
 
     domain_blacklist:
         - pornhub.com
