@@ -4,7 +4,7 @@ import logging
 import re
 import typing as t
 
-from discord import Colour, Message
+from discord import Colour, Message, NotFound
 from discord.ext.commands import Cog
 
 from bot import utils
@@ -83,7 +83,13 @@ class TokenRemover(Cog):
     async def take_action(self, msg: Message, found_token: Token) -> None:
         """Remove the `msg` containing the `found_token` and send a mod log message."""
         self.mod_log.ignore(Event.message_delete, msg.id)
-        await msg.delete()
+
+        try:
+            await msg.delete()
+        except NotFound:
+            log.debug(f"Failed to remove token in message {msg.id}: message already deleted.")
+            return
+
         await msg.channel.send(DELETION_MESSAGE_TEMPLATE.format(mention=msg.author.mention))
 
         log_message = self.format_log_message(msg, found_token)

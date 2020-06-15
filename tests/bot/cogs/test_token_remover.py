@@ -3,7 +3,7 @@ from re import Match
 from unittest import mock
 from unittest.mock import MagicMock
 
-from discord import Colour
+from discord import Colour, NotFound
 
 from bot import constants
 from bot.cogs import token_remover
@@ -281,6 +281,19 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
             thumbnail=self.msg.author.avatar_url_as.return_value,
             channel_id=constants.Channels.mod_alerts
         )
+
+    @mock.patch.object(TokenRemover, "mod_log", new_callable=mock.PropertyMock)
+    async def test_take_action_delete_failure(self, mod_log_property):
+        """Shouldn't send any messages if the token message can't be deleted."""
+        cog = TokenRemover(self.bot)
+        mod_log_property.return_value = mock.create_autospec(ModLog, spec_set=True, instance=True)
+        self.msg.delete.side_effect = NotFound(MagicMock(), MagicMock())
+
+        token = mock.create_autospec(Token, spec_set=True, instance=True)
+        await cog.take_action(self.msg, token)
+
+        self.msg.delete.assert_called_once_with()
+        self.msg.channel.send.assert_not_awaited()
 
 
 class TokenRemoverExtensionTests(unittest.TestCase):
