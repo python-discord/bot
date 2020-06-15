@@ -127,11 +127,10 @@ class InfractionScheduler(Scheduler):
                     dm_result = ":incoming_envelope: "
                     dm_log_text = "\nDM: Sent"
 
-        if infraction["actor"] == self.bot.user.id:
+        if reason and infraction["actor"] == self.bot.user.id:
             log.trace(
                 f"Infraction #{id_} actor is bot; including the reason in the confirmation message."
             )
-
             end_msg = f" (reason: {textwrap.shorten(reason, width=1500, placeholder='...')})"
         elif ctx.channel.id not in STAFF_CHANNELS:
             log.trace(
