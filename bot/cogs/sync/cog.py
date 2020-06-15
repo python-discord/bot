@@ -46,6 +46,9 @@ class Sync(Cog):
     @Cog.listener()
     async def on_guild_role_create(self, role: Role) -> None:
         """Adds newly create role to the database table over the API."""
+        if role.guild != constants.Guild.id:
+            return
+
         await self.bot.api_client.post(
             'bot/roles',
             json={
@@ -60,11 +63,17 @@ class Sync(Cog):
     @Cog.listener()
     async def on_guild_role_delete(self, role: Role) -> None:
         """Deletes role from the database when it's deleted from the guild."""
+        if role.guild != constants.Guild.id:
+            return
+
         await self.bot.api_client.delete(f'bot/roles/{role.id}')
 
     @Cog.listener()
     async def on_guild_role_update(self, before: Role, after: Role) -> None:
         """Syncs role with the database if any of the stored attributes were updated."""
+        if after.guild != constants.Guild.id:
+            return
+
         was_updated = (
             before.name != after.name
             or before.colour != after.colour
@@ -93,6 +102,9 @@ class Sync(Cog):
         previously left), it will update the user's information. If the user is not yet known by
         the database, the user is added.
         """
+        if member.guild != constants.Guild.id:
+            return
+
         packed = {
             'discriminator': int(member.discriminator),
             'id': member.id,
@@ -122,11 +134,17 @@ class Sync(Cog):
     @Cog.listener()
     async def on_member_remove(self, member: Member) -> None:
         """Set the in_guild field to False when a member leaves the guild."""
+        if member.guild != constants.Guild.id:
+            return
+
         await self.patch_user(member.id, updated_information={"in_guild": False})
 
     @Cog.listener()
     async def on_member_update(self, before: Member, after: Member) -> None:
         """Update the roles of the member in the database if a change is detected."""
+        if after.guild != constants.Guild.id:
+            return
+
         if before.roles != after.roles:
             updated_information = {"roles": sorted(role.id for role in after.roles)}
             await self.patch_user(after.id, updated_information=updated_information)
