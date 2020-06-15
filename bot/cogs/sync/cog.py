@@ -34,14 +34,15 @@ class Sync(Cog):
         for syncer in (self.role_syncer, self.user_syncer):
             await syncer.sync(guild)
 
-    async def patch_user(self, user_id: int, updated_information: Dict[str, Any]) -> None:
+    async def patch_user(self, user_id: int, json: Dict[str, Any], ignore_404: bool = False) -> None:
         """Send a PATCH request to partially update a user in the database."""
         try:
-            await self.bot.api_client.patch(f"bot/users/{user_id}", json=updated_information)
+            await self.bot.api_client.patch(f"bot/users/{user_id}", json=json)
         except ResponseCodeError as e:
             if e.response.status != 404:
                 raise
-            log.warning("Unable to update user, got 404. Assuming race condition from join event.")
+            if not ignore_404:
+                log.warning("Unable to update user, got 404. Assuming race condition from join event.")
 
     @Cog.listener()
     async def on_guild_role_create(self, role: Role) -> None:
@@ -137,7 +138,7 @@ class Sync(Cog):
         if member.guild != constants.Guild.id:
             return
 
-        await self.patch_user(member.id, updated_information={"in_guild": False})
+        await self.patch_user(member.id, json={"in_guild": False})
 
     @Cog.listener()
     async def on_member_update(self, before: Member, after: Member) -> None:
@@ -147,7 +148,7 @@ class Sync(Cog):
 
         if before.roles != after.roles:
             updated_information = {"roles": sorted(role.id for role in after.roles)}
-            await self.patch_user(after.id, updated_information=updated_information)
+            await self.patch_user(after.id, json=updated_information)
 
     @Cog.listener()
     async def on_user_update(self, before: User, after: User) -> None:
@@ -158,7 +159,8 @@ class Sync(Cog):
                 "name": after.name,
                 "discriminator": int(after.discriminator),
             }
-            await self.patch_user(after.id, updated_information=updated_information)
+            # A 404 likely means the user is in another guild.
+            await self.patch_user(after.id, json=updated_information, ignore_404=True)
 
     @commands.group(name='sync')
     @commands.has_permissions(administrator=True)

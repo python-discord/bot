@@ -226,7 +226,7 @@ class SyncCogListenerTests(SyncCogTestCase):
 
         self.cog.patch_user.assert_called_once_with(
             member.id,
-            updated_information={"in_guild": False}
+            json={"in_guild": False}
         )
 
     async def test_sync_cog_on_member_remove_ignores_guilds(self):
@@ -247,7 +247,7 @@ class SyncCogListenerTests(SyncCogTestCase):
         await self.cog.on_member_update(before_member, after_member)
 
         data = {"roles": sorted(role.id for role in after_member.roles)}
-        self.cog.patch_user.assert_called_once_with(after_member.id, updated_information=data)
+        self.cog.patch_user.assert_called_once_with(after_member.id, json=data)
 
     async def test_sync_cog_on_member_update_other(self):
         """Members should not be patched if other attributes have changed."""
@@ -308,12 +308,15 @@ class SyncCogListenerTests(SyncCogTestCase):
 
                     # Don't care if *all* keys are present; only the changed one is required
                     call_args = self.cog.patch_user.call_args
-                    self.assertEqual(call_args[0][0], after_user.id)
-                    self.assertIn("updated_information", call_args[1])
+                    self.assertEqual(call_args.args[0], after_user.id)
+                    self.assertIn("json", call_args.kwargs)
 
-                    updated_information = call_args[1]["updated_information"]
-                    self.assertIn(api_field, updated_information)
-                    self.assertEqual(updated_information[api_field], api_value)
+                    self.assertIn("ignore_404", call_args.kwargs)
+                    self.assertTrue(call_args.kwargs["ignore_404"])
+
+                    json = call_args.kwargs["json"]
+                    self.assertIn(api_field, json)
+                    self.assertEqual(json[api_field], api_value)
                 else:
                     self.cog.patch_user.assert_not_called()
 
