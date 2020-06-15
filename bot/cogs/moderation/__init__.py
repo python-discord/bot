@@ -1,11 +1,11 @@
 from bot.bot import Bot
 from .incidents import Incidents
-from .infractions import Infractions
-from .management import ModManagement
+from .infraction.infractions import Infractions
+from .infraction.management import ModManagement
+from .infraction.superstarify import Superstarify
 from .modlog import ModLog
 from .silence import Silence
 from .slowmode import Slowmode
-from .superstarify import Superstarify
 
 
 def setup(bot: Bot) -> None:

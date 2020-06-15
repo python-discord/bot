@@ -5,8 +5,8 @@ import discord
 
 from bot import constants
 from bot.api import ResponseCodeError
-from bot.cogs import sync
-from bot.cogs.sync.syncers import Syncer
+from bot.cogs.backend import sync
+from bot.cogs.backend.sync import Syncer
 from tests import helpers
 from tests.base import CommandTestCase
 

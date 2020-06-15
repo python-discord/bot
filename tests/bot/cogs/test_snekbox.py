@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, MagicMock, Mock, call, create_autospec, pat
 from discord.ext import commands
 
 from bot import constants
-from bot.cogs import snekbox
-from bot.cogs.snekbox import Snekbox
+from bot.cogs.utils import snekbox
+from bot.cogs.utils.snekbox import Snekbox
 from tests.helpers import MockBot, MockContext, MockMessage, MockReaction, MockUser
 
 

@@ -2,7 +2,7 @@ import textwrap
 import unittest
 from unittest.mock import AsyncMock, Mock, patch
 
-from bot.cogs.moderation.infractions import Infractions
+from bot.cogs.moderation.infraction.infractions import Infractions
 from tests.helpers import MockBot, MockContext, MockGuild, MockMember, MockRole
 
 

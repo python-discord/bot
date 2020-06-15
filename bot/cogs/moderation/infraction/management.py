@@ -9,13 +9,13 @@ from discord.ext.commands import Context
 
 from bot import constants
 from bot.bot import Bot
+from bot.cogs.moderation.modlog import ModLog
 from bot.converters import Expiry, InfractionSearchQuery, allowed_strings, proxy_user
 from bot.pagination import LinePaginator
 from bot.utils import time
 from bot.utils.checks import in_whitelist_check, with_role_check
 from . import utils
 from .infractions import Infractions
-from .modlog import ModLog
 
 log = logging.getLogger(__name__)
 

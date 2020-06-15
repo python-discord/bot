@@ -1,7 +1,7 @@
 import unittest
 from unittest import mock
 
-from bot.cogs.sync.syncers import UserSyncer, _Diff, _User
+from bot.cogs.backend.sync import UserSyncer, _Diff, _User
 from tests import helpers
 
 

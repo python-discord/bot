@@ -5,7 +5,7 @@ from collections import ChainMap
 from discord.ext.commands import Cog, Context, group
 
 from bot.bot import Bot
-from bot.cogs.moderation.utils import post_infraction
+from bot.cogs.moderation.infraction.utils import post_infraction
 from bot.constants import Channels, MODERATION_ROLES, Webhooks
 from bot.converters import FetchedMember
 from bot.decorators import with_role

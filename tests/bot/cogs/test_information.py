@@ -6,7 +6,7 @@ import unittest.mock
 import discord
 
 from bot import constants
-from bot.cogs import information
+from bot.cogs.info import information
 from bot.utils.checks import InWhitelistCheckFailure
 from tests import helpers
 

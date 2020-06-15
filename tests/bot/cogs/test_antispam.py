@@ -1,6 +1,6 @@
 import unittest
 
-from bot.cogs import antispam
+from bot.cogs.filters import antispam
 
 
 class AntispamConfigurationValidationTests(unittest.TestCase):

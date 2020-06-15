@@ -8,7 +8,7 @@ from discord import Embed, Message, RawMessageUpdateEvent, TextChannel
 from discord.ext.commands import Cog, Context, command, group
 
 from bot.bot import Bot
-from bot.cogs.token_remover import TokenRemover
+from bot.cogs.filters.token_remover import TokenRemover
 from bot.constants import Categories, Channels, DEBUG_MODE, Guild, MODERATION_ROLES, Roles, URLs
 from bot.decorators import with_role
 from bot.utils.messages import wait_for_deletion

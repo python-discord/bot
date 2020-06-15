@@ -12,11 +12,11 @@ from discord.ext.commands import Context
 from bot import constants
 from bot.api import ResponseCodeError
 from bot.bot import Bot
+from bot.cogs.moderation.modlog import ModLog
 from bot.constants import Colours, STAFF_CHANNELS
 from bot.utils import time
 from bot.utils.scheduling import Scheduler
 from . import utils
-from .modlog import ModLog
 from .utils import UserSnowflake
 
 log = logging.getLogger(__name__)

@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 
 from discord.ext.commands import NoPrivateMessage
 
-from bot.cogs import security
+from bot.cogs.filters import security
 from tests.helpers import MockBot, MockContext
 
 

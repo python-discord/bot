@@ -8,7 +8,7 @@ from discord.ext.commands import (
 )
 
 from bot.bot import Bot
-from bot.cogs.extensions import Extension
+from bot.cogs.utils.extensions import Extension
 from bot.converters import FetchedMember, TagNameConverter
 from bot.pagination import LinePaginator
 
