@@ -24,7 +24,6 @@ GUILD_CHANNEL = t.Union[discord.CategoryChannel, discord.TextChannel, discord.Vo
 
 CHANNEL_CHANGES_UNSUPPORTED = ("permissions",)
 CHANNEL_CHANGES_SUPPRESSED = ("_overwrites", "position")
-MEMBER_CHANGES_SUPPRESSED = ("status", "activities", "_client_status")
 ROLE_CHANGES_UNSUPPORTED = ("colour", "permissions")
 
 VOICE_STATE_ATTRIBUTES = {
@@ -477,36 +476,27 @@ class ModLog(Cog, name="ModLog"):
             self._ignored[Event.member_update].remove(before.id)
             return
 
-        diff = DeepDiff(before, after)
         changes = self.get_role_diff(before.roles, after.roles)
-        done = []
 
-        diff_values = {}
+        # The regex is a simple way to exclude all sequence and mapping types.
+        diff = DeepDiff(before, after, exclude_regex_paths=r".*\[.*")
 
-        diff_values.update(diff.get("values_changed", {}))
-        diff_values.update(diff.get("type_changes", {}))
+        # A type change seems to always take precedent over a value change. Furthermore, it will
+        # include the value change along with the type change anyway. Therefore, it's OK to
+        # "overwrite" values_changed; in practice there will never even be anything to overwrite.
+        diff_values = {**diff.get("values_changed", {}), **diff.get("type_changes", {})}
 
-        for key, value in diff_values.items():
-            if not key:  # Not sure why, but it happens
+        for attr, value in diff_values.items():
+            if not attr:  # Not sure why, but it happens.
                 continue
 
-            key = key[5:]  # Remove "root." prefix
-
-            if "[" in key:
-                key = key.split("[", 1)[0]
-
-            if "." in key:
-                key = key.split(".", 1)[0]
-
-            if key in done or key in MEMBER_CHANGES_SUPPRESSED:
-                continue
+            attr = attr[len("root."):]  # Remove "root." prefix.
+            attr = attr.replace("_", " ").replace(".", " ").capitalize()
 
             new = value.get("new_value")
             old = value.get("old_value")
 
-            changes.append(f"**{key.title()}:** `{old}` **→** `{new}`")
-
-            done.append(key)
+            changes.append(f"**{attr}:** `{old}` **→** `{new}`")
 
         if not changes:
             return
@@ -520,8 +510,10 @@ class ModLog(Cog, name="ModLog"):
         message = f"**{member_str}** (`{after.id}`)\n{message}"
 
         await self.send_log_message(
-            Icons.user_update, Colour.blurple(),
-            "Member updated", message,
+            icon_url=Icons.user_update,
+            colour=Colour.blurple(),
+            title="Member updated",
+            text=message,
             thumbnail=after.avatar_url_as(static_format="png"),
             channel_id=Channels.user_log
         )
