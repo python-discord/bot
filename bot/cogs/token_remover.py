@@ -63,6 +63,9 @@ class TokenRemover(Cog):
 
         See: https://discordapp.com/developers/docs/reference#snowflakes
         """
+        if not msg.guild:
+            return  # Ignore DMs; can't delete messages in there anyway.
+
         found_token = self.find_token_in_message(msg)
         if found_token:
             await self.take_action(msg, found_token)

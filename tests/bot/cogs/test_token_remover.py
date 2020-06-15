@@ -121,6 +121,16 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         find_token_in_message.assert_called_once_with(self.msg)
         take_action.assert_not_awaited()
 
+    @autospec(TokenRemover, "find_token_in_message")
+    async def test_on_message_ignores_dms(self, find_token_in_message):
+        """Shouldn't parse a message if it is a DM."""
+        cog = TokenRemover(self.bot)
+        self.msg.guild = None
+
+        await cog.on_message(self.msg)
+
+        find_token_in_message.assert_not_called()
+
     @autospec("bot.cogs.token_remover", "TOKEN_RE")
     def test_find_token_ignores_bot_messages(self, token_re):
         """The token finder should ignore messages authored by bots."""
