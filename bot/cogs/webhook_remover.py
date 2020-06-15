@@ -59,6 +59,10 @@ class WebhookRemover(Cog):
     @Cog.listener()
     async def on_message(self, msg: Message) -> None:
         """Check if a Discord webhook URL is in `message`."""
+        # Ignore DMs; can't delete messages in there anyway.
+        if not msg.guild or msg.author.bot:
+            return
+
         matches = WEBHOOK_URL_RE.search(msg.content)
         if matches:
             await self.delete_and_respond(msg, matches[1] + "xxx")
