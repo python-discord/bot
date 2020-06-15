@@ -10,11 +10,9 @@ message_cooldown = commands.CooldownMapping.from_cooldown(1.0, 60.0, commands.Bu
 @bot.event
 async def on_message(message):
     bucket = message_cooldown.get_bucket(message)
-    # update_rate_limit returns a time you need to wait before
-    # trying again
     retry_after = bucket.update_rate_limit()
     if retry_after:
-        await message.channel.send("Slow down! You're sending messages too fast")
+        await message.channel.send(f"Slow down! Try again in {retry_after} seconds.")
     else:
         await message.channel.send("Not ratelimited!")
 ```
