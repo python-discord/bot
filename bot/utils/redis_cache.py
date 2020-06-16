@@ -48,8 +48,8 @@ class RedisCache:
     behaves, and should be familiar to Python users. The biggest difference is that
     all the public methods in this class are coroutines, and must be awaited.
 
-    Because of limitations in Redis, this cache will only accept strings, integers and
-    floats both for keys and values.
+    Because of limitations in Redis, this cache will only accept strings and integers for keys,
+    and strings, integers, floats and booleans for values.
 
     Please note that this class MUST be created as a class attribute, and that that class
     must also contain an attribute with an instance of our Bot. See `__get__` and `__set_name__`
