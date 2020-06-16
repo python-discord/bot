@@ -1,6 +1,7 @@
 import asyncio
 import contextlib
 import logging
+import re
 from io import BytesIO
 from typing import List, Optional, Sequence, Union
 
@@ -86,7 +87,7 @@ async def send_attachments(
                     else:
                         await destination.send(
                             file=attachment_file,
-                            username=message.author.display_name,
+                            username=sub_clyde(message.author.display_name),
                             avatar_url=message.author.avatar_url
                         )
             elif link_large:
@@ -109,8 +110,19 @@ async def send_attachments(
         else:
             await destination.send(
                 embed=embed,
-                username=message.author.display_name,
+                username=sub_clyde(message.author.display_name),
                 avatar_url=message.author.avatar_url
             )
 
     return urls
+
+
+def sub_clyde(username: Optional[str]) -> Optional[str]:
+    """
+    Replace "e" in any "clyde" in `username` with a similar Unicode char and return the new string.
+
+    Discord disallows "clyde" anywhere in the username for webhooks. It will return a 400.
+    Return None only if `username` is None.
+    """
+    if username:
+        return re.sub(r"(clyd)e", r"\1𝖾", username, flags=re.I)
