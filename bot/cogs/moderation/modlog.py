@@ -490,7 +490,7 @@ class ModLog(Cog, name="ModLog"):
             if not attr:  # Not sure why, but it happens.
                 continue
 
-            attr = attr[len("root."):]  # Remove "root." prefix.
+            attr = attr[5:]  # Remove "root." prefix.
             attr = attr.replace("_", " ").replace(".", " ").capitalize()
 
             new = value.get("new_value")
