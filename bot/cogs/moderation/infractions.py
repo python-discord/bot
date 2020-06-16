@@ -298,7 +298,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     # endregion
     # region: Base pardon functions
 
-    async def pardon_mute(self, user_id: int, guild: discord.Guild, reason: str) -> t.Dict[str, str]:
+    async def pardon_mute(self, user_id: int, guild: discord.Guild, reason: t.Optional[str]) -> t.Dict[str, str]:
         """Remove a user's muted role, DM them a notification, and return a log dict."""
         user = guild.get_member(user_id)
         log_text = {}
@@ -324,7 +324,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         return log_text
 
-    async def pardon_ban(self, user_id: int, guild: discord.Guild, reason: str) -> t.Dict[str, str]:
+    async def pardon_ban(self, user_id: int, guild: discord.Guild, reason: t.Optional[str]) -> t.Dict[str, str]:
         """Remove a user's ban on the Discord guild and return a log dict."""
         user = discord.Object(user_id)
         log_text = {}
