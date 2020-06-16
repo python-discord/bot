@@ -53,7 +53,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     # region: Permanent infractions
 
     @command()
-    async def warn(self, ctx: Context, user: Member, *, reason: str = None) -> None:
+    async def warn(self, ctx: Context, user: Member, *, reason: t.Optional[str] = None) -> None:
         """Warn a user for the given reason."""
         infraction = await utils.post_infraction(ctx, user, "warning", reason, active=False)
         if infraction is None:
@@ -62,12 +62,12 @@ class Infractions(InfractionScheduler, commands.Cog):
         await self.apply_infraction(ctx, infraction, user)
 
     @command()
-    async def kick(self, ctx: Context, user: Member, *, reason: str = None) -> None:
+    async def kick(self, ctx: Context, user: Member, *, reason: t.Optional[str] = None) -> None:
         """Kick a user for the given reason."""
         await self.apply_kick(ctx, user, reason, active=False)
 
     @command()
-    async def ban(self, ctx: Context, user: FetchedMember, *, reason: str = None) -> None:
+    async def ban(self, ctx: Context, user: FetchedMember, *, reason: t.Optional[str] = None) -> None:
         """Permanently ban a user for the given reason and stop watching them with Big Brother."""
         await self.apply_ban(ctx, user, reason)
 
@@ -75,7 +75,9 @@ class Infractions(InfractionScheduler, commands.Cog):
     # region: Temporary infractions
 
     @command(aliases=["mute"])
-    async def tempmute(self, ctx: Context, user: Member, duration: Expiry, *, reason: str = None) -> None:
+    async def tempmute(
+            self, ctx: Context, user: Member, duration: Expiry, *, reason: t.Optional[str] = None
+    ) -> None:
         """
         Temporarily mute a user for the given reason and duration.
 
@@ -94,7 +96,9 @@ class Infractions(InfractionScheduler, commands.Cog):
         await self.apply_mute(ctx, user, reason, expires_at=duration)
 
     @command()
-    async def tempban(self, ctx: Context, user: FetchedMember, duration: Expiry, *, reason: str = None) -> None:
+    async def tempban(
+            self, ctx: Context, user: FetchedMember, duration: Expiry, *, reason: t.Optional[str] = None
+    ) -> None:
         """
         Temporarily ban a user for the given reason and duration.
 
@@ -116,7 +120,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     # region: Permanent shadow infractions
 
     @command(hidden=True)
-    async def note(self, ctx: Context, user: FetchedMember, *, reason: str = None) -> None:
+    async def note(self, ctx: Context, user: FetchedMember, *, reason: t.Optional[str] = None) -> None:
         """Create a private note for a user with the given reason without notifying the user."""
         infraction = await utils.post_infraction(ctx, user, "note", reason, hidden=True, active=False)
         if infraction is None:
@@ -125,12 +129,14 @@ class Infractions(InfractionScheduler, commands.Cog):
         await self.apply_infraction(ctx, infraction, user)
 
     @command(hidden=True, aliases=['shadowkick', 'skick'])
-    async def shadow_kick(self, ctx: Context, user: Member, *, reason: str = None) -> None:
+    async def shadow_kick(self, ctx: Context, user: Member, *, reason: t.Optional[str] = None) -> None:
         """Kick a user for the given reason without notifying the user."""
         await self.apply_kick(ctx, user, reason, hidden=True, active=False)
 
     @command(hidden=True, aliases=['shadowban', 'sban'])
-    async def shadow_ban(self, ctx: Context, user: FetchedMember, *, reason: str = None) -> None:
+    async def shadow_ban(
+            self, ctx: Context, user: FetchedMember, *, reason: t.Optional[str] = None
+    ) -> None:
         """Permanently ban a user for the given reason without notifying the user."""
         await self.apply_ban(ctx, user, reason, hidden=True)
 
@@ -138,7 +144,14 @@ class Infractions(InfractionScheduler, commands.Cog):
     # region: Temporary shadow infractions
 
     @command(hidden=True, aliases=["shadowtempmute, stempmute", "shadowmute", "smute"])
-    async def shadow_tempmute(self, ctx: Context, user: Member, duration: Expiry, *, reason: str = None) -> None:
+    async def shadow_tempmute(
+            self,
+            ctx: Context,
+            user: Member,
+            duration: Expiry,
+            *,
+            reason: t.Optional[str] = None
+    ) -> None:
         """
         Temporarily mute a user for the given reason and duration without notifying the user.
 
@@ -158,12 +171,12 @@ class Infractions(InfractionScheduler, commands.Cog):
 
     @command(hidden=True, aliases=["shadowtempban, stempban"])
     async def shadow_tempban(
-        self,
-        ctx: Context,
-        user: FetchedMember,
-        duration: Expiry,
-        *,
-        reason: str = None
+            self,
+            ctx: Context,
+            user: FetchedMember,
+            duration: Expiry,
+            *,
+            reason: t.Optional[str] = None
     ) -> None:
         """
         Temporarily ban a user for the given reason and duration without notifying the user.
@@ -198,7 +211,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     # endregion
     # region: Base apply functions
 
-    async def apply_mute(self, ctx: Context, user: Member, reason: str, **kwargs) -> None:
+    async def apply_mute(self, ctx: Context, user: Member, reason: t.Optional[str], **kwargs) -> None:
         """Apply a mute infraction with kwargs passed to `post_infraction`."""
         if await utils.get_active_infraction(ctx, user, "mute"):
             return
@@ -218,7 +231,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         await self.apply_infraction(ctx, infraction, user, action())
 
     @respect_role_hierarchy()
-    async def apply_kick(self, ctx: Context, user: Member, reason: str, **kwargs) -> None:
+    async def apply_kick(self, ctx: Context, user: Member, reason: t.Optional[str], **kwargs) -> None:
         """Apply a kick infraction with kwargs passed to `post_infraction`."""
         infraction = await utils.post_infraction(ctx, user, "kick", reason, active=False, **kwargs)
         if infraction is None:
@@ -233,7 +246,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         await self.apply_infraction(ctx, infraction, user, action)
 
     @respect_role_hierarchy()
-    async def apply_ban(self, ctx: Context, user: UserSnowflake, reason: str, **kwargs) -> None:
+    async def apply_ban(self, ctx: Context, user: UserSnowflake, reason: t.Optional[str], **kwargs) -> None:
         """
         Apply a ban infraction with kwargs passed to `post_infraction`.
 
