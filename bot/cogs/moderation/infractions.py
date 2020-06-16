@@ -75,9 +75,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     # region: Temporary infractions
 
     @command(aliases=["mute"])
-    async def tempmute(
-            self, ctx: Context, user: Member, duration: Expiry, *, reason: t.Optional[str] = None
-    ) -> None:
+    async def tempmute(self, ctx: Context, user: Member, duration: Expiry, *, reason: t.Optional[str] = None) -> None:
         """
         Temporarily mute a user for the given reason and duration.
 
@@ -97,7 +95,12 @@ class Infractions(InfractionScheduler, commands.Cog):
 
     @command()
     async def tempban(
-            self, ctx: Context, user: FetchedMember, duration: Expiry, *, reason: t.Optional[str] = None
+        self,
+        ctx: Context,
+        user: FetchedMember,
+        duration: Expiry,
+        *,
+        reason: t.Optional[str] = None
     ) -> None:
         """
         Temporarily ban a user for the given reason and duration.
@@ -134,9 +137,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         await self.apply_kick(ctx, user, reason, hidden=True, active=False)
 
     @command(hidden=True, aliases=['shadowban', 'sban'])
-    async def shadow_ban(
-            self, ctx: Context, user: FetchedMember, *, reason: t.Optional[str] = None
-    ) -> None:
+    async def shadow_ban(self, ctx: Context, user: FetchedMember, *, reason: t.Optional[str] = None) -> None:
         """Permanently ban a user for the given reason without notifying the user."""
         await self.apply_ban(ctx, user, reason, hidden=True)
 
@@ -145,12 +146,11 @@ class Infractions(InfractionScheduler, commands.Cog):
 
     @command(hidden=True, aliases=["shadowtempmute, stempmute", "shadowmute", "smute"])
     async def shadow_tempmute(
-            self,
-            ctx: Context,
-            user: Member,
-            duration: Expiry,
-            *,
-            reason: t.Optional[str] = None
+        self, ctx: Context,
+        user: Member,
+        duration: Expiry,
+        *,
+        reason: t.Optional[str] = None
     ) -> None:
         """
         Temporarily mute a user for the given reason and duration without notifying the user.
@@ -171,12 +171,12 @@ class Infractions(InfractionScheduler, commands.Cog):
 
     @command(hidden=True, aliases=["shadowtempban, stempban"])
     async def shadow_tempban(
-            self,
-            ctx: Context,
-            user: FetchedMember,
-            duration: Expiry,
-            *,
-            reason: t.Optional[str] = None
+        self,
+        ctx: Context,
+        user: FetchedMember,
+        duration: Expiry,
+        *,
+        reason: t.Optional[str] = None
     ) -> None:
         """
         Temporarily ban a user for the given reason and duration without notifying the user.
