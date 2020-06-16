@@ -97,7 +97,7 @@ async def send_attachments(
             if link_large and e.status == 413:
                 large.append(attachment)
             else:
-                log.warning(f"{failure_msg} with status {e.status}.")
+                log.warning(f"{failure_msg} with status {e.status}.", exc_info=e)
 
     if link_large and large:
         desc = "\n".join(f"[{attachment.filename}]({attachment.url})" for attachment in large)

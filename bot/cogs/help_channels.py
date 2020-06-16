@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 
 ASKING_GUIDE_URL = "https://pythondiscord.com/pages/asking-good-questions/"
 MAX_CHANNELS_PER_CATEGORY = 50
-EXCLUDED_CHANNELS = (constants.Channels.how_to_get_help,)
+EXCLUDED_CHANNELS = (constants.Channels.how_to_get_help, constants.Channels.cooldown)
 
 HELP_CHANNEL_TOPIC = """
 This is a Python help channel. You can claim your own help channel in the Python Help: Available category.

@@ -101,16 +101,7 @@ class RedisCache:
 
     def _set_namespace(self, namespace: str) -> None:
         """Try to set the namespace, but do not permit collisions."""
-        # We need a unique namespace, to prevent collisions. This loop
-        # will try appending underscores to the end of the namespace until
-        # it finds one that is unique.
-        #
-        # For example, if `john` and `john_`  are both taken, the namespace will
-        # be `john__` at the end of this loop.
-        while namespace in self._namespaces:
-            namespace += "_"
-
-        log.trace(f"RedisCache setting namespace to {self._namespace}")
+        log.trace(f"RedisCache setting namespace to {namespace}")
         self._namespaces.append(namespace)
         self._namespace = namespace
 
