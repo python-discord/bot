@@ -562,11 +562,10 @@ class HelpChannels(Scheduler, commands.Cog):
             self.bot.stats.timing("help.in_use_time", in_use_time)
 
         unanswered = await self.unanswered.get(channel.id)
-        if unanswered is not None:
-            if unanswered:
-                self.bot.stats.incr("help.sessions.unanswered")
-            else:
-                self.bot.stats.incr("help.sessions.answered")
+        if unanswered:
+            self.bot.stats.incr("help.sessions.unanswered")
+        elif unanswered is not None:
+            self.bot.stats.incr("help.sessions.answered")
 
         log.trace(f"Position of #{channel} ({channel.id}) is actually {channel.position}.")
         log.trace(f"Sending dormant message for #{channel} ({channel.id}).")
