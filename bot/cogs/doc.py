@@ -353,12 +353,12 @@ class Doc(commands.Cog):
         return embed
 
     @commands.group(name='docs', aliases=('doc', 'd'), invoke_without_command=True)
-    async def docs_group(self, ctx: commands.Context, symbol: commands.clean_content = None) -> None:
+    async def docs_group(self, ctx: commands.Context, *, symbol: str) -> None:
         """Lookup documentation for Python symbols."""
-        await ctx.invoke(self.get_command, symbol)
+        await ctx.invoke(self.get_command, symbol=symbol)
 
     @docs_group.command(name='get', aliases=('g',))
-    async def get_command(self, ctx: commands.Context, symbol: commands.clean_content = None) -> None:
+    async def get_command(self, ctx: commands.Context, *, symbol: str) -> None:
         """
         Return a documentation embed for a given symbol.
 
@@ -370,7 +370,7 @@ class Doc(commands.Cog):
             !docs aiohttp.ClientSession
             !docs get aiohttp.ClientSession
         """
-        if symbol is None:
+        if not symbol:
             inventory_embed = discord.Embed(
                 title=f"All inventories (`{len(self.base_urls)}` total)",
                 colour=discord.Colour.blue()
@@ -392,8 +392,9 @@ class Doc(commands.Cog):
                 doc_embed = await self.get_symbol_embed(symbol)
 
             if doc_embed is None:
+                symbol = await discord.ext.commands.clean_content().convert(ctx, symbol)
                 error_embed = discord.Embed(
-                    description=f"Sorry, I could not find any documentation for `{symbol}`.",
+                    description=f"Sorry, I could not find any documentation for `{(symbol)}`.",
                     colour=discord.Colour.red()
                 )
                 error_message = await ctx.send(embed=error_embed)
