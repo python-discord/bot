@@ -6,7 +6,7 @@ import textwrap
 from collections import OrderedDict
 from contextlib import suppress
 from types import SimpleNamespace
-from typing import Any, Callable, Optional, Tuple
+from typing import Any, Callable, List, Optional, Tuple
 from urllib.parse import urljoin
 
 import discord
@@ -265,30 +265,14 @@ class Doc(commands.Cog):
             return None
 
         if symbol_id == f"module-{symbol}":
-            # Get page content from the module headerlink to the
-            # first tag that has its class in `SEARCH_END_TAG_ATTRS`
-            start_tag = symbol_heading.find("a", attrs={"class": "headerlink"})
-            if start_tag is None:
-                return [], ""
-
-            end_tag = start_tag.find_next(self._match_end_tag)
-            if end_tag is None:
-                return [], ""
-
-            description_start_index = search_html.find(str(start_tag.parent)) + len(str(start_tag.parent))
-            description_end_index = search_html.find(str(end_tag))
-            description = search_html[description_start_index:description_end_index]
-            signatures = None
+            parsed_module = self.parse_module_symbol(symbol_heading, search_html)
+            if parsed_module is None:
+                return None
+            else:
+                signatures, description = parsed_module
 
         else:
-            signatures = []
-            description = str(symbol_heading.find_next_sibling("dd"))
-            description_pos = search_html.find(description)
-            # Get text of up to 3 signatures, remove unwanted symbols
-            for element in [symbol_heading] + symbol_heading.find_next_siblings("dt", limit=2):
-                signature = UNWANTED_SIGNATURE_SYMBOLS_RE.sub("", element.text)
-                if signature and search_html.find(str(element)) < description_pos:
-                    signatures.append(signature)
+            signatures, description = self.parse_symbol(symbol_heading, search_html)
 
         return signatures, description.replace('¶', '')
 
@@ -353,6 +337,42 @@ class Doc(commands.Cog):
             text=", ".join(renamed for renamed in self.renamed_symbols - {symbol} if renamed.endswith(f".{symbol}"))
         )
         return embed
+
+    @classmethod
+    def parse_module_symbol(cls, heading: PageElement, html: str) -> Optional[Tuple[None, str]]:
+        """Get page content from the headerlink up to a table or a tag with its class in `SEARCH_END_TAG_ATTRS`."""
+        start_tag = heading.find("a", attrs={"class": "headerlink"})
+        if start_tag is None:
+            return None
+
+        end_tag = start_tag.find_next(cls._match_end_tag)
+        if end_tag is None:
+            return None
+
+        description_start_index = html.find(str(start_tag.parent)) + len(str(start_tag.parent))
+        description_end_index = html.find(str(end_tag))
+        description = html[description_start_index:description_end_index]
+
+        return None, description
+
+    @staticmethod
+    def parse_symbol(heading: PageElement, html: str) -> Tuple[List[str], str]:
+        """
+        Parse the signatures and description of a symbol.
+
+        Collects up to 3 signatures from dt tags and a description from their sibling dd tag.
+        """
+        signatures = []
+        description = str(heading.find_next_sibling("dd"))
+        description_pos = html.find(description)
+
+        for element in [heading] + heading.find_next_siblings("dt", limit=2):
+            signature = UNWANTED_SIGNATURE_SYMBOLS_RE.sub("", element.text)
+
+            if signature and html.find(str(element)) < description_pos:
+                signatures.append(signature)
+
+        return signatures, description
 
     @commands.group(name='docs', aliases=('doc', 'd'), invoke_without_command=True)
     async def docs_group(self, ctx: commands.Context, *, symbol: str) -> None:
