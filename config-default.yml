@@ -331,6 +331,7 @@ filter:
         - ssteam.site
         - steamwalletgift.com
         - discord.gift
+        - lmgtfy.com
 
     word_watchlist:
         - goo+ks*
