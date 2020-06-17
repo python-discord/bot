@@ -134,6 +134,9 @@ class SyncCogListenerTests(SyncCogTestCase):
         self.guild_id_patcher = mock.patch("bot.cogs.sync.cog.constants.Guild.id", 5)
         self.guild_id = self.guild_id_patcher.start()
 
+        self.guild = helpers.MockGuild(id=self.guild_id)
+        self.other_guild = helpers.MockGuild(id=0)
+
     def tearDown(self):
         self.guild_id_patcher.stop()
 
@@ -148,14 +151,14 @@ class SyncCogListenerTests(SyncCogTestCase):
             "permissions": 8,
             "position": 23,
         }
-        role = helpers.MockRole(**role_data, guild=self.guild_id)
+        role = helpers.MockRole(**role_data, guild=self.guild)
         await self.cog.on_guild_role_create(role)
 
         self.bot.api_client.post.assert_called_once_with("bot/roles", json=role_data)
 
     async def test_sync_cog_on_guild_role_create_ignores_guilds(self):
         """Events from other guilds should be ignored."""
-        role = helpers.MockRole(guild=0)
+        role = helpers.MockRole(guild=self.other_guild)
         await self.cog.on_guild_role_create(role)
         self.bot.api_client.post.assert_not_awaited()
 
@@ -163,14 +166,14 @@ class SyncCogListenerTests(SyncCogTestCase):
         """A DELETE request should be sent."""
         self.assertTrue(self.cog.on_guild_role_delete.__cog_listener__)
 
-        role = helpers.MockRole(id=99, guild=self.guild_id)
+        role = helpers.MockRole(id=99, guild=self.guild)
         await self.cog.on_guild_role_delete(role)
 
         self.bot.api_client.delete.assert_called_once_with("bot/roles/99")
 
     async def test_sync_cog_on_guild_role_delete_ignores_guilds(self):
         """Events from other guilds should be ignored."""
-        role = helpers.MockRole(guild=0)
+        role = helpers.MockRole(guild=self.other_guild)
         await self.cog.on_guild_role_delete(role)
         self.bot.api_client.delete.assert_not_awaited()
 
@@ -198,8 +201,8 @@ class SyncCogListenerTests(SyncCogTestCase):
                     after_role_data = role_data.copy()
                     after_role_data[attribute] = 876
 
-                    before_role = helpers.MockRole(**role_data, guild=self.guild_id)
-                    after_role = helpers.MockRole(**after_role_data, guild=self.guild_id)
+                    before_role = helpers.MockRole(**role_data, guild=self.guild)
+                    after_role = helpers.MockRole(**after_role_data, guild=self.guild)
 
                     await self.cog.on_guild_role_update(before_role, after_role)
 
@@ -213,7 +216,7 @@ class SyncCogListenerTests(SyncCogTestCase):
 
     async def test_sync_cog_on_guild_role_update_ignores_guilds(self):
         """Events from other guilds should be ignored."""
-        role = helpers.MockRole(guild=0)
+        role = helpers.MockRole(guild=self.other_guild)
         await self.cog.on_guild_role_update(role, role)
         self.bot.api_client.put.assert_not_awaited()
 
@@ -221,7 +224,7 @@ class SyncCogListenerTests(SyncCogTestCase):
         """Member should be patched to set in_guild as False."""
         self.assertTrue(self.cog.on_member_remove.__cog_listener__)
 
-        member = helpers.MockMember(guild=self.guild_id)
+        member = helpers.MockMember(guild=self.guild)
         await self.cog.on_member_remove(member)
 
         self.cog.patch_user.assert_called_once_with(
@@ -231,7 +234,7 @@ class SyncCogListenerTests(SyncCogTestCase):
 
     async def test_sync_cog_on_member_remove_ignores_guilds(self):
         """Events from other guilds should be ignored."""
-        member = helpers.MockMember(guild=0)
+        member = helpers.MockMember(guild=self.other_guild)
         await self.cog.on_member_remove(member)
         self.cog.patch_user.assert_not_awaited()
 
@@ -241,8 +244,8 @@ class SyncCogListenerTests(SyncCogTestCase):
 
         # Roles are intentionally unsorted.
         before_roles = [helpers.MockRole(id=12), helpers.MockRole(id=30), helpers.MockRole(id=20)]
-        before_member = helpers.MockMember(roles=before_roles, guild=self.guild_id)
-        after_member = helpers.MockMember(roles=before_roles[1:], guild=self.guild_id)
+        before_member = helpers.MockMember(roles=before_roles, guild=self.guild)
+        after_member = helpers.MockMember(roles=before_roles[1:], guild=self.guild)
 
         await self.cog.on_member_update(before_member, after_member)
 
@@ -263,8 +266,8 @@ class SyncCogListenerTests(SyncCogTestCase):
             with self.subTest(attribute=attribute):
                 self.cog.patch_user.reset_mock()
 
-                before_member = helpers.MockMember(**{attribute: old_value}, guild=self.guild_id)
-                after_member = helpers.MockMember(**{attribute: new_value}, guild=self.guild_id)
+                before_member = helpers.MockMember(**{attribute: old_value}, guild=self.guild)
+                after_member = helpers.MockMember(**{attribute: new_value}, guild=self.guild)
 
                 await self.cog.on_member_update(before_member, after_member)
 
@@ -272,7 +275,7 @@ class SyncCogListenerTests(SyncCogTestCase):
 
     async def test_sync_cog_on_member_update_ignores_guilds(self):
         """Events from other guilds should be ignored."""
-        member = helpers.MockMember(guild=0)
+        member = helpers.MockMember(guild=self.other_guild)
         await self.cog.on_member_update(member, member)
         self.cog.patch_user.assert_not_awaited()
 
@@ -329,7 +332,7 @@ class SyncCogListenerTests(SyncCogTestCase):
         member = helpers.MockMember(
             discriminator="1234",
             roles=[helpers.MockRole(id=22), helpers.MockRole(id=12)],
-            guild=self.guild_id,
+            guild=self.guild,
         )
 
         data = {
@@ -376,7 +379,7 @@ class SyncCogListenerTests(SyncCogTestCase):
 
     async def test_sync_cog_on_member_join_ignores_guilds(self):
         """Events from other guilds should be ignored."""
-        member = helpers.MockMember(guild=0)
+        member = helpers.MockMember(guild=self.other_guild)
         await self.cog.on_member_join(member)
         self.bot.api_client.post.assert_not_awaited()
         self.bot.api_client.put.assert_not_awaited()
