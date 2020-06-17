@@ -7,6 +7,7 @@ from collections import OrderedDict
 from contextlib import suppress
 from types import SimpleNamespace
 from typing import Any, Callable, Optional, Tuple
+from urllib.parse import urljoin
 
 import discord
 from bs4 import BeautifulSoup
@@ -98,6 +99,10 @@ def async_cache(max_size: int = 128, arg_offset: int = 0) -> Callable:
 class DocMarkdownConverter(MarkdownConverter):
     """Subclass markdownify's MarkdownCoverter to provide custom conversion methods."""
 
+    def __init__(self, *, page_url: str, **options):
+        super().__init__(**options)
+        self.page_url = page_url
+
     def convert_code(self, el: PageElement, text: str) -> str:
         """Undo `markdownify`s underscore escaping."""
         return f"`{text}`".replace('\\', '')
@@ -107,10 +112,15 @@ class DocMarkdownConverter(MarkdownConverter):
         code = ''.join(el.strings)
         return f"```py\n{code}```"
 
+    def convert_a(self, el: PageElement, text: str) -> str:
+        """Resolve relative URLs to `self.page_url`."""
+        el["href"] = urljoin(self.page_url, el["href"])
+        return super().convert_a(el, text)
 
-def markdownify(html: str) -> DocMarkdownConverter:
+
+def markdownify(html: str, *, url: str = "") -> DocMarkdownConverter:
     """Create a DocMarkdownConverter object from the input html."""
-    return DocMarkdownConverter(bullets='•').convert(html)
+    return DocMarkdownConverter(bullets='•', page_url=url).convert(html)
 
 
 class InventoryURL(commands.Converter):
@@ -293,7 +303,7 @@ class Doc(commands.Cog):
 
         signatures = scraped_html[0]
         permalink = self.inventories[symbol]
-        description = markdownify(scraped_html[1])
+        description = markdownify(scraped_html[1], url=permalink)
 
         # Truncate the description of the embed to the last occurrence
         # of a double newline (interpreted as a paragraph) before index 1000.
