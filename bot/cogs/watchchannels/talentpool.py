@@ -34,7 +34,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
     @with_role(*MODERATION_ROLES)
     async def nomination_group(self, ctx: Context) -> None:
         """Highlights the activity of helper nominees by relaying their messages to the talent pool channel."""
-        await ctx.invoke(self.bot.get_command("help"), "talentpool")
+        await ctx.send_help(ctx.command)
 
     @nomination_group.command(name='watched', aliases=('all', 'list'))
     @with_role(*MODERATION_ROLES)
@@ -61,7 +61,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
             return
 
         if isinstance(user, Member) and any(role.id in STAFF_ROLES for role in user.roles):
-            await ctx.send(f":x: Nominating staff members, eh? Here's a cookie :cookie:")
+            await ctx.send(":x: Nominating staff members, eh? Here's a cookie :cookie:")
             return
 
         if not await self.fetch_user_cache():
@@ -106,8 +106,8 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
 
         if history:
             total = f"({len(history)} previous nominations in total)"
-            start_reason = f"Watched: {history[0]['reason']}"
-            end_reason = f"Unwatched: {history[0]['end_reason']}"
+            start_reason = f"Watched: {textwrap.shorten(history[0]['reason'], width=500, placeholder='...')}"
+            end_reason = f"Unwatched: {textwrap.shorten(history[0]['end_reason'], width=500, placeholder='...')}"
             msg += f"\n\nUser's previous watch reasons {total}:```{start_reason}\n\n{end_reason}```"
 
         await ctx.send(msg)
@@ -173,7 +173,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
     @with_role(*MODERATION_ROLES)
     async def nomination_edit_group(self, ctx: Context) -> None:
         """Commands to edit nominations."""
-        await ctx.invoke(self.bot.get_command("help"), "talentpool", "edit")
+        await ctx.send_help(ctx.command)
 
     @nomination_edit_group.command(name='reason')
     @with_role(*MODERATION_ROLES)
@@ -224,7 +224,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
                 Status: **Active**
                 Date: {start_date}
                 Actor: {actor.mention if actor else actor_id}
-                Reason: {nomination_object["reason"]}
+                Reason: {textwrap.shorten(nomination_object["reason"], width=200, placeholder="...")}
                 Nomination ID: `{nomination_object["id"]}`
                 ===============
                 """
@@ -237,10 +237,10 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
                 Status: Inactive
                 Date: {start_date}
                 Actor: {actor.mention if actor else actor_id}
-                Reason: {nomination_object["reason"]}
+                Reason: {textwrap.shorten(nomination_object["reason"], width=200, placeholder="...")}
 
                 End date: {end_date}
-                Unwatch reason: {nomination_object["end_reason"]}
+                Unwatch reason: {textwrap.shorten(nomination_object["end_reason"], width=200, placeholder="...")}
                 Nomination ID: `{nomination_object["id"]}`
                 ===============
                 """

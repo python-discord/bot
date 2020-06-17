@@ -7,9 +7,8 @@ import discord
 
 from bot import constants
 from bot.cogs import information
-from bot.decorators import InChannelCheckFailure
+from bot.utils.checks import InWhitelistCheckFailure
 from tests import helpers
-
 
 COG_PATH = "bot.cogs.information.Information"
 
@@ -34,7 +33,7 @@ class InformationCogTests(unittest.TestCase):
         """Test if the `role_info` command correctly returns the `moderator_role`."""
         self.ctx.guild.roles.append(self.moderator_role)
 
-        self.cog.roles_info.can_run = helpers.AsyncMock()
+        self.cog.roles_info.can_run = unittest.mock.AsyncMock()
         self.cog.roles_info.can_run.return_value = True
 
         coroutine = self.cog.roles_info.callback(self.cog, self.ctx)
@@ -45,10 +44,9 @@ class InformationCogTests(unittest.TestCase):
         _, kwargs = self.ctx.send.call_args
         embed = kwargs.pop('embed')
 
-        self.assertEqual(embed.title, "Role information")
+        self.assertEqual(embed.title, "Role information (Total 1 role)")
         self.assertEqual(embed.colour, discord.Colour.blurple())
-        self.assertEqual(embed.description, f"`{self.moderator_role.id}` - {self.moderator_role.mention}\n")
-        self.assertEqual(embed.footer.text, "Total roles: 1")
+        self.assertEqual(embed.description, f"\n`{self.moderator_role.id}` - {self.moderator_role.mention}\n")
 
     def test_role_info_command(self):
         """Tests the `role info` command."""
@@ -72,7 +70,7 @@ class InformationCogTests(unittest.TestCase):
 
         self.ctx.guild.roles.append([dummy_role, admin_role])
 
-        self.cog.role_info.can_run = helpers.AsyncMock()
+        self.cog.role_info.can_run = unittest.mock.AsyncMock()
         self.cog.role_info.can_run.return_value = True
 
         coroutine = self.cog.role_info.callback(self.cog, self.ctx, dummy_role, admin_role)
@@ -150,14 +148,18 @@ class InformationCogTests(unittest.TestCase):
                 Voice region: {self.ctx.guild.region}
                 Features: {', '.join(self.ctx.guild.features)}
 
-                **Counts**
-                Members: {self.ctx.guild.member_count:,}
-                Roles: {len(self.ctx.guild.roles)}
+                **Channel counts**
                 Category channels: 1
                 Text channels: 1
                 Voice channels: 1
+                Staff channels: 0
 
-                **Members**
+                **Member counts**
+                Members: {self.ctx.guild.member_count:,}
+                Staff members: 0
+                Roles: {len(self.ctx.guild.roles)}
+
+                **Member statuses**
                 {constants.Emojis.status_online} 2
                 {constants.Emojis.status_idle} 1
                 {constants.Emojis.status_dnd} 4
@@ -174,7 +176,7 @@ class UserInfractionHelperMethodTests(unittest.TestCase):
     def setUp(self):
         """Common set-up steps done before for each test."""
         self.bot = helpers.MockBot()
-        self.bot.api_client.get = helpers.AsyncMock()
+        self.bot.api_client.get = unittest.mock.AsyncMock()
         self.cog = information.Information(self.bot)
         self.member = helpers.MockMember(id=1234)
 
@@ -345,10 +347,10 @@ class UserEmbedTests(unittest.TestCase):
     def setUp(self):
         """Common set-up steps done before for each test."""
         self.bot = helpers.MockBot()
-        self.bot.api_client.get = helpers.AsyncMock()
+        self.bot.api_client.get = unittest.mock.AsyncMock()
         self.cog = information.Information(self.bot)
 
-    @unittest.mock.patch(f"{COG_PATH}.basic_user_infraction_counts", new=helpers.AsyncMock(return_value=""))
+    @unittest.mock.patch(f"{COG_PATH}.basic_user_infraction_counts", new=unittest.mock.AsyncMock(return_value=""))
     def test_create_user_embed_uses_string_representation_of_user_in_title_if_nick_is_not_available(self):
         """The embed should use the string representation of the user if they don't have a nick."""
         ctx = helpers.MockContext(channel=helpers.MockTextChannel(id=1))
@@ -360,7 +362,7 @@ class UserEmbedTests(unittest.TestCase):
 
         self.assertEqual(embed.title, "Mr. Hemlock")
 
-    @unittest.mock.patch(f"{COG_PATH}.basic_user_infraction_counts", new=helpers.AsyncMock(return_value=""))
+    @unittest.mock.patch(f"{COG_PATH}.basic_user_infraction_counts", new=unittest.mock.AsyncMock(return_value=""))
     def test_create_user_embed_uses_nick_in_title_if_available(self):
         """The embed should use the nick if it's available."""
         ctx = helpers.MockContext(channel=helpers.MockTextChannel(id=1))
@@ -372,7 +374,7 @@ class UserEmbedTests(unittest.TestCase):
 
         self.assertEqual(embed.title, "Cat lover (Mr. Hemlock)")
 
-    @unittest.mock.patch(f"{COG_PATH}.basic_user_infraction_counts", new=helpers.AsyncMock(return_value=""))
+    @unittest.mock.patch(f"{COG_PATH}.basic_user_infraction_counts", new=unittest.mock.AsyncMock(return_value=""))
     def test_create_user_embed_ignores_everyone_role(self):
         """Created `!user` embeds should not contain mention of the @everyone-role."""
         ctx = helpers.MockContext(channel=helpers.MockTextChannel(id=1))
@@ -387,8 +389,8 @@ class UserEmbedTests(unittest.TestCase):
         self.assertIn("&Admins", embed.description)
         self.assertNotIn("&Everyone", embed.description)
 
-    @unittest.mock.patch(f"{COG_PATH}.expanded_user_infraction_counts", new_callable=helpers.AsyncMock)
-    @unittest.mock.patch(f"{COG_PATH}.user_nomination_counts", new_callable=helpers.AsyncMock)
+    @unittest.mock.patch(f"{COG_PATH}.expanded_user_infraction_counts", new_callable=unittest.mock.AsyncMock)
+    @unittest.mock.patch(f"{COG_PATH}.user_nomination_counts", new_callable=unittest.mock.AsyncMock)
     def test_create_user_embed_expanded_information_in_moderation_channels(self, nomination_counts, infraction_counts):
         """The embed should contain expanded infractions and nomination info in mod channels."""
         ctx = helpers.MockContext(channel=helpers.MockTextChannel(id=50))
@@ -423,7 +425,7 @@ class UserEmbedTests(unittest.TestCase):
             embed.description
         )
 
-    @unittest.mock.patch(f"{COG_PATH}.basic_user_infraction_counts", new_callable=helpers.AsyncMock)
+    @unittest.mock.patch(f"{COG_PATH}.basic_user_infraction_counts", new_callable=unittest.mock.AsyncMock)
     def test_create_user_embed_basic_information_outside_of_moderation_channels(self, infraction_counts):
         """The embed should contain only basic infraction data outside of mod channels."""
         ctx = helpers.MockContext(channel=helpers.MockTextChannel(id=100))
@@ -454,7 +456,7 @@ class UserEmbedTests(unittest.TestCase):
             embed.description
         )
 
-    @unittest.mock.patch(f"{COG_PATH}.basic_user_infraction_counts", new=helpers.AsyncMock(return_value=""))
+    @unittest.mock.patch(f"{COG_PATH}.basic_user_infraction_counts", new=unittest.mock.AsyncMock(return_value=""))
     def test_create_user_embed_uses_top_role_colour_when_user_has_roles(self):
         """The embed should be created with the colour of the top role, if a top role is available."""
         ctx = helpers.MockContext()
@@ -467,7 +469,7 @@ class UserEmbedTests(unittest.TestCase):
 
         self.assertEqual(embed.colour, discord.Colour(moderators_role.colour))
 
-    @unittest.mock.patch(f"{COG_PATH}.basic_user_infraction_counts", new=helpers.AsyncMock(return_value=""))
+    @unittest.mock.patch(f"{COG_PATH}.basic_user_infraction_counts", new=unittest.mock.AsyncMock(return_value=""))
     def test_create_user_embed_uses_blurple_colour_when_user_has_no_roles(self):
         """The embed should be created with a blurple colour if the user has no assigned roles."""
         ctx = helpers.MockContext()
@@ -477,7 +479,7 @@ class UserEmbedTests(unittest.TestCase):
 
         self.assertEqual(embed.colour, discord.Colour.blurple())
 
-    @unittest.mock.patch(f"{COG_PATH}.basic_user_infraction_counts", new=helpers.AsyncMock(return_value=""))
+    @unittest.mock.patch(f"{COG_PATH}.basic_user_infraction_counts", new=unittest.mock.AsyncMock(return_value=""))
     def test_create_user_embed_uses_png_format_of_user_avatar_as_thumbnail(self):
         """The embed thumbnail should be set to the user's avatar in `png` format."""
         ctx = helpers.MockContext()
@@ -486,7 +488,7 @@ class UserEmbedTests(unittest.TestCase):
         user.avatar_url_as.return_value = "avatar url"
         embed = asyncio.run(self.cog.create_user_embed(ctx, user))
 
-        user.avatar_url_as.assert_called_once_with(format="png")
+        user.avatar_url_as.assert_called_once_with(static_format="png")
         self.assertEqual(embed.thumbnail.url, "avatar url")
 
 
@@ -526,10 +528,10 @@ class UserCommandTests(unittest.TestCase):
         ctx = helpers.MockContext(author=self.author, channel=helpers.MockTextChannel(id=100))
 
         msg = "Sorry, but you may only use this command within <#50>."
-        with self.assertRaises(InChannelCheckFailure, msg=msg):
+        with self.assertRaises(InWhitelistCheckFailure, msg=msg):
             asyncio.run(self.cog.user_info.callback(self.cog, ctx))
 
-    @unittest.mock.patch("bot.cogs.information.Information.create_user_embed", new_callable=helpers.AsyncMock)
+    @unittest.mock.patch("bot.cogs.information.Information.create_user_embed", new_callable=unittest.mock.AsyncMock)
     def test_regular_user_may_use_command_in_bot_commands_channel(self, create_embed, constants):
         """A regular user should be allowed to use `!user` targeting themselves in bot-commands."""
         constants.STAFF_ROLES = [self.moderator_role.id]
@@ -542,7 +544,7 @@ class UserCommandTests(unittest.TestCase):
         create_embed.assert_called_once_with(ctx, self.author)
         ctx.send.assert_called_once()
 
-    @unittest.mock.patch("bot.cogs.information.Information.create_user_embed", new_callable=helpers.AsyncMock)
+    @unittest.mock.patch("bot.cogs.information.Information.create_user_embed", new_callable=unittest.mock.AsyncMock)
     def test_regular_user_can_explicitly_target_themselves(self, create_embed, constants):
         """A user should target itself with `!user` when a `user` argument was not provided."""
         constants.STAFF_ROLES = [self.moderator_role.id]
@@ -555,7 +557,7 @@ class UserCommandTests(unittest.TestCase):
         create_embed.assert_called_once_with(ctx, self.author)
         ctx.send.assert_called_once()
 
-    @unittest.mock.patch("bot.cogs.information.Information.create_user_embed", new_callable=helpers.AsyncMock)
+    @unittest.mock.patch("bot.cogs.information.Information.create_user_embed", new_callable=unittest.mock.AsyncMock)
     def test_staff_members_can_bypass_channel_restriction(self, create_embed, constants):
         """Staff members should be able to bypass the bot-commands channel restriction."""
         constants.STAFF_ROLES = [self.moderator_role.id]
@@ -568,7 +570,7 @@ class UserCommandTests(unittest.TestCase):
         create_embed.assert_called_once_with(ctx, self.moderator)
         ctx.send.assert_called_once()
 
-    @unittest.mock.patch("bot.cogs.information.Information.create_user_embed", new_callable=helpers.AsyncMock)
+    @unittest.mock.patch("bot.cogs.information.Information.create_user_embed", new_callable=unittest.mock.AsyncMock)
     def test_moderators_can_target_another_member(self, create_embed, constants):
         """A moderator should be able to use `!user` targeting another user."""
         constants.MODERATION_ROLES = [self.moderator_role.id]

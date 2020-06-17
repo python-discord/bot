@@ -11,19 +11,7 @@ from tests import helpers
 from tests.base import CommandTestCase
 
 
-class MockSyncer(helpers.CustomMockMixin, mock.MagicMock):
-    """
-    A MagicMock subclass to mock Syncer objects.
-
-    Instances of this class will follow the specifications of `bot.cogs.sync.syncers.Syncer`
-    instances. For more information, see the `MockGuild` docstring.
-    """
-
-    def __init__(self, **kwargs) -> None:
-        super().__init__(spec_set=Syncer, **kwargs)
-
-
-class SyncExtensionTests(unittest.TestCase):
+class SyncExtensionTests(unittest.IsolatedAsyncioTestCase):
     """Tests for the sync extension."""
 
     @staticmethod
@@ -34,22 +22,21 @@ class SyncExtensionTests(unittest.TestCase):
         bot.add_cog.assert_called_once()
 
 
-class SyncCogTestCase(unittest.TestCase):
+class SyncCogTestCase(unittest.IsolatedAsyncioTestCase):
     """Base class for Sync cog tests. Sets up patches for syncers."""
 
     def setUp(self):
         self.bot = helpers.MockBot()
 
-        # These patch the type. When the type is called, a MockSyncer instanced is returned.
-        # MockSyncer is needed so that our custom AsyncMock is used.
-        # TODO: Use autospec instead in 3.8, which will automatically use AsyncMock when needed.
         self.role_syncer_patcher = mock.patch(
             "bot.cogs.sync.syncers.RoleSyncer",
-            new=mock.MagicMock(return_value=MockSyncer())
+            autospec=Syncer,
+            spec_set=True
         )
         self.user_syncer_patcher = mock.patch(
             "bot.cogs.sync.syncers.UserSyncer",
-            new=mock.MagicMock(return_value=MockSyncer())
+            autospec=Syncer,
+            spec_set=True
         )
         self.RoleSyncer = self.role_syncer_patcher.start()
         self.UserSyncer = self.user_syncer_patcher.start()
@@ -72,13 +59,13 @@ class SyncCogTestCase(unittest.TestCase):
 class SyncCogTests(SyncCogTestCase):
     """Tests for the Sync cog."""
 
-    @mock.patch.object(sync.Sync, "sync_guild")
+    @mock.patch.object(sync.Sync, "sync_guild", new_callable=mock.MagicMock)
     def test_sync_cog_init(self, sync_guild):
         """Should instantiate syncers and run a sync for the guild."""
         # Reset because a Sync cog was already instantiated in setUp.
         self.RoleSyncer.reset_mock()
         self.UserSyncer.reset_mock()
-        self.bot.loop.create_task.reset_mock()
+        self.bot.loop.create_task = mock.MagicMock()
 
         mock_sync_guild_coro = mock.MagicMock()
         sync_guild.return_value = mock_sync_guild_coro
@@ -90,7 +77,6 @@ class SyncCogTests(SyncCogTestCase):
         sync_guild.assert_called_once_with()
         self.bot.loop.create_task.assert_called_once_with(mock_sync_guild_coro)
 
-    @helpers.async_test
     async def test_sync_cog_sync_guild(self):
         """Roles and users should be synced only if a guild is successfully retrieved."""
         for guild in (helpers.MockGuild(), None):
@@ -126,14 +112,12 @@ class SyncCogTests(SyncCogTestCase):
             json=updated_information,
         )
 
-    @helpers.async_test
     async def test_sync_cog_patch_user(self):
         """A PATCH request should be sent and 404 errors ignored."""
         for side_effect in (None, self.response_error(404)):
             with self.subTest(side_effect=side_effect):
                 await self.patch_user_helper(side_effect)
 
-    @helpers.async_test
     async def test_sync_cog_patch_user_non_404(self):
         """A PATCH request should be sent and the error raised if it's not a 404."""
         with self.assertRaises(ResponseCodeError):
@@ -145,9 +129,8 @@ class SyncCogListenerTests(SyncCogTestCase):
 
     def setUp(self):
         super().setUp()
-        self.cog.patch_user = helpers.AsyncMock(spec_set=self.cog.patch_user)
+        self.cog.patch_user = mock.AsyncMock(spec_set=self.cog.patch_user)
 
-    @helpers.async_test
     async def test_sync_cog_on_guild_role_create(self):
         """A POST request should be sent with the new role's data."""
         self.assertTrue(self.cog.on_guild_role_create.__cog_listener__)
@@ -164,7 +147,6 @@ class SyncCogListenerTests(SyncCogTestCase):
 
         self.bot.api_client.post.assert_called_once_with("bot/roles", json=role_data)
 
-    @helpers.async_test
     async def test_sync_cog_on_guild_role_delete(self):
         """A DELETE request should be sent."""
         self.assertTrue(self.cog.on_guild_role_delete.__cog_listener__)
@@ -174,7 +156,6 @@ class SyncCogListenerTests(SyncCogTestCase):
 
         self.bot.api_client.delete.assert_called_once_with("bot/roles/99")
 
-    @helpers.async_test
     async def test_sync_cog_on_guild_role_update(self):
         """A PUT request should be sent if the colour, name, permissions, or position changes."""
         self.assertTrue(self.cog.on_guild_role_update.__cog_listener__)
@@ -212,7 +193,6 @@ class SyncCogListenerTests(SyncCogTestCase):
                     else:
                         self.bot.api_client.put.assert_not_called()
 
-    @helpers.async_test
     async def test_sync_cog_on_member_remove(self):
         """Member should patched to set in_guild as False."""
         self.assertTrue(self.cog.on_member_remove.__cog_listener__)
@@ -225,7 +205,6 @@ class SyncCogListenerTests(SyncCogTestCase):
             updated_information={"in_guild": False}
         )
 
-    @helpers.async_test
     async def test_sync_cog_on_member_update_roles(self):
         """Members should be patched if their roles have changed."""
         self.assertTrue(self.cog.on_member_update.__cog_listener__)
@@ -240,7 +219,6 @@ class SyncCogListenerTests(SyncCogTestCase):
         data = {"roles": sorted(role.id for role in after_member.roles)}
         self.cog.patch_user.assert_called_once_with(after_member.id, updated_information=data)
 
-    @helpers.async_test
     async def test_sync_cog_on_member_update_other(self):
         """Members should not be patched if other attributes have changed."""
         self.assertTrue(self.cog.on_member_update.__cog_listener__)
@@ -262,7 +240,6 @@ class SyncCogListenerTests(SyncCogTestCase):
 
                 self.cog.patch_user.assert_not_called()
 
-    @helpers.async_test
     async def test_sync_cog_on_user_update(self):
         """A user should be patched only if the name, discriminator, or avatar changes."""
         self.assertTrue(self.cog.on_user_update.__cog_listener__)
@@ -270,14 +247,12 @@ class SyncCogListenerTests(SyncCogTestCase):
         before_data = {
             "name": "old name",
             "discriminator": "1234",
-            "avatar": "old avatar",
             "bot": False,
         }
 
         subtests = (
             (True, "name", "name", "new name", "new name"),
             (True, "discriminator", "discriminator", "8765", 8765),
-            (True, "avatar", "avatar_hash", "9j2e9", "9j2e9"),
             (False, "bot", "bot", True, True),
         )
 
@@ -318,7 +293,6 @@ class SyncCogListenerTests(SyncCogTestCase):
         )
 
         data = {
-            "avatar_hash": member.avatar,
             "discriminator": int(member.discriminator),
             "id": member.id,
             "in_guild": True,
@@ -341,7 +315,6 @@ class SyncCogListenerTests(SyncCogTestCase):
 
         return data
 
-    @helpers.async_test
     async def test_sync_cog_on_member_join(self):
         """Should PUT user's data or POST it if the user doesn't exist."""
         for side_effect in (None, self.response_error(404)):
@@ -354,7 +327,6 @@ class SyncCogListenerTests(SyncCogTestCase):
                 else:
                     self.bot.api_client.post.assert_not_called()
 
-    @helpers.async_test
     async def test_sync_cog_on_member_join_non_404(self):
         """ResponseCodeError should be re-raised if status code isn't a 404."""
         with self.assertRaises(ResponseCodeError):
@@ -366,7 +338,6 @@ class SyncCogListenerTests(SyncCogTestCase):
 class SyncCogCommandTests(SyncCogTestCase, CommandTestCase):
     """Tests for the commands in the Sync cog."""
 
-    @helpers.async_test
     async def test_sync_roles_command(self):
         """sync() should be called on the RoleSyncer."""
         ctx = helpers.MockContext()
@@ -374,7 +345,6 @@ class SyncCogCommandTests(SyncCogTestCase, CommandTestCase):
 
         self.cog.role_syncer.sync.assert_called_once_with(ctx.guild, ctx)
 
-    @helpers.async_test
     async def test_sync_users_command(self):
         """sync() should be called on the UserSyncer."""
         ctx = helpers.MockContext()
@@ -382,7 +352,7 @@ class SyncCogCommandTests(SyncCogTestCase, CommandTestCase):
 
         self.cog.user_syncer.sync.assert_called_once_with(ctx.guild, ctx)
 
-    def test_commands_require_admin(self):
+    async def test_commands_require_admin(self):
         """The sync commands should only run if the author has the administrator permission."""
         cmds = (
             self.cog.sync_group,
@@ -392,4 +362,4 @@ class SyncCogCommandTests(SyncCogTestCase, CommandTestCase):
 
         for cmd in cmds:
             with self.subTest(cmd=cmd):
-                self.assertHasPermissionsCheck(cmd, {"administrator": True})
+                await self.assertHasPermissionsCheck(cmd, {"administrator": True})

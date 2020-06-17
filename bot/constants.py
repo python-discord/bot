@@ -15,7 +15,7 @@ import os
 from collections.abc import Mapping
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import yaml
 
@@ -198,7 +198,18 @@ class Bot(metaclass=YAMLGetter):
 
     prefix: str
     token: str
-    sentry_dsn: str
+    sentry_dsn: Optional[str]
+
+
+class Redis(metaclass=YAMLGetter):
+    section = "bot"
+    subsection = "redis"
+
+    host: str
+    port: int
+    password: Optional[str]
+    use_fakeredis: bool  # If this is True, Bot will use fakeredis.aioredis
+
 
 class Filter(metaclass=YAMLGetter):
     section = "filter"
@@ -206,9 +217,8 @@ class Filter(metaclass=YAMLGetter):
     filter_zalgo: bool
     filter_invites: bool
     filter_domains: bool
+    watch_regex: bool
     watch_rich_embeds: bool
-    watch_words: bool
-    watch_tokens: bool
 
     # Notifications are not expected for "watchlist" type filters
     notify_user_zalgo: bool
@@ -352,12 +362,22 @@ class CleanMessages(metaclass=YAMLGetter):
 
     message_limit: int
 
+class Stats(metaclass=YAMLGetter):
+    section = "bot"
+    subsection = "stats"
+
+    presence_update_timeout: int
+    statsd_host: str
+
 
 class Categories(metaclass=YAMLGetter):
     section = "guild"
     subsection = "categories"
 
-    python_help: int
+    help_available: int
+    help_in_use: int
+    help_dormant: int
+    modmail: int
 
 
 class Channels(metaclass=YAMLGetter):
@@ -370,20 +390,15 @@ class Channels(metaclass=YAMLGetter):
     attachment_log: int
     big_brother_logs: int
     bot_commands: int
+    cooldown: int
     defcon: int
     dev_contrib: int
     dev_core: int
     dev_log: int
     esoteric: int
-    help_0: int
-    help_1: int
-    help_2: int
-    help_3: int
-    help_4: int
-    help_5: int
-    help_6: int
-    help_7: int
     helpers: int
+    how_to_get_help: int
+    incidents: int
     message_log: int
     meta: int
     mod_alerts: int
@@ -422,6 +437,7 @@ class Roles(metaclass=YAMLGetter):
     announcements: int
     contributors: int
     core_developers: int
+    help_cooldown: int
     helpers: int
     jammers: int
     moderators: int
@@ -447,7 +463,7 @@ class Guild(metaclass=YAMLGetter):
 class Keys(metaclass=YAMLGetter):
     section = "keys"
 
-    site_api: str
+    site_api: Optional[str]
 
 
 class URLs(metaclass=YAMLGetter):
@@ -490,8 +506,8 @@ class Reddit(metaclass=YAMLGetter):
     section = "reddit"
 
     subreddits: list
-    client_id: str
-    secret: str
+    client_id: Optional[str]
+    secret: Optional[str]
 
 
 class Wolfram(metaclass=YAMLGetter):
@@ -499,7 +515,7 @@ class Wolfram(metaclass=YAMLGetter):
 
     user_limit_day: int
     guild_limit_day: int
-    key: str
+    key: Optional[str]
 
 
 class AntiSpam(metaclass=YAMLGetter):
@@ -533,11 +549,21 @@ class Free(metaclass=YAMLGetter):
     cooldown_per: float
 
 
-class Mention(metaclass=YAMLGetter):
-    section = 'mention'
+class HelpChannels(metaclass=YAMLGetter):
+    section = 'help_channels'
 
-    message_timeout: int
-    reset_delay: int
+    enable: bool
+    claim_minutes: int
+    cmd_whitelist: List[int]
+    idle_minutes: int
+    deleted_idle_minutes: int
+    max_available: int
+    max_total_channels: int
+    name_prefix: str
+    notify: bool
+    notify_channel: int
+    notify_minutes: int
+    notify_roles: List[int]
 
 
 class RedirectOutput(metaclass=YAMLGetter):
@@ -552,6 +578,14 @@ class Sync(metaclass=YAMLGetter):
 
     confirm_timeout: int
     max_diff: int
+
+
+class PythonNews(metaclass=YAMLGetter):
+    section = 'python_news'
+
+    mail_lists: List[str]
+    channel: int
+    webhook: int
 
 
 class Event(Enum):
@@ -591,12 +625,9 @@ PROJECT_ROOT = os.path.abspath(os.path.join(BOT_DIR, os.pardir))
 MODERATION_ROLES = Guild.moderation_roles
 STAFF_ROLES = Guild.staff_roles
 
-# Roles combinations
+# Channel combinations
 STAFF_CHANNELS = Guild.staff_channels
-
-# Default Channel combinations
 MODERATION_CHANNELS = Guild.moderation_channels
-
 
 # Bot replies
 NEGATIVE_REPLIES = [

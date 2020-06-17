@@ -12,8 +12,8 @@ from discord import HTTPException, Message, NotFound, Reaction, User
 from discord.ext.commands import Cog, Context, command, guild_only
 
 from bot.bot import Bot
-from bot.constants import Channels, Roles, URLs
-from bot.decorators import in_channel
+from bot.constants import Categories, Channels, Roles, URLs
+from bot.decorators import in_whitelist
 from bot.utils.messages import wait_for_deletion
 
 log = logging.getLogger(__name__)
@@ -38,11 +38,16 @@ RAW_CODE_REGEX = re.compile(
 )
 
 MAX_PASTE_LEN = 1000
+
+# `!eval` command whitelists
+EVAL_CHANNELS = (Channels.bot_commands, Channels.esoteric)
+EVAL_CATEGORIES = (Categories.help_available, Categories.help_in_use)
 EVAL_ROLES = (Roles.helpers, Roles.moderators, Roles.admins, Roles.owners, Roles.python_community, Roles.partners)
 
 SIGKILL = 9
 
 REEVAL_EMOJI = '\U0001f501'  # :repeat:
+REEVAL_TIMEOUT = 30
 
 
 class Snekbox(Cog):
@@ -201,6 +206,12 @@ class Snekbox(Cog):
             if paste_link:
                 msg = f"{msg}\nFull output: {paste_link}"
 
+            # Collect stats of eval fails + successes
+            if icon == ":x:":
+                self.bot.stats.incr("snekbox.python.fail")
+            else:
+                self.bot.stats.incr("snekbox.python.success")
+
             response = await ctx.send(msg)
             self.bot.loop.create_task(
                 wait_for_deletion(response, user_ids=(ctx.author.id,), client=ctx.bot)
@@ -223,7 +234,7 @@ class Snekbox(Cog):
                 _, new_message = await self.bot.wait_for(
                     'message_edit',
                     check=_predicate_eval_message_edit,
-                    timeout=10
+                    timeout=REEVAL_TIMEOUT
                 )
                 await ctx.message.add_reaction(REEVAL_EMOJI)
                 await self.bot.wait_for(
@@ -232,7 +243,7 @@ class Snekbox(Cog):
                     timeout=10
                 )
 
-                code = new_message.content.split(' ', maxsplit=1)[1]
+                code = await self.get_code(new_message)
                 await ctx.message.clear_reactions()
                 with contextlib.suppress(HTTPException):
                     await response.delete()
@@ -243,9 +254,29 @@ class Snekbox(Cog):
 
             return code
 
+    async def get_code(self, message: Message) -> Optional[str]:
+        """
+        Return the code from `message` to be evaluated.
+
+        If the message is an invocation of the eval command, return the first argument or None if it
+        doesn't exist. Otherwise, return the full content of the message.
+        """
+        log.trace(f"Getting context for message {message.id}.")
+        new_ctx = await self.bot.get_context(message)
+
+        if new_ctx.command is self.eval_command:
+            log.trace(f"Message {message.id} invokes eval command.")
+            split = message.content.split(maxsplit=1)
+            code = split[1] if len(split) > 1 else None
+        else:
+            log.trace(f"Message {message.id} does not invoke eval command.")
+            code = message.content
+
+        return code
+
     @command(name="eval", aliases=("e",))
     @guild_only()
-    @in_channel(Channels.bot_commands, hidden_channels=(Channels.esoteric,), bypass_roles=EVAL_ROLES)
+    @in_whitelist(channels=EVAL_CHANNELS, categories=EVAL_CATEGORIES, roles=EVAL_ROLES)
     async def eval_command(self, ctx: Context, *, code: str = None) -> None:
         """
         Run Python code and get the results.
@@ -265,8 +296,20 @@ class Snekbox(Cog):
             return
 
         if not code:  # None or empty string
-            await ctx.invoke(self.bot.get_command("help"), "eval")
+            await ctx.send_help(ctx.command)
             return
+
+        if Roles.helpers in (role.id for role in ctx.author.roles):
+            self.bot.stats.incr("snekbox_usages.roles.helpers")
+        else:
+            self.bot.stats.incr("snekbox_usages.roles.developers")
+
+        if ctx.channel.category_id == Categories.help_in_use:
+            self.bot.stats.incr("snekbox_usages.channels.help")
+        elif ctx.channel.id == Channels.bot_commands:
+            self.bot.stats.incr("snekbox_usages.channels.bot_commands")
+        else:
+            self.bot.stats.incr("snekbox_usages.channels.topical")
 
         log.info(f"Received code from {ctx.author} for evaluation:\n{code}")
 
@@ -281,7 +324,7 @@ class Snekbox(Cog):
             code = await self.continue_eval(ctx, response)
             if not code:
                 break
-            log.info(f"Re-evaluating message {ctx.message.id}")
+            log.info(f"Re-evaluating code from message {ctx.message.id}:\n{code}")
 
 
 def predicate_eval_message_edit(ctx: Context, old_msg: Message, new_msg: Message) -> bool:

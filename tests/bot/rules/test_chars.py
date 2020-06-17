@@ -2,7 +2,7 @@ from typing import Iterable
 
 from bot.rules import chars
 from tests.bot.rules import DisallowedCase, RuleTest
-from tests.helpers import MockMessage, async_test
+from tests.helpers import MockMessage
 
 
 def make_msg(author: str, n_chars: int) -> MockMessage:
@@ -20,7 +20,6 @@ class CharsRuleTests(RuleTest):
             "interval": 10,
         }
 
-    @async_test
     async def test_allows_messages_within_limit(self):
         """Cases with a total amount of chars within limit."""
         cases = (
@@ -31,7 +30,6 @@ class CharsRuleTests(RuleTest):
 
         await self.run_allowed(cases)
 
-    @async_test
     async def test_disallows_messages_beyond_limit(self):
         """Cases where the total amount of chars exceeds the limit, triggering the rule."""
         cases = (

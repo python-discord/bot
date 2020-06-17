@@ -1,36 +1,76 @@
 # https://aka.ms/yaml
 
 variables:
+  PIP_NO_CACHE_DIR: false
+  PIP_USER: 1
   PIPENV_HIDE_EMOJIS: 1
   PIPENV_IGNORE_VIRTUALENVS: 1
   PIPENV_NOSPIN: 1
+  PRE_COMMIT_HOME: $(Pipeline.Workspace)/pre-commit-cache
+  PYTHONUSERBASE: $(Pipeline.Workspace)/py-user-base
 
 jobs:
   - job: test
     displayName: 'Lint & Test'
     pool:
-      vmImage: ubuntu-16.04
+      vmImage: ubuntu-18.04
 
     variables:
-      PIP_CACHE_DIR: ".cache/pip"
+      BOT_API_KEY: foo
+      BOT_SENTRY_DSN: blah
+      BOT_TOKEN: bar
+      REDDIT_CLIENT_ID: spam
+      REDDIT_SECRET: ham
+      WOLFRAM_API_KEY: baz
+      REDIS_PASSWORD: ''
 
     steps:
       - task: UsePythonVersion@0
         displayName: 'Set Python version'
+        name: python
         inputs:
-          versionSpec: '3.7.x'
+          versionSpec: '3.8.x'
           addToPath: true
+
+      - task: Cache@2
+        displayName: 'Restore Python environment'
+        inputs:
+          key: python | $(Agent.OS) | "$(python.pythonLocation)" | 0 | ./Pipfile | ./Pipfile.lock
+          cacheHitVar: PY_ENV_RESTORED
+          path: $(PYTHONUSERBASE)
+
+      - script: echo '##vso[task.prependpath]$(PYTHONUSERBASE)/bin'
+        displayName: 'Prepend PATH'
 
       - script: pip install pipenv
         displayName: 'Install pipenv'
+        condition: and(succeeded(), ne(variables.PY_ENV_RESTORED, 'true'))
 
       - script: pipenv install --dev --deploy --system
         displayName: 'Install project using pipenv'
+        condition: and(succeeded(), ne(variables.PY_ENV_RESTORED, 'true'))
 
-      - script: python -m flake8
-        displayName: 'Run linter'
+      # Create an executable shell script which replaces the original pipenv binary.
+      # The shell script ignores the first argument and executes the rest of the args as a command.
+      # It makes the `pipenv run flake8` command in the pre-commit hook work by circumventing
+      # pipenv entirely, which is too dumb to know it should use the system interpreter rather than
+      # creating a new venv.
+      - script: |
+          printf '%s\n%s' '#!/bin/bash' '"${@:2}"' > $(python.pythonLocation)/bin/pipenv \
+          && chmod +x $(python.pythonLocation)/bin/pipenv
+        displayName: 'Mock pipenv binary'
 
-      - script: BOT_API_KEY=foo BOT_SENTRY_DSN=blah BOT_TOKEN=bar WOLFRAM_API_KEY=baz REDDIT_CLIENT_ID=spam REDDIT_SECRET=ham coverage run -m xmlrunner
+      - task: Cache@2
+        displayName: 'Restore pre-commit environment'
+        inputs:
+          key: pre-commit | "$(python.pythonLocation)" | 0 | .pre-commit-config.yaml
+          path: $(PRE_COMMIT_HOME)
+
+      # pre-commit's venv doesn't allow user installs - not that they're really needed anyway.
+      - script: export PIP_USER=0; pre-commit run --all-files
+        displayName: 'Run pre-commit hooks'
+
+      - script: coverage run -m xmlrunner
         displayName: Run tests
 
       - script: coverage report -m && coverage xml -o coverage.xml

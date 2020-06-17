@@ -1,13 +1,15 @@
-import datetime
+import asyncio
 import logging
 import re
-from typing import Mapping, Optional, Union
+from datetime import datetime, timedelta
+from typing import List, Mapping, Optional, Union
 
 import dateutil
 import discord.errors
 from dateutil.relativedelta import relativedelta
 from discord import Colour, DMChannel, HTTPException, Member, Message, NotFound, TextChannel
 from discord.ext.commands import Cog
+from discord.utils import escape_markdown
 
 from bot.bot import Bot
 from bot.cogs.moderation import ModLog
@@ -15,6 +17,7 @@ from bot.constants import (
     Channels, Colours,
     Filter, Icons, URLs
 )
+from bot.utils.redis_cache import RedisCache
 from bot.utils.scheduling import Scheduler
 from bot.utils.time import wait_until
 
@@ -31,6 +34,7 @@ INVITE_RE = re.compile(
     flags=re.IGNORECASE
 )
 
+SPOILER_RE = re.compile(r"(\|\|.+?\|\|)", re.DOTALL)
 URL_RE = re.compile(r"(https?://[^\s]+)", flags=re.IGNORECASE)
 ZALGO_RE = re.compile(r"[\u0300-\u036F\u0489]")
 
@@ -40,16 +44,32 @@ WORD_WATCHLIST_PATTERNS = [
 TOKEN_WATCHLIST_PATTERNS = [
     re.compile(fr'{expression}', flags=re.IGNORECASE) for expression in Filter.token_watchlist
 ]
+WATCHLIST_PATTERNS = WORD_WATCHLIST_PATTERNS + TOKEN_WATCHLIST_PATTERNS
 
-OFFENSIVE_MSG_DELETE_TIME = datetime.timedelta(days=Filter.offensive_msg_delete_days)
+DAYS_BETWEEN_ALERTS = 3
+
+
+def expand_spoilers(text: str) -> str:
+    """Return a string containing all interpretations of a spoilered message."""
+    split_text = SPOILER_RE.split(text)
+    return ''.join(
+        split_text[0::2] + split_text[1::2] + split_text
+    )
+
+OFFENSIVE_MSG_DELETE_TIME = timedelta(days=Filter.offensive_msg_delete_days)
 
 
 class Filtering(Cog, Scheduler):
     """Filtering out invites, blacklisting domains, and warning us of certain regular expressions."""
 
+    # Redis cache mapping a user ID to the last timestamp a bad nickname alert was sent
+    name_alerts = RedisCache()
+
     def __init__(self, bot: Bot):
         self.bot = bot
         super().__init__()
+
+        self.name_lock = asyncio.Lock()
 
         staff_mistake_str = "If you believe this was a mistake, please let staff know!"
         self.filters = {
@@ -88,6 +108,12 @@ class Filtering(Cog, Scheduler):
                 ),
                 "schedule_deletion": False
             },
+            "watch_regex": {
+                "enabled": Filter.watch_regex,
+                "function": self._has_watch_regex_match,
+                "type": "watchlist",
+                "content_only": True,
+            },
             "watch_rich_embeds": {
                 "enabled": Filter.watch_rich_embeds,
                 "function": self._has_rich_embed,
@@ -122,6 +148,7 @@ class Filtering(Cog, Scheduler):
     async def on_message(self, msg: Message) -> None:
         """Invoke message filter for new messages."""
         await self._filter_message(msg)
+        await self.check_bad_words_in_name(msg.author)
 
     @Cog.listener()
     async def on_message_edit(self, before: Message, after: Message) -> None:
@@ -135,6 +162,55 @@ class Filtering(Cog, Scheduler):
         else:
             delta = relativedelta(after.edited_at, before.edited_at).microseconds
         await self._filter_message(after, delta)
+
+    @staticmethod
+    def get_name_matches(name: str) -> List[re.Match]:
+        """Check bad words from passed string (name). Return list of matches."""
+        matches = []
+        for pattern in WATCHLIST_PATTERNS:
+            if match := pattern.search(name):
+                matches.append(match)
+        return matches
+
+    async def check_send_alert(self, member: Member) -> bool:
+        """When there is less than 3 days after last alert, return `False`, otherwise `True`."""
+        if last_alert := await self.name_alerts.get(member.id):
+            last_alert = datetime.utcfromtimestamp(last_alert)
+            if datetime.utcnow() - timedelta(days=DAYS_BETWEEN_ALERTS) < last_alert:
+                log.trace(f"Last alert was too recent for {member}'s nickname.")
+                return False
+
+        return True
+
+    async def check_bad_words_in_name(self, member: Member) -> None:
+        """Send a mod alert every 3 days if a username still matches a watchlist pattern."""
+        # Use lock to avoid race conditions
+        async with self.name_lock:
+            # Check whether the users display name contains any words in our blacklist
+            matches = self.get_name_matches(member.display_name)
+
+            if not matches or not await self.check_send_alert(member):
+                return
+
+            log.info(f"Sending bad nickname alert for '{member.display_name}' ({member.id}).")
+
+            log_string = (
+                f"**User:** {member.mention} (`{member.id}`)\n"
+                f"**Display Name:** {member.display_name}\n"
+                f"**Bad Matches:** {', '.join(match.group() for match in matches)}"
+            )
+
+            await self.mod_log.send_log_message(
+                icon_url=Icons.token_removed,
+                colour=Colours.soft_red,
+                title="Username filtering alert",
+                text=log_string,
+                channel_id=Channels.mod_alerts,
+                thumbnail=member.avatar_url
+            )
+
+            # Update time when alert sent
+            await self.name_alerts.set(member.id, datetime.utcnow().timestamp())
 
     async def _filter_message(self, msg: Message, delta: Optional[int] = None) -> None:
         """Filter the input message to see if it violates any of our rules, and then respond accordingly."""
@@ -171,8 +247,10 @@ class Filtering(Cog, Scheduler):
                         match = await _filter["function"](msg)
 
                     if match:
-                        # If this is a filter (not a watchlist), we should delete the message.
-                        if _filter["type"] == "filter":
+                        is_private = msg.channel.type is discord.ChannelType.private
+
+                        # If this is a filter (not a watchlist) and not in a DM, delete the message.
+                        if _filter["type"] == "filter" and not is_private:
                             try:
                                 # Embeds (can?) trigger both the `on_message` and `on_message_edit`
                                 # event handlers, triggering filtering twice for the same message.
@@ -193,7 +271,7 @@ class Filtering(Cog, Scheduler):
 
                         # If the message is classed as offensive, we store it in the site db and
                         # it will be deleted it after one week.
-                        if _filter["schedule_deletion"]:
+                        if _filter["schedule_deletion"] and not is_private:
                             delete_date = (msg.created_at + OFFENSIVE_MSG_DELETE_TIME).isoformat()
                             data = {
                                 'id': msg.id,
@@ -205,18 +283,18 @@ class Filtering(Cog, Scheduler):
                             self.schedule_task(msg.id, data)
                             log.trace(f"Offensive message {msg.id} will be deleted on {delete_date}")
 
-                        if isinstance(msg.channel, DMChannel):
+                        if is_private:
                             channel_str = "via DM"
                         else:
                             channel_str = f"in {msg.channel.mention}"
 
-                        # Word and match stats for watch_words and watch_tokens
-                        if filter_name in ("watch_words", "watch_tokens"):
+                        # Word and match stats for watch_regex
+                        if filter_name == "watch_regex":
                             surroundings = match.string[max(match.start() - 10, 0): match.end() + 10]
                             message_content = (
                                 f"**Match:** '{match[0]}'\n"
-                                f"**Location:** '...{surroundings}...'\n"
-                                f"\n**Original Message:**\n{msg.content}"
+                                f"**Location:** '...{escape_markdown(surroundings)}...'\n"
+                                f"\n**Original Message:**\n{escape_markdown(msg.content)}"
                             )
                         else:  # Use content of discord Message
                             message_content = msg.content
@@ -231,10 +309,14 @@ class Filtering(Cog, Scheduler):
 
                         log.debug(message)
 
+                        self.bot.stats.incr(f"filters.{filter_name}")
+
                         additional_embeds = None
                         additional_embeds_msg = None
 
-                        if filter_name == "filter_invites":
+                        # The function returns True for invalid invites.
+                        # They have no data so additional embeds can't be created for them.
+                        if filter_name == "filter_invites" and match is not True:
                             additional_embeds = []
                             for invite, data in match.items():
                                 embed = discord.Embed(description=(
@@ -267,35 +349,24 @@ class Filtering(Cog, Scheduler):
                         break  # We don't want multiple filters to trigger
 
     @staticmethod
-    async def _has_watchlist_words(text: str) -> Union[bool, re.Match]:
+    async def _has_watch_regex_match(text: str) -> Union[bool, re.Match]:
         """
-        Returns True if the text contains one of the regular expressions from the word_watchlist in our filter config.
+        Return True if `text` matches any regex from `word_watchlist` or `token_watchlist` configs.
 
-        Only matches words with boundaries before and after the expression.
+        `word_watchlist`'s patterns are placed between word boundaries while `token_watchlist` is
+        matched as-is. Spoilers are expanded, if any, and URLs are ignored.
         """
-        for regex_pattern in WORD_WATCHLIST_PATTERNS:
-            match = regex_pattern.search(text)
+        if SPOILER_RE.search(text):
+            text = expand_spoilers(text)
+
+        # Make sure it's not a URL
+        if URL_RE.search(text):
+            return False
+
+        for pattern in WATCHLIST_PATTERNS:
+            match = pattern.search(text)
             if match:
-                return match  # match objects always have a boolean value of True
-
-        return False
-
-    @staticmethod
-    async def _has_watchlist_tokens(text: str) -> Union[bool, re.Match]:
-        """
-        Returns True if the text contains one of the regular expressions from the token_watchlist in our filter config.
-
-        This will match the expression even if it does not have boundaries before and after.
-        """
-        for regex_pattern in TOKEN_WATCHLIST_PATTERNS:
-            match = regex_pattern.search(text)
-            if match:
-
-                # Make sure it's not a URL
-                if not URL_RE.search(text):
-                    return match  # match objects always have a boolean value of True
-
-        return False
+                return match
 
     @staticmethod
     async def _has_urls(text: str) -> bool:

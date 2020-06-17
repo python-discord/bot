@@ -51,19 +51,31 @@ class Scheduler(metaclass=CogABCMeta):
         self._scheduled_tasks[task_id] = task
         log.debug(f"{self.cog_name}: scheduled task #{task_id} {id(task)}.")
 
-    def cancel_task(self, task_id: t.Hashable) -> None:
-        """Unschedule the task identified by `task_id`."""
+    def cancel_task(self, task_id: t.Hashable, ignore_missing: bool = False) -> None:
+        """
+        Unschedule the task identified by `task_id`.
+
+        If `ignore_missing` is True, a warning will not be sent if a task isn't found.
+        """
         log.trace(f"{self.cog_name}: cancelling task #{task_id}...")
         task = self._scheduled_tasks.get(task_id)
 
         if not task:
-            log.warning(f"{self.cog_name}: failed to unschedule {task_id} (no task found).")
+            if not ignore_missing:
+                log.warning(f"{self.cog_name}: failed to unschedule {task_id} (no task found).")
             return
 
-        task.cancel()
         del self._scheduled_tasks[task_id]
+        task.cancel()
 
         log.debug(f"{self.cog_name}: unscheduled task #{task_id} {id(task)}.")
+
+    def cancel_all(self) -> None:
+        """Unschedule all known tasks."""
+        log.debug(f"{self.cog_name}: unscheduling all tasks")
+
+        for task_id in self._scheduled_tasks.copy():
+            self.cancel_task(task_id, ignore_missing=True)
 
     def _task_done_callback(self, task_id: t.Hashable, done_task: asyncio.Task) -> None:
         """
@@ -98,6 +110,6 @@ class Scheduler(metaclass=CogABCMeta):
             # Log the exception if one exists.
             if exception:
                 log.error(
-                    f"{self.cog_name}: error in task #{task_id} {id(scheduled_task)}!",
+                    f"{self.cog_name}: error in task #{task_id} {id(done_task)}!",
                     exc_info=exception
                 )

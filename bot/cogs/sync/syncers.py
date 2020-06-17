@@ -1,4 +1,5 @@
 import abc
+import asyncio
 import logging
 import typing as t
 from collections import namedtuple
@@ -16,7 +17,7 @@ log = logging.getLogger(__name__)
 # These objects are declared as namedtuples because tuples are hashable,
 # something that we make use of when diffing site roles against guild roles.
 _Role = namedtuple('Role', ('id', 'name', 'colour', 'permissions', 'position'))
-_User = namedtuple('User', ('id', 'name', 'discriminator', 'avatar_hash', 'roles', 'in_guild'))
+_User = namedtuple('User', ('id', 'name', 'discriminator', 'roles', 'in_guild'))
 _Diff = namedtuple('Diff', ('created', 'updated', 'deleted'))
 
 
@@ -122,20 +123,20 @@ class Syncer(abc.ABC):
                 check=partial(self._reaction_check, author, message),
                 timeout=constants.Sync.confirm_timeout
             )
-        except TimeoutError:
+        except asyncio.TimeoutError:
             # reaction will remain none thus sync will be aborted in the finally block below.
             log.debug(f"The {self.name} syncer confirmation prompt timed out.")
-        finally:
-            if str(reaction) == constants.Emojis.check_mark:
-                log.trace(f"The {self.name} syncer was confirmed.")
-                await message.edit(content=f':ok_hand: {mention}{self.name} sync will proceed.')
-                return True
-            else:
-                log.warning(f"The {self.name} syncer was aborted or timed out!")
-                await message.edit(
-                    content=f':warning: {mention}{self.name} sync aborted or timed out!'
-                )
-                return False
+
+        if str(reaction) == constants.Emojis.check_mark:
+            log.trace(f"The {self.name} syncer was confirmed.")
+            await message.edit(content=f':ok_hand: {mention}{self.name} sync will proceed.')
+            return True
+        else:
+            log.info(f"The {self.name} syncer was aborted or timed out!")
+            await message.edit(
+                content=f':warning: {mention}{self.name} sync aborted or timed out!'
+            )
+            return False
 
     @abc.abstractmethod
     async def _get_diff(self, guild: Guild) -> _Diff:
@@ -297,7 +298,6 @@ class UserSyncer(Syncer):
                 id=member.id,
                 name=member.name,
                 discriminator=int(member.discriminator),
-                avatar_hash=member.avatar,
                 roles=tuple(sorted(role.id for role in member.roles)),
                 in_guild=True
             )

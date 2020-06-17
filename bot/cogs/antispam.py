@@ -94,7 +94,7 @@ class DeletionContext:
         await modlog.send_log_message(
             icon_url=Icons.filtering,
             colour=Colour(Colours.soft_red),
-            title=f"Spam detected!",
+            title="Spam detected!",
             text=mod_alert_message,
             thumbnail=last_message.author.avatar_url_as(static_format="png"),
             channel_id=Channels.mod_alerts,
@@ -130,7 +130,7 @@ class AntiSpam(Cog):
             body += "\n\n**The cog has been unloaded.**"
 
             await self.mod_log.send_log_message(
-                title=f"Error: AntiSpam configuration validation failed!",
+                title="Error: AntiSpam configuration validation failed!",
                 text=body,
                 ping_everyone=True,
                 icon_url=Icons.token_removed,
@@ -182,6 +182,7 @@ class AntiSpam(Cog):
             # which contains the reason for why the message violated the rule and
             # an iterable of all members that violated the rule.
             if result is not None:
+                self.bot.stats.incr(f"mod_alerts.{rule_name}")
                 reason, members, relevant_messages = result
                 full_reason = f"`{rule_name}` rule: {reason}"
 

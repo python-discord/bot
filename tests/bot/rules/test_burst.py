@@ -2,7 +2,7 @@ from typing import Iterable
 
 from bot.rules import burst
 from tests.bot.rules import DisallowedCase, RuleTest
-from tests.helpers import MockMessage, async_test
+from tests.helpers import MockMessage
 
 
 def make_msg(author: str) -> MockMessage:
@@ -21,7 +21,6 @@ class BurstRuleTests(RuleTest):
         self.apply = burst.apply
         self.config = {"max": 2, "interval": 10}
 
-    @async_test
     async def test_allows_messages_within_limit(self):
         """Cases which do not violate the rule."""
         cases = (
@@ -31,7 +30,6 @@ class BurstRuleTests(RuleTest):
 
         await self.run_allowed(cases)
 
-    @async_test
     async def test_disallows_messages_beyond_limit(self):
         """Cases where the amount of messages exceeds the limit, triggering the rule."""
         cases = (

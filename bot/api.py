@@ -52,7 +52,7 @@ class APIClient:
 
         self._ready = asyncio.Event(loop=loop)
         self._creation_task = None
-        self._session_args = kwargs
+        self._default_session_kwargs = kwargs
 
         self.recreate()
 
@@ -60,25 +60,41 @@ class APIClient:
     def _url_for(endpoint: str) -> str:
         return f"{URLs.site_schema}{URLs.site_api}/{quote_url(endpoint)}"
 
-    async def _create_session(self) -> None:
-        """Create the aiohttp session and set the ready event."""
-        self.session = aiohttp.ClientSession(**self._session_args)
+    async def _create_session(self, **session_kwargs) -> None:
+        """
+        Create the aiohttp session with `session_kwargs` and set the ready event.
+
+        `session_kwargs` is merged with `_default_session_kwargs` and overwrites its values.
+        If an open session already exists, it will first be closed.
+        """
+        await self.close()
+        self.session = aiohttp.ClientSession(**{**self._default_session_kwargs, **session_kwargs})
         self._ready.set()
 
     async def close(self) -> None:
         """Close the aiohttp session and unset the ready event."""
-        if not self._ready.is_set():
-            return
+        if self.session:
+            await self.session.close()
 
-        await self.session.close()
         self._ready.clear()
 
-    def recreate(self) -> None:
-        """Schedule the aiohttp session to be created if it's been closed."""
-        if self.session is None or self.session.closed:
+    def recreate(self, force: bool = False, **session_kwargs) -> None:
+        """
+        Schedule the aiohttp session to be created with `session_kwargs` if it's been closed.
+
+        If `force` is True, the session will be recreated even if an open one exists. If a task to
+        create the session is pending, it will be cancelled.
+
+        `session_kwargs` is merged with the kwargs given when the `APIClient` was created and
+        overwrites those default kwargs.
+        """
+        if force or self.session is None or self.session.closed:
+            if force and self._creation_task:
+                self._creation_task.cancel()
+
             # Don't schedule a task if one is already in progress.
-            if self._creation_task is None or self._creation_task.done():
-                self._creation_task = self.loop.create_task(self._create_session())
+            if force or self._creation_task is None or self._creation_task.done():
+                self._creation_task = self.loop.create_task(self._create_session(**session_kwargs))
 
     async def maybe_raise_for_status(self, response: aiohttp.ClientResponse, should_raise: bool) -> None:
         """Raise ResponseCodeError for non-OK response if an exception should be raised."""
