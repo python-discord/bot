@@ -7,7 +7,7 @@ from typing import List, Mapping, Optional, Union
 import dateutil
 import discord.errors
 from dateutil.relativedelta import relativedelta
-from discord import Colour, DMChannel, HTTPException, Member, Message, NotFound, TextChannel
+from discord import Colour, HTTPException, Member, Message, NotFound, TextChannel
 from discord.ext.commands import Cog
 from discord.utils import escape_markdown
 
@@ -55,6 +55,7 @@ def expand_spoilers(text: str) -> str:
     return ''.join(
         split_text[0::2] + split_text[1::2] + split_text
     )
+
 
 OFFENSIVE_MSG_DELETE_TIME = timedelta(days=Filter.offensive_msg_delete_days)
 
@@ -113,6 +114,7 @@ class Filtering(Cog, Scheduler):
                 "function": self._has_watch_regex_match,
                 "type": "watchlist",
                 "content_only": True,
+                "schedule_deletion": True
             },
             "watch_rich_embeds": {
                 "enabled": Filter.watch_rich_embeds,
@@ -120,21 +122,7 @@ class Filtering(Cog, Scheduler):
                 "type": "watchlist",
                 "content_only": False,
                 "schedule_deletion": False
-            },
-            "watch_words": {
-                "enabled": Filter.watch_words,
-                "function": self._has_watchlist_words,
-                "type": "watchlist",
-                "content_only": True,
-                "schedule_deletion": True
-            },
-            "watch_tokens": {
-                "enabled": Filter.watch_tokens,
-                "function": self._has_watchlist_tokens,
-                "type": "watchlist",
-                "content_only": True,
-                "schedule_deletion": True
-            },
+            }
         }
 
         self.bot.loop.create_task(self.reschedule_offensive_msg_deletion())
@@ -481,7 +469,7 @@ class Filtering(Cog, Scheduler):
         await self.bot.wait_until_ready()
         response = await self.bot.api_client.get('bot/offensive-messages',)
 
-        now = datetime.datetime.utcnow()
+        now = datetime.utcnow()
 
         for msg in response:
             delete_at = dateutil.parser.isoparse(msg['delete_date']).replace(tzinfo=None)
