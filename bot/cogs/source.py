@@ -35,7 +35,9 @@ class SourceConverter(commands.Converter):
         elif argument.lower() in tags_cog._cache:
             return argument.lower()
 
-        raise commands.BadArgument(f"Unable to convert `{argument}` to valid command{', tag,' if show_tag else ''} or Cog.")
+        raise commands.BadArgument(
+            f"Unable to convert `{argument}` to valid command{', tag,' if show_tag else ''} or Cog."
+        )
 
 
 class BotSource(commands.Cog):
