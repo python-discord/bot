@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from discord import Colour, Embed
 
 from bot.cogs import tags
-from tests.helpers import MockBot, MockContext, MockTextChannel
+from tests.helpers import MockBot, MockContext, MockMember, MockRole, MockTextChannel
 
 
 class TagsBaseTests(unittest.TestCase):
@@ -17,6 +17,7 @@ class TagsBaseTests(unittest.TestCase):
         with patch("bot.cogs.tags.Path") as path:
             path.return_value = Path("tests", "bot", "resources", "testing-tags")
             self.cog = tags.Tags(self.bot)
+        self.member = MockMember(roles=(MockRole(name="Developers"),))
 
     def test_get_tags(self):
         """Should return `Dict` of tags, fetched from resources and have correct keys."""
@@ -26,10 +27,14 @@ class TagsBaseTests(unittest.TestCase):
             actual = tags.Tags.get_tags()
 
         self.assertEqual(len(actual), len(list(testing_path.iterdir())))
-        for file in testing_path.iterdir():
-            name = file.name.replace(".md", "")
-            self.assertIn(name, actual)
-            self.assertEqual(file.read_text(encoding="utf-8"), actual[name]["embed"]["description"])
+        for file in testing_path.glob("**/*"):
+            if file.is_file():
+                name = file.name.replace(".md", "")
+                self.assertIn(name, actual)
+                self.assertEqual(file.read_text(encoding="utf-8"), actual[name]["embed"]["description"])
+                parents = list(file.relative_to(testing_path).parents)
+                if len(parents) > 1:
+                    self.assertEqual(parents[-2].name, actual[name]["restricted_to"])
 
     @patch("bot.cogs.tags.REGEX_NON_ALPHABET")
     def test_fuzzy_search(self, regex):
@@ -113,8 +118,9 @@ class TagsBaseTests(unittest.TestCase):
                     self.assertTrue(any(expected_tag["title"] == actual_tag["title"] for actual_tag in actual))
 
     def test_get_tags_via_content(self):
-        """Should return list of correct tags."""
+        """Should return list of correct tags and call access check."""
         cache = self.cog._cache
+        self.cog.check_accessibility = MagicMock()
         # Create tags names list for visual formatting
         tag_names_for_any_test = [
             "class",
@@ -130,12 +136,44 @@ class TagsBaseTests(unittest.TestCase):
                 "keywords": "class",
                 "check": any,
                 "expected": [tag for tag_name, tag in cache.items() if tag_name in tag_names_for_any_test]
+            },
+            {
+                "keywords": "youtube,audio,",
+                "check": all,
+                "expected": [cache["ytdl"]]
+            },
+            {
+                "keywords": ",",
+                "check": all,
+                "expected": [cache["pep8"], cache["ytdl"]]
             }
         ]
 
         for case in test_cases:
             with self.subTest(keywords=case["keywords"], expected=case["expected"], check=case["check"]):
-                actual = self.cog._get_tags_via_content(case["check"], case["keywords"])
+                self.cog.check_accessibility.reset_mock()
+                actual = self.cog._get_tags_via_content(case["check"], case["keywords"], self.member)
+                self.assertEqual(actual, case["expected"])
+                self.cog.check_accessibility.assert_called()
+
+    def test_check_accessibility(self):
+        """Should return does user have access to tag."""
+        test_cases = [
+            {
+                "member": MockMember(roles=(MockRole(name="Developers"),)),
+                "restricted_to": "moderators",
+                "expected": False
+            },
+            {
+                "member": MockMember(roles=(MockRole(name="Developers"), MockRole(name="Moderators"))),
+                "restricted_to": "moderators",
+                "expected": True
+            }
+        ]
+
+        for case in test_cases:
+            with self.subTest(restricted_to=case["restricted_to"], expected=case["expected"]):
+                actual = self.cog.check_accessibility(case["member"], {"restricted_to": case["restricted_to"]})
                 self.assertEqual(actual, case["expected"])
 
 
@@ -144,7 +182,8 @@ class TagsCommandsTests(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self) -> None:
         self.bot = MockBot()
-        self.ctx = MockContext(bot=self.bot)
+        self.member = MockMember(roles=(MockRole(name="Developers"),))
+        self.ctx = MockContext(bot=self.bot, author=self.member)
 
     async def test_head_command(self):
         """Should invoke `!tags get` command from `!tag` command."""
@@ -164,7 +203,7 @@ class TagsCommandsTests(unittest.IsolatedAsyncioTestCase):
         cog._send_matching_tags = AsyncMock()
 
         self.assertIsNone(await cog.search_tag_content.callback(cog, self.ctx, keywords="youtube,audio"))
-        cog._get_tags_via_content.assert_called_once_with(all, "youtube,audio")
+        cog._get_tags_via_content.assert_called_once_with(all, "youtube,audio", self.member)
         cog._send_matching_tags.assert_awaited_once_with(self.ctx, "youtube,audio", "foo")
 
     async def test_search_tags_any_command(self):
@@ -186,7 +225,7 @@ class TagsCommandsTests(unittest.IsolatedAsyncioTestCase):
                 self.assertIsNone(
                     await cog.search_tag_content_any_keyword.callback(cog, self.ctx, keywords=case["keywords"])
                 )
-                cog._get_tags_via_content.assert_called_once_with(any, case["keywords"] or "any")
+                cog._get_tags_via_content.assert_called_once_with(any, case["keywords"] or "any", self.member)
                 cog._send_matching_tags.assert_awaited_once_with(self.ctx, case["keywords"], "foo")
 
     async def test_send_matching_tags(self):
@@ -239,7 +278,8 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self) -> None:
         self.bot = MockBot()
-        self.ctx = MockContext(bot=self.bot, channel=MockTextChannel(id=1234))
+        self.member = MockMember(roles=(MockRole(name="Developers"), MockRole(name="Moderators")))
+        self.ctx = MockContext(bot=self.bot, channel=MockTextChannel(id=1234), author=self.member)
 
     async def test_tag_on_cooldown(self):
         """Should not respond to chat due tag is under cooldown."""
@@ -279,6 +319,20 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(embed.description, f"\n{tags_string}\n")
         self.assertEqual(embed.footer.text, tags.FOOTER_TEXT)
 
+    async def test_tags_list_permissions(self):
+        """Should not include tag to list when user don't have permissions to use that tag."""
+        with patch("bot.cogs.tags.Path") as path:
+            path.return_value = Path("tests", "bot", "resources", "testing-tags")
+            cog = tags.Tags(self.bot)
+
+        self.ctx.author = MockMember(roles=(MockRole(name="Developers"),))
+        self.assertIsNone(await cog.get_command.callback(cog, self.ctx, tag_name=None))
+        embed = self.ctx.send.call_args[1]["embed"]
+        tags_string = "\n".join(
+            sorted(f"**»**   {tag}" for tag in cog._cache if cog._cache[tag]["restricted_to"] != "moderators")
+        )
+        self.assertEqual(embed.description, f"\n{tags_string}\n")
+
     async def test_tag(self):
         """Should send correct embed to chat (`ctx.send`) with tag content."""
         with patch("bot.cogs.tags.Path") as path:
@@ -316,3 +370,41 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
 
                     self.assertEqual(embed.to_dict(), case["expected"])
                     self.ctx.send.assert_awaited_once_with(embed=embed)
+
+    async def test_tag_using_permissions(self):
+        """Should silently return when user don't have required role to use tag."""
+        with patch("bot.cogs.tags.Path") as path:
+            path.return_value = Path("tests", "bot", "resources", "testing-tags")
+            cog = tags.Tags(self.bot)
+
+        test_cases = [
+            {
+                "member": MockMember(roles=(MockRole(name="Developers"), MockRole(name="Moderators"))),
+                "tag": "test-mod-tag",
+                "should_access": True
+            },
+            {
+                "member": MockMember(roles=(MockRole(name="Developers"),)),
+                "tag": "test-mod-tag",
+                "should_access": False
+            }
+        ]
+
+        for case in test_cases:
+            with self.subTest(tag=case["tag"], should_access=case["should_access"]):
+                self.ctx.reset_mock()
+                await cog.get_command.callback(cog, self.ctx, tag_name=case["tag"])
+                if case["should_access"]:
+                    self.ctx.send.assert_awaited_once()
+                else:
+                    self.ctx.send.assert_not_awaited()
+
+
+class TagsSetupTests(unittest.TestCase):
+    """Tests for tags cog `setup` function."""
+
+    def test_setup(self):
+        """Should call `bot.add_cog`."""
+        bot = MockBot()
+        tags.setup(bot)
+        bot.add_cog.assert_called_once()
