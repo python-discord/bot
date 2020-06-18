@@ -29,10 +29,7 @@ class SourceConverter(commands.Converter):
 
         tags_cog = ctx.bot.get_cog("Tags")
 
-        if not tags_cog:
-            await ctx.send("Unable to get `Tags` cog.")
-            return commands.ExtensionNotLoaded("bot.cogs.tags")
-        elif argument.lower() in tags_cog._cache:
+        if tags_cog and argument.lower() in tags_cog._cache:
             return argument.lower()
 
         raise commands.BadArgument(f"Unable to convert `{argument}` to valid command, tag, or Cog.")
@@ -47,10 +44,6 @@ class BotSource(commands.Cog):
     @commands.command(name="source", aliases=("src",))
     async def source_command(self, ctx: commands.Context, *, source_item: SourceConverter = None) -> None:
         """Display information and a GitHub link to the source code of a command, tag, or cog."""
-        # When we have problem to get Tags cog, exit early
-        if isinstance(source_item, commands.ExtensionNotLoaded):
-            return
-
         if not source_item:
             embed = Embed(title="Bot's GitHub Repository")
             embed.add_field(name="Repository", value=f"[Go to GitHub]({URLs.github_bot_repo})")
