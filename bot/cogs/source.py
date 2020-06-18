@@ -28,11 +28,14 @@ class SourceConverter(commands.Converter):
             return cmd
 
         tags_cog = ctx.bot.get_cog("Tags")
+        show_tag = True
 
-        if tags_cog and argument.lower() in tags_cog._cache:
+        if not tags_cog:
+            show_tag = False
+        elif argument.lower() in tags_cog._cache:
             return argument.lower()
 
-        raise commands.BadArgument(f"Unable to convert `{argument}` to valid command, tag, or Cog.")
+        raise commands.BadArgument(f"Unable to convert `{argument}` to valid command{', tag,' if show_tag else ''} or Cog.")
 
 
 class BotSource(commands.Cog):
