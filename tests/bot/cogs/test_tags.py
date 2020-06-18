@@ -184,27 +184,23 @@ class TagsCommandsTests(unittest.IsolatedAsyncioTestCase):
         self.bot = MockBot()
         self.member = MockMember(roles=(MockRole(name="Developers"),))
         self.ctx = MockContext(bot=self.bot, author=self.member)
+        with patch("bot.cogs.tags.Path") as path:
+            path.return_value = Path("tests", "bot", "resources", "testing-tags")
+            self.cog = tags.Tags(self.bot)
 
     async def test_head_command(self):
         """Should invoke `!tags get` command from `!tag` command."""
-        with patch("bot.cogs.tags.Path") as path:
-            path.return_value = Path("tests", "bot", "resources", "testing-tags")
-            cog = tags.Tags(self.bot)
-
-        self.assertIsNone(await cog.tags_group.callback(cog, self.ctx, tag_name="class"))
-        self.ctx.invoke.assert_awaited_once_with(cog.get_command, tag_name="class")
+        self.assertIsNone(await self.cog.tags_group.callback(self.cog, self.ctx, tag_name="class"))
+        self.ctx.invoke.assert_awaited_once_with(self.cog.get_command, tag_name="class")
 
     async def test_search_tags_with_keyword_command(self):
         """Should call `Tags._get_tags_via_content` and `Tags._send_matching_tags` with correct parameters."""
-        with patch("bot.cogs.tags.Path") as path:
-            path.return_value = Path("tests", "bot", "resources", "testing-tags")
-            cog = tags.Tags(self.bot)
-        cog._get_tags_via_content = MagicMock(return_value="foo")
-        cog._send_matching_tags = AsyncMock()
+        self.cog._get_tags_via_content = MagicMock(return_value="foo")
+        self.cog._send_matching_tags = AsyncMock()
 
-        self.assertIsNone(await cog.search_tag_content.callback(cog, self.ctx, keywords="youtube,audio"))
-        cog._get_tags_via_content.assert_called_once_with(all, "youtube,audio", self.member)
-        cog._send_matching_tags.assert_awaited_once_with(self.ctx, "youtube,audio", "foo")
+        self.assertIsNone(await self.cog.search_tag_content.callback(self.cog, self.ctx, keywords="youtube,audio"))
+        self.cog._get_tags_via_content.assert_called_once_with(all, "youtube,audio", self.member)
+        self.cog._send_matching_tags.assert_awaited_once_with(self.ctx, "youtube,audio", "foo")
 
     async def test_search_tags_any_command(self):
         """Should call `Tags._get_tags_via_content` and `Tags._send_matching_tags` with correct parameters."""
@@ -212,39 +208,36 @@ class TagsCommandsTests(unittest.IsolatedAsyncioTestCase):
             {"keywords": "youtube,discord,foo"},
             {"keywords": "any"}
         ]
+        self.cog._get_tags_via_content = MagicMock(return_value="foo")
+        self.cog._send_matching_tags = AsyncMock()
 
         for case in test_cases:
             with self.subTest(keywords=case["keywords"]):
-                with patch("bot.cogs.tags.Path") as path:
-                    path.return_value = Path("tests", "bot", "resources", "testing-tags")
-                    cog = tags.Tags(self.bot)
-
-                cog._get_tags_via_content = MagicMock(return_value="foo")
-                cog._send_matching_tags = AsyncMock()
+                self.cog._get_tags_via_content.reset_mock()
+                self.cog._send_matching_tags.reset_mock()
 
                 self.assertIsNone(
-                    await cog.search_tag_content_any_keyword.callback(cog, self.ctx, keywords=case["keywords"])
+                    await self.cog.search_tag_content_any_keyword.callback(
+                        self.cog, self.ctx, keywords=case["keywords"]
+                    )
                 )
-                cog._get_tags_via_content.assert_called_once_with(any, case["keywords"] or "any", self.member)
-                cog._send_matching_tags.assert_awaited_once_with(self.ctx, case["keywords"], "foo")
+                self.cog._get_tags_via_content.assert_called_once_with(any, case["keywords"] or "any", self.member)
+                self.cog._send_matching_tags.assert_awaited_once_with(self.ctx, case["keywords"], "foo")
 
     async def test_send_matching_tags(self):
         """Should return `None` and send correct embed."""
-        with patch("bot.cogs.tags.Path") as path:
-            path.return_value = Path("tests", "bot", "resources", "testing-tags")
-            cog = tags.Tags(self.bot)
-
+        cache = self.cog._cache
         test_cases = [
             {
-                "args": (self.ctx, "youtube,audio", [cog._cache["ytdl"]]),
-                "expected": Embed.from_dict(cog._cache["ytdl"]["embed"])
+                "args": (self.ctx, "youtube,audio", [cache["ytdl"]]),
+                "expected": Embed.from_dict(cache["ytdl"]["embed"])
             },
             {
                 "args": (self.ctx, "foo", []),
                 "expected": None
             },
             {
-                "args": (self.ctx, "bar", [cog._cache["ytdl"], cog._cache["class"], cog._cache["classmethod"]]),
+                "args": (self.ctx, "bar", [cache["ytdl"], cache["class"], cache["classmethod"]]),
                 "expected": Embed.from_dict({
                     "description": (
                         "\n**»**   class\n"
@@ -261,7 +254,7 @@ class TagsCommandsTests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(args=case["args"], expected=case["expected"]):
                 self.ctx.send.reset_mock()
 
-                self.assertIsNone(await cog._send_matching_tags(*case["args"]))
+                self.assertIsNone(await self.cog._send_matching_tags(*case["args"]))
                 if case["expected"] is None:
                     self.ctx.send.assert_not_awaited()
                 else:
@@ -280,25 +273,21 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
         self.bot = MockBot()
         self.member = MockMember(roles=(MockRole(name="Developers"), MockRole(name="Moderators")))
         self.ctx = MockContext(bot=self.bot, channel=MockTextChannel(id=1234), author=self.member)
+        with patch("bot.cogs.tags.Path") as path:
+            path.return_value = Path("tests", "bot", "resources", "testing-tags")
+            self.cog = tags.Tags(self.bot)
 
     async def test_tag_on_cooldown(self):
         """Should not respond to chat due tag is under cooldown."""
-        with patch("bot.cogs.tags.Path") as path:
-            path.return_value = Path("tests", "bot", "resources", "testing-tags")
-            cog = tags.Tags(self.bot)
-        cog.tag_cooldowns["ytdl"] = {"channel": 1234, "time": time.time()}
+        self.cog.tag_cooldowns["ytdl"] = {"channel": 1234, "time": time.time()}
 
-        self.assertIsNone(await cog.get_command.callback(cog, self.ctx, tag_name="ytdl"))
+        self.assertIsNone(await self.cog.get_command.callback(self.cog, self.ctx, tag_name="ytdl"))
         self.ctx.send.assert_not_awaited()
 
     async def test_tags_list_empty(self):
         """Should send to chat (`ctx.send`) correct embed with information about no tags."""
-        with patch("bot.cogs.tags.Path") as path:
-            path.return_value = Path("tests", "bot", "resources", "testing-tags")
-            cog = tags.Tags(self.bot)
-        cog._cache = {}
-
-        self.assertIsNone(await cog.get_command.callback(cog, self.ctx, tag_name=None))
+        self.cog._cache = {}
+        self.assertIsNone(await self.cog.get_command.callback(self.cog, self.ctx, tag_name=None))
         embed = self.ctx.send.call_args[1]["embed"]
         self.ctx.send.assert_awaited_once_with(embed=embed)
 
@@ -307,40 +296,28 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_tags_list(self):
         """Should send to chat (`LinePaginator.paginate`) embed that contains all tags."""
-        with patch("bot.cogs.tags.Path") as path:
-            path.return_value = Path("tests", "bot", "resources", "testing-tags")
-            cog = tags.Tags(self.bot)
-
-        self.assertIsNone(await cog.get_command.callback(cog, self.ctx, tag_name=None))
+        self.assertIsNone(await self.cog.get_command.callback(self.cog, self.ctx, tag_name=None))
         embed = self.ctx.send.call_args[1]["embed"]
 
         self.assertEqual(embed.title, "**Current tags**")
-        tags_string = "\n".join(sorted(f"**»**   {tag}" for tag in cog._cache))
+        tags_string = "\n".join(sorted(f"**»**   {tag}" for tag in self.cog._cache))
         self.assertEqual(embed.description, f"\n{tags_string}\n")
         self.assertEqual(embed.footer.text, tags.FOOTER_TEXT)
 
     async def test_tags_list_permissions(self):
         """Should not include tag to list when user don't have permissions to use that tag."""
-        with patch("bot.cogs.tags.Path") as path:
-            path.return_value = Path("tests", "bot", "resources", "testing-tags")
-            cog = tags.Tags(self.bot)
-
         self.ctx.author = MockMember(roles=(MockRole(name="Developers"),))
-        self.assertIsNone(await cog.get_command.callback(cog, self.ctx, tag_name=None))
+        self.assertIsNone(await self.cog.get_command.callback(self.cog, self.ctx, tag_name=None))
         embed = self.ctx.send.call_args[1]["embed"]
         tags_string = "\n".join(
-            sorted(f"**»**   {tag}" for tag in cog._cache if cog._cache[tag]["restricted_to"] != "moderators")
+            sorted(f"**»**   {tag}" for tag in self.cog._cache if self.cog._cache[tag]["restricted_to"] != "moderators")
         )
         self.assertEqual(embed.description, f"\n{tags_string}\n")
 
     async def test_tag(self):
         """Should send correct embed to chat (`ctx.send`) with tag content."""
-        with patch("bot.cogs.tags.Path") as path:
-            path.return_value = Path("tests", "bot", "resources", "testing-tags")
-            cog = tags.Tags(self.bot)
-
         test_cases = [
-            {"tag": tag["title"], "expected": tag["embed"]} for tag in cog._cache.values()
+            {"tag": tag["title"], "expected": tag["embed"]} for tag in self.cog._cache.values()
         ]
         test_cases.extend(
             [
@@ -362,7 +339,7 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
         for case in test_cases:
             with self.subTest(tag_name=case["tag"], expected=case["expected"]):
                 self.ctx.send.reset_mock()
-                self.assertIsNone(await cog.get_command.callback(cog, self.ctx, tag_name=case["tag"]))
+                self.assertIsNone(await self.cog.get_command.callback(self.cog, self.ctx, tag_name=case["tag"]))
                 if case["expected"] is None:
                     self.ctx.send.assert_not_awaited()
                 else:
@@ -373,10 +350,6 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_tag_using_permissions(self):
         """Should silently return when user don't have required role to use tag."""
-        with patch("bot.cogs.tags.Path") as path:
-            path.return_value = Path("tests", "bot", "resources", "testing-tags")
-            cog = tags.Tags(self.bot)
-
         test_cases = [
             {
                 "member": MockMember(roles=(MockRole(name="Developers"), MockRole(name="Moderators"))),
@@ -393,7 +366,7 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
         for case in test_cases:
             with self.subTest(tag=case["tag"], should_access=case["should_access"]):
                 self.ctx.reset_mock()
-                await cog.get_command.callback(cog, self.ctx, tag_name=case["tag"])
+                await self.cog.get_command.callback(self.cog, self.ctx, tag_name=case["tag"])
                 if case["should_access"]:
                     self.ctx.send.assert_awaited_once()
                 else:
