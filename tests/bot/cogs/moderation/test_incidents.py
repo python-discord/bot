@@ -1,3 +1,4 @@
+import asyncio
 import enum
 import logging
 import unittest
@@ -7,7 +8,16 @@ import aiohttp
 import discord
 
 from bot.cogs.moderation import Incidents, incidents
-from tests.helpers import MockAsyncWebhook, MockBot, MockMessage, MockReaction, MockTextChannel, MockUser
+from tests.helpers import (
+    MockAsyncWebhook,
+    MockBot,
+    MockMember,
+    MockMessage,
+    MockReaction,
+    MockRole,
+    MockTextChannel,
+    MockUser,
+)
 
 
 class MockSignal(enum.Enum):
@@ -248,6 +258,96 @@ class TestMakeConfirmationTask(TestIncidents):
 
         # This `message_id` does not match
         self.assertFalse(created_check(payload=MagicMock(message_id=0)))
+
+
+@patch("bot.cogs.moderation.incidents.ALLOWED_ROLES", {1, 2})
+@patch("bot.cogs.moderation.incidents.Incidents.make_confirmation_task", AsyncMock())  # Generic awaitable
+class TestProcessEvent(TestIncidents):
+    """Tests for the `Incidents.process_event` coroutine."""
+
+    @patch("bot.cogs.moderation.incidents.ALLOWED_ROLES", {1, 2})
+    async def test_process_event_bad_role(self):
+        """The reaction is removed when the author lacks all allowed roles."""
+        incident = MockMessage()
+        member = MockMember(roles=[MockRole(id=0)])  # Must have role 1 or 2
+
+        await self.cog_instance.process_event("reaction", incident, member)
+        incident.remove_reaction.assert_called_once_with("reaction", member)
+
+    async def test_process_event_bad_emoji(self):
+        """
+        The reaction is removed when an invalid emoji is used.
+
+        This requires that we pass in a `member` with valid roles, as we need the role check
+        to succeed.
+        """
+        incident = MockMessage()
+        member = MockMember(roles=[MockRole(id=1)])  # Member has allowed role
+
+        await self.cog_instance.process_event("invalid_signal", incident, member)
+        incident.remove_reaction.assert_called_once_with("invalid_signal", member)
+
+    async def test_process_event_no_archive_on_investigating(self):
+        """Message is not archived on `Signal.INVESTIGATING`."""
+        with patch("bot.cogs.moderation.incidents.Incidents.archive", AsyncMock()) as mocked_archive:
+            await self.cog_instance.process_event(
+                reaction=incidents.Signal.INVESTIGATING.value,
+                incident=MockMessage(),
+                member=MockMember(roles=[MockRole(id=1)]),
+            )
+
+        mocked_archive.assert_not_called()
+
+    async def test_process_event_no_delete_if_archive_fails(self):
+        """
+        Original message is not deleted when `Incidents.archive` returns False.
+
+        This is the way of signaling that the relay failed, and we should not remove the original,
+        as that would result in losing the incident record.
+        """
+        incident = MockMessage()
+
+        with patch("bot.cogs.moderation.incidents.Incidents.archive", AsyncMock(return_value=False)):
+            await self.cog_instance.process_event(
+                reaction=incidents.Signal.ACTIONED.value,
+                incident=incident,
+                member=MockMember(roles=[MockRole(id=1)])
+            )
+
+        incident.delete.assert_not_called()
+
+    async def test_process_event_confirmation_task_is_awaited(self):
+        """Task given by `Incidents.make_confirmation_task` is awaited before method exits."""
+        mock_task = AsyncMock()
+
+        with patch("bot.cogs.moderation.incidents.Incidents.make_confirmation_task", mock_task):
+            await self.cog_instance.process_event(
+                reaction=incidents.Signal.ACTIONED.value,
+                incident=MockMessage(),
+                member=MockMember(roles=[MockRole(id=1)])
+            )
+
+        mock_task.assert_awaited()
+
+    async def test_process_event_confirmation_task_timeout_is_handled(self):
+        """
+        Confirmation task `asyncio.TimeoutError` is handled gracefully.
+
+        We have `make_confirmation_task` return a mock with a side effect, and then catch the
+        exception should it propagate out of `process_event`. This is so that we can then manually
+        fail the test with a more informative message than just the plain traceback.
+        """
+        mock_task = AsyncMock(side_effect=asyncio.TimeoutError())
+
+        try:
+            with patch("bot.cogs.moderation.incidents.Incidents.make_confirmation_task", mock_task):
+                await self.cog_instance.process_event(
+                    reaction=incidents.Signal.ACTIONED.value,
+                    incident=MockMessage(),
+                    member=MockMember(roles=[MockRole(id=1)])
+                )
+        except asyncio.TimeoutError:
+            self.fail("TimeoutError was not handled gracefully, and propagated out of `process_event`!")
 
 
 class TestResolveMessage(TestIncidents):
