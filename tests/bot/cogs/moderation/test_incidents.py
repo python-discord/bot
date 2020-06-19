@@ -520,6 +520,134 @@ class TestResolveMessage(TestIncidents):
             self.assertIsNone(await self.cog_instance.resolve_message(123))
 
 
+@patch("bot.constants.Channels.incidents", 123)
+class TestOnRawReactionAdd(TestIncidents):
+    """
+    Tests for the `Incidents.on_raw_reaction_add` listener.
+
+    Writing tests for this listener comes with additional complexity due to the listener
+    awaiting the `crawl_task` task. See `asyncSetUp` for further details, which attempts
+    to make unit testing this function possible.
+    """
+
+    def setUp(self):
+        """
+        Prepare & assign `payload` attribute.
+
+        This attribute represents an *ideal* payload which will not be rejected by the
+        listener. As each test will receive a fresh instance, it can be mutated to
+        observe how the listener's behaviour changes with different attributes on
+        the passed payload.
+        """
+        super().setUp()  # Ensure `cog_instance` is assigned
+
+        self.payload = MagicMock(
+            discord.RawReactionActionEvent,
+            channel_id=123,  # Patched at class level
+            message_id=456,
+            member=MockMember(bot=False),
+            emoji="reaction",
+        )
+
+    async def asyncSetUp(self):  # noqa: N802
+        """
+        Prepare an empty task and assign it as `crawl_task`.
+
+        It appears that the `unittest` framework does not provide anything for mocking
+        asyncio tasks. An `AsyncMock` instance can be called and then awaited, however,
+        it does not provide the `done` method or any other parts of the `asyncio.Task`
+        interface.
+
+        Although we do not need to make any assertions about the task itself while
+        testing the listener, the code will still await it and call the `done` method,
+        and so we must inject something that will not fail on either action.
+
+        Note that this is done in an `asyncSetUp`, which runs after `setUp`.
+        The justification is that creating an actual task requires the event
+        loop to be ready, which is not the case in the `setUp`.
+        """
+        mock_task = asyncio.create_task(AsyncMock()())  # Mock async func, then a coro
+        self.cog_instance.crawl_task = mock_task
+
+    async def test_on_raw_reaction_add_wrong_channel(self):
+        """
+        Events outside of #incidents will be ignored.
+
+        We check this by asserting that `resolve_message` was never queried.
+        """
+        self.payload.channel_id = 0
+        self.cog_instance.resolve_message = AsyncMock()
+
+        await self.cog_instance.on_raw_reaction_add(self.payload)
+        self.cog_instance.resolve_message.assert_not_called()
+
+    async def test_on_raw_reaction_add_user_is_bot(self):
+        """
+        Events dispatched by bot accounts will be ignored.
+
+        We check this by asserting that `resolve_message` was never queried.
+        """
+        self.payload.member = MockMember(bot=True)
+        self.cog_instance.resolve_message = AsyncMock()
+
+        await self.cog_instance.on_raw_reaction_add(self.payload)
+        self.cog_instance.resolve_message.assert_not_called()
+
+    async def test_on_raw_reaction_add_message_doesnt_exist(self):
+        """
+        Listener gracefully handles the case where `resolve_message` gives None.
+
+        We check this by asserting that `process_event` was never called.
+        """
+        self.cog_instance.process_event = AsyncMock()
+        self.cog_instance.resolve_message = AsyncMock(return_value=None)
+
+        await self.cog_instance.on_raw_reaction_add(self.payload)
+        self.cog_instance.process_event.assert_not_called()
+
+    async def test_on_raw_reaction_add_message_is_not_an_incident(self):
+        """
+        The event won't be processed if the related message is not an incident.
+
+        This is an edge-case that can happen if someone manually leaves a reaction
+        on a pinned message, or a comment.
+
+        We check this by asserting that `process_event` was never called.
+        """
+        self.cog_instance.process_event = AsyncMock()
+        self.cog_instance.resolve_message = AsyncMock(return_value=MockMessage())
+
+        with patch("bot.cogs.moderation.incidents.is_incident", MagicMock(return_value=False)):
+            await self.cog_instance.on_raw_reaction_add(self.payload)
+
+        self.cog_instance.process_event.assert_not_called()
+
+    async def test_on_raw_reaction_add_valid_event_is_processed(self):
+        """
+        If the reaction event is valid, it is passed to `process_event`.
+
+        This is the case when everything goes right:
+            * The reaction was placed in #incidents, and not by a bot
+            * The message was found successfully
+            * The message qualifies as an incident
+
+        Additionally, we check that all arguments were passed as expected.
+        """
+        incident = MockMessage(id=1)
+
+        self.cog_instance.process_event = AsyncMock()
+        self.cog_instance.resolve_message = AsyncMock(return_value=incident)
+
+        with patch("bot.cogs.moderation.incidents.is_incident", MagicMock(return_value=True)):
+            await self.cog_instance.on_raw_reaction_add(self.payload)
+
+        self.cog_instance.process_event.assert_called_with(
+            "reaction",  # Defined in `self.payload`
+            incident,
+            self.payload.member,
+        )
+
+
 class TestOnMessage(TestIncidents):
     """
     Tests for the `Incidents.on_message` listener.
