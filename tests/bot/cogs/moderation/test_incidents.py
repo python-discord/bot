@@ -209,6 +209,64 @@ class TestIncidents(unittest.IsolatedAsyncioTestCase):
         self.cog_instance = Incidents(MockBot())
 
 
+@patch("asyncio.sleep", AsyncMock())  # Prevent the coro from sleeping to speed up the test
+class TestCrawlIncidents(TestIncidents):
+    """
+    Tests for the `Incidents.crawl_incidents` coroutine.
+
+    Apart from `test_crawl_incidents_waits_until_cache_ready`, all tests in this class
+    will patch the return values of `is_incident` and `has_signal` and then observe
+    whether the `AsyncMock` for `add_signals` was awaited or not.
+
+    The `add_signals` mock is added by each test separately to ensure it is clean (has not
+    been awaited by another test yet). The mock can be reset, but this appears to be the
+    cleaner way.
+
+    For each test, we inject a mock channel with a history of 1 message only (see: `setUp`).
+    """
+
+    def setUp(self):
+        """For each test, ensure `bot.get_channel` returns a channel with 1 arbitrary message."""
+        super().setUp()  # First ensure we get `cog_instance` from parent
+
+        incidents_history = MagicMock(return_value=MockAsyncIterable([MockMessage()]))
+        self.cog_instance.bot.get_channel = MagicMock(return_value=MockTextChannel(history=incidents_history))
+
+    async def test_crawl_incidents_waits_until_cache_ready(self):
+        """
+        The coroutine will await the `wait_until_guild_available` event.
+
+        Since this task is schedule in the `__init__`, it is critical that it waits for the
+        cache to be ready, so that it can safely get the #incidents channel.
+        """
+        await self.cog_instance.crawl_incidents()
+        self.cog_instance.bot.wait_until_guild_available.assert_awaited()
+
+    @patch("bot.cogs.moderation.incidents.add_signals", AsyncMock())
+    @patch("bot.cogs.moderation.incidents.is_incident", MagicMock(return_value=False))  # Message doesn't qualify
+    @patch("bot.cogs.moderation.incidents.has_signals", MagicMock(return_value=False))
+    async def test_crawl_incidents_noop_if_is_not_incident(self):
+        """Signals are not added for a non-incident message."""
+        await self.cog_instance.crawl_incidents()
+        incidents.add_signals.assert_not_awaited()
+
+    @patch("bot.cogs.moderation.incidents.add_signals", AsyncMock())
+    @patch("bot.cogs.moderation.incidents.is_incident", MagicMock(return_value=True))  # Message qualifies
+    @patch("bot.cogs.moderation.incidents.has_signals", MagicMock(return_value=True))  # But already has signals
+    async def test_crawl_incidents_noop_if_message_already_has_signals(self):
+        """Signals are not added for messages which already have them."""
+        await self.cog_instance.crawl_incidents()
+        incidents.add_signals.assert_not_awaited()
+
+    @patch("bot.cogs.moderation.incidents.add_signals", AsyncMock())
+    @patch("bot.cogs.moderation.incidents.is_incident", MagicMock(return_value=True))  # Message qualifies
+    @patch("bot.cogs.moderation.incidents.has_signals", MagicMock(return_value=False))  # And doesn't have signals
+    async def test_crawl_incidents_add_signals_called(self):
+        """Message has signals added as it does not have them yet and qualifies as an incident."""
+        await self.cog_instance.crawl_incidents()
+        incidents.add_signals.assert_awaited_once()
+
+
 class TestArchive(TestIncidents):
     """Tests for the `Incidents.archive` coroutine."""
 
