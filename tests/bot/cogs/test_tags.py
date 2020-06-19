@@ -145,7 +145,7 @@ class TagsBaseTests(unittest.TestCase):
             {
                 "keywords": ",",
                 "check": all,
-                "expected": [cache["pep8"], cache["ytdl"]]
+                "expected": [cache["ytdl"], cache["pep8"]]
             }
         ]
 
@@ -325,7 +325,7 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
                     "tag": "clas",
                     "expected": {
                         "title": "Did you mean ...",
-                        "description": "class\nclassmethod",
+                        "description": "classmethod\nclass",
                         "type": "rich"
                     }
                 },
