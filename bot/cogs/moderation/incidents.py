@@ -64,10 +64,10 @@ async def add_signals(incident: discord.Message) -> None:
 
         # This will not raise, but it is a superfluous API call that can be avoided
         if signal_emoji.value in existing_reacts:
-            log.debug(f"Skipping emoji as it's already been placed: {signal_emoji}")
+            log.trace(f"Skipping emoji as it's already been placed: {signal_emoji}")
 
         else:
-            log.debug(f"Adding reaction: {signal_emoji}")
+            log.trace(f"Adding reaction: {signal_emoji}")
             await incident.add_reaction(signal_emoji.value)
 
 
@@ -132,11 +132,11 @@ class Incidents(Cog):
         async for message in incidents.history(limit=limit):
 
             if not is_incident(message):
-                log.debug("Skipping message: not an incident")
+                log.trace("Skipping message: not an incident")
                 continue
 
             if has_signals(message):
-                log.debug("Skipping message: already has all signals")
+                log.trace("Skipping message: already has all signals")
                 continue
 
             await add_signals(message)
@@ -179,7 +179,7 @@ class Incidents(Cog):
             return False
 
         else:
-            log.debug("Message archived successfully!")
+            log.trace("Message archived successfully!")
             return True
 
     def make_confirmation_task(self, incident: discord.Message, timeout: int = 5) -> asyncio.Task:
@@ -189,7 +189,7 @@ class Incidents(Cog):
         If `timeout` passes, this will raise `asyncio.TimeoutError`, signaling that we haven't
         been able to confirm that the message was deleted.
         """
-        log.debug(f"Confirmation task will wait {timeout=} seconds for {incident.id=} to be deleted")
+        log.trace(f"Confirmation task will wait {timeout=} seconds for {incident.id=} to be deleted")
 
         def check(payload: discord.RawReactionActionEvent) -> bool:
             return payload.message_id == incident.id
@@ -225,7 +225,7 @@ class Incidents(Cog):
 
         # If we reach this point, we know that `emoji` is a `Signal` member
         signal = Signal(reaction)
-        log.debug(f"Received signal: {signal}")
+        log.trace(f"Received signal: {signal}")
 
         if signal not in (Signal.ACTIONED, Signal.NOT_ACTIONED):
             log.debug("Reaction was valid, but no action is currently defined for it")
@@ -233,22 +233,22 @@ class Incidents(Cog):
 
         relay_successful = await self.archive(incident, signal)
         if not relay_successful:
-            log.debug("Original message will not be deleted as we failed to relay it to the archive")
+            log.trace("Original message will not be deleted as we failed to relay it to the archive")
             return
 
         timeout = 5  # Seconds
         confirmation_task = self.make_confirmation_task(incident, timeout)
 
-        log.debug("Deleting original message")
+        log.trace("Deleting original message")
         await incident.delete()
 
-        log.debug(f"Awaiting deletion confirmation: {timeout=} seconds")
+        log.trace(f"Awaiting deletion confirmation: {timeout=} seconds")
         try:
             await confirmation_task
         except asyncio.TimeoutError:
             log.warning(f"Did not receive incident deletion confirmation within {timeout} seconds!")
         else:
-            log.debug("Deletion was confirmed")
+            log.trace("Deletion was confirmed")
 
     async def resolve_message(self, message_id: int) -> t.Optional[discord.Message]:
         """
@@ -264,22 +264,22 @@ class Incidents(Cog):
         This signals that the event for `message_id` should be ignored.
         """
         await self.bot.wait_until_guild_available()  # First make sure that the cache is ready
-        log.debug(f"Resolving message for: {message_id=}")
+        log.trace(f"Resolving message for: {message_id=}")
         message: discord.Message = self.bot._connection._get_message(message_id)  # noqa: Private attribute
 
         if message is not None:
-            log.debug("Message was found in cache")
+            log.trace("Message was found in cache")
             return message
 
-        log.debug("Message not found, attempting to fetch")
+        log.trace("Message not found, attempting to fetch")
         try:
             message = await self.bot.get_channel(Channels.incidents).fetch_message(message_id)
         except discord.NotFound:
-            log.debug("Message doesn't exist, it was likely already relayed")
+            log.trace("Message doesn't exist, it was likely already relayed")
         except Exception as exc:
             log.exception("Failed to fetch message!", exc_info=exc)
         else:
-            log.debug("Message fetched successfully!")
+            log.trace("Message fetched successfully!")
             return message
 
     @Cog.listener()
@@ -309,10 +309,10 @@ class Incidents(Cog):
         if payload.channel_id != Channels.incidents or payload.member.bot:
             return
 
-        log.debug(f"Received reaction add event in #incidents, waiting for crawler: {self.crawl_task.done()=}")
+        log.trace(f"Received reaction add event in #incidents, waiting for crawler: {self.crawl_task.done()=}")
         await self.crawl_task
 
-        log.debug(f"Acquiring event lock: {self.event_lock.locked()=}")
+        log.trace(f"Acquiring event lock: {self.event_lock.locked()=}")
         async with self.event_lock:
             message = await self.resolve_message(payload.message_id)
 
@@ -325,7 +325,7 @@ class Incidents(Cog):
                 return
 
             await self.process_event(str(payload.emoji), message, payload.member)
-            log.debug("Releasing event lock")
+            log.trace("Releasing event lock")
 
     @Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
