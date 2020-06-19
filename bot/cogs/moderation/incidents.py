@@ -61,11 +61,8 @@ async def add_signals(incident: discord.Message) -> None:
     existing_reacts = own_reactions(incident)
 
     for signal_emoji in Signal:
-
-        # This will not raise, but it is a superfluous API call that can be avoided
-        if signal_emoji.value in existing_reacts:
+        if signal_emoji.value in existing_reacts:  # This would not raise, but it is a superfluous API call
             log.trace(f"Skipping emoji as it's already been placed: {signal_emoji}")
-
         else:
             log.trace(f"Adding reaction: {signal_emoji}")
             await incident.add_reaction(signal_emoji.value)
