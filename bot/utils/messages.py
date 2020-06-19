@@ -130,3 +130,5 @@ def sub_clyde(username: Optional[str]) -> Optional[str]:
 
     if username:
         return re.sub(r"(clyd)(e)", replace_e, username, flags=re.I)
+    else:
+        return username  # Empty string or None
