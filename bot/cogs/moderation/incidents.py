@@ -265,7 +265,7 @@ class Incidents(Cog):
         """
         await self.bot.wait_until_guild_available()  # First make sure that the cache is ready
         log.trace(f"Resolving message for: {message_id=}")
-        message: discord.Message = self.bot._connection._get_message(message_id)
+        message: t.Optional[discord.Message] = self.bot._connection._get_message(message_id)
 
         if message is not None:
             log.trace("Message was found in cache")
