@@ -1,6 +1,7 @@
 import asyncio
 import enum
 import logging
+import typing as t
 import unittest
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
@@ -18,6 +19,42 @@ from tests.helpers import (
     MockTextChannel,
     MockUser,
 )
+
+
+class MockAsyncIterable:
+    """
+    Helper for mocking asynchronous for loops.
+
+    It does not appear that the `unittest` library currently provides anything that would
+    allow us to simply mock an async iterator, such as `discord.TextChannel.history`.
+
+    We therefore write our own helper to wrap a regular synchronous iterable, and feed
+    its values via `__anext__` rather than `__next__`.
+
+    This class was written for the purposes of testing the `Incidents` cog - it may not
+    be generic enough to be placed in the `tests.helpers` module.
+    """
+
+    def __init__(self, messages: t.Iterable):
+        """Take a sync iterable to be wrapped."""
+        self.iter_messages = iter(messages)
+
+    def __aiter__(self):
+        """Return `self` as we provide the `__anext__` method."""
+        return self
+
+    async def __anext__(self):
+        """
+        Feed the next item, or raise `StopAsyncIteration`.
+
+        Since we're wrapping a sync iterator, it will communicate that it has been depleted
+        by raising a `StopIteration`. The `async for` construct does not expect it, and we
+        therefore need to substitute it for the appropriate exception type.
+        """
+        try:
+            return next(self.iter_messages)
+        except StopIteration:
+            raise StopAsyncIteration
 
 
 class MockSignal(enum.Enum):
