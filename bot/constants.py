@@ -226,6 +226,7 @@ class Filter(metaclass=YAMLGetter):
     notify_user_domains: bool
 
     ping_everyone: bool
+    offensive_msg_delete_days: int
     guild_invite_whitelist: List[int]
     domain_blacklist: List[str]
     word_watchlist: List[str]

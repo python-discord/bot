@@ -127,10 +127,20 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
             self.ctx.reset_mock()
 
     async def test_unsilence_sent_correct_discord_message(self):
-        """Proper reply after a successful unsilence."""
-        with mock.patch.object(self.cog, "_unsilence", return_value=True):
-            await self.cog.unsilence.callback(self.cog, self.ctx)
-            self.ctx.send.assert_called_once_with(f"{Emojis.check_mark} unsilenced current channel.")
+        """Check if proper message was sent when unsilencing channel."""
+        test_cases = (
+            (True, f"{Emojis.check_mark} unsilenced current channel."),
+            (False, f"{Emojis.cross_mark} current channel was not silenced.")
+        )
+        for _unsilence_patch_return, result_message in test_cases:
+            with self.subTest(
+                starting_silenced_state=_unsilence_patch_return,
+                result_message=result_message
+            ):
+                with mock.patch.object(self.cog, "_unsilence", return_value=_unsilence_patch_return):
+                    await self.cog.unsilence.callback(self.cog, self.ctx)
+                    self.ctx.send.assert_called_once_with(result_message)
+            self.ctx.reset_mock()
 
     async def test_silence_private_for_false(self):
         """Permissions are not set and `False` is returned in an already silenced channel."""
