@@ -18,15 +18,15 @@ class Scheduler:
         """Return True if a task with the given `task_id` is currently scheduled."""
         return task_id in self._scheduled_tasks
 
-    def schedule(self, task_id: t.Hashable, task: t.Awaitable) -> None:
-        """Schedule the execution of a task."""
+    def schedule(self, task_id: t.Hashable, coroutine: t.Coroutine) -> None:
+        """Schedule the execution of a coroutine."""
         self._log.trace(f"Scheduling task #{task_id}...")
 
         if task_id in self._scheduled_tasks:
             self._log.debug(f"Did not schedule task #{task_id}; task was already scheduled.")
             return
 
-        task = asyncio.create_task(task, name=f"{self.name}_{task_id}")
+        task = asyncio.create_task(coroutine, name=f"{self.name}_{task_id}")
         task.add_done_callback(partial(self._task_done_callback, task_id))
 
         self._scheduled_tasks[task_id] = task
