@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from contextlib import suppress
-from typing import NamedTuple, Optional
+from typing import Optional
 
 from discord import TextChannel
 from discord.ext import commands, tasks
@@ -14,13 +14,6 @@ from bot.utils.checks import with_role_check
 from bot.utils.scheduling import Scheduler
 
 log = logging.getLogger(__name__)
-
-
-class TaskData(NamedTuple):
-    """Data for a scheduled task."""
-
-    delay: int
-    ctx: Context
 
 
 class SilenceNotifier(tasks.Loop):
@@ -61,24 +54,16 @@ class SilenceNotifier(tasks.Loop):
             await self._alert_channel.send(f"<@&{Roles.moderators}> currently silenced channels: {channels_text}")
 
 
-class Silence(Scheduler, commands.Cog):
+class Silence(commands.Cog):
     """Commands for stopping channel messages for `verified` role in a channel."""
 
     def __init__(self, bot: Bot):
-        super().__init__()
         self.bot = bot
+        self.scheduler = Scheduler(self.__class__.__name__)
         self.muted_channels = set()
+
         self._get_instance_vars_task = self.bot.loop.create_task(self._get_instance_vars())
         self._get_instance_vars_event = asyncio.Event()
-
-    async def _scheduled_task(self, task: TaskData) -> None:
-        """Calls `self.unsilence` on expired silenced channel to unsilence it."""
-        await asyncio.sleep(task.delay)
-        log.info("Unsilencing channel after set delay.")
-
-        # Because `self.unsilence` explicitly cancels this scheduled task, it is shielded
-        # to avoid prematurely cancelling itself
-        await asyncio.shield(task.ctx.invoke(self.unsilence))
 
     async def _get_instance_vars(self) -> None:
         """Get instance variables after they're available to get from the guild."""
@@ -109,12 +94,7 @@ class Silence(Scheduler, commands.Cog):
 
         await ctx.send(f"{Emojis.check_mark} silenced current channel for {duration} minute(s).")
 
-        task_data = TaskData(
-            delay=duration*60,
-            ctx=ctx
-        )
-
-        self.schedule_task(ctx.channel.id, task_data)
+        self.scheduler.schedule_later(duration * 60, ctx.channel.id, ctx.invoke(self.unsilence))
 
     @commands.command(aliases=("unhush",))
     async def unsilence(self, ctx: Context) -> None:
@@ -164,7 +144,7 @@ class Silence(Scheduler, commands.Cog):
         if current_overwrite.send_messages is False:
             await channel.set_permissions(self._verified_role, **dict(current_overwrite, send_messages=None))
             log.info(f"Unsilenced channel #{channel} ({channel.id}).")
-            self.cancel_task(channel.id)
+            self.scheduler.cancel(channel.id)
             self.notifier.remove_channel(channel)
             self.muted_channels.discard(channel)
             return True
