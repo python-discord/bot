@@ -11,6 +11,14 @@ from bot.constants import Channels, Emojis, Roles, Webhooks
 
 log = logging.getLogger(__name__)
 
+# Amount of messages for `crawl_task` to process at most on start-up - limited to 50
+# as in practice, there should never be this many messages, and if there are,
+# something has likely gone very wrong
+CRAWL_LIMIT = 50
+
+# Seconds for `crawl_task` to sleep after adding reactions to a message
+CRAWL_SLEEP = 2
+
 
 class Signal(Enum):
     """
@@ -114,19 +122,14 @@ class Incidents(Cog):
 
         Once this task is scheduled, listeners that change messages should await it.
         The crawl assumes that the channel history doesn't change as we go over it.
+
+        Behaviour is configured by: `CRAWL_LIMIT`, `CRAWL_SLEEP`.
         """
         await self.bot.wait_until_guild_available()
         incidents: discord.TextChannel = self.bot.get_channel(Channels.incidents)
 
-        # Limit the query at 50 as in practice, there should never be this many messages,
-        # and if there are, something has likely gone very wrong
-        limit = 50
-
-        # Seconds to sleep after adding reactions to a message
-        sleep = 2
-
-        log.debug(f"Crawling messages in #incidents: {limit=}, {sleep=}")
-        async for message in incidents.history(limit=limit):
+        log.debug(f"Crawling messages in #incidents: {CRAWL_LIMIT=}, {CRAWL_SLEEP=}")
+        async for message in incidents.history(limit=CRAWL_LIMIT):
 
             if not is_incident(message):
                 log.trace(f"Skipping message {message.id}: not an incident")
@@ -137,7 +140,7 @@ class Incidents(Cog):
                 continue
 
             await add_signals(message)
-            await asyncio.sleep(sleep)
+            await asyncio.sleep(CRAWL_SLEEP)
 
         log.debug("Crawl task finished!")
 
