@@ -56,8 +56,7 @@ def own_reactions(message: discord.Message) -> t.Set[str]:
 
 def has_signals(message: discord.Message) -> bool:
     """True if `message` already has all `Signal` reactions, False otherwise."""
-    missing_signals = ALLOWED_EMOJI - own_reactions(message)  # In `ALLOWED_EMOJI` but not in `own_reactions(message)`
-    return not missing_signals
+    return ALLOWED_EMOJI.issubset(own_reactions(message))
 
 
 async def add_signals(incident: discord.Message) -> None:
