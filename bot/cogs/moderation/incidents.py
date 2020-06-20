@@ -8,6 +8,7 @@ from discord.ext.commands import Cog
 
 from bot.bot import Bot
 from bot.constants import Channels, Emojis, Roles, Webhooks
+from bot.utils.messages import sub_clyde
 
 log = logging.getLogger(__name__)
 
@@ -169,7 +170,7 @@ class Incidents(Cog):
             # Now relay the incident
             message: discord.Message = await webhook.send(
                 content=incident.clean_content,  # Clean content will prevent mentions from pinging
-                username=incident.author.name,
+                username=sub_clyde(incident.author.name),
                 avatar_url=incident.author.avatar_url,
                 wait=True,  # This makes the method return the sent Message object
             )
