@@ -171,8 +171,8 @@ class Incidents(Cog):
             # Finally add the `outcome` emoji
             await message.add_reaction(outcome.value)
 
-        except Exception as exc:
-            log.exception("Failed to archive incident to #incidents-archive", exc_info=exc)
+        except Exception:
+            log.exception("Failed to archive incident to #incidents-archive")
             return False
 
         else:
@@ -273,8 +273,8 @@ class Incidents(Cog):
             message = await self.bot.get_channel(Channels.incidents).fetch_message(message_id)
         except discord.NotFound:
             log.trace("Message doesn't exist, it was likely already relayed")
-        except Exception as exc:
-            log.exception("Failed to fetch message!", exc_info=exc)
+        except Exception:
+            log.exception("Failed to fetch message!")
         else:
             log.trace("Message fetched successfully!")
             return message
