@@ -39,17 +39,17 @@ class Scheduler:
         If `ignore_missing` is True, a warning will not be sent if a task isn't found.
         """
         self._log.trace(f"Cancelling task #{task_id}...")
-        task = self._scheduled_tasks.get(task_id)
 
-        if not task:
+        try:
+            task = self._scheduled_tasks.pop(task_id)
+        except KeyError:
             if not ignore_missing:
                 self._log.warning(f"Failed to unschedule {task_id} (no task found).")
-            return
+        else:
+            del self._scheduled_tasks[task_id]
+            task.cancel()
 
-        del self._scheduled_tasks[task_id]
-        task.cancel()
-
-        self._log.debug(f"Unscheduled task #{task_id} {id(task)}.")
+            self._log.debug(f"Unscheduled task #{task_id} {id(task)}.")
 
     def cancel_all(self) -> None:
         """Unschedule all known tasks."""
