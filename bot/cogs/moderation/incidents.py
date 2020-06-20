@@ -129,11 +129,11 @@ class Incidents(Cog):
         async for message in incidents.history(limit=limit):
 
             if not is_incident(message):
-                log.trace("Skipping message: not an incident")
+                log.trace(f"Skipping message {message.id}: not an incident")
                 continue
 
             if has_signals(message):
-                log.trace("Skipping message: already has all signals")
+                log.trace(f"Skipping message {message.id}: already has all signals")
                 continue
 
             await add_signals(message)
@@ -172,7 +172,7 @@ class Incidents(Cog):
             await message.add_reaction(outcome.value)
 
         except Exception:
-            log.exception("Failed to archive incident to #incidents-archive")
+            log.exception(f"Failed to archive incident {incident.id} to #incidents-archive")
             return False
 
         else:
@@ -274,7 +274,7 @@ class Incidents(Cog):
         except discord.NotFound:
             log.trace("Message doesn't exist, it was likely already relayed")
         except Exception:
-            log.exception("Failed to fetch message!")
+            log.exception(f"Failed to fetch message {message_id}!")
         else:
             log.trace("Message fetched successfully!")
             return message
