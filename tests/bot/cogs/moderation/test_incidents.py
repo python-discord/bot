@@ -131,17 +131,17 @@ class TestOwnReactions(unittest.TestCase):
         self.assertSetEqual(incidents.own_reactions(message), {"A", "B"})
 
 
-@patch("bot.cogs.moderation.incidents.ALLOWED_EMOJI", {"A", "B"})
+@patch("bot.cogs.moderation.incidents.ALL_SIGNALS", {"A", "B"})
 class TestHasSignals(unittest.TestCase):
     """
     Assertions for the `has_signals` function.
 
-    We patch `ALLOWED_EMOJI` globally. Each test function then patches `own_reactions`
+    We patch `ALL_SIGNALS` globally. Each test function then patches `own_reactions`
     as appropriate.
     """
 
     def test_has_signals_true(self):
-        """True when `own_reactions` returns all emoji in `ALLOWED_EMOJI`."""
+        """True when `own_reactions` returns all emoji in `ALL_SIGNALS`."""
         message = MockMessage()
         own_reactions = MagicMock(return_value={"A", "B"})
 
@@ -149,7 +149,7 @@ class TestHasSignals(unittest.TestCase):
             self.assertTrue(incidents.has_signals(message))
 
     def test_has_signals_false(self):
-        """False when `own_reactions` does not return all emoji in `ALLOWED_EMOJI`."""
+        """False when `own_reactions` does not return all emoji in `ALL_SIGNALS`."""
         message = MockMessage()
         own_reactions = MagicMock(return_value={"A", "C"})
 
