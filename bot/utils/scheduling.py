@@ -22,7 +22,7 @@ class Scheduler:
             self._log.debug(f"Did not schedule task #{task_id}; task was already scheduled.")
             return
 
-        task = asyncio.create_task(task)
+        task = asyncio.create_task(task, name=f"{self.name}_{task_id}")
         task.add_done_callback(partial(self._task_done_callback, task_id))
 
         self._scheduled_tasks[task_id] = task
