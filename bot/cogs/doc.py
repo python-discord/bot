@@ -6,7 +6,7 @@ import textwrap
 from collections import OrderedDict
 from contextlib import suppress
 from types import SimpleNamespace
-from typing import Any, Callable, List, Optional, Tuple, Union
+from typing import Any, Callable, List, NamedTuple, Optional, Tuple, Union
 from urllib.parse import urljoin
 
 import discord
@@ -65,6 +65,13 @@ WHITESPACE_AFTER_NEWLINES_RE = re.compile(r"(?<=\n\n)(\s+)")
 
 FAILED_REQUEST_RETRY_AMOUNT = 3
 NOT_FOUND_DELETE_DELAY = RedirectOutput.delete_delay
+
+
+class DocItem(NamedTuple):
+    """Holds inventory symbol information."""
+
+    url: str
+    group: str
 
 
 def async_cache(max_size: int = 128, arg_offset: int = 0) -> Callable:
@@ -194,10 +201,10 @@ class Doc(commands.Cog):
                 if "/" in symbol:
                     continue  # skip unreachable symbols with slashes
                 absolute_doc_url = base_url + relative_doc_url
+                group_name = group.split(":")[1]
 
                 if symbol in self.inventories:
-                    group_name = group.split(":")[1]
-                    symbol_base_url = self.inventories[symbol].split("/", 3)[2]
+                    symbol_base_url = self.inventories[symbol].url.split("/", 3)[2]
                     if (
                         group_name in NO_OVERRIDE_GROUPS
                         or any(package in symbol_base_url for package in NO_OVERRIDE_PACKAGES)
@@ -209,11 +216,11 @@ class Doc(commands.Cog):
                             # Split `package_name` because of packages like Pillow that have spaces in them.
                             symbol = f"{package_name.split()[0]}.{symbol}"
 
-                        self.inventories[symbol] = absolute_doc_url
+                        self.inventories[symbol] = DocItem(absolute_doc_url, group_name)
                         self.renamed_symbols.add(symbol)
                         continue
 
-                self.inventories[symbol] = absolute_doc_url
+                self.inventories[symbol] = DocItem(absolute_doc_url, group_name)
 
         log.trace(f"Fetched inventory for {package_name}.")
 
@@ -248,15 +255,15 @@ class Doc(commands.Cog):
         If the given symbol is a module, returns a tuple `(None, str)`
         else if the symbol could not be found, returns `None`.
         """
-        url = self.inventories.get(symbol)
-        if url is None:
+        symbol_info = self.inventories.get(symbol)
+        if symbol_info is None:
             return None
 
-        async with self.bot.http_session.get(url) as response:
+        async with self.bot.http_session.get(symbol_info.url) as response:
             html = await response.text(encoding='utf-8')
 
         # Find the signature header and parse the relevant parts.
-        symbol_id = url.split('#')[-1]
+        symbol_id = symbol_info.url.split('#')[-1]
         soup = BeautifulSoup(html, 'lxml')
         symbol_heading = soup.find(id=symbol_id)
         search_html = str(soup)
@@ -288,7 +295,7 @@ class Doc(commands.Cog):
             return None
 
         signatures = scraped_html[0]
-        permalink = self.inventories[symbol]
+        permalink = self.inventories[symbol].url
         description = markdownify(scraped_html[1], url=permalink)
 
         # Truncate the description of the embed to the last occurrence
