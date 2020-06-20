@@ -32,6 +32,10 @@ class Scheduler:
         self._scheduled_tasks[task_id] = task
         self._log.debug(f"Scheduled task #{task_id} {id(task)}.")
 
+    def schedule_later(self, delay: t.Union[int, float], task_id: t.Hashable, coroutine: t.Coroutine) -> None:
+        """Schedule `coroutine` to be executed after the given `delay` number of seconds."""
+        self.schedule(task_id, self._await_later(delay, coroutine))
+
     def cancel(self, task_id: t.Hashable) -> None:
         """Unschedule the task identified by `task_id`. Log a warning if the task doesn't exist."""
         self._log.trace(f"Cancelling task #{task_id}...")
@@ -52,6 +56,21 @@ class Scheduler:
 
         for task_id in self._scheduled_tasks.copy():
             self.cancel(task_id)
+
+    async def _await_later(self, delay: t.Union[int, float], coroutine: t.Coroutine) -> None:
+        """Await `coroutine` after the given `delay` number of seconds."""
+        try:
+            self._log.trace(f"Waiting {delay} seconds before awaiting the coroutine.")
+            await asyncio.sleep(delay)
+
+            # Use asyncio.shield to prevent the coroutine from cancelling itself.
+            self._log.trace("Done waiting; now awaiting the coroutine.")
+            await asyncio.shield(coroutine)
+        finally:
+            # Close it to prevent unawaited coroutine warnings,
+            # which would happen if the task was cancelled during the sleep.
+            self._log.trace("Explicitly closing the coroutine.")
+            coroutine.close()
 
     def _task_done_callback(self, task_id: t.Hashable, done_task: asyncio.Task) -> None:
         """
