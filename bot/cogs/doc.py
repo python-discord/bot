@@ -361,7 +361,7 @@ class Doc(commands.Cog):
         signatures = []
         description_element = heading.find_next_sibling("dd")
         description_pos = html.find(str(description_element))
-        description = "".join(cls.find_all_text_until_tag(description_element, ("dt",)))
+        description = cls.find_all_text_until_tag(description_element, ("dt",))
 
         for element in (
             *reversed(heading.find_previous_siblings("dt", limit=2)),
