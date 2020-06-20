@@ -11,7 +11,7 @@ from urllib.parse import urljoin
 
 import discord
 from bs4 import BeautifulSoup
-from bs4.element import PageElement, Tag
+from bs4.element import NavigableString, PageElement, Tag
 from discord.errors import NotFound
 from discord.ext import commands
 from markdownify import MarkdownConverter
@@ -377,7 +377,9 @@ class Doc(commands.Cog):
             tag_filter: Union[Tuple[str], Callable[[Tag], bool]]
     ) -> Optional[str]:
         """
-        Get all text from <p> elements until a tag matching `tag_filter` is found, max 1000 elements searched.
+        Get all text from <p> elements and strings until a tag matching `tag_filter` is found.
+
+        Max 1000 elements are searched to avoid going through whole pages when no matching tag is found.
 
         `tag_filter` can be either a tuple of string names to check against,
         or a filtering callable that's applied to the tags.
@@ -389,7 +391,11 @@ class Doc(commands.Cog):
             if element is None:
                 break
 
-            element = element.find_next()
+            element = element.next
+            while isinstance(element, NavigableString):
+                text += element
+                element = element.next
+
             if element.name == "p":
                 text += str(element)
 
