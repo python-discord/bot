@@ -18,7 +18,7 @@ class Scheduler:
         """Return True if a task with the given `task_id` is currently scheduled."""
         return task_id in self._scheduled_tasks
 
-    def schedule_task(self, task_id: t.Hashable, task: t.Awaitable) -> None:
+    def schedule(self, task_id: t.Hashable, task: t.Awaitable) -> None:
         """Schedule the execution of a task."""
         self._log.trace(f"Scheduling task #{task_id}...")
 
@@ -32,7 +32,7 @@ class Scheduler:
         self._scheduled_tasks[task_id] = task
         self._log.debug(f"Scheduled task #{task_id} {id(task)}.")
 
-    def cancel_task(self, task_id: t.Hashable) -> None:
+    def cancel(self, task_id: t.Hashable) -> None:
         """Unschedule the task identified by `task_id`. Log a warning if the task doesn't exist."""
         self._log.trace(f"Cancelling task #{task_id}...")
 
@@ -51,7 +51,7 @@ class Scheduler:
         self._log.debug("Unscheduling all tasks")
 
         for task_id in self._scheduled_tasks.copy():
-            self.cancel_task(task_id)
+            self.cancel(task_id)
 
     def _task_done_callback(self, task_id: t.Hashable, done_task: asyncio.Task) -> None:
         """
