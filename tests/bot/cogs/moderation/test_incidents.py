@@ -360,7 +360,6 @@ class TestMakeConfirmationTask(TestIncidents):
 class TestProcessEvent(TestIncidents):
     """Tests for the `Incidents.process_event` coroutine."""
 
-    @patch("bot.cogs.moderation.incidents.ALLOWED_ROLES", {1, 2})
     async def test_process_event_bad_role(self):
         """The reaction is removed when the author lacks all allowed roles."""
         incident = MockMessage()
