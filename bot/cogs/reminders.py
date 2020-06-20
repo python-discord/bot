@@ -17,7 +17,7 @@ from bot.converters import Duration
 from bot.pagination import LinePaginator
 from bot.utils.checks import without_role_check
 from bot.utils.scheduling import Scheduler
-from bot.utils.time import humanize_delta, wait_until
+from bot.utils.time import humanize_delta
 
 log = logging.getLogger(__name__)
 
@@ -25,12 +25,12 @@ WHITELISTED_CHANNELS = Guild.reminder_whitelist
 MAXIMUM_REMINDERS = 5
 
 
-class Reminders(Scheduler, Cog):
+class Reminders(Cog):
     """Provide in-channel reminder functionality."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        super().__init__()
+        self.scheduler = Scheduler(self.__class__.__name__)
 
         self.bot.loop.create_task(self.reschedule_reminders())
 
@@ -56,7 +56,7 @@ class Reminders(Scheduler, Cog):
                 late = relativedelta(now, remind_at)
                 await self.send_reminder(reminder, late)
             else:
-                self.schedule_task(reminder["id"], reminder)
+                self.schedule_reminder(reminder)
 
     def ensure_valid_reminder(
         self,
@@ -99,17 +99,18 @@ class Reminders(Scheduler, Cog):
 
         await ctx.send(embed=embed)
 
-    async def _scheduled_task(self, reminder: dict) -> None:
+    def schedule_reminder(self, reminder: dict) -> None:
         """A coroutine which sends the reminder once the time is reached, and cancels the running task."""
         reminder_id = reminder["id"]
         reminder_datetime = isoparse(reminder['expiration']).replace(tzinfo=None)
 
-        # Send the reminder message once the desired duration has passed
-        await wait_until(reminder_datetime)
-        await self.send_reminder(reminder)
+        async def _remind() -> None:
+            await self.send_reminder(reminder)
 
-        log.debug(f"Deleting reminder {reminder_id} (the user has been reminded).")
-        await self._delete_reminder(reminder_id)
+            log.debug(f"Deleting reminder {reminder_id} (the user has been reminded).")
+            await self._delete_reminder(reminder_id)
+
+        self.scheduler.schedule_at(reminder_datetime, reminder_id, _remind())
 
     async def _delete_reminder(self, reminder_id: str, cancel_task: bool = True) -> None:
         """Delete a reminder from the database, given its ID, and cancel the running task."""
@@ -117,15 +118,15 @@ class Reminders(Scheduler, Cog):
 
         if cancel_task:
             # Now we can remove it from the schedule list
-            self.cancel_task(reminder_id)
+            self.scheduler.cancel(reminder_id)
 
     async def _reschedule_reminder(self, reminder: dict) -> None:
         """Reschedule a reminder object."""
         log.trace(f"Cancelling old task #{reminder['id']}")
-        self.cancel_task(reminder["id"])
+        self.scheduler.cancel(reminder["id"])
 
         log.trace(f"Scheduling new task #{reminder['id']}")
-        self.schedule_task(reminder["id"], reminder)
+        self.schedule_reminder(reminder)
 
     async def send_reminder(self, reminder: dict, late: relativedelta = None) -> None:
         """Send the reminder."""
@@ -223,7 +224,7 @@ class Reminders(Scheduler, Cog):
             delivery_dt=expiration,
         )
 
-        self.schedule_task(reminder["id"], reminder)
+        self.schedule_reminder(reminder)
 
     @remind_group.command(name="list")
     async def list_reminders(self, ctx: Context) -> t.Optional[discord.Message]:
