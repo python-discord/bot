@@ -2,7 +2,7 @@ import asyncio
 import logging
 import socket
 import warnings
-from typing import Optional
+from typing import List, Optional
 
 import aiohttp
 import aioredis
@@ -49,6 +49,9 @@ class Bot(commands.Bot):
 
         self.stats = AsyncStatsClient(self.loop, statsd_url, 8125, prefix="bot")
 
+        # All tasks that need to block closing until finished
+        self.closing_tasks: List[asyncio.Task] = []
+
     async def _create_redis_session(self) -> None:
         """
         Create the Redis connection pool, and then open the redis event gate.
@@ -89,9 +92,32 @@ class Bot(commands.Bot):
         self._recreate()
         super().clear()
 
+    def remove_extensions(self) -> None:
+        """Remove all extensions and Cog to close bot. Copy from discord.py's own `close` for right closing order."""
+        for extension in tuple(self.extensions):
+            try:
+                self.unload_extension(extension)
+            except Exception:
+                pass
+
+        for cog in tuple(self.cogs):
+            try:
+                self.remove_cog(cog)
+            except Exception:
+                pass
+
     async def close(self) -> None:
         """Close the Discord connection and the aiohttp session, connector, statsd client, and resolver."""
-        await super().close()
+        # Remove extensions and cogs before calling super().close() to allow task finish before HTTP session close
+        self.remove_extensions()
+
+        # Wait until all tasks that have to be completed before bot is closing is done
+        for task in self.closing_tasks:
+            log.trace(f"Waiting for task {task.get_name()} before closing.")
+            await task
+
+        # Now actually do full close of bot
+        await super(commands.Bot, self).close()
 
         await self.api_client.close()
 
