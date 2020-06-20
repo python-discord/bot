@@ -19,7 +19,6 @@ from bot.constants import (
 )
 from bot.utils.redis_cache import RedisCache
 from bot.utils.scheduling import Scheduler
-from bot.utils.time import wait_until
 
 log = logging.getLogger(__name__)
 
@@ -60,7 +59,7 @@ def expand_spoilers(text: str) -> str:
 OFFENSIVE_MSG_DELETE_TIME = timedelta(days=Filter.offensive_msg_delete_days)
 
 
-class Filtering(Cog, Scheduler):
+class Filtering(Cog):
     """Filtering out invites, blacklisting domains, and warning us of certain regular expressions."""
 
     # Redis cache mapping a user ID to the last timestamp a bad nickname alert was sent
@@ -68,8 +67,7 @@ class Filtering(Cog, Scheduler):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        super().__init__()
-
+        self.scheduler = Scheduler(self.__class__.__name__)
         self.name_lock = asyncio.Lock()
 
         staff_mistake_str = "If you believe this was a mistake, please let staff know!"
@@ -268,7 +266,7 @@ class Filtering(Cog, Scheduler):
                             }
 
                             await self.bot.api_client.post('bot/offensive-messages', json=data)
-                            self.schedule_task(msg.id, data)
+                            self.schedule_msg_delete(data)
                             log.trace(f"Offensive message {msg.id} will be deleted on {delete_date}")
 
                         if is_private:
@@ -457,12 +455,10 @@ class Filtering(Cog, Scheduler):
         except discord.errors.Forbidden:
             await channel.send(f"{filtered_member.mention} {reason}")
 
-    async def _scheduled_task(self, msg: dict) -> None:
+    def schedule_msg_delete(self, msg: dict) -> None:
         """Delete an offensive message once its deletion date is reached."""
         delete_at = dateutil.parser.isoparse(msg['delete_date']).replace(tzinfo=None)
-
-        await wait_until(delete_at)
-        await self.delete_offensive_msg(msg)
+        self.scheduler.schedule_at(delete_at, msg['id'], self.delete_offensive_msg(msg))
 
     async def reschedule_offensive_msg_deletion(self) -> None:
         """Get all the pending message deletion from the API and reschedule them."""
@@ -477,7 +473,7 @@ class Filtering(Cog, Scheduler):
             if delete_at < now:
                 await self.delete_offensive_msg(msg)
             else:
-                self.schedule_task(msg['id'], msg)
+                self.schedule_msg_delete(msg)
 
     async def delete_offensive_msg(self, msg: Mapping[str, str]) -> None:
         """Delete an offensive message, and then delete it from the db."""
