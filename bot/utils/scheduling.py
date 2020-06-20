@@ -2,13 +2,10 @@ import asyncio
 import contextlib
 import logging
 import typing as t
-from abc import abstractmethod
 from functools import partial
 
-from bot.utils import CogABCMeta
 
-
-class Scheduler(metaclass=CogABCMeta):
+class Scheduler:
     """Task scheduler."""
 
     def __init__(self, name: str):
@@ -17,31 +14,15 @@ class Scheduler(metaclass=CogABCMeta):
         self._log = logging.getLogger(f"{__name__}.{name}")
         self._scheduled_tasks: t.Dict[t.Hashable, asyncio.Task] = {}
 
-    @abstractmethod
-    async def _scheduled_task(self, task_object: t.Any) -> None:
-        """
-        A coroutine which handles the scheduling.
-
-        This is added to the scheduled tasks, and should wait the task duration, execute the desired
-        code, then clean up the task.
-
-        For example, in Reminders this will wait for the reminder duration, send the reminder,
-        then make a site API request to delete the reminder from the database.
-        """
-
-    def schedule_task(self, task_id: t.Hashable, task_data: t.Any) -> None:
-        """
-        Schedules a task.
-
-        `task_data` is passed to the `Scheduler._scheduled_task()` coroutine.
-        """
+    def schedule_task(self, task_id: t.Hashable, task: t.Awaitable) -> None:
+        """Schedule the execution of a task."""
         self._log.trace(f"Scheduling task #{task_id}...")
 
         if task_id in self._scheduled_tasks:
             self._log.debug(f"Did not schedule task #{task_id}; task was already scheduled.")
             return
 
-        task = asyncio.create_task(self._scheduled_task(task_data))
+        task = asyncio.create_task(task)
         task.add_done_callback(partial(self._task_done_callback, task_id))
 
         self._scheduled_tasks[task_id] = task
