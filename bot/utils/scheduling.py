@@ -32,19 +32,14 @@ class Scheduler:
         self._scheduled_tasks[task_id] = task
         self._log.debug(f"Scheduled task #{task_id} {id(task)}.")
 
-    def cancel_task(self, task_id: t.Hashable, ignore_missing: bool = False) -> None:
-        """
-        Unschedule the task identified by `task_id`.
-
-        If `ignore_missing` is True, a warning will not be sent if a task isn't found.
-        """
+    def cancel_task(self, task_id: t.Hashable) -> None:
+        """Unschedule the task identified by `task_id`. Log a warning if the task doesn't exist."""
         self._log.trace(f"Cancelling task #{task_id}...")
 
         try:
             task = self._scheduled_tasks.pop(task_id)
         except KeyError:
-            if not ignore_missing:
-                self._log.warning(f"Failed to unschedule {task_id} (no task found).")
+            self._log.warning(f"Failed to unschedule {task_id} (no task found).")
         else:
             del self._scheduled_tasks[task_id]
             task.cancel()
@@ -56,7 +51,7 @@ class Scheduler:
         self._log.debug("Unscheduling all tasks")
 
         for task_id in self._scheduled_tasks.copy():
-            self.cancel_task(task_id, ignore_missing=True)
+            self.cancel_task(task_id)
 
     def _task_done_callback(self, task_id: t.Hashable, done_task: asyncio.Task) -> None:
         """
@@ -70,7 +65,7 @@ class Scheduler:
         scheduled_task = self._scheduled_tasks.get(task_id)
 
         if scheduled_task and done_task is scheduled_task:
-            # A task for the ID exists and its the same as the done task.
+            # A task for the ID exists and is the same as the done task.
             # Since this is the done callback, the task is already done so no need to cancel it.
             self._log.trace(f"Deleting task #{task_id} {id(done_task)}.")
             del self._scheduled_tasks[task_id]
