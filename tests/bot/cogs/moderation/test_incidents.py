@@ -319,6 +319,25 @@ class TestArchive(TestIncidents):
         # Finally check that the method returned True
         self.assertTrue(archive_return)
 
+    async def test_archive_clyde_username(self):
+        """
+        The archive webhook username is cleansed using `sub_clyde`.
+
+        Discord will reject any webhook with "clyde" in the username field, as it impersonates
+        the official Clyde bot. Since we do not control what the username will be (the incident
+        author name is used), we must ensure the name is cleansed, otherwise the relay may fail.
+
+        This test assumes the username is passed as a kwarg. If this test fails, please review
+        whether the passed argument is being retrieved correctly.
+        """
+        webhook = MockAsyncWebhook()
+        self.cog_instance.bot.fetch_webhook = AsyncMock(return_value=webhook)
+
+        message_from_clyde = MockMessage(author=MockUser(name="clyde the great"))
+        await self.cog_instance.archive(message_from_clyde, MagicMock(incidents.Signal))
+
+        self.assertNotIn("clyde", webhook.send.call_args.kwargs["username"])
+
 
 class TestMakeConfirmationTask(TestIncidents):
     """
