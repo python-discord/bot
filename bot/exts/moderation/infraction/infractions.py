@@ -257,10 +257,13 @@ class Infractions(InfractionScheduler, commands.Cog):
         self.mod_log.ignore(Event.member_update, user.id)
 
         async def action() -> None:
-            await user.add_roles(self._muted_role, reason=reason)
-
-            log.trace(f"Attempting to kick {user} from voice because they've been muted.")
-            await user.move_to(None, reason=reason)
+            try:
+                await user.add_roles(self._muted_role, reason=reason)
+            except discord.NotFound:
+                log.info(f"User {user} ({user.id}) left from guild. Can't give Muted role.")
+            else:
+                log.trace(f"Attempting to kick {user} from voice because they've been muted.")
+                await user.move_to(None, reason=reason)
 
         await self.apply_infraction(ctx, infraction, user, action())
 

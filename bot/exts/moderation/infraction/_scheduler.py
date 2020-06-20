@@ -74,8 +74,13 @@ class InfractionScheduler:
             return
 
         # Allowing mod log since this is a passive action that should be logged.
-        await apply_coro
-        log.info(f"Re-applied {infraction['type']} to user {infraction['user']} upon rejoining.")
+        try:
+            await apply_coro
+        except discord.NotFound:
+            # When user joined and then right after this left again before action completed, this can't add roles
+            log.info(f"Can't reapply {infraction['type']} to user {infraction['user']} because user left again.")
+        else:
+            log.info(f"Re-applied {infraction['type']} to user {infraction['user']} upon rejoining.")
 
     async def apply_infraction(
         self,
