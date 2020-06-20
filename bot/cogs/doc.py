@@ -363,7 +363,11 @@ class Doc(commands.Cog):
         description_pos = html.find(str(description_element))
         description = "".join(cls.find_all_text_until_tag(description_element, ("dt",)))
 
-        for element in [heading] + heading.find_next_siblings("dt", limit=2):
+        for element in (
+            *reversed(heading.find_previous_siblings("dt", limit=2)),
+            heading,
+            *heading.find_next_siblings("dt", limit=2),
+        )[-3:]:
             signature = UNWANTED_SIGNATURE_SYMBOLS_RE.sub("", element.text)
 
             if signature and html.find(str(element)) < description_pos:
