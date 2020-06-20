@@ -2,6 +2,7 @@ import asyncio
 import contextlib
 import logging
 import typing as t
+from datetime import datetime
 from functools import partial
 
 
@@ -31,6 +32,18 @@ class Scheduler:
 
         self._scheduled_tasks[task_id] = task
         self._log.debug(f"Scheduled task #{task_id} {id(task)}.")
+
+    def schedule_at(self, time: datetime, task_id: t.Hashable, coroutine: t.Coroutine) -> None:
+        """
+        Schedule `coroutine` to be executed at the given naïve UTC `time`.
+
+        If `time` is in the past, schedule `coroutine` immediately.
+        """
+        delay = (time - datetime.utcnow()).total_seconds()
+        if delay > 0:
+            coroutine = self._await_later(delay, coroutine)
+
+        self.schedule(task_id, coroutine)
 
     def schedule_later(self, delay: t.Union[int, float], task_id: t.Hashable, coroutine: t.Coroutine) -> None:
         """Schedule `coroutine` to be executed after the given `delay` number of seconds."""
