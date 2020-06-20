@@ -2,8 +2,7 @@ import asyncio
 import logging
 import socket
 import warnings
-from collections import defaultdict
-from typing import Dict, Optional
+from typing import List, Optional
 
 import aiohttp
 import discord
@@ -51,11 +50,17 @@ class Bot(commands.Bot):
         self.stats = AsyncStatsClient(self.loop, LOCALHOST)
         self._connect_statsd(statsd_url)
 
-    def _connect_statsd(self, statsd_url: str, retry_after: int = 2, attempt: int = 1) -> None:
-        """Callback used to retry a connection to statsd if it should fail."""
-        if attempt >= 8:
-            log.error("Reached 8 attempts trying to reconnect AsyncStatsClient. Aborting")
-            return
+        # All tasks that need to block closing until finished
+        self.closing_tasks: List[asyncio.Task] = []
+
+    async def _create_redis_session(self) -> None:
+        """
+        Create the Redis connection pool, and then open the redis event gate.
+
+        If constants.Redis.use_fakeredis is True, we'll set up a fake redis pool instead
+        of attempting to communicate with a real Redis server. This is useful because it
+        means contributors don't necessarily need to get Redis running locally just
+        to run the bot.
 
         try:
             self.stats = AsyncStatsClient(self.loop, statsd_url, 8125, prefix="bot")
@@ -143,9 +148,32 @@ class Bot(commands.Bot):
         """Not implemented! Re-instantiate the bot instead of attempting to re-use a closed one."""
         raise NotImplementedError("Re-using a Bot object after closing it is not supported.")
 
+    def remove_extensions(self) -> None:
+        """Remove all extensions and Cog to close bot. Copy from discord.py's own `close` for right closing order."""
+        for extension in tuple(self.extensions):
+            try:
+                self.unload_extension(extension)
+            except Exception:
+                pass
+
+        for cog in tuple(self.cogs):
+            try:
+                self.remove_cog(cog)
+            except Exception:
+                pass
+
     async def close(self) -> None:
         """Close the Discord connection and the aiohttp session, connector, statsd client, and resolver."""
-        await super().close()
+        # Remove extensions and cogs before calling super().close() to allow task finish before HTTP session close
+        self.remove_extensions()
+
+        # Wait until all tasks that have to be completed before bot is closing is done
+        for task in self.closing_tasks:
+            log.trace(f"Waiting for task {task.get_name()} before closing.")
+            await task
+
+        # Now actually do full close of bot
+        await super(commands.Bot, self).close()
 
         if self.api_client:
             await self.api_client.close()
