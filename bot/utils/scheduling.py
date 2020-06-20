@@ -7,16 +7,14 @@ from functools import partial
 
 from bot.utils import CogABCMeta
 
-log = logging.getLogger(__name__)
-
 
 class Scheduler(metaclass=CogABCMeta):
     """Task scheduler."""
 
-    def __init__(self):
-        # Keep track of the child cog's name so the logs are clear.
-        self.cog_name = self.__class__.__name__
+    def __init__(self, name: str):
+        self.name = name
 
+        self._log = logging.getLogger(f"{__name__}.{name}")
         self._scheduled_tasks: t.Dict[t.Hashable, asyncio.Task] = {}
 
     @abstractmethod
@@ -37,19 +35,17 @@ class Scheduler(metaclass=CogABCMeta):
 
         `task_data` is passed to the `Scheduler._scheduled_task()` coroutine.
         """
-        log.trace(f"{self.cog_name}: scheduling task #{task_id}...")
+        self._log.trace(f"Scheduling task #{task_id}...")
 
         if task_id in self._scheduled_tasks:
-            log.debug(
-                f"{self.cog_name}: did not schedule task #{task_id}; task was already scheduled."
-            )
+            self._log.debug(f"Did not schedule task #{task_id}; task was already scheduled.")
             return
 
         task = asyncio.create_task(self._scheduled_task(task_data))
         task.add_done_callback(partial(self._task_done_callback, task_id))
 
         self._scheduled_tasks[task_id] = task
-        log.debug(f"{self.cog_name}: scheduled task #{task_id} {id(task)}.")
+        self._log.debug(f"Scheduled task #{task_id} {id(task)}.")
 
     def cancel_task(self, task_id: t.Hashable, ignore_missing: bool = False) -> None:
         """
@@ -57,22 +53,22 @@ class Scheduler(metaclass=CogABCMeta):
 
         If `ignore_missing` is True, a warning will not be sent if a task isn't found.
         """
-        log.trace(f"{self.cog_name}: cancelling task #{task_id}...")
+        self._log.trace(f"Cancelling task #{task_id}...")
         task = self._scheduled_tasks.get(task_id)
 
         if not task:
             if not ignore_missing:
-                log.warning(f"{self.cog_name}: failed to unschedule {task_id} (no task found).")
+                self._log.warning(f"Failed to unschedule {task_id} (no task found).")
             return
 
         del self._scheduled_tasks[task_id]
         task.cancel()
 
-        log.debug(f"{self.cog_name}: unscheduled task #{task_id} {id(task)}.")
+        self._log.debug(f"Unscheduled task #{task_id} {id(task)}.")
 
     def cancel_all(self) -> None:
         """Unschedule all known tasks."""
-        log.debug(f"{self.cog_name}: unscheduling all tasks")
+        self._log.debug("Unscheduling all tasks")
 
         for task_id in self._scheduled_tasks.copy():
             self.cancel_task(task_id, ignore_missing=True)
@@ -84,24 +80,24 @@ class Scheduler(metaclass=CogABCMeta):
         If `done_task` and the task associated with `task_id` are different, then the latter
         will not be deleted. In this case, a new task was likely rescheduled with the same ID.
         """
-        log.trace(f"{self.cog_name}: performing done callback for task #{task_id} {id(done_task)}.")
+        self._log.trace(f"Performing done callback for task #{task_id} {id(done_task)}.")
 
         scheduled_task = self._scheduled_tasks.get(task_id)
 
         if scheduled_task and done_task is scheduled_task:
             # A task for the ID exists and its the same as the done task.
             # Since this is the done callback, the task is already done so no need to cancel it.
-            log.trace(f"{self.cog_name}: deleting task #{task_id} {id(done_task)}.")
+            self._log.trace(f"Deleting task #{task_id} {id(done_task)}.")
             del self._scheduled_tasks[task_id]
         elif scheduled_task:
             # A new task was likely rescheduled with the same ID.
-            log.debug(
-                f"{self.cog_name}: the scheduled task #{task_id} {id(scheduled_task)} "
+            self._log.debug(
+                f"The scheduled task #{task_id} {id(scheduled_task)} "
                 f"and the done task {id(done_task)} differ."
             )
         elif not done_task.cancelled():
-            log.warning(
-                f"{self.cog_name}: task #{task_id} not found while handling task {id(done_task)}! "
+            self._log.warning(
+                f"Task #{task_id} not found while handling task {id(done_task)}! "
                 f"A task somehow got unscheduled improperly (i.e. deleted but not cancelled)."
             )
 
@@ -109,7 +105,4 @@ class Scheduler(metaclass=CogABCMeta):
             exception = done_task.exception()
             # Log the exception if one exists.
             if exception:
-                log.error(
-                    f"{self.cog_name}: error in task #{task_id} {id(done_task)}!",
-                    exc_info=exception
-                )
+                self._log.error(f"Error in task #{task_id} {id(done_task)}!", exc_info=exception)
