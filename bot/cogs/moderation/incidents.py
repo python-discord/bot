@@ -41,6 +41,30 @@ ALLOWED_ROLES: t.Set[int] = {Roles.moderators, Roles.admins, Roles.owners}
 ALL_SIGNALS: t.Set[str] = {signal.value for signal in Signal}
 
 
+def make_username(reported_by: discord.Member, actioned_by: discord.Member, max_length: int = 80) -> str:
+    """
+    Create a webhook-friendly username from the names of `reported_by` and `actioned_by`.
+
+    If the resulting username length exceeds `max_length`, it will be capped at `max_length - 3`
+    and have 3 dots appended to the end. The default value is 80, which corresponds to the limit
+    Discord imposes on webhook username length.
+
+    If the value of `max_length` is < 3, ValueError is raised.
+    """
+    if max_length < 3:
+        raise ValueError(f"Maximum length cannot be less than 3: {max_length=}")
+
+    username = f"{reported_by.name} | {actioned_by.name}"
+    log.trace(f"Generated webhook username: {username} (length: {len(username)})")
+
+    if len(username) > max_length:
+        stop = max_length - 3
+        username = f"{username[:stop]}..."
+        log.trace(f"Username capped at {max_length=}: {username}")
+
+    return username
+
+
 def is_incident(message: discord.Message) -> bool:
     """True if `message` qualifies as an incident, False otherwise."""
     conditions = (

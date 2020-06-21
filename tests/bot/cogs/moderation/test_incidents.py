@@ -68,6 +68,35 @@ mock_404 = discord.NotFound(
 )
 
 
+class TestMakeUsername(unittest.TestCase):
+    """Collection of tests for the `make_username` helper function."""
+
+    def test_make_username_raises(self):
+        """Raises `ValueError` on `max_length` < 3."""
+        with self.assertRaises(ValueError):
+            incidents.make_username(MockMember(), MockMember(), max_length=2)
+
+    def test_make_username_never_exceed_limit(self):
+        """
+        The return string length is always less than or equal to `max_length`.
+
+        For this test we pass `max_length=10` for convenience. The name of the first
+        user (`reported_by`) is always 1 character in length, but we generate names
+        for the `actioned_by` user starting at length 1 and up to length 20.
+
+        Finally, we assert that the output length never exceeded 10 in total.
+        """
+        user_a = MockMember(name="A")
+
+        max_length = 10
+        test_cases = (MockMember(name="B" * n) for n in range(1, 20))
+
+        for user_b in test_cases:
+            with self.subTest(user_a=user_a, user_b=user_b, max_length=max_length):
+                generated_username = incidents.make_username(user_a, user_b, max_length)
+                self.assertLessEqual(len(generated_username), max_length)
+
+
 @patch("bot.constants.Channels.incidents", 123)
 class TestIsIncident(unittest.TestCase):
     """
