@@ -125,7 +125,7 @@ class DocMarkdownConverter(MarkdownConverter):
         return super().convert_a(el, text)
 
 
-def markdownify(html: str, *, url: str = "") -> DocMarkdownConverter:
+def markdownify(html: str, *, url: str = "") -> str:
     """Create a DocMarkdownConverter object from the input html."""
     return DocMarkdownConverter(bullets='•', page_url=url).convert(html)
 
