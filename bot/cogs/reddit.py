@@ -45,7 +45,6 @@ class Reddit(Cog):
         self.auto_poster_loop.cancel()
         if self.access_token and self.access_token.expires_at > datetime.utcnow():
             task = asyncio.create_task(self.revoke_access_token())
-            task.set_name("revoke_reddit_access_token")
             self.bot.closing_tasks.append(task)
 
     async def init_reddit_ready(self) -> None:
