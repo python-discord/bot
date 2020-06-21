@@ -176,7 +176,7 @@ class Silence(Scheduler, commands.Cog):
         if self.muted_channels:
             channels_string = ''.join(channel.mention for channel in self.muted_channels)
             message = f"<@&{Roles.moderators}> channels left silenced on cog unload: {channels_string}"
-            asyncio.create_task(self._mod_alerts_channel.send(message))
+            self.bot.closing_tasks.append(asyncio.create_task(self._mod_alerts_channel.send(message)))
 
     # This cannot be static (must have a __func__ attribute).
     def cog_check(self, ctx: Context) -> bool:
