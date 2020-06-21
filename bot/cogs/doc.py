@@ -458,6 +458,7 @@ class Doc(commands.Cog):
                 await ctx.send(embed=inventory_embed)
 
         else:
+            symbol = symbol.strip("`")
             # Fetching documentation for a symbol (at least for the first time, since
             # caching is used) takes quite some time, so let's send typing to indicate
             # that we got the command, but are still working on it.
