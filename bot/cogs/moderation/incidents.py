@@ -172,13 +172,14 @@ class Incidents(Cog):
 
         log.debug("Crawl task finished!")
 
-    async def archive(self, incident: discord.Message, outcome: Signal) -> bool:
+    async def archive(self, incident: discord.Message, outcome: Signal, actioned_by: discord.Member) -> bool:
         """
         Relay `incident` to the #incidents-archive channel.
 
         The following pieces of information are relayed:
             * Incident message content (clean, pingless)
-            * Incident author name (as webhook author)
+            * Incident author name (as webhook username)
+            * Name of user who actioned the incident (appended to webhook username)
             * Incident author avatar (as webhook avatar)
             * Resolution signal (`outcome`)
 
@@ -194,7 +195,7 @@ class Incidents(Cog):
             # Now relay the incident
             message: discord.Message = await webhook.send(
                 content=incident.clean_content,  # Clean content will prevent mentions from pinging
-                username=sub_clyde(incident.author.name),
+                username=sub_clyde(make_username(incident.author, actioned_by)),
                 avatar_url=incident.author.avatar_url,
                 wait=True,  # This makes the method return the sent Message object
             )
@@ -259,7 +260,7 @@ class Incidents(Cog):
             log.debug("Reaction was valid, but no action is currently defined for it")
             return
 
-        relay_successful = await self.archive(incident, signal)
+        relay_successful = await self.archive(incident, signal, actioned_by=member)
         if not relay_successful:
             log.trace("Original message will not be deleted as we failed to relay it to the archive")
             return
