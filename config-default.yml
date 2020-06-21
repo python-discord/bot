@@ -142,6 +142,7 @@ guild:
 
         # Python Help: Available
         how_to_get_help:    704250143020417084
+        cooldown:           720603994149486673
 
         # Logs
         attachment_log:     &ATTACH_LOG     649243850006855680
@@ -268,7 +269,8 @@ filter:
     notify_user_domains:     false
 
     # Filter configuration
-    ping_everyone: true  # Ping @everyone when we send a mod-alert?
+    ping_everyone:             true  # Ping @everyone when we send a mod-alert?
+    offensive_msg_delete_days: 7     # How many days before deleting an offensive message?
 
     guild_invite_whitelist:
         - 280033776820813825  # Functional Programming
@@ -297,6 +299,8 @@ filter:
         - 613425648685547541  # Discord Developers
         - 185590609631903755  # Blender Hub
         - 420324994703163402  # /r/FlutterDev
+        - 488751051629920277  # Python Atlanta
+        - 143867839282020352  # C#
 
     domain_blacklist:
         - pornhub.com
@@ -328,6 +332,7 @@ filter:
         - ssteam.site
         - steamwalletgift.com
         - discord.gift
+        - lmgtfy.com
 
     word_watchlist:
         - goo+ks*

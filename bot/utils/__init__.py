@@ -64,3 +64,8 @@ async def send_to_paste_service(http_session: ClientSession, contents: str, *, e
             f"Got unexpected JSON response from paste service: {response_json}\n"
             f"trying again ({attempt}/{FAILED_REQUEST_ATTEMPTS})."
         )
+
+
+def pad_base64(data: str) -> str:
+    """Return base64 `data` with padding characters to ensure its length is a multiple of 4."""
+    return data + "=" * (-len(data) % 4)

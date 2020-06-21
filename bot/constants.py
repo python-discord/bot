@@ -226,6 +226,7 @@ class Filter(metaclass=YAMLGetter):
     notify_user_domains: bool
 
     ping_everyone: bool
+    offensive_msg_delete_days: int
     guild_invite_whitelist: List[int]
     domain_blacklist: List[str]
     word_watchlist: List[str]
@@ -389,6 +390,7 @@ class Channels(metaclass=YAMLGetter):
     attachment_log: int
     big_brother_logs: int
     bot_commands: int
+    cooldown: int
     defcon: int
     dev_contrib: int
     dev_core: int

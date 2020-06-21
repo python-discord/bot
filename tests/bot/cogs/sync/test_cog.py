@@ -247,14 +247,12 @@ class SyncCogListenerTests(SyncCogTestCase):
         before_data = {
             "name": "old name",
             "discriminator": "1234",
-            "avatar": "old avatar",
             "bot": False,
         }
 
         subtests = (
             (True, "name", "name", "new name", "new name"),
             (True, "discriminator", "discriminator", "8765", 8765),
-            (True, "avatar", "avatar_hash", "9j2e9", "9j2e9"),
             (False, "bot", "bot", True, True),
         )
 
@@ -295,7 +293,6 @@ class SyncCogListenerTests(SyncCogTestCase):
         )
 
         data = {
-            "avatar_hash": member.avatar,
             "discriminator": int(member.discriminator),
             "id": member.id,
             "in_guild": True,

@@ -7,7 +7,7 @@ from discord.ext.commands import Cog
 
 from bot import constants
 from bot.bot import Bot
-from bot.utils.messages import send_attachments
+from bot.utils.messages import send_attachments, sub_clyde
 
 log = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ class DuckPond(Cog):
         try:
             await self.webhook.send(
                 content=content,
-                username=username,
+                username=sub_clyde(username),
                 avatar_url=avatar_url,
                 embed=embed
             )
