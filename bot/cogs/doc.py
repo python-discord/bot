@@ -209,16 +209,21 @@ class Doc(commands.Cog):
                         group_name in NO_OVERRIDE_GROUPS
                         or any(package in symbol_base_url for package in NO_OVERRIDE_PACKAGES)
                     ):
-
                         symbol = f"{group_name}.{symbol}"
-                        # If renamed `symbol` already exists, add library name in front to differentiate between them.
-                        if symbol in self.renamed_symbols:
-                            # Split `package_name` because of packages like Pillow that have spaces in them.
-                            symbol = f"{package_name.split()[0]}.{symbol}"
 
-                        self.inventories[symbol] = DocItem(absolute_doc_url, group_name)
+                    elif (overridden_symbol_group := self.inventories[symbol].group) in NO_OVERRIDE_GROUPS:
+                        overridden_symbol = f"{overridden_symbol_group}.{symbol}"
+                        if overridden_symbol in self.renamed_symbols:
+                            overridden_symbol = f"{package_name.split()[0]}.{overridden_symbol}"
+
+                        self.inventories[overridden_symbol] = self.inventories[symbol]
+                        self.renamed_symbols.add(overridden_symbol)
+
+                    # If renamed `symbol` already exists, add library name in front to differentiate between them.
+                    if symbol in self.renamed_symbols:
+                        # Split `package_name` because of packages like Pillow that have spaces in them.
+                        symbol = f"{package_name.split()[0]}.{symbol}"
                         self.renamed_symbols.add(symbol)
-                        continue
 
                 self.inventories[symbol] = DocItem(absolute_doc_url, group_name)
 
