@@ -279,7 +279,7 @@ class Doc(commands.Cog):
         if symbol_id == f"module-{symbol}":
             parsed_module = self.parse_module_symbol(symbol_heading)
             if parsed_module is None:
-                return None
+                return [], ""
             else:
                 signatures, description = parsed_module
 
@@ -538,14 +538,13 @@ class Doc(commands.Cog):
         old_inventories = set(self.base_urls)
         with ctx.typing():
             await self.refresh_inventory()
-        # Get differences of added and removed inventories
-        added = ', '.join(inv for inv in self.base_urls if inv not in old_inventories)
-        if added:
-            added = f"+ {added}"
+        new_inventories = set(self.base_urls)
 
-        removed = ', '.join(inv for inv in old_inventories if inv not in self.base_urls)
-        if removed:
-            removed = f"- {removed}"
+        if added := ", ".join(new_inventories - old_inventories):
+            added = "+ " + added
+
+        if removed := ", ".join(old_inventories - new_inventories):
+            removed = "- " + removed
 
         embed = discord.Embed(
             title="Inventories refreshed",
