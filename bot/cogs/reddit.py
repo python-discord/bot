@@ -44,8 +44,7 @@ class Reddit(Cog):
         """Stop the loop task and revoke the access token when the cog is unloaded."""
         self.auto_poster_loop.cancel()
         if self.access_token and self.access_token.expires_at > datetime.utcnow():
-            task = asyncio.create_task(self.revoke_access_token())
-            self.bot.closing_tasks.append(task)
+            self.bot.closing_tasks.append(asyncio.create_task(self.revoke_access_token()))
 
     async def init_reddit_ready(self) -> None:
         """Sets the reddit webhook when the cog is loaded."""
