@@ -47,6 +47,7 @@ EVAL_ROLES = (Roles.helpers, Roles.moderators, Roles.admins, Roles.owners, Roles
 SIGKILL = 9
 
 REEVAL_EMOJI = '\U0001f501'  # :repeat:
+REEVAL_TIMEOUT = 30
 
 
 class Snekbox(Cog):
@@ -205,6 +206,12 @@ class Snekbox(Cog):
             if paste_link:
                 msg = f"{msg}\nFull output: {paste_link}"
 
+            # Collect stats of eval fails + successes
+            if icon == ":x:":
+                self.bot.stats.incr("snekbox.python.fail")
+            else:
+                self.bot.stats.incr("snekbox.python.success")
+
             response = await ctx.send(msg)
             self.bot.loop.create_task(
                 wait_for_deletion(response, user_ids=(ctx.author.id,), client=ctx.bot)
@@ -227,7 +234,7 @@ class Snekbox(Cog):
                 _, new_message = await self.bot.wait_for(
                     'message_edit',
                     check=_predicate_eval_message_edit,
-                    timeout=10
+                    timeout=REEVAL_TIMEOUT
                 )
                 await ctx.message.add_reaction(REEVAL_EMOJI)
                 await self.bot.wait_for(
@@ -291,6 +298,18 @@ class Snekbox(Cog):
         if not code:  # None or empty string
             await ctx.send_help(ctx.command)
             return
+
+        if Roles.helpers in (role.id for role in ctx.author.roles):
+            self.bot.stats.incr("snekbox_usages.roles.helpers")
+        else:
+            self.bot.stats.incr("snekbox_usages.roles.developers")
+
+        if ctx.channel.category_id == Categories.help_in_use:
+            self.bot.stats.incr("snekbox_usages.channels.help")
+        elif ctx.channel.id == Channels.bot_commands:
+            self.bot.stats.incr("snekbox_usages.channels.bot_commands")
+        else:
+            self.bot.stats.incr("snekbox_usages.channels.topical")
 
         log.info(f"Received code from {ctx.author} for evaluation:\n{code}")
 

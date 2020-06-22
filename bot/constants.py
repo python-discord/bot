@@ -15,7 +15,7 @@ import os
 from collections.abc import Mapping
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import yaml
 
@@ -198,7 +198,18 @@ class Bot(metaclass=YAMLGetter):
 
     prefix: str
     token: str
-    sentry_dsn: str
+    sentry_dsn: Optional[str]
+
+
+class Redis(metaclass=YAMLGetter):
+    section = "bot"
+    subsection = "redis"
+
+    host: str
+    port: int
+    password: Optional[str]
+    use_fakeredis: bool  # If this is True, Bot will use fakeredis.aioredis
+
 
 class Filter(metaclass=YAMLGetter):
     section = "filter"
@@ -215,6 +226,7 @@ class Filter(metaclass=YAMLGetter):
     notify_user_domains: bool
 
     ping_everyone: bool
+    offensive_msg_delete_days: int
     guild_invite_whitelist: List[int]
     domain_blacklist: List[str]
     word_watchlist: List[str]
@@ -365,6 +377,7 @@ class Categories(metaclass=YAMLGetter):
     help_available: int
     help_in_use: int
     help_dormant: int
+    modmail: int
 
 
 class Channels(metaclass=YAMLGetter):
@@ -377,6 +390,7 @@ class Channels(metaclass=YAMLGetter):
     attachment_log: int
     big_brother_logs: int
     bot_commands: int
+    cooldown: int
     defcon: int
     dev_contrib: int
     dev_core: int
@@ -384,6 +398,7 @@ class Channels(metaclass=YAMLGetter):
     esoteric: int
     helpers: int
     how_to_get_help: int
+    incidents: int
     message_log: int
     meta: int
     mod_alerts: int
@@ -448,7 +463,7 @@ class Guild(metaclass=YAMLGetter):
 class Keys(metaclass=YAMLGetter):
     section = "keys"
 
-    site_api: str
+    site_api: Optional[str]
 
 
 class URLs(metaclass=YAMLGetter):
@@ -491,8 +506,8 @@ class Reddit(metaclass=YAMLGetter):
     section = "reddit"
 
     subreddits: list
-    client_id: str
-    secret: str
+    client_id: Optional[str]
+    secret: Optional[str]
 
 
 class Wolfram(metaclass=YAMLGetter):
@@ -500,7 +515,7 @@ class Wolfram(metaclass=YAMLGetter):
 
     user_limit_day: int
     guild_limit_day: int
-    key: str
+    key: Optional[str]
 
 
 class AntiSpam(metaclass=YAMLGetter):
@@ -541,6 +556,7 @@ class HelpChannels(metaclass=YAMLGetter):
     claim_minutes: int
     cmd_whitelist: List[int]
     idle_minutes: int
+    deleted_idle_minutes: int
     max_available: int
     max_total_channels: int
     name_prefix: str
@@ -609,12 +625,9 @@ PROJECT_ROOT = os.path.abspath(os.path.join(BOT_DIR, os.pardir))
 MODERATION_ROLES = Guild.moderation_roles
 STAFF_ROLES = Guild.staff_roles
 
-# Roles combinations
+# Channel combinations
 STAFF_CHANNELS = Guild.staff_channels
-
-# Default Channel combinations
 MODERATION_CHANNELS = Guild.moderation_channels
-
 
 # Bot replies
 NEGATIVE_REPLIES = [

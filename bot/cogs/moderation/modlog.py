@@ -98,7 +98,10 @@ class ModLog(Cog, name="ModLog"):
         footer: t.Optional[str] = None,
     ) -> Context:
         """Generate log embed and send to logging channel."""
-        embed = discord.Embed(description=text)
+        # Truncate string directly here to avoid removing newlines
+        embed = discord.Embed(
+            description=text[:2045] + "..." if len(text) > 2048 else text
+        )
 
         if title and icon_url:
             embed.set_author(name=title, icon_url=icon_url)
@@ -551,6 +554,10 @@ class ModLog(Cog, name="ModLog"):
         """Log message delete event to message change log."""
         channel = message.channel
         author = message.author
+
+        # Ignore DMs.
+        if not message.guild:
+            return
 
         if message.guild.id != GuildConstant.id or channel.id in GuildConstant.modlog_blacklist:
             return

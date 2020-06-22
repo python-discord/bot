@@ -10,6 +10,7 @@ from discord.ext.tasks import loop
 
 from bot import constants
 from bot.bot import Bot
+from bot.utils.messages import sub_clyde
 
 PEPS_RSS_URL = "https://www.python.org/dev/peps/peps.rss/"
 
@@ -109,6 +110,9 @@ class PythonNews(Cog):
             )
             payload["data"]["pep"].append(pep_nr)
 
+            # Increase overall PEP new stat
+            self.bot.stats.incr("python_news.posted.pep")
+
             if msg.channel.is_news():
                 log.trace("Publishing PEP annnouncement because it was in a news channel")
                 await msg.publish()
@@ -150,6 +154,7 @@ class PythonNews(Cog):
 
                 if (
                         thread_information["thread_id"] in existing_news["data"][maillist]
+                        or 'Re: ' in thread_information["subject"]
                         or new_date.date() < date.today()
                 ):
                     continue
@@ -167,6 +172,9 @@ class PythonNews(Cog):
                     footer=f"Posted to {self.webhook_names[maillist]}"
                 )
                 payload["data"][maillist].append(thread_information["thread_id"])
+
+                # Increase this specific maillist counter in stats
+                self.bot.stats.incr(f"python_news.posted.{maillist.replace('-', '_')}")
 
                 if msg.channel.is_news():
                     log.trace("Publishing mailing list message because it was in a news channel")
@@ -201,7 +209,7 @@ class PythonNews(Cog):
 
         return await self.webhook.send(
             embed=embed,
-            username=webhook_profile_name,
+            username=sub_clyde(webhook_profile_name),
             avatar_url=AVATAR_URL,
             wait=True
         )

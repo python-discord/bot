@@ -1,6 +1,8 @@
 import unittest
+from unittest.mock import MagicMock
 
 from bot.utils import checks
+from bot.utils.checks import InWhitelistCheckFailure
 from tests.helpers import MockContext, MockRole
 
 
@@ -42,10 +44,48 @@ class ChecksTests(unittest.TestCase):
         self.ctx.author.roles.append(MockRole(id=role_id))
         self.assertTrue(checks.without_role_check(self.ctx, role_id + 10))
 
-    def test_in_channel_check_for_correct_channel(self):
-        self.ctx.channel.id = 42
-        self.assertTrue(checks.in_channel_check(self.ctx, *[42]))
+    def test_in_whitelist_check_correct_channel(self):
+        """`in_whitelist_check` returns `True` if `Context.channel.id` is in the channel list."""
+        channel_id = 3
+        self.ctx.channel.id = channel_id
+        self.assertTrue(checks.in_whitelist_check(self.ctx, [channel_id]))
 
-    def test_in_channel_check_for_incorrect_channel(self):
-        self.ctx.channel.id = 42 + 10
-        self.assertFalse(checks.in_channel_check(self.ctx, *[42]))
+    def test_in_whitelist_check_incorrect_channel(self):
+        """`in_whitelist_check` raises InWhitelistCheckFailure if there's no channel match."""
+        self.ctx.channel.id = 3
+        with self.assertRaises(InWhitelistCheckFailure):
+            checks.in_whitelist_check(self.ctx, [4])
+
+    def test_in_whitelist_check_correct_category(self):
+        """`in_whitelist_check` returns `True` if `Context.channel.category_id` is in the category list."""
+        category_id = 3
+        self.ctx.channel.category_id = category_id
+        self.assertTrue(checks.in_whitelist_check(self.ctx, categories=[category_id]))
+
+    def test_in_whitelist_check_incorrect_category(self):
+        """`in_whitelist_check` raises InWhitelistCheckFailure if there's no category match."""
+        self.ctx.channel.category_id = 3
+        with self.assertRaises(InWhitelistCheckFailure):
+            checks.in_whitelist_check(self.ctx, categories=[4])
+
+    def test_in_whitelist_check_correct_role(self):
+        """`in_whitelist_check` returns `True` if any of the `Context.author.roles` are in the roles list."""
+        self.ctx.author.roles = (MagicMock(id=1), MagicMock(id=2))
+        self.assertTrue(checks.in_whitelist_check(self.ctx, roles=[2, 6]))
+
+    def test_in_whitelist_check_incorrect_role(self):
+        """`in_whitelist_check` raises InWhitelistCheckFailure if there's no role match."""
+        self.ctx.author.roles = (MagicMock(id=1), MagicMock(id=2))
+        with self.assertRaises(InWhitelistCheckFailure):
+            checks.in_whitelist_check(self.ctx, roles=[4])
+
+    def test_in_whitelist_check_fail_silently(self):
+        """`in_whitelist_check` test no exception raised if `fail_silently` is `True`"""
+        self.assertFalse(checks.in_whitelist_check(self.ctx, roles=[2, 6], fail_silently=True))
+
+    def test_in_whitelist_check_complex(self):
+        """`in_whitelist_check` test with multiple parameters"""
+        self.ctx.author.roles = (MagicMock(id=1), MagicMock(id=2))
+        self.ctx.channel.category_id = 3
+        self.ctx.channel.id = 5
+        self.assertTrue(checks.in_whitelist_check(self.ctx, channels=[1], categories=[8], roles=[2]))

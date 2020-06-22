@@ -16,6 +16,7 @@ from bot.constants import Channels, ERROR_REPLIES, Emojis, Reddit as RedditConfi
 from bot.converters import Subreddit
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
+from bot.utils.messages import sub_clyde
 
 log = logging.getLogger(__name__)
 
@@ -218,15 +219,19 @@ class Reddit(Cog):
 
         for subreddit in RedditConfig.subreddits:
             top_posts = await self.get_top_posts(subreddit=subreddit, time="day")
-            await self.webhook.send(username=f"{subreddit} Top Daily Posts", embed=top_posts)
+            username = sub_clyde(f"{subreddit} Top Daily Posts")
+            message = await self.webhook.send(username=username, embed=top_posts, wait=True)
+
+            if message.channel.is_news():
+                await message.publish()
 
     async def top_weekly_posts(self) -> None:
         """Post a summary of the top posts."""
         for subreddit in RedditConfig.subreddits:
             # Send and pin the new weekly posts.
             top_posts = await self.get_top_posts(subreddit=subreddit, time="week")
-
-            message = await self.webhook.send(wait=True, username=f"{subreddit} Top Weekly Posts", embed=top_posts)
+            username = sub_clyde(f"{subreddit} Top Weekly Posts")
+            message = await self.webhook.send(wait=True, username=username, embed=top_posts)
 
             if subreddit.lower() == "r/python":
                 if not self.channel:
@@ -241,6 +246,9 @@ class Reddit(Cog):
                     del pins[-1]
 
                 await message.pin()
+
+                if message.channel.is_news():
+                    await message.publish()
 
     @group(name="reddit", invoke_without_command=True)
     async def reddit_group(self, ctx: Context) -> None:
