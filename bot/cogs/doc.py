@@ -187,7 +187,7 @@ class Doc(commands.Cog):
         self.base_urls.clear()
         self.inventories.clear()
         self.renamed_symbols.clear()
-        async_cache.cache = OrderedDict()
+        async_cache.cache["get_symbol_embed"] = OrderedDict()
 
         # Run all coroutines concurrently - since each of them performs a HTTP
         # request, this speeds up fetching the inventory data heavily.

@@ -11,21 +11,23 @@ def async_cache(max_size: int = 128, arg_offset: int = 0) -> Callable:
 
     An offset may be optionally provided to be applied to the coroutine's arguments when creating the cache key.
     """
-    # Assign the cache to the function itself so we can clear it from outside.
-    async_cache.cache = OrderedDict()
+    # Make global cache as dictionary to allow multiple function caches
+    async_cache.cache = {}
 
     def decorator(function: Callable) -> Callable:
         """Define the async_cache decorator."""
+        async_cache.cache[function.__name__] = OrderedDict()
+
         @functools.wraps(function)
         async def wrapper(*args) -> Any:
             """Decorator wrapper for the caching logic."""
             key = ':'.join(str(args[arg_offset:]))
 
             if key not in async_cache.cache:
-                if len(async_cache.cache) > max_size:
-                    async_cache.cache.popitem(last=False)
+                if len(async_cache.cache[function.__name__]) > max_size:
+                    async_cache.cache[function.__name__].popitem(last=False)
 
-                async_cache.cache[key] = await function(*args)
-            return async_cache.cache[key]
+                async_cache.cache[function.__name__][key] = await function(*args)
+            return async_cache.cache[function.__name__][key]
         return wrapper
     return decorator
