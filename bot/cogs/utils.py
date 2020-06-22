@@ -247,7 +247,7 @@ class Utils(Cog):
 
     @async_cache(arg_offset=2)
     async def get_pep_embed(self, ctx: Context, pep_nr: int) -> Optional[Embed]:
-        """Fetch, generate and return PEP embed."""
+        """Fetch, generate and return PEP embed. When any error occur, use `self.send_pep_error_embed`."""
         if (
             pep_nr not in self.peps
             and (self.last_refreshed_peps + timedelta(minutes=30)) <= datetime.now()
@@ -258,9 +258,7 @@ class Utils(Cog):
         if pep_nr not in self.peps:
             log.trace(f"PEP {pep_nr} was not found")
             not_found = f"PEP {pep_nr} does not exist."
-            embed = Embed(title="PEP not found", description=not_found, colour=Colour.red())
-            await ctx.send(embed=embed)
-            return
+            return await self.send_pep_error_embed(ctx, "PEP not found", not_found)
 
         response = await self.bot.http_session.get(self.peps[pep_nr])
 
@@ -291,11 +289,14 @@ class Utils(Cog):
             log.trace(
                 f"The user requested PEP {pep_nr}, but the response had an unexpected status code: {response.status}."
             )
-
             error_message = "Unexpected HTTP error during PEP search. Please let us know."
-            embed = Embed(title="Unexpected error", description=error_message, colour=Colour.red())
-            await ctx.send(embed=embed)
-            return
+            return await self.send_pep_error_embed(ctx, "Unexpected error", error_message)
+
+    @staticmethod
+    async def send_pep_error_embed(ctx: Context, title: str, description: str) -> None:
+        """Send error PEP embed with `ctx.send`."""
+        embed = Embed(title=title, description=description, colour=Colour.red())
+        await ctx.send(embed=embed)
     # endregion
 
 
