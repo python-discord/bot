@@ -192,7 +192,7 @@ class Utils(Cog):
         for reaction in options:
             await message.add_reaction(reaction)
 
-    # PEPs area
+    # region: PEP
 
     async def refresh_peps_urls(self) -> None:
         """Refresh PEP URLs listing in every 3 hours."""
@@ -292,6 +292,7 @@ class Utils(Cog):
             embed = Embed(title="Unexpected error", description=error_message, colour=Colour.red())
             await ctx.send(embed=embed)
             return
+    # endregion
 
 
 def setup(bot: Bot) -> None:
