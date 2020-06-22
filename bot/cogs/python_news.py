@@ -10,6 +10,7 @@ from discord.ext.tasks import loop
 
 from bot import constants
 from bot.bot import Bot
+from bot.utils.messages import sub_clyde
 
 PEPS_RSS_URL = "https://www.python.org/dev/peps/peps.rss/"
 
@@ -208,7 +209,7 @@ class PythonNews(Cog):
 
         return await self.webhook.send(
             embed=embed,
-            username=webhook_profile_name,
+            username=sub_clyde(webhook_profile_name),
             avatar_url=AVATAR_URL,
             wait=True
         )

@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 
 # Type aliases
 RedisKeyType = Union[str, int]
-RedisValueType = Union[str, int, float]
+RedisValueType = Union[str, int, float, bool]
 RedisKeyOrValue = Union[RedisKeyType, RedisValueType]
 
 # Prefix tuples
@@ -20,6 +20,7 @@ _VALUE_PREFIXES = (
     ("f|", float),
     ("i|", int),
     ("s|", str),
+    ("b|", bool),
 )
 _KEY_PREFIXES = (
     ("i|", int),
@@ -47,8 +48,8 @@ class RedisCache:
     behaves, and should be familiar to Python users. The biggest difference is that
     all the public methods in this class are coroutines, and must be awaited.
 
-    Because of limitations in Redis, this cache will only accept strings, integers and
-    floats both for keys and values.
+    Because of limitations in Redis, this cache will only accept strings and integers for keys,
+    and strings, integers, floats and booleans for values.
 
     Please note that this class MUST be created as a class attribute, and that that class
     must also contain an attribute with an instance of our Bot. See `__get__` and `__set_name__`
@@ -108,8 +109,15 @@ class RedisCache:
     def _to_typestring(key_or_value: RedisKeyOrValue, prefixes: _PrefixTuple) -> str:
         """Turn a valid Redis type into a typestring."""
         for prefix, _type in prefixes:
-            if isinstance(key_or_value, _type):
+            # Convert bools into integers before storing them.
+            if type(key_or_value) is bool:
+                bool_int = int(key_or_value)
+                return f"{prefix}{bool_int}"
+
+            # isinstance is a bad idea here, because isintance(False, int) == True.
+            if type(key_or_value) is _type:
                 return f"{prefix}{key_or_value}"
+
         raise TypeError(f"RedisCache._to_typestring only supports the following: {prefixes}.")
 
     @staticmethod
@@ -122,6 +130,13 @@ class RedisCache:
         # Now we convert our unicode string back into the type it originally was.
         for prefix, _type in prefixes:
             if key_or_value.startswith(prefix):
+
+                # For booleans, we need special handling because bool("False") is True.
+                if prefix == "b|":
+                    value = key_or_value[len(prefix):]
+                    return bool(int(value))
+
+                # Otherwise we can just convert normally.
                 return _type(key_or_value[len(prefix):])
         raise TypeError(f"RedisCache._from_typestring only supports the following: {prefixes}.")
 
