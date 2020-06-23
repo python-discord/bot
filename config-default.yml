@@ -269,7 +269,8 @@ filter:
     notify_user_domains:     false
 
     # Filter configuration
-    ping_everyone: true  # Ping @everyone when we send a mod-alert?
+    ping_everyone:             true  # Ping @everyone when we send a mod-alert?
+    offensive_msg_delete_days: 7     # How many days before deleting an offensive message?
 
     guild_invite_whitelist:
         - 280033776820813825  # Functional Programming
@@ -299,6 +300,7 @@ filter:
         - 185590609631903755  # Blender Hub
         - 420324994703163402  # /r/FlutterDev
         - 488751051629920277  # Python Atlanta
+        - 143867839282020352  # C#
 
     domain_blacklist:
         - pornhub.com
@@ -330,6 +332,7 @@ filter:
         - ssteam.site
         - steamwalletgift.com
         - discord.gift
+        - lmgtfy.com
 
     word_watchlist:
         - goo+ks*

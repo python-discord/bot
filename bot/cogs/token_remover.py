@@ -4,7 +4,7 @@ import logging
 import re
 import typing as t
 
-from discord import Colour, Message
+from discord import Colour, Message, NotFound
 from discord.ext.commands import Cog
 
 from bot import utils
@@ -63,6 +63,10 @@ class TokenRemover(Cog):
 
         See: https://discordapp.com/developers/docs/reference#snowflakes
         """
+        # Ignore DMs; can't delete messages in there anyway.
+        if not msg.guild or msg.author.bot:
+            return
+
         found_token = self.find_token_in_message(msg)
         if found_token:
             await self.take_action(msg, found_token)
@@ -79,7 +83,13 @@ class TokenRemover(Cog):
     async def take_action(self, msg: Message, found_token: Token) -> None:
         """Remove the `msg` containing the `found_token` and send a mod log message."""
         self.mod_log.ignore(Event.message_delete, msg.id)
-        await msg.delete()
+
+        try:
+            await msg.delete()
+        except NotFound:
+            log.debug(f"Failed to remove token in message {msg.id}: message already deleted.")
+            return
+
         await msg.channel.send(DELETION_MESSAGE_TEMPLATE.format(mention=msg.author.mention))
 
         log_message = self.format_log_message(msg, found_token)
@@ -112,9 +122,6 @@ class TokenRemover(Cog):
     @classmethod
     def find_token_in_message(cls, msg: Message) -> t.Optional[Token]:
         """Return a seemingly valid token found in `msg` or `None` if no token is found."""
-        if msg.author.bot:
-            return
-
         # Use finditer rather than search to guard against method calls prematurely returning the
         # token check (e.g. `message.channel.send` also matches our token pattern)
         for match in TOKEN_RE.finditer(msg.content):

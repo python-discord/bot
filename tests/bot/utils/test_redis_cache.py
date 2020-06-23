@@ -49,7 +49,9 @@ class RedisCacheTests(unittest.IsolatedAsyncioTestCase):
         test_cases = (
             ('favorite_fruit', 'melon'),
             ('favorite_number', 86),
-            ('favorite_fraction', 86.54)
+            ('favorite_fraction', 86.54),
+            ('favorite_boolean', False),
+            ('other_boolean', True),
         )
 
         # Test that we can get and set different types.
