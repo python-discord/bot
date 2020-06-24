@@ -214,7 +214,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
     async def test_post_user(self):
         """Should POST a new user and return the response if successful or otherwise send an error message."""
         user = MockUser(discriminator=5678, id=1234, name="Test user")
-        some_mock = MagicMock(discriminator=3333)
+        not_user = MagicMock(discriminator=3333, id=5678, name="Wrong user")
         test_cases = [
             {
                 "user": user,
@@ -241,14 +241,14 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 }
             },
             {
-                "user": some_mock,
+                "user": not_user,
                 "post_result": "bar",
                 "raise_error": None,
                 "payload": {
-                    "discriminator": some_mock.discriminator,
-                    "id": some_mock.id,
+                    "discriminator": not_user.discriminator,
+                    "id": not_user.id,
                     "in_guild": False,
-                    "name": some_mock.name,
+                    "name": not_user.name,
                     "roles": []
                 }
             }
