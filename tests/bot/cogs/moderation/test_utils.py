@@ -279,7 +279,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     self.bot.api_client.post.assert_awaited_once_with("bot/users", json=payload)
                 else:
                     self.ctx.send.assert_awaited_once()
-                    self.assertTrue(str(raise_error.status) in self.ctx.send.call_args[0][0])
+                    self.assertIn(str(raise_error.status), self.ctx.send.call_args[0][0])
 
                 if isinstance(user, MagicMock):
                     log_mock.debug.assert_called_once()
