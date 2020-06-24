@@ -166,23 +166,19 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
         ]
 
         for case in test_cases:
-            args = case["args"]
-            expected = case["expected_output"]
-            send = case["send_result"]
-
-            with self.subTest(args=args, expected=expected, send=send):
+            with self.subTest(args=case["args"], expected=case["expected_output"], send=case["send_result"]):
                 send_private_embed_mock.reset_mock()
 
-                send_private_embed_mock.return_value = send
-                result = await utils.notify_infraction(*args)
+                send_private_embed_mock.return_value = case["send_result"]
+                result = await utils.notify_infraction(*case["args"])
 
-                self.assertEqual(send, result)
+                self.assertEqual(case["send_result"], result)
 
                 embed = send_private_embed_mock.call_args[0][1]
 
-                self.assertEqual(embed.to_dict(), expected.to_dict())
+                self.assertEqual(embed.to_dict(), case["expected"].to_dict())
 
-                send_private_embed_mock.assert_awaited_once_with(args[0], embed)
+                send_private_embed_mock.assert_awaited_once_with(case["args"][0], embed)
 
     @patch("bot.cogs.moderation.utils.send_private_embed")
     async def test_notify_pardon(self, send_private_embed_mock):
