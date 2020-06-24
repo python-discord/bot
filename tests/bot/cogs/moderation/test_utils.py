@@ -27,7 +27,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
         self.user = MockUser(id=1234)
         self.ctx = MockContext(bot=self.bot, author=self.member)
 
-    async def test_user_get_active_infraction(self):
+    async def test_get_active_infraction(self):
         """
         Should request the API for active infractions and return infraction if the user has one or `None` otherwise.
 
