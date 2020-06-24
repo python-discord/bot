@@ -154,12 +154,10 @@ async def notify_infraction(
     """DM a user about their new infraction and return True if the DM is successful."""
     log.trace(f"Sending {user} a DM about their {infr_type} infraction.")
 
-    text = textwrap.dedent(
-        INFRACTION_DESCRIPTION_TEMPLATE.format(
-            type=infr_type.capitalize(),
-            expires=expires_at or "N/A",
-            reason=reason or "No reason provided."
-        )
+    text = INFRACTION_DESCRIPTION_TEMPLATE.format(
+        type=infr_type.capitalize(),
+        expires=expires_at or "N/A",
+        reason=reason or "No reason provided."
     )
 
     embed = discord.Embed(
