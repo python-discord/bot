@@ -21,6 +21,71 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
         self.user = MockUser(id=1234)
         self.ctx = MockContext(bot=self.bot, author=self.member)
 
+    async def test_post_user(self):
+        """Should POST a new user and return the response if successful or otherwise send an error message."""
+        user = MockUser(discriminator=5678, id=1234, name="Test user")
+        not_user = MagicMock(discriminator=3333, id=5678, name="Wrong user")
+        test_cases = [
+            {
+                "user": user,
+                "post_result": "bar",
+                "raise_error": None,
+                "payload": {
+                    "discriminator": 5678,
+                    "id": self.user.id,
+                    "in_guild": False,
+                    "name": "Test user",
+                    "roles": []
+                }
+            },
+            {
+                "user": self.member,
+                "post_result": "foo",
+                "raise_error": ResponseCodeError(MagicMock(status=400), "foo"),
+                "payload": {
+                    "discriminator": 0,
+                    "id": self.member.id,
+                    "in_guild": False,
+                    "name": "Name unknown",
+                    "roles": []
+                }
+            },
+            {
+                "user": not_user,
+                "post_result": "bar",
+                "raise_error": None,
+                "payload": {
+                    "discriminator": not_user.discriminator,
+                    "id": not_user.id,
+                    "in_guild": False,
+                    "name": not_user.name,
+                    "roles": []
+                }
+            }
+        ]
+
+        for case in test_cases:
+            user = case["user"]
+            post_result = case["post_result"]
+            raise_error = case["raise_error"]
+            payload = case["payload"]
+
+            with self.subTest(user=user, post_result=post_result, raise_error=raise_error, payload=payload):
+                self.bot.api_client.post.reset_mock(side_effect=True)
+                self.ctx.bot.api_client.post.return_value = post_result
+
+                self.ctx.bot.api_client.post.side_effect = raise_error
+
+                result = await utils.post_user(self.ctx, user)
+
+                if raise_error:
+                    self.assertIsNone(result)
+                    self.ctx.send.assert_awaited_once()
+                    self.assertIn(str(raise_error.status), self.ctx.send.call_args[0][0])
+                else:
+                    self.assertEqual(result, post_result)
+                    self.bot.api_client.post.assert_awaited_once_with("bot/users", json=payload)
+
     async def test_get_active_infraction(self):
         """
         Should request the API for active infractions and return infraction if the user has one or `None` otherwise.
@@ -204,71 +269,6 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(embed.to_dict(), expected.to_dict())
 
                 send_private_embed_mock.assert_awaited_once_with(case.args[0], embed)
-
-    async def test_post_user(self):
-        """Should POST a new user and return the response if successful or otherwise send an error message."""
-        user = MockUser(discriminator=5678, id=1234, name="Test user")
-        not_user = MagicMock(discriminator=3333, id=5678, name="Wrong user")
-        test_cases = [
-            {
-                "user": user,
-                "post_result": "bar",
-                "raise_error": None,
-                "payload": {
-                    "discriminator": 5678,
-                    "id": self.user.id,
-                    "in_guild": False,
-                    "name": "Test user",
-                    "roles": []
-                }
-            },
-            {
-                "user": self.member,
-                "post_result": "foo",
-                "raise_error": ResponseCodeError(MagicMock(status=400), "foo"),
-                "payload": {
-                    "discriminator": 0,
-                    "id": self.member.id,
-                    "in_guild": False,
-                    "name": "Name unknown",
-                    "roles": []
-                }
-            },
-            {
-                "user": not_user,
-                "post_result": "bar",
-                "raise_error": None,
-                "payload": {
-                    "discriminator": not_user.discriminator,
-                    "id": not_user.id,
-                    "in_guild": False,
-                    "name": not_user.name,
-                    "roles": []
-                }
-            }
-        ]
-
-        for case in test_cases:
-            user = case["user"]
-            post_result = case["post_result"]
-            raise_error = case["raise_error"]
-            payload = case["payload"]
-
-            with self.subTest(user=user, post_result=post_result, raise_error=raise_error, payload=payload):
-                self.bot.api_client.post.reset_mock(side_effect=True)
-                self.ctx.bot.api_client.post.return_value = post_result
-
-                self.ctx.bot.api_client.post.side_effect = raise_error
-
-                result = await utils.post_user(self.ctx, user)
-
-                if raise_error:
-                    self.assertIsNone(result)
-                    self.ctx.send.assert_awaited_once()
-                    self.assertIn(str(raise_error.status), self.ctx.send.call_args[0][0])
-                else:
-                    self.assertEqual(result, post_result)
-                    self.bot.api_client.post.assert_awaited_once_with("bot/users", json=payload)
 
     async def test_send_private_embed(self):
         """Should DM the user and return `True` on success or `False` on failure."""
