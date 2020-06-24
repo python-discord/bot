@@ -211,8 +211,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
 
                 send_private_embed_mock.assert_awaited_once_with(case.args[0], embed)
 
-    @patch("bot.cogs.moderation.utils.log")
-    async def test_post_user(self, log_mock):
+    async def test_post_user(self):
         """Should POST a new user and return the response if successful or otherwise send an error message."""
         user = MockUser(discriminator=5678, id=1234, name="Test user")
         some_mock = MagicMock(discriminator=3333)
@@ -262,7 +261,6 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
             payload = case["payload"]
 
             with self.subTest(user=user, post_result=post_result, raise_error=raise_error, payload=payload):
-                log_mock.reset_mock()
                 self.bot.api_client.post.reset_mock(side_effect=True)
                 self.ctx.bot.api_client.post.return_value = post_result
 
@@ -277,11 +275,6 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 else:
                     self.assertEqual(result, post_result)
                     self.bot.api_client.post.assert_awaited_once_with("bot/users", json=payload)
-
-                if isinstance(user, MagicMock):
-                    log_mock.debug.assert_called_once()
-                else:
-                    log_mock.debug.assert_not_called()
 
     async def test_send_private_embed(self):
         """Should DM the user and return `True` on success or `False` on failure."""
