@@ -170,9 +170,7 @@ async def notify_infraction(
     embed.url = RULES_URL
 
     if infr_type in APPEALABLE_INFRACTIONS:
-        embed.set_footer(
-            text=INFRACTION_APPEAL_FOOTER
-        )
+        embed.set_footer(text=INFRACTION_APPEAL_FOOTER)
 
     return await send_private_embed(user, embed)
 
