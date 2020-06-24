@@ -64,7 +64,6 @@ class Scheduler:
         except KeyError:
             self._log.warning(f"Failed to unschedule {task_id} (no task found).")
         else:
-            del self._scheduled_tasks[task_id]
             task.cancel()
 
             self._log.debug(f"Unscheduled task #{task_id} {id(task)}.")
