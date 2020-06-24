@@ -34,12 +34,6 @@ INFRACTION_TITLE = f"Please review our rules over at {RULES_URL}"
 INFRACTION_APPEAL_FOOTER = f"To appeal this infraction, send an e-mail to {APPEAL_EMAIL}"
 INFRACTION_AUTHOR_NAME = "Infraction information"
 
-INFRACTION_DESCRIPTION_TEMPLATE = (
-    "\n**Type:** {type}\n"
-    "**Expires:** {expires}\n"
-    "**Reason:** {reason}\n"
-)
-
 
 async def post_user(ctx: Context, user: UserSnowflake) -> t.Optional[dict]:
     """

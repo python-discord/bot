@@ -10,6 +10,12 @@ from bot.cogs.moderation import utils
 from bot.constants import Colours, Icons
 from tests.helpers import MockBot, MockContext, MockMember, MockUser
 
+INFRACTION_DESCRIPTION_TEMPLATE = (
+    "\n**Type:** {type}\n"
+    "**Expires:** {expires}\n"
+    "**Reason:** {reason}\n"
+)
+
 
 class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
     """Tests Moderation utils."""
@@ -83,7 +89,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 "args": (self.user, "ban", "2020-02-26 09:20 (23 hours and 59 minutes)"),
                 "expected_output": Embed(
                     title=utils.INFRACTION_TITLE,
-                    description=textwrap.shorten(utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
+                    description=textwrap.shorten(INFRACTION_DESCRIPTION_TEMPLATE.format(
                         type="Ban",
                         expires="2020-02-26 09:20 (23 hours and 59 minutes)",
                         reason="No reason provided."
@@ -101,7 +107,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 "args": (self.user, "warning", None, "Test reason."),
                 "expected_output": Embed(
                     title=utils.INFRACTION_TITLE,
-                    description=textwrap.shorten(utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
+                    description=textwrap.shorten(INFRACTION_DESCRIPTION_TEMPLATE.format(
                         type="Warning",
                         expires="N/A",
                         reason="Test reason."
@@ -119,7 +125,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 "args": (self.user, "note", None, None, Icons.defcon_denied),
                 "expected_output": Embed(
                     title=utils.INFRACTION_TITLE,
-                    description=textwrap.shorten(utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
+                    description=textwrap.shorten(INFRACTION_DESCRIPTION_TEMPLATE.format(
                         type="Note",
                         expires="N/A",
                         reason="No reason provided."
@@ -137,7 +143,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 "args": (self.user, "mute", "2020-02-26 09:20 (23 hours and 59 minutes)", "Test", Icons.defcon_denied),
                 "expected_output": Embed(
                     title=utils.INFRACTION_TITLE,
-                    description=textwrap.shorten(utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
+                    description=textwrap.shorten(INFRACTION_DESCRIPTION_TEMPLATE.format(
                         type="Mute",
                         expires="2020-02-26 09:20 (23 hours and 59 minutes)",
                         reason="Test"
@@ -155,7 +161,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 "args": (self.user, "mute", None, "foo bar" * 4000, Icons.defcon_denied),
                 "expected_output": Embed(
                     title=utils.INFRACTION_TITLE,
-                    description=textwrap.shorten(utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
+                    description=textwrap.shorten(INFRACTION_DESCRIPTION_TEMPLATE.format(
                         type="Mute",
                         expires="N/A",
                         reason="foo bar" * 4000
