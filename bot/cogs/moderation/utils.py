@@ -34,6 +34,12 @@ INFRACTION_TITLE = f"Please review our rules over at {RULES_URL}"
 INFRACTION_APPEAL_FOOTER = f"To appeal this infraction, send an e-mail to {APPEAL_EMAIL}"
 INFRACTION_AUTHOR_NAME = "Infraction information"
 
+INFRACTION_DESCRIPTION_TEMPLATE = (
+    "\n**Type:** {type}\n"
+    "**Expires:** {expires}\n"
+    "**Reason:** {reason}\n"
+)
+
 
 async def post_user(ctx: Context, user: UserSnowflake) -> t.Optional[dict]:
     """
@@ -148,11 +154,13 @@ async def notify_infraction(
     """DM a user about their new infraction and return True if the DM is successful."""
     log.trace(f"Sending {user} a DM about their {infr_type} infraction.")
 
-    text = textwrap.dedent(f"""
-        **Type:** {infr_type.capitalize()}
-        **Expires:** {expires_at or "N/A"}
-        **Reason:** {reason or "No reason provided."}
-    """)
+    text = textwrap.dedent(
+        INFRACTION_DESCRIPTION_TEMPLATE.format(
+            type=infr_type.capitalize(),
+            expires=expires_at or "N/A",
+            reason=reason or "No reason provided."
+        )
+    )
 
     embed = discord.Embed(
         description=textwrap.shorten(text, width=2048, placeholder="..."),
