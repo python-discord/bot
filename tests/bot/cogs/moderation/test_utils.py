@@ -59,8 +59,9 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
 
                 if case.send_msg and case.get_return_value:
                     self.ctx.send.assert_awaited_once()
-                    self.assertTrue(case.infraction_nr in self.ctx.send.call_args[0][0])
-                    self.assertTrue("ban" in self.ctx.send.call_args[0][0])
+                    sent_message = self.ctx.send.call_args[0][0]
+                    self.assertIn(case.infraction_nr, sent_message)
+                    self.assertIn("ban", sent_message)
                 else:
                     self.ctx.send.assert_not_awaited()
 
