@@ -1,5 +1,6 @@
 import textwrap
 import unittest
+from collections import namedtuple
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
@@ -32,29 +33,15 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
 
         A message should be sent to the context indicating a user already has an infraction, if that's the case.
         """
+        test_case = namedtuple("test_case", ["get_return_value", "expected_output", "infraction_nr", "send_msg"])
         test_cases = [
-            {
-                "get_return_value": [],
-                "expected_output": None,
-                "infraction_nr": None,
-                "send_msg": True
-            },
-            {
-                "get_return_value": [{"id": 123987}],
-                "expected_output": {"id": 123987},
-                "infraction_nr": "123987",
-                "send_msg": False
-            },
-            {
-                "get_return_value": [{"id": 123987}],
-                "expected_output": {"id": 123987},
-                "infraction_nr": "123987",
-                "send_msg": True
-            }
+            test_case([], None, None, True),
+            test_case([{"id": 123987}], {"id": 123987}, "123987", False),
+            test_case([{"id": 123987}], {"id": 123987}, "123987", True)
         ]
 
         for case in test_cases:
-            with self.subTest(return_value=case["get_return_value"], expected=case["expected_output"]):
+            with self.subTest(return_value=case.get_return_value, expected=case.expected_output):
                 self.bot.api_client.get.reset_mock()
                 self.ctx.send.reset_mock()
 
@@ -64,15 +51,15 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     "user__id": str(self.member.id)
                 }
 
-                self.bot.api_client.get.return_value = case["get_return_value"]
+                self.bot.api_client.get.return_value = case.get_return_value
 
-                result = await utils.get_active_infraction(self.ctx, self.member, "ban", send_msg=case["send_msg"])
-                self.assertEqual(result, case["expected_output"])
+                result = await utils.get_active_infraction(self.ctx, self.member, "ban", send_msg=case.send_msg)
+                self.assertEqual(result, case.expected_output)
                 self.bot.api_client.get.assert_awaited_once_with("bot/infractions", params=params)
 
-                if case["send_msg"] and case["get_return_value"]:
+                if case.send_msg and case.get_return_value:
                     self.ctx.send.assert_awaited_once()
-                    self.assertTrue(case["infraction_nr"] in self.ctx.send.call_args[0][0])
+                    self.assertTrue(case.infraction_nr in self.ctx.send.call_args[0][0])
                     self.assertTrue("ban" in self.ctx.send.call_args[0][0])
                 else:
                     self.ctx.send.assert_not_awaited()
@@ -199,43 +186,33 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
     @patch("bot.cogs.moderation.utils.send_private_embed")
     async def test_notify_pardon(self, send_private_embed_mock):
         """Should send an embed of a certain format as a DM and return `True` if DM successful."""
+        test_case = namedtuple("test_case", ["args", "icon", "send_result"])
         test_cases = [
-            {
-                "args": (self.user, "Test title", "Example content"),
-                "icon": Icons.user_verified,
-                "send_result": True
-            },
-            {
-                "args": (self.user, "Test title", "Example content", Icons.user_update),
-                "icon": Icons.user_update,
-                "send_result": False
-            }
+            test_case((self.user, "Test title", "Example content"), Icons.user_verified, True),
+            test_case((self.user, "Test title", "Example content", Icons.user_update), Icons.user_update, False)
         ]
 
         for case in test_cases:
-            args = case["args"]
-            send = case["send_result"]
-
             expected = Embed(
                 description="Example content",
                 colour=Colours.soft_green
             ).set_author(
                 name="Test title",
-                icon_url=case["icon"]
+                icon_url=case.icon
             )
 
-            with self.subTest(args=args, expected=expected):
+            with self.subTest(args=case.args, expected=expected):
                 send_private_embed_mock.reset_mock()
 
-                send_private_embed_mock.return_value = send
+                send_private_embed_mock.return_value = case.send_result
 
-                result = await utils.notify_pardon(*args)
-                self.assertEqual(send, result)
+                result = await utils.notify_pardon(*case.args)
+                self.assertEqual(case.send_result, result)
 
                 embed = send_private_embed_mock.call_args[0][1]
                 self.assertEqual(embed.to_dict(), expected.to_dict())
 
-                send_private_embed_mock.assert_awaited_once_with(args[0], embed)
+                send_private_embed_mock.assert_awaited_once_with(case.args[0], embed)
 
     @patch("bot.cogs.moderation.utils.log")
     async def test_post_user(self, log_mock):
@@ -316,37 +293,23 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
         """Should DM the user and return `True` on success or `False` on failure."""
         embed = Embed(title="Test", description="Test val")
 
+        test_case = namedtuple("test_case", ["expected_output", "raised_exception"])
         test_cases = [
-            {
-                "expected_output": True,
-                "raised_exception": None
-            },
-            {
-                "expected_output": False,
-                "raised_exception": HTTPException(AsyncMock(), AsyncMock())
-            },
-            {
-                "expected_output": False,
-                "raised_exception": Forbidden(AsyncMock(), AsyncMock())
-            },
-            {
-                "expected_output": False,
-                "raised_exception": NotFound(AsyncMock(), AsyncMock())
-            }
+            test_case(True, None),
+            test_case(False, HTTPException(AsyncMock(), AsyncMock())),
+            test_case(False, Forbidden(AsyncMock(), AsyncMock())),
+            test_case(False, NotFound(AsyncMock(), AsyncMock()))
         ]
 
         for case in test_cases:
-            expected = case["expected_output"]
-            raised = case["raised_exception"]
-
-            with self.subTest(expected=expected, raised=raised):
+            with self.subTest(expected=case.expected_output, raised=case.raised_exception):
                 self.user.send.reset_mock(side_effect=True)
-                self.user.send.side_effect = raised
+                self.user.send.side_effect = case.raised_exception
 
                 result = await utils.send_private_embed(self.user, embed)
 
-                self.assertEqual(result, expected)
-                if expected:
+                self.assertEqual(result, case.expected_output)
+                if case.expected_output:
                     self.user.send.assert_awaited_once_with(embed=embed)
 
 
