@@ -20,11 +20,17 @@ class Scheduler:
         return task_id in self._scheduled_tasks
 
     def schedule(self, task_id: t.Hashable, coroutine: t.Coroutine) -> None:
-        """Schedule the execution of a coroutine."""
+        """
+        Schedule the execution of a coroutine.
+
+        If a task with `task_id` already exists, close `coroutine` instead of scheduling it.
+        This prevents unawaited coroutine warnings.
+        """
         self._log.trace(f"Scheduling task #{task_id}...")
 
         if task_id in self._scheduled_tasks:
             self._log.debug(f"Did not schedule task #{task_id}; task was already scheduled.")
+            coroutine.close()
             return
 
         task = asyncio.create_task(coroutine, name=f"{self.name}_{task_id}")
