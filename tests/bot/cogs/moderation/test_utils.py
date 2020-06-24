@@ -176,7 +176,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
 
                 embed = send_private_embed_mock.call_args[0][1]
 
-                self.assertEqual(embed.to_dict(), case["expected"].to_dict())
+                self.assertEqual(embed.to_dict(), case["expected_output"].to_dict())
 
                 send_private_embed_mock.assert_awaited_once_with(case["args"][0], embed)
 
