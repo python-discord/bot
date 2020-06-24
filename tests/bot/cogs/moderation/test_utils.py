@@ -272,14 +272,11 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
 
                 if raise_error:
                     self.assertIsNone(result)
-                else:
-                    self.assertEqual(result, post_result)
-
-                if not raise_error:
-                    self.bot.api_client.post.assert_awaited_once_with("bot/users", json=payload)
-                else:
                     self.ctx.send.assert_awaited_once()
                     self.assertIn(str(raise_error.status), self.ctx.send.call_args[0][0])
+                else:
+                    self.assertEqual(result, post_result)
+                    self.bot.api_client.post.assert_awaited_once_with("bot/users", json=payload)
 
                 if isinstance(user, MagicMock):
                     log_mock.debug.assert_called_once()
