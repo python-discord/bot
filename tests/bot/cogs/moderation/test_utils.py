@@ -256,32 +256,32 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
         ]
 
         for case in test_cases:
-            test_user = case["user"]
-            expected = case["post_result"]
-            error = case["raise_error"]
+            user = case["user"]
+            post_result = case["post_result"]
+            raise_error = case["raise_error"]
             payload = case["payload"]
 
-            with self.subTest(user=test_user, result=expected, error=error, payload=payload):
+            with self.subTest(user=user, post_result=post_result, raise_error=raise_error, payload=payload):
                 log_mock.reset_mock()
                 self.bot.api_client.post.reset_mock(side_effect=True)
-                self.ctx.bot.api_client.post.return_value = expected
+                self.ctx.bot.api_client.post.return_value = post_result
 
-                self.ctx.bot.api_client.post.side_effect = error
+                self.ctx.bot.api_client.post.side_effect = raise_error
 
-                result = await utils.post_user(self.ctx, test_user)
+                result = await utils.post_user(self.ctx, user)
 
-                if error:
+                if raise_error:
                     self.assertIsNone(result)
                 else:
-                    self.assertEqual(result, expected)
+                    self.assertEqual(result, post_result)
 
-                if not error:
+                if not raise_error:
                     self.bot.api_client.post.assert_awaited_once_with("bot/users", json=payload)
                 else:
                     self.ctx.send.assert_awaited_once()
-                    self.assertTrue(str(error.status) in self.ctx.send.call_args[0][0])
+                    self.assertTrue(str(raise_error.status) in self.ctx.send.call_args[0][0])
 
-                if isinstance(test_user, MagicMock):
+                if isinstance(user, MagicMock):
                     log_mock.debug.assert_called_once()
                 else:
                     log_mock.debug.assert_not_called()
