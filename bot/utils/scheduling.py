@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import inspect
 import logging
 import typing as t
 from datetime import datetime
@@ -87,8 +88,11 @@ class Scheduler:
         finally:
             # Close it to prevent unawaited coroutine warnings,
             # which would happen if the task was cancelled during the sleep.
-            self._log.trace("Explicitly closing the coroutine.")
-            coroutine.close()
+            # Only close it if it's not been awaited yet. This check is important because the
+            # coroutine may cancel this task, which would also trigger the finally block.
+            if inspect.getcoroutinestate(coroutine) == "CORO_CREATED":
+                self._log.trace("Explicitly closing the coroutine.")
+                coroutine.close()
 
     def _task_done_callback(self, task_id: t.Hashable, done_task: asyncio.Task) -> None:
         """
