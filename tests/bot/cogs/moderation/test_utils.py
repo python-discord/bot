@@ -290,8 +290,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 result = await utils.send_private_embed(self.user, embed)
 
                 self.assertEqual(result, case.expected_output)
-                if case.expected_output:
-                    self.user.send.assert_awaited_once_with(embed=embed)
+                self.user.send.assert_awaited_once_with(embed=embed)
 
 
 class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
