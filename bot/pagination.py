@@ -62,7 +62,7 @@ class LinePaginator(Paginator):
         if scale_to_size < max_size:
             raise ValueError("scale_to_size must be >= max_size.")
 
-        self.scale_to_size = scale_to_size
+        self.scale_to_size = scale_to_size - len(suffix)
         self.max_lines = max_lines
         self._current_page = [prefix]
         self._linecount = 0
@@ -94,14 +94,14 @@ class LinePaginator(Paginator):
                     raise RuntimeError(f'Line exceeds maximum scale_to_size {self.scale_to_size}'
                                        ' and could not be split.')
 
-        if self.max_lines is not None:
-            if self._linecount >= self.max_lines:
-                self._linecount = 0
-                self.close_page()
+        if self.max_lines is not None and self._linecount >= self.max_lines:
+            log.debug("max_lines exceeded, creating new page.")
+            self._new_page()
+        elif self._count + len(line) + 1 > self.max_size and self._linecount > 0:
+            log.debug("max_size exceeded on page with lines, creating new page.")
+            self._new_page()
 
-            self._linecount += 1
-        if self._count + len(line) + 1 > self.max_size:
-            self.close_page()
+        self._linecount += 1
 
         self._count += len(line) + 1
         self._current_page.append(line)
@@ -111,7 +111,13 @@ class LinePaginator(Paginator):
             self._count += 1
 
         if remaining_words:
+            self._new_page()
             self.add_line(remaining_words)
+
+    def _new_page(self) -> None:
+        self._linecount = 0
+        self._count = len(self.prefix) + 1
+        self.close_page()
 
     def _split_remaining_words(self, line: str, max_chars: int) -> t.Tuple[str, t.Optional[str]]:
         """
