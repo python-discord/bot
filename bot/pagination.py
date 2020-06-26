@@ -60,7 +60,7 @@ class LinePaginator(Paginator):
         self.suffix = suffix
         self.max_size = max_size - len(suffix)
         if scale_to_size < max_size:
-            raise ValueError("scale_to_size must be >= max_size.")
+            raise ValueError(f"scale_to_size must be >= max_size. ({scale_to_size} < {max_size})")
 
         self.scale_to_size = scale_to_size - len(suffix)
         self.max_lines = max_lines
