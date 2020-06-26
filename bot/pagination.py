@@ -135,7 +135,7 @@ class LinePaginator(Paginator):
             if not is_full:
                 if len(word) + reduced_char_count <= max_chars:
                     reduced_words.append(word)
-                    reduced_char_count += len(word)
+                    reduced_char_count += len(word) + 1
                 else:
                     is_full = True
                     remaining_words.append(word)
