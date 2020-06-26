@@ -132,8 +132,9 @@ class LinePaginator(Paginator):
         Return a tuple in the format (reduced_words, remaining_words).
         """
         reduced_words = []
+        remaining_words = []
         # "(Continued)" is used on a line by itself to indicate the continuation of last page
-        remaining_words = ["(Continued)\n", "---------------\n"]
+        continuation_header = "(Continued)\n-----------\n"
         reduced_char_count = 0
         is_full = False
 
@@ -147,9 +148,11 @@ class LinePaginator(Paginator):
                     remaining_words.append(word)
             else:
                 remaining_words.append(word)
-
-        return " ".join(reduced_words), " ".join(remaining_words) if len(remaining_words) > 2 \
-               else None
+        
+        return (
+            " ".join(reduced_words),
+            continuation_header + " ".join(remaining_words) if remaining_words else None
+        )
 
     @classmethod
     async def paginate(
