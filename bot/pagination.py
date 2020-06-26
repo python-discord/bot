@@ -131,6 +131,7 @@ class LinePaginator(Paginator):
         """
         reduced_words = []
         remaining_words = []
+
         # "(Continued)" is used on a line by itself to indicate the continuation of last page
         continuation_header = "(Continued)\n-----------\n"
         reduced_char_count = 0
