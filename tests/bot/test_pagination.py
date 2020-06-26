@@ -39,13 +39,11 @@ class LinePaginatorTests(TestCase):
         self.paginator.add_line('z')
         self.assertEqual(len(self.paginator._pages), 1)
 
-    def test_add_line_raises_on_very_long_words(self):
-        """`add_line` should raise if a single long word is added that exceeds `scale_to_size`.
-
-        Note: truncation is also a potential option, but this should not occur from normal usage.
-        """
-        with self.assertRaises(RuntimeError):
-            self.paginator.add_line('x' * (self.paginator.scale_to_size + 1))
+    def test_add_line_truncates_very_long_words(self):
+        """`add_line` should truncate if a single long word exceeds `scale_to_size`."""
+        self.paginator.add_line('x' * (self.paginator.scale_to_size + 1))
+        # Note: item at index 1 is the truncated line, index 0 is prefix
+        self.assertEqual(self.paginator._current_page[1], 'x' * self.paginator.scale_to_size)
 
 
 class ImagePaginatorTests(TestCase):

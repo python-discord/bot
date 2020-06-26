@@ -88,11 +88,9 @@ class LinePaginator(Paginator):
         if len(line) > (max_chars := self.max_size - len(self.prefix) - 2):
             if len(line) > self.scale_to_size:
                 line, remaining_words = self._split_remaining_words(line, max_chars)
-                # If line still exceeds scale_to_size, we were unable to split into a second
-                # page without truncating.
                 if len(line) > self.scale_to_size:
-                    raise RuntimeError(f'Line exceeds maximum scale_to_size {self.scale_to_size}'
-                                       ' and could not be split.')
+                    log.debug("Could not continue to next page, truncating line.")
+                    line = line[:self.scale_to_size]
 
         if self.max_lines is not None and self._linecount >= self.max_lines:
             log.debug("max_lines exceeded, creating new page.")
@@ -144,11 +142,14 @@ class LinePaginator(Paginator):
                     reduced_words.append(word)
                     reduced_char_count += len(word) + 1
                 else:
+                    # If reduced_words is empty, we were unable to split the words across pages
+                    if not reduced_words:
+                        return line, None
                     is_full = True
                     remaining_words.append(word)
             else:
                 remaining_words.append(word)
-        
+
         return (
             " ".join(reduced_words),
             continuation_header + " ".join(remaining_words) if remaining_words else None
