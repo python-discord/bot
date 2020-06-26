@@ -18,18 +18,18 @@ class LinePaginatorTests(TestCase):
         self.assertEqual(len(self.paginator._pages), 0)
 
     def test_add_line_works_on_long_lines(self):
-        """`add_line` should scale long lines up to `scale_to_size`."""
-        self.paginator.add_line('x' * self.paginator.scale_to_size)
-        self.assertEqual(len(self.paginator._pages), 1)
+        """After additional lines after `max_size` is exceeded should go on the next page."""
+        self.paginator.add_line('x' * self.paginator.max_size)
+        self.assertEqual(len(self.paginator._pages), 0)
 
         # Any additional lines should start a new page after `max_size` is exceeded.
         self.paginator.add_line('x')
-        self.assertEqual(len(self.paginator._pages), 2)
+        self.assertEqual(len(self.paginator._pages), 1)
 
     def test_add_line_continuation(self):
         """When `scale_to_size` is exceeded, remaining words should be split onto the next page."""
         self.paginator.add_line('zyz ' * (self.paginator.scale_to_size//4 + 1))
-        self.assertEqual(len(self.paginator._pages), 2)
+        self.assertEqual(len(self.paginator._pages), 1)
 
     def test_add_line_no_continuation(self):
         """If adding a new line to an existing page would exceed `max_size`, it should start a new
