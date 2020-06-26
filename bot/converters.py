@@ -217,7 +217,10 @@ class Duration(Converter):
         delta = relativedelta(**duration_dict)
         now = datetime.utcnow()
 
-        return now + delta
+        try:
+            return now + delta
+        except ValueError:
+            raise BadArgument(f"`{duration}` results in a datetime outside the supported range.")
 
 
 class ISODateTime(Converter):

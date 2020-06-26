@@ -36,7 +36,8 @@ class Stats(Cog):
         if message.guild.id != Guild.id:
             return
 
-        if message.channel.category.id == Categories.modmail:
+        cat = getattr(message.channel, "category", None)
+        if cat is not None and cat.id == Categories.modmail:
             if message.channel.id != Channels.incidents:
                 # Do not report modmail channels to stats, there are too many
                 # of them for interesting statistics to be drawn out of this.

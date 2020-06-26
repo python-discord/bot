@@ -106,18 +106,38 @@ class InfractionScheduler(Scheduler):
         log_content = None
         failed = False
 
+        # DM the user about the infraction if it's not a shadow/hidden infraction.
+        # This needs to happen before we apply the infraction, as the bot cannot
+        # send DMs to user that it doesn't share a guild with. If we were to
+        # apply kick/ban infractions first, this would mean that we'd make it
+        # impossible for us to deliver a DM. See python-discord/bot#982.
+        if not infraction["hidden"]:
+            dm_result = f"{constants.Emojis.failmail} "
+            dm_log_text = "\nDM: **Failed**"
+
+            # Sometimes user is a discord.Object; make it a proper user.
+            try:
+                if not isinstance(user, (discord.Member, discord.User)):
+                    user = await self.bot.fetch_user(user.id)
+            except discord.HTTPException as e:
+                log.error(f"Failed to DM {user.id}: could not fetch user (status {e.status})")
+            else:
+                # Accordingly display whether the user was successfully notified via DM.
+                if await utils.notify_infraction(user, infr_type, expiry, reason, icon):
+                    dm_result = ":incoming_envelope: "
+                    dm_log_text = "\nDM: Sent"
+
+        end_msg = ""
         if infraction["actor"] == self.bot.user.id:
             log.trace(
                 f"Infraction #{id_} actor is bot; including the reason in the confirmation message."
             )
-
-            end_msg = f" (reason: {textwrap.shorten(reason, width=1500, placeholder='...')})"
+            if reason:
+                end_msg = f" (reason: {textwrap.shorten(reason, width=1500, placeholder='...')})"
         elif ctx.channel.id not in STAFF_CHANNELS:
             log.trace(
                 f"Infraction #{id_} context is not in a staff channel; omitting infraction count."
             )
-
-            end_msg = ""
         else:
             log.trace(f"Fetching total infraction count for {user}.")
 
@@ -150,27 +170,7 @@ class InfractionScheduler(Scheduler):
                     log.exception(log_msg)
                 failed = True
 
-        # DM the user about the infraction if it's not a shadow/hidden infraction.
-        # Don't send DM when applying failed.
-        if not infraction["hidden"] and not failed:
-            dm_result = f"{constants.Emojis.failmail} "
-            dm_log_text = "\nDM: **Failed**"
-
-            # Sometimes user is a discord.Object; make it a proper user.
-            try:
-                if not isinstance(user, (discord.Member, discord.User)):
-                    user = await self.bot.fetch_user(user.id)
-            except discord.HTTPException as e:
-                log.error(f"Failed to DM {user.id}: could not fetch user (status {e.status})")
-            else:
-                # Accordingly display whether the user was successfully notified via DM.
-                if await utils.notify_infraction(user, infr_type, expiry, reason, icon):
-                    dm_result = ":incoming_envelope: "
-                    dm_log_text = "\nDM: Sent"
-
         if failed:
-            dm_log_text = "\nDM: **Canceled**"
-            dm_result = f"{constants.Emojis.failmail} "
             log.trace(f"Deleted infraction {infraction['id']} from database because applying infraction failed.")
             try:
                 await self.bot.api_client.delete(f"bot/infractions/{id_}")
