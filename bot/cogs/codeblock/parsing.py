@@ -11,6 +11,7 @@ from bot.utils import has_lines
 log = logging.getLogger(__name__)
 
 BACKTICK = "`"
+PY_LANG_CODES = ("python", "py")  # Order is important; "py" is second cause it's a subset.
 _TICKS = {
     BACKTICK,
     "'",
@@ -24,6 +25,7 @@ _TICKS = {
     "\u2033",  # DOUBLE PRIME
     "\u3003",  # VERTICAL KANA REPEAT MARK UPPER HALF
 }
+
 _RE_CODE_BLOCK = re.compile(
     fr"""
     (?P<ticks>
@@ -37,7 +39,6 @@ _RE_CODE_BLOCK = re.compile(
     re.DOTALL | re.VERBOSE
 )
 
-PY_LANG_CODES = ("python", "py")  # Order is important; "py" is second cause it's a subset.
 _RE_LANGUAGE = re.compile(
     fr"""
     ^(?P<spaces>\s+)?                    # Optionally match leading spaces from the beginning.
