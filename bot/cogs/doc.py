@@ -124,6 +124,13 @@ class DocMarkdownConverter(MarkdownConverter):
         el["href"] = urljoin(self.page_url, el["href"])
         return super().convert_a(el, text)
 
+    def convert_p(self, el: PageElement, text: str) -> str:
+        """Include only one newline instead of two when the parent is a li tag."""
+        parent = el.parent
+        if parent is not None and parent.name == "li":
+            return f"{text}\n"
+        return super().convert_p(el, text)
+
 
 def markdownify(html: str, *, url: str = "") -> str:
     """Create a DocMarkdownConverter object from the input html."""
