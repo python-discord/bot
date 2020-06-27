@@ -715,7 +715,7 @@ class HelpChannels(Scheduler, commands.Cog):
 
         The new time for the dormant task is configured with `HelpChannels.deleted_idle_minutes`.
         """
-        if not self.is_in_category(msg.channel, constants.Categories.help_in_use):
+        if not channel_utils.is_in_category(msg.channel, constants.Categories.help_in_use):
             return
 
         if not await self.is_empty(msg.channel):
