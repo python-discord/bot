@@ -504,7 +504,7 @@ class Doc(commands.Cog):
         # Rebuilding the inventory can take some time, so lets send out a
         # typing event to show that the Bot is still working.
         async with ctx.typing():
-            await self.refresh_inventory()
+            await self.update_single(package_name, base_url, inventory_url)
         await ctx.send(f"Added package `{package_name}` to database and refreshed inventory.")
 
     @docs_group.command(name='delete', aliases=('remove', 'rm', 'd'))
