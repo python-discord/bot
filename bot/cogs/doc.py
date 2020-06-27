@@ -11,7 +11,7 @@ from urllib.parse import urljoin
 
 import discord
 from bs4 import BeautifulSoup
-from bs4.element import NavigableString, PageElement, Tag
+from bs4.element import PageElement, Tag
 from discord.errors import NotFound
 from discord.ext import commands
 from markdownify import MarkdownConverter
@@ -357,7 +357,7 @@ class Doc(commands.Cog):
         if start_tag is None:
             return None
 
-        description = cls.find_all_text_until_tag(start_tag, cls._match_end_tag)
+        description = cls.find_all_children_until_tag(start_tag, cls._match_end_tag)
         if description is None:
             return None
 
@@ -373,7 +373,7 @@ class Doc(commands.Cog):
         signatures = []
         description_element = heading.find_next_sibling("dd")
         description_pos = html.find(str(description_element))
-        description = cls.find_all_text_until_tag(description_element, ("dt",))
+        description = cls.find_all_children_until_tag(description_element, tag_filter=("dt", "dl"))
 
         for element in (
             *reversed(heading.find_previous_siblings("dt", limit=2)),
@@ -388,41 +388,26 @@ class Doc(commands.Cog):
         return signatures, description
 
     @staticmethod
-    def find_all_text_until_tag(
+    def find_all_children_until_tag(
             start_element: PageElement,
-            tag_filter: Union[Tuple[str], Callable[[Tag], bool]]
+            tag_filter: Union[Tuple[str, ...], Callable[[Tag], bool]]
     ) -> Optional[str]:
         """
-        Get all text from <p> elements and strings until a tag matching `tag_filter` is found.
-
-        Max 1000 elements are searched to avoid going through whole pages when no matching tag is found.
+        Get all direct children until a child matching `tag_filter` is found.
 
         `tag_filter` can be either a tuple of string names to check against,
         or a filtering callable that's applied to the tags.
-        If no matching end tag is found, None is returned.
         """
         text = ""
-        element = start_element
-        for _ in range(1000):
-            if element is None:
-                break
 
-            element = element.next
-            while isinstance(element, NavigableString):
-                text += element
-                element = element.next
-
-            if element.name == "p":
-                text += str(element)
-
-            elif isinstance(tag_filter, tuple):
+        for element in start_element.find_next().find_next_siblings():
+            if isinstance(tag_filter, tuple):
                 if element.name in tag_filter:
                     break
-            else:
-                if tag_filter(element):
-                    break
-        else:
-            return None
+            elif tag_filter(element):
+                break
+            text += str(element)
+
         return text
 
     @commands.group(name='docs', aliases=('doc', 'd'), invoke_without_command=True)
