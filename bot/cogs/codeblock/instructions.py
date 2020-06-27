@@ -100,11 +100,11 @@ def _get_bad_lang_message(content: str) -> Optional[str]:
     lines = []
     language = info.language
 
-    if info.leading_spaces:
+    if info.has_leading_spaces:
         log.trace("Language specifier was preceded by a space.")
         lines.append(f"Make sure there are no spaces between the back ticks and `{language}`.")
 
-    if not info.terminal_newline:
+    if not info.has_terminal_newline:
         log.trace("Language specifier was not followed by a newline.")
         lines.append(
             f"Make sure you put your code on a new line following `{language}`. "

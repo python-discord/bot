@@ -60,8 +60,8 @@ class BadLanguage(NamedTuple):
     """Parsed information about a poorly formatted language specifier."""
 
     language: str
-    leading_spaces: bool
-    terminal_newline: bool
+    has_leading_spaces: bool
+    has_terminal_newline: bool
 
 
 def find_code_blocks(message: str) -> Optional[Sequence[CodeBlock]]:
