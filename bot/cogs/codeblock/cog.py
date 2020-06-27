@@ -83,12 +83,14 @@ class CodeBlockCog(Cog, name="Code Block"):
 
     def is_on_cooldown(self, channel: discord.TextChannel) -> bool:
         """
-        Return True if an embed was sent for `channel` in the last 300 seconds.
+        Return True if an embed was sent too recently for `channel`.
 
+        The cooldown is configured by `constants.CodeBlock.cooldown_seconds`.
         Note: only channels in the `channel_cooldowns` have cooldowns enabled.
         """
         log.trace(f"Checking if #{channel} is on cooldown.")
-        return (time.time() - self.channel_cooldowns.get(channel.id, 0)) < 300
+        cooldown = constants.CodeBlock.cooldown_seconds
+        return (time.time() - self.channel_cooldowns.get(channel.id, 0)) < cooldown
 
     def is_valid_channel(self, channel: discord.TextChannel) -> bool:
         """Return True if `channel` is a help channel, may be on a cooldown, or is whitelisted."""
