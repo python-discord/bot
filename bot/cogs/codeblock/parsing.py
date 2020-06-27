@@ -148,6 +148,6 @@ def parse_bad_language(content: str) -> Optional[BadLanguage]:
 
     return BadLanguage(
         language=match["lang"],
-        leading_spaces=match["spaces"] is not None,
-        terminal_newline=match["newline"] is not None,
+        has_leading_spaces=match["spaces"] is not None,
+        has_terminal_newline=match["newline"] is not None,
     )
