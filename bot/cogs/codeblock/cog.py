@@ -55,7 +55,7 @@ class CodeBlockCog(Cog, name="Code Block"):
         self.bot = bot
 
         # Stores allowed channels plus epoch times since the last instructional messages sent.
-        self.channel_cooldowns = {channel: 0.0 for channel in constants.CodeBlock.cooldown_channels}
+        self.channel_cooldowns = dict.fromkeys(constants.CodeBlock.cooldown_channels, 0.0)
 
         # Maps users' messages to the messages the bot sent with instructions.
         self.codeblock_message_ids = {}
