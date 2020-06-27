@@ -147,7 +147,11 @@ def _get_no_lang_message(content: str) -> Optional[str]:
 
 
 def get_instructions(content: str) -> Optional[str]:
-    """Return code block formatting instructions for `content` or None if nothing's wrong."""
+    """
+    Parse `content` and return code block formatting instructions if something is wrong.
+
+    Return None if `content` lacks code block formatting issues.
+    """
     log.trace("Getting formatting instructions.")
 
     blocks = parsing.find_code_blocks(content)
