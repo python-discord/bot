@@ -26,6 +26,9 @@ _TICKS = {
     "\u3003",  # VERTICAL KANA REPEAT MARK UPPER HALF
 }
 
+_RE_PYTHON_REPL = re.compile(r"^(>>>|\.\.\.)( |$)")
+_RE_IPYTHON_REPL = re.compile(r"^((In|Out) \[\d+\]: |\s*\.{3,}: ?)")
+
 _RE_CODE_BLOCK = re.compile(
     fr"""
     (?P<ticks>
@@ -118,19 +121,27 @@ def is_python_code(content: str) -> bool:
 
 
 def is_repl_code(content: str, threshold: int = 3) -> bool:
-    """Return True if `content` has at least `threshold` number of Python REPL-like lines."""
-    log.trace(f"Checking if content is Python REPL code using a threshold of {threshold}.")
+    """Return True if `content` has at least `threshold` number of (I)Python REPL-like lines."""
+    log.trace(f"Checking if content is (I)Python REPL code using a threshold of {threshold}.")
 
     repl_lines = 0
+    patterns = (_RE_PYTHON_REPL, _RE_IPYTHON_REPL)
+
     for line in content.splitlines():
-        if line.startswith(">>> ") or line.startswith("... "):
-            repl_lines += 1
+        # Check the line against all patterns.
+        for pattern in patterns:
+            if pattern.match(line):
+                repl_lines += 1
+
+                # Once a pattern is matched, only use that pattern for the remaining lines.
+                patterns = (pattern,)
+                break
 
         if repl_lines == threshold:
-            log.trace("Content is Python REPL code.")
+            log.trace("Content is (I)Python REPL code.")
             return True
 
-    log.trace("Content is not Python REPL code.")
+    log.trace("Content is not (I)Python REPL code.")
     return False
 
 
