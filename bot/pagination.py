@@ -73,12 +73,16 @@ class LinePaginator(Paginator):
         """
         Adds a line to the current page.
 
-        If the line exceeds `self.max_size`, then `self.max_size` will go up to `scale_to_size` for
-        a single line before creating a new page. If it is still exceeded, the excess characters
-        are stored and placed on the next pages until there are none remaining (by word boundary).
+        If a line on a page exceeds `max_size` characters, then `max_size` will go up to
+        `scale_to_size` for a single line before creating a new page for the overflow words. If it
+        is still exceeded, the excess characters are stored and placed on the next pages unti
+        there are none remaining (by word boundary). The line is truncated if `scale_to_size` is
+        still exceeded after attempting to continue onto the next page.
 
-        Raises a RuntimeError if `self.max_size` is still exceeded after attempting to continue
-        onto the next page.
+        In the case that the page already contains one or more lines and the new lines would cause
+        `max_size` to be exceeded, a new page is created. This is done in order to make a best
+        effort to avoid breaking up single lines across pages, but to keep the total length of the
+        page at a reasonable size.
 
         This function overrides the `Paginator.add_line` from inside `discord.ext.commands`.
 
@@ -113,6 +117,12 @@ class LinePaginator(Paginator):
             self.add_line(remaining_words)
 
     def _new_page(self) -> None:
+        """
+        Internal: start a new page for the paginator.
+
+        This closes the current page and resets the counters for the new page's line count and
+        character count.
+        """
         self._linecount = 0
         self._count = len(self.prefix) + 1
         self.close_page()
