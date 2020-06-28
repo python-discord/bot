@@ -91,7 +91,7 @@ class LinePaginator(Paginator):
 
         In the case that the page already contains one or more lines and the new lines would cause
         `max_size` to be exceeded, a new page is created. This is done in order to make a best
-        effort to avoid breaking up single lines across pages, but to keep the total length of the
+        effort to avoid breaking up single lines across pages, while keeping the total length of the
         page at a reasonable size.
 
         This function overrides the `Paginator.add_line` from inside `discord.ext.commands`.
