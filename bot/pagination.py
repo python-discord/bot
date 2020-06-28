@@ -139,6 +139,10 @@ class LinePaginator(Paginator):
         remaining_words: the words in `line` which exceed `max_chars`. This value is None if
             no words could be split from `line`.
 
+        If there are any remaining_words, an ellipses is appended to reduced_words and a
+        continuation header is inserted before remaining_words to visually communicate the line
+        continuation.
+
         Return a tuple in the format (reduced_words, remaining_words).
         """
         reduced_words = []
@@ -164,7 +168,7 @@ class LinePaginator(Paginator):
                 remaining_words.append(word)
 
         return (
-            " ".join(reduced_words),
+            " ".join(reduced_words) + "..." if remaining_words else "",
             continuation_header + " ".join(remaining_words) if remaining_words else None
         )
 
