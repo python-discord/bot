@@ -96,6 +96,7 @@ class LinePaginator(Paginator):
                     log.debug("Could not continue to next page, truncating line.")
                     line = line[:self.scale_to_size]
 
+        # Check if we should start a new page or continue the line on the current one
         if self.max_lines is not None and self._linecount >= self.max_lines:
             log.debug("max_lines exceeded, creating new page.")
             self._new_page()
@@ -112,6 +113,7 @@ class LinePaginator(Paginator):
             self._current_page.append('')
             self._count += 1
 
+        # Start a new page if there were any overflow words
         if remaining_words:
             self._new_page()
             self.add_line(remaining_words)
