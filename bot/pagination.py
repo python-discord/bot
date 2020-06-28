@@ -58,9 +58,19 @@ class LinePaginator(Paginator):
         """
         self.prefix = prefix
         self.suffix = suffix
+
+        # Embeds that exceed 2048 characters will result in an HTTPException
+        # (Discord API limit), so we've set a limit of 2000
+        if max_size > 2000:
+            raise ValueError(f"max_size must be <= 2,000 characters. ({max_size} > 2000)")
+
         self.max_size = max_size - len(suffix)
+
         if scale_to_size < max_size:
             raise ValueError(f"scale_to_size must be >= max_size. ({scale_to_size} < {max_size})")
+
+        if scale_to_size > 2000:
+            raise ValueError(f"max_size must be <= 2,000 characters. ({scale_to_size} > 2000)")
 
         self.scale_to_size = scale_to_size - len(suffix)
         self.max_lines = max_lines

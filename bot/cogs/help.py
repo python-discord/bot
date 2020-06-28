@@ -299,7 +299,7 @@ class CustomHelpCommand(HelpCommand):
             embed,
             prefix=description,
             max_lines=COMMANDS_PER_PAGE,
-            max_size=2040,
+            max_size=2000,
         )
 
     async def send_bot_help(self, mapping: dict) -> None:
