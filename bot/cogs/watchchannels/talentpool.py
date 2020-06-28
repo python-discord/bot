@@ -224,7 +224,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
                 Status: **Active**
                 Date: {start_date}
                 Actor: {actor.mention if actor else actor_id}
-                Reason: {textwrap.shorten(nomination_object["reason"], width=200, placeholder="...")}
+                Reason: {nomination_object["reason"]}
                 Nomination ID: `{nomination_object["id"]}`
                 ===============
                 """
@@ -237,10 +237,10 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
                 Status: Inactive
                 Date: {start_date}
                 Actor: {actor.mention if actor else actor_id}
-                Reason: {textwrap.shorten(nomination_object["reason"], width=200, placeholder="...")}
+                Reason: {nomination_object["reason"]}
 
                 End date: {end_date}
-                Unwatch reason: {textwrap.shorten(nomination_object["end_reason"], width=200, placeholder="...")}
+                Unwatch reason: {nomination_object["end_reason"]}
                 Nomination ID: `{nomination_object["id"]}`
                 ===============
                 """
