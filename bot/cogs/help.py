@@ -346,7 +346,7 @@ class CustomHelpCommand(HelpCommand):
             # add any remaining command help that didn't get added in the last iteration above.
             pages.append(page)
 
-        await LinePaginator.paginate(pages, self.context, embed=embed, max_lines=1, max_size=2040)
+        await LinePaginator.paginate(pages, self.context, embed=embed, max_lines=1, max_size=2000)
 
 
 class Help(Cog):
