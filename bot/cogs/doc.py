@@ -151,6 +151,7 @@ class InventoryURL(commands.Converter):
     @staticmethod
     async def convert(ctx: commands.Context, url: str) -> str:
         """Convert url to Intersphinx inventory URL."""
+        await ctx.trigger_typing()
         try:
             intersphinx.fetch_inventory(SPHINX_MOCK_APP, '', url)
         except AttributeError:
@@ -504,10 +505,7 @@ class Doc(commands.Cog):
             f"Inventory URL: {inventory_url}"
         )
 
-        # Rebuilding the inventory can take some time, so lets send out a
-        # typing event to show that the Bot is still working.
-        async with ctx.typing():
-            await self.update_single(package_name, base_url, inventory_url)
+        await self.update_single(package_name, base_url, inventory_url)
         await ctx.send(f"Added package `{package_name}` to database and refreshed inventory.")
 
     @docs_group.command(name='delete', aliases=('remove', 'rm', 'd'))
