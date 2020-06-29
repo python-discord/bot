@@ -162,3 +162,52 @@ def parse_bad_language(content: str) -> Optional[BadLanguage]:
         has_leading_spaces=match["spaces"] is not None,
         has_terminal_newline=match["newline"] is not None,
     )
+
+
+def _get_leading_spaces(content: str) -> int:
+    """Return the number of spaces at the start of the first line in `content`."""
+    current = content[0]
+    leading_spaces = 0
+
+    while current == " ":
+        leading_spaces += 1
+        current = content[leading_spaces]
+
+    return leading_spaces
+
+
+def _fix_indentation(content: str) -> str:
+    """
+    Attempt to fix badly indented code in `content`.
+
+    In most cases, this works like textwrap.dedent. However, if the first line ends with a colon,
+    all subsequent lines are re-indented to only be one level deep relative to the first line.
+    The intent is to fix cases where the leading spaces of the first line of code were accidentally
+    not copied, which makes the first line appear not indented.
+
+    This is fairly naïve and inaccurate. Therefore, it may break some code that was otherwise valid.
+    It's meant to catch really common cases, so that's acceptable. Its flaws are:
+
+    - It assumes that if the first line ends with a colon, it is the start of an indented block
+    - It uses 4 spaces as the indentation, regardless of what the rest of the code uses
+    """
+    lines = content.splitlines(keepends=True)
+
+    # Dedent the first line
+    first_indent = _get_leading_spaces(content)
+    first_line = lines[0][first_indent:]
+
+    second_indent = _get_leading_spaces(lines[1])
+
+    # If the first line ends with a colon, all successive lines need to be indented one
+    # additional level (assumes an indent width of 4).
+    if first_line.rstrip().endswith(":"):
+        second_indent -= 4
+
+    # All lines must be dedented at least by the same amount as the first line.
+    first_indent = max(first_indent, second_indent)
+
+    # Dedent the rest of the lines and join them together with the first line.
+    content = first_line + "".join(line[first_indent:] for line in lines[1:])
+
+    return content
