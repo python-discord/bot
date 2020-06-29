@@ -70,7 +70,7 @@ def _get_no_ticks_message(content: str) -> Optional[str]:
     """If `content` is Python/REPL code, return instructions on using code blocks."""
     log.trace("Creating instructions for a missing code block.")
 
-    if parsing.is_repl_code(content) or parsing.is_python_code(content):
+    if parsing.is_python_code(content):
         example_blocks = _get_example("python")
         return (
             "It looks like you're trying to paste code into this channel.\n\n"
@@ -132,7 +132,7 @@ def _get_no_lang_message(content: str) -> Optional[str]:
     """
     log.trace("Creating instructions for a missing language.")
 
-    if parsing.is_repl_code(content) or parsing.is_python_code(content):
+    if parsing.is_python_code(content):
         example_blocks = _get_example("python")
 
         # Note that _get_bad_ticks_message expects the first line to have two newlines.

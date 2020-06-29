@@ -3,6 +3,7 @@
 import ast
 import logging
 import re
+import textwrap
 from typing import NamedTuple, Optional, Sequence
 
 from bot import constants
@@ -98,7 +99,7 @@ def find_code_blocks(message: str) -> Optional[Sequence[CodeBlock]]:
     return code_blocks
 
 
-def is_python_code(content: str) -> bool:
+def _is_python_code(content: str) -> bool:
     """Return True if `content` is valid Python consisting of more than just expressions."""
     log.trace("Checking if content is Python code.")
     try:
@@ -120,7 +121,7 @@ def is_python_code(content: str) -> bool:
         return False
 
 
-def is_repl_code(content: str, threshold: int = 3) -> bool:
+def _is_repl_code(content: str, threshold: int = 3) -> bool:
     """Return True if `content` has at least `threshold` number of (I)Python REPL-like lines."""
     log.trace(f"Checking if content is (I)Python REPL code using a threshold of {threshold}.")
 
@@ -143,6 +144,18 @@ def is_repl_code(content: str, threshold: int = 3) -> bool:
 
     log.trace("Content is not (I)Python REPL code.")
     return False
+
+
+def is_python_code(content: str) -> bool:
+    """Return True if `content` is valid Python code or (I)Python REPL output."""
+    dedented = textwrap.dedent(content)
+
+    # Parse AST twice in case _fix_indentation ends up breaking code due to its inaccuracies.
+    return (
+        _is_python_code(dedented)
+        or _is_repl_code(dedented)
+        or _is_python_code(_fix_indentation(content))
+    )
 
 
 def parse_bad_language(content: str) -> Optional[BadLanguage]:
