@@ -6,7 +6,7 @@ import textwrap
 from collections import OrderedDict
 from contextlib import suppress
 from types import SimpleNamespace
-from typing import Any, Callable, List, NamedTuple, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, NamedTuple, Optional, Tuple, Union
 from urllib.parse import urljoin
 
 import discord
@@ -70,6 +70,7 @@ NOT_FOUND_DELETE_DELAY = RedirectOutput.delete_delay
 class DocItem(NamedTuple):
     """Holds inventory symbol information."""
 
+    package: str
     url: str
     group: str
 
@@ -174,7 +175,7 @@ class Doc(commands.Cog):
     def __init__(self, bot: Bot):
         self.base_urls = {}
         self.bot = bot
-        self.inventories = {}
+        self.inventories: Dict[str, DocItem] = {}
         self.renamed_symbols = set()
 
         self.bot.loop.create_task(self.init_refresh_inventory())
@@ -185,7 +186,7 @@ class Doc(commands.Cog):
         await self.refresh_inventory()
 
     async def update_single(
-        self, package_name: str, base_url: str, inventory_url: str
+        self, api_package_name: str, base_url: str, inventory_url: str
     ) -> None:
         """
         Rebuild the inventory for a single package.
@@ -197,14 +198,14 @@ class Doc(commands.Cog):
             * `inventory_url` is the absolute URL to the intersphinx inventory, fetched by running
                 `intersphinx.fetch_inventory` in an executor on the bot's event loop
         """
-        self.base_urls[package_name] = base_url
+        self.base_urls[api_package_name] = base_url
 
         package = await self._fetch_inventory(inventory_url)
         if not package:
             return None
 
         for group, value in package.items():
-            for symbol, (package_name, _version, relative_doc_url, _) in value.items():
+            for symbol, (_package_name, _version, relative_doc_url, _) in value.items():
                 if "/" in symbol:
                     continue  # skip unreachable symbols with slashes
                 absolute_doc_url = base_url + relative_doc_url
@@ -221,7 +222,7 @@ class Doc(commands.Cog):
                     elif (overridden_symbol_group := self.inventories[symbol].group) in NO_OVERRIDE_GROUPS:
                         overridden_symbol = f"{overridden_symbol_group}.{symbol}"
                         if overridden_symbol in self.renamed_symbols:
-                            overridden_symbol = f"{package_name.split()[0]}.{overridden_symbol}"
+                            overridden_symbol = f"{api_package_name}.{overridden_symbol}"
 
                         self.inventories[overridden_symbol] = self.inventories[symbol]
                         self.renamed_symbols.add(overridden_symbol)
@@ -229,12 +230,12 @@ class Doc(commands.Cog):
                     # If renamed `symbol` already exists, add library name in front to differentiate between them.
                     if symbol in self.renamed_symbols:
                         # Split `package_name` because of packages like Pillow that have spaces in them.
-                        symbol = f"{package_name.split()[0]}.{symbol}"
+                        symbol = f"{api_package_name}.{symbol}"
                         self.renamed_symbols.add(symbol)
 
-                self.inventories[symbol] = DocItem(absolute_doc_url, group_name)
+                self.inventories[symbol] = DocItem(api_package_name, absolute_doc_url, group_name)
 
-        log.trace(f"Fetched inventory for {package_name}.")
+        log.trace(f"Fetched inventory for {api_package_name}.")
 
     async def refresh_inventory(self) -> None:
         """Refresh internal documentation inventory."""
@@ -306,8 +307,10 @@ class Doc(commands.Cog):
         if scraped_html is None:
             return None
 
+        symbol_obj = self.inventories[symbol]
+        self.bot.stats.incr(f"doc_fetches.{symbol_obj.package.lower()}")
         signatures = scraped_html[0]
-        permalink = self.inventories[symbol].url
+        permalink = symbol_obj.url
         description = markdownify(scraped_html[1], url=permalink)
 
         # Truncate the description of the embed to the last occurrence
