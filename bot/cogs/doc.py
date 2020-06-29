@@ -12,7 +12,6 @@ from urllib.parse import urljoin
 import discord
 from bs4 import BeautifulSoup
 from bs4.element import PageElement, Tag
-from discord.errors import NotFound
 from discord.ext import commands
 from markdownify import MarkdownConverter
 from requests import ConnectTimeout, ConnectionError, HTTPError
@@ -24,6 +23,7 @@ from bot.constants import MODERATION_ROLES, RedirectOutput
 from bot.converters import ValidPythonIdentifier, ValidURL
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
+from bot.utils.messages import wait_for_deletion
 
 
 log = logging.getLogger(__name__)
@@ -468,9 +468,16 @@ class Doc(commands.Cog):
                     colour=discord.Colour.red()
                 )
                 error_message = await ctx.send(embed=error_embed)
-                with suppress(NotFound):
-                    await error_message.delete(delay=NOT_FOUND_DELETE_DELAY)
-                    await ctx.message.delete(delay=NOT_FOUND_DELETE_DELAY)
+                await wait_for_deletion(
+                    error_message,
+                    (ctx.author.id,),
+                    timeout=NOT_FOUND_DELETE_DELAY,
+                    client=self.bot
+                )
+                with suppress(discord.NotFound):
+                    await ctx.message.delete()
+                with suppress(discord.NotFound):
+                    await error_message.delete()
             else:
                 await ctx.send(embed=doc_embed)
 
