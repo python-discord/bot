@@ -68,35 +68,6 @@ mock_404 = discord.NotFound(
 )
 
 
-class TestMakeUsername(unittest.TestCase):
-    """Collection of tests for the `make_username` helper function."""
-
-    def test_make_username_raises(self):
-        """Raises `ValueError` on `max_length` < 3."""
-        with self.assertRaises(ValueError):
-            incidents.make_username(MockMember(), MockMember(), max_length=2)
-
-    def test_make_username_never_exceed_limit(self):
-        """
-        The return string length is always less than or equal to `max_length`.
-
-        For this test we pass `max_length=10` for convenience. The name of the first
-        user (`reported_by`) is always 1 character in length, but we generate names
-        for the `actioned_by` user starting at length 1 and up to length 20.
-
-        Finally, we assert that the output length never exceeded 10 in total.
-        """
-        user_a = MockMember(name="A")
-
-        max_length = 10
-        test_cases = (MockMember(name="B" * n) for n in range(1, 20))
-
-        for user_b in test_cases:
-            with self.subTest(user_a=user_a, user_b=user_b, max_length=max_length):
-                generated_username = incidents.make_username(user_a, user_b, max_length)
-                self.assertLessEqual(len(generated_username), max_length)
-
-
 @patch("bot.constants.Channels.incidents", 123)
 class TestIsIncident(unittest.TestCase):
     """
@@ -307,9 +278,7 @@ class TestArchive(TestIncidents):
         propagate out of the method, which is just as important.
         """
         self.cog_instance.bot.fetch_webhook = AsyncMock(side_effect=mock_404)
-
-        result = await self.cog_instance.archive(incident=MockMessage(), outcome=MagicMock(), actioned_by=MockMember())
-        self.assertFalse(result)
+        self.assertFalse(await self.cog_instance.archive(incident=MockMessage(), outcome=MagicMock()))
 
     async def test_archive_relays_incident(self):
         """
@@ -334,18 +303,12 @@ class TestArchive(TestIncidents):
             author=MockUser(name="author_name", avatar_url="author_avatar"),
             id=123,
         )
-
-        with patch("bot.cogs.moderation.incidents.make_username", MagicMock(return_value="generated_username")):
-            archive_return = await self.cog_instance.archive(
-                incident=incident,
-                outcome=MagicMock(value="A"),
-                actioned_by=MockMember(name="moderator"),
-            )
+        archive_return = await self.cog_instance.archive(incident, outcome=MagicMock(value="A"))
 
         # Check that the webhook was dispatched correctly
         webhook.send.assert_called_once_with(
             content="pingless message",
-            username="generated_username",
+            username="author_name",
             avatar_url="author_avatar",
             wait=True,
         )
@@ -362,8 +325,7 @@ class TestArchive(TestIncidents):
 
         Discord will reject any webhook with "clyde" in the username field, as it impersonates
         the official Clyde bot. Since we do not control what the username will be (the incident
-        author name, and actioning moderator names are used), we must ensure the name is cleansed,
-        otherwise the relay may fail.
+        author name is used), we must ensure the name is cleansed, otherwise the relay may fail.
 
         This test assumes the username is passed as a kwarg. If this test fails, please review
         whether the passed argument is being retrieved correctly.
@@ -371,11 +333,9 @@ class TestArchive(TestIncidents):
         webhook = MockAsyncWebhook()
         self.cog_instance.bot.fetch_webhook = AsyncMock(return_value=webhook)
 
-        # The `make_username` helper will return a string with "clyde" in it
-        with patch("bot.cogs.moderation.incidents.make_username", MagicMock(return_value="clyde the great")):
-            await self.cog_instance.archive(MockMessage(), MagicMock(incidents.Signal), MockMember())
+        message_from_clyde = MockMessage(author=MockUser(name="clyde the great"))
+        await self.cog_instance.archive(message_from_clyde, MagicMock(incidents.Signal))
 
-        # Assert that the "clyde" was never passed to `send`
         self.assertNotIn("clyde", webhook.send.call_args.kwargs["username"])
 
 

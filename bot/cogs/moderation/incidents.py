@@ -41,30 +41,6 @@ ALLOWED_ROLES: t.Set[int] = {Roles.moderators, Roles.admins, Roles.owners}
 ALL_SIGNALS: t.Set[str] = {signal.value for signal in Signal}
 
 
-def make_username(reported_by: discord.Member, actioned_by: discord.Member, max_length: int = 80) -> str:
-    """
-    Create a webhook-friendly username from the names of `reported_by` and `actioned_by`.
-
-    If the resulting username length exceeds `max_length`, it will be capped at `max_length - 3`
-    and have 3 dots appended to the end. The default value is 80, which corresponds to the limit
-    Discord imposes on webhook username length.
-
-    If the value of `max_length` is < 3, ValueError is raised.
-    """
-    if max_length < 3:
-        raise ValueError(f"Maximum length cannot be less than 3: {max_length=}")
-
-    username = f"{reported_by.name} | {actioned_by.name}"
-    log.trace(f"Generated webhook username: {username} (length: {len(username)})")
-
-    if len(username) > max_length:
-        stop = max_length - 3
-        username = f"{username[:stop]}..."
-        log.trace(f"Username capped at {max_length=}: {username}")
-
-    return username
-
-
 def is_incident(message: discord.Message) -> bool:
     """True if `message` qualifies as an incident, False otherwise."""
     conditions = (
@@ -172,14 +148,13 @@ class Incidents(Cog):
 
         log.debug("Crawl task finished!")
 
-    async def archive(self, incident: discord.Message, outcome: Signal, actioned_by: discord.Member) -> bool:
+    async def archive(self, incident: discord.Message, outcome: Signal) -> bool:
         """
         Relay `incident` to the #incidents-archive channel.
 
         The following pieces of information are relayed:
             * Incident message content (clean, pingless)
-            * Incident author name (as webhook username)
-            * Name of user who actioned the incident (appended to webhook username)
+            * Incident author name (as webhook author)
             * Incident author avatar (as webhook avatar)
             * Resolution signal (`outcome`)
 
@@ -195,7 +170,7 @@ class Incidents(Cog):
             # Now relay the incident
             message: discord.Message = await webhook.send(
                 content=incident.clean_content,  # Clean content will prevent mentions from pinging
-                username=sub_clyde(make_username(incident.author, actioned_by)),
+                username=sub_clyde(incident.author.name),
                 avatar_url=incident.author.avatar_url,
                 wait=True,  # This makes the method return the sent Message object
             )
@@ -260,7 +235,7 @@ class Incidents(Cog):
             log.debug("Reaction was valid, but no action is currently defined for it")
             return
 
-        relay_successful = await self.archive(incident, signal, actioned_by=member)
+        relay_successful = await self.archive(incident, signal)
         if not relay_successful:
             log.trace("Original message will not be deleted as we failed to relay it to the archive")
             return
