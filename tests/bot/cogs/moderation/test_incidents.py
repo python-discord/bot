@@ -278,7 +278,9 @@ class TestArchive(TestIncidents):
         propagate out of the method, which is just as important.
         """
         self.cog_instance.bot.fetch_webhook = AsyncMock(side_effect=mock_404)
-        self.assertFalse(await self.cog_instance.archive(incident=MockMessage(), outcome=MagicMock()))
+        self.assertFalse(
+            await self.cog_instance.archive(incident=MockMessage(), outcome=MagicMock(), actioned_by=MockMember())
+        )
 
     async def test_archive_relays_incident(self):
         """
@@ -303,7 +305,7 @@ class TestArchive(TestIncidents):
             author=MockUser(name="author_name", avatar_url="author_avatar"),
             id=123,
         )
-        archive_return = await self.cog_instance.archive(incident, outcome=MagicMock(value="A"))
+        archive_return = await self.cog_instance.archive(incident, MagicMock(value="A"), MockMember())
 
         # Check that the webhook was dispatched correctly
         webhook.send.assert_called_once_with(
@@ -334,7 +336,7 @@ class TestArchive(TestIncidents):
         self.cog_instance.bot.fetch_webhook = AsyncMock(return_value=webhook)
 
         message_from_clyde = MockMessage(author=MockUser(name="clyde the great"))
-        await self.cog_instance.archive(message_from_clyde, MagicMock(incidents.Signal))
+        await self.cog_instance.archive(message_from_clyde, MagicMock(incidents.Signal), MockMember())
 
         self.assertNotIn("clyde", webhook.send.call_args.kwargs["username"])
 

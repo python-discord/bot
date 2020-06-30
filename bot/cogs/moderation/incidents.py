@@ -148,7 +148,7 @@ class Incidents(Cog):
 
         log.debug("Crawl task finished!")
 
-    async def archive(self, incident: discord.Message, outcome: Signal) -> bool:
+    async def archive(self, incident: discord.Message, outcome: Signal, actioned_by: discord.Member) -> bool:
         """
         Relay `incident` to the #incidents-archive channel.
 
@@ -235,7 +235,7 @@ class Incidents(Cog):
             log.debug("Reaction was valid, but no action is currently defined for it")
             return
 
-        relay_successful = await self.archive(incident, signal)
+        relay_successful = await self.archive(incident, signal, actioned_by=member)
         if not relay_successful:
             log.trace("Original message will not be deleted as we failed to relay it to the archive")
             return
