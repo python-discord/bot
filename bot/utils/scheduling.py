@@ -11,6 +11,10 @@ class Scheduler:
     """
     Schedule the execution of coroutines and keep track of them.
 
+    When instantiating a Scheduler, a name must be provided. This name is used to distinguish the
+    instance's log messages from other instances. Using the name of the class or module containing
+    the instance is suggested.
+
     Coroutines can be scheduled immediately with `schedule` or in the future with `schedule_at`
     or `schedule_later`. A unique ID is required to be given in order to keep track of the
     resulting Tasks. Any scheduled task can be cancelled prematurely using `cancel` by providing
