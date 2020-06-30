@@ -8,7 +8,17 @@ from functools import partial
 
 
 class Scheduler:
-    """Task scheduler."""
+    """
+    Schedule the execution of coroutines and keep track of them.
+
+    Coroutines can be scheduled immediately with `schedule` or in the future with `schedule_at`
+    or `schedule_later`. A unique ID is required to be given in order to keep track of the
+    resulting Tasks. Any scheduled task can be cancelled prematurely using `cancel` by providing
+    the same ID used to schedule it.  The `in` operator is supported for checking if a task with a
+    given ID is currently scheduled.
+
+    Any exception raised in a scheduled task is logged when the task is done.
+    """
 
     def __init__(self, name: str):
         self.name = name
