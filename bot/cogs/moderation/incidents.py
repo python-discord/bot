@@ -1,13 +1,14 @@
 import asyncio
 import logging
 import typing as t
+from datetime import datetime
 from enum import Enum
 
 import discord
 from discord.ext.commands import Cog
 
 from bot.bot import Bot
-from bot.constants import Channels, Emojis, Roles, Webhooks
+from bot.constants import Channels, Colours, Emojis, Roles, Webhooks
 from bot.utils.messages import sub_clyde
 
 log = logging.getLogger(__name__)
@@ -39,6 +40,35 @@ ALLOWED_ROLES: t.Set[int] = {Roles.moderators, Roles.admins, Roles.owners}
 
 # Message must have all of these emoji to pass the `has_signals` check
 ALL_SIGNALS: t.Set[str] = {signal.value for signal in Signal}
+
+
+def make_embed(incident: discord.Message, outcome: Signal, actioned_by: discord.Member) -> discord.Embed:
+    """
+    Create an embed representation of `incident` for the #incidents-archive channel.
+
+    The name & discriminator of `actioned_by` and `outcome` will be presented in the
+    embed footer. Additionally, the embed is coloured based on `outcome`.
+
+    The author of `incident` is not shown in the embed. It is assumed that this piece
+    of information will be relayed in other ways, e.g. webhook username.
+
+    As mentions in embeds do not ping, we do not need to use `incident.clean_content`.
+    """
+    if outcome is Signal.ACTIONED:
+        colour = Colours.soft_green
+        footer = f"Actioned by {actioned_by}"
+    else:
+        colour = Colours.soft_red
+        footer = f"Rejected by {actioned_by}"
+
+    embed = discord.Embed(
+        description=incident.content,
+        timestamp=datetime.utcnow(),
+        colour=colour,
+    )
+    embed.set_footer(text=footer, icon_url=actioned_by.avatar_url)
+
+    return embed
 
 
 def is_incident(message: discord.Message) -> bool:

@@ -9,6 +9,7 @@ import aiohttp
 import discord
 
 from bot.cogs.moderation import Incidents, incidents
+from bot.constants import Colours
 from tests.helpers import (
     MockAsyncWebhook,
     MockBot,
@@ -66,6 +67,31 @@ mock_404 = discord.NotFound(
     response=MagicMock(aiohttp.ClientResponse),  # Mock the erroneous response
     message="Not found",
 )
+
+
+class TestMakeEmbed(unittest.TestCase):
+    """Collection of tests for the `make_embed` helper function."""
+
+    def test_make_embed_actioned(self):
+        """Embed is coloured green and footer contains 'Actioned' when `outcome=Signal.ACTIONED`."""
+        embed = incidents.make_embed(MockMessage(), incidents.Signal.ACTIONED, MockMember())
+
+        self.assertEqual(embed.colour.value, Colours.soft_green)
+        self.assertIn("Actioned", embed.footer.text)
+
+    def test_make_embed_not_actioned(self):
+        """Embed is coloured red and footer contains 'Rejected' when `outcome=Signal.NOT_ACTIONED`."""
+        embed = incidents.make_embed(MockMessage(), incidents.Signal.NOT_ACTIONED, MockMember())
+
+        self.assertEqual(embed.colour.value, Colours.soft_red)
+        self.assertIn("Rejected", embed.footer.text)
+
+    def test_make_embed_content(self):
+        """Incident content appears as embed description."""
+        incident = MockMessage(content="this is an incident")
+        embed = incidents.make_embed(incident, incidents.Signal.ACTIONED, MockMember())
+
+        self.assertEqual(incident.content, embed.description)
 
 
 @patch("bot.constants.Channels.incidents", 123)
