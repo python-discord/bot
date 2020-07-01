@@ -312,39 +312,29 @@ class TestArchive(TestIncidents):
         """
         If webhook is found, method relays `incident` properly.
 
-        This test will assert the following:
-            * The fetched webhook's `send` method is fed the correct arguments
-            * The message returned by `send` will have `outcome` reaction added
-            * Finally, the `archive` method returns True
-
-        Assertions are made specifically in this order.
+        This test will assert that the fetched webhook's `send` method is fed the correct arguments,
+        and that the `archive` method returns True.
         """
-        webhook_message = MockMessage()  # The message that will be returned by the webhook's `send` method
-        webhook = MockAsyncWebhook(send=AsyncMock(return_value=webhook_message))
-
+        webhook = MockAsyncWebhook()
         self.cog_instance.bot.fetch_webhook = AsyncMock(return_value=webhook)  # Patch in our webhook
 
-        # Now we'll pas our own `incident` to `archive` and capture the return value
+        # Define our own `incident` for archivation
         incident = MockMessage(
-            clean_content="pingless message",
-            content="pingful message",
+            content="this is an incident",
             author=MockUser(name="author_name", avatar_url="author_avatar"),
             id=123,
         )
-        archive_return = await self.cog_instance.archive(incident, MagicMock(value="A"), MockMember())
+        built_embed = MagicMock(discord.Embed, id=123)  # We patch `make_embed` to return this
 
-        # Check that the webhook was dispatched correctly
+        with patch("bot.cogs.moderation.incidents.make_embed", MagicMock(return_value=built_embed)):
+            archive_return = await self.cog_instance.archive(incident, MagicMock(value="A"), MockMember())
+
+        # Now we check that the webhook was given the correct args, and that `archive` returned True
         webhook.send.assert_called_once_with(
-            content="pingless message",
+            embed=built_embed,
             username="author_name",
             avatar_url="author_avatar",
-            wait=True,
         )
-
-        # Now check that the correct emoji was added to the relayed message
-        webhook_message.add_reaction.assert_called_once_with("A")
-
-        # Finally check that the method returned True
         self.assertTrue(archive_return)
 
     async def test_archive_clyde_username(self):

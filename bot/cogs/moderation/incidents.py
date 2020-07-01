@@ -180,38 +180,30 @@ class Incidents(Cog):
 
     async def archive(self, incident: discord.Message, outcome: Signal, actioned_by: discord.Member) -> bool:
         """
-        Relay `incident` to the #incidents-archive channel.
+        Relay an embed representation of `incident` to the #incidents-archive channel.
 
         The following pieces of information are relayed:
-            * Incident message content (clean, pingless)
+            * Incident message content (as embed description)
             * Incident author name (as webhook author)
             * Incident author avatar (as webhook avatar)
-            * Resolution signal (`outcome`)
+            * Resolution signal `outcome` (as embed colour & footer)
+            * Moderator `actioned_by` (name & discriminator shown in footer)
 
         Return True if the relay finishes successfully. If anything goes wrong, meaning
         not all information was relayed, return False. This signals that the original
         message is not safe to be deleted, as we will lose some information.
         """
-        log.debug(f"Archiving incident: {incident.id} with outcome: {outcome}")
+        log.debug(f"Archiving incident: {incident.id} (outcome: {outcome}, actioned by: {actioned_by})")
         try:
-            # First we try to grab the webhook
-            webhook: discord.Webhook = await self.bot.fetch_webhook(Webhooks.incidents_archive)
-
-            # Now relay the incident
-            message: discord.Message = await webhook.send(
-                content=incident.clean_content,  # Clean content will prevent mentions from pinging
+            webhook = await self.bot.fetch_webhook(Webhooks.incidents_archive)
+            await webhook.send(
+                embed=make_embed(incident, outcome, actioned_by),
                 username=sub_clyde(incident.author.name),
                 avatar_url=incident.author.avatar_url,
-                wait=True,  # This makes the method return the sent Message object
             )
-
-            # Finally add the `outcome` emoji
-            await message.add_reaction(outcome.value)
-
         except Exception:
             log.exception(f"Failed to archive incident {incident.id} to #incidents-archive")
             return False
-
         else:
             log.trace("Message archived successfully!")
             return True
