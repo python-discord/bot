@@ -62,13 +62,13 @@ class Scheduler:
         """
         delay = (time - datetime.utcnow()).total_seconds()
         if delay > 0:
-            coroutine = self._await_later(delay, coroutine)
+            coroutine = self._await_later(delay, task_id, coroutine)
 
         self.schedule(task_id, coroutine)
 
     def schedule_later(self, delay: t.Union[int, float], task_id: t.Hashable, coroutine: t.Coroutine) -> None:
         """Schedule `coroutine` to be executed after the given `delay` number of seconds."""
-        self.schedule(task_id, self._await_later(delay, coroutine))
+        self.schedule(task_id, self._await_later(delay, task_id, coroutine))
 
     def cancel(self, task_id: t.Hashable) -> None:
         """Unschedule the task identified by `task_id`. Log a warning if the task doesn't exist."""
@@ -90,23 +90,26 @@ class Scheduler:
         for task_id in self._scheduled_tasks.copy():
             self.cancel(task_id)
 
-    async def _await_later(self, delay: t.Union[int, float], coroutine: t.Coroutine) -> None:
+    async def _await_later(self, delay: t.Union[int, float], task_id: t.Hashable, coroutine: t.Coroutine) -> None:
         """Await `coroutine` after the given `delay` number of seconds."""
         try:
-            self._log.trace(f"Waiting {delay} seconds before awaiting the coroutine.")
+            self._log.trace(f"Waiting {delay} seconds before awaiting coroutine for #{task_id}.")
             await asyncio.sleep(delay)
 
             # Use asyncio.shield to prevent the coroutine from cancelling itself.
-            self._log.trace("Done waiting; now awaiting the coroutine.")
+            self._log.trace(f"Done waiting for #{task_id}; now awaiting the coroutine.")
             await asyncio.shield(coroutine)
         finally:
             # Close it to prevent unawaited coroutine warnings,
             # which would happen if the task was cancelled during the sleep.
             # Only close it if it's not been awaited yet. This check is important because the
             # coroutine may cancel this task, which would also trigger the finally block.
-            if inspect.getcoroutinestate(coroutine) == "CORO_CREATED":
-                self._log.trace("Explicitly closing the coroutine.")
+            state = inspect.getcoroutinestate(coroutine)
+            if state == "CORO_CREATED":
+                self._log.debug(f"Explicitly closing the coroutine for #{task_id}.")
                 coroutine.close()
+            else:
+                self._log.debug(f"Finally block reached for #{task_id}; {state=}")
 
     def _task_done_callback(self, task_id: t.Hashable, done_task: asyncio.Task) -> None:
         """
