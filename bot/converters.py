@@ -228,7 +228,7 @@ class Duration(DurationDelta):
 
         The converter supports the same symbols for each unit of time as its parent class.
         """
-        delta = super().convert(ctx, duration)
+        delta = await super().convert(ctx, duration)
         now = datetime.utcnow()
 
         try:
