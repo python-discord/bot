@@ -29,7 +29,15 @@ class Slowmode(Cog):
     async def get_slowmode(self, ctx: Context, channel: TextChannel) -> None:
         """Get the slowmode delay for a given text channel."""
         delay = relativedelta(seconds=channel.slowmode_delay)
-        await ctx.send(f'The slowmode delay for {channel.mention} is {time.humanize_delta(delay, precision=3)}.')
+
+        try:
+            humanized_delay = time.humanize_delta(delay, precision=3)
+
+        except TypeError:
+            humanized_delay = '0 seconds'
+
+        finally:
+            await ctx.send(f'The slowmode delay for {channel.mention} is {humanized_delay}.')
 
     @slowmode_group.command(name='set', aliases=['s'])
     @with_role(*MODERATION_ROLES)
