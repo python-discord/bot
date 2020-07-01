@@ -1,9 +1,13 @@
+import logging
+
 from discord import TextChannel
 from discord.ext.commands import Cog, Context, group
 
 from bot.bot import Bot
 from bot.constants import Emojis, MODERATION_ROLES
 from bot.decorators import with_role
+
+log = logging.getLogger(__name__)
 
 
 class Slowmode(Cog):
@@ -33,9 +37,15 @@ class Slowmode(Cog):
                 f'{Emojis.check_mark} The slowmode delay for {channel.mention} is now {seconds} seconds.'
             )
 
+            log.info(f'{ctx.author} set the slowmode delay for #{channel} to {seconds} seconds.')
+
         else:
             await ctx.send(
                 f'{Emojis.cross_mark} The slowmode delay must be between 0 and 21600 seconds.'
+            )
+            log.info(
+                f'{ctx.author} tried to set the slowmode delay of #{channel} to {seconds} seconds, '
+                'which is not between 0 and 21600 seconds.'
             )
 
     @slowmode_group.command(name='reset', aliases=['r'])
@@ -46,6 +56,7 @@ class Slowmode(Cog):
         await ctx.send(
             f'{Emojis.check_mark} The slowmode delay for {channel.mention} has been reset to 0 seconds.'
         )
+        log.info(f'{ctx.author} reset the slowmode delay for #{channel} to 0 seconds.')
 
 
 def setup(bot: Bot) -> None:
