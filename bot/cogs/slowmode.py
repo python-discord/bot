@@ -7,6 +7,7 @@ from bot.decorators import with_role
 
 
 class Slowmode(Cog):
+    """Commands for getting and setting slowmode delays of text channels."""
 
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
