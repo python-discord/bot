@@ -48,7 +48,7 @@ class Slowmode(Cog):
         # Convert `dateutil.relativedelta.relativedelta` to `datetime.timedelta`
         # Must do this to get the delta in a particular unit of time
         utcnow = datetime.utcnow()
-        slowmode_delay = (utcnow + delay - utcnow).seconds
+        slowmode_delay = (utcnow + delay - utcnow).total_seconds()
 
         humanized_delay = time.humanize_delta(delay, precision=3)
 
