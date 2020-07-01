@@ -34,6 +34,8 @@ class Slowmode(Cog):
             humanized_delay = time.humanize_delta(delay, precision=3)
 
         except TypeError:
+            # The slowmode delay is 0 seconds,
+            # which causes `time.humanize_delta` to raise a TypeError
             humanized_delay = '0 seconds'
 
         finally:
