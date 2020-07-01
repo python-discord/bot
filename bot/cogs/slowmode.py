@@ -19,6 +19,8 @@ class Slowmode(Cog):
     @slowmode_group.command(name='get', aliases=['g'])
     async def get_slowmode(self, ctx: Context, channel: TextChannel) -> None:
         """Get the slowmode delay for a given text channel."""
+        slowmode_delay = channel.slowmode_delay
+        await ctx.send(f'The slowmode delay for {channel.mention} is {slowmode_delay} seconds.')
 
     @slowmode_group.command(name='set', aliases=['s'])
     @with_role(*MODERATION_ROLES)
