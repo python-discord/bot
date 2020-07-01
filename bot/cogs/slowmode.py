@@ -2,7 +2,7 @@ from discord import TextChannel
 from discord.ext.commands import Cog, Context, group
 
 from bot.bot import Bot
-from bot.constants import MODERATION_ROLES
+from bot.constants import Emojis, MODERATION_ROLES
 from bot.decorators import with_role
 
 
@@ -26,6 +26,10 @@ class Slowmode(Cog):
     @with_role(*MODERATION_ROLES)
     async def set_slowmode(self, ctx: Context, channel: TextChannel, seconds: int) -> None:
         """Set the slowmode delay for a given text channel."""
+        await channel.edit(slowmode_delay=seconds)
+        await ctx.send(
+            f'{Emojis.check_mark} The slowmode delay for {channel.mention} is now {seconds} seconds.'
+        )
 
 
 def setup(bot: Bot) -> None:
