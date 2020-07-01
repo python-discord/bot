@@ -26,10 +26,16 @@ class Slowmode(Cog):
     @with_role(*MODERATION_ROLES)
     async def set_slowmode(self, ctx: Context, channel: TextChannel, seconds: int) -> None:
         """Set the slowmode delay for a given text channel."""
-        await channel.edit(slowmode_delay=seconds)
-        await ctx.send(
-            f'{Emojis.check_mark} The slowmode delay for {channel.mention} is now {seconds} seconds.'
-        )
+        if 0 <= seconds <= 21600:
+            await channel.edit(slowmode_delay=seconds)
+            await ctx.send(
+                f'{Emojis.check_mark} The slowmode delay for {channel.mention} is now {seconds} seconds.'
+            )
+
+        else:
+            await ctx.send(
+                f'{Emojis.cross_mark} The slowmode delay must be between 0 and 21600 seconds.'
+            )
 
 
 def setup(bot: Bot) -> None:
