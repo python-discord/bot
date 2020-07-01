@@ -181,8 +181,8 @@ class TagContentConverter(Converter):
         return tag_content
 
 
-class Duration(Converter):
-    """Convert duration strings into UTC datetime.datetime objects."""
+class DurationDelta(Converter):
+    """Convert duration strings into dateutil.relativedelta.relativedelta objects."""
 
     duration_parser = re.compile(
         r"((?P<years>\d+?) ?(years|year|Y|y) ?)?"
@@ -194,9 +194,9 @@ class Duration(Converter):
         r"((?P<seconds>\d+?) ?(seconds|second|S|s))?"
     )
 
-    async def convert(self, ctx: Context, duration: str) -> datetime:
+    async def convert(self, ctx: Context, duration: str) -> relativedelta:
         """
-        Converts a `duration` string to a datetime object that's `duration` in the future.
+        Converts a `duration` string to a relativedelta object.
 
         The converter supports the following symbols for each unit of time:
         - years: `Y`, `y`, `year`, `years`
@@ -215,6 +215,20 @@ class Duration(Converter):
 
         duration_dict = {unit: int(amount) for unit, amount in match.groupdict(default=0).items()}
         delta = relativedelta(**duration_dict)
+
+        return delta
+
+
+class Duration(DurationDelta):
+    """Convert duration strings into UTC datetime.datetime objects."""
+
+    async def convert(self, ctx: Context, duration: str) -> datetime:
+        """
+        Converts a `duration` string to a datetime object that's `duration` in the future.
+
+        The converter supports the same symbols for each unit of time as its parent class.
+        """
+        delta = super().convert(ctx, duration)
         now = datetime.utcnow()
 
         try:
