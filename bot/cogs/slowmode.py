@@ -37,6 +37,15 @@ class Slowmode(Cog):
                 f'{Emojis.cross_mark} The slowmode delay must be between 0 and 21600 seconds.'
             )
 
+    @slowmode_group.command(name='reset', aliases=['r'])
+    @with_role(*MODERATION_ROLES)
+    async def reset_slowmode(self, ctx: Context, channel: TextChannel) -> None:
+        """Reset the slowmode delay for a given text channel to 0 seconds."""
+        await channel.edit(slowmode_delay=0)
+        await ctx.send(
+            f'{Emojis.check_mark} The slowmode delay for {channel.mention} has been reset to 0 seconds.'
+        )
+
 
 def setup(bot: Bot) -> None:
     """Load the Slowmode cog."""
