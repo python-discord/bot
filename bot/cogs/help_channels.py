@@ -113,6 +113,10 @@ class HelpChannels(Scheduler, commands.Cog):
     # RedisCache[discord.TextChannel.id, UtcPosixTimestamp]
     claim_times = RedisCache()
 
+    # This cache maps a help channel to original question message in same channel.
+    # RedisCache[discord.TextChannel.id, discord.Message.id]
+    question_messages = RedisCache()
+
     def __init__(self, bot: Bot):
         super().__init__()
 
@@ -548,6 +552,22 @@ class HelpChannels(Scheduler, commands.Cog):
 
         A caller argument is provided for metrics.
         """
+        msg_id = await self.question_messages.pop(channel.id)
+
+        # When message ID exist in cache, try to get it from cache first. When this fail, use API request.
+        # When this return 404, this mean that message is deleted and can't be unpinned.
+        if msg_id:
+            msg = discord.utils.get(self.bot.cached_messages, id=msg_id)
+            if msg is None:
+                try:
+                    msg = await channel.fetch_message(msg_id)
+                except discord.NotFound:
+                    log.debug(f"Can't unpin message {msg_id} because this is deleted.")
+
+            # When we got message, then unpin it
+            if msg:
+                await msg.unpin()
+
         log.info(f"Moving #{channel} ({channel.id}) to the Dormant category.")
 
         await self.move_to_bottom_position(
@@ -688,6 +708,14 @@ class HelpChannels(Scheduler, commands.Cog):
             log.info(f"Channel #{channel} was claimed by `{message.author.id}`.")
             await self.move_to_in_use(channel)
             await self.revoke_send_permissions(message.author)
+            # Pin message for better access and storage this to cache
+            try:
+                await message.pin()
+            except discord.NotFound:
+                log.info(f"Pinning message {message.id} ({channel}) failed because message got deleted.")
+            else:
+                await self.question_messages.set(channel.id, message.id)
+
             # Add user with channel for dormant check.
             await self.help_channel_claimants.set(channel.id, message.author.id)
 
