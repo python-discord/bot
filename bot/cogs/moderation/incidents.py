@@ -54,6 +54,8 @@ def make_embed(incident: discord.Message, outcome: Signal, actioned_by: discord.
 
     As mentions in embeds do not ping, we do not need to use `incident.clean_content`.
     """
+    log.trace(f"Creating embed for {incident.id=}")
+
     if outcome is Signal.ACTIONED:
         colour = Colours.soft_green
         footer = f"Actioned by {actioned_by}"
