@@ -8,7 +8,7 @@ from discord.ext.commands import Cog, Context, group
 from bot.bot import Bot
 from bot.constants import Emojis, MODERATION_ROLES
 from bot.converters import DurationDelta
-from bot.decorators import with_role
+from bot.decorators import with_role_check
 from bot.utils import time
 
 log = logging.getLogger(__name__)
@@ -39,7 +39,6 @@ class Slowmode(Cog):
         await ctx.send(f'The slowmode delay for {channel.mention} is {humanized_delay}.')
 
     @slowmode_group.command(name='set', aliases=['s'])
-    @with_role(*MODERATION_ROLES)
     async def set_slowmode(self, ctx: Context, channel: TextChannel, delay: DurationDelta) -> None:
         """Set the slowmode delay for a given text channel."""
         # Convert `dateutil.relativedelta.relativedelta` to `datetime.timedelta`
@@ -68,7 +67,6 @@ class Slowmode(Cog):
             )
 
     @slowmode_group.command(name='reset', aliases=['r'])
-    @with_role(*MODERATION_ROLES)
     async def reset_slowmode(self, ctx: Context, channel: TextChannel) -> None:
         """Reset the slowmode delay for a given text channel to 0 seconds."""
         log.info(f'{ctx.author} reset the slowmode delay for #{channel} to 0 seconds.')
@@ -77,6 +75,10 @@ class Slowmode(Cog):
         await ctx.send(
             f'{Emojis.check_mark} The slowmode delay for {channel.mention} has been reset to 0 seconds.'
         )
+
+    def cog_check(self, ctx: Context) -> bool:
+        """Only allow moderators to invoke the commands in this cog."""
+        return with_role_check(ctx, *MODERATION_ROLES)
 
 
 def setup(bot: Bot) -> None:
