@@ -30,16 +30,13 @@ class Slowmode(Cog):
         """Get the slowmode delay for a given text channel."""
         delay = relativedelta(seconds=channel.slowmode_delay)
 
-        try:
-            humanized_delay = time.humanize_delta(delay, precision=3)
-
-        except TypeError:
-            # The slowmode delay is 0 seconds,
-            # which causes `time.humanize_delta` to raise a TypeError
+        # Say "0 seconds" instead of "less than a second"
+        if channel.slowmode_delay == 0:
             humanized_delay = '0 seconds'
+        else:
+            humanized_delay = time.humanize_delta(delay)
 
-        finally:
-            await ctx.send(f'The slowmode delay for {channel.mention} is {humanized_delay}.')
+        await ctx.send(f'The slowmode delay for {channel.mention} is {humanized_delay}.')
 
     @slowmode_group.command(name='set', aliases=['s'])
     @with_role(*MODERATION_ROLES)
@@ -50,7 +47,7 @@ class Slowmode(Cog):
         utcnow = datetime.utcnow()
         slowmode_delay = (utcnow + delay - utcnow).total_seconds()
 
-        humanized_delay = time.humanize_delta(delay, precision=3)
+        humanized_delay = time.humanize_delta(delay)
 
         if 0 <= slowmode_delay <= 21600:
             await channel.edit(slowmode_delay=slowmode_delay)
