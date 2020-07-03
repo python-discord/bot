@@ -50,31 +50,33 @@ class Slowmode(Cog):
         humanized_delay = time.humanize_delta(delay)
 
         if 0 <= slowmode_delay <= 21600:
+            log.info(f'{ctx.author} set the slowmode delay for #{channel} to {humanized_delay}.')
+
             await channel.edit(slowmode_delay=slowmode_delay)
             await ctx.send(
                 f'{Emojis.check_mark} The slowmode delay for {channel.mention} is now {humanized_delay}.'
             )
 
-            log.info(f'{ctx.author} set the slowmode delay for #{channel} to {humanized_delay}.')
-
         else:
-            await ctx.send(
-                f'{Emojis.cross_mark} The slowmode delay must be between 0 and 6 hours.'
-            )
             log.info(
                 f'{ctx.author} tried to set the slowmode delay of #{channel} to {humanized_delay}, '
                 'which is not between 0 and 6 hours.'
+            )
+
+            await ctx.send(
+                f'{Emojis.cross_mark} The slowmode delay must be between 0 and 6 hours.'
             )
 
     @slowmode_group.command(name='reset', aliases=['r'])
     @with_role(*MODERATION_ROLES)
     async def reset_slowmode(self, ctx: Context, channel: TextChannel) -> None:
         """Reset the slowmode delay for a given text channel to 0 seconds."""
+        log.info(f'{ctx.author} reset the slowmode delay for #{channel} to 0 seconds.')
+
         await channel.edit(slowmode_delay=0)
         await ctx.send(
             f'{Emojis.check_mark} The slowmode delay for {channel.mention} has been reset to 0 seconds.'
         )
-        log.info(f'{ctx.author} reset the slowmode delay for #{channel} to 0 seconds.')
 
 
 def setup(bot: Bot) -> None:
