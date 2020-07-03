@@ -323,6 +323,7 @@ class TestArchive(TestIncidents):
             content="this is an incident",
             author=MockUser(name="author_name", avatar_url="author_avatar"),
             id=123,
+            attachments=[],  # This incident has no attachments
         )
         built_embed = MagicMock(discord.Embed, id=123)  # We patch `make_embed` to return this
 
@@ -334,8 +335,37 @@ class TestArchive(TestIncidents):
             embed=built_embed,
             username="author_name",
             avatar_url="author_avatar",
+            file=None,
         )
         self.assertTrue(archive_return)
+
+    async def test_archive_relays_incident_with_attachments(self):
+        """
+        Incident attachments are relayed and displayed in the embed.
+
+        This test asserts the two things that need to happen in order to relay the attachment.
+        The embed returned by `make_embed` must have the `set_image` method called with the
+        attachment's filename, and the file must be passed to the webhook's send method.
+        """
+        attachment_file = MagicMock(discord.File)
+        attachment = MagicMock(
+            discord.Attachment,
+            filename="abc.png",
+            to_file=AsyncMock(return_value=attachment_file),
+        )
+        incident = MockMessage(
+            attachments=[attachment],
+        )
+        built_embed = MagicMock(discord.Embed)
+
+        with patch("bot.cogs.moderation.incidents.make_embed", MagicMock(return_value=built_embed)):
+            await self.cog_instance.archive(incident, incidents.Signal.ACTIONED, actioned_by=MockMember())
+
+        built_embed.set_image.assert_called_once_with(url="attachment://abc.png")
+
+        send_kwargs = self.cog_instance.bot.fetch_webhook.return_value.send.call_args.kwargs
+        self.assertIn("file", send_kwargs)
+        self.assertIs(send_kwargs["file"], attachment_file)
 
     async def test_archive_clyde_username(self):
         """

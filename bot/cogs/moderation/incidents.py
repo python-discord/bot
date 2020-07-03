@@ -186,22 +186,41 @@ class Incidents(Cog):
 
         The following pieces of information are relayed:
             * Incident message content (as embed description)
+            * Incident attachment (if image, shown in archive embed)
             * Incident author name (as webhook author)
             * Incident author avatar (as webhook avatar)
             * Resolution signal `outcome` (as embed colour & footer)
             * Moderator `actioned_by` (name & discriminator shown in footer)
+
+        If `incident` contains an attachment, we try to add it to the archive embed. There is
+        no handing of extensions / file types - we simply dispatch the attachment file with the
+        webhook, and try to display it in the embed. Testing indicates that if the attachment
+        cannot be displayed (e.g. a text file), it's invisible in the embed, with no error.
 
         Return True if the relay finishes successfully. If anything goes wrong, meaning
         not all information was relayed, return False. This signals that the original
         message is not safe to be deleted, as we will lose some information.
         """
         log.debug(f"Archiving incident: {incident.id} (outcome: {outcome}, actioned by: {actioned_by})")
+        embed = make_embed(incident, outcome, actioned_by)
+
+        # If the incident had an attachment, we will try to relay it
+        if incident.attachments:
+            attachment = incident.attachments[0]  # User-sent messages can only contain one attachment
+            log.debug(f"Attempting to archive incident attachment: {attachment.filename}")
+
+            attachment_file = await attachment.to_file()  # The file will be sent with the webhook
+            embed.set_image(url=f"attachment://{attachment.filename}")  # Embed displays the attached file
+        else:
+            attachment_file = None
+
         try:
             webhook = await self.bot.fetch_webhook(Webhooks.incidents_archive)
             await webhook.send(
-                embed=make_embed(incident, outcome, actioned_by),
+                embed=embed,
                 username=sub_clyde(incident.author.name),
                 avatar_url=incident.author.avatar_url,
+                file=attachment_file,
             )
         except Exception:
             log.exception(f"Failed to archive incident {incident.id} to #incidents-archive")
