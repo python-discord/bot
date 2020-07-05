@@ -98,8 +98,8 @@ class RepoWidgets(Cog):
                     url=repo['web_url'],
                     color=0x111111
                 ).set_footer(
-                    text=f'Stars: {repo["star_count"]} | ' +
-                         f'Forks: {repo["forks_count"]}'
+                    text=f'Stars: {repo["star_count"]} | '
+                         + f'Forks: {repo["forks_count"]}'
                 )
 
                 if repo['avatar_url'] is not None:

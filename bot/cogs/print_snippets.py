@@ -91,7 +91,7 @@ class PrintSnippets(Cog):
     """
 
     def __init__(self, bot: Bot):
-        """Initializes the cog's bot"""
+        """Initializes the cog's bot."""
         self.bot = bot
         self.session = aiohttp.ClientSession()
 
