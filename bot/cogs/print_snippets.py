@@ -1,24 +1,16 @@
-"""
-Cog that prints out snippets to Discord
-
-Matches each message against a regex and prints the contents
-of the first matched snippet url
-"""
-
 import os
 import re
 import textwrap
 
+import aiohttp
 from discord import Message
 from discord.ext.commands import Cog
-import aiohttp
 
 from bot.bot import Bot
 
 
-async def fetch_http(session: aiohttp.ClientSession, url: str, response_format='text', **kwargs) -> str:
+async def fetch_http(session: aiohttp.ClientSession, url: str, response_format: str, **kwargs) -> str:
     """Uses aiohttp to make http GET requests"""
-
     async with session.get(url, **kwargs) as response:
         if response_format == 'text':
             return await response.text()
@@ -28,7 +20,6 @@ async def fetch_http(session: aiohttp.ClientSession, url: str, response_format='
 
 async def revert_to_orig(d: dict) -> dict:
     """Replace URL Encoded values back to their original"""
-
     for obj in d:
         if d[obj] is not None:
             d[obj] = d[obj].replace('%2F', '/').replace('%2E', '.')
@@ -36,17 +27,13 @@ async def revert_to_orig(d: dict) -> dict:
 
 async def orig_to_encode(d: dict) -> dict:
     """Encode URL Parameters"""
-
     for obj in d:
         if d[obj] is not None:
             d[obj] = d[obj].replace('/', '%2F').replace('.', '%2E')
 
 
 async def snippet_to_embed(d: dict, file_contents: str) -> str:
-    """
-    Given a regex groupdict and file contents, creates a code block
-    """
-
+    """Given a regex groupdict and file contents, creates a code block"""
     if d['end_line']:
         start_line = int(d['start_line'])
         end_line = int(d['end_line'])
@@ -97,19 +84,20 @@ BITBUCKET_RE = re.compile(
 
 
 class PrintSnippets(Cog):
-    def __init__(self, bot):
-        """Initializes the cog's bot"""
+    """
+    Cog that prints out snippets to Discord
 
+    Matches each message against a regex and prints the contents of all matched snippets
+    """
+
+    def __init__(self, bot: Bot):
+        """Initializes the cog's bot"""
         self.bot = bot
         self.session = aiohttp.ClientSession()
 
     @Cog.listener()
     async def on_message(self, message: Message) -> None:
-        """
-        Checks if the message starts is a GitHub snippet, then removes the embed,
-        then sends the snippet in Discord
-        """
-
+        """Checks if the message starts is a GitHub snippet, then removes the embed, then sends the snippet in Discord"""
         gh_match = GITHUB_RE.search(message.content)
         gh_gist_match = GITHUB_GIST_RE.search(message.content)
         gl_match = GITLAB_RE.search(message.content)
@@ -125,7 +113,8 @@ class PrintSnippets(Cog):
                     headers['Authorization'] = f'token {os.environ["GITHUB_TOKEN"]}'
                 file_contents = await fetch_http(
                     self.session,
-                    f'https://api.github.com/repos/{d["repo"]}/contents/{d["file_path"]}?ref={d["branch"]}',
+                    f'https://api.github.com/repos/{d["repo"]}\
+                        /contents/{d["file_path"]}?ref={d["branch"]}',
                     'text',
                     headers=headers,
                 )
@@ -135,7 +124,8 @@ class PrintSnippets(Cog):
                 d = gh_gist.groupdict()
                 gist_json = await fetch_http(
                     self.session,
-                    f'https://api.github.com/gists/{d["gist_id"]}{"/" + d["revision"] if len(d["revision"]) > 0 else ""}',
+                    f'https://api.github.com/gists/{d["gist_id"]}\
+                        {"/" + d["revision"] if len(d["revision"]) > 0 else ""}',
                     'json',
                 )
                 for f in gist_json['files']:
@@ -157,7 +147,8 @@ class PrintSnippets(Cog):
                     headers['PRIVATE-TOKEN'] = os.environ["GITLAB_TOKEN"]
                 file_contents = await fetch_http(
                     self.session,
-                    f'https://gitlab.com/api/v4/projects/{d["repo"]}/repository/files/{d["file_path"]}/raw?ref={d["branch"]}',
+                    f'https://gitlab.com/api/v4/projects/{d["repo"]}/\
+                        repository/files/{d["file_path"]}/raw?ref={d["branch"]}',
                     'text',
                     headers=headers,
                 )

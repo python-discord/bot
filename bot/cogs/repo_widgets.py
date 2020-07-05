@@ -1,23 +1,15 @@
-"""
-Cog that sends pretty embeds of repos
-
-Matches each message against a regex and prints the contents
-of the first matched snippet url
-"""
-
 import os
 import re
 
+import aiohttp
 from discord import Embed, Message
 from discord.ext.commands import Cog
-import aiohttp
 
 from bot.bot import Bot
 
 
-async def fetch_http(session: aiohttp.ClientSession, url: str, response_format='text', **kwargs) -> str:
+async def fetch_http(session: aiohttp.ClientSession, url: str, response_format: str, **kwargs) -> str:
     """Uses aiohttp to make http GET requests"""
-
     async with session.get(url, **kwargs) as response:
         if response_format == 'text':
             return await response.text()
@@ -27,7 +19,6 @@ async def fetch_http(session: aiohttp.ClientSession, url: str, response_format='
 
 async def orig_to_encode(d: dict) -> dict:
     """Encode URL Parameters"""
-
     for obj in d:
         if d[obj] is not None:
             d[obj] = d[obj].replace('/', '%2F').replace('.', '%2E')
@@ -41,19 +32,20 @@ GITLAB_RE = re.compile(
 
 
 class RepoWidgets(Cog):
+    """
+    Cog that sends pretty embeds of repos
+
+    Matches each message against a regex and sends an embed with the details of all referenced repos
+    """
+
     def __init__(self, bot: Bot):
         """Initializes the cog's bot"""
-
         self.bot = bot
         self.session = aiohttp.ClientSession()
 
     @Cog.listener()
     async def on_message(self, message: Message) -> None:
-        """
-        Checks if the message starts is a GitHub repo link, then removes the embed,
-        then sends a rich embed to Discord
-        """
-
+        """Checks if the message starts is a GitHub repo link, then removes the embed, then sends a rich embed to Discord"""
         gh_match = GITHUB_RE.search(message.content)
         gl_match = GITLAB_RE.search(message.content)
 
