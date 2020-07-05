@@ -9,7 +9,7 @@ from bot.bot import Bot
 
 
 async def fetch_http(session: aiohttp.ClientSession, url: str, response_format: str, **kwargs) -> str:
-    """Uses aiohttp to make http GET requests"""
+    """Uses aiohttp to make http GET requests."""
     async with session.get(url, **kwargs) as response:
         if response_format == 'text':
             return await response.text()
@@ -18,7 +18,7 @@ async def fetch_http(session: aiohttp.ClientSession, url: str, response_format: 
 
 
 async def orig_to_encode(d: dict) -> dict:
-    """Encode URL Parameters"""
+    """Encode URL Parameters."""
     for obj in d:
         if d[obj] is not None:
             d[obj] = d[obj].replace('/', '%2F').replace('.', '%2E')
@@ -33,19 +33,19 @@ GITLAB_RE = re.compile(
 
 class RepoWidgets(Cog):
     """
-    Cog that sends pretty embeds of repos
+    Cog that sends pretty embeds of repos.
 
-    Matches each message against a regex and sends an embed with the details of all referenced repos
+    Matches each message against a regex and sends an embed with the details of all referenced repos.
     """
 
     def __init__(self, bot: Bot):
-        """Initializes the cog's bot"""
+        """Initializes the cog's bot."""
         self.bot = bot
         self.session = aiohttp.ClientSession()
 
     @Cog.listener()
     async def on_message(self, message: Message) -> None:
-        """Checks if the message starts is a GitHub repo link, then removes the embed, then sends a rich embed to Discord"""
+        """Checks if the message has a repo link, removes the embed, then sends a rich embed."""
         gh_match = GITHUB_RE.search(message.content)
         gl_match = GITLAB_RE.search(message.content)
 
@@ -69,10 +69,10 @@ class RepoWidgets(Cog):
                     url=repo['html_url'],
                     color=0x111111
                 ).set_footer(
-                    text=f'Language: {repo["language"]} | ' +
-                         f'Stars: {repo["stargazers_count"]} | ' +
-                         f'Forks: {repo["forks_count"]} | ' +
-                         f'Size: {repo["size"]}kb'
+                    text=f'Language: {repo["language"]} | '
+                         + f'Stars: {repo["stargazers_count"]} | '
+                         + f'Forks: {repo["forks_count"]} | '
+                         + f'Size: {repo["size"]}kb'
                 ).set_thumbnail(url=repo['owner']['avatar_url'])
                 if repo['homepage']:
                     embed.add_field(name='Website', value=repo['homepage'])

@@ -10,7 +10,7 @@ from bot.bot import Bot
 
 
 async def fetch_http(session: aiohttp.ClientSession, url: str, response_format: str, **kwargs) -> str:
-    """Uses aiohttp to make http GET requests"""
+    """Uses aiohttp to make http GET requests."""
     async with session.get(url, **kwargs) as response:
         if response_format == 'text':
             return await response.text()
@@ -19,21 +19,21 @@ async def fetch_http(session: aiohttp.ClientSession, url: str, response_format: 
 
 
 async def revert_to_orig(d: dict) -> dict:
-    """Replace URL Encoded values back to their original"""
+    """Replace URL Encoded values back to their original."""
     for obj in d:
         if d[obj] is not None:
             d[obj] = d[obj].replace('%2F', '/').replace('%2E', '.')
 
 
 async def orig_to_encode(d: dict) -> dict:
-    """Encode URL Parameters"""
+    """Encode URL Parameters."""
     for obj in d:
         if d[obj] is not None:
             d[obj] = d[obj].replace('/', '%2F').replace('.', '%2E')
 
 
 async def snippet_to_embed(d: dict, file_contents: str) -> str:
-    """Given a regex groupdict and file contents, creates a code block"""
+    """Given a regex groupdict and file contents, creates a code block."""
     if d['end_line']:
         start_line = int(d['start_line'])
         end_line = int(d['end_line'])
@@ -85,9 +85,9 @@ BITBUCKET_RE = re.compile(
 
 class PrintSnippets(Cog):
     """
-    Cog that prints out snippets to Discord
+    Cog that prints out snippets to Discord.
 
-    Matches each message against a regex and prints the contents of all matched snippets
+    Matches each message against a regex and prints the contents of all matched snippets.
     """
 
     def __init__(self, bot: Bot):
@@ -97,7 +97,7 @@ class PrintSnippets(Cog):
 
     @Cog.listener()
     async def on_message(self, message: Message) -> None:
-        """Checks if the message starts is a GitHub snippet, then removes the embed, then sends the snippet in Discord"""
+        """Checks if the message has a snippet link, removes the embed, then sends the snippet contents."""
         gh_match = GITHUB_RE.search(message.content)
         gh_gist_match = GITHUB_GIST_RE.search(message.content)
         gl_match = GITLAB_RE.search(message.content)
