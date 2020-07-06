@@ -284,7 +284,7 @@ class Doc(commands.Cog):
         if symbol_heading is None:
             return None
 
-        if symbol_id == f"module-{symbol}":
+        if symbol_info.group == "module":
             parsed_module = self.parse_module_symbol(symbol_heading)
             if parsed_module is None:
                 return [], ""
