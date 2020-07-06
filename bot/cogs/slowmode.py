@@ -29,7 +29,7 @@ class Slowmode(Cog):
         await ctx.send_help(ctx.command)
 
     @slowmode_group.command(name='get', aliases=['g'])
-    async def get_slowmode(self, ctx: Context, channel: Optional[TextChannel] = None) -> None:
+    async def get_slowmode(self, ctx: Context, channel: Optional[TextChannel]) -> None:
         """Get the slowmode delay for a given text channel."""
         # Use the channel this command was invoked in if one was not given
         if channel is None:
@@ -74,7 +74,7 @@ class Slowmode(Cog):
             )
 
     @slowmode_group.command(name='reset', aliases=['r'])
-    async def reset_slowmode(self, ctx: Context, channel: Optional[TextChannel] = None) -> None:
+    async def reset_slowmode(self, ctx: Context, channel: Optional[TextChannel]) -> None:
         """Reset the slowmode delay for a given text channel to 0 seconds."""
         # Use the channel this command was invoked in if one was not given
         if channel is None:
