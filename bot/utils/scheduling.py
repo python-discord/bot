@@ -43,6 +43,9 @@ class Scheduler:
         """
         self._log.trace(f"Scheduling task #{task_id}...")
 
+        msg = f"Cannot schedule an already started coroutine for #{task_id}"
+        assert inspect.getcoroutinestate(coroutine) == "CORO_CREATED", msg
+
         if task_id in self._scheduled_tasks:
             self._log.debug(f"Did not schedule task #{task_id}; task was already scheduled.")
             coroutine.close()
