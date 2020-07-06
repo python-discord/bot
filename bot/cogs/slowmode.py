@@ -41,8 +41,12 @@ class Slowmode(Cog):
         await ctx.send(f'The slowmode delay for {channel.mention} is {humanized_delay}.')
 
     @slowmode_group.command(name='set', aliases=['s'])
-    async def set_slowmode(self, ctx: Context, channel: TextChannel, delay: DurationDelta) -> None:
+    async def set_slowmode(self, ctx: Context, channel: Optional[TextChannel], delay: DurationDelta) -> None:
         """Set the slowmode delay for a given text channel."""
+        # Use the channel this command was invoked in if one was not given
+        if not channel:
+            channel = ctx.channel
+
         # Convert `dateutil.relativedelta.relativedelta` to `datetime.timedelta`
         # Must do this to get the delta in a particular unit of time
         utcnow = datetime.utcnow()
