@@ -3,7 +3,7 @@ from unittest import mock
 
 from dateutil.relativedelta import relativedelta
 
-from bot.cogs.slowmode import Slowmode
+from bot.cogs.moderation.slowmode import Slowmode
 from bot.constants import Emojis
 from tests.helpers import MockBot, MockContext, MockTextChannel
 
@@ -103,8 +103,8 @@ class SlowmodeTests(unittest.IsolatedAsyncioTestCase):
             f'{Emojis.check_mark} The slowmode delay for #meta has been reset to 0 seconds.'
         )
 
-    @mock.patch("bot.cogs.slowmode.with_role_check")
-    @mock.patch("bot.cogs.slowmode.MODERATION_ROLES", new=(1, 2, 3))
+    @mock.patch("bot.cogs.moderation.slowmode.with_role_check")
+    @mock.patch("bot.cogs.moderation.slowmode.MODERATION_ROLES", new=(1, 2, 3))
     def test_cog_check(self, role_check):
         """Role check is called with `MODERATION_ROLES`"""
         self.cog.cog_check(self.ctx)
