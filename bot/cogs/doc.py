@@ -2,6 +2,7 @@ import asyncio
 import functools
 import logging
 import re
+import sys
 import textwrap
 from collections import OrderedDict
 from contextlib import suppress
@@ -210,7 +211,9 @@ class Doc(commands.Cog):
                 if "/" in symbol:
                     continue  # skip unreachable symbols with slashes
                 absolute_doc_url = base_url + relative_doc_url
-                group_name = group.split(":")[1]
+                # Intern the group names since they're reused in all the DocItems
+                # to remove unnecessary memory consumption from them being unique objects
+                group_name = sys.intern(group.split(":")[1])
 
                 if symbol in self.inventories:
                     symbol_base_url = self.inventories[symbol].url.split("/", 3)[2]
