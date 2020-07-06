@@ -13,28 +13,25 @@ class SlowmodeTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.bot = MockBot()
         self.cog = Slowmode(self.bot)
-        self.text_channel = MockTextChannel()
-        self.ctx = MockContext(channel=self.text_channel)
+        self.ctx = MockContext()
 
     async def test_get_slowmode_no_channel(self) -> None:
         """Get slowmode without a given channel."""
-        self.text_channel.mention = '#python-general'
-        self.text_channel.slowmode_delay = 5
+        self.ctx.channel = MockTextChannel(name='python-general', slowmode_delay=5)
 
         await self.cog.get_slowmode(self.cog, self.ctx, None)
         self.ctx.send.assert_called_once_with("The slowmode delay for #python-general is 5 seconds.")
 
     async def test_get_slowmode_with_channel(self) -> None:
         """Get slowmode with a given channel."""
-        self.text_channel.mention = '#python-language'
-        self.text_channel.slowmode_delay = 2
+        text_channel = MockTextChannel(name='python-language', slowmode_delay=2)
 
-        await self.cog.get_slowmode(self.cog, self.ctx, self.text_channel)
+        await self.cog.get_slowmode(self.cog, self.ctx, text_channel)
         self.ctx.send.assert_called_once_with('The slowmode delay for #python-language is 2 seconds.')
 
     async def test_set_slowmode_no_channel(self) -> None:
         """Set slowmode without a given channel."""
-        self.text_channel.mention = '#careers'
+        self.ctx.channel = MockTextChannel(name='careers')
 
         await self.cog.set_slowmode(self.cog, self.ctx, None, relativedelta(seconds=3))
         self.ctx.send.assert_called_once_with(
@@ -43,16 +40,16 @@ class SlowmodeTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_set_slowmode_with_channel(self) -> None:
         """Set slowmode with a given channel."""
-        self.text_channel.mention = '#meta'
+        text_channel = MockTextChannel(name='meta')
 
-        await self.cog.set_slowmode(self.cog, self.ctx, self.text_channel, relativedelta(seconds=4))
+        await self.cog.set_slowmode(self.cog, self.ctx, text_channel, relativedelta(seconds=4))
         self.ctx.send.assert_called_once_with(
             f'{Emojis.check_mark} The slowmode delay for #meta is now 4 seconds.'
         )
 
     async def test_reset_slowmode_no_channel(self) -> None:
         """Reset slowmode without a given channel."""
-        self.text_channel.mention = '#careers'
+        self.ctx.channel = MockTextChannel(name='careers', slowmode_delay=6)
 
         await self.cog.reset_slowmode(self.cog, self.ctx, None)
         self.ctx.send.assert_called_once_with(
@@ -61,9 +58,9 @@ class SlowmodeTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_reset_slowmode_with_channel(self) -> None:
         """Reset slowmode with a given channel."""
-        self.text_channel.mention = '#meta'
+        text_channel = MockTextChannel(name='meta', slowmode_delay=1)
 
-        await self.cog.reset_slowmode(self.cog, self.ctx, self.text_channel)
+        await self.cog.reset_slowmode(self.cog, self.ctx, text_channel)
         self.ctx.send.assert_called_once_with(
             f'{Emojis.check_mark} The slowmode delay for #meta has been reset to 0 seconds.'
         )
