@@ -1,6 +1,8 @@
 import unittest
 from unittest import mock
 
+from dateutil.relativedelta import relativedelta
+
 from bot.cogs.slowmode import Slowmode
 from bot.constants import Emojis
 from tests.helpers import MockBot, MockContext, MockTextChannel
@@ -29,6 +31,24 @@ class SlowmodeTests(unittest.IsolatedAsyncioTestCase):
 
         await self.cog.get_slowmode(self.cog, self.ctx, self.text_channel)
         self.ctx.send.assert_called_once_with('The slowmode delay for #python-language is 2 seconds.')
+
+    async def test_set_slowmode_no_channel(self) -> None:
+        """Set slowmode without a given channel."""
+        self.text_channel.mention = '#careers'
+
+        await self.cog.set_slowmode(self.cog, self.ctx, None, relativedelta(seconds=3))
+        self.ctx.send.assert_called_once_with(
+            f'{Emojis.check_mark} The slowmode delay for #careers is now 3 seconds.'
+        )
+
+    async def test_set_slowmode_with_channel(self) -> None:
+        """Set slowmode with a given channel."""
+        self.text_channel.mention = '#meta'
+
+        await self.cog.set_slowmode(self.cog, self.ctx, self.text_channel, relativedelta(seconds=4))
+        self.ctx.send.assert_called_once_with(
+            f'{Emojis.check_mark} The slowmode delay for #meta is now 4 seconds.'
+        )
 
     async def test_reset_slowmode_no_channel(self) -> None:
         """Reset slowmode without a given channel."""
