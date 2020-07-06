@@ -275,13 +275,9 @@ class Doc(commands.Cog):
         symbol_info = self.inventories.get(symbol)
         if symbol_info is None:
             return None
+        request_url, symbol_id = symbol_info.url.rsplit('#')
 
-        async with self.bot.http_session.get(symbol_info.url) as response:
-            html = await response.text(encoding='utf-8')
-
-        # Find the signature header and parse the relevant parts.
-        symbol_id = symbol_info.url.split('#')[-1]
-        soup = BeautifulSoup(html, 'lxml')
+        soup = await self._get_soup_from_url(request_url)
         symbol_heading = soup.find(id=symbol_id)
         search_html = str(soup)
 
@@ -423,6 +419,15 @@ class Doc(commands.Cog):
             text += str(element)
 
         return text
+
+    @async_cache(arg_offset=1)
+    async def _get_soup_from_url(self, url: str) -> BeautifulSoup:
+        """Create a BeautifulSoup object from the HTML data in `url` with the head tag removed."""
+        log.trace(f"Sending a request to {url}.")
+        async with self.bot.http_session.get(url) as response:
+            soup = BeautifulSoup(await response.text(encoding="utf8"), 'lxml')
+        soup.find("head").decompose()  # the head contains no useful data so we can remove it
+        return soup
 
     @commands.group(name='docs', aliases=('doc', 'd'), invoke_without_command=True)
     async def docs_group(self, ctx: commands.Context, *, symbol: str) -> None:
