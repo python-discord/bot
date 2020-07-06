@@ -36,10 +36,10 @@ class Scheduler:
 
     def schedule(self, task_id: t.Hashable, coroutine: t.Coroutine) -> None:
         """
-        Schedule the execution of a coroutine.
+        Schedule the execution of a `coroutine`.
 
-        If a task with `task_id` already exists, close `coroutine` instead of scheduling it.
-        This prevents unawaited coroutine warnings.
+        If a task with `task_id` already exists, close `coroutine` instead of scheduling it. This
+        prevents unawaited coroutine warnings. Don't pass a coroutine that'll be re-used elsewhere.
         """
         self._log.trace(f"Scheduling task #{task_id}...")
 
@@ -62,6 +62,9 @@ class Scheduler:
         Schedule `coroutine` to be executed at the given naïve UTC `time`.
 
         If `time` is in the past, schedule `coroutine` immediately.
+
+        If a task with `task_id` already exists, close `coroutine` instead of scheduling it. This
+        prevents unawaited coroutine warnings. Don't pass a coroutine that'll be re-used elsewhere.
         """
         delay = (time - datetime.utcnow()).total_seconds()
         if delay > 0:
@@ -70,7 +73,12 @@ class Scheduler:
         self.schedule(task_id, coroutine)
 
     def schedule_later(self, delay: t.Union[int, float], task_id: t.Hashable, coroutine: t.Coroutine) -> None:
-        """Schedule `coroutine` to be executed after the given `delay` number of seconds."""
+        """
+        Schedule `coroutine` to be executed after the given `delay` number of seconds.
+
+        If a task with `task_id` already exists, close `coroutine` instead of scheduling it. This
+        prevents unawaited coroutine warnings. Don't pass a coroutine that'll be re-used elsewhere.
+        """
         self.schedule(task_id, self._await_later(delay, task_id, coroutine))
 
     def cancel(self, task_id: t.Hashable) -> None:
