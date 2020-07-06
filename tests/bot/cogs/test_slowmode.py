@@ -32,20 +32,27 @@ class SlowmodeTests(unittest.IsolatedAsyncioTestCase):
     async def test_set_slowmode_no_channel(self) -> None:
         """Set slowmode without a given channel."""
         test_cases = (
-            ('helpers', 23, f'{Emojis.check_mark} The slowmode delay for #helpers is now 23 seconds.'),
-            ('mods', 76526, f'{Emojis.cross_mark} The slowmode delay must be between 0 and 6 hours.'),
-            ('admins', 97, f'{Emojis.check_mark} The slowmode delay for #admins is now 1 minute and 37 seconds.')
+            ('helpers', 23, True, f'{Emojis.check_mark} The slowmode delay for #helpers is now 23 seconds.'),
+            ('mods', 76526, False, f'{Emojis.cross_mark} The slowmode delay must be between 0 and 6 hours.'),
+            ('admins', 97, True, f'{Emojis.check_mark} The slowmode delay for #admins is now 1 minute and 37 seconds.')
         )
 
-        for channel_name, seconds, result_msg in test_cases:
+        for channel_name, seconds, edited, result_msg in test_cases:
             with self.subTest(
                 channel_mention=channel_name,
                 seconds=seconds,
+                edited=edited,
                 result_msg=result_msg
             ):
                 self.ctx.channel = MockTextChannel(name=channel_name)
 
                 await self.cog.set_slowmode(self.cog, self.ctx, None, relativedelta(seconds=seconds))
+
+                if edited:
+                    self.ctx.channel.edit.assert_awaited_once_with(slowmode_delay=float(seconds))
+                else:
+                    self.ctx.channel.edit.assert_not_called()
+
                 self.ctx.send.assert_called_once_with(result_msg)
 
             self.ctx.reset_mock()
@@ -53,20 +60,27 @@ class SlowmodeTests(unittest.IsolatedAsyncioTestCase):
     async def test_set_slowmode_with_channel(self) -> None:
         """Set slowmode with a given channel."""
         test_cases = (
-            ('bot-commands', 12, f'{Emojis.check_mark} The slowmode delay for #bot-commands is now 12 seconds.'),
-            ('mod-spam', 21, f'{Emojis.check_mark} The slowmode delay for #mod-spam is now 21 seconds.'),
-            ('admin-spam', 4323598, f'{Emojis.cross_mark} The slowmode delay must be between 0 and 6 hours.')
+            ('bot-commands', 12, True, f'{Emojis.check_mark} The slowmode delay for #bot-commands is now 12 seconds.'),
+            ('mod-spam', 21, True, f'{Emojis.check_mark} The slowmode delay for #mod-spam is now 21 seconds.'),
+            ('admin-spam', 4323598, False, f'{Emojis.cross_mark} The slowmode delay must be between 0 and 6 hours.')
         )
 
-        for channel_name, seconds, result_msg in test_cases:
+        for channel_name, seconds, edited, result_msg in test_cases:
             with self.subTest(
                 channel_mention=channel_name,
                 seconds=seconds,
+                edited=edited,
                 result_msg=result_msg
             ):
                 text_channel = MockTextChannel(name=channel_name)
 
                 await self.cog.set_slowmode(self.cog, self.ctx, text_channel, relativedelta(seconds=seconds))
+
+                if edited:
+                    text_channel.edit.assert_awaited_once_with(slowmode_delay=float(seconds))
+                else:
+                    text_channel.edit.assert_not_called()
+
                 self.ctx.send.assert_called_once_with(result_msg)
 
             self.ctx.reset_mock()
