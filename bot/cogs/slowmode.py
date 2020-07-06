@@ -13,6 +13,8 @@ from bot.utils import time
 
 log = logging.getLogger(__name__)
 
+SLOWMODE_MAX_DELAY = 21600  # seconds
+
 
 class Slowmode(Cog):
     """Commands for getting and setting slowmode delays of text channels."""
@@ -48,7 +50,8 @@ class Slowmode(Cog):
 
         humanized_delay = time.humanize_delta(delay)
 
-        if 0 <= slowmode_delay <= 21600:
+        # Ensure the delay is within discord's limits
+        if slowmode_delay <= SLOWMODE_MAX_DELAY:
             log.info(f'{ctx.author} set the slowmode delay for #{channel} to {humanized_delay}.')
 
             await channel.edit(slowmode_delay=slowmode_delay)
