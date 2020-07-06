@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from typing import Optional
 
 from dateutil.relativedelta import relativedelta
 from discord import TextChannel
@@ -28,8 +29,12 @@ class Slowmode(Cog):
         await ctx.send_help(ctx.command)
 
     @slowmode_group.command(name='get', aliases=['g'])
-    async def get_slowmode(self, ctx: Context, channel: TextChannel) -> None:
+    async def get_slowmode(self, ctx: Context, channel: Optional[TextChannel] = None) -> None:
         """Get the slowmode delay for a given text channel."""
+        # Use the channel this command was invoked in if one was not given
+        if channel is None:
+            channel = ctx.channel
+
         delay = relativedelta(seconds=channel.slowmode_delay)
         humanized_delay = time.humanize_delta(delay)
 
