@@ -35,7 +35,7 @@ INFRACTION_APPEAL_FOOTER = f"To appeal this infraction, send an e-mail to {APPEA
 INFRACTION_AUTHOR_NAME = "Infraction information"
 
 INFRACTION_DESCRIPTION_TEMPLATE = (
-    "\n**Type:** {type}\n"
+    "**Type:** {type}\n"
     "**Expires:** {expires}\n"
     "**Reason:** {reason}\n"
 )
@@ -157,11 +157,11 @@ async def notify_infraction(
     text = INFRACTION_DESCRIPTION_TEMPLATE.format(
         type=infr_type.capitalize(),
         expires=expires_at or "N/A",
-        reason=reason or "No reason provided."
+        reason=textwrap.shorten(reason, 1000, placeholder="...") if reason else "No reason provided."
     )
 
     embed = discord.Embed(
-        description=textwrap.shorten(text, width=2048, placeholder="..."),
+        description=text,
         colour=Colours.soft_red
     )
 

@@ -136,11 +136,11 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 "args": (self.user, "ban", "2020-02-26 09:20 (23 hours and 59 minutes)"),
                 "expected_output": Embed(
                     title=utils.INFRACTION_TITLE,
-                    description=textwrap.shorten(utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
+                    description=utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
                         type="Ban",
                         expires="2020-02-26 09:20 (23 hours and 59 minutes)",
                         reason="No reason provided."
-                    ), width=2048, placeholder="..."),
+                    ),
                     colour=Colours.soft_red,
                     url=utils.RULES_URL
                 ).set_author(
@@ -154,11 +154,11 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 "args": (self.user, "warning", None, "Test reason."),
                 "expected_output": Embed(
                     title=utils.INFRACTION_TITLE,
-                    description=textwrap.shorten(utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
+                    description=utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
                         type="Warning",
                         expires="N/A",
                         reason="Test reason."
-                    ), width=2048, placeholder="..."),
+                    ),
                     colour=Colours.soft_red,
                     url=utils.RULES_URL
                 ).set_author(
@@ -172,11 +172,11 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 "args": (self.user, "note", None, None, Icons.defcon_denied),
                 "expected_output": Embed(
                     title=utils.INFRACTION_TITLE,
-                    description=textwrap.shorten(utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
+                    description=utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
                         type="Note",
                         expires="N/A",
                         reason="No reason provided."
-                    ), width=2048, placeholder="..."),
+                    ),
                     colour=Colours.soft_red,
                     url=utils.RULES_URL
                 ).set_author(
@@ -190,11 +190,11 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 "args": (self.user, "mute", "2020-02-26 09:20 (23 hours and 59 minutes)", "Test", Icons.defcon_denied),
                 "expected_output": Embed(
                     title=utils.INFRACTION_TITLE,
-                    description=textwrap.shorten(utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
+                    description=utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
                         type="Mute",
                         expires="2020-02-26 09:20 (23 hours and 59 minutes)",
                         reason="Test"
-                    ), width=2048, placeholder="..."),
+                    ),
                     colour=Colours.soft_red,
                     url=utils.RULES_URL
                 ).set_author(
@@ -208,11 +208,11 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 "args": (self.user, "mute", None, "foo bar" * 4000, Icons.defcon_denied),
                 "expected_output": Embed(
                     title=utils.INFRACTION_TITLE,
-                    description=textwrap.shorten(utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
+                    description=utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
                         type="Mute",
                         expires="N/A",
-                        reason="foo bar" * 4000
-                    ), width=2048, placeholder="..."),
+                        reason=textwrap.shorten("foo bar" * 4000, 1000, placeholder="...")
+                    ),
                     colour=Colours.soft_red,
                     url=utils.RULES_URL
                 ).set_author(
