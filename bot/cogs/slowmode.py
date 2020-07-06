@@ -44,7 +44,7 @@ class Slowmode(Cog):
     async def set_slowmode(self, ctx: Context, channel: Optional[TextChannel], delay: DurationDelta) -> None:
         """Set the slowmode delay for a given text channel."""
         # Use the channel this command was invoked in if one was not given
-        if not channel:
+        if channel is None:
             channel = ctx.channel
 
         # Convert `dateutil.relativedelta.relativedelta` to `datetime.timedelta`
