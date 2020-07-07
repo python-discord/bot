@@ -204,6 +204,7 @@ class WatchChannel(metaclass=CogABCMeta):
         embed: Optional[Embed] = None,
     ) -> None:
         """Sends a message to the webhook with the specified kwargs."""
+        username = messages.sub_clyde(username)
         try:
             await self.webhook.send(content=content, username=username, avatar_url=avatar_url, embed=embed)
         except discord.HTTPException as exc:

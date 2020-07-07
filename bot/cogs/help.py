@@ -299,7 +299,7 @@ class CustomHelpCommand(HelpCommand):
             embed,
             prefix=description,
             max_lines=COMMANDS_PER_PAGE,
-            max_size=2040,
+            max_size=2000,
         )
 
     async def send_bot_help(self, mapping: dict) -> None:
@@ -346,7 +346,7 @@ class CustomHelpCommand(HelpCommand):
             # add any remaining command help that didn't get added in the last iteration above.
             pages.append(page)
 
-        await LinePaginator.paginate(pages, self.context, embed=embed, max_lines=1, max_size=2040)
+        await LinePaginator.paginate(pages, self.context, embed=embed, max_lines=1, max_size=2000)
 
 
 class Help(Cog):

@@ -2,11 +2,12 @@ import asyncio
 import logging
 import re
 from datetime import datetime, timedelta
-from typing import List, Optional, Union
+from typing import List, Mapping, Optional, Union
 
+import dateutil
 import discord.errors
 from dateutil.relativedelta import relativedelta
-from discord import Colour, Member, Message, TextChannel
+from discord import Colour, HTTPException, Member, Message, NotFound, TextChannel
 from discord.ext.commands import Cog
 from discord.utils import escape_markdown
 
@@ -17,6 +18,8 @@ from bot.constants import (
     Filter, Icons, URLs
 )
 from bot.utils.redis_cache import RedisCache
+from bot.utils.scheduling import Scheduler
+from bot.utils.time import wait_until
 
 log = logging.getLogger(__name__)
 
@@ -54,7 +57,10 @@ def expand_spoilers(text: str) -> str:
     )
 
 
-class Filtering(Cog):
+OFFENSIVE_MSG_DELETE_TIME = timedelta(days=Filter.offensive_msg_delete_days)
+
+
+class Filtering(Cog, Scheduler):
     """Filtering out invites, blacklisting domains, and warning us of certain regular expressions."""
 
     # Redis cache mapping a user ID to the last timestamp a bad nickname alert was sent
@@ -62,6 +68,8 @@ class Filtering(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
+        super().__init__()
+
         self.name_lock = asyncio.Lock()
 
         staff_mistake_str = "If you believe this was a mistake, please let staff know!"
@@ -75,7 +83,8 @@ class Filtering(Cog):
                 "notification_msg": (
                     "Your post has been removed for abusing Unicode character rendering (aka Zalgo text). "
                     f"{staff_mistake_str}"
-                )
+                ),
+                "schedule_deletion": False
             },
             "filter_invites": {
                 "enabled": Filter.filter_invites,
@@ -86,7 +95,8 @@ class Filtering(Cog):
                 "notification_msg": (
                     f"Per Rule 6, your invite link has been removed. {staff_mistake_str}\n\n"
                     r"Our server rules can be found here: <https://pythondiscord.com/pages/rules>"
-                )
+                ),
+                "schedule_deletion": False
             },
             "filter_domains": {
                 "enabled": Filter.filter_domains,
@@ -96,21 +106,26 @@ class Filtering(Cog):
                 "user_notification": Filter.notify_user_domains,
                 "notification_msg": (
                     f"Your URL has been removed because it matched a blacklisted domain. {staff_mistake_str}"
-                )
+                ),
+                "schedule_deletion": False
             },
             "watch_regex": {
                 "enabled": Filter.watch_regex,
                 "function": self._has_watch_regex_match,
                 "type": "watchlist",
                 "content_only": True,
+                "schedule_deletion": True
             },
             "watch_rich_embeds": {
                 "enabled": Filter.watch_rich_embeds,
                 "function": self._has_rich_embed,
                 "type": "watchlist",
                 "content_only": False,
-            },
+                "schedule_deletion": False
+            }
         }
+
+        self.bot.loop.create_task(self.reschedule_offensive_msg_deletion())
 
     @property
     def mod_log(self) -> ModLog:
@@ -242,6 +257,20 @@ class Filtering(Cog):
                             if _filter["user_notification"]:
                                 await self.notify_member(msg.author, _filter["notification_msg"], msg.channel)
 
+                        # If the message is classed as offensive, we store it in the site db and
+                        # it will be deleted it after one week.
+                        if _filter["schedule_deletion"] and not is_private:
+                            delete_date = (msg.created_at + OFFENSIVE_MSG_DELETE_TIME).isoformat()
+                            data = {
+                                'id': msg.id,
+                                'channel_id': msg.channel.id,
+                                'delete_date': delete_date
+                            }
+
+                            await self.bot.api_client.post('bot/offensive-messages', json=data)
+                            self.schedule_task(msg.id, data)
+                            log.trace(f"Offensive message {msg.id} will be deleted on {delete_date}")
+
                         if is_private:
                             channel_str = "via DM"
                         else:
@@ -359,7 +388,7 @@ class Filtering(Cog):
 
         Attempts to catch some of common ways to try to cheat the system.
         """
-        # Remove backslashes to prevent escape character aroundfuckery like
+        # Remove backslashes to prevent escape character around fuckery like
         # discord\.gg/gdudes-pony-farm
         text = text.replace("\\", "")
 
@@ -427,6 +456,46 @@ class Filtering(Cog):
             await filtered_member.send(reason)
         except discord.errors.Forbidden:
             await channel.send(f"{filtered_member.mention} {reason}")
+
+    async def _scheduled_task(self, msg: dict) -> None:
+        """Delete an offensive message once its deletion date is reached."""
+        delete_at = dateutil.parser.isoparse(msg['delete_date']).replace(tzinfo=None)
+
+        await wait_until(delete_at)
+        await self.delete_offensive_msg(msg)
+
+    async def reschedule_offensive_msg_deletion(self) -> None:
+        """Get all the pending message deletion from the API and reschedule them."""
+        await self.bot.wait_until_ready()
+        response = await self.bot.api_client.get('bot/offensive-messages',)
+
+        now = datetime.utcnow()
+
+        for msg in response:
+            delete_at = dateutil.parser.isoparse(msg['delete_date']).replace(tzinfo=None)
+
+            if delete_at < now:
+                await self.delete_offensive_msg(msg)
+            else:
+                self.schedule_task(msg['id'], msg)
+
+    async def delete_offensive_msg(self, msg: Mapping[str, str]) -> None:
+        """Delete an offensive message, and then delete it from the db."""
+        try:
+            channel = self.bot.get_channel(msg['channel_id'])
+            if channel:
+                msg_obj = await channel.fetch_message(msg['id'])
+                await msg_obj.delete()
+        except NotFound:
+            log.info(
+                f"Tried to delete message {msg['id']}, but the message can't be found "
+                f"(it has been probably already deleted)."
+            )
+        except HTTPException as e:
+            log.warning(f"Failed to delete message {msg['id']}: status {e.status}")
+
+        await self.bot.api_client.delete(f'bot/offensive-messages/{msg["id"]}')
+        log.info(f"Deleted the offensive message with id {msg['id']}.")
 
 
 def setup(bot: Bot) -> None:
