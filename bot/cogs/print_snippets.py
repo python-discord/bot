@@ -1,9 +1,10 @@
+import asyncio
 import os
 import re
 import textwrap
 
 import aiohttp
-from discord import Message
+from discord import Message, Reaction, User
 from discord.ext.commands import Cog
 
 from bot.bot import Bot
@@ -113,8 +114,8 @@ class PrintSnippets(Cog):
                     headers['Authorization'] = f'token {os.environ["GITHUB_TOKEN"]}'
                 file_contents = await fetch_http(
                     self.session,
-                    f'https://api.github.com/repos/{d["repo"]}\
-                        /contents/{d["file_path"]}?ref={d["branch"]}',
+                    f'https://api.github.com/repos/{d["repo"]}'
+                    + f'/contents/{d["file_path"]}?ref={d["branch"]}',
                     'text',
                     headers=headers,
                 )
@@ -124,8 +125,8 @@ class PrintSnippets(Cog):
                 d = gh_gist.groupdict()
                 gist_json = await fetch_http(
                     self.session,
-                    f'https://api.github.com/gists/{d["gist_id"]}\
-                        {"/" + d["revision"] if len(d["revision"]) > 0 else ""}',
+                    f'https://api.github.com/gists/{d["gist_id"]}'
+                    + f'{"/" + d["revision"] if len(d["revision"]) > 0 else ""}',
                     'json',
                 )
                 for f in gist_json['files']:
@@ -147,8 +148,8 @@ class PrintSnippets(Cog):
                     headers['PRIVATE-TOKEN'] = os.environ["GITLAB_TOKEN"]
                 file_contents = await fetch_http(
                     self.session,
-                    f'https://gitlab.com/api/v4/projects/{d["repo"]}/\
-                        repository/files/{d["file_path"]}/raw?ref={d["branch"]}',
+                    f'https://gitlab.com/api/v4/projects/{d["repo"]}/'
+                    + f'repository/files/{d["file_path"]}/raw?ref={d["branch"]}',
                     'text',
                     headers=headers,
                 )
@@ -168,22 +169,20 @@ class PrintSnippets(Cog):
 
             message_to_send = message_to_send[:-1]
 
-            if len(message_to_send) > 2000:
-                await message.channel.send(
-                    'Sorry, Discord has a 2000 character limit. Please send a shorter '
-                    + 'snippet or split the big snippet up into several smaller ones :slight_smile:'
-                )
-            elif len(message_to_send) == 0:
-                await message.channel.send(
-                    'Please send valid snippet links to prevent spam :slight_smile:'
-                )
-            elif message_to_send.count('\n') > 50:
-                await message.channel.send(
-                    'Please limit the total number of lines to at most 50 to prevent spam :slight_smile:'
-                )
-            else:
-                await message.channel.send(message_to_send)
-            await message.edit(suppress=True)
+            if 0 < len(message_to_send) <= 2000 and message_to_send.count('\n') <= 50:
+                sent_message = await message.channel.send(message_to_send)
+                await message.edit(suppress=True)
+                await sent_message.add_reaction('❌')
+
+                def check(reaction: Reaction, user: User) -> bool:
+                    return user == message.author and str(reaction.emoji) == '❌'
+
+                try:
+                    reaction, user = await self.bot.wait_for('reaction_add', timeout=10.0, check=check)
+                except asyncio.TimeoutError:
+                    await sent_message.remove_reaction('❌', self.bot.user)
+                else:
+                    await sent_message.delete()
 
 
 def setup(bot: Bot) -> None:

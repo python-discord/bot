@@ -72,7 +72,6 @@ bot.load_extension("bot.cogs.watchchannels")
 bot.load_extension("bot.cogs.webhook_remover")
 bot.load_extension("bot.cogs.wolfram")
 bot.load_extension("bot.cogs.print_snippets")
-bot.load_extension("bot.cogs.repo_widgets")
 
 if constants.HelpChannels.enable:
     bot.load_extension("bot.cogs.help_channels")
