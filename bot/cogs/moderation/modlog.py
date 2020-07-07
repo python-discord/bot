@@ -24,7 +24,6 @@ GUILD_CHANNEL = t.Union[discord.CategoryChannel, discord.TextChannel, discord.Vo
 
 CHANNEL_CHANGES_UNSUPPORTED = ("permissions",)
 CHANNEL_CHANGES_SUPPRESSED = ("_overwrites", "position")
-MEMBER_CHANGES_SUPPRESSED = ("status", "activities", "_client_status", "nick")
 ROLE_CHANGES_UNSUPPORTED = ("colour", "permissions")
 
 VOICE_STATE_ATTRIBUTES = {
@@ -452,6 +451,21 @@ class ModLog(Cog, name="ModLog"):
             channel_id=Channels.mod_log
         )
 
+    @staticmethod
+    def get_role_diff(before: t.List[discord.Role], after: t.List[discord.Role]) -> t.List[str]:
+        """Return a list of strings describing the roles added and removed."""
+        changes = []
+        before_roles = set(before)
+        after_roles = set(after)
+
+        for role in (before_roles - after_roles):
+            changes.append(f"**Role removed:** {role.name} (`{role.id}`)")
+
+        for role in (after_roles - before_roles):
+            changes.append(f"**Role added:** {role.name} (`{role.id}`)")
+
+        return changes
+
     @Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member) -> None:
         """Log member update event to user log."""
@@ -462,74 +476,27 @@ class ModLog(Cog, name="ModLog"):
             self._ignored[Event.member_update].remove(before.id)
             return
 
-        diff = DeepDiff(before, after)
-        changes = []
-        done = []
+        changes = self.get_role_diff(before.roles, after.roles)
 
-        diff_values = {}
+        # The regex is a simple way to exclude all sequence and mapping types.
+        diff = DeepDiff(before, after, exclude_regex_paths=r".*\[.*")
 
-        diff_values.update(diff.get("values_changed", {}))
-        diff_values.update(diff.get("type_changes", {}))
-        diff_values.update(diff.get("iterable_item_removed", {}))
-        diff_values.update(diff.get("iterable_item_added", {}))
+        # A type change seems to always take precedent over a value change. Furthermore, it will
+        # include the value change along with the type change anyway. Therefore, it's OK to
+        # "overwrite" values_changed; in practice there will never even be anything to overwrite.
+        diff_values = {**diff.get("values_changed", {}), **diff.get("type_changes", {})}
 
-        diff_user = DeepDiff(before._user, after._user)
-
-        diff_values.update(diff_user.get("values_changed", {}))
-        diff_values.update(diff_user.get("type_changes", {}))
-        diff_values.update(diff_user.get("iterable_item_removed", {}))
-        diff_values.update(diff_user.get("iterable_item_added", {}))
-
-        for key, value in diff_values.items():
-            if not key:  # Not sure why, but it happens
+        for attr, value in diff_values.items():
+            if not attr:  # Not sure why, but it happens.
                 continue
 
-            key = key[5:]  # Remove "root." prefix
+            attr = attr[5:]  # Remove "root." prefix.
+            attr = attr.replace("_", " ").replace(".", " ").capitalize()
 
-            if "[" in key:
-                key = key.split("[", 1)[0]
+            new = value.get("new_value")
+            old = value.get("old_value")
 
-            if "." in key:
-                key = key.split(".", 1)[0]
-
-            if key in done or key in MEMBER_CHANGES_SUPPRESSED:
-                continue
-
-            if key == "_roles":
-                new_roles = after.roles
-                old_roles = before.roles
-
-                for role in old_roles:
-                    if role not in new_roles:
-                        changes.append(f"**Role removed:** {role.name} (`{role.id}`)")
-
-                for role in new_roles:
-                    if role not in old_roles:
-                        changes.append(f"**Role added:** {role.name} (`{role.id}`)")
-
-            else:
-                new = value.get("new_value")
-                old = value.get("old_value")
-
-                if new and old:
-                    changes.append(f"**{key.title()}:** `{old}` **→** `{new}`")
-
-            done.append(key)
-
-        if before.name != after.name:
-            changes.append(
-                f"**Username:** `{before.name}` **→** `{after.name}`"
-            )
-
-        if before.discriminator != after.discriminator:
-            changes.append(
-                f"**Discriminator:** `{before.discriminator}` **→** `{after.discriminator}`"
-            )
-
-        if before.display_name != after.display_name:
-            changes.append(
-                f"**Display name:** `{before.display_name}` **→** `{after.display_name}`"
-            )
+            changes.append(f"**{attr}:** `{old}` **→** `{new}`")
 
         if not changes:
             return
@@ -543,8 +510,10 @@ class ModLog(Cog, name="ModLog"):
         message = f"**{member_str}** (`{after.id}`)\n{message}"
 
         await self.send_log_message(
-            Icons.user_update, Colour.blurple(),
-            "Member updated", message,
+            icon_url=Icons.user_update,
+            colour=Colour.blurple(),
+            title="Member updated",
+            text=message,
             thumbnail=after.avatar_url_as(static_format="png"),
             channel_id=Channels.user_log
         )
