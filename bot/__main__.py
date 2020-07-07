@@ -29,6 +29,7 @@ bot = Bot(
     activity=discord.Game(name="Commands: !help"),
     case_insensitive=True,
     max_messages=10_000,
+    allowed_mentions=discord.AllowedMentions(everyone=False, roles=False)
 )
 
 # Internal/debug
