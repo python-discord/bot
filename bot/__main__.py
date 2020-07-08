@@ -24,11 +24,13 @@ sentry_sdk.init(
     ]
 )
 
+allowed_roles = [discord.Object(id_) for id_ in constants.MODERATION_ROLES]
 bot = Bot(
     command_prefix=when_mentioned_or(constants.Bot.prefix),
     activity=discord.Game(name="Commands: !help"),
     case_insensitive=True,
     max_messages=10_000,
+    allowed_mentions=discord.AllowedMentions(everyone=False, roles=allowed_roles)
 )
 
 # Internal/debug
