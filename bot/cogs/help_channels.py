@@ -554,19 +554,12 @@ class HelpChannels(Scheduler, commands.Cog):
         """
         msg_id = await self.question_messages.pop(channel.id)
 
-        # When message ID exist in cache, try to get it from cache first. When this fail, use API request.
-        # When this return 404, this mean that message is deleted and can't be unpinned.
-        if msg_id:
-            msg = discord.utils.get(self.bot.cached_messages, id=msg_id)
-            if msg is None:
-                try:
-                    msg = await channel.fetch_message(msg_id)
-                except discord.NotFound:
-                    log.debug(f"Can't unpin message {msg_id} because this is deleted.")
-
-            # When we got message, then unpin it
-            if msg:
-                await msg.unpin()
+        try:
+            await self.bot.http.unpin_message(channel.id, msg_id)
+        except discord.HTTPException:
+            log.trace(f"Message {msg_id} don't exist, can't unpin.")
+        else:
+            log.trace(f"Unpinned message {msg_id}.")
 
         log.info(f"Moving #{channel} ({channel.id}) to the Dormant category.")
 
