@@ -8,7 +8,7 @@ import discord
 from discord.ext.commands import Cog
 
 from bot.bot import Bot
-from bot.constants import Channels, Colours, Emojis, Roles, Webhooks
+from bot.constants import Channels, Colours, Emojis, Guild, Webhooks
 from bot.utils.messages import sub_clyde
 
 log = logging.getLogger(__name__)
@@ -35,8 +35,8 @@ class Signal(Enum):
     INVESTIGATING = Emojis.incident_investigating
 
 
-# Reactions from roles not listed here will be removed
-ALLOWED_ROLES: t.Set[int] = {Roles.moderators, Roles.admins, Roles.owners}
+# Reactions from non-mod roles will be removed
+ALLOWED_ROLES: t.Set[int] = set(Guild.moderation_roles)
 
 # Message must have all of these emoji to pass the `has_signals` check
 ALL_SIGNALS: t.Set[str] = {signal.value for signal in Signal}
