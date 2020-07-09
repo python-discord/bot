@@ -170,7 +170,7 @@ class ErrorHandler(Cog):
             await prepared_help_command
             self.bot.stats.incr("errors.too_many_arguments")
         elif isinstance(e, errors.BadArgument):
-            await ctx.send("Bad argument: Please double check your input arguments and try again.\n")
+            await ctx.send("Bad argument: Please double-check your input arguments and try again.\n")
             await prepared_help_command
             self.bot.stats.incr("errors.bad_argument")
         elif isinstance(e, errors.BadUnionArgument):
