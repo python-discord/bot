@@ -207,6 +207,7 @@ class Filtering(Cog, Scheduler):
         Also requires the original message, to check whether to filter and for mod logs.
         Returns whether a filter was triggered or not.
         """
+        filter_triggered = False
         # Should we filter this message?
         if self._check_filter(msg):
             for filter_name, _filter in self.filters.items():
