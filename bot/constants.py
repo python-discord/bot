@@ -427,12 +427,12 @@ class Webhooks(metaclass=YAMLGetter):
     section = "guild"
     subsection = "webhooks"
 
-    talent_pool: int
     big_brother: int
-    reddit: int
-    duck_pond: int
     dev_log: int
+    duck_pond: int
     incidents_archive: int
+    reddit: int
+    talent_pool: int
 
 
 class Roles(metaclass=YAMLGetter):

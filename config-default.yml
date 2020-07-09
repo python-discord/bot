@@ -171,13 +171,13 @@ guild:
         admin_spam:         &ADMIN_SPAM     563594791770914816
         defcon:             &DEFCON         464469101889454091
         helpers:            &HELPERS        385474242440986624
+        incidents:                          714214212200562749
+        incidents_archive:                  720668923636351037
         mods:               &MODS           305126844661760000
         mod_alerts:         &MOD_ALERTS     473092532147060736
         mod_spam:           &MOD_SPAM       620607373828030464
         organisation:       &ORGANISATION   551789653284356126
         staff_lounge:       &STAFF_LOUNGE   464905259261755392
-        incidents:                          714214212200562749
-        incidents_archive:                  720668923636351037
 
         # Voice
         admins_voice:       &ADMINS_VOICE   500734494840717332
@@ -250,13 +250,13 @@ guild:
         - *HELPERS_ROLE
 
     webhooks:
-        talent_pool:                    569145364800602132
-        big_brother:                    569133704568373283
-        reddit:                         635408384794951680
-        duck_pond:                      637821475327311927
-        dev_log:                        680501655111729222
-        python_news:    &PYNEWS_WEBHOOK 704381182279942324
-        incidents_archive:              720671599790915702
+        big_brother:                        569133704568373283
+        dev_log:                            680501655111729222
+        duck_pond:                          637821475327311927
+        incidents_archive:                  720671599790915702
+        python_news:        &PYNEWS_WEBHOOK 704381182279942324
+        reddit:                             635408384794951680
+        talent_pool:                        569145364800602132
 
 filter:
 
