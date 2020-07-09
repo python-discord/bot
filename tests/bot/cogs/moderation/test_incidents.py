@@ -318,7 +318,7 @@ class TestArchive(TestIncidents):
         webhook = MockAsyncWebhook()
         self.cog_instance.bot.fetch_webhook = AsyncMock(return_value=webhook)  # Patch in our webhook
 
-        # Define our own `incident` for archivation
+        # Define our own `incident` to be archived
         incident = MockMessage(
             content="this is an incident",
             author=MockUser(name="author_name", avatar_url="author_avatar"),
