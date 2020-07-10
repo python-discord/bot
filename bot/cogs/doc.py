@@ -350,7 +350,7 @@ class Doc(commands.Cog):
             embed_description += f"\n{description}"
 
         embed = discord.Embed(
-            title=f'`{symbol}`',
+            title=discord.utils.escape_markdown(symbol),
             url=permalink,
             description=embed_description
         )
