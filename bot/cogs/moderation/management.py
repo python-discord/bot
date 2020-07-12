@@ -268,12 +268,12 @@ class ModManagement(commands.Cog):
             User: {self.bot.get_user(user_id)} (`{user_id}`)
             Type: **{infraction["type"]}**
             Shadow: {hidden}
-            Reason: {infraction["reason"] or "*None*"}
             Created: {created}
             Expires: {expires}
             Remaining: {remaining}
             Actor: {actor.mention if actor else actor_id}
             ID: `{infraction["id"]}`
+            Reason: {infraction["reason"] or "*None*"}
             {"**===============**" if active else "==============="}
         """)
 
