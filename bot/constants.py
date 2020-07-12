@@ -416,6 +416,7 @@ class Channels(metaclass=YAMLGetter):
     user_log: int
     verification: int
     voice_log: int
+    dm_log: int
 
 
 class Webhooks(metaclass=YAMLGetter):
