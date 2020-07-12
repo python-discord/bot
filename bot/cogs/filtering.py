@@ -329,7 +329,7 @@ class Filtering(Cog, Scheduler):
                             text=message,
                             thumbnail=msg.author.avatar_url_as(static_format="png"),
                             channel_id=Channels.mod_alerts,
-                            ping_everyone=Filter.ping_everyone,
+                            ping_moderators=Filter.ping_moderators,
                             additional_embeds=additional_embeds,
                             additional_embeds_msg=additional_embeds_msg
                         )

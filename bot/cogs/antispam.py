@@ -98,7 +98,7 @@ class DeletionContext:
             text=mod_alert_message,
             thumbnail=last_message.author.avatar_url_as(static_format="png"),
             channel_id=Channels.mod_alerts,
-            ping_everyone=AntiSpamConfig.ping_everyone
+            ping_moderators=AntiSpamConfig.ping_moderators
         )
 
 
@@ -132,7 +132,7 @@ class AntiSpam(Cog):
             await self.mod_log.send_log_message(
                 title="Error: AntiSpam configuration validation failed!",
                 text=body,
-                ping_everyone=True,
+                ping_moderators=True,
                 icon_url=Icons.token_removed,
                 colour=Colour.red()
             )

@@ -225,7 +225,7 @@ class Filter(metaclass=YAMLGetter):
     notify_user_invites: bool
     notify_user_domains: bool
 
-    ping_everyone: bool
+    ping_moderators: bool
     offensive_msg_delete_days: int
     guild_invite_whitelist: List[int]
     domain_blacklist: List[str]
@@ -522,7 +522,7 @@ class AntiSpam(metaclass=YAMLGetter):
     section = 'anti_spam'
 
     clean_offending: bool
-    ping_everyone: bool
+    ping_moderators: bool
 
     punishment: Dict[str, Dict[str, int]]
     rules: Dict[str, Dict[str, int]]

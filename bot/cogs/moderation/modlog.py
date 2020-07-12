@@ -15,7 +15,7 @@ from discord.ext.commands import Cog, Context
 from discord.utils import escape_markdown
 
 from bot.bot import Bot
-from bot.constants import Categories, Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, URLs
+from bot.constants import Categories, Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, Roles, URLs
 from bot.utils.time import humanize_delta
 
 log = logging.getLogger(__name__)
@@ -88,7 +88,7 @@ class ModLog(Cog, name="ModLog"):
         text: str,
         thumbnail: t.Optional[t.Union[str, discord.Asset]] = None,
         channel_id: int = Channels.mod_log,
-        ping_everyone: bool = False,
+        ping_moderators: bool = False,
         files: t.Optional[t.List[discord.File]] = None,
         content: t.Optional[str] = None,
         additional_embeds: t.Optional[t.List[discord.Embed]] = None,
@@ -114,11 +114,11 @@ class ModLog(Cog, name="ModLog"):
         if thumbnail:
             embed.set_thumbnail(url=thumbnail)
 
-        if ping_everyone:
+        if ping_moderators:
             if content:
-                content = f"@everyone\n{content}"
+                content = f"<@&{Roles.moderators}>\n{content}"
             else:
-                content = "@everyone"
+                content = f"<@&{Roles.moderators}>"
 
         channel = self.bot.get_channel(channel_id)
         log_message = await channel.send(content=content, embed=embed, files=files)
