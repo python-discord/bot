@@ -129,38 +129,6 @@ class DuckPondTests(base.LoggingTestsMixin, unittest.IsolatedAsyncioTestCase):
             ):
                 self.assertEqual(expected_return, actual_return)
 
-    def test_send_webhook_correctly_passes_on_arguments(self):
-        """The `send_webhook` method should pass the arguments to the webhook correctly."""
-        self.cog.webhook = helpers.MockAsyncWebhook()
-
-        content = "fake content"
-        username = "fake username"
-        avatar_url = "fake avatar_url"
-        embed = "fake embed"
-
-        asyncio.run(self.cog.send_webhook(content, username, avatar_url, embed))
-
-        self.cog.webhook.send.assert_called_once_with(
-            content=content,
-            username=username,
-            avatar_url=avatar_url,
-            embed=embed
-        )
-
-    def test_send_webhook_logs_when_sending_message_fails(self):
-        """The `send_webhook` method should catch a `discord.HTTPException` and log accordingly."""
-        self.cog.webhook = helpers.MockAsyncWebhook()
-        self.cog.webhook.send.side_effect = discord.HTTPException(response=MagicMock(), message="Something failed.")
-
-        log = logging.getLogger('bot.cogs.duck_pond')
-        with self.assertLogs(logger=log, level=logging.ERROR) as log_watcher:
-            asyncio.run(self.cog.send_webhook())
-
-        self.assertEqual(len(log_watcher.records), 1)
-
-        record = log_watcher.records[0]
-        self.assertEqual(record.levelno, logging.ERROR)
-
     def _get_reaction(
         self,
         emoji: typing.Union[str, helpers.MockEmoji],
@@ -280,16 +248,20 @@ class DuckPondTests(base.LoggingTestsMixin, unittest.IsolatedAsyncioTestCase):
 
     async def test_relay_message_correctly_relays_content_and_attachments(self):
         """The `relay_message` method should correctly relay message content and attachments."""
-        send_webhook_path = f"{MODULE_PATH}.DuckPond.send_webhook"
+        send_webhook_path = f"{MODULE_PATH}.send_webhook"
         send_attachments_path = f"{MODULE_PATH}.send_attachments"
+        author = MagicMock(
+            display_name="x",
+            avatar_url="https://"
+        )
 
         self.cog.webhook = helpers.MockAsyncWebhook()
 
         test_values = (
-            (helpers.MockMessage(clean_content="", attachments=[]), False, False),
-            (helpers.MockMessage(clean_content="message", attachments=[]), True, False),
-            (helpers.MockMessage(clean_content="", attachments=["attachment"]), False, True),
-            (helpers.MockMessage(clean_content="message", attachments=["attachment"]), True, True),
+            (helpers.MockMessage(author=author, clean_content="", attachments=[]), False, False),
+            (helpers.MockMessage(author=author, clean_content="message", attachments=[]), True, False),
+            (helpers.MockMessage(author=author, clean_content="", attachments=["attachment"]), False, True),
+            (helpers.MockMessage(author=author, clean_content="message", attachments=["attachment"]), True, True),
         )
 
         for message, expect_webhook_call, expect_attachment_call in test_values:
@@ -314,14 +286,14 @@ class DuckPondTests(base.LoggingTestsMixin, unittest.IsolatedAsyncioTestCase):
 
         for side_effect in side_effects:  # pragma: no cover
             send_attachments.side_effect = side_effect
-            with patch(f"{MODULE_PATH}.DuckPond.send_webhook", new_callable=AsyncMock) as send_webhook:
+            with patch(f"{MODULE_PATH}.send_webhook", new_callable=AsyncMock) as send_webhook:
                 with self.subTest(side_effect=type(side_effect).__name__):
                     with self.assertNotLogs(logger=log, level=logging.ERROR):
                         await self.cog.relay_message(message)
 
                     self.assertEqual(send_webhook.call_count, 2)
 
-    @patch(f"{MODULE_PATH}.DuckPond.send_webhook", new_callable=AsyncMock)
+    @patch(f"{MODULE_PATH}.send_webhook", new_callable=AsyncMock)
     @patch(f"{MODULE_PATH}.send_attachments", new_callable=AsyncMock)
     async def test_relay_message_handles_attachment_http_error(self, send_attachments, send_webhook):
         """The `relay_message` method should handle irretrievable attachments."""
@@ -337,6 +309,7 @@ class DuckPondTests(base.LoggingTestsMixin, unittest.IsolatedAsyncioTestCase):
                 await self.cog.relay_message(message)
 
             send_webhook.assert_called_once_with(
+                webhook=self.cog.webhook,
                 content=message.clean_content,
                 username=message.author.display_name,
                 avatar_url=message.author.avatar_url
