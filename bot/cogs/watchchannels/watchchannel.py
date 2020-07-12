@@ -120,7 +120,7 @@ class WatchChannel(metaclass=CogABCMeta):
             await self.modlog.send_log_message(
                 title=f"Error: Failed to initialize the {self.__class__.__name__} watch channel",
                 text=message,
-                ping_moderators=True,
+                ping_everyone=True,
                 icon_url=Icons.token_removed,
                 colour=Color.red()
             )
@@ -132,7 +132,7 @@ class WatchChannel(metaclass=CogABCMeta):
             await self.modlog.send_log_message(
                 title=f"Warning: Failed to retrieve user cache for the {self.__class__.__name__} watch channel",
                 text="Could not retrieve the list of watched users from the API and messages will not be relayed.",
-                ping_moderators=True,
+                ping_everyone=True,
                 icon_url=Icons.token_removed,
                 colour=Color.red()
             )
