@@ -1,7 +1,9 @@
 import logging
+from typing import Optional
 
 import discord
 from discord import Color
+from discord.ext import commands
 from discord.ext.commands import Cog
 
 from bot import constants
@@ -20,6 +22,32 @@ class DMRelay(Cog):
         self.webhook_id = constants.Webhooks.dm_log
         self.webhook = None
         self.bot.loop.create_task(self.fetch_webhook())
+        self.last_dm_user = None
+
+    @commands.command(aliases=("reply",))
+    async def send_dm(self, ctx: commands.Context, member: Optional[discord.Member], *, message: str) -> None:
+        """
+        Allows you to send a DM to a user from the bot.
+
+        If `member` is not provided, it will send to the last user who DM'd the bot.
+
+        This feature should be used extremely sparingly. Use ModMail if you need to have a serious
+        conversation with a user. This is just for responding to extraordinary DMs, having a little
+        fun with users, and telling people they are DMing the wrong bot.
+
+        NOTE: This feature will be removed if it is overused.
+        """
+        if member:
+            await member.send(message)
+            await ctx.message.add_reaction("✅")
+            return
+        elif self.last_dm_user:
+            await self.last_dm_user.send(message)
+            await ctx.message.add_reaction("✅")
+            return
+        else:
+            log.debug("Unable to send a DM to the user.")
+            await ctx.message.add_reaction("❌")
 
     async def fetch_webhook(self) -> None:
         """Fetches the webhook object, so we can post to it."""
@@ -45,6 +73,7 @@ class DMRelay(Cog):
                 username=message.author.display_name,
                 avatar_url=message.author.avatar_url
             )
+            self.last_dm_user = message.author
 
         # Handle any attachments
         if message.attachments:
