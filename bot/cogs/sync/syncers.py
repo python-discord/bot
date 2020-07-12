@@ -5,6 +5,7 @@ import typing as t
 from collections import namedtuple
 from functools import partial
 
+import discord
 from discord import Guild, HTTPException, Member, Message, Reaction, User
 from discord.ext.commands import Context
 
@@ -68,7 +69,11 @@ class Syncer(abc.ABC):
                     )
                     return None
 
-            message = await channel.send(f"{self._CORE_DEV_MENTION}{msg_content}")
+            allowed_roles = [discord.Object(constants.Roles.core_developers)]
+            message = await channel.send(
+                f"{self._CORE_DEV_MENTION}{msg_content}",
+                allowed_mentions=discord.AllowedMentions(everyone=False, roles=allowed_roles)
+            )
         else:
             await message.edit(content=msg_content)
 

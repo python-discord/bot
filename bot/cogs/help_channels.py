@@ -624,11 +624,13 @@ class HelpChannels(Scheduler, commands.Cog):
 
             channel = self.bot.get_channel(constants.HelpChannels.notify_channel)
             mentions = " ".join(f"<@&{role}>" for role in constants.HelpChannels.notify_roles)
+            allowed_roles = [discord.Object(id_) for id_ in constants.HelpChannels.notify_roles]
 
             message = await channel.send(
                 f"{mentions} A new available help channel is needed but there "
                 f"are no more dormant ones. Consider freeing up some in-use channels manually by "
-                f"using the `{constants.Bot.prefix}dormant` command within the channels."
+                f"using the `{constants.Bot.prefix}dormant` command within the channels.",
+                allowed_mentions=discord.AllowedMentions(everyone=False, roles=allowed_roles)
             )
 
             self.bot.stats.incr("help.out_of_channel_alerts")
