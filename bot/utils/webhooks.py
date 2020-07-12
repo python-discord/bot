@@ -16,14 +16,14 @@ async def send_webhook(
         avatar_url: Optional[str] = None,
         embed: Optional[Embed] = None,
         wait: Optional[bool] = False
-) -> None:
+) -> discord.Message:
     """
     Send a message using the provided webhook.
 
     This uses sub_clyde() and tries for an HTTPException to ensure it doesn't crash.
     """
     try:
-        await webhook.send(
+        return await webhook.send(
             content=content,
             username=sub_clyde(username),
             avatar_url=avatar_url,
