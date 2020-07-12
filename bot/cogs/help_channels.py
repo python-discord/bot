@@ -701,7 +701,7 @@ class HelpChannels(Scheduler, commands.Cog):
             log.info(f"Channel #{channel} was claimed by `{message.author.id}`.")
             await self.move_to_in_use(channel)
             await self.revoke_send_permissions(message.author)
-            # Pin message for better access and storage this to cache
+            # Pin message for better access and store this to cache
             try:
                 await message.pin()
             except discord.NotFound:
