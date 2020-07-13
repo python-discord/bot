@@ -64,7 +64,7 @@ class DMRelay(Cog):
     async def on_message(self, message: discord.Message) -> None:
         """Relays the message's content and attachments to the dm_log channel."""
         # Only relay DMs from humans
-        if message.author.bot or message.guild:
+        if message.author.bot or message.guild or self.webhook is None:
             return
 
         clean_content = message.clean_content
