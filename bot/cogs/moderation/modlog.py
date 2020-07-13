@@ -121,7 +121,12 @@ class ModLog(Cog, name="ModLog"):
                 content = "@everyone"
 
         channel = self.bot.get_channel(channel_id)
-        log_message = await channel.send(content=content, embed=embed, files=files)
+        log_message = await channel.send(
+            content=content,
+            embed=embed,
+            files=files,
+            allowed_mentions=discord.AllowedMentions(everyone=True)
+        )
 
         if additional_embeds:
             if additional_embeds_msg:

@@ -1,5 +1,4 @@
 import asyncio
-import inspect
 import json
 import logging
 import random
@@ -57,14 +56,7 @@ through our guide for [asking a good question]({ASKING_GUIDE_URL}).
 CoroutineFunc = t.Callable[..., t.Coroutine]
 
 
-class TaskData(t.NamedTuple):
-    """Data for a scheduled task."""
-
-    wait_time: int
-    callback: t.Awaitable
-
-
-class HelpChannels(Scheduler, commands.Cog):
+class HelpChannels(commands.Cog):
     """
     Manage the help channel system of the guild.
 
@@ -114,9 +106,8 @@ class HelpChannels(Scheduler, commands.Cog):
     claim_times = RedisCache()
 
     def __init__(self, bot: Bot):
-        super().__init__()
-
         self.bot = bot
+        self.scheduler = Scheduler(self.__class__.__name__)
 
         # Categories
         self.available_category: discord.CategoryChannel = None
@@ -145,7 +136,7 @@ class HelpChannels(Scheduler, commands.Cog):
         for task in self.queue_tasks:
             task.cancel()
 
-        self.cancel_all()
+        self.scheduler.cancel_all()
 
     def create_channel_queue(self) -> asyncio.Queue:
         """
@@ -229,10 +220,11 @@ class HelpChannels(Scheduler, commands.Cog):
                 await self.remove_cooldown_role(ctx.author)
 
                 # Ignore missing task when cooldown has passed but the channel still isn't dormant.
-                self.cancel_task(ctx.author.id, ignore_missing=True)
+                if ctx.author.id in self.scheduler:
+                    self.scheduler.cancel(ctx.author.id)
 
                 await self.move_to_dormant(ctx.channel, "command")
-                self.cancel_task(ctx.channel.id)
+                self.scheduler.cancel(ctx.channel.id)
         else:
             log.debug(f"{ctx.author} invoked command 'dormant' outside an in-use help channel")
 
@@ -474,16 +466,15 @@ class HelpChannels(Scheduler, commands.Cog):
         else:
             # Cancel the existing task, if any.
             if has_task:
-                self.cancel_task(channel.id)
+                self.scheduler.cancel(channel.id)
 
-            data = TaskData(idle_seconds - time_elapsed, self.move_idle_channel(channel))
-
+            delay = idle_seconds - time_elapsed
             log.info(
                 f"#{channel} ({channel.id}) is still active; "
-                f"scheduling it to be moved after {data.wait_time} seconds."
+                f"scheduling it to be moved after {delay} seconds."
             )
 
-            self.schedule_task(channel.id, data)
+            self.scheduler.schedule_later(delay, channel.id, self.move_idle_channel(channel))
 
     async def move_to_bottom_position(self, channel: discord.TextChannel, category_id: int, **options) -> None:
         """
@@ -588,8 +579,7 @@ class HelpChannels(Scheduler, commands.Cog):
         timeout = constants.HelpChannels.idle_minutes * 60
 
         log.trace(f"Scheduling #{channel} ({channel.id}) to become dormant in {timeout} sec.")
-        data = TaskData(timeout, self.move_idle_channel(channel))
-        self.schedule_task(channel.id, data)
+        self.scheduler.schedule_later(timeout, channel.id, self.move_idle_channel(channel))
         self.report_stats()
 
     async def notify(self) -> None:
@@ -624,11 +614,13 @@ class HelpChannels(Scheduler, commands.Cog):
 
             channel = self.bot.get_channel(constants.HelpChannels.notify_channel)
             mentions = " ".join(f"<@&{role}>" for role in constants.HelpChannels.notify_roles)
+            allowed_roles = [discord.Object(id_) for id_ in constants.HelpChannels.notify_roles]
 
             message = await channel.send(
                 f"{mentions} A new available help channel is needed but there "
                 f"are no more dormant ones. Consider freeing up some in-use channels manually by "
-                f"using the `{constants.Bot.prefix}dormant` command within the channels."
+                f"using the `{constants.Bot.prefix}dormant` command within the channels.",
+                allowed_mentions=discord.AllowedMentions(everyone=False, roles=allowed_roles)
             )
 
             self.bot.stats.incr("help.out_of_channel_alerts")
@@ -722,10 +714,10 @@ class HelpChannels(Scheduler, commands.Cog):
         log.info(f"Claimant of #{msg.channel} ({msg.author}) deleted message, channel is empty now. Rescheduling task.")
 
         # Cancel existing dormant task before scheduling new.
-        self.cancel_task(msg.channel.id)
+        self.scheduler.cancel(msg.channel.id)
 
-        task = TaskData(constants.HelpChannels.deleted_idle_minutes * 60, self.move_idle_channel(msg.channel))
-        self.schedule_task(msg.channel.id, task)
+        delay = constants.HelpChannels.deleted_idle_minutes * 60
+        self.scheduler.schedule_later(delay, msg.channel.id, self.move_idle_channel(msg.channel))
 
     async def is_empty(self, channel: discord.TextChannel) -> bool:
         """Return True if the most recent message in `channel` is the bot's `AVAILABLE_MSG`."""
@@ -752,8 +744,8 @@ class HelpChannels(Scheduler, commands.Cog):
                 await self.remove_cooldown_role(member)
             else:
                 # The member is still on a cooldown; re-schedule it for the remaining time.
-                remaining = cooldown - in_use_time.seconds
-                await self.schedule_cooldown_expiration(member, remaining)
+                delay = cooldown - in_use_time.seconds
+                self.scheduler.schedule_later(delay, member.id, self.remove_cooldown_role(member))
 
     async def add_cooldown_role(self, member: discord.Member) -> None:
         """Add the help cooldown role to `member`."""
@@ -804,16 +796,11 @@ class HelpChannels(Scheduler, commands.Cog):
 
         # Cancel the existing task, if any.
         # Would mean the user somehow bypassed the lack of permissions (e.g. user is guild owner).
-        self.cancel_task(member.id, ignore_missing=True)
+        if member.id in self.scheduler:
+            self.scheduler.cancel(member.id)
 
-        await self.schedule_cooldown_expiration(member, constants.HelpChannels.claim_minutes * 60)
-
-    async def schedule_cooldown_expiration(self, member: discord.Member, seconds: int) -> None:
-        """Schedule the cooldown role for `member` to be removed after a duration of `seconds`."""
-        log.trace(f"Scheduling removal of {member}'s ({member.id}) cooldown.")
-
-        callback = self.remove_cooldown_role(member)
-        self.schedule_task(member.id, TaskData(seconds, callback))
+        delay = constants.HelpChannels.claim_minutes * 60
+        self.scheduler.schedule_later(delay, member.id, self.remove_cooldown_role(member))
 
     async def send_available_message(self, channel: discord.TextChannel) -> None:
         """Send the available message by editing a dormant message or sending a new message."""
@@ -854,21 +841,6 @@ class HelpChannels(Scheduler, commands.Cog):
         self.queue_tasks.remove(task)
 
         return channel
-
-    async def _scheduled_task(self, data: TaskData) -> None:
-        """Await the `data.callback` coroutine after waiting for `data.wait_time` seconds."""
-        try:
-            log.trace(f"Waiting {data.wait_time} seconds before awaiting callback.")
-            await asyncio.sleep(data.wait_time)
-
-            # Use asyncio.shield to prevent callback from cancelling itself.
-            # The parent task (_scheduled_task) will still get cancelled.
-            log.trace("Done waiting; now awaiting the callback.")
-            await asyncio.shield(data.callback)
-        finally:
-            if inspect.iscoroutine(data.callback):
-                log.trace("Explicitly closing coroutine.")
-                data.callback.close()
 
 
 def validate_config() -> None:
