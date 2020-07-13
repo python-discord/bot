@@ -78,9 +78,7 @@ class DuckPond(Cog):
 
     async def relay_message(self, message: Message) -> None:
         """Relays the message's content and attachments to the duck pond channel."""
-        clean_content = message.clean_content
-
-        if clean_content:
+        if message.clean_content:
             await send_webhook(
                 webhook=self.webhook,
                 content=message.clean_content,

@@ -67,8 +67,7 @@ class DMRelay(Cog):
         if message.author.bot or message.guild or self.webhook is None:
             return
 
-        clean_content = message.clean_content
-        if clean_content:
+        if message.clean_content:
             await send_webhook(
                 webhook=self.webhook,
                 content=message.clean_content,
