@@ -8,6 +8,8 @@ from discord.ext.commands import Cog
 
 from bot import constants
 from bot.bot import Bot
+from bot.constants import MODERATION_ROLES
+from bot.utils.checks import with_role_check
 from bot.utils.messages import send_attachments
 from bot.utils.webhooks import send_webhook
 
@@ -92,6 +94,10 @@ class DMRelay(Cog):
                 )
             except discord.HTTPException:
                 log.exception("Failed to send an attachment to the webhook")
+
+    def cog_check(self, ctx: commands.Context) -> bool:
+        """Only allow moderators to invoke the commands in this cog."""
+        return with_role_check(ctx, *MODERATION_ROLES)
 
 
 def setup(bot: Bot) -> None:
