@@ -113,6 +113,7 @@ class PythonNews(Cog):
                 webhook=self.webhook,
                 username=data["feed"]["title"],
                 embed=embed,
+                avatar_url=AVATAR_URL,
                 wait=True,
             )
             payload["data"]["pep"].append(pep_nr)
@@ -189,6 +190,7 @@ class PythonNews(Cog):
                     webhook=self.webhook,
                     username=self.webhook_names[maillist],
                     embed=embed,
+                    avatar_url=AVATAR_URL,
                     wait=True,
                 )
                 payload["data"][maillist].append(thread_information["thread_id"])
