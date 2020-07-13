@@ -217,43 +217,43 @@ class Filtering(Cog, Scheduler):
                 if _filter["enabled"] and _filter["content_only"]:
                     match = await _filter["function"](result)
 
-                if match:
-                    # If this is a filter (not a watchlist), we set the variable so we know
-                    # that it has been triggered
-                    if _filter["type"] == "filter":
-                        filter_triggered = True
+                    if match:
+                        # If this is a filter (not a watchlist), we set the variable so we know
+                        # that it has been triggered
+                        if _filter["type"] == "filter":
+                            filter_triggered = True
 
-                    # We do not have to check against DM channels since !eval cannot be used there.
-                    channel_str = f"in {msg.channel.mention}"
+                        # We do not have to check against DM channels since !eval cannot be used there.
+                        channel_str = f"in {msg.channel.mention}"
 
-                    message_content, additional_embeds, additional_embeds_msg = self._add_stats(
-                        filter_name, match, result
-                    )
+                        message_content, additional_embeds, additional_embeds_msg = self._add_stats(
+                            filter_name, match, result
+                        )
 
-                    message = (
-                        f"The {filter_name} {_filter['type']} was triggered "
-                        f"by **{msg.author}** "
-                        f"(`{msg.author.id}`) {channel_str} using !eval with "
-                        f"[the following message]({msg.jump_url}):\n\n"
-                        f"{message_content}"
-                    )
+                        message = (
+                            f"The {filter_name} {_filter['type']} was triggered "
+                            f"by **{msg.author}** "
+                            f"(`{msg.author.id}`) {channel_str} using !eval with "
+                            f"[the following message]({msg.jump_url}):\n\n"
+                            f"{message_content}"
+                        )
 
-                    log.debug(message)
+                        log.debug(message)
 
-                    # Send pretty mod log embed to mod-alerts
-                    await self.mod_log.send_log_message(
-                        icon_url=Icons.filtering,
-                        colour=Colour(Colours.soft_red),
-                        title=f"{_filter['type'].title()} triggered!",
-                        text=message,
-                        thumbnail=msg.author.avatar_url_as(static_format="png"),
-                        channel_id=Channels.mod_alerts,
-                        ping_everyone=Filter.ping_everyone,
-                        additional_embeds=additional_embeds,
-                        additional_embeds_msg=additional_embeds_msg
-                    )
+                        # Send pretty mod log embed to mod-alerts
+                        await self.mod_log.send_log_message(
+                            icon_url=Icons.filtering,
+                            colour=Colour(Colours.soft_red),
+                            title=f"{_filter['type'].title()} triggered!",
+                            text=message,
+                            thumbnail=msg.author.avatar_url_as(static_format="png"),
+                            channel_id=Channels.mod_alerts,
+                            ping_everyone=Filter.ping_everyone,
+                            additional_embeds=additional_embeds,
+                            additional_embeds_msg=additional_embeds_msg
+                        )
 
-                    break  # We don't want multiple filters to trigger
+                        break  # We don't want multiple filters to trigger
 
         return filter_triggered
 
