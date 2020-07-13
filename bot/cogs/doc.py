@@ -430,12 +430,12 @@ class Doc(commands.Cog):
         return soup
 
     @commands.group(name='docs', aliases=('doc', 'd'), invoke_without_command=True)
-    async def docs_group(self, ctx: commands.Context, *, symbol: str) -> None:
+    async def docs_group(self, ctx: commands.Context, *, symbol: Optional[str]) -> None:
         """Lookup documentation for Python symbols."""
         await ctx.invoke(self.get_command, symbol=symbol)
 
     @docs_group.command(name='getdoc', aliases=('g',))
-    async def get_command(self, ctx: commands.Context, *, symbol: str) -> None:
+    async def get_command(self, ctx: commands.Context, *, symbol: Optional[str]) -> None:
         """
         Return a documentation embed for a given symbol.
 
