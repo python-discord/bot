@@ -200,7 +200,7 @@ class Filtering(Cog, Scheduler):
             # Update time when alert sent
             await self.name_alerts.set(member.id, datetime.utcnow().timestamp())
 
-    async def _filter_eval(self, result: str, msg: Message) -> bool:
+    async def filter_eval(self, result: str, msg: Message) -> bool:
         """
         Filter the result of an !eval to see if it violates any of our rules, and then respond accordingly.
 
