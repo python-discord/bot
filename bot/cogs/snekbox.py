@@ -213,7 +213,9 @@ class Snekbox(Cog):
                 self.bot.stats.incr("snekbox.python.success")
 
             filter_cog = self.bot.get_cog("Filtering")
-            filter_triggered = await filter_cog.filter_eval(msg, ctx.message)
+            filter_triggered = False
+            if filter_cog:
+                filter_triggered = await filter_cog.filter_eval(msg, ctx.message)
             if filter_triggered:
                 response = await ctx.send("Attempt to circumvent filter detected. Moderator team has been alerted.")
             else:
