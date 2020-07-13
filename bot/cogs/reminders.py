@@ -80,7 +80,7 @@ class Reminders(Cog):
     async def _send_confirmation(
         ctx: Context,
         on_success: str,
-        reminder_id: str,
+        reminder_id: t.Union[str, int],
         delivery_dt: t.Optional[datetime],
     ) -> None:
         """Send an embed confirming the reminder change was made successfully."""
