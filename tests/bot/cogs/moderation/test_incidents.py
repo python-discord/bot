@@ -12,6 +12,7 @@ from bot.cogs.moderation import Incidents, incidents
 from bot.constants import Colours
 from tests.helpers import (
     MockAsyncWebhook,
+    MockAttachment,
     MockBot,
     MockMember,
     MockMessage,
@@ -67,6 +68,25 @@ mock_404 = discord.NotFound(
     response=MagicMock(aiohttp.ClientResponse),  # Mock the erroneous response
     message="Not found",
 )
+
+
+class TestDownloadFile(unittest.IsolatedAsyncioTestCase):
+    """Collection of tests for the `download_file` helper function."""
+
+    async def test_download_file_success(self):
+        """If `to_file` succeeds, function returns the acquired `discord.File`."""
+        file = MagicMock(discord.File, filename="bigbadlemon.jpg")
+        attachment = MockAttachment(to_file=AsyncMock(return_value=file))
+
+        acquired_file = await incidents.download_file(attachment)
+        self.assertIs(file, acquired_file)
+
+    async def test_download_file_fail(self):
+        """If `to_file` fails, function handles the exception & returns None."""
+        attachment = MockAttachment(to_file=AsyncMock(side_effect=mock_404))
+
+        acquired_file = await incidents.download_file(attachment)
+        self.assertIsNone(acquired_file)
 
 
 class TestMakeEmbed(unittest.TestCase):

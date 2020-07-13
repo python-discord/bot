@@ -42,6 +42,19 @@ ALLOWED_ROLES: t.Set[int] = set(Guild.moderation_roles)
 ALL_SIGNALS: t.Set[str] = {signal.value for signal in Signal}
 
 
+async def download_file(attachment: discord.Attachment) -> t.Optional[discord.File]:
+    """
+    Download & return `attachment` file.
+
+    If the download fails, the reason is logged and None will be returned.
+    """
+    log.debug(f"Attempting to download attachment: {attachment.filename}")
+    try:
+        return await attachment.to_file()
+    except Exception:
+        log.exception("Failed to download attachment")
+
+
 def make_embed(incident: discord.Message, outcome: Signal, actioned_by: discord.Member) -> discord.Embed:
     """
     Create an embed representation of `incident` for the #incidents-archive channel.
