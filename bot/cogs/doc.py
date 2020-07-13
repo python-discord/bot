@@ -434,7 +434,7 @@ class Doc(commands.Cog):
         """Lookup documentation for Python symbols."""
         await ctx.invoke(self.get_command, symbol=symbol)
 
-    @docs_group.command(name='get', aliases=('g',))
+    @docs_group.command(name='getdoc', aliases=('g',))
     async def get_command(self, ctx: commands.Context, *, symbol: str) -> None:
         """
         Return a documentation embed for a given symbol.
@@ -489,7 +489,7 @@ class Doc(commands.Cog):
             else:
                 await ctx.send(embed=doc_embed)
 
-    @docs_group.command(name='set', aliases=('s',))
+    @docs_group.command(name='setdoc', aliases=('s',))
     @with_role(*MODERATION_ROLES)
     async def set_command(
         self, ctx: commands.Context, package_name: ValidPythonIdentifier,
@@ -523,7 +523,7 @@ class Doc(commands.Cog):
         await self.update_single(package_name, base_url, inventory_url)
         await ctx.send(f"Added package `{package_name}` to database and refreshed inventory.")
 
-    @docs_group.command(name='delete', aliases=('remove', 'rm', 'd'))
+    @docs_group.command(name='deletedoc', aliases=('removedoc', 'rm', 'd'))
     @with_role(*MODERATION_ROLES)
     async def delete_command(self, ctx: commands.Context, package_name: ValidPythonIdentifier) -> None:
         """
@@ -540,7 +540,7 @@ class Doc(commands.Cog):
             await self.refresh_inventory()
         await ctx.send(f"Successfully deleted `{package_name}` and refreshed inventory.")
 
-    @docs_group.command(name="refresh", aliases=("rfsh", "r"))
+    @docs_group.command(name="refreshdoc", aliases=("rfsh", "r"))
     @with_role(*MODERATION_ROLES)
     async def refresh_command(self, ctx: commands.Context) -> None:
         """Refresh inventories and send differences to channel."""
