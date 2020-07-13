@@ -139,7 +139,7 @@ class ModManagement(commands.Cog):
 
             # If the infraction was not marked as permanent, schedule a new expiration task
             if request_data['expires_at']:
-                self.infractions_cog.scheduler.schedule(new_infraction['id'], new_infraction)
+                self.infractions_cog.schedule_expiration(new_infraction)
 
             log_text += f"""
                 Previous expiry: {old_infraction['expires_at'] or "Permanent"}
