@@ -15,4 +15,3 @@ if favorite_fruit == 'grapefruit' or favorite_fruit == 'lemon':
 if favorite_fruit in ('grapefruit', 'lemon'):
     print("That's a weird favorite fruit to have.")
 ```
-For more info, see here:  [Python Docs - Boolean Operations](https://docs.python.org/3/reference/expressions.html#boolean-operations)
