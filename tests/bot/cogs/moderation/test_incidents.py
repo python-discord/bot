@@ -89,29 +89,57 @@ class TestDownloadFile(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(acquired_file)
 
 
-class TestMakeEmbed(unittest.TestCase):
+class TestMakeEmbed(unittest.IsolatedAsyncioTestCase):
     """Collection of tests for the `make_embed` helper function."""
 
-    def test_make_embed_actioned(self):
+    async def test_make_embed_actioned(self):
         """Embed is coloured green and footer contains 'Actioned' when `outcome=Signal.ACTIONED`."""
-        embed = incidents.make_embed(MockMessage(), incidents.Signal.ACTIONED, MockMember())
+        embed, file = await incidents.make_embed(MockMessage(), incidents.Signal.ACTIONED, MockMember())
 
         self.assertEqual(embed.colour.value, Colours.soft_green)
         self.assertIn("Actioned", embed.footer.text)
 
-    def test_make_embed_not_actioned(self):
+    async def test_make_embed_not_actioned(self):
         """Embed is coloured red and footer contains 'Rejected' when `outcome=Signal.NOT_ACTIONED`."""
-        embed = incidents.make_embed(MockMessage(), incidents.Signal.NOT_ACTIONED, MockMember())
+        embed, file = await incidents.make_embed(MockMessage(), incidents.Signal.NOT_ACTIONED, MockMember())
 
         self.assertEqual(embed.colour.value, Colours.soft_red)
         self.assertIn("Rejected", embed.footer.text)
 
-    def test_make_embed_content(self):
+    async def test_make_embed_content(self):
         """Incident content appears as embed description."""
         incident = MockMessage(content="this is an incident")
-        embed = incidents.make_embed(incident, incidents.Signal.ACTIONED, MockMember())
+        embed, file = await incidents.make_embed(incident, incidents.Signal.ACTIONED, MockMember())
 
         self.assertEqual(incident.content, embed.description)
+
+    async def test_make_embed_with_attachment_succeeds(self):
+        """Incident's attachment is downloaded and displayed in the embed's image field."""
+        file = MagicMock(discord.File, filename="bigbadjoe.jpg")
+        attachment = MockAttachment(filename="bigbadjoe.jpg")
+        incident = MockMessage(content="this is an incident", attachments=[attachment])
+
+        # Patch `download_file` to return our `file`
+        with patch("bot.cogs.moderation.incidents.download_file", AsyncMock(return_value=file)):
+            embed, returned_file = await incidents.make_embed(incident, incidents.Signal.ACTIONED, MockMember())
+
+        self.assertIs(file, returned_file)
+        self.assertEqual("attachment://bigbadjoe.jpg", embed.image.url)
+
+    async def test_make_embed_with_attachment_fails(self):
+        """Incident's attachment fails to download, proxy url is linked instead."""
+        attachment = MockAttachment(proxy_url="discord.com/bigbadjoe.jpg")
+        incident = MockMessage(content="this is an incident", attachments=[attachment])
+
+        # Patch `download_file` to return None as if the download failed
+        with patch("bot.cogs.moderation.incidents.download_file", AsyncMock(return_value=None)):
+            embed, returned_file = await incidents.make_embed(incident, incidents.Signal.ACTIONED, MockMember())
+
+        self.assertIsNone(returned_file)
+
+        # The author name field is simply expected to have something in it, we do not assert the message
+        self.assertGreater(len(embed.author.name), 0)
+        self.assertEqual(embed.author.url, "discord.com/bigbadjoe.jpg")  # However, it should link the exact url
 
 
 @patch("bot.constants.Channels.incidents", 123)
@@ -343,11 +371,10 @@ class TestArchive(TestIncidents):
             content="this is an incident",
             author=MockUser(name="author_name", avatar_url="author_avatar"),
             id=123,
-            attachments=[],  # This incident has no attachments
         )
         built_embed = MagicMock(discord.Embed, id=123)  # We patch `make_embed` to return this
 
-        with patch("bot.cogs.moderation.incidents.make_embed", MagicMock(return_value=built_embed)):
+        with patch("bot.cogs.moderation.incidents.make_embed", AsyncMock(return_value=(built_embed, None))):
             archive_return = await self.cog_instance.archive(incident, MagicMock(value="A"), MockMember())
 
         # Now we check that the webhook was given the correct args, and that `archive` returned True
@@ -358,34 +385,6 @@ class TestArchive(TestIncidents):
             file=None,
         )
         self.assertTrue(archive_return)
-
-    async def test_archive_relays_incident_with_attachments(self):
-        """
-        Incident attachments are relayed and displayed in the embed.
-
-        This test asserts the two things that need to happen in order to relay the attachment.
-        The embed returned by `make_embed` must have the `set_image` method called with the
-        attachment's filename, and the file must be passed to the webhook's send method.
-        """
-        attachment_file = MagicMock(discord.File)
-        attachment = MagicMock(
-            discord.Attachment,
-            filename="abc.png",
-            to_file=AsyncMock(return_value=attachment_file),
-        )
-        incident = MockMessage(
-            attachments=[attachment],
-        )
-        built_embed = MagicMock(discord.Embed)
-
-        with patch("bot.cogs.moderation.incidents.make_embed", MagicMock(return_value=built_embed)):
-            await self.cog_instance.archive(incident, incidents.Signal.ACTIONED, actioned_by=MockMember())
-
-        built_embed.set_image.assert_called_once_with(url="attachment://abc.png")
-
-        send_kwargs = self.cog_instance.bot.fetch_webhook.return_value.send.call_args.kwargs
-        self.assertIn("file", send_kwargs)
-        self.assertIs(send_kwargs["file"], attachment_file)
 
     async def test_archive_clyde_username(self):
         """

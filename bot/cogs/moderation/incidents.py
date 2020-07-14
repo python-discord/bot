@@ -41,6 +41,10 @@ ALLOWED_ROLES: t.Set[int] = set(Guild.moderation_roles)
 # Message must have all of these emoji to pass the `has_signals` check
 ALL_SIGNALS: t.Set[str] = {signal.value for signal in Signal}
 
+# An embed coupled with an optional file to be dispatched
+# If the file is not None, the embed attempts to show it in its body
+FileEmbed = t.Tuple[discord.Embed, t.Optional[discord.File]]
+
 
 async def download_file(attachment: discord.Attachment) -> t.Optional[discord.File]:
     """
@@ -55,7 +59,7 @@ async def download_file(attachment: discord.Attachment) -> t.Optional[discord.Fi
         log.exception("Failed to download attachment")
 
 
-def make_embed(incident: discord.Message, outcome: Signal, actioned_by: discord.Member) -> discord.Embed:
+async def make_embed(incident: discord.Message, outcome: Signal, actioned_by: discord.Member) -> FileEmbed:
     """
     Create an embed representation of `incident` for the #incidents-archive channel.
 
@@ -66,6 +70,11 @@ def make_embed(incident: discord.Message, outcome: Signal, actioned_by: discord.
     of information will be relayed in other ways, e.g. webhook username.
 
     As mentions in embeds do not ping, we do not need to use `incident.clean_content`.
+
+    If `incident` contains attachments, the first attachment will be downloaded and
+    returned alongside the embed. The embed attempts to display the attachment.
+    Should the download fail, we fallback on linking the `proxy_url`, which should
+    remain functional for some time after the original message is deleted.
     """
     log.trace(f"Creating embed for {incident.id=}")
 
@@ -83,7 +92,18 @@ def make_embed(incident: discord.Message, outcome: Signal, actioned_by: discord.
     )
     embed.set_footer(text=footer, icon_url=actioned_by.avatar_url)
 
-    return embed
+    if incident.attachments:
+        attachment = incident.attachments[0]  # User-sent messages can only contain one attachment
+        file = await download_file(attachment)
+
+        if file is not None:
+            embed.set_image(url=f"attachment://{attachment.filename}")  # Embed displays the attached file
+        else:
+            embed.set_author(name="[Failed to relay attachment]", url=attachment.proxy_url)  # Embed links the file
+    else:
+        file = None
+
+    return embed, file
 
 
 def is_incident(message: discord.Message) -> bool:
@@ -215,17 +235,7 @@ class Incidents(Cog):
         message is not safe to be deleted, as we will lose some information.
         """
         log.debug(f"Archiving incident: {incident.id} (outcome: {outcome}, actioned by: {actioned_by})")
-        embed = make_embed(incident, outcome, actioned_by)
-
-        # If the incident had an attachment, we will try to relay it
-        if incident.attachments:
-            attachment = incident.attachments[0]  # User-sent messages can only contain one attachment
-            log.debug(f"Attempting to archive incident attachment: {attachment.filename}")
-
-            attachment_file = await attachment.to_file()  # The file will be sent with the webhook
-            embed.set_image(url=f"attachment://{attachment.filename}")  # Embed displays the attached file
-        else:
-            attachment_file = None
+        embed, attachment_file = await make_embed(incident, outcome, actioned_by)
 
         try:
             webhook = await self.bot.fetch_webhook(Webhooks.incidents_archive)
