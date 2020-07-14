@@ -177,7 +177,7 @@ class Doc(commands.Cog):
     def __init__(self, bot: Bot):
         self.base_urls = {}
         self.bot = bot
-        self.inventories: Dict[str, DocItem] = {}
+        self.doc_symbols: Dict[str, DocItem] = {}
         self.renamed_symbols = set()
 
         self.bot.loop.create_task(self.init_refresh_inventory())
@@ -215,20 +215,20 @@ class Doc(commands.Cog):
                 # to remove unnecessary memory consumption from them being unique objects
                 group_name = sys.intern(group.split(":")[1])
 
-                if symbol in self.inventories:
-                    symbol_base_url = self.inventories[symbol].url.split("/", 3)[2]
+                if symbol in self.doc_symbols:
+                    symbol_base_url = self.doc_symbols[symbol].url.split("/", 3)[2]
                     if (
                         group_name in NO_OVERRIDE_GROUPS
                         or any(package in symbol_base_url for package in NO_OVERRIDE_PACKAGES)
                     ):
                         symbol = f"{group_name}.{symbol}"
 
-                    elif (overridden_symbol_group := self.inventories[symbol].group) in NO_OVERRIDE_GROUPS:
+                    elif (overridden_symbol_group := self.doc_symbols[symbol].group) in NO_OVERRIDE_GROUPS:
                         overridden_symbol = f"{overridden_symbol_group}.{symbol}"
                         if overridden_symbol in self.renamed_symbols:
                             overridden_symbol = f"{api_package_name}.{overridden_symbol}"
 
-                        self.inventories[overridden_symbol] = self.inventories[symbol]
+                        self.doc_symbols[overridden_symbol] = self.doc_symbols[symbol]
                         self.renamed_symbols.add(overridden_symbol)
 
                     # If renamed `symbol` already exists, add library name in front to differentiate between them.
@@ -237,7 +237,7 @@ class Doc(commands.Cog):
                         symbol = f"{api_package_name}.{symbol}"
                         self.renamed_symbols.add(symbol)
 
-                self.inventories[symbol] = DocItem(api_package_name, absolute_doc_url, group_name)
+                self.doc_symbols[symbol] = DocItem(api_package_name, absolute_doc_url, group_name)
 
         log.trace(f"Fetched inventory for {api_package_name}.")
 
@@ -245,11 +245,11 @@ class Doc(commands.Cog):
         """Refresh internal documentation inventory."""
         log.debug("Refreshing documentation inventory...")
 
-        # Clear the old base URLS and inventories to ensure
+        # Clear the old base URLS and doc symbols to ensure
         # that we start from a fresh local dataset.
         # Also, reset the cache used for fetching documentation.
         self.base_urls.clear()
-        self.inventories.clear()
+        self.doc_symbols.clear()
         self.renamed_symbols.clear()
         async_cache.cache = OrderedDict()
 
@@ -272,7 +272,7 @@ class Doc(commands.Cog):
         If the given symbol is a module, returns a tuple `(None, str)`
         else if the symbol could not be found, returns `None`.
         """
-        symbol_info = self.inventories.get(symbol)
+        symbol_info = self.doc_symbols.get(symbol)
         if symbol_info is None:
             return None
         request_url, symbol_id = symbol_info.url.rsplit('#')
@@ -307,7 +307,7 @@ class Doc(commands.Cog):
         if scraped_html is None:
             return None
 
-        symbol_obj = self.inventories[symbol]
+        symbol_obj = self.doc_symbols[symbol]
         self.bot.stats.incr(f"doc_fetches.{symbol_obj.package.lower()}")
         signatures = scraped_html[0]
         permalink = symbol_obj.url
