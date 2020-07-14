@@ -287,7 +287,9 @@ class WatchChannel(metaclass=CogABCMeta):
 
         await self.webhook_send(embed=embed, username=msg.author.display_name, avatar_url=msg.author.avatar_url)
 
-    async def list_watched_users(self, ctx: Context, update_cache: bool = True) -> None:
+    async def list_watched_users(
+        self, ctx: Context, oldest_first: bool = False, update_cache: bool = True
+    ) -> None:
         """
         Gives an overview of the watched user list for this channel.
 
@@ -305,7 +307,11 @@ class WatchChannel(metaclass=CogABCMeta):
             time_delta = self._get_time_delta(inserted_at)
             lines.append(f"• <@{user_id}> (added {time_delta})")
 
+        if oldest_first:
+            lines.reverse()
+
         lines = lines or ("There's nothing here yet.",)
+
         embed = Embed(
             title=f"{self.__class__.__name__} watched users ({'updated' if update_cache else 'cached'})",
             color=Color.blue()
