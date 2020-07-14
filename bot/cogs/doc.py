@@ -445,7 +445,7 @@ class Doc(commands.Cog):
             !docs
             !docs aiohttp
             !docs aiohttp.ClientSession
-            !docs get aiohttp.ClientSession
+            !docs getdoc aiohttp.ClientSession
         """
         if not symbol:
             inventory_embed = discord.Embed(
@@ -501,7 +501,7 @@ class Doc(commands.Cog):
         The database will update the object, should an existing item with the specified `package_name` already exist.
 
         Example:
-            !docs set \
+            !docs setdoc \
                     python \
                     https://docs.python.org/3/ \
                     https://docs.python.org/3/objects.inv
@@ -530,7 +530,7 @@ class Doc(commands.Cog):
         Removes the specified package from the database.
 
         Examples:
-            !docs delete aiohttp
+            !docs deletedoc aiohttp
         """
         await self.bot.api_client.delete(f'bot/documentation-links/{package_name}')
 
