@@ -42,7 +42,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
         The optional kwarg `update_cache` can be used to update the user
         cache using the API before listing the users.
         """
-        await self.list_watched_users(ctx, update_cache)
+        await self.list_watched_users(ctx, update_cache=update_cache)
 
     @bigbrother_group.command(name='watch', aliases=('w',))
     @with_role(*MODERATION_ROLES)
