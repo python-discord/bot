@@ -51,6 +51,17 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         """
         await self.list_watched_users(ctx, oldest_first=oldest_first, update_cache=update_cache)
 
+    @nomination_group.command(name='oldest')
+    @with_role(*MODERATION_ROLES)
+    async def oldest_command(self, ctx: Context, update_cache: bool = True) -> None:
+        """
+        Shows talent pool monitored users ordered by oldest nomination.
+
+        The optional kwarg `update_cache` can be used to update the user
+        cache using the API before listing the users.
+        """
+        await ctx.invoke(self.watched_command, oldest_first=True, update_cache=update_cache)
+
     @nomination_group.command(name='watch', aliases=('w', 'add', 'a'))
     @with_role(*STAFF_ROLES)
     async def watch_command(self, ctx: Context, user: FetchedMember, *, reason: str) -> None:
