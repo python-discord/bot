@@ -3,7 +3,7 @@ When checking if something is equal to one thing or another, you might think tha
 if favorite_fruit == 'grapefruit' or 'lemon':
     print("That's a weird favorite fruit to have.")
 ```
-While this makes sense in English, it may not behave the way you would expect. In Python, you should have _complete instructions on both sides of the logical operator_.
+While this makes sense in English, it may not behave the way you would expect. [In Python, you should have _complete instructions on both sides of the logical operator_.](https://docs.python.org/3/reference/expressions.html#boolean-operations)
 
 So, if you want to check if something is equal to one thing or another, there are two common ways:
 ```py
