@@ -34,22 +34,20 @@ def allowed_strings(*values, preserve_case: bool = False) -> t.Callable[[str], s
     return converter
 
 
-class ValidPythonIdentifier(Converter):
+class PackageName(Converter):
     """
-    A converter that checks whether the given string is a valid Python identifier.
+    A converter that checks whether the given string is a valid package name.
 
-    This is used to have package names that correspond to how you would use the package in your
-    code, e.g. `import package`.
-
-    Raises `BadArgument` if the argument is not a valid Python identifier, and simply passes through
-    the given argument otherwise.
+    Package names are used for stats and are restricted to the a-z and _ characters.
     """
 
-    @staticmethod
-    async def convert(ctx: Context, argument: str) -> str:
-        """Checks whether the given string is a valid Python identifier."""
-        if not argument.isidentifier():
-            raise BadArgument(f"`{argument}` is not a valid Python identifier")
+    PACKAGE_NAME_RE = re.compile(r"[^a-z_]")
+
+    @classmethod
+    async def convert(cls, ctx: Context, argument: str) -> str:
+        """Checks whether the given string is a valid package name."""
+        if cls.PACKAGE_NAME_RE.search(argument):
+            raise BadArgument("The provided package name is not valid, please only use the _ and a-z characters.")
         return argument
 
 

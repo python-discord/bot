@@ -21,7 +21,7 @@ from urllib3.exceptions import ProtocolError
 
 from bot.bot import Bot
 from bot.constants import MODERATION_ROLES, RedirectOutput
-from bot.converters import ValidPythonIdentifier, ValidURL
+from bot.converters import PackageName, ValidURL
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
 from bot.utils.messages import wait_for_deletion
@@ -492,7 +492,7 @@ class Doc(commands.Cog):
     @docs_group.command(name='setdoc', aliases=('s',))
     @with_role(*MODERATION_ROLES)
     async def set_command(
-        self, ctx: commands.Context, package_name: ValidPythonIdentifier,
+        self, ctx: commands.Context, package_name: PackageName,
         base_url: ValidURL, inventory_url: InventoryURL
     ) -> None:
         """
@@ -525,7 +525,7 @@ class Doc(commands.Cog):
 
     @docs_group.command(name='deletedoc', aliases=('removedoc', 'rm', 'd'))
     @with_role(*MODERATION_ROLES)
-    async def delete_command(self, ctx: commands.Context, package_name: ValidPythonIdentifier) -> None:
+    async def delete_command(self, ctx: commands.Context, package_name: PackageName) -> None:
         """
         Removes the specified package from the database.
 
