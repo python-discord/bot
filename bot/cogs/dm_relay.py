@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 import discord
 from discord import Color
@@ -7,6 +8,7 @@ from discord.ext.commands import Cog
 
 from bot import constants
 from bot.bot import Bot
+from bot.utils import RedisCache
 from bot.utils.checks import in_whitelist_check, with_role_check
 from bot.utils.messages import send_attachments
 from bot.utils.webhooks import send_webhook
@@ -17,6 +19,9 @@ log = logging.getLogger(__name__)
 class DMRelay(Cog):
     """Relay direct messages to and from the bot."""
 
+    # RedisCache[str, t.Union[discord.User.id, discord.Member.id]]
+    dm_cache = RedisCache()
+
     def __init__(self, bot: Bot):
         self.bot = bot
         self.webhook_id = constants.Webhooks.dm_log
@@ -24,11 +29,11 @@ class DMRelay(Cog):
         self.bot.loop.create_task(self.fetch_webhook())
 
     @commands.command(aliases=("reply",))
-    async def send_dm(self, ctx: commands.Context, member: discord.Member, *, message: str) -> None:
+    async def send_dm(self, ctx: commands.Context, member: Optional[discord.Member], *, message: str) -> None:
         """
         Allows you to send a DM to a user from the bot.
 
-        A `member` must be provided.
+        If `member` is not provided, it will send to the last user who DM'd the bot.
 
         This feature should be used extremely sparingly. Use ModMail if you need to have a serious
         conversation with a user. This is just for responding to extraordinary DMs, having a little
@@ -36,11 +41,21 @@ class DMRelay(Cog):
 
         NOTE: This feature will be removed if it is overused.
         """
-        try:
-            await member.send(message)
-            await ctx.message.add_reaction("✅")
-            return
+        user_id = await self.dm_cache.get("last_user")
+        last_dm_user = ctx.guild.get_member(user_id) if user_id else None
 
+        try:
+            if member:
+                await member.send(message)
+                await ctx.message.add_reaction("✅")
+                return
+            elif last_dm_user:
+                await last_dm_user.send(message)
+                await ctx.message.add_reaction("✅")
+                return
+            else:
+                log.debug("This bot has never gotten a DM, or the RedisCache has been cleared.")
+                await ctx.message.add_reaction("❌")
         except discord.errors.Forbidden:
             log.debug("User has disabled DMs.")
             await ctx.message.add_reaction("❌")
@@ -68,6 +83,7 @@ class DMRelay(Cog):
                 username=message.author.display_name,
                 avatar_url=message.author.avatar_url
             )
+            await self.dm_cache.set("last_user", message.author.id)
 
         # Handle any attachments
         if message.attachments:
