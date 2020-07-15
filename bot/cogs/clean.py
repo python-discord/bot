@@ -45,6 +45,7 @@ class Clean(Cog):
         bots_only: bool = False,
         user: User = None,
         regex: Optional[str] = None,
+        until_message: Optional[Message] = None,
     ) -> None:
         """A helper function that does the actual message cleaning."""
         def predicate_bots_only(message: Message) -> bool:
@@ -129,6 +130,25 @@ class Clean(Cog):
                 if not self.cleaning:
                     return
 
+                # If we are looking for specific message.
+                if until_message:
+                    # Since we will be using `delete_messages` method
+                    # of a TextChannel
+                    # and we need message objects to use it
+                    # as well as to send logs
+                    # we will start appending messages here
+                    # instead adding them from purge.
+                    messages.append(message)
+                    # we could use ID's here however
+                    # in case if the message we are looking for
+                    # gets deleted, we won't have a way to figure that out
+                    # thus checking for datetime should be more reliable
+                    if message.created_at <= until_message.created_at:
+                        # means we have found the message until which
+                        # we were supposed to be deleting.
+                        message_ids.append(message.id)
+                        break
+
                 # If the message passes predicate, let's save it.
                 if predicate is None or predicate(message):
                     message_ids.append(message.id)
@@ -138,7 +158,14 @@ class Clean(Cog):
         # Now let's delete the actual messages with purge.
         self.mod_log.ignore(Event.message_delete, *message_ids)
         for channel in channels:
-            messages += await channel.purge(limit=amount, check=predicate)
+            if until_message:
+                for i in range(0, len(messages), 100):
+                    # while purge automatically handles the amount of messages
+                    # delete_messages only allows for up to 100 messages at once
+                    # thus we need to paginate the amount to always be <= 100
+                    await channel.delete_messages(messages[i:i + 100])
+            else:
+                messages += await channel.purge(limit=amount, check=predicate)
 
         # Reverse the list to restore chronological order
         if messages:
@@ -220,6 +247,17 @@ class Clean(Cog):
     ) -> None:
         """Delete all messages that match a certain regex, stop cleaning after traversing `amount` messages."""
         await self._clean_messages(amount, ctx, regex=regex, channels=channels)
+
+    @clean_group.command(name="message", aliases=["messages"])
+    @with_role(*MODERATION_ROLES)
+    async def clean_message(self, ctx: Context, message: Message) -> None:
+        """Delete all messages until certain message, stop cleaning after hitting the `message`"""
+        await self._clean_messages(
+            CleanMessages.message_limit,
+            ctx,
+            channels=[message.channel],
+            until_message=message
+        )
 
     @clean_group.command(name="stop", aliases=["cancel", "abort"])
     @with_role(*MODERATION_ROLES)
