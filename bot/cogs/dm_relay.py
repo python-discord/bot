@@ -8,6 +8,7 @@ from discord.ext.commands import Cog
 
 from bot import constants
 from bot.bot import Bot
+from bot.converters import UserMentionOrID
 from bot.utils import RedisCache
 from bot.utils.checks import in_whitelist_check, with_role_check
 from bot.utils.messages import send_attachments
@@ -29,7 +30,7 @@ class DMRelay(Cog):
         self.bot.loop.create_task(self.fetch_webhook())
 
     @commands.command(aliases=("reply",))
-    async def send_dm(self, ctx: commands.Context, member: Optional[discord.Member], *, message: str) -> None:
+    async def send_dm(self, ctx: commands.Context, member: Optional[UserMentionOrID], *, message: str) -> None:
         """
         Allows you to send a DM to a user from the bot.
 
