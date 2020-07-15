@@ -36,13 +36,12 @@ async def help_cleanup(bot: Bot, author: Member, message: Message) -> None:
 
     await message.add_reaction(DELETE_EMOJI)
 
-    try:
-        await bot.wait_for("reaction_add", check=check, timeout=300)
-        await message.delete()
-    except TimeoutError:
-        await message.remove_reaction(DELETE_EMOJI, bot.user)
-    except NotFound:
-        pass
+    with suppress(NotFound):
+        try:
+            await bot.wait_for("reaction_add", check=check, timeout=300)
+            await message.delete()
+        except TimeoutError:
+            await message.remove_reaction(DELETE_EMOJI, bot.user)
 
 
 class HelpQueryNotFound(ValueError):
