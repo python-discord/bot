@@ -60,9 +60,6 @@ class DMRelay(Cog):
         else:
             await ctx.message.add_reaction("✅")
             self.bot.stats.incr("dm_relay.dm_sent")
-        except discord.errors.Forbidden:
-            log.debug("User has disabled DMs.")
-            await ctx.message.add_reaction("❌")
 
     async def fetch_webhook(self) -> None:
         """Fetches the webhook object, so we can post to it."""
