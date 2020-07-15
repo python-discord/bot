@@ -15,7 +15,7 @@ from bot.bot import Bot
 from bot.constants import Roles
 from bot.decorators import with_role
 from bot.interpreter import Interpreter
-from bot.utils import send_to_paste_service
+from bot.utils import find_nth_occurrence, send_to_paste_service
 
 log = logging.getLogger(__name__)
 
@@ -220,16 +220,6 @@ async def func():  # (None,) -> Any
             code = "_ = " + code
 
         await self._eval(ctx, code)
-
-
-def find_nth_occurrence(string: str, substring: str, n: int) -> Optional[int]:
-    """Return index of `n`th occurrence of `substring` in `string`, or None if not found."""
-    index = 0
-    for _ in range(n):
-        index = string.find(substring, index+1)
-        if index == -1:
-            return None
-    return index
 
 
 def setup(bot: Bot) -> None:
