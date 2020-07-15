@@ -341,10 +341,7 @@ class UserMentionOrID(UserConverter):
 
     async def convert(self, ctx: Context, argument: str) -> discord.User:
         """Convert the `arg` to a `discord.User`."""
-        print(argument)
         match = self._get_id_match(argument) or re.match(r'<@!?([0-9]+)>$', argument)
-
-        print(match)
 
         if match is not None:
             return await super().convert(ctx, argument)
