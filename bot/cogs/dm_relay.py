@@ -48,10 +48,12 @@ class DMRelay(Cog):
             if member:
                 await member.send(message)
                 await ctx.message.add_reaction("✅")
+                self.bot.stats.incr("dm_relay.dm_sent")
                 return
             elif last_dm_user:
                 await last_dm_user.send(message)
                 await ctx.message.add_reaction("✅")
+                self.bot.stats.incr("dm_relay.dm_sent")
                 return
             else:
                 log.debug("This bot has never gotten a DM, or the RedisCache has been cleared.")
@@ -84,6 +86,7 @@ class DMRelay(Cog):
                 avatar_url=message.author.avatar_url
             )
             await self.dm_cache.set("last_user", message.author.id)
+            self.bot.stats.incr("dm_relay.dm_received")
 
         # Handle any attachments
         if message.attachments:
