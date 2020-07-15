@@ -34,9 +34,6 @@ and will be yours until it has been inactive for {constants.HelpChannels.idle_mi
 is closed manually with `!close`. When that happens, it will be set to **dormant** and moved into \
 the **Help: Dormant** category.
 
-You may claim a new channel once every {constants.HelpChannels.claim_minutes} minutes. If you \
-currently cannot send a message in this channel, it means you are on cooldown and need to wait.
-
 Try to write the best question you can by providing a detailed description and telling us what \
 you've tried already. For more information on asking a good question, \
 check out our guide on [asking good questions]({ASKING_GUIDE_URL}).
