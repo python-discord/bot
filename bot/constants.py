@@ -395,6 +395,7 @@ class Channels(metaclass=YAMLGetter):
     dev_contrib: int
     dev_core: int
     dev_log: int
+    dm_log: int
     esoteric: int
     helpers: int
     how_to_get_help: int
@@ -427,6 +428,7 @@ class Webhooks(metaclass=YAMLGetter):
     reddit: int
     duck_pond: int
     dev_log: int
+    dm_log: int
 
 
 class Roles(metaclass=YAMLGetter):
@@ -459,6 +461,7 @@ class Guild(metaclass=YAMLGetter):
     reminder_whitelist: List[int]
     staff_channels: List[int]
     staff_roles: List[int]
+
 
 class Keys(metaclass=YAMLGetter):
     section = "keys"
