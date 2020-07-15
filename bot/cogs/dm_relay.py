@@ -41,23 +41,24 @@ class DMRelay(Cog):
 
         NOTE: This feature will be removed if it is overused.
         """
-        user_id = await self.dm_cache.get("last_user")
-        last_dm_user = ctx.guild.get_member(user_id) if user_id else None
+        if not member:
+            user_id = await self.dm_cache.get("last_user")
+            member = ctx.guild.get_member(user_id) if user_id else None
+
+        # If we still don't have a Member at this point, give up
+        if not member:
+            log.debug("This bot has never gotten a DM, or the RedisCache has been cleared.")
+            await ctx.message.add_reaction("❌")
+            return
 
         try:
-            if member:
-                await member.send(message)
-                await ctx.message.add_reaction("✅")
-                self.bot.stats.incr("dm_relay.dm_sent")
-                return
-            elif last_dm_user:
-                await last_dm_user.send(message)
-                await ctx.message.add_reaction("✅")
-                self.bot.stats.incr("dm_relay.dm_sent")
-                return
-            else:
-                log.debug("This bot has never gotten a DM, or the RedisCache has been cleared.")
-                await ctx.message.add_reaction("❌")
+            await member.send(message)
+        except discord.errors.Forbidden:
+            log.debug("User has disabled DMs.")
+            await ctx.message.add_reaction("❌")
+        else:
+            await ctx.message.add_reaction("✅")
+            self.bot.stats.incr("dm_relay.dm_sent")
         except discord.errors.Forbidden:
             log.debug("User has disabled DMs.")
             await ctx.message.add_reaction("❌")
