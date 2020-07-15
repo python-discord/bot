@@ -1,25 +1,17 @@
 import logging
-from abc import ABCMeta
 from typing import Optional
 
 from aiohttp import ClientConnectorError, ClientSession
-from discord.ext.commands import CogMeta
 
 from bot.constants import URLs
+from bot.utils.helpers import CogABCMeta, pad_base64
 from bot.utils.redis_cache import RedisCache
 
 log = logging.getLogger(__name__)
 
 FAILED_REQUEST_ATTEMPTS = 3
 
-
-__all__ = ['RedisCache', 'CogABCMeta', "send_to_paste_service"]
-
-
-class CogABCMeta(CogMeta, ABCMeta):
-    """Metaclass for ABCs meant to be implemented as Cogs."""
-
-    pass
+__all__ = ['RedisCache', 'CogABCMeta', "pad_base64", "send_to_paste_service"]
 
 
 async def send_to_paste_service(http_session: ClientSession, contents: str, *, extension: str = "") -> Optional[str]:
@@ -64,8 +56,3 @@ async def send_to_paste_service(http_session: ClientSession, contents: str, *, e
             f"Got unexpected JSON response from paste service: {response_json}\n"
             f"trying again ({attempt}/{FAILED_REQUEST_ATTEMPTS})."
         )
-
-
-def pad_base64(data: str) -> str:
-    """Return base64 `data` with padding characters to ensure its length is a multiple of 4."""
-    return data + "=" * (-len(data) % 4)
