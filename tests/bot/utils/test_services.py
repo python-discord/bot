@@ -4,14 +4,14 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 from aiohttp import ClientConnectorError
 
-from bot.utils import FAILED_REQUEST_ATTEMPTS, send_to_paste_service
+from bot.utils.services import FAILED_REQUEST_ATTEMPTS, send_to_paste_service
 
 
 class PasteTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.http_session = MagicMock()
 
-    @patch("bot.utils.URLs.paste_service", "https://paste_service.com/{key}")
+    @patch("bot.utils.services.URLs.paste_service", "https://paste_service.com/{key}")
     async def test_url_and_sent_contents(self):
         """Correct url was used and post was called with expected data."""
         response = MagicMock(
@@ -22,7 +22,7 @@ class PasteTests(unittest.IsolatedAsyncioTestCase):
         await send_to_paste_service(self.http_session, "Content")
         self.http_session.post.assert_called_once_with("https://paste_service.com/documents", data="Content")
 
-    @patch("bot.utils.URLs.paste_service", "https://paste_service.com/{key}")
+    @patch("bot.utils.services.URLs.paste_service", "https://paste_service.com/{key}")
     async def test_paste_returns_correct_url_on_success(self):
         """Url with specified extension is returned on successful requests."""
         key = "paste_key"
