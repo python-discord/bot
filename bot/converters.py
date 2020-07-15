@@ -330,6 +330,25 @@ def proxy_user(user_id: str) -> discord.Object:
     return user
 
 
+class UserMentionOrID(UserConverter):
+    """
+    Converts to a `discord.User`, but only if a mention or userID is provided.
+
+    Unlike the default `UserConverter`, it does allow conversion from name, or name#descrim.
+
+    This is useful in cases where that lookup strategy would lead to ambiguity.
+    """
+
+    async def convert(self, ctx: Context, argument: str) -> discord.User:
+        """Convert the `arg` to a `discord.User`."""
+        match = self._get_id_match(argument) or re.match(r'<@!?([0-9]+)>$', argument)
+
+        if match is not None:
+            return await super().convert(ctx, argument)
+        else:
+            raise BadArgument(f"`{argument}` is not a User mention or a User ID.")
+
+
 class FetchedUser(UserConverter):
     """
     Converts to a `discord.User` or, if it fails, a `discord.Object`.

@@ -233,6 +233,10 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.cog.get_status_emoji = MagicMock(return_value=':yay!:')
         self.cog.format_output = AsyncMock(return_value=('[No output]', None))
 
+        mocked_filter_cog = MagicMock()
+        mocked_filter_cog.filter_eval = AsyncMock(return_value=False)
+        self.bot.get_cog.return_value = mocked_filter_cog
+
         await self.cog.send_eval(ctx, 'MyAwesomeCode')
         ctx.send.assert_called_once_with(
             '@LemonLemonishBeard#0042 :yay!: Return code 0.\n\n```py\n[No output]\n```'
@@ -254,6 +258,10 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.cog.get_status_emoji = MagicMock(return_value=':yay!:')
         self.cog.format_output = AsyncMock(return_value=('Way too long beard', 'lookatmybeard.com'))
 
+        mocked_filter_cog = MagicMock()
+        mocked_filter_cog.filter_eval = AsyncMock(return_value=False)
+        self.bot.get_cog.return_value = mocked_filter_cog
+
         await self.cog.send_eval(ctx, 'MyAwesomeCode')
         ctx.send.assert_called_once_with(
             '@LemonLemonishBeard#0042 :yay!: Return code 0.'
@@ -274,6 +282,10 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.cog.get_results_message = MagicMock(return_value=('Return code 127', 'Beard got stuck in the eval'))
         self.cog.get_status_emoji = MagicMock(return_value=':nope!:')
         self.cog.format_output = AsyncMock()  # This function isn't called
+
+        mocked_filter_cog = MagicMock()
+        mocked_filter_cog.filter_eval = AsyncMock(return_value=False)
+        self.bot.get_cog.return_value = mocked_filter_cog
 
         await self.cog.send_eval(ctx, 'MyAwesomeCode')
         ctx.send.assert_called_once_with(
