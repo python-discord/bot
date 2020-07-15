@@ -293,6 +293,8 @@ class WatchChannel(metaclass=CogABCMeta):
         """
         Gives an overview of the watched user list for this channel.
 
+        The optional kwarg `oldest_first` orders the list by oldest entry.
+
         The optional kwarg `update_cache` specifies whether the cache should
         be refreshed by polling the API.
         """
