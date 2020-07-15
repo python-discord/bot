@@ -80,7 +80,7 @@ class DMRelay(Cog):
             await send_webhook(
                 webhook=self.webhook,
                 content=message.clean_content,
-                username=message.author.display_name,
+                username=f"{message.author.display_name} ({message.author.id})",
                 avatar_url=message.author.avatar_url
             )
             await self.dm_cache.set("last_user", message.author.id)
