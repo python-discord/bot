@@ -295,12 +295,22 @@ filter:
         - 172018499005317120  # The Coding Den
         - 666560367173828639  # PyWeek
         - 702724176489873509  # Microsoft Python
+        - 150662382874525696  # Microsoft Community
         - 81384788765712384   # Discord API
         - 613425648685547541  # Discord Developers
         - 185590609631903755  # Blender Hub
         - 420324994703163402  # /r/FlutterDev
         - 488751051629920277  # Python Atlanta
         - 143867839282020352  # C#
+        - 159039020565790721  # Django
+        - 238666723824238602  # Programming Discussions
+        - 433980600391696384  # JetBrains Community
+        - 204621105720328193  # Raspberry Pi
+        - 244230771232079873  # Programmers Hangout
+        - 239433591950540801  # SpeakJS
+        - 174075418410876928  # DevCord
+        - 489222168727519232  # Unity
+        - 494558898880118785  # Programmer Humor
 
     domain_blacklist:
         - pornhub.com
