@@ -150,8 +150,8 @@ class CustomHelpCommand(HelpCommand):
 
         # Run fuzzywuzzy's processor beforehand, and avoid matching if processed string is empty
         # This avoids fuzzywuzzy from raising a warning on inputs with only non-alphanumeric characters
-        if full_process(string):
-            result = process.extractBests(string, choices, scorer=fuzz.ratio, score_cutoff=60, processor=None)
+        if (processed := full_process(string)):
+            result = process.extractBests(processed, choices, scorer=fuzz.ratio, score_cutoff=60, processor=None)
         else:
             result = []
 
