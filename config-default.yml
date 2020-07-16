@@ -154,6 +154,7 @@ guild:
         mod_log:            &MOD_LOG        282638479504965634
         user_log:                           528976905546760203
         voice_log:                          640292421988646961
+        dm_log:                             653713721625018428
 
         # Off-topic
         off_topic_0:    291284109232308226
@@ -252,6 +253,7 @@ guild:
     webhooks:
         big_brother:                        569133704568373283
         dev_log:                            680501655111729222
+        dm_log:                             654567640664244225
         duck_pond:                          637821475327311927
         incidents_archive:                  720671599790915702
         python_news:        &PYNEWS_WEBHOOK 704381182279942324
@@ -259,7 +261,6 @@ guild:
         talent_pool:                        569145364800602132
 
 filter:
-
     # What do we filter?
     filter_zalgo:       false
     filter_invites:     true
@@ -274,7 +275,7 @@ filter:
     notify_user_domains:     false
 
     # Filter configuration
-    ping_everyone:             true  # Ping @everyone when we send a mod-alert?
+    ping_everyone:             true
     offensive_msg_delete_days: 7     # How many days before deleting an offensive message?
 
     guild_invite_whitelist:
@@ -300,12 +301,22 @@ filter:
         - 172018499005317120  # The Coding Den
         - 666560367173828639  # PyWeek
         - 702724176489873509  # Microsoft Python
+        - 150662382874525696  # Microsoft Community
         - 81384788765712384   # Discord API
         - 613425648685547541  # Discord Developers
         - 185590609631903755  # Blender Hub
         - 420324994703163402  # /r/FlutterDev
         - 488751051629920277  # Python Atlanta
         - 143867839282020352  # C#
+        - 159039020565790721  # Django
+        - 238666723824238602  # Programming Discussions
+        - 433980600391696384  # JetBrains Community
+        - 204621105720328193  # Raspberry Pi
+        - 244230771232079873  # Programmers Hangout
+        - 239433591950540801  # SpeakJS
+        - 174075418410876928  # DevCord
+        - 489222168727519232  # Unity
+        - 494558898880118785  # Programmer Humor
 
     domain_blacklist:
         - pornhub.com
