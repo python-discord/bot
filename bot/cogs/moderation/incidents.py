@@ -55,6 +55,8 @@ async def download_file(attachment: discord.Attachment) -> t.Optional[discord.Fi
     log.debug(f"Attempting to download attachment: {attachment.filename}")
     try:
         return await attachment.to_file()
+    except discord.NotFound as not_found:
+        log.debug(f"Failed to download attachment: {not_found}")
     except Exception:
         log.exception("Failed to download attachment")
 

@@ -81,11 +81,21 @@ class TestDownloadFile(unittest.IsolatedAsyncioTestCase):
         acquired_file = await incidents.download_file(attachment)
         self.assertIs(file, acquired_file)
 
-    async def test_download_file_fail(self):
-        """If `to_file` fails, function handles the exception & returns None."""
+    async def test_download_file_404(self):
+        """If `to_file` encounters a 404, function handles the exception & returns None."""
         attachment = MockAttachment(to_file=AsyncMock(side_effect=mock_404))
 
         acquired_file = await incidents.download_file(attachment)
+        self.assertIsNone(acquired_file)
+
+    async def test_download_file_fail(self):
+        """If `to_file` fails on a non-404 error, function logs the exception & returns None."""
+        arbitrary_error = discord.HTTPException(MagicMock(aiohttp.ClientResponse), "Arbitrary API error")
+        attachment = MockAttachment(to_file=AsyncMock(side_effect=arbitrary_error))
+
+        with self.assertLogs(logger=incidents.log, level=logging.ERROR):
+            acquired_file = await incidents.download_file(attachment)
+
         self.assertIsNone(acquired_file)
 
 
