@@ -130,6 +130,13 @@ class Reminders(Cog):
         else:
             return True, ""
 
+    def get_mentionables_from_ids(self, mention_ids: t.List[str]) -> t.Iterator[Mentionable]:
+        """Converts Role and Member ids to their corresponding objects if possible."""
+        guild = self.bot.get_guild(Guild.id)
+        for mention_id in mention_ids:
+            if (mentionable := (guild.get_member(mention_id) or guild.get_role(mention_id))):
+                yield mentionable
+
     def schedule_reminder(self, reminder: dict) -> None:
         """A coroutine which sends the reminder once the time is reached, and cancels the running task."""
         reminder_id = reminder["id"]
