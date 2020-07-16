@@ -9,10 +9,11 @@ from operator import itemgetter
 import discord
 from dateutil.parser import isoparse
 from dateutil.relativedelta import relativedelta
+from discord import Member, Role
 from discord.ext.commands import Cog, Context, group
 
 from bot.bot import Bot
-from bot.constants import Guild, Icons, NEGATIVE_REPLIES, POSITIVE_REPLIES, STAFF_ROLES
+from bot.constants import Guild, Icons, MODERATION_ROLES, NEGATIVE_REPLIES, POSITIVE_REPLIES, STAFF_ROLES
 from bot.converters import Duration
 from bot.pagination import LinePaginator
 from bot.utils.checks import without_role_check
@@ -23,6 +24,8 @@ log = logging.getLogger(__name__)
 
 WHITELISTED_CHANNELS = Guild.reminder_whitelist
 MAXIMUM_REMINDERS = 5
+
+Mentionable = t.Union[Member, Role]
 
 
 class Reminders(Cog):
@@ -109,6 +112,23 @@ class Reminders(Cog):
         embed.description = reason
 
         await ctx.send(embed=embed)
+
+    @staticmethod
+    async def allow_mentions(ctx: Context, mentions: t.List[Mentionable]) -> t.Tuple[bool, str]:
+        """
+        Returns whether or not the list of mentions is allowed.
+
+        Conditions:
+        - Role reminders are Mods+
+        - Reminders for other users are Helpers+
+        If mentions aren't allowed, also return the type of mention(s) disallowed.
+        """
+        if without_role_check(ctx, *STAFF_ROLES):
+            return False, "members/roles"
+        elif without_role_check(ctx, *MODERATION_ROLES):
+            return all(isinstance(mention, Member) for mention in mentions), "roles"
+        else:
+            return True, ""
 
     def schedule_reminder(self, reminder: dict) -> None:
         """A coroutine which sends the reminder once the time is reached, and cancels the running task."""
