@@ -384,6 +384,34 @@ class Reminders(Cog):
         )
         await self._reschedule_reminder(reminder)
 
+    @edit_reminder_group.command(name="mentions", aliases=("pings",))
+    async def edit_reminder_mentions(self, ctx: Context, id_: int, mentions: Greedy[Mentionable]) -> None:
+        """Edit one of your reminder's mentions."""
+        # Filter mentions to see if the user can mention members/roles
+        mentions_allowed, disallowed_mentions = await self.allow_mentions(ctx, mentions)
+        if not mentions_allowed:
+            return await self._send_denial(
+                ctx, f"You can't mention other {disallowed_mentions} in your reminder!"
+            )
+
+        mention_ids = [mention.id for mention in mentions]
+        reminder = await self.bot.api_client.patch(
+            'bot/reminders/' + str(id_),
+            json={"mentions": mention_ids}
+        )
+
+        # Parse the reminder expiration back into a datetime for the confirmation message
+        expiration = isoparse(reminder['expiration']).replace(tzinfo=None)
+
+        # Send a confirmation message to the channel
+        await self._send_confirmation(
+            ctx,
+            on_success="That reminder has been edited successfully!",
+            reminder_id=id_,
+            delivery_dt=expiration,
+        )
+        await self._reschedule_reminder(reminder)
+
     @remind_group.command("delete", aliases=("remove", "cancel"))
     async def delete_reminder(self, ctx: Context, id_: int) -> None:
         """Delete one of your active reminders."""
