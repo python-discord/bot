@@ -51,12 +51,13 @@ async def download_file(attachment: discord.Attachment) -> t.Optional[discord.Fi
     Download & return `attachment` file.
 
     If the download fails, the reason is logged and None will be returned.
+    404 and 403 errors are only logged at debug level.
     """
     log.debug(f"Attempting to download attachment: {attachment.filename}")
     try:
         return await attachment.to_file()
-    except discord.NotFound as not_found:
-        log.debug(f"Failed to download attachment: {not_found}")
+    except (discord.NotFound, discord.Forbidden) as exc:
+        log.debug(f"Failed to download attachment: {exc}")
     except Exception:
         log.exception("Failed to download attachment")
 
