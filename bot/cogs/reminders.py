@@ -10,7 +10,7 @@ import discord
 from dateutil.parser import isoparse
 from dateutil.relativedelta import relativedelta
 from discord import Member, Role
-from discord.ext.commands import Cog, Context, group
+from discord.ext.commands import Cog, Context, Greedy, group
 
 from bot.bot import Bot
 from bot.constants import Guild, Icons, MODERATION_ROLES, NEGATIVE_REPLIES, POSITIVE_REPLIES, STAFF_ROLES
@@ -197,12 +197,16 @@ class Reminders(Cog):
         )
 
     @group(name="remind", aliases=("reminder", "reminders", "remindme"), invoke_without_command=True)
-    async def remind_group(self, ctx: Context, expiration: Duration, *, content: str) -> None:
+    async def remind_group(
+        self, ctx: Context, mentions: Greedy[Mentionable], expiration: Duration, *, content: str
+    ) -> None:
         """Commands for managing your reminders."""
-        await ctx.invoke(self.new_reminder, expiration=expiration, content=content)
+        await ctx.invoke(self.new_reminder, mentions=mentions, expiration=expiration, content=content)
 
     @remind_group.command(name="new", aliases=("add", "create"))
-    async def new_reminder(self, ctx: Context, expiration: Duration, *, content: str) -> t.Optional[discord.Message]:
+    async def new_reminder(
+        self, ctx: Context, mentions: Greedy[Mentionable], expiration: Duration, *, content: str
+    ) -> t.Optional[discord.Message]:
         """
         Set yourself a simple reminder.
 
@@ -227,6 +231,17 @@ class Reminders(Cog):
             # reminders from kip or something like that :P
             if len(active_reminders) > MAXIMUM_REMINDERS:
                 return await self._send_denial(ctx, "You have too many active reminders!")
+
+        # Filter mentions to see if the user can mention members/roles
+        if mentions:
+            mentions_allowed, disallowed_mentions = await self.allow_mentions(ctx, mentions)
+            if not mentions_allowed:
+                return await self._send_denial(
+                    ctx, f"You can't mention other {disallowed_mentions} in your reminder!"
+                )
+
+        mention_ids = [mention.id for mention in mentions]
+
         # Now we can attempt to actually set the reminder.
         reminder = await self.bot.api_client.post(
             'bot/reminders',
@@ -235,17 +250,22 @@ class Reminders(Cog):
                 'channel_id': ctx.message.channel.id,
                 'jump_url': ctx.message.jump_url,
                 'content': content,
-                'expiration': expiration.isoformat()
+                'expiration': expiration.isoformat(),
+                'mentions': mention_ids,
             }
         )
 
         now = datetime.utcnow() - timedelta(seconds=1)
         humanized_delta = humanize_delta(relativedelta(expiration, now))
+        mention_string = (
+            f"Your reminder will arrive in {humanized_delta} "
+            f"and will mention {len(mentions)} other(s)!"
+        )
 
         # Confirm to the user that it worked.
         await self._send_confirmation(
             ctx,
-            on_success=f"Your reminder will arrive in {humanized_delta}!",
+            on_success=mention_string,
             reminder_id=reminder["id"],
             delivery_dt=expiration,
         )
