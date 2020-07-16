@@ -191,8 +191,12 @@ class Reminders(Cog):
                 name=f"Sorry it arrived {humanize_delta(late, max_units=2)} late!"
             )
 
+        additional_mentions = ' '.join(
+            mentionable.mention for mentionable in self.get_mentionables_from_ids(reminder["mentions"])
+        )
+
         await channel.send(
-            content=user.mention,
+            content=f"{user.mention} {additional_mentions}",
             embed=embed
         )
 
