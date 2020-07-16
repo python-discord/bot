@@ -100,6 +100,16 @@ class Reminders(Cog):
 
         await ctx.send(embed=embed)
 
+    @staticmethod
+    async def _send_denial(ctx: Context, reason: str) -> None:
+        """Send an embed denying the user from creating a reminder."""
+        embed = discord.Embed()
+        embed.colour = discord.Colour.red()
+        embed.title = random.choice(NEGATIVE_REPLIES)
+        embed.description = reason
+
+        await ctx.send(embed=embed)
+
     def schedule_reminder(self, reminder: dict) -> None:
         """A coroutine which sends the reminder once the time is reached, and cancels the running task."""
         reminder_id = reminder["id"]
@@ -171,18 +181,12 @@ class Reminders(Cog):
 
         Expiration is parsed per: http://strftime.org/
         """
-        embed = discord.Embed()
-
         # If the user is not staff, we need to verify whether or not to make a reminder at all.
         if without_role_check(ctx, *STAFF_ROLES):
 
             # If they don't have permission to set a reminder in this channel
             if ctx.channel.id not in WHITELISTED_CHANNELS:
-                embed.colour = discord.Colour.red()
-                embed.title = random.choice(NEGATIVE_REPLIES)
-                embed.description = "Sorry, you can't do that here!"
-
-                return await ctx.send(embed=embed)
+                return await self._send_denial(ctx, "Sorry, you can't do that here!")
 
             # Get their current active reminders
             active_reminders = await self.bot.api_client.get(
@@ -195,12 +199,7 @@ class Reminders(Cog):
             # Let's limit this, so we don't get 10 000
             # reminders from kip or something like that :P
             if len(active_reminders) > MAXIMUM_REMINDERS:
-                embed.colour = discord.Colour.red()
-                embed.title = random.choice(NEGATIVE_REPLIES)
-                embed.description = "You have too many active reminders!"
-
-                return await ctx.send(embed=embed)
-
+                return await self._send_denial(ctx, "You have too many active reminders!")
         # Now we can attempt to actually set the reminder.
         reminder = await self.bot.api_client.post(
             'bot/reminders',
