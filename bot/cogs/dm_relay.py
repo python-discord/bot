@@ -99,7 +99,7 @@ class DMRelay(Cog):
                 await send_webhook(
                     webhook=self.webhook,
                     embed=e,
-                    username=message.author.display_name,
+                    username=f"{message.author.display_name} ({message.author.id})",
                     avatar_url=message.author.avatar_url
                 )
             except discord.HTTPException:
