@@ -290,7 +290,7 @@ class Reminders(Cog):
         # Make a list of tuples so it can be sorted by time.
         reminders = sorted(
             (
-                (rem['content'], rem['expiration'], rem['id'])
+                (rem['content'], rem['expiration'], rem['id'], rem['mentions'])
                 for rem in data
             ),
             key=itemgetter(1)
@@ -298,13 +298,19 @@ class Reminders(Cog):
 
         lines = []
 
-        for content, remind_at, id_ in reminders:
+        for content, remind_at, id_, mentions in reminders:
             # Parse and humanize the time, make it pretty :D
             remind_datetime = isoparse(remind_at).replace(tzinfo=None)
             time = humanize_delta(relativedelta(remind_datetime, now))
 
+            mentions = ", ".join(
+                # Both Role and User objects have the `name` attribute
+                mention.name for mention in self.get_mentionables_from_ids(mentions)
+            )
+            mention_string = f"\n**Mentions:** {mentions}" if mentions else ""
+
             text = textwrap.dedent(f"""
-            **Reminder #{id_}:** *expires in {time}* (ID: {id_})
+            **Reminder #{id_}:** *expires in {time}* (ID: {id_}) {mention_string}
             {content}
             """).strip()
 
