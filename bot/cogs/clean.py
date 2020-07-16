@@ -132,16 +132,17 @@ class Clean(Cog):
 
                 # If we are looking for specific message.
                 if until_message:
+
+                    # we could use ID's here however in case if the message we are looking for gets deleted,
+                    # we won't have a way to figure that out thus checking for datetime should be more reliable
+                    if message.created_at < until_message.created_at:
+                        # means we have found the message until which we were supposed to be deleting.
+                        break
+
                     # Since we will be using `delete_messages` method of a TextChannel and we need message objects to
                     # use it as well as to send logs we will start appending messages here instead adding them from
                     # purge.
                     messages.append(message)
-                    # we could use ID's here however in case if the message we are looking for gets deleted,
-                    # we won't have a way to figure that out thus checking for datetime should be more reliable
-                    if message.created_at <= until_message.created_at:
-                        # means we have found the message until which we were supposed to be deleting.
-                        message_ids.append(message.id)
-                        break
 
                 # If the message passes predicate, let's save it.
                 if predicate is None or predicate(message):
