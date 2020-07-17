@@ -49,6 +49,10 @@ class Bot(commands.Bot):
 
         self.stats = AsyncStatsClient(self.loop, statsd_url, 8125, prefix="bot")
 
+    async def _cache_allow_deny_list_data(self) -> None:
+        """Cache all the data in the AllowDenyList on the site."""
+        self.allow_deny_list_cache = await self.api_client.get('bot/allow_deny_lists')
+
     async def _create_redis_session(self) -> None:
         """
         Create the Redis connection pool, and then open the redis event gate.
@@ -158,6 +162,9 @@ class Bot(commands.Bot):
 
         self.http_session = aiohttp.ClientSession(connector=self._connector)
         self.api_client.recreate(force=True, connector=self._connector)
+
+        # Build the AllowDenyList cache
+        self.loop.create_task(self._cache_allow_deny_list_data())
 
     async def on_guild_available(self, guild: discord.Guild) -> None:
         """
