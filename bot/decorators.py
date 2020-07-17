@@ -110,6 +110,8 @@ def mutually_exclusive(namespace: t.Hashable, resource_id: ResourceId) -> t.Call
     `resource_id` identifies a resource on which to perform a mutually exclusive operation.
     It may also be a callable or awaitable which will return the resource ID given the decorated
     function's args and kwargs.
+
+    If decorating a command, this decorator must go before (below) the `command` decorator.
     """
     def decorator(func: t.Callable) -> t.Callable:
         name = func.__name__
