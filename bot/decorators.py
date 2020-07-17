@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 import logging
 import random
 import typing as t
@@ -17,7 +18,9 @@ log = logging.getLogger(__name__)
 __lock_dicts = defaultdict(WeakValueDictionary)
 
 Argument = t.Union[int, str]
-ResourceId = t.Union[t.Hashable, t.Callable[..., t.Hashable]]
+_IdCallable = t.Callable[..., t.Hashable]
+_IdAwaitable = t.Callable[..., t.Awaitable[t.Hashable]]
+ResourceId = t.Union[t.Hashable, _IdCallable, _IdAwaitable]
 
 
 def in_whitelist(
@@ -104,9 +107,9 @@ def mutually_exclusive(namespace: t.Hashable, resource_id: ResourceId) -> t.Call
 
     `namespace` is an identifier used to prevent collisions among resource IDs.
 
-    `resource_id` identifies a resource on which to perform a mutually exclusive operation. It may
-    also be a callable which will return the resource ID given the decorated function's args and
-    kwargs.
+    `resource_id` identifies a resource on which to perform a mutually exclusive operation.
+    It may also be a callable or awaitable which will return the resource ID given the decorated
+    function's args and kwargs.
     """
     def decorator(func: t.Callable) -> t.Callable:
         @wraps(func)
@@ -114,6 +117,10 @@ def mutually_exclusive(namespace: t.Hashable, resource_id: ResourceId) -> t.Call
             if callable(resource_id):
                 # Call to get the ID if a callable was given.
                 id_ = resource_id(*args, **kwargs)
+
+                if inspect.isawaitable(id_):
+                    # Await to get the ID if an awaitable was given.
+                    id_ = await id_
             else:
                 id_ = resource_id
 
