@@ -67,7 +67,7 @@ class InWhitelistTests(unittest.TestCase):
         for test_case in test_cases:
             # patch `commands.check` with a no-op lambda that just returns the predicate passed to it
             # so we can test the predicate that was generated from the specified kwargs.
-            with unittest.mock.patch("bot.decorators.commands.check", new=lambda predicate: predicate):
+            with unittest.mock.patch("bot.decorators.check", new=lambda predicate: predicate):
                 predicate = in_whitelist(**test_case.kwargs)
 
             with self.subTest(test_description=test_case.description):
@@ -139,7 +139,7 @@ class InWhitelistTests(unittest.TestCase):
 
             # patch `commands.check` with a no-op lambda that just returns the predicate passed to it
             # so we can test the predicate that was generated from the specified kwargs.
-            with unittest.mock.patch("bot.decorators.commands.check", new=lambda predicate: predicate):
+            with unittest.mock.patch("bot.decorators.check", new=lambda predicate: predicate):
                 predicate = in_whitelist(**test_case.kwargs)
 
             with self.subTest(test_description=test_case.description):
