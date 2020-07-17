@@ -24,7 +24,7 @@ def in_whitelist(
     roles: Container[int] = (),
     redirect: Optional[int] = Channels.bot_commands,
     fail_silently: bool = False,
-) -> Callable:
+) -> commands.Command:
     """
     Check if a command was issued in a whitelisted context.
 
@@ -45,7 +45,7 @@ def in_whitelist(
     return commands.check(predicate)
 
 
-def with_role(*role_ids: int) -> Callable:
+def with_role(*role_ids: int) -> commands.Command:
     """Returns True if the user has any one of the roles in role_ids."""
     async def predicate(ctx: Context) -> bool:
         """With role checker predicate."""
@@ -53,7 +53,7 @@ def with_role(*role_ids: int) -> Callable:
     return commands.check(predicate)
 
 
-def without_role(*role_ids: int) -> Callable:
+def without_role(*role_ids: int) -> commands.Command:
     """Returns True if the user does not have any of the roles in role_ids."""
     async def predicate(ctx: Context) -> bool:
         return without_role_check(ctx, *role_ids)
