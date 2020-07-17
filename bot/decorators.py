@@ -112,26 +112,34 @@ def mutually_exclusive(namespace: t.Hashable, resource_id: ResourceId) -> t.Call
     function's args and kwargs.
     """
     def decorator(func: t.Callable) -> t.Callable:
+        name = func.__name__
+
         @wraps(func)
         async def wrapper(*args, **kwargs) -> t.Any:
+            log.trace(f"{name}: mutually exclusive decorator called")
+
             if callable(resource_id):
-                # Call to get the ID if a callable was given.
+                log.trace(f"{name}: calling the given callable to get the resource ID")
                 id_ = resource_id(*args, **kwargs)
 
                 if inspect.isawaitable(id_):
-                    # Await to get the ID if an awaitable was given.
+                    log.trace(f"{name}: awaiting to get resource ID")
                     id_ = await id_
             else:
                 id_ = resource_id
 
-            # Get the lock for the ID. Create a Lock if one doesn't exist yet.
+            log.trace(f"{name}: getting lock for resource {id_!r} under namespace {namespace!r}")
+
+            # Get the lock for the ID. Create a lock if one doesn't exist yet.
             locks = __lock_dicts[namespace]
             lock = locks.setdefault(id_, asyncio.Lock())
 
             if not lock.locked():
-                # Resource is free; acquire it.
+                log.debug(f"{name}: resource {namespace!r}:{id_!r} is free; acquiring it...")
                 async with lock:
                     return await func(*args, **kwargs)
+            else:
+                log.info(f"{name}: aborted because resource {namespace!r}:{id_!r} is locked")
 
         return wrapper
     return decorator
