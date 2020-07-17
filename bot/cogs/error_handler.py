@@ -2,12 +2,13 @@ import contextlib
 import logging
 import typing as t
 
+from discord import Embed
 from discord.ext.commands import Cog, Context, errors
 from sentry_sdk import push_scope
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Channels
+from bot.constants import Channels, Colours
 from bot.converters import TagNameConverter
 from bot.utils.checks import InWhitelistCheckFailure
 
@@ -19,6 +20,14 @@ class ErrorHandler(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
+
+    def _get_error_embed(self, title: str, body: str) -> Embed:
+        """Return an embed that contains the exception."""
+        return Embed(
+            title=title,
+            colour=Colours.soft_red,
+            description=body
+        )
 
     @Cog.listener()
     async def on_command_error(self, ctx: Context, e: errors.CommandError) -> None:
@@ -162,25 +171,34 @@ class ErrorHandler(Cog):
         prepared_help_command = self.get_help_command(ctx)
 
         if isinstance(e, errors.MissingRequiredArgument):
-            await ctx.send(f"Missing required argument `{e.param.name}`.")
+            embed = self._get_error_embed("Missing required argument", e.param.name)
+            await ctx.send(embed=embed)
             await prepared_help_command
             self.bot.stats.incr("errors.missing_required_argument")
         elif isinstance(e, errors.TooManyArguments):
-            await ctx.send("Too many arguments provided.")
+            embed = self._get_error_embed("Too many arguments", str(e))
+            await ctx.send(embed=embed)
             await prepared_help_command
             self.bot.stats.incr("errors.too_many_arguments")
         elif isinstance(e, errors.BadArgument):
-            await ctx.send("Bad argument: Please double-check your input arguments and try again.\n")
+            embed = self._get_error_embed("Bad argument", str(e))
+            await ctx.send(embed=embed)
             await prepared_help_command
             self.bot.stats.incr("errors.bad_argument")
         elif isinstance(e, errors.BadUnionArgument):
-            await ctx.send(f"Bad argument: {e}\n```{e.errors[-1]}```")
+            embed = self._get_error_embed("Bad argument", f"{e}\n{e.errors[-1]}")
+            await ctx.send(embed=embed)
             self.bot.stats.incr("errors.bad_union_argument")
         elif isinstance(e, errors.ArgumentParsingError):
-            await ctx.send(f"Argument parsing error: {e}")
+            embed = self._get_error_embed("Argument parsing error", str(e))
+            await ctx.send(embed=embed)
             self.bot.stats.incr("errors.argument_parsing_error")
         else:
-            await ctx.send("Something about your input seems off. Check the arguments:")
+            embed = self._get_error_embed(
+                "Input error",
+                "Something about your input seems off. Check the arguments and try again."
+            )
+            await ctx.send(embed=embed)
             await prepared_help_command
             self.bot.stats.incr("errors.other_user_input_error")
 
