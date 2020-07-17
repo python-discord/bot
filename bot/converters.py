@@ -7,7 +7,7 @@ from ssl import CertificateError
 import dateutil.parser
 import dateutil.tz
 import discord
-from aiohttp import ClientConnectorError
+from aiohttp import ClientConnectorError, ContentTypeError
 from dateutil.relativedelta import relativedelta
 from discord.ext.commands import BadArgument, Context, Converter, UserConverter
 
@@ -32,6 +32,32 @@ def allowed_strings(*values, preserve_case: bool = False) -> t.Callable[[str], s
             return arg
 
     return converter
+
+
+class ValidAllowDenyListType(Converter):
+    """
+    A converter that checks whether the given string is a valid AllowDenyList type.
+
+    Raises `BadArgument` if the argument is not a valid AllowDenyList type, and simply
+    passes through the given argument otherwise.
+    """
+
+    async def convert(self, ctx: Context, list_type: str) -> str:
+        """Checks whether the given string is a valid AllowDenyList type."""
+        try:
+            valid_types = await ctx.bot.api_client.get('bot/allow_deny_lists/get_types')
+        except ContentTypeError:
+            raise BadArgument("Cannot validate list_type: Unable to fetch valid types from API.")
+
+        valid_types = [enum for enum, classname in valid_types]
+        list_type = list_type.upper()
+
+        if list_type not in valid_types:
+            raise BadArgument(
+                f"You have provided an invalid AllowDenyList type!\n\n"
+                f"Please provide one of the following: \n{', '.join(valid_types)}."
+            )
+        return list_type
 
 
 class ValidPythonIdentifier(Converter):
