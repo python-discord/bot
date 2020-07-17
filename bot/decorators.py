@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 __lock_dicts = defaultdict(WeakValueDictionary)
 
 Argument = t.Union[int, str]
-ResourceId = t.Union[Argument, t.Callable[..., t.Hashable]]
+ResourceId = t.Union[t.Hashable, t.Callable[..., t.Hashable]]
 
 
 def in_whitelist(
@@ -95,28 +95,27 @@ def locked() -> t.Callable:
     return wrap
 
 
-def mutually_exclusive(namespace: t.Hashable, resource_arg: ResourceId) -> t.Callable:
+def mutually_exclusive(namespace: t.Hashable, resource_id: ResourceId) -> t.Callable:
     """
-    Turn the decorated coroutine function into a mutually exclusive operation on a resource.
+    Turn the decorated coroutine function into a mutually exclusive operation on a `resource_id`.
 
     If any other mutually exclusive function currently holds the lock for a resource, do not run the
     decorated function and return None.
 
     `namespace` is an identifier used to prevent collisions among resource IDs.
 
-    `resource_arg` is the positional index or name of the parameter of the decorated function whose
-    value will be the resource ID. It may also be a callable which will return the resource ID
-    given the decorated function's args and kwargs.
+    `resource_id` identifies a resource on which to perform a mutually exclusive operation. It may
+    also be a callable which will return the resource ID given the decorated function's args and
+    kwargs.
     """
     def decorator(func: t.Callable) -> t.Callable:
         @wraps(func)
         async def wrapper(*args, **kwargs) -> t.Any:
-            if callable(resource_arg):
+            if callable(resource_id):
                 # Call to get the ID if a callable was given.
-                id_ = resource_arg(*args, **kwargs)
+                id_ = resource_id(*args, **kwargs)
             else:
-                # Retrieve the ID from the args via position or name.
-                id_ = _get_arg_value(resource_arg, args, kwargs)
+                id_ = resource_id
 
             # Get the lock for the ID. Create a Lock if one doesn't exist yet.
             locks = __lock_dicts[namespace]
