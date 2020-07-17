@@ -126,7 +126,7 @@ def mutually_exclusive(namespace: t.Hashable, resource_id: ResourceId) -> t.Call
 
             # Get the lock for the ID. Create a Lock if one doesn't exist yet.
             locks = __lock_dicts[namespace]
-            lock = locks.setdefault(id_, asyncio.Lock)
+            lock = locks.setdefault(id_, asyncio.Lock())
 
             if not lock.locked():
                 # Resource is free; acquire it.
