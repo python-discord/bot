@@ -29,6 +29,7 @@ class AllowDenyLists(Cog):
         allow_type = "whitelist" if allowed else "blacklist"
 
         # Try to add the item to the database
+        log.trace(f"Trying to add the {content} item to the {list_type} {allow_type}")
         try:
             item = await self.bot.api_client.post(
                 "bot/allow_deny_lists",
@@ -37,6 +38,10 @@ class AllowDenyLists(Cog):
         except ResponseCodeError as e:
             if e.status == 500:
                 await ctx.message.add_reaction("❌")
+                log.debug(
+                    f"{ctx.author} tried to add data to a {allow_type}, but the API returned 500, "
+                    "probably because the request violated the UniqueConstraint."
+                )
                 raise BadArgument(
                     f"Unable to add the item to the {allow_type}. "
                     "The item probably already exists. Keep in mind that a "
@@ -60,6 +65,9 @@ class AllowDenyLists(Cog):
     async def _delete_data(self, ctx: Context, allowed: bool, list_type: ValidAllowDenyListType, content: str) -> None:
         """Remove an item from an allow or denylist."""
         item = None
+        allow_type = "whitelist" if allowed else "blacklist"
+
+        log.trace(f"Trying to delete the {content} item from the {list_type} {allow_type}")
 
         for allow_list in self.bot.allow_deny_list_cache.get(f"{list_type}.{allowed}", []):
             if content == allow_list.get("content"):
@@ -77,11 +85,12 @@ class AllowDenyLists(Cog):
         """Paginate and display all items in an allow or denylist."""
         result = self.bot.allow_deny_list_cache.get(f"{list_type}.{allowed}", [])
         lines = sorted(f"• {item.get('content')}" for item in result)
-        allowed_string = "Whitelisted" if allowed else "Blacklisted"
+        allow_type = "whitelist" if allowed else "blacklist"
         embed = Embed(
-            title=f"{allowed_string} {list_type.lower()} items ({len(result)} total)",
+            title=f"{allow_type.title()}ed {list_type.lower()} items ({len(result)} total)",
             colour=Colour.blue()
         )
+        log.trace(f"Trying to list {len(result)} items from the {list_type.lower()} {allow_type}")
 
         if result:
             await LinePaginator.paginate(lines, ctx, embed, max_lines=15, empty=False)
