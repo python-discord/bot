@@ -171,7 +171,7 @@ class InventoryURL(commands.Converter):
         return url
 
 
-class Doc(commands.Cog):
+class DocCog(commands.Cog):
     """A set of commands for querying & displaying documentation."""
 
     def __init__(self, bot: Bot):
@@ -596,8 +596,3 @@ class Doc(commands.Cog):
                 return True
 
         return tag.name == "table"
-
-
-def setup(bot: Bot) -> None:
-    """Load the Doc cog."""
-    bot.add_cog(Doc(bot))
