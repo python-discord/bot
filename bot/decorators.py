@@ -38,7 +38,7 @@ def in_whitelist(
 
     - `channels`: a container with channel ids for whitelisted channels
     - `categories`: a container with category ids for whitelisted categories
-    - `roles`: a container with with role ids for whitelisted roles
+    - `roles`: a container with role ids for whitelisted roles
 
     If the command was invoked in a context that was not whitelisted, the member is either
     redirected to the `redirect` channel that was passed (default: #bot-commands) or simply
