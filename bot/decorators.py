@@ -5,7 +5,7 @@ import random
 import typing as t
 from collections import defaultdict
 from contextlib import suppress
-from functools import wraps
+from functools import partial, wraps
 from weakref import WeakValueDictionary
 
 from discord import Colour, Embed, Member, NotFound
@@ -148,6 +148,21 @@ def mutually_exclusive(namespace: t.Hashable, resource_id: ResourceId) -> t.Call
 
         return wrapper
     return decorator
+
+
+def mutually_exclusive_arg(
+    namespace: t.Hashable,
+    name_or_pos: function.Argument,
+    func: t.Callable[[t.Any], _IdCallableReturn] = None
+) -> t.Callable:
+    """
+    Apply `mutually_exclusive` using the value of the arg at the given name/position as the ID.
+
+    `func` is an optional callable or awaitable which will return the ID given the argument value.
+    See `mutually_exclusive` docs for more information.
+    """
+    decorator_func = partial(mutually_exclusive, namespace)
+    return function.get_arg_value_wrapper(decorator_func, name_or_pos, func)
 
 
 def redirect_output(destination_channel: int, bypass_roles: t.Container[int] = None) -> t.Callable:
