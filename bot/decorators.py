@@ -12,6 +12,7 @@ from discord import Colour, Embed, Member, NotFound
 from discord.ext.commands import Cog, Command, Context, check
 
 from bot.constants import Channels, ERROR_REPLIES, RedirectOutput
+from bot.utils import function
 from bot.utils.checks import in_whitelist_check, with_role_check, without_role_check
 
 log = logging.getLogger(__name__)
@@ -123,12 +124,10 @@ def mutually_exclusive(namespace: t.Hashable, resource_id: ResourceId) -> t.Call
 
             if callable(resource_id):
                 log.trace(f"{name}: binding args to signature")
-                sig = inspect.signature(func)
-                bound_args = sig.bind(*args, **kwargs)
-                bound_args.apply_defaults()
+                bound_args = function.get_bound_args(func, args, kwargs)
 
                 log.trace(f"{name}: calling the given callable to get the resource ID")
-                id_ = resource_id(bound_args.arguments)
+                id_ = resource_id(bound_args)
 
                 if inspect.isawaitable(id_):
                     log.trace(f"{name}: awaiting to get resource ID")

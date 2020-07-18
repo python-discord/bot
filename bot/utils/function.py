@@ -1,5 +1,6 @@
 """Utilities for interaction with functions."""
 
+import inspect
 import typing as t
 
 Argument = t.Union[int, str]
@@ -59,3 +60,16 @@ def get_arg_value_wrapper(
         return value
 
     return decorator_func(wrapper)
+
+
+def get_bound_args(func: t.Callable, args: t.Tuple, kwargs: t.Dict[str, t.Any]) -> BoundArgs:
+    """
+    Bind `args` and `kwargs` to `func` and return a mapping of parameter names to argument values.
+
+    Default parameter values are also set.
+    """
+    sig = inspect.signature(func)
+    bound_args = sig.bind(*args, **kwargs)
+    bound_args.apply_defaults()
+
+    return bound_args.arguments
