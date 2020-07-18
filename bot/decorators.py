@@ -200,7 +200,7 @@ def redirect_output(destination_channel: int, bypass_roles: t.Container[int] = N
     return wrap
 
 
-def respect_role_hierarchy(name_or_pos: Argument = 2) -> t.Callable:
+def respect_role_hierarchy(name_or_pos: Argument) -> t.Callable:
     """
     Ensure the highest role of the invoking member is greater than that of the target member.
 

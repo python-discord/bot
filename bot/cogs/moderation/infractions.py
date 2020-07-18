@@ -230,7 +230,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         await self.apply_infraction(ctx, infraction, user, action())
 
-    @respect_role_hierarchy()
+    @respect_role_hierarchy(2)
     async def apply_kick(self, ctx: Context, user: Member, reason: t.Optional[str], **kwargs) -> None:
         """Apply a kick infraction with kwargs passed to `post_infraction`."""
         infraction = await utils.post_infraction(ctx, user, "kick", reason, active=False, **kwargs)
@@ -245,7 +245,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         action = user.kick(reason=reason)
         await self.apply_infraction(ctx, infraction, user, action)
 
-    @respect_role_hierarchy()
+    @respect_role_hierarchy(2)
     async def apply_ban(self, ctx: Context, user: UserSnowflake, reason: t.Optional[str], **kwargs) -> None:
         """
         Apply a ban infraction with kwargs passed to `post_infraction`.
