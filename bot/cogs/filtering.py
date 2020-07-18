@@ -22,6 +22,7 @@ from bot.utils.scheduling import Scheduler
 
 log = logging.getLogger(__name__)
 
+# Regular expressions
 INVITE_RE = re.compile(
     r"(?:discord(?:[\.,]|dot)gg|"                     # Could be discord.gg/
     r"discord(?:[\.,]|dot)com(?:\/|slash)invite|"     # or discord.com/invite/
@@ -37,25 +38,8 @@ SPOILER_RE = re.compile(r"(\|\|.+?\|\|)", re.DOTALL)
 URL_RE = re.compile(r"(https?://[^\s]+)", flags=re.IGNORECASE)
 ZALGO_RE = re.compile(r"[\u0300-\u036F\u0489]")
 
-WORD_WATCHLIST_PATTERNS = [
-    re.compile(fr'\b{expression}\b', flags=re.IGNORECASE) for expression in Filter.word_watchlist
-]
-TOKEN_WATCHLIST_PATTERNS = [
-    re.compile(fr'{expression}', flags=re.IGNORECASE) for expression in Filter.token_watchlist
-]
-WATCHLIST_PATTERNS = WORD_WATCHLIST_PATTERNS + TOKEN_WATCHLIST_PATTERNS
-
+# Other constants.
 DAYS_BETWEEN_ALERTS = 3
-
-
-def expand_spoilers(text: str) -> str:
-    """Return a string containing all interpretations of a spoilered message."""
-    split_text = SPOILER_RE.split(text)
-    return ''.join(
-        split_text[0::2] + split_text[1::2] + split_text
-    )
-
-
 OFFENSIVE_MSG_DELETE_TIME = timedelta(days=Filter.offensive_msg_delete_days)
 
 
@@ -125,6 +109,23 @@ class Filtering(Cog):
 
         self.bot.loop.create_task(self.reschedule_offensive_msg_deletion())
 
+    def _get_allowlist_items(self, allow: bool, list_type: str, compiled: Optional[bool] = False) -> list:
+        """Fetch items from the allow_deny_list_cache."""
+        items = self.bot.allow_deny_list_cache[f"{list_type}.{allow}"]
+
+        if compiled:
+            return [re.compile(fr'{item.get("content")}', flags=re.IGNORECASE) for item in items]
+        else:
+            return [item.get("content") for item in items]
+
+    @staticmethod
+    def _expand_spoilers(text: str) -> str:
+        """Return a string containing all interpretations of a spoilered message."""
+        split_text = SPOILER_RE.split(text)
+        return ''.join(
+            split_text[0::2] + split_text[1::2] + split_text
+        )
+
     @property
     def mod_log(self) -> ModLog:
         """Get currently loaded ModLog cog instance."""
@@ -149,11 +150,11 @@ class Filtering(Cog):
             delta = relativedelta(after.edited_at, before.edited_at).microseconds
         await self._filter_message(after, delta)
 
-    @staticmethod
-    def get_name_matches(name: str) -> List[re.Match]:
+    def get_name_matches(self, name: str) -> List[re.Match]:
         """Check bad words from passed string (name). Return list of matches."""
         matches = []
-        for pattern in WATCHLIST_PATTERNS:
+        watchlist_patterns = self._get_allowlist_items(False, 'word_watchlist', compiled=True)
+        for pattern in watchlist_patterns:
             if match := pattern.search(name):
                 matches.append(match)
         return matches
@@ -403,8 +404,7 @@ class Filtering(Cog):
             and not msg.author.bot                          # Author not a bot
         )
 
-    @staticmethod
-    async def _has_watch_regex_match(text: str) -> Union[bool, re.Match]:
+    async def _has_watch_regex_match(self, text: str) -> Union[bool, re.Match]:
         """
         Return True if `text` matches any regex from `word_watchlist` or `token_watchlist` configs.
 
@@ -412,26 +412,27 @@ class Filtering(Cog):
         matched as-is. Spoilers are expanded, if any, and URLs are ignored.
         """
         if SPOILER_RE.search(text):
-            text = expand_spoilers(text)
+            text = self._expand_spoilers(text)
 
         # Make sure it's not a URL
         if URL_RE.search(text):
             return False
 
-        for pattern in WATCHLIST_PATTERNS:
+        watchlist_patterns = self._get_allowlist_items(False, 'word_watchlist', compiled=True)
+        for pattern in watchlist_patterns:
             match = pattern.search(text)
             if match:
                 return match
 
-    @staticmethod
-    async def _has_urls(text: str) -> bool:
+    async def _has_urls(self, text: str) -> bool:
         """Returns True if the text contains one of the blacklisted URLs from the config file."""
         if not URL_RE.search(text):
             return False
 
         text = text.lower()
+        domain_blacklist = self._get_allowlist_items(False, "domain_name")
 
-        for url in Filter.domain_blacklist:
+        for url in domain_blacklist:
             if url.lower() in text:
                 return True
 
@@ -476,9 +477,10 @@ class Filtering(Cog):
                 # between invalid and expired invites
                 return True
 
-            guild_id = int(guild.get("id"))
+            guild_id = guild.get("id")
+            guild_invite_whitelist = self._get_allowlist_items(True, "guild_invite_id")
 
-            if guild_id not in Filter.guild_invite_whitelist:
+            if guild_id not in guild_invite_whitelist:
                 guild_icon_hash = guild["icon"]
                 guild_icon = (
                     "https://cdn.discordapp.com/icons/"
