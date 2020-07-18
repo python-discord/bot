@@ -386,35 +386,6 @@ anti_spam:
             max: 3
 
 
-anti_malware:
-    whitelist:
-        - '.3gp'
-        - '.3g2'
-        - '.avi'
-        - '.bmp'
-        - '.gif'
-        - '.h264'
-        - '.jpg'
-        - '.jpeg'
-        - '.m4v'
-        - '.mkv'
-        - '.mov'
-        - '.mp4'
-        - '.mpeg'
-        - '.mpg'
-        - '.png'
-        - '.tiff'
-        - '.wmv'
-        - '.svg'
-        - '.psd'  # Photoshop
-        - '.ai'   # Illustrator
-        - '.aep'  # After Effects
-        - '.xcf'  # GIMP
-        - '.mp3'
-        - '.wav'
-        - '.ogg'
-
-
 reddit:
     subreddits:
         - 'r/Python'
