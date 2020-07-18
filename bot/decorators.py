@@ -18,10 +18,8 @@ from bot.utils.checks import in_whitelist_check, with_role_check, without_role_c
 log = logging.getLogger(__name__)
 __lock_dicts = defaultdict(WeakValueDictionary)
 
-Argument = t.Union[int, str]
-BoundArgs = t.OrderedDict[str, t.Any]
 _IdCallableReturn = t.Union[t.Hashable, t.Awaitable[t.Hashable]]
-_IdCallable = t.Callable[[BoundArgs], _IdCallableReturn]
+_IdCallable = t.Callable[[function.BoundArgs], _IdCallableReturn]
 ResourceId = t.Union[t.Hashable, _IdCallable]
 
 
@@ -200,7 +198,7 @@ def redirect_output(destination_channel: int, bypass_roles: t.Container[int] = N
     return wrap
 
 
-def respect_role_hierarchy(name_or_pos: Argument) -> t.Callable:
+def respect_role_hierarchy(name_or_pos: function.Argument) -> t.Callable:
     """
     Ensure the highest role of the invoking member is greater than that of the target member.
 
