@@ -50,13 +50,13 @@ class ValidAllowDenyListType(Converter):
             raise BadArgument("Cannot validate list_type: Unable to fetch valid types from API.")
 
         valid_types = [enum for enum, classname in valid_types]
-        valid_types_lower = [type_.lower() for type_ in valid_types]
+        valid_types_list = '\n'.join([f"• {type_.lower()}" for type_ in valid_types])
         list_type = list_type.upper()
 
         if list_type not in valid_types:
             raise BadArgument(
                 f"You have provided an invalid list type!\n\n"
-                f"Please provide one of the following: \n{', '.join(valid_types_lower)}."
+                f"Please provide one of the following: \n{valid_types_list}"
             )
         return list_type
 
