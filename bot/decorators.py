@@ -200,30 +200,33 @@ def redirect_output(destination_channel: int, bypass_roles: t.Container[int] = N
     return wrap
 
 
-def respect_role_hierarchy(target_arg: Argument = 0) -> t.Callable:
+def respect_role_hierarchy(name_or_pos: Argument = 2) -> t.Callable:
     """
     Ensure the highest role of the invoking member is greater than that of the target member.
 
     If the condition fails, a warning is sent to the invoking context. A target which is not an
     instance of discord.Member will always pass.
 
-    A value of 0 (i.e. position 0) for `target_arg` corresponds to the argument which comes after
-    `ctx`. If the target argument is a kwarg, its name can instead be given.
+    `name_or_pos` is the keyword name or position index of the parameter of the decorated command
+    whose value is the target member.
 
     This decorator must go before (below) the `command` decorator.
     """
-    def wrap(func: t.Callable) -> t.Callable:
+    def decorator(func: t.Callable) -> t.Callable:
         @wraps(func)
-        async def inner(self: Cog, ctx: Context, *args, **kwargs) -> None:
-            target = _get_arg_value(target_arg, args, kwargs)
+        async def wrapper(*args, **kwargs) -> None:
+            bound_args = function.get_bound_args(func, args, kwargs)
+            target = function.get_arg_value(name_or_pos, bound_args)
 
             if not isinstance(target, Member):
                 log.trace("The target is not a discord.Member; skipping role hierarchy check.")
-                await func(self, ctx, *args, **kwargs)
+                await func(*args, **kwargs)
                 return
 
+            ctx = function.get_arg_value(1, bound_args)
             cmd = ctx.command.name
             actor = ctx.author
+
             if target.top_role >= actor.top_role:
                 log.info(
                     f"{actor} ({actor.id}) attempted to {cmd} "
@@ -234,26 +237,6 @@ def respect_role_hierarchy(target_arg: Argument = 0) -> t.Callable:
                     "someone with an equal or higher top role."
                 )
             else:
-                await func(self, ctx, *args, **kwargs)
-        return inner
-    return wrap
-
-
-def _get_arg_value(target_arg: Argument, args: t.Tuple, kwargs: t.Dict[str, t.Any]) -> t.Any:
-    """
-    Return the value of the arg at the given position or name `target_arg`.
-
-    Use an integer as a position if the target argument is positional.
-    Use a string as a parameter name if the target argument is a keyword argument.
-
-    Raise ValueError if `target_arg` cannot be found.
-    """
-    try:
-        return kwargs[target_arg]
-    except KeyError:
-        try:
-            return args[target_arg]
-        except IndexError:
-            raise ValueError(f"Could not find target argument at position {target_arg}")
-        except TypeError:
-            raise ValueError(f"Could not find target kwarg with key {target_arg!r}")
+                await func(*args, **kwargs)
+        return wrapper
+    return decorator
