@@ -7,12 +7,11 @@ import textwrap
 from collections import OrderedDict
 from contextlib import suppress
 from types import SimpleNamespace
-from typing import Callable, Dict, List, NamedTuple, Optional, Tuple, Union
+from typing import Dict, NamedTuple, Optional, Tuple
 from urllib.parse import urljoin
 
 import discord
-from bs4 import BeautifulSoup
-from bs4.element import PageElement, Tag
+from bs4.element import PageElement
 from discord.ext import commands
 from markdownify import MarkdownConverter
 from requests import ConnectTimeout, ConnectionError, HTTPError
@@ -26,6 +25,7 @@ from bot.decorators import with_role
 from bot.pagination import LinePaginator
 from bot.utils.messages import wait_for_deletion
 from .cache import async_cache
+from .parser import get_soup_from_url, parse_module_symbol, parse_symbol
 
 log = logging.getLogger(__name__)
 logging.getLogger('urllib3').setLevel(logging.WARNING)
@@ -51,19 +51,7 @@ NO_OVERRIDE_PACKAGES = (
     "python",
 )
 
-SEARCH_END_TAG_ATTRS = (
-    "data",
-    "function",
-    "class",
-    "exception",
-    "seealso",
-    "section",
-    "rubric",
-    "sphinxsidebar",
-)
-UNWANTED_SIGNATURE_SYMBOLS_RE = re.compile(r"\[source]|\\\\|¶")
 WHITESPACE_AFTER_NEWLINES_RE = re.compile(r"(?<=\n\n)(\s+)")
-
 FAILED_REQUEST_RETRY_AMOUNT = 3
 NOT_FOUND_DELETE_DELAY = RedirectOutput.delete_delay
 
@@ -248,7 +236,7 @@ class DocCog(commands.Cog):
             return None
         request_url, symbol_id = symbol_info.url.rsplit('#')
 
-        soup = await self._get_soup_from_url(request_url)
+        soup = await get_soup_from_url(self.bot.http_session, request_url)
         symbol_heading = soup.find(id=symbol_id)
         search_html = str(soup)
 
@@ -256,14 +244,14 @@ class DocCog(commands.Cog):
             return None
 
         if symbol_info.group == "module":
-            parsed_module = self.parse_module_symbol(symbol_heading)
+            parsed_module = parse_module_symbol(symbol_heading)
             if parsed_module is None:
                 return [], ""
             else:
                 signatures, description = parsed_module
 
         else:
-            signatures, description = self.parse_symbol(symbol_heading, search_html)
+            signatures, description = parse_symbol(symbol_heading, search_html)
 
         return signatures, description.replace('¶', '')
 
@@ -330,75 +318,6 @@ class DocCog(commands.Cog):
             text=", ".join(renamed for renamed in self.renamed_symbols - {symbol} if renamed.endswith(f".{symbol}"))
         )
         return embed
-
-    @classmethod
-    def parse_module_symbol(cls, heading: PageElement) -> Optional[Tuple[None, str]]:
-        """Get page content from the headerlink up to a table or a tag with its class in `SEARCH_END_TAG_ATTRS`."""
-        start_tag = heading.find("a", attrs={"class": "headerlink"})
-        if start_tag is None:
-            return None
-
-        description = cls.find_all_children_until_tag(start_tag, cls._match_end_tag)
-        if description is None:
-            return None
-
-        return None, description
-
-    @classmethod
-    def parse_symbol(cls, heading: PageElement, html: str) -> Tuple[List[str], str]:
-        """
-        Parse the signatures and description of a symbol.
-
-        Collects up to 3 signatures from dt tags and a description from their sibling dd tag.
-        """
-        signatures = []
-        description_element = heading.find_next_sibling("dd")
-        description_pos = html.find(str(description_element))
-        description = cls.find_all_children_until_tag(description_element, tag_filter=("dt", "dl"))
-
-        for element in (
-            *reversed(heading.find_previous_siblings("dt", limit=2)),
-            heading,
-            *heading.find_next_siblings("dt", limit=2),
-        )[-3:]:
-            signature = UNWANTED_SIGNATURE_SYMBOLS_RE.sub("", element.text)
-
-            if signature and html.find(str(element)) < description_pos:
-                signatures.append(signature)
-
-        return signatures, description
-
-    @staticmethod
-    def find_all_children_until_tag(
-            start_element: PageElement,
-            tag_filter: Union[Tuple[str, ...], Callable[[Tag], bool]]
-    ) -> Optional[str]:
-        """
-        Get all direct children until a child matching `tag_filter` is found.
-
-        `tag_filter` can be either a tuple of string names to check against,
-        or a filtering callable that's applied to the tags.
-        """
-        text = ""
-
-        for element in start_element.find_next().find_next_siblings():
-            if isinstance(tag_filter, tuple):
-                if element.name in tag_filter:
-                    break
-            elif tag_filter(element):
-                break
-            text += str(element)
-
-        return text
-
-    @async_cache(arg_offset=1)
-    async def _get_soup_from_url(self, url: str) -> BeautifulSoup:
-        """Create a BeautifulSoup object from the HTML data in `url` with the head tag removed."""
-        log.trace(f"Sending a request to {url}.")
-        async with self.bot.http_session.get(url) as response:
-            soup = BeautifulSoup(await response.text(encoding="utf8"), 'lxml')
-        soup.find("head").decompose()  # the head contains no useful data so we can remove it
-        return soup
 
     @commands.group(name='docs', aliases=('doc', 'd'), invoke_without_command=True)
     async def docs_group(self, ctx: commands.Context, *, symbol: Optional[str]) -> None:
@@ -558,12 +477,3 @@ class DocCog(commands.Cog):
                 return package
         log.error(f"Fetching of inventory {inventory_url} failed.")
         return None
-
-    @staticmethod
-    def _match_end_tag(tag: Tag) -> bool:
-        """Matches `tag` if its class value is in `SEARCH_END_TAG_ATTRS` or the tag is table."""
-        for attr in SEARCH_END_TAG_ATTRS:
-            if attr in tag.get("class", ()):
-                return True
-
-        return tag.name == "table"
