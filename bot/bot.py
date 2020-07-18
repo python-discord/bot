@@ -51,7 +51,19 @@ class Bot(commands.Bot):
 
     async def _cache_allow_deny_list_data(self) -> None:
         """Cache all the data in the AllowDenyList on the site."""
-        self.allow_deny_list_cache = await self.api_client.get('bot/allow_deny_lists')
+        full_cache = await self.api_client.get('bot/allow_deny_lists')
+        self.allow_deny_list_cache = {}
+
+        for item in full_cache:
+            type_ = item.get("type")
+            allowed = item.get("allowed")
+            metadata = {
+                "content": item.get("content"),
+                "id": item.get("id"),
+                "created_at": item.get("created_at"),
+                "updated_at": item.get("updated_at"),
+            }
+            self.allow_deny_list_cache.setdefault(f"{type_}.{allowed}", []).append(metadata)
 
     async def _create_redis_session(self) -> None:
         """
