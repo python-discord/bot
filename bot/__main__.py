@@ -53,6 +53,7 @@ bot.load_extension("bot.cogs.verification")
 
 # Feature cogs
 bot.load_extension("bot.cogs.alias")
+bot.load_extension("bot.cogs.allow_deny_lists")
 bot.load_extension("bot.cogs.defcon")
 bot.load_extension("bot.cogs.dm_relay")
 bot.load_extension("bot.cogs.duck_pond")
