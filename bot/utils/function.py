@@ -3,9 +3,12 @@
 import typing as t
 
 Argument = t.Union[int, str]
+BoundArgs = t.OrderedDict[str, t.Any]
+Decorator = t.Callable[[t.Callable], t.Callable]
+ArgValGetter = t.Callable[[BoundArgs], t.Any]
 
 
-def get_arg_value(name_or_pos: Argument, arguments: t.OrderedDict[str, t.Any]) -> t.Any:
+def get_arg_value(name_or_pos: Argument, arguments: BoundArgs) -> t.Any:
     """
     Return a value from `arguments` based on a name or position.
 
@@ -32,3 +35,27 @@ def get_arg_value(name_or_pos: Argument, arguments: t.OrderedDict[str, t.Any]) -
             raise ValueError(f"Argument {arg_name!r} doesn't exist.")
     else:
         raise TypeError("'arg' must either be an int (positional index) or a str (keyword).")
+
+
+def get_arg_value_wrapper(
+    decorator_func: t.Callable[[ArgValGetter], Decorator],
+    name_or_pos: Argument,
+    func: t.Callable[[t.Any], t.Any] = None,
+) -> Decorator:
+    """
+    Call `decorator_func` with the value of the arg at the given name/position.
+
+    `decorator_func` must accept a callable as a parameter to which it will pass a mapping of
+    parameter names to argument values of the function it's decorating.
+
+    `func` is an optional callable which will return a new value given the argument's value.
+
+    Return the decorator returned by `decorator_func`.
+    """
+    def wrapper(args: BoundArgs) -> t.Any:
+        value = get_arg_value(name_or_pos, args)
+        if func:
+            value = func(value)
+        return value
+
+    return decorator_func(wrapper)
