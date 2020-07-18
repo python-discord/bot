@@ -228,6 +228,8 @@ def respect_role_hierarchy(name_or_pos: function.Argument) -> t.Callable:
     def decorator(func: t.Callable) -> t.Callable:
         @wraps(func)
         async def wrapper(*args, **kwargs) -> None:
+            log.trace(f"{func.__name__}: respect role hierarchy decorator called")
+
             bound_args = function.get_bound_args(func, args, kwargs)
             target = function.get_arg_value(name_or_pos, bound_args)
 
@@ -250,6 +252,7 @@ def respect_role_hierarchy(name_or_pos: function.Argument) -> t.Callable:
                     "someone with an equal or higher top role."
                 )
             else:
+                log.trace(f"{func.__name__}: {target.top_role=} < {actor.top_role=}; calling func")
                 await func(*args, **kwargs)
         return wrapper
     return decorator
