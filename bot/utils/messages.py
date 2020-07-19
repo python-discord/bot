@@ -1,15 +1,17 @@
 import asyncio
 import contextlib
 import logging
+import random
 import re
 from io import BytesIO
 from typing import List, Optional, Sequence, Union
 
-from discord import Client, Embed, File, Member, Message, Reaction, TextChannel, Webhook
+from discord import Client, Colour, Embed, File, Member, Message, Reaction, TextChannel, Webhook
 from discord.abc import Snowflake
 from discord.errors import HTTPException
+from discord.ext.commands import Context
 
-from bot.constants import Emojis
+from bot.constants import Emojis, NEGATIVE_REPLIES
 
 log = logging.getLogger(__name__)
 
@@ -132,3 +134,13 @@ def sub_clyde(username: Optional[str]) -> Optional[str]:
         return re.sub(r"(clyd)(e)", replace_e, username, flags=re.I)
     else:
         return username  # Empty string or None
+
+
+async def send_denial(ctx: Context, reason: str) -> None:
+    """Send an embed denying the user with the given reason."""
+    embed = Embed()
+    embed.colour = Colour.red()
+    embed.title = random.choice(NEGATIVE_REPLIES)
+    embed.description = reason
+
+    await ctx.send(embed=embed)

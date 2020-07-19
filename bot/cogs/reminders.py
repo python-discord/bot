@@ -12,10 +12,11 @@ from dateutil.relativedelta import relativedelta
 from discord.ext.commands import Cog, Context, Greedy, group
 
 from bot.bot import Bot
-from bot.constants import Guild, Icons, MODERATION_ROLES, NEGATIVE_REPLIES, POSITIVE_REPLIES, STAFF_ROLES
+from bot.constants import Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES, STAFF_ROLES
 from bot.converters import Duration
 from bot.pagination import LinePaginator
 from bot.utils.checks import without_role_check
+from bot.utils.messages import send_denial
 from bot.utils.scheduling import Scheduler
 from bot.utils.time import humanize_delta
 
@@ -99,16 +100,6 @@ class Reminders(Cog):
             footer_str = f"{footer_str}, Due: {delivery_dt.strftime('%Y-%m-%dT%H:%M:%S')}"
 
         embed.set_footer(text=footer_str)
-
-        await ctx.send(embed=embed)
-
-    @staticmethod
-    async def _send_denial(ctx: Context, reason: str) -> None:
-        """Send an embed denying the user from creating a reminder."""
-        embed = discord.Embed()
-        embed.colour = discord.Colour.red()
-        embed.title = random.choice(NEGATIVE_REPLIES)
-        embed.description = reason
 
         await ctx.send(embed=embed)
 
@@ -220,7 +211,7 @@ class Reminders(Cog):
 
             # If they don't have permission to set a reminder in this channel
             if ctx.channel.id not in WHITELISTED_CHANNELS:
-                return await self._send_denial(ctx, "Sorry, you can't do that here!")
+                return await send_denial(ctx, "Sorry, you can't do that here!")
 
             # Get their current active reminders
             active_reminders = await self.bot.api_client.get(
@@ -233,13 +224,13 @@ class Reminders(Cog):
             # Let's limit this, so we don't get 10 000
             # reminders from kip or something like that :P
             if len(active_reminders) > MAXIMUM_REMINDERS:
-                return await self._send_denial(ctx, "You have too many active reminders!")
+                return await send_denial(ctx, "You have too many active reminders!")
 
         # Filter mentions to see if the user can mention members/roles
         if mentions:
             mentions_allowed, disallowed_mentions = await self.allow_mentions(ctx, mentions)
             if not mentions_allowed:
-                return await self._send_denial(
+                return await send_denial(
                     ctx, f"You can't mention other {disallowed_mentions} in your reminder!"
                 )
 
@@ -389,7 +380,7 @@ class Reminders(Cog):
         # Filter mentions to see if the user can mention members/roles
         mentions_allowed, disallowed_mentions = await self.allow_mentions(ctx, mentions)
         if not mentions_allowed:
-            return await self._send_denial(
+            return await send_denial(
                 ctx, f"You can't mention other {disallowed_mentions} in your reminder!"
             )
 
