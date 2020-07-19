@@ -9,7 +9,6 @@ from operator import itemgetter
 import discord
 from dateutil.parser import isoparse
 from dateutil.relativedelta import relativedelta
-from discord import Member, Role
 from discord.ext.commands import Cog, Context, Greedy, group
 
 from bot.bot import Bot
@@ -25,7 +24,7 @@ log = logging.getLogger(__name__)
 WHITELISTED_CHANNELS = Guild.reminder_whitelist
 MAXIMUM_REMINDERS = 5
 
-Mentionable = t.Union[Member, Role]
+Mentionable = t.Union[discord.Member, discord.Role]
 
 
 class Reminders(Cog):
@@ -126,7 +125,7 @@ class Reminders(Cog):
         if without_role_check(ctx, *STAFF_ROLES):
             return False, "members/roles"
         elif without_role_check(ctx, *MODERATION_ROLES):
-            return all(isinstance(mention, Member) for mention in mentions), "roles"
+            return all(isinstance(mention, discord.Member) for mention in mentions), "roles"
         else:
             return True, ""
 
