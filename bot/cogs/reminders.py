@@ -120,7 +120,7 @@ class Reminders(Cog):
         else:
             return True, ""
 
-    def get_mentionables_from_ids(self, mention_ids: t.List[str]) -> t.Iterator[Mentionable]:
+    def get_mentionables(self, mention_ids: t.List[int]) -> t.Iterator[Mentionable]:
         """Converts Role and Member ids to their corresponding objects if possible."""
         guild = self.bot.get_guild(Guild.id)
         for mention_id in mention_ids:
@@ -182,7 +182,7 @@ class Reminders(Cog):
             )
 
         additional_mentions = ' '.join(
-            mentionable.mention for mentionable in self.get_mentionables_from_ids(reminder["mentions"])
+            mentionable.mention for mentionable in self.get_mentionables(reminder["mentions"])
         )
 
         await channel.send(
@@ -295,7 +295,7 @@ class Reminders(Cog):
 
             mentions = ", ".join(
                 # Both Role and User objects have the `name` attribute
-                mention.name for mention in self.get_mentionables_from_ids(mentions)
+                mention.name for mention in self.get_mentionables(mentions)
             )
             mention_string = f"\n**Mentions:** {mentions}" if mentions else ""
 
