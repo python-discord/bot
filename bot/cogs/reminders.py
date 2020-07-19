@@ -228,7 +228,7 @@ class Reminders(Cog):
     @remind_group.command(name="new", aliases=("add", "create"))
     async def new_reminder(
         self, ctx: Context, mentions: Greedy[Mentionable], expiration: Duration, *, content: str
-    ) -> t.Optional[discord.Message]:
+    ) -> None:
         """
         Set yourself a simple reminder.
 
@@ -239,7 +239,8 @@ class Reminders(Cog):
 
             # If they don't have permission to set a reminder in this channel
             if ctx.channel.id not in WHITELISTED_CHANNELS:
-                return await send_denial(ctx, "Sorry, you can't do that here!")
+                await send_denial(ctx, "Sorry, you can't do that here!")
+                return
 
             # Get their current active reminders
             active_reminders = await self.bot.api_client.get(
@@ -252,7 +253,8 @@ class Reminders(Cog):
             # Let's limit this, so we don't get 10 000
             # reminders from kip or something like that :P
             if len(active_reminders) > MAXIMUM_REMINDERS:
-                return await send_denial(ctx, "You have too many active reminders!")
+                await send_denial(ctx, "You have too many active reminders!")
+                return
 
         # Filter mentions to see if the user can mention members/roles
         if not await self.validate_mentions(ctx, mentions):
@@ -291,7 +293,7 @@ class Reminders(Cog):
         self.schedule_reminder(reminder)
 
     @remind_group.command(name="list")
-    async def list_reminders(self, ctx: Context) -> t.Optional[discord.Message]:
+    async def list_reminders(self, ctx: Context) -> None:
         """View a paginated embed of all reminders for your user."""
         # Get all the user's reminders from the database.
         data = await self.bot.api_client.get(
@@ -337,7 +339,8 @@ class Reminders(Cog):
         # Remind the user that they have no reminders :^)
         if not lines:
             embed.description = "No active reminders could be found."
-            return await ctx.send(embed=embed)
+            await ctx.send(embed=embed)
+            return
 
         # Construct the embed and paginate it.
         embed.colour = discord.Colour.blurple()
