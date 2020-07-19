@@ -58,7 +58,6 @@ class Reminders(Cog):
             if remind_at < now:
                 late = relativedelta(now, remind_at)
                 await self.send_reminder(reminder, late)
-                await self._delete_reminder(reminder["id"])
             else:
                 self.schedule_reminder(reminder)
 
@@ -217,6 +216,7 @@ class Reminders(Cog):
             content=f"{user.mention} {additional_mentions}",
             embed=embed
         )
+        await self._delete_reminder(reminder["id"])
 
     @group(name="remind", aliases=("reminder", "reminders", "remindme"), invoke_without_command=True)
     async def remind_group(
