@@ -9,8 +9,10 @@ import dateutil.tz
 import discord
 from aiohttp import ClientConnectorError, ContentTypeError
 from dateutil.relativedelta import relativedelta
-from discord.ext.commands import BadArgument, Context, Converter, UserConverter
+from discord.ext.commands import BadArgument, Context, Converter, IDConverter, UserConverter
 
+from bot.constants import URLs
+from bot.utils.regex import INVITE_RE
 
 log = logging.getLogger(__name__)
 
@@ -32,6 +34,42 @@ def allowed_strings(*values, preserve_case: bool = False) -> t.Callable[[str], s
             return arg
 
     return converter
+
+
+class ValidDiscordServerInvite(Converter):
+    """
+    A converter that validates whether a given string is a valid Discord server invite.
+
+    Raises 'BadArgument' if:
+    - The string is not a valid Discord server invite.
+    - The string is valid, but is an invite for a group DM.
+    - The string is valid, but is expired.
+
+    Returns a (partial) guild object if:
+    - The string is a valid vanity
+    - The string is a full invite URI
+    - The string contains the invite code (the stuff after discord.gg/)
+
+    See the Discord API docs for documentation on the guild object:
+    https://discord.com/developers/docs/resources/guild#guild-object
+    """
+
+    async def convert(self, ctx: Context, server_invite: str) -> dict:
+        """Check whether the string is a valid Discord server invite."""
+        invite_code = INVITE_RE.match(server_invite)
+        if invite_code:
+            response = await ctx.bot.http_session.get(
+                f"{URLs.discord_invite_api}/{invite_code[1]}"
+            )
+            if response.status != 404:
+                invite_data = await response.json()
+                return invite_data.get("guild")
+
+        id_converter = IDConverter()
+        if id_converter._get_id_match(server_invite):
+            raise BadArgument("Guild IDs are not supported, only invites.")
+
+        raise BadArgument("This does not appear to be a valid Discord server invite.")
 
 
 class ValidAllowDenyListType(Converter):

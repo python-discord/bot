@@ -7,7 +7,7 @@ from discord.ext.commands import BadArgument, Cog, Context, group
 from bot import constants
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.converters import ValidAllowDenyListType
+from bot.converters import ValidAllowDenyListType, ValidDiscordServerInvite
 from bot.pagination import LinePaginator
 from bot.utils.checks import with_role_check
 
@@ -30,6 +30,24 @@ class AllowDenyLists(Cog):
     ) -> None:
         """Add an item to an allow or denylist."""
         allow_type = "whitelist" if allowed else "blacklist"
+
+        # If this is a server invite, we gotta validate it.
+        if list_type == "GUILD_INVITE":
+            log.trace(f"{content} is a guild invite, attempting to validate.")
+            validator = ValidDiscordServerInvite()
+            guild_data = await validator.convert(ctx, content)
+
+            # If we make it this far without raising a BadArgument, the invite is
+            # valid. Let's convert the content to an ID.
+            log.trace(f"{content} validated as server invite. Converting to ID.")
+            content = guild_data.get("id")
+
+            # Unless the user has specified another comment, let's
+            # use the server name as the comment so that the list
+            # of guild IDs will be more easily readable when we
+            # display it.
+            if not comment:
+                comment = guild_data.get("name")
 
         # Try to add the item to the database
         log.trace(f"Trying to add the {content} item to the {list_type} {allow_type}")
@@ -100,17 +118,18 @@ class AllowDenyLists(Cog):
         # Build a list of lines we want to show in the paginator
         lines = []
         for item in result:
-            line = f"• {item.get('content')}"
+            line = f"• `{item.get('content')}`"
 
             if item.get("comment"):
-                line += f" ({item.get('comment')})"
+                line += f" - {item.get('comment')}"
 
             lines.append(line)
         lines = sorted(lines)
 
         # Build the embed
+        list_type_plural = list_type.lower().replace("_", " ").title() + "s"
         embed = Embed(
-            title=f"{allow_type.title()}ed {list_type.lower()} items ({len(result)} total)",
+            title=f"{allow_type.title()}ed {list_type_plural} ({len(result)} total)",
             colour=Colour.blue()
         )
         log.trace(f"Trying to list {len(result)} items from the {list_type.lower()} {allow_type}")
@@ -139,6 +158,7 @@ class AllowDenyLists(Cog):
             ctx: Context,
             list_type: ValidAllowDenyListType,
             content: str,
+            *,
             comment: Optional[str] = None,
     ) -> None:
         """Add an item to the specified allowlist."""
@@ -150,6 +170,7 @@ class AllowDenyLists(Cog):
             ctx: Context,
             list_type: ValidAllowDenyListType,
             content: str,
+            *,
             comment: Optional[str] = None,
     ) -> None:
         """Add an item to the specified denylist."""

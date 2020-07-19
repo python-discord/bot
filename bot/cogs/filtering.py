@@ -18,22 +18,12 @@ from bot.constants import (
     Filter, Icons, URLs
 )
 from bot.utils.redis_cache import RedisCache
+from bot.utils.regex import INVITE_RE
 from bot.utils.scheduling import Scheduler
 
 log = logging.getLogger(__name__)
 
 # Regular expressions
-INVITE_RE = re.compile(
-    r"(?:discord(?:[\.,]|dot)gg|"                     # Could be discord.gg/
-    r"discord(?:[\.,]|dot)com(?:\/|slash)invite|"     # or discord.com/invite/
-    r"discordapp(?:[\.,]|dot)com(?:\/|slash)invite|"  # or discordapp.com/invite/
-    r"discord(?:[\.,]|dot)me|"                        # or discord.me
-    r"discord(?:[\.,]|dot)io"                         # or discord.io.
-    r")(?:[\/]|slash)"                                # / or 'slash'
-    r"([a-zA-Z0-9]+)",                                # the invite code itself
-    flags=re.IGNORECASE
-)
-
 SPOILER_RE = re.compile(r"(\|\|.+?\|\|)", re.DOTALL)
 URL_RE = re.compile(r"(https?://[^\s]+)", flags=re.IGNORECASE)
 ZALGO_RE = re.compile(r"[\u0300-\u036F\u0489]")
@@ -478,7 +468,7 @@ class Filtering(Cog):
                 return True
 
             guild_id = guild.get("id")
-            guild_invite_whitelist = self._get_allowlist_items(True, "guild_invite_id")
+            guild_invite_whitelist = self._get_allowlist_items(True, "guild_invite")
 
             if guild_id not in guild_invite_whitelist:
                 guild_icon_hash = guild["icon"]
