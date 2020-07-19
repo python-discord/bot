@@ -111,7 +111,7 @@ class Filtering(Cog):
 
     def _get_allowlist_items(self, allow: bool, list_type: str, compiled: Optional[bool] = False) -> list:
         """Fetch items from the allow_deny_list_cache."""
-        items = self.bot.allow_deny_list_cache[f"{list_type}.{allow}"]
+        items = self.bot.allow_deny_list_cache.get(f"{list_type.upper()}.{allow}", [])
 
         if compiled:
             return [re.compile(fr'{item.get("content")}', flags=re.IGNORECASE) for item in items]
@@ -371,14 +371,14 @@ class Filtering(Cog):
         # They have no data so additional embeds can't be created for them.
         if name == "filter_invites" and match is not True:
             additional_embeds = []
-            for invite, data in match.items():
+            for _, data in match.items():
                 embed = discord.Embed(description=(
                     f"**Members:**\n{data['members']}\n"
                     f"**Active:**\n{data['active']}"
                 ))
                 embed.set_author(name=data["name"])
                 embed.set_thumbnail(url=data["icon"])
-                embed.set_footer(text=f"Guild Invite Code: {invite}")
+                embed.set_footer(text=f"Guild ID: {data['id']}")
                 additional_embeds.append(embed)
             additional_embeds_msg = "For the following guild(s):"
 
@@ -489,6 +489,7 @@ class Filtering(Cog):
 
                 invite_data[invite] = {
                     "name": guild["name"],
+                    "id": guild['id'],
                     "icon": guild_icon,
                     "members": response["approximate_member_count"],
                     "active": response["approximate_presence_count"]
