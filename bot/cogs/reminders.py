@@ -104,7 +104,7 @@ class Reminders(Cog):
         await ctx.send(embed=embed)
 
     @staticmethod
-    async def check_mentions(ctx: Context, mentions: t.List[Mentionable]) -> t.Tuple[bool, str]:
+    async def _check_mentions(ctx: Context, mentions: t.List[Mentionable]) -> t.Tuple[bool, str]:
         """
         Returns whether or not the list of mentions is allowed.
 
@@ -119,6 +119,21 @@ class Reminders(Cog):
             return all(isinstance(mention, discord.Member) for mention in mentions), "roles"
         else:
             return True, ""
+
+    @staticmethod
+    async def validate_mentions(ctx: Context, mentions: t.List[Mentionable]) -> bool:
+        """
+        Filter mentions to see if the user can mention, and sends a denial if not allowed.
+
+        Returns whether or not the validation is successful.
+        """
+        mentions_allowed, disallowed_mentions = await Reminders._check_mentions(ctx, mentions)
+
+        if not mentions or mentions_allowed:
+            return True
+        else:
+            await send_denial(ctx, f"You can't mention other {disallowed_mentions} in your reminder!")
+            return False
 
     def get_mentionables(self, mention_ids: t.List[int]) -> t.Iterator[Mentionable]:
         """Converts Role and Member ids to their corresponding objects if possible."""
@@ -240,12 +255,8 @@ class Reminders(Cog):
                 return await send_denial(ctx, "You have too many active reminders!")
 
         # Filter mentions to see if the user can mention members/roles
-        if mentions:
-            mentions_allowed, disallowed_mentions = await self.check_mentions(ctx, mentions)
-            if not mentions_allowed:
-                return await send_denial(
-                    ctx, f"You can't mention other {disallowed_mentions} in your reminder!"
-                )
+        if not await self.validate_mentions(ctx, mentions):
+            return
 
         mention_ids = [mention.id for mention in mentions]
 
@@ -361,14 +372,10 @@ class Reminders(Cog):
     async def edit_reminder_mentions(self, ctx: Context, id_: int, mentions: Greedy[Mentionable]) -> None:
         """Edit one of your reminder's mentions."""
         # Filter mentions to see if the user can mention members/roles
-        mentions_allowed, disallowed_mentions = await self.check_mentions(ctx, mentions)
-        if not mentions_allowed:
-            return await send_denial(
-                ctx, f"You can't mention other {disallowed_mentions} in your reminder!"
-            )
+        if not await self.validate_mentions(ctx, mentions):
+            return
 
         mention_ids = [mention.id for mention in mentions]
-
         await self.edit_reminder(ctx, id_, {"mentions": mention_ids})
 
     async def edit_reminder(self, ctx: Context, id_: int, payload: dict) -> None:
