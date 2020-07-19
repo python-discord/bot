@@ -104,7 +104,7 @@ class Reminders(Cog):
         await ctx.send(embed=embed)
 
     @staticmethod
-    async def _check_mentions(ctx: Context, mentions: t.List[Mentionable]) -> t.Tuple[bool, str]:
+    async def _check_mentions(ctx: Context, mentions: t.Iterable[Mentionable]) -> t.Tuple[bool, str]:
         """
         Returns whether or not the list of mentions is allowed.
 
@@ -121,7 +121,7 @@ class Reminders(Cog):
             return True, ""
 
     @staticmethod
-    async def validate_mentions(ctx: Context, mentions: t.List[Mentionable]) -> bool:
+    async def validate_mentions(ctx: Context, mentions: t.Iterable[Mentionable]) -> bool:
         """
         Filter mentions to see if the user can mention, and sends a denial if not allowed.
 
@@ -256,6 +256,10 @@ class Reminders(Cog):
                 await send_denial(ctx, "You have too many active reminders!")
                 return
 
+        # Remove duplicate mentions
+        mentions = set(mentions)
+        mentions.discard(ctx.author)
+
         # Filter mentions to see if the user can mention members/roles
         if not await self.validate_mentions(ctx, mentions):
             return
@@ -374,6 +378,10 @@ class Reminders(Cog):
     @edit_reminder_group.command(name="mentions", aliases=("pings",))
     async def edit_reminder_mentions(self, ctx: Context, id_: int, mentions: Greedy[Mentionable]) -> None:
         """Edit one of your reminder's mentions."""
+        # Remove duplicate mentions
+        mentions = set(mentions)
+        mentions.discard(ctx.author)
+
         # Filter mentions to see if the user can mention members/roles
         if not await self.validate_mentions(ctx, mentions):
             return
