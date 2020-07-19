@@ -148,6 +148,19 @@ class Reminders(Cog):
             # Now we can remove it from the schedule list
             self.scheduler.cancel(reminder_id)
 
+    async def _edit_reminder(self, reminder_id: int, payload: dict) -> dict:
+        """
+        Edits a reminder in the database given the ID and payload.
+
+        Returns the edited reminder.
+        """
+        # Send the request to update the reminder in the database
+        reminder = await self.bot.api_client.patch(
+            'bot/reminders/' + str(reminder_id),
+            json=payload
+        )
+        return reminder
+
     async def _reschedule_reminder(self, reminder: dict) -> None:
         """Reschedule a reminder object."""
         log.trace(f"Cancelling old task #{reminder['id']}")
@@ -300,7 +313,7 @@ class Reminders(Cog):
             mention_string = f"\n**Mentions:** {mentions}" if mentions else ""
 
             text = textwrap.dedent(f"""
-            **Reminder #{id_}:** *expires in {time}* (ID: {id_}) {mention_string}
+            **Reminder #{id_}:** *expires in {time}* (ID: {id_}){mention_string}
             {content}
             """).strip()
 
@@ -333,46 +346,16 @@ class Reminders(Cog):
     @edit_reminder_group.command(name="duration", aliases=("time",))
     async def edit_reminder_duration(self, ctx: Context, id_: int, expiration: Duration) -> None:
         """
-         Edit one of your reminder's expiration.
+        Edit one of your reminder's expiration.
 
         Expiration is parsed per: http://strftime.org/
         """
-        # Send the request to update the reminder in the database
-        reminder = await self.bot.api_client.patch(
-            'bot/reminders/' + str(id_),
-            json={'expiration': expiration.isoformat()}
-        )
-
-        # Send a confirmation message to the channel
-        await self._send_confirmation(
-            ctx,
-            on_success="That reminder has been edited successfully!",
-            reminder_id=id_,
-            delivery_dt=expiration,
-        )
-
-        await self._reschedule_reminder(reminder)
+        await self.edit_reminder(ctx, id_, {'expiration': expiration.isoformat()})
 
     @edit_reminder_group.command(name="content", aliases=("reason",))
     async def edit_reminder_content(self, ctx: Context, id_: int, *, content: str) -> None:
         """Edit one of your reminder's content."""
-        # Send the request to update the reminder in the database
-        reminder = await self.bot.api_client.patch(
-            'bot/reminders/' + str(id_),
-            json={'content': content}
-        )
-
-        # Parse the reminder expiration back into a datetime for the confirmation message
-        expiration = isoparse(reminder['expiration']).replace(tzinfo=None)
-
-        # Send a confirmation message to the channel
-        await self._send_confirmation(
-            ctx,
-            on_success="That reminder has been edited successfully!",
-            reminder_id=id_,
-            delivery_dt=expiration,
-        )
-        await self._reschedule_reminder(reminder)
+        await self.edit_reminder(ctx, id_, {"content": content})
 
     @edit_reminder_group.command(name="mentions", aliases=("pings",))
     async def edit_reminder_mentions(self, ctx: Context, id_: int, mentions: Greedy[Mentionable]) -> None:
@@ -385,13 +368,15 @@ class Reminders(Cog):
             )
 
         mention_ids = [mention.id for mention in mentions]
-        reminder = await self.bot.api_client.patch(
-            'bot/reminders/' + str(id_),
-            json={"mentions": mention_ids}
-        )
 
-        # Parse the reminder expiration back into a datetime for the confirmation message
-        expiration = isoparse(reminder['expiration']).replace(tzinfo=None)
+        await self.edit_reminder(ctx, id_, {"mentions": mention_ids})
+
+    async def edit_reminder(self, ctx: Context, id_: int, payload: dict) -> None:
+        """Edits a reminder with the given payload, then sends a confirmation message."""
+        reminder = await self._edit_reminder(id_, payload)
+
+        # Parse the reminder expiration back into a datetime
+        expiration = isoparse(reminder["expiration"]).replace(tzinfo=None)
 
         # Send a confirmation message to the channel
         await self._send_confirmation(
