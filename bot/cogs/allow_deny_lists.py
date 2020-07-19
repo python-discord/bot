@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 
 from discord import Colour, Embed
-from discord.ext.commands import BadArgument, Cog, Context, group
+from discord.ext.commands import BadArgument, Cog, Context, IDConverter, group
 
 from bot import constants
 from bot.api import ResponseCodeError
@@ -95,9 +95,21 @@ class AllowDenyLists(Cog):
         """Remove an item from an allow or denylist."""
         item = None
         allow_type = "whitelist" if allowed else "blacklist"
+        id_converter = IDConverter()
 
+        # If this is a server invite, we need to convert it.
+        if list_type == "GUILD_INVITE" and not id_converter._get_id_match(content):
+            log.trace(f"{content} is a guild invite, attempting to validate.")
+            validator = ValidDiscordServerInvite()
+            guild_data = await validator.convert(ctx, content)
+
+            # If we make it this far without raising a BadArgument, the invite is
+            # valid. Let's convert the content to an ID.
+            log.trace(f"{content} validated as server invite. Converting to ID.")
+            content = guild_data.get("id")
+
+        # Find the content and delete it.
         log.trace(f"Trying to delete the {content} item from the {list_type} {allow_type}")
-
         for allow_list in self.bot.allow_deny_list_cache.get(f"{list_type}.{allowed}", []):
             if content == allow_list.get("content"):
                 item = allow_list
