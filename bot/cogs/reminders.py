@@ -110,6 +110,7 @@ class Reminders(Cog):
         Conditions:
         - Role reminders are Mods+
         - Reminders for other users are Helpers+
+
         If mentions aren't allowed, also return the type of mention(s) disallowed.
         """
         if without_role_check(ctx, *STAFF_ROLES):
