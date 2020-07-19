@@ -99,9 +99,9 @@ class Filtering(Cog):
 
         self.bot.loop.create_task(self.reschedule_offensive_msg_deletion())
 
-    def _get_allowlist_items(self, allow: bool, list_type: str, compiled: Optional[bool] = False) -> list:
+    def _get_allowlist_items(self, list_type: str, *, allowed: bool, compiled: Optional[bool] = False) -> list:
         """Fetch items from the allow_deny_list_cache."""
-        items = self.bot.allow_deny_list_cache.get(f"{list_type.upper()}.{allow}", [])
+        items = self.bot.allow_deny_list_cache.get(f"{list_type.upper()}.{allowed}", [])
 
         if compiled:
             return [re.compile(fr'{item.get("content")}', flags=re.IGNORECASE) for item in items]
@@ -143,7 +143,7 @@ class Filtering(Cog):
     def get_name_matches(self, name: str) -> List[re.Match]:
         """Check bad words from passed string (name). Return list of matches."""
         matches = []
-        watchlist_patterns = self._get_allowlist_items(False, 'word_watchlist', compiled=True)
+        watchlist_patterns = self._get_allowlist_items('word_watchlist', allowed=False, compiled=True)
         for pattern in watchlist_patterns:
             if match := pattern.search(name):
                 matches.append(match)
@@ -408,7 +408,7 @@ class Filtering(Cog):
         if URL_RE.search(text):
             return False
 
-        watchlist_patterns = self._get_allowlist_items(False, 'word_watchlist', compiled=True)
+        watchlist_patterns = self._get_allowlist_items('word_watchlist', allowed=False, compiled=True)
         for pattern in watchlist_patterns:
             match = pattern.search(text)
             if match:
@@ -420,7 +420,7 @@ class Filtering(Cog):
             return False
 
         text = text.lower()
-        domain_blacklist = self._get_allowlist_items(False, "domain_name")
+        domain_blacklist = self._get_allowlist_items("domain_name", allowed=False)
 
         for url in domain_blacklist:
             if url.lower() in text:
@@ -468,9 +468,21 @@ class Filtering(Cog):
                 return True
 
             guild_id = guild.get("id")
-            guild_invite_whitelist = self._get_allowlist_items(True, "guild_invite")
+            guild_invite_whitelist = self._get_allowlist_items("guild_invite", allowed=True)
+            guild_invite_blacklist = self._get_allowlist_items("guild_invite", allowed=False)
 
-            if guild_id not in guild_invite_whitelist:
+            # Is this invite allowed?
+            guild_partnered_or_verified = (
+                'PARTNERED' in guild.get("features")
+                or 'VERIFIED' in guild.get("features")
+            )
+            invite_not_allowed = (
+                guild_id in guild_invite_blacklist           # Blacklisted guilds are never permitted.
+                or guild_id not in guild_invite_whitelist    # Whitelisted guilds are always permitted.
+                and not guild_partnered_or_verified          # Otherwise guilds have to be Verified or Partnered.
+            )
+
+            if invite_not_allowed:
                 guild_icon_hash = guild["icon"]
                 guild_icon = (
                     "https://cdn.discordapp.com/icons/"
