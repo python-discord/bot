@@ -25,7 +25,7 @@ from bot.decorators import with_role
 from bot.pagination import LinePaginator
 from bot.utils.messages import wait_for_deletion
 from .cache import async_cache
-from .parser import get_soup_from_url, parse_module_symbol, parse_symbol
+from .parser import get_soup_from_url, parse_module_symbol, parse_symbol, truncate_markdown
 
 log = logging.getLogger(__name__)
 logging.getLogger('urllib3').setLevel(logging.WARNING)
@@ -270,30 +270,7 @@ class DocCog(commands.Cog):
         self.bot.stats.incr(f"doc_fetches.{symbol_obj.package.lower()}")
         signatures = scraped_html[0]
         permalink = symbol_obj.url
-        description = markdownify(scraped_html[1], url=permalink)
-
-        # Truncate the description of the embed to the last occurrence
-        # of a double newline (interpreted as a paragraph) before index 1000.
-        if len(description) > 1000:
-            shortened = description[:1000]
-            description_cutoff = shortened.rfind('\n\n', 100)
-            if description_cutoff == -1:
-                # Search the shortened version for cutoff points in decreasing desirability,
-                # cutoff at 1000 if none are found.
-                for string in (". ", ", ", ",", " "):
-                    description_cutoff = shortened.rfind(string)
-                    if description_cutoff != -1:
-                        break
-                else:
-                    description_cutoff = 1000
-            description = description[:description_cutoff]
-
-            # If there is an incomplete code block, cut it out
-            if description.count("```") % 2:
-                codeblock_start = description.rfind('```py')
-                description = description[:codeblock_start].rstrip()
-            description += f"... [read more]({permalink})"
-
+        description = truncate_markdown(markdownify(scraped_html[1], url=permalink), permalink, 1000)
         description = WHITESPACE_AFTER_NEWLINES_RE.sub('', description)
         if signatures is None:
             # If symbol is a module, don't show signature.

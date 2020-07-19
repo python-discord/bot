@@ -83,6 +83,35 @@ def find_all_children_until_tag(
     return text
 
 
+def truncate_markdown(markdown: str, permalink: str, max_length: int) -> str:
+    """
+    Truncate `markdown` to be at most `max_length` characters.
+
+    The markdown string is searched for substrings to cut at, to keep its structure,
+    but if none are found the string is simply sliced.
+    """
+    if len(markdown) > max_length:
+        shortened = markdown[:max_length]
+        description_cutoff = shortened.rfind('\n\n', 100)
+        if description_cutoff == -1:
+            # Search the shortened version for cutoff points in decreasing desirability,
+            # cutoff at 1000 if none are found.
+            for string in (". ", ", ", ",", " "):
+                description_cutoff = shortened.rfind(string)
+                if description_cutoff != -1:
+                    break
+            else:
+                description_cutoff = max_length
+        markdown = markdown[:description_cutoff]
+
+        # If there is an incomplete code block, cut it out
+        if markdown.count("```") % 2:
+            codeblock_start = markdown.rfind('```py')
+            markdown = markdown[:codeblock_start].rstrip()
+        markdown += f"... [read more]({permalink})"
+    return markdown
+
+
 @async_cache(arg_offset=1)
 async def get_soup_from_url(http_session: ClientSession, url: str) -> BeautifulSoup:
     """Create a BeautifulSoup object from the HTML data in `url` with the head tag removed."""
