@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 from discord import Colour, Embed
 from discord.ext.commands import BadArgument, Cog, Context, group
@@ -19,17 +20,26 @@ class AllowDenyLists(Cog):
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
 
-    async def _add_data(self, ctx: Context, allowed: bool, list_type: ValidAllowDenyListType, content: str) -> None:
+    async def _add_data(
+            self,
+            ctx: Context,
+            allowed: bool,
+            list_type: ValidAllowDenyListType,
+            content: str,
+            comment: Optional[str] = None,
+    ) -> None:
         """Add an item to an allow or denylist."""
-        payload = {
-            'allowed': allowed,
-            'type': list_type,
-            'content': content,
-        }
         allow_type = "whitelist" if allowed else "blacklist"
 
         # Try to add the item to the database
         log.trace(f"Trying to add the {content} item to the {list_type} {allow_type}")
+        payload = {
+            'allowed': allowed,
+            'type': list_type,
+            'content': content,
+            'comment': comment,
+        }
+
         try:
             item = await self.bot.api_client.post(
                 "bot/allow_deny_lists",
@@ -55,6 +65,7 @@ class AllowDenyLists(Cog):
         allowed = item.get("allowed")
         metadata = {
             "content": item.get("content"),
+            "comment": item.get("comment"),
             "id": item.get("id"),
             "created_at": item.get("created_at"),
             "updated_at": item.get("updated_at"),
@@ -83,9 +94,21 @@ class AllowDenyLists(Cog):
 
     async def _list_all_data(self, ctx: Context, allowed: bool, list_type: ValidAllowDenyListType) -> None:
         """Paginate and display all items in an allow or denylist."""
-        result = self.bot.allow_deny_list_cache.get(f"{list_type}.{allowed}", [])
-        lines = sorted(f"• {item.get('content')}" for item in result)
         allow_type = "whitelist" if allowed else "blacklist"
+        result = self.bot.allow_deny_list_cache.get(f"{list_type}.{allowed}", [])
+
+        # Build a list of lines we want to show in the paginator
+        lines = []
+        for item in result:
+            line = f"• {item.get('content')}"
+
+            if item.get("comment"):
+                line += f" ({item.get('comment')})"
+
+            lines.append(line)
+        lines = sorted(lines)
+
+        # Build the embed
         embed = Embed(
             title=f"{allow_type.title()}ed {list_type.lower()} items ({len(result)} total)",
             colour=Colour.blue()
@@ -111,14 +134,26 @@ class AllowDenyLists(Cog):
             await ctx.send_help(ctx.command)
 
     @whitelist.command(name="add", aliases=("a", "set"))
-    async def allow_add(self, ctx: Context, list_type: ValidAllowDenyListType, content: str) -> None:
+    async def allow_add(
+            self,
+            ctx: Context,
+            list_type: ValidAllowDenyListType,
+            content: str,
+            comment: Optional[str] = None,
+    ) -> None:
         """Add an item to the specified allowlist."""
-        await self._add_data(ctx, True, list_type, content)
+        await self._add_data(ctx, True, list_type, content, comment)
 
     @blacklist.command(name="add", aliases=("a", "set"))
-    async def deny_add(self, ctx: Context, list_type: ValidAllowDenyListType, content: str) -> None:
+    async def deny_add(
+            self,
+            ctx: Context,
+            list_type: ValidAllowDenyListType,
+            content: str,
+            comment: Optional[str] = None,
+    ) -> None:
         """Add an item to the specified denylist."""
-        await self._add_data(ctx, False, list_type, content)
+        await self._add_data(ctx, False, list_type, content, comment)
 
     @whitelist.command(name="remove", aliases=("delete", "rm",))
     async def allow_delete(self, ctx: Context, list_type: ValidAllowDenyListType, content: str) -> None:

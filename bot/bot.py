@@ -59,6 +59,7 @@ class Bot(commands.Bot):
             allowed = item.get("allowed")
             metadata = {
                 "content": item.get("content"),
+                "comment": item.get("comment"),
                 "id": item.get("id"),
                 "created_at": item.get("created_at"),
                 "updated_at": item.get("updated_at"),
