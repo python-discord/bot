@@ -456,7 +456,7 @@ class Filtering(Cog):
 
         Attempts to catch some of common ways to try to cheat the system.
         """
-        # Remove backslashes to prevent escape character around fuckery like
+        # Remove backslashes to prevent escape character aroundfuckery like
         # discord\.gg/gdudes-pony-farm
         text = text.replace("\\", "")
 
