@@ -11,11 +11,12 @@ from bot import utils
 from bot.bot import Bot
 from bot.cogs.moderation import ModLog
 from bot.constants import Channels, Colours, Event, Icons
+from bot.utils.messages import format_user
 
 log = logging.getLogger(__name__)
 
 LOG_MESSAGE = (
-    "Censored a seemingly valid token sent by {author} (`{author_id}`) in {channel}, "
+    "Censored a seemingly valid token sent by {author} in {channel}, "
     "token was `{user_id}.{timestamp}.{hmac}`"
 )
 DELETION_MESSAGE_TEMPLATE = (
@@ -111,8 +112,7 @@ class TokenRemover(Cog):
     def format_log_message(msg: Message, token: Token) -> str:
         """Return the log message to send for `token` being censored in `msg`."""
         return LOG_MESSAGE.format(
-            author=msg.author,
-            author_id=msg.author.id,
+            author=format_user(msg.author),
             channel=msg.channel.mention,
             user_id=token.user_id,
             timestamp=token.timestamp,

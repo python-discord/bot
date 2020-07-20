@@ -12,6 +12,7 @@ from bot.bot import Bot
 from bot.cogs.moderation import ModLog
 from bot.constants import Channels, Colours, Emojis, Event, Icons, Roles
 from bot.decorators import with_role
+from bot.utils.messages import format_user
 
 log = logging.getLogger(__name__)
 
@@ -107,7 +108,7 @@ class Defcon(Cog):
                 self.bot.stats.incr("defcon.leaves")
 
                 message = (
-                    f"{member} (`{member.id}`) was denied entry because their account is too new."
+                    f"{format_user(member)} was denied entry because their account is too new."
                 )
 
                 if not message_sent:

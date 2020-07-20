@@ -7,6 +7,7 @@ from discord.ext.commands import Cog
 from bot.bot import Bot
 from bot.cogs.moderation.modlog import ModLog
 from bot.constants import Channels, Colours, Event, Icons
+from bot.utils.messages import format_user
 
 WEBHOOK_URL_RE = re.compile(r"((?:https?://)?discordapp\.com/api/webhooks/\d+/)\S+/?", re.I)
 
@@ -45,8 +46,8 @@ class WebhookRemover(Cog):
         await msg.channel.send(ALERT_MESSAGE_TEMPLATE.format(user=msg.author.mention))
 
         message = (
-            f"{msg.author} (`{msg.author.id}`) posted a Discord webhook URL "
-            f"to #{msg.channel}. Webhook URL was `{redacted_url}`"
+            f"{format_user(msg.author)} posted a Discord webhook URL to {msg.channel.mention}. "
+            f"Webhook URL was `{redacted_url}`"
         )
         log.debug(message)
 
