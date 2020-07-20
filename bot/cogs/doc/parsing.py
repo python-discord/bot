@@ -1,6 +1,7 @@
 import logging
 import re
 import string
+from functools import partial
 from typing import Callable, List, Optional, Tuple, Union
 
 from aiohttp import ClientSession
@@ -22,6 +23,40 @@ SEARCH_END_TAG_ATTRS = (
     "rubric",
     "sphinxsidebar",
 )
+
+
+def find_elements_until_tag(
+        start_element: PageElement,
+        tag_filter: Union[Tuple[str, ...], Callable[[Tag], bool]],
+        *,
+        func: Callable,
+        limit: int = None,
+) -> List[str]:
+    """
+    Get all tags until a tag matching `tag_filter` is found.
+
+    `tag_filter` can be either a tuple of string names to check against,
+    or a filtering t.Callable that's applied to the tags.
+
+    `func` takes in a BeautifulSoup unbound method for finding multiple elements, such as `BeautifulSoup.find_all`.
+    That method is then iterated over and all tags until the matching tag are added to the return list as strings.
+    """
+    elements = []
+
+    for element in func(start_element, limit=limit):
+        if isinstance(tag_filter, tuple):
+            if element.name in tag_filter:
+                break
+        elif tag_filter(element):
+            break
+        elements.append(str(element))
+
+    return elements
+
+
+find_next_children_until_tag = partial(find_elements_until_tag, func=partial(BeautifulSoup.find_all, recursive=False))
+find_next_siblings_until_tag = partial(find_elements_until_tag, func=BeautifulSoup.find_next_siblings)
+find_previous_siblings_until_tag = partial(find_elements_until_tag, func=BeautifulSoup.find_previous_siblings)
 
 
 def parse_module_symbol(heading: PageElement) -> Optional[Tuple[None, str]]:
