@@ -2,7 +2,7 @@ import asyncio
 import logging
 import re
 from datetime import datetime, timedelta
-from typing import List, Mapping, Optional, Tuple, Union
+from typing import List, Mapping, NamedTuple, Optional, Union
 
 import dateutil
 import discord.errors
@@ -46,6 +46,7 @@ TOKEN_WATCHLIST_PATTERNS = [
 WATCHLIST_PATTERNS = WORD_WATCHLIST_PATTERNS + TOKEN_WATCHLIST_PATTERNS
 
 DAYS_BETWEEN_ALERTS = 3
+OFFENSIVE_MSG_DELETE_TIME = timedelta(days=Filter.offensive_msg_delete_days)
 
 
 def expand_spoilers(text: str) -> str:
@@ -56,7 +57,15 @@ def expand_spoilers(text: str) -> str:
     )
 
 
-OFFENSIVE_MSG_DELETE_TIME = timedelta(days=Filter.offensive_msg_delete_days)
+FilterMatch = Union[re.Match, dict, bool, List[discord.Embed]]
+
+
+class Stats(NamedTuple):
+    """Additional stats on a triggered filter to append to a mod log."""
+
+    message_content: str
+    additional_embeds: Optional[List[discord.Embed]]
+    additional_embeds_msg: Optional[str]
 
 
 class Filtering(Cog):
@@ -221,7 +230,9 @@ class Filtering(Cog):
                         if _filter["type"] == "filter":
                             filter_triggered = True
 
-                        await self._send_log(filter_name, _filter["type"], match, msg, result)
+                        stats = self._add_stats(filter_name, match, result)
+                        await self._send_log(filter_name, _filter["type"], msg, stats, is_eval=True)
+
                         break  # We don't want multiple filters to trigger
 
         return filter_triggered
@@ -283,16 +294,19 @@ class Filtering(Cog):
                             self.schedule_msg_delete(data)
                             log.trace(f"Offensive message {msg.id} will be deleted on {delete_date}")
 
-                        await self._send_log(filter_name, _filter["type"], match, msg)
+                        stats = self._add_stats(filter_name, match, msg.content)
+                        await self._send_log(filter_name, _filter["type"], msg, stats)
+
                         break  # We don't want multiple filters to trigger
 
     async def _send_log(
         self,
         filter_name: str,
         filter_type: str,
-        match: Union[re.Match, dict, bool, List[discord.Embed]],
         msg: discord.Message,
-        eval_content: Optional[str] = None
+        stats: Stats,
+        *,
+        is_eval: bool = False,
     ) -> None:
         """Send a mod log for a triggered filter."""
         if msg.channel.type is discord.ChannelType.private:
@@ -300,23 +314,13 @@ class Filtering(Cog):
         else:
             channel_str = f"in {msg.channel.mention}"
 
-        if eval_content is None:
-            # It's not an eval, so use the message's contents to get stats.
-            eval_content = msg.content
-        else:
-            # This variable name is a bit misleading but whatever.
-            channel_str += " using !eval"
-
-        message_content, additional_embeds, additional_embeds_msg = self._add_stats(
-            filter_name, match, eval_content
-        )
-
+        eval_msg = "using !eval" if is_eval else ""
         message = (
             f"The {filter_name} {filter_type} was triggered "
             f"by **{msg.author}** "
-            f"(`{msg.author.id}`) {channel_str} with [the "
+            f"(`{msg.author.id}`) {channel_str} {eval_msg}with [the "
             f"following message]({msg.jump_url}):\n\n"
-            f"{message_content}"
+            f"{stats.message_content}"
         )
 
         log.debug(message)
@@ -330,13 +334,11 @@ class Filtering(Cog):
             thumbnail=msg.author.avatar_url_as(static_format="png"),
             channel_id=Channels.mod_alerts,
             ping_everyone=Filter.ping_everyone,
-            additional_embeds=additional_embeds,
-            additional_embeds_msg=additional_embeds_msg
+            additional_embeds=stats.additional_embeds,
+            additional_embeds_msg=stats.additional_embeds_msg
         )
 
-    def _add_stats(self, name: str, match: Union[re.Match, dict, bool, List[discord.Embed]], content: str) -> Tuple[
-        str, Optional[List[discord.Embed]], Optional[str]
-    ]:
+    def _add_stats(self, name: str, match: FilterMatch, content: str) -> Stats:
         """Adds relevant statistical information to the relevant filter and increments the bot's stats."""
         # Word and match stats for watch_regex
         if name == "watch_regex":
@@ -373,7 +375,7 @@ class Filtering(Cog):
             additional_embeds = match
             additional_embeds_msg = "With the following embed(s):"
 
-        return message_content, additional_embeds, additional_embeds_msg
+        return Stats(message_content, additional_embeds, additional_embeds_msg)
 
     @staticmethod
     def _check_filter(msg: Message) -> bool:
