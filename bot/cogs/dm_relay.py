@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 import discord
 from discord import Color
@@ -7,6 +8,8 @@ from discord.ext.commands import Cog
 
 from bot import constants
 from bot.bot import Bot
+from bot.converters import UserMentionOrID
+from bot.utils import RedisCache
 from bot.utils.checks import in_whitelist_check, with_role_check
 from bot.utils.messages import send_attachments
 from bot.utils.webhooks import send_webhook
@@ -17,6 +20,9 @@ log = logging.getLogger(__name__)
 class DMRelay(Cog):
     """Relay direct messages to and from the bot."""
 
+    # RedisCache[str, t.Union[discord.User.id, discord.Member.id]]
+    dm_cache = RedisCache()
+
     def __init__(self, bot: Bot):
         self.bot = bot
         self.webhook_id = constants.Webhooks.dm_log
@@ -24,11 +30,11 @@ class DMRelay(Cog):
         self.bot.loop.create_task(self.fetch_webhook())
 
     @commands.command(aliases=("reply",))
-    async def send_dm(self, ctx: commands.Context, member: discord.Member, *, message: str) -> None:
+    async def send_dm(self, ctx: commands.Context, member: Optional[UserMentionOrID], *, message: str) -> None:
         """
         Allows you to send a DM to a user from the bot.
 
-        A `member` must be provided.
+        If `member` is not provided, it will send to the last user who DM'd the bot.
 
         This feature should be used extremely sparingly. Use ModMail if you need to have a serious
         conversation with a user. This is just for responding to extraordinary DMs, having a little
@@ -36,14 +42,24 @@ class DMRelay(Cog):
 
         NOTE: This feature will be removed if it is overused.
         """
-        try:
-            await member.send(message)
-            await ctx.message.add_reaction("✅")
+        if not member:
+            user_id = await self.dm_cache.get("last_user")
+            member = ctx.guild.get_member(user_id) if user_id else None
+
+        # If we still don't have a Member at this point, give up
+        if not member:
+            log.debug("This bot has never gotten a DM, or the RedisCache has been cleared.")
+            await ctx.message.add_reaction("❌")
             return
 
+        try:
+            await member.send(message)
         except discord.errors.Forbidden:
             log.debug("User has disabled DMs.")
             await ctx.message.add_reaction("❌")
+        else:
+            await ctx.message.add_reaction("✅")
+            self.bot.stats.incr("dm_relay.dm_sent")
 
     async def fetch_webhook(self) -> None:
         """Fetches the webhook object, so we can post to it."""
@@ -65,9 +81,11 @@ class DMRelay(Cog):
             await send_webhook(
                 webhook=self.webhook,
                 content=message.clean_content,
-                username=message.author.display_name,
+                username=f"{message.author.display_name} ({message.author.id})",
                 avatar_url=message.author.avatar_url
             )
+            await self.dm_cache.set("last_user", message.author.id)
+            self.bot.stats.incr("dm_relay.dm_received")
 
         # Handle any attachments
         if message.attachments:
@@ -81,7 +99,7 @@ class DMRelay(Cog):
                 await send_webhook(
                     webhook=self.webhook,
                     embed=e,
-                    username=message.author.display_name,
+                    username=f"{message.author.display_name} ({message.author.id})",
                     avatar_url=message.author.avatar_url
                 )
             except discord.HTTPException:
