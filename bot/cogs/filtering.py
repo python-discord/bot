@@ -221,36 +221,7 @@ class Filtering(Cog):
                         if _filter["type"] == "filter":
                             filter_triggered = True
 
-                        # We do not have to check against DM channels since !eval cannot be used there.
-                        channel_str = f"in {msg.channel.mention}"
-
-                        message_content, additional_embeds, additional_embeds_msg = self._add_stats(
-                            filter_name, match, result
-                        )
-
-                        message = (
-                            f"The {filter_name} {_filter['type']} was triggered "
-                            f"by **{msg.author}** "
-                            f"(`{msg.author.id}`) {channel_str} using !eval with "
-                            f"[the following message]({msg.jump_url}):\n\n"
-                            f"{message_content}"
-                        )
-
-                        log.debug(message)
-
-                        # Send pretty mod log embed to mod-alerts
-                        await self.mod_log.send_log_message(
-                            icon_url=Icons.filtering,
-                            colour=Colour(Colours.soft_red),
-                            title=f"{_filter['type'].title()} triggered!",
-                            text=message,
-                            thumbnail=msg.author.avatar_url_as(static_format="png"),
-                            channel_id=Channels.mod_alerts,
-                            ping_everyone=Filter.ping_everyone,
-                            additional_embeds=additional_embeds,
-                            additional_embeds_msg=additional_embeds_msg
-                        )
-
+                        await self._send_log(filter_name, _filter["type"], match, msg, result)
                         break  # We don't want multiple filters to trigger
 
         return filter_triggered
@@ -312,39 +283,56 @@ class Filtering(Cog):
                             self.schedule_msg_delete(data)
                             log.trace(f"Offensive message {msg.id} will be deleted on {delete_date}")
 
-                        if is_private:
-                            channel_str = "via DM"
-                        else:
-                            channel_str = f"in {msg.channel.mention}"
-
-                        message_content, additional_embeds, additional_embeds_msg = self._add_stats(
-                            filter_name, match, msg.content
-                        )
-
-                        message = (
-                            f"The {filter_name} {_filter['type']} was triggered "
-                            f"by **{msg.author}** "
-                            f"(`{msg.author.id}`) {channel_str} with [the "
-                            f"following message]({msg.jump_url}):\n\n"
-                            f"{message_content}"
-                        )
-
-                        log.debug(message)
-
-                        # Send pretty mod log embed to mod-alerts
-                        await self.mod_log.send_log_message(
-                            icon_url=Icons.filtering,
-                            colour=Colour(Colours.soft_red),
-                            title=f"{_filter['type'].title()} triggered!",
-                            text=message,
-                            thumbnail=msg.author.avatar_url_as(static_format="png"),
-                            channel_id=Channels.mod_alerts,
-                            ping_everyone=Filter.ping_everyone,
-                            additional_embeds=additional_embeds,
-                            additional_embeds_msg=additional_embeds_msg
-                        )
-
+                        await self._send_log(filter_name, _filter["type"], match, msg)
                         break  # We don't want multiple filters to trigger
+
+    async def _send_log(
+        self,
+        filter_name: str,
+        filter_type: str,
+        match: Union[re.Match, dict, bool, List[discord.Embed]],
+        msg: discord.Message,
+        eval_content: Optional[str] = None
+    ) -> None:
+        """Send a mod log for a triggered filter."""
+        if msg.channel.type is discord.ChannelType.private:
+            channel_str = "via DM"
+        else:
+            channel_str = f"in {msg.channel.mention}"
+
+        if eval_content is None:
+            # It's not an eval, so use the message's contents to get stats.
+            eval_content = msg.content
+        else:
+            # This variable name is a bit misleading but whatever.
+            channel_str += " using !eval"
+
+        message_content, additional_embeds, additional_embeds_msg = self._add_stats(
+            filter_name, match, eval_content
+        )
+
+        message = (
+            f"The {filter_name} {filter_type} was triggered "
+            f"by **{msg.author}** "
+            f"(`{msg.author.id}`) {channel_str} with [the "
+            f"following message]({msg.jump_url}):\n\n"
+            f"{message_content}"
+        )
+
+        log.debug(message)
+
+        # Send pretty mod log embed to mod-alerts
+        await self.mod_log.send_log_message(
+            icon_url=Icons.filtering,
+            colour=Colour(Colours.soft_red),
+            title=f"{filter_type.title()} triggered!",
+            text=message,
+            thumbnail=msg.author.avatar_url_as(static_format="png"),
+            channel_id=Channels.mod_alerts,
+            ping_everyone=Filter.ping_everyone,
+            additional_embeds=additional_embeds,
+            additional_embeds_msg=additional_embeds_msg
+        )
 
     def _add_stats(self, name: str, match: Union[re.Match, dict, bool, List[discord.Embed]], content: str) -> Tuple[
         str, Optional[List[discord.Embed]], Optional[str]
