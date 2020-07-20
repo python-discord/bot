@@ -11,7 +11,7 @@ from bot import constants
 from bot.bot import Bot
 from bot.converters import Expiry, InfractionSearchQuery, allowed_strings, proxy_user
 from bot.pagination import LinePaginator
-from bot.utils import time
+from bot.utils import messages, time
 from bot.utils.checks import in_whitelist_check, with_role_check
 from . import utils
 from .infractions import Infractions
@@ -154,15 +154,11 @@ class ModManagement(commands.Cog):
         user = ctx.guild.get_member(user_id)
 
         if user:
-            user_text = f"{user.mention} (`{user.id}`)"
+            user_text = messages.format_user(user)
             thumbnail = user.avatar_url_as(static_format="png")
         else:
-            user_text = f"`{user_id}`"
+            user_text = f"<@{user_id}>"
             thumbnail = None
-
-        # The infraction's actor
-        actor_id = new_infraction['actor']
-        actor = ctx.guild.get_member(actor_id) or f"`{actor_id}`"
 
         await self.mod_log.send_log_message(
             icon_url=constants.Icons.pencil,
@@ -171,8 +167,8 @@ class ModManagement(commands.Cog):
             thumbnail=thumbnail,
             text=textwrap.dedent(f"""
                 Member: {user_text}
-                Actor: {actor}
-                Edited by: {ctx.message.author}{log_text}
+                Actor: <@{new_infraction['actor']}>
+                Edited by: {ctx.message.author.mention}{log_text}
             """)
         )
 

@@ -13,8 +13,7 @@ from bot import constants
 from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Colours, STAFF_CHANNELS
-from bot.utils import time
-from bot.utils.scheduling import Scheduler
+from bot.utils import messages, scheduling, time
 from . import utils
 from .modlog import ModLog
 from .utils import UserSnowflake
@@ -27,7 +26,7 @@ class InfractionScheduler:
 
     def __init__(self, bot: Bot, supported_infractions: t.Container[str]):
         self.bot = bot
-        self.scheduler = Scheduler(self.__class__.__name__)
+        self.scheduler = scheduling.Scheduler(self.__class__.__name__)
 
         self.bot.loop.create_task(self.reschedule_infractions(supported_infractions))
 
@@ -193,8 +192,8 @@ class InfractionScheduler:
             title=f"Infraction {log_title}: {infr_type}",
             thumbnail=user.avatar_url_as(static_format="png"),
             text=textwrap.dedent(f"""
-                Member: {user.mention} (`{user.id}`)
-                Actor: {ctx.message.author}{dm_log_text}{expiry_log_text}
+                Member: {messages.format_user(user)}
+                Actor: {ctx.message.author.mention}{dm_log_text}{expiry_log_text}
                 Reason: {reason}
             """),
             content=log_content,
@@ -237,8 +236,8 @@ class InfractionScheduler:
         # Deactivate the infraction and cancel its scheduled expiration task.
         log_text = await self.deactivate_infraction(response[0], send_log=False)
 
-        log_text["Member"] = f"{user.mention}(`{user.id}`)"
-        log_text["Actor"] = str(ctx.message.author)
+        log_text["Member"] = messages.format_user(user)
+        log_text["Actor"] = ctx.message.author.mention
         log_content = None
         id_ = response[0]['id']
         footer = f"ID: {id_}"
@@ -316,7 +315,7 @@ class InfractionScheduler:
         log_content = None
         log_text = {
             "Member": f"<@{user_id}>",
-            "Actor": str(self.bot.get_user(actor) or actor),
+            "Actor": f"<@{actor}>",
             "Reason": infraction["reason"],
             "Created": created,
         }
