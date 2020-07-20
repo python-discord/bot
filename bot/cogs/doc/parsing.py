@@ -73,51 +73,25 @@ def get_module_description(start_element: PageElement) -> Optional[str]:
     return description
 
 
-def parse_symbol(heading: PageElement, html: str) -> Tuple[List[str], str]:
+def get_signatures(start_signature: PageElement) -> List[str]:
     """
-    Parse the signatures and description of a symbol.
+    Collect up to 3 signatures from dt tags around the `start_signature` dt tag.
 
-    Collects up to 3 signatures from dt tags and a description from their sibling dd tag.
+    First the signatures under the `start_signature` are included;
+    if less than 2 are found, tags above the start signature are added to the result if any are present.
     """
     signatures = []
-    description_element = heading.find_next_sibling("dd")
-    description_pos = html.find(str(description_element))
-    description = find_all_children_until_tag(description_element, tag_filter=("dt", "dl"))
-
     for element in (
-            *reversed(heading.find_previous_siblings("dt", limit=2)),
-            heading,
-            *heading.find_next_siblings("dt", limit=2),
+            *reversed(find_previous_siblings_until_tag(start_signature, ("dd",), limit=2)),
+            start_signature,
+            *find_next_siblings_until_tag(start_signature, ("dd",), limit=2),
     )[-3:]:
-        signature = UNWANTED_SIGNATURE_SYMBOLS_RE.sub("", element.text)
+        signature = UNWANTED_SIGNATURE_SYMBOLS_RE.sub("", element)
 
-        if signature and html.find(str(element)) < description_pos:
+        if signature:
             signatures.append(signature)
 
-    return signatures, description
-
-
-def find_all_children_until_tag(
-        start_element: PageElement,
-        tag_filter: Union[Tuple[str, ...], Callable[[Tag], bool]]
-) -> Optional[str]:
-    """
-    Get all direct children until a child matching `tag_filter` is found.
-
-    `tag_filter` can be either a tuple of string names to check against,
-    or a filtering callable that's applied to the tags.
-    """
-    text = ""
-
-    for element in start_element.find_next().find_next_siblings():
-        if isinstance(tag_filter, tuple):
-            if element.name in tag_filter:
-                break
-        elif tag_filter(element):
-            break
-        text += str(element)
-
-    return text
+    return signatures
 
 
 def truncate_markdown(markdown: str, max_length: int) -> str:
