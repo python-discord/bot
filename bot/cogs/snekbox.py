@@ -202,7 +202,7 @@ class Snekbox(Cog):
                 output, paste_link = await self.format_output(results["stdout"])
 
             icon = self.get_status_emoji(results)
-            msg = f"{ctx.author.mention} {icon} {msg}.\n\n```py\n{output}\n```"
+            msg = f"{ctx.author.mention} {icon} {msg}.\n\n```\n{output}\n```"
             if paste_link:
                 msg = f"{msg}\nFull output: {paste_link}"
 
