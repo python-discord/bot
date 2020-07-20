@@ -12,6 +12,7 @@ from bot import constants
 from bot.bot import Bot
 from bot.converters import Expiry
 from bot.utils.checks import with_role_check
+from bot.utils.messages import format_user
 from bot.utils.time import format_infraction
 from . import utils
 from .scheduler import InfractionScheduler
@@ -181,8 +182,8 @@ class Superstarify(InfractionScheduler, Cog):
             title="Member achieved superstardom",
             thumbnail=member.avatar_url_as(static_format="png"),
             text=textwrap.dedent(f"""
-                Member: {member.mention} (`{member.id}`)
-                Actor: {ctx.message.author}
+                Member: {member.mention}
+                Actor: {ctx.message.author.mention}
                 Expires: {expiry_str}
                 Old nickname: `{old_nick}`
                 New nickname: `{forced_nick}`
@@ -221,7 +222,7 @@ class Superstarify(InfractionScheduler, Cog):
         )
 
         return {
-            "Member": f"{user.mention}(`{user.id}`)",
+            "Member": format_user(user),
             "DM": "Sent" if notified else "**Failed**"
         }
 
