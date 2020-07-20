@@ -243,42 +243,6 @@ class InfractionScheduler:
         id_ = response[0]['id']
         footer = f"ID: {id_}"
 
-        # If multiple active infractions were found, mark them as inactive in the database
-        # and cancel their expiration tasks.
-        if len(response) > 1:
-            log.info(
-                f"Found more than one active {infr_type} infraction for user {user.id}; "
-                "deactivating the extra active infractions too."
-            )
-
-            footer = f"Infraction IDs: {', '.join(str(infr['id']) for infr in response)}"
-
-            log_note = f"Found multiple **active** {infr_type} infractions in the database."
-            if "Note" in log_text:
-                log_text["Note"] = f" {log_note}"
-            else:
-                log_text["Note"] = log_note
-
-            # deactivate_infraction() is not called again because:
-            #     1. Discord cannot store multiple active bans or assign multiples of the same role
-            #     2. It would send a pardon DM for each active infraction, which is redundant
-            for infraction in response[1:]:
-                id_ = infraction['id']
-                try:
-                    # Mark infraction as inactive in the database.
-                    await self.bot.api_client.patch(
-                        f"bot/infractions/{id_}",
-                        json={"active": False}
-                    )
-                except ResponseCodeError:
-                    log.exception(f"Failed to deactivate infraction #{id_} ({infr_type})")
-                    # This is simpler and cleaner than trying to concatenate all the errors.
-                    log_text["Failure"] = "See bot's logs for details."
-
-                # Cancel pending expiration task.
-                if infraction["expires_at"] is not None:
-                    self.scheduler.cancel(infraction["id"])
-
         # Accordingly display whether the user was successfully notified via DM.
         dm_emoji = ""
         if log_text.get("DM") == "Sent":
