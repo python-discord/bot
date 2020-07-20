@@ -7,6 +7,7 @@ from pathlib import Path
 
 from discord import Colour, Embed, Member
 from discord.ext.commands import Cog, Context, command
+from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
@@ -139,7 +140,6 @@ class Superstarify(InfractionScheduler, Cog):
         infraction = await utils.post_infraction(ctx, member, "superstar", reason, duration, active=True)
         id_ = infraction["id"]
 
-        old_nick = member.display_name
         forced_nick = self.get_nick(id_, member.id)
         expiry_str = format_infraction(infraction["expires_at"])
 
@@ -148,6 +148,9 @@ class Superstarify(InfractionScheduler, Cog):
         self.mod_log.ignore(constants.Event.member_update, member.id)
         await member.edit(nick=forced_nick, reason=reason)
         self.schedule_expiration(infraction)
+
+        old_nick = escape_markdown(member.display_name)
+        forced_nick = escape_markdown(forced_nick)
 
         # Send a DM to the user to notify them of their new infraction.
         await utils.notify_infraction(
