@@ -25,7 +25,7 @@ from bot.decorators import with_role
 from bot.pagination import LinePaginator
 from bot.utils.messages import wait_for_deletion
 from .cache import async_cache
-from .parser import get_soup_from_url, parse_module_symbol, parse_symbol, truncate_markdown
+from .parsing import get_soup_from_url, parse_module_symbol, parse_symbol, truncate_markdown
 
 log = logging.getLogger(__name__)
 logging.getLogger('urllib3').setLevel(logging.WARNING)
