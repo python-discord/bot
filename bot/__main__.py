@@ -3,7 +3,9 @@ import logging
 import discord
 import sentry_sdk
 from discord.ext.commands import when_mentioned_or
+from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
+from sentry_sdk.integrations.redis import RedisIntegration
 
 from bot import constants, patches
 from bot.bot import Bot
@@ -15,14 +17,20 @@ sentry_logging = LoggingIntegration(
 
 sentry_sdk.init(
     dsn=constants.Bot.sentry_dsn,
-    integrations=[sentry_logging]
+    integrations=[
+        sentry_logging,
+        AioHttpIntegration(),
+        RedisIntegration(),
+    ]
 )
 
+allowed_roles = [discord.Object(id_) for id_ in constants.MODERATION_ROLES]
 bot = Bot(
     command_prefix=when_mentioned_or(constants.Bot.prefix),
     activity=discord.Game(name="Commands: !help"),
     case_insensitive=True,
     max_messages=10_000,
+    allowed_mentions=discord.AllowedMentions(everyone=False, roles=allowed_roles)
 )
 
 # Internal/debug
@@ -46,6 +54,7 @@ bot.load_extension("bot.cogs.verification")
 # Feature cogs
 bot.load_extension("bot.cogs.alias")
 bot.load_extension("bot.cogs.defcon")
+bot.load_extension("bot.cogs.dm_relay")
 bot.load_extension("bot.cogs.duck_pond")
 bot.load_extension("bot.cogs.eval")
 bot.load_extension("bot.cogs.information")

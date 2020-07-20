@@ -131,6 +131,15 @@ class SyncCogListenerTests(SyncCogTestCase):
         super().setUp()
         self.cog.patch_user = mock.AsyncMock(spec_set=self.cog.patch_user)
 
+        self.guild_id_patcher = mock.patch("bot.cogs.sync.cog.constants.Guild.id", 5)
+        self.guild_id = self.guild_id_patcher.start()
+
+        self.guild = helpers.MockGuild(id=self.guild_id)
+        self.other_guild = helpers.MockGuild(id=0)
+
+    def tearDown(self):
+        self.guild_id_patcher.stop()
+
     async def test_sync_cog_on_guild_role_create(self):
         """A POST request should be sent with the new role's data."""
         self.assertTrue(self.cog.on_guild_role_create.__cog_listener__)
@@ -142,19 +151,31 @@ class SyncCogListenerTests(SyncCogTestCase):
             "permissions": 8,
             "position": 23,
         }
-        role = helpers.MockRole(**role_data)
+        role = helpers.MockRole(**role_data, guild=self.guild)
         await self.cog.on_guild_role_create(role)
 
         self.bot.api_client.post.assert_called_once_with("bot/roles", json=role_data)
+
+    async def test_sync_cog_on_guild_role_create_ignores_guilds(self):
+        """Events from other guilds should be ignored."""
+        role = helpers.MockRole(guild=self.other_guild)
+        await self.cog.on_guild_role_create(role)
+        self.bot.api_client.post.assert_not_awaited()
 
     async def test_sync_cog_on_guild_role_delete(self):
         """A DELETE request should be sent."""
         self.assertTrue(self.cog.on_guild_role_delete.__cog_listener__)
 
-        role = helpers.MockRole(id=99)
+        role = helpers.MockRole(id=99, guild=self.guild)
         await self.cog.on_guild_role_delete(role)
 
         self.bot.api_client.delete.assert_called_once_with("bot/roles/99")
+
+    async def test_sync_cog_on_guild_role_delete_ignores_guilds(self):
+        """Events from other guilds should be ignored."""
+        role = helpers.MockRole(guild=self.other_guild)
+        await self.cog.on_guild_role_delete(role)
+        self.bot.api_client.delete.assert_not_awaited()
 
     async def test_sync_cog_on_guild_role_update(self):
         """A PUT request should be sent if the colour, name, permissions, or position changes."""
@@ -180,8 +201,8 @@ class SyncCogListenerTests(SyncCogTestCase):
                     after_role_data = role_data.copy()
                     after_role_data[attribute] = 876
 
-                    before_role = helpers.MockRole(**role_data)
-                    after_role = helpers.MockRole(**after_role_data)
+                    before_role = helpers.MockRole(**role_data, guild=self.guild)
+                    after_role = helpers.MockRole(**after_role_data, guild=self.guild)
 
                     await self.cog.on_guild_role_update(before_role, after_role)
 
@@ -193,17 +214,29 @@ class SyncCogListenerTests(SyncCogTestCase):
                     else:
                         self.bot.api_client.put.assert_not_called()
 
+    async def test_sync_cog_on_guild_role_update_ignores_guilds(self):
+        """Events from other guilds should be ignored."""
+        role = helpers.MockRole(guild=self.other_guild)
+        await self.cog.on_guild_role_update(role, role)
+        self.bot.api_client.put.assert_not_awaited()
+
     async def test_sync_cog_on_member_remove(self):
-        """Member should patched to set in_guild as False."""
+        """Member should be patched to set in_guild as False."""
         self.assertTrue(self.cog.on_member_remove.__cog_listener__)
 
-        member = helpers.MockMember()
+        member = helpers.MockMember(guild=self.guild)
         await self.cog.on_member_remove(member)
 
         self.cog.patch_user.assert_called_once_with(
             member.id,
-            updated_information={"in_guild": False}
+            json={"in_guild": False}
         )
+
+    async def test_sync_cog_on_member_remove_ignores_guilds(self):
+        """Events from other guilds should be ignored."""
+        member = helpers.MockMember(guild=self.other_guild)
+        await self.cog.on_member_remove(member)
+        self.cog.patch_user.assert_not_awaited()
 
     async def test_sync_cog_on_member_update_roles(self):
         """Members should be patched if their roles have changed."""
@@ -211,13 +244,13 @@ class SyncCogListenerTests(SyncCogTestCase):
 
         # Roles are intentionally unsorted.
         before_roles = [helpers.MockRole(id=12), helpers.MockRole(id=30), helpers.MockRole(id=20)]
-        before_member = helpers.MockMember(roles=before_roles)
-        after_member = helpers.MockMember(roles=before_roles[1:])
+        before_member = helpers.MockMember(roles=before_roles, guild=self.guild)
+        after_member = helpers.MockMember(roles=before_roles[1:], guild=self.guild)
 
         await self.cog.on_member_update(before_member, after_member)
 
         data = {"roles": sorted(role.id for role in after_member.roles)}
-        self.cog.patch_user.assert_called_once_with(after_member.id, updated_information=data)
+        self.cog.patch_user.assert_called_once_with(after_member.id, json=data)
 
     async def test_sync_cog_on_member_update_other(self):
         """Members should not be patched if other attributes have changed."""
@@ -233,12 +266,18 @@ class SyncCogListenerTests(SyncCogTestCase):
             with self.subTest(attribute=attribute):
                 self.cog.patch_user.reset_mock()
 
-                before_member = helpers.MockMember(**{attribute: old_value})
-                after_member = helpers.MockMember(**{attribute: new_value})
+                before_member = helpers.MockMember(**{attribute: old_value}, guild=self.guild)
+                after_member = helpers.MockMember(**{attribute: new_value}, guild=self.guild)
 
                 await self.cog.on_member_update(before_member, after_member)
 
                 self.cog.patch_user.assert_not_called()
+
+    async def test_sync_cog_on_member_update_ignores_guilds(self):
+        """Events from other guilds should be ignored."""
+        member = helpers.MockMember(guild=self.other_guild)
+        await self.cog.on_member_update(member, member)
+        self.cog.patch_user.assert_not_awaited()
 
     async def test_sync_cog_on_user_update(self):
         """A user should be patched only if the name, discriminator, or avatar changes."""
@@ -247,14 +286,12 @@ class SyncCogListenerTests(SyncCogTestCase):
         before_data = {
             "name": "old name",
             "discriminator": "1234",
-            "avatar": "old avatar",
             "bot": False,
         }
 
         subtests = (
             (True, "name", "name", "new name", "new name"),
             (True, "discriminator", "discriminator", "8765", 8765),
-            (True, "avatar", "avatar_hash", "9j2e9", "9j2e9"),
             (False, "bot", "bot", True, True),
         )
 
@@ -274,12 +311,15 @@ class SyncCogListenerTests(SyncCogTestCase):
 
                     # Don't care if *all* keys are present; only the changed one is required
                     call_args = self.cog.patch_user.call_args
-                    self.assertEqual(call_args[0][0], after_user.id)
-                    self.assertIn("updated_information", call_args[1])
+                    self.assertEqual(call_args.args[0], after_user.id)
+                    self.assertIn("json", call_args.kwargs)
 
-                    updated_information = call_args[1]["updated_information"]
-                    self.assertIn(api_field, updated_information)
-                    self.assertEqual(updated_information[api_field], api_value)
+                    self.assertIn("ignore_404", call_args.kwargs)
+                    self.assertTrue(call_args.kwargs["ignore_404"])
+
+                    json = call_args.kwargs["json"]
+                    self.assertIn(api_field, json)
+                    self.assertEqual(json[api_field], api_value)
                 else:
                     self.cog.patch_user.assert_not_called()
 
@@ -292,10 +332,10 @@ class SyncCogListenerTests(SyncCogTestCase):
         member = helpers.MockMember(
             discriminator="1234",
             roles=[helpers.MockRole(id=22), helpers.MockRole(id=12)],
+            guild=self.guild,
         )
 
         data = {
-            "avatar_hash": member.avatar,
             "discriminator": int(member.discriminator),
             "id": member.id,
             "in_guild": True,
@@ -336,6 +376,13 @@ class SyncCogListenerTests(SyncCogTestCase):
             await self.on_member_join_helper(self.response_error(500))
 
         self.bot.api_client.post.assert_not_called()
+
+    async def test_sync_cog_on_member_join_ignores_guilds(self):
+        """Events from other guilds should be ignored."""
+        member = helpers.MockMember(guild=self.other_guild)
+        await self.cog.on_member_join(member)
+        self.bot.api_client.post.assert_not_awaited()
+        self.bot.api_client.put.assert_not_awaited()
 
 
 class SyncCogCommandTests(SyncCogTestCase, CommandTestCase):

@@ -10,6 +10,7 @@ from discord.ext.tasks import loop
 
 from bot import constants
 from bot.bot import Bot
+from bot.utils.webhooks import send_webhook
 
 PEPS_RSS_URL = "https://www.python.org/dev/peps/peps.rss/"
 
@@ -99,13 +100,21 @@ class PythonNews(Cog):
             ):
                 continue
 
-            msg = await self.send_webhook(
+            # Build an embed and send a webhook
+            embed = discord.Embed(
                 title=new["title"],
                 description=new["summary"],
                 timestamp=new_datetime,
                 url=new["link"],
-                webhook_profile_name=data["feed"]["title"],
-                footer=data["feed"]["title"]
+                colour=constants.Colours.soft_green
+            )
+            embed.set_footer(text=data["feed"]["title"], icon_url=AVATAR_URL)
+            msg = await send_webhook(
+                webhook=self.webhook,
+                username=data["feed"]["title"],
+                embed=embed,
+                avatar_url=AVATAR_URL,
+                wait=True,
             )
             payload["data"]["pep"].append(pep_nr)
 
@@ -160,15 +169,29 @@ class PythonNews(Cog):
 
                 content = email_information["content"]
                 link = THREAD_URL.format(id=thread["href"].split("/")[-2], list=maillist)
-                msg = await self.send_webhook(
+
+                # Build an embed and send a message to the webhook
+                embed = discord.Embed(
                     title=thread_information["subject"],
                     description=content[:500] + f"... [continue reading]({link})" if len(content) > 500 else content,
                     timestamp=new_date,
                     url=link,
-                    author=f"{email_information['sender_name']} ({email_information['sender']['address']})",
-                    author_url=MAILMAN_PROFILE_URL.format(id=email_information["sender"]["mailman_id"]),
-                    webhook_profile_name=self.webhook_names[maillist],
-                    footer=f"Posted to {self.webhook_names[maillist]}"
+                    colour=constants.Colours.soft_green
+                )
+                embed.set_author(
+                    name=f"{email_information['sender_name']} ({email_information['sender']['address']})",
+                    url=MAILMAN_PROFILE_URL.format(id=email_information["sender"]["mailman_id"]),
+                )
+                embed.set_footer(
+                    text=f"Posted to {self.webhook_names[maillist]}",
+                    icon_url=AVATAR_URL,
+                )
+                msg = await send_webhook(
+                    webhook=self.webhook,
+                    username=self.webhook_names[maillist],
+                    embed=embed,
+                    avatar_url=AVATAR_URL,
+                    wait=True,
                 )
                 payload["data"][maillist].append(thread_information["thread_id"])
 
@@ -180,38 +203,6 @@ class PythonNews(Cog):
                     await msg.publish()
 
         await self.bot.api_client.put("bot/bot-settings/news", json=payload)
-
-    async def send_webhook(self,
-                           title: str,
-                           description: str,
-                           timestamp: datetime,
-                           url: str,
-                           webhook_profile_name: str,
-                           footer: str,
-                           author: t.Optional[str] = None,
-                           author_url: t.Optional[str] = None,
-                           ) -> discord.Message:
-        """Send webhook entry and return sent message."""
-        embed = discord.Embed(
-            title=title,
-            description=description,
-            timestamp=timestamp,
-            url=url,
-            colour=constants.Colours.soft_green
-        )
-        if author and author_url:
-            embed.set_author(
-                name=author,
-                url=author_url
-            )
-        embed.set_footer(text=footer, icon_url=AVATAR_URL)
-
-        return await self.webhook.send(
-            embed=embed,
-            username=webhook_profile_name,
-            avatar_url=AVATAR_URL,
-            wait=True
-        )
 
     async def get_thread_and_first_mail(self, maillist: str, thread_identifier: str) -> t.Tuple[t.Any, t.Any]:
         """Get mail thread and first mail from mail.python.org based on `maillist` and `thread_identifier`."""

@@ -44,22 +44,14 @@ class RedisCacheTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(RuntimeError):
             await bad_cache.set("test", "me_up_deadman")
 
-    def test_namespace_collision(self):
-        """Test that we prevent colliding namespaces."""
-        bob_cache_1 = RedisCache()
-        bob_cache_1._set_namespace("BobRoss")
-        self.assertEqual(bob_cache_1._namespace, "BobRoss")
-
-        bob_cache_2 = RedisCache()
-        bob_cache_2._set_namespace("BobRoss")
-        self.assertEqual(bob_cache_2._namespace, "BobRoss_")
-
     async def test_set_get_item(self):
         """Test that users can set and get items from the RedisDict."""
         test_cases = (
             ('favorite_fruit', 'melon'),
             ('favorite_number', 86),
-            ('favorite_fraction', 86.54)
+            ('favorite_fraction', 86.54),
+            ('favorite_boolean', False),
+            ('other_boolean', True),
         )
 
         # Test that we can get and set different types.

@@ -6,7 +6,7 @@ from email.parser import HeaderParser
 from io import StringIO
 from typing import Tuple, Union
 
-from discord import Colour, Embed
+from discord import Colour, Embed, utils
 from discord.ext.commands import BadArgument, Cog, Context, command
 
 from bot.bot import Bot
@@ -145,7 +145,7 @@ class Utils(Cog):
                 u_code = f"\\U{digit:>08}"
             url = f"https://www.compart.com/en/unicode/U+{digit:>04}"
             name = f"[{unicodedata.name(char, '')}]({url})"
-            info = f"`{u_code.ljust(10)}`: {name} - {char}"
+            info = f"`{u_code.ljust(10)}`: {name} - {utils.escape_markdown(char)}"
             return info, u_code
 
         charlist, rawlist = zip(*(get_info(c) for c in characters))
