@@ -83,7 +83,7 @@ def find_all_children_until_tag(
     return text
 
 
-def truncate_markdown(markdown: str, permalink: str, max_length: int) -> str:
+def truncate_markdown(markdown: str, max_length: int) -> str:
     """
     Truncate `markdown` to be at most `max_length` characters.
 
@@ -108,7 +108,7 @@ def truncate_markdown(markdown: str, permalink: str, max_length: int) -> str:
         if markdown.count("```") % 2:
             codeblock_start = markdown.rfind('```py')
             markdown = markdown[:codeblock_start].rstrip()
-        markdown += f"... [read more]({permalink})"
+        markdown += "... read more"
     return markdown
 
 

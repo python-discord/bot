@@ -270,7 +270,7 @@ class DocCog(commands.Cog):
         self.bot.stats.incr(f"doc_fetches.{symbol_obj.package.lower()}")
         signatures = scraped_html[0]
         permalink = symbol_obj.url
-        description = truncate_markdown(markdownify(scraped_html[1], url=permalink), permalink, 1000)
+        description = truncate_markdown(markdownify(scraped_html[1], url=permalink), 1000)
         description = WHITESPACE_AFTER_NEWLINES_RE.sub('', description)
         if signatures is None:
             # If symbol is a module, don't show signature.
