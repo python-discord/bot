@@ -17,6 +17,7 @@ from bot.constants import (
     Channels, Colours,
     Filter, Icons, URLs
 )
+from bot.utils.messages import format_user
 from bot.utils.redis_cache import RedisCache
 from bot.utils.scheduling import Scheduler
 
@@ -190,8 +191,8 @@ class Filtering(Cog):
             log.info(f"Sending bad nickname alert for '{member.display_name}' ({member.id}).")
 
             log_string = (
-                f"**User:** {member.mention} (`{member.id}`)\n"
-                f"**Display Name:** {member.display_name}\n"
+                f"**User:** {format_user(member)}\n"
+                f"**Display Name:** {escape_markdown(member.display_name)}\n"
                 f"**Bad Matches:** {', '.join(match.group() for match in matches)}"
             )
 
@@ -316,10 +317,8 @@ class Filtering(Cog):
 
         eval_msg = "using !eval" if is_eval else ""
         message = (
-            f"The {filter_name} {filter_type} was triggered "
-            f"by **{msg.author}** "
-            f"(`{msg.author.id}`) {channel_str} {eval_msg}with [the "
-            f"following message]({msg.jump_url}):\n\n"
+            f"The {filter_name} {filter_type} was triggered by {format_user(msg.author)} "
+            f"{channel_str} {eval_msg}with [the following message]({msg.jump_url}):\n\n"
             f"{stats.message_content}"
         )
 
