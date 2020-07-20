@@ -59,17 +59,18 @@ find_next_siblings_until_tag = partial(find_elements_until_tag, func=BeautifulSo
 find_previous_siblings_until_tag = partial(find_elements_until_tag, func=BeautifulSoup.find_previous_siblings)
 
 
-def parse_module_symbol(heading: PageElement) -> Optional[Tuple[None, str]]:
-    """Get page content from the headerlink up to a table or a tag with its class in `SEARCH_END_TAG_ATTRS`."""
-    start_tag = heading.find("a", attrs={"class": "headerlink"})
-    if start_tag is None:
-        return None
+def get_module_description(start_element: PageElement) -> Optional[str]:
+    """
+    Get page content to a table or a tag with its class in `SEARCH_END_TAG_ATTRS`.
 
-    description = find_all_children_until_tag(start_tag, _match_end_tag)
-    if description is None:
-        return None
+    A headerlink a tag is attempted to be found to skip repeating the module name in the description,
+    if it's found it's used as the tag to search from instead of the `start_element`.
+    """
+    header = start_element.find("a", attrs={"class": "headerlink"})
+    start_tag = header.parent if header is not None else start_element
+    description = "".join(str(tag) for tag in find_next_siblings_until_tag(start_tag, _match_end_tag))
 
-    return None, description
+    return description
 
 
 def parse_symbol(heading: PageElement, html: str) -> Tuple[List[str], str]:
