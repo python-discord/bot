@@ -1,5 +1,6 @@
 import logging
 import re
+import string
 from typing import Callable, List, Optional, Tuple, Union
 
 from aiohttp import ClientSession
@@ -96,8 +97,8 @@ def truncate_markdown(markdown: str, max_length: int) -> str:
         if description_cutoff == -1:
             # Search the shortened version for cutoff points in decreasing desirability,
             # cutoff at 1000 if none are found.
-            for string in (". ", ", ", ",", " "):
-                description_cutoff = shortened.rfind(string)
+            for cutoff_string in (". ", ", ", ",", " "):
+                description_cutoff = shortened.rfind(cutoff_string)
                 if description_cutoff != -1:
                     break
             else:
@@ -108,7 +109,7 @@ def truncate_markdown(markdown: str, max_length: int) -> str:
         if markdown.count("```") % 2:
             codeblock_start = markdown.rfind('```py')
             markdown = markdown[:codeblock_start].rstrip()
-        markdown += "... read more"
+        markdown = markdown.rstrip(string.punctuation) + "..."
     return markdown
 
 
