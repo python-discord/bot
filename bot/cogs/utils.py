@@ -12,6 +12,7 @@ from discord.ext.commands import BadArgument, Cog, Context, command
 from bot.bot import Bot
 from bot.constants import Channels, MODERATION_ROLES, STAFF_ROLES
 from bot.decorators import in_whitelist, with_role
+from bot.pagination import LinePaginator
 from bot.utils import messages
 
 log = logging.getLogger(__name__)
@@ -142,15 +143,14 @@ class Utils(Cog):
             info = f"`{u_code.ljust(10)}`: {name} - {utils.escape_markdown(char)}"
             return info, u_code
 
-        charlist, rawlist = zip(*(get_info(c) for c in characters))
-
-        embed = Embed(description="\n".join(charlist))
-        embed.set_author(name="Character Info")
+        char_list, raw_list = zip(*(get_info(c) for c in characters))
+        embed = Embed().set_author(name="Character Info")
 
         if len(characters) > 1:
-            embed.add_field(name='Raw', value=f"`{''.join(rawlist)}`", inline=False)
+            # Maximum length possible is 252 so no need to truncate.
+            embed.add_field(name='Raw', value=f"`{''.join(raw_list)}`", inline=False)
 
-        await ctx.send(embed=embed)
+        await LinePaginator.paginate(char_list, ctx, embed, max_size=2000, empty=False)
 
     @command()
     async def zen(self, ctx: Context, *, search_value: Union[int, str, None] = None) -> None:
