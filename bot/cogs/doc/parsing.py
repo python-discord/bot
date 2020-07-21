@@ -31,7 +31,7 @@ def find_elements_until_tag(
         *,
         func: Callable,
         limit: int = None,
-) -> List[str]:
+) -> List[Tag]:
     """
     Get all tags until a tag matching `tag_filter` is found.
 
@@ -49,7 +49,7 @@ def find_elements_until_tag(
                 break
         elif tag_filter(element):
             break
-        elements.append(str(element))
+        elements.append(element)
 
     return elements
 
