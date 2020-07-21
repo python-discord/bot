@@ -12,6 +12,7 @@ from discord.ext.commands import BadArgument, Cog, Context, command
 from bot.bot import Bot
 from bot.constants import Channels, MODERATION_ROLES, STAFF_ROLES
 from bot.decorators import in_whitelist, with_role
+from bot.utils import messages
 
 log = logging.getLogger(__name__)
 
@@ -120,22 +121,15 @@ class Utils(Cog):
         """Shows you information on up to 25 unicode characters."""
         match = re.match(r"<(a?):(\w+):(\d+)>", characters)
         if match:
-            embed = Embed(
-                title="Non-Character Detected",
-                description=(
-                    "Only unicode characters can be processed, but a custom Discord emoji "
-                    "was found. Please remove it and try again."
-                )
+            return await messages.send_denial(
+                ctx,
+                "**Non-Character Detected**\n"
+                "Only unicode characters can be processed, but a custom Discord emoji "
+                "was found. Please remove it and try again."
             )
-            embed.colour = Colour.red()
-            await ctx.send(embed=embed)
-            return
 
         if len(characters) > 25:
-            embed = Embed(title=f"Too many characters ({len(characters)}/25)")
-            embed.colour = Colour.red()
-            await ctx.send(embed=embed)
-            return
+            return await messages.send_denial(ctx, f"Too many characters ({len(characters)}/25)")
 
         def get_info(char: str) -> Tuple[str, str]:
             digit = f"{ord(char):x}"
