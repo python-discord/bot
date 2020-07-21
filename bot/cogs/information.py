@@ -226,7 +226,7 @@ class Information(Cog):
         if user.nick:
             name = f"{user.nick} ({name})"
 
-        joined = time_since(user.joined_at, precision="days")
+        joined = time_since(user.joined_at, max_units=3)
         roles = ", ".join(role.mention for role in user.roles[1:])
 
         description = [
