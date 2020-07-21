@@ -240,8 +240,7 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(return_value, log_message.format.return_value)
         log_message.format.assert_called_once_with(
-            author=self.msg.author,
-            author_id=self.msg.author.id,
+            author=f"{self.msg.author.mention} ({self.msg.author})",
             channel=self.msg.channel.mention,
             user_id=token.user_id,
             timestamp=token.timestamp,
