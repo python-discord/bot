@@ -3,7 +3,7 @@ import re
 import string
 import textwrap
 from functools import partial
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Callable, List, Optional, TYPE_CHECKING, Tuple, Union
 from urllib.parse import urljoin
 
 from aiohttp import ClientSession
@@ -12,13 +12,15 @@ from bs4.element import PageElement, Tag
 from markdownify import MarkdownConverter
 
 from .cache import async_cache
+if TYPE_CHECKING:
+    from .cog import DocItem
 
 log = logging.getLogger(__name__)
 
-UNWANTED_SIGNATURE_SYMBOLS_RE = re.compile(r"\[source]|\\\\|¶")
-WHITESPACE_AFTER_NEWLINES_RE = re.compile(r"(?<=\n\n)(\s+)")
+_UNWANTED_SIGNATURE_SYMBOLS_RE = re.compile(r"\[source]|\\\\|¶")
+_WHITESPACE_AFTER_NEWLINES_RE = re.compile(r"(?<=\n\n)(\s+)")
 
-SEARCH_END_TAG_ATTRS = (
+_SEARCH_END_TAG_ATTRS = (
     "data",
     "function",
     "class",
@@ -29,8 +31,17 @@ SEARCH_END_TAG_ATTRS = (
     "sphinxsidebar",
 )
 
+_NO_SIGNATURE_GROUPS = {
+    "attribute",
+    "envvar",
+    "setting",
+    "tempaltefilter",
+    "templatetag",
+    "term",
+}
 
-class DocMarkdownConverter(MarkdownConverter):
+
+class _DocMarkdownConverter(MarkdownConverter):
     """Subclass markdownify's MarkdownCoverter to provide custom conversion methods."""
 
     def __init__(self, *, page_url: str, **options):
@@ -75,12 +86,12 @@ class DocMarkdownConverter(MarkdownConverter):
         return super().convert_p(el, text)
 
 
-def markdownify(html: str, *, url: str = "") -> str:
+def _markdownify(html: str, *, url: str = "") -> str:
     """Create a DocMarkdownConverter object from the input html."""
-    return DocMarkdownConverter(bullets='•', page_url=url).convert(html)
+    return _DocMarkdownConverter(bullets='•', page_url=url).convert(html)
 
 
-def find_elements_until_tag(
+def _find_elements_until_tag(
         start_element: PageElement,
         tag_filter: Union[Tuple[str, ...], Callable[[Tag], bool]],
         *,
@@ -109,9 +120,9 @@ def find_elements_until_tag(
     return elements
 
 
-find_next_children_until_tag = partial(find_elements_until_tag, func=partial(BeautifulSoup.find_all, recursive=False))
-find_next_siblings_until_tag = partial(find_elements_until_tag, func=BeautifulSoup.find_next_siblings)
-find_previous_siblings_until_tag = partial(find_elements_until_tag, func=BeautifulSoup.find_previous_siblings)
+_find_next_children_until_tag = partial(_find_elements_until_tag, func=partial(BeautifulSoup.find_all, recursive=False))
+_find_next_siblings_until_tag = partial(_find_elements_until_tag, func=BeautifulSoup.find_next_siblings)
+_find_previous_siblings_until_tag = partial(_find_elements_until_tag, func=BeautifulSoup.find_previous_siblings)
 
 
 def get_module_description(start_element: PageElement) -> Optional[str]:
@@ -123,12 +134,19 @@ def get_module_description(start_element: PageElement) -> Optional[str]:
     """
     header = start_element.find("a", attrs={"class": "headerlink"})
     start_tag = header.parent if header is not None else start_element
-    description = "".join(str(tag) for tag in find_next_siblings_until_tag(start_tag, _match_end_tag))
+    description = "".join(str(tag) for tag in _find_next_siblings_until_tag(start_tag, _match_end_tag))
 
     return description
 
 
-def get_signatures(start_signature: PageElement) -> List[str]:
+def _get_symbol_description(symbol: PageElement) -> str:
+    """Get the string contents of the next dd tag, up to a dt or a dl tag."""
+    description_tag = symbol.find_next("dd")
+    description_contents = _find_next_children_until_tag(description_tag, ("dt", "dl"))
+    return "".join(str(tag) for tag in description_contents)
+
+
+def _get_signatures(start_signature: PageElement) -> List[str]:
     """
     Collect up to 3 signatures from dt tags around the `start_signature` dt tag.
 
@@ -137,11 +155,11 @@ def get_signatures(start_signature: PageElement) -> List[str]:
     """
     signatures = []
     for element in (
-            *reversed(find_previous_siblings_until_tag(start_signature, ("dd",), limit=2)),
+            *reversed(_find_previous_siblings_until_tag(start_signature, ("dd",), limit=2)),
             start_signature,
-            *find_next_siblings_until_tag(start_signature, ("dd",), limit=2),
+            *_find_next_siblings_until_tag(start_signature, ("dd",), limit=2),
     )[-3:]:
-        signature = UNWANTED_SIGNATURE_SYMBOLS_RE.sub("", element.text)
+        signature = _UNWANTED_SIGNATURE_SYMBOLS_RE.sub("", element.text)
 
         if signature:
             signatures.append(signature)
@@ -149,7 +167,7 @@ def get_signatures(start_signature: PageElement) -> List[str]:
     return signatures
 
 
-def truncate_markdown(markdown: str, max_length: int) -> str:
+def _truncate_markdown(markdown: str, max_length: int) -> str:
     """
     Truncate `markdown` to be at most `max_length` characters.
 
@@ -185,8 +203,8 @@ def _parse_into_markdown(signatures: Optional[List[str]], description: str, url:
     The signatures are wrapped in python codeblocks, separated from the description by a newline.
     The result string is truncated to be max 1000 symbols long.
     """
-    description = truncate_markdown(markdownify(description, url=url), 1000)
-    description = WHITESPACE_AFTER_NEWLINES_RE.sub('', description)
+    description = _truncate_markdown(_markdownify(description, url=url), 1000)
+    description = _WHITESPACE_AFTER_NEWLINES_RE.sub('', description)
     if signatures is not None:
         formatted_markdown = "".join(f"```py\n{textwrap.shorten(signature, 500)}```" for signature in signatures)
     else:
@@ -197,7 +215,7 @@ def _parse_into_markdown(signatures: Optional[List[str]], description: str, url:
 
 
 @async_cache(arg_offset=1)
-async def get_soup_from_url(http_session: ClientSession, url: str) -> BeautifulSoup:
+async def _get_soup_from_url(http_session: ClientSession, url: str) -> BeautifulSoup:
     """Create a BeautifulSoup object from the HTML data in `url` with the head tag removed."""
     log.trace(f"Sending a request to {url}.")
     async with http_session.get(url) as response:
@@ -208,8 +226,40 @@ async def get_soup_from_url(http_session: ClientSession, url: str) -> BeautifulS
 
 def _match_end_tag(tag: Tag) -> bool:
     """Matches `tag` if its class value is in `SEARCH_END_TAG_ATTRS` or the tag is table."""
-    for attr in SEARCH_END_TAG_ATTRS:
+    for attr in _SEARCH_END_TAG_ATTRS:
         if attr in tag.get("class", ()):
             return True
 
     return tag.name == "table"
+
+
+async def get_symbol_markdown(http_session: ClientSession, symbol_data: "DocItem") -> str:
+    """
+    Return parsed markdown of the passed symbol, truncated to 1000 characters.
+
+    A request through `http_session` is made to the url associated with `symbol_data` for the html contents;
+    the contents are then parsed depending on what group the symbol belongs to.
+    """
+    if "#" in symbol_data.url:
+        request_url, symbol_id = symbol_data.url.rsplit('#')
+    else:
+        request_url = symbol_data.url
+        symbol_id = None
+
+    soup = await _get_soup_from_url(http_session, request_url)
+    symbol_heading = soup.find(id=symbol_id)
+
+    # Handle doc symbols as modules, because they either link to the page of a module,
+    # or don't contain any useful info to be parsed.
+    signature = None
+    if symbol_data.group in {"module", "doc"}:
+        description = get_module_description(symbol_heading)
+
+    elif symbol_data.group in _NO_SIGNATURE_GROUPS:
+        description = _get_symbol_description(symbol_heading)
+
+    else:
+        signature = _get_signatures(symbol_heading)
+        description = _get_symbol_description(symbol_heading)
+
+    return _parse_into_markdown(signature, description, symbol_data.url)
