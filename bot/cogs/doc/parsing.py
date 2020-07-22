@@ -262,4 +262,4 @@ async def get_symbol_markdown(http_session: ClientSession, symbol_data: "DocItem
         signature = _get_signatures(symbol_heading)
         description = _get_symbol_description(symbol_heading)
 
-    return _parse_into_markdown(signature, description, symbol_data.url)
+    return _parse_into_markdown(signature, description.replace('¶', ''), symbol_data.url)
