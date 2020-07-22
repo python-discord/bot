@@ -41,8 +41,10 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
         """Should `ctx.send` and exit early because duplicate members provided and total there is only 1 member."""
         self.cog.create_channels = AsyncMock()
         self.cog.add_roles = AsyncMock()
+
         member = MockMember()
         await self.cog.createteam(self.cog, self.ctx, "foo", (member for _ in range(5)))
+
         self.ctx.send.assert_awaited_once()
         self.cog.create_channels.assert_not_awaited()
         self.cog.add_roles.assert_not_awaited()
@@ -51,8 +53,10 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
         """Should call `ctx.send` when everything goes right."""
         self.cog.create_channels = AsyncMock()
         self.cog.add_roles = AsyncMock()
+
         members = [MockMember() for _ in range(5)]
         await self.cog.createteam(self.cog, self.ctx, "foo", members)
+
         self.cog.create_channels.assert_awaited_once()
         self.cog.add_roles.assert_awaited_once()
         self.ctx.send.assert_awaited_once()
@@ -60,7 +64,9 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
     async def test_category_dont_exist(self):
         """Should create code jam category."""
         self.utils_mock.get.return_value = None
+
         await self.cog.get_category(self.guild)
+
         self.guild.create_category_channel.assert_awaited_once()
         category_overwrites = self.guild.create_category_channel.call_args[1]["overwrites"]
 
