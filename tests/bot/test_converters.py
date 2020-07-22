@@ -10,9 +10,9 @@ from bot.converters import (
     Duration,
     HushDurationConverter,
     ISODateTime,
+    PackageName,
     TagContentConverter,
     TagNameConverter,
-    ValidPythonIdentifier,
 )
 
 
@@ -78,24 +78,23 @@ class ConverterTests(unittest.TestCase):
                 with self.assertRaises(BadArgument, msg=exception_message):
                     asyncio.run(TagNameConverter.convert(self.context, invalid_name))
 
-    def test_valid_python_identifier_for_valid(self):
-        """ValidPythonIdentifier returns valid identifiers unchanged."""
-        test_values = ('foo', 'lemon')
+    def test_package_name_for_valid(self):
+        """PackageName returns valid package names unchanged."""
+        test_values = ('foo', 'le_mon')
 
         for name in test_values:
             with self.subTest(identifier=name):
-                conversion = asyncio.run(ValidPythonIdentifier.convert(self.context, name))
+                conversion = asyncio.run(PackageName.convert(self.context, name))
                 self.assertEqual(name, conversion)
 
-    def test_valid_python_identifier_for_invalid(self):
-        """ValidPythonIdentifier raises the proper exception for invalid identifiers."""
-        test_values = ('nested.stuff', '#####')
+    def test_package_name_for_invalid(self):
+        """PackageName raises the proper exception for invalid package names."""
+        test_values = ('text_with_a_dot.', 'UpperCaseName', "num83r")
 
         for name in test_values:
             with self.subTest(identifier=name):
-                exception_message = f'`{name}` is not a valid Python identifier'
-                with self.assertRaises(BadArgument, msg=exception_message):
-                    asyncio.run(ValidPythonIdentifier.convert(self.context, name))
+                with self.assertRaises(BadArgument):
+                    asyncio.run(PackageName.convert(self.context, name))
 
     def test_duration_converter_for_valid(self):
         """Duration returns the correct `datetime` for valid duration strings."""
