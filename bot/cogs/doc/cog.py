@@ -3,17 +3,13 @@ import functools
 import logging
 import re
 import sys
-import textwrap
 from collections import OrderedDict
 from contextlib import suppress
 from types import SimpleNamespace
-from typing import Dict, NamedTuple, Optional, Tuple
-from urllib.parse import urljoin
+from typing import Dict, NamedTuple, Optional
 
 import discord
-from bs4.element import PageElement
 from discord.ext import commands
-from markdownify import MarkdownConverter
 from requests import ConnectTimeout, ConnectionError, HTTPError
 from sphinx.ext import intersphinx
 from urllib3.exceptions import ProtocolError
@@ -25,7 +21,7 @@ from bot.decorators import with_role
 from bot.pagination import LinePaginator
 from bot.utils.messages import wait_for_deletion
 from .cache import async_cache
-from .parsing import get_soup_from_url, parse_module_symbol, parse_symbol, truncate_markdown
+from .parsing import get_symbol_markdown
 
 log = logging.getLogger(__name__)
 logging.getLogger('urllib3').setLevel(logging.WARNING)
@@ -187,40 +183,6 @@ class DocCog(commands.Cog):
         ]
         await asyncio.gather(*coros)
 
-    async def get_symbol_html(self, symbol: str) -> Optional[Tuple[list, str]]:
-        """
-        Given a Python symbol, return its signature and description.
-
-        The first tuple element is the signature of the given symbol as a markup-free string, and
-        the second tuple element is the description of the given symbol with HTML markup included.
-
-        If the given symbol is a module, returns a tuple `(None, str)`
-        else if the symbol could not be found, returns `None`.
-        """
-        symbol_info = self.doc_symbols.get(symbol)
-        if symbol_info is None:
-            return None
-        request_url, symbol_id = symbol_info.url.rsplit('#')
-
-        soup = await get_soup_from_url(self.bot.http_session, request_url)
-        symbol_heading = soup.find(id=symbol_id)
-        search_html = str(soup)
-
-        if symbol_heading is None:
-            return None
-
-        if symbol_info.group == "module":
-            parsed_module = parse_module_symbol(symbol_heading)
-            if parsed_module is None:
-                return [], ""
-            else:
-                signatures, description = parsed_module
-
-        else:
-            signatures, description = parse_symbol(symbol_heading, search_html)
-
-        return signatures, description.replace('¶', '')
-
     @async_cache(arg_offset=1)
     async def get_symbol_embed(self, symbol: str) -> Optional[discord.Embed]:
         """
@@ -228,32 +190,15 @@ class DocCog(commands.Cog):
 
         If the symbol is known, an Embed with documentation about it is returned.
         """
-        scraped_html = await self.get_symbol_html(symbol)
-        if scraped_html is None:
+        symbol_info = self.doc_symbols.get(symbol)
+        if symbol_info is None:
             return None
-
-        symbol_obj = self.doc_symbols[symbol]
-        self.bot.stats.incr(f"doc_fetches.{symbol_obj.package.lower()}")
-        signatures = scraped_html[0]
-        permalink = symbol_obj.url
-        description = truncate_markdown(markdownify(scraped_html[1], url=permalink), 1000)
-        description = WHITESPACE_AFTER_NEWLINES_RE.sub('', description)
-        if signatures is None:
-            # If symbol is a module, don't show signature.
-            embed_description = description
-
-        elif not signatures:
-            # It's some "meta-page", for example:
-            # https://docs.djangoproject.com/en/dev/ref/views/#module-django.views
-            embed_description = "This appears to be a generic page not tied to a specific symbol."
-
-        else:
-            embed_description = "".join(f"```py\n{textwrap.shorten(signature, 500)}```" for signature in signatures)
-            embed_description += f"\n{description}"
+        self.bot.stats.incr(f"doc_fetches.{symbol_info.package.lower()}")
+        embed_description = await get_symbol_markdown(self.bot.http_session, symbol_info)
 
         embed = discord.Embed(
             title=discord.utils.escape_markdown(symbol),
-            url=permalink,
+            url=symbol_info.url,
             description=embed_description
         )
         # Show all symbols with the same name that were renamed in the footer.
