@@ -67,15 +67,26 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
         self.cog.add_roles.assert_awaited_once()
         self.ctx.send.assert_awaited_once()
 
-    async def test_category_dont_exist(self):
-        """Should create code jam category."""
-        await self.cog.get_category(self.guild)
+    async def test_category_doesnt_exist(self):
+        """Should create a new code jam category."""
+        subtests = (
+            [],
+            [get_mock_category(jams.MAX_CHANNELS - 1, jams.CATEGORY_NAME)],
+            [get_mock_category(48, "other")],
+        )
 
-        self.guild.create_category_channel.assert_awaited_once()
-        category_overwrites = self.guild.create_category_channel.call_args[1]["overwrites"]
+        for categories in subtests:
+            self.guild.reset_mock()
+            self.guild.categories = categories
 
-        self.assertFalse(category_overwrites[self.guild.default_role].read_messages)
-        self.assertTrue(category_overwrites[self.guild.me].read_messages)
+            with self.subTest(categories=categories):
+                await self.cog.get_category(self.guild)
+
+                self.guild.create_category_channel.assert_awaited_once()
+                category_overwrites = self.guild.create_category_channel.call_args[1]["overwrites"]
+
+                self.assertFalse(category_overwrites[self.guild.default_role].read_messages)
+                self.assertTrue(category_overwrites[self.guild.me].read_messages)
 
     async def test_category_channel_exist(self):
         """Should not try to create category channel."""
