@@ -3,10 +3,12 @@ import re
 import string
 from functools import partial
 from typing import Callable, List, Optional, Tuple, Union
+from urllib.parse import urljoin
 
 from aiohttp import ClientSession
 from bs4 import BeautifulSoup
 from bs4.element import PageElement, Tag
+from markdownify import MarkdownConverter
 
 from .cache import async_cache
 
@@ -31,6 +33,22 @@ class DocMarkdownConverter(MarkdownConverter):
     def __init__(self, *, page_url: str, **options):
         super().__init__(**options)
         self.page_url = page_url
+
+    def convert_li(self, el: PageElement, text: str) -> str:
+        """Fix markdownify's erroneous indexing in ol tags."""
+        parent = el.parent
+        if parent is not None and parent.name == 'ol':
+            li_tags = parent.find_all("li")
+            bullet = '%s.' % (li_tags.index(el)+1)
+        else:
+            depth = -1
+            while el:
+                if el.name == 'ul':
+                    depth += 1
+                el = el.parent
+            bullets = self.options['bullets']
+            bullet = bullets[depth % len(bullets)]
+        return '%s %s\n' % (bullet, text or '')
 
     def convert_code(self, el: PageElement, text: str) -> str:
         """Undo `markdownify`s underscore escaping."""
