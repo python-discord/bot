@@ -5,7 +5,7 @@ import itertools
 import logging
 import unittest.mock
 from asyncio import AbstractEventLoop
-from typing import Iterable, Optional
+from typing import Callable, Iterable, Optional
 
 import discord
 from aiohttp import ClientSession
@@ -24,6 +24,24 @@ for logger in logging.Logger.manager.loggerDict.values():
         continue
 
     logger.setLevel(logging.CRITICAL)
+
+
+def autospec(target, *attributes: str, **kwargs) -> Callable:
+    """Patch multiple `attributes` of a `target` with autospecced mocks and `spec_set` as True."""
+    # Caller's kwargs should take priority and overwrite the defaults.
+    kwargs = {'spec_set': True, 'autospec': True, **kwargs}
+
+    # Import the target if it's a string.
+    # This is to support both object and string targets like patch.multiple.
+    if type(target) is str:
+        target = unittest.mock._importer(target)
+
+    def decorator(func):
+        for attribute in attributes:
+            patcher = unittest.mock.patch.object(target, attribute, **kwargs)
+            func = patcher(func)
+        return func
+    return decorator
 
 
 class HashableMixin(discord.mixins.EqualityComparable):

@@ -181,8 +181,8 @@ class TagContentConverter(Converter):
         return tag_content
 
 
-class Duration(Converter):
-    """Convert duration strings into UTC datetime.datetime objects."""
+class DurationDelta(Converter):
+    """Convert duration strings into dateutil.relativedelta.relativedelta objects."""
 
     duration_parser = re.compile(
         r"((?P<years>\d+?) ?(years|year|Y|y) ?)?"
@@ -194,9 +194,9 @@ class Duration(Converter):
         r"((?P<seconds>\d+?) ?(seconds|second|S|s))?"
     )
 
-    async def convert(self, ctx: Context, duration: str) -> datetime:
+    async def convert(self, ctx: Context, duration: str) -> relativedelta:
         """
-        Converts a `duration` string to a datetime object that's `duration` in the future.
+        Converts a `duration` string to a relativedelta object.
 
         The converter supports the following symbols for each unit of time:
         - years: `Y`, `y`, `year`, `years`
@@ -215,6 +215,20 @@ class Duration(Converter):
 
         duration_dict = {unit: int(amount) for unit, amount in match.groupdict(default=0).items()}
         delta = relativedelta(**duration_dict)
+
+        return delta
+
+
+class Duration(DurationDelta):
+    """Convert duration strings into UTC datetime.datetime objects."""
+
+    async def convert(self, ctx: Context, duration: str) -> datetime:
+        """
+        Converts a `duration` string to a datetime object that's `duration` in the future.
+
+        The converter supports the same symbols for each unit of time as its parent class.
+        """
+        delta = await super().convert(ctx, duration)
         now = datetime.utcnow()
 
         try:
@@ -314,6 +328,25 @@ def proxy_user(user_id: str) -> discord.Object:
     user.bot = False
 
     return user
+
+
+class UserMentionOrID(UserConverter):
+    """
+    Converts to a `discord.User`, but only if a mention or userID is provided.
+
+    Unlike the default `UserConverter`, it does allow conversion from name, or name#descrim.
+
+    This is useful in cases where that lookup strategy would lead to ambiguity.
+    """
+
+    async def convert(self, ctx: Context, argument: str) -> discord.User:
+        """Convert the `arg` to a `discord.User`."""
+        match = self._get_id_match(argument) or re.match(r'<@!?([0-9]+)>$', argument)
+
+        if match is not None:
+            return await super().convert(ctx, argument)
+        else:
+            raise BadArgument(f"`{argument}` is not a User mention or a User ID.")
 
 
 class FetchedUser(UserConverter):

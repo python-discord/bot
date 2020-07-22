@@ -24,11 +24,13 @@ sentry_sdk.init(
     ]
 )
 
+allowed_roles = [discord.Object(id_) for id_ in constants.MODERATION_ROLES]
 bot = Bot(
     command_prefix=when_mentioned_or(constants.Bot.prefix),
     activity=discord.Game(name="Commands: !help"),
     case_insensitive=True,
     max_messages=10_000,
+    allowed_mentions=discord.AllowedMentions(everyone=False, roles=allowed_roles)
 )
 
 # Internal/debug
@@ -52,6 +54,7 @@ bot.load_extension("bot.cogs.verification")
 # Feature cogs
 bot.load_extension("bot.cogs.alias")
 bot.load_extension("bot.cogs.defcon")
+bot.load_extension("bot.cogs.dm_relay")
 bot.load_extension("bot.cogs.duck_pond")
 bot.load_extension("bot.cogs.eval")
 bot.load_extension("bot.cogs.information")
@@ -63,6 +66,7 @@ bot.load_extension("bot.cogs.reddit")
 bot.load_extension("bot.cogs.reminders")
 bot.load_extension("bot.cogs.site")
 bot.load_extension("bot.cogs.snekbox")
+bot.load_extension("bot.cogs.source")
 bot.load_extension("bot.cogs.stats")
 bot.load_extension("bot.cogs.sync")
 bot.load_extension("bot.cogs.tags")

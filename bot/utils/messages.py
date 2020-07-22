@@ -1,14 +1,17 @@
 import asyncio
 import contextlib
 import logging
+import random
+import re
 from io import BytesIO
 from typing import List, Optional, Sequence, Union
 
-from discord import Client, Embed, File, Member, Message, Reaction, TextChannel, Webhook
+from discord import Client, Colour, Embed, File, Member, Message, Reaction, TextChannel, Webhook
 from discord.abc import Snowflake
 from discord.errors import HTTPException
+from discord.ext.commands import Context
 
-from bot.constants import Emojis
+from bot.constants import Emojis, NEGATIVE_REPLIES
 
 log = logging.getLogger(__name__)
 
@@ -86,7 +89,7 @@ async def send_attachments(
                     else:
                         await destination.send(
                             file=attachment_file,
-                            username=message.author.display_name,
+                            username=sub_clyde(message.author.display_name),
                             avatar_url=message.author.avatar_url
                         )
             elif link_large:
@@ -97,7 +100,7 @@ async def send_attachments(
             if link_large and e.status == 413:
                 large.append(attachment)
             else:
-                log.warning(f"{failure_msg} with status {e.status}.")
+                log.warning(f"{failure_msg} with status {e.status}.", exc_info=e)
 
     if link_large and large:
         desc = "\n".join(f"[{attachment.filename}]({attachment.url})" for attachment in large)
@@ -109,8 +112,35 @@ async def send_attachments(
         else:
             await destination.send(
                 embed=embed,
-                username=message.author.display_name,
+                username=sub_clyde(message.author.display_name),
                 avatar_url=message.author.avatar_url
             )
 
     return urls
+
+
+def sub_clyde(username: Optional[str]) -> Optional[str]:
+    """
+    Replace "e"/"E" in any "clyde" in `username` with a Cyrillic "е"/"E" and return the new string.
+
+    Discord disallows "clyde" anywhere in the username for webhooks. It will return a 400.
+    Return None only if `username` is None.
+    """
+    def replace_e(match: re.Match) -> str:
+        char = "е" if match[2] == "e" else "Е"
+        return match[1] + char
+
+    if username:
+        return re.sub(r"(clyd)(e)", replace_e, username, flags=re.I)
+    else:
+        return username  # Empty string or None
+
+
+async def send_denial(ctx: Context, reason: str) -> None:
+    """Send an embed denying the user with the given reason."""
+    embed = Embed()
+    embed.colour = Colour.red()
+    embed.title = random.choice(NEGATIVE_REPLIES)
+    embed.description = reason
+
+    await ctx.send(embed=embed)

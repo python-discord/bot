@@ -33,7 +33,7 @@ class Site(Cog):
         embed.colour = Colour.blurple()
         embed.description = (
             f"[Our official website]({url}) is an open-source community project "
-            "created with Python and Flask. It contains information about the server "
+            "created with Python and Django. It contains information about the server "
             "itself, lets you sign up for upcoming events, has its own wiki, contains "
             "a list of valuable learning resources, and much more."
         )
