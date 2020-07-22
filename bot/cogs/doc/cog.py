@@ -55,9 +55,15 @@ NOT_FOUND_DELETE_DELAY = RedirectOutput.delete_delay
 class DocItem(NamedTuple):
     """Holds inventory symbol information."""
 
+    base_url: str
+    relative_url: str
     package: str
-    url: str
     group: str
+
+    @property
+    def url(self) -> str:
+        """Return the absolute url to the symbol."""
+        return self.base_url + self.relative_url
 
 
 class InventoryURL(commands.Converter):
@@ -131,7 +137,6 @@ class DocCog(commands.Cog):
             for symbol, (_package_name, _version, relative_doc_url, _) in value.items():
                 if "/" in symbol:
                     continue  # skip unreachable symbols with slashes
-                absolute_doc_url = base_url + relative_doc_url
                 # Intern the group names since they're reused in all the DocItems
                 # to remove unnecessary memory consumption from them being unique objects
                 group_name = sys.intern(group.split(":")[1])
@@ -158,7 +163,7 @@ class DocCog(commands.Cog):
                         symbol = f"{api_package_name}.{symbol}"
                         self.renamed_symbols.add(symbol)
 
-                self.doc_symbols[symbol] = DocItem(api_package_name, absolute_doc_url, group_name)
+                self.doc_symbols[symbol] = DocItem(base_url, relative_doc_url, api_package_name, group_name)
 
         log.trace(f"Fetched inventory for {api_package_name}.")
 
