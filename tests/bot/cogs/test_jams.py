@@ -16,11 +16,12 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
         self.guild = MockGuild([self.admin_role])
         self.ctx = MockContext(bot=self.bot, author=self.command_user, guild=self.guild)
         self.cog = CodeJams(self.bot)
-        self.utils_mock = patch("bot.cogs.jams.utils").start()
-        self.default_args = [self.cog, self.ctx, "foo"]
 
-    def tearDown(self):
-        self.utils_mock.stop()
+        utils_patcher = patch("bot.cogs.jams.utils")
+        self.utils_mock = utils_patcher.start()
+        self.addCleanup(utils_patcher.stop)
+
+        self.default_args = [self.cog, self.ctx, "foo"]
 
     async def test_too_small_amount_of_team_members_passed(self):
         """Should `ctx.send` and exit early when too small amount of members."""
