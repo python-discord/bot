@@ -72,7 +72,7 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
         subtests = (
             [],
             [get_mock_category(jams.MAX_CHANNELS - 1, jams.CATEGORY_NAME)],
-            [get_mock_category(48, "other")],
+            [get_mock_category(jams.MAX_CHANNELS - 2, "other")],
         )
 
         for categories in subtests:
@@ -91,11 +91,11 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_category_channel_exist(self):
         """Should not try to create category channel."""
-        expected_category = get_mock_category(48, jams.CATEGORY_NAME)
+        expected_category = get_mock_category(jams.MAX_CHANNELS - 2, jams.CATEGORY_NAME)
         self.guild.categories = [
-            get_mock_category(48, "other"),
+            get_mock_category(jams.MAX_CHANNELS - 2, "other"),
             expected_category,
-            get_mock_category(6, jams.CATEGORY_NAME),
+            get_mock_category(0, jams.CATEGORY_NAME),
         ]
 
         actual_category = await self.cog.get_category(self.guild)
