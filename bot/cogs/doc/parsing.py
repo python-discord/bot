@@ -1,6 +1,7 @@
 import logging
 import re
 import string
+import textwrap
 from functools import partial
 from typing import Callable, List, Optional, Tuple, Union
 from urllib.parse import urljoin
@@ -15,6 +16,8 @@ from .cache import async_cache
 log = logging.getLogger(__name__)
 
 UNWANTED_SIGNATURE_SYMBOLS_RE = re.compile(r"\[source]|\\\\|¶")
+WHITESPACE_AFTER_NEWLINES_RE = re.compile(r"(?<=\n\n)(\s+)")
+
 SEARCH_END_TAG_ATTRS = (
     "data",
     "function",
@@ -173,6 +176,24 @@ def truncate_markdown(markdown: str, max_length: int) -> str:
             markdown = markdown[:codeblock_start].rstrip()
         markdown = markdown.rstrip(string.punctuation) + "..."
     return markdown
+
+
+def _parse_into_markdown(signatures: Optional[List[str]], description: str, url: str) -> str:
+    """
+    Create a markdown string with the signatures at the top, and the converted html description below them.
+
+    The signatures are wrapped in python codeblocks, separated from the description by a newline.
+    The result string is truncated to be max 1000 symbols long.
+    """
+    description = truncate_markdown(markdownify(description, url=url), 1000)
+    description = WHITESPACE_AFTER_NEWLINES_RE.sub('', description)
+    if signatures is not None:
+        formatted_markdown = "".join(f"```py\n{textwrap.shorten(signature, 500)}```" for signature in signatures)
+    else:
+        formatted_markdown = ""
+    formatted_markdown += f"\n{description}"
+
+    return formatted_markdown
 
 
 @async_cache(arg_offset=1)
