@@ -183,7 +183,6 @@ class DocCog(commands.Cog):
         ]
         await asyncio.gather(*coros)
 
-    @async_cache(arg_offset=1)
     async def get_symbol_embed(self, symbol: str) -> Optional[discord.Embed]:
         """
         Attempt to scrape and fetch the data for the given `symbol`, and build an embed from its contents.
