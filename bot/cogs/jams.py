@@ -1,6 +1,7 @@
 import logging
+import typing as t
 
-from discord import Member, PermissionOverwrite, utils
+from discord import CategoryChannel, Guild, Member, PermissionOverwrite, Role, utils
 from discord.ext import commands
 from more_itertools import unique_everseen
 
@@ -40,22 +41,39 @@ class CodeJams(commands.Cog):
             )
             return
 
-        code_jam_category = utils.get(ctx.guild.categories, name="Code Jam")
+        team_channel = await self.create_channels(ctx.guild, team_name, members)
+        await self.add_roles(ctx.guild, members)
+
+        await ctx.send(
+            f":ok_hand: Team created: {team_channel}\n"
+            f"**Team Leader:** {members[0].mention}\n"
+            f"**Team Members:** {' '.join(member.mention for member in members[1:])}"
+        )
+
+    @staticmethod
+    async def get_category(guild: Guild) -> CategoryChannel:
+        """Create a Code Jam category if it doesn't exist and return it."""
+        code_jam_category = utils.get(guild.categories, name="Code Jam")
 
         if code_jam_category is None:
             log.info("Code Jam category not found, creating it.")
 
             category_overwrites = {
-                ctx.guild.default_role: PermissionOverwrite(read_messages=False),
-                ctx.guild.me: PermissionOverwrite(read_messages=True)
+                guild.default_role: PermissionOverwrite(read_messages=False),
+                guild.me: PermissionOverwrite(read_messages=True)
             }
 
-            code_jam_category = await ctx.guild.create_category_channel(
+            code_jam_category = await guild.create_category_channel(
                 "Code Jam",
                 overwrites=category_overwrites,
                 reason="It's code jam time!"
             )
 
+        return code_jam_category
+
+    @staticmethod
+    def get_overwrites(members: t.List[Member], guild: Guild) -> t.Dict[t.Union[Member, Role], PermissionOverwrite]:
+        """Get Code Jam team channels permission overwrites."""
         # First member is always the team leader
         team_channel_overwrites = {
             members[0]: PermissionOverwrite(
@@ -64,8 +82,8 @@ class CodeJams(commands.Cog):
                 manage_webhooks=True,
                 connect=True
             ),
-            ctx.guild.default_role: PermissionOverwrite(read_messages=False, connect=False),
-            ctx.guild.get_role(Roles.verified): PermissionOverwrite(
+            guild.default_role: PermissionOverwrite(read_messages=False, connect=False),
+            guild.get_role(Roles.verified): PermissionOverwrite(
                 read_messages=False,
                 connect=False
             )
@@ -78,8 +96,16 @@ class CodeJams(commands.Cog):
                 connect=True
             )
 
+        return team_channel_overwrites
+
+    async def create_channels(self, guild: Guild, team_name: str, members: t.List[Member]) -> str:
+        """Create team text and voice channels. Return the mention for the text channel."""
+        # Get permission overwrites and category
+        team_channel_overwrites = self.get_overwrites(members, guild)
+        code_jam_category = await self.get_category(guild)
+
         # Create a text channel for the team
-        team_channel = await ctx.guild.create_text_channel(
+        team_channel = await guild.create_text_channel(
             team_name,
             overwrites=team_channel_overwrites,
             category=code_jam_category
@@ -88,25 +114,24 @@ class CodeJams(commands.Cog):
         # Create a voice channel for the team
         team_voice_name = " ".join(team_name.split("-")).title()
 
-        await ctx.guild.create_voice_channel(
+        await guild.create_voice_channel(
             team_voice_name,
             overwrites=team_channel_overwrites,
             category=code_jam_category
         )
 
+        return team_channel.mention
+
+    @staticmethod
+    async def add_roles(guild: Guild, members: t.List[Member]) -> None:
+        """Assign team leader and jammer roles."""
         # Assign team leader role
-        await members[0].add_roles(ctx.guild.get_role(Roles.team_leaders))
+        await members[0].add_roles(guild.get_role(Roles.team_leaders))
 
         # Assign rest of roles
-        jammer_role = ctx.guild.get_role(Roles.jammers)
+        jammer_role = guild.get_role(Roles.jammers)
         for member in members:
             await member.add_roles(jammer_role)
-
-        await ctx.send(
-            f":ok_hand: Team created: {team_channel.mention}\n"
-            f"**Team Leader:** {members[0].mention}\n"
-            f"**Team Members:** {' '.join(member.mention for member in members[1:])}"
-        )
 
 
 def setup(bot: Bot) -> None:
