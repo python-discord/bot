@@ -21,8 +21,6 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
         self.utils_mock = utils_patcher.start()
         self.addCleanup(utils_patcher.stop)
 
-        self.default_args = [self.cog, self.ctx, "foo"]
-
     async def test_too_small_amount_of_team_members_passed(self):
         """Should `ctx.send` and exit early when too small amount of members."""
         for case in (1, 2):
@@ -32,7 +30,8 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
 
                 self.ctx.reset_mock()
                 self.utils_mock.reset_mock()
-                await self.cog.createteam(*self.default_args, (MockMember() for _ in range(case)))
+                members = (MockMember() for _ in range(case))
+                await self.cog.createteam(self.cog, self.ctx, "foo", members)
 
                 self.ctx.send.assert_awaited_once()
                 self.cog.create_channels.assert_not_awaited()
@@ -43,7 +42,7 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
         self.cog.create_channels = AsyncMock()
         self.cog.add_roles = AsyncMock()
         member = MockMember()
-        await self.cog.createteam(*self.default_args, (member for _ in range(5)))
+        await self.cog.createteam(self.cog, self.ctx, "foo", (member for _ in range(5)))
         self.ctx.send.assert_awaited_once()
         self.cog.create_channels.assert_not_awaited()
         self.cog.add_roles.assert_not_awaited()
