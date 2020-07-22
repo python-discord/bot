@@ -64,40 +64,6 @@ class DocItem(NamedTuple):
     group: str
 
 
-class DocMarkdownConverter(MarkdownConverter):
-    """Subclass markdownify's MarkdownCoverter to provide custom conversion methods."""
-
-    def __init__(self, *, page_url: str, **options):
-        super().__init__(**options)
-        self.page_url = page_url
-
-    def convert_code(self, el: PageElement, text: str) -> str:
-        """Undo `markdownify`s underscore escaping."""
-        return f"`{text}`".replace('\\', '')
-
-    def convert_pre(self, el: PageElement, text: str) -> str:
-        """Wrap any codeblocks in `py` for syntax highlighting."""
-        code = ''.join(el.strings)
-        return f"```py\n{code}```"
-
-    def convert_a(self, el: PageElement, text: str) -> str:
-        """Resolve relative URLs to `self.page_url`."""
-        el["href"] = urljoin(self.page_url, el["href"])
-        return super().convert_a(el, text)
-
-    def convert_p(self, el: PageElement, text: str) -> str:
-        """Include only one newline instead of two when the parent is a li tag."""
-        parent = el.parent
-        if parent is not None and parent.name == "li":
-            return f"{text}\n"
-        return super().convert_p(el, text)
-
-
-def markdownify(html: str, *, url: str = "") -> str:
-    """Create a DocMarkdownConverter object from the input html."""
-    return DocMarkdownConverter(bullets='•', page_url=url).convert(html)
-
-
 class InventoryURL(commands.Converter):
     """
     Represents an Intersphinx inventory URL.
