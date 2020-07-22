@@ -48,6 +48,16 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
         self.cog.create_channels.assert_not_awaited()
         self.cog.add_roles.assert_not_awaited()
 
+    async def test_result_sending(self):
+        """Should call `ctx.send` when everything goes right."""
+        self.cog.create_channels = AsyncMock()
+        self.cog.add_roles = AsyncMock()
+        members = [MockMember() for _ in range(5)]
+        await self.cog.createteam(self.cog, self.ctx, "foo", members)
+        self.cog.create_channels.assert_awaited_once()
+        self.cog.add_roles.assert_awaited_once()
+        self.ctx.send.assert_awaited_once()
+
     async def test_category_dont_exist(self):
         """Should create code jam category."""
         self.utils_mock.get.return_value = None
@@ -124,16 +134,6 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
         leader.add_roles.assert_any_await(leader_role)
         for member in members:
             member.add_roles.assert_any_await(jam_role)
-
-    async def test_result_sending(self):
-        """Should call `ctx.send` when everything goes right."""
-        self.cog.create_channels = AsyncMock()
-        self.cog.add_roles = AsyncMock()
-        members = [MockMember() for _ in range(5)]
-        await self.cog.createteam(self.cog, self.ctx, "foo", members)
-        self.cog.create_channels.assert_awaited_once()
-        self.cog.add_roles.assert_awaited_once()
-        self.ctx.send.assert_awaited_once()
 
 
 class CodeJamSetup(unittest.TestCase):
