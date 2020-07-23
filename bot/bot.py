@@ -164,7 +164,7 @@ class Bot(commands.Bot):
 
     async def close(self) -> None:
         """Close the Discord connection and the aiohttp session, connector, statsd client, and resolver."""
-        # Remove extensions and cogs before calling super().close() to allow task finish before HTTP session close
+        # Done before super().close() to allow tasks finish before the HTTP session closes.
         self.remove_extensions()
 
         # Wait until all tasks that have to be completed before bot is closing is done
