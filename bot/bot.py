@@ -148,8 +148,8 @@ class Bot(commands.Bot):
         """Not implemented! Re-instantiate the bot instead of attempting to re-use a closed one."""
         raise NotImplementedError("Re-using a Bot object after closing it is not supported.")
 
-    def remove_extensions(self) -> None:
-        """Remove all extensions and Cog to close bot. Copy from discord.py's own `close` for right closing order."""
+    def _remove_extensions(self) -> None:
+        """Remove all extensions and Cog to close bot. Copyright (c) 2015-2020 Rapptz (discord.py, MIT License)."""
         for extension in tuple(self.extensions):
             try:
                 self.unload_extension(extension)
