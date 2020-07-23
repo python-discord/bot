@@ -130,7 +130,7 @@ class Utils(Cog):
             )
 
         if len(characters) > 50:
-            return await messages.send_denial(ctx, f"Too many characters ({len(characters)}/25)")
+            return await messages.send_denial(ctx, f"Too many characters ({len(characters)}/50)")
 
         def get_info(char: str) -> Tuple[str, str]:
             digit = f"{ord(char):x}"
