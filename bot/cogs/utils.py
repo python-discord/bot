@@ -119,7 +119,7 @@ class Utils(Cog):
     @command()
     @in_whitelist(channels=(Channels.bot_commands,), roles=STAFF_ROLES)
     async def charinfo(self, ctx: Context, *, characters: str) -> None:
-        """Shows you information on up to 25 unicode characters."""
+        """Shows you information on up to 50 unicode characters."""
         match = re.match(r"<(a?):(\w+):(\d+)>", characters)
         if match:
             return await messages.send_denial(
@@ -129,7 +129,7 @@ class Utils(Cog):
                 "was found. Please remove it and try again."
             )
 
-        if len(characters) > 25:
+        if len(characters) > 50:
             return await messages.send_denial(ctx, f"Too many characters ({len(characters)}/25)")
 
         def get_info(char: str) -> Tuple[str, str]:
@@ -147,10 +147,10 @@ class Utils(Cog):
         embed = Embed().set_author(name="Character Info")
 
         if len(characters) > 1:
-            # Maximum length possible is 252 so no need to truncate.
+            # Maximum length possible is 502 out of 1024, so there's no need to truncate.
             embed.add_field(name='Full Raw Text', value=f"`{''.join(raw_list)}`", inline=False)
 
-        await LinePaginator.paginate(char_list, ctx, embed, max_size=2000, empty=False)
+        await LinePaginator.paginate(char_list, ctx, embed, max_lines=10, max_size=2000, empty=False)
 
     @command()
     async def zen(self, ctx: Context, *, search_value: Union[int, str, None] = None) -> None:
