@@ -148,7 +148,7 @@ class Utils(Cog):
 
         if len(characters) > 1:
             # Maximum length possible is 252 so no need to truncate.
-            embed.add_field(name='Raw', value=f"`{''.join(raw_list)}`", inline=False)
+            embed.add_field(name='Full Raw Text', value=f"`{''.join(raw_list)}`", inline=False)
 
         await LinePaginator.paginate(char_list, ctx, embed, max_size=2000, empty=False)
 
