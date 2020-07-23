@@ -1,9 +1,20 @@
 import unittest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, create_autospec
 
-from bot.cogs.jams import CodeJams, setup
+from discord import CategoryChannel
+
+from bot.cogs import jams
 from bot.constants import Roles
 from tests.helpers import MockBot, MockContext, MockGuild, MockMember, MockRole, MockTextChannel
+
+
+def get_mock_category(channel_count: int, name: str) -> CategoryChannel:
+    """Return a mocked code jam category."""
+    category = create_autospec(CategoryChannel, spec_set=True, instance=True)
+    category.name = name
+    category.channels = [MockTextChannel() for _ in range(channel_count)]
+
+    return category
 
 
 class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
@@ -15,11 +26,7 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
         self.command_user = MockMember([self.admin_role])
         self.guild = MockGuild([self.admin_role])
         self.ctx = MockContext(bot=self.bot, author=self.command_user, guild=self.guild)
-        self.cog = CodeJams(self.bot)
-
-        utils_patcher = patch("bot.cogs.jams.utils")
-        self.utils_mock = utils_patcher.start()
-        self.addCleanup(utils_patcher.stop)
+        self.cog = jams.CodeJams(self.bot)
 
     async def test_too_small_amount_of_team_members_passed(self):
         """Should `ctx.send` and exit early when too small amount of members."""
@@ -29,7 +36,6 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
                 self.cog.add_roles = AsyncMock()
 
                 self.ctx.reset_mock()
-                self.utils_mock.reset_mock()
                 members = (MockMember() for _ in range(case))
                 await self.cog.createteam(self.cog, self.ctx, "foo", members)
 
@@ -61,22 +67,39 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
         self.cog.add_roles.assert_awaited_once()
         self.ctx.send.assert_awaited_once()
 
-    async def test_category_dont_exist(self):
-        """Should create code jam category."""
-        self.utils_mock.get.return_value = None
+    async def test_category_doesnt_exist(self):
+        """Should create a new code jam category."""
+        subtests = (
+            [],
+            [get_mock_category(jams.MAX_CHANNELS - 1, jams.CATEGORY_NAME)],
+            [get_mock_category(jams.MAX_CHANNELS - 2, "other")],
+        )
 
-        await self.cog.get_category(self.guild)
+        for categories in subtests:
+            self.guild.reset_mock()
+            self.guild.categories = categories
 
-        self.guild.create_category_channel.assert_awaited_once()
-        category_overwrites = self.guild.create_category_channel.call_args[1]["overwrites"]
+            with self.subTest(categories=categories):
+                actual_category = await self.cog.get_category(self.guild)
 
-        self.assertFalse(category_overwrites[self.guild.default_role].read_messages)
-        self.assertTrue(category_overwrites[self.guild.me].read_messages)
+                self.guild.create_category_channel.assert_awaited_once()
+                category_overwrites = self.guild.create_category_channel.call_args[1]["overwrites"]
+
+                self.assertFalse(category_overwrites[self.guild.default_role].read_messages)
+                self.assertTrue(category_overwrites[self.guild.me].read_messages)
+                self.assertEqual(self.guild.create_category_channel.return_value, actual_category)
 
     async def test_category_channel_exist(self):
         """Should not try to create category channel."""
-        await self.cog.get_category(self.guild)
-        self.guild.create_category_channel.assert_not_awaited()
+        expected_category = get_mock_category(jams.MAX_CHANNELS - 2, jams.CATEGORY_NAME)
+        self.guild.categories = [
+            get_mock_category(jams.MAX_CHANNELS - 2, "other"),
+            expected_category,
+            get_mock_category(0, jams.CATEGORY_NAME),
+        ]
+
+        actual_category = await self.cog.get_category(self.guild)
+        self.assertEqual(expected_category, actual_category)
 
     async def test_channel_overwrites(self):
         """Should have correct permission overwrites for users and roles."""
@@ -103,7 +126,6 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_team_channels_creation(self):
         """Should create new voice and text channel for team."""
-        self.utils_mock.get.return_value = "foo"
         members = [MockMember() for _ in range(5)]
 
         self.cog.get_overwrites = MagicMock()
@@ -147,5 +169,5 @@ class CodeJamSetup(unittest.TestCase):
     def test_setup(self):
         """Should call `bot.add_cog`."""
         bot = MockBot()
-        setup(bot)
+        jams.setup(bot)
         bot.add_cog.assert_called_once()
