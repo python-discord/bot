@@ -428,8 +428,11 @@ class HelpChannels(commands.Cog):
         if not message or not message.embeds:
             return False
 
-        embed = message.embeds[0]
-        return message.author == self.bot.user and embed.description.strip() == description.strip()
+        bot_msg_desc = message.embeds[0].description
+        if bot_msg_desc is discord.Embed.Empty:
+            log.trace("Last message was a bot embed but it was empty.")
+            return False
+        return message.author == self.bot.user and bot_msg_desc.strip() == description.strip()
 
     @staticmethod
     def is_in_category(channel: discord.TextChannel, category_id: int) -> bool:
