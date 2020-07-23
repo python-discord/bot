@@ -1,7 +1,7 @@
 import logging
 import typing as t
 
-from discord import CategoryChannel, Guild, Member, PermissionOverwrite, Role, utils
+from discord import CategoryChannel, Guild, Member, PermissionOverwrite, Role
 from discord.ext import commands
 from more_itertools import unique_everseen
 
@@ -10,6 +10,9 @@ from bot.constants import Roles
 from bot.decorators import with_role
 
 log = logging.getLogger(__name__)
+
+MAX_CHANNELS = 50
+CATEGORY_NAME = "Code Jam"
 
 
 class CodeJams(commands.Cog):
@@ -50,30 +53,38 @@ class CodeJams(commands.Cog):
             f"**Team Members:** {' '.join(member.mention for member in members[1:])}"
         )
 
+    async def get_category(self, guild: Guild) -> CategoryChannel:
+        """
+        Return a code jam category.
+
+        If all categories are full or none exist, create a new category.
+        """
+        for category in guild.categories:
+            # Need 2 available spaces: one for the text channel and one for voice.
+            if category.name == CATEGORY_NAME and MAX_CHANNELS - len(category.channels) >= 2:
+                return category
+
+        return await self.create_category(guild)
+
     @staticmethod
-    async def get_category(guild: Guild) -> CategoryChannel:
-        """Create a Code Jam category if it doesn't exist and return it."""
-        code_jam_category = utils.get(guild.categories, name="Code Jam")
+    async def create_category(guild: Guild) -> CategoryChannel:
+        """Create a new code jam category and return it."""
+        log.info("Creating a new code jam category.")
 
-        if code_jam_category is None:
-            log.info("Code Jam category not found, creating it.")
+        category_overwrites = {
+            guild.default_role: PermissionOverwrite(read_messages=False),
+            guild.me: PermissionOverwrite(read_messages=True)
+        }
 
-            category_overwrites = {
-                guild.default_role: PermissionOverwrite(read_messages=False),
-                guild.me: PermissionOverwrite(read_messages=True)
-            }
-
-            code_jam_category = await guild.create_category_channel(
-                "Code Jam",
-                overwrites=category_overwrites,
-                reason="It's code jam time!"
-            )
-
-        return code_jam_category
+        return await guild.create_category_channel(
+            CATEGORY_NAME,
+            overwrites=category_overwrites,
+            reason="It's code jam time!"
+        )
 
     @staticmethod
     def get_overwrites(members: t.List[Member], guild: Guild) -> t.Dict[t.Union[Member, Role], PermissionOverwrite]:
-        """Get Code Jam team channels permission overwrites."""
+        """Get code jam team channels permission overwrites."""
         # First member is always the team leader
         team_channel_overwrites = {
             members[0]: PermissionOverwrite(
