@@ -210,10 +210,7 @@ class AllowDenyLists(Cog):
 
     def cog_check(self, ctx: Context) -> bool:
         """Only allow moderators to invoke the commands in this cog."""
-        checks = [
-            with_role_check(ctx, *constants.MODERATION_ROLES),
-        ]
-        return all(checks)
+        return with_role_check(ctx, *constants.MODERATION_ROLES)
 
 
 def setup(bot: Bot) -> None:
