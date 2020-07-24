@@ -473,8 +473,8 @@ class Filtering(Cog):
 
             # Is this invite allowed?
             guild_partnered_or_verified = (
-                'PARTNERED' in guild.get("features")
-                or 'VERIFIED' in guild.get("features")
+                'PARTNERED' in guild.get("features", [])
+                or 'VERIFIED' in guild.get("features", [])
             )
             invite_not_allowed = (
                 guild_id in guild_invite_blacklist           # Blacklisted guilds are never permitted.
