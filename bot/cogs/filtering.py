@@ -104,9 +104,9 @@ class Filtering(Cog):
         items = self.bot.allow_deny_list_cache.get(f"{list_type.upper()}.{allowed}", [])
 
         if compiled:
-            return [re.compile(fr'{item.get("content")}', flags=re.IGNORECASE) for item in items]
+            return [re.compile(fr'{item["content"]}', flags=re.IGNORECASE) for item in items]
         else:
-            return [item.get("content") for item in items]
+            return [item["content"] for item in items]
 
     @staticmethod
     def _expand_spoilers(text: str) -> str:
