@@ -1,16 +1,16 @@
-import logging
-import re
-import typing as t
-from datetime import datetime
-from ssl import CertificateError
-
 import dateutil.parser
 import dateutil.tz
 import discord
-from aiohttp import ClientConnectorError, ContentTypeError
+import logging
+import re
+import typing as t
+from aiohttp import ClientConnectorError
+from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from discord.ext.commands import BadArgument, Context, Converter, IDConverter, UserConverter
+from ssl import CertificateError
 
+from bot.api import ResponseCodeError
 from bot.constants import URLs
 from bot.utils.regex import INVITE_RE
 
@@ -84,7 +84,7 @@ class ValidAllowDenyListType(Converter):
         """Checks whether the given string is a valid AllowDenyList type."""
         try:
             valid_types = await ctx.bot.api_client.get('bot/allow_deny_lists/get_types')
-        except ContentTypeError:
+        except ResponseCodeError:
             raise BadArgument("Cannot validate list_type: Unable to fetch valid types from API.")
 
         valid_types = [enum for enum, classname in valid_types]
