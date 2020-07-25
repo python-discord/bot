@@ -148,6 +148,7 @@ class DocCog(commands.Cog):
                         or any(package in symbol_base_url for package in NO_OVERRIDE_PACKAGES)
                     ):
                         symbol = f"{group_name}.{symbol}"
+                        self.renamed_symbols.add(symbol)
 
                     elif (overridden_symbol_group := self.doc_symbols[symbol].group) in NO_OVERRIDE_GROUPS:
                         overridden_symbol = f"{overridden_symbol_group}.{symbol}"
@@ -158,7 +159,7 @@ class DocCog(commands.Cog):
                         self.renamed_symbols.add(overridden_symbol)
 
                     # If renamed `symbol` already exists, add library name in front to differentiate between them.
-                    if symbol in self.renamed_symbols:
+                    elif symbol in self.renamed_symbols:
                         # Split `package_name` because of packages like Pillow that have spaces in them.
                         symbol = f"{api_package_name}.{symbol}"
                         self.renamed_symbols.add(symbol)
