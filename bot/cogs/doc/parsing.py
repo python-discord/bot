@@ -65,6 +65,10 @@ class _DocMarkdownConverter(MarkdownConverter):
             bullet = bullets[depth % len(bullets)]
         return '%s %s\n' % (bullet, text or '')
 
+    def convert_hn(self, _n: int, el: PageElement, text: str) -> str:
+        """Convert h tags to bold text with ** instead of adding #."""
+        return f"**{text}**\n\n"
+
     def convert_code(self, el: PageElement, text: str) -> str:
         """Undo `markdownify`s underscore escaping."""
         return f"`{text}`".replace('\\', '')
