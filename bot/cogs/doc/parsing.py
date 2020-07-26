@@ -8,10 +8,11 @@ from urllib.parse import urljoin
 
 from aiohttp import ClientSession
 from bs4 import BeautifulSoup
-from bs4.element import PageElement, Tag
+from bs4.element import NavigableString, PageElement, Tag
 from markdownify import MarkdownConverter
 
 from .cache import async_cache
+from .html import Strainer
 if TYPE_CHECKING:
     from .cog import DocItem
 
@@ -96,25 +97,30 @@ def _find_elements_until_tag(
         tag_filter: Union[Tuple[str, ...], Callable[[Tag], bool]],
         *,
         func: Callable,
+        include_strings: bool = False,
         limit: int = None,
-) -> List[Tag]:
+) -> List[Union[Tag, NavigableString]]:
     """
-    Get all tags until a tag matching `tag_filter` is found.
+    Get all elements up to `limit` or until a tag matching `tag_filter` is found.
 
     `tag_filter` can be either a tuple of string names to check against,
-    or a filtering t.Callable that's applied to the tags.
+    or a filtering callable that's applied to tags.
+
+    When `include_strings` is True, `NavigableString`s from the document will be included in the result along `Tag`s.
 
     `func` takes in a BeautifulSoup unbound method for finding multiple elements, such as `BeautifulSoup.find_all`.
-    That method is then iterated over and all tags until the matching tag are added to the return list as strings.
+    The method is then iterated over and all elements until the matching tag or the limit are added to the return list.
     """
+    use_tuple_filter = isinstance(tag_filter, tuple)
     elements = []
 
-    for element in func(start_element, limit=limit):
-        if isinstance(tag_filter, tuple):
-            if element.name in tag_filter:
+    for element in func(start_element, name=Strainer(include_strings=include_strings), limit=limit):
+        if isinstance(element, Tag):
+            if use_tuple_filter:
+                if element.name in tag_filter:
+                    break
+            elif tag_filter(element):
                 break
-        elif tag_filter(element):
-            break
         elements.append(element)
 
     return elements
@@ -125,7 +131,7 @@ _find_next_siblings_until_tag = partial(_find_elements_until_tag, func=Beautiful
 _find_previous_siblings_until_tag = partial(_find_elements_until_tag, func=BeautifulSoup.find_previous_siblings)
 
 
-def get_module_description(start_element: PageElement) -> Optional[str]:
+def _get_module_description(start_element: PageElement) -> Optional[str]:
     """
     Get page content to a table or a tag with its class in `SEARCH_END_TAG_ATTRS`.
 
@@ -134,7 +140,9 @@ def get_module_description(start_element: PageElement) -> Optional[str]:
     """
     header = start_element.find("a", attrs={"class": "headerlink"})
     start_tag = header.parent if header is not None else start_element
-    description = "".join(str(tag) for tag in _find_next_siblings_until_tag(start_tag, _match_end_tag))
+    description = "".join(
+        str(tag) for tag in _find_next_siblings_until_tag(start_tag, _match_end_tag, include_strings=True)
+    )
 
     return description
 
@@ -142,7 +150,7 @@ def get_module_description(start_element: PageElement) -> Optional[str]:
 def _get_symbol_description(symbol: PageElement) -> str:
     """Get the string contents of the next dd tag, up to a dt or a dl tag."""
     description_tag = symbol.find_next("dd")
-    description_contents = _find_next_children_until_tag(description_tag, ("dt", "dl"))
+    description_contents = _find_next_children_until_tag(description_tag, ("dt", "dl"), include_strings=True)
     return "".join(str(tag) for tag in description_contents)
 
 
@@ -253,7 +261,7 @@ async def get_symbol_markdown(http_session: ClientSession, symbol_data: "DocItem
     # or don't contain any useful info to be parsed.
     signature = None
     if symbol_data.group in {"module", "doc"}:
-        description = get_module_description(symbol_heading)
+        description = _get_module_description(symbol_heading)
 
     elif symbol_data.group in _NO_SIGNATURE_GROUPS:
         description = _get_symbol_description(symbol_heading)
