@@ -197,6 +197,7 @@ async def get_symbol_markdown(http_session: ClientSession, symbol_data: "DocItem
     A request through `http_session` is made to the url associated with `symbol_data` for the html contents;
     the contents are then parsed depending on what group the symbol belongs to.
     """
+    log.trace(f"Parsing symbol from url {symbol_data.url}.")
     if "#" in symbol_data.url:
         request_url, symbol_id = symbol_data.url.rsplit('#')
     else:
@@ -210,12 +211,15 @@ async def get_symbol_markdown(http_session: ClientSession, symbol_data: "DocItem
     # or don't contain any useful info to be parsed.
     signature = None
     if symbol_data.group in {"module", "doc"}:
+        log.trace("Symbol is a module or doc, parsing as module.")
         description = _get_module_description(symbol_heading)
 
     elif symbol_data.group in _NO_SIGNATURE_GROUPS:
+        log.trace("Symbol's group is in the group signature blacklist, skipping parsing of signature.")
         description = _get_symbol_description(symbol_heading)
 
     else:
+        log.trace("Parsing both signature and description of symbol.")
         signature = _get_signatures(symbol_heading)
         description = _get_symbol_description(symbol_heading)
 
