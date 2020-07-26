@@ -80,14 +80,14 @@ _find_next_siblings_until_tag = partial(_find_elements_until_tag, func=Beautiful
 _find_previous_siblings_until_tag = partial(_find_elements_until_tag, func=BeautifulSoup.find_previous_siblings)
 
 
-def _get_module_description(start_element: PageElement) -> Optional[str]:
+def _get_general_description(start_element: PageElement) -> Optional[str]:
     """
     Get page content to a table or a tag with its class in `SEARCH_END_TAG_ATTRS`.
 
-    A headerlink a tag is attempted to be found to skip repeating the module name in the description,
-    if it's found it's used as the tag to search from instead of the `start_element`.
+    A headerlink a tag is attempted to be found to skip repeating the symbol information in the description,
+    if it's found it's used as the tag to start the search from instead of the `start_element`.
     """
-    header = start_element.find("a", attrs={"class": "headerlink"})
+    header = start_element.find_next("a", attrs={"class": "headerlink"})
     start_tag = header.parent if header is not None else start_element
     description = "".join(
         str(tag) for tag in _find_next_siblings_until_tag(start_tag, _match_end_tag, include_strings=True)
@@ -96,7 +96,7 @@ def _get_module_description(start_element: PageElement) -> Optional[str]:
     return description
 
 
-def _get_symbol_description(symbol: PageElement) -> str:
+def _get_dd_description(symbol: PageElement) -> str:
     """Get the string contents of the next dd tag, up to a dt or a dl tag."""
     description_tag = symbol.find_next("dd")
     description_contents = _find_next_children_until_tag(description_tag, ("dt", "dl"), include_strings=True)
@@ -212,15 +212,15 @@ async def get_symbol_markdown(http_session: ClientSession, symbol_data: "DocItem
     signature = None
     if symbol_data.group in {"module", "doc"}:
         log.trace("Symbol is a module or doc, parsing as module.")
-        description = _get_module_description(symbol_heading)
+        description = _get_general_description(symbol_heading)
 
     elif symbol_data.group in _NO_SIGNATURE_GROUPS:
         log.trace("Symbol's group is in the group signature blacklist, skipping parsing of signature.")
-        description = _get_symbol_description(symbol_heading)
+        description = _get_dd_description(symbol_heading)
 
     else:
         log.trace("Parsing both signature and description of symbol.")
         signature = _get_signatures(symbol_heading)
-        description = _get_symbol_description(symbol_heading)
+        description = _get_dd_description(symbol_heading)
 
     return _parse_into_markdown(signature, description.replace('¶', ''), symbol_data.url)
