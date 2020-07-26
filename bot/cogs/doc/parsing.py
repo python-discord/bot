@@ -206,12 +206,20 @@ async def get_symbol_markdown(http_session: ClientSession, symbol_data: "DocItem
 
     soup = await _get_soup_from_url(http_session, request_url)
     symbol_heading = soup.find(id=symbol_id)
-
-    # Handle doc symbols as modules, because they either link to the page of a module,
-    # or don't contain any useful info to be parsed.
     signature = None
-    if symbol_data.group in {"module", "doc"}:
-        log.trace("Symbol is a module or doc, parsing as module.")
+    # Modules, doc pages and labels don't point to description list tags but to tags like divs,
+    # no special parsing can be done so we only try to include what's under them.
+    if symbol_data.group in {"module", "doc", "label"}:
+        log.trace("Symbol is a module, doc or a label; using general description parsing.")
+        description = _get_general_description(symbol_heading)
+
+    elif symbol_heading.name != "dt":
+        # Use the general parsing for symbols that aren't modules, docs or labels and aren't dt tags,
+        # log info the tag can be looked at.
+        log.info(
+            f"Symbol heading at url {symbol_data.url} was not a dt tag or from known groups that lack it,"
+            f"handling as general description."
+        )
         description = _get_general_description(symbol_heading)
 
     elif symbol_data.group in _NO_SIGNATURE_GROUPS:
