@@ -7,14 +7,14 @@ from discord.ext.commands import BadArgument, Cog, Context, IDConverter, group
 from bot import constants
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.converters import ValidAllowDenyListType, ValidDiscordServerInvite
+from bot.converters import ValidDiscordServerInvite, ValidFilterListType
 from bot.pagination import LinePaginator
 from bot.utils.checks import with_role_check
 
 log = logging.getLogger(__name__)
 
 
-class AllowDenyLists(Cog):
+class FilterLists(Cog):
     """Commands for blacklisting and whitelisting things."""
 
     def __init__(self, bot: Bot) -> None:
@@ -24,11 +24,11 @@ class AllowDenyLists(Cog):
             self,
             ctx: Context,
             allowed: bool,
-            list_type: ValidAllowDenyListType,
+            list_type: ValidFilterListType,
             content: str,
             comment: Optional[str] = None,
     ) -> None:
-        """Add an item to an allow or denylist."""
+        """Add an item to a filterlist."""
         allow_type = "whitelist" if allowed else "blacklist"
 
         # If this is a server invite, we gotta validate it.
@@ -60,7 +60,7 @@ class AllowDenyLists(Cog):
 
         try:
             item = await self.bot.api_client.post(
-                "bot/allow_deny_lists",
+                "bot/filter-lists",
                 json=payload
             )
         except ResponseCodeError as e:
@@ -88,11 +88,11 @@ class AllowDenyLists(Cog):
             "created_at": item.get("created_at"),
             "updated_at": item.get("updated_at"),
         }
-        self.bot.allow_deny_list_cache.setdefault(f"{type_}.{allowed}", []).append(metadata)
+        self.bot.filter_list_cache.setdefault(f"{type_}.{allowed}", []).append(metadata)
         await ctx.message.add_reaction("✅")
 
-    async def _delete_data(self, ctx: Context, allowed: bool, list_type: ValidAllowDenyListType, content: str) -> None:
-        """Remove an item from an allow or denylist."""
+    async def _delete_data(self, ctx: Context, allowed: bool, list_type: ValidFilterListType, content: str) -> None:
+        """Remove an item from a filterlist."""
         item = None
         allow_type = "whitelist" if allowed else "blacklist"
         id_converter = IDConverter()
@@ -110,22 +110,22 @@ class AllowDenyLists(Cog):
 
         # Find the content and delete it.
         log.trace(f"Trying to delete the {content} item from the {list_type} {allow_type}")
-        for allow_list in self.bot.allow_deny_list_cache.get(f"{list_type}.{allowed}", []):
+        for allow_list in self.bot.filter_list_cache.get(f"{list_type}.{allowed}", []):
             if content == allow_list.get("content"):
                 item = allow_list
                 break
 
         if item is not None:
             await self.bot.api_client.delete(
-                f"bot/allow_deny_lists/{item.get('id')}"
+                f"bot/filter-lists/{item.get('id')}"
             )
-            self.bot.allow_deny_list_cache[f"{list_type}.{allowed}"].remove(item)
+            self.bot.filter_list_cache[f"{list_type}.{allowed}"].remove(item)
             await ctx.message.add_reaction("✅")
 
-    async def _list_all_data(self, ctx: Context, allowed: bool, list_type: ValidAllowDenyListType) -> None:
-        """Paginate and display all items in an allow or denylist."""
+    async def _list_all_data(self, ctx: Context, allowed: bool, list_type: ValidFilterListType) -> None:
+        """Paginate and display all items in a filterlist."""
         allow_type = "whitelist" if allowed else "blacklist"
-        result = self.bot.allow_deny_list_cache.get(f"{list_type}.{allowed}", [])
+        result = self.bot.filter_list_cache.get(f"{list_type}.{allowed}", [])
 
         # Build a list of lines we want to show in the paginator
         lines = []
@@ -168,7 +168,7 @@ class AllowDenyLists(Cog):
     async def allow_add(
             self,
             ctx: Context,
-            list_type: ValidAllowDenyListType,
+            list_type: ValidFilterListType,
             content: str,
             *,
             comment: Optional[str] = None,
@@ -180,7 +180,7 @@ class AllowDenyLists(Cog):
     async def deny_add(
             self,
             ctx: Context,
-            list_type: ValidAllowDenyListType,
+            list_type: ValidFilterListType,
             content: str,
             *,
             comment: Optional[str] = None,
@@ -189,22 +189,22 @@ class AllowDenyLists(Cog):
         await self._add_data(ctx, False, list_type, content, comment)
 
     @whitelist.command(name="remove", aliases=("delete", "rm",))
-    async def allow_delete(self, ctx: Context, list_type: ValidAllowDenyListType, content: str) -> None:
+    async def allow_delete(self, ctx: Context, list_type: ValidFilterListType, content: str) -> None:
         """Remove an item from the specified allowlist."""
         await self._delete_data(ctx, True, list_type, content)
 
     @blacklist.command(name="remove", aliases=("delete", "rm",))
-    async def deny_delete(self, ctx: Context, list_type: ValidAllowDenyListType, content: str) -> None:
+    async def deny_delete(self, ctx: Context, list_type: ValidFilterListType, content: str) -> None:
         """Remove an item from the specified denylist."""
         await self._delete_data(ctx, False, list_type, content)
 
     @whitelist.command(name="get", aliases=("list", "ls", "fetch", "show"))
-    async def allow_get(self, ctx: Context, list_type: ValidAllowDenyListType) -> None:
+    async def allow_get(self, ctx: Context, list_type: ValidFilterListType) -> None:
         """Get the contents of a specified allowlist."""
         await self._list_all_data(ctx, True, list_type)
 
     @blacklist.command(name="get", aliases=("list", "ls", "fetch", "show"))
-    async def deny_get(self, ctx: Context, list_type: ValidAllowDenyListType) -> None:
+    async def deny_get(self, ctx: Context, list_type: ValidFilterListType) -> None:
         """Get the contents of a specified denylist."""
         await self._list_all_data(ctx, False, list_type)
 
@@ -214,5 +214,5 @@ class AllowDenyLists(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Load the AllowDenyLists cog."""
-    bot.add_cog(AllowDenyLists(bot))
+    """Load the FilterLists cog."""
+    bot.add_cog(FilterLists(bot))

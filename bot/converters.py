@@ -72,18 +72,18 @@ class ValidDiscordServerInvite(Converter):
         raise BadArgument("This does not appear to be a valid Discord server invite.")
 
 
-class ValidAllowDenyListType(Converter):
+class ValidFilterListType(Converter):
     """
-    A converter that checks whether the given string is a valid AllowDenyList type.
+    A converter that checks whether the given string is a valid FilterList type.
 
-    Raises `BadArgument` if the argument is not a valid AllowDenyList type, and simply
+    Raises `BadArgument` if the argument is not a valid FilterList type, and simply
     passes through the given argument otherwise.
     """
 
     async def convert(self, ctx: Context, list_type: str) -> str:
-        """Checks whether the given string is a valid AllowDenyList type."""
+        """Checks whether the given string is a valid FilterList type."""
         try:
-            valid_types = await ctx.bot.api_client.get('bot/allow_deny_lists/get_types')
+            valid_types = await ctx.bot.api_client.get('bot/filter-lists/get-types')
         except ResponseCodeError:
             raise BadArgument("Cannot validate list_type: Unable to fetch valid types from API.")
 
