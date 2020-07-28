@@ -7,7 +7,7 @@ from io import StringIO
 from typing import Tuple, Union
 
 from discord import Colour, Embed, utils
-from discord.ext.commands import BadArgument, Cog, Context, command, clean_content
+from discord.ext.commands import BadArgument, Cog, Context, clean_content, command
 
 from bot.bot import Bot
 from bot.constants import Channels, MODERATION_ROLES, STAFF_ROLES
