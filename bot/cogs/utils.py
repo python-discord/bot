@@ -7,7 +7,7 @@ from io import StringIO
 from typing import Tuple, Union
 
 from discord import Colour, Embed, utils
-from discord.ext.commands import BadArgument, Cog, Context, command
+from discord.ext.commands import BadArgument, Cog, Context, command, clean_content
 
 from bot.bot import Bot
 from bot.constants import Channels, MODERATION_ROLES, STAFF_ROLES
@@ -225,7 +225,7 @@ class Utils(Cog):
 
     @command(aliases=("poll",))
     @with_role(*MODERATION_ROLES)
-    async def vote(self, ctx: Context, title: str, *options: str) -> None:
+    async def vote(self, ctx: Context, title: clean_content(fix_channel_mentions=True), *options: str) -> None:
         """
         Build a quick voting poll with matching reactions with the provided options.
 
