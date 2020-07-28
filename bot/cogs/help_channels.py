@@ -556,8 +556,11 @@ class HelpChannels(Scheduler, commands.Cog):
 
         try:
             await self.bot.http.unpin_message(channel.id, msg_id)
-        except discord.HTTPException:
-            log.trace(f"Message {msg_id} don't exist, can't unpin.")
+        except discord.HTTPException as e:
+            if e.code == 10008:
+                log.trace(f"Message {msg_id} don't exist, can't unpin.")
+            else:
+                log.warn(f"Got unexpected status {e.code} when unpinning message {msg_id}: {e.text}")
         else:
             log.trace(f"Unpinned message {msg_id}.")
 
