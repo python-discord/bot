@@ -1,4 +1,5 @@
 from bot.bot import Bot
+from .incidents import Incidents
 from .infractions import Infractions
 from .management import ModManagement
 from .modlog import ModLog
@@ -8,7 +9,8 @@ from .superstarify import Superstarify
 
 
 def setup(bot: Bot) -> None:
-    """Load the Infractions, ModManagement, ModLog, Silence, Slowmode, and Superstarify cogs."""
+    """Load the Incidents, Infractions, ModManagement, ModLog, Silence, Slowmode and Superstarify cogs."""
+    bot.add_cog(Incidents(bot))
     bot.add_cog(Infractions(bot))
     bot.add_cog(ModLog(bot))
     bot.add_cog(ModManagement(bot))

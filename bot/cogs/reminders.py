@@ -9,28 +9,31 @@ from operator import itemgetter
 import discord
 from dateutil.parser import isoparse
 from dateutil.relativedelta import relativedelta
-from discord.ext.commands import Cog, Context, group
+from discord.ext.commands import Cog, Context, Greedy, group
 
 from bot.bot import Bot
-from bot.constants import Guild, Icons, NEGATIVE_REPLIES, POSITIVE_REPLIES, STAFF_ROLES
+from bot.constants import Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES, STAFF_ROLES
 from bot.converters import Duration
 from bot.pagination import LinePaginator
 from bot.utils.checks import without_role_check
+from bot.utils.messages import send_denial
 from bot.utils.scheduling import Scheduler
-from bot.utils.time import humanize_delta, wait_until
+from bot.utils.time import humanize_delta
 
 log = logging.getLogger(__name__)
 
 WHITELISTED_CHANNELS = Guild.reminder_whitelist
 MAXIMUM_REMINDERS = 5
 
+Mentionable = t.Union[discord.Member, discord.Role]
 
-class Reminders(Scheduler, Cog):
+
+class Reminders(Cog):
     """Provide in-channel reminder functionality."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        super().__init__()
+        self.scheduler = Scheduler(self.__class__.__name__)
 
         self.bot.loop.create_task(self.reschedule_reminders())
 
@@ -56,7 +59,7 @@ class Reminders(Scheduler, Cog):
                 late = relativedelta(now, remind_at)
                 await self.send_reminder(reminder, late)
             else:
-                self.schedule_task(reminder["id"], reminder)
+                self.schedule_reminder(reminder)
 
     def ensure_valid_reminder(
         self,
@@ -99,17 +102,58 @@ class Reminders(Scheduler, Cog):
 
         await ctx.send(embed=embed)
 
-    async def _scheduled_task(self, reminder: dict) -> None:
+    @staticmethod
+    async def _check_mentions(ctx: Context, mentions: t.Iterable[Mentionable]) -> t.Tuple[bool, str]:
+        """
+        Returns whether or not the list of mentions is allowed.
+
+        Conditions:
+        - Role reminders are Mods+
+        - Reminders for other users are Helpers+
+
+        If mentions aren't allowed, also return the type of mention(s) disallowed.
+        """
+        if without_role_check(ctx, *STAFF_ROLES):
+            return False, "members/roles"
+        elif without_role_check(ctx, *MODERATION_ROLES):
+            return all(isinstance(mention, discord.Member) for mention in mentions), "roles"
+        else:
+            return True, ""
+
+    @staticmethod
+    async def validate_mentions(ctx: Context, mentions: t.Iterable[Mentionable]) -> bool:
+        """
+        Filter mentions to see if the user can mention, and sends a denial if not allowed.
+
+        Returns whether or not the validation is successful.
+        """
+        mentions_allowed, disallowed_mentions = await Reminders._check_mentions(ctx, mentions)
+
+        if not mentions or mentions_allowed:
+            return True
+        else:
+            await send_denial(ctx, f"You can't mention other {disallowed_mentions} in your reminder!")
+            return False
+
+    def get_mentionables(self, mention_ids: t.List[int]) -> t.Iterator[Mentionable]:
+        """Converts Role and Member ids to their corresponding objects if possible."""
+        guild = self.bot.get_guild(Guild.id)
+        for mention_id in mention_ids:
+            if (mentionable := (guild.get_member(mention_id) or guild.get_role(mention_id))):
+                yield mentionable
+
+    def schedule_reminder(self, reminder: dict) -> None:
         """A coroutine which sends the reminder once the time is reached, and cancels the running task."""
         reminder_id = reminder["id"]
         reminder_datetime = isoparse(reminder['expiration']).replace(tzinfo=None)
 
-        # Send the reminder message once the desired duration has passed
-        await wait_until(reminder_datetime)
-        await self.send_reminder(reminder)
+        async def _remind() -> None:
+            await self.send_reminder(reminder)
 
-        log.debug(f"Deleting reminder {reminder_id} (the user has been reminded).")
-        await self._delete_reminder(reminder_id)
+            log.debug(f"Deleting reminder {reminder_id} (the user has been reminded).")
+            await self._delete_reminder(reminder_id)
+
+        self.scheduler.schedule_at(reminder_datetime, reminder_id, _remind())
 
     async def _delete_reminder(self, reminder_id: str, cancel_task: bool = True) -> None:
         """Delete a reminder from the database, given its ID, and cancel the running task."""
@@ -117,15 +161,28 @@ class Reminders(Scheduler, Cog):
 
         if cancel_task:
             # Now we can remove it from the schedule list
-            self.cancel_task(reminder_id)
+            self.scheduler.cancel(reminder_id)
+
+    async def _edit_reminder(self, reminder_id: int, payload: dict) -> dict:
+        """
+        Edits a reminder in the database given the ID and payload.
+
+        Returns the edited reminder.
+        """
+        # Send the request to update the reminder in the database
+        reminder = await self.bot.api_client.patch(
+            'bot/reminders/' + str(reminder_id),
+            json=payload
+        )
+        return reminder
 
     async def _reschedule_reminder(self, reminder: dict) -> None:
         """Reschedule a reminder object."""
         log.trace(f"Cancelling old task #{reminder['id']}")
-        self.cancel_task(reminder["id"])
+        self.scheduler.cancel(reminder["id"])
 
         log.trace(f"Scheduling new task #{reminder['id']}")
-        self.schedule_task(reminder["id"], reminder)
+        self.schedule_reminder(reminder)
 
     async def send_reminder(self, reminder: dict, late: relativedelta = None) -> None:
         """Send the reminder."""
@@ -152,36 +209,39 @@ class Reminders(Scheduler, Cog):
                 name=f"Sorry it arrived {humanize_delta(late, max_units=2)} late!"
             )
 
+        additional_mentions = ' '.join(
+            mentionable.mention for mentionable in self.get_mentionables(reminder["mentions"])
+        )
+
         await channel.send(
-            content=user.mention,
+            content=f"{user.mention} {additional_mentions}",
             embed=embed
         )
         await self._delete_reminder(reminder["id"])
 
     @group(name="remind", aliases=("reminder", "reminders", "remindme"), invoke_without_command=True)
-    async def remind_group(self, ctx: Context, expiration: Duration, *, content: str) -> None:
+    async def remind_group(
+        self, ctx: Context, mentions: Greedy[Mentionable], expiration: Duration, *, content: str
+    ) -> None:
         """Commands for managing your reminders."""
-        await ctx.invoke(self.new_reminder, expiration=expiration, content=content)
+        await ctx.invoke(self.new_reminder, mentions=mentions, expiration=expiration, content=content)
 
     @remind_group.command(name="new", aliases=("add", "create"))
-    async def new_reminder(self, ctx: Context, expiration: Duration, *, content: str) -> t.Optional[discord.Message]:
+    async def new_reminder(
+        self, ctx: Context, mentions: Greedy[Mentionable], expiration: Duration, *, content: str
+    ) -> None:
         """
         Set yourself a simple reminder.
 
         Expiration is parsed per: http://strftime.org/
         """
-        embed = discord.Embed()
-
         # If the user is not staff, we need to verify whether or not to make a reminder at all.
         if without_role_check(ctx, *STAFF_ROLES):
 
             # If they don't have permission to set a reminder in this channel
             if ctx.channel.id not in WHITELISTED_CHANNELS:
-                embed.colour = discord.Colour.red()
-                embed.title = random.choice(NEGATIVE_REPLIES)
-                embed.description = "Sorry, you can't do that here!"
-
-                return await ctx.send(embed=embed)
+                await send_denial(ctx, "Sorry, you can't do that here!")
+                return
 
             # Get their current active reminders
             active_reminders = await self.bot.api_client.get(
@@ -194,11 +254,18 @@ class Reminders(Scheduler, Cog):
             # Let's limit this, so we don't get 10 000
             # reminders from kip or something like that :P
             if len(active_reminders) > MAXIMUM_REMINDERS:
-                embed.colour = discord.Colour.red()
-                embed.title = random.choice(NEGATIVE_REPLIES)
-                embed.description = "You have too many active reminders!"
+                await send_denial(ctx, "You have too many active reminders!")
+                return
 
-                return await ctx.send(embed=embed)
+        # Remove duplicate mentions
+        mentions = set(mentions)
+        mentions.discard(ctx.author)
+
+        # Filter mentions to see if the user can mention members/roles
+        if not await self.validate_mentions(ctx, mentions):
+            return
+
+        mention_ids = [mention.id for mention in mentions]
 
         # Now we can attempt to actually set the reminder.
         reminder = await self.bot.api_client.post(
@@ -208,25 +275,30 @@ class Reminders(Scheduler, Cog):
                 'channel_id': ctx.message.channel.id,
                 'jump_url': ctx.message.jump_url,
                 'content': content,
-                'expiration': expiration.isoformat()
+                'expiration': expiration.isoformat(),
+                'mentions': mention_ids,
             }
         )
 
         now = datetime.utcnow() - timedelta(seconds=1)
         humanized_delta = humanize_delta(relativedelta(expiration, now))
+        mention_string = (
+            f"Your reminder will arrive in {humanized_delta} "
+            f"and will mention {len(mentions)} other(s)!"
+        )
 
         # Confirm to the user that it worked.
         await self._send_confirmation(
             ctx,
-            on_success=f"Your reminder will arrive in {humanized_delta}!",
+            on_success=mention_string,
             reminder_id=reminder["id"],
             delivery_dt=expiration,
         )
 
-        self.schedule_task(reminder["id"], reminder)
+        self.schedule_reminder(reminder)
 
     @remind_group.command(name="list")
-    async def list_reminders(self, ctx: Context) -> t.Optional[discord.Message]:
+    async def list_reminders(self, ctx: Context) -> None:
         """View a paginated embed of all reminders for your user."""
         # Get all the user's reminders from the database.
         data = await self.bot.api_client.get(
@@ -239,7 +311,7 @@ class Reminders(Scheduler, Cog):
         # Make a list of tuples so it can be sorted by time.
         reminders = sorted(
             (
-                (rem['content'], rem['expiration'], rem['id'])
+                (rem['content'], rem['expiration'], rem['id'], rem['mentions'])
                 for rem in data
             ),
             key=itemgetter(1)
@@ -247,13 +319,19 @@ class Reminders(Scheduler, Cog):
 
         lines = []
 
-        for content, remind_at, id_ in reminders:
+        for content, remind_at, id_, mentions in reminders:
             # Parse and humanize the time, make it pretty :D
             remind_datetime = isoparse(remind_at).replace(tzinfo=None)
             time = humanize_delta(relativedelta(remind_datetime, now))
 
+            mentions = ", ".join(
+                # Both Role and User objects have the `name` attribute
+                mention.name for mention in self.get_mentionables(mentions)
+            )
+            mention_string = f"\n**Mentions:** {mentions}" if mentions else ""
+
             text = textwrap.dedent(f"""
-            **Reminder #{id_}:** *expires in {time}* (ID: {id_})
+            **Reminder #{id_}:** *expires in {time}* (ID: {id_}){mention_string}
             {content}
             """).strip()
 
@@ -266,7 +344,8 @@ class Reminders(Scheduler, Cog):
         # Remind the user that they have no reminders :^)
         if not lines:
             embed.description = "No active reminders could be found."
-            return await ctx.send(embed=embed)
+            await ctx.send(embed=embed)
+            return
 
         # Construct the embed and paginate it.
         embed.colour = discord.Colour.blurple()
@@ -286,37 +365,37 @@ class Reminders(Scheduler, Cog):
     @edit_reminder_group.command(name="duration", aliases=("time",))
     async def edit_reminder_duration(self, ctx: Context, id_: int, expiration: Duration) -> None:
         """
-         Edit one of your reminder's expiration.
+        Edit one of your reminder's expiration.
 
         Expiration is parsed per: http://strftime.org/
         """
-        # Send the request to update the reminder in the database
-        reminder = await self.bot.api_client.patch(
-            'bot/reminders/' + str(id_),
-            json={'expiration': expiration.isoformat()}
-        )
-
-        # Send a confirmation message to the channel
-        await self._send_confirmation(
-            ctx,
-            on_success="That reminder has been edited successfully!",
-            reminder_id=id_,
-            delivery_dt=expiration,
-        )
-
-        await self._reschedule_reminder(reminder)
+        await self.edit_reminder(ctx, id_, {'expiration': expiration.isoformat()})
 
     @edit_reminder_group.command(name="content", aliases=("reason",))
     async def edit_reminder_content(self, ctx: Context, id_: int, *, content: str) -> None:
         """Edit one of your reminder's content."""
-        # Send the request to update the reminder in the database
-        reminder = await self.bot.api_client.patch(
-            'bot/reminders/' + str(id_),
-            json={'content': content}
-        )
+        await self.edit_reminder(ctx, id_, {"content": content})
 
-        # Parse the reminder expiration back into a datetime for the confirmation message
-        expiration = isoparse(reminder['expiration']).replace(tzinfo=None)
+    @edit_reminder_group.command(name="mentions", aliases=("pings",))
+    async def edit_reminder_mentions(self, ctx: Context, id_: int, mentions: Greedy[Mentionable]) -> None:
+        """Edit one of your reminder's mentions."""
+        # Remove duplicate mentions
+        mentions = set(mentions)
+        mentions.discard(ctx.author)
+
+        # Filter mentions to see if the user can mention members/roles
+        if not await self.validate_mentions(ctx, mentions):
+            return
+
+        mention_ids = [mention.id for mention in mentions]
+        await self.edit_reminder(ctx, id_, {"mentions": mention_ids})
+
+    async def edit_reminder(self, ctx: Context, id_: int, payload: dict) -> None:
+        """Edits a reminder with the given payload, then sends a confirmation message."""
+        reminder = await self._edit_reminder(id_, payload)
+
+        # Parse the reminder expiration back into a datetime
+        expiration = isoparse(reminder["expiration"]).replace(tzinfo=None)
 
         # Send a confirmation message to the channel
         await self._send_confirmation(

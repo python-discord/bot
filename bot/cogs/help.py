@@ -8,6 +8,7 @@ from typing import List, Union
 from discord import Colour, Embed, Member, Message, NotFound, Reaction, User
 from discord.ext.commands import Bot, Cog, Command, Context, Group, HelpCommand
 from fuzzywuzzy import fuzz, process
+from fuzzywuzzy.utils import full_process
 
 from bot import constants
 from bot.constants import Channels, Emojis, STAFF_ROLES
@@ -36,13 +37,12 @@ async def help_cleanup(bot: Bot, author: Member, message: Message) -> None:
 
     await message.add_reaction(DELETE_EMOJI)
 
-    try:
-        await bot.wait_for("reaction_add", check=check, timeout=300)
-        await message.delete()
-    except TimeoutError:
-        await message.remove_reaction(DELETE_EMOJI, bot.user)
-    except NotFound:
-        pass
+    with suppress(NotFound):
+        try:
+            await bot.wait_for("reaction_add", check=check, timeout=300)
+            await message.delete()
+        except TimeoutError:
+            await message.remove_reaction(DELETE_EMOJI, bot.user)
 
 
 class HelpQueryNotFound(ValueError):
@@ -146,7 +146,13 @@ class CustomHelpCommand(HelpCommand):
         Will return an instance of the `HelpQueryNotFound` exception with the error message and possible matches.
         """
         choices = await self.get_all_help_choices()
-        result = process.extractBests(string, choices, scorer=fuzz.ratio, score_cutoff=60)
+
+        # Run fuzzywuzzy's processor beforehand, and avoid matching if processed string is empty
+        # This avoids fuzzywuzzy from raising a warning on inputs with only non-alphanumeric characters
+        if (processed := full_process(string)):
+            result = process.extractBests(processed, choices, scorer=fuzz.ratio, score_cutoff=60, processor=None)
+        else:
+            result = []
 
         return HelpQueryNotFound(f'Query "{string}" not found.', dict(result))
 

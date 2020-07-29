@@ -38,6 +38,10 @@ style:
         status_dnd:     "<:status_dnd:470326272082313216>"
         status_offline: "<:status_offline:470326266537705472>"
 
+        incident_actioned:      "<:incident_actioned:719645530128646266>"
+        incident_unactioned:    "<:incident_unactioned:719645583245180960>"
+        incident_investigating: "<:incident_investigating:719645658671480924>"
+
         failmail: "<:failmail:633660039931887616>"
         trashcan: "<:trashcan:637136429717389331>"
 
@@ -150,6 +154,7 @@ guild:
         mod_log:            &MOD_LOG        282638479504965634
         user_log:                           528976905546760203
         voice_log:                          640292421988646961
+        dm_log:                             653713721625018428
 
         # Off-topic
         off_topic_0:    291284109232308226
@@ -167,12 +172,13 @@ guild:
         admin_spam:         &ADMIN_SPAM     563594791770914816
         defcon:             &DEFCON         464469101889454091
         helpers:            &HELPERS        385474242440986624
+        incidents:                          714214212200562749
+        incidents_archive:                  720668923636351037
         mods:               &MODS           305126844661760000
         mod_alerts:         &MOD_ALERTS     473092532147060736
         mod_spam:           &MOD_SPAM       620607373828030464
         organisation:       &ORGANISATION   551789653284356126
         staff_lounge:       &STAFF_LOUNGE   464905259261755392
-        incidents:                          714214212200562749
 
         # Voice
         admins_voice:       &ADMINS_VOICE   500734494840717332
@@ -230,8 +236,8 @@ guild:
         owners:             &OWNERS_ROLE    267627879762755584
 
         # Code Jam
-        jammers:        591786436651646989
-        team_leaders:   501324292341104650
+        jammers:        737249140966162473
+        team_leaders:   737250302834638889
 
     moderation_roles:
         - *OWNERS_ROLE
@@ -245,16 +251,16 @@ guild:
         - *HELPERS_ROLE
 
     webhooks:
-        talent_pool:                    569145364800602132
-        big_brother:                    569133704568373283
-        reddit:                         635408384794951680
-        duck_pond:                      637821475327311927
-        dev_log:                        680501655111729222
-        python_news:    &PYNEWS_WEBHOOK 704381182279942324
-
+        big_brother:                        569133704568373283
+        dev_log:                            680501655111729222
+        dm_log:                             654567640664244225
+        duck_pond:                          637821475327311927
+        incidents_archive:                  720671599790915702
+        python_news:        &PYNEWS_WEBHOOK 704381182279942324
+        reddit:                             635408384794951680
+        talent_pool:                        569145364800602132
 
 filter:
-
     # What do we filter?
     filter_zalgo:       false
     filter_invites:     true
@@ -269,7 +275,7 @@ filter:
     notify_user_domains:     false
 
     # Filter configuration
-    ping_everyone:             true  # Ping @everyone when we send a mod-alert?
+    ping_everyone:             true
     offensive_msg_delete_days: 7     # How many days before deleting an offensive message?
 
     guild_invite_whitelist:
@@ -295,12 +301,22 @@ filter:
         - 172018499005317120  # The Coding Den
         - 666560367173828639  # PyWeek
         - 702724176489873509  # Microsoft Python
+        - 150662382874525696  # Microsoft Community
         - 81384788765712384   # Discord API
         - 613425648685547541  # Discord Developers
         - 185590609631903755  # Blender Hub
         - 420324994703163402  # /r/FlutterDev
         - 488751051629920277  # Python Atlanta
         - 143867839282020352  # C#
+        - 159039020565790721  # Django
+        - 238666723824238602  # Programming Discussions
+        - 433980600391696384  # JetBrains Community
+        - 204621105720328193  # Raspberry Pi
+        - 244230771232079873  # Programmers Hangout
+        - 239433591950540801  # SpeakJS
+        - 174075418410876928  # DevCord
+        - 489222168727519232  # Unity
+        - 494558898880118785  # Programmer Humor
 
     domain_blacklist:
         - pornhub.com
@@ -442,10 +458,6 @@ anti_spam:
         burst:
             interval: 10
             max: 7
-
-        burst_shared:
-            interval: 10
-            max: 20
 
         chars:
             interval: 5
