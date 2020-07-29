@@ -102,6 +102,10 @@ class HelpChannels(commands.Cog):
     # RedisCache[discord.TextChannel.id, UtcPosixTimestamp]
     claim_times = RedisCache()
 
+    # This cache maps a help channel to original question message in same channel.
+    # RedisCache[discord.TextChannel.id, discord.Message.id]
+    question_messages = RedisCache()
+
     def __init__(self, bot: Bot):
         self.bot = bot
         self.scheduler = Scheduler(self.__class__.__name__)
@@ -539,6 +543,18 @@ class HelpChannels(commands.Cog):
 
         A caller argument is provided for metrics.
         """
+        msg_id = await self.question_messages.pop(channel.id)
+
+        try:
+            await self.bot.http.unpin_message(channel.id, msg_id)
+        except discord.HTTPException as e:
+            if e.code == 10008:
+                log.trace(f"Message {msg_id} don't exist, can't unpin.")
+            else:
+                log.warn(f"Got unexpected status {e.code} when unpinning message {msg_id}: {e.text}")
+        else:
+            log.trace(f"Unpinned message {msg_id}.")
+
         log.info(f"Moving #{channel} ({channel.id}) to the Dormant category.")
 
         await self.move_to_bottom_position(
@@ -680,6 +696,14 @@ class HelpChannels(commands.Cog):
             log.info(f"Channel #{channel} was claimed by `{message.author.id}`.")
             await self.move_to_in_use(channel)
             await self.revoke_send_permissions(message.author)
+            # Pin message for better access and store this to cache
+            try:
+                await message.pin()
+            except discord.NotFound:
+                log.info(f"Pinning message {message.id} ({channel}) failed because message got deleted.")
+            else:
+                await self.question_messages.set(channel.id, message.id)
+
             # Add user with channel for dormant check.
             await self.help_channel_claimants.set(channel.id, message.author.id)
 
