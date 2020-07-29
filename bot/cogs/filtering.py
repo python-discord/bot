@@ -101,7 +101,7 @@ class Filtering(Cog):
 
     def _get_filterlist_items(self, list_type: str, *, allowed: bool, compiled: Optional[bool] = False) -> list:
         """Fetch items from the filter_list_cache."""
-        items = self.bot.filter_list_cache.get(f"{list_type.upper()}.{allowed}", [])
+        items = self.bot.filter_list_cache[f"{list_type.upper()}.{allowed}"]
 
         if compiled:
             return [re.compile(fr'{item["content"]}', flags=re.IGNORECASE) for item in items]

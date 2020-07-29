@@ -2,6 +2,7 @@ import asyncio
 import logging
 import socket
 import warnings
+from collections import defaultdict
 from typing import Optional
 
 import aiohttp
@@ -34,7 +35,7 @@ class Bot(commands.Bot):
         self.redis_ready = asyncio.Event()
         self.redis_closed = False
         self.api_client = api.APIClient(loop=self.loop)
-        self.filter_list_cache = {}
+        self.filter_list_cache = defaultdict(list)
 
         self._connector = None
         self._resolver = None
@@ -64,7 +65,7 @@ class Bot(commands.Bot):
                 "created_at": item.get("created_at"),
                 "updated_at": item.get("updated_at"),
             }
-            self.filter_list_cache.setdefault(f"{type_}.{allowed}", []).append(metadata)
+            self.filter_list_cache[f"{type_}.{allowed}"].append(metadata)
 
     async def _create_redis_session(self) -> None:
         """

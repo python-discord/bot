@@ -88,7 +88,7 @@ class FilterLists(Cog):
             "created_at": item.get("created_at"),
             "updated_at": item.get("updated_at"),
         }
-        self.bot.filter_list_cache.setdefault(f"{type_}.{allowed}", []).append(metadata)
+        self.bot.filter_list_cache[f"{type_}.{allowed}"].append(metadata)
         await ctx.message.add_reaction("✅")
 
     async def _delete_data(self, ctx: Context, allowed: bool, list_type: ValidFilterListType, content: str) -> None:
@@ -110,7 +110,7 @@ class FilterLists(Cog):
 
         # Find the content and delete it.
         log.trace(f"Trying to delete the {content} item from the {list_type} {allow_type}")
-        for allow_list in self.bot.filter_list_cache.get(f"{list_type}.{allowed}", []):
+        for allow_list in self.bot.filter_list_cache[f"{list_type}.{allowed}"]:
             if content == allow_list.get("content"):
                 item = allow_list
                 break
@@ -125,7 +125,7 @@ class FilterLists(Cog):
     async def _list_all_data(self, ctx: Context, allowed: bool, list_type: ValidFilterListType) -> None:
         """Paginate and display all items in a filterlist."""
         allow_type = "whitelist" if allowed else "blacklist"
-        result = self.bot.filter_list_cache.get(f"{list_type}.{allowed}", [])
+        result = self.bot.filter_list_cache[f"{list_type}.{allowed}"]
 
         # Build a list of lines we want to show in the paginator
         lines = []
