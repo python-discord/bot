@@ -79,16 +79,7 @@ class FilterLists(Cog):
             raise
 
         # Insert the item into the cache
-        type_ = item.get("type")
-        allowed = item.get("allowed")
-        metadata = {
-            "content": item.get("content"),
-            "comment": item.get("comment"),
-            "id": item.get("id"),
-            "created_at": item.get("created_at"),
-            "updated_at": item.get("updated_at"),
-        }
-        self.bot.filter_list_cache[f"{type_}.{allowed}"].append(metadata)
+        self.bot.insert_item_into_filter_list_cache(item)
         await ctx.message.add_reaction("✅")
 
     async def _delete_data(self, ctx: Context, allowed: bool, list_type: ValidFilterListType, content: str) -> None:

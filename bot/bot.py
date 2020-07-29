@@ -3,7 +3,7 @@ import logging
 import socket
 import warnings
 from collections import defaultdict
-from typing import Optional
+from typing import Any, Dict, Optional
 
 import aiohttp
 import aioredis
@@ -56,16 +56,7 @@ class Bot(commands.Bot):
         full_cache = await self.api_client.get('bot/filter-lists')
 
         for item in full_cache:
-            type_ = item.get("type")
-            allowed = item.get("allowed")
-            metadata = {
-                "content": item.get("content"),
-                "comment": item.get("comment"),
-                "id": item.get("id"),
-                "created_at": item.get("created_at"),
-                "updated_at": item.get("updated_at"),
-            }
-            self.filter_list_cache[f"{type_}.{allowed}"].append(metadata)
+            self.insert_item_into_filter_list_cache(item)
 
     async def _create_redis_session(self) -> None:
         """
@@ -173,6 +164,19 @@ class Bot(commands.Bot):
             self.redis_session.close()
             self.redis_ready.clear()
             await self.redis_session.wait_closed()
+
+    def insert_item_into_filter_list_cache(self, item: Dict[Any]) -> None:
+        """Add an item to the bots filter_list_cache."""
+        type_ = item["type"]
+        allowed = item["allowed"]
+        metadata = {
+            "id": item["id"],
+            "content": item["content"],
+            "comment": item["comment"],
+            "created_at": item["created_at"],
+            "updated_at": item["updated_at"],
+        }
+        self.filter_list_cache[f"{type_}.{allowed}"].append(metadata)
 
     async def login(self, *args, **kwargs) -> None:
         """Re-create the connector and set up sessions before logging into Discord."""
