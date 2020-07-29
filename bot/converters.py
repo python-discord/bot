@@ -1,14 +1,15 @@
-import dateutil.parser
-import dateutil.tz
-import discord
 import logging
 import re
 import typing as t
-from aiohttp import ClientConnectorError
 from datetime import datetime
+from ssl import CertificateError
+
+import dateutil.parser
+import dateutil.tz
+import discord
+from aiohttp import ClientConnectorError
 from dateutil.relativedelta import relativedelta
 from discord.ext.commands import BadArgument, Context, Converter, IDConverter, UserConverter
-from ssl import CertificateError
 
 from bot.api import ResponseCodeError
 from bot.constants import URLs
