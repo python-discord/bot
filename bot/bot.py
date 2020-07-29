@@ -3,7 +3,7 @@ import logging
 import socket
 import warnings
 from collections import defaultdict
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
 
 import aiohttp
 import aioredis
@@ -165,7 +165,7 @@ class Bot(commands.Bot):
             self.redis_ready.clear()
             await self.redis_session.wait_closed()
 
-    def insert_item_into_filter_list_cache(self, item: Dict[Any]) -> None:
+    def insert_item_into_filter_list_cache(self, item: Dict[str, str]) -> None:
         """Add an item to the bots filter_list_cache."""
         type_ = item["type"]
         allowed = item["allowed"]
