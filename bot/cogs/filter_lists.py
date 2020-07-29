@@ -64,10 +64,10 @@ class FilterLists(Cog):
                 json=payload
             )
         except ResponseCodeError as e:
-            if e.status == 500:
+            if e.status == 400:
                 await ctx.message.add_reaction("❌")
                 log.debug(
-                    f"{ctx.author} tried to add data to a {allow_type}, but the API returned 500, "
+                    f"{ctx.author} tried to add data to a {allow_type}, but the API returned 400, "
                     "probably because the request violated the UniqueConstraint."
                 )
                 raise BadArgument(
