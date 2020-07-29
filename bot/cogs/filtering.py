@@ -99,14 +99,10 @@ class Filtering(Cog):
 
         self.bot.loop.create_task(self.reschedule_offensive_msg_deletion())
 
-    def _get_filterlist_items(self, list_type: str, *, allowed: bool, compiled: Optional[bool] = False) -> list:
+    def _get_filterlist_items(self, list_type: str, *, allowed: bool) -> list:
         """Fetch items from the filter_list_cache."""
         items = self.bot.filter_list_cache[f"{list_type.upper()}.{allowed}"]
-
-        if compiled:
-            return [re.compile(fr'{item["content"]}', flags=re.IGNORECASE) for item in items]
-        else:
-            return [item["content"] for item in items]
+        return [item["content"] for item in items]
 
     @staticmethod
     def _expand_spoilers(text: str) -> str:
@@ -143,9 +139,9 @@ class Filtering(Cog):
     def get_name_matches(self, name: str) -> List[re.Match]:
         """Check bad words from passed string (name). Return list of matches."""
         matches = []
-        watchlist_patterns = self._get_filterlist_items('word_watchlist', allowed=False, compiled=True)
+        watchlist_patterns = self._get_filterlist_items('word_watchlist', allowed=False)
         for pattern in watchlist_patterns:
-            if match := pattern.search(name):
+            if match := re.search(pattern, name, flags=re.IGNORECASE):
                 matches.append(match)
         return matches
 
@@ -408,9 +404,9 @@ class Filtering(Cog):
         if URL_RE.search(text):
             return False
 
-        watchlist_patterns = self._get_filterlist_items('word_watchlist', allowed=False, compiled=True)
+        watchlist_patterns = self._get_filterlist_items('word_watchlist', allowed=False)
         for pattern in watchlist_patterns:
-            match = pattern.search(text)
+            match = re.search(pattern, text, flags=re.IGNORECASE)
             if match:
                 return match
 
