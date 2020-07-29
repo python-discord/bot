@@ -33,13 +33,7 @@ class FilterLists(Cog):
 
         # If this is a server invite, we gotta validate it.
         if list_type == "GUILD_INVITE":
-            log.trace(f"{content} is a guild invite, attempting to validate.")
-            validator = ValidDiscordServerInvite()
-            guild_data = await validator.convert(ctx, content)
-
-            # If we make it this far without raising a BadArgument, the invite is
-            # valid. Let's convert the content to an ID.
-            log.trace(f"{content} validated as server invite. Converting to ID.")
+            guild_data = await self._validate_guild_invite(ctx, content)
             content = guild_data.get("id")
 
             # Unless the user has specified another comment, let's
@@ -86,17 +80,10 @@ class FilterLists(Cog):
         """Remove an item from a filterlist."""
         item = None
         allow_type = "whitelist" if allowed else "blacklist"
-        id_converter = IDConverter()
 
         # If this is a server invite, we need to convert it.
-        if list_type == "GUILD_INVITE" and not id_converter._get_id_match(content):
-            log.trace(f"{content} is a guild invite, attempting to validate.")
-            validator = ValidDiscordServerInvite()
-            guild_data = await validator.convert(ctx, content)
-
-            # If we make it this far without raising a BadArgument, the invite is
-            # valid. Let's convert the content to an ID.
-            log.trace(f"{content} validated as server invite. Converting to ID.")
+        if list_type == "GUILD_INVITE" and not IDConverter()._get_id_match(content):
+            guild_data = await self._validate_guild_invite(ctx, content)
             content = guild_data.get("id")
 
         # Find the content and delete it.
@@ -142,6 +129,21 @@ class FilterLists(Cog):
         else:
             embed.description = "Hmmm, seems like there's nothing here yet."
             await ctx.send(embed=embed)
+
+    async def _validate_guild_invite(self, ctx: Context, invite: str) -> dict:
+        """
+        Validates a guild invite, and returns the guild info as a dict.
+
+        Will raise a BadArgument if the guild invite is invalid.
+        """
+        log.trace(f"Attempting to validate whether or not {invite} is a guild invite.")
+        validator = ValidDiscordServerInvite()
+        guild_data = await validator.convert(ctx, invite)
+
+        # If we make it this far without raising a BadArgument, the invite is
+        # valid. Let's return a dict of guild information.
+        log.trace(f"{invite} validated as server invite. Converting to ID.")
+        return guild_data
 
     @group(aliases=("allowlist", "allow", "al", "wl"))
     async def whitelist(self, ctx: Context) -> None:
