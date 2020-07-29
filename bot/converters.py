@@ -57,7 +57,7 @@ class ValidDiscordServerInvite(Converter):
 
     async def convert(self, ctx: Context, server_invite: str) -> dict:
         """Check whether the string is a valid Discord server invite."""
-        invite_code = INVITE_RE.match(server_invite)
+        invite_code = INVITE_RE.search(server_invite)
         if invite_code:
             response = await ctx.bot.http_session.get(
                 f"{URLs.discord_invite_api}/{invite_code[1]}"
