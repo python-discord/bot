@@ -138,7 +138,7 @@ class Filtering(Cog):
     def get_name_matches(self, name: str) -> List[re.Match]:
         """Check bad words from passed string (name). Return list of matches."""
         matches = []
-        watchlist_patterns = self._get_filterlist_items('word_watchlist', allowed=False)
+        watchlist_patterns = self._get_filterlist_items('filter_token', allowed=False)
         for pattern in watchlist_patterns:
             if match := re.search(pattern, name, flags=re.IGNORECASE):
                 matches.append(match)
@@ -403,7 +403,7 @@ class Filtering(Cog):
         if URL_RE.search(text):
             return False
 
-        watchlist_patterns = self._get_filterlist_items('word_watchlist', allowed=False)
+        watchlist_patterns = self._get_filterlist_items('filter_token', allowed=False)
         for pattern in watchlist_patterns:
             match = re.search(pattern, text, flags=re.IGNORECASE)
             if match:
