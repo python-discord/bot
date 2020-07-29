@@ -9,7 +9,7 @@ import dateutil.tz
 import discord
 from aiohttp import ClientConnectorError
 from dateutil.relativedelta import relativedelta
-from discord.ext.commands import BadArgument, Context, Converter, IDConverter, UserConverter
+from discord.ext.commands import BadArgument, Bot, Context, Converter, IDConverter, UserConverter
 
 from bot.api import ResponseCodeError
 from bot.constants import URLs
@@ -81,14 +81,23 @@ class ValidFilterListType(Converter):
     passes through the given argument otherwise.
     """
 
-    async def convert(self, ctx: Context, list_type: str) -> str:
-        """Checks whether the given string is a valid FilterList type."""
+    @staticmethod
+    async def get_valid_types(bot: Bot) -> list:
+        """
+        Try to get a list of valid filter list types.
+
+        Raise a BadArgument if the API can't respond.
+        """
         try:
-            valid_types = await ctx.bot.api_client.get('bot/filter-lists/get-types')
+            valid_types = await bot.api_client.get('bot/filter-lists/get-types')
         except ResponseCodeError:
             raise BadArgument("Cannot validate list_type: Unable to fetch valid types from API.")
 
-        valid_types = [enum for enum, classname in valid_types]
+        return [enum for enum, classname in valid_types]
+
+    async def convert(self, ctx: Context, list_type: str) -> str:
+        """Checks whether the given string is a valid FilterList type."""
+        valid_types = await self.get_valid_types(ctx.bot)
         list_type = list_type.upper()
 
         if list_type not in valid_types:

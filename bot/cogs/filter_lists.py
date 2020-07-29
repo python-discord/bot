@@ -17,8 +17,32 @@ log = logging.getLogger(__name__)
 class FilterLists(Cog):
     """Commands for blacklisting and whitelisting things."""
 
+    methods_with_filterlist_types = [
+        "allow_add",
+        "allow_delete",
+        "allow_get",
+        "deny_add",
+        "deny_delete",
+        "deny_get",
+    ]
+
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
+        self.bot.loop.create_task(self._amend_docstrings())
+
+    async def _amend_docstrings(self) -> None:
+        """Add the valid FilterList types to the docstrings, so they'll appear in !help invocations."""
+        await self.bot.wait_until_guild_available()
+
+        # Add valid filterlist types to the docstrings
+        valid_types = await ValidFilterListType.get_valid_types(self.bot)
+        valid_types = [f"`{type_.lower()}`" for type_ in valid_types]
+
+        for method_name in self.methods_with_filterlist_types:
+            command = getattr(self, method_name)
+            command.help = (
+                f"{command.help}\n\nValid **list_type** values are {', '.join(valid_types)}."
+            )
 
     async def _add_data(
             self,
