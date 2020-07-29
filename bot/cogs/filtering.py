@@ -101,8 +101,7 @@ class Filtering(Cog):
 
     def _get_filterlist_items(self, list_type: str, *, allowed: bool) -> list:
         """Fetch items from the filter_list_cache."""
-        items = self.bot.filter_list_cache[f"{list_type.upper()}.{allowed}"]
-        return [item["content"] for item in items]
+        return self.bot.filter_list_cache[f"{list_type.upper()}.{allowed}"].keys()
 
     @staticmethod
     def _expand_spoilers(text: str) -> str:

@@ -35,7 +35,7 @@ class Bot(commands.Bot):
         self.redis_ready = asyncio.Event()
         self.redis_closed = False
         self.api_client = api.APIClient(loop=self.loop)
-        self.filter_list_cache = defaultdict(list)
+        self.filter_list_cache = defaultdict(dict)
 
         self._connector = None
         self._resolver = None
@@ -169,14 +169,14 @@ class Bot(commands.Bot):
         """Add an item to the bots filter_list_cache."""
         type_ = item["type"]
         allowed = item["allowed"]
-        metadata = {
+        content = item["content"]
+
+        self.filter_list_cache[f"{type_}.{allowed}"][content] = {
             "id": item["id"],
-            "content": item["content"],
             "comment": item["comment"],
             "created_at": item["created_at"],
             "updated_at": item["updated_at"],
         }
-        self.filter_list_cache[f"{type_}.{allowed}"].append(metadata)
 
     async def login(self, *args, **kwargs) -> None:
         """Re-create the connector and set up sessions before logging into Discord."""

@@ -88,16 +88,16 @@ class FilterLists(Cog):
 
         # Find the content and delete it.
         log.trace(f"Trying to delete the {content} item from the {list_type} {allow_type}")
-        for allow_list in self.bot.filter_list_cache[f"{list_type}.{allowed}"]:
-            if content == allow_list.get("content"):
-                item = allow_list
+        for allow_list, metadata in self.bot.filter_list_cache[f"{list_type}.{allowed}"].items():
+            if content == allow_list:
+                item = metadata
                 break
 
         if item is not None:
             await self.bot.api_client.delete(
-                f"bot/filter-lists/{item.get('id')}"
+                f"bot/filter-lists/{item['id']}"
             )
-            self.bot.filter_list_cache[f"{list_type}.{allowed}"].remove(item)
+            del self.bot.filter_list_cache[f"{list_type}.{allowed}"][content]
             await ctx.message.add_reaction("✅")
 
     async def _list_all_data(self, ctx: Context, allowed: bool, list_type: ValidFilterListType) -> None:
@@ -107,11 +107,11 @@ class FilterLists(Cog):
 
         # Build a list of lines we want to show in the paginator
         lines = []
-        for item in result:
-            line = f"• `{item.get('content')}`"
+        for content, metadata in result.items():
+            line = f"• `{content}`"
 
-            if item.get("comment"):
-                line += f" - {item.get('comment')}"
+            if metadata.get("comment"):
+                line += f" - {metadata.get('comment')}"
 
             lines.append(line)
         lines = sorted(lines)
