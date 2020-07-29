@@ -88,10 +88,7 @@ class FilterLists(Cog):
 
         # Find the content and delete it.
         log.trace(f"Trying to delete the {content} item from the {list_type} {allow_type}")
-        for allow_list, metadata in self.bot.filter_list_cache[f"{list_type}.{allowed}"].items():
-            if content == allow_list:
-                item = metadata
-                break
+        item = self.bot.filter_list_cache[f"{list_type}.{allowed}"].get(content)
 
         if item is not None:
             await self.bot.api_client.delete(
