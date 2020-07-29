@@ -106,7 +106,6 @@ class FilterLists(Cog):
 
     async def _delete_data(self, ctx: Context, allowed: bool, list_type: ValidFilterListType, content: str) -> None:
         """Remove an item from a filterlist."""
-        item = None
         allow_type = "whitelist" if allowed else "blacklist"
 
         # If this is a server invite, we need to convert it.
@@ -123,11 +122,20 @@ class FilterLists(Cog):
         item = self.bot.filter_list_cache[f"{list_type}.{allowed}"].get(content)
 
         if item is not None:
-            await self.bot.api_client.delete(
-                f"bot/filter-lists/{item['id']}"
-            )
-            del self.bot.filter_list_cache[f"{list_type}.{allowed}"][content]
-            await ctx.message.add_reaction("✅")
+            try:
+                await self.bot.api_client.delete(
+                    f"bot/filter-lists/{item['id']}"
+                )
+                del self.bot.filter_list_cache[f"{list_type}.{allowed}"][content]
+                await ctx.message.add_reaction("✅")
+            except ResponseCodeError as e:
+                log.debug(
+                    f"{ctx.author} tried to delete an item with the id {item['id']}, but "
+                    f"the API raised an unexpected error: {e}"
+                )
+                await ctx.message.add_reaction("❌")
+        else:
+            await ctx.message.add_reaction("❌")
 
     async def _list_all_data(self, ctx: Context, allowed: bool, list_type: ValidFilterListType) -> None:
         """Paginate and display all items in a filterlist."""
@@ -158,8 +166,10 @@ class FilterLists(Cog):
         else:
             embed.description = "Hmmm, seems like there's nothing here yet."
             await ctx.send(embed=embed)
+            await ctx.message.add_reaction("❌")
 
-    async def _validate_guild_invite(self, ctx: Context, invite: str) -> dict:
+    @staticmethod
+    async def _validate_guild_invite(ctx: Context, invite: str) -> dict:
         """
         Validates a guild invite, and returns the guild info as a dict.
 
