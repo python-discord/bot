@@ -43,6 +43,10 @@ class FilterLists(Cog):
             if not comment:
                 comment = guild_data.get("name")
 
+        # If it's a file format, let's make sure it has a leading dot.
+        elif list_type == "FILE_FORMAT" and not content.startswith("."):
+            content = f".{content}"
+
         # Try to add the item to the database
         log.trace(f"Trying to add the {content} item to the {list_type} {allow_type}")
         payload = {
@@ -85,6 +89,10 @@ class FilterLists(Cog):
         if list_type == "GUILD_INVITE" and not IDConverter()._get_id_match(content):
             guild_data = await self._validate_guild_invite(ctx, content)
             content = guild_data.get("id")
+
+        # If it's a file format, let's make sure it has a leading dot.
+        elif list_type == "FILE_FORMAT" and not content.startswith("."):
+            content = f".{content}"
 
         # Find the content and delete it.
         log.trace(f"Trying to delete the {content} item from the {list_type} {allow_type}")
