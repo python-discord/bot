@@ -8,7 +8,7 @@ from bot.bot import Bot
 from bot.cogs.moderation.modlog import ModLog
 from bot.constants import Channels, Colours, Event, Icons
 
-WEBHOOK_URL_RE = re.compile(r"((?:https?://)?discordapp\.com/api/webhooks/\d+/)\S+/?", re.I)
+WEBHOOK_URL_RE = re.compile(r"((?:https?://)?discord(app)?\.com/api/webhooks/\d+/)\S+/?", re.I)
 
 ALERT_MESSAGE_TEMPLATE = (
     "{user}, looks like you posted a Discord webhook URL. Therefore, your "
