@@ -701,6 +701,8 @@ class HelpChannels(commands.Cog):
                 await message.pin()
             except discord.NotFound:
                 log.info(f"Pinning message {message.id} ({channel}) failed because message got deleted.")
+            except discord.HTTPException as e:
+                log.info(f"Pinning message {message.id} ({channel.id}) failed with code {e.code}", exc_info=e)
             else:
                 await self.question_messages.set(channel.id, message.id)
 
