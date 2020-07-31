@@ -93,16 +93,10 @@ class Bot(commands.Bot):
         super().clear()
 
     def _remove_extensions(self) -> None:
-        """Remove all extensions and Cog to close bot. Copyright (c) 2015-2020 Rapptz (discord.py, MIT License)."""
-        for extension in tuple(self.extensions):
+        """Remove all extensions to trigger cog unloads."""
+        for ext in self.extensions.keys():
             try:
-                self.unload_extension(extension)
-            except Exception:
-                pass
-
-        for cog in tuple(self.cogs):
-            try:
-                self.remove_cog(cog)
+                self.unload_extension(ext)
             except Exception:
                 pass
 
