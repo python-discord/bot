@@ -364,10 +364,18 @@ class HelpChannels(commands.Cog):
         channels = list(self.get_category_channels(self.available_category))
         missing = constants.HelpChannels.max_available - len(channels)
 
-        log.trace(f"Moving {missing} missing channels to the Available category.")
+        # If we've got less than `max_available` channel available, we should add some.
+        if missing > 0:
+            log.trace(f"Moving {missing} missing channels to the Available category.")
+            for _ in range(missing):
+                await self.move_to_available()
 
-        for _ in range(missing):
-            await self.move_to_available()
+        # If for some reason we have more than `max_available` channels available,
+        # we should move the superfluous ones over to dormant.
+        elif missing < 0:
+            log.trace(f"Moving {abs(missing)} superfluous available channels over to the Dormant category.")
+            for channel in channels[:abs(missing)]:
+                await self.move_to_dormant(channel, "auto")
 
     async def init_categories(self) -> None:
         """Get the help category objects. Remove the cog if retrieval fails."""
