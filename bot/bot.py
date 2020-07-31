@@ -106,9 +106,8 @@ class Bot(commands.Bot):
         self.remove_extensions()
 
         # Wait until all tasks that have to be completed before bot is closing is done
-        for task in self.closing_tasks:
-            log.trace(f"Waiting for task {task.get_name()} before closing.")
-            await task
+        log.trace("Waiting for tasks before closing.")
+        await asyncio.gather(*self.closing_tasks)
 
         # Now actually do full close of bot
         await super(commands.Bot, self).close()
