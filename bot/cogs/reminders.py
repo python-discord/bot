@@ -23,7 +23,7 @@ from bot.utils.time import humanize_delta
 
 log = logging.getLogger(__name__)
 
-NAMESPACE = "reminders"  # Used for the mutually_exclusive decorator; constant to prevent typos
+NAMESPACE = "reminder"  # Used for the mutually_exclusive decorator; constant to prevent typos
 WHITELISTED_CHANNELS = Guild.reminder_whitelist
 MAXIMUM_REMINDERS = 5
 
