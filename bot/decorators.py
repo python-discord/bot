@@ -9,7 +9,7 @@ from functools import partial, wraps
 from weakref import WeakValueDictionary
 
 from discord import Colour, Embed, Member, NotFound
-from discord.ext.commands import Cog, Command, Context, check
+from discord.ext.commands import Cog, Context, check
 
 from bot.constants import Channels, ERROR_REPLIES, RedirectOutput
 from bot.errors import LockedResourceError
@@ -31,7 +31,7 @@ def in_whitelist(
     roles: t.Container[int] = (),
     redirect: t.Optional[int] = Channels.bot_commands,
     fail_silently: bool = False,
-) -> Command:
+) -> t.Callable:
     """
     Check if a command was issued in a whitelisted context.
 
@@ -52,7 +52,7 @@ def in_whitelist(
     return check(predicate)
 
 
-def with_role(*role_ids: int) -> Command:
+def with_role(*role_ids: int) -> t.Callable:
     """Returns True if the user has any one of the roles in role_ids."""
     async def predicate(ctx: Context) -> bool:
         """With role checker predicate."""
@@ -60,7 +60,7 @@ def with_role(*role_ids: int) -> Command:
     return check(predicate)
 
 
-def without_role(*role_ids: int) -> Command:
+def without_role(*role_ids: int) -> t.Callable:
     """Returns True if the user does not have any of the roles in role_ids."""
     async def predicate(ctx: Context) -> bool:
         return without_role_check(ctx, *role_ids)
