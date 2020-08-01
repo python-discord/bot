@@ -224,14 +224,14 @@ def redirect_output(destination_channel: int, bypass_roles: t.Container[int] = N
     return wrap
 
 
-def respect_role_hierarchy(name_or_pos: function.Argument) -> t.Callable:
+def respect_role_hierarchy(member_arg: function.Argument) -> t.Callable:
     """
     Ensure the highest role of the invoking member is greater than that of the target member.
 
     If the condition fails, a warning is sent to the invoking context. A target which is not an
     instance of discord.Member will always pass.
 
-    `name_or_pos` is the keyword name or position index of the parameter of the decorated command
+    `member_arg` is the keyword name or position index of the parameter of the decorated command
     whose value is the target member.
 
     This decorator must go before (below) the `command` decorator.
@@ -242,7 +242,7 @@ def respect_role_hierarchy(name_or_pos: function.Argument) -> t.Callable:
             log.trace(f"{func.__name__}: respect role hierarchy decorator called")
 
             bound_args = function.get_bound_args(func, args, kwargs)
-            target = function.get_arg_value(name_or_pos, bound_args)
+            target = function.get_arg_value(member_arg, bound_args)
 
             if not isinstance(target, Member):
                 log.trace("The target is not a discord.Member; skipping role hierarchy check.")
