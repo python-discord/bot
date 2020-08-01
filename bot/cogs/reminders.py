@@ -166,7 +166,7 @@ class Reminders(Cog):
         log.trace(f"Scheduling new task #{reminder['id']}")
         self.schedule_reminder(reminder)
 
-    @mutually_exclusive_arg(NAMESPACE, "reminder", itemgetter("id"))
+    @mutually_exclusive_arg(NAMESPACE, "reminder", itemgetter("id"), raise_error=True)
     async def send_reminder(self, reminder: dict, late: relativedelta = None) -> None:
         """Send the reminder."""
         is_valid, user, channel = self.ensure_valid_reminder(reminder)
@@ -373,7 +373,7 @@ class Reminders(Cog):
         mention_ids = [mention.id for mention in mentions]
         await self.edit_reminder(ctx, id_, {"mentions": mention_ids})
 
-    @mutually_exclusive_arg(NAMESPACE, "id_")
+    @mutually_exclusive_arg(NAMESPACE, "id_", raise_error=True)
     async def edit_reminder(self, ctx: Context, id_: int, payload: dict) -> None:
         """Edits a reminder with the given payload, then sends a confirmation message."""
         reminder = await self._edit_reminder(id_, payload)
@@ -391,7 +391,7 @@ class Reminders(Cog):
         await self._reschedule_reminder(reminder)
 
     @remind_group.command("delete", aliases=("remove", "cancel"))
-    @mutually_exclusive_arg(NAMESPACE, "id_")
+    @mutually_exclusive_arg(NAMESPACE, "id_", raise_error=True)
     async def delete_reminder(self, ctx: Context, id_: int) -> None:
         """Delete one of your active reminders."""
         await self.bot.api_client.delete(f"bot/reminders/{id_}")
