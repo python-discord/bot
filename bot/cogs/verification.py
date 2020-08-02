@@ -19,8 +19,8 @@ In order to send messages, you first have to accept our rules. To do so, please 
 <#{constants.Channels.verification}>. Thank you!
 """
 
-WELCOME_MESSAGE = f"""
-Hello! Welcome to the server, and thanks for verifying yourself!
+VERIFIED_MESSAGE = f"""
+Thanks for verifying yourself!
 
 For your records, these are the documents you accepted:
 
@@ -121,7 +121,7 @@ class Verification(Cog):
         log.debug(f"{ctx.author} called !accept. Assigning the 'Developer' role.")
         await ctx.author.add_roles(Object(constants.Roles.verified), reason="Accepted the rules")
         try:
-            await ctx.author.send(WELCOME_MESSAGE)
+            await ctx.author.send(VERIFIED_MESSAGE)
         except Forbidden:
             log.info(f"Sending welcome message failed for {ctx.author}.")
         finally:
