@@ -7,11 +7,13 @@ from io import StringIO
 from typing import Tuple, Union
 
 from discord import Colour, Embed, utils
-from discord.ext.commands import BadArgument, Cog, Context, command
+from discord.ext.commands import BadArgument, Cog, Context, clean_content, command
 
 from bot.bot import Bot
 from bot.constants import Channels, MODERATION_ROLES, STAFF_ROLES
 from bot.decorators import in_whitelist, with_role
+from bot.pagination import LinePaginator
+from bot.utils import messages
 
 log = logging.getLogger(__name__)
 
@@ -117,25 +119,18 @@ class Utils(Cog):
     @command()
     @in_whitelist(channels=(Channels.bot_commands,), roles=STAFF_ROLES)
     async def charinfo(self, ctx: Context, *, characters: str) -> None:
-        """Shows you information on up to 25 unicode characters."""
+        """Shows you information on up to 50 unicode characters."""
         match = re.match(r"<(a?):(\w+):(\d+)>", characters)
         if match:
-            embed = Embed(
-                title="Non-Character Detected",
-                description=(
-                    "Only unicode characters can be processed, but a custom Discord emoji "
-                    "was found. Please remove it and try again."
-                )
+            return await messages.send_denial(
+                ctx,
+                "**Non-Character Detected**\n"
+                "Only unicode characters can be processed, but a custom Discord emoji "
+                "was found. Please remove it and try again."
             )
-            embed.colour = Colour.red()
-            await ctx.send(embed=embed)
-            return
 
-        if len(characters) > 25:
-            embed = Embed(title=f"Too many characters ({len(characters)}/25)")
-            embed.colour = Colour.red()
-            await ctx.send(embed=embed)
-            return
+        if len(characters) > 50:
+            return await messages.send_denial(ctx, f"Too many characters ({len(characters)}/50)")
 
         def get_info(char: str) -> Tuple[str, str]:
             digit = f"{ord(char):x}"
@@ -148,15 +143,14 @@ class Utils(Cog):
             info = f"`{u_code.ljust(10)}`: {name} - {utils.escape_markdown(char)}"
             return info, u_code
 
-        charlist, rawlist = zip(*(get_info(c) for c in characters))
-
-        embed = Embed(description="\n".join(charlist))
-        embed.set_author(name="Character Info")
+        char_list, raw_list = zip(*(get_info(c) for c in characters))
+        embed = Embed().set_author(name="Character Info")
 
         if len(characters) > 1:
-            embed.add_field(name='Raw', value=f"`{''.join(rawlist)}`", inline=False)
+            # Maximum length possible is 502 out of 1024, so there's no need to truncate.
+            embed.add_field(name='Full Raw Text', value=f"`{''.join(raw_list)}`", inline=False)
 
-        await ctx.send(embed=embed)
+        await LinePaginator.paginate(char_list, ctx, embed, max_lines=10, max_size=2000, empty=False)
 
     @command()
     async def zen(self, ctx: Context, *, search_value: Union[int, str, None] = None) -> None:
@@ -231,7 +225,7 @@ class Utils(Cog):
 
     @command(aliases=("poll",))
     @with_role(*MODERATION_ROLES)
-    async def vote(self, ctx: Context, title: str, *options: str) -> None:
+    async def vote(self, ctx: Context, title: clean_content(fix_channel_mentions=True), *options: str) -> None:
         """
         Build a quick voting poll with matching reactions with the provided options.
 

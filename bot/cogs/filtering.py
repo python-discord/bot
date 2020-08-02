@@ -312,8 +312,10 @@ class Filtering(Cog):
         """Send a mod log for a triggered filter."""
         if msg.channel.type is discord.ChannelType.private:
             channel_str = "via DM"
+            ping_everyone = False
         else:
             channel_str = f"in {msg.channel.mention}"
+            ping_everyone = Filter.ping_everyone
 
         eval_msg = "using !eval" if is_eval else ""
         message = (
@@ -332,7 +334,7 @@ class Filtering(Cog):
             text=message,
             thumbnail=msg.author.avatar_url_as(static_format="png"),
             channel_id=Channels.mod_alerts,
-            ping_everyone=Filter.ping_everyone,
+            ping_everyone=ping_everyone,
             additional_embeds=stats.additional_embeds,
             additional_embeds_msg=stats.additional_embeds_msg
         )

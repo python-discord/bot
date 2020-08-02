@@ -236,8 +236,8 @@ guild:
         owners:             &OWNERS_ROLE    267627879762755584
 
         # Code Jam
-        jammers:        591786436651646989
-        team_leaders:   501324292341104650
+        jammers:        737249140966162473
+        team_leaders:   737250302834638889
 
     moderation_roles:
         - *OWNERS_ROLE
@@ -458,10 +458,6 @@ anti_spam:
         burst:
             interval: 10
             max: 7
-
-        burst_shared:
-            interval: 10
-            max: 20
 
         chars:
             interval: 5
