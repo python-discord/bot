@@ -12,6 +12,13 @@ from bot.utils.checks import InWhitelistCheckFailure, without_role_check
 
 log = logging.getLogger(__name__)
 
+ON_JOIN_MESSAGE = f"""
+Hello! Welcome to Python Discord!
+
+In order to send messages, you first have to accept our rules. To do so, please visit \
+<#{constants.Channels.verification}>. Thank you!
+"""
+
 WELCOME_MESSAGE = f"""
 Hello! Welcome to the server, and thanks for verifying yourself!
 
