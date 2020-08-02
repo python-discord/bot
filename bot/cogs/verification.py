@@ -1,7 +1,7 @@
 import logging
 from contextlib import suppress
 
-from discord import Colour, Forbidden, Message, NotFound, Object
+from discord import Colour, Forbidden, Member, Message, NotFound, Object
 from discord.ext.commands import Cog, Context, command
 
 from bot import constants
@@ -52,6 +52,16 @@ class Verification(Cog):
     def mod_log(self) -> ModLog:
         """Get currently loaded ModLog cog instance."""
         return self.bot.get_cog("ModLog")
+
+    @Cog.listener()
+    async def on_member_join(self, member: Member) -> None:
+        """Attempt to send initial direct message to each new member."""
+        if member.guild.id != constants.Guild.id:
+            return  # Only listen for PyDis events
+
+        log.trace(f"Sending on join message to new member: {member.id}")
+        with suppress(Forbidden):
+            await member.send(ON_JOIN_MESSAGE)
 
     @Cog.listener()
     async def on_message(self, message: Message) -> None:
