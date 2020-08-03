@@ -74,10 +74,10 @@ class FilterLists(Cog):
         # Try to add the item to the database
         log.trace(f"Trying to add the {content} item to the {list_type} {allow_type}")
         payload = {
-            'allowed': allowed,
-            'type': list_type,
-            'content': content,
-            'comment': comment,
+            "allowed": allowed,
+            "type": list_type,
+            "content": content,
+            "comment": comment,
         }
 
         try:
