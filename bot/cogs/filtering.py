@@ -325,7 +325,7 @@ class Filtering(Cog):
                             text=message,
                             thumbnail=msg.author.avatar_url_as(static_format="png"),
                             channel_id=Channels.mod_alerts,
-                            ping_everyone=Filter.ping_everyone,
+                            ping_everyone=Filter.ping_everyone if not is_private else False,
                             additional_embeds=additional_embeds,
                             additional_embeds_msg=additional_embeds_msg
                         )

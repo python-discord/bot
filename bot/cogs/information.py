@@ -116,10 +116,7 @@ class Information(Cog):
             parsed_roles.append(role)
 
         if failed_roles:
-            await ctx.send(
-                ":x: I could not convert the following role names to a role: \n- "
-                "\n- ".join(failed_roles)
-            )
+            await ctx.send(f":x: Could not retrieve the following roles: {', '.join(failed_roles)}")
 
         for role in parsed_roles:
             h, s, v = colorsys.rgb_to_hsv(*role.colour.to_rgb())
@@ -226,7 +223,7 @@ class Information(Cog):
         if user.nick:
             name = f"{user.nick} ({name})"
 
-        joined = time_since(user.joined_at, precision="days")
+        joined = time_since(user.joined_at, max_units=3)
         roles = ", ".join(role.mention for role in user.roles[1:])
 
         description = [

@@ -47,6 +47,7 @@ class Tags(Cog):
                         "description": file.read_text(encoding="utf8"),
                     },
                     "restricted_to": "developers",
+                    "location": f"/bot/{file}"
                 }
 
                 # Convert to a list to allow negative indexing.

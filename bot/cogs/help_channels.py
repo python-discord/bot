@@ -102,6 +102,10 @@ class HelpChannels(commands.Cog):
     # RedisCache[discord.TextChannel.id, UtcPosixTimestamp]
     claim_times = RedisCache()
 
+    # This cache maps a help channel to original question message in same channel.
+    # RedisCache[discord.TextChannel.id, discord.Message.id]
+    question_messages = RedisCache()
+
     def __init__(self, bot: Bot):
         self.bot = bot
         self.scheduler = Scheduler(self.__class__.__name__)
@@ -360,10 +364,18 @@ class HelpChannels(commands.Cog):
         channels = list(self.get_category_channels(self.available_category))
         missing = constants.HelpChannels.max_available - len(channels)
 
-        log.trace(f"Moving {missing} missing channels to the Available category.")
+        # If we've got less than `max_available` channel available, we should add some.
+        if missing > 0:
+            log.trace(f"Moving {missing} missing channels to the Available category.")
+            for _ in range(missing):
+                await self.move_to_available()
 
-        for _ in range(missing):
-            await self.move_to_available()
+        # If for some reason we have more than `max_available` channels available,
+        # we should move the superfluous ones over to dormant.
+        elif missing < 0:
+            log.trace(f"Moving {abs(missing)} superfluous available channels over to the Dormant category.")
+            for channel in channels[:abs(missing)]:
+                await self.move_to_dormant(channel, "auto")
 
     async def init_categories(self) -> None:
         """Get the help category objects. Remove the cog if retrieval fails."""
@@ -428,8 +440,11 @@ class HelpChannels(commands.Cog):
         if not message or not message.embeds:
             return False
 
-        embed = message.embeds[0]
-        return message.author == self.bot.user and embed.description.strip() == description.strip()
+        bot_msg_desc = message.embeds[0].description
+        if bot_msg_desc is discord.Embed.Empty:
+            log.trace("Last message was a bot embed but it was empty.")
+            return False
+        return message.author == self.bot.user and bot_msg_desc.strip() == description.strip()
 
     @staticmethod
     def is_in_category(channel: discord.TextChannel, category_id: int) -> bool:
@@ -536,6 +551,18 @@ class HelpChannels(commands.Cog):
 
         A caller argument is provided for metrics.
         """
+        msg_id = await self.question_messages.pop(channel.id)
+
+        try:
+            await self.bot.http.unpin_message(channel.id, msg_id)
+        except discord.HTTPException as e:
+            if e.code == 10008:
+                log.trace(f"Message {msg_id} don't exist, can't unpin.")
+            else:
+                log.warn(f"Got unexpected status {e.code} when unpinning message {msg_id}: {e.text}")
+        else:
+            log.trace(f"Unpinned message {msg_id}.")
+
         log.info(f"Moving #{channel} ({channel.id}) to the Dormant category.")
 
         await self.move_to_bottom_position(
@@ -677,6 +704,16 @@ class HelpChannels(commands.Cog):
             log.info(f"Channel #{channel} was claimed by `{message.author.id}`.")
             await self.move_to_in_use(channel)
             await self.revoke_send_permissions(message.author)
+            # Pin message for better access and store this to cache
+            try:
+                await message.pin()
+            except discord.NotFound:
+                log.info(f"Pinning message {message.id} ({channel}) failed because message got deleted.")
+            except discord.HTTPException as e:
+                log.info(f"Pinning message {message.id} ({channel.id}) failed with code {e.code}", exc_info=e)
+            else:
+                await self.question_messages.set(channel.id, message.id)
+
             # Add user with channel for dormant check.
             await self.help_channel_claimants.set(channel.id, message.author.id)
 
