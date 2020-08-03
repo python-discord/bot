@@ -227,10 +227,6 @@ class Filter(metaclass=YAMLGetter):
 
     ping_everyone: bool
     offensive_msg_delete_days: int
-    guild_invite_whitelist: List[int]
-    domain_blacklist: List[str]
-    word_watchlist: List[str]
-    token_watchlist: List[str]
 
     channel_whitelist: List[int]
     role_whitelist: List[int]
@@ -535,12 +531,6 @@ class AntiSpam(metaclass=YAMLGetter):
 
     punishment: Dict[str, Dict[str, int]]
     rules: Dict[str, Dict[str, int]]
-
-
-class AntiMalware(metaclass=YAMLGetter):
-    section = "anti_malware"
-
-    whitelist: list
 
 
 class BigBrother(metaclass=YAMLGetter):

@@ -2,7 +2,8 @@ import asyncio
 import logging
 import socket
 import warnings
-from typing import Optional
+from collections import defaultdict
+from typing import Dict, Optional
 
 import aiohttp
 import aioredis
@@ -34,6 +35,7 @@ class Bot(commands.Bot):
         self.redis_ready = asyncio.Event()
         self.redis_closed = False
         self.api_client = api.APIClient(loop=self.loop)
+        self.filter_list_cache = defaultdict(dict)
 
         self._connector = None
         self._resolver = None
@@ -48,6 +50,13 @@ class Bot(commands.Bot):
             statsd_url = "127.0.0.1"
 
         self.stats = AsyncStatsClient(self.loop, statsd_url, 8125, prefix="bot")
+
+    async def _cache_filter_list_data(self) -> None:
+        """Cache all the data in the FilterList on the site."""
+        full_cache = await self.api_client.get('bot/filter-lists')
+
+        for item in full_cache:
+            self.insert_item_into_filter_list_cache(item)
 
     async def _create_redis_session(self) -> None:
         """
@@ -72,6 +81,49 @@ class Bot(commands.Bot):
 
         self.redis_closed = False
         self.redis_ready.set()
+
+    def _recreate(self) -> None:
+        """Re-create the connector, aiohttp session, the APIClient and the Redis session."""
+        # Use asyncio for DNS resolution instead of threads so threads aren't spammed.
+        # Doesn't seem to have any state with regards to being closed, so no need to worry?
+        self._resolver = aiohttp.AsyncResolver()
+
+        # Its __del__ does send a warning but it doesn't always show up for some reason.
+        if self._connector and not self._connector._closed:
+            log.warning(
+                "The previous connector was not closed; it will remain open and be overwritten"
+            )
+
+        if self.redis_session and not self.redis_session.closed:
+            log.warning(
+                "The previous redis pool was not closed; it will remain open and be overwritten"
+            )
+
+        # Create the redis session
+        self.loop.create_task(self._create_redis_session())
+
+        # Use AF_INET as its socket family to prevent HTTPS related problems both locally
+        # and in production.
+        self._connector = aiohttp.TCPConnector(
+            resolver=self._resolver,
+            family=socket.AF_INET,
+        )
+
+        # Client.login() will call HTTPClient.static_login() which will create a session using
+        # this connector attribute.
+        self.http.connector = self._connector
+
+        # Its __del__ does send a warning but it doesn't always show up for some reason.
+        if self.http_session and not self.http_session.closed:
+            log.warning(
+                "The previous session was not closed; it will remain open and be overwritten"
+            )
+
+        self.http_session = aiohttp.ClientSession(connector=self._connector)
+        self.api_client.recreate(force=True, connector=self._connector)
+
+        # Build the FilterList cache
+        self.loop.create_task(self._cache_filter_list_data())
 
     def add_cog(self, cog: commands.Cog) -> None:
         """Adds a "cog" to the bot and logs the operation."""
@@ -113,51 +165,24 @@ class Bot(commands.Bot):
             self.redis_ready.clear()
             await self.redis_session.wait_closed()
 
+    def insert_item_into_filter_list_cache(self, item: Dict[str, str]) -> None:
+        """Add an item to the bots filter_list_cache."""
+        type_ = item["type"]
+        allowed = item["allowed"]
+        content = item["content"]
+
+        self.filter_list_cache[f"{type_}.{allowed}"][content] = {
+            "id": item["id"],
+            "comment": item["comment"],
+            "created_at": item["created_at"],
+            "updated_at": item["updated_at"],
+        }
+
     async def login(self, *args, **kwargs) -> None:
         """Re-create the connector and set up sessions before logging into Discord."""
         self._recreate()
         await self.stats.create_socket()
         await super().login(*args, **kwargs)
-
-    def _recreate(self) -> None:
-        """Re-create the connector, aiohttp session, the APIClient and the Redis session."""
-        # Use asyncio for DNS resolution instead of threads so threads aren't spammed.
-        # Doesn't seem to have any state with regards to being closed, so no need to worry?
-        self._resolver = aiohttp.AsyncResolver()
-
-        # Its __del__ does send a warning but it doesn't always show up for some reason.
-        if self._connector and not self._connector._closed:
-            log.warning(
-                "The previous connector was not closed; it will remain open and be overwritten"
-            )
-
-        if self.redis_session and not self.redis_session.closed:
-            log.warning(
-                "The previous redis pool was not closed; it will remain open and be overwritten"
-            )
-
-        # Create the redis session
-        self.loop.create_task(self._create_redis_session())
-
-        # Use AF_INET as its socket family to prevent HTTPS related problems both locally
-        # and in production.
-        self._connector = aiohttp.TCPConnector(
-            resolver=self._resolver,
-            family=socket.AF_INET,
-        )
-
-        # Client.login() will call HTTPClient.static_login() which will create a session using
-        # this connector attribute.
-        self.http.connector = self._connector
-
-        # Its __del__ does send a warning but it doesn't always show up for some reason.
-        if self.http_session and not self.http_session.closed:
-            log.warning(
-                "The previous session was not closed; it will remain open and be overwritten"
-            )
-
-        self.http_session = aiohttp.ClientSession(connector=self._connector)
-        self.api_client.recreate(force=True, connector=self._connector)
 
     async def on_guild_available(self, guild: discord.Guild) -> None:
         """
