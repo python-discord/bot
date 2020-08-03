@@ -147,8 +147,8 @@ class FilterLists(Cog):
         for content, metadata in result.items():
             line = f"• `{content}`"
 
-            if metadata.get("comment"):
-                line += f" - {metadata.get('comment')}"
+            if comment := metadata.get("comment"):
+                line += f" - {comment}"
 
             lines.append(line)
         lines = sorted(lines)
