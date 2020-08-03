@@ -101,11 +101,23 @@ class ValidFilterListType(Converter):
         list_type = list_type.upper()
 
         if list_type not in valid_types:
-            valid_types_list = '\n'.join([f"• {type_.lower()}" for type_ in valid_types])
-            raise BadArgument(
-                f"You have provided an invalid list type!\n\n"
-                f"Please provide one of the following: \n{valid_types_list}"
-            )
+
+            # Maybe the user is using the plural form of this type,
+            # e.g. "guild_invites" instead of "guild_invite".
+            #
+            # This code will support the simple plural form (a single 's' at the end),
+            # which works for all current list types, but if a list type is added in the future
+            # which has an irregular plural form (like 'ies'), this code will need to be
+            # refactored to support this.
+            if list_type.endswith("S") and list_type[:-1] in valid_types:
+                list_type = list_type[:-1]
+
+            else:
+                valid_types_list = '\n'.join([f"• {type_.lower()}" for type_ in valid_types])
+                raise BadArgument(
+                    f"You have provided an invalid list type!\n\n"
+                    f"Please provide one of the following: \n{valid_types_list}"
+                )
         return list_type
 
 
