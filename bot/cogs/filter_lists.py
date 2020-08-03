@@ -168,10 +168,18 @@ class FilterLists(Cog):
             await ctx.send(embed=embed)
             await ctx.message.add_reaction("❌")
 
-    async def _sync_data(self) -> None:
+    async def _sync_data(self, ctx: Context) -> None:
         """Syncs the filterlists with the API."""
-        log.trace("Synchronizing FilterList cache with data from the API.")
-        await self.bot.cache_filter_list_data()
+        try:
+            log.trace("Attempting to sync FilterList cache with data from the API.")
+            await self.bot.cache_filter_list_data()
+            await ctx.message.add_reaction("✅")
+        except ResponseCodeError as e:
+            log.debug(
+                f"{ctx.author} tried to sync FilterList cache data but "
+                f"the API raised an unexpected error: {e}"
+            )
+            await ctx.message.add_reaction("❌")
 
     @staticmethod
     async def _validate_guild_invite(ctx: Context, invite: str) -> dict:
@@ -246,14 +254,14 @@ class FilterLists(Cog):
         await self._list_all_data(ctx, False, list_type)
 
     @whitelist.command(name="sync", aliases=("s",))
-    async def allow_sync(self, _: Context) -> None:
+    async def allow_sync(self, ctx: Context) -> None:
         """Syncs both allowlists and denylists with the API."""
-        await self._sync_data()
+        await self._sync_data(ctx)
 
     @blacklist.command(name="sync", aliases=("s",))
-    async def deny_sync(self, _: Context) -> None:
+    async def deny_sync(self, ctx: Context) -> None:
         """Syncs both allowlists and denylists with the API."""
-        await self._sync_data()
+        await self._sync_data(ctx)
 
     def cog_check(self, ctx: Context) -> bool:
         """Only allow moderators to invoke the commands in this cog."""
