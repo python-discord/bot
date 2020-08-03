@@ -168,6 +168,11 @@ class FilterLists(Cog):
             await ctx.send(embed=embed)
             await ctx.message.add_reaction("❌")
 
+    async def _sync_data(self) -> None:
+        """Syncs the filterlists with the API."""
+        log.trace("Synchronizing FilterList cache with data from the API.")
+        await self.bot.cache_filter_list_data()
+
     @staticmethod
     async def _validate_guild_invite(ctx: Context, invite: str) -> dict:
         """
@@ -239,6 +244,16 @@ class FilterLists(Cog):
     async def deny_get(self, ctx: Context, list_type: ValidFilterListType) -> None:
         """Get the contents of a specified denylist."""
         await self._list_all_data(ctx, False, list_type)
+
+    @whitelist.command(name="sync", aliases=("s",))
+    async def allow_sync(self, _: Context) -> None:
+        """Syncs both allowlists and denylists with the API."""
+        await self._sync_data()
+
+    @blacklist.command(name="sync", aliases=("s",))
+    async def deny_sync(self, _: Context) -> None:
+        """Syncs both allowlists and denylists with the API."""
+        await self._sync_data()
 
     def cog_check(self, ctx: Context) -> bool:
         """Only allow moderators to invoke the commands in this cog."""

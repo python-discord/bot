@@ -51,7 +51,7 @@ class Bot(commands.Bot):
 
         self.stats = AsyncStatsClient(self.loop, statsd_url, 8125, prefix="bot")
 
-    async def _cache_filter_list_data(self) -> None:
+    async def cache_filter_list_data(self) -> None:
         """Cache all the data in the FilterList on the site."""
         full_cache = await self.api_client.get('bot/filter-lists')
 
@@ -123,7 +123,7 @@ class Bot(commands.Bot):
         self.api_client.recreate(force=True, connector=self._connector)
 
         # Build the FilterList cache
-        self.loop.create_task(self._cache_filter_list_data())
+        self.loop.create_task(self.cache_filter_list_data())
 
     def add_cog(self, cog: commands.Cog) -> None:
         """Adds a "cog" to the bot and logs the operation."""
