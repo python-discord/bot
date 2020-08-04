@@ -16,6 +16,16 @@ from bot.utils.checks import InWhitelistCheckFailure, without_role_check
 
 log = logging.getLogger(__name__)
 
+UNVERIFIED_AFTER = 3  # Amount of days after which non-Developers receive the @Unverified role
+KICKED_AFTER = 30  # Amount of days after which non-Developers get kicked from the guild
+
+# Number in range [0, 1] determining the percentage of unverified users that are safe
+# to be kicked from the guild in one batch, any larger amount will require staff confirmation,
+# set this to 0 to require explicit approval for batches of any size
+KICK_CONFIRMATION_THRESHOLD = 0
+
+BOT_MESSAGE_DELETE_DELAY = 10
+
 ON_JOIN_MESSAGE = f"""
 Hello! Welcome to Python Discord!
 
@@ -42,16 +52,6 @@ to assign yourself the **Announcements** role. We'll mention this role every tim
 If you'd like to unsubscribe from the announcement notifications, simply send `!unsubscribe` to \
 <#{constants.Channels.bot_commands}>.
 """
-
-UNVERIFIED_AFTER = 3  # Amount of days after which non-Developers receive the @Unverified role
-KICKED_AFTER = 30  # Amount of days after which non-Developers get kicked from the guild
-
-# Number in range [0, 1] determining the percentage of unverified users that are safe
-# to be kicked from the guild in one batch, any larger amount will require staff confirmation,
-# set this to 0 to require explicit approval for batches of any size
-KICK_CONFIRMATION_THRESHOLD = 0
-
-BOT_MESSAGE_DELETE_DELAY = 10
 
 
 class Verification(Cog):
