@@ -738,6 +738,7 @@ class HelpChannels(commands.Cog):
 
     async def is_empty(self, channel: discord.TextChannel) -> bool:
         """Return True if there's an AVAILABLE_MSG and the messages leading up are bot messages."""
+        log.trace(f"Checking if #{channel} ({channel.id}) is empty.")
         found = False
 
         # A limit of 100 results in a single API call.
@@ -745,9 +746,11 @@ class HelpChannels(commands.Cog):
         # Not gonna do an extensive search for it cause it's too expensive.
         async for msg in channel.history(limit=100):
             if not msg.author.bot:
+                log.trace(f"#{channel} ({channel.id}) has a non-bot message.")
                 return False
 
             if self.match_bot_embed(msg, AVAILABLE_MSG):
+                log.trace(f"#{channel} ({channel.id}) has the available message embed.")
                 found = True
                 break
 
