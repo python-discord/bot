@@ -853,26 +853,41 @@ class HelpChannels(commands.Cog):
         log.trace(f"Channel #{channel} ({channel_id}) retrieved.")
         return channel
 
-    async def unpin(self, channel: discord.TextChannel) -> None:
-        """Unpin the initial question message sent in `channel`."""
-        channel_str = f"#{channel} ({channel.id})"
+    async def pin_wrapper(self, msg_id: int, channel: discord.TextChannel, *, pin: bool) -> bool:
+        """
+        Pin message `msg_id` in `channel` if `pin` is True or unpin if it's False.
 
-        msg_id = await self.question_messages.pop(channel.id)
-        if msg_id is None:
-            log.debug(f"{channel_str} doesn't have a message pinned.")
-            return
+        Return True if successful and False otherwise.
+        """
+        channel_str = f"#{channel} ({channel.id})"
+        if pin:
+            func = self.bot.http.pin_message
+            verb = "pin"
+        else:
+            func = self.bot.http.unpin_message
+            verb = "unpin"
 
         try:
-            await self.bot.http.unpin_message(channel.id, msg_id)
+            await func(channel.id, msg_id)
         except discord.HTTPException as e:
             if e.code == 10008:
-                log.debug(f"Message {msg_id} in {channel_str} doesn't exist; can't unpin.")
+                log.debug(f"Message {msg_id} in {channel_str} doesn't exist; can't {verb}.")
             else:
                 log.exception(
-                    f"Error unpinning message {msg_id} in {channel_str}: {e.status} ({e.code})"
+                    f"Error {verb}ning message {msg_id} in {channel_str}: {e.status} ({e.code})"
                 )
+            return False
         else:
-            log.trace(f"Unpinned message {msg_id} in {channel_str}.")
+            log.trace(f"{verb.capitalize()}ned message {msg_id} in {channel_str}.")
+            return True
+
+    async def unpin(self, channel: discord.TextChannel) -> None:
+        """Unpin the initial question message sent in `channel`."""
+        msg_id = await self.question_messages.pop(channel.id)
+        if msg_id is None:
+            log.debug(f"#{channel} ({channel.id}) doesn't have a message pinned.")
+        else:
+            await self.pin_wrapper(msg_id, channel, pin=False)
 
     async def wait_for_dormant_channel(self) -> discord.TextChannel:
         """Wait for a dormant channel to become available in the queue and return it."""
