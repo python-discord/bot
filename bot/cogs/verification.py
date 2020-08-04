@@ -26,6 +26,7 @@ KICK_CONFIRMATION_THRESHOLD = 0
 
 BOT_MESSAGE_DELETE_DELAY = 10
 
+# Sent via DMs once user joins the guild
 ON_JOIN_MESSAGE = f"""
 Hello! Welcome to Python Discord!
 
@@ -33,6 +34,7 @@ In order to send messages, you first have to accept our rules. To do so, please 
 <#{constants.Channels.verification}>. Thank you!
 """
 
+# Sent via DMs once user verifies
 VERIFIED_MESSAGE = f"""
 Thanks for verifying yourself!
 
@@ -53,6 +55,7 @@ If you'd like to unsubscribe from the announcement notifications, simply send `!
 <#{constants.Channels.bot_commands}>.
 """
 
+# Sent periodically in the verification channel
 REMINDER_MESSAGE = f"""
 <@&{constants.Roles.unverified}>
 
