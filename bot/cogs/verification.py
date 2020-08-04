@@ -60,6 +60,13 @@ class Verification(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
+    @property
+    def mod_log(self) -> ModLog:
+        """Get currently loaded ModLog cog instance."""
+        return self.bot.get_cog("ModLog")
+
+    # region: automatically update unverified users
+
     async def _verify_kick(self, n_members: int) -> bool:
         """
         Determine whether `n_members` is a reasonable amount of members to kick.
@@ -244,10 +251,8 @@ class Verification(Cog):
             text=f"{kick_report}\n{role_report}",
         )
 
-    @property
-    def mod_log(self) -> ModLog:
-        """Get currently loaded ModLog cog instance."""
-        return self.bot.get_cog("ModLog")
+    # endregion
+    # region: listeners
 
     @Cog.listener()
     async def on_member_join(self, member: discord.Member) -> None:
@@ -319,6 +324,9 @@ class Verification(Cog):
         with suppress(discord.NotFound):
             await ctx.message.delete()
 
+    # endregion
+    # region: accept and subscribe commands
+
     @command(name='accept', aliases=('verify', 'verified', 'accepted'), hidden=True)
     @without_role(constants.Roles.verified)
     @in_whitelist(channels=(constants.Channels.verification,))
@@ -386,6 +394,9 @@ class Verification(Cog):
             f"{ctx.author.mention} Unsubscribed from <#{constants.Channels.announcements}> notifications."
         )
 
+    # endregion
+    # region: miscellaneous
+
     # This cannot be static (must have a __func__ attribute).
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:
         """Check for & ignore any InWhitelistCheckFailure."""
@@ -399,6 +410,8 @@ class Verification(Cog):
             return ctx.command.name == "accept"
         else:
             return True
+
+    # endregion
 
 
 def setup(bot: Bot) -> None:
