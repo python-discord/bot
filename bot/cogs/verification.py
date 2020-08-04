@@ -5,6 +5,7 @@ from contextlib import suppress
 from datetime import datetime, timedelta
 
 import discord
+from discord.ext import tasks
 from discord.ext.commands import Cog, Context, command
 
 from bot import constants
@@ -206,6 +207,42 @@ class Verification(Cog):
 
         log.debug(f"Found {len(for_role)} users for {unverified} role, {len(for_kick)} users to be kicked")
         return for_role, for_kick
+
+    @tasks.loop(minutes=30)
+    async def update_unverified_members(self) -> None:
+        """
+        Periodically call `_check_members` and update unverified members accordingly.
+
+        After each run, a summary will be sent to the modlog channel. If a suspiciously high
+        amount of members to be kicked is found, the operation is guarded by `_verify_kick`.
+        """
+        log.info("Updating unverified guild members")
+
+        await self.bot.wait_until_guild_available()
+        unverified = self.bot.get_guild(constants.Guild.id).get_role(constants.Roles.unverified)
+
+        for_role, for_kick = await self._check_members()
+
+        if not for_role:
+            role_report = f"Found no users to be assigned the {unverified.mention} role."
+        else:
+            n_roles = await self._give_role(for_role, unverified)
+            role_report = f"Assigned {unverified.mention} role to `{n_roles}`/`{len(for_role)}` members."
+
+        if not for_kick:
+            kick_report = "Found no users to be kicked."
+        elif not await self._verify_kick(len(for_kick)):
+            kick_report = f"Not authorized to kick `{len(for_kick)}` members."
+        else:
+            n_kicks = await self._kick_members(for_kick)
+            kick_report = f"Kicked `{n_kicks}`/`{len(for_kick)}` members from the guild."
+
+        await self.mod_log.send_log_message(
+            icon_url=self.bot.user.avatar_url,
+            colour=discord.Colour.blurple(),
+            title="Verification system",
+            text=f"{kick_report}\n{role_report}",
+        )
 
     @property
     def mod_log(self) -> ModLog:
