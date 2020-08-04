@@ -855,17 +855,21 @@ class HelpChannels(commands.Cog):
 
     async def unpin(self, channel: discord.TextChannel) -> None:
         """Unpin the initial question message sent in `channel`."""
+        channel_str = f"#{channel} ({channel.id})"
+
         msg_id = await self.question_messages.pop(channel.id)
 
         try:
             await self.bot.http.unpin_message(channel.id, msg_id)
         except discord.HTTPException as e:
             if e.code == 10008:
-                log.trace(f"Message {msg_id} don't exist, can't unpin.")
+                log.debug(f"Message {msg_id} in {channel_str} doesn't exist; can't unpin.")
             else:
-                log.warn(f"Got unexpected status {e.code} when unpinning message {msg_id}: {e.text}")
+                log.exception(
+                    f"Error unpinning message {msg_id} in {channel_str}: {e.status} ({e.code})"
+                )
         else:
-            log.trace(f"Unpinned message {msg_id}.")
+            log.trace(f"Unpinned message {msg_id} in {channel_str}.")
 
     async def wait_for_dormant_channel(self) -> discord.TextChannel:
         """Wait for a dormant channel to become available in the queue and return it."""
