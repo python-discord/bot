@@ -694,15 +694,8 @@ class HelpChannels(commands.Cog):
             log.info(f"Channel #{channel} was claimed by `{message.author.id}`.")
             await self.move_to_in_use(channel)
             await self.revoke_send_permissions(message.author)
-            # Pin message for better access and store this to cache
-            try:
-                await message.pin()
-            except discord.NotFound:
-                log.info(f"Pinning message {message.id} ({channel}) failed because message got deleted.")
-            except discord.HTTPException as e:
-                log.info(f"Pinning message {message.id} ({channel.id}) failed with code {e.code}", exc_info=e)
-            else:
-                await self.question_messages.set(channel.id, message.id)
+
+            await self.pin(message)
 
             # Add user with channel for dormant check.
             await self.help_channel_claimants.set(channel.id, message.author.id)
@@ -880,6 +873,11 @@ class HelpChannels(commands.Cog):
         else:
             log.trace(f"{verb.capitalize()}ned message {msg_id} in {channel_str}.")
             return True
+
+    async def pin(self, message: discord.Message) -> None:
+        """Pin an initial question `message` and store it in a cache."""
+        if await self.pin_wrapper(message.id, message.channel, pin=True):
+            await self.question_messages.set(message.channel.id, message.id)
 
     async def unpin(self, channel: discord.TextChannel) -> None:
         """Unpin the initial question message sent in `channel`."""
