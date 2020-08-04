@@ -101,8 +101,9 @@ class Verification(Cog):
 
         core_devs = pydis.get_channel(constants.Channels.dev_core)
         confirmation_msg = await core_devs.send(
-            f"Verification determined that `{n_members}` members should be kicked as they haven't verified in "
-            f"`{KICKED_AFTER}` days. This is `{percentage:.2%}` of the guild's population. Proceed?"
+            f"<@&{constants.Roles.core_developers}> Verification determined that `{n_members}` members should "
+            f"be kicked as they haven't verified in `{KICKED_AFTER}` days. This is `{percentage:.2%}` of the "
+            f"guild's population. Proceed?"
         )
 
         options = (constants.Emojis.incident_actioned, constants.Emojis.incident_unactioned)
