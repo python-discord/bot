@@ -301,6 +301,9 @@ class Verification(Cog):
         if message.channel.id != constants.Channels.verification:
             return  # Only listen for #checkpoint messages
 
+        if message.content == REMINDER_MESSAGE.strip():
+            return  # Ignore bots own verification reminder
+
         if message.author.bot:
             # They're a bot, delete their message after the delay.
             await message.delete(delay=BOT_MESSAGE_DELETE_DELAY)
