@@ -59,8 +59,27 @@ class Verification(Cog):
         ...
 
     async def _give_role(self, members: t.Set[discord.Member], role: discord.Role) -> int:
-        """Give `role` to all `members`."""
-        ...
+        """
+        Give `role` to all `members`.
+
+        Returns the amount of successful requests. Status codes of unsuccessful requests
+        are logged at info level.
+        """
+        log.info(f"Assigning {role} role to {len(members)} members (not verified after {UNVERIFIED_AFTER} days)")
+        n_success, bad_statuses = 0, set()
+
+        for member in members:
+            try:
+                await member.add_roles(role, reason=f"User has not verified in {UNVERIFIED_AFTER} days")
+            except discord.HTTPException as http_exc:
+                bad_statuses.add(http_exc.status)
+            else:
+                n_success += 1
+
+        if bad_statuses:
+            log.info(f"Failed to assign {len(members) - n_success} roles due to following statuses: {bad_statuses}")
+
+        return n_success
 
     async def check_users(self) -> None:
         """
