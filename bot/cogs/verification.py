@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import typing as t
 from contextlib import suppress
@@ -55,8 +54,27 @@ class Verification(Cog):
         self.bot = bot
 
     async def _kick_members(self, members: t.Set[discord.Member]) -> int:
-        """Kick `members` from the PyDis guild."""
-        ...
+        """
+        Kick `members` from the PyDis guild.
+
+        Note that this is a potentially destructive operation. Returns the amount of successful
+        requests. Failed requests are logged at info level.
+        """
+        log.info(f"Kicking {len(members)} members from the guild (not verified after {KICKED_AFTER} days)")
+        n_kicked, bad_statuses = 0, set()
+
+        for member in members:
+            try:
+                await member.kick(reason=f"User has not verified in {KICKED_AFTER} days")
+            except discord.HTTPException as http_exc:
+                bad_statuses.add(http_exc.status)
+            else:
+                n_kicked += 1
+
+        if bad_statuses:
+            log.info(f"Failed to kick {len(members) - n_kicked} members due to following statuses: {bad_statuses}")
+
+        return n_kicked
 
     async def _give_role(self, members: t.Set[discord.Member], role: discord.Role) -> int:
         """
