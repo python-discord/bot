@@ -551,18 +551,6 @@ class HelpChannels(commands.Cog):
 
         A caller argument is provided for metrics.
         """
-        msg_id = await self.question_messages.pop(channel.id)
-
-        try:
-            await self.bot.http.unpin_message(channel.id, msg_id)
-        except discord.HTTPException as e:
-            if e.code == 10008:
-                log.trace(f"Message {msg_id} don't exist, can't unpin.")
-            else:
-                log.warn(f"Got unexpected status {e.code} when unpinning message {msg_id}: {e.text}")
-        else:
-            log.trace(f"Unpinned message {msg_id}.")
-
         log.info(f"Moving #{channel} ({channel.id}) to the Dormant category.")
 
         await self.move_to_bottom_position(
@@ -586,6 +574,8 @@ class HelpChannels(commands.Cog):
         log.trace(f"Sending dormant message for #{channel} ({channel.id}).")
         embed = discord.Embed(description=DORMANT_MSG)
         await channel.send(embed=embed)
+
+        await self.unpin(channel)
 
         log.trace(f"Pushing #{channel} ({channel.id}) into the channel queue.")
         self.channel_queue.put_nowait(channel)
@@ -862,6 +852,20 @@ class HelpChannels(commands.Cog):
 
         log.trace(f"Channel #{channel} ({channel_id}) retrieved.")
         return channel
+
+    async def unpin(self, channel: discord.TextChannel) -> None:
+        """Unpin the initial question message sent in `channel`."""
+        msg_id = await self.question_messages.pop(channel.id)
+
+        try:
+            await self.bot.http.unpin_message(channel.id, msg_id)
+        except discord.HTTPException as e:
+            if e.code == 10008:
+                log.trace(f"Message {msg_id} don't exist, can't unpin.")
+            else:
+                log.warn(f"Got unexpected status {e.code} when unpinning message {msg_id}: {e.text}")
+        else:
+            log.trace(f"Unpinned message {msg_id}.")
 
     async def wait_for_dormant_channel(self) -> discord.TextChannel:
         """Wait for a dormant channel to become available in the queue and return it."""
