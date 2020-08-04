@@ -78,18 +78,20 @@ class Verification(Cog):
     reminder_cache = RedisCache()
 
     def __init__(self, bot: Bot) -> None:
-        """Start `update_unverified_members` task."""
+        """Start internal tasks."""
         self.bot = bot
 
         self.update_unverified_members.start()
+        self.ping_unverified.start()
 
     def cog_unload(self) -> None:
         """
-        Kill `update_unverified_members` task.
+        Cancel internal tasks.
 
-        This is necessary, the task is not automatically cancelled on cog unload.
+        This is necessary, as tasks are not automatically cancelled on cog unload.
         """
         self.update_unverified_members.cancel()
+        self.ping_unverified.cancel()
 
     @property
     def mod_log(self) -> ModLog:
