@@ -162,16 +162,15 @@ class Verification(Cog):
 
         return n_success
 
-    async def check_users(self) -> None:
+    async def _check_members(self) -> t.Tuple[t.Set[discord.Member], t.Set[discord.Member]]:
         """
-        Periodically check in on the verification status of PyDis members.
+        Check in on the verification status of PyDis members.
 
-        This coroutine performs two actions:
-            * Find members who have not verified for `UNVERIFIED_AFTER` and give them the @Unverified role
-            * Find members who have not verified for `KICKED_AFTER` and kick them from the guild
+        This coroutine finds two sets of users:
+            * Not verified after `UNVERIFIED_AFTER` days, should be given the @Unverified role
+            * Not verified after `KICKED_AFTER` days, should be kicked from the guild
 
-        Within the body of this coroutine, we only select the members for each action. The work is then
-        delegated to `_kick_members` and `_give_role`. After each run, a report is sent via modlog.
+        These sets are always disjoint, i.e. share no common members.
         """
         await self.bot.wait_until_guild_available()  # Ensure cache is ready
         pydis = self.bot.get_guild(constants.Guild.id)
@@ -205,9 +204,8 @@ class Verification(Cog):
             elif since_join > timedelta(days=UNVERIFIED_AFTER) and unverified not in member.roles:
                 for_role.add(member)  # User should be given the @Unverified role
 
-        log.debug(f"{len(for_role)} users will be given the {unverified} role, {len(for_kick)} users will be kicked")
-        n_kicks = await self._kick_members(for_kick)
-        n_roles = await self._give_role(for_role, unverified)
+        log.debug(f"Found {len(for_role)} users for {unverified} role, {len(for_kick)} users to be kicked")
+        return for_role, for_kick
 
     @property
     def mod_log(self) -> ModLog:
