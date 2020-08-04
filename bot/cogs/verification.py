@@ -39,6 +39,9 @@ If you'd like to unsubscribe from the announcement notifications, simply send `!
 <#{constants.Channels.bot_commands}>.
 """
 
+UNVERIFIED_AFTER = 3  # Amount of days after which non-Developers receive the @Unverified role
+KICKED_AFTER = 30  # Amount of days after which non-Developers get kicked from the guild
+
 BOT_MESSAGE_DELETE_DELAY = 10
 
 
