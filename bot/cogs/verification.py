@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import typing as t
 from contextlib import suppress
@@ -44,6 +45,11 @@ If you'd like to unsubscribe from the announcement notifications, simply send `!
 UNVERIFIED_AFTER = 3  # Amount of days after which non-Developers receive the @Unverified role
 KICKED_AFTER = 30  # Amount of days after which non-Developers get kicked from the guild
 
+# Number in range [0, 1] determining the percentage of unverified users that are safe
+# to be kicked from the guild in one batch, any larger amount will require staff confirmation,
+# set this to 0 to require explicit approval for batches of any size
+KICK_CONFIRMATION_THRESHOLD = 0
+
 BOT_MESSAGE_DELETE_DELAY = 10
 
 
@@ -52,6 +58,63 @@ class Verification(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
+
+    async def _verify_kick(self, n_members: int) -> bool:
+        """
+        Determine whether `n_members` is a reasonable amount of members to kick.
+
+        First, `n_members` is checked against the size of the PyDis guild. If `n_members` are
+        more than `KICK_CONFIRMATION_THRESHOLD` of the guild, the operation must be confirmed
+        by staff in #core-dev. Otherwise, the operation is seen as safe.
+        """
+        log.debug(f"Checking whether {n_members} members are safe to kick")
+
+        await self.bot.wait_until_guild_available()  # Ensure cache is populated before we grab the guild
+        pydis = self.bot.get_guild(constants.Guild.id)
+
+        percentage = n_members / len(pydis.members)
+        if percentage < KICK_CONFIRMATION_THRESHOLD:
+            log.debug(f"Kicking {percentage:.2%} of the guild's population is seen as safe")
+            return True
+
+        # Since `n_members` is a suspiciously large number, we will ask for confirmation
+        log.debug("Amount of users is too large, requesting staff confirmation")
+
+        core_devs = pydis.get_channel(constants.Channels.dev_core)
+        confirmation_msg = await core_devs.send(
+            f"Verification determined that `{n_members}` members should be kicked as they haven't verified in "
+            f"`{KICKED_AFTER}` days. This is `{percentage:.2%}` of the guild's population. Proceed?"
+        )
+
+        options = (constants.Emojis.incident_actioned, constants.Emojis.incident_unactioned)
+        for option in options:
+            await confirmation_msg.add_reaction(option)
+
+        def check(reaction: discord.Reaction, user: discord.User) -> bool:
+            """Check whether `reaction` is a valid reaction to `confirmation_msg`."""
+            return (
+                reaction.message.id == confirmation_msg.id  # Reacted to `confirmation_msg`
+                and str(reaction.emoji) in options  # With one of `options`
+                and not user.bot  # By a human
+            )
+
+        timeout = 60 * 5  # Seconds, i.e. 5 minutes
+        try:
+            choice, _ = await self.bot.wait_for("reaction_add", check=check, timeout=timeout)
+        except asyncio.TimeoutError:
+            log.debug("Staff prompt not answered, aborting operation")
+            return False
+        finally:
+            await confirmation_msg.clear_reactions()
+
+        result = str(choice) == constants.Emojis.incident_actioned
+        log.debug(f"Received answer: {choice}, result: {result}")
+
+        # Edit the prompt message to reflect the final choice
+        await confirmation_msg.edit(
+            content=f"Request to kick `{n_members}` members was {'authorized' if result else 'denied'}!"
+        )
+        return result
 
     async def _kick_members(self, members: t.Set[discord.Member]) -> int:
         """
