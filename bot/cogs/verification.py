@@ -1,7 +1,7 @@
 import logging
 from contextlib import suppress
 
-from discord import Colour, Forbidden, Member, Message, NotFound, Object
+import discord
 from discord.ext.commands import Cog, Context, command
 
 from bot import constants
@@ -54,17 +54,17 @@ class Verification(Cog):
         return self.bot.get_cog("ModLog")
 
     @Cog.listener()
-    async def on_member_join(self, member: Member) -> None:
+    async def on_member_join(self, member: discord.Member) -> None:
         """Attempt to send initial direct message to each new member."""
         if member.guild.id != constants.Guild.id:
             return  # Only listen for PyDis events
 
         log.trace(f"Sending on join message to new member: {member.id}")
-        with suppress(Forbidden):
+        with suppress(discord.Forbidden):
             await member.send(ON_JOIN_MESSAGE)
 
     @Cog.listener()
-    async def on_message(self, message: Message) -> None:
+    async def on_message(self, message: discord.Message) -> None:
         """Check new message event for messages to the checkpoint channel & process."""
         if message.channel.id != constants.Channels.verification:
             return  # Only listen for #checkpoint messages
@@ -91,7 +91,7 @@ class Verification(Cog):
             # Send pretty mod log embed to mod-alerts
             await self.mod_log.send_log_message(
                 icon_url=constants.Icons.filtering,
-                colour=Colour(constants.Colours.soft_red),
+                colour=discord.Colour(constants.Colours.soft_red),
                 title=f"User/Role mentioned in {message.channel.name}",
                 text=embed_text,
                 thumbnail=message.author.avatar_url_as(static_format="png"),
@@ -120,7 +120,7 @@ class Verification(Cog):
         )
 
         log.trace(f"Deleting the message posted by {ctx.author}")
-        with suppress(NotFound):
+        with suppress(discord.NotFound):
             await ctx.message.delete()
 
     @command(name='accept', aliases=('verify', 'verified', 'accepted'), hidden=True)
@@ -129,14 +129,14 @@ class Verification(Cog):
     async def accept_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
         """Accept our rules and gain access to the rest of the server."""
         log.debug(f"{ctx.author} called !accept. Assigning the 'Developer' role.")
-        await ctx.author.add_roles(Object(constants.Roles.verified), reason="Accepted the rules")
+        await ctx.author.add_roles(discord.Object(constants.Roles.verified), reason="Accepted the rules")
         try:
             await ctx.author.send(VERIFIED_MESSAGE)
-        except Forbidden:
+        except discord.Forbidden:
             log.info(f"Sending welcome message failed for {ctx.author}.")
         finally:
             log.trace(f"Deleting accept message by {ctx.author}.")
-            with suppress(NotFound):
+            with suppress(discord.NotFound):
                 self.mod_log.ignore(constants.Event.message_delete, ctx.message.id)
                 await ctx.message.delete()
 
@@ -156,7 +156,7 @@ class Verification(Cog):
             return
 
         log.debug(f"{ctx.author} called !subscribe. Assigning the 'Announcements' role.")
-        await ctx.author.add_roles(Object(constants.Roles.announcements), reason="Subscribed to announcements")
+        await ctx.author.add_roles(discord.Object(constants.Roles.announcements), reason="Subscribed to announcements")
 
         log.trace(f"Deleting the message posted by {ctx.author}.")
 
@@ -180,7 +180,9 @@ class Verification(Cog):
             return
 
         log.debug(f"{ctx.author} called !unsubscribe. Removing the 'Announcements' role.")
-        await ctx.author.remove_roles(Object(constants.Roles.announcements), reason="Unsubscribed from announcements")
+        await ctx.author.remove_roles(
+                discord.Object(constants.Roles.announcements), reason="Unsubscribed from announcements"
+        )
 
         log.trace(f"Deleting the message posted by {ctx.author}.")
 
