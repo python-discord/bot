@@ -454,6 +454,7 @@ class Roles(metaclass=YAMLGetter):
     partners: int
     python_community: int
     team_leaders: int
+    unverified: int
     verified: int  # This is the Developers role on PyDis, here named verified for readability reasons.
 
 

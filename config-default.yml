@@ -225,8 +225,8 @@ guild:
         partners:                               323426753857191936
         python_community:   &PY_COMMUNITY_ROLE  458226413825294336
 
-        # This is the Developers role on PyDis, here named verified for readability reasons
-        verified:                               352427296948486144
+        unverified:                             739794855945044069
+        verified:                               352427296948486144  # @Developers on PyDis
 
         # Staff
         admins:             &ADMINS_ROLE    267628507062992896
