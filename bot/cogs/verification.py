@@ -57,8 +57,19 @@ BOT_MESSAGE_DELETE_DELAY = 10
 class Verification(Cog):
     """User verification and role self-management."""
 
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: Bot) -> None:
+        """Start `update_unverified_members` task."""
         self.bot = bot
+
+        self.update_unverified_members.start()
+
+    def cog_unload(self) -> None:
+        """
+        Kill `update_unverified_members` task.
+
+        This is necessary, the task is not automatically cancelled on cog unload.
+        """
+        self.update_unverified_members.cancel()
 
     @property
     def mod_log(self) -> ModLog:
