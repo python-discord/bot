@@ -858,6 +858,9 @@ class HelpChannels(commands.Cog):
         channel_str = f"#{channel} ({channel.id})"
 
         msg_id = await self.question_messages.pop(channel.id)
+        if msg_id is None:
+            log.debug(f"{channel_str} doesn't have a message pinned.")
+            return
 
         try:
             await self.bot.http.unpin_message(channel.id, msg_id)
