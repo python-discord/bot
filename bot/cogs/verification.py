@@ -1,5 +1,8 @@
+import asyncio
 import logging
+import typing as t
 from contextlib import suppress
+from datetime import datetime, timedelta
 
 import discord
 from discord.ext.commands import Cog, Context, command
@@ -50,6 +53,61 @@ class Verification(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
+
+    async def _kick_members(self, members: t.Set[discord.Member]) -> int:
+        """Kick `members` from the PyDis guild."""
+        ...
+
+    async def _give_role(self, members: t.Set[discord.Member], role: discord.Role) -> int:
+        """Give `role` to all `members`."""
+        ...
+
+    async def check_users(self) -> None:
+        """
+        Periodically check in on the verification status of PyDis members.
+
+        This coroutine performs two actions:
+            * Find members who have not verified for `UNVERIFIED_AFTER` and give them the @Unverified role
+            * Find members who have not verified for `KICKED_AFTER` and kick them from the guild
+
+        Within the body of this coroutine, we only select the members for each action. The work is then
+        delegated to `_kick_members` and `_give_role`. After each run, a report is sent via modlog.
+        """
+        await self.bot.wait_until_guild_available()  # Ensure cache is ready
+        pydis = self.bot.get_guild(constants.Guild.id)
+
+        unverified = pydis.get_role(constants.Roles.unverified)
+        current_dt = datetime.utcnow()  # Discord timestamps are UTC
+
+        # Users to be given the @Unverified role, and those to be kicked, these should be entirely disjoint
+        for_role, for_kick = set(), set()
+
+        log.debug("Checking verification status of guild members")
+        for member in pydis.members:
+
+            # Skip all bots and users for which we don't know their join date
+            # This should be extremely rare, but can happen according to `joined_at` docs
+            if member.bot or member.joined_at is None:
+                continue
+
+            # Now we check roles to determine whether this user has already verified
+            unverified_roles = {unverified, pydis.default_role}  # Verified users have at least one more role
+            if set(member.roles) - unverified_roles:
+                continue
+
+            # At this point, we know that `member` is an unverified user, and we will decide what
+            # to do with them based on time passed since their join date
+            since_join = current_dt - member.joined_at
+
+            if since_join > timedelta(days=KICKED_AFTER):
+                for_kick.add(member)  # User should be removed from the guild
+
+            elif since_join > timedelta(days=UNVERIFIED_AFTER) and unverified not in member.roles:
+                for_role.add(member)  # User should be given the @Unverified role
+
+        log.debug(f"{len(for_role)} users will be given the {unverified} role, {len(for_kick)} users will be kicked")
+        n_kicks = await self._kick_members(for_kick)
+        n_roles = await self._give_role(for_role, unverified)
 
     @property
     def mod_log(self) -> ModLog:
@@ -184,7 +242,7 @@ class Verification(Cog):
 
         log.debug(f"{ctx.author} called !unsubscribe. Removing the 'Announcements' role.")
         await ctx.author.remove_roles(
-                discord.Object(constants.Roles.announcements), reason="Unsubscribed from announcements"
+            discord.Object(constants.Roles.announcements), reason="Unsubscribed from announcements"
         )
 
         log.trace(f"Deleting the message posted by {ctx.author}.")
