@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 import discord
 from discord.ext import tasks
 from discord.ext.commands import Cog, Context, command
+from discord.utils import snowflake_time
 
 from bot import constants
 from bot.bot import Bot
@@ -281,6 +282,57 @@ class Verification(Cog):
             title="Verification system",
             text=f"{kick_report}\n{role_report}",
         )
+
+    # endregion
+    # region: periodically ping @Unverified
+
+    @tasks.loop(hours=REMINDER_FREQUENCY)
+    async def ping_unverified(self) -> None:
+        """
+        Delete latest `REMINDER_MESSAGE` and send it again.
+
+        This utilizes RedisCache to persist the latest reminder message id.
+        """
+        await self.bot.wait_until_guild_available()
+        verification = self.bot.get_guild(constants.Guild.id).get_channel(constants.Channels.verification)
+
+        last_reminder: t.Optional[int] = await self.reminder_cache.get("last_reminder")
+
+        if last_reminder is not None:
+            log.trace(f"Found verification reminder message in cache, deleting: {last_reminder}")
+
+            with suppress(discord.HTTPException):  # If something goes wrong, just ignore it
+                await self.bot.http.delete_message(verification.id, last_reminder)
+
+        log.trace("Sending verification reminder")
+        new_reminder = await verification.send(REMINDER_MESSAGE)
+
+        await self.reminder_cache.set("last_reminder", new_reminder.id)
+
+    @ping_unverified.before_loop
+    async def _before_first_ping(self) -> None:
+        """
+        Sleep until `REMINDER_MESSAGE` should be sent again.
+
+        If latest reminder is not cached, exit instantly. Otherwise, wait wait until the
+        configured `REMINDER_FREQUENCY` has passed.
+        """
+        last_reminder: t.Optional[int] = await self.reminder_cache.get("last_reminder")
+
+        if last_reminder is None:
+            log.trace("Latest verification reminder message not cached, task will not wait")
+            return
+
+        # Convert cached message id into a timestamp
+        time_since = datetime.utcnow() - snowflake_time(last_reminder)
+        log.trace(f"Time since latest verification reminder: {time_since}")
+
+        to_sleep = timedelta(hours=REMINDER_FREQUENCY) - time_since
+        log.trace(f"Time to sleep until next ping: {to_sleep}")
+
+        # Delta can be negative if `REMINDER_FREQUENCY` has already passed
+        secs = max(to_sleep.total_seconds(), 0)
+        await asyncio.sleep(secs)
 
     # endregion
     # region: listeners
