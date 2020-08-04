@@ -737,9 +737,21 @@ class HelpChannels(commands.Cog):
         self.scheduler.schedule_later(delay, msg.channel.id, self.move_idle_channel(msg.channel))
 
     async def is_empty(self, channel: discord.TextChannel) -> bool:
-        """Return True if the most recent message in `channel` is the bot's `AVAILABLE_MSG`."""
-        msg = await self.get_last_message(channel)
-        return self.match_bot_embed(msg, AVAILABLE_MSG)
+        """Return True if there's an AVAILABLE_MSG and the messages leading up are bot messages."""
+        found = False
+
+        # A limit of 100 results in a single API call.
+        # If AVAILABLE_MSG isn't found within 100 messages, then assume the channel is not empty.
+        # Not gonna do an extensive search for it cause it's too expensive.
+        async for msg in channel.history(limit=100):
+            if not msg.author.bot:
+                return False
+
+            if self.match_bot_embed(msg, AVAILABLE_MSG):
+                found = True
+                break
+
+        return found
 
     async def check_cooldowns(self) -> None:
         """Remove expired cooldowns and re-schedule active ones."""
