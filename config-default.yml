@@ -358,6 +358,10 @@ anti_spam:
             interval: 10
             max: 7
 
+        burst_shared:
+            interval: 10
+            max: 20
+
         chars:
             interval: 5
             max: 3_000
