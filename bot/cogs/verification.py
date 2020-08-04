@@ -53,6 +53,17 @@ If you'd like to unsubscribe from the announcement notifications, simply send `!
 <#{constants.Channels.bot_commands}>.
 """
 
+REMINDER_MESSAGE = f"""
+<@&{constants.Roles.unverified}>
+
+Welcome to Python Discord! Please read the documents mentioned above and type `!accept` to gain permissions \
+to send messages in the community!
+
+You will be kicked if you don't verify within `{KICKED_AFTER}` days.
+"""
+
+REMINDER_FREQUENCY = 28  # Hours to wait between sending `REMINDER_MESSAGE`
+
 
 class Verification(Cog):
     """User verification and role self-management."""
