@@ -13,6 +13,7 @@ from bot.bot import Bot
 from bot.cogs.moderation import ModLog
 from bot.decorators import in_whitelist, without_role
 from bot.utils.checks import InWhitelistCheckFailure, without_role_check
+from bot.utils.redis_cache import RedisCache
 
 log = logging.getLogger(__name__)
 
@@ -70,6 +71,10 @@ REMINDER_FREQUENCY = 28  # Hours to wait between sending `REMINDER_MESSAGE`
 
 class Verification(Cog):
     """User verification and role self-management."""
+
+    # Cache last sent `REMINDER_MESSAGE` id
+    # RedisCache[str, discord.Message.id]
+    reminder_cache = RedisCache()
 
     def __init__(self, bot: Bot) -> None:
         """Start `update_unverified_members` task."""
