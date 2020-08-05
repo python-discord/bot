@@ -226,7 +226,6 @@ class RedisCache:
         for attribute in vars(instance).values():
             if isinstance(attribute, Bot):
                 self.bot = attribute
-                self._redis = self.bot.redis_session
                 return self
         else:
             error_message = (
@@ -251,7 +250,7 @@ class RedisCache:
         value = self._value_to_typestring(value)
 
         log.trace(f"Setting {key} to {value}.")
-        await self._redis.hset(self._namespace, key, value)
+        await self.bot.redis_session.hset(self._namespace, key, value)
 
     async def get(self, key: RedisKeyType, default: Optional[RedisValueType] = None) -> Optional[RedisValueType]:
         """Get an item from the Redis cache."""
@@ -259,7 +258,7 @@ class RedisCache:
         key = self._key_to_typestring(key)
 
         log.trace(f"Attempting to retrieve {key}.")
-        value = await self._redis.hget(self._namespace, key)
+        value = await self.bot.redis_session.hget(self._namespace, key)
 
         if value is None:
             log.trace(f"Value not found, returning default value {default}")
@@ -281,7 +280,7 @@ class RedisCache:
         key = self._key_to_typestring(key)
 
         log.trace(f"Attempting to delete {key}.")
-        return await self._redis.hdel(self._namespace, key)
+        return await self.bot.redis_session.hdel(self._namespace, key)
 
     async def contains(self, key: RedisKeyType) -> bool:
         """
@@ -291,7 +290,7 @@ class RedisCache:
         """
         await self._validate_cache()
         key = self._key_to_typestring(key)
-        exists = await self._redis.hexists(self._namespace, key)
+        exists = await self.bot.redis_session.hexists(self._namespace, key)
 
         log.trace(f"Testing if {key} exists in the RedisCache - Result is {exists}")
         return exists
@@ -314,7 +313,7 @@ class RedisCache:
         """
         await self._validate_cache()
         items = self._dict_from_typestring(
-            await self._redis.hgetall(self._namespace)
+            await self.bot.redis_session.hgetall(self._namespace)
         ).items()
 
         log.trace(f"Retrieving all key/value pairs from cache, total of {len(items)} items.")
@@ -323,7 +322,7 @@ class RedisCache:
     async def length(self) -> int:
         """Return the number of items in the Redis cache."""
         await self._validate_cache()
-        number_of_items = await self._redis.hlen(self._namespace)
+        number_of_items = await self.bot.redis_session.hlen(self._namespace)
         log.trace(f"Returning length. Result is {number_of_items}.")
         return number_of_items
 
@@ -335,7 +334,7 @@ class RedisCache:
         """Deletes the entire hash from the Redis cache."""
         await self._validate_cache()
         log.trace("Clearing the cache of all key/value pairs.")
-        await self._redis.delete(self._namespace)
+        await self.bot.redis_session.delete(self._namespace)
 
     async def pop(self, key: RedisKeyType, default: Optional[RedisValueType] = None) -> RedisValueType:
         """Get the item, remove it from the cache, and provide a default if not found."""
@@ -364,7 +363,7 @@ class RedisCache:
         """
         await self._validate_cache()
         log.trace(f"Updating the cache with the following items:\n{items}")
-        await self._redis.hmset_dict(self._namespace, self._dict_to_typestring(items))
+        await self.bot.redis_session.hmset_dict(self._namespace, self._dict_to_typestring(items))
 
     async def increment(self, key: RedisKeyType, amount: Optional[int, float] = 1) -> None:
         """
