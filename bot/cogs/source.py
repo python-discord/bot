@@ -60,7 +60,11 @@ class BotSource(commands.Cog):
         await ctx.send(embed=embed)
 
     def get_source_link(self, source_item: SourceType) -> Tuple[str, str, Optional[int]]:
-        """Build GitHub link of source item, return this link, file location and first line number."""
+        """
+        Build GitHub link of source item, return this link, file location and first line number.
+
+        Raise BadArgument if `source_item` is a dynamically-created object (e.g. via internal eval).
+        """
         if isinstance(source_item, commands.HelpCommand):
             src = type(source_item)
             filename = inspect.getsourcefile(src)
@@ -78,10 +82,17 @@ class BotSource(commands.Cog):
             filename = tags_cog._cache[source_item]["location"]
         else:
             src = type(source_item)
-            filename = inspect.getsourcefile(src)
+            try:
+                filename = inspect.getsourcefile(src)
+            except TypeError:
+                raise commands.BadArgument("Cannot get source for a dynamically-created object.")
 
         if not isinstance(source_item, str):
-            lines, first_line_no = inspect.getsourcelines(src)
+            try:
+                lines, first_line_no = inspect.getsourcelines(src)
+            except OSError:
+                raise commands.BadArgument("Cannot get source for a dynamically-created object.")
+
             lines_extension = f"#L{first_line_no}-L{first_line_no+len(lines)-1}"
         else:
             first_line_no = None
