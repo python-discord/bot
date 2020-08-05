@@ -694,7 +694,7 @@ class HelpChannels(commands.Cog):
         async with self.on_message_lock:
             log.trace(f"on_message lock acquired for {message.id}.")
 
-            if not self.is_in_category(channel, constants.Categories.help_available):
+            if await self.help_channel_claimants.contains(channel.id):
                 log.debug(
                     f"Message {message.id} will not make #{channel} ({channel.id}) in-use "
                     f"because another message in the channel already triggered that."
