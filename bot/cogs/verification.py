@@ -6,13 +6,13 @@ from datetime import datetime, timedelta
 
 import discord
 from discord.ext import tasks
-from discord.ext.commands import Cog, Context, command
+from discord.ext.commands import Cog, Context, command, group
 from discord.utils import snowflake_time
 
 from bot import constants
 from bot.bot import Bot
 from bot.cogs.moderation import ModLog
-from bot.decorators import in_whitelist, without_role
+from bot.decorators import in_whitelist, with_role, without_role
 from bot.utils.checks import InWhitelistCheckFailure, without_role_check
 from bot.utils.redis_cache import RedisCache
 
@@ -447,6 +447,64 @@ class Verification(Cog):
         log.trace(f"Deleting the message posted by {ctx.author}")
         with suppress(discord.NotFound):
             await ctx.message.delete()
+
+    # endregion
+    # region: task management commands
+
+    @with_role(*constants.MODERATION_ROLES)
+    @group(name="verification")
+    async def verification_group(self, ctx: Context) -> None:
+        """Manage internal verification tasks."""
+        if ctx.invoked_subcommand is None:
+            await ctx.send_help(ctx.command)
+
+    @verification_group.command(name="status")
+    async def status_cmd(self, ctx: Context) -> None:
+        """Check whether verification tasks are running."""
+        log.trace("Checking status of verification tasks")
+
+        if self.update_unverified_members.is_running():
+            update_status = f"{constants.Emojis.incident_actioned} Member update task is running."
+        else:
+            update_status = f"{constants.Emojis.incident_unactioned} Member update task is **not** running."
+
+        mention = f"<@&{constants.Roles.unverified}>"
+        if self.ping_unverified.is_running():
+            ping_status = f"{constants.Emojis.incident_actioned} Ping {mention} is running."
+        else:
+            ping_status = f"{constants.Emojis.incident_unactioned} Ping {mention} is **not** running."
+
+        embed = discord.Embed(
+            title="Verification system",
+            description=f"{update_status}\n{ping_status}",
+            colour=discord.Colour.blurple(),
+        )
+        await ctx.send(embed=embed)
+
+    @verification_group.command(name="start")
+    async def start_cmd(self, ctx: Context) -> None:
+        """Start verification tasks if they are not already running."""
+        log.info("Starting verification tasks")
+
+        if not self.update_unverified_members.is_running():
+            self.update_unverified_members.start()
+
+        if not self.ping_unverified.is_running():
+            self.ping_unverified.start()
+
+        colour = discord.Colour.blurple()
+        await ctx.send(embed=discord.Embed(title="Verification system", description="Done. :ok_hand:", colour=colour))
+
+    @verification_group.command(name="stop", aliases=["kill"])
+    async def stop_cmd(self, ctx: Context) -> None:
+        """Stop verification tasks."""
+        log.info("Stopping verification tasks")
+
+        self.update_unverified_members.cancel()
+        self.ping_unverified.cancel()
+
+        colour = discord.Colour.blurple()
+        await ctx.send(embed=discord.Embed(title="Verification system", description="Tasks canceled.", colour=colour))
 
     # endregion
     # region: accept and subscribe commands
