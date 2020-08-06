@@ -111,9 +111,7 @@ class Verification(Cog):
     def __init__(self, bot: Bot) -> None:
         """Start internal tasks."""
         self.bot = bot
-
-        self.update_unverified_members.start()
-        self.ping_unverified.start()
+        self.bot.loop.create_task(self.maybe_start_tasks())
 
     def cog_unload(self) -> None:
         """
@@ -128,6 +126,20 @@ class Verification(Cog):
     def mod_log(self) -> ModLog:
         """Get currently loaded ModLog cog instance."""
         return self.bot.get_cog("ModLog")
+
+    async def maybe_start_tasks(self) -> None:
+        """
+        Poll Redis to check whether internal tasks should start.
+
+        Redis must be interfaced with from an async function.
+        """
+        log.trace("Checking whether background tasks should begin")
+        setting: t.Optional[int] = await self.reminder_cache.get("tasks_running")  # This can be None if never set
+
+        if setting:
+            log.trace("Background tasks will be started")
+            self.update_unverified_members.start()
+            self.ping_unverified.start()
 
     # region: automatically update unverified users
 
@@ -492,6 +504,8 @@ class Verification(Cog):
         if not self.ping_unverified.is_running():
             self.ping_unverified.start()
 
+        await self.reminder_cache.set("tasks_running", 1)
+
         colour = discord.Colour.blurple()
         await ctx.send(embed=discord.Embed(title="Verification system", description="Done. :ok_hand:", colour=colour))
 
@@ -502,6 +516,8 @@ class Verification(Cog):
 
         self.update_unverified_members.cancel()
         self.ping_unverified.cancel()
+
+        await self.reminder_cache.set("tasks_running", 0)
 
         colour = discord.Colour.blurple()
         await ctx.send(embed=discord.Embed(title="Verification system", description="Tasks canceled.", colour=colour))
