@@ -86,7 +86,23 @@ MENTION_UNVERIFIED = discord.AllowedMentions(
 
 
 class Verification(Cog):
-    """User verification and role self-management."""
+    """
+    User verification and role management.
+
+    There are two internal tasks in this cog:
+
+        * `update_unverified_members`
+            * Unverified members are given the @Unverified role after `UNVERIFIED_AFTER` days
+            * Unverified members are kicked after `UNVERIFIED_AFTER` days
+
+        * `ping_unverified`
+            * Periodically ping the @Unverified role in the verification channel
+
+    Statistics are collected in the 'verification.' namespace.
+
+    Additionally, this cog offers the !accept, !subscribe and !unsubscribe commands,
+    and keeps the verification channel clean by deleting messages.
+    """
 
     # Cache last sent `REMINDER_MESSAGE` id
     # RedisCache[str, discord.Message.id]
