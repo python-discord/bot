@@ -37,6 +37,10 @@ class Reminders(Cog):
 
         self.bot.loop.create_task(self.reschedule_reminders())
 
+    def cog_unload(self) -> None:
+        """Cancel scheduled tasks."""
+        self.scheduler.cancel_all()
+
     async def reschedule_reminders(self) -> None:
         """Get all current reminders from the API and reschedule them."""
         await self.bot.wait_until_guild_available()

@@ -34,21 +34,20 @@ bot = Bot(
 )
 
 # Internal/debug
+bot.load_extension("bot.cogs.config_verifier")
 bot.load_extension("bot.cogs.error_handler")
 bot.load_extension("bot.cogs.filtering")
 bot.load_extension("bot.cogs.logging")
 bot.load_extension("bot.cogs.security")
-bot.load_extension("bot.cogs.config_verifier")
 
 # Commands, etc
 bot.load_extension("bot.cogs.antimalware")
 bot.load_extension("bot.cogs.antispam")
 bot.load_extension("bot.cogs.bot")
 bot.load_extension("bot.cogs.clean")
+bot.load_extension("bot.cogs.doc")
 bot.load_extension("bot.cogs.extensions")
 bot.load_extension("bot.cogs.help")
-
-bot.load_extension("bot.cogs.doc")
 bot.load_extension("bot.cogs.verification")
 
 # Feature cogs
@@ -57,11 +56,12 @@ bot.load_extension("bot.cogs.defcon")
 bot.load_extension("bot.cogs.dm_relay")
 bot.load_extension("bot.cogs.duck_pond")
 bot.load_extension("bot.cogs.eval")
+bot.load_extension("bot.cogs.filter_lists")
 bot.load_extension("bot.cogs.information")
 bot.load_extension("bot.cogs.jams")
 bot.load_extension("bot.cogs.moderation")
-bot.load_extension("bot.cogs.python_news")
 bot.load_extension("bot.cogs.off_topic_names")
+bot.load_extension("bot.cogs.python_news")
 bot.load_extension("bot.cogs.reddit")
 bot.load_extension("bot.cogs.reminders")
 bot.load_extension("bot.cogs.site")
