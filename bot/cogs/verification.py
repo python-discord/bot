@@ -57,6 +57,12 @@ If you'd like to unsubscribe from the announcement notifications, simply send `!
 <#{constants.Channels.bot_commands}>.
 """
 
+# Sent via DMs to users kicked for failing to verify
+KICKED_MESSAGE = f"""
+Hi! You have been automatically kicked from Python Discord as you have failed to accept our rules \
+within `{KICKED_AFTER}` days. If this was an accident, please feel free to join again.
+"""
+
 # Sent periodically in the verification channel
 REMINDER_MESSAGE = f"""
 <@&{constants.Roles.unverified}>
@@ -177,6 +183,8 @@ class Verification(Cog):
         n_kicked, bad_statuses = 0, set()
 
         for member in members:
+            with suppress(discord.Forbidden):
+                await member.send(KICKED_MESSAGE)  # Send message while user is still in guild
             try:
                 await member.kick(reason=f"User has not verified in {KICKED_AFTER} days")
             except discord.HTTPException as http_exc:
