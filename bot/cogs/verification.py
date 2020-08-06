@@ -24,7 +24,7 @@ KICKED_AFTER = 30  # Amount of days after which non-Developers get kicked from t
 # Number in range [0, 1] determining the percentage of unverified users that are safe
 # to be kicked from the guild in one batch, any larger amount will require staff confirmation,
 # set this to 0 to require explicit approval for batches of any size
-KICK_CONFIRMATION_THRESHOLD = 0
+KICK_CONFIRMATION_THRESHOLD = 0.01  # 1%
 
 BOT_MESSAGE_DELETE_DELAY = 10
 
