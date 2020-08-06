@@ -152,7 +152,8 @@ class Silence(commands.Cog):
         return False
 
     def cog_unload(self) -> None:
-        """Send alert with silenced channels on unload."""
+        """Send alert with silenced channels and cancel scheduled tasks on unload."""
+        self.scheduler.cancel_all()
         if self.muted_channels:
             channels_string = ''.join(channel.mention for channel in self.muted_channels)
             message = f"<@&{Roles.moderators}> channels left silenced on cog unload: {channels_string}"
