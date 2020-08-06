@@ -69,6 +69,13 @@ You will be kicked if you don't verify within `{KICKED_AFTER}` days.
 
 REMINDER_FREQUENCY = 28  # Hours to wait between sending `REMINDER_MESSAGE`
 
+MENTION_CORE_DEVS = discord.AllowedMentions(
+    everyone=False, roles=[discord.Object(constants.Roles.core_developers)]
+)
+MENTION_UNVERIFIED = discord.AllowedMentions(
+    everyone=False, roles=[discord.Object(constants.Roles.unverified)]
+)
+
 
 class Verification(Cog):
     """User verification and role self-management."""
@@ -125,7 +132,8 @@ class Verification(Cog):
         confirmation_msg = await core_devs.send(
             f"<@&{constants.Roles.core_developers}> Verification determined that `{n_members}` members should "
             f"be kicked as they haven't verified in `{KICKED_AFTER}` days. This is `{percentage:.2%}` of the "
-            f"guild's population. Proceed?"
+            f"guild's population. Proceed?",
+            allowed_mentions=MENTION_CORE_DEVS,
         )
 
         options = (constants.Emojis.incident_actioned, constants.Emojis.incident_unactioned)
@@ -309,7 +317,7 @@ class Verification(Cog):
                 await self.bot.http.delete_message(verification.id, last_reminder)
 
         log.trace("Sending verification reminder")
-        new_reminder = await verification.send(REMINDER_MESSAGE)
+        new_reminder = await verification.send(REMINDER_MESSAGE, allowed_mentions=MENTION_UNVERIFIED)
 
         await self.reminder_cache.set("last_reminder", new_reminder.id)
 
