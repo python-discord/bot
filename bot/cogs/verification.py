@@ -422,6 +422,11 @@ class Verification(Cog):
         """Accept our rules and gain access to the rest of the server."""
         log.debug(f"{ctx.author} called !accept. Assigning the 'Developer' role.")
         await ctx.author.add_roles(discord.Object(constants.Roles.verified), reason="Accepted the rules")
+
+        if constants.Roles.unverified in [role.id for role in ctx.author.roles]:
+            log.debug(f"Removing Unverified role from: {ctx.author}")
+            await ctx.author.remove_roles(discord.Object(constants.Roles.unverified))
+
         try:
             await ctx.author.send(VERIFIED_MESSAGE)
         except discord.Forbidden:
