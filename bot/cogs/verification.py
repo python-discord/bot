@@ -176,6 +176,8 @@ class Verification(Cog):
             else:
                 n_kicked += 1
 
+        self.bot.stats.incr("verification.kicked", count=n_kicked)
+
         if bad_statuses:
             log.info(f"Failed to kick {len(members) - n_kicked} members due to following statuses: {bad_statuses}")
 
@@ -415,6 +417,30 @@ class Verification(Cog):
     # endregion
     # region: accept and subscribe commands
 
+    def _bump_verified_stats(self, verified_member: discord.Member) -> None:
+        """
+        Increment verification stats for `verified_member`.
+
+        Each member falls into one of the three categories:
+            * Verified within 24 hours after joining
+            * Does not have @Unverified role yet
+            * Does have @Unverified role
+
+        Stats for member kicking are handled separately.
+        """
+        if verified_member.joined_at is None:  # Docs mention this can happen
+            return
+
+        if (datetime.utcnow() - verified_member.joined_at) < timedelta(hours=24):
+            category = "accepted_on_day_one"
+        elif constants.Roles.unverified not in [role.id for role in verified_member.roles]:
+            category = "accepted_before_unverified"
+        else:
+            category = "accepted_after_unverified"
+
+        log.trace(f"Bumping verification stats in category: {category}")
+        self.bot.stats.incr(f"verification.{category}")
+
     @command(name='accept', aliases=('verify', 'verified', 'accepted'), hidden=True)
     @without_role(constants.Roles.verified)
     @in_whitelist(channels=(constants.Channels.verification,))
@@ -422,6 +448,8 @@ class Verification(Cog):
         """Accept our rules and gain access to the rest of the server."""
         log.debug(f"{ctx.author} called !accept. Assigning the 'Developer' role.")
         await ctx.author.add_roles(discord.Object(constants.Roles.verified), reason="Accepted the rules")
+
+        self._bump_verified_stats(ctx.author)  # This checks for @Unverified so make sure it's not yet removed
 
         if constants.Roles.unverified in [role.id for role in ctx.author.roles]:
             log.debug(f"Removing Unverified role from: {ctx.author}")
