@@ -99,6 +99,10 @@ class Filtering(Cog):
 
         self.bot.loop.create_task(self.reschedule_offensive_msg_deletion())
 
+    def cog_unload(self) -> None:
+        """Cancel scheduled tasks."""
+        self.scheduler.cancel_all()
+
     def _get_filterlist_items(self, list_type: str, *, allowed: bool) -> list:
         """Fetch items from the filter_list_cache."""
         return self.bot.filter_list_cache[f"{list_type.upper()}.{allowed}"].keys()
