@@ -100,13 +100,19 @@ class Verification(Cog):
 
     Statistics are collected in the 'verification.' namespace.
 
+    Moderators+ can use the `verification` command group to start or stop both internal
+    tasks, if necessary. Settings are persisted in Redis across sessions.
+
     Additionally, this cog offers the !accept, !subscribe and !unsubscribe commands,
     and keeps the verification channel clean by deleting messages.
     """
 
-    # Cache last sent `REMINDER_MESSAGE` id
-    # RedisCache[str, discord.Message.id]
-    reminder_cache = RedisCache()
+    # Persist task settings & last sent `REMINDER_MESSAGE` id
+    # RedisCache[
+    #   "tasks_running": int (0 or 1),
+    #   "last_reminder": int (discord.Message.id),
+    # ]
+    task_cache = RedisCache()
 
     def __init__(self, bot: Bot) -> None:
         """Start internal tasks."""
@@ -134,7 +140,7 @@ class Verification(Cog):
         Redis must be interfaced with from an async function.
         """
         log.trace("Checking whether background tasks should begin")
-        setting: t.Optional[int] = await self.reminder_cache.get("tasks_running")  # This can be None if never set
+        setting: t.Optional[int] = await self.task_cache.get("tasks_running")  # This can be None if never set
 
         if setting:
             log.trace("Background tasks will be started")
@@ -346,7 +352,7 @@ class Verification(Cog):
         await self.bot.wait_until_guild_available()
         verification = self.bot.get_guild(constants.Guild.id).get_channel(constants.Channels.verification)
 
-        last_reminder: t.Optional[int] = await self.reminder_cache.get("last_reminder")
+        last_reminder: t.Optional[int] = await self.task_cache.get("last_reminder")
 
         if last_reminder is not None:
             log.trace(f"Found verification reminder message in cache, deleting: {last_reminder}")
@@ -357,7 +363,7 @@ class Verification(Cog):
         log.trace("Sending verification reminder")
         new_reminder = await verification.send(REMINDER_MESSAGE, allowed_mentions=MENTION_UNVERIFIED)
 
-        await self.reminder_cache.set("last_reminder", new_reminder.id)
+        await self.task_cache.set("last_reminder", new_reminder.id)
 
     @ping_unverified.before_loop
     async def _before_first_ping(self) -> None:
@@ -367,7 +373,7 @@ class Verification(Cog):
         If latest reminder is not cached, exit instantly. Otherwise, wait wait until the
         configured `REMINDER_FREQUENCY` has passed.
         """
-        last_reminder: t.Optional[int] = await self.reminder_cache.get("last_reminder")
+        last_reminder: t.Optional[int] = await self.task_cache.get("last_reminder")
 
         if last_reminder is None:
             log.trace("Latest verification reminder message not cached, task will not wait")
@@ -504,7 +510,7 @@ class Verification(Cog):
         if not self.ping_unverified.is_running():
             self.ping_unverified.start()
 
-        await self.reminder_cache.set("tasks_running", 1)
+        await self.task_cache.set("tasks_running", 1)
 
         colour = discord.Colour.blurple()
         await ctx.send(embed=discord.Embed(title="Verification system", description="Done. :ok_hand:", colour=colour))
@@ -517,7 +523,7 @@ class Verification(Cog):
         self.update_unverified_members.cancel()
         self.ping_unverified.cancel()
 
-        await self.reminder_cache.set("tasks_running", 0)
+        await self.task_cache.set("tasks_running", 0)
 
         colour = discord.Colour.blurple()
         await ctx.send(embed=discord.Embed(title="Verification system", description="Tasks canceled.", colour=colour))
