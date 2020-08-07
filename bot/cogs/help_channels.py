@@ -739,7 +739,6 @@ class HelpChannels(commands.Cog):
     async def is_empty(self, channel: discord.TextChannel) -> bool:
         """Return True if there's an AVAILABLE_MSG and the messages leading up are bot messages."""
         log.trace(f"Checking if #{channel} ({channel.id}) is empty.")
-        found = False
 
         # A limit of 100 results in a single API call.
         # If AVAILABLE_MSG isn't found within 100 messages, then assume the channel is not empty.
@@ -751,10 +750,9 @@ class HelpChannels(commands.Cog):
 
             if self.match_bot_embed(msg, AVAILABLE_MSG):
                 log.trace(f"#{channel} ({channel.id}) has the available message embed.")
-                found = True
-                break
+                return True
 
-        return found
+        return False
 
     async def check_cooldowns(self) -> None:
         """Remove expired cooldowns and re-schedule active ones."""
