@@ -85,6 +85,20 @@ MENTION_UNVERIFIED = discord.AllowedMentions(
 )
 
 
+def is_verified(member: discord.Member) -> bool:
+    """
+    Check whether `member` is considered verified.
+
+    Members are considered verified if they have at least 1 role other than
+    the default role (@everyone) and the @Unverified role.
+    """
+    unverified_roles = {
+        member.guild.get_role(constants.Roles.unverified),
+        member.guild.default_role,
+    }
+    return bool(set(member.roles) - unverified_roles)
+
+
 class Verification(Cog):
     """
     User verification and role management.
@@ -219,6 +233,8 @@ class Verification(Cog):
         n_kicked, bad_statuses = 0, set()
 
         for member in members:
+            if is_verified(member):  # Member could have verified in the meantime
+                continue
             with suppress(discord.Forbidden):
                 await member.send(KICKED_MESSAGE)  # Send message while user is still in guild
             try:
@@ -246,6 +262,8 @@ class Verification(Cog):
         n_success, bad_statuses = 0, set()
 
         for member in members:
+            if is_verified(member):  # Member could have verified in the meantime
+                continue
             try:
                 await member.add_roles(role, reason=f"User has not verified in {UNVERIFIED_AFTER} days")
             except discord.HTTPException as http_exc:
@@ -280,14 +298,9 @@ class Verification(Cog):
         log.debug("Checking verification status of guild members")
         for member in pydis.members:
 
-            # Skip all bots and users for which we don't know their join date
-            # This should be extremely rare, but can happen according to `joined_at` docs
-            if member.bot or member.joined_at is None:
-                continue
-
-            # Now we check roles to determine whether this user has already verified
-            unverified_roles = {unverified, pydis.default_role}  # Verified users have at least one more role
-            if set(member.roles) - unverified_roles:
+            # Skip verified members, bots, and members for which we do not know their join date,
+            # this should be extremely rare but docs mention that it can happen
+            if is_verified(member) or member.bot or member.joined_at is None:
                 continue
 
             # At this point, we know that `member` is an unverified user, and we will decide what
