@@ -215,9 +215,6 @@ class HelpChannels(commands.Cog):
         log.trace("close command invoked; checking if the channel is in-use.")
         if ctx.channel.category == self.in_use_category:
             if await self.dormant_check(ctx):
-
-                # Remove the claimant and the cooldown role
-                await self.help_channel_claimants.delete(ctx.channel.id)
                 await self.remove_cooldown_role(ctx.author)
 
                 # Ignore missing task when cooldown has passed but the channel still isn't dormant.
@@ -551,6 +548,7 @@ class HelpChannels(commands.Cog):
 
         A caller argument is provided for metrics.
         """
+        await self.help_channel_claimants.delete(channel.id)
         msg_id = await self.question_messages.pop(channel.id)
 
         try:
