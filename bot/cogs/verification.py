@@ -213,15 +213,21 @@ class Verification(Cog):
             log.debug("Staff prompt not answered, aborting operation")
             return False
         finally:
-            await confirmation_msg.clear_reactions()
+            with suppress(discord.HTTPException):
+                await confirmation_msg.clear_reactions()
 
         result = str(choice) == constants.Emojis.incident_actioned
         log.debug(f"Received answer: {choice}, result: {result}")
 
         # Edit the prompt message to reflect the final choice
-        await confirmation_msg.edit(
-            content=f"Request to kick `{n_members}` members was {'authorized' if result else 'denied'}!"
-        )
+        if result is True:
+            result_msg = f":ok_hand: Request to kick `{n_members}` members was authorized!"
+        else:
+            result_msg = f":warning: Request to kick `{n_members}` members was denied!"
+
+        with suppress(discord.HTTPException):
+            await confirmation_msg.edit(content=result_msg)
+
         return result
 
     async def _kick_members(self, members: t.Collection[discord.Member]) -> int:
