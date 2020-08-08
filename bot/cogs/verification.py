@@ -196,12 +196,14 @@ class Verification(Cog):
         for option in options:
             await confirmation_msg.add_reaction(option)
 
+        core_dev_ids = [member.id for member in pydis.get_role(constants.Roles.core_developers).members]
+
         def check(reaction: discord.Reaction, user: discord.User) -> bool:
             """Check whether `reaction` is a valid reaction to `confirmation_msg`."""
             return (
                 reaction.message.id == confirmation_msg.id  # Reacted to `confirmation_msg`
                 and str(reaction.emoji) in options  # With one of `options`
-                and not user.bot  # By a human
+                and user.id in core_dev_ids  # By a core developer
             )
 
         timeout = 60 * 5  # Seconds, i.e. 5 minutes
