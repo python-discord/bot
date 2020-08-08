@@ -224,7 +224,7 @@ class Verification(Cog):
         )
         return result
 
-    async def _kick_members(self, members: t.Set[discord.Member]) -> int:
+    async def _kick_members(self, members: t.Collection[discord.Member]) -> int:
         """
         Kick `members` from the PyDis guild.
 
@@ -253,7 +253,7 @@ class Verification(Cog):
 
         return n_kicked
 
-    async def _give_role(self, members: t.Set[discord.Member], role: discord.Role) -> int:
+    async def _give_role(self, members: t.Collection[discord.Member], role: discord.Role) -> int:
         """
         Give `role` to all `members`.
 
