@@ -52,10 +52,14 @@ class BotCog(Cog, name="Bot"):
 
     @command(name='embed')
     @with_role(*MODERATION_ROLES)
-    async def embed_command(self, ctx: Context, *, text: str) -> None:
-        """Send the input within an embed to the current channel."""
+    async def embed_command(self, ctx: Context, channel: Optional[TextChannel], *, text: str) -> None:
+        """Send the input within an embed to either a specified channel or the current channel."""
         embed = Embed(description=text)
-        await ctx.send(embed=embed)
+
+        if channel is None:
+            await ctx.send(embed=embed)
+        else:
+            await channel.send(embed=embed)
 
 
 def setup(bot: Bot) -> None:

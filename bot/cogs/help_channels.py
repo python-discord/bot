@@ -1,5 +1,4 @@
 import asyncio
-import inspect
 import json
 import logging
 import random
@@ -35,9 +34,6 @@ and will be yours until it has been inactive for {constants.HelpChannels.idle_mi
 is closed manually with `!close`. When that happens, it will be set to **dormant** and moved into \
 the **Help: Dormant** category.
 
-You may claim a new channel once every {constants.HelpChannels.claim_minutes} minutes. If you \
-currently cannot send a message in this channel, it means you are on cooldown and need to wait.
-
 Try to write the best question you can by providing a detailed description and telling us what \
 you've tried already. For more information on asking a good question, \
 check out our guide on [asking good questions]({ASKING_GUIDE_URL}).
@@ -57,14 +53,7 @@ through our guide for [asking a good question]({ASKING_GUIDE_URL}).
 CoroutineFunc = t.Callable[..., t.Coroutine]
 
 
-class TaskData(t.NamedTuple):
-    """Data for a scheduled task."""
-
-    wait_time: int
-    callback: t.Awaitable
-
-
-class HelpChannels(Scheduler, commands.Cog):
+class HelpChannels(commands.Cog):
     """
     Manage the help channel system of the guild.
 
@@ -113,10 +102,13 @@ class HelpChannels(Scheduler, commands.Cog):
     # RedisCache[discord.TextChannel.id, UtcPosixTimestamp]
     claim_times = RedisCache()
 
-    def __init__(self, bot: Bot):
-        super().__init__()
+    # This cache maps a help channel to original question message in same channel.
+    # RedisCache[discord.TextChannel.id, discord.Message.id]
+    question_messages = RedisCache()
 
+    def __init__(self, bot: Bot):
         self.bot = bot
+        self.scheduler = Scheduler(self.__class__.__name__)
 
         # Categories
         self.available_category: discord.CategoryChannel = None
@@ -145,7 +137,7 @@ class HelpChannels(Scheduler, commands.Cog):
         for task in self.queue_tasks:
             task.cancel()
 
-        self.cancel_all()
+        self.scheduler.cancel_all()
 
     def create_channel_queue(self) -> asyncio.Queue:
         """
@@ -223,16 +215,14 @@ class HelpChannels(Scheduler, commands.Cog):
         log.trace("close command invoked; checking if the channel is in-use.")
         if ctx.channel.category == self.in_use_category:
             if await self.dormant_check(ctx):
-
-                # Remove the claimant and the cooldown role
-                await self.help_channel_claimants.delete(ctx.channel.id)
                 await self.remove_cooldown_role(ctx.author)
 
                 # Ignore missing task when cooldown has passed but the channel still isn't dormant.
-                self.cancel_task(ctx.author.id, ignore_missing=True)
+                if ctx.author.id in self.scheduler:
+                    self.scheduler.cancel(ctx.author.id)
 
                 await self.move_to_dormant(ctx.channel, "command")
-                self.cancel_task(ctx.channel.id)
+                self.scheduler.cancel(ctx.channel.id)
         else:
             log.debug(f"{ctx.author} invoked command 'dormant' outside an in-use help channel")
 
@@ -371,10 +361,18 @@ class HelpChannels(Scheduler, commands.Cog):
         channels = list(self.get_category_channels(self.available_category))
         missing = constants.HelpChannels.max_available - len(channels)
 
-        log.trace(f"Moving {missing} missing channels to the Available category.")
+        # If we've got less than `max_available` channel available, we should add some.
+        if missing > 0:
+            log.trace(f"Moving {missing} missing channels to the Available category.")
+            for _ in range(missing):
+                await self.move_to_available()
 
-        for _ in range(missing):
-            await self.move_to_available()
+        # If for some reason we have more than `max_available` channels available,
+        # we should move the superfluous ones over to dormant.
+        elif missing < 0:
+            log.trace(f"Moving {abs(missing)} superfluous available channels over to the Dormant category.")
+            for channel in channels[:abs(missing)]:
+                await self.move_to_dormant(channel, "auto")
 
     async def init_categories(self) -> None:
         """Get the help category objects. Remove the cog if retrieval fails."""
@@ -446,8 +444,11 @@ class HelpChannels(Scheduler, commands.Cog):
         if not message or not message.embeds:
             return False
 
-        embed = message.embeds[0]
-        return message.author == self.bot.user and embed.description.strip() == description.strip()
+        bot_msg_desc = message.embeds[0].description
+        if bot_msg_desc is discord.Embed.Empty:
+            log.trace("Last message was a bot embed but it was empty.")
+            return False
+        return message.author == self.bot.user and bot_msg_desc.strip() == description.strip()
 
     async def move_idle_channel(self, channel: discord.TextChannel, has_task: bool = True) -> None:
         """
@@ -475,16 +476,15 @@ class HelpChannels(Scheduler, commands.Cog):
         else:
             # Cancel the existing task, if any.
             if has_task:
-                self.cancel_task(channel.id)
+                self.scheduler.cancel(channel.id)
 
-            data = TaskData(idle_seconds - time_elapsed, self.move_idle_channel(channel))
-
+            delay = idle_seconds - time_elapsed
             log.info(
                 f"#{channel} ({channel.id}) is still active; "
-                f"scheduling it to be moved after {data.wait_time} seconds."
+                f"scheduling it to be moved after {delay} seconds."
             )
 
-            self.schedule_task(channel.id, data)
+            self.scheduler.schedule_later(delay, channel.id, self.move_idle_channel(channel))
 
     async def move_to_bottom_position(self, channel: discord.TextChannel, category_id: int, **options) -> None:
         """
@@ -551,6 +551,7 @@ class HelpChannels(Scheduler, commands.Cog):
         """
         log.info(f"Moving #{channel} ({channel.id}) to the Dormant category.")
 
+        await self.help_channel_claimants.delete(channel.id)
         await self.move_to_bottom_position(
             channel=channel,
             category_id=constants.Categories.help_dormant,
@@ -573,6 +574,8 @@ class HelpChannels(Scheduler, commands.Cog):
         embed = discord.Embed(description=DORMANT_MSG)
         await channel.send(embed=embed)
 
+        await self.unpin(channel)
+
         log.trace(f"Pushing #{channel} ({channel.id}) into the channel queue.")
         self.channel_queue.put_nowait(channel)
         self.report_stats()
@@ -589,8 +592,7 @@ class HelpChannels(Scheduler, commands.Cog):
         timeout = constants.HelpChannels.idle_minutes * 60
 
         log.trace(f"Scheduling #{channel} ({channel.id}) to become dormant in {timeout} sec.")
-        data = TaskData(timeout, self.move_idle_channel(channel))
-        self.schedule_task(channel.id, data)
+        self.scheduler.schedule_later(timeout, channel.id, self.move_idle_channel(channel))
         self.report_stats()
 
     async def notify(self) -> None:
@@ -625,11 +627,13 @@ class HelpChannels(Scheduler, commands.Cog):
 
             channel = self.bot.get_channel(constants.HelpChannels.notify_channel)
             mentions = " ".join(f"<@&{role}>" for role in constants.HelpChannels.notify_roles)
+            allowed_roles = [discord.Object(id_) for id_ in constants.HelpChannels.notify_roles]
 
             message = await channel.send(
                 f"{mentions} A new available help channel is needed but there "
                 f"are no more dormant ones. Consider freeing up some in-use channels manually by "
-                f"using the `{constants.Bot.prefix}dormant` command within the channels."
+                f"using the `{constants.Bot.prefix}dormant` command within the channels.",
+                allowed_mentions=discord.AllowedMentions(everyone=False, roles=allowed_roles)
             )
 
             self.bot.stats.incr("help.out_of_channel_alerts")
@@ -690,6 +694,9 @@ class HelpChannels(Scheduler, commands.Cog):
             log.info(f"Channel #{channel} was claimed by `{message.author.id}`.")
             await self.move_to_in_use(channel)
             await self.revoke_send_permissions(message.author)
+
+            await self.pin(message)
+
             # Add user with channel for dormant check.
             await self.help_channel_claimants.set(channel.id, message.author.id)
 
@@ -724,15 +731,28 @@ class HelpChannels(Scheduler, commands.Cog):
         log.info(f"Claimant of #{msg.channel} ({msg.author}) deleted message, channel is empty now. Rescheduling task.")
 
         # Cancel existing dormant task before scheduling new.
-        self.cancel_task(msg.channel.id)
+        self.scheduler.cancel(msg.channel.id)
 
-        task = TaskData(constants.HelpChannels.deleted_idle_minutes * 60, self.move_idle_channel(msg.channel))
-        self.schedule_task(msg.channel.id, task)
+        delay = constants.HelpChannels.deleted_idle_minutes * 60
+        self.scheduler.schedule_later(delay, msg.channel.id, self.move_idle_channel(msg.channel))
 
     async def is_empty(self, channel: discord.TextChannel) -> bool:
-        """Return True if the most recent message in `channel` is the bot's `AVAILABLE_MSG`."""
-        msg = await self.get_last_message(channel)
-        return self.match_bot_embed(msg, AVAILABLE_MSG)
+        """Return True if there's an AVAILABLE_MSG and the messages leading up are bot messages."""
+        log.trace(f"Checking if #{channel} ({channel.id}) is empty.")
+
+        # A limit of 100 results in a single API call.
+        # If AVAILABLE_MSG isn't found within 100 messages, then assume the channel is not empty.
+        # Not gonna do an extensive search for it cause it's too expensive.
+        async for msg in channel.history(limit=100):
+            if not msg.author.bot:
+                log.trace(f"#{channel} ({channel.id}) has a non-bot message.")
+                return False
+
+            if self.match_bot_embed(msg, AVAILABLE_MSG):
+                log.trace(f"#{channel} ({channel.id}) has the available message embed.")
+                return True
+
+        return False
 
     async def check_cooldowns(self) -> None:
         """Remove expired cooldowns and re-schedule active ones."""
@@ -754,8 +774,8 @@ class HelpChannels(Scheduler, commands.Cog):
                 await self.remove_cooldown_role(member)
             else:
                 # The member is still on a cooldown; re-schedule it for the remaining time.
-                remaining = cooldown - in_use_time.seconds
-                await self.schedule_cooldown_expiration(member, remaining)
+                delay = cooldown - in_use_time.seconds
+                self.scheduler.schedule_later(delay, member.id, self.remove_cooldown_role(member))
 
     async def add_cooldown_role(self, member: discord.Member) -> None:
         """Add the help cooldown role to `member`."""
@@ -806,16 +826,11 @@ class HelpChannels(Scheduler, commands.Cog):
 
         # Cancel the existing task, if any.
         # Would mean the user somehow bypassed the lack of permissions (e.g. user is guild owner).
-        self.cancel_task(member.id, ignore_missing=True)
+        if member.id in self.scheduler:
+            self.scheduler.cancel(member.id)
 
-        await self.schedule_cooldown_expiration(member, constants.HelpChannels.claim_minutes * 60)
-
-    async def schedule_cooldown_expiration(self, member: discord.Member, seconds: int) -> None:
-        """Schedule the cooldown role for `member` to be removed after a duration of `seconds`."""
-        log.trace(f"Scheduling removal of {member}'s ({member.id}) cooldown.")
-
-        callback = self.remove_cooldown_role(member)
-        self.schedule_task(member.id, TaskData(seconds, callback))
+        delay = constants.HelpChannels.claim_minutes * 60
+        self.scheduler.schedule_later(delay, member.id, self.remove_cooldown_role(member))
 
     async def send_available_message(self, channel: discord.TextChannel) -> None:
         """Send the available message by editing a dormant message or sending a new message."""
@@ -832,6 +847,47 @@ class HelpChannels(Scheduler, commands.Cog):
             log.trace(f"Dormant message not found in {channel_info}; sending a new message.")
             await channel.send(embed=embed)
 
+    async def pin_wrapper(self, msg_id: int, channel: discord.TextChannel, *, pin: bool) -> bool:
+        """
+        Pin message `msg_id` in `channel` if `pin` is True or unpin if it's False.
+
+        Return True if successful and False otherwise.
+        """
+        channel_str = f"#{channel} ({channel.id})"
+        if pin:
+            func = self.bot.http.pin_message
+            verb = "pin"
+        else:
+            func = self.bot.http.unpin_message
+            verb = "unpin"
+
+        try:
+            await func(channel.id, msg_id)
+        except discord.HTTPException as e:
+            if e.code == 10008:
+                log.debug(f"Message {msg_id} in {channel_str} doesn't exist; can't {verb}.")
+            else:
+                log.exception(
+                    f"Error {verb}ning message {msg_id} in {channel_str}: {e.status} ({e.code})"
+                )
+            return False
+        else:
+            log.trace(f"{verb.capitalize()}ned message {msg_id} in {channel_str}.")
+            return True
+
+    async def pin(self, message: discord.Message) -> None:
+        """Pin an initial question `message` and store it in a cache."""
+        if await self.pin_wrapper(message.id, message.channel, pin=True):
+            await self.question_messages.set(message.channel.id, message.id)
+
+    async def unpin(self, channel: discord.TextChannel) -> None:
+        """Unpin the initial question message sent in `channel`."""
+        msg_id = await self.question_messages.pop(channel.id)
+        if msg_id is None:
+            log.debug(f"#{channel} ({channel.id}) doesn't have a message pinned.")
+        else:
+            await self.pin_wrapper(msg_id, channel, pin=False)
+
     async def wait_for_dormant_channel(self) -> discord.TextChannel:
         """Wait for a dormant channel to become available in the queue and return it."""
         log.trace("Waiting for a dormant channel.")
@@ -844,21 +900,6 @@ class HelpChannels(Scheduler, commands.Cog):
         self.queue_tasks.remove(task)
 
         return channel
-
-    async def _scheduled_task(self, data: TaskData) -> None:
-        """Await the `data.callback` coroutine after waiting for `data.wait_time` seconds."""
-        try:
-            log.trace(f"Waiting {data.wait_time} seconds before awaiting callback.")
-            await asyncio.sleep(data.wait_time)
-
-            # Use asyncio.shield to prevent callback from cancelling itself.
-            # The parent task (_scheduled_task) will still get cancelled.
-            log.trace("Done waiting; now awaiting the callback.")
-            await asyncio.shield(data.callback)
-        finally:
-            if inspect.iscoroutine(data.callback):
-                log.trace("Explicitly closing coroutine.")
-                data.callback.close()
 
 
 def validate_config() -> None:

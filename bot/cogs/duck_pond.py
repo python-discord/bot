@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, Union
+from typing import Union
 
 import discord
 from discord import Color, Embed, Member, Message, RawReactionActionEvent, User, errors
@@ -7,7 +7,8 @@ from discord.ext.commands import Cog
 
 from bot import constants
 from bot.bot import Bot
-from bot.utils.messages import send_attachments, sub_clyde
+from bot.utils.messages import send_attachments
+from bot.utils.webhooks import send_webhook
 
 log = logging.getLogger(__name__)
 
@@ -18,6 +19,7 @@ class DuckPond(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.webhook_id = constants.Webhooks.duck_pond
+        self.webhook = None
         self.bot.loop.create_task(self.fetch_webhook())
 
     async def fetch_webhook(self) -> None:
@@ -46,24 +48,6 @@ class DuckPond(Cog):
                     if user == self.bot.user:
                         return True
         return False
-
-    async def send_webhook(
-        self,
-        content: Optional[str] = None,
-        username: Optional[str] = None,
-        avatar_url: Optional[str] = None,
-        embed: Optional[Embed] = None,
-    ) -> None:
-        """Send a webhook to the duck_pond channel."""
-        try:
-            await self.webhook.send(
-                content=content,
-                username=sub_clyde(username),
-                avatar_url=avatar_url,
-                embed=embed
-            )
-        except discord.HTTPException:
-            log.exception("Failed to send a message to the Duck Pool webhook")
 
     async def count_ducks(self, message: Message) -> int:
         """
@@ -94,10 +78,9 @@ class DuckPond(Cog):
 
     async def relay_message(self, message: Message) -> None:
         """Relays the message's content and attachments to the duck pond channel."""
-        clean_content = message.clean_content
-
-        if clean_content:
-            await self.send_webhook(
+        if message.clean_content:
+            await send_webhook(
+                webhook=self.webhook,
                 content=message.clean_content,
                 username=message.author.display_name,
                 avatar_url=message.author.avatar_url
@@ -111,7 +94,8 @@ class DuckPond(Cog):
                     description=":x: **This message contained an attachment, but it could not be retrieved**",
                     color=Color.red()
                 )
-                await self.send_webhook(
+                await send_webhook(
+                    webhook=self.webhook,
                     embed=e,
                     username=message.author.display_name,
                     avatar_url=message.author.avatar_url

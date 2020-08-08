@@ -135,11 +135,11 @@ class ModManagement(commands.Cog):
         if 'expires_at' in request_data:
             # A scheduled task should only exist if the old infraction wasn't permanent
             if old_infraction['expires_at']:
-                self.infractions_cog.cancel_task(new_infraction['id'])
+                self.infractions_cog.scheduler.cancel(new_infraction['id'])
 
             # If the infraction was not marked as permanent, schedule a new expiration task
             if request_data['expires_at']:
-                self.infractions_cog.schedule_task(new_infraction['id'], new_infraction)
+                self.infractions_cog.schedule_expiration(new_infraction)
 
             log_text += f"""
                 Previous expiry: {old_infraction['expires_at'] or "Permanent"}
@@ -268,12 +268,12 @@ class ModManagement(commands.Cog):
             User: {self.bot.get_user(user_id)} (`{user_id}`)
             Type: **{infraction["type"]}**
             Shadow: {hidden}
-            Reason: {infraction["reason"] or "*None*"}
             Created: {created}
             Expires: {expires}
             Remaining: {remaining}
             Actor: {actor.mention if actor else actor_id}
             ID: `{infraction["id"]}`
+            Reason: {infraction["reason"] or "*None*"}
             {"**===============**" if active else "==============="}
         """)
 

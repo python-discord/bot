@@ -38,6 +38,10 @@ style:
         status_dnd:     "<:status_dnd:470326272082313216>"
         status_offline: "<:status_offline:470326266537705472>"
 
+        incident_actioned:      "<:incident_actioned:719645530128646266>"
+        incident_unactioned:    "<:incident_unactioned:719645583245180960>"
+        incident_investigating: "<:incident_investigating:719645658671480924>"
+
         failmail: "<:failmail:633660039931887616>"
         trashcan: "<:trashcan:637136429717389331>"
 
@@ -150,6 +154,7 @@ guild:
         mod_log:            &MOD_LOG        282638479504965634
         user_log:                           528976905546760203
         voice_log:                          640292421988646961
+        dm_log:                             653713721625018428
 
         # Off-topic
         off_topic_0:    291284109232308226
@@ -167,12 +172,13 @@ guild:
         admin_spam:         &ADMIN_SPAM     563594791770914816
         defcon:             &DEFCON         464469101889454091
         helpers:            &HELPERS        385474242440986624
+        incidents:                          714214212200562749
+        incidents_archive:                  720668923636351037
         mods:               &MODS           305126844661760000
         mod_alerts:         &MOD_ALERTS     473092532147060736
         mod_spam:           &MOD_SPAM       620607373828030464
         organisation:       &ORGANISATION   551789653284356126
         staff_lounge:       &STAFF_LOUNGE   464905259261755392
-        incidents:                          714214212200562749
 
         # Voice
         admins_voice:       &ADMINS_VOICE   500734494840717332
@@ -230,8 +236,8 @@ guild:
         owners:             &OWNERS_ROLE    267627879762755584
 
         # Code Jam
-        jammers:        591786436651646989
-        team_leaders:   501324292341104650
+        jammers:        737249140966162473
+        team_leaders:   737250302834638889
 
     moderation_roles:
         - *OWNERS_ROLE
@@ -245,16 +251,16 @@ guild:
         - *HELPERS_ROLE
 
     webhooks:
-        talent_pool:                    569145364800602132
-        big_brother:                    569133704568373283
-        reddit:                         635408384794951680
-        duck_pond:                      637821475327311927
-        dev_log:                        680501655111729222
-        python_news:    &PYNEWS_WEBHOOK 704381182279942324
-
+        big_brother:                        569133704568373283
+        dev_log:                            680501655111729222
+        dm_log:                             654567640664244225
+        duck_pond:                          637821475327311927
+        incidents_archive:                  720671599790915702
+        python_news:        &PYNEWS_WEBHOOK 704381182279942324
+        reddit:                             635408384794951680
+        talent_pool:                        569145364800602132
 
 filter:
-
     # What do we filter?
     filter_zalgo:       false
     filter_invites:     true
@@ -269,99 +275,8 @@ filter:
     notify_user_domains:     false
 
     # Filter configuration
-    ping_everyone:             true  # Ping @everyone when we send a mod-alert?
+    ping_everyone:             true
     offensive_msg_delete_days: 7     # How many days before deleting an offensive message?
-
-    guild_invite_whitelist:
-        - 280033776820813825  # Functional Programming
-        - 267624335836053506  # Python Discord
-        - 440186186024222721  # Python Discord: Emojis 1
-        - 578587418123304970  # Python Discord: Emojis 2
-        - 273944235143593984  # STEM
-        - 348658686962696195  # RLBot
-        - 531221516914917387  # Pallets
-        - 249111029668249601  # Gentoo
-        - 327254708534116352  # Adafruit
-        - 544525886180032552  # kennethreitz.org
-        - 590806733924859943  # Discord Hack Week
-        - 423249981340778496  # Kivy
-        - 197038439483310086  # Discord Testers
-        - 286633898581164032  # Ren'Py
-        - 349505959032389632  # PyGame
-        - 438622377094414346  # Pyglet
-        - 524691714909274162  # Panda3D
-        - 336642139381301249  # discord.py
-        - 405403391410438165  # Sentdex
-        - 172018499005317120  # The Coding Den
-        - 666560367173828639  # PyWeek
-        - 702724176489873509  # Microsoft Python
-        - 81384788765712384   # Discord API
-        - 613425648685547541  # Discord Developers
-        - 185590609631903755  # Blender Hub
-        - 420324994703163402  # /r/FlutterDev
-        - 488751051629920277  # Python Atlanta
-        - 143867839282020352  # C#
-
-    domain_blacklist:
-        - pornhub.com
-        - liveleak.com
-        - grabify.link
-        - bmwforum.co
-        - leancoding.co
-        - spottyfly.com
-        - stopify.co
-        - yoütu.be
-        - discörd.com
-        - minecräft.com
-        - freegiftcards.co
-        - disçordapp.com
-        - fortnight.space
-        - fortnitechat.site
-        - joinmy.site
-        - curiouscat.club
-        - catsnthings.fun
-        - yourtube.site
-        - youtubeshort.watch
-        - catsnthing.com
-        - youtubeshort.pro
-        - canadianlumberjacks.online
-        - poweredbydialup.club
-        - poweredbydialup.online
-        - poweredbysecurity.org
-        - poweredbysecurity.online
-        - ssteam.site
-        - steamwalletgift.com
-        - discord.gift
-        - lmgtfy.com
-
-    word_watchlist:
-        - goo+ks*
-        - ky+s+
-        - ki+ke+s*
-        - beaner+s?
-        - coo+ns*
-        - nig+lets*
-        - slant-eyes*
-        - towe?l-?head+s*
-        - chi*n+k+s*
-        - spick*s*
-        - kill* +(?:yo)?urself+
-        - jew+s*
-        - suicide
-        - rape
-        - (re+)tar+(d+|t+)(ed)?
-        - ta+r+d+
-        - cunts*
-        - trann*y
-        - shemale
-
-    token_watchlist:
-        - fa+g+s*
-        - 卐
-        - 卍
-        - cuck(?!oo+)
-        - nigg+(?:e*r+|a+h*?|u+h+)s?
-        - fag+o+t+s*
 
     # Censor doesn't apply to these
     channel_whitelist:
@@ -477,35 +392,6 @@ anti_spam:
             max: 3
 
 
-anti_malware:
-    whitelist:
-        - '.3gp'
-        - '.3g2'
-        - '.avi'
-        - '.bmp'
-        - '.gif'
-        - '.h264'
-        - '.jpg'
-        - '.jpeg'
-        - '.m4v'
-        - '.mkv'
-        - '.mov'
-        - '.mp4'
-        - '.mpeg'
-        - '.mpg'
-        - '.png'
-        - '.tiff'
-        - '.wmv'
-        - '.svg'
-        - '.psd'  # Photoshop
-        - '.ai'   # Illustrator
-        - '.aep'  # After Effects
-        - '.xcf'  # GIMP
-        - '.mp3'
-        - '.wav'
-        - '.ogg'
-
-
 reddit:
     subreddits:
         - 'r/Python'
@@ -563,8 +449,8 @@ help_channels:
     # Allowed duration of inactivity before making a channel dormant
     idle_minutes: 30
 
-    # Allowed duration of inactivity when question message deleted
-    # and no one other sent before message making channel dormant.
+    # Allowed duration of inactivity when channel is empty (due to deleted messages)
+    # before message making a channel dormant
     deleted_idle_minutes: 5
 
     # Maximum number of channels to put in the available category

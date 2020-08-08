@@ -227,10 +227,6 @@ class Filter(metaclass=YAMLGetter):
 
     ping_everyone: bool
     offensive_msg_delete_days: int
-    guild_invite_whitelist: List[int]
-    domain_blacklist: List[str]
-    word_watchlist: List[str]
-    token_watchlist: List[str]
 
     channel_whitelist: List[int]
     role_whitelist: List[int]
@@ -271,6 +267,10 @@ class Emojis(metaclass=YAMLGetter):
     status_offline: str
     status_idle: str
     status_dnd: str
+
+    incident_actioned: str
+    incident_unactioned: str
+    incident_investigating: str
 
     failmail: str
     trashcan: str
@@ -395,10 +395,12 @@ class Channels(metaclass=YAMLGetter):
     dev_contrib: int
     dev_core: int
     dev_log: int
+    dm_log: int
     esoteric: int
     helpers: int
     how_to_get_help: int
     incidents: int
+    incidents_archive: int
     message_log: int
     meta: int
     mod_alerts: int
@@ -422,11 +424,13 @@ class Webhooks(metaclass=YAMLGetter):
     section = "guild"
     subsection = "webhooks"
 
-    talent_pool: int
     big_brother: int
-    reddit: int
-    duck_pond: int
     dev_log: int
+    dm_log: int
+    duck_pond: int
+    incidents_archive: int
+    reddit: int
+    talent_pool: int
 
 
 class Roles(metaclass=YAMLGetter):
@@ -459,6 +463,7 @@ class Guild(metaclass=YAMLGetter):
     reminder_whitelist: List[int]
     staff_channels: List[int]
     staff_roles: List[int]
+
 
 class Keys(metaclass=YAMLGetter):
     section = "keys"
@@ -526,12 +531,6 @@ class AntiSpam(metaclass=YAMLGetter):
 
     punishment: Dict[str, Dict[str, int]]
     rules: Dict[str, Dict[str, int]]
-
-
-class AntiMalware(metaclass=YAMLGetter):
-    section = "anti_malware"
-
-    whitelist: list
 
 
 class BigBrother(metaclass=YAMLGetter):
