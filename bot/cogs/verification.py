@@ -73,7 +73,7 @@ Welcome to Python Discord! Please read the documents mentioned above and type `!
 to send messages in the community!
 
 You will be kicked if you don't verify within `{KICKED_AFTER}` days.
-"""
+""".strip()
 
 REMINDER_FREQUENCY = 28  # Hours to wait between sending `REMINDER_MESSAGE`
 
@@ -424,7 +424,7 @@ class Verification(Cog):
         if message.channel.id != constants.Channels.verification:
             return  # Only listen for #checkpoint messages
 
-        if message.content == REMINDER_MESSAGE.strip():
+        if message.content == REMINDER_MESSAGE:
             return  # Ignore bots own verification reminder
 
         if message.author.bot:
