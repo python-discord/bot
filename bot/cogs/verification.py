@@ -96,7 +96,7 @@ def is_verified(member: discord.Member) -> bool:
         member.guild.get_role(constants.Roles.unverified),
         member.guild.default_role,
     }
-    return bool(set(member.roles) - unverified_roles)
+    return len(set(member.roles) - unverified_roles) > 0
 
 
 class Verification(Cog):
