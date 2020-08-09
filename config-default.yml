@@ -309,24 +309,7 @@ urls:
     site_staff:  &STAFF  !JOIN ["staff.", *DOMAIN]
     site_schema: &SCHEMA       "https://"
 
-    site_bigbrother_api:                !JOIN [*SCHEMA, *API, "/bot/bigbrother"]
-    site_docs_api:                      !JOIN [*SCHEMA, *API, "/bot/docs"]
-    site_superstarify_api:              !JOIN [*SCHEMA, *API, "/bot/superstarify"]
-    site_infractions:                   !JOIN [*SCHEMA, *API, "/bot/infractions"]
-    site_infractions_user:              !JOIN [*SCHEMA, *API, "/bot/infractions/user/{user_id}"]
-    site_infractions_type:              !JOIN [*SCHEMA, *API, "/bot/infractions/type/{infraction_type}"]
-    site_infractions_by_id:             !JOIN [*SCHEMA, *API, "/bot/infractions/id/{infraction_id}"]
-    site_infractions_user_type_current: !JOIN [*SCHEMA, *API, "/bot/infractions/user/{user_id}/{infraction_type}/current"]
-    site_infractions_user_type:         !JOIN [*SCHEMA, *API, "/bot/infractions/user/{user_id}/{infraction_type}"]
-    site_logs_api:                      !JOIN [*SCHEMA, *API, "/bot/logs"]
     site_logs_view:                     !JOIN [*SCHEMA, *STAFF, "/bot/logs"]
-    site_off_topic_names_api:           !JOIN [*SCHEMA, *API, "/bot/off-topic-names"]
-    site_reminders_api:                 !JOIN [*SCHEMA, *API, "/bot/reminders"]
-    site_reminders_user_api:            !JOIN [*SCHEMA, *API, "/bot/reminders/user"]
-    site_settings_api:                  !JOIN [*SCHEMA, *API, "/bot/settings"]
-    site_tags_api:                      !JOIN [*SCHEMA, *API, "/bot/tags"]
-    site_user_api:                      !JOIN [*SCHEMA, *API, "/bot/users"]
-    site_user_complete_api:             !JOIN [*SCHEMA, *API, "/bot/users/complete"]
     paste_service:                      !JOIN [*SCHEMA, *PASTE, "/{key}"]
 
     # Snekbox
