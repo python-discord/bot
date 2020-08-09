@@ -12,7 +12,7 @@ beautifulsoup4 = "~=4.9"
 colorama = {version = "~=0.4.3",sys_platform = "== 'win32'"}
 coloredlogs = "~=14.0"
 deepdiff = "~=4.0"
-discord-py = {git = "https://github.com/Rapptz/discord.py.git",ref = "0bc15fa130b8f01fe2d67446a2184d474b0d0ba7"}
+discord.py = "~=1.4.0"
 fakeredis = "~=1.4"
 feedparser = "~=5.2"
 fuzzywuzzy = "~=0.17"

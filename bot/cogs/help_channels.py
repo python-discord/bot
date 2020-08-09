@@ -215,9 +215,6 @@ class HelpChannels(commands.Cog):
         log.trace("close command invoked; checking if the channel is in-use.")
         if ctx.channel.category == self.in_use_category:
             if await self.dormant_check(ctx):
-
-                # Remove the claimant and the cooldown role
-                await self.help_channel_claimants.delete(ctx.channel.id)
                 await self.remove_cooldown_role(ctx.author)
 
                 # Ignore missing task when cooldown has passed but the channel still isn't dormant.
@@ -551,20 +548,9 @@ class HelpChannels(commands.Cog):
 
         A caller argument is provided for metrics.
         """
-        msg_id = await self.question_messages.pop(channel.id)
-
-        try:
-            await self.bot.http.unpin_message(channel.id, msg_id)
-        except discord.HTTPException as e:
-            if e.code == 10008:
-                log.trace(f"Message {msg_id} don't exist, can't unpin.")
-            else:
-                log.warn(f"Got unexpected status {e.code} when unpinning message {msg_id}: {e.text}")
-        else:
-            log.trace(f"Unpinned message {msg_id}.")
-
         log.info(f"Moving #{channel} ({channel.id}) to the Dormant category.")
 
+        await self.help_channel_claimants.delete(channel.id)
         await self.move_to_bottom_position(
             channel=channel,
             category_id=constants.Categories.help_dormant,
@@ -586,6 +572,8 @@ class HelpChannels(commands.Cog):
         log.trace(f"Sending dormant message for #{channel} ({channel.id}).")
         embed = discord.Embed(description=DORMANT_MSG)
         await channel.send(embed=embed)
+
+        await self.unpin(channel)
 
         log.trace(f"Pushing #{channel} ({channel.id}) into the channel queue.")
         self.channel_queue.put_nowait(channel)
@@ -704,15 +692,8 @@ class HelpChannels(commands.Cog):
             log.info(f"Channel #{channel} was claimed by `{message.author.id}`.")
             await self.move_to_in_use(channel)
             await self.revoke_send_permissions(message.author)
-            # Pin message for better access and store this to cache
-            try:
-                await message.pin()
-            except discord.NotFound:
-                log.info(f"Pinning message {message.id} ({channel}) failed because message got deleted.")
-            except discord.HTTPException as e:
-                log.info(f"Pinning message {message.id} ({channel.id}) failed with code {e.code}", exc_info=e)
-            else:
-                await self.question_messages.set(channel.id, message.id)
+
+            await self.pin(message)
 
             # Add user with channel for dormant check.
             await self.help_channel_claimants.set(channel.id, message.author.id)
@@ -754,9 +735,22 @@ class HelpChannels(commands.Cog):
         self.scheduler.schedule_later(delay, msg.channel.id, self.move_idle_channel(msg.channel))
 
     async def is_empty(self, channel: discord.TextChannel) -> bool:
-        """Return True if the most recent message in `channel` is the bot's `AVAILABLE_MSG`."""
-        msg = await self.get_last_message(channel)
-        return self.match_bot_embed(msg, AVAILABLE_MSG)
+        """Return True if there's an AVAILABLE_MSG and the messages leading up are bot messages."""
+        log.trace(f"Checking if #{channel} ({channel.id}) is empty.")
+
+        # A limit of 100 results in a single API call.
+        # If AVAILABLE_MSG isn't found within 100 messages, then assume the channel is not empty.
+        # Not gonna do an extensive search for it cause it's too expensive.
+        async for msg in channel.history(limit=100):
+            if not msg.author.bot:
+                log.trace(f"#{channel} ({channel.id}) has a non-bot message.")
+                return False
+
+            if self.match_bot_embed(msg, AVAILABLE_MSG):
+                log.trace(f"#{channel} ({channel.id}) has the available message embed.")
+                return True
+
+        return False
 
     async def check_cooldowns(self) -> None:
         """Remove expired cooldowns and re-schedule active ones."""
@@ -862,6 +856,47 @@ class HelpChannels(commands.Cog):
 
         log.trace(f"Channel #{channel} ({channel_id}) retrieved.")
         return channel
+
+    async def pin_wrapper(self, msg_id: int, channel: discord.TextChannel, *, pin: bool) -> bool:
+        """
+        Pin message `msg_id` in `channel` if `pin` is True or unpin if it's False.
+
+        Return True if successful and False otherwise.
+        """
+        channel_str = f"#{channel} ({channel.id})"
+        if pin:
+            func = self.bot.http.pin_message
+            verb = "pin"
+        else:
+            func = self.bot.http.unpin_message
+            verb = "unpin"
+
+        try:
+            await func(channel.id, msg_id)
+        except discord.HTTPException as e:
+            if e.code == 10008:
+                log.debug(f"Message {msg_id} in {channel_str} doesn't exist; can't {verb}.")
+            else:
+                log.exception(
+                    f"Error {verb}ning message {msg_id} in {channel_str}: {e.status} ({e.code})"
+                )
+            return False
+        else:
+            log.trace(f"{verb.capitalize()}ned message {msg_id} in {channel_str}.")
+            return True
+
+    async def pin(self, message: discord.Message) -> None:
+        """Pin an initial question `message` and store it in a cache."""
+        if await self.pin_wrapper(message.id, message.channel, pin=True):
+            await self.question_messages.set(message.channel.id, message.id)
+
+    async def unpin(self, channel: discord.TextChannel) -> None:
+        """Unpin the initial question message sent in `channel`."""
+        msg_id = await self.question_messages.pop(channel.id)
+        if msg_id is None:
+            log.debug(f"#{channel} ({channel.id}) doesn't have a message pinned.")
+        else:
+            await self.pin_wrapper(msg_id, channel, pin=False)
 
     async def wait_for_dormant_channel(self) -> discord.TextChannel:
         """Wait for a dormant channel to become available in the queue and return it."""

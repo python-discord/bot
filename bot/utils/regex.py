@@ -7,6 +7,6 @@ INVITE_RE = re.compile(
     r"discord(?:[\.,]|dot)me|"                        # or discord.me
     r"discord(?:[\.,]|dot)io"                         # or discord.io.
     r")(?:[\/]|slash)"                                # / or 'slash'
-    r"([a-zA-Z0-9]+)",                                # the invite code itself
+    r"([a-zA-Z0-9\-]+)",                              # the invite code itself
     flags=re.IGNORECASE
 )
