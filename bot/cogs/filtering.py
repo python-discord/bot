@@ -124,7 +124,10 @@ class Filtering(Cog):
     async def on_message(self, msg: Message) -> None:
         """Invoke message filter for new messages."""
         await self._filter_message(msg)
-        await self.check_bad_words_in_name(msg.author)
+
+        # Ignore webhook messages.
+        if msg.webhook_id is None:
+            await self.check_bad_words_in_name(msg.author)
 
     @Cog.listener()
     async def on_message_edit(self, before: Message, after: Message) -> None:
