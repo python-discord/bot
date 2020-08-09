@@ -485,11 +485,13 @@ class URLs(metaclass=YAMLGetter):
     bot_avatar: str
     github_bot_repo: str
 
-    # Site endpoints
+    # Base site vars
     site: str
     site_api: str
-    site_logs_view: str
     site_schema: str
+
+    # Site endpoints
+    site_logs_view: str
     paste_service: str
 
 
