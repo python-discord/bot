@@ -432,8 +432,8 @@ help_channels:
     # Allowed duration of inactivity before making a channel dormant
     idle_minutes: 30
 
-    # Allowed duration of inactivity when question message deleted
-    # and no one other sent before message making channel dormant.
+    # Allowed duration of inactivity when channel is empty (due to deleted messages)
+    # before message making a channel dormant
     deleted_idle_minutes: 5
 
     # Maximum number of channels to put in the available category
