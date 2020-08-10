@@ -9,6 +9,7 @@ from bot import constants
 from bot.cogs import token_remover
 from bot.cogs.moderation import ModLog
 from bot.cogs.token_remover import Token, TokenRemover
+from bot.utils.messages import format_user
 from tests.helpers import MockBot, MockMessage, autospec
 
 
@@ -240,7 +241,7 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(return_value, log_message.format.return_value)
         log_message.format.assert_called_once_with(
-            author=f"{self.msg.author.mention} ({self.msg.author})",
+            author=format_user(self.msg.author),
             channel=self.msg.channel.mention,
             user_id=token.user_id,
             timestamp=token.timestamp,
