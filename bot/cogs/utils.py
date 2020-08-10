@@ -232,6 +232,8 @@ class Utils(Cog):
         A maximum of 20 options can be provided, as Discord supports a max of 20
         reactions on a single message.
         """
+        if len(title) > 256:
+            raise BadArgument("The title cannot be longer than 256 characters.")
         if len(options) < 2:
             raise BadArgument("Please provide at least 2 options.")
         if len(options) > 20:

@@ -30,6 +30,10 @@ class InfractionScheduler:
 
         self.bot.loop.create_task(self.reschedule_infractions(supported_infractions))
 
+    def cog_unload(self) -> None:
+        """Cancel scheduled tasks."""
+        self.scheduler.cancel_all()
+
     @property
     def mod_log(self) -> ModLog:
         """Get the currently loaded ModLog cog instance."""
