@@ -252,7 +252,7 @@ class ModManagement(commands.Cog):
         else:
             # Use the user data retrieved from the DB.
             name = escape_markdown(user['name'])
-            user_str = f"<@{user['id']}> ({name}#{user['discriminator']})"
+            user_str = f"<@{user['id']}> ({name}#{user['discriminator']:04})"
 
         if active:
             remaining = time.until_expiration(expires_at) or "Expired"
