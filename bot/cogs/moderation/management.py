@@ -10,7 +10,7 @@ from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
-from bot.converters import Expiry, InfractionSearchQuery, allowed_strings, proxy_user
+from bot.converters import Expiry, Snowflake, allowed_strings, proxy_user
 from bot.pagination import LinePaginator
 from bot.utils import messages, time
 from bot.utils.checks import in_whitelist_check, with_role_check
@@ -177,7 +177,7 @@ class ModManagement(commands.Cog):
     # region: Search infractions
 
     @infraction_group.group(name="search", invoke_without_command=True)
-    async def infraction_search_group(self, ctx: Context, query: InfractionSearchQuery) -> None:
+    async def infraction_search_group(self, ctx: Context, query: Snowflake) -> None:
         """Searches for infractions in the database."""
         if isinstance(query, discord.User):
             await ctx.invoke(self.search_user, query)
