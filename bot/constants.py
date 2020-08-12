@@ -485,25 +485,13 @@ class URLs(metaclass=YAMLGetter):
     bot_avatar: str
     github_bot_repo: str
 
-    # Site endpoints
+    # Base site vars
     site: str
     site_api: str
-    site_superstarify_api: str
-    site_logs_api: str
-    site_logs_view: str
-    site_reminders_api: str
-    site_reminders_user_api: str
     site_schema: str
-    site_settings_api: str
-    site_tags_api: str
-    site_user_api: str
-    site_user_complete_api: str
-    site_infractions: str
-    site_infractions_user: str
-    site_infractions_type: str
-    site_infractions_by_id: str
-    site_infractions_user_type_current: str
-    site_infractions_user_type: str
+
+    # Site endpoints
+    site_logs_view: str
     paste_service: str
 
 
