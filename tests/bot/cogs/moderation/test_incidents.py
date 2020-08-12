@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, call, patch
 import aiohttp
 import discord
 
-from bot.cogs.moderation import Incidents, incidents
+from bot.cogs.moderation import incidents
 from bot.constants import Colours
 from tests.helpers import (
     MockAsyncWebhook,
@@ -290,7 +290,7 @@ class TestIncidents(unittest.IsolatedAsyncioTestCase):
         Note that this will not schedule `crawl_incidents` in the background, as everything
         is being mocked. The `crawl_task` attribute will end up being None.
         """
-        self.cog_instance = Incidents(MockBot())
+        self.cog_instance = incidents.Incidents(MockBot())
 
 
 @patch("asyncio.sleep", AsyncMock())  # Prevent the coro from sleeping to speed up the test

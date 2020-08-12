@@ -17,8 +17,8 @@ class TruncationTests(unittest.IsolatedAsyncioTestCase):
         self.guild = MockGuild(id=4567)
         self.ctx = MockContext(bot=self.bot, author=self.user, guild=self.guild)
 
-    @patch("bot.cogs.moderation.utils.get_active_infraction")
-    @patch("bot.cogs.moderation.utils.post_infraction")
+    @patch("bot.cogs.moderation.infraction.utils.get_active_infraction")
+    @patch("bot.cogs.moderation.infraction.utils.post_infraction")
     async def test_apply_ban_reason_truncation(self, post_infraction_mock, get_active_mock):
         """Should truncate reason for `ctx.guild.ban`."""
         get_active_mock.return_value = None
@@ -39,7 +39,7 @@ class TruncationTests(unittest.IsolatedAsyncioTestCase):
             self.ctx, {"foo": "bar"}, self.target, self.ctx.guild.ban.return_value
         )
 
-    @patch("bot.cogs.moderation.utils.post_infraction")
+    @patch("bot.cogs.moderation.infraction.utils.post_infraction")
     async def test_apply_kick_reason_truncation(self, post_infraction_mock):
         """Should truncate reason for `Member.kick`."""
         post_infraction_mock.return_value = {"foo": "bar"}

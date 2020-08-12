@@ -10,7 +10,7 @@ from bot.cogs.info import information
 from bot.utils.checks import InWhitelistCheckFailure
 from tests import helpers
 
-COG_PATH = "bot.cogs.information.Information"
+COG_PATH = "bot.cogs.info.information.Information"
 
 
 class InformationCogTests(unittest.TestCase):
@@ -97,7 +97,7 @@ class InformationCogTests(unittest.TestCase):
         self.assertEqual(admin_embed.title, "Admins info")
         self.assertEqual(admin_embed.colour, discord.Colour.red())
 
-    @unittest.mock.patch('bot.cogs.information.time_since')
+    @unittest.mock.patch('bot.cogs.info.information.time_since')
     def test_server_info_command(self, time_since_patch):
         time_since_patch.return_value = '2 days ago'
 
@@ -339,8 +339,8 @@ class UserInfractionHelperMethodTests(unittest.TestCase):
         self._method_subtests(self.cog.user_nomination_counts, test_values, header)
 
 
-@unittest.mock.patch("bot.cogs.information.time_since", new=unittest.mock.MagicMock(return_value="1 year ago"))
-@unittest.mock.patch("bot.cogs.information.constants.MODERATION_CHANNELS", new=[50])
+@unittest.mock.patch("bot.cogs.info.information.time_since", new=unittest.mock.MagicMock(return_value="1 year ago"))
+@unittest.mock.patch("bot.cogs.info.information.constants.MODERATION_CHANNELS", new=[50])
 class UserEmbedTests(unittest.TestCase):
     """Tests for the creation of the `!user` embed."""
 
@@ -492,7 +492,7 @@ class UserEmbedTests(unittest.TestCase):
         self.assertEqual(embed.thumbnail.url, "avatar url")
 
 
-@unittest.mock.patch("bot.cogs.information.constants")
+@unittest.mock.patch("bot.cogs.info.information.constants")
 class UserCommandTests(unittest.TestCase):
     """Tests for the `!user` command."""
 
@@ -531,7 +531,7 @@ class UserCommandTests(unittest.TestCase):
         with self.assertRaises(InWhitelistCheckFailure, msg=msg):
             asyncio.run(self.cog.user_info.callback(self.cog, ctx))
 
-    @unittest.mock.patch("bot.cogs.information.Information.create_user_embed", new_callable=unittest.mock.AsyncMock)
+    @unittest.mock.patch("bot.cogs.info.information.Information.create_user_embed")
     def test_regular_user_may_use_command_in_bot_commands_channel(self, create_embed, constants):
         """A regular user should be allowed to use `!user` targeting themselves in bot-commands."""
         constants.STAFF_ROLES = [self.moderator_role.id]
@@ -544,7 +544,7 @@ class UserCommandTests(unittest.TestCase):
         create_embed.assert_called_once_with(ctx, self.author)
         ctx.send.assert_called_once()
 
-    @unittest.mock.patch("bot.cogs.information.Information.create_user_embed", new_callable=unittest.mock.AsyncMock)
+    @unittest.mock.patch("bot.cogs.info.information.Information.create_user_embed")
     def test_regular_user_can_explicitly_target_themselves(self, create_embed, constants):
         """A user should target itself with `!user` when a `user` argument was not provided."""
         constants.STAFF_ROLES = [self.moderator_role.id]
@@ -557,7 +557,7 @@ class UserCommandTests(unittest.TestCase):
         create_embed.assert_called_once_with(ctx, self.author)
         ctx.send.assert_called_once()
 
-    @unittest.mock.patch("bot.cogs.information.Information.create_user_embed", new_callable=unittest.mock.AsyncMock)
+    @unittest.mock.patch("bot.cogs.info.information.Information.create_user_embed")
     def test_staff_members_can_bypass_channel_restriction(self, create_embed, constants):
         """Staff members should be able to bypass the bot-commands channel restriction."""
         constants.STAFF_ROLES = [self.moderator_role.id]
@@ -570,7 +570,7 @@ class UserCommandTests(unittest.TestCase):
         create_embed.assert_called_once_with(ctx, self.moderator)
         ctx.send.assert_called_once()
 
-    @unittest.mock.patch("bot.cogs.information.Information.create_user_embed", new_callable=unittest.mock.AsyncMock)
+    @unittest.mock.patch("bot.cogs.info.information.Information.create_user_embed")
     def test_moderators_can_target_another_member(self, create_embed, constants):
         """A moderator should be able to use `!user` targeting another user."""
         constants.MODERATION_ROLES = [self.moderator_role.id]

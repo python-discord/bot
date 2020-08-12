@@ -132,7 +132,7 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
             await cog.on_message(msg)
             find_token_in_message.assert_not_called()
 
-    @autospec("bot.cogs.token_remover", "TOKEN_RE")
+    @autospec("bot.cogs.filters.token_remover", "TOKEN_RE")
     def test_find_token_no_matches(self, token_re):
         """None should be returned if the regex matches no tokens in a message."""
         token_re.finditer.return_value = ()
@@ -143,8 +143,8 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         token_re.finditer.assert_called_once_with(self.msg.content)
 
     @autospec(TokenRemover, "is_valid_user_id", "is_valid_timestamp")
-    @autospec("bot.cogs.token_remover", "Token")
-    @autospec("bot.cogs.token_remover", "TOKEN_RE")
+    @autospec("bot.cogs.filters.token_remover", "Token")
+    @autospec("bot.cogs.filters.token_remover", "TOKEN_RE")
     def test_find_token_valid_match(self, token_re, token_cls, is_valid_id, is_valid_timestamp):
         """The first match with a valid user ID and timestamp should be returned as a `Token`."""
         matches = [
@@ -167,8 +167,8 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         token_re.finditer.assert_called_once_with(self.msg.content)
 
     @autospec(TokenRemover, "is_valid_user_id", "is_valid_timestamp")
-    @autospec("bot.cogs.token_remover", "Token")
-    @autospec("bot.cogs.token_remover", "TOKEN_RE")
+    @autospec("bot.cogs.filters.token_remover", "Token")
+    @autospec("bot.cogs.filters.token_remover", "TOKEN_RE")
     def test_find_token_invalid_matches(self, token_re, token_cls, is_valid_id, is_valid_timestamp):
         """None should be returned if no matches have valid user IDs or timestamps."""
         token_re.finditer.return_value = [mock.create_autospec(Match, spec_set=True, instance=True)]
@@ -230,7 +230,7 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         results = [match[0] for match in results]
         self.assertCountEqual((token_1, token_2), results)
 
-    @autospec("bot.cogs.token_remover", "LOG_MESSAGE")
+    @autospec("bot.cogs.filters.token_remover", "LOG_MESSAGE")
     def test_format_log_message(self, log_message):
         """Should correctly format the log message with info from the message and token."""
         token = Token("NDY3MjIzMjMwNjUwNzc3NjQx", "XsySD_", "s45jqDV_Iisn-symw0yDRrk_jf4")
@@ -249,7 +249,7 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         )
 
     @mock.patch.object(TokenRemover, "mod_log", new_callable=mock.PropertyMock)
-    @autospec("bot.cogs.token_remover", "log")
+    @autospec("bot.cogs.filters.token_remover", "log")
     @autospec(TokenRemover, "format_log_message")
     async def test_take_action(self, format_log_message, logger, mod_log_property):
         """Should delete the message and send a mod log."""
@@ -299,7 +299,7 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
 class TokenRemoverExtensionTests(unittest.TestCase):
     """Tests for the token_remover extension."""
 
-    @autospec("bot.cogs.token_remover", "TokenRemover")
+    @autospec("bot.cogs.filters.token_remover", "TokenRemover")
     def test_extension_setup(self, cog):
         """The TokenRemover cog should be added."""
         bot = MockBot()

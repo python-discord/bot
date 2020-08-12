@@ -6,7 +6,7 @@ import discord
 from bot import constants
 from bot.api import ResponseCodeError
 from bot.cogs.backend import sync
-from bot.cogs.backend.sync import Syncer
+from bot.cogs.backend.sync.syncers import Syncer
 from tests import helpers
 from tests.base import CommandTestCase
 
@@ -29,12 +29,12 @@ class SyncCogTestCase(unittest.IsolatedAsyncioTestCase):
         self.bot = helpers.MockBot()
 
         self.role_syncer_patcher = mock.patch(
-            "bot.cogs.sync.syncers.RoleSyncer",
+            "bot.cogs.backend.sync.syncers.RoleSyncer",
             autospec=Syncer,
             spec_set=True
         )
         self.user_syncer_patcher = mock.patch(
-            "bot.cogs.sync.syncers.UserSyncer",
+            "bot.cogs.backend.sync.syncers.UserSyncer",
             autospec=Syncer,
             spec_set=True
         )
@@ -131,7 +131,7 @@ class SyncCogListenerTests(SyncCogTestCase):
         super().setUp()
         self.cog.patch_user = mock.AsyncMock(spec_set=self.cog.patch_user)
 
-        self.guild_id_patcher = mock.patch("bot.cogs.sync.cog.constants.Guild.id", 5)
+        self.guild_id_patcher = mock.patch("bot.cogs.backend.sync.cog.constants.Guild.id", 5)
         self.guild_id = self.guild_id_patcher.start()
 
         self.guild = helpers.MockGuild(id=self.guild_id)

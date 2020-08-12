@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, create_autospec
 
 from discord import CategoryChannel
 
-from bot.cogs import jams
+from bot.cogs.utils import jams
 from bot.constants import Roles
 from tests.helpers import MockBot, MockContext, MockGuild, MockMember, MockRole, MockTextChannel
 

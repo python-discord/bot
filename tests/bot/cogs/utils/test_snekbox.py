@@ -68,7 +68,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         context_manager.__aenter__.return_value = resp
         self.bot.http_session.post.return_value = context_manager
 
-        log = logging.getLogger("bot.cogs.snekbox")
+        log = logging.getLogger("bot.cogs.utils.snekbox")
         with self.assertLogs(logger=log, level='ERROR'):
             await self.cog.upload_output('My awesome output!')
 
@@ -99,14 +99,14 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
                 actual = self.cog.get_results_message({'stdout': stdout, 'returncode': returncode})
                 self.assertEqual(actual, expected)
 
-    @patch('bot.cogs.snekbox.Signals', side_effect=ValueError)
+    @patch('bot.cogs.utils.snekbox.Signals', side_effect=ValueError)
     def test_get_results_message_invalid_signal(self, mock_signals: Mock):
         self.assertEqual(
             self.cog.get_results_message({'stdout': '', 'returncode': 127}),
             ('Your eval job has completed with return code 127', '')
         )
 
-    @patch('bot.cogs.snekbox.Signals')
+    @patch('bot.cogs.utils.snekbox.Signals')
     def test_get_results_message_valid_signal(self, mock_signals: Mock):
         mock_signals.return_value.name = 'SIGTEST'
         self.assertEqual(
@@ -296,7 +296,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.cog.get_results_message.assert_called_once_with({'stdout': 'ERROR', 'returncode': 127})
         self.cog.format_output.assert_not_called()
 
-    @patch("bot.cogs.snekbox.partial")
+    @patch("bot.cogs.utils.snekbox.partial")
     async def test_continue_eval_does_continue(self, partial_mock):
         """Test that the continue_eval function does continue if required conditions are met."""
         ctx = MockContext(message=MockMessage(add_reaction=AsyncMock(), clear_reactions=AsyncMock()))
