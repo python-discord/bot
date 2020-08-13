@@ -33,48 +33,65 @@ bot = Bot(
     allowed_mentions=discord.AllowedMentions(everyone=False, roles=allowed_roles)
 )
 
-# Internal/debug
-bot.load_extension("bot.cogs.config_verifier")
-bot.load_extension("bot.cogs.error_handler")
-bot.load_extension("bot.cogs.filtering")
-bot.load_extension("bot.cogs.logging")
-bot.load_extension("bot.cogs.security")
+# Backend
+bot.load_extension("bot.cogs.backend.config_verifier")
+bot.load_extension("bot.cogs.backend.error_handler")
+bot.load_extension("bot.cogs.backend.logging")
+bot.load_extension("bot.cogs.backend.sync")
 
-# Commands, etc
-bot.load_extension("bot.cogs.antimalware")
-bot.load_extension("bot.cogs.antispam")
-bot.load_extension("bot.cogs.bot")
-bot.load_extension("bot.cogs.clean")
-bot.load_extension("bot.cogs.doc")
-bot.load_extension("bot.cogs.extensions")
-bot.load_extension("bot.cogs.help")
-bot.load_extension("bot.cogs.verification")
+# Filters
+bot.load_extension("bot.cogs.filters.antimalware")
+bot.load_extension("bot.cogs.filters.antispam")
+bot.load_extension("bot.cogs.filters.filter_lists")
+bot.load_extension("bot.cogs.filters.filtering")
+bot.load_extension("bot.cogs.filters.security")
+bot.load_extension("bot.cogs.filters.token_remover")
+bot.load_extension("bot.cogs.filters.webhook_remover")
 
-# Feature cogs
+# Info
+bot.load_extension("bot.cogs.info.doc")
+bot.load_extension("bot.cogs.info.help")
+bot.load_extension("bot.cogs.info.information")
+bot.load_extension("bot.cogs.info.python_news")
+bot.load_extension("bot.cogs.info.reddit")
+bot.load_extension("bot.cogs.info.site")
+bot.load_extension("bot.cogs.info.source")
+bot.load_extension("bot.cogs.info.stats")
+bot.load_extension("bot.cogs.info.tags")
+bot.load_extension("bot.cogs.info.wolfram")
+
+# Moderation
+bot.load_extension("bot.cogs.moderation.defcon")
+bot.load_extension("bot.cogs.moderation.incidents")
+bot.load_extension("bot.cogs.moderation.modlog")
+bot.load_extension("bot.cogs.moderation.silence")
+bot.load_extension("bot.cogs.moderation.slowmode")
+bot.load_extension("bot.cogs.moderation.verification")
+
+# Moderation - Infraction
+bot.load_extension("bot.cogs.moderation.infraction.infractions")
+bot.load_extension("bot.cogs.moderation.infraction.management")
+bot.load_extension("bot.cogs.moderation.infraction.superstarify")
+
+# Moderation - Watchchannels
+bot.load_extension("bot.cogs.moderation.watchchannels.bigbrother")
+bot.load_extension("bot.cogs.moderation.watchchannels.talentpool")
+
+# Utils
+bot.load_extension("bot.cogs.utils.bot")
+bot.load_extension("bot.cogs.utils.clean")
+bot.load_extension("bot.cogs.utils.eval")
+bot.load_extension("bot.cogs.utils.extensions")
+bot.load_extension("bot.cogs.utils.jams")
+bot.load_extension("bot.cogs.utils.reminders")
+bot.load_extension("bot.cogs.utils.snekbox")
+bot.load_extension("bot.cogs.utils.utils")
+
+# Misc
 bot.load_extension("bot.cogs.alias")
-bot.load_extension("bot.cogs.defcon")
 bot.load_extension("bot.cogs.dm_relay")
 bot.load_extension("bot.cogs.duck_pond")
-bot.load_extension("bot.cogs.eval")
-bot.load_extension("bot.cogs.filter_lists")
-bot.load_extension("bot.cogs.information")
-bot.load_extension("bot.cogs.jams")
-bot.load_extension("bot.cogs.moderation")
 bot.load_extension("bot.cogs.off_topic_names")
-bot.load_extension("bot.cogs.python_news")
-bot.load_extension("bot.cogs.reddit")
-bot.load_extension("bot.cogs.reminders")
-bot.load_extension("bot.cogs.site")
-bot.load_extension("bot.cogs.snekbox")
-bot.load_extension("bot.cogs.source")
-bot.load_extension("bot.cogs.stats")
-bot.load_extension("bot.cogs.sync")
-bot.load_extension("bot.cogs.tags")
-bot.load_extension("bot.cogs.token_remover")
-bot.load_extension("bot.cogs.utils")
-bot.load_extension("bot.cogs.watchchannels")
-bot.load_extension("bot.cogs.webhook_remover")
-bot.load_extension("bot.cogs.wolfram")
 
 if constants.HelpChannels.enable:
     bot.load_extension("bot.cogs.help_channels")
