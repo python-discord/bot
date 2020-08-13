@@ -8,7 +8,7 @@ from discord.ext import commands
 from discord.ext.commands import Cog, Context, group
 
 from bot.bot import Bot
-from bot.cogs.moderation import ModLog
+from bot.cogs.moderation.modlog import ModLog
 from bot.constants import (
     Channels, CleanMessages, Colours, Event, Icons, MODERATION_ROLES, NEGATIVE_REPLIES
 )

@@ -8,7 +8,7 @@ from discord import Colour, NotFound
 from bot import constants
 from bot.cogs.filters import token_remover
 from bot.cogs.filters.token_remover import Token, TokenRemover
-from bot.cogs.moderation import ModLog
+from bot.cogs.moderation.modlog import ModLog
 from tests.helpers import MockBot, MockMessage, autospec
 
 

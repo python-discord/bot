@@ -9,7 +9,7 @@ from discord.ext.commands import Cog
 
 from bot import utils
 from bot.bot import Bot
-from bot.cogs.moderation import ModLog
+from bot.cogs.moderation.modlog import ModLog
 from bot.constants import Channels, Colours, Event, Icons
 
 log = logging.getLogger(__name__)

@@ -6,7 +6,7 @@ from discord.ext.commands import Cog, Context, command
 
 from bot import constants
 from bot.bot import Bot
-from bot.cogs.moderation import ModLog
+from bot.cogs.moderation.modlog import ModLog
 from bot.decorators import in_whitelist, without_role
 from bot.utils.checks import InWhitelistCheckFailure, without_role_check
 

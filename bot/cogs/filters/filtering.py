@@ -12,7 +12,7 @@ from discord.ext.commands import Cog
 from discord.utils import escape_markdown
 
 from bot.bot import Bot
-from bot.cogs.moderation import ModLog
+from bot.cogs.moderation.modlog import ModLog
 from bot.constants import (
     Channels, Colours,
     Filter, Icons, URLs

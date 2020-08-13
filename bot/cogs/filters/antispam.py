@@ -11,7 +11,7 @@ from discord.ext.commands import Cog
 
 from bot import rules
 from bot.bot import Bot
-from bot.cogs.moderation import ModLog
+from bot.cogs.moderation.modlog import ModLog
 from bot.constants import (
     AntiSpam as AntiSpamConfig, Channels,
     Colours, DEBUG_MODE, Event, Filter,

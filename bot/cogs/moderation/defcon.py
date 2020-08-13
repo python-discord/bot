@@ -9,7 +9,7 @@ from discord import Colour, Embed, Member
 from discord.ext.commands import Cog, Context, group
 
 from bot.bot import Bot
-from bot.cogs.moderation import ModLog
+from bot.cogs.moderation.modlog import ModLog
 from bot.constants import Channels, Colours, Emojis, Event, Icons, Roles
 from bot.decorators import with_role
 
