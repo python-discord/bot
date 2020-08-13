@@ -84,6 +84,9 @@ MENTION_UNVERIFIED = discord.AllowedMentions(
     everyone=False, roles=[discord.Object(constants.Roles.unverified)]
 )
 
+# An async function taking a Member param
+Request = t.Callable[[discord.Member], t.Awaitable]
+
 
 def is_verified(member: discord.Member) -> bool:
     """
@@ -229,6 +232,33 @@ class Verification(Cog):
             await confirmation_msg.edit(content=result_msg)
 
         return result
+
+    async def _send_requests(self, members: t.Collection[discord.Member], request: Request) -> int:
+        """
+        Pass `members` one by one to `request` handling Discord exceptions.
+
+        This coroutine serves as a generic `request` executor for kicking members and adding
+        roles, as it allows us to define the error handling logic in one place only.
+
+        Returns the amount of successful requests. Failed requests are logged at info level.
+        """
+        log.info(f"Sending {len(members)} requests")
+        n_success, bad_statuses = 0, set()
+
+        for member in members:
+            if is_verified(member):  # Member could have verified in the meantime
+                continue
+            try:
+                await request(member)
+            except discord.HTTPException as http_exc:
+                bad_statuses.add(http_exc.status)
+            else:
+                n_success += 1
+
+        if bad_statuses:
+            log.info(f"Failed to send {len(members) - n_success} requests due to following statuses: {bad_statuses}")
+
+        return n_success
 
     async def _kick_members(self, members: t.Collection[discord.Member]) -> int:
         """
