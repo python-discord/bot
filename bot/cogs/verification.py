@@ -264,28 +264,18 @@ class Verification(Cog):
         """
         Kick `members` from the PyDis guild.
 
-        Note that this is a potentially destructive operation. Returns the amount of successful
-        requests. Failed requests are logged at info level.
+        Note that this is a potentially destructive operation. Returns the amount of successful requests.
         """
         log.info(f"Kicking {len(members)} members from the guild (not verified after {KICKED_AFTER} days)")
-        n_kicked, bad_statuses = 0, set()
 
-        for member in members:
-            if is_verified(member):  # Member could have verified in the meantime
-                continue
+        async def kick_request(member: discord.Member) -> None:
+            """Send `KICKED_MESSAGE` to `member` and kick them from the guild."""
             with suppress(discord.Forbidden):
-                await member.send(KICKED_MESSAGE)  # Send message while user is still in guild
-            try:
-                await member.kick(reason=f"User has not verified in {KICKED_AFTER} days")
-            except discord.HTTPException as http_exc:
-                bad_statuses.add(http_exc.status)
-            else:
-                n_kicked += 1
+                await member.send(KICKED_MESSAGE)
+            await member.kick(reason=f"User has not verified in {KICKED_AFTER} days")
 
+        n_kicked = await self._send_requests(members, kick_request)
         self.bot.stats.incr("verification.kicked", count=n_kicked)
-
-        if bad_statuses:
-            log.info(f"Failed to kick {len(members) - n_kicked} members due to following statuses: {bad_statuses}")
 
         return n_kicked
 
@@ -293,26 +283,15 @@ class Verification(Cog):
         """
         Give `role` to all `members`.
 
-        Returns the amount of successful requests. Status codes of unsuccessful requests
-        are logged at info level.
+        Returns the amount of successful requests.
         """
         log.info(f"Assigning {role} role to {len(members)} members (not verified after {UNVERIFIED_AFTER} days)")
-        n_success, bad_statuses = 0, set()
 
-        for member in members:
-            if is_verified(member):  # Member could have verified in the meantime
-                continue
-            try:
-                await member.add_roles(role, reason=f"User has not verified in {UNVERIFIED_AFTER} days")
-            except discord.HTTPException as http_exc:
-                bad_statuses.add(http_exc.status)
-            else:
-                n_success += 1
+        async def role_request(member: discord.Member) -> None:
+            """Add `role` to `member`."""
+            await member.add_roles(role, reason=f"User has not verified in {UNVERIFIED_AFTER} days")
 
-        if bad_statuses:
-            log.info(f"Failed to assign {len(members) - n_success} roles due to following statuses: {bad_statuses}")
-
-        return n_success
+        return await self._send_requests(members, role_request)
 
     async def _check_members(self) -> t.Tuple[t.Set[discord.Member], t.Set[discord.Member]]:
         """
