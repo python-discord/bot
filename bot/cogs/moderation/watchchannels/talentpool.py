@@ -12,7 +12,7 @@ from bot.converters import FetchedMember
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
 from bot.utils import time
-from .watchchannel import WatchChannel
+from ._watchchannel import WatchChannel
 
 log = logging.getLogger(__name__)
 
@@ -262,3 +262,8 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
             )
 
         return lines.strip()
+
+
+def setup(bot: Bot) -> None:
+    """Load the TalentPool cog."""
+    bot.add_cog(TalentPool(bot))

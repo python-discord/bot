@@ -405,3 +405,8 @@ class Incidents(Cog):
         """Pass `message` to `add_signals` if and only if it satisfies `is_incident`."""
         if is_incident(message):
             await add_signals(message)
+
+
+def setup(bot: Bot) -> None:
+    """Load the Incidents cog."""
+    bot.add_cog(Incidents(bot))

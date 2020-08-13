@@ -3,7 +3,7 @@ from unittest import mock
 
 import discord
 
-from bot.cogs.backend.sync.syncers import RoleSyncer, _Diff, _Role
+from bot.cogs.backend.sync._syncers import RoleSyncer, _Diff, _Role
 from tests import helpers
 
 

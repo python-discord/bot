@@ -6,7 +6,8 @@ import discord
 from bot import constants
 from bot.api import ResponseCodeError
 from bot.cogs.backend import sync
-from bot.cogs.backend.sync.syncers import Syncer
+from bot.cogs.backend.sync._cog import Sync
+from bot.cogs.backend.sync._syncers import Syncer
 from tests import helpers
 from tests.base import CommandTestCase
 
@@ -29,19 +30,19 @@ class SyncCogTestCase(unittest.IsolatedAsyncioTestCase):
         self.bot = helpers.MockBot()
 
         self.role_syncer_patcher = mock.patch(
-            "bot.cogs.backend.sync.syncers.RoleSyncer",
+            "bot.cogs.backend.sync._syncers.RoleSyncer",
             autospec=Syncer,
             spec_set=True
         )
         self.user_syncer_patcher = mock.patch(
-            "bot.cogs.backend.sync.syncers.UserSyncer",
+            "bot.cogs.backend.sync._syncers.UserSyncer",
             autospec=Syncer,
             spec_set=True
         )
         self.RoleSyncer = self.role_syncer_patcher.start()
         self.UserSyncer = self.user_syncer_patcher.start()
 
-        self.cog = sync.Sync(self.bot)
+        self.cog = Sync(self.bot)
 
     def tearDown(self):
         self.role_syncer_patcher.stop()
@@ -59,7 +60,7 @@ class SyncCogTestCase(unittest.IsolatedAsyncioTestCase):
 class SyncCogTests(SyncCogTestCase):
     """Tests for the Sync cog."""
 
-    @mock.patch.object(sync.Sync, "sync_guild", new_callable=mock.MagicMock)
+    @mock.patch.object(Sync, "sync_guild", new_callable=mock.MagicMock)
     def test_sync_cog_init(self, sync_guild):
         """Should instantiate syncers and run a sync for the guild."""
         # Reset because a Sync cog was already instantiated in setUp.
@@ -70,7 +71,7 @@ class SyncCogTests(SyncCogTestCase):
         mock_sync_guild_coro = mock.MagicMock()
         sync_guild.return_value = mock_sync_guild_coro
 
-        sync.Sync(self.bot)
+        Sync(self.bot)
 
         self.RoleSyncer.assert_called_once_with(self.bot)
         self.UserSyncer.assert_called_once_with(self.bot)
@@ -131,7 +132,7 @@ class SyncCogListenerTests(SyncCogTestCase):
         super().setUp()
         self.cog.patch_user = mock.AsyncMock(spec_set=self.cog.patch_user)
 
-        self.guild_id_patcher = mock.patch("bot.cogs.backend.sync.cog.constants.Guild.id", 5)
+        self.guild_id_patcher = mock.patch("bot.cogs.backend.sync._cog.constants.Guild.id", 5)
         self.guild_id = self.guild_id_patcher.start()
 
         self.guild = helpers.MockGuild(id=self.guild_id)

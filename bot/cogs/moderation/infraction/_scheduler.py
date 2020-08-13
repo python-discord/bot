@@ -16,8 +16,8 @@ from bot.cogs.moderation.modlog import ModLog
 from bot.constants import Colours, STAFF_CHANNELS
 from bot.utils import time
 from bot.utils.scheduling import Scheduler
-from . import utils
-from .utils import UserSnowflake
+from . import _utils
+from ._utils import UserSnowflake
 
 log = logging.getLogger(__name__)
 
@@ -56,7 +56,7 @@ class InfractionScheduler:
 
     async def reapply_infraction(
         self,
-        infraction: utils.Infraction,
+        infraction: _utils.Infraction,
         apply_coro: t.Optional[t.Awaitable]
     ) -> None:
         """Reapply an infraction if it's still active or deactivate it if less than 60 sec left."""
@@ -80,13 +80,13 @@ class InfractionScheduler:
     async def apply_infraction(
         self,
         ctx: Context,
-        infraction: utils.Infraction,
+        infraction: _utils.Infraction,
         user: UserSnowflake,
         action_coro: t.Optional[t.Awaitable] = None
     ) -> None:
         """Apply an infraction to the user, log the infraction, and optionally notify the user."""
         infr_type = infraction["type"]
-        icon = utils.INFRACTION_ICONS[infr_type][0]
+        icon = _utils.INFRACTION_ICONS[infr_type][0]
         reason = infraction["reason"]
         expiry = time.format_infraction_with_duration(infraction["expires_at"])
         id_ = infraction['id']
@@ -126,7 +126,7 @@ class InfractionScheduler:
                 log.error(f"Failed to DM {user.id}: could not fetch user (status {e.status})")
             else:
                 # Accordingly display whether the user was successfully notified via DM.
-                if await utils.notify_infraction(user, infr_type, expiry, reason, icon):
+                if await _utils.notify_infraction(user, infr_type, expiry, reason, icon):
                     dm_result = ":incoming_envelope: "
                     dm_log_text = "\nDM: Sent"
 
@@ -316,7 +316,7 @@ class InfractionScheduler:
 
         # Send a log message to the mod log.
         await self.mod_log.send_log_message(
-            icon_url=utils.INFRACTION_ICONS[infr_type][1],
+            icon_url=_utils.INFRACTION_ICONS[infr_type][1],
             colour=Colours.soft_green,
             title=f"Infraction {log_title}: {infr_type}",
             thumbnail=user.avatar_url_as(static_format="png"),
@@ -327,7 +327,7 @@ class InfractionScheduler:
 
     async def deactivate_infraction(
         self,
-        infraction: utils.Infraction,
+        infraction: _utils.Infraction,
         send_log: bool = True
     ) -> t.Dict[str, str]:
         """
@@ -432,7 +432,7 @@ class InfractionScheduler:
 
             log.trace(f"Sending deactivation mod log for infraction #{id_}.")
             await self.mod_log.send_log_message(
-                icon_url=utils.INFRACTION_ICONS[type_][1],
+                icon_url=_utils.INFRACTION_ICONS[type_][1],
                 colour=Colours.soft_green,
                 title=f"Infraction {log_title}: {type_}",
                 thumbnail=avatar,
@@ -444,7 +444,7 @@ class InfractionScheduler:
         return log_text
 
     @abstractmethod
-    async def _pardon_action(self, infraction: utils.Infraction) -> t.Optional[t.Dict[str, str]]:
+    async def _pardon_action(self, infraction: _utils.Infraction) -> t.Optional[t.Dict[str, str]]:
         """
         Execute deactivation steps specific to the infraction's type and return a log dict.
 
@@ -452,7 +452,7 @@ class InfractionScheduler:
         """
         raise NotImplementedError
 
-    def schedule_expiration(self, infraction: utils.Infraction) -> None:
+    def schedule_expiration(self, infraction: _utils.Infraction) -> None:
         """
         Marks an infraction expired after the delay from time of scheduling to time of expiration.
 

@@ -163,3 +163,8 @@ class Silence(commands.Cog):
     def cog_check(self, ctx: Context) -> bool:
         """Only allow moderators to invoke the commands in this cog."""
         return with_role_check(ctx, *MODERATION_ROLES)
+
+
+def setup(bot: Bot) -> None:
+    """Load the Silence cog."""
+    bot.add_cog(Silence(bot))

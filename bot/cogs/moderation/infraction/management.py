@@ -14,7 +14,7 @@ from bot.converters import Expiry, InfractionSearchQuery, allowed_strings, proxy
 from bot.pagination import LinePaginator
 from bot.utils import time
 from bot.utils.checks import in_whitelist_check, with_role_check
-from . import utils
+from . import _utils
 from .infractions import Infractions
 
 log = logging.getLogger(__name__)
@@ -220,7 +220,7 @@ class ModManagement(commands.Cog):
         self,
         ctx: Context,
         embed: discord.Embed,
-        infractions: t.Iterable[utils.Infraction]
+        infractions: t.Iterable[_utils.Infraction]
     ) -> None:
         """Send a paginated embed of infractions for the specified user."""
         if not infractions:
@@ -241,7 +241,7 @@ class ModManagement(commands.Cog):
             max_size=1000
         )
 
-    def infraction_to_string(self, infraction: utils.Infraction) -> str:
+    def infraction_to_string(self, infraction: _utils.Infraction) -> str:
         """Convert the infraction object to a string representation."""
         actor_id = infraction["actor"]
         guild = self.bot.get_guild(constants.Guild.id)
@@ -303,3 +303,8 @@ class ModManagement(commands.Cog):
             if discord.User in error.converters:
                 await ctx.send(str(error.errors[0]))
                 error.handled = True
+
+
+def setup(bot: Bot) -> None:
+    """Load the ModManagement cog."""
+    bot.add_cog(ModManagement(bot))

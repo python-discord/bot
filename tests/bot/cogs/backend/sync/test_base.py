@@ -6,7 +6,7 @@ import discord
 
 from bot import constants
 from bot.api import ResponseCodeError
-from bot.cogs.backend.sync.syncers import Syncer, _Diff
+from bot.cogs.backend.sync._syncers import Syncer, _Diff
 from tests import helpers
 
 

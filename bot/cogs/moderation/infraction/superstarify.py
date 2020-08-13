@@ -13,8 +13,8 @@ from bot.bot import Bot
 from bot.converters import Expiry
 from bot.utils.checks import with_role_check
 from bot.utils.time import format_infraction
-from . import utils
-from .scheduler import InfractionScheduler
+from . import _utils
+from ._scheduler import InfractionScheduler
 
 log = logging.getLogger(__name__)
 NICKNAME_POLICY_URL = "https://pythondiscord.com/pages/rules/#nickname-policy"
@@ -67,7 +67,7 @@ class Superstarify(InfractionScheduler, Cog):
             reason=f"Superstarified member tried to escape the prison: {infraction['id']}"
         )
 
-        notified = await utils.notify_infraction(
+        notified = await _utils.notify_infraction(
             user=after,
             infr_type="Superstarify",
             expires_at=format_infraction(infraction["expires_at"]),
@@ -76,7 +76,7 @@ class Superstarify(InfractionScheduler, Cog):
                 f"from **{before.display_name}** to **{after.display_name}**, but as you "
                 "are currently in superstar-prison, you do not have permission to do so."
             ),
-            icon_url=utils.INFRACTION_ICONS["superstar"][0]
+            icon_url=_utils.INFRACTION_ICONS["superstar"][0]
         )
 
         if not notified:
@@ -130,12 +130,12 @@ class Superstarify(InfractionScheduler, Cog):
         An optional reason can be provided. If no reason is given, the original name will be shown
         in a generated reason.
         """
-        if await utils.get_active_infraction(ctx, member, "superstar"):
+        if await _utils.get_active_infraction(ctx, member, "superstar"):
             return
 
         # Post the infraction to the API
         reason = reason or f"old nick: {member.display_name}"
-        infraction = await utils.post_infraction(ctx, member, "superstar", reason, duration, active=True)
+        infraction = await _utils.post_infraction(ctx, member, "superstar", reason, duration, active=True)
         id_ = infraction["id"]
 
         old_nick = member.display_name
@@ -149,11 +149,11 @@ class Superstarify(InfractionScheduler, Cog):
         self.schedule_expiration(infraction)
 
         # Send a DM to the user to notify them of their new infraction.
-        await utils.notify_infraction(
+        await _utils.notify_infraction(
             user=member,
             infr_type="Superstarify",
             expires_at=expiry_str,
-            icon_url=utils.INFRACTION_ICONS["superstar"][0],
+            icon_url=_utils.INFRACTION_ICONS["superstar"][0],
             reason=f"Your nickname didn't comply with our [nickname policy]({NICKNAME_POLICY_URL})."
         )
 
@@ -176,7 +176,7 @@ class Superstarify(InfractionScheduler, Cog):
         # Log to the mod log channel.
         log.trace(f"Sending apply mod log for superstar #{id_}.")
         await self.mod_log.send_log_message(
-            icon_url=utils.INFRACTION_ICONS["superstar"][0],
+            icon_url=_utils.INFRACTION_ICONS["superstar"][0],
             colour=Colour.gold(),
             title="Member achieved superstardom",
             thumbnail=member.avatar_url_as(static_format="png"),
@@ -196,7 +196,7 @@ class Superstarify(InfractionScheduler, Cog):
         """Remove the superstarify infraction and allow the user to change their nickname."""
         await self.pardon_infraction(ctx, "superstar", member)
 
-    async def _pardon_action(self, infraction: utils.Infraction) -> t.Optional[t.Dict[str, str]]:
+    async def _pardon_action(self, infraction: _utils.Infraction) -> t.Optional[t.Dict[str, str]]:
         """Pardon a superstar infraction and return a log dict."""
         if infraction["type"] != "superstar":
             return
@@ -213,11 +213,11 @@ class Superstarify(InfractionScheduler, Cog):
             return {}
 
         # DM the user about the expiration.
-        notified = await utils.notify_pardon(
+        notified = await _utils.notify_pardon(
             user=user,
             title="You are no longer superstarified",
             content="You may now change your nickname on the server.",
-            icon_url=utils.INFRACTION_ICONS["superstar"][1]
+            icon_url=_utils.INFRACTION_ICONS["superstar"][1]
         )
 
         return {
@@ -237,3 +237,8 @@ class Superstarify(InfractionScheduler, Cog):
     def cog_check(self, ctx: Context) -> bool:
         """Only allow moderators to invoke the commands in this cog."""
         return with_role_check(ctx, *constants.MODERATION_ROLES)
+
+
+def setup(bot: Bot) -> None:
+    """Load the Superstarify cog."""
+    bot.add_cog(Superstarify(bot))

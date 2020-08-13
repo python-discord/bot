@@ -830,3 +830,8 @@ class ModLog(Cog, name="ModLog"):
             thumbnail=member.avatar_url_as(static_format="png"),
             channel_id=Channels.voice_log
         )
+
+
+def setup(bot: Bot) -> None:
+    """Load the ModLog cog."""
+    bot.add_cog(ModLog(bot))

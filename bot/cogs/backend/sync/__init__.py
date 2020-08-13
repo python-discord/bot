@@ -1,5 +1,5 @@
 from bot.bot import Bot
-from .cog import Sync
+from ._cog import Sync
 
 
 def setup(bot: Bot) -> None:

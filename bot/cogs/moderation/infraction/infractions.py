@@ -13,9 +13,9 @@ from bot.constants import Event
 from bot.converters import Expiry, FetchedMember
 from bot.decorators import respect_role_hierarchy
 from bot.utils.checks import with_role_check
-from . import utils
-from .scheduler import InfractionScheduler
-from .utils import UserSnowflake
+from . import _utils
+from ._scheduler import InfractionScheduler
+from ._utils import UserSnowflake
 
 log = logging.getLogger(__name__)
 
@@ -55,7 +55,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     @command()
     async def warn(self, ctx: Context, user: Member, *, reason: t.Optional[str] = None) -> None:
         """Warn a user for the given reason."""
-        infraction = await utils.post_infraction(ctx, user, "warning", reason, active=False)
+        infraction = await _utils.post_infraction(ctx, user, "warning", reason, active=False)
         if infraction is None:
             return
 
@@ -125,7 +125,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     @command(hidden=True)
     async def note(self, ctx: Context, user: FetchedMember, *, reason: t.Optional[str] = None) -> None:
         """Create a private note for a user with the given reason without notifying the user."""
-        infraction = await utils.post_infraction(ctx, user, "note", reason, hidden=True, active=False)
+        infraction = await _utils.post_infraction(ctx, user, "note", reason, hidden=True, active=False)
         if infraction is None:
             return
 
@@ -213,10 +213,10 @@ class Infractions(InfractionScheduler, commands.Cog):
 
     async def apply_mute(self, ctx: Context, user: Member, reason: t.Optional[str], **kwargs) -> None:
         """Apply a mute infraction with kwargs passed to `post_infraction`."""
-        if await utils.get_active_infraction(ctx, user, "mute"):
+        if await _utils.get_active_infraction(ctx, user, "mute"):
             return
 
-        infraction = await utils.post_infraction(ctx, user, "mute", reason, active=True, **kwargs)
+        infraction = await _utils.post_infraction(ctx, user, "mute", reason, active=True, **kwargs)
         if infraction is None:
             return
 
@@ -233,7 +233,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     @respect_role_hierarchy()
     async def apply_kick(self, ctx: Context, user: Member, reason: t.Optional[str], **kwargs) -> None:
         """Apply a kick infraction with kwargs passed to `post_infraction`."""
-        infraction = await utils.post_infraction(ctx, user, "kick", reason, active=False, **kwargs)
+        infraction = await _utils.post_infraction(ctx, user, "kick", reason, active=False, **kwargs)
         if infraction is None:
             return
 
@@ -254,7 +254,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         """
         # In the case of a permanent ban, we don't need get_active_infractions to tell us if one is active
         is_temporary = kwargs.get("expires_at") is not None
-        active_infraction = await utils.get_active_infraction(ctx, user, "ban", is_temporary)
+        active_infraction = await _utils.get_active_infraction(ctx, user, "ban", is_temporary)
 
         if active_infraction:
             if is_temporary:
@@ -269,7 +269,7 @@ class Infractions(InfractionScheduler, commands.Cog):
             log.trace("Old tempban is being replaced by new permaban.")
             await self.pardon_infraction(ctx, "ban", user, is_temporary)
 
-        infraction = await utils.post_infraction(ctx, user, "ban", reason, active=True, **kwargs)
+        infraction = await _utils.post_infraction(ctx, user, "ban", reason, active=True, **kwargs)
         if infraction is None:
             return
 
@@ -309,11 +309,11 @@ class Infractions(InfractionScheduler, commands.Cog):
             await user.remove_roles(self._muted_role, reason=reason)
 
             # DM the user about the expiration.
-            notified = await utils.notify_pardon(
+            notified = await _utils.notify_pardon(
                 user=user,
                 title="You have been unmuted",
                 content="You may now send messages in the server.",
-                icon_url=utils.INFRACTION_ICONS["mute"][1]
+                icon_url=_utils.INFRACTION_ICONS["mute"][1]
             )
 
             log_text["Member"] = f"{user.mention}(`{user.id}`)"
@@ -339,7 +339,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         return log_text
 
-    async def _pardon_action(self, infraction: utils.Infraction) -> t.Optional[t.Dict[str, str]]:
+    async def _pardon_action(self, infraction: _utils.Infraction) -> t.Optional[t.Dict[str, str]]:
         """
         Execute deactivation steps specific to the infraction's type and return a log dict.
 
@@ -368,3 +368,8 @@ class Infractions(InfractionScheduler, commands.Cog):
             if discord.User in error.converters or discord.Member in error.converters:
                 await ctx.send(str(error.errors[0]))
                 error.handled = True
+
+
+def setup(bot: Bot) -> None:
+    """Load the Infractions cog."""
+    bot.add_cog(Infractions(bot))

@@ -8,7 +8,7 @@ from discord.ext.commands import Cog, Context
 from bot import constants
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from . import syncers
+from . import _syncers
 
 log = logging.getLogger(__name__)
 
@@ -18,8 +18,8 @@ class Sync(Cog):
 
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
-        self.role_syncer = syncers.RoleSyncer(self.bot)
-        self.user_syncer = syncers.UserSyncer(self.bot)
+        self.role_syncer = _syncers.RoleSyncer(self.bot)
+        self.user_syncer = _syncers.UserSyncer(self.bot)
 
         self.bot.loop.create_task(self.sync_guild())
 
