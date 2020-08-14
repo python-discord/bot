@@ -4,7 +4,7 @@ import pprint
 import textwrap
 from collections import Counter, defaultdict
 from string import Template
-from typing import Any, Mapping, Optional, Union
+from typing import Any, Mapping, Optional, Tuple, Union
 
 from discord import ChannelType, Colour, Embed, Guild, Member, Message, Role, Status, utils
 from discord.abc import GuildChannel
@@ -184,6 +184,18 @@ class Information(Cog):
 
         await ctx.send(embed=embed)
 
+    @staticmethod
+    def status_to_emoji(status: Status) -> str:
+        """Convert a Discord status into the relevant emoji."""
+        if status is Status.offline:
+            return constants.Emojis.status_offline
+        elif status is Status.dnd:
+            return constants.Emojis.status_dnd
+        elif status is Status.idle:
+            return constants.Emojis.status_idle
+        else:
+            return constants.Emojis.status_online
+
     @command(name="user", aliases=["user_info", "member", "member_info"])
     async def user_info(self, ctx: Context, user: Member = None) -> None:
         """Returns info about a user."""
@@ -223,41 +235,68 @@ class Information(Cog):
         if user.nick:
             name = f"{user.nick} ({name})"
 
+        badges = ""
+
+        for badge, is_set in user.public_flags:
+            if is_set and (emoji := getattr(constants.Emojis, f"badge_{badge}")):
+                badges += emoji + " "
+
         joined = time_since(user.joined_at, max_units=3)
         roles = ", ".join(role.mention for role in user.roles[1:])
 
-        description = [
-            textwrap.dedent(f"""
-                **User Information**
-                Created: {created}
-                Profile: {user.mention}
-                ID: {user.id}
-                {custom_status}
-                **Member Information**
-                Joined: {joined}
-                Roles: {roles or None}
-            """).strip()
+        desktop_status = self.status_to_emoji(user.desktop_status)
+        web_status = self.status_to_emoji(user.web_status)
+        mobile_status = self.status_to_emoji(user.mobile_status)
+
+        fields = [
+            (
+                "User information",
+                textwrap.dedent(f"""
+                    Created: {created}
+                    Profile: {user.mention}
+                    ID: {user.id}
+                    {custom_status}
+                """).strip()
+            ),
+            (
+                "Member information",
+                textwrap.dedent(f"""
+                    Joined: {joined}
+                    Roles: {roles or None}
+                """).strip()
+            ),
+            (
+                "Status",
+                textwrap.dedent(f"""
+                    Desktop: {desktop_status}
+                    Web: {web_status}
+                    Mobile: {mobile_status}
+                """).strip()
+            )
         ]
 
         # Show more verbose output in moderation channels for infractions and nominations
         if ctx.channel.id in constants.MODERATION_CHANNELS:
-            description.append(await self.expanded_user_infraction_counts(user))
-            description.append(await self.user_nomination_counts(user))
+            fields.append(await self.expanded_user_infraction_counts(user))
+            fields.append(await self.user_nomination_counts(user))
         else:
-            description.append(await self.basic_user_infraction_counts(user))
+            fields.append(await self.basic_user_infraction_counts(user))
 
         # Let's build the embed now
         embed = Embed(
             title=name,
-            description="\n\n".join(description)
+            description=badges
         )
+
+        for field_name, field_content in fields:
+            embed.add_field(name=field_name, value=field_content, inline=False)
 
         embed.set_thumbnail(url=user.avatar_url_as(static_format="png"))
         embed.colour = user.top_role.colour if roles else Colour.blurple()
 
         return embed
 
-    async def basic_user_infraction_counts(self, member: Member) -> str:
+    async def basic_user_infraction_counts(self, member: Member) -> Tuple[str, str]:
         """Gets the total and active infraction counts for the given `member`."""
         infractions = await self.bot.api_client.get(
             'bot/infractions',
@@ -270,11 +309,11 @@ class Information(Cog):
         total_infractions = len(infractions)
         active_infractions = sum(infraction['active'] for infraction in infractions)
 
-        infraction_output = f"**Infractions**\nTotal: {total_infractions}\nActive: {active_infractions}"
+        infraction_output = f"Total: {total_infractions}\nActive: {active_infractions}"
 
-        return infraction_output
+        return "Infractions", infraction_output
 
-    async def expanded_user_infraction_counts(self, member: Member) -> str:
+    async def expanded_user_infraction_counts(self, member: Member) -> Tuple[str, str]:
         """
         Gets expanded infraction counts for the given `member`.
 
@@ -288,9 +327,9 @@ class Information(Cog):
             }
         )
 
-        infraction_output = ["**Infractions**"]
+        infraction_output = []
         if not infractions:
-            infraction_output.append("This user has never received an infraction.")
+            infraction_output.append("No infractions")
         else:
             # Count infractions split by `type` and `active` status for this user
             infraction_types = set()
@@ -313,9 +352,9 @@ class Information(Cog):
 
                 infraction_output.append(line)
 
-        return "\n".join(infraction_output)
+        return "Infractions", "\n".join(infraction_output)
 
-    async def user_nomination_counts(self, member: Member) -> str:
+    async def user_nomination_counts(self, member: Member) -> Tuple[str, str]:
         """Gets the active and historical nomination counts for the given `member`."""
         nominations = await self.bot.api_client.get(
             'bot/nominations',
@@ -324,21 +363,21 @@ class Information(Cog):
             }
         )
 
-        output = ["**Nominations**"]
+        output = []
 
         if not nominations:
-            output.append("This user has never been nominated.")
+            output.append("No nominations")
         else:
             count = len(nominations)
             is_currently_nominated = any(nomination["active"] for nomination in nominations)
             nomination_noun = "nomination" if count == 1 else "nominations"
 
             if is_currently_nominated:
-                output.append(f"This user is **currently** nominated ({count} {nomination_noun} in total).")
+                output.append(f"This user is **currently** nominated\n({count} {nomination_noun} in total)")
             else:
                 output.append(f"This user has {count} historical {nomination_noun}, but is currently not nominated.")
 
-        return "\n".join(output)
+        return "Nominations", "\n".join(output)
 
     def format_fields(self, mapping: Mapping[str, Any], field_width: Optional[int] = None) -> str:
         """Format a mapping to be readable to a human."""
