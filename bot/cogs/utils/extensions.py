@@ -169,14 +169,12 @@ class Extensions(commands.Cog):
 
         lines = []
         categories = self.group_extension_statuses()
-        for category, extensions in categories.items():
+        for category, extensions in sorted(categories.items()):
             # Treat each category as a single line by concatenating everything.
             # This ensures the paginator will not cut off a page in the middle of a category.
-            category = category.replace("_", " ").capitalize()
+            category = category.replace("_", " ").title()
             extensions = "\n".join(sorted(extensions))
             lines.append(f"**{category}**\n{extensions}\n")
-
-        lines.sort()  # Sort by category name.
 
         log.debug(f"{ctx.author} requested a list of all cogs. Returning a paginated list.")
         await LinePaginator.paginate(lines, ctx, embed, scale_to_size=700, empty=False)
@@ -193,9 +191,10 @@ class Extensions(commands.Cog):
 
             path = ext.split(".")
             if len(path) > COG_PATH_LEN + 1:
-                extensions = categories.setdefault(path[COG_PATH_LEN], [])
+                category = " - ".join(path[COG_PATH_LEN:-1])
+                extensions = categories.setdefault(category, [])
             else:
-                extensions = categories.setdefault("Uncategorised", [])
+                extensions = categories.setdefault("uncategorised", [])
 
             extensions.append(f"{status}  {path[-1]}")
 
