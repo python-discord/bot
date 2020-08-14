@@ -34,67 +34,67 @@ bot = Bot(
 )
 
 # Backend
-bot.load_extension("bot.cogs.backend.config_verifier")
-bot.load_extension("bot.cogs.backend.error_handler")
-bot.load_extension("bot.cogs.backend.logging")
-bot.load_extension("bot.cogs.backend.sync")
+bot.load_extension("bot.exts.backend.config_verifier")
+bot.load_extension("bot.exts.backend.error_handler")
+bot.load_extension("bot.exts.backend.logging")
+bot.load_extension("bot.exts.backend.sync")
 
 # Filters
-bot.load_extension("bot.cogs.filters.antimalware")
-bot.load_extension("bot.cogs.filters.antispam")
-bot.load_extension("bot.cogs.filters.filter_lists")
-bot.load_extension("bot.cogs.filters.filtering")
-bot.load_extension("bot.cogs.filters.security")
-bot.load_extension("bot.cogs.filters.token_remover")
-bot.load_extension("bot.cogs.filters.webhook_remover")
+bot.load_extension("bot.exts.filters.antimalware")
+bot.load_extension("bot.exts.filters.antispam")
+bot.load_extension("bot.exts.filters.filter_lists")
+bot.load_extension("bot.exts.filters.filtering")
+bot.load_extension("bot.exts.filters.security")
+bot.load_extension("bot.exts.filters.token_remover")
+bot.load_extension("bot.exts.filters.webhook_remover")
 
 # Info
-bot.load_extension("bot.cogs.info.doc")
-bot.load_extension("bot.cogs.info.help")
-bot.load_extension("bot.cogs.info.information")
-bot.load_extension("bot.cogs.info.python_news")
-bot.load_extension("bot.cogs.info.reddit")
-bot.load_extension("bot.cogs.info.site")
-bot.load_extension("bot.cogs.info.source")
-bot.load_extension("bot.cogs.info.stats")
-bot.load_extension("bot.cogs.info.tags")
-bot.load_extension("bot.cogs.info.wolfram")
+bot.load_extension("bot.exts.info.doc")
+bot.load_extension("bot.exts.info.help")
+bot.load_extension("bot.exts.info.information")
+bot.load_extension("bot.exts.info.python_news")
+bot.load_extension("bot.exts.info.reddit")
+bot.load_extension("bot.exts.info.site")
+bot.load_extension("bot.exts.info.source")
+bot.load_extension("bot.exts.info.stats")
+bot.load_extension("bot.exts.info.tags")
+bot.load_extension("bot.exts.info.wolfram")
 
 # Moderation
-bot.load_extension("bot.cogs.moderation.defcon")
-bot.load_extension("bot.cogs.moderation.incidents")
-bot.load_extension("bot.cogs.moderation.modlog")
-bot.load_extension("bot.cogs.moderation.silence")
-bot.load_extension("bot.cogs.moderation.slowmode")
-bot.load_extension("bot.cogs.moderation.verification")
+bot.load_extension("bot.exts.moderation.defcon")
+bot.load_extension("bot.exts.moderation.incidents")
+bot.load_extension("bot.exts.moderation.modlog")
+bot.load_extension("bot.exts.moderation.silence")
+bot.load_extension("bot.exts.moderation.slowmode")
+bot.load_extension("bot.exts.moderation.verification")
 
 # Moderation - Infraction
-bot.load_extension("bot.cogs.moderation.infraction.infractions")
-bot.load_extension("bot.cogs.moderation.infraction.management")
-bot.load_extension("bot.cogs.moderation.infraction.superstarify")
+bot.load_extension("bot.exts.moderation.infraction.infractions")
+bot.load_extension("bot.exts.moderation.infraction.management")
+bot.load_extension("bot.exts.moderation.infraction.superstarify")
 
 # Moderation - Watchchannels
-bot.load_extension("bot.cogs.moderation.watchchannels.bigbrother")
-bot.load_extension("bot.cogs.moderation.watchchannels.talentpool")
+bot.load_extension("bot.exts.moderation.watchchannels.bigbrother")
+bot.load_extension("bot.exts.moderation.watchchannels.talentpool")
 
 # Utils
-bot.load_extension("bot.cogs.utils.bot")
-bot.load_extension("bot.cogs.utils.clean")
-bot.load_extension("bot.cogs.utils.eval")
-bot.load_extension("bot.cogs.utils.extensions")
-bot.load_extension("bot.cogs.utils.jams")
-bot.load_extension("bot.cogs.utils.reminders")
-bot.load_extension("bot.cogs.utils.snekbox")
-bot.load_extension("bot.cogs.utils.utils")
+bot.load_extension("bot.exts.utils.bot")
+bot.load_extension("bot.exts.utils.clean")
+bot.load_extension("bot.exts.utils.eval")
+bot.load_extension("bot.exts.utils.extensions")
+bot.load_extension("bot.exts.utils.jams")
+bot.load_extension("bot.exts.utils.reminders")
+bot.load_extension("bot.exts.utils.snekbox")
+bot.load_extension("bot.exts.utils.utils")
 
 # Misc
-bot.load_extension("bot.cogs.alias")
-bot.load_extension("bot.cogs.dm_relay")
-bot.load_extension("bot.cogs.duck_pond")
-bot.load_extension("bot.cogs.off_topic_names")
+bot.load_extension("bot.exts.alias")
+bot.load_extension("bot.exts.dm_relay")
+bot.load_extension("bot.exts.duck_pond")
+bot.load_extension("bot.exts.off_topic_names")
 
 if constants.HelpChannels.enable:
-    bot.load_extension("bot.cogs.help_channels")
+    bot.load_extension("bot.exts.help_channels")
 
 # Apply `message_edited_at` patch if discord.py did not yet release a bug fix.
 if not hasattr(discord.message.Message, '_handle_edited_timestamp'):
