@@ -6,7 +6,7 @@ from collections import Counter, defaultdict
 from string import Template
 from typing import Any, Mapping, Optional, Tuple, Union
 
-from discord import ChannelType, Colour, Embed, Guild, Member, Message, Role, Status, utils
+from discord import ChannelType, Colour, CustomActivity, Embed, Guild, Member, Message, Role, Status, utils
 from discord.abc import GuildChannel
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group
 from discord.utils import escape_markdown
@@ -223,13 +223,18 @@ class Information(Cog):
         # Custom status
         custom_status = ''
         for activity in user.activities:
-            # Check activity.state for None value if user has a custom status set
-            # This guards against a custom status with an emoji but no text, which will cause
-            # escape_markdown to raise an exception
-            # This can be reworked after a move to d.py 1.3.0+, which adds a CustomActivity class
-            if activity.name == 'Custom Status' and activity.state:
-                state = escape_markdown(activity.state)
-                custom_status = f'Status: {state}\n'
+            if isinstance(activity, CustomActivity):
+                state = ""
+
+                if activity.name:
+                    state = escape_markdown(activity.name)
+
+                emoji = ""
+                if activity.emoji:
+                    if not activity.emoji.id:
+                        emoji += activity.emoji.name + " "
+
+                custom_status = f'Status: {emoji}{state}\n'
 
         name = str(user)
         if user.nick:
