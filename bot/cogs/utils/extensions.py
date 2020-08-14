@@ -192,11 +192,10 @@ class Extensions(commands.Cog):
             path = ext.split(".")
             if len(path) > COG_PATH_LEN + 1:
                 category = " - ".join(path[COG_PATH_LEN:-1])
-                extensions = categories.setdefault(category, [])
             else:
-                extensions = categories.setdefault("uncategorised", [])
+                category = "uncategorised"
 
-            extensions.append(f"{status}  {path[-1]}")
+            categories.setdefault(category, []).append(f"{status}  {path[-1]}")
 
         return categories
 
