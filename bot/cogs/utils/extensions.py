@@ -41,6 +41,7 @@ def walk_extensions() -> t.Iterator[str]:
 
 UNLOAD_BLACKLIST = {f"{cogs.__name__}.utils.extensions", f"{cogs.__name__}.moderation.modlog"}
 EXTENSIONS = frozenset(walk_extensions())
+COG_PATH_LEN = len(cogs.__name__.split("."))
 
 
 class Action(Enum):
@@ -159,27 +160,46 @@ class Extensions(commands.Cog):
         Grey indicates that the extension is unloaded.
         Green indicates that the extension is currently loaded.
         """
-        embed = Embed()
-        lines = []
-
-        embed.colour = Colour.blurple()
+        embed = Embed(colour=Colour.blurple())
         embed.set_author(
             name="Extensions List",
             url=URLs.github_bot_repo,
             icon_url=URLs.bot_avatar
         )
 
-        for ext in sorted(list(EXTENSIONS)):
+        lines = []
+        categories = self.group_extension_statuses()
+        for category, extensions in categories.items():
+            # Treat each category as a single line by concatenating everything.
+            # This ensures the paginator will not cut off a page in the middle of a category.
+            category = category.replace("_", " ").capitalize()
+            extensions = "\n".join(sorted(extensions))
+            lines.append(f"**{category}**\n{extensions}\n")
+
+        lines.sort()  # Sort by category name.
+
+        log.debug(f"{ctx.author} requested a list of all cogs. Returning a paginated list.")
+        await LinePaginator.paginate(lines, ctx, embed, scale_to_size=700, empty=False)
+
+    def group_extension_statuses(self) -> t.Mapping[str, str]:
+        """Return a mapping of extension names and statuses to their categories."""
+        categories = {}
+
+        for ext in EXTENSIONS:
             if ext in self.bot.extensions:
                 status = Emojis.status_online
             else:
                 status = Emojis.status_offline
 
-            ext = ext.rsplit(".", 1)[1]
-            lines.append(f"{status}  {ext}")
+            path = ext.split(".")
+            if len(path) > COG_PATH_LEN + 1:
+                extensions = categories.setdefault(path[COG_PATH_LEN], [])
+            else:
+                extensions = categories.setdefault("Uncategorised", [])
 
-        log.debug(f"{ctx.author} requested a list of all cogs. Returning a paginated list.")
-        await LinePaginator.paginate(lines, ctx, embed, max_size=300, empty=False)
+            extensions.append(f"{status}  {path[-1]}")
+
+        return categories
 
     def batch_manage(self, action: Action, *extensions: str) -> str:
         """
