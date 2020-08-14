@@ -88,6 +88,13 @@ MENTION_UNVERIFIED = discord.AllowedMentions(
 Request = t.Callable[[discord.Member], t.Awaitable]
 
 
+class Limit(t.NamedTuple):
+    """Composition over config for throttling requests."""
+
+    batch_size: int  # Amount of requests after which to pause
+    sleep_secs: int  # Sleep this many seconds after each batch
+
+
 def is_verified(member: discord.Member) -> bool:
     """
     Check whether `member` is considered verified.
@@ -233,19 +240,22 @@ class Verification(Cog):
 
         return result
 
-    async def _send_requests(self, members: t.Collection[discord.Member], request: Request) -> int:
+    async def _send_requests(self, members: t.Collection[discord.Member], request: Request, limit: Limit) -> int:
         """
         Pass `members` one by one to `request` handling Discord exceptions.
 
         This coroutine serves as a generic `request` executor for kicking members and adding
         roles, as it allows us to define the error handling logic in one place only.
 
+        To avoid rate-limits, pass a `limit` configuring the batch size and the amount of seconds
+        to sleep between batches.
+
         Returns the amount of successful requests. Failed requests are logged at info level.
         """
         log.info(f"Sending {len(members)} requests")
         n_success, bad_statuses = 0, set()
 
-        for member in members:
+        for progress, member in enumerate(members, start=1):
             if is_verified(member):  # Member could have verified in the meantime
                 continue
             try:
@@ -255,6 +265,10 @@ class Verification(Cog):
             else:
                 n_success += 1
 
+            if progress % limit.batch_size == 0:
+                log.trace(f"Processed {progress} requests, pausing for {limit.sleep_secs} seconds")
+                await asyncio.sleep(limit.sleep_secs)
+
         if bad_statuses:
             log.info(f"Failed to send {len(members) - n_success} requests due to following statuses: {bad_statuses}")
 
@@ -263,6 +277,9 @@ class Verification(Cog):
     async def _kick_members(self, members: t.Collection[discord.Member]) -> int:
         """
         Kick `members` from the PyDis guild.
+
+        Due to strict ratelimits on sending messages (120 requests / 60 secs), we sleep for a second
+        after each 2 requests to allow breathing room for other features.
 
         Note that this is a potentially destructive operation. Returns the amount of successful requests.
         """
@@ -274,7 +291,7 @@ class Verification(Cog):
                 await member.send(KICKED_MESSAGE)
             await member.kick(reason=f"User has not verified in {KICKED_AFTER} days")
 
-        n_kicked = await self._send_requests(members, kick_request)
+        n_kicked = await self._send_requests(members, kick_request, Limit(batch_size=2, sleep_secs=1))
         self.bot.stats.incr("verification.kicked", count=n_kicked)
 
         return n_kicked
@@ -282,6 +299,8 @@ class Verification(Cog):
     async def _give_role(self, members: t.Collection[discord.Member], role: discord.Role) -> int:
         """
         Give `role` to all `members`.
+
+        We pause for a second after batches of 25 requests to ensure ratelimits aren't exceeded.
 
         Returns the amount of successful requests.
         """
@@ -291,7 +310,7 @@ class Verification(Cog):
             """Add `role` to `member`."""
             await member.add_roles(role, reason=f"User has not verified in {UNVERIFIED_AFTER} days")
 
-        return await self._send_requests(members, role_request)
+        return await self._send_requests(members, role_request, Limit(batch_size=25, sleep_secs=1))
 
     async def _check_members(self) -> t.Tuple[t.Set[discord.Member], t.Set[discord.Member]]:
         """
