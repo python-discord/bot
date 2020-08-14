@@ -68,11 +68,26 @@ class Extension(commands.Converter):
 
         argument = argument.lower()
 
-        if "." not in argument:
-            argument = f"{cogs.__name__}.{argument}"
-
         if argument in EXTENSIONS:
             return argument
+        elif (qualified_arg := f"{cogs.__name__}.{argument}") in EXTENSIONS:
+            return qualified_arg
+
+        matches = []
+        for ext in EXTENSIONS:
+            name = ext.rsplit(".", maxsplit=1)[-1]
+            if argument == name:
+                matches.append(ext)
+
+        if len(matches) > 1:
+            matches.sort()
+            names = "\n".join(matches)
+            raise commands.BadArgument(
+                f":x: `{argument}` is an ambiguous extension name. "
+                f"Please use one of the following fully-qualified names.```\n{names}```"
+            )
+        elif matches:
+            return matches[0]
         else:
             raise commands.BadArgument(f":x: Could not find the extension `{argument}`.")
 
