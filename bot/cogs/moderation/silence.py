@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 from contextlib import suppress
 from typing import Optional
@@ -10,6 +11,7 @@ from discord.ext.commands import Context
 from bot.bot import Bot
 from bot.constants import Channels, Emojis, Guild, MODERATION_ROLES, Roles
 from bot.converters import HushDurationConverter
+from bot.utils import RedisCache
 from bot.utils.checks import with_role_check
 from bot.utils.scheduling import Scheduler
 
@@ -57,10 +59,13 @@ class SilenceNotifier(tasks.Loop):
 class Silence(commands.Cog):
     """Commands for stopping channel messages for `verified` role in a channel."""
 
+    # Maps muted channel IDs to their previous overwrites for send_message and add_reactions.
+    # Overwrites are stored as JSON.
+    muted_channel_perms = RedisCache()
+
     def __init__(self, bot: Bot):
         self.bot = bot
         self.scheduler = Scheduler(self.__class__.__name__)
-        self.muted_channels = set()
 
         self._get_instance_vars_task = self.bot.loop.create_task(self._get_instance_vars())
         self._get_instance_vars_event = asyncio.Event()
@@ -118,12 +123,17 @@ class Silence(commands.Cog):
         `duration` is only used for logging; if None is passed `persistent` should be True to not log None.
         Return `True` if channel permissions were changed, `False` otherwise.
         """
-        current_overwrite = channel.overwrites_for(self._verified_role)
-        if current_overwrite.send_messages is False:
+        overwrite = channel.overwrites_for(self._verified_role)
+        prev_overwrites = dict(send_messages=overwrite.send_messages, add_reactions=overwrite.add_reactions)
+
+        if all(val is False for val in prev_overwrites.values()):
             log.info(f"Tried to silence channel #{channel} ({channel.id}) but the channel was already silenced.")
             return False
-        await channel.set_permissions(self._verified_role, **dict(current_overwrite, send_messages=False))
-        self.muted_channels.add(channel)
+
+        overwrite.update(send_messages=False, add_reactions=False)
+        await channel.set_permissions(self._verified_role, overwrite=overwrite)
+        await self.muted_channel_perms.set(channel.id, json.dumps(prev_overwrites))
+
         if persistent:
             log.info(f"Silenced #{channel} ({channel.id}) indefinitely.")
             self.notifier.add_channel(channel)
@@ -140,22 +150,28 @@ class Silence(commands.Cog):
         if it is unsilence it and remove it from the notifier.
         Return `True` if channel permissions were changed, `False` otherwise.
         """
-        current_overwrite = channel.overwrites_for(self._verified_role)
-        if current_overwrite.send_messages is False:
-            await channel.set_permissions(self._verified_role, **dict(current_overwrite, send_messages=None))
+        prev_overwrites = await self.muted_channel_perms.get(channel.id)
+        if prev_overwrites is not None:
+            overwrite = channel.overwrites_for(self._verified_role)
+            overwrite.update(**json.loads(prev_overwrites))
+
+            await channel.set_permissions(self._verified_role, overwrite=overwrite)
             log.info(f"Unsilenced channel #{channel} ({channel.id}).")
+
             self.scheduler.cancel(channel.id)
             self.notifier.remove_channel(channel)
-            self.muted_channels.discard(channel)
+            await self.muted_channel_perms.delete(channel.id)
+
             return True
+
         log.info(f"Tried to unsilence channel #{channel} ({channel.id}) but the channel was not silenced.")
         return False
 
     def cog_unload(self) -> None:
         """Send alert with silenced channels and cancel scheduled tasks on unload."""
         self.scheduler.cancel_all()
-        if self.muted_channels:
-            channels_string = ''.join(channel.mention for channel in self.muted_channels)
+        if self.muted_channel_perms:
+            channels_string = ''.join(channel.mention for channel in self.muted_channel_perms)
             message = f"<@&{Roles.moderators}> channels left silenced on cog unload: {channels_string}"
             asyncio.create_task(self._mod_alerts_channel.send(message))
 
