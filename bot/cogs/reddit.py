@@ -10,6 +10,7 @@ from aiohttp import BasicAuth, ClientError
 from discord import Colour, Embed, TextChannel
 from discord.ext.commands import Cog, Context, group
 from discord.ext.tasks import loop
+from discord.utils import escape_markdown
 
 from bot.bot import Bot
 from bot.constants import Channels, ERROR_REPLIES, Emojis, Reddit as RedditConfig, STAFF_ROLES, Webhooks
@@ -187,6 +188,8 @@ class Reddit(Cog):
             author = data["author"]
 
             title = textwrap.shorten(data["title"], width=64, placeholder="...")
+            # Normal brackets interfere with Markdown.
+            title = escape_markdown(title).replace("[", "⦋").replace("]", "⦌")
             link = self.URL + data["permalink"]
 
             embed.description += (
