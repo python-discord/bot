@@ -19,7 +19,7 @@ from sphinx.ext import intersphinx
 from urllib3.exceptions import ProtocolError
 
 from bot.bot import Bot
-from bot.constants import MODERATION_ROLES, RedirectOutput, Emojis
+from bot.constants import Emojis, MODERATION_ROLES, RedirectOutput
 from bot.converters import ValidPythonIdentifier, ValidURL
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
@@ -73,8 +73,8 @@ async def doc_cleanup(bot: Bot, author: discord.Member, message: discord.Message
     Runs the cleanup for the documentation command.
 
     Adds a :trashcan: reaction what, when clicked, will delete the documentation embed.
-    After a 300 second timeout, the reaction will be removed."""
-
+    After a 300 second timeout, the reaction will be removed.
+    """
     await message.add_reaction(DELETE_EMOJI)
 
     def check(reaction: discord.Reaction, member: discord.Member) -> bool:
