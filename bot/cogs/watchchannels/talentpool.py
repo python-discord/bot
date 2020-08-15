@@ -1,8 +1,9 @@
 import logging
 import textwrap
 from collections import ChainMap
+from typing import Union
 
-from discord import Color, Embed, Member
+from discord import Color, Embed, Member, User
 from discord.ext.commands import Cog, Context, group
 
 from bot.api import ResponseCodeError
@@ -164,25 +165,10 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
 
         Providing a `reason` is required.
         """
-        active_nomination = await self.bot.api_client.get(
-            self.api_endpoint,
-            params=ChainMap(
-                self.api_default_params,
-                {"user__id": str(user.id)}
-            )
-        )
-
-        if not active_nomination:
+        if await self.unwatch(user.id, reason):
+            await ctx.send(f":white_check_mark: Messages sent by {user} will no longer be relayed")
+        else:
             await ctx.send(":x: The specified user does not have an active nomination")
-            return
-
-        [nomination] = active_nomination
-        await self.bot.api_client.patch(
-            f"{self.api_endpoint}/{nomination['id']}",
-            json={'end_reason': reason, 'active': False}
-        )
-        await ctx.send(f":white_check_mark: Messages sent by {user} will no longer be relayed")
-        self._remove_user(user.id)
 
     @nomination_group.group(name='edit', aliases=('e',), invoke_without_command=True)
     @with_role(*MODERATION_ROLES)
@@ -219,6 +205,36 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         )
 
         await ctx.send(f":white_check_mark: Updated the {field} of the nomination!")
+
+    @Cog.listener()
+    async def on_member_ban(self, guild: Guild, user: Union[User, Member]) -> None:
+        """Remove `user` from the talent pool after they are banned."""
+        await self.unwatch(user.id, "User was banned.")
+
+    async def unwatch(self, user_id: int, reason: str) -> bool:
+        """End the active nomination of a user with the given reason and return True on success."""
+        active_nomination = await self.bot.api_client.get(
+            self.api_endpoint,
+            params=ChainMap(
+                self.api_default_params,
+                {"user__id": str(user_id)}
+            )
+        )
+
+        if not active_nomination:
+            log.debug(f"No active nominate exists for {user_id=}")
+            return False
+
+        log.info(f"Ending nomination: {user_id=} {reason=}")
+
+        [nomination] = active_nomination
+        await self.bot.api_client.patch(
+            f"{self.api_endpoint}/{nomination['id']}",
+            json={'end_reason': reason, 'active': False}
+        )
+        self._remove_user(user_id)
+
+        return True
 
     def _nomination_to_string(self, nomination_object: dict) -> str:
         """Creates a string representation of a nomination."""
