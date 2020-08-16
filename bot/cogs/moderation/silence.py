@@ -2,7 +2,7 @@ import asyncio
 import json
 import logging
 from contextlib import suppress
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from discord import TextChannel
@@ -111,7 +111,7 @@ class Silence(commands.Cog):
         await ctx.send(f"{Emojis.check_mark} silenced current channel for {duration} minute(s).")
 
         self.scheduler.schedule_later(duration * 60, ctx.channel.id, ctx.invoke(self.unsilence))
-        unsilence_time = (datetime.utcnow() + timedelta(minutes=duration))
+        unsilence_time = (datetime.now(tz=timezone.utc) + timedelta(minutes=duration))
         await self.muted_channel_times.set(ctx.channel.id, unsilence_time.timestamp())
 
     @commands.command(aliases=("unhush",))
@@ -218,12 +218,13 @@ class Silence(commands.Cog):
                 self.notifier.add_channel(channel)
                 continue
 
-            dt = datetime.utcfromtimestamp(timestamp)
-            if dt <= datetime.utcnow():
+            dt = datetime.fromtimestamp(timestamp, tz=timezone.utc)
+            delta = (dt - datetime.now(tz=timezone.utc)).total_seconds()
+            if delta <= 0:
                 await self._unsilence_wrapper(channel)
             else:
                 log.info(f"Rescheduling silence for #{channel} ({channel.id}).")
-                self.scheduler.schedule_at(dt, channel_id, self._unsilence_wrapper(channel))
+                self.scheduler.schedule_later(delta, channel_id, self._unsilence_wrapper(channel))
 
     def cog_unload(self) -> None:
         """Cancel scheduled tasks."""
