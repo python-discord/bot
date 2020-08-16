@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 from contextlib import suppress
+from datetime import datetime, timedelta
 from typing import Optional
 
 from discord import TextChannel
@@ -63,6 +64,10 @@ class Silence(commands.Cog):
     # Overwrites are stored as JSON.
     muted_channel_perms = RedisCache()
 
+    # Maps muted channel IDs to POSIX timestamps of when they'll be unsilenced.
+    # A timestamp equal to -1 means it's indefinite.
+    muted_channel_times = RedisCache()
+
     def __init__(self, bot: Bot):
         self.bot = bot
         self.scheduler = Scheduler(self.__class__.__name__)
@@ -90,16 +95,21 @@ class Silence(commands.Cog):
         """
         await self._get_instance_vars_event.wait()
         log.debug(f"{ctx.author} is silencing channel #{ctx.channel}.")
+
         if not await self._silence(ctx.channel, persistent=(duration is None), duration=duration):
             await ctx.send(f"{Emojis.cross_mark} current channel is already silenced.")
             return
+
         if duration is None:
             await ctx.send(f"{Emojis.check_mark} silenced current channel indefinitely.")
+            await self.muted_channel_times.set(ctx.channel.id, -1)
             return
 
         await ctx.send(f"{Emojis.check_mark} silenced current channel for {duration} minute(s).")
 
         self.scheduler.schedule_later(duration * 60, ctx.channel.id, ctx.invoke(self.unsilence))
+        unsilence_time = (datetime.utcnow() + timedelta(minutes=duration))
+        await self.muted_channel_times.set(ctx.channel.id, unsilence_time.timestamp())
 
     @commands.command(aliases=("unhush",))
     async def unsilence(self, ctx: Context) -> None:
@@ -178,6 +188,7 @@ class Silence(commands.Cog):
         self.scheduler.cancel(channel.id)
         self.notifier.remove_channel(channel)
         await self.muted_channel_perms.delete(channel.id)
+        await self.muted_channel_times.delete(channel.id)
 
         if prev_overwrites is None:
             await self._mod_alerts_channel.send(
