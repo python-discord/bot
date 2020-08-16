@@ -392,8 +392,8 @@ class Doc(commands.Cog):
                     await error_message.delete(delay=NOT_FOUND_DELETE_DELAY)
                     await ctx.message.delete(delay=NOT_FOUND_DELETE_DELAY)
             else:
-                doc_embed = await ctx.send(embed=doc_embed)
-                await wait_for_deletion(doc_embed, (ctx.author.id,), client=self.bot)
+                msg = await ctx.send(embed=doc_embed)
+                await wait_for_deletion(msg, (ctx.author.id,), client=self.bot)
 
     @docs_group.command(name='set', aliases=('s',))
     @with_role(*MODERATION_ROLES)
