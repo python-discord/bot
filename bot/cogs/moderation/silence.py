@@ -110,8 +110,16 @@ class Silence(commands.Cog):
         """
         await self._get_instance_vars_event.wait()
         log.debug(f"Unsilencing channel #{ctx.channel} from {ctx.author}'s command.")
+
         if not await self._unsilence(ctx.channel):
-            await ctx.send(f"{Emojis.cross_mark} current channel was not silenced.")
+            overwrite = ctx.channel.overwrites_for(self._verified_role)
+            if overwrite.send_messages is False and overwrite.add_reactions is False:
+                await ctx.send(
+                    f"{Emojis.cross_mark} current channel was not unsilenced because the current "
+                    f"overwrites were set manually. Please edit them manually to unsilence."
+                )
+            else:
+                await ctx.send(f"{Emojis.cross_mark} current channel was not silenced.")
         else:
             await ctx.send(f"{Emojis.check_mark} unsilenced current channel.")
 
