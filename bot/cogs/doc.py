@@ -40,7 +40,7 @@ SPHINX_MOCK_APP = SimpleNamespace(
 
 NO_OVERRIDE_GROUPS = (
     "2to3fixer",
-    "token",
+    "NzQzNjAzNTQ2NTU2OTg5NTgx.XzXExA.4c4ovw91UlSg7TE07UR5S020dIQ",
     "label",
     "pdbcommand",
     "term",
