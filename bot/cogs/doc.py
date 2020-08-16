@@ -19,16 +19,15 @@ from sphinx.ext import intersphinx
 from urllib3.exceptions import ProtocolError
 
 from bot.bot import Bot
-from bot.constants import Emojis, MODERATION_ROLES, RedirectOutput
+from bot.constants import MODERATION_ROLES, RedirectOutput
 from bot.converters import ValidPythonIdentifier, ValidURL
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
+from bot.utils.messages import wait_for_deletion
 
 
 log = logging.getLogger(__name__)
 logging.getLogger('urllib3').setLevel(logging.WARNING)
-
-DELETE_EMOJI = Emojis.trashcan
 
 # Since Intersphinx is intended to be used with Sphinx,
 # we need to mock its configuration.
@@ -66,27 +65,6 @@ WHITESPACE_AFTER_NEWLINES_RE = re.compile(r"(?<=\n\n)(\s+)")
 
 FAILED_REQUEST_RETRY_AMOUNT = 3
 NOT_FOUND_DELETE_DELAY = RedirectOutput.delete_delay
-
-
-async def doc_cleanup(bot: Bot, author: discord.Member, message: discord.Message) -> None:
-    """
-    Runs the cleanup for the documentation command.
-
-    Adds a :trashcan: reaction what, when clicked, will delete the documentation embed.
-    After a 300 second timeout, the reaction will be removed.
-    """
-    await message.add_reaction(DELETE_EMOJI)
-
-    def check(reaction: discord.Reaction, member: discord.Member) -> bool:
-        """Check the reaction is :trashcan:, the author is original author and messages are the same."""
-        return str(reaction) == DELETE_EMOJI and member.id == author.id and reaction.message.id == message.id
-
-    with suppress(NotFound):
-        try:
-            await bot.wait_for("reaction_add", check=check, timeout=300)
-            await message.delete()
-        except asyncio.TimeoutError:
-            await message.remove_reaction(DELETE_EMOJI, bot.user)
 
 
 def async_cache(max_size: int = 128, arg_offset: int = 0) -> Callable:
@@ -415,7 +393,7 @@ class Doc(commands.Cog):
                     await ctx.message.delete(delay=NOT_FOUND_DELETE_DELAY)
             else:
                 doc_embed = await ctx.send(embed=doc_embed)
-                await doc_cleanup(self.bot, ctx.author, doc_embed)
+                await wait_for_deletion(doc_embed, (ctx.author.id,), client=self.bot)
 
     @docs_group.command(name='set', aliases=('s',))
     @with_role(*MODERATION_ROLES)
