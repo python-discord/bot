@@ -126,7 +126,7 @@ class Silence(commands.Cog):
         overwrite = channel.overwrites_for(self._verified_role)
         prev_overwrites = dict(send_messages=overwrite.send_messages, add_reactions=overwrite.add_reactions)
 
-        if all(val is False for val in prev_overwrites.values()):
+        if channel.id in self.scheduler or all(val is False for val in prev_overwrites.values()):
             log.info(f"Tried to silence channel #{channel} ({channel.id}) but the channel was already silenced.")
             return False
 
