@@ -78,11 +78,14 @@ class Silence(commands.Cog):
     async def _get_instance_vars(self) -> None:
         """Get instance variables after they're available to get from the guild."""
         await self.bot.wait_until_guild_available()
+
         guild = self.bot.get_guild(Guild.id)
         self._verified_role = guild.get_role(Roles.verified)
         self._mod_alerts_channel = self.bot.get_channel(Channels.mod_alerts)
         self._mod_log_channel = self.bot.get_channel(Channels.mod_log)
         self.notifier = SilenceNotifier(self._mod_log_channel)
+        await self._reschedule()
+
         self._get_instance_vars_event.set()
 
     @commands.command(aliases=("hush",))
@@ -120,18 +123,21 @@ class Silence(commands.Cog):
         """
         await self._get_instance_vars_event.wait()
         log.debug(f"Unsilencing channel #{ctx.channel} from {ctx.author}'s command.")
+        await self._unsilence_wrapper(ctx.channel)
 
-        if not await self._unsilence(ctx.channel):
-            overwrite = ctx.channel.overwrites_for(self._verified_role)
+    async def _unsilence_wrapper(self, channel: TextChannel) -> None:
+        """Unsilence `channel` and send a success/failure message."""
+        if not await self._unsilence(channel):
+            overwrite = channel.overwrites_for(self._verified_role)
             if overwrite.send_messages is False and overwrite.add_reactions is False:
-                await ctx.send(
+                await channel.send(
                     f"{Emojis.cross_mark} current channel was not unsilenced because the current "
                     f"overwrites were set manually. Please edit them manually to unsilence."
                 )
             else:
-                await ctx.send(f"{Emojis.cross_mark} current channel was not silenced.")
+                await channel.send(f"{Emojis.cross_mark} current channel was not silenced.")
         else:
-            await ctx.send(f"{Emojis.check_mark} unsilenced current channel.")
+            await channel.send(f"{Emojis.check_mark} unsilenced current channel.")
 
     async def _silence(self, channel: TextChannel, persistent: bool, duration: Optional[int]) -> bool:
         """
@@ -199,13 +205,29 @@ class Silence(commands.Cog):
 
         return True
 
+    async def _reschedule(self) -> None:
+        """Reschedule unsilencing of active silences and add permanent ones to the notifier."""
+        for channel_id, timestamp in await self.muted_channel_times.items():
+            channel = self.bot.get_channel(channel_id)
+            if channel is None:
+                log.info(f"Can't reschedule silence for {channel_id}: channel not found.")
+                continue
+
+            if timestamp == -1:
+                log.info(f"Adding permanent silence for #{channel} ({channel.id}) to the notifier.")
+                self.notifier.add_channel(channel)
+                continue
+
+            dt = datetime.utcfromtimestamp(timestamp)
+            if dt <= datetime.utcnow():
+                await self._unsilence_wrapper(channel)
+            else:
+                log.info(f"Rescheduling silence for #{channel} ({channel.id}).")
+                self.scheduler.schedule_at(dt, channel_id, self._unsilence_wrapper(channel))
+
     def cog_unload(self) -> None:
-        """Send alert with silenced channels and cancel scheduled tasks on unload."""
+        """Cancel scheduled tasks."""
         self.scheduler.cancel_all()
-        if self.muted_channel_perms:
-            channels_string = ''.join(channel.mention for channel in self.muted_channel_perms)
-            message = f"<@&{Roles.moderators}> channels left silenced on cog unload: {channels_string}"
-            asyncio.create_task(self._mod_alerts_channel.send(message))
 
     # This cannot be static (must have a __func__ attribute).
     def cog_check(self, ctx: Context) -> bool:
