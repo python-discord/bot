@@ -273,9 +273,9 @@ class Information(Cog):
             (
                 "Status",
                 textwrap.dedent(f"""
-                    Desktop: {desktop_status}
-                    Web: {web_status}
-                    Mobile: {mobile_status}
+                    {desktop_status} Desktop
+                    {web_status} Web
+                    {mobile_status} Mobile
                 """).strip()
             )
         ]
