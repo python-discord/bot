@@ -74,6 +74,7 @@ class SilenceNotifierTests(unittest.IsolatedAsyncioTestCase):
 
 @autospec(Silence, "muted_channel_perms", "muted_channel_times", pass_mocks=False)
 class SilenceTests(unittest.IsolatedAsyncioTestCase):
+    @autospec("bot.cogs.moderation.silence", "Scheduler", pass_mocks=False)
     def setUp(self) -> None:
         self.bot = MockBot()
         self.cog = Silence(self.bot)
@@ -237,20 +238,10 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         del mock_permissions_dict['send_messages']
         self.assertDictEqual(mock_permissions_dict, new_permissions)
 
-    @mock.patch("bot.cogs.moderation.silence.asyncio")
-    @mock.patch.object(Silence, "_mod_alerts_channel", create=True)
-    def test_cog_unload_starts_task(self, alert_channel, asyncio_mock):
-        """Task for sending an alert was created with present `muted_channels`."""
-        with mock.patch.object(self.cog, "muted_channels"):
-            self.cog.cog_unload()
-            alert_channel.send.assert_called_once_with(f"<@&{Roles.moderators}> channels left silenced on cog unload: ")
-            asyncio_mock.create_task.assert_called_once_with(alert_channel.send())
-
-    @mock.patch("bot.cogs.moderation.silence.asyncio")
-    def test_cog_unload_skips_task_start(self, asyncio_mock):
-        """No task created with no channels."""
+    def test_cog_unload_cancels_tasks(self):
+        """All scheduled tasks should be cancelled."""
         self.cog.cog_unload()
-        asyncio_mock.create_task.assert_not_called()
+        self.cog.scheduler.cancel_all.assert_called_once_with()
 
     @mock.patch("bot.cogs.moderation.silence.with_role_check")
     @mock.patch("bot.cogs.moderation.silence.MODERATION_ROLES", new=(1, 2, 3))
