@@ -146,26 +146,39 @@ class Silence(commands.Cog):
         """
         Unsilence `channel`.
 
-        Check if `channel` is silenced through a `PermissionOverwrite`,
-        if it is unsilence it and remove it from the notifier.
+        If `channel` has a silence task scheduled or has its previous overwrites cached, unsilence
+        it, cancel the task, and remove it from the notifier. Notify admins if it has a task but
+        not cached overwrites.
+
         Return `True` if channel permissions were changed, `False` otherwise.
         """
         prev_overwrites = await self.muted_channel_perms.get(channel.id)
-        if prev_overwrites is not None:
-            overwrite = channel.overwrites_for(self._verified_role)
+        if channel.id not in self.scheduler and prev_overwrites is None:
+            log.info(f"Tried to unsilence channel #{channel} ({channel.id}) but the channel was not silenced.")
+            return False
+
+        overwrite = channel.overwrites_for(self._verified_role)
+        if prev_overwrites is None:
+            log.info(f"Missing previous overwrites for #{channel} ({channel.id}); defaulting to None.")
+            overwrite.update(send_messages=None, add_reactions=None)
+        else:
             overwrite.update(**json.loads(prev_overwrites))
 
-            await channel.set_permissions(self._verified_role, overwrite=overwrite)
-            log.info(f"Unsilenced channel #{channel} ({channel.id}).")
+        await channel.set_permissions(self._verified_role, overwrite=overwrite)
+        log.info(f"Unsilenced channel #{channel} ({channel.id}).")
 
-            self.scheduler.cancel(channel.id)
-            self.notifier.remove_channel(channel)
-            await self.muted_channel_perms.delete(channel.id)
+        self.scheduler.cancel(channel.id)
+        self.notifier.remove_channel(channel)
+        await self.muted_channel_perms.delete(channel.id)
 
-            return True
+        if prev_overwrites is None:
+            await self._mod_alerts_channel.send(
+                f"<@&{Roles.admins}> Restored overwrites with default values after unsilencing "
+                f"{channel.mention}. Please check that the `Send Messages` and `Add Reactions` "
+                f"overwrites for {self._verified_role.mention} are at their desired values."
+            )
 
-        log.info(f"Tried to unsilence channel #{channel} ({channel.id}) but the channel was not silenced.")
-        return False
+        return True
 
     def cog_unload(self) -> None:
         """Send alert with silenced channels and cancel scheduled tasks on unload."""
