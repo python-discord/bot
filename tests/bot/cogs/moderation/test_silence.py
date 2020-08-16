@@ -80,26 +80,26 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         self.ctx = MockContext()
         self.cog._verified_role = None
 
-    async def test_instance_vars_got_guild(self):
+    async def test_init_cog_got_guild(self):
         """Bot got guild after it became available."""
         await self.cog._init_cog()
-        self.bot.wait_until_guild_available.assert_called_once()
+        self.bot.wait_until_guild_available.assert_awaited_once()
         self.bot.get_guild.assert_called_once_with(Guild.id)
 
-    async def test_instance_vars_got_role(self):
+    async def test_init_cog_got_role(self):
         """Got `Roles.verified` role from guild."""
         await self.cog._init_cog()
         guild = self.bot.get_guild()
         guild.get_role.assert_called_once_with(Roles.verified)
 
-    async def test_instance_vars_got_channels(self):
+    async def test_init_cog_got_channels(self):
         """Got channels from bot."""
         await self.cog._init_cog()
         self.bot.get_channel.called_once_with(Channels.mod_alerts)
         self.bot.get_channel.called_once_with(Channels.mod_log)
 
     @mock.patch("bot.cogs.moderation.silence.SilenceNotifier")
-    async def test_instance_vars_got_notifier(self, notifier):
+    async def test_init_cog_got_notifier(self, notifier):
         """Notifier was started with channel."""
         mod_log = MockTextChannel()
         self.bot.get_channel.side_effect = (None, mod_log)
