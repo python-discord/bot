@@ -1,4 +1,3 @@
-import asyncio
 import json
 import logging
 from contextlib import suppress
@@ -73,7 +72,6 @@ class Silence(commands.Cog):
         self.scheduler = Scheduler(self.__class__.__name__)
 
         self._get_instance_vars_task = self.bot.loop.create_task(self._get_instance_vars())
-        self._get_instance_vars_event = asyncio.Event()
 
     async def _get_instance_vars(self) -> None:
         """Get instance variables after they're available to get from the guild."""
@@ -86,8 +84,6 @@ class Silence(commands.Cog):
         self.notifier = SilenceNotifier(self._mod_log_channel)
         await self._reschedule()
 
-        self._get_instance_vars_event.set()
-
     @commands.command(aliases=("hush",))
     async def silence(self, ctx: Context, duration: HushDurationConverter = 10) -> None:
         """
@@ -96,7 +92,7 @@ class Silence(commands.Cog):
         Duration is capped at 15 minutes, passing forever makes the silence indefinite.
         Indefinitely silenced channels get added to a notifier which posts notices every 15 minutes from the start.
         """
-        await self._get_instance_vars_event.wait()
+        await self._get_instance_vars_task
         log.debug(f"{ctx.author} is silencing channel #{ctx.channel}.")
 
         if not await self._silence(ctx.channel, persistent=(duration is None), duration=duration):
@@ -121,7 +117,7 @@ class Silence(commands.Cog):
 
         If the channel was silenced indefinitely, notifications for the channel will stop.
         """
-        await self._get_instance_vars_event.wait()
+        await self._get_instance_vars_task
         log.debug(f"Unsilencing channel #{ctx.channel} from {ctx.author}'s command.")
         await self._unsilence_wrapper(ctx.channel)
 
