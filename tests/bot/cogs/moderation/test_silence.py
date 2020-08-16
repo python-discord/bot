@@ -6,7 +6,7 @@ from discord import PermissionOverwrite
 
 from bot.cogs.moderation.silence import Silence, SilenceNotifier
 from bot.constants import Channels, Emojis, Guild, Roles
-from tests.helpers import MockBot, MockContext, MockTextChannel
+from tests.helpers import MockBot, MockContext, MockTextChannel, autospec
 
 
 class SilenceNotifierTests(unittest.IsolatedAsyncioTestCase):
@@ -72,14 +72,13 @@ class SilenceNotifierTests(unittest.IsolatedAsyncioTestCase):
                     self.alert_channel.send.assert_not_called()
 
 
+@autospec(Silence, "muted_channel_perms", "muted_channel_times", pass_mocks=False)
 class SilenceTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.bot = MockBot()
         self.cog = Silence(self.bot)
         self.ctx = MockContext()
         self.cog._verified_role = None
-        # Set event so command callbacks can continue.
-        self.cog._get_instance_vars_event.set()
 
     async def test_instance_vars_got_guild(self):
         """Bot got guild after it became available."""
