@@ -168,19 +168,23 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
             overwrite=overwrite
         )
 
-    async def test_silence_private_preserves_permissions(self):
-        """Previous permissions were preserved when channel was silenced."""
+    async def test_silence_private_preserves_other_overwrites(self):
+        """Channel's other unrelated overwrites were not changed when it was silenced."""
         channel = MockTextChannel()
-        # Set up mock channel permission state.
-        mock_permissions = PermissionOverwrite()
-        mock_permissions_dict = dict(mock_permissions)
-        channel.overwrites_for.return_value = mock_permissions
+        overwrite = PermissionOverwrite(stream=True, attach_files=False)
+        channel.overwrites_for.return_value = overwrite
+
+        prev_overwrite_dict = dict(overwrite)
         await self.cog._silence(channel, False, None)
-        new_permissions = channel.set_permissions.call_args.kwargs
-        # Remove 'send_messages' key because it got changed in the method.
-        del new_permissions['send_messages']
-        del mock_permissions_dict['send_messages']
-        self.assertDictEqual(mock_permissions_dict, new_permissions)
+        new_overwrite_dict = dict(overwrite)
+
+        # Remove 'send_messages' & 'add_reactions' keys because they were changed by the method.
+        del prev_overwrite_dict['send_messages']
+        del prev_overwrite_dict['add_reactions']
+        del new_overwrite_dict['send_messages']
+        del new_overwrite_dict['add_reactions']
+
+        self.assertDictEqual(prev_overwrite_dict, new_overwrite_dict)
 
     async def test_silence_private_notifier(self):
         """Channel should be added to notifier with `persistent` set to `True`, and the other way around."""
