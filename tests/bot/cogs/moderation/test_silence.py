@@ -1,6 +1,6 @@
 import unittest
 from unittest import mock
-from unittest.mock import MagicMock, Mock
+from unittest.mock import Mock
 
 from discord import PermissionOverwrite
 
@@ -80,6 +80,18 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         self.cog = Silence(self.bot)
         self.ctx = MockContext()
         self.cog._verified_role = None
+
+    def unsilence_fixture(self) -> MockTextChannel:
+        """Setup mocks for a successful `_unsilence` call. Return the mocked channel."""
+        overwrite_json = '{"send_messages": true, "add_reactions": null}'
+        self.cog.muted_channel_perms.get.return_value = overwrite_json
+
+        # stream=True just to have at least one other overwrite not be the default value.
+        channel = MockTextChannel()
+        overwrite = PermissionOverwrite(stream=True, send_messages=False, add_reactions=False)
+        channel.overwrites_for.return_value = overwrite
+
+        return channel
 
     async def test_init_cog_got_guild(self):
         """Bot got guild after it became available."""
@@ -223,47 +235,50 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
 
     @mock.patch.object(Silence, "notifier", create=True)
     async def test_unsilence_private_unsilenced_channel(self, _):
-        """Channel had `send_message` permissions restored"""
-        perm_overwrite = MagicMock(send_messages=False)
-        channel = MockTextChannel(overwrites_for=Mock(return_value=perm_overwrite))
-        self.assertTrue(await self.cog._unsilence(channel))
-        channel.set_permissions.assert_called_once()
-        self.assertIsNone(channel.set_permissions.call_args.kwargs['send_messages'])
+        """Channel had `send_message` permissions restored."""
+        channel = self.unsilence_fixture()
+        overwrite = channel.overwrites_for.return_value
+
+        await self.cog._unsilence(channel)
+        channel.set_permissions.assert_awaited_once_with(
+            self.cog._verified_role, overwrite=overwrite
+        )
+
+        # Recall that these values are determined by the fixture.
+        self.assertTrue(overwrite.send_messages)
+        self.assertIsNone(overwrite.add_reactions)
 
     @mock.patch.object(Silence, "notifier", create=True)
     async def test_unsilence_private_removed_notifier(self, notifier):
         """Channel was removed from `notifier` on unsilence."""
-        overwrite_json = '{"send_messages": true, "add_reactions": null}'
-        self.cog.muted_channel_perms.get.return_value = overwrite_json
-        channel = MockTextChannel()
-        channel.overwrites_for.return_value = PermissionOverwrite()
-
+        channel = self.unsilence_fixture()
         await self.cog._unsilence(channel)
         notifier.remove_channel.assert_called_once_with(channel)
 
     @mock.patch.object(Silence, "notifier", create=True)
     async def test_unsilence_private_removed_muted_channel(self, _):
-        """Channel was removed from `muted_channels` on unsilence."""
-        perm_overwrite = MagicMock(send_messages=False)
-        channel = MockTextChannel(overwrites_for=Mock(return_value=perm_overwrite))
-        with mock.patch.object(self.cog, "muted_channels") as muted_channels:
-            await self.cog._unsilence(channel)
-        muted_channels.discard.assert_called_once_with(channel)
+        """Channel was removed from overwrites cache on unsilence."""
+        channel = self.unsilence_fixture()
+        await self.cog._unsilence(channel)
+        self.cog.muted_channel_perms.delete.assert_awaited_once_with(channel.id)
 
     @mock.patch.object(Silence, "notifier", create=True)
-    async def test_unsilence_private_preserves_permissions(self, _):
-        """Previous permissions were preserved when channel was unsilenced."""
-        channel = MockTextChannel()
-        # Set up mock channel permission state.
-        mock_permissions = PermissionOverwrite(send_messages=False)
-        mock_permissions_dict = dict(mock_permissions)
-        channel.overwrites_for.return_value = mock_permissions
+    async def test_unsilence_private_preserves_other_overwrites(self, _):
+        """Channel's other unrelated overwrites were not changed when it was unsilenced."""
+        channel = self.unsilence_fixture()
+        overwrite = channel.overwrites_for.return_value
+
+        prev_overwrite_dict = dict(overwrite)
         await self.cog._unsilence(channel)
-        new_permissions = channel.set_permissions.call_args.kwargs
-        # Remove 'send_messages' key because it got changed in the method.
-        del new_permissions['send_messages']
-        del mock_permissions_dict['send_messages']
-        self.assertDictEqual(mock_permissions_dict, new_permissions)
+        new_overwrite_dict = dict(overwrite)
+
+        # Remove 'send_messages' & 'add_reactions' keys because they were changed by the method.
+        del prev_overwrite_dict['send_messages']
+        del prev_overwrite_dict['add_reactions']
+        del new_overwrite_dict['send_messages']
+        del new_overwrite_dict['add_reactions']
+
+        self.assertDictEqual(prev_overwrite_dict, new_overwrite_dict)
 
     def test_cog_unload_cancels_tasks(self):
         """All scheduled tasks should be cancelled."""
