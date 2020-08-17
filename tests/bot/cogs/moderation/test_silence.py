@@ -233,8 +233,11 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
     @mock.patch.object(Silence, "notifier", create=True)
     async def test_unsilence_private_removed_notifier(self, notifier):
         """Channel was removed from `notifier` on unsilence."""
-        perm_overwrite = MagicMock(send_messages=False)
-        channel = MockTextChannel(overwrites_for=Mock(return_value=perm_overwrite))
+        overwrite_json = '{"send_messages": true, "add_reactions": null}'
+        self.cog.muted_channel_perms.get.return_value = overwrite_json
+        channel = MockTextChannel()
+        channel.overwrites_for.return_value = PermissionOverwrite()
+
         await self.cog._unsilence(channel)
         notifier.remove_channel.assert_called_once_with(channel)
 
