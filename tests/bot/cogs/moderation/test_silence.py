@@ -151,11 +151,18 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         channel.set_permissions.assert_not_called()
 
     async def test_silence_private_silenced_channel(self):
-        """Channel had `send_message` permissions revoked."""
+        """Channel had `send_message` and `add_reactions` permissions revoked for verified role."""
         channel = MockTextChannel()
+        overwrite = PermissionOverwrite(send_messages=True, add_reactions=None)
+        channel.overwrites_for.return_value = overwrite
+
         self.assertTrue(await self.cog._silence(channel, False, None))
-        channel.set_permissions.assert_called_once()
-        self.assertFalse(channel.set_permissions.call_args.kwargs['send_messages'])
+        self.assertFalse(overwrite.send_messages)
+        self.assertFalse(overwrite.add_reactions)
+        channel.set_permissions.assert_awaited_once_with(
+            self.cog._verified_role,
+            overwrite=overwrite
+        )
 
     async def test_silence_private_preserves_permissions(self):
         """Previous permissions were preserved when channel was silenced."""
