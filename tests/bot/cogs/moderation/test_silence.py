@@ -196,7 +196,10 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_unsilence_private_for_false(self):
         """Permissions are not set and `False` is returned in an unsilenced channel."""
-        channel = Mock()
+        self.cog.scheduler.__contains__.return_value = False
+        self.cog.muted_channel_perms.get.return_value = None
+        channel = MockTextChannel()
+
         self.assertFalse(await self.cog._unsilence(channel))
         channel.set_permissions.assert_not_called()
 
