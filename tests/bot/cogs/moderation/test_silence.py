@@ -144,11 +144,20 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_silence_private_for_false(self):
         """Permissions are not set and `False` is returned in an already silenced channel."""
-        perm_overwrite = Mock(send_messages=False)
-        channel = Mock(overwrites_for=Mock(return_value=perm_overwrite))
+        subtests = (
+            (False, PermissionOverwrite(send_messages=False, add_reactions=False)),
+            (True, PermissionOverwrite(send_messages=True, add_reactions=True)),
+            (True, PermissionOverwrite(send_messages=False, add_reactions=False)),
+        )
 
-        self.assertFalse(await self.cog._silence(channel, True, None))
-        channel.set_permissions.assert_not_called()
+        for contains, overwrite in subtests:
+            with self.subTest(contains=contains, overwrite=overwrite):
+                self.cog.scheduler.__contains__.return_value = contains
+                channel = MockTextChannel()
+                channel.overwrites_for.return_value = overwrite
+
+                self.assertFalse(await self.cog._silence(channel, True, None))
+                channel.set_permissions.assert_not_called()
 
     async def test_silence_private_silenced_channel(self):
         """Channel had `send_message` and `add_reactions` permissions revoked for verified role."""
