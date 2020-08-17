@@ -1,3 +1,4 @@
+import asyncio
 import unittest
 from unittest import mock
 from unittest.mock import Mock
@@ -73,25 +74,13 @@ class SilenceNotifierTests(unittest.IsolatedAsyncioTestCase):
 
 
 @autospec(Silence, "muted_channel_perms", "muted_channel_times", pass_mocks=False)
-class SilenceTests(unittest.IsolatedAsyncioTestCase):
+class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
+    """Tests for the general functionality of the Silence cog."""
+
     @autospec("bot.cogs.moderation.silence", "Scheduler", pass_mocks=False)
     def setUp(self) -> None:
         self.bot = MockBot()
         self.cog = Silence(self.bot)
-        self.ctx = MockContext()
-        self.cog._verified_role = None
-
-    def unsilence_fixture(self) -> MockTextChannel:
-        """Setup mocks for a successful `_unsilence` call. Return the mocked channel."""
-        overwrite_json = '{"send_messages": true, "add_reactions": null}'
-        self.cog.muted_channel_perms.get.return_value = overwrite_json
-
-        # stream=True just to have at least one other overwrite not be the default value.
-        channel = MockTextChannel()
-        overwrite = PermissionOverwrite(stream=True, send_messages=False, add_reactions=False)
-        channel.overwrites_for.return_value = overwrite
-
-        return channel
 
     async def test_init_cog_got_guild(self):
         """Bot got guild after it became available."""
@@ -120,37 +109,49 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         notifier.assert_called_once_with(mod_log)
         self.bot.get_channel.side_effect = None
 
-    async def test_silence_sent_correct_discord_message(self):
-        """Check if proper message was sent when called with duration in channel with previous state."""
+    def test_cog_unload_cancelled_tasks(self):
+        """All scheduled tasks were cancelled."""
+        self.cog.cog_unload()
+        self.cog.scheduler.cancel_all.assert_called_once_with()
+
+    @mock.patch("bot.cogs.moderation.silence.with_role_check")
+    @mock.patch("bot.cogs.moderation.silence.MODERATION_ROLES", new=(1, 2, 3))
+    def test_cog_check(self, role_check):
+        """Role check was called with `MODERATION_ROLES`"""
+        ctx = MockContext()
+        self.cog.cog_check(ctx)
+        role_check.assert_called_once_with(ctx, *(1, 2, 3))
+
+
+@autospec(Silence, "muted_channel_perms", "muted_channel_times", pass_mocks=False)
+class SilenceTests(unittest.IsolatedAsyncioTestCase):
+    """Tests for the silence command and its related helper methods."""
+
+    @autospec(Silence, "_reschedule", pass_mocks=False)
+    @autospec("bot.cogs.moderation.silence", "Scheduler", "SilenceNotifier", pass_mocks=False)
+    def setUp(self) -> None:
+        self.bot = MockBot()
+        self.cog = Silence(self.bot)
+        self.cog._init_task = mock.AsyncMock()()
+
+        asyncio.run(self.cog._init_cog())  # Populate instance attributes.
+
+    async def test_sent_correct_message(self):
+        """Appropriate failure/success message was sent by the command."""
         test_cases = (
             (0.0001, f"{Emojis.check_mark} silenced current channel for 0.0001 minute(s).", True,),
             (None, f"{Emojis.check_mark} silenced current channel indefinitely.", True,),
             (5, f"{Emojis.cross_mark} current channel is already silenced.", False,),
         )
         for duration, message, was_silenced in test_cases:
-            self.cog._init_task = mock.AsyncMock()()
+            ctx = MockContext()
             with self.subTest(was_silenced=was_silenced, message=message, duration=duration):
                 with mock.patch.object(self.cog, "_silence", return_value=was_silenced):
-                    await self.cog.silence.callback(self.cog, self.ctx, duration)
-                    self.ctx.send.assert_called_once_with(message)
-            self.ctx.reset_mock()
+                    await self.cog.silence.callback(self.cog, ctx, duration)
+                    ctx.send.assert_called_once_with(message)
 
-    async def test_unsilence_sent_correct_discord_message(self):
-        """Check if proper message was sent when unsilencing channel."""
-        test_cases = (
-            (True, f"{Emojis.check_mark} unsilenced current channel."),
-            (False, f"{Emojis.cross_mark} current channel was not silenced.")
-        )
-        for was_unsilenced, message in test_cases:
-            self.cog._init_task = mock.AsyncMock()()
-            with self.subTest(was_unsilenced=was_unsilenced, message=message):
-                with mock.patch.object(self.cog, "_unsilence", return_value=was_unsilenced):
-                    await self.cog.unsilence.callback(self.cog, self.ctx)
-                    self.ctx.channel.send.assert_called_once_with(message)
-            self.ctx.reset_mock()
-
-    async def test_silence_private_for_false(self):
-        """Permissions are not set and `False` is returned in an already silenced channel."""
+    async def test_skipped_already_silenced(self):
+        """Permissions were not set and `False` was returned for an already silenced channel."""
         subtests = (
             (False, PermissionOverwrite(send_messages=False, add_reactions=False)),
             (True, PermissionOverwrite(send_messages=True, add_reactions=True)),
@@ -166,7 +167,7 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
                 self.assertFalse(await self.cog._silence(channel, True, None))
                 channel.set_permissions.assert_not_called()
 
-    async def test_silence_private_silenced_channel(self):
+    async def test_silenced_channel(self):
         """Channel had `send_message` and `add_reactions` permissions revoked for verified role."""
         channel = MockTextChannel()
         overwrite = PermissionOverwrite(send_messages=True, add_reactions=None)
@@ -180,8 +181,8 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
             overwrite=overwrite
         )
 
-    async def test_silence_private_preserves_other_overwrites(self):
-        """Channel's other unrelated overwrites were not changed when it was silenced."""
+    async def test_preserved_other_overwrites(self):
+        """Channel's other unrelated overwrites were not changed."""
         channel = MockTextChannel()
         overwrite = PermissionOverwrite(stream=True, attach_files=False)
         channel.overwrites_for.return_value = overwrite
@@ -198,8 +199,8 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertDictEqual(prev_overwrite_dict, new_overwrite_dict)
 
-    async def test_silence_private_notifier(self):
-        """Channel should be added to notifier with `persistent` set to `True`, and the other way around."""
+    async def test_added_removed_notifier(self):
+        """Channel was added to notifier if `persistent` was `True`, and removed if `False`."""
         channel = MockTextChannel()
         overwrite = PermissionOverwrite(send_messages=True, add_reactions=None)
         channel.overwrites_for.return_value = overwrite
@@ -214,8 +215,8 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
                 await self.cog._silence(channel, False, None)
                 self.cog.notifier.add_channel.assert_not_called()
 
-    async def test_silence_private_cached_perms(self):
-        """Channel's previous overwrites were cached when silenced."""
+    async def test_cached_previous_overwrites(self):
+        """Channel's previous overwrites were cached."""
         channel = MockTextChannel()
         overwrite = PermissionOverwrite(send_messages=True, add_reactions=None)
         overwrite_json = '{"send_messages": true, "add_reactions": null}'
@@ -224,8 +225,47 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         await self.cog._silence(channel, False, None)
         self.cog.muted_channel_perms.set.assert_called_once_with(channel.id, overwrite_json)
 
-    async def test_unsilence_private_for_false(self):
-        """Permissions are not set and `False` is returned in an unsilenced channel."""
+
+@autospec(Silence, "muted_channel_perms", "muted_channel_times", pass_mocks=False)
+class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
+    """Tests for the unsilence command and its related helper methods."""
+
+    @autospec(Silence, "_reschedule", pass_mocks=False)
+    @autospec("bot.cogs.moderation.silence", "Scheduler", "SilenceNotifier", pass_mocks=False)
+    def setUp(self) -> None:
+        self.bot = MockBot()
+        self.cog = Silence(self.bot)
+        self.cog._init_task = mock.AsyncMock()()
+
+        asyncio.run(self.cog._init_cog())  # Populate instance attributes.
+
+    def unsilence_fixture(self) -> MockTextChannel:
+        """Setup mocks for a successful `_unsilence` call. Return the mocked channel."""
+        overwrite_json = '{"send_messages": true, "add_reactions": null}'
+        self.cog.muted_channel_perms.get.return_value = overwrite_json
+
+        # stream=True just to have at least one other overwrite not be the default value.
+        channel = MockTextChannel()
+        overwrite = PermissionOverwrite(stream=True, send_messages=False, add_reactions=False)
+        channel.overwrites_for.return_value = overwrite
+
+        return channel
+
+    async def test_sent_correct_message(self):
+        """Appropriate failure/success message was sent by the command."""
+        test_cases = (
+            (True, f"{Emojis.check_mark} unsilenced current channel."),
+            (False, f"{Emojis.cross_mark} current channel was not silenced.")
+        )
+        for was_unsilenced, message in test_cases:
+            ctx = MockContext()
+            with self.subTest(was_unsilenced=was_unsilenced, message=message):
+                with mock.patch.object(self.cog, "_unsilence", return_value=was_unsilenced):
+                    await self.cog.unsilence.callback(self.cog, ctx)
+                    ctx.channel.send.assert_called_once_with(message)
+
+    async def test_skipped_already_unsilenced(self):
+        """Permissions were not set and `False` was returned for an already unsilenced channel."""
         self.cog.scheduler.__contains__.return_value = False
         self.cog.muted_channel_perms.get.return_value = None
         channel = MockTextChannel()
@@ -233,9 +273,8 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(await self.cog._unsilence(channel))
         channel.set_permissions.assert_not_called()
 
-    @mock.patch.object(Silence, "notifier", create=True)
-    async def test_unsilence_private_unsilenced_channel(self, _):
-        """Channel had `send_message` permissions restored."""
+    async def test_unsilenced_channel(self):
+        """Channel's `send_message` and `add_reactions` overwrites were restored."""
         channel = self.unsilence_fixture()
         overwrite = channel.overwrites_for.return_value
 
@@ -248,23 +287,20 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(overwrite.send_messages)
         self.assertIsNone(overwrite.add_reactions)
 
-    @mock.patch.object(Silence, "notifier", create=True)
-    async def test_unsilence_private_removed_notifier(self, notifier):
-        """Channel was removed from `notifier` on unsilence."""
+    async def test_removed_notifier(self):
+        """Channel was removed from `notifier`."""
         channel = self.unsilence_fixture()
         await self.cog._unsilence(channel)
-        notifier.remove_channel.assert_called_once_with(channel)
+        self.cog.notifier.remove_channel.assert_called_once_with(channel)
 
-    @mock.patch.object(Silence, "notifier", create=True)
-    async def test_unsilence_private_removed_muted_channel(self, _):
-        """Channel was removed from overwrites cache on unsilence."""
+    async def test_deleted_cached_overwrite(self):
+        """Channel was deleted from the overwrites cache."""
         channel = self.unsilence_fixture()
         await self.cog._unsilence(channel)
         self.cog.muted_channel_perms.delete.assert_awaited_once_with(channel.id)
 
-    @mock.patch.object(Silence, "notifier", create=True)
-    async def test_unsilence_private_preserves_other_overwrites(self, _):
-        """Channel's other unrelated overwrites were not changed when it was unsilenced."""
+    async def test_preserved_other_overwrites(self):
+        """Channel's other unrelated overwrites were not changed."""
         channel = self.unsilence_fixture()
         overwrite = channel.overwrites_for.return_value
 
@@ -279,15 +315,3 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         del new_overwrite_dict['add_reactions']
 
         self.assertDictEqual(prev_overwrite_dict, new_overwrite_dict)
-
-    def test_cog_unload_cancels_tasks(self):
-        """All scheduled tasks should be cancelled."""
-        self.cog.cog_unload()
-        self.cog.scheduler.cancel_all.assert_called_once_with()
-
-    @mock.patch("bot.cogs.moderation.silence.with_role_check")
-    @mock.patch("bot.cogs.moderation.silence.MODERATION_ROLES", new=(1, 2, 3))
-    def test_cog_check(self, role_check):
-        """Role check is called with `MODERATION_ROLES`"""
-        self.cog.cog_check(self.ctx)
-        role_check.assert_called_once_with(self.ctx, *(1, 2, 3))
