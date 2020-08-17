@@ -184,12 +184,15 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
                 await self.cog._silence(channel, False, None)
                 self.cog.notifier.add_channel.assert_not_called()
 
-    async def test_silence_private_added_muted_channel(self):
-        """Channel was added to `muted_channels` on silence."""
+    async def test_silence_private_cached_perms(self):
+        """Channel's previous overwrites were cached when silenced."""
         channel = MockTextChannel()
-        with mock.patch.object(self.cog, "muted_channels") as muted_channels:
-            await self.cog._silence(channel, False, None)
-        muted_channels.add.assert_called_once_with(channel)
+        overwrite = PermissionOverwrite(send_messages=True, add_reactions=None)
+        overwrite_json = '{"send_messages": true, "add_reactions": null}'
+        channel.overwrites_for.return_value = overwrite
+
+        await self.cog._silence(channel, False, None)
+        self.cog.muted_channel_perms.set.assert_called_once_with(channel.id, overwrite_json)
 
     async def test_unsilence_private_for_false(self):
         """Permissions are not set and `False` is returned in an unsilenced channel."""
