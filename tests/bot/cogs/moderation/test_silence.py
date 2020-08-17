@@ -82,39 +82,45 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         self.bot = MockBot()
         self.cog = Silence(self.bot)
 
+    @autospec(Silence, "_reschedule", pass_mocks=False)
+    @autospec("bot.cogs.moderation.silence", "SilenceNotifier", pass_mocks=False)
     async def test_init_cog_got_guild(self):
         """Bot got guild after it became available."""
         await self.cog._init_cog()
         self.bot.wait_until_guild_available.assert_awaited_once()
         self.bot.get_guild.assert_called_once_with(Guild.id)
 
+    @autospec(Silence, "_reschedule", pass_mocks=False)
+    @autospec("bot.cogs.moderation.silence", "SilenceNotifier", pass_mocks=False)
     async def test_init_cog_got_role(self):
         """Got `Roles.verified` role from guild."""
         await self.cog._init_cog()
         guild = self.bot.get_guild()
         guild.get_role.assert_called_once_with(Roles.verified)
 
+    @autospec(Silence, "_reschedule", pass_mocks=False)
+    @autospec("bot.cogs.moderation.silence", "SilenceNotifier", pass_mocks=False)
     async def test_init_cog_got_channels(self):
         """Got channels from bot."""
         await self.cog._init_cog()
         self.bot.get_channel.called_once_with(Channels.mod_alerts)
         self.bot.get_channel.called_once_with(Channels.mod_log)
 
-    @mock.patch("bot.cogs.moderation.silence.SilenceNotifier")
+    @autospec(Silence, "_reschedule", pass_mocks=False)
+    @autospec("bot.cogs.moderation.silence", "SilenceNotifier")
     async def test_init_cog_got_notifier(self, notifier):
         """Notifier was started with channel."""
         mod_log = MockTextChannel()
         self.bot.get_channel.side_effect = (None, mod_log)
         await self.cog._init_cog()
-        notifier.assert_called_once_with(mod_log)
-        self.bot.get_channel.side_effect = None
+        notifier.assert_called_once_with(self.cog._mod_log_channel)
 
     def test_cog_unload_cancelled_tasks(self):
         """All scheduled tasks were cancelled."""
         self.cog.cog_unload()
         self.cog.scheduler.cancel_all.assert_called_once_with()
 
-    @mock.patch("bot.cogs.moderation.silence.with_role_check")
+    @autospec("bot.cogs.moderation.silence", "with_role_check")
     @mock.patch("bot.cogs.moderation.silence.MODERATION_ROLES", new=(1, 2, 3))
     def test_cog_check(self, role_check):
         """Role check was called with `MODERATION_ROLES`"""
