@@ -115,15 +115,12 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
             (None, f"{Emojis.check_mark} silenced current channel indefinitely.", True,),
             (5, f"{Emojis.cross_mark} current channel is already silenced.", False,),
         )
-        for duration, result_message, _silence_patch_return in test_cases:
-            with self.subTest(
-                silence_duration=duration,
-                result_message=result_message,
-                starting_unsilenced_state=_silence_patch_return
-            ):
-                with mock.patch.object(self.cog, "_silence", return_value=_silence_patch_return):
+        for duration, message, was_silenced in test_cases:
+            self.cog._init_task = mock.AsyncMock()()
+            with self.subTest(was_silenced=was_silenced, message=message, duration=duration):
+                with mock.patch.object(self.cog, "_silence", return_value=was_silenced):
                     await self.cog.silence.callback(self.cog, self.ctx, duration)
-                    self.ctx.send.assert_called_once_with(result_message)
+                    self.ctx.send.assert_called_once_with(message)
             self.ctx.reset_mock()
 
     async def test_unsilence_sent_correct_discord_message(self):
@@ -132,14 +129,12 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
             (True, f"{Emojis.check_mark} unsilenced current channel."),
             (False, f"{Emojis.cross_mark} current channel was not silenced.")
         )
-        for _unsilence_patch_return, result_message in test_cases:
-            with self.subTest(
-                starting_silenced_state=_unsilence_patch_return,
-                result_message=result_message
-            ):
-                with mock.patch.object(self.cog, "_unsilence", return_value=_unsilence_patch_return):
+        for was_unsilenced, message in test_cases:
+            self.cog._init_task = mock.AsyncMock()()
+            with self.subTest(was_unsilenced=was_unsilenced, message=message):
+                with mock.patch.object(self.cog, "_unsilence", return_value=was_unsilenced):
                     await self.cog.unsilence.callback(self.cog, self.ctx)
-                    self.ctx.send.assert_called_once_with(result_message)
+                    self.ctx.channel.send.assert_called_once_with(message)
             self.ctx.reset_mock()
 
     async def test_silence_private_for_false(self):
