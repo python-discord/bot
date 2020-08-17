@@ -174,6 +174,9 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
     async def test_silence_private_notifier(self):
         """Channel should be added to notifier with `persistent` set to `True`, and the other way around."""
         channel = MockTextChannel()
+        overwrite = PermissionOverwrite(send_messages=True, add_reactions=None)
+        channel.overwrites_for.return_value = overwrite
+
         with mock.patch.object(self.cog, "notifier", create=True):
             with self.subTest(persistent=True):
                 await self.cog._silence(channel, True, None)
