@@ -83,7 +83,6 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         self.bot = MockBot()
         self.cog = silence.Silence(self.bot)
 
-    @autospec(silence.Silence, "_reschedule", pass_mocks=False)
     @autospec(silence, "SilenceNotifier", pass_mocks=False)
     async def test_init_cog_got_guild(self):
         """Bot got guild after it became available."""
@@ -91,7 +90,6 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         self.bot.wait_until_guild_available.assert_awaited_once()
         self.bot.get_guild.assert_called_once_with(Guild.id)
 
-    @autospec(silence.Silence, "_reschedule", pass_mocks=False)
     @autospec(silence, "SilenceNotifier", pass_mocks=False)
     async def test_init_cog_got_role(self):
         """Got `Roles.verified` role from guild."""
@@ -99,7 +97,6 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         guild = self.bot.get_guild()
         guild.get_role.assert_called_once_with(Roles.verified)
 
-    @autospec(silence.Silence, "_reschedule", pass_mocks=False)
     @autospec(silence, "SilenceNotifier", pass_mocks=False)
     async def test_init_cog_got_channels(self):
         """Got channels from bot."""
@@ -107,7 +104,6 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         self.bot.get_channel.called_once_with(Channels.mod_alerts)
         self.bot.get_channel.called_once_with(Channels.mod_log)
 
-    @autospec(silence.Silence, "_reschedule", pass_mocks=False)
     @autospec(silence, "SilenceNotifier")
     async def test_init_cog_got_notifier(self, notifier):
         """Notifier was started with channel."""
