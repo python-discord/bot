@@ -127,9 +127,12 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         self.cog._reschedule.assert_awaited_once_with()
 
     def test_cog_unload_cancelled_tasks(self):
-        """All scheduled tasks were cancelled."""
+        """The init task was cancelled."""
+        self.cog._init_task = asyncio.Future()
         self.cog.cog_unload()
-        self.cog.scheduler.cancel_all.assert_called_once_with()
+
+        # It's too annoying to test cancel_all since it's a done callback and wrapped in a lambda.
+        self.assertTrue(self.cog._init_task.cancelled())
 
     @autospec(silence, "with_role_check")
     @mock.patch.object(silence, "MODERATION_ROLES", new=(1, 2, 3))

@@ -231,8 +231,13 @@ class Silence(commands.Cog):
                 self.scheduler.schedule_later(delta, channel_id, self._unsilence_wrapper(channel))
 
     def cog_unload(self) -> None:
-        """Cancel scheduled tasks."""
-        self.scheduler.cancel_all()
+        """Cancel the init task and scheduled tasks."""
+        # It's important to wait for _init_task (specifically for _reschedule) to be cancelled
+        # before cancelling scheduled tasks. Otherwise, it's possible for _reschedule to schedule
+        # more tasks after cancel_all has finished, despite _init_task.cancel being called first.
+        # This is cause cancel() on its own doesn't block until the task is cancelled.
+        self._init_task.cancel()
+        self._init_task.add_done_callback(lambda _: self.scheduler.cancel_all)
 
     # This cannot be static (must have a __func__ attribute).
     def cog_check(self, ctx: Context) -> bool:
