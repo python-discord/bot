@@ -122,7 +122,7 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
     @autospec(silence, "SilenceNotifier", pass_mocks=False)
     async def test_init_cog_rescheduled(self):
         """`_reschedule_` coroutine was awaited."""
-        self.cog._reschedule = mock.create_autospec(self.cog._reschedule, spec_set=True)
+        self.cog._reschedule = mock.create_autospec(self.cog._reschedule)
         await self.cog._init_cog()
         self.cog._reschedule.assert_awaited_once_with()
 
@@ -148,9 +148,9 @@ class RescheduleTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.bot = MockBot()
         self.cog = silence.Silence(self.bot)
-        self.cog._unsilence_wrapper = mock.create_autospec(self.cog._unsilence_wrapper, spec_set=True)
+        self.cog._unsilence_wrapper = mock.create_autospec(self.cog._unsilence_wrapper)
 
-        with mock.patch.object(self.cog, "_reschedule", spec_set=True, autospec=True):
+        with mock.patch.object(self.cog, "_reschedule", autospec=True):
             asyncio.run(self.cog._init_cog())  # Populate instance attributes.
 
     async def test_skipped_missing_channel(self):
