@@ -138,7 +138,8 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.bot = MockBot()
         self.cog = Silence(self.bot)
-        self.cog._init_task = mock.AsyncMock()()
+        self.cog._init_task = asyncio.Future()
+        self.cog._init_task.set_result(None)
 
         asyncio.run(self.cog._init_cog())  # Populate instance attributes.
 
@@ -229,7 +230,8 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.bot = MockBot()
         self.cog = Silence(self.bot)
-        self.cog._init_task = mock.AsyncMock()()
+        self.cog._init_task = asyncio.Future()
+        self.cog._init_task.set_result(None)
 
         perms_cache = mock.create_autospec(self.cog.muted_channel_perms, spec_set=True)
         self.cog.muted_channel_perms = perms_cache
