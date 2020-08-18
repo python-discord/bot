@@ -324,6 +324,11 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
         await self.cog._unsilence(self.channel)
         self.cog.muted_channel_times.delete.assert_awaited_once_with(self.channel.id)
 
+    async def test_cancelled_task(self):
+        """The scheduled unsilence task should be cancelled."""
+        await self.cog._unsilence(self.channel)
+        self.cog.scheduler.cancel.assert_called_once_with(self.channel.id)
+
     async def test_preserved_other_overwrites(self):
         """Channel's other unrelated overwrites were not changed."""
         prev_overwrite_dict = dict(self.overwrite)
