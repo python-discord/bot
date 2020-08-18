@@ -319,6 +319,11 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
         await self.cog._unsilence(self.channel)
         self.cog.muted_channel_perms.delete.assert_awaited_once_with(self.channel.id)
 
+    async def test_deleted_cached_time(self):
+        """Channel was deleted from the timestamp cache."""
+        await self.cog._unsilence(self.channel)
+        self.cog.muted_channel_times.delete.assert_awaited_once_with(self.channel.id)
+
     async def test_preserved_other_overwrites(self):
         """Channel's other unrelated overwrites were not changed."""
         prev_overwrite_dict = dict(self.overwrite)
