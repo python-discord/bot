@@ -235,6 +235,12 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         self.cog.muted_channel_times.set.assert_awaited_once_with(ctx.channel.id, timestamp)
         datetime_mock.now.assert_called_once_with(tz=timezone.utc)  # Ensure it's using an aware dt.
 
+    async def test_cached_indefinite_time(self):
+        """A value of -1 was cached for a permanent silence."""
+        ctx = MockContext(channel=self.channel)
+        await self.cog.silence.callback(self.cog, ctx, None)
+        self.cog.muted_channel_times.set.assert_awaited_once_with(ctx.channel.id, -1)
+
 
 @autospec(Silence, "muted_channel_times", pass_mocks=False)
 class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
