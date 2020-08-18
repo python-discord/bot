@@ -134,6 +134,31 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
 
 
 @autospec(silence.Silence, "muted_channel_perms", "muted_channel_times", pass_mocks=False)
+class RescheduleTests(unittest.IsolatedAsyncioTestCase):
+    """Tests for the rescheduling of cached unsilences."""
+
+    @autospec(silence, "Scheduler", "SilenceNotifier", pass_mocks=False)
+    def setUp(self):
+        self.bot = MockBot()
+        self.cog = silence.Silence(self.bot)
+        self.cog._unsilence_wrapper = mock.create_autospec(self.cog._unsilence_wrapper, spec_set=True)
+
+        with mock.patch.object(self.cog, "_reschedule", spec_set=True, autospec=True):
+            asyncio.run(self.cog._init_cog())  # Populate instance attributes.
+
+    async def test_skipped_missing_channel(self):
+        """Did nothing because the channel couldn't be retrieved."""
+        self.cog.muted_channel_times.items.return_value = [(123, -1), (123, 1), (123, 100000000000)]
+        self.bot.get_channel.return_value = None
+
+        await self.cog._reschedule()
+
+        self.cog.notifier.add_channel.assert_not_called()
+        self.cog._unsilence_wrapper.assert_not_called()
+        self.cog.scheduler.schedule_later.assert_not_called()
+
+
+@autospec(silence.Silence, "muted_channel_perms", "muted_channel_times", pass_mocks=False)
 class SilenceTests(unittest.IsolatedAsyncioTestCase):
     """Tests for the silence command and its related helper methods."""
 
