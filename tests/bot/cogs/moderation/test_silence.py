@@ -142,6 +142,10 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
 
         asyncio.run(self.cog._init_cog())  # Populate instance attributes.
 
+        self.channel = MockTextChannel()
+        self.overwrite = PermissionOverwrite(stream=True, send_messages=True, add_reactions=False)
+        self.channel.overwrites_for.return_value = self.overwrite
+
     async def test_sent_correct_message(self):
         """Appropriate failure/success message was sent by the command."""
         test_cases = (
@@ -175,27 +179,19 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_silenced_channel(self):
         """Channel had `send_message` and `add_reactions` permissions revoked for verified role."""
-        channel = MockTextChannel()
-        overwrite = PermissionOverwrite(send_messages=True, add_reactions=None)
-        channel.overwrites_for.return_value = overwrite
-
-        self.assertTrue(await self.cog._silence(channel, False, None))
-        self.assertFalse(overwrite.send_messages)
-        self.assertFalse(overwrite.add_reactions)
-        channel.set_permissions.assert_awaited_once_with(
+        self.assertTrue(await self.cog._silence(self.channel, False, None))
+        self.assertFalse(self.overwrite.send_messages)
+        self.assertFalse(self.overwrite.add_reactions)
+        self.channel.set_permissions.assert_awaited_once_with(
             self.cog._verified_role,
-            overwrite=overwrite
+            overwrite=self.overwrite
         )
 
     async def test_preserved_other_overwrites(self):
         """Channel's other unrelated overwrites were not changed."""
-        channel = MockTextChannel()
-        overwrite = PermissionOverwrite(stream=True, attach_files=False)
-        channel.overwrites_for.return_value = overwrite
-
-        prev_overwrite_dict = dict(overwrite)
-        await self.cog._silence(channel, False, None)
-        new_overwrite_dict = dict(overwrite)
+        prev_overwrite_dict = dict(self.overwrite)
+        await self.cog._silence(self.channel, False, None)
+        new_overwrite_dict = dict(self.overwrite)
 
         # Remove 'send_messages' & 'add_reactions' keys because they were changed by the method.
         del prev_overwrite_dict['send_messages']
@@ -207,29 +203,21 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_added_removed_notifier(self):
         """Channel was added to notifier if `persistent` was `True`, and removed if `False`."""
-        channel = MockTextChannel()
-        overwrite = PermissionOverwrite(send_messages=True, add_reactions=None)
-        channel.overwrites_for.return_value = overwrite
-
         with mock.patch.object(self.cog, "notifier", create=True):
             with self.subTest(persistent=True):
-                await self.cog._silence(channel, True, None)
+                await self.cog._silence(self.channel, True, None)
                 self.cog.notifier.add_channel.assert_called_once()
 
         with mock.patch.object(self.cog, "notifier", create=True):
             with self.subTest(persistent=False):
-                await self.cog._silence(channel, False, None)
+                await self.cog._silence(self.channel, False, None)
                 self.cog.notifier.add_channel.assert_not_called()
 
     async def test_cached_previous_overwrites(self):
         """Channel's previous overwrites were cached."""
-        channel = MockTextChannel()
-        overwrite = PermissionOverwrite(send_messages=True, add_reactions=None)
-        overwrite_json = '{"send_messages": true, "add_reactions": null}'
-        channel.overwrites_for.return_value = overwrite
-
-        await self.cog._silence(channel, False, None)
-        self.cog.muted_channel_perms.set.assert_called_once_with(channel.id, overwrite_json)
+        overwrite_json = '{"send_messages": true, "add_reactions": false}'
+        await self.cog._silence(self.channel, False, None)
+        self.cog.muted_channel_perms.set.assert_called_once_with(self.channel.id, overwrite_json)
 
 
 @autospec(Silence, "muted_channel_times", pass_mocks=False)
