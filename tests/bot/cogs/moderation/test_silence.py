@@ -11,6 +11,13 @@ from bot.constants import Channels, Guild, Roles
 from tests.helpers import MockBot, MockContext, MockTextChannel, autospec
 
 
+# Have to subclass it because builtins can't be patched.
+class PatchedDatetime(datetime):
+    """A datetime object with a mocked now() function."""
+
+    now = mock.create_autospec(datetime, "now")
+
+
 class SilenceNotifierTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.alert_channel = MockTextChannel()
@@ -184,6 +191,28 @@ class RescheduleTests(unittest.IsolatedAsyncioTestCase):
 
         self.cog.notifier.add_channel.assert_not_called()
         self.cog.scheduler.schedule_later.assert_not_called()
+
+    @mock.patch.object(silence, "datetime", new=PatchedDatetime)
+    async def test_rescheduled_active(self):
+        """Rescheduled active silences."""
+        channels = [MockTextChannel(id=123), MockTextChannel(id=456)]
+        self.bot.get_channel.side_effect = channels
+        self.cog.muted_channel_times.items.return_value = [(123, 2000), (456, 3000)]
+        silence.datetime.now.return_value = datetime.fromtimestamp(1000, tz=timezone.utc)
+
+        self.cog._unsilence_wrapper = mock.MagicMock()
+        unsilence_return = self.cog._unsilence_wrapper.return_value
+
+        await self.cog._reschedule()
+
+        # Yuck.
+        calls = [mock.call(1000, 123, unsilence_return), mock.call(2000, 456, unsilence_return)]
+        self.cog.scheduler.schedule_later.assert_has_calls(calls)
+
+        unsilence_calls = [mock.call(channel) for channel in channels]
+        self.cog._unsilence_wrapper.assert_has_calls(unsilence_calls)
+
+        self.cog.notifier.add_channel.assert_not_called()
 
 
 @autospec(silence.Silence, "muted_channel_perms", "muted_channel_times", pass_mocks=False)
