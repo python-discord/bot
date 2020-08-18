@@ -112,6 +112,13 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         await self.cog._init_cog()
         notifier.assert_called_once_with(self.cog._mod_log_channel)
 
+    @autospec(silence, "SilenceNotifier", pass_mocks=False)
+    async def test_init_cog_rescheduled(self):
+        """`_reschedule_` coroutine was awaited."""
+        self.cog._reschedule = mock.create_autospec(self.cog._reschedule, spec_set=True)
+        await self.cog._init_cog()
+        self.cog._reschedule.assert_awaited_once_with()
+
     def test_cog_unload_cancelled_tasks(self):
         """All scheduled tasks were cancelled."""
         self.cog.cog_unload()
