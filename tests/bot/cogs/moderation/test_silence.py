@@ -7,7 +7,6 @@ from unittest.mock import Mock
 from discord import PermissionOverwrite
 
 from bot.cogs.moderation import silence
-from bot.cogs.moderation.silence import Silence, SilenceNotifier
 from bot.constants import Channels, Guild, Roles
 from tests.helpers import MockBot, MockContext, MockTextChannel, autospec
 
@@ -15,7 +14,7 @@ from tests.helpers import MockBot, MockContext, MockTextChannel, autospec
 class SilenceNotifierTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.alert_channel = MockTextChannel()
-        self.notifier = SilenceNotifier(self.alert_channel)
+        self.notifier = silence.SilenceNotifier(self.alert_channel)
         self.notifier.stop = self.notifier_stop_mock = Mock()
         self.notifier.start = self.notifier_start_mock = Mock()
 
@@ -75,41 +74,41 @@ class SilenceNotifierTests(unittest.IsolatedAsyncioTestCase):
                     self.alert_channel.send.assert_not_called()
 
 
-@autospec(Silence, "muted_channel_perms", "muted_channel_times", pass_mocks=False)
+@autospec(silence.Silence, "muted_channel_perms", "muted_channel_times", pass_mocks=False)
 class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
     """Tests for the general functionality of the Silence cog."""
 
-    @autospec("bot.cogs.moderation.silence", "Scheduler", pass_mocks=False)
+    @autospec(silence, "Scheduler", pass_mocks=False)
     def setUp(self) -> None:
         self.bot = MockBot()
-        self.cog = Silence(self.bot)
+        self.cog = silence.Silence(self.bot)
 
-    @autospec(Silence, "_reschedule", pass_mocks=False)
-    @autospec("bot.cogs.moderation.silence", "SilenceNotifier", pass_mocks=False)
+    @autospec(silence.Silence, "_reschedule", pass_mocks=False)
+    @autospec(silence, "SilenceNotifier", pass_mocks=False)
     async def test_init_cog_got_guild(self):
         """Bot got guild after it became available."""
         await self.cog._init_cog()
         self.bot.wait_until_guild_available.assert_awaited_once()
         self.bot.get_guild.assert_called_once_with(Guild.id)
 
-    @autospec(Silence, "_reschedule", pass_mocks=False)
-    @autospec("bot.cogs.moderation.silence", "SilenceNotifier", pass_mocks=False)
+    @autospec(silence.Silence, "_reschedule", pass_mocks=False)
+    @autospec(silence, "SilenceNotifier", pass_mocks=False)
     async def test_init_cog_got_role(self):
         """Got `Roles.verified` role from guild."""
         await self.cog._init_cog()
         guild = self.bot.get_guild()
         guild.get_role.assert_called_once_with(Roles.verified)
 
-    @autospec(Silence, "_reschedule", pass_mocks=False)
-    @autospec("bot.cogs.moderation.silence", "SilenceNotifier", pass_mocks=False)
+    @autospec(silence.Silence, "_reschedule", pass_mocks=False)
+    @autospec(silence, "SilenceNotifier", pass_mocks=False)
     async def test_init_cog_got_channels(self):
         """Got channels from bot."""
         await self.cog._init_cog()
         self.bot.get_channel.called_once_with(Channels.mod_alerts)
         self.bot.get_channel.called_once_with(Channels.mod_log)
 
-    @autospec(Silence, "_reschedule", pass_mocks=False)
-    @autospec("bot.cogs.moderation.silence", "SilenceNotifier")
+    @autospec(silence.Silence, "_reschedule", pass_mocks=False)
+    @autospec(silence, "SilenceNotifier")
     async def test_init_cog_got_notifier(self, notifier):
         """Notifier was started with channel."""
         mod_log = MockTextChannel()
@@ -122,8 +121,8 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         self.cog.cog_unload()
         self.cog.scheduler.cancel_all.assert_called_once_with()
 
-    @autospec("bot.cogs.moderation.silence", "with_role_check")
-    @mock.patch("bot.cogs.moderation.silence.MODERATION_ROLES", new=(1, 2, 3))
+    @autospec(silence, "with_role_check")
+    @mock.patch.object(silence, "MODERATION_ROLES", new=(1, 2, 3))
     def test_cog_check(self, role_check):
         """Role check was called with `MODERATION_ROLES`"""
         ctx = MockContext()
@@ -131,15 +130,15 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         role_check.assert_called_once_with(ctx, *(1, 2, 3))
 
 
-@autospec(Silence, "muted_channel_perms", "muted_channel_times", pass_mocks=False)
+@autospec(silence.Silence, "muted_channel_perms", "muted_channel_times", pass_mocks=False)
 class SilenceTests(unittest.IsolatedAsyncioTestCase):
     """Tests for the silence command and its related helper methods."""
 
-    @autospec(Silence, "_reschedule", pass_mocks=False)
-    @autospec("bot.cogs.moderation.silence", "Scheduler", "SilenceNotifier", pass_mocks=False)
+    @autospec(silence.Silence, "_reschedule", pass_mocks=False)
+    @autospec(silence, "Scheduler", "SilenceNotifier", pass_mocks=False)
     def setUp(self) -> None:
         self.bot = MockBot()
-        self.cog = Silence(self.bot)
+        self.cog = silence.Silence(self.bot)
         self.cog._init_task = asyncio.Future()
         self.cog._init_task.set_result(None)
 
@@ -222,7 +221,7 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         await self.cog._silence(self.channel, False, None)
         self.cog.muted_channel_perms.set.assert_called_once_with(self.channel.id, overwrite_json)
 
-    @autospec("bot.cogs.moderation.silence", "datetime")
+    @autospec(silence, "datetime")
     async def test_cached_unsilence_time(self, datetime_mock):
         """The UTC POSIX timestamp for the unsilence was cached."""
         now_timestamp = 100
@@ -255,15 +254,15 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         self.cog.scheduler.schedule_later.assert_not_called()
 
 
-@autospec(Silence, "muted_channel_times", pass_mocks=False)
+@autospec(silence.Silence, "muted_channel_times", pass_mocks=False)
 class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
     """Tests for the unsilence command and its related helper methods."""
 
-    @autospec(Silence, "_reschedule", pass_mocks=False)
-    @autospec("bot.cogs.moderation.silence", "Scheduler", "SilenceNotifier", pass_mocks=False)
+    @autospec(silence.Silence, "_reschedule", pass_mocks=False)
+    @autospec(silence, "Scheduler", "SilenceNotifier", pass_mocks=False)
     def setUp(self) -> None:
         self.bot = MockBot(get_channel=lambda _: MockTextChannel())
-        self.cog = Silence(self.bot)
+        self.cog = silence.Silence(self.bot)
         self.cog._init_task = asyncio.Future()
         self.cog._init_task.set_result(None)
 
