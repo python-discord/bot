@@ -6,8 +6,9 @@ from unittest.mock import Mock
 
 from discord import PermissionOverwrite
 
+from bot.cogs.moderation import silence
 from bot.cogs.moderation.silence import Silence, SilenceNotifier
-from bot.constants import Channels, Emojis, Guild, Roles
+from bot.constants import Channels, Guild, Roles
 from tests.helpers import MockBot, MockContext, MockTextChannel, autospec
 
 
@@ -151,9 +152,9 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
     async def test_sent_correct_message(self):
         """Appropriate failure/success message was sent by the command."""
         test_cases = (
-            (0.0001, f"{Emojis.check_mark} silenced current channel for 0.0001 minute(s).", True,),
-            (None, f"{Emojis.check_mark} silenced current channel indefinitely.", True,),
-            (5, f"{Emojis.cross_mark} current channel is already silenced.", False,),
+            (0.0001, silence.MSG_SILENCE_SUCCESS.format(duration=0.0001), True,),
+            (None, silence.MSG_SILENCE_PERMANENT, True,),
+            (5, silence.MSG_SILENCE_FAIL, False,),
         )
         for duration, message, was_silenced in test_cases:
             ctx = MockContext()
@@ -280,8 +281,8 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
     async def test_sent_correct_message(self):
         """Appropriate failure/success message was sent by the command."""
         test_cases = (
-            (True, f"{Emojis.check_mark} unsilenced current channel."),
-            (False, f"{Emojis.cross_mark} current channel was not silenced.")
+            (True, silence.MSG_UNSILENCE_SUCCESS),
+            (False, silence.MSG_UNSILENCE_FAIL)
         )
         for was_unsilenced, message in test_cases:
             ctx = MockContext()

@@ -17,6 +17,17 @@ from bot.utils.scheduling import Scheduler
 
 log = logging.getLogger(__name__)
 
+MSG_SILENCE_FAIL = f"{Emojis.cross_mark} current channel is already silenced."
+MSG_SILENCE_PERMANENT = f"{Emojis.check_mark} silenced current channel indefinitely."
+MSG_SILENCE_SUCCESS = Emojis.check_mark + " silenced current channel for {duration} minute(s)."
+
+MSG_UNSILENCE_FAIL = f"{Emojis.cross_mark} current channel was not silenced."
+MSG_UNSILENCE_MANUAL = (
+    f"{Emojis.cross_mark} current channel was not unsilenced because the current "
+    f"overwrites were set manually. Please edit them manually to unsilence."
+)
+MSG_UNSILENCE_SUCCESS = f"{Emojis.check_mark} unsilenced current channel."
+
 
 class SilenceNotifier(tasks.Loop):
     """Loop notifier for posting notices to `alert_channel` containing added channels."""
@@ -96,15 +107,15 @@ class Silence(commands.Cog):
         log.debug(f"{ctx.author} is silencing channel #{ctx.channel}.")
 
         if not await self._silence(ctx.channel, persistent=(duration is None), duration=duration):
-            await ctx.send(f"{Emojis.cross_mark} current channel is already silenced.")
+            await ctx.send(MSG_SILENCE_FAIL)
             return
 
         if duration is None:
-            await ctx.send(f"{Emojis.check_mark} silenced current channel indefinitely.")
+            await ctx.send(MSG_SILENCE_PERMANENT)
             await self.muted_channel_times.set(ctx.channel.id, -1)
             return
 
-        await ctx.send(f"{Emojis.check_mark} silenced current channel for {duration} minute(s).")
+        await ctx.send(MSG_SILENCE_SUCCESS.format(duration=duration))
 
         self.scheduler.schedule_later(duration * 60, ctx.channel.id, ctx.invoke(self.unsilence))
         unsilence_time = (datetime.now(tz=timezone.utc) + timedelta(minutes=duration))
@@ -126,14 +137,11 @@ class Silence(commands.Cog):
         if not await self._unsilence(channel):
             overwrite = channel.overwrites_for(self._verified_role)
             if overwrite.send_messages is False and overwrite.add_reactions is False:
-                await channel.send(
-                    f"{Emojis.cross_mark} current channel was not unsilenced because the current "
-                    f"overwrites were set manually. Please edit them manually to unsilence."
-                )
+                await channel.send(MSG_UNSILENCE_MANUAL)
             else:
-                await channel.send(f"{Emojis.cross_mark} current channel was not silenced.")
+                await channel.send(MSG_UNSILENCE_FAIL)
         else:
-            await channel.send(f"{Emojis.check_mark} unsilenced current channel.")
+            await channel.send(MSG_UNSILENCE_SUCCESS)
 
     async def _silence(self, channel: TextChannel, persistent: bool, duration: Optional[int]) -> bool:
         """
