@@ -1,5 +1,6 @@
 import asyncio
 import unittest
+from datetime import datetime, timezone
 from unittest import mock
 from unittest.mock import Mock
 
@@ -219,6 +220,20 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         overwrite_json = '{"send_messages": true, "add_reactions": false}'
         await self.cog._silence(self.channel, False, None)
         self.cog.muted_channel_perms.set.assert_called_once_with(self.channel.id, overwrite_json)
+
+    @autospec("bot.cogs.moderation.silence", "datetime")
+    async def test_cached_unsilence_time(self, datetime_mock):
+        """The UTC POSIX timestamp for the unsilence was cached."""
+        now_timestamp = 100
+        duration = 15
+        timestamp = now_timestamp + duration * 60
+        datetime_mock.now.return_value = datetime.fromtimestamp(now_timestamp, tz=timezone.utc)
+
+        ctx = MockContext(channel=self.channel)
+        await self.cog.silence.callback(self.cog, ctx, duration)
+
+        self.cog.muted_channel_times.set.assert_awaited_once_with(ctx.channel.id, timestamp)
+        datetime_mock.now.assert_called_once_with(tz=timezone.utc)  # Ensure it's using an aware dt.
 
 
 @autospec(Silence, "muted_channel_times", pass_mocks=False)
