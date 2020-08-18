@@ -324,6 +324,13 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(self.overwrite.send_messages)
         self.assertIsNone(self.overwrite.add_reactions)
 
+    async def test_cache_miss_sent_mod_alert(self):
+        """A message was sent to the mod alerts channel."""
+        self.cog.muted_channel_perms.get.return_value = None
+
+        await self.cog._unsilence(self.channel)
+        self.cog._mod_alerts_channel.send.assert_awaited_once()
+
     async def test_removed_notifier(self):
         """Channel was removed from `notifier`."""
         await self.cog._unsilence(self.channel)
