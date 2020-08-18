@@ -72,11 +72,11 @@ class Silence(commands.Cog):
 
     # Maps muted channel IDs to their previous overwrites for send_message and add_reactions.
     # Overwrites are stored as JSON.
-    muted_channel_perms = RedisCache()
+    previous_overwrites = RedisCache()
 
     # Maps muted channel IDs to POSIX timestamps of when they'll be unsilenced.
     # A timestamp equal to -1 means it's indefinite.
-    muted_channel_times = RedisCache()
+    unsilence_timestamps = RedisCache()
 
     def __init__(self, bot: Bot):
         self.bot = bot
@@ -112,14 +112,14 @@ class Silence(commands.Cog):
 
         if duration is None:
             await ctx.send(MSG_SILENCE_PERMANENT)
-            await self.muted_channel_times.set(ctx.channel.id, -1)
+            await self.unsilence_timestamps.set(ctx.channel.id, -1)
             return
 
         await ctx.send(MSG_SILENCE_SUCCESS.format(duration=duration))
 
         self.scheduler.schedule_later(duration * 60, ctx.channel.id, ctx.invoke(self.unsilence))
         unsilence_time = (datetime.now(tz=timezone.utc) + timedelta(minutes=duration))
-        await self.muted_channel_times.set(ctx.channel.id, unsilence_time.timestamp())
+        await self.unsilence_timestamps.set(ctx.channel.id, unsilence_time.timestamp())
 
     @commands.command(aliases=("unhush",))
     async def unsilence(self, ctx: Context) -> None:
@@ -160,7 +160,7 @@ class Silence(commands.Cog):
 
         overwrite.update(send_messages=False, add_reactions=False)
         await channel.set_permissions(self._verified_role, overwrite=overwrite)
-        await self.muted_channel_perms.set(channel.id, json.dumps(prev_overwrites))
+        await self.previous_overwrites.set(channel.id, json.dumps(prev_overwrites))
 
         if persistent:
             log.info(f"Silenced #{channel} ({channel.id}) indefinitely.")
@@ -180,7 +180,7 @@ class Silence(commands.Cog):
 
         Return `True` if channel permissions were changed, `False` otherwise.
         """
-        prev_overwrites = await self.muted_channel_perms.get(channel.id)
+        prev_overwrites = await self.previous_overwrites.get(channel.id)
         if channel.id not in self.scheduler and prev_overwrites is None:
             log.info(f"Tried to unsilence channel #{channel} ({channel.id}) but the channel was not silenced.")
             return False
@@ -197,8 +197,8 @@ class Silence(commands.Cog):
 
         self.scheduler.cancel(channel.id)
         self.notifier.remove_channel(channel)
-        await self.muted_channel_perms.delete(channel.id)
-        await self.muted_channel_times.delete(channel.id)
+        await self.previous_overwrites.delete(channel.id)
+        await self.unsilence_timestamps.delete(channel.id)
 
         if prev_overwrites is None:
             await self._mod_alerts_channel.send(
@@ -211,7 +211,7 @@ class Silence(commands.Cog):
 
     async def _reschedule(self) -> None:
         """Reschedule unsilencing of active silences and add permanent ones to the notifier."""
-        for channel_id, timestamp in await self.muted_channel_times.items():
+        for channel_id, timestamp in await self.unsilence_timestamps.items():
             channel = self.bot.get_channel(channel_id)
             if channel is None:
                 log.info(f"Can't reschedule silence for {channel_id}: channel not found.")
