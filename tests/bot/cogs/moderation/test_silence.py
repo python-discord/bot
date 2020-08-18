@@ -261,7 +261,7 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
     @autospec(Silence, "_reschedule", pass_mocks=False)
     @autospec("bot.cogs.moderation.silence", "Scheduler", "SilenceNotifier", pass_mocks=False)
     def setUp(self) -> None:
-        self.bot = MockBot()
+        self.bot = MockBot(get_channel=lambda _: MockTextChannel())
         self.cog = Silence(self.bot)
         self.cog._init_task = asyncio.Future()
         self.cog._init_task.set_result(None)
@@ -271,7 +271,8 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
 
         asyncio.run(self.cog._init_cog())  # Populate instance attributes.
 
-        perms_cache.get.return_value = '{"send_messages": true, "add_reactions": null}'
+        self.cog.scheduler.__contains__.return_value = True
+        perms_cache.get.return_value = '{"send_messages": true, "add_reactions": false}'
         self.channel = MockTextChannel()
         self.overwrite = PermissionOverwrite(stream=True, send_messages=False, add_reactions=False)
         self.channel.overwrites_for.return_value = self.overwrite
@@ -298,15 +299,29 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(await self.cog._unsilence(channel))
         channel.set_permissions.assert_not_called()
 
-    async def test_unsilenced_channel(self):
+    async def test_restored_overwrites(self):
         """Channel's `send_message` and `add_reactions` overwrites were restored."""
         await self.cog._unsilence(self.channel)
         self.channel.set_permissions.assert_awaited_once_with(
-            self.cog._verified_role, overwrite=self.overwrite
+            self.cog._verified_role,
+            overwrite=self.overwrite,
         )
 
         # Recall that these values are determined by the fixture.
         self.assertTrue(self.overwrite.send_messages)
+        self.assertFalse(self.overwrite.add_reactions)
+
+    async def test_cache_miss_used_default_overwrites(self):
+        """Both overwrites were set to None due previous values not being found in the cache."""
+        self.cog.muted_channel_perms.get.return_value = None
+
+        await self.cog._unsilence(self.channel)
+        self.channel.set_permissions.assert_awaited_once_with(
+            self.cog._verified_role,
+            overwrite=self.overwrite,
+        )
+
+        self.assertIsNone(self.overwrite.send_messages)
         self.assertIsNone(self.overwrite.add_reactions)
 
     async def test_removed_notifier(self):
