@@ -232,7 +232,7 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         self.cog.muted_channel_perms.set.assert_called_once_with(channel.id, overwrite_json)
 
 
-@autospec(Silence, "muted_channel_perms", "muted_channel_times", pass_mocks=False)
+@autospec(Silence, "muted_channel_times", pass_mocks=False)
 class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
     """Tests for the unsilence command and its related helper methods."""
 
@@ -243,19 +243,15 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
         self.cog = Silence(self.bot)
         self.cog._init_task = mock.AsyncMock()()
 
+        perms_cache = mock.create_autospec(self.cog.muted_channel_perms, spec_set=True)
+        self.cog.muted_channel_perms = perms_cache
+
         asyncio.run(self.cog._init_cog())  # Populate instance attributes.
 
-    def unsilence_fixture(self) -> MockTextChannel:
-        """Setup mocks for a successful `_unsilence` call. Return the mocked channel."""
-        overwrite_json = '{"send_messages": true, "add_reactions": null}'
-        self.cog.muted_channel_perms.get.return_value = overwrite_json
-
-        # stream=True just to have at least one other overwrite not be the default value.
-        channel = MockTextChannel()
-        overwrite = PermissionOverwrite(stream=True, send_messages=False, add_reactions=False)
-        channel.overwrites_for.return_value = overwrite
-
-        return channel
+        perms_cache.get.return_value = '{"send_messages": true, "add_reactions": null}'
+        self.channel = MockTextChannel()
+        self.overwrite = PermissionOverwrite(stream=True, send_messages=False, add_reactions=False)
+        self.channel.overwrites_for.return_value = self.overwrite
 
     async def test_sent_correct_message(self):
         """Appropriate failure/success message was sent by the command."""
@@ -281,38 +277,30 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_unsilenced_channel(self):
         """Channel's `send_message` and `add_reactions` overwrites were restored."""
-        channel = self.unsilence_fixture()
-        overwrite = channel.overwrites_for.return_value
-
-        await self.cog._unsilence(channel)
-        channel.set_permissions.assert_awaited_once_with(
-            self.cog._verified_role, overwrite=overwrite
+        await self.cog._unsilence(self.channel)
+        self.channel.set_permissions.assert_awaited_once_with(
+            self.cog._verified_role, overwrite=self.overwrite
         )
 
         # Recall that these values are determined by the fixture.
-        self.assertTrue(overwrite.send_messages)
-        self.assertIsNone(overwrite.add_reactions)
+        self.assertTrue(self.overwrite.send_messages)
+        self.assertIsNone(self.overwrite.add_reactions)
 
     async def test_removed_notifier(self):
         """Channel was removed from `notifier`."""
-        channel = self.unsilence_fixture()
-        await self.cog._unsilence(channel)
-        self.cog.notifier.remove_channel.assert_called_once_with(channel)
+        await self.cog._unsilence(self.channel)
+        self.cog.notifier.remove_channel.assert_called_once_with(self.channel)
 
     async def test_deleted_cached_overwrite(self):
         """Channel was deleted from the overwrites cache."""
-        channel = self.unsilence_fixture()
-        await self.cog._unsilence(channel)
-        self.cog.muted_channel_perms.delete.assert_awaited_once_with(channel.id)
+        await self.cog._unsilence(self.channel)
+        self.cog.muted_channel_perms.delete.assert_awaited_once_with(self.channel.id)
 
     async def test_preserved_other_overwrites(self):
         """Channel's other unrelated overwrites were not changed."""
-        channel = self.unsilence_fixture()
-        overwrite = channel.overwrites_for.return_value
-
-        prev_overwrite_dict = dict(overwrite)
-        await self.cog._unsilence(channel)
-        new_overwrite_dict = dict(overwrite)
+        prev_overwrite_dict = dict(self.overwrite)
+        await self.cog._unsilence(self.channel)
+        new_overwrite_dict = dict(self.overwrite)
 
         # Remove 'send_messages' & 'add_reactions' keys because they were changed by the method.
         del prev_overwrite_dict['send_messages']
