@@ -157,6 +157,20 @@ class RescheduleTests(unittest.IsolatedAsyncioTestCase):
         self.cog._unsilence_wrapper.assert_not_called()
         self.cog.scheduler.schedule_later.assert_not_called()
 
+    async def test_added_permanent_to_notifier(self):
+        """Permanently silenced channels were added to the notifier."""
+        channels = [MockTextChannel(id=123), MockTextChannel(id=456)]
+        self.bot.get_channel.side_effect = channels
+        self.cog.muted_channel_times.items.return_value = [(123, -1), (456, -1)]
+
+        await self.cog._reschedule()
+
+        self.cog.notifier.add_channel.assert_any_call(channels[0])
+        self.cog.notifier.add_channel.assert_any_call(channels[1])
+
+        self.cog._unsilence_wrapper.assert_not_called()
+        self.cog.scheduler.schedule_later.assert_not_called()
+
 
 @autospec(silence.Silence, "muted_channel_perms", "muted_channel_times", pass_mocks=False)
 class SilenceTests(unittest.IsolatedAsyncioTestCase):
