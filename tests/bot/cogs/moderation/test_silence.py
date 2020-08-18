@@ -280,14 +280,17 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_sent_correct_message(self):
         """Appropriate failure/success message was sent by the command."""
+        unsilenced_overwrite = PermissionOverwrite(send_messages=True, add_reactions=True)
         test_cases = (
-            (True, silence.MSG_UNSILENCE_SUCCESS),
-            (False, silence.MSG_UNSILENCE_FAIL)
+            (True, silence.MSG_UNSILENCE_SUCCESS, unsilenced_overwrite),
+            (False, silence.MSG_UNSILENCE_FAIL, unsilenced_overwrite),
+            (False, silence.MSG_UNSILENCE_MANUAL, self.overwrite),
         )
-        for was_unsilenced, message in test_cases:
+        for was_unsilenced, message, overwrite in test_cases:
             ctx = MockContext()
-            with self.subTest(was_unsilenced=was_unsilenced, message=message):
+            with self.subTest(was_unsilenced=was_unsilenced, message=message, overwrite=overwrite):
                 with mock.patch.object(self.cog, "_unsilence", return_value=was_unsilenced):
+                    ctx.channel.overwrites_for.return_value = overwrite
                     await self.cog.unsilence.callback(self.cog, ctx)
                     ctx.channel.send.assert_called_once_with(message)
 
