@@ -352,15 +352,19 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
         self.cog.scheduler.cancel.assert_called_once_with(self.channel.id)
 
     async def test_preserved_other_overwrites(self):
-        """Channel's other unrelated overwrites were not changed."""
-        prev_overwrite_dict = dict(self.overwrite)
-        await self.cog._unsilence(self.channel)
-        new_overwrite_dict = dict(self.overwrite)
+        """Channel's other unrelated overwrites were not changed, including cache misses."""
+        for overwrite_json in ('{"send_messages": true, "add_reactions": null}', None):
+            with self.subTest(overwrite_json=overwrite_json):
+                self.cog.muted_channel_perms.get.return_value = overwrite_json
 
-        # Remove 'send_messages' & 'add_reactions' keys because they were changed by the method.
-        del prev_overwrite_dict['send_messages']
-        del prev_overwrite_dict['add_reactions']
-        del new_overwrite_dict['send_messages']
-        del new_overwrite_dict['add_reactions']
+                prev_overwrite_dict = dict(self.overwrite)
+                await self.cog._unsilence(self.channel)
+                new_overwrite_dict = dict(self.overwrite)
 
-        self.assertDictEqual(prev_overwrite_dict, new_overwrite_dict)
+                # Remove these keys because they were modified by the unsilence.
+                del prev_overwrite_dict['send_messages']
+                del prev_overwrite_dict['add_reactions']
+                del new_overwrite_dict['send_messages']
+                del new_overwrite_dict['add_reactions']
+
+                self.assertDictEqual(prev_overwrite_dict, new_overwrite_dict)
