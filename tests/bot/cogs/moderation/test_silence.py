@@ -241,6 +241,18 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         await self.cog.silence.callback(self.cog, ctx, None)
         self.cog.muted_channel_times.set.assert_awaited_once_with(ctx.channel.id, -1)
 
+    async def test_scheduled_task(self):
+        """An unsilence task was scheduled."""
+        ctx = MockContext(channel=self.channel)
+        await self.cog.silence.callback(self.cog, ctx)
+        self.cog.scheduler.schedule_later.assert_called_once()
+
+    async def test_permanent_not_scheduled(self):
+        """A task was not scheduled for a permanent silence."""
+        ctx = MockContext(channel=self.channel)
+        await self.cog.silence.callback(self.cog, ctx, None)
+        self.cog.scheduler.schedule_later.assert_not_called()
+
 
 @autospec(Silence, "muted_channel_times", pass_mocks=False)
 class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
