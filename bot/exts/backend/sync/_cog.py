@@ -8,7 +8,7 @@ from discord.ext.commands import Cog, Context
 from bot import constants
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from . import _syncers
+from bot.exts.backend.sync import _syncers
 
 log = logging.getLogger(__name__)
 

@@ -12,10 +12,10 @@ from bot.bot import Bot
 from bot.constants import Event
 from bot.converters import Expiry, FetchedMember
 from bot.decorators import respect_role_hierarchy
+from bot.exts.moderation.infraction import _utils
+from bot.exts.moderation.infraction._scheduler import InfractionScheduler
+from bot.exts.moderation.infraction._utils import UserSnowflake
 from bot.utils.checks import with_role_check
-from . import _utils
-from ._scheduler import InfractionScheduler
-from ._utils import UserSnowflake
 
 log = logging.getLogger(__name__)
 

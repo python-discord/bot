@@ -9,7 +9,7 @@ from bot.constants import Channels, MODERATION_ROLES, Webhooks
 from bot.converters import FetchedMember
 from bot.decorators import with_role
 from bot.exts.moderation.infraction._utils import post_infraction
-from ._watchchannel import WatchChannel
+from bot.exts.moderation.watchchannels._watchchannel import WatchChannel
 
 log = logging.getLogger(__name__)
 

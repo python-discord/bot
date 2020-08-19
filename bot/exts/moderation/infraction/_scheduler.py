@@ -13,11 +13,11 @@ from bot import constants
 from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Colours, STAFF_CHANNELS
+from bot.exts.moderation.infraction import _utils
+from bot.exts.moderation.infraction._utils import UserSnowflake
 from bot.exts.moderation.modlog import ModLog
 from bot.utils import time
 from bot.utils.scheduling import Scheduler
-from . import _utils
-from ._utils import UserSnowflake
 
 log = logging.getLogger(__name__)
 

@@ -11,10 +11,10 @@ from discord.ext.commands import Cog, Context, command
 from bot import constants
 from bot.bot import Bot
 from bot.converters import Expiry
+from bot.exts.moderation.infraction import _utils
+from bot.exts.moderation.infraction._scheduler import InfractionScheduler
 from bot.utils.checks import with_role_check
 from bot.utils.time import format_infraction
-from . import _utils
-from ._scheduler import InfractionScheduler
 
 log = logging.getLogger(__name__)
 NICKNAME_POLICY_URL = "https://pythondiscord.com/pages/rules/#nickname-policy"

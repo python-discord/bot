@@ -10,9 +10,9 @@ from bot.bot import Bot
 from bot.constants import Channels, Guild, MODERATION_ROLES, STAFF_ROLES, Webhooks
 from bot.converters import FetchedMember
 from bot.decorators import with_role
+from bot.exts.moderation.watchchannels._watchchannel import WatchChannel
 from bot.pagination import LinePaginator
 from bot.utils import time
-from ._watchchannel import WatchChannel
 
 log = logging.getLogger(__name__)
 
