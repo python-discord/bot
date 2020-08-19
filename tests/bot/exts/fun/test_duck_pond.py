@@ -7,11 +7,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import discord
 
 from bot import constants
-from bot.exts import duck_pond
+from bot.exts.fun import duck_pond
 from tests import base
 from tests import helpers
 
-MODULE_PATH = "bot.exts.duck_pond"
+MODULE_PATH = "bot.exts.fun.duck_pond"
 
 
 class DuckPondTests(base.LoggingTestsMixin, unittest.IsolatedAsyncioTestCase):
@@ -63,7 +63,7 @@ class DuckPondTests(base.LoggingTestsMixin, unittest.IsolatedAsyncioTestCase):
         self.bot.fetch_webhook.side_effect = discord.HTTPException(response=MagicMock(), message="Not found.")
         self.cog.webhook_id = 1
 
-        log = logging.getLogger('bot.exts.duck_pond')
+        log = logging.getLogger(MODULE_PATH)
         with self.assertLogs(logger=log, level=logging.ERROR) as log_watcher:
             asyncio.run(self.cog.fetch_webhook())
 
@@ -282,7 +282,7 @@ class DuckPondTests(base.LoggingTestsMixin, unittest.IsolatedAsyncioTestCase):
         side_effects = (discord.errors.Forbidden(MagicMock(), ""), discord.errors.NotFound(MagicMock(), ""))
 
         self.cog.webhook = helpers.MockAsyncWebhook()
-        log = logging.getLogger("bot.exts.duck_pond")
+        log = logging.getLogger(MODULE_PATH)
 
         for side_effect in side_effects:  # pragma: no cover
             send_attachments.side_effect = side_effect
@@ -300,7 +300,7 @@ class DuckPondTests(base.LoggingTestsMixin, unittest.IsolatedAsyncioTestCase):
         message = helpers.MockMessage(clean_content="message", attachments=["attachment"])
 
         self.cog.webhook = helpers.MockAsyncWebhook()
-        log = logging.getLogger("bot.exts.duck_pond")
+        log = logging.getLogger(MODULE_PATH)
 
         side_effect = discord.HTTPException(MagicMock(), "")
         send_attachments.side_effect = side_effect
