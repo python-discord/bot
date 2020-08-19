@@ -216,8 +216,8 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         active_nomination = await self.bot.api_client.get(
             self.api_endpoint,
             params=ChainMap(
+                {"user__id": str(user_id)},
                 self.api_default_params,
-                {"user__id": str(user_id)}
             )
         )
 
