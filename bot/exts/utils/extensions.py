@@ -1,8 +1,5 @@
 import functools
-import importlib
-import inspect
 import logging
-import pkgutil
 import typing as t
 from enum import Enum
 
@@ -15,37 +12,12 @@ from bot.bot import Bot
 from bot.constants import Emojis, MODERATION_ROLES, Roles, URLs
 from bot.pagination import LinePaginator
 from bot.utils.checks import with_role_check
+from bot.utils.extensions import EXTENSIONS, unqualify
 
 log = logging.getLogger(__name__)
 
 
-def unqualify(name: str) -> str:
-    """Return an unqualified name given a qualified module/package `name`."""
-    return name.rsplit(".", maxsplit=1)[-1]
-
-
-def walk_extensions() -> t.Iterator[str]:
-    """Yield extension names from the bot.exts subpackage."""
-
-    def on_error(name: str) -> t.NoReturn:
-        raise ImportError(name=name)  # pragma: no cover
-
-    for module in pkgutil.walk_packages(exts.__path__, f"{exts.__name__}.", onerror=on_error):
-        if unqualify(module.name).startswith("_"):
-            # Ignore module/package names starting with an underscore.
-            continue
-
-        if module.ispkg:
-            imported = importlib.import_module(module.name)
-            if not inspect.isfunction(getattr(imported, "setup", None)):
-                # If it lacks a setup function, it's not an extension.
-                continue
-
-        yield module.name
-
-
 UNLOAD_BLACKLIST = {f"{exts.__name__}.utils.extensions", f"{exts.__name__}.moderation.modlog"}
-EXTENSIONS = frozenset(walk_extensions())
 BASE_PATH_LEN = len(exts.__name__.split("."))
 
 
