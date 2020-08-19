@@ -19,6 +19,11 @@ from bot.utils.checks import with_role_check
 log = logging.getLogger(__name__)
 
 
+def unqualify(name: str) -> str:
+    """Return an unqualified name given a qualified module/package `name`."""
+    return name.rsplit(".", maxsplit=1)[-1]
+
+
 def walk_extensions() -> t.Iterator[str]:
     """Yield extension names from the bot.exts subpackage."""
 
@@ -26,7 +31,7 @@ def walk_extensions() -> t.Iterator[str]:
         raise ImportError(name=name)  # pragma: no cover
 
     for module in pkgutil.walk_packages(exts.__path__, f"{exts.__name__}.", onerror=on_error):
-        if module.name.rsplit(".", maxsplit=1)[-1].startswith("_"):
+        if unqualify(module.name).startswith("_"):
             # Ignore module/package names starting with an underscore.
             continue
 
@@ -75,8 +80,7 @@ class Extension(commands.Converter):
 
         matches = []
         for ext in EXTENSIONS:
-            name = ext.rsplit(".", maxsplit=1)[-1]
-            if argument == name:
+            if argument == unqualify(ext):
                 matches.append(ext)
 
         if len(matches) > 1:
