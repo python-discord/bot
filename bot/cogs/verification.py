@@ -537,9 +537,9 @@ class Verification(Cog):
 
         mention = f"<@&{constants.Roles.unverified}>"
         if self.ping_unverified.is_running():
-            ping_status = f"{constants.Emojis.incident_actioned} Ping {mention} is running."
+            ping_status = f"{constants.Emojis.incident_actioned} Ping {mention} task is running."
         else:
-            ping_status = f"{constants.Emojis.incident_unactioned} Ping {mention} is **not** running."
+            ping_status = f"{constants.Emojis.incident_unactioned} Ping {mention} task is **not** running."
 
         embed = discord.Embed(
             title="Verification system",
