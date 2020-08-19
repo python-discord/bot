@@ -227,7 +227,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
 
         log.info(f"Ending nomination: {user_id=} {reason=}")
 
-        [nomination] = active_nomination
+        nomination = active_nomination[0]
         await self.bot.api_client.patch(
             f"{self.api_endpoint}/{nomination['id']}",
             json={'end_reason': reason, 'active': False}
