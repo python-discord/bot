@@ -70,7 +70,7 @@ async def post_infraction(
     log.trace(f"Posting {infr_type} infraction for {user} to the API.")
 
     payload = {
-        "actor": ctx.message.author.id,
+        "actor": ctx.author.id,  # Don't use ctx.message.author; antispam only patches ctx.author.
         "hidden": hidden,
         "reason": reason,
         "type": infr_type,
