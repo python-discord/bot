@@ -66,12 +66,7 @@ def without_role(*role_ids: int) -> t.Callable:
     return check(predicate)
 
 
-def mutually_exclusive(
-    namespace: t.Hashable,
-    resource_id: ResourceId,
-    *,
-    raise_error: bool = False,
-) -> t.Callable:
+def lock(namespace: t.Hashable, resource_id: ResourceId, *, raise_error: bool = False) -> t.Callable:
     """
     Turn the decorated coroutine function into a mutually exclusive operation on a `resource_id`.
 
@@ -126,7 +121,7 @@ def mutually_exclusive(
     return decorator
 
 
-def mutually_exclusive_arg(
+def lock_arg(
     namespace: t.Hashable,
     name_or_pos: function.Argument,
     func: t.Callable[[t.Any], _IdCallableReturn] = None,
@@ -134,12 +129,12 @@ def mutually_exclusive_arg(
     raise_error: bool = False,
 ) -> t.Callable:
     """
-    Apply `mutually_exclusive` using the value of the arg at the given name/position as the ID.
+    Apply the `lock` decorator using the value of the arg at the given name/position as the ID.
 
     `func` is an optional callable or awaitable which will return the ID given the argument value.
-    See `mutually_exclusive` docs for more information.
+    See `lock` docs for more information.
     """
-    decorator_func = partial(mutually_exclusive, namespace, raise_error=raise_error)
+    decorator_func = partial(lock, namespace, raise_error=raise_error)
     return function.get_arg_value_wrapper(decorator_func, name_or_pos, func)
 
 
