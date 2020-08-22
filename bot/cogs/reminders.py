@@ -14,9 +14,9 @@ from discord.ext.commands import Cog, Context, Greedy, group
 from bot.bot import Bot
 from bot.constants import Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES, STAFF_ROLES
 from bot.converters import Duration
-from bot.decorators import lock_arg
 from bot.pagination import LinePaginator
 from bot.utils.checks import without_role_check
+from bot.utils.lock import lock_arg
 from bot.utils.messages import send_denial
 from bot.utils.scheduling import Scheduler
 from bot.utils.time import humanize_delta
