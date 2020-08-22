@@ -13,7 +13,7 @@ from discord.ext.commands import Cog, Context, check
 
 from bot.constants import Channels, ERROR_REPLIES, RedirectOutput
 from bot.errors import LockedResourceError
-from bot.utils import function
+from bot.utils import LockGuard, function
 from bot.utils.checks import in_whitelist_check, with_role_check, without_role_check
 
 log = logging.getLogger(__name__)
@@ -144,11 +144,11 @@ def mutually_exclusive(
 
             # Get the lock for the ID. Create a lock if one doesn't exist yet.
             locks = __lock_dicts[namespace]
-            lock = locks.setdefault(id_, asyncio.Lock())
+            lock = locks.setdefault(id_, LockGuard())
 
             if not lock.locked():
                 log.debug(f"{name}: resource {namespace!r}:{id_!r} is free; acquiring it...")
-                async with lock:
+                with lock:
                     return await func(*args, **kwargs)
             else:
                 log.info(f"{name}: aborted because resource {namespace!r}:{id_!r} is locked")
