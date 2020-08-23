@@ -225,9 +225,11 @@ class Information(Cog):
 
                 emoji = ""
                 if activity.emoji:
-                    # Confirm that the emoji is not a custom emoji since we cannot use them.
+                    # If an emoji is unicode use the emoji, else write the emote like :abc:
                     if not activity.emoji.id:
                         emoji += activity.emoji.name + " "
+                    else:
+                        emoji += f"`:{activity.emoji.name}:` "
 
                 custom_status = f'Status: {emoji}{state}\n'
 
