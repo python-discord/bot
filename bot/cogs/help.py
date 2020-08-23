@@ -189,7 +189,9 @@ class CustomHelpCommand(HelpCommand):
         command_details = f"**```{PREFIX}{name} {command.signature}```**\n"
 
         # show command aliases
-        aliases = ", ".join(f"`{alias}`" if not parent else f"`{parent} {alias}`" for alias in command.aliases)
+        aliases = [f"`{alias}`" if not parent else f"`{parent} {alias}`" for alias in command.aliases]
+        aliases += [f"`{alias}`" for alias in getattr(command, "root_aliases", ())]
+        aliases = ", ".join(sorted(aliases))
         if aliases:
             command_details += f"**Can also use:** {aliases}\n\n"
 
