@@ -262,7 +262,7 @@ class Bot(commands.Bot):
             for subcommand in command.commands:
                 self._add_root_aliases(subcommand)
 
-        for alias in command.root_aliases:
+        for alias in getattr(command, "root_aliases", ()):
             if alias in self.all_commands:
                 raise commands.CommandRegistrationError(alias, alias_conflict=True)
 
@@ -274,5 +274,5 @@ class Bot(commands.Bot):
             for subcommand in command.commands:
                 self._remove_root_aliases(subcommand)
 
-        for alias in command.root_aliases:
+        for alias in getattr(command, "root_aliases", ()):
             self.all_commands.pop(alias, None)
