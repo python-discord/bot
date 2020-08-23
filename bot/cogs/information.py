@@ -20,6 +20,12 @@ from bot.utils.time import time_since
 
 log = logging.getLogger(__name__)
 
+STATUS_EMOTES = {
+    Status.offline: constants.Emojis.status_offline,
+    Status.dnd: constants.Emojis.status_dnd,
+    Status.idle: constants.Emojis.status_idle
+}
+
 
 class Information(Cog):
     """A cog with commands for generating embeds with server info, such as server stats and user info."""
@@ -184,18 +190,6 @@ class Information(Cog):
 
         await ctx.send(embed=embed)
 
-    @staticmethod
-    def status_to_emoji(status: Status) -> str:
-        """Convert a Discord status into the relevant emoji."""
-        if status is Status.offline:
-            return constants.Emojis.status_offline
-        elif status is Status.dnd:
-            return constants.Emojis.status_dnd
-        elif status is Status.idle:
-            return constants.Emojis.status_idle
-        else:
-            return constants.Emojis.status_online
-
     @command(name="user", aliases=["user_info", "member", "member_info"])
     async def user_info(self, ctx: Context, user: Member = None) -> None:
         """Returns info about a user."""
@@ -231,6 +225,7 @@ class Information(Cog):
 
                 emoji = ""
                 if activity.emoji:
+                    # Confirm that the emoji is not a custom emoji since we cannot use them.
                     if not activity.emoji.id:
                         emoji += activity.emoji.name + " "
 
@@ -240,18 +235,18 @@ class Information(Cog):
         if user.nick:
             name = f"{user.nick} ({name})"
 
-        badges = ""
+        badges = []
 
         for badge, is_set in user.public_flags:
-            if is_set and (emoji := getattr(constants.Emojis, f"badge_{badge}")):
-                badges += emoji + " "
+            if is_set and (emoji := getattr(constants.Emojis, f"badge_{badge}", None)):
+                badges.append(emoji)
 
         joined = time_since(user.joined_at, max_units=3)
         roles = ", ".join(role.mention for role in user.roles[1:])
 
-        desktop_status = self.status_to_emoji(user.desktop_status)
-        web_status = self.status_to_emoji(user.web_status)
-        mobile_status = self.status_to_emoji(user.mobile_status)
+        desktop_status = STATUS_EMOTES.get(user.desktop_status, constants.Emojis.status_online)
+        web_status = STATUS_EMOTES.get(user.web_status, constants.Emojis.status_online)
+        mobile_status = STATUS_EMOTES.get(user.mobile_status, constants.Emojis.status_online)
 
         fields = [
             (
@@ -290,7 +285,7 @@ class Information(Cog):
         # Let's build the embed now
         embed = Embed(
             title=name,
-            description=badges
+            description=" ".join(badges)
         )
 
         for field_name, field_content in fields:
