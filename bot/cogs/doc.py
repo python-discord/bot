@@ -23,6 +23,7 @@ from bot.constants import MODERATION_ROLES, RedirectOutput
 from bot.converters import ValidPythonIdentifier, ValidURL
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
+from bot.utils.messages import wait_for_deletion
 
 
 log = logging.getLogger(__name__)
@@ -391,7 +392,8 @@ class Doc(commands.Cog):
                     await error_message.delete(delay=NOT_FOUND_DELETE_DELAY)
                     await ctx.message.delete(delay=NOT_FOUND_DELETE_DELAY)
             else:
-                await ctx.send(embed=doc_embed)
+                msg = await ctx.send(embed=doc_embed)
+                await wait_for_deletion(msg, (ctx.author.id,), client=self.bot)
 
     @docs_group.command(name='set', aliases=('s',))
     @with_role(*MODERATION_ROLES)
