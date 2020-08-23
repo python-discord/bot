@@ -268,6 +268,17 @@ class Emojis(metaclass=YAMLGetter):
     status_idle: str
     status_dnd: str
 
+    badge_staff: str
+    badge_partner: str
+    badge_hypesquad: str
+    badge_bug_hunter: str
+    badge_hypesquad_bravery: str
+    badge_hypesquad_brilliance: str
+    badge_hypesquad_balance: str
+    badge_early_supporter: str
+    badge_bug_hunter_level_2: str
+    badge_verified_bot_developer: str
+
     incident_actioned: str
     incident_unactioned: str
     incident_investigating: str
