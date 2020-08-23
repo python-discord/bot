@@ -11,6 +11,7 @@ from discord import Colour, HTTPException, Member, Message, NotFound, TextChanne
 from discord.ext.commands import Cog
 from discord.utils import escape_markdown
 
+from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.cogs.moderation import ModLog
 from bot.constants import (
@@ -301,9 +302,16 @@ class Filtering(Cog):
                                 'delete_date': delete_date
                             }
 
-                            await self.bot.api_client.post('bot/offensive-messages', json=data)
-                            self.schedule_msg_delete(data)
-                            log.trace(f"Offensive message {msg.id} will be deleted on {delete_date}")
+                            try:
+                                await self.bot.api_client.post('bot/offensive-messages', json=data)
+                            except ResponseCodeError as e:
+                                if e.status == 400 and "already exists" in e.response_json.get("id", [""])[0]:
+                                    log.debug(f"Offensive message {msg.id} already exists.")
+                                else:
+                                    log.error(f"Offensive message {msg.id} failed to post: {e}")
+                            else:
+                                self.schedule_msg_delete(data)
+                                log.trace(f"Offensive message {msg.id} will be deleted on {delete_date}")
 
                         if is_private:
                             channel_str = "via DM"

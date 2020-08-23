@@ -131,8 +131,8 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
         active_watches = await self.bot.api_client.get(
             self.api_endpoint,
             params=ChainMap(
+                {"user__id": str(user.id)},
                 self.api_default_params,
-                {"user__id": str(user.id)}
             )
         )
         if active_watches:
