@@ -13,3 +13,6 @@ class Command(commands.Command):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.root_aliases = kwargs.get("root_aliases", [])
+
+        if not isinstance(self.root_aliases, (list, tuple)):
+            raise TypeError("Root aliases of a command must be a list or a tuple of strings.")
