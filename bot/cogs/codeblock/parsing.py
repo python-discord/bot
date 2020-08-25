@@ -179,14 +179,12 @@ def parse_bad_language(content: str) -> Optional[BadLanguage]:
 
 def _get_leading_spaces(content: str) -> int:
     """Return the number of spaces at the start of the first line in `content`."""
-    current = content[0]
     leading_spaces = 0
-
-    while current == " ":
-        leading_spaces += 1
-        current = content[leading_spaces]
-
-    return leading_spaces
+    for char in content:
+        if char == " ":
+            leading_spaces += 1
+        else:
+            return leading_spaces
 
 
 def _fix_indentation(content: str) -> str:
