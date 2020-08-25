@@ -17,8 +17,7 @@ def is_help_channel(channel: discord.TextChannel) -> bool:
 
 def is_in_category(channel: discord.TextChannel, category_id: int) -> bool:
     """Return True if `channel` is within a category with `category_id`."""
-    actual_category = getattr(channel, "category", None)
-    return actual_category is not None and actual_category.id == category_id
+    return getattr(channel, "category_id", None) == category_id
 
 
 async def try_get_channel(channel_id: int, client: discord.Client) -> discord.abc.GuildChannel:
