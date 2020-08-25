@@ -273,8 +273,14 @@ class Information(Cog):
             )
         ]
 
+        # Use getattr to future-proof for commands invoked via DMs.
+        show_verbose = (
+            ctx.channel.id in constants.MODERATION_CHANNELS
+            or getattr(ctx.channel, "category_id", None) == constants.Categories.modmail
+        )
+
         # Show more verbose output in moderation channels for infractions and nominations
-        if ctx.channel.id in constants.MODERATION_CHANNELS:
+        if show_verbose:
             fields.append(await self.expanded_user_infraction_counts(user))
             fields.append(await self.user_nomination_counts(user))
         else:
