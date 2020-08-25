@@ -7,6 +7,7 @@ from discord.ext.tasks import loop
 
 from bot.bot import Bot
 from bot.constants import Categories, Channels, Guild, Stats as StatConf
+from bot.utils.channel import is_in_category
 
 
 CHANNEL_NAME_OVERRIDES = {
@@ -36,8 +37,7 @@ class Stats(Cog):
         if message.guild.id != Guild.id:
             return
 
-        cat = getattr(message.channel, "category", None)
-        if cat is not None and cat.id == Categories.modmail:
+        if is_in_category(message.channel, Categories.modmail):
             if message.channel.id != Channels.incidents:
                 # Do not report modmail channels to stats, there are too many
                 # of them for interesting statistics to be drawn out of this.
