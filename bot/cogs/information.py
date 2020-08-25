@@ -15,7 +15,7 @@ from bot import constants
 from bot.bot import Bot
 from bot.decorators import in_whitelist, with_role
 from bot.pagination import LinePaginator
-from bot.utils.checks import InWhitelistCheckFailure, cooldown_with_role_bypass, with_role_check
+from bot.utils.checks import cooldown_with_role_bypass, in_whitelist_check, with_role_check
 from bot.utils.time import time_since
 
 log = logging.getLogger(__name__)
@@ -201,14 +201,10 @@ class Information(Cog):
             await ctx.send("You may not use this command on users other than yourself.")
             return
 
-        # Non-staff may only do this in #bot-commands
-        if not with_role_check(ctx, *constants.STAFF_ROLES):
-            if not ctx.channel.id == constants.Channels.bot_commands:
-                raise InWhitelistCheckFailure(constants.Channels.bot_commands)
-
-        embed = await self.create_user_embed(ctx, user)
-
-        await ctx.send(embed=embed)
+        # Will redirect to #bot-commands if it fails.
+        if in_whitelist_check(ctx, roles=constants.STAFF_ROLES):
+            embed = await self.create_user_embed(ctx, user)
+            await ctx.send(embed=embed)
 
     async def create_user_embed(self, ctx: Context, user: Member) -> Embed:
         """Creates an embed containing information on the `user`."""
