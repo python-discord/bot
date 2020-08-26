@@ -79,12 +79,8 @@ You will be kicked if you don't verify within `{KICKED_AFTER}` days.
 
 REMINDER_FREQUENCY = 28  # Hours to wait between sending `REMINDER_MESSAGE`
 
-MENTION_CORE_DEVS = discord.AllowedMentions(
-    everyone=False, roles=[discord.Object(constants.Roles.core_developers)]
-)
-MENTION_UNVERIFIED = discord.AllowedMentions(
-    everyone=False, roles=[discord.Object(constants.Roles.unverified)]
-)
+MENTION_CORE_DEVS = discord.AllowedMentions(roles=[discord.Object(constants.Roles.core_developers)])
+MENTION_UNVERIFIED = discord.AllowedMentions(roles=[discord.Object(constants.Roles.unverified)])
 
 # An async function taking a Member param
 Request = t.Callable[[discord.Member], t.Awaitable]
