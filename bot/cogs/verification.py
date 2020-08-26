@@ -79,6 +79,7 @@ You will be kicked if you don't verify within `{KICKED_AFTER}` days.
 
 REMINDER_FREQUENCY = 28  # Hours to wait between sending `REMINDER_MESSAGE`
 
+MENTION_ADMINS = discord.AllowedMentions(roles=[discord.Object(constants.Roles.admins)])
 MENTION_CORE_DEVS = discord.AllowedMentions(roles=[discord.Object(constants.Roles.core_developers)])
 MENTION_UNVERIFIED = discord.AllowedMentions(roles=[discord.Object(constants.Roles.unverified)])
 
@@ -238,6 +239,23 @@ class Verification(Cog):
             await confirmation_msg.edit(content=result_msg)
 
         return result
+
+    async def _alert_admins(self, exception: discord.HTTPException) -> None:
+        """
+        Ping @Admins with information about `exception`.
+
+        This is used when a critical `exception` caused a verification task to abort.
+        """
+        await self.bot.wait_until_guild_available()
+        log.info(f"Sending admin alert regarding exception: {exception}")
+
+        admins_channel = self.bot.get_guild(constants.Guild.id).get_channel(constants.Channels.admins)
+        ping = f"<@&{constants.Roles.admins}>"
+
+        await admins_channel.send(
+            f"{ping} Aborted updating unverified users due to the following exception:\n```{exception}```",
+            allowed_mentions=MENTION_ADMINS,
+        )
 
     async def _send_requests(self, members: t.Collection[discord.Member], request: Request, limit: Limit) -> int:
         """
