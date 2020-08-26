@@ -192,11 +192,12 @@ class Verification(Cog):
         # Since `n_members` is a suspiciously large number, we will ask for confirmation
         log.debug("Amount of users is too large, requesting staff confirmation")
 
-        core_devs = pydis.get_channel(constants.Channels.dev_core)
-        confirmation_msg = await core_devs.send(
-            f"<@&{constants.Roles.core_developers}> Verification determined that `{n_members}` members should "
-            f"be kicked as they haven't verified in `{KICKED_AFTER}` days. This is `{percentage:.2%}` of the "
-            f"guild's population. Proceed?",
+        core_dev_channel = pydis.get_channel(constants.Channels.dev_core)
+        core_dev_ping = f"<@&{constants.Roles.core_developers}>"
+
+        confirmation_msg = await core_dev_channel.send(
+            f"{core_dev_ping} Verification determined that `{n_members}` members should be kicked as they haven't "
+            f"verified in `{KICKED_AFTER}` days. This is `{percentage:.2%}` of the guild's population. Proceed?",
             allowed_mentions=MENTION_CORE_DEVS,
         )
 
@@ -229,9 +230,9 @@ class Verification(Cog):
 
         # Edit the prompt message to reflect the final choice
         if result is True:
-            result_msg = f":ok_hand: Request to kick `{n_members}` members was authorized!"
+            result_msg = f":ok_hand: {core_dev_ping} Request to kick `{n_members}` members was authorized!"
         else:
-            result_msg = f":warning: Request to kick `{n_members}` members was denied!"
+            result_msg = f":warning: {core_dev_ping} Request to kick `{n_members}` members was denied!"
 
         with suppress(discord.HTTPException):
             await confirmation_msg.edit(content=result_msg)
