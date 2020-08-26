@@ -23,7 +23,7 @@ class Site(Cog):
         """Commands for getting info about our website."""
         await ctx.send_help(ctx.command)
 
-    @site_group.command(name="home", aliases=("about",))
+    @site_group.command(name="home", aliases=("about",), root_aliases=("home",))
     async def site_main(self, ctx: Context) -> None:
         """Info about the website itself."""
         url = f"{URLs.site_schema}{URLs.site}/"
@@ -40,7 +40,7 @@ class Site(Cog):
 
         await ctx.send(embed=embed)
 
-    @site_group.command(name="resources")
+    @site_group.command(name="resources", root_aliases=("resources", "resource"))
     async def site_resources(self, ctx: Context) -> None:
         """Info about the site's Resources page."""
         learning_url = f"{PAGES_URL}/resources"
@@ -56,7 +56,7 @@ class Site(Cog):
 
         await ctx.send(embed=embed)
 
-    @site_group.command(name="tools")
+    @site_group.command(name="tools", root_aliases=("tools",))
     async def site_tools(self, ctx: Context) -> None:
         """Info about the site's Tools page."""
         tools_url = f"{PAGES_URL}/resources/tools"
@@ -87,7 +87,7 @@ class Site(Cog):
 
         await ctx.send(embed=embed)
 
-    @site_group.command(name="faq")
+    @site_group.command(name="faq", root_aliases=("faq",))
     async def site_faq(self, ctx: Context) -> None:
         """Info about the site's FAQ page."""
         url = f"{PAGES_URL}/frequently-asked-questions"
@@ -104,7 +104,7 @@ class Site(Cog):
 
         await ctx.send(embed=embed)
 
-    @site_group.command(aliases=['r', 'rule'], name='rules')
+    @site_group.command(name="rules", aliases=("r", "rule"), root_aliases=("rules", "rule"))
     async def site_rules(self, ctx: Context, *rules: int) -> None:
         """Provides a link to all rules or, if specified, displays specific rule(s)."""
         rules_embed = Embed(title='Rules', color=Colour.blurple())
