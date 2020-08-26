@@ -123,6 +123,7 @@ style:
 
 guild:
     id: 267624335836053506
+    invite: "https://discord.gg/python"
 
     categories:
         help_available:                     691405807388196926

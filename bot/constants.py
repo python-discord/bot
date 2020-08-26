@@ -458,6 +458,7 @@ class Guild(metaclass=YAMLGetter):
     section = "guild"
 
     id: int
+    invite: str  # Discord invite, gets embedded in chat
     moderation_channels: List[int]
     moderation_roles: List[int]
     modlog_blacklist: List[int]
