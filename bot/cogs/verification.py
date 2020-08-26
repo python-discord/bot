@@ -87,6 +87,14 @@ MENTION_UNVERIFIED = discord.AllowedMentions(roles=[discord.Object(constants.Rol
 Request = t.Callable[[discord.Member], t.Awaitable]
 
 
+class StopExecution(Exception):
+    """Signals that a task should halt immediately & alert admins."""
+
+    def __init__(self, reason: discord.HTTPException) -> None:
+        super().__init__()
+        self.reason = reason
+
+
 class Limit(t.NamedTuple):
     """Composition over config for throttling requests."""
 
@@ -277,6 +285,9 @@ class Verification(Cog):
                 continue
             try:
                 await request(member)
+            except StopExecution as stop_execution:
+                await self._alert_admins(stop_execution.reason)
+                break
             except discord.HTTPException as http_exc:
                 bad_statuses.add(http_exc.status)
             else:
@@ -304,8 +315,12 @@ class Verification(Cog):
 
         async def kick_request(member: discord.Member) -> None:
             """Send `KICKED_MESSAGE` to `member` and kick them from the guild."""
-            with suppress(discord.Forbidden):
+            try:
                 await member.send(KICKED_MESSAGE)
+            except discord.Forbidden as exc_403:
+                log.trace(f"DM dispatch failed on 403 error with code: {exc_403.code}")
+                if exc_403.code != 50_007:  # 403 raised for any other reason than disabled DMs
+                    raise StopExecution(reason=exc_403)
             await member.kick(reason=f"User has not verified in {KICKED_AFTER} days")
 
         n_kicked = await self._send_requests(members, kick_request, Limit(batch_size=2, sleep_secs=1))
