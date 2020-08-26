@@ -62,7 +62,8 @@ If you'd like to unsubscribe from the announcement notifications, simply send `!
 # Sent via DMs to users kicked for failing to verify
 KICKED_MESSAGE = f"""
 Hi! You have been automatically kicked from Python Discord as you have failed to accept our rules \
-within `{KICKED_AFTER}` days. If this was an accident, please feel free to join again.
+within `{KICKED_AFTER}` days. If this was an accident, please feel free to join us again!
+{constants.Guild.invite}
 """
 
 # Sent periodically in the verification channel
