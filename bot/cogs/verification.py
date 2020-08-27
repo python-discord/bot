@@ -79,10 +79,6 @@ You will be kicked if you don't verify within `{KICKED_AFTER}` days.
 
 REMINDER_FREQUENCY = 28  # Hours to wait between sending `REMINDER_MESSAGE`
 
-MENTION_ADMINS = discord.AllowedMentions(roles=[discord.Object(constants.Roles.admins)])
-MENTION_CORE_DEVS = discord.AllowedMentions(roles=[discord.Object(constants.Roles.core_developers)])
-MENTION_UNVERIFIED = discord.AllowedMentions(roles=[discord.Object(constants.Roles.unverified)])
-
 # An async function taking a Member param
 Request = t.Callable[[discord.Member], t.Awaitable]
 
@@ -100,6 +96,11 @@ class Limit(t.NamedTuple):
 
     batch_size: int  # Amount of requests after which to pause
     sleep_secs: int  # Sleep this many seconds after each batch
+
+
+def mention_role(role_id: int) -> discord.AllowedMentions:
+    """Construct an allowed mentions instance that allows pinging `role_id`."""
+    return discord.AllowedMentions(roles=[discord.Object(role_id)])
 
 
 def is_verified(member: discord.Member) -> bool:
@@ -207,7 +208,7 @@ class Verification(Cog):
         confirmation_msg = await core_dev_channel.send(
             f"{core_dev_ping} Verification determined that `{n_members}` members should be kicked as they haven't "
             f"verified in `{KICKED_AFTER}` days. This is `{percentage:.2%}` of the guild's population. Proceed?",
-            allowed_mentions=MENTION_CORE_DEVS,
+            allowed_mentions=mention_role(constants.Roles.core_developers),
         )
 
         options = (constants.Emojis.incident_actioned, constants.Emojis.incident_unactioned)
@@ -262,7 +263,7 @@ class Verification(Cog):
 
         await admins_channel.send(
             f"{ping} Aborted updating unverified users due to the following exception:\n```{exception}```",
-            allowed_mentions=MENTION_ADMINS,
+            allowed_mentions=mention_role(constants.Roles.admins),
         )
 
     async def _send_requests(self, members: t.Collection[discord.Member], request: Request, limit: Limit) -> int:
@@ -445,7 +446,9 @@ class Verification(Cog):
                 await self.bot.http.delete_message(verification.id, last_reminder)
 
         log.trace("Sending verification reminder")
-        new_reminder = await verification.send(REMINDER_MESSAGE, allowed_mentions=MENTION_UNVERIFIED)
+        new_reminder = await verification.send(
+            REMINDER_MESSAGE, allowed_mentions=mention_role(constants.Roles.unverified),
+        )
 
         await self.task_cache.set("last_reminder", new_reminder.id)
 
