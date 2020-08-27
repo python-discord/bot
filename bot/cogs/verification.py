@@ -272,6 +272,9 @@ class Verification(Cog):
         This coroutine serves as a generic `request` executor for kicking members and adding
         roles, as it allows us to define the error handling logic in one place only.
 
+        Any `request` has the ability to completely abort the execution by raising `StopExecution`.
+        In such a case, the @Admins will be alerted of the reason attribute.
+
         To avoid rate-limits, pass a `limit` configuring the batch size and the amount of seconds
         to sleep between batches.
 
