@@ -53,6 +53,7 @@ class CommandNameTests(unittest.TestCase):
         """Return a list of all qualified names, including aliases, for the `command`."""
         names = [f"{command.full_parent_name} {alias}".strip() for alias in command.aliases]
         names.append(command.qualified_name)
+        names += getattr(command, "root_aliases", [])
 
         return names
 

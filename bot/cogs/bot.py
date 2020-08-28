@@ -339,7 +339,7 @@ class BotCog(Cog, name="Bot"):
                         self.codeblock_message_ids[msg.id] = bot_message.id
 
                         self.bot.loop.create_task(
-                            wait_for_deletion(bot_message, user_ids=(msg.author.id,), client=self.bot)
+                            wait_for_deletion(bot_message, (msg.author.id,), self.bot)
                         )
                     else:
                         return

@@ -162,7 +162,7 @@ class Defcon(Cog):
 
             self.bot.stats.gauge("defcon.threshold", days)
 
-    @defcon_group.command(name='enable', aliases=('on', 'e'))
+    @defcon_group.command(name='enable', aliases=('on', 'e'), root_aliases=("defon",))
     @with_role(Roles.admins, Roles.owners)
     async def enable_command(self, ctx: Context) -> None:
         """
@@ -175,7 +175,7 @@ class Defcon(Cog):
         await self._defcon_action(ctx, days=0, action=Action.ENABLED)
         await self.update_channel_topic()
 
-    @defcon_group.command(name='disable', aliases=('off', 'd'))
+    @defcon_group.command(name='disable', aliases=('off', 'd'), root_aliases=("defoff",))
     @with_role(Roles.admins, Roles.owners)
     async def disable_command(self, ctx: Context) -> None:
         """Disable DEFCON mode. Useful in a pinch, but be sure you know what you're doing!"""

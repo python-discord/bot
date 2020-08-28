@@ -12,10 +12,10 @@ from dateutil.relativedelta import relativedelta
 from discord.ext.commands import Cog, Context, Greedy, group
 
 from bot.bot import Bot
-from bot.constants import Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES, STAFF_ROLES
+from bot.constants import Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES, Roles, STAFF_ROLES
 from bot.converters import Duration
 from bot.pagination import LinePaginator
-from bot.utils.checks import without_role_check
+from bot.utils.checks import with_role_check, without_role_check
 from bot.utils.messages import send_denial
 from bot.utils.scheduling import Scheduler
 from bot.utils.time import humanize_delta
@@ -396,6 +396,8 @@ class Reminders(Cog):
 
     async def edit_reminder(self, ctx: Context, id_: int, payload: dict) -> None:
         """Edits a reminder with the given payload, then sends a confirmation message."""
+        if not await self._can_modify(ctx, id_):
+            return
         reminder = await self._edit_reminder(id_, payload)
 
         # Parse the reminder expiration back into a datetime
@@ -413,6 +415,8 @@ class Reminders(Cog):
     @remind_group.command("delete", aliases=("remove", "cancel"))
     async def delete_reminder(self, ctx: Context, id_: int) -> None:
         """Delete one of your active reminders."""
+        if not await self._can_modify(ctx, id_):
+            return
         await self._delete_reminder(id_)
         await self._send_confirmation(
             ctx,
@@ -420,6 +424,24 @@ class Reminders(Cog):
             reminder_id=id_,
             delivery_dt=None,
         )
+
+    async def _can_modify(self, ctx: Context, reminder_id: t.Union[str, int]) -> bool:
+        """
+        Check whether the reminder can be modified by the ctx author.
+
+        The check passes when the user is an admin, or if they created the reminder.
+        """
+        if with_role_check(ctx, Roles.admins):
+            return True
+
+        api_response = await self.bot.api_client.get(f"bot/reminders/{reminder_id}")
+        if not api_response["author"] == ctx.author.id:
+            log.debug(f"{ctx.author} is not the reminder author and does not pass the check.")
+            await send_denial(ctx, "You can't modify reminders of other users!")
+            return False
+
+        log.debug(f"{ctx.author} is the reminder author and passes the check.")
+        return True
 
 
 def setup(bot: Bot) -> None:
