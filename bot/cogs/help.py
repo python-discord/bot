@@ -10,7 +10,7 @@ from fuzzywuzzy import fuzz, process
 from fuzzywuzzy.utils import full_process
 
 from bot import constants
-from bot.constants import Channels, Emojis, STAFF_ROLES
+from bot.constants import Channels, STAFF_ROLES
 from bot.decorators import redirect_output
 from bot.pagination import LinePaginator
 from bot.utils.messages import wait_for_deletion
@@ -18,7 +18,6 @@ from bot.utils.messages import wait_for_deletion
 log = logging.getLogger(__name__)
 
 COMMANDS_PER_PAGE = 8
-DELETE_EMOJI = Emojis.trashcan
 PREFIX = constants.Bot.prefix
 
 Category = namedtuple("Category", ["name", "description", "cogs"])
