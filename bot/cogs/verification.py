@@ -276,7 +276,9 @@ class Verification(Cog):
         ping = f"<@&{constants.Roles.admins}>"
 
         await admins_channel.send(
-            f"{ping} Aborted updating unverified users due to the following exception:\n```{exception}```",
+            f"{ping} Aborted updating unverified users due to the following exception:\n"
+            f"```{exception}```\n"
+            f"Internal tasks will be stopped.",
             allowed_mentions=mention_role(constants.Roles.admins),
         )
 
@@ -305,6 +307,7 @@ class Verification(Cog):
                 await request(member)
             except StopExecution as stop_execution:
                 await self._alert_admins(stop_execution.reason)
+                self._stop_tasks(gracefully=True)  # Gracefully finish current iteration, then stop
                 break
             except discord.HTTPException as http_exc:
                 bad_statuses.add(http_exc.status)
