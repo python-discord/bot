@@ -157,8 +157,7 @@ class Verification(Cog):
 
         This is necessary, as tasks are not automatically cancelled on cog unload.
         """
-        self.update_unverified_members.cancel()
-        self.ping_unverified.cancel()
+        self._stop_tasks(gracefully=False)
 
     @property
     def mod_log(self) -> ModLog:
@@ -178,6 +177,21 @@ class Verification(Cog):
             log.trace("Background tasks will be started")
             self.update_unverified_members.start()
             self.ping_unverified.start()
+
+    def _stop_tasks(self, *, gracefully: bool) -> None:
+        """
+        Stop the update users & ping @Unverified tasks.
+
+        If `gracefully` is True, the tasks will be able to finish their current iteration.
+        Otherwise, they are cancelled immediately.
+        """
+        log.info(f"Stopping internal tasks ({gracefully=})")
+        if gracefully:
+            self.update_unverified_members.stop()
+            self.ping_unverified.stop()
+        else:
+            self.update_unverified_members.cancel()
+            self.ping_unverified.cancel()
 
     # region: automatically update unverified users
 
@@ -607,9 +621,7 @@ class Verification(Cog):
         """Stop verification tasks."""
         log.info("Stopping verification tasks")
 
-        self.update_unverified_members.cancel()
-        self.ping_unverified.cancel()
-
+        self._stop_tasks(gracefully=False)
         await self.task_cache.set("tasks_running", 0)
 
         colour = discord.Colour.blurple()
