@@ -307,6 +307,7 @@ class Verification(Cog):
                 await request(member)
             except StopExecution as stop_execution:
                 await self._alert_admins(stop_execution.reason)
+                await self.task_cache.set("tasks_running", 0)
                 self._stop_tasks(gracefully=True)  # Gracefully finish current iteration, then stop
                 break
             except discord.HTTPException as http_exc:
