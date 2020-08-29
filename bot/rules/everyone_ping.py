@@ -25,7 +25,7 @@ async def apply(
 
     if ev_msgs_ct > config["max"]:
         # Send the user an embed giving them more info:
-        member_count = "{:,}".format(last_message.guild.member_count).split(",")[0]
+        member_count = f'{last_message.guild.member_count}'.split(",")[0]
         # Change the `K` to an `M` once the server reaches over 1 million people.
         embed_text = textwrap.dedent(
             f"""
