@@ -4,7 +4,6 @@ from typing import Dict, Iterable, List, Optional, Tuple
 
 from discord import Embed, Member, Message
 
-from bot.cogs.moderation.utils import send_private_embed
 from bot.constants import Colours
 
 # For embed sender
@@ -17,9 +16,7 @@ async def apply(
     config: Dict[str, int],
 ) -> Optional[Tuple[str, Iterable[Member], Iterable[Message]]]:
     """Detects if a user has sent an '@everyone' ping."""
-    relevant_messages = tuple(
-        msg for msg in recent_messages if msg.author == last_message.author
-    )
+    relevant_messages = tuple(msg for msg in recent_messages if msg.author == last_message.author)
 
     ev_msgs_ct = 0
     for msg in relevant_messages:
@@ -28,23 +25,16 @@ async def apply(
 
     if ev_msgs_ct > config["max"]:
         # Send the user an embed giving them more info:
-        member_count = "{:,}".format(last_message.guild.member_count).split(
-            ","
-        )[0]
+        member_count = "{:,}".format(last_message.guild.member_count).split(",")[0]
         # Change the `K` to an `M` once the server reaches over 1 million people.
         embed_text = textwrap.dedent(
             f"""
-            Hello {last_message.author.display_name}, please don't try to ping {member_count}K people.
+            Please don't try to ping {member_count}K people.
             **It will not have good results.**
-            If you want to know what it would be like, imagine pinging Greenland. Please don't ping Greenland.
         """
         )
-        embed = Embed(
-            title="Everyone Ping Mute Info",
-            colour=Colours.soft_red,
-            description=embed_text,
-        )
-        await send_private_embed(last_message.author, embed)
+        embed = Embed(description=embed_text, colour=Colours.soft_red)
+        await last_message.channel.send(f"Hey {last_message.author.mention}!", embed=embed)
         return (
             f"pinged the everyone role {ev_msgs_ct} times in {config['interval']}s",
             (last_message.author,),
