@@ -386,8 +386,8 @@ anti_spam:
             max: 3
 
         everyone_ping:
-            interval: 1
-            max: 1
+            interval: 10
+            max: 0
 
 
 reddit:

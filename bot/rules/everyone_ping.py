@@ -14,18 +14,14 @@ async def apply(
     )
 
     ev_msgs_ct = 0
-    if config["max"]:
-        for msg in relevant_messages:
-            ev_role = msg.guild.default_role
-            msg_roles = msg.role_mentions
+    for msg in relevant_messages:
+        if '@everyone' in msg.content:
+            ev_msgs_ct += 1
 
-            if ev_role in msg_roles:
-                ev_msgs_ct += 1
-
-    if ev_msgs_ct > 0:
+    if ev_msgs_ct >= config['max']:
         return (
-            f"pinged the everyone role {ev_msgs_ct} times",
-            (last_message.author),
+            f"pinged the everyone role {ev_msgs_ct} times in {config['interval']}s",
+            (last_message.author,),
             relevant_messages,
         )
     return None
