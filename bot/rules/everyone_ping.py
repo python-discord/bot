@@ -31,14 +31,14 @@ async def apply(
         member_count = "{:,}".format(last_message.guild.member_count).split(
             ","
         )[0]
+        # Change the `K` to an `M` once the server reaches over 1 million people.
         embed_text = textwrap.dedent(
             f"""
-            Hello {last_message.author.display_name}, please don't try to ping {member_count}k people.
+            Hello {last_message.author.display_name}, please don't try to ping {member_count}K people.
             **It will not have good results.**
             If you want to know what it would be like, imagine pinging Greenland. Please don't ping Greenland.
         """
         )
-        print(embed_text)
         embed = Embed(
             title="Everyone Ping Mute Info",
             colour=Colours.soft_red,
