@@ -393,13 +393,6 @@ reddit:
     secret:    !ENV "REDDIT_SECRET"
 
 
-wolfram:
-    # Max requests per day.
-    user_limit_day: 10
-    guild_limit_day: 67
-    key: !ENV "WOLFRAM_API_KEY"
-
-
 big_brother:
     log_delay: 15
     header_message_limit: 15
