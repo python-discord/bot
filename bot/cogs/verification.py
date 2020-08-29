@@ -149,7 +149,7 @@ class Verification(Cog):
     def __init__(self, bot: Bot) -> None:
         """Start internal tasks."""
         self.bot = bot
-        self.bot.loop.create_task(self.maybe_start_tasks())
+        self.bot.loop.create_task(self._maybe_start_tasks())
 
     def cog_unload(self) -> None:
         """
@@ -164,7 +164,7 @@ class Verification(Cog):
         """Get currently loaded ModLog cog instance."""
         return self.bot.get_cog("ModLog")
 
-    async def maybe_start_tasks(self) -> None:
+    async def _maybe_start_tasks(self) -> None:
         """
         Poll Redis to check whether internal tasks should start.
 
