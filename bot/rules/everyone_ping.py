@@ -14,7 +14,7 @@ async def apply(
     )
 
     ev_msgs_ct = 0
-    if config["enabled"]:
+    if config["max"]:
         for msg in relevant_messages:
             ev_role = msg.guild.default_role
             msg_roles = msg.role_mentions
