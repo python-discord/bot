@@ -1,5 +1,4 @@
 import random
-import textwrap
 from typing import Dict, Iterable, List, Optional, Tuple
 
 from discord import Embed, Member, Message
@@ -22,15 +21,10 @@ async def apply(
 
     if everyone_messages_count > config["max"]:
         # Send the user an embed giving them more info:
-        embed_text = textwrap.dedent(
-            f"""
-            **{random.choice(NEGATIVE_REPLIES)}**
-            Please don't try to ping {last_message.guild.member_count:,} people.
-            """
-        )
+        embed_text = f"Please don't try to ping {last_message.guild.member_count:,} people."
 
         # Make embed:
-        embed = Embed(description=embed_text, colour=Colours.soft_red)
+        embed = Embed(title=random.choice(NEGATIVE_REPLIES), description=embed_text, colour=Colours.soft_red)
 
         # Send embed:
         await last_message.channel.send(embed=embed)
