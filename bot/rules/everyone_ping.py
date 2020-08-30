@@ -1,13 +1,9 @@
-import logging
 import textwrap
 from typing import Dict, Iterable, List, Optional, Tuple
 
 from discord import Embed, Member, Message
 
 from bot.constants import Colours
-
-# For embed sender
-log = logging.getLogger(__name__)
 
 
 async def apply(
@@ -25,11 +21,9 @@ async def apply(
 
     if ev_msgs_ct > config["max"]:
         # Send the user an embed giving them more info:
-        member_count = f'{last_message.guild.member_count}'.split(",")[0]
-        # Change the `K` to an `M` once the server reaches over 1 million people.
         embed_text = textwrap.dedent(
             f"""
-            Please don't try to ping {member_count}K people.
+            Please don't try to ping {last_message.guild.member_count} people.
             **It will not have good results.**
         """
         )
