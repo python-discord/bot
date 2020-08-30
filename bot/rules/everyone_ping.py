@@ -23,7 +23,7 @@ async def apply(
         # Send the user an embed giving them more info:
         embed_text = textwrap.dedent(
             f"""
-            Please don't try to ping {last_message.guild.member_count} people.
+            Please don't try to ping {last_message.guild.member_count:,} people.
             **It will not have good results.**
         """
         )
