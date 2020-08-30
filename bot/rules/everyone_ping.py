@@ -1,9 +1,10 @@
+import random
 import textwrap
 from typing import Dict, Iterable, List, Optional, Tuple
 
 from discord import Embed, Member, Message
 
-from bot.constants import Colours
+from bot.constants import Colours, NEGATIVE_REPLIES
 
 
 async def apply(
@@ -14,23 +15,27 @@ async def apply(
     """Detects if a user has sent an '@everyone' ping."""
     relevant_messages = tuple(msg for msg in recent_messages if msg.author == last_message.author)
 
-    ev_msgs_ct = 0
+    everyone_messages_count = 0
     for msg in relevant_messages:
         if "@everyone" in msg.content:
-            ev_msgs_ct += 1
+            everyone_messages_count += 1
 
-    if ev_msgs_ct > config["max"]:
+    if everyone_messages_count > config["max"]:
         # Send the user an embed giving them more info:
         embed_text = textwrap.dedent(
             f"""
+            **{random.choice(NEGATIVE_REPLIES)}**
             Please don't try to ping {last_message.guild.member_count:,} people.
-            **It will not have good results.**
-        """
+            """
         )
+
+        # Make embed:
         embed = Embed(description=embed_text, colour=Colours.soft_red)
-        await last_message.channel.send(f"Hey {last_message.author.mention}!", embed=embed)
+
+        # Send embed:
+        await last_message.channel.send(embed=embed)
         return (
-            f"pinged the everyone role {ev_msgs_ct} times in {config['interval']}s",
+            f"pinged the everyone role {everyone_messages_count} times in {config['interval']}s",
             (last_message.author,),
             relevant_messages,
         )
