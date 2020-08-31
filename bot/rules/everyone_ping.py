@@ -1,9 +1,15 @@
 import random
+import re
 from typing import Dict, Iterable, List, Optional, Tuple
 
 from discord import Embed, Member, Message
 
-from bot.constants import Colours, NEGATIVE_REPLIES
+from bot.constants import Colours, Guild, NEGATIVE_REPLIES
+
+# Generate regex for checking for pings:
+guild_id = Guild.id
+EVERYONE_RE_INLINE_CODE = re.compile(rf"(?!`)@everyone(?!`)|(?!`)<@&{guild_id}>(?!`)")
+EVERYONE_RE_MULTILINE_CODE = re.compile(rf"(?!```\n.*)@everyone(?!\n.*```)|(?!```\n.*)<@&{guild_id}>(?!\n.*```)")
 
 
 async def apply(
@@ -16,20 +22,19 @@ async def apply(
 
     everyone_messages_count = 0
     for msg in relevant_messages:
-        if "@everyone" in msg.content:
+        num_everyone_pings_inline = len(re.findall(EVERYONE_RE_INLINE_CODE, msg.content))
+        num_everyone_pings_multiline = len(re.findall(EVERYONE_RE_MULTILINE_CODE, msg.content))
+        if num_everyone_pings_inline and num_everyone_pings_multiline:
             everyone_messages_count += 1
 
     if everyone_messages_count > config["max"]:
-        # Send the user an embed giving them more info:
+        # Send the channel an embed giving the user more info:
         embed_text = f"Please don't try to ping {last_message.guild.member_count:,} people."
-
-        # Make embed:
         embed = Embed(title=random.choice(NEGATIVE_REPLIES), description=embed_text, colour=Colours.soft_red)
-
-        # Send embed:
         await last_message.channel.send(embed=embed)
+
         return (
-            f"pinged the everyone role {everyone_messages_count} times in {config['interval']}s",
+            "pinged the everyone role",
             (last_message.author,),
             relevant_messages,
         )
