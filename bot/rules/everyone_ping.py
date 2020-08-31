@@ -8,8 +8,8 @@ from bot.constants import Colours, Guild, NEGATIVE_REPLIES
 
 # Generate regex for checking for pings:
 guild_id = Guild.id
-EVERYONE_RE_INLINE_CODE = re.compile(rf"(?!`)@everyone(?!`)|(?!`)<@&{guild_id}>(?!`)")
-EVERYONE_RE_MULTILINE_CODE = re.compile(rf"(?!```\n.*)@everyone(?!\n.*```)|(?!```\n.*)<@&{guild_id}>(?!\n.*```)")
+EVERYONE_RE_INLINE_CODE = re.compile(rf"^(?!`)@everyone(?!`)$|^(?!`)<@&{guild_id}>(?!`)$")
+EVERYONE_RE_MULTILINE_CODE = re.compile(rf"^(?!```)@everyone(?!```)$|^(?!```)<@&{guild_id}>(?!```)$")
 
 
 async def apply(
