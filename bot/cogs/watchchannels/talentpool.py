@@ -37,7 +37,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         """Highlights the activity of helper nominees by relaying their messages to the talent pool channel."""
         await ctx.send_help(ctx.command)
 
-    @nomination_group.command(name='watched', aliases=('all', 'list'))
+    @nomination_group.command(name='watched', aliases=('all', 'list'), root_aliases=("nominees",))
     @with_role(*MODERATION_ROLES)
     async def watched_command(
         self, ctx: Context, oldest_first: bool = False, update_cache: bool = True
@@ -63,7 +63,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         """
         await ctx.invoke(self.watched_command, oldest_first=True, update_cache=update_cache)
 
-    @nomination_group.command(name='watch', aliases=('w', 'add', 'a'))
+    @nomination_group.command(name='watch', aliases=('w', 'add', 'a'), root_aliases=("nominate",))
     @with_role(*STAFF_ROLES)
     async def watch_command(self, ctx: Context, user: FetchedMember, *, reason: str) -> None:
         """
@@ -157,7 +157,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
             max_size=1000
         )
 
-    @nomination_group.command(name='unwatch', aliases=('end', ))
+    @nomination_group.command(name='unwatch', aliases=('end', ), root_aliases=("unnominate",))
     @with_role(*MODERATION_ROLES)
     async def unwatch_command(self, ctx: Context, user: FetchedMember, *, reason: str) -> None:
         """

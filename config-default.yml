@@ -38,6 +38,17 @@ style:
         status_dnd:     "<:status_dnd:470326272082313216>"
         status_offline: "<:status_offline:470326266537705472>"
 
+        badge_staff: "<:discord_staff:743882896498098226>"
+        badge_partner: "<:partner:748666453242413136>"
+        badge_hypesquad: "<:hypesquad_events:743882896892362873>"
+        badge_bug_hunter: "<:bug_hunter_lvl1:743882896372269137>"
+        badge_hypesquad_bravery: "<:hypesquad_bravery:743882896745693335>"
+        badge_hypesquad_brilliance: "<:hypesquad_brilliance:743882896938631248>"
+        badge_hypesquad_balance: "<:hypesquad_balance:743882896460480625>"
+        badge_early_supporter: "<:early_supporter:743882896909140058>"
+        badge_bug_hunter_level_2: "<:bug_hunter_lvl2:743882896611344505>"
+        badge_verified_bot_developer: "<:verified_bot_dev:743882897299210310>"
+
         incident_actioned:      "<:incident_actioned:719645530128646266>"
         incident_unactioned:    "<:incident_unactioned:719645583245180960>"
         incident_investigating: "<:incident_investigating:719645658671480924>"

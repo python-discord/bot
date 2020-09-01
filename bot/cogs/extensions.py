@@ -107,7 +107,7 @@ class Extensions(commands.Cog):
 
         await ctx.send(msg)
 
-    @extensions_group.command(name="reload", aliases=("r",))
+    @extensions_group.command(name="reload", aliases=("r",), root_aliases=("reload",))
     async def reload_command(self, ctx: Context, *extensions: Extension) -> None:
         r"""
         Reload extensions given their fully qualified or unqualified names.
