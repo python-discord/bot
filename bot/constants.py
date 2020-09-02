@@ -472,7 +472,6 @@ class Guild(metaclass=YAMLGetter):
     moderation_roles: List[int]
     modlog_blacklist: List[int]
     reminder_whitelist: List[int]
-    staff_channels: List[int]
     staff_roles: List[int]
 
 
@@ -624,7 +623,6 @@ MODERATION_ROLES = Guild.moderation_roles
 STAFF_ROLES = Guild.staff_roles
 
 # Channel combinations
-STAFF_CHANNELS = Guild.staff_channels
 MODERATION_CHANNELS = Guild.moderation_channels
 
 # Bot replies

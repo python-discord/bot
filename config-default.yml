@@ -199,15 +199,6 @@ guild:
         big_brother_logs:   &BB_LOGS        468507907357409333
         talent_pool:        &TALENT_POOL    534321732593647616
 
-    staff_channels:
-        - *ADMINS
-        - *ADMIN_SPAM
-        - *DEFCON
-        - *HELPERS
-        - *MODS
-        - *MOD_SPAM
-        - *ORGANISATION
-
     moderation_channels:
         - *ADMINS
         - *ADMIN_SPAM
