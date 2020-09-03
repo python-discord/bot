@@ -385,6 +385,10 @@ anti_spam:
             interval: 10
             max: 3
 
+        everyone_ping:
+            interval: 10
+            max: 0
+
 
 reddit:
     subreddits:
