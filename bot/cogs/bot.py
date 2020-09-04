@@ -9,6 +9,7 @@ from discord.ext.commands import Cog, Context, command, group
 
 from bot.bot import Bot
 from bot.cogs.token_remover import TokenRemover
+from bot.cogs.webhook_remover import WEBHOOK_URL_RE
 from bot.constants import Categories, Channels, DEBUG_MODE, Guild, MODERATION_ROLES, Roles, URLs
 from bot.decorators import with_role
 from bot.utils.messages import wait_for_deletion
@@ -240,6 +241,7 @@ class BotCog(Cog, name="Bot"):
             and not msg.author.bot
             and len(msg.content.splitlines()) > 3
             and not TokenRemover.find_token_in_message(msg)
+            and not WEBHOOK_URL_RE.search(msg.content)
         )
 
         if parse_codeblock:  # no token in the msg

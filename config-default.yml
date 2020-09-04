@@ -39,7 +39,7 @@ style:
         status_offline: "<:status_offline:470326266537705472>"
 
         badge_staff: "<:discord_staff:743882896498098226>"
-        badge_partner: "<:partner:743882897131569323>"
+        badge_partner: "<:partner:748666453242413136>"
         badge_hypesquad: "<:hypesquad_events:743882896892362873>"
         badge_bug_hunter: "<:bug_hunter_lvl1:743882896372269137>"
         badge_hypesquad_bravery: "<:hypesquad_bravery:743882896745693335>"
@@ -385,19 +385,16 @@ anti_spam:
             interval: 10
             max: 3
 
+        everyone_ping:
+            interval: 10
+            max: 0
+
 
 reddit:
     subreddits:
         - 'r/Python'
     client_id: !ENV "REDDIT_CLIENT_ID"
     secret:    !ENV "REDDIT_SECRET"
-
-
-wolfram:
-    # Max requests per day.
-    user_limit_day: 10
-    guild_limit_day: 67
-    key: !ENV "WOLFRAM_API_KEY"
 
 
 big_brother:
