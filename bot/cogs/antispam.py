@@ -27,7 +27,8 @@ log = logging.getLogger(__name__)
 RULE_FUNCTION_MAPPING = {
     'attachments': rules.apply_attachments,
     'burst': rules.apply_burst,
-    'burst_shared': rules.apply_burst_shared,
+    # burst shared is temporarily disabled due to a bug
+    # 'burst_shared': rules.apply_burst_shared,
     'chars': rules.apply_chars,
     'discord_emojis': rules.apply_discord_emojis,
     'duplicates': rules.apply_duplicates,
