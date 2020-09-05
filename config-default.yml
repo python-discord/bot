@@ -352,9 +352,13 @@ anti_spam:
             interval: 10
             max: 7
 
-        burst_shared:
-            interval: 10
-            max: 20
+        # Burst shared it (temporarily) disabled to prevent
+        # the bug that triggers multiple infractions/DMs per
+        # user. It also tends to catch a lot of innocent users
+        # now that we're so big.
+        # burst_shared:
+        #    interval: 10
+        #    max: 20
 
         chars:
             interval: 5
@@ -385,9 +389,11 @@ anti_spam:
             interval: 10
             max: 3
 
-        everyone_ping:
-            interval: 10
-            max: 0
+        # The everyone ping filter is temporarily disabled
+        # until we've fixed a couple of bugs.
+        # everyone_ping:
+        #    interval: 10
+        #    max: 0
 
 
 reddit:
