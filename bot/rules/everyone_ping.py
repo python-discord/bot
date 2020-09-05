@@ -8,8 +8,12 @@ from bot.constants import Colours, Guild, NEGATIVE_REPLIES
 
 # Generate regex for checking for pings:
 guild_id = Guild.id
-EVERYONE_RE_INLINE_CODE = re.compile(rf"^(?!`).*@everyone.*(?!`)$|^(?!`).*<@&{guild_id}>.*(?!`)$")
-EVERYONE_RE_MULTILINE_CODE = re.compile(rf"^(?!```).*@everyone.*(?!```)$|^(?!```).*<@&{guild_id}>.*(?!```)$")
+EVERYONE_PING_RE = re.compile(rf"@everyone|<@&{guild_id}>")
+CODE_BLOCK_RE = re.compile(
+    r"(?P<delim>``?)[^`]+?(?P=delim)(?!`+)"  # Inline codeblock
+    r"|```(.+?)```",  # Multiline codeblock
+    re.DOTALL | re.MULTILINE
+)
 
 
 async def apply(
@@ -22,10 +26,9 @@ async def apply(
 
     everyone_messages_count = 0
     for msg in relevant_messages:
-        num_everyone_pings_inline = len(re.findall(EVERYONE_RE_INLINE_CODE, msg.content))
-        num_everyone_pings_multiline = len(re.findall(EVERYONE_RE_MULTILINE_CODE, msg.content))
-        if num_everyone_pings_inline and num_everyone_pings_multiline:
-            everyone_messages_count += 1
+        content = CODE_BLOCK_RE.sub("", msg.content)  # Remove codeblocks in the message
+        if matches := len(EVERYONE_PING_RE.findall(content)):
+            everyone_messages_count += matches
 
     if everyone_messages_count > config["max"]:
         # Send the channel an embed giving the user more info:
