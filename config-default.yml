@@ -389,9 +389,11 @@ anti_spam:
             interval: 10
             max: 3
 
-        everyone_ping:
-            interval: 10
-            max: 0
+        # The everyone ping filter is temporarily disabled
+        # until we've fixed a couple of bugs.
+        # everyone_ping:
+        #    interval: 10
+        #    max: 0
 
 
 reddit:
