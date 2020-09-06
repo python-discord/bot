@@ -15,10 +15,11 @@ from bot import constants
 from bot.bot import Bot
 from bot.decorators import in_whitelist
 from bot.pagination import LinePaginator
-from bot.utils.checks import InWhitelistCheckFailure, cooldown_with_role_bypass, with_role_check
+from bot.utils.checks import InWhitelistCheckFailure, cooldown_with_role_bypass, without_role_check
 from bot.utils.time import time_since
 
 log = logging.getLogger(__name__)
+
 
 STATUS_EMOTES = {
     Status.offline: constants.Emojis.status_offline,
@@ -197,12 +198,12 @@ class Information(Cog):
             user = ctx.author
 
         # Do a role check if this is being executed on someone other than the caller
-        elif user != ctx.author and not with_role_check(ctx, *constants.MODERATION_ROLES):
+        elif user != ctx.author and await without_role_check(ctx, *constants.MODERATION_ROLES):
             await ctx.send("You may not use this command on users other than yourself.")
             return
 
         # Non-staff may only do this in #bot-commands
-        if not with_role_check(ctx, *constants.STAFF_ROLES):
+        if await without_role_check(ctx, *constants.STAFF_ROLES):
             if not ctx.channel.id == constants.Channels.bot_commands:
                 raise InWhitelistCheckFailure(constants.Channels.bot_commands)
 

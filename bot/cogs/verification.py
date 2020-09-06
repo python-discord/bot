@@ -178,9 +178,10 @@ class Verification(Cog):
             error.handled = True
 
     @staticmethod
-    def bot_check(ctx: Context) -> bool:
+    async def bot_check(ctx: Context) -> bool:
         """Block any command within the verification channel that is not !accept."""
-        if ctx.channel.id == constants.Channels.verification and without_role_check(ctx, *constants.MODERATION_ROLES):
+        is_verification = ctx.channel.id == constants.Channels.verification
+        if is_verification and await without_role_check(ctx, *constants.MODERATION_ROLES):
             return ctx.command.name == "accept"
         else:
             return True

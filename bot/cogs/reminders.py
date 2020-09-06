@@ -117,9 +117,9 @@ class Reminders(Cog):
 
         If mentions aren't allowed, also return the type of mention(s) disallowed.
         """
-        if without_role_check(ctx, *STAFF_ROLES):
+        if await without_role_check(ctx, *STAFF_ROLES):
             return False, "members/roles"
-        elif without_role_check(ctx, *MODERATION_ROLES):
+        elif await without_role_check(ctx, *MODERATION_ROLES):
             return all(isinstance(mention, discord.Member) for mention in mentions), "roles"
         else:
             return True, ""
@@ -240,7 +240,7 @@ class Reminders(Cog):
         Expiration is parsed per: http://strftime.org/
         """
         # If the user is not staff, we need to verify whether or not to make a reminder at all.
-        if without_role_check(ctx, *STAFF_ROLES):
+        if await without_role_check(ctx, *STAFF_ROLES):
 
             # If they don't have permission to set a reminder in this channel
             if ctx.channel.id not in WHITELISTED_CHANNELS:
@@ -431,7 +431,7 @@ class Reminders(Cog):
 
         The check passes when the user is an admin, or if they created the reminder.
         """
-        if with_role_check(ctx, Roles.admins):
+        if await with_role_check(ctx, Roles.admins):
             return True
 
         api_response = await self.bot.api_client.get(f"bot/reminders/{reminder_id}")
