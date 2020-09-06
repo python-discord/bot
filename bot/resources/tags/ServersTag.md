@@ -1,0 +1,5 @@
+**Are you on the lookout for new servers to join?**
+
+If you're looking for a community dedicated to a certain tool, language or related field of interest, check out this *[awesome list](https://github.com/mhxion/awesome-discord-communities)*. A curated list of Discord communities that are dedicated to a a multitude of areas including [Programming languages](https://github.com/mhxion/awesome-discord-communities/blob/main/README.md#programming-languages), [Electricals](https://github.com/mhxion/awesome-discord-communities/blob/main/README.md#electricals), [Computer science](https://github.com/mhxion/awesome-discord-communities/blob/main/README.md#art-of-computer-science), [Operating systems](https://github.com/mhxion/awesome-discord-communities/blob/main/README.md#operating-systems) and more!
+
+Also consider checking out the wonderful communities this server has partnered with, either in the partners channel or the [communities](https://github.com/mhxion/awesome-discord-communities/blob/main/README.md#operating-systems) page of the python discord's website.
