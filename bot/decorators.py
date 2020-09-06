@@ -6,13 +6,12 @@ from functools import wraps
 from typing import Callable, Container, Optional, Union
 from weakref import WeakValueDictionary
 
-from discord import Colour, Embed, Member
-from discord.errors import NotFound
+from discord import Colour, Embed, Member, NotFound
 from discord.ext import commands
 from discord.ext.commands import Cog, Context
 
 from bot.constants import Channels, ERROR_REPLIES, RedirectOutput
-from bot.utils.checks import in_whitelist_check, without_role_check
+from bot.utils.checks import in_whitelist_check
 
 log = logging.getLogger(__name__)
 
@@ -45,10 +44,22 @@ def in_whitelist(
     return commands.check(predicate)
 
 
-def without_role(*role_ids: int) -> Callable:
-    """Returns True if the user does not have any of the roles in role_ids."""
+def without_role(*roles: Union[str, int]) -> Callable:
+    """
+    Returns True if the user does not have any of the roles specified.
+
+    `roles` are the names or IDs of the disallowed roles.
+    """
     async def predicate(ctx: Context) -> bool:
-        return without_role_check(ctx, *role_ids)
+        try:
+            await commands.has_any_role(*roles).predicate(ctx)
+        except commands.MissingAnyRole:
+            return True
+        else:
+            # This error is never shown to users, so don't bother trying to make it too pretty.
+            roles_ = ", ".join(f"'{item}'" for item in roles)
+            raise commands.CheckFailure(f"You have at least one of the disallowed roles: {roles_}")
+
     return commands.check(predicate)
 
 
