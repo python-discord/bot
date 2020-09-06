@@ -91,7 +91,7 @@ def in_whitelist_check(
     return False
 
 
-async def with_role_check(ctx: Context, *roles: Union[str, int]) -> bool:
+async def has_any_role_check(ctx: Context, *roles: Union[str, int]) -> bool:
     """
     Returns True if the context's author has any of the specified roles.
 
@@ -104,7 +104,7 @@ async def with_role_check(ctx: Context, *roles: Union[str, int]) -> bool:
         return False
 
 
-async def without_role_check(ctx: Context, *roles: Union[str, int]) -> bool:
+async def has_no_roles_check(ctx: Context, *roles: Union[str, int]) -> bool:
     """
     Returns True if the context's author doesn't have any of the specified roles.
 

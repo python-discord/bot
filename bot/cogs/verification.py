@@ -7,8 +7,8 @@ from discord.ext.commands import Cog, Context, command
 from bot import constants
 from bot.bot import Bot
 from bot.cogs.moderation import ModLog
-from bot.decorators import in_whitelist, without_role
-from bot.utils.checks import InWhitelistCheckFailure, without_role_check
+from bot.decorators import has_no_roles, in_whitelist
+from bot.utils.checks import InWhitelistCheckFailure, has_no_roles_check
 
 log = logging.getLogger(__name__)
 
@@ -107,7 +107,7 @@ class Verification(Cog):
             await ctx.message.delete()
 
     @command(name='accept', aliases=('verify', 'verified', 'accepted'), hidden=True)
-    @without_role(constants.Roles.verified)
+    @has_no_roles(constants.Roles.verified)
     @in_whitelist(channels=(constants.Channels.verification,))
     async def accept_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
         """Accept our rules and gain access to the rest of the server."""
@@ -181,7 +181,7 @@ class Verification(Cog):
     async def bot_check(ctx: Context) -> bool:
         """Block any command within the verification channel that is not !accept."""
         is_verification = ctx.channel.id == constants.Channels.verification
-        if is_verification and await without_role_check(ctx, *constants.MODERATION_ROLES):
+        if is_verification and await has_no_roles_check(ctx, *constants.MODERATION_ROLES):
             return ctx.command.name == "accept"
         else:
             return True

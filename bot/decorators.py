@@ -44,7 +44,7 @@ def in_whitelist(
     return commands.check(predicate)
 
 
-def without_role(*roles: Union[str, int]) -> Callable:
+def has_no_roles(*roles: Union[str, int]) -> Callable:
     """
     Returns True if the user does not have any of the roles specified.
 
