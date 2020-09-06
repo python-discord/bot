@@ -4,13 +4,12 @@ import logging
 from datetime import datetime, timedelta
 
 from discord import Colour, Embed
-from discord.ext.commands import Cog, Context, group
+from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Channels, MODERATION_ROLES
 from bot.converters import OffTopicName
-from bot.decorators import with_role
 from bot.pagination import LinePaginator
 
 CHANNELS = (Channels.off_topic_0, Channels.off_topic_1, Channels.off_topic_2)
@@ -67,13 +66,13 @@ class OffTopicNames(Cog):
             self.updater_task = self.bot.loop.create_task(coro)
 
     @group(name='otname', aliases=('otnames', 'otn'), invoke_without_command=True)
-    @with_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES)
     async def otname_group(self, ctx: Context) -> None:
         """Add or list items from the off-topic channel name rotation."""
         await ctx.send_help(ctx.command)
 
     @otname_group.command(name='add', aliases=('a',))
-    @with_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES)
     async def add_command(self, ctx: Context, *, name: OffTopicName) -> None:
         """
         Adds a new off-topic name to the rotation.
@@ -96,7 +95,7 @@ class OffTopicNames(Cog):
             await self._add_name(ctx, name)
 
     @otname_group.command(name='forceadd', aliases=('fa',))
-    @with_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES)
     async def force_add_command(self, ctx: Context, *, name: OffTopicName) -> None:
         """Forcefully adds a new off-topic name to the rotation."""
         await self._add_name(ctx, name)
@@ -109,7 +108,7 @@ class OffTopicNames(Cog):
         await ctx.send(f":ok_hand: Added `{name}` to the names list.")
 
     @otname_group.command(name='delete', aliases=('remove', 'rm', 'del', 'd'))
-    @with_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES)
     async def delete_command(self, ctx: Context, *, name: OffTopicName) -> None:
         """Removes a off-topic name from the rotation."""
         await self.bot.api_client.delete(f'bot/off-topic-channel-names/{name}')
@@ -118,7 +117,7 @@ class OffTopicNames(Cog):
         await ctx.send(f":ok_hand: Removed `{name}` from the names list.")
 
     @otname_group.command(name='list', aliases=('l',))
-    @with_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES)
     async def list_command(self, ctx: Context) -> None:
         """
         Lists all currently known off-topic channel names in a paginator.
@@ -138,7 +137,7 @@ class OffTopicNames(Cog):
             await ctx.send(embed=embed)
 
     @otname_group.command(name='search', aliases=('s',))
-    @with_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES)
     async def search_command(self, ctx: Context, *, query: OffTopicName) -> None:
         """Search for an off-topic name."""
         result = await self.bot.api_client.get('bot/off-topic-channel-names')

@@ -8,14 +8,13 @@ from typing import List
 
 from aiohttp import BasicAuth, ClientError
 from discord import Colour, Embed, TextChannel
-from discord.ext.commands import Cog, Context, group
+from discord.ext.commands import Cog, Context, group, has_any_role
 from discord.ext.tasks import loop
 from discord.utils import escape_markdown
 
 from bot.bot import Bot
 from bot.constants import Channels, ERROR_REPLIES, Emojis, Reddit as RedditConfig, STAFF_ROLES, Webhooks
 from bot.converters import Subreddit
-from bot.decorators import with_role
 from bot.pagination import LinePaginator
 from bot.utils.messages import sub_clyde
 
@@ -282,7 +281,7 @@ class Reddit(Cog):
 
         await ctx.send(content=f"Here are this week's top {subreddit} posts!", embed=embed)
 
-    @with_role(*STAFF_ROLES)
+    @has_any_role(*STAFF_ROLES)
     @reddit_group.command(name="subreddits", aliases=("subs",))
     async def subreddits_command(self, ctx: Context) -> None:
         """Send a paginated embed of all the subreddits we're relaying."""

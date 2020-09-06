@@ -2,13 +2,12 @@ import logging
 import textwrap
 from collections import ChainMap
 
-from discord.ext.commands import Cog, Context, group
+from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
 from bot.cogs.moderation.utils import post_infraction
 from bot.constants import Channels, MODERATION_ROLES, Webhooks
 from bot.converters import FetchedMember
-from bot.decorators import with_role
 from .watchchannel import WatchChannel
 
 log = logging.getLogger(__name__)
@@ -28,13 +27,13 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
         )
 
     @group(name='bigbrother', aliases=('bb',), invoke_without_command=True)
-    @with_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES)
     async def bigbrother_group(self, ctx: Context) -> None:
         """Monitors users by relaying their messages to the Big Brother watch channel."""
         await ctx.send_help(ctx.command)
 
     @bigbrother_group.command(name='watched', aliases=('all', 'list'))
-    @with_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES)
     async def watched_command(
         self, ctx: Context, oldest_first: bool = False, update_cache: bool = True
     ) -> None:
@@ -49,7 +48,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
         await self.list_watched_users(ctx, oldest_first=oldest_first, update_cache=update_cache)
 
     @bigbrother_group.command(name='oldest')
-    @with_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES)
     async def oldest_command(self, ctx: Context, update_cache: bool = True) -> None:
         """
         Shows Big Brother monitored users ordered by oldest watched.
@@ -60,7 +59,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
         await ctx.invoke(self.watched_command, oldest_first=True, update_cache=update_cache)
 
     @bigbrother_group.command(name='watch', aliases=('w',), root_aliases=('watch',))
-    @with_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES)
     async def watch_command(self, ctx: Context, user: FetchedMember, *, reason: str) -> None:
         """
         Relay messages sent by the given `user` to the `#big-brother` channel.
@@ -71,7 +70,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
         await self.apply_watch(ctx, user, reason)
 
     @bigbrother_group.command(name='unwatch', aliases=('uw',), root_aliases=('unwatch',))
-    @with_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES)
     async def unwatch_command(self, ctx: Context, user: FetchedMember, *, reason: str) -> None:
         """Stop relaying messages by the given `user`."""
         await self.apply_unwatch(ctx, user, reason)

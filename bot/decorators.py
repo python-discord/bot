@@ -12,7 +12,7 @@ from discord.ext import commands
 from discord.ext.commands import Cog, Context
 
 from bot.constants import Channels, ERROR_REPLIES, RedirectOutput
-from bot.utils.checks import in_whitelist_check, with_role_check, without_role_check
+from bot.utils.checks import in_whitelist_check, without_role_check
 
 log = logging.getLogger(__name__)
 
@@ -42,14 +42,6 @@ def in_whitelist(
         """Check if command was issued in a whitelisted context."""
         return in_whitelist_check(ctx, channels, categories, roles, redirect, fail_silently)
 
-    return commands.check(predicate)
-
-
-def with_role(*role_ids: int) -> Callable:
-    """Returns True if the user has any one of the roles in role_ids."""
-    async def predicate(ctx: Context) -> bool:
-        """With role checker predicate."""
-        return with_role_check(ctx, *role_ids)
     return commands.check(predicate)
 
 

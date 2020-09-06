@@ -8,12 +8,12 @@ from typing import Any, Mapping, Optional, Tuple, Union
 
 from discord import ChannelType, Colour, CustomActivity, Embed, Guild, Member, Message, Role, Status, utils
 from discord.abc import GuildChannel
-from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group
+from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
 from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
-from bot.decorators import in_whitelist, with_role
+from bot.decorators import in_whitelist
 from bot.pagination import LinePaginator
 from bot.utils.checks import InWhitelistCheckFailure, cooldown_with_role_bypass, with_role_check
 from bot.utils.time import time_since
@@ -76,7 +76,7 @@ class Information(Cog):
         channel_type_list = sorted(channel_type_list)
         return "\n".join(channel_type_list)
 
-    @with_role(*constants.MODERATION_ROLES)
+    @has_any_role(*constants.MODERATION_ROLES)
     @command(name="roles")
     async def roles_info(self, ctx: Context) -> None:
         """Returns a list of all roles and their corresponding IDs."""
@@ -96,7 +96,7 @@ class Information(Cog):
 
         await LinePaginator.paginate(role_list, ctx, embed, empty=False)
 
-    @with_role(*constants.MODERATION_ROLES)
+    @has_any_role(*constants.MODERATION_ROLES)
     @command(name="role")
     async def role_info(self, ctx: Context, *roles: Union[Role, str]) -> None:
         """
