@@ -6,12 +6,11 @@ import typing as t
 from pathlib import Path
 
 from discord import Colour, Embed, Member
-from discord.ext.commands import Cog, Context, command
+from discord.ext.commands import Cog, Context, command, has_any_role
 
 from bot import constants
 from bot.bot import Bot
 from bot.converters import Expiry
-from bot.utils.checks import with_role_check
 from bot.utils.time import format_infraction
 from . import utils
 from .scheduler import InfractionScheduler
@@ -234,6 +233,6 @@ class Superstarify(InfractionScheduler, Cog):
         return rng.choice(STAR_NAMES)
 
     # This cannot be static (must have a __func__ attribute).
-    def cog_check(self, ctx: Context) -> bool:
+    async def cog_check(self, ctx: Context) -> bool:
         """Only allow moderators to invoke the commands in this cog."""
-        return with_role_check(ctx, *constants.MODERATION_ROLES)
+        return await has_any_role(*constants.MODERATION_ROLES).predicate(ctx)

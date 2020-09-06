@@ -12,7 +12,6 @@ from bot.bot import Bot
 from bot.constants import Event
 from bot.converters import Expiry, FetchedMember
 from bot.decorators import respect_role_hierarchy
-from bot.utils.checks import with_role_check
 from . import utils
 from .scheduler import InfractionScheduler
 from .utils import UserSnowflake
@@ -357,9 +356,9 @@ class Infractions(InfractionScheduler, commands.Cog):
     # endregion
 
     # This cannot be static (must have a __func__ attribute).
-    def cog_check(self, ctx: Context) -> bool:
+    async def cog_check(self, ctx: Context) -> bool:
         """Only allow moderators to invoke the commands in this cog."""
-        return with_role_check(ctx, *constants.MODERATION_ROLES)
+        return await commands.has_any_role(*constants.MODERATION_ROLES).predicate(ctx)
 
     # This cannot be static (must have a __func__ attribute).
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:

@@ -12,7 +12,7 @@ from bot.bot import Bot
 from bot.converters import Expiry, InfractionSearchQuery, allowed_strings, proxy_user
 from bot.pagination import LinePaginator
 from bot.utils import time
-from bot.utils.checks import in_whitelist_check, with_role_check
+from bot.utils.checks import in_whitelist_check
 from . import utils
 from .infractions import Infractions
 from .modlog import ModLog
@@ -282,10 +282,10 @@ class ModManagement(commands.Cog):
     # endregion
 
     # This cannot be static (must have a __func__ attribute).
-    def cog_check(self, ctx: Context) -> bool:
+    async def cog_check(self, ctx: Context) -> bool:
         """Only allow moderators inside moderator channels to invoke the commands in this cog."""
         checks = [
-            with_role_check(ctx, *constants.MODERATION_ROLES),
+            await commands.has_any_role(*constants.MODERATION_ROLES).predicate(ctx),
             in_whitelist_check(
                 ctx,
                 channels=constants.MODERATION_CHANNELS,

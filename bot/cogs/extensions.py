@@ -11,7 +11,6 @@ from discord.ext.commands import Context, group
 from bot.bot import Bot
 from bot.constants import Emojis, MODERATION_ROLES, Roles, URLs
 from bot.pagination import LinePaginator
-from bot.utils.checks import with_role_check
 
 log = logging.getLogger(__name__)
 
@@ -219,9 +218,9 @@ class Extensions(commands.Cog):
         return msg, error_msg
 
     # This cannot be static (must have a __func__ attribute).
-    def cog_check(self, ctx: Context) -> bool:
+    async def cog_check(self, ctx: Context) -> bool:
         """Only allow moderators and core developers to invoke the commands in this cog."""
-        return with_role_check(ctx, *MODERATION_ROLES, Roles.core_developers)
+        return await commands.has_any_role(*MODERATION_ROLES, Roles.core_developers).predicate(ctx)
 
     # This cannot be static (must have a __func__ attribute).
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:
