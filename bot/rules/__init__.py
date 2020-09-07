@@ -10,4 +10,3 @@ from .links import apply as apply_links
 from .mentions import apply as apply_mentions
 from .newlines import apply as apply_newlines
 from .role_mentions import apply as apply_role_mentions
-from .everyone_ping import apply as apply_everyone_ping

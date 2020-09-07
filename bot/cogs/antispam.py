@@ -36,7 +36,6 @@ RULE_FUNCTION_MAPPING = {
     'mentions': rules.apply_mentions,
     'newlines': rules.apply_newlines,
     'role_mentions': rules.apply_role_mentions,
-    'everyone_ping': rules.apply_everyone_ping,
 }
 
 
