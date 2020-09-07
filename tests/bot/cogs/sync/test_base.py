@@ -49,8 +49,10 @@ class SyncerSyncTests(unittest.IsolatedAsyncioTestCase):
         for message, side_effect, should_edit in subtests:
             with self.subTest(message=message, side_effect=side_effect, should_edit=should_edit):
                 self.syncer._sync.side_effect = side_effect
+                ctx = helpers.MockContext()
+                ctx.send.return_value = message
 
-                await self.syncer.sync(self.guild)
+                await self.syncer.sync(self.guild, ctx)
 
                 if should_edit:
                     message.edit.assert_called_once()
