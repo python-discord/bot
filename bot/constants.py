@@ -563,13 +563,6 @@ class RedirectOutput(metaclass=YAMLGetter):
     delete_delay: int
 
 
-class Sync(metaclass=YAMLGetter):
-    section = 'sync'
-
-    confirm_timeout: int
-    max_diff: int
-
-
 class PythonNews(metaclass=YAMLGetter):
     section = 'python_news'
 

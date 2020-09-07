@@ -460,10 +460,6 @@ redirect_output:
     delete_invocation: true
     delete_delay: 15
 
-sync:
-    confirm_timeout: 300
-    max_diff: 10
-
 duck_pond:
     threshold: 5
     custom_emojis:
