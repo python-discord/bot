@@ -217,6 +217,7 @@ class Filter(metaclass=YAMLGetter):
     filter_zalgo: bool
     filter_invites: bool
     filter_domains: bool
+    filter_everyone_ping: bool
     watch_regex: bool
     watch_rich_embeds: bool
 
@@ -224,6 +225,7 @@ class Filter(metaclass=YAMLGetter):
     notify_user_zalgo: bool
     notify_user_invites: bool
     notify_user_domains: bool
+    notify_user_everyone_ping: bool
 
     ping_everyone: bool
     offensive_msg_delete_days: int

@@ -273,17 +273,19 @@ guild:
 
 filter:
     # What do we filter?
-    filter_zalgo:       false
-    filter_invites:     true
-    filter_domains:     true
-    watch_regex:        true
-    watch_rich_embeds:  true
+    filter_zalgo:          false
+    filter_invites:        true
+    filter_domains:        true
+    filter_everyone_ping:  true
+    watch_regex:           true
+    watch_rich_embeds:     true
 
     # Notify user on filter?
     # Notifications are not expected for "watchlist" type filters
-    notify_user_zalgo:       false
-    notify_user_invites:     true
-    notify_user_domains:     false
+    notify_user_zalgo:          false
+    notify_user_invites:        true
+    notify_user_domains:        false
+    notify_user_everyone_ping:  true
 
     # Filter configuration
     ping_everyone:             true
