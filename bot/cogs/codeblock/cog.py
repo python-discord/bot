@@ -9,6 +9,7 @@ from discord.ext.commands import Cog
 from bot import constants
 from bot.bot import Bot
 from bot.cogs.token_remover import TokenRemover
+from bot.cogs.webhook_remover import WEBHOOK_URL_RE
 from bot.utils import has_lines
 from bot.utils.channel import is_help_channel
 from bot.utils.messages import wait_for_deletion
@@ -127,13 +128,14 @@ class CodeBlockCog(Cog, name="Code Block"):
         1. Is not authored by a bot
         2. Is in a valid channel
         3. Has more than 3 lines
-        4. Has no bot token
+        4. Has no bot or webhook token
         """
         return (
             not message.author.bot
             and self.is_valid_channel(message.channel)
             and has_lines(message.content, constants.CodeBlock.minimum_lines)
             and not TokenRemover.find_token_in_message(message)
+            and not WEBHOOK_URL_RE.search(message.content)
         )
 
     @Cog.listener()

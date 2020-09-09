@@ -514,14 +514,6 @@ class Reddit(metaclass=YAMLGetter):
     secret: Optional[str]
 
 
-class Wolfram(metaclass=YAMLGetter):
-    section = "wolfram"
-
-    user_limit_day: int
-    guild_limit_day: int
-    key: Optional[str]
-
-
 class AntiSpam(metaclass=YAMLGetter):
     section = 'anti_spam'
 
