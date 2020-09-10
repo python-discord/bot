@@ -589,6 +589,16 @@ class PythonNews(metaclass=YAMLGetter):
     webhook: int
 
 
+class Verification(metaclass=YAMLGetter):
+    section = "verification"
+
+    unverified_after: int
+    kicked_after: int
+    reminder_frequency: int
+    bot_message_delete_delay: int
+    kick_confirmation_threshold: float
+
+
 class Event(Enum):
     """
     Event names. This does not include every event (for example, raw

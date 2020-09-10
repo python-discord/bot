@@ -18,16 +18,6 @@ from bot.utils.redis_cache import RedisCache
 
 log = logging.getLogger(__name__)
 
-UNVERIFIED_AFTER = 3  # Amount of days after which non-Developers receive the @Unverified role
-KICKED_AFTER = 30  # Amount of days after which non-Developers get kicked from the guild
-
-# Number in range [0, 1] determining the percentage of unverified users that are safe
-# to be kicked from the guild in one batch, any larger amount will require staff confirmation,
-# set this to 0 to require explicit approval for batches of any size
-KICK_CONFIRMATION_THRESHOLD = 0.01  # 1%
-
-BOT_MESSAGE_DELETE_DELAY = 10
-
 # Sent via DMs once user joins the guild
 ON_JOIN_MESSAGE = f"""
 Hello! Welcome to Python Discord!
@@ -62,7 +52,7 @@ If you'd like to unsubscribe from the announcement notifications, simply send `!
 # Sent via DMs to users kicked for failing to verify
 KICKED_MESSAGE = f"""
 Hi! You have been automatically kicked from Python Discord as you have failed to accept our rules \
-within `{KICKED_AFTER}` days. If this was an accident, please feel free to join us again!
+within `{constants.Verification.kicked_after}` days. If this was an accident, please feel free to join us again!
 
 {constants.Guild.invite}
 """
@@ -74,10 +64,8 @@ REMINDER_MESSAGE = f"""
 Welcome to Python Discord! Please read the documents mentioned above and type `!accept` to gain permissions \
 to send messages in the community!
 
-You will be kicked if you don't verify within `{KICKED_AFTER}` days.
+You will be kicked if you don't verify within `{constants.Verification.kicked_after}` days.
 """.strip()
-
-REMINDER_FREQUENCY = 28  # Hours to wait between sending `REMINDER_MESSAGE`
 
 # An async function taking a Member param
 Request = t.Callable[[discord.Member], t.Awaitable]
@@ -209,7 +197,7 @@ class Verification(Cog):
         pydis = self.bot.get_guild(constants.Guild.id)
 
         percentage = n_members / len(pydis.members)
-        if percentage < KICK_CONFIRMATION_THRESHOLD:
+        if percentage < constants.Verification.kick_confirmation_threshold:
             log.debug(f"Kicking {percentage:.2%} of the guild's population is seen as safe")
             return True
 
@@ -221,7 +209,8 @@ class Verification(Cog):
 
         confirmation_msg = await core_dev_channel.send(
             f"{core_dev_ping} Verification determined that `{n_members}` members should be kicked as they haven't "
-            f"verified in `{KICKED_AFTER}` days. This is `{percentage:.2%}` of the guild's population. Proceed?",
+            f"verified in `{constants.Verification.kicked_after}` days. This is `{percentage:.2%}` of the guild's "
+            f"population. Proceed?",
             allowed_mentions=mention_role(constants.Roles.core_developers),
         )
 
@@ -333,7 +322,7 @@ class Verification(Cog):
 
         Note that this is a potentially destructive operation. Returns the amount of successful requests.
         """
-        log.info(f"Kicking {len(members)} members from the guild (not verified after {KICKED_AFTER} days)")
+        log.info(f"Kicking {len(members)} members (not verified after {constants.Verification.kicked_after} days)")
 
         async def kick_request(member: discord.Member) -> None:
             """Send `KICKED_MESSAGE` to `member` and kick them from the guild."""
@@ -343,7 +332,7 @@ class Verification(Cog):
                 log.trace(f"DM dispatch failed on 403 error with code: {exc_403.code}")
                 if exc_403.code != 50_007:  # 403 raised for any other reason than disabled DMs
                     raise StopExecution(reason=exc_403)
-            await member.kick(reason=f"User has not verified in {KICKED_AFTER} days")
+            await member.kick(reason=f"User has not verified in {constants.Verification.kicked_after} days")
 
         n_kicked = await self._send_requests(members, kick_request, Limit(batch_size=2, sleep_secs=1))
         self.bot.stats.incr("verification.kicked", count=n_kicked)
@@ -358,11 +347,14 @@ class Verification(Cog):
 
         Returns the amount of successful requests.
         """
-        log.info(f"Assigning {role} role to {len(members)} members (not verified after {UNVERIFIED_AFTER} days)")
+        log.info(
+            f"Assigning {role} role to {len(members)} members (not verified "
+            f"after {constants.Verification.unverified_after} days)"
+        )
 
         async def role_request(member: discord.Member) -> None:
             """Add `role` to `member`."""
-            await member.add_roles(role, reason=f"User has not verified in {UNVERIFIED_AFTER} days")
+            await member.add_roles(role, reason=f"Not verified after {constants.Verification.unverified_after} days")
 
         return await self._send_requests(members, role_request, Limit(batch_size=25, sleep_secs=1))
 
@@ -397,10 +389,13 @@ class Verification(Cog):
             # to do with them based on time passed since their join date
             since_join = current_dt - member.joined_at
 
-            if since_join > timedelta(days=KICKED_AFTER):
+            if since_join > timedelta(days=constants.Verification.kicked_after):
                 for_kick.add(member)  # User should be removed from the guild
 
-            elif since_join > timedelta(days=UNVERIFIED_AFTER) and unverified not in member.roles:
+            elif (
+                since_join > timedelta(days=constants.Verification.unverified_after)
+                and unverified not in member.roles
+            ):
                 for_role.add(member)  # User should be given the @Unverified role
 
         log.debug(f"Found {len(for_role)} users for {unverified} role, {len(for_kick)} users to be kicked")
@@ -445,7 +440,7 @@ class Verification(Cog):
     # endregion
     # region: periodically ping @Unverified
 
-    @tasks.loop(hours=REMINDER_FREQUENCY)
+    @tasks.loop(hours=constants.Verification.reminder_frequency)
     async def ping_unverified(self) -> None:
         """
         Delete latest `REMINDER_MESSAGE` and send it again.
@@ -488,7 +483,7 @@ class Verification(Cog):
         time_since = datetime.utcnow() - snowflake_time(last_reminder)
         log.trace(f"Time since latest verification reminder: {time_since}")
 
-        to_sleep = timedelta(hours=REMINDER_FREQUENCY) - time_since
+        to_sleep = timedelta(hours=constants.Verification.reminder_frequency) - time_since
         log.trace(f"Time to sleep until next ping: {to_sleep}")
 
         # Delta can be negative if `REMINDER_FREQUENCY` has already passed
@@ -519,7 +514,7 @@ class Verification(Cog):
 
         if message.author.bot:
             # They're a bot, delete their message after the delay.
-            await message.delete(delay=BOT_MESSAGE_DELETE_DELAY)
+            await message.delete(delay=constants.Verification.bot_message_delete_delay)
             return
 
         # if a user mentions a role or guild member

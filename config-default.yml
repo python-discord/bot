@@ -493,5 +493,18 @@ python_news:
     channel: *PYNEWS_CHANNEL
     webhook: *PYNEWS_WEBHOOK
 
+
+verification:
+    unverified_after: 3  # Days after which non-Developers receive the @Unverified role
+    kicked_after: 30  # Days after which non-Developers get kicked from the guild
+    reminder_frequency: 28  # Hours between @Unverified pings
+    bot_message_delete_delay: 10  # Seconds before deleting bots response in #verification
+
+    # Number in range [0, 1] determining the percentage of unverified users that are safe
+    # to be kicked from the guild in one batch, any larger amount will require staff confirmation,
+    # set this to 0 to require explicit approval for batches of any size
+    kick_confirmation_threshold: 0.01  # 1%
+
+
 config:
     required_keys: ['bot.token']
