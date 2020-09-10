@@ -1,17 +1,16 @@
 import asyncio
 import inspect
 import logging
-import random
 import typing as t
 from collections import defaultdict
 from contextlib import suppress
 from functools import partial, wraps
 from weakref import WeakValueDictionary
 
-from discord import Colour, Embed, Member, NotFound
+from discord import Member, NotFound
 from discord.ext.commands import Cog, Context, check
 
-from bot.constants import Channels, ERROR_REPLIES, RedirectOutput
+from bot.constants import Channels, RedirectOutput
 from bot.errors import LockedResourceError
 from bot.utils import LockGuard, function
 from bot.utils.checks import in_whitelist_check, with_role_check, without_role_check
@@ -65,38 +64,6 @@ def without_role(*role_ids: int) -> t.Callable:
     async def predicate(ctx: Context) -> bool:
         return without_role_check(ctx, *role_ids)
     return check(predicate)
-
-
-def locked() -> t.Callable:
-    """
-    Allows the user to only run one instance of the decorated command at a time.
-
-    Subsequent calls to the command from the same author are ignored until the command has completed invocation.
-
-    This decorator must go before (below) the `command` decorator.
-    """
-    def wrap(func: t.Callable) -> t.Callable:
-        func.__locks = WeakValueDictionary()
-
-        @wraps(func)
-        async def inner(self: Cog, ctx: Context, *args, **kwargs) -> None:
-            lock = func.__locks.setdefault(ctx.author.id, asyncio.Lock())
-            if lock.locked():
-                embed = Embed()
-                embed.colour = Colour.red()
-
-                log.debug("User tried to invoke a locked command.")
-                embed.description = (
-                    "You're already using this command. Please wait until it is done before you use it again."
-                )
-                embed.title = random.choice(ERROR_REPLIES)
-                await ctx.send(embed=embed)
-                return
-
-            async with func.__locks.setdefault(ctx.author.id, asyncio.Lock()):
-                await func(self, ctx, *args, **kwargs)
-        return inner
-    return wrap
 
 
 def mutually_exclusive(
