@@ -461,6 +461,7 @@ class Roles(metaclass=YAMLGetter):
     partners: int
     python_community: int
     team_leaders: int
+    unverified: int
     verified: int  # This is the Developers role on PyDis, here named verified for readability reasons.
 
 
@@ -468,6 +469,7 @@ class Guild(metaclass=YAMLGetter):
     section = "guild"
 
     id: int
+    invite: str  # Discord invite, gets embedded in chat
     moderation_channels: List[int]
     moderation_roles: List[int]
     modlog_blacklist: List[int]
@@ -576,6 +578,16 @@ class PythonNews(metaclass=YAMLGetter):
     mail_lists: List[str]
     channel: int
     webhook: int
+
+
+class Verification(metaclass=YAMLGetter):
+    section = "verification"
+
+    unverified_after: int
+    kicked_after: int
+    reminder_frequency: int
+    bot_message_delete_delay: int
+    kick_confirmation_threshold: float
 
 
 class Event(Enum):
