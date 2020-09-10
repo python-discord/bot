@@ -227,10 +227,6 @@ class Filter(metaclass=YAMLGetter):
 
     ping_everyone: bool
     offensive_msg_delete_days: int
-    guild_invite_whitelist: List[int]
-    domain_blacklist: List[str]
-    word_watchlist: List[str]
-    token_watchlist: List[str]
 
     channel_whitelist: List[int]
     role_whitelist: List[int]
@@ -271,6 +267,17 @@ class Emojis(metaclass=YAMLGetter):
     status_offline: str
     status_idle: str
     status_dnd: str
+
+    badge_staff: str
+    badge_partner: str
+    badge_hypesquad: str
+    badge_bug_hunter: str
+    badge_hypesquad_bravery: str
+    badge_hypesquad_brilliance: str
+    badge_hypesquad_balance: str
+    badge_early_supporter: str
+    badge_bug_hunter_level_2: str
+    badge_verified_bot_developer: str
 
     incident_actioned: str
     incident_unactioned: str
@@ -489,25 +496,13 @@ class URLs(metaclass=YAMLGetter):
     bot_avatar: str
     github_bot_repo: str
 
-    # Site endpoints
+    # Base site vars
     site: str
     site_api: str
-    site_superstarify_api: str
-    site_logs_api: str
-    site_logs_view: str
-    site_reminders_api: str
-    site_reminders_user_api: str
     site_schema: str
-    site_settings_api: str
-    site_tags_api: str
-    site_user_api: str
-    site_user_complete_api: str
-    site_infractions: str
-    site_infractions_user: str
-    site_infractions_type: str
-    site_infractions_by_id: str
-    site_infractions_user_type_current: str
-    site_infractions_user_type: str
+
+    # Site endpoints
+    site_logs_view: str
     paste_service: str
 
 
@@ -519,14 +514,6 @@ class Reddit(metaclass=YAMLGetter):
     secret: Optional[str]
 
 
-class Wolfram(metaclass=YAMLGetter):
-    section = "wolfram"
-
-    user_limit_day: int
-    guild_limit_day: int
-    key: Optional[str]
-
-
 class AntiSpam(metaclass=YAMLGetter):
     section = 'anti_spam'
 
@@ -535,12 +522,6 @@ class AntiSpam(metaclass=YAMLGetter):
 
     punishment: Dict[str, Dict[str, int]]
     rules: Dict[str, Dict[str, int]]
-
-
-class AntiMalware(metaclass=YAMLGetter):
-    section = "anti_malware"
-
-    whitelist: list
 
 
 class BigBrother(metaclass=YAMLGetter):

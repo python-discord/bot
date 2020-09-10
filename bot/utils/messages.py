@@ -19,24 +19,19 @@ log = logging.getLogger(__name__)
 async def wait_for_deletion(
     message: Message,
     user_ids: Sequence[Snowflake],
+    client: Client,
     deletion_emojis: Sequence[str] = (Emojis.trashcan,),
     timeout: float = 60 * 5,
     attach_emojis: bool = True,
-    client: Optional[Client] = None
 ) -> None:
     """
     Wait for up to `timeout` seconds for a reaction by any of the specified `user_ids` to delete the message.
 
     An `attach_emojis` bool may be specified to determine whether to attach the given
-    `deletion_emojis` to the message in the given `context`
-
-    A `client` instance may be optionally specified, otherwise client will be taken from the
-    guild of the message.
+    `deletion_emojis` to the message in the given `context`.
     """
-    if message.guild is None and client is None:
+    if message.guild is None:
         raise ValueError("Message must be sent on a guild")
-
-    bot = client or message.guild.me
 
     if attach_emojis:
         for emoji in deletion_emojis:
@@ -51,7 +46,7 @@ async def wait_for_deletion(
         )
 
     with contextlib.suppress(asyncio.TimeoutError):
-        await bot.wait_for('reaction_add', check=check, timeout=timeout)
+        await client.wait_for('reaction_add', check=check, timeout=timeout)
         await message.delete()
 
 

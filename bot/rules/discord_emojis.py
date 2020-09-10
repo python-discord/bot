@@ -5,6 +5,7 @@ from discord import Member, Message
 
 
 DISCORD_EMOJI_RE = re.compile(r"<:\w+:\d+>")
+CODE_BLOCK_RE = re.compile(r"```.*?```", flags=re.DOTALL)
 
 
 async def apply(
@@ -17,8 +18,9 @@ async def apply(
         if msg.author == last_message.author
     )
 
+    # Get rid of code blocks in the message before searching for emojis.
     total_emojis = sum(
-        len(DISCORD_EMOJI_RE.findall(msg.content))
+        len(DISCORD_EMOJI_RE.findall(CODE_BLOCK_RE.sub("", msg.content)))
         for msg in relevant_messages
     )
 

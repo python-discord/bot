@@ -1,48 +1,26 @@
 import itertools
 import logging
-from asyncio import TimeoutError
 from collections import namedtuple
 from contextlib import suppress
 from typing import List, Union
 
-from discord import Colour, Embed, Member, Message, NotFound, Reaction, User
+from discord import Colour, Embed
 from discord.ext.commands import Bot, Cog, Command, Context, Group, HelpCommand
 from fuzzywuzzy import fuzz, process
 from fuzzywuzzy.utils import full_process
 
 from bot import constants
-from bot.constants import Channels, Emojis, STAFF_ROLES
+from bot.constants import Channels, STAFF_ROLES
 from bot.decorators import redirect_output
 from bot.pagination import LinePaginator
+from bot.utils.messages import wait_for_deletion
 
 log = logging.getLogger(__name__)
 
 COMMANDS_PER_PAGE = 8
-DELETE_EMOJI = Emojis.trashcan
 PREFIX = constants.Bot.prefix
 
 Category = namedtuple("Category", ["name", "description", "cogs"])
-
-
-async def help_cleanup(bot: Bot, author: Member, message: Message) -> None:
-    """
-    Runs the cleanup for the help command.
-
-    Adds the :trashcan: reaction that, when clicked, will delete the help message.
-    After a 300 second timeout, the reaction will be removed.
-    """
-    def check(reaction: Reaction, user: User) -> bool:
-        """Checks the reaction is :trashcan:, the author is original author and messages are the same."""
-        return str(reaction) == DELETE_EMOJI and user.id == author.id and reaction.message.id == message.id
-
-    await message.add_reaction(DELETE_EMOJI)
-
-    with suppress(NotFound):
-        try:
-            await bot.wait_for("reaction_add", check=check, timeout=300)
-            await message.delete()
-        except TimeoutError:
-            await message.remove_reaction(DELETE_EMOJI, bot.user)
 
 
 class HelpQueryNotFound(ValueError):
@@ -189,7 +167,9 @@ class CustomHelpCommand(HelpCommand):
         command_details = f"**```{PREFIX}{name} {command.signature}```**\n"
 
         # show command aliases
-        aliases = ", ".join(f"`{alias}`" if not parent else f"`{parent} {alias}`" for alias in command.aliases)
+        aliases = [f"`{alias}`" if not parent else f"`{parent} {alias}`" for alias in command.aliases]
+        aliases += [f"`{alias}`" for alias in getattr(command, "root_aliases", ())]
+        aliases = ", ".join(sorted(aliases))
         if aliases:
             command_details += f"**Can also use:** {aliases}\n\n"
 
@@ -206,7 +186,7 @@ class CustomHelpCommand(HelpCommand):
         """Send help for a single command."""
         embed = await self.command_formatting(command)
         message = await self.context.send(embed=embed)
-        await help_cleanup(self.context.bot, self.context.author, message)
+        await wait_for_deletion(message, (self.context.author.id,), self.context.bot)
 
     @staticmethod
     def get_commands_brief_details(commands_: List[Command], return_as_list: bool = False) -> Union[List[str], str]:
@@ -245,7 +225,7 @@ class CustomHelpCommand(HelpCommand):
             embed.description += f"\n**Subcommands:**\n{command_details}"
 
         message = await self.context.send(embed=embed)
-        await help_cleanup(self.context.bot, self.context.author, message)
+        await wait_for_deletion(message, (self.context.author.id,), self.context.bot)
 
     async def send_cog_help(self, cog: Cog) -> None:
         """Send help for a cog."""
@@ -261,7 +241,7 @@ class CustomHelpCommand(HelpCommand):
             embed.description += f"\n\n**Commands:**\n{command_details}"
 
         message = await self.context.send(embed=embed)
-        await help_cleanup(self.context.bot, self.context.author, message)
+        await wait_for_deletion(message, (self.context.author.id,), self.context.bot)
 
     @staticmethod
     def _category_key(command: Command) -> str:

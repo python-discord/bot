@@ -31,6 +31,10 @@ class InfractionScheduler:
 
         self.bot.loop.create_task(self.reschedule_infractions(supported_infractions))
 
+    def cog_unload(self) -> None:
+        """Cancel scheduled tasks."""
+        self.scheduler.cancel_all()
+
     @property
     def mod_log(self) -> ModLog:
         """Get the currently loaded ModLog cog instance."""
@@ -157,6 +161,7 @@ class InfractionScheduler:
                     self.schedule_expiration(infraction)
             except discord.HTTPException as e:
                 # Accordingly display that applying the infraction failed.
+                # Don't use ctx.message.author; antispam only patches ctx.author.
                 confirm_msg = ":x: failed to apply"
                 expiry_msg = ""
                 log_content = ctx.author.mention
@@ -186,6 +191,7 @@ class InfractionScheduler:
         await ctx.send(f"{dm_result}{confirm_msg}{infr_message}.")
 
         # Send a log message to the mod log.
+        # Don't use ctx.message.author for the actor; antispam only patches ctx.author.
         log.trace(f"Sending apply mod log for infraction #{id_}.")
         await self.mod_log.send_log_message(
             icon_url=icon,
@@ -194,7 +200,7 @@ class InfractionScheduler:
             thumbnail=user.avatar_url_as(static_format="png"),
             text=textwrap.dedent(f"""
                 Member: {user.mention} (`{user.id}`)
-                Actor: {ctx.message.author}{dm_log_text}{expiry_log_text}
+                Actor: {ctx.author}{dm_log_text}{expiry_log_text}
                 Reason: {reason}
             """),
             content=log_content,
@@ -238,7 +244,7 @@ class InfractionScheduler:
         log_text = await self.deactivate_infraction(response[0], send_log=False)
 
         log_text["Member"] = f"{user.mention}(`{user.id}`)"
-        log_text["Actor"] = str(ctx.message.author)
+        log_text["Actor"] = str(ctx.author)
         log_content = None
         id_ = response[0]['id']
         footer = f"ID: {id_}"
