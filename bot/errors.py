@@ -7,7 +7,7 @@ class LockedResourceError(RuntimeError):
 
     Attributes:
         `type` -- name of the locked resource's type
-        `resource_id` -- ID of the locked resource
+        `id` -- ID of the locked resource
     """
 
     def __init__(self, resource_type: str, resource_id: Hashable):
