@@ -1,7 +1,7 @@
 import logging
 import textwrap
 from collections import ChainMap
-from typing import Union, Optional
+from typing import Optional, Union
 
 from discord import Color, Embed, Member, User
 from discord.ext.commands import Cog, Context, group, has_any_role
