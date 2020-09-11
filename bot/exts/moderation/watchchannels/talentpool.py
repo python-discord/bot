@@ -202,7 +202,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
             f"{self.api_endpoint}/{nomination_id}",
             json={field: reason}
         )
-
+        await self.fetch_user_cache()  # Update cache.
         await ctx.send(f":white_check_mark: Updated the {field} of the nomination!")
 
     @Cog.listener()
