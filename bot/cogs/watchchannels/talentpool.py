@@ -1,7 +1,7 @@
 import logging
 import textwrap
 from collections import ChainMap
-from typing import Union
+from typing import Union, Optional
 
 from discord import Color, Embed, Member, User
 from discord.ext.commands import Cog, Context, group
@@ -65,7 +65,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
 
     @nomination_group.command(name='watch', aliases=('w', 'add', 'a'), root_aliases=("nominate",))
     @with_role(*STAFF_ROLES)
-    async def watch_command(self, ctx: Context, user: FetchedMember, *, reason: str) -> None:
+    async def watch_command(self, ctx: Context, user: FetchedMember, *, reason: Optional[str] = '') -> None:
         """
         Relay messages sent by the given `user` to the `#talent-pool` channel.
 
