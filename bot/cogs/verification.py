@@ -111,12 +111,11 @@ class Verification(Cog):
 
     There are two internal tasks in this cog:
 
-        * `update_unverified_members`
-            * Unverified members are given the @Unverified role after `UNVERIFIED_AFTER` days
-            * Unverified members are kicked after `UNVERIFIED_AFTER` days
-
-        * `ping_unverified`
-            * Periodically ping the @Unverified role in the verification channel
+    * `update_unverified_members`
+        * Unverified members are given the @Unverified role after configured `unverified_after` days
+        * Unverified members are kicked after configured `kicked_after` days
+    * `ping_unverified`
+        * Periodically ping the @Unverified role in the verification channel
 
     Statistics are collected in the 'verification.' namespace.
 
@@ -188,8 +187,8 @@ class Verification(Cog):
         Determine whether `n_members` is a reasonable amount of members to kick.
 
         First, `n_members` is checked against the size of the PyDis guild. If `n_members` are
-        more than `KICK_CONFIRMATION_THRESHOLD` of the guild, the operation must be confirmed
-        by staff in #core-dev. Otherwise, the operation is seen as safe.
+        more than the configured `kick_confirmation_threshold` of the guild, the operation
+        must be confirmed by staff in #core-dev. Otherwise, the operation is seen as safe.
         """
         log.debug(f"Checking whether {n_members} members are safe to kick")
 
@@ -363,8 +362,8 @@ class Verification(Cog):
         Check in on the verification status of PyDis members.
 
         This coroutine finds two sets of users:
-            * Not verified after `UNVERIFIED_AFTER` days, should be given the @Unverified role
-            * Not verified after `KICKED_AFTER` days, should be kicked from the guild
+        * Not verified after configured `unverified_after` days, should be given the @Unverified role
+        * Not verified after configured `kicked_after` days, should be kicked from the guild
 
         These sets are always disjoint, i.e. share no common members.
         """
@@ -471,7 +470,7 @@ class Verification(Cog):
         Sleep until `REMINDER_MESSAGE` should be sent again.
 
         If latest reminder is not cached, exit instantly. Otherwise, wait wait until the
-        configured `REMINDER_FREQUENCY` has passed.
+        configured `reminder_frequency` has passed.
         """
         last_reminder: t.Optional[int] = await self.task_cache.get("last_reminder")
 
@@ -486,7 +485,7 @@ class Verification(Cog):
         to_sleep = timedelta(hours=constants.Verification.reminder_frequency) - time_since
         log.trace(f"Time to sleep until next ping: {to_sleep}")
 
-        # Delta can be negative if `REMINDER_FREQUENCY` has already passed
+        # Delta can be negative if `reminder_frequency` has already passed
         secs = max(to_sleep.total_seconds(), 0)
         await asyncio.sleep(secs)
 
