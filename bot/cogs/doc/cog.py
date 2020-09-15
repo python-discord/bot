@@ -55,15 +55,16 @@ NOT_FOUND_DELETE_DELAY = RedirectOutput.delete_delay
 class DocItem(NamedTuple):
     """Holds inventory symbol information."""
 
-    base_url: str
-    relative_url: str
     package: str
     group: str
+    base_url: str
+    relative_url_path: str
+    symbol_id: str
 
     @property
     def url(self) -> str:
         """Return the absolute url to the symbol."""
-        return self.base_url + self.relative_url
+        return "".join((self.base_url, self.relative_url_path))
 
 
 class InventoryURL(commands.Converter):
@@ -141,21 +142,20 @@ class DocCog(commands.Cog):
                 # to remove unnecessary memory consumption from them being unique objects
                 group_name = sys.intern(group.split(":")[1])
 
-                if symbol in self.doc_symbols:
-                    symbol_base_url = self.doc_symbols[symbol].url.split("/", 3)[2]
+                if (original_symbol := self.doc_symbols.get(symbol)) is not None:
                     if (
                         group_name in NO_OVERRIDE_GROUPS
-                        or any(package in symbol_base_url for package in NO_OVERRIDE_PACKAGES)
+                        or any(package == original_symbol.package for package in NO_OVERRIDE_PACKAGES)
                     ):
                         symbol = f"{group_name}.{symbol}"
                         self.renamed_symbols.add(symbol)
 
-                    elif (overridden_symbol_group := self.doc_symbols[symbol].group) in NO_OVERRIDE_GROUPS:
+                    elif (overridden_symbol_group := original_symbol.group) in NO_OVERRIDE_GROUPS:
                         overridden_symbol = f"{overridden_symbol_group}.{symbol}"
                         if overridden_symbol in self.renamed_symbols:
                             overridden_symbol = f"{api_package_name}.{overridden_symbol}"
 
-                        self.doc_symbols[overridden_symbol] = self.doc_symbols[symbol]
+                        self.doc_symbols[overridden_symbol] = original_symbol
                         self.renamed_symbols.add(overridden_symbol)
 
                     # If renamed `symbol` already exists, add library name in front to differentiate between them.
@@ -202,7 +202,7 @@ class DocCog(commands.Cog):
 
         embed = discord.Embed(
             title=discord.utils.escape_markdown(symbol),
-            url=symbol_info.url,
+            url=f"{symbol_info.url}#{symbol_info.symbol_id}",
             description=embed_description
         )
         # Show all symbols with the same name that were renamed in the footer.
