@@ -160,7 +160,6 @@ class DocCog(commands.Cog):
 
                     # If renamed `symbol` already exists, add library name in front to differentiate between them.
                     elif symbol in self.renamed_symbols:
-                        # Split `package_name` because of packages like Pillow that have spaces in them.
                         symbol = f"{api_package_name}.{symbol}"
                         self.renamed_symbols.add(symbol)
 
