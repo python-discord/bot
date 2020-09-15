@@ -141,12 +141,27 @@ class Reddit(Cog):
                 # Got appropriate response - process and return.
                 content = await response.json()
                 posts = content["data"]["children"]
+                if posts[0]["data"]["over_18"]:
+                    resp_not_allowed = [
+                        {
+                            "error": "Oops ! Looks like this subreddit, doesn't fit in the scope of the server."
+                        }
+                    ]
+                    return resp_not_allowed
                 return posts[:amount]
 
             await asyncio.sleep(3)
 
         log.debug(f"Invalid response from: {url} - status code {response.status}, mimetype {response.content_type}")
-        return list()  # Failed to get appropriate response within allowed number of retries.
+        resp_failed = [
+            {
+                "error": (
+                    "Sorry! We couldn't find any posts from that subreddit. "
+                    "If this problem persists, please let us know."
+                )
+            }
+        ]
+        return resp_failed  # Failed to get appropriate response within allowed number of retries.
 
     async def get_top_posts(self, subreddit: Subreddit, time: str = "all", amount: int = 5) -> Embed:
         """
@@ -164,14 +179,10 @@ class Reddit(Cog):
             amount=amount,
             params={"t": time}
         )
-
-        if not posts:
+        if "error" in posts[0]:
             embed.title = random.choice(ERROR_REPLIES)
             embed.colour = Colour.red()
-            embed.description = (
-                "Sorry! We couldn't find any posts from that subreddit. "
-                "If this problem persists, please let us know."
-            )
+            embed.description = posts[0]["error"]
 
             return embed
 
