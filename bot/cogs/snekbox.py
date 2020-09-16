@@ -14,6 +14,7 @@ from discord.ext.commands import Cog, Context, command, guild_only
 from bot.bot import Bot
 from bot.constants import Categories, Channels, Roles, URLs
 from bot.decorators import in_whitelist
+from bot.utils import send_to_paste_service
 from bot.utils.messages import wait_for_deletion
 
 log = logging.getLogger(__name__)
@@ -71,17 +72,7 @@ class Snekbox(Cog):
         if len(output) > MAX_PASTE_LEN:
             log.info("Full output is too long to upload")
             return "too long to upload"
-
-        url = URLs.paste_service.format(key="documents")
-        try:
-            async with self.bot.http_session.post(url, data=output, raise_for_status=True) as resp:
-                data = await resp.json()
-
-            if "key" in data:
-                return URLs.paste_service.format(key=data["key"])
-        except Exception:
-            # 400 (Bad Request) means there are too many characters
-            log.exception("Failed to upload full output to paste service!")
+        return await send_to_paste_service(self.bot.http_session, output, extension="txt")
 
     @staticmethod
     def prepare_input(code: str) -> str:
