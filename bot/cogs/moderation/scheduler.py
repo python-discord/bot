@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import textwrap
 import typing as t
@@ -23,14 +22,18 @@ from .utils import UserSnowflake
 log = logging.getLogger(__name__)
 
 
-class InfractionScheduler(Scheduler):
+class InfractionScheduler:
     """Handles the application, pardoning, and expiration of infractions."""
 
     def __init__(self, bot: Bot, supported_infractions: t.Container[str]):
-        super().__init__()
-
         self.bot = bot
+        self.scheduler = Scheduler(self.__class__.__name__)
+
         self.bot.loop.create_task(self.reschedule_infractions(supported_infractions))
+
+    def cog_unload(self) -> None:
+        """Cancel scheduled tasks."""
+        self.scheduler.cancel_all()
 
     @property
     def mod_log(self) -> ModLog:
@@ -49,7 +52,7 @@ class InfractionScheduler(Scheduler):
         )
         for infraction in infractions:
             if infraction["expires_at"] is not None and infraction["type"] in supported_infractions:
-                self.schedule_task(infraction["id"], infraction)
+                self.schedule_expiration(infraction)
 
     async def reapply_infraction(
         self,
@@ -155,9 +158,10 @@ class InfractionScheduler(Scheduler):
                 await action_coro
                 if expiry:
                     # Schedule the expiration of the infraction.
-                    self.schedule_task(infraction["id"], infraction)
+                    self.schedule_expiration(infraction)
             except discord.HTTPException as e:
                 # Accordingly display that applying the infraction failed.
+                # Don't use ctx.message.author; antispam only patches ctx.author.
                 confirm_msg = ":x: failed to apply"
                 expiry_msg = ""
                 log_content = ctx.author.mention
@@ -187,6 +191,7 @@ class InfractionScheduler(Scheduler):
         await ctx.send(f"{dm_result}{confirm_msg}{infr_message}.")
 
         # Send a log message to the mod log.
+        # Don't use ctx.message.author for the actor; antispam only patches ctx.author.
         log.trace(f"Sending apply mod log for infraction #{id_}.")
         await self.mod_log.send_log_message(
             icon_url=icon,
@@ -195,7 +200,7 @@ class InfractionScheduler(Scheduler):
             thumbnail=user.avatar_url_as(static_format="png"),
             text=textwrap.dedent(f"""
                 Member: {user.mention} (`{user.id}`)
-                Actor: {ctx.message.author}{dm_log_text}{expiry_log_text}
+                Actor: {ctx.author}{dm_log_text}{expiry_log_text}
                 Reason: {reason}
             """),
             content=log_content,
@@ -239,7 +244,7 @@ class InfractionScheduler(Scheduler):
         log_text = await self.deactivate_infraction(response[0], send_log=False)
 
         log_text["Member"] = f"{user.mention}(`{user.id}`)"
-        log_text["Actor"] = str(ctx.message.author)
+        log_text["Actor"] = str(ctx.author)
         log_content = None
         id_ = response[0]['id']
         footer = f"ID: {id_}"
@@ -278,7 +283,7 @@ class InfractionScheduler(Scheduler):
 
                 # Cancel pending expiration task.
                 if infraction["expires_at"] is not None:
-                    self.cancel_task(infraction["id"])
+                    self.scheduler.cancel(infraction["id"])
 
         # Accordingly display whether the user was successfully notified via DM.
         dm_emoji = ""
@@ -415,7 +420,7 @@ class InfractionScheduler(Scheduler):
 
         # Cancel the expiration task.
         if infraction["expires_at"] is not None:
-            self.cancel_task(infraction["id"])
+            self.scheduler.cancel(infraction["id"])
 
         # Send a log message to the mod log.
         if send_log:
@@ -449,7 +454,7 @@ class InfractionScheduler(Scheduler):
         """
         raise NotImplementedError
 
-    async def _scheduled_task(self, infraction: utils.Infraction) -> None:
+    def schedule_expiration(self, infraction: utils.Infraction) -> None:
         """
         Marks an infraction expired after the delay from time of scheduling to time of expiration.
 
@@ -457,8 +462,4 @@ class InfractionScheduler(Scheduler):
         expiration task is cancelled.
         """
         expiry = dateutil.parser.isoparse(infraction["expires_at"]).replace(tzinfo=None)
-        await time.wait_until(expiry)
-
-        # Because deactivate_infraction() explicitly cancels this scheduled task, it is shielded
-        # to avoid prematurely cancelling itself.
-        await asyncio.shield(self.deactivate_infraction(infraction))
+        self.scheduler.schedule_at(expiry, infraction["id"], self.deactivate_infraction(infraction))

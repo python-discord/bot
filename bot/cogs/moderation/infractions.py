@@ -64,7 +64,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     @command()
     async def kick(self, ctx: Context, user: Member, *, reason: t.Optional[str] = None) -> None:
         """Kick a user for the given reason."""
-        await self.apply_kick(ctx, user, reason, active=False)
+        await self.apply_kick(ctx, user, reason)
 
     @command()
     async def ban(self, ctx: Context, user: FetchedMember, *, reason: t.Optional[str] = None) -> None:
@@ -134,7 +134,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     @command(hidden=True, aliases=['shadowkick', 'skick'])
     async def shadow_kick(self, ctx: Context, user: Member, *, reason: t.Optional[str] = None) -> None:
         """Kick a user for the given reason without notifying the user."""
-        await self.apply_kick(ctx, user, reason, hidden=True, active=False)
+        await self.apply_kick(ctx, user, reason, hidden=True)
 
     @command(hidden=True, aliases=['shadowban', 'sban'])
     async def shadow_ban(self, ctx: Context, user: FetchedMember, *, reason: t.Optional[str] = None) -> None:

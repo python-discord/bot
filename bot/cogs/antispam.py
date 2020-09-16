@@ -27,14 +27,18 @@ log = logging.getLogger(__name__)
 RULE_FUNCTION_MAPPING = {
     'attachments': rules.apply_attachments,
     'burst': rules.apply_burst,
-    'burst_shared': rules.apply_burst_shared,
+    # burst shared is temporarily disabled due to a bug
+    # 'burst_shared': rules.apply_burst_shared,
     'chars': rules.apply_chars,
     'discord_emojis': rules.apply_discord_emojis,
     'duplicates': rules.apply_duplicates,
     'links': rules.apply_links,
     'mentions': rules.apply_mentions,
     'newlines': rules.apply_newlines,
-    'role_mentions': rules.apply_role_mentions
+    'role_mentions': rules.apply_role_mentions,
+    # the everyone filter is temporarily disabled until
+    # it has been improved.
+    # 'everyone_ping': rules.apply_everyone_ping,
 }
 
 
@@ -219,7 +223,6 @@ class AntiSpam(Cog):
             # Get context and make sure the bot becomes the actor of infraction by patching the `author` attributes
             context = await self.bot.get_context(msg)
             context.author = self.bot.user
-            context.message.author = self.bot.user
 
             # Since we're going to invoke the tempmute command directly, we need to manually call the converter.
             dt_remove_role_after = await self.expiration_date_converter.convert(context, f"{remove_role_after}S")

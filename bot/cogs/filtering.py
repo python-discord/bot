@@ -2,7 +2,7 @@ import asyncio
 import logging
 import re
 from datetime import datetime, timedelta
-from typing import List, Mapping, Optional, Union
+from typing import List, Mapping, Optional, Tuple, Union
 
 import dateutil
 import discord.errors
@@ -11,6 +11,7 @@ from discord import Colour, HTTPException, Member, Message, NotFound, TextChanne
 from discord.ext.commands import Cog
 from discord.utils import escape_markdown
 
+from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.cogs.moderation import ModLog
 from bot.constants import (
@@ -18,49 +19,22 @@ from bot.constants import (
     Filter, Icons, URLs
 )
 from bot.utils.redis_cache import RedisCache
+from bot.utils.regex import INVITE_RE
 from bot.utils.scheduling import Scheduler
-from bot.utils.time import wait_until
 
 log = logging.getLogger(__name__)
 
-INVITE_RE = re.compile(
-    r"(?:discord(?:[\.,]|dot)gg|"                     # Could be discord.gg/
-    r"discord(?:[\.,]|dot)com(?:\/|slash)invite|"     # or discord.com/invite/
-    r"discordapp(?:[\.,]|dot)com(?:\/|slash)invite|"  # or discordapp.com/invite/
-    r"discord(?:[\.,]|dot)me|"                        # or discord.me
-    r"discord(?:[\.,]|dot)io"                         # or discord.io.
-    r")(?:[\/]|slash)"                                # / or 'slash'
-    r"([a-zA-Z0-9]+)",                                # the invite code itself
-    flags=re.IGNORECASE
-)
-
+# Regular expressions
 SPOILER_RE = re.compile(r"(\|\|.+?\|\|)", re.DOTALL)
 URL_RE = re.compile(r"(https?://[^\s]+)", flags=re.IGNORECASE)
 ZALGO_RE = re.compile(r"[\u0300-\u036F\u0489]")
 
-WORD_WATCHLIST_PATTERNS = [
-    re.compile(fr'\b{expression}\b', flags=re.IGNORECASE) for expression in Filter.word_watchlist
-]
-TOKEN_WATCHLIST_PATTERNS = [
-    re.compile(fr'{expression}', flags=re.IGNORECASE) for expression in Filter.token_watchlist
-]
-WATCHLIST_PATTERNS = WORD_WATCHLIST_PATTERNS + TOKEN_WATCHLIST_PATTERNS
-
+# Other constants.
 DAYS_BETWEEN_ALERTS = 3
-
-
-def expand_spoilers(text: str) -> str:
-    """Return a string containing all interpretations of a spoilered message."""
-    split_text = SPOILER_RE.split(text)
-    return ''.join(
-        split_text[0::2] + split_text[1::2] + split_text
-    )
-
-
 OFFENSIVE_MSG_DELETE_TIME = timedelta(days=Filter.offensive_msg_delete_days)
 
 
-class Filtering(Cog, Scheduler):
+class Filtering(Cog):
     """Filtering out invites, blacklisting domains, and warning us of certain regular expressions."""
 
     # Redis cache mapping a user ID to the last timestamp a bad nickname alert was sent
@@ -68,8 +42,7 @@ class Filtering(Cog, Scheduler):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        super().__init__()
-
+        self.scheduler = Scheduler(self.__class__.__name__)
         self.name_lock = asyncio.Lock()
 
         staff_mistake_str = "If you believe this was a mistake, please let staff know!"
@@ -127,6 +100,22 @@ class Filtering(Cog, Scheduler):
 
         self.bot.loop.create_task(self.reschedule_offensive_msg_deletion())
 
+    def cog_unload(self) -> None:
+        """Cancel scheduled tasks."""
+        self.scheduler.cancel_all()
+
+    def _get_filterlist_items(self, list_type: str, *, allowed: bool) -> list:
+        """Fetch items from the filter_list_cache."""
+        return self.bot.filter_list_cache[f"{list_type.upper()}.{allowed}"].keys()
+
+    @staticmethod
+    def _expand_spoilers(text: str) -> str:
+        """Return a string containing all interpretations of a spoilered message."""
+        split_text = SPOILER_RE.split(text)
+        return ''.join(
+            split_text[0::2] + split_text[1::2] + split_text
+        )
+
     @property
     def mod_log(self) -> ModLog:
         """Get currently loaded ModLog cog instance."""
@@ -136,7 +125,10 @@ class Filtering(Cog, Scheduler):
     async def on_message(self, msg: Message) -> None:
         """Invoke message filter for new messages."""
         await self._filter_message(msg)
-        await self.check_bad_words_in_name(msg.author)
+
+        # Ignore webhook messages.
+        if msg.webhook_id is None:
+            await self.check_bad_words_in_name(msg.author)
 
     @Cog.listener()
     async def on_message_edit(self, before: Message, after: Message) -> None:
@@ -151,12 +143,12 @@ class Filtering(Cog, Scheduler):
             delta = relativedelta(after.edited_at, before.edited_at).microseconds
         await self._filter_message(after, delta)
 
-    @staticmethod
-    def get_name_matches(name: str) -> List[re.Match]:
+    def get_name_matches(self, name: str) -> List[re.Match]:
         """Check bad words from passed string (name). Return list of matches."""
         matches = []
-        for pattern in WATCHLIST_PATTERNS:
-            if match := pattern.search(name):
+        watchlist_patterns = self._get_filterlist_items('filter_token', allowed=False)
+        for pattern in watchlist_patterns:
+            if match := re.search(pattern, name, flags=re.IGNORECASE):
                 matches.append(match)
         return matches
 
@@ -200,24 +192,67 @@ class Filtering(Cog, Scheduler):
             # Update time when alert sent
             await self.name_alerts.set(member.id, datetime.utcnow().timestamp())
 
+    async def filter_eval(self, result: str, msg: Message) -> bool:
+        """
+        Filter the result of an !eval to see if it violates any of our rules, and then respond accordingly.
+
+        Also requires the original message, to check whether to filter and for mod logs.
+        Returns whether a filter was triggered or not.
+        """
+        filter_triggered = False
+        # Should we filter this message?
+        if self._check_filter(msg):
+            for filter_name, _filter in self.filters.items():
+                # Is this specific filter enabled in the config?
+                # We also do not need to worry about filters that take the full message,
+                # since all we have is an arbitrary string.
+                if _filter["enabled"] and _filter["content_only"]:
+                    match = await _filter["function"](result)
+
+                    if match:
+                        # If this is a filter (not a watchlist), we set the variable so we know
+                        # that it has been triggered
+                        if _filter["type"] == "filter":
+                            filter_triggered = True
+
+                        # We do not have to check against DM channels since !eval cannot be used there.
+                        channel_str = f"in {msg.channel.mention}"
+
+                        message_content, additional_embeds, additional_embeds_msg = self._add_stats(
+                            filter_name, match, result
+                        )
+
+                        message = (
+                            f"The {filter_name} {_filter['type']} was triggered "
+                            f"by **{msg.author}** "
+                            f"(`{msg.author.id}`) {channel_str} using !eval with "
+                            f"[the following message]({msg.jump_url}):\n\n"
+                            f"{message_content}"
+                        )
+
+                        log.debug(message)
+
+                        # Send pretty mod log embed to mod-alerts
+                        await self.mod_log.send_log_message(
+                            icon_url=Icons.filtering,
+                            colour=Colour(Colours.soft_red),
+                            title=f"{_filter['type'].title()} triggered!",
+                            text=message,
+                            thumbnail=msg.author.avatar_url_as(static_format="png"),
+                            channel_id=Channels.mod_alerts,
+                            ping_everyone=Filter.ping_everyone,
+                            additional_embeds=additional_embeds,
+                            additional_embeds_msg=additional_embeds_msg
+                        )
+
+                        break  # We don't want multiple filters to trigger
+
+        return filter_triggered
+
     async def _filter_message(self, msg: Message, delta: Optional[int] = None) -> None:
         """Filter the input message to see if it violates any of our rules, and then respond accordingly."""
         # Should we filter this message?
-        role_whitelisted = False
-
-        if type(msg.author) is Member:  # Only Member has roles, not User.
-            for role in msg.author.roles:
-                if role.id in Filter.role_whitelist:
-                    role_whitelisted = True
-
-        filter_message = (
-            msg.channel.id not in Filter.channel_whitelist  # Channel not in whitelist
-            and not role_whitelisted                        # Role not in whitelist
-            and not msg.author.bot                          # Author not a bot
-        )
-
-        # If none of the above, we can start filtering.
-        if filter_message:
+        if self._check_filter(msg):
             for filter_name, _filter in self.filters.items():
                 # Is this specific filter enabled in the config?
                 if _filter["enabled"]:
@@ -267,25 +302,25 @@ class Filtering(Cog, Scheduler):
                                 'delete_date': delete_date
                             }
 
-                            await self.bot.api_client.post('bot/offensive-messages', json=data)
-                            self.schedule_task(msg.id, data)
-                            log.trace(f"Offensive message {msg.id} will be deleted on {delete_date}")
+                            try:
+                                await self.bot.api_client.post('bot/offensive-messages', json=data)
+                            except ResponseCodeError as e:
+                                if e.status == 400 and "already exists" in e.response_json.get("id", [""])[0]:
+                                    log.debug(f"Offensive message {msg.id} already exists.")
+                                else:
+                                    log.error(f"Offensive message {msg.id} failed to post: {e}")
+                            else:
+                                self.schedule_msg_delete(data)
+                                log.trace(f"Offensive message {msg.id} will be deleted on {delete_date}")
 
                         if is_private:
                             channel_str = "via DM"
                         else:
                             channel_str = f"in {msg.channel.mention}"
 
-                        # Word and match stats for watch_regex
-                        if filter_name == "watch_regex":
-                            surroundings = match.string[max(match.start() - 10, 0): match.end() + 10]
-                            message_content = (
-                                f"**Match:** '{match[0]}'\n"
-                                f"**Location:** '...{escape_markdown(surroundings)}...'\n"
-                                f"\n**Original Message:**\n{escape_markdown(msg.content)}"
-                            )
-                        else:  # Use content of discord Message
-                            message_content = msg.content
+                        message_content, additional_embeds, additional_embeds_msg = self._add_stats(
+                            filter_name, match, msg.content
+                        )
 
                         message = (
                             f"The {filter_name} {_filter['type']} was triggered "
@@ -297,30 +332,6 @@ class Filtering(Cog, Scheduler):
 
                         log.debug(message)
 
-                        self.bot.stats.incr(f"filters.{filter_name}")
-
-                        additional_embeds = None
-                        additional_embeds_msg = None
-
-                        # The function returns True for invalid invites.
-                        # They have no data so additional embeds can't be created for them.
-                        if filter_name == "filter_invites" and match is not True:
-                            additional_embeds = []
-                            for invite, data in match.items():
-                                embed = discord.Embed(description=(
-                                    f"**Members:**\n{data['members']}\n"
-                                    f"**Active:**\n{data['active']}"
-                                ))
-                                embed.set_author(name=data["name"])
-                                embed.set_thumbnail(url=data["icon"])
-                                embed.set_footer(text=f"Guild Invite Code: {invite}")
-                                additional_embeds.append(embed)
-                            additional_embeds_msg = "For the following guild(s):"
-
-                        elif filter_name == "watch_rich_embeds":
-                            additional_embeds = msg.embeds
-                            additional_embeds_msg = "With the following embed(s):"
-
                         # Send pretty mod log embed to mod-alerts
                         await self.mod_log.send_log_message(
                             icon_url=Icons.filtering,
@@ -329,15 +340,71 @@ class Filtering(Cog, Scheduler):
                             text=message,
                             thumbnail=msg.author.avatar_url_as(static_format="png"),
                             channel_id=Channels.mod_alerts,
-                            ping_everyone=Filter.ping_everyone,
+                            ping_everyone=Filter.ping_everyone if not is_private else False,
                             additional_embeds=additional_embeds,
                             additional_embeds_msg=additional_embeds_msg
                         )
 
                         break  # We don't want multiple filters to trigger
 
+    def _add_stats(self, name: str, match: Union[re.Match, dict, bool, List[discord.Embed]], content: str) -> Tuple[
+        str, Optional[List[discord.Embed]], Optional[str]
+    ]:
+        """Adds relevant statistical information to the relevant filter and increments the bot's stats."""
+        # Word and match stats for watch_regex
+        if name == "watch_regex":
+            surroundings = match.string[max(match.start() - 10, 0): match.end() + 10]
+            message_content = (
+                f"**Match:** '{match[0]}'\n"
+                f"**Location:** '...{escape_markdown(surroundings)}...'\n"
+                f"\n**Original Message:**\n{escape_markdown(content)}"
+            )
+        else:  # Use original content
+            message_content = content
+
+        additional_embeds = None
+        additional_embeds_msg = None
+
+        self.bot.stats.incr(f"filters.{name}")
+
+        # The function returns True for invalid invites.
+        # They have no data so additional embeds can't be created for them.
+        if name == "filter_invites" and match is not True:
+            additional_embeds = []
+            for _, data in match.items():
+                embed = discord.Embed(description=(
+                    f"**Members:**\n{data['members']}\n"
+                    f"**Active:**\n{data['active']}"
+                ))
+                embed.set_author(name=data["name"])
+                embed.set_thumbnail(url=data["icon"])
+                embed.set_footer(text=f"Guild ID: {data['id']}")
+                additional_embeds.append(embed)
+            additional_embeds_msg = "For the following guild(s):"
+
+        elif name == "watch_rich_embeds":
+            additional_embeds = match
+            additional_embeds_msg = "With the following embed(s):"
+
+        return message_content, additional_embeds, additional_embeds_msg
+
     @staticmethod
-    async def _has_watch_regex_match(text: str) -> Union[bool, re.Match]:
+    def _check_filter(msg: Message) -> bool:
+        """Check whitelists to see if we should filter this message."""
+        role_whitelisted = False
+
+        if type(msg.author) is Member:  # Only Member has roles, not User.
+            for role in msg.author.roles:
+                if role.id in Filter.role_whitelist:
+                    role_whitelisted = True
+
+        return (
+            msg.channel.id not in Filter.channel_whitelist  # Channel not in whitelist
+            and not role_whitelisted                        # Role not in whitelist
+            and not msg.author.bot                          # Author not a bot
+        )
+
+    async def _has_watch_regex_match(self, text: str) -> Union[bool, re.Match]:
         """
         Return True if `text` matches any regex from `word_watchlist` or `token_watchlist` configs.
 
@@ -345,26 +412,27 @@ class Filtering(Cog, Scheduler):
         matched as-is. Spoilers are expanded, if any, and URLs are ignored.
         """
         if SPOILER_RE.search(text):
-            text = expand_spoilers(text)
+            text = self._expand_spoilers(text)
 
         # Make sure it's not a URL
         if URL_RE.search(text):
             return False
 
-        for pattern in WATCHLIST_PATTERNS:
-            match = pattern.search(text)
+        watchlist_patterns = self._get_filterlist_items('filter_token', allowed=False)
+        for pattern in watchlist_patterns:
+            match = re.search(pattern, text, flags=re.IGNORECASE)
             if match:
                 return match
 
-    @staticmethod
-    async def _has_urls(text: str) -> bool:
+    async def _has_urls(self, text: str) -> bool:
         """Returns True if the text contains one of the blacklisted URLs from the config file."""
         if not URL_RE.search(text):
             return False
 
         text = text.lower()
+        domain_blacklist = self._get_filterlist_items("domain_name", allowed=False)
 
-        for url in Filter.domain_blacklist:
+        for url in domain_blacklist:
             if url.lower() in text:
                 return True
 
@@ -388,7 +456,7 @@ class Filtering(Cog, Scheduler):
 
         Attempts to catch some of common ways to try to cheat the system.
         """
-        # Remove backslashes to prevent escape character around fuckery like
+        # Remove backslashes to prevent escape character aroundfuckery like
         # discord\.gg/gdudes-pony-farm
         text = text.replace("\\", "")
 
@@ -409,9 +477,22 @@ class Filtering(Cog, Scheduler):
                 # between invalid and expired invites
                 return True
 
-            guild_id = int(guild.get("id"))
+            guild_id = guild.get("id")
+            guild_invite_whitelist = self._get_filterlist_items("guild_invite", allowed=True)
+            guild_invite_blacklist = self._get_filterlist_items("guild_invite", allowed=False)
 
-            if guild_id not in Filter.guild_invite_whitelist:
+            # Is this invite allowed?
+            guild_partnered_or_verified = (
+                'PARTNERED' in guild.get("features", [])
+                or 'VERIFIED' in guild.get("features", [])
+            )
+            invite_not_allowed = (
+                guild_id in guild_invite_blacklist           # Blacklisted guilds are never permitted.
+                or guild_id not in guild_invite_whitelist    # Whitelisted guilds are always permitted.
+                and not guild_partnered_or_verified          # Otherwise guilds have to be Verified or Partnered.
+            )
+
+            if invite_not_allowed:
                 guild_icon_hash = guild["icon"]
                 guild_icon = (
                     "https://cdn.discordapp.com/icons/"
@@ -420,6 +501,7 @@ class Filtering(Cog, Scheduler):
 
                 invite_data[invite] = {
                     "name": guild["name"],
+                    "id": guild['id'],
                     "icon": guild_icon,
                     "members": response["approximate_member_count"],
                     "active": response["approximate_presence_count"]
@@ -428,7 +510,7 @@ class Filtering(Cog, Scheduler):
         return invite_data if invite_data else False
 
     @staticmethod
-    async def _has_rich_embed(msg: Message) -> bool:
+    async def _has_rich_embed(msg: Message) -> Union[bool, List[discord.Embed]]:
         """Determines if `msg` contains any rich embeds not auto-generated from a URL."""
         if msg.embeds:
             for embed in msg.embeds:
@@ -437,7 +519,7 @@ class Filtering(Cog, Scheduler):
                     if not embed.url or embed.url not in urls:
                         # If `embed.url` does not exist or if `embed.url` is not part of the content
                         # of the message, it's unlikely to be an auto-generated embed by Discord.
-                        return True
+                        return msg.embeds
                     else:
                         log.trace(
                             "Found a rich embed sent by a regular user account, "
@@ -457,12 +539,10 @@ class Filtering(Cog, Scheduler):
         except discord.errors.Forbidden:
             await channel.send(f"{filtered_member.mention} {reason}")
 
-    async def _scheduled_task(self, msg: dict) -> None:
+    def schedule_msg_delete(self, msg: dict) -> None:
         """Delete an offensive message once its deletion date is reached."""
         delete_at = dateutil.parser.isoparse(msg['delete_date']).replace(tzinfo=None)
-
-        await wait_until(delete_at)
-        await self.delete_offensive_msg(msg)
+        self.scheduler.schedule_at(delete_at, msg['id'], self.delete_offensive_msg(msg))
 
     async def reschedule_offensive_msg_deletion(self) -> None:
         """Get all the pending message deletion from the API and reschedule them."""
@@ -477,7 +557,7 @@ class Filtering(Cog, Scheduler):
             if delete_at < now:
                 await self.delete_offensive_msg(msg)
             else:
-                self.schedule_task(msg['id'], msg)
+                self.schedule_msg_delete(msg)
 
     async def delete_offensive_msg(self, msg: Mapping[str, str]) -> None:
         """Delete an offensive message, and then delete it from the db."""

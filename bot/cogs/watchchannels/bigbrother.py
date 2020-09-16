@@ -35,16 +35,31 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
 
     @bigbrother_group.command(name='watched', aliases=('all', 'list'))
     @with_role(*MODERATION_ROLES)
-    async def watched_command(self, ctx: Context, update_cache: bool = True) -> None:
+    async def watched_command(
+        self, ctx: Context, oldest_first: bool = False, update_cache: bool = True
+    ) -> None:
         """
         Shows the users that are currently being monitored by Big Brother.
+
+        The optional kwarg `oldest_first` can be used to order the list by oldest watched.
 
         The optional kwarg `update_cache` can be used to update the user
         cache using the API before listing the users.
         """
-        await self.list_watched_users(ctx, update_cache)
+        await self.list_watched_users(ctx, oldest_first=oldest_first, update_cache=update_cache)
 
-    @bigbrother_group.command(name='watch', aliases=('w',))
+    @bigbrother_group.command(name='oldest')
+    @with_role(*MODERATION_ROLES)
+    async def oldest_command(self, ctx: Context, update_cache: bool = True) -> None:
+        """
+        Shows Big Brother monitored users ordered by oldest watched.
+
+        The optional kwarg `update_cache` can be used to update the user
+        cache using the API before listing the users.
+        """
+        await ctx.invoke(self.watched_command, oldest_first=True, update_cache=update_cache)
+
+    @bigbrother_group.command(name='watch', aliases=('w',), root_aliases=('watch',))
     @with_role(*MODERATION_ROLES)
     async def watch_command(self, ctx: Context, user: FetchedMember, *, reason: str) -> None:
         """
@@ -55,7 +70,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
         """
         await self.apply_watch(ctx, user, reason)
 
-    @bigbrother_group.command(name='unwatch', aliases=('uw',))
+    @bigbrother_group.command(name='unwatch', aliases=('uw',), root_aliases=('unwatch',))
     @with_role(*MODERATION_ROLES)
     async def unwatch_command(self, ctx: Context, user: FetchedMember, *, reason: str) -> None:
         """Stop relaying messages by the given `user`."""
@@ -116,8 +131,8 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
         active_watches = await self.bot.api_client.get(
             self.api_endpoint,
             params=ChainMap(
+                {"user__id": str(user.id)},
                 self.api_default_params,
-                {"user__id": str(user.id)}
             )
         )
         if active_watches:
