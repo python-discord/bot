@@ -77,9 +77,9 @@ style:
         ducky_santa:    &DUCKY_SANTA    655360331002019870
 
         # emotes used for #reddit
-        upvotes:        "<:reddit_upvotes:638729835245731840>"
-        comments:       "<:reddit_comments:638729835073765387>"
-        user:           "<:reddit_user:638729835442602003>"
+        upvotes:        "<:reddit_upvotes:755845219890757644> "
+        comments:       "<:reddit_comments:755845255001014384>"
+        user:           "<:reddit_users:755845303822974997>"
 
     icons:
         crown_blurple: "https://cdn.discordapp.com/emojis/469964153289965568.png"
