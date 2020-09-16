@@ -76,9 +76,10 @@ style:
         ducky_maul:     &DUCKY_MAUL     640137724958867467
         ducky_santa:    &DUCKY_SANTA    655360331002019870
 
-        upvotes:        "<:upvotes:638729835245731840>"
-        comments:       "<:comments:638729835073765387>"
-        user:           "<:user:638729835442602003>"
+        # emotes used for #reddit
+        upvotes:        "<:reddit_upvotes:638729835245731840>"
+        comments:       "<:reddit_comments:638729835073765387>"
+        user:           "<:reddit_user:638729835442602003>"
 
     icons:
         crown_blurple: "https://cdn.discordapp.com/emojis/469964153289965568.png"
