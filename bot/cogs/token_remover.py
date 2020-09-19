@@ -18,6 +18,11 @@ LOG_MESSAGE = (
     "Censored a seemingly valid token sent by {author} (`{author_id}`) in {channel}, "
     "token was `{user_id}.{timestamp}.{hmac}`"
 )
+DECODED_LOG_MESSAGE = "The token user_id decodes into {user_id}."
+USER_TOKEN_MESSAGE = (
+    "The token user_id decodes into {user_id}, "
+    "which matches `{user_name}` and means this is a valid USER token."
+)
 DELETION_MESSAGE_TEMPLATE = (
     "Hey {mention}! I noticed you posted a seemingly valid Discord API "
     "token in your message and have removed your message. "
@@ -92,7 +97,14 @@ class TokenRemover(Cog):
 
         await msg.channel.send(DELETION_MESSAGE_TEMPLATE.format(mention=msg.author.mention))
 
-        log_message = self.format_log_message(msg, found_token)
+        user_name = None
+        user_id = self.extract_user_id(found_token.user_id)
+        user = msg.guild.get_member(user_id)
+
+        if user:
+            user_name = str(user)
+
+        log_message = self.format_log_message(msg, found_token, user_id, user_name)
         log.debug(log_message)
 
         # Send pretty mod log embed to mod-alerts
@@ -103,14 +115,24 @@ class TokenRemover(Cog):
             text=log_message,
             thumbnail=msg.author.avatar_url_as(static_format="png"),
             channel_id=Channels.mod_alerts,
+            ping_everyone=user_name is not None,
         )
 
         self.bot.stats.incr("tokens.removed_tokens")
 
     @staticmethod
-    def format_log_message(msg: Message, token: Token) -> str:
-        """Return the log message to send for `token` being censored in `msg`."""
-        return LOG_MESSAGE.format(
+    def format_log_message(
+        msg: Message,
+        token: Token,
+        user_id: int,
+        user_name: t.Optional[str] = None,
+    ) -> str:
+        """
+        Return the log message to send for `token` being censored in `msg`.
+
+        Additonally, mention if the token was decodable into a user id, and if that resolves to a user on the server.
+        """
+        message = LOG_MESSAGE.format(
             author=msg.author,
             author_id=msg.author.id,
             channel=msg.channel.mention,
@@ -118,6 +140,11 @@ class TokenRemover(Cog):
             timestamp=token.timestamp,
             hmac='x' * len(token.hmac),
         )
+        if user_name:
+            more = USER_TOKEN_MESSAGE.format(user_id=user_id, user_name=user_name)
+        else:
+            more = DECODED_LOG_MESSAGE.format(user_id=user_id)
+        return message + "\n" + more
 
     @classmethod
     def find_token_in_message(cls, msg: Message) -> t.Optional[Token]:
@@ -134,22 +161,33 @@ class TokenRemover(Cog):
         return
 
     @staticmethod
-    def is_valid_user_id(b64_content: str) -> bool:
-        """
-        Check potential token to see if it contains a valid Discord user ID.
-
-        See: https://discordapp.com/developers/docs/reference#snowflakes
-        """
+    def extract_user_id(b64_content: str) -> t.Optional[int]:
+        """Return a userid integer from part of a potential token, or None if it couldn't be decoded."""
         b64_content = utils.pad_base64(b64_content)
 
         try:
             decoded_bytes = base64.urlsafe_b64decode(b64_content)
             string = decoded_bytes.decode('utf-8')
-
-            # isdigit on its own would match a lot of other Unicode characters, hence the isascii.
-            return string.isascii() and string.isdigit()
+            if not (string.isascii() and string.isdigit()):
+                # This case triggers if there are fancy unicode digits in the base64 encoding,
+                # that means it's not a valid user id.
+                return None
+            return int(string)
         except (binascii.Error, ValueError):
+            return None
+
+    @classmethod
+    def is_valid_user_id(cls, b64_content: str) -> bool:
+        """
+        Check potential token to see if it contains a valid Discord user ID.
+
+        See: https://discordapp.com/developers/docs/reference#snowflakes
+        """
+        decoded_id = cls.extract_user_id(b64_content)
+        if not decoded_id:
             return False
+
+        return True
 
     @staticmethod
     def is_valid_timestamp(b64_content: str) -> bool:

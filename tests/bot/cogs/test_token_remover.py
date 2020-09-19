@@ -22,6 +22,7 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
 
         self.msg = MockMessage(id=555, content="hello world")
         self.msg.channel.mention = "#lemonade-stand"
+        self.msg.guild.get_member = MagicMock(return_value="Bob")
         self.msg.author.__str__ = MagicMock(return_value=self.msg.author.name)
         self.msg.author.avatar_url_as.return_value = "picture-lemon.png"
 
@@ -230,15 +231,19 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         results = [match[0] for match in results]
         self.assertCountEqual((token_1, token_2), results)
 
-    @autospec("bot.cogs.token_remover", "LOG_MESSAGE")
-    def test_format_log_message(self, log_message):
+    @autospec("bot.cogs.token_remover", "LOG_MESSAGE", "DECODED_LOG_MESSAGE")
+    def test_format_log_message(self, log_message, decoded_log_message):
         """Should correctly format the log message with info from the message and token."""
-        token = Token("NDY3MjIzMjMwNjUwNzc3NjQx", "XsySD_", "s45jqDV_Iisn-symw0yDRrk_jf4")
+        token = Token("NDcyMjY1OTQzMDYyNDEzMzMy", "XsySD_", "s45jqDV_Iisn-symw0yDRrk_jf4")
         log_message.format.return_value = "Howdy"
+        decoded_log_message.format.return_value = " Partner"
 
-        return_value = TokenRemover.format_log_message(self.msg, token)
+        return_value = TokenRemover.format_log_message(self.msg, token, 472265943062413332, None)
 
-        self.assertEqual(return_value, log_message.format.return_value)
+        self.assertEqual(
+            return_value,
+            log_message.format.return_value + "\n" + decoded_log_message.format.return_value,
+        )
         log_message.format.assert_called_once_with(
             author=self.msg.author,
             author_id=self.msg.author.id,
@@ -246,6 +251,32 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
             user_id=token.user_id,
             timestamp=token.timestamp,
             hmac="x" * len(token.hmac),
+        )
+
+    @autospec("bot.cogs.token_remover", "LOG_MESSAGE", "USER_TOKEN_MESSAGE")
+    def test_format_log_message_user_token(self, log_message, user_token_message):
+        """Should correctly format the log message with info from the message and token."""
+        token = Token("NDY3MjIzMjMwNjUwNzc3NjQx", "XsySD_", "s45jqDV_Iisn-symw0yDRrk_jf4")
+        log_message.format.return_value = "Howdy"
+        user_token_message.format.return_value = "Partner"
+
+        return_value = TokenRemover.format_log_message(self.msg, token, 467223230650777641, "Bob")
+
+        self.assertEqual(
+            return_value,
+            log_message.format.return_value + "\n" + user_token_message.format.return_value,
+        )
+        log_message.format.assert_called_once_with(
+            author=self.msg.author,
+            author_id=self.msg.author.id,
+            channel=self.msg.channel.mention,
+            user_id=token.user_id,
+            timestamp=token.timestamp,
+            hmac="x" * len(token.hmac),
+        )
+        user_token_message.format.assert_called_once_with(
+            user_id=467223230650777641,
+            user_name="Bob",
         )
 
     @mock.patch.object(TokenRemover, "mod_log", new_callable=mock.PropertyMock)
@@ -256,6 +287,7 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         cog = TokenRemover(self.bot)
         mod_log = mock.create_autospec(ModLog, spec_set=True, instance=True)
         token = mock.create_autospec(Token, spec_set=True, instance=True)
+        token.user_id = "no-id"
         log_msg = "testing123"
 
         mod_log_property.return_value = mod_log
@@ -268,7 +300,7 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
             token_remover.DELETION_MESSAGE_TEMPLATE.format(mention=self.msg.author.mention)
         )
 
-        format_log_message.assert_called_once_with(self.msg, token)
+        format_log_message.assert_called_once_with(self.msg, token, None, "Bob")
         logger.debug.assert_called_with(log_msg)
         self.bot.stats.incr.assert_called_once_with("tokens.removed_tokens")
 
@@ -279,7 +311,8 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
             title="Token removed!",
             text=log_msg,
             thumbnail=self.msg.author.avatar_url_as.return_value,
-            channel_id=constants.Channels.mod_alerts
+            channel_id=constants.Channels.mod_alerts,
+            ping_everyone=True,
         )
 
     @mock.patch.object(TokenRemover, "mod_log", new_callable=mock.PropertyMock)
