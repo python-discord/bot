@@ -339,7 +339,7 @@ class Filtering(Cog):
             # Allow specific filters to override ping_everyone
             ping_everyone = Filter.ping_everyone and _filter.get("ping_everyone", True)
 
-        eval_msg = "using !eval" if is_eval else ""
+        eval_msg = "using !eval " if is_eval else ""
         message = (
             f"The {filter_name} {_filter['type']} was triggered by {format_user(msg.author)} "
             f"{channel_str} {eval_msg}with [the following message]({msg.jump_url}):\n\n"
