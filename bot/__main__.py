@@ -33,6 +33,7 @@ redis_session = RedisSession(
     minsize=1,
     maxsize=20,
     use_fakeredis=constants.Redis.use_fakeredis,
+    global_namespace="bot",
 )
 
 # Connect redis session to ensure it's connected before we try to access Redis
