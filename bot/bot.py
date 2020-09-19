@@ -6,9 +6,8 @@ from collections import defaultdict
 from typing import Dict, Optional
 
 import aiohttp
-import aioredis
 import discord
-import fakeredis.aioredis
+from async_rediscache import RedisSession
 from discord.ext import commands
 from sentry_sdk import push_scope
 
@@ -21,7 +20,7 @@ log = logging.getLogger('bot')
 class Bot(commands.Bot):
     """A subclass of `discord.ext.commands.Bot` with an aiohttp session and an API client."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, redis_session: RedisSession, **kwargs):
         if "connector" in kwargs:
             warnings.warn(
                 "If login() is called (or the bot is started), the connector will be overwritten "
@@ -31,9 +30,7 @@ class Bot(commands.Bot):
         super().__init__(*args, **kwargs)
 
         self.http_session: Optional[aiohttp.ClientSession] = None
-        self.redis_session: Optional[aioredis.Redis] = None
-        self.redis_ready = asyncio.Event()
-        self.redis_closed = False
+        self.redis_session = redis_session
         self.api_client = api.APIClient(loop=self.loop)
         self.filter_list_cache = defaultdict(dict)
 
@@ -58,30 +55,6 @@ class Bot(commands.Bot):
         for item in full_cache:
             self.insert_item_into_filter_list_cache(item)
 
-    async def _create_redis_session(self) -> None:
-        """
-        Create the Redis connection pool, and then open the redis event gate.
-
-        If constants.Redis.use_fakeredis is True, we'll set up a fake redis pool instead
-        of attempting to communicate with a real Redis server. This is useful because it
-        means contributors don't necessarily need to get Redis running locally just
-        to run the bot.
-
-        The fakeredis cache won't have persistence across restarts, but that
-        usually won't matter for local bot testing.
-        """
-        if constants.Redis.use_fakeredis:
-            log.info("Using fakeredis instead of communicating with a real Redis server.")
-            self.redis_session = await fakeredis.aioredis.create_redis_pool()
-        else:
-            self.redis_session = await aioredis.create_redis_pool(
-                address=(constants.Redis.host, constants.Redis.port),
-                password=constants.Redis.password,
-            )
-
-        self.redis_closed = False
-        self.redis_ready.set()
-
     def _recreate(self) -> None:
         """Re-create the connector, aiohttp session, the APIClient and the Redis session."""
         # Use asyncio for DNS resolution instead of threads so threads aren't spammed.
@@ -94,13 +67,10 @@ class Bot(commands.Bot):
                 "The previous connector was not closed; it will remain open and be overwritten"
             )
 
-        if self.redis_session and not self.redis_session.closed:
-            log.warning(
-                "The previous redis pool was not closed; it will remain open and be overwritten"
-            )
-
-        # Create the redis session
-        self.loop.create_task(self._create_redis_session())
+        if self.redis_session.closed:
+            # If the RedisSession was somehow closed, we try to reconnect it
+            # here. Normally, this shouldn't happen.
+            self.loop.create_task(self.redis_session.connect())
 
         # Use AF_INET as its socket family to prevent HTTPS related problems both locally
         # and in production.
@@ -180,10 +150,7 @@ class Bot(commands.Bot):
             self.stats._transport.close()
 
         if self.redis_session:
-            self.redis_closed = True
-            self.redis_session.close()
-            self.redis_ready.clear()
-            await self.redis_session.wait_closed()
+            await self.redis_session.close()
 
     def insert_item_into_filter_list_cache(self, item: Dict[str, str]) -> None:
         """Add an item to the bots filter_list_cache."""

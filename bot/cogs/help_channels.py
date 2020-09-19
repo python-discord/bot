@@ -9,11 +9,11 @@ from pathlib import Path
 
 import discord
 import discord.abc
+from async_rediscache import RedisCache
 from discord.ext import commands
 
 from bot import constants
 from bot.bot import Bot
-from bot.utils import RedisCache
 from bot.utils.checks import with_role_check
 from bot.utils.scheduling import Scheduler
 

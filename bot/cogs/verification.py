@@ -5,6 +5,7 @@ from contextlib import suppress
 from datetime import datetime, timedelta
 
 import discord
+from async_rediscache import RedisCache
 from discord.ext import tasks
 from discord.ext.commands import Cog, Context, command, group
 from discord.utils import snowflake_time
@@ -14,7 +15,6 @@ from bot.bot import Bot
 from bot.cogs.moderation import ModLog
 from bot.decorators import in_whitelist, with_role, without_role
 from bot.utils.checks import InWhitelistCheckFailure, without_role_check
-from bot.utils.redis_cache import RedisCache
 
 log = logging.getLogger(__name__)
 
