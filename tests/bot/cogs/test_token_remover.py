@@ -86,6 +86,34 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
                 result = TokenRemover.is_valid_timestamp(timestamp)
                 self.assertFalse(result)
 
+    def test_is_valid_hmac_valid(self):
+        """Should consider hmac valid if it is a valid hmac with a variety of characters."""
+        valid_hmacs = (
+            "VXmErH7j511turNpfURmb0rVNm8",
+            "Ysnu2wacjaKs7qnoo46S8Dm2us8",
+            "sJf6omBPORBPju3WJEIAcwW9Zds",
+            "s45jqDV_Iisn-symw0yDRrk_jf4",
+        )
+
+        for hmac in valid_hmacs:
+            with self.subTest(msg=hmac):
+                result = TokenRemover.is_maybevalid_hmac(hmac)
+                self.assertTrue(result)
+
+    def test_is_invalid_hmac_invalid(self):
+        """Should consider hmac invalid if it possesses too little variety."""
+        invalid_hmacs = (
+            ("xxxxxxxxxxxxxxxxxx", "Single character"),
+            ("XxXxXxXxXxXxXxXxXx", "Single character alternating case"),
+            ("ASFasfASFasfASFASsf", "Three characters alternating-case"),
+            ("asdasdasdasdasdasdasd", "Three characters one case"),
+        )
+
+        for hmac, msg in invalid_hmacs:
+            with self.subTest(msg=msg):
+                result = TokenRemover.is_maybevalid_hmac(hmac)
+                self.assertFalse(result)
+
     def test_mod_log_property(self):
         """The `mod_log` property should ask the bot to return the `ModLog` cog."""
         self.bot.get_cog.return_value = 'lemon'
@@ -143,11 +171,11 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(return_value)
         token_re.finditer.assert_called_once_with(self.msg.content)
 
-    @autospec(TokenRemover, "is_valid_user_id", "is_valid_timestamp")
+    @autospec(TokenRemover, "is_valid_user_id", "is_valid_timestamp", "is_maybevalid_hmac")
     @autospec("bot.cogs.token_remover", "Token")
     @autospec("bot.cogs.token_remover", "TOKEN_RE")
-    def test_find_token_valid_match(self, token_re, token_cls, is_valid_id, is_valid_timestamp):
-        """The first match with a valid user ID and timestamp should be returned as a `Token`."""
+    def test_find_token_valid_match(self, token_re, token_cls, is_valid_id, is_valid_timestamp, is_maybevalid_hmac):
+        """The first match with a valid user ID. timestamp and hmac should be returned as a `Token`."""
         matches = [
             mock.create_autospec(Match, spec_set=True, instance=True),
             mock.create_autospec(Match, spec_set=True, instance=True),
@@ -161,21 +189,23 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         token_cls.side_effect = tokens
         is_valid_id.side_effect = (False, True)  # The 1st match will be invalid, 2nd one valid.
         is_valid_timestamp.return_value = True
+        is_maybevalid_hmac.return_value = True
 
         return_value = TokenRemover.find_token_in_message(self.msg)
 
         self.assertEqual(tokens[1], return_value)
         token_re.finditer.assert_called_once_with(self.msg.content)
 
-    @autospec(TokenRemover, "is_valid_user_id", "is_valid_timestamp")
+    @autospec(TokenRemover, "is_valid_user_id", "is_valid_timestamp", "is_maybevalid_hmac")
     @autospec("bot.cogs.token_remover", "Token")
     @autospec("bot.cogs.token_remover", "TOKEN_RE")
-    def test_find_token_invalid_matches(self, token_re, token_cls, is_valid_id, is_valid_timestamp):
+    def test_find_token_invalid_matches(self, token_re, token_cls, is_valid_id, is_valid_timestamp, is_maybevalid_hmac):
         """None should be returned if no matches have valid user IDs or timestamps."""
         token_re.finditer.return_value = [mock.create_autospec(Match, spec_set=True, instance=True)]
         token_cls.return_value = mock.create_autospec(Token, spec_set=True, instance=True)
         is_valid_id.return_value = False
         is_valid_timestamp.return_value = False
+        is_maybevalid_hmac.return_value = False
 
         return_value = TokenRemover.find_token_in_message(self.msg)
 

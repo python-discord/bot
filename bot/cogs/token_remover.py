@@ -1,5 +1,6 @@
 import base64
 import binascii
+import collections
 import logging
 import re
 import typing as t
@@ -153,7 +154,9 @@ class TokenRemover(Cog):
         # token check (e.g. `message.channel.send` also matches our token pattern)
         for match in TOKEN_RE.finditer(msg.content):
             token = Token(*match.groups())
-            if cls.is_valid_user_id(token.user_id) and cls.is_valid_timestamp(token.timestamp):
+            if cls.is_valid_user_id(token.user_id) \
+                    and cls.is_valid_timestamp(token.timestamp) \
+                    and cls.is_maybevalid_hmac(token.hmac):
                 # Short-circuit on first match
                 return token
 
@@ -213,6 +216,22 @@ class TokenRemover(Cog):
         else:
             log.debug(f"Invalid token timestamp '{b64_content}': smaller than Discord epoch")
             return False
+
+    @staticmethod
+    def is_maybevalid_hmac(b64_content: str) -> bool:
+        """
+        Determine if a given hmac portion of a token is potentially valid.
+
+        If the HMAC has 3 or less characters, it's probably a dummy value like "xxxxxxxxxx",
+        and thus the token can probably be skipped.
+        """
+        unique = len(collections.Counter(b64_content.lower()).keys())
+        if unique <= 3:
+            log.debug(f"Considering the hmac {b64_content} a dummy because it has {unique}"
+                      " case-insensitively unique characters")
+            return False
+        else:
+            return True
 
 
 def setup(bot: Bot) -> None:
