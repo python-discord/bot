@@ -463,7 +463,7 @@ sync:
     max_diff: 10
 
 duck_pond:
-    threshold: 5
+    threshold: 4
     channel_blacklist:
         - *ANNOUNCEMENTS
         - *PYNEWS_CHANNEL
