@@ -306,7 +306,7 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
         """Should return response from POST request if there are no errors."""
         now = datetime.now()
         payload = {
-            "actor": self.ctx.message.author.id,
+            "actor": self.ctx.author.id,
             "hidden": True,
             "reason": "Test reason",
             "type": "ban",
@@ -344,7 +344,7 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
     async def test_first_fail_second_success_user_post_infraction(self, post_user_mock):
         """Should post the user if they don't exist, POST infraction again, and return the response if successful."""
         payload = {
-            "actor": self.ctx.message.author.id,
+            "actor": self.ctx.author.id,
             "hidden": False,
             "reason": "Test reason",
             "type": "mute",
