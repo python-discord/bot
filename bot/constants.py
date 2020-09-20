@@ -252,7 +252,6 @@ class DuckPond(metaclass=YAMLGetter):
     section = "duck_pond"
 
     threshold: int
-    custom_emojis: List[int]
 
 
 class Emojis(metaclass=YAMLGetter):
@@ -291,20 +290,6 @@ class Emojis(metaclass=YAMLGetter):
     pencil: str
     cross_mark: str
     check_mark: str
-
-    ducky_yellow: int
-    ducky_blurple: int
-    ducky_regal: int
-    ducky_camo: int
-    ducky_ninja: int
-    ducky_devil: int
-    ducky_tube: int
-    ducky_hunt: int
-    ducky_wizard: int
-    ducky_party: int
-    ducky_angel: int
-    ducky_maul: int
-    ducky_santa: int
 
     upvotes: str
     comments: str

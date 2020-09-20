@@ -62,20 +62,6 @@ style:
         cross_mark: "\u274C"
         check_mark: "\u2705"
 
-        ducky_yellow:   &DUCKY_YELLOW   574951975574175744
-        ducky_blurple:  &DUCKY_BLURPLE  574951975310065675
-        ducky_regal:    &DUCKY_REGAL    637883439185395712
-        ducky_camo:     &DUCKY_CAMO     637914731566596096
-        ducky_ninja:    &DUCKY_NINJA    637923502535606293
-        ducky_devil:    &DUCKY_DEVIL    637925314982576139
-        ducky_tube:     &DUCKY_TUBE     637881368008851456
-        ducky_hunt:     &DUCKY_HUNT     639355090909528084
-        ducky_wizard:   &DUCKY_WIZARD   639355996954689536
-        ducky_party:    &DUCKY_PARTY    639468753440210977
-        ducky_angel:    &DUCKY_ANGEL    640121935610511361
-        ducky_maul:     &DUCKY_MAUL     640137724958867467
-        ducky_santa:    &DUCKY_SANTA    655360331002019870
-
         # emotes used for #reddit
         upvotes:        "<:reddit_upvotes:755845219890757644>"
         comments:       "<:reddit_comments:755845255001014384>"
@@ -468,20 +454,6 @@ sync:
 
 duck_pond:
     threshold: 5
-    custom_emojis:
-        - *DUCKY_YELLOW
-        - *DUCKY_BLURPLE
-        - *DUCKY_CAMO
-        - *DUCKY_DEVIL
-        - *DUCKY_NINJA
-        - *DUCKY_REGAL
-        - *DUCKY_TUBE
-        - *DUCKY_HUNT
-        - *DUCKY_WIZARD
-        - *DUCKY_PARTY
-        - *DUCKY_ANGEL
-        - *DUCKY_MAUL
-        - *DUCKY_SANTA
 
 python_news:
     mail_lists:

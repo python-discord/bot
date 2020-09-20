@@ -49,32 +49,32 @@ class DuckPond(Cog):
                         return True
         return False
 
+    @staticmethod
+    def _is_duck_emoji(emoji: Union[str, discord.PartialEmoji, discord.Emoji]) -> bool:
+        """Check if the emoji is a valid duck emoji."""
+        if isinstance(emoji, str):
+            return emoji == "🦆"
+        else:
+            return hasattr(emoji, "name") and emoji.name.startswith("ducky_")
+
     async def count_ducks(self, message: Message) -> int:
         """
         Count the number of ducks in the reactions of a specific message.
 
         Only counts ducks added by staff members.
         """
-        duck_count = 0
-        duck_reactors = []
+        duck_reactors = set()
 
+        # iterate over all reactions
         for reaction in message.reactions:
-            async for user in reaction.users():
+            # check if the current reaction is a duck
+            if not self._is_duck_emoji(reaction.emoji):
+                continue
 
-                # Is the user a staff member and not already counted as reactor?
-                if not self.is_staff(user) or user.id in duck_reactors:
-                    continue
+            # update the set of reactors with all staff reactors
+            duck_reactors |= {user.id async for user in reaction.users() if self.is_staff(user)}
 
-                # Is the emoji a duck?
-                if hasattr(reaction.emoji, "id"):
-                    if reaction.emoji.id in constants.DuckPond.custom_emojis:
-                        duck_count += 1
-                        duck_reactors.append(user.id)
-                elif isinstance(reaction.emoji, str):
-                    if reaction.emoji == "🦆":
-                        duck_count += 1
-                        duck_reactors.append(user.id)
-        return duck_count
+        return len(duck_reactors)
 
     async def relay_message(self, message: Message) -> None:
         """Relays the message's content and attachments to the duck pond channel."""
@@ -105,16 +105,16 @@ class DuckPond(Cog):
 
         await message.add_reaction("✅")
 
-    @staticmethod
-    def _payload_has_duckpond_emoji(payload: RawReactionActionEvent) -> bool:
+    def _payload_has_duckpond_emoji(self, emoji: discord.PartialEmoji) -> bool:
         """Test if the RawReactionActionEvent payload contains a duckpond emoji."""
-        if payload.emoji.is_custom_emoji():
-            if payload.emoji.id in constants.DuckPond.custom_emojis:
-                return True
-        elif payload.emoji.name == "🦆":
-            return True
+        if emoji.is_unicode_emoji():
+            # For unicode PartialEmojis, the `name` attribute is just the string
+            # representation of the emoji. This is what the helper method
+            # expects, as unicode emojis show up as just a `str` instance when
+            # inspecting the reactions attached to a message.
+            emoji = emoji.name
 
-        return False
+        return self._is_duck_emoji(emoji)
 
     @Cog.listener()
     async def on_raw_reaction_add(self, payload: RawReactionActionEvent) -> None:
@@ -126,7 +126,7 @@ class DuckPond(Cog):
         send the message off to the duck pond.
         """
         # Is the emoji in the reaction a duck?
-        if not self._payload_has_duckpond_emoji(payload):
+        if not self._payload_has_duckpond_emoji(payload.emoji):
             return
 
         channel = discord.utils.get(self.bot.get_all_channels(), id=payload.channel_id)
