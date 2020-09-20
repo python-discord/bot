@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import re
 import string
@@ -178,7 +180,7 @@ def _match_end_tag(tag: Tag) -> bool:
     return tag.name == "table"
 
 
-def get_symbol_markdown(soup: BeautifulSoup, symbol_data: "DocItem") -> str:
+def get_symbol_markdown(soup: BeautifulSoup, symbol_data: DocItem) -> str:
     """
     Return parsed markdown of the passed symbol using the passed in soup, truncated to 1000 characters.
 
