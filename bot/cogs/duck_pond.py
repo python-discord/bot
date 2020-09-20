@@ -125,6 +125,10 @@ class DuckPond(Cog):
         amount of ducks specified in the config under duck_pond/threshold, it will
         send the message off to the duck pond.
         """
+        # Was this reaction issued in a blacklisted channel?
+        if payload.channel_id in constants.DuckPond.channel_blacklist:
+            return
+
         # Is the emoji in the reaction a duck?
         if not self._payload_has_duckpond_emoji(payload.emoji):
             return
