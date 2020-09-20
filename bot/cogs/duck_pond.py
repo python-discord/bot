@@ -4,10 +4,11 @@ from typing import Union
 
 import discord
 from discord import Color, Embed, Member, Message, RawReactionActionEvent, User, errors
-from discord.ext.commands import Cog
+from discord.ext.commands import Cog, Context, command
 
 from bot import constants
 from bot.bot import Bot
+from bot.decorators import with_role
 from bot.utils.messages import send_attachments
 from bot.utils.webhooks import send_webhook
 
@@ -182,6 +183,15 @@ class DuckPond(Cog):
             duck_count = await self.count_ducks(message)
             if duck_count >= constants.DuckPond.threshold:
                 await message.add_reaction("✅")
+
+    @command(name="duckify", aliases=("duckpond", "pondify"))
+    @with_role(constants.Roles.admins)
+    async def duckify(self, ctx: Context, message: discord.Message) -> None:
+        """Relay a message to the duckpond, no ducks required!"""
+        if await self.locked_relay(message):
+            await ctx.message.add_reaction("🦆")
+        else:
+            await ctx.message.add_reaction("❌")
 
 
 def setup(bot: Bot) -> None:
