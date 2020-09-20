@@ -47,6 +47,7 @@ class Tags(Cog):
                         "description": file.read_text(encoding="utf8"),
                     },
                     "restricted_to": "developers",
+                    "location": f"/bot/{file}"
                 }
 
                 # Convert to a list to allow negative indexing.
@@ -235,7 +236,7 @@ class Tags(Cog):
                 await wait_for_deletion(
                     await ctx.send(embed=Embed.from_dict(tag['embed'])),
                     [ctx.author.id],
-                    client=self.bot
+                    self.bot
                 )
             elif founds and len(tag_name) >= 3:
                 await wait_for_deletion(
@@ -246,7 +247,7 @@ class Tags(Cog):
                         )
                     ),
                     [ctx.author.id],
-                    client=self.bot
+                    self.bot
                 )
 
         else:

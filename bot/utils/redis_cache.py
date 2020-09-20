@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 
 # Type aliases
 RedisKeyType = Union[str, int]
-RedisValueType = Union[str, int, float]
+RedisValueType = Union[str, int, float, bool]
 RedisKeyOrValue = Union[RedisKeyType, RedisValueType]
 
 # Prefix tuples
@@ -20,6 +20,7 @@ _VALUE_PREFIXES = (
     ("f|", float),
     ("i|", int),
     ("s|", str),
+    ("b|", bool),
 )
 _KEY_PREFIXES = (
     ("i|", int),
@@ -47,8 +48,8 @@ class RedisCache:
     behaves, and should be familiar to Python users. The biggest difference is that
     all the public methods in this class are coroutines, and must be awaited.
 
-    Because of limitations in Redis, this cache will only accept strings, integers and
-    floats both for keys and values.
+    Because of limitations in Redis, this cache will only accept strings and integers for keys,
+    and strings, integers, floats and booleans for values.
 
     Please note that this class MUST be created as a class attribute, and that that class
     must also contain an attribute with an instance of our Bot. See `__get__` and `__set_name__`
@@ -100,16 +101,7 @@ class RedisCache:
 
     def _set_namespace(self, namespace: str) -> None:
         """Try to set the namespace, but do not permit collisions."""
-        # We need a unique namespace, to prevent collisions. This loop
-        # will try appending underscores to the end of the namespace until
-        # it finds one that is unique.
-        #
-        # For example, if `john` and `john_`  are both taken, the namespace will
-        # be `john__` at the end of this loop.
-        while namespace in self._namespaces:
-            namespace += "_"
-
-        log.trace(f"RedisCache setting namespace to {self._namespace}")
+        log.trace(f"RedisCache setting namespace to {namespace}")
         self._namespaces.append(namespace)
         self._namespace = namespace
 
@@ -117,8 +109,15 @@ class RedisCache:
     def _to_typestring(key_or_value: RedisKeyOrValue, prefixes: _PrefixTuple) -> str:
         """Turn a valid Redis type into a typestring."""
         for prefix, _type in prefixes:
-            if isinstance(key_or_value, _type):
+            # Convert bools into integers before storing them.
+            if type(key_or_value) is bool:
+                bool_int = int(key_or_value)
+                return f"{prefix}{bool_int}"
+
+            # isinstance is a bad idea here, because isintance(False, int) == True.
+            if type(key_or_value) is _type:
                 return f"{prefix}{key_or_value}"
+
         raise TypeError(f"RedisCache._to_typestring only supports the following: {prefixes}.")
 
     @staticmethod
@@ -131,6 +130,13 @@ class RedisCache:
         # Now we convert our unicode string back into the type it originally was.
         for prefix, _type in prefixes:
             if key_or_value.startswith(prefix):
+
+                # For booleans, we need special handling because bool("False") is True.
+                if prefix == "b|":
+                    value = key_or_value[len(prefix):]
+                    return bool(int(value))
+
+                # Otherwise we can just convert normally.
                 return _type(key_or_value[len(prefix):])
         raise TypeError(f"RedisCache._from_typestring only supports the following: {prefixes}.")
 
@@ -220,7 +226,6 @@ class RedisCache:
         for attribute in vars(instance).values():
             if isinstance(attribute, Bot):
                 self.bot = attribute
-                self._redis = self.bot.redis_session
                 return self
         else:
             error_message = (
@@ -245,7 +250,7 @@ class RedisCache:
         value = self._value_to_typestring(value)
 
         log.trace(f"Setting {key} to {value}.")
-        await self._redis.hset(self._namespace, key, value)
+        await self.bot.redis_session.hset(self._namespace, key, value)
 
     async def get(self, key: RedisKeyType, default: Optional[RedisValueType] = None) -> Optional[RedisValueType]:
         """Get an item from the Redis cache."""
@@ -253,7 +258,7 @@ class RedisCache:
         key = self._key_to_typestring(key)
 
         log.trace(f"Attempting to retrieve {key}.")
-        value = await self._redis.hget(self._namespace, key)
+        value = await self.bot.redis_session.hget(self._namespace, key)
 
         if value is None:
             log.trace(f"Value not found, returning default value {default}")
@@ -275,7 +280,7 @@ class RedisCache:
         key = self._key_to_typestring(key)
 
         log.trace(f"Attempting to delete {key}.")
-        return await self._redis.hdel(self._namespace, key)
+        return await self.bot.redis_session.hdel(self._namespace, key)
 
     async def contains(self, key: RedisKeyType) -> bool:
         """
@@ -285,7 +290,7 @@ class RedisCache:
         """
         await self._validate_cache()
         key = self._key_to_typestring(key)
-        exists = await self._redis.hexists(self._namespace, key)
+        exists = await self.bot.redis_session.hexists(self._namespace, key)
 
         log.trace(f"Testing if {key} exists in the RedisCache - Result is {exists}")
         return exists
@@ -308,7 +313,7 @@ class RedisCache:
         """
         await self._validate_cache()
         items = self._dict_from_typestring(
-            await self._redis.hgetall(self._namespace)
+            await self.bot.redis_session.hgetall(self._namespace)
         ).items()
 
         log.trace(f"Retrieving all key/value pairs from cache, total of {len(items)} items.")
@@ -317,7 +322,7 @@ class RedisCache:
     async def length(self) -> int:
         """Return the number of items in the Redis cache."""
         await self._validate_cache()
-        number_of_items = await self._redis.hlen(self._namespace)
+        number_of_items = await self.bot.redis_session.hlen(self._namespace)
         log.trace(f"Returning length. Result is {number_of_items}.")
         return number_of_items
 
@@ -329,7 +334,7 @@ class RedisCache:
         """Deletes the entire hash from the Redis cache."""
         await self._validate_cache()
         log.trace("Clearing the cache of all key/value pairs.")
-        await self._redis.delete(self._namespace)
+        await self.bot.redis_session.delete(self._namespace)
 
     async def pop(self, key: RedisKeyType, default: Optional[RedisValueType] = None) -> RedisValueType:
         """Get the item, remove it from the cache, and provide a default if not found."""
@@ -358,7 +363,7 @@ class RedisCache:
         """
         await self._validate_cache()
         log.trace(f"Updating the cache with the following items:\n{items}")
-        await self._redis.hmset_dict(self._namespace, self._dict_to_typestring(items))
+        await self.bot.redis_session.hmset_dict(self._namespace, self._dict_to_typestring(items))
 
     async def increment(self, key: RedisKeyType, amount: Optional[int, float] = 1) -> None:
         """

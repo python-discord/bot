@@ -1,14 +1,14 @@
 import logging
 import re
 
-from discord import Colour, Message
+from discord import Colour, Message, NotFound
 from discord.ext.commands import Cog
 
 from bot.bot import Bot
 from bot.cogs.moderation.modlog import ModLog
 from bot.constants import Channels, Colours, Event, Icons
 
-WEBHOOK_URL_RE = re.compile(r"((?:https?://)?discordapp\.com/api/webhooks/\d+/)\S+/?", re.I)
+WEBHOOK_URL_RE = re.compile(r"((?:https?://)?discord(?:app)?\.com/api/webhooks/\d+/)\S+/?", re.IGNORECASE)
 
 ALERT_MESSAGE_TEMPLATE = (
     "{user}, looks like you posted a Discord webhook URL. Therefore, your "
@@ -35,7 +35,13 @@ class WebhookRemover(Cog):
         """Delete `msg` and send a warning that it contained the Discord webhook `redacted_url`."""
         # Don't log this, due internal delete, not by user. Will make different entry.
         self.mod_log.ignore(Event.message_delete, msg.id)
-        await msg.delete()
+
+        try:
+            await msg.delete()
+        except NotFound:
+            log.debug(f"Failed to remove webhook in message {msg.id}: message already deleted.")
+            return
+
         await msg.channel.send(ALERT_MESSAGE_TEMPLATE.format(user=msg.author.mention))
 
         message = (
@@ -59,6 +65,10 @@ class WebhookRemover(Cog):
     @Cog.listener()
     async def on_message(self, msg: Message) -> None:
         """Check if a Discord webhook URL is in `message`."""
+        # Ignore DMs; can't delete messages in there anyway.
+        if not msg.guild or msg.author.bot:
+            return
+
         matches = WEBHOOK_URL_RE.search(msg.content)
         if matches:
             await self.delete_and_respond(msg, matches[1] + "xxx")

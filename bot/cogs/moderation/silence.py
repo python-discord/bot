@@ -11,6 +11,7 @@ from bot.bot import Bot
 from bot.constants import Channels, Emojis, Guild, MODERATION_ROLES, Roles
 from bot.converters import HushDurationConverter
 from bot.utils.checks import with_role_check
+from bot.utils.scheduling import Scheduler
 
 log = logging.getLogger(__name__)
 
@@ -58,7 +59,9 @@ class Silence(commands.Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
+        self.scheduler = Scheduler(self.__class__.__name__)
         self.muted_channels = set()
+
         self._get_instance_vars_task = self.bot.loop.create_task(self._get_instance_vars())
         self._get_instance_vars_event = asyncio.Event()
 
@@ -90,9 +93,8 @@ class Silence(commands.Cog):
             return
 
         await ctx.send(f"{Emojis.check_mark} silenced current channel for {duration} minute(s).")
-        await asyncio.sleep(duration*60)
-        log.info("Unsilencing channel after set delay.")
-        await ctx.invoke(self.unsilence)
+
+        self.scheduler.schedule_later(duration * 60, ctx.channel.id, ctx.invoke(self.unsilence))
 
     @commands.command(aliases=("unhush",))
     async def unsilence(self, ctx: Context) -> None:
@@ -103,7 +105,9 @@ class Silence(commands.Cog):
         """
         await self._get_instance_vars_event.wait()
         log.debug(f"Unsilencing channel #{ctx.channel} from {ctx.author}'s command.")
-        if await self._unsilence(ctx.channel):
+        if not await self._unsilence(ctx.channel):
+            await ctx.send(f"{Emojis.cross_mark} current channel was not silenced.")
+        else:
             await ctx.send(f"{Emojis.check_mark} unsilenced current channel.")
 
     async def _silence(self, channel: TextChannel, persistent: bool, duration: Optional[int]) -> bool:
@@ -140,6 +144,7 @@ class Silence(commands.Cog):
         if current_overwrite.send_messages is False:
             await channel.set_permissions(self._verified_role, **dict(current_overwrite, send_messages=None))
             log.info(f"Unsilenced channel #{channel} ({channel.id}).")
+            self.scheduler.cancel(channel.id)
             self.notifier.remove_channel(channel)
             self.muted_channels.discard(channel)
             return True
@@ -147,7 +152,8 @@ class Silence(commands.Cog):
         return False
 
     def cog_unload(self) -> None:
-        """Send alert with silenced channels on unload."""
+        """Send alert with silenced channels and cancel scheduled tasks on unload."""
+        self.scheduler.cancel_all()
         if self.muted_channels:
             channels_string = ''.join(channel.mention for channel in self.muted_channels)
             message = f"<@&{Roles.moderators}> channels left silenced on cog unload: {channels_string}"

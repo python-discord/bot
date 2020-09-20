@@ -146,7 +146,7 @@ class Superstarify(InfractionScheduler, Cog):
         log.debug(f"Changing nickname of {member} to {forced_nick}.")
         self.mod_log.ignore(constants.Event.member_update, member.id)
         await member.edit(nick=forced_nick, reason=reason)
-        self.schedule_task(id_, infraction)
+        self.schedule_expiration(infraction)
 
         # Send a DM to the user to notify them of their new infraction.
         await utils.notify_infraction(
@@ -183,10 +183,10 @@ class Superstarify(InfractionScheduler, Cog):
             text=textwrap.dedent(f"""
                 Member: {member.mention} (`{member.id}`)
                 Actor: {ctx.message.author}
-                Reason: {reason}
                 Expires: {expiry_str}
                 Old nickname: `{old_nick}`
                 New nickname: `{forced_nick}`
+                Reason: {reason}
             """),
             footer=f"ID {id_}"
         )

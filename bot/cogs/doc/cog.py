@@ -377,7 +377,8 @@ class DocCog(commands.Cog):
                 with suppress(discord.NotFound):
                     await error_message.delete()
             else:
-                await ctx.send(embed=doc_embed)
+                msg = await ctx.send(embed=doc_embed)
+                await wait_for_deletion(msg, (ctx.author.id,), client=self.bot)
 
     @docs_group.command(name='setdoc', aliases=('s',))
     @with_role(*MODERATION_ROLES)

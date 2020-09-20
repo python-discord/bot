@@ -41,7 +41,6 @@ async def post_user(ctx: Context, user: UserSnowflake) -> t.Optional[dict]:
         log.debug("The user being added to the DB is not a Member or User object.")
 
     payload = {
-        'avatar_hash': getattr(user, 'avatar', 0),
         'discriminator': int(getattr(user, 'discriminator', 0)),
         'id': user.id,
         'in_guild': False,
@@ -71,7 +70,7 @@ async def post_infraction(
     log.trace(f"Posting {infr_type} infraction for {user} to the API.")
 
     payload = {
-        "actor": ctx.message.author.id,
+        "actor": ctx.author.id,  # Don't use ctx.message.author; antispam only patches ctx.author.
         "hidden": hidden,
         "reason": reason,
         "type": infr_type,
@@ -143,12 +142,14 @@ async def notify_infraction(
     """DM a user about their new infraction and return True if the DM is successful."""
     log.trace(f"Sending {user} a DM about their {infr_type} infraction.")
 
+    text = textwrap.dedent(f"""
+        **Type:** {infr_type.capitalize()}
+        **Expires:** {expires_at or "N/A"}
+        **Reason:** {reason or "No reason provided."}
+    """)
+
     embed = discord.Embed(
-        description=textwrap.dedent(f"""
-            **Type:** {infr_type.capitalize()}
-            **Expires:** {expires_at or "N/A"}
-            **Reason:** {reason or "No reason provided."}
-            """),
+        description=textwrap.shorten(text, width=2048, placeholder="..."),
         colour=Colours.soft_red
     )
 

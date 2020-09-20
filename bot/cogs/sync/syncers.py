@@ -5,6 +5,7 @@ import typing as t
 from collections import namedtuple
 from functools import partial
 
+import discord
 from discord import Guild, HTTPException, Member, Message, Reaction, User
 from discord.ext.commands import Context
 
@@ -17,7 +18,7 @@ log = logging.getLogger(__name__)
 # These objects are declared as namedtuples because tuples are hashable,
 # something that we make use of when diffing site roles against guild roles.
 _Role = namedtuple('Role', ('id', 'name', 'colour', 'permissions', 'position'))
-_User = namedtuple('User', ('id', 'name', 'discriminator', 'avatar_hash', 'roles', 'in_guild'))
+_User = namedtuple('User', ('id', 'name', 'discriminator', 'roles', 'in_guild'))
 _Diff = namedtuple('Diff', ('created', 'updated', 'deleted'))
 
 
@@ -68,7 +69,11 @@ class Syncer(abc.ABC):
                     )
                     return None
 
-            message = await channel.send(f"{self._CORE_DEV_MENTION}{msg_content}")
+            allowed_roles = [discord.Object(constants.Roles.core_developers)]
+            message = await channel.send(
+                f"{self._CORE_DEV_MENTION}{msg_content}",
+                allowed_mentions=discord.AllowedMentions(everyone=False, roles=allowed_roles)
+            )
         else:
             await message.edit(content=msg_content)
 
@@ -298,7 +303,6 @@ class UserSyncer(Syncer):
                 id=member.id,
                 name=member.name,
                 discriminator=int(member.discriminator),
-                avatar_hash=member.avatar,
                 roles=tuple(sorted(role.id for role in member.roles)),
                 in_guild=True
             )

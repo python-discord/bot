@@ -38,6 +38,21 @@ style:
         status_dnd:     "<:status_dnd:470326272082313216>"
         status_offline: "<:status_offline:470326266537705472>"
 
+        badge_staff: "<:discord_staff:743882896498098226>"
+        badge_partner: "<:partner:748666453242413136>"
+        badge_hypesquad: "<:hypesquad_events:743882896892362873>"
+        badge_bug_hunter: "<:bug_hunter_lvl1:743882896372269137>"
+        badge_hypesquad_bravery: "<:hypesquad_bravery:743882896745693335>"
+        badge_hypesquad_brilliance: "<:hypesquad_brilliance:743882896938631248>"
+        badge_hypesquad_balance: "<:hypesquad_balance:743882896460480625>"
+        badge_early_supporter: "<:early_supporter:743882896909140058>"
+        badge_bug_hunter_level_2: "<:bug_hunter_lvl2:743882896611344505>"
+        badge_verified_bot_developer: "<:verified_bot_dev:743882897299210310>"
+
+        incident_actioned:      "<:incident_actioned:719645530128646266>"
+        incident_unactioned:    "<:incident_unactioned:719645583245180960>"
+        incident_investigating: "<:incident_investigating:719645658671480924>"
+
         failmail: "<:failmail:633660039931887616>"
         trashcan: "<:trashcan:637136429717389331>"
 
@@ -61,9 +76,10 @@ style:
         ducky_maul:     &DUCKY_MAUL     640137724958867467
         ducky_santa:    &DUCKY_SANTA    655360331002019870
 
-        upvotes:        "<:upvotes:638729835245731840>"
-        comments:       "<:comments:638729835073765387>"
-        user:           "<:user:638729835442602003>"
+        # emotes used for #reddit
+        upvotes:        "<:reddit_upvotes:755845219890757644>"
+        comments:       "<:reddit_comments:755845255001014384>"
+        user:           "<:reddit_users:755845303822974997>"
 
     icons:
         crown_blurple: "https://cdn.discordapp.com/emojis/469964153289965568.png"
@@ -119,6 +135,7 @@ style:
 
 guild:
     id: 267624335836053506
+    invite: "https://discord.gg/python"
 
     categories:
         help_available:                     691405807388196926
@@ -142,6 +159,7 @@ guild:
 
         # Python Help: Available
         how_to_get_help:    704250143020417084
+        cooldown:           720603994149486673
 
         # Logs
         attachment_log:     &ATTACH_LOG     649243850006855680
@@ -149,6 +167,7 @@ guild:
         mod_log:            &MOD_LOG        282638479504965634
         user_log:                           528976905546760203
         voice_log:                          640292421988646961
+        dm_log:                             653713721625018428
 
         # Off-topic
         off_topic_0:    291284109232308226
@@ -166,12 +185,13 @@ guild:
         admin_spam:         &ADMIN_SPAM     563594791770914816
         defcon:             &DEFCON         464469101889454091
         helpers:            &HELPERS        385474242440986624
+        incidents:                          714214212200562749
+        incidents_archive:                  720668923636351037
         mods:               &MODS           305126844661760000
         mod_alerts:         &MOD_ALERTS     473092532147060736
         mod_spam:           &MOD_SPAM       620607373828030464
         organisation:       &ORGANISATION   551789653284356126
         staff_lounge:       &STAFF_LOUNGE   464905259261755392
-        incidents:                          714214212200562749
 
         # Voice
         admins_voice:       &ADMINS_VOICE   500734494840717332
@@ -218,8 +238,8 @@ guild:
         partners:                               323426753857191936
         python_community:   &PY_COMMUNITY_ROLE  458226413825294336
 
-        # This is the Developers role on PyDis, here named verified for readability reasons
-        verified:                               352427296948486144
+        unverified:                             739794855945044069
+        verified:                               352427296948486144  # @Developers on PyDis
 
         # Staff
         admins:             &ADMINS_ROLE    267628507062992896
@@ -229,8 +249,8 @@ guild:
         owners:             &OWNERS_ROLE    267627879762755584
 
         # Code Jam
-        jammers:        591786436651646989
-        team_leaders:   501324292341104650
+        jammers:        737249140966162473
+        team_leaders:   737250302834638889
 
     moderation_roles:
         - *OWNERS_ROLE
@@ -244,16 +264,16 @@ guild:
         - *HELPERS_ROLE
 
     webhooks:
-        talent_pool:                    569145364800602132
-        big_brother:                    569133704568373283
-        reddit:                         635408384794951680
-        duck_pond:                      637821475327311927
-        dev_log:                        680501655111729222
-        python_news:    &PYNEWS_WEBHOOK 704381182279942324
-
+        big_brother:                        569133704568373283
+        dev_log:                            680501655111729222
+        dm_log:                             654567640664244225
+        duck_pond:                          637821475327311927
+        incidents_archive:                  720671599790915702
+        python_news:        &PYNEWS_WEBHOOK 704381182279942324
+        reddit:                             635408384794951680
+        talent_pool:                        569145364800602132
 
 filter:
-
     # What do we filter?
     filter_zalgo:       false
     filter_invites:     true
@@ -268,95 +288,8 @@ filter:
     notify_user_domains:     false
 
     # Filter configuration
-    ping_everyone: true  # Ping @everyone when we send a mod-alert?
-
-    guild_invite_whitelist:
-        - 280033776820813825  # Functional Programming
-        - 267624335836053506  # Python Discord
-        - 440186186024222721  # Python Discord: Emojis 1
-        - 578587418123304970  # Python Discord: Emojis 2
-        - 273944235143593984  # STEM
-        - 348658686962696195  # RLBot
-        - 531221516914917387  # Pallets
-        - 249111029668249601  # Gentoo
-        - 327254708534116352  # Adafruit
-        - 544525886180032552  # kennethreitz.org
-        - 590806733924859943  # Discord Hack Week
-        - 423249981340778496  # Kivy
-        - 197038439483310086  # Discord Testers
-        - 286633898581164032  # Ren'Py
-        - 349505959032389632  # PyGame
-        - 438622377094414346  # Pyglet
-        - 524691714909274162  # Panda3D
-        - 336642139381301249  # discord.py
-        - 405403391410438165  # Sentdex
-        - 172018499005317120  # The Coding Den
-        - 666560367173828639  # PyWeek
-        - 702724176489873509  # Microsoft Python
-        - 81384788765712384   # Discord API
-        - 613425648685547541  # Discord Developers
-        - 185590609631903755  # Blender Hub
-        - 420324994703163402  # /r/FlutterDev
-
-    domain_blacklist:
-        - pornhub.com
-        - liveleak.com
-        - grabify.link
-        - bmwforum.co
-        - leancoding.co
-        - spottyfly.com
-        - stopify.co
-        - yoütu.be
-        - discörd.com
-        - minecräft.com
-        - freegiftcards.co
-        - disçordapp.com
-        - fortnight.space
-        - fortnitechat.site
-        - joinmy.site
-        - curiouscat.club
-        - catsnthings.fun
-        - yourtube.site
-        - youtubeshort.watch
-        - catsnthing.com
-        - youtubeshort.pro
-        - canadianlumberjacks.online
-        - poweredbydialup.club
-        - poweredbydialup.online
-        - poweredbysecurity.org
-        - poweredbysecurity.online
-        - ssteam.site
-        - steamwalletgift.com
-        - discord.gift
-
-    word_watchlist:
-        - goo+ks*
-        - ky+s+
-        - ki+ke+s*
-        - beaner+s?
-        - coo+ns*
-        - nig+lets*
-        - slant-eyes*
-        - towe?l-?head+s*
-        - chi*n+k+s*
-        - spick*s*
-        - kill* +(?:yo)?urself+
-        - jew+s*
-        - suicide
-        - rape
-        - (re+)tar+(d+|t+)(ed)?
-        - ta+r+d+
-        - cunts*
-        - trann*y
-        - shemale
-
-    token_watchlist:
-        - fa+g+s*
-        - 卐
-        - 卍
-        - cuck(?!oo+)
-        - nigg+(?:e*r+|a+h*?|u+h+)s?
-        - fag+o+t+s*
+    ping_everyone:             true
+    offensive_msg_delete_days: 7     # How many days before deleting an offensive message?
 
     # Censor doesn't apply to these
     channel_whitelist:
@@ -389,24 +322,7 @@ urls:
     site_staff:  &STAFF  !JOIN ["staff.", *DOMAIN]
     site_schema: &SCHEMA       "https://"
 
-    site_bigbrother_api:                !JOIN [*SCHEMA, *API, "/bot/bigbrother"]
-    site_docs_api:                      !JOIN [*SCHEMA, *API, "/bot/docs"]
-    site_superstarify_api:              !JOIN [*SCHEMA, *API, "/bot/superstarify"]
-    site_infractions:                   !JOIN [*SCHEMA, *API, "/bot/infractions"]
-    site_infractions_user:              !JOIN [*SCHEMA, *API, "/bot/infractions/user/{user_id}"]
-    site_infractions_type:              !JOIN [*SCHEMA, *API, "/bot/infractions/type/{infraction_type}"]
-    site_infractions_by_id:             !JOIN [*SCHEMA, *API, "/bot/infractions/id/{infraction_id}"]
-    site_infractions_user_type_current: !JOIN [*SCHEMA, *API, "/bot/infractions/user/{user_id}/{infraction_type}/current"]
-    site_infractions_user_type:         !JOIN [*SCHEMA, *API, "/bot/infractions/user/{user_id}/{infraction_type}"]
-    site_logs_api:                      !JOIN [*SCHEMA, *API, "/bot/logs"]
     site_logs_view:                     !JOIN [*SCHEMA, *STAFF, "/bot/logs"]
-    site_off_topic_names_api:           !JOIN [*SCHEMA, *API, "/bot/off-topic-names"]
-    site_reminders_api:                 !JOIN [*SCHEMA, *API, "/bot/reminders"]
-    site_reminders_user_api:            !JOIN [*SCHEMA, *API, "/bot/reminders/user"]
-    site_settings_api:                  !JOIN [*SCHEMA, *API, "/bot/settings"]
-    site_tags_api:                      !JOIN [*SCHEMA, *API, "/bot/tags"]
-    site_user_api:                      !JOIN [*SCHEMA, *API, "/bot/users"]
-    site_user_complete_api:             !JOIN [*SCHEMA, *API, "/bot/users/complete"]
     paste_service:                      !JOIN [*SCHEMA, *PASTE, "/{key}"]
 
     # Snekbox
@@ -438,9 +354,13 @@ anti_spam:
             interval: 10
             max: 7
 
-        burst_shared:
-            interval: 10
-            max: 20
+        # Burst shared it (temporarily) disabled to prevent
+        # the bug that triggers multiple infractions/DMs per
+        # user. It also tends to catch a lot of innocent users
+        # now that we're so big.
+        # burst_shared:
+        #    interval: 10
+        #    max: 20
 
         chars:
             interval: 5
@@ -471,34 +391,11 @@ anti_spam:
             interval: 10
             max: 3
 
-
-anti_malware:
-    whitelist:
-        - '.3gp'
-        - '.3g2'
-        - '.avi'
-        - '.bmp'
-        - '.gif'
-        - '.h264'
-        - '.jpg'
-        - '.jpeg'
-        - '.m4v'
-        - '.mkv'
-        - '.mov'
-        - '.mp4'
-        - '.mpeg'
-        - '.mpg'
-        - '.png'
-        - '.tiff'
-        - '.wmv'
-        - '.svg'
-        - '.psd'  # Photoshop
-        - '.ai'   # Illustrator
-        - '.aep'  # After Effects
-        - '.xcf'  # GIMP
-        - '.mp3'
-        - '.wav'
-        - '.ogg'
+        # The everyone ping filter is temporarily disabled
+        # until we've fixed a couple of bugs.
+        # everyone_ping:
+        #    interval: 10
+        #    max: 0
 
 
 reddit:
@@ -506,13 +403,6 @@ reddit:
         - 'r/Python'
     client_id: !ENV "REDDIT_CLIENT_ID"
     secret:    !ENV "REDDIT_SECRET"
-
-
-wolfram:
-    # Max requests per day.
-    user_limit_day: 10
-    guild_limit_day: 67
-    key: !ENV "WOLFRAM_API_KEY"
 
 
 big_brother:
@@ -541,8 +431,8 @@ help_channels:
     # Allowed duration of inactivity before making a channel dormant
     idle_minutes: 30
 
-    # Allowed duration of inactivity when question message deleted
-    # and no one other sent before message making channel dormant.
+    # Allowed duration of inactivity when channel is empty (due to deleted messages)
+    # before message making a channel dormant
     deleted_idle_minutes: 5
 
     # Maximum number of channels to put in the available category
@@ -600,6 +490,19 @@ python_news:
         - 'pypi-announce'
     channel: *PYNEWS_CHANNEL
     webhook: *PYNEWS_WEBHOOK
+
+
+verification:
+    unverified_after: 3  # Days after which non-Developers receive the @Unverified role
+    kicked_after: 30  # Days after which non-Developers get kicked from the guild
+    reminder_frequency: 28  # Hours between @Unverified pings
+    bot_message_delete_delay: 10  # Seconds before deleting bots response in #verification
+
+    # Number in range [0, 1] determining the percentage of unverified users that are safe
+    # to be kicked from the guild in one batch, any larger amount will require staff confirmation,
+    # set this to 0 to require explicit approval for batches of any size
+    kick_confirmation_threshold: 0.01  # 1%
+
 
 config:
     required_keys: ['bot.token']

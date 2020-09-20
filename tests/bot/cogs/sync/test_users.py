@@ -10,7 +10,6 @@ def fake_user(**kwargs):
     kwargs.setdefault("id", 43)
     kwargs.setdefault("name", "bob the test man")
     kwargs.setdefault("discriminator", 1337)
-    kwargs.setdefault("avatar_hash", None)
     kwargs.setdefault("roles", (666,))
     kwargs.setdefault("in_guild", True)
 
@@ -32,7 +31,6 @@ class UserSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
 
         for member in members:
             member = member.copy()
-            member["avatar"] = member.pop("avatar_hash")
             del member["in_guild"]
 
             mock_member = helpers.MockMember(**member)

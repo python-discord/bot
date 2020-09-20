@@ -9,6 +9,7 @@ from discord.ext.commands import Cog, Context, command, group
 
 from bot.bot import Bot
 from bot.cogs.token_remover import TokenRemover
+from bot.cogs.webhook_remover import WEBHOOK_URL_RE
 from bot.constants import Categories, Channels, DEBUG_MODE, Guild, MODERATION_ROLES, Roles, URLs
 from bot.decorators import with_role
 from bot.utils.messages import wait_for_deletion
@@ -72,10 +73,14 @@ class BotCog(Cog, name="Bot"):
 
     @command(name='embed')
     @with_role(*MODERATION_ROLES)
-    async def embed_command(self, ctx: Context, *, text: str) -> None:
-        """Send the input within an embed to the current channel."""
+    async def embed_command(self, ctx: Context, channel: Optional[TextChannel], *, text: str) -> None:
+        """Send the input within an embed to either a specified channel or the current channel."""
         embed = Embed(description=text)
-        await ctx.send(embed=embed)
+
+        if channel is None:
+            await ctx.send(embed=embed)
+        else:
+            await channel.send(embed=embed)
 
     def codeblock_stripping(self, msg: str, bad_ticks: bool) -> Optional[Tuple[Tuple[str, ...], str]]:
         """
@@ -236,6 +241,7 @@ class BotCog(Cog, name="Bot"):
             and not msg.author.bot
             and len(msg.content.splitlines()) > 3
             and not TokenRemover.find_token_in_message(msg)
+            and not WEBHOOK_URL_RE.search(msg.content)
         )
 
         if parse_codeblock:  # no token in the msg
@@ -333,7 +339,7 @@ class BotCog(Cog, name="Bot"):
                         self.codeblock_message_ids[msg.id] = bot_message.id
 
                         self.bot.loop.create_task(
-                            wait_for_deletion(bot_message, user_ids=(msg.author.id,), client=self.bot)
+                            wait_for_deletion(bot_message, (msg.author.id,), self.bot)
                         )
                     else:
                         return

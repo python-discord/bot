@@ -15,6 +15,8 @@ from discord.ext.commands import Cog, Context
 from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.cogs.moderation import ModLog
+from bot.cogs.token_remover import TokenRemover
+from bot.cogs.webhook_remover import WEBHOOK_URL_RE
 from bot.constants import BigBrother as BigBrotherConfig, Guild as GuildConfig, Icons
 from bot.pagination import LinePaginator
 from bot.utils import CogABCMeta, messages
@@ -204,6 +206,7 @@ class WatchChannel(metaclass=CogABCMeta):
         embed: Optional[Embed] = None,
     ) -> None:
         """Sends a message to the webhook with the specified kwargs."""
+        username = messages.sub_clyde(username)
         try:
             await self.webhook.send(content=content, username=username, avatar_url=avatar_url, embed=embed)
         except discord.HTTPException as exc:
@@ -225,14 +228,16 @@ class WatchChannel(metaclass=CogABCMeta):
 
             await self.send_header(msg)
 
-        cleaned_content = msg.clean_content
-
-        if cleaned_content:
+        if TokenRemover.find_token_in_message(msg) or WEBHOOK_URL_RE.search(msg.content):
+            cleaned_content = "Content is censored because it contains a bot or webhook token."
+        elif cleaned_content := msg.clean_content:
             # Put all non-media URLs in a code block to prevent embeds
             media_urls = {embed.url for embed in msg.embeds if embed.type in ("image", "video")}
             for url in URL_RE.findall(cleaned_content):
                 if url not in media_urls:
                     cleaned_content = cleaned_content.replace(url, f"`{url}`")
+
+        if cleaned_content:
             await self.webhook_send(
                 cleaned_content,
                 username=msg.author.display_name,
@@ -280,14 +285,19 @@ class WatchChannel(metaclass=CogABCMeta):
         else:
             message_jump = f"in [#{msg.channel.name}]({msg.jump_url})"
 
+        footer = f"Added {time_delta} by {actor} | Reason: {reason}"
         embed = Embed(description=f"{msg.author.mention} {message_jump}")
-        embed.set_footer(text=f"Added {time_delta} by {actor} | Reason: {reason}")
+        embed.set_footer(text=textwrap.shorten(footer, width=128, placeholder="..."))
 
         await self.webhook_send(embed=embed, username=msg.author.display_name, avatar_url=msg.author.avatar_url)
 
-    async def list_watched_users(self, ctx: Context, update_cache: bool = True) -> None:
+    async def list_watched_users(
+        self, ctx: Context, oldest_first: bool = False, update_cache: bool = True
+    ) -> None:
         """
         Gives an overview of the watched user list for this channel.
+
+        The optional kwarg `oldest_first` orders the list by oldest entry.
 
         The optional kwarg `update_cache` specifies whether the cache should
         be refreshed by polling the API.
@@ -303,7 +313,11 @@ class WatchChannel(metaclass=CogABCMeta):
             time_delta = self._get_time_delta(inserted_at)
             lines.append(f"• <@{user_id}> (added {time_delta})")
 
+        if oldest_first:
+            lines.reverse()
+
         lines = lines or ("There's nothing here yet.",)
+
         embed = Embed(
             title=f"{self.__class__.__name__} watched users ({'updated' if update_cache else 'cached'})",
             color=Color.blue()

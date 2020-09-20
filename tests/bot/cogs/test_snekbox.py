@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import unittest
 from unittest.mock import AsyncMock, MagicMock, Mock, call, create_autospec, patch
 
@@ -39,42 +38,13 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         result = await self.cog.upload_output("-" * (snekbox.MAX_PASTE_LEN + 1))
         self.assertEqual(result, "too long to upload")
 
-    async def test_upload_output(self):
+    @patch("bot.cogs.snekbox.send_to_paste_service")
+    async def test_upload_output(self, mock_paste_util):
         """Upload the eval output to the URLs.paste_service.format(key="documents") endpoint."""
-        key = "MarkDiamond"
-        resp = MagicMock()
-        resp.json = AsyncMock(return_value={"key": key})
-
-        context_manager = MagicMock()
-        context_manager.__aenter__.return_value = resp
-        self.bot.http_session.post.return_value = context_manager
-
-        self.assertEqual(
-            await self.cog.upload_output("My awesome output"),
-            constants.URLs.paste_service.format(key=key)
+        await self.cog.upload_output("Test output.")
+        mock_paste_util.assert_called_once_with(
+            self.bot.http_session, "Test output.", extension="txt"
         )
-        self.bot.http_session.post.assert_called_with(
-            constants.URLs.paste_service.format(key="documents"),
-            data="My awesome output",
-            raise_for_status=True
-        )
-
-    async def test_upload_output_gracefully_fallback_if_exception_during_request(self):
-        """Output upload gracefully fallback if the upload fail."""
-        resp = MagicMock()
-        resp.json = AsyncMock(side_effect=Exception)
-
-        context_manager = MagicMock()
-        context_manager.__aenter__.return_value = resp
-        self.bot.http_session.post.return_value = context_manager
-
-        log = logging.getLogger("bot.cogs.snekbox")
-        with self.assertLogs(logger=log, level='ERROR'):
-            await self.cog.upload_output('My awesome output!')
-
-    async def test_upload_output_gracefully_fallback_if_no_key_in_response(self):
-        """Output upload gracefully fallback if there is no key entry in the response body."""
-        self.assertEqual((await self.cog.upload_output('My awesome output!')), None)
 
     def test_prepare_input(self):
         cases = (
@@ -233,9 +203,13 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.cog.get_status_emoji = MagicMock(return_value=':yay!:')
         self.cog.format_output = AsyncMock(return_value=('[No output]', None))
 
+        mocked_filter_cog = MagicMock()
+        mocked_filter_cog.filter_eval = AsyncMock(return_value=False)
+        self.bot.get_cog.return_value = mocked_filter_cog
+
         await self.cog.send_eval(ctx, 'MyAwesomeCode')
         ctx.send.assert_called_once_with(
-            '@LemonLemonishBeard#0042 :yay!: Return code 0.\n\n```py\n[No output]\n```'
+            '@LemonLemonishBeard#0042 :yay!: Return code 0.\n\n```\n[No output]\n```'
         )
         self.cog.post_eval.assert_called_once_with('MyAwesomeCode')
         self.cog.get_status_emoji.assert_called_once_with({'stdout': '', 'returncode': 0})
@@ -254,10 +228,14 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.cog.get_status_emoji = MagicMock(return_value=':yay!:')
         self.cog.format_output = AsyncMock(return_value=('Way too long beard', 'lookatmybeard.com'))
 
+        mocked_filter_cog = MagicMock()
+        mocked_filter_cog.filter_eval = AsyncMock(return_value=False)
+        self.bot.get_cog.return_value = mocked_filter_cog
+
         await self.cog.send_eval(ctx, 'MyAwesomeCode')
         ctx.send.assert_called_once_with(
             '@LemonLemonishBeard#0042 :yay!: Return code 0.'
-            '\n\n```py\nWay too long beard\n```\nFull output: lookatmybeard.com'
+            '\n\n```\nWay too long beard\n```\nFull output: lookatmybeard.com'
         )
         self.cog.post_eval.assert_called_once_with('MyAwesomeCode')
         self.cog.get_status_emoji.assert_called_once_with({'stdout': 'Way too long beard', 'returncode': 0})
@@ -275,9 +253,13 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.cog.get_status_emoji = MagicMock(return_value=':nope!:')
         self.cog.format_output = AsyncMock()  # This function isn't called
 
+        mocked_filter_cog = MagicMock()
+        mocked_filter_cog.filter_eval = AsyncMock(return_value=False)
+        self.bot.get_cog.return_value = mocked_filter_cog
+
         await self.cog.send_eval(ctx, 'MyAwesomeCode')
         ctx.send.assert_called_once_with(
-            '@LemonLemonishBeard#0042 :nope!: Return code 127.\n\n```py\nBeard got stuck in the eval\n```'
+            '@LemonLemonishBeard#0042 :nope!: Return code 127.\n\n```\nBeard got stuck in the eval\n```'
         )
         self.cog.post_eval.assert_called_once_with('MyAwesomeCode')
         self.cog.get_status_emoji.assert_called_once_with({'stdout': 'ERROR', 'returncode': 127})
