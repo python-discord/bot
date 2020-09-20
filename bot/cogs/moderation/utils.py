@@ -157,7 +157,7 @@ async def notify_infraction(
     text = INFRACTION_DESCRIPTION_TEMPLATE.format(
         type=infr_type.capitalize(),
         expires=expires_at or "N/A",
-        reason=textwrap.shorten(reason, 1000, placeholder="...") if reason else "No reason provided."
+        reason=reason or "No reason provided."
     )
 
     # For case when other fields than reason is too long and this reach limit, then force-shorten string
