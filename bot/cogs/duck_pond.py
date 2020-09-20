@@ -133,7 +133,11 @@ class DuckPond(Cog):
         message = await channel.fetch_message(payload.message_id)
         member = discord.utils.get(message.guild.members, id=payload.user_id)
 
-        # Is the member a human and a staff member?
+        # Was the message sent by a human staff member?
+        if not self.is_staff(message.author) or message.author.bot:
+            return
+
+        # Is the reactor a human staff member?
         if not self.is_staff(member) or member.bot:
             return
 
