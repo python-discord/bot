@@ -105,6 +105,25 @@ class DuckPond(Cog):
             except discord.HTTPException:
                 log.exception("Failed to send an attachment to the webhook")
 
+    async def locked_relay(self, message: discord.Message) -> bool:
+        """Relay a message after obtaining the relay lock."""
+        if self.relay_lock is None:
+            # Lazily load the lock to ensure it's created within the
+            # appropriate event loop.
+            self.relay_lock = asyncio.Lock()
+
+        async with self.relay_lock:
+            # check if the message has a checkmark after acquiring the lock
+            if await self.has_green_checkmark(message):
+                return False
+
+            # relay the message
+            await self.relay_message(message)
+
+            # add a green checkmark to indicate that the message was relayed
+            await message.add_reaction("✅")
+        return True
+
     def _payload_has_duckpond_emoji(self, emoji: discord.PartialEmoji) -> bool:
         """Test if the RawReactionActionEvent payload contains a duckpond emoji."""
         if emoji.is_unicode_emoji():
@@ -150,21 +169,7 @@ class DuckPond(Cog):
 
         # If we've got more than the required amount of ducks, send the message to the duck_pond.
         if duck_count >= constants.DuckPond.threshold:
-            if self.relay_lock is None:
-                # Lazily load the lock to ensure it's created within the
-                # appropriate event loop.
-                self.relay_lock = asyncio.Lock()
-
-            async with self.relay_lock:
-                # check if the message has a checkmark after acquiring the lock
-                if await self.has_green_checkmark(message):
-                    return
-
-                # relay the message
-                await self.relay_message(message)
-
-                # add a green checkmark to indicate that the message was relayed
-                await message.add_reaction("✅")
+            await self.locked_relay(message)
 
     @Cog.listener()
     async def on_raw_reaction_remove(self, payload: RawReactionActionEvent) -> None:
