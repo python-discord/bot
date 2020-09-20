@@ -1,4 +1,3 @@
-import textwrap
 import unittest
 from collections import namedtuple
 from datetime import datetime
@@ -211,8 +210,8 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     description=utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
                         type="Mute",
                         expires="N/A",
-                        reason=textwrap.shorten("foo bar" * 4000, 1000, placeholder="...")
-                    ),
+                        reason="foo bar" * 4000
+                    )[:2045] + "...",
                     colour=Colours.soft_red,
                     url=utils.RULES_URL
                 ).set_author(
