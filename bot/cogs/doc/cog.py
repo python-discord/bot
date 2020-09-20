@@ -1,14 +1,18 @@
+from __future__ import annotations
+
 import asyncio
 import functools
 import logging
 import re
 import sys
-from collections import OrderedDict
+from collections import defaultdict
 from contextlib import suppress
 from types import SimpleNamespace
-from typing import Dict, NamedTuple, Optional
+from typing import Dict, List, NamedTuple, Optional, Union
 
 import discord
+from aiohttp import ClientSession
+from bs4 import BeautifulSoup
 from discord.ext import commands
 from requests import ConnectTimeout, ConnectionError, HTTPError
 from sphinx.ext import intersphinx
@@ -20,7 +24,6 @@ from bot.converters import PackageName, ValidURL
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
 from bot.utils.messages import wait_for_deletion
-from .cache import async_cache
 from .parsing import get_symbol_markdown
 
 log = logging.getLogger(__name__)
@@ -67,6 +70,108 @@ class DocItem(NamedTuple):
         return "".join((self.base_url, self.relative_url_path))
 
 
+class QueueItem(NamedTuple):
+    """Contains a symbol and the BeautifulSoup object needed to parse it."""
+
+    symbol: DocItem
+    soup: BeautifulSoup
+
+    def __eq__(self, other: Union[QueueItem, DocItem]):
+        if isinstance(other, DocItem):
+            return self.symbol == other
+        return NamedTuple.__eq__(self, other)
+
+
+class CachedParser:
+    """
+    Get symbol markdown from pages with smarter caching.
+
+    DocItems are added through the `add_item` method which adds them to the `_page_symbols` dict.
+    `get_markdown` is used to fetch the markdown; when this is used for the first time on a page,
+    all of the symbols are queued to be parsed to avoid multiple web requests to the same page.
+    """
+
+    def __init__(self):
+        self._queue: List[QueueItem] = []
+        self._results = {}
+        self._page_symbols: Dict[str, List[DocItem]] = defaultdict(list)
+        self._item_events: Dict[DocItem, asyncio.Event] = {}
+        self._parse_task = None
+
+    async def get_markdown(self, client_session: ClientSession, doc_item: DocItem) -> str:
+        """
+        Get result markdown of `doc_item`.
+
+        If no symbols were fetched from `doc_item`s page before,
+        the HTML has to be fetched before parsing can be queued.
+        """
+        if (symbol := self._results.get(doc_item)) is not None:
+            return symbol
+
+        if (symbols_to_queue := self._page_symbols.get(doc_item.url)) is not None:
+            async with client_session.get(doc_item.url) as response:
+                soup = BeautifulSoup(await response.text(encoding="utf8"), "lxml")
+
+            self._queue.extend(QueueItem(symbol, soup) for symbol in symbols_to_queue)
+            del self._page_symbols[doc_item.url]
+            log.debug(f"Added symbols from {doc_item.url} to parse queue.")
+
+            if self._parse_task is None:
+                self._parse_task = asyncio.create_task(self._parse_queue())
+
+        self._move_to_front(doc_item)
+        self._item_events[doc_item] = item_event = asyncio.Event()
+        await item_event.wait()
+        return self._results[doc_item]
+
+    async def _parse_queue(self) -> None:
+        """
+        Parse all item from the queue, setting associated events for symbols if present.
+
+        The coroutine will run as long as the queue is not empty, resetting `self._parse_task` to None when finished.
+        """
+        log.trace("Starting queue parsing.")
+        while self._queue:
+            item, soup = self._queue.pop()
+            self._results[item] = get_symbol_markdown(soup, item)
+            if (event := self._item_events.get(item)) is not None:
+                event.set()
+            await asyncio.sleep(0.1)
+
+        self._parse_task = None
+        log.trace("Finished parsing queue.")
+
+    def _move_to_front(self, item: Union[QueueItem, DocItem]) -> None:
+        """Move `item` to the front of the parse queue."""
+        # The parse queue stores soups along with the doc symbols in QueueItem objects,
+        # in case we're moving a DocItem we have to get the associated QueueItem first and then move it.
+        item_index = self._queue.index(item)
+        queue_item = self._queue[item_index]
+
+        del self._queue[item_index]
+        self._queue.append(queue_item)
+
+    def add_item(self, doc_item: DocItem) -> None:
+        """Add a DocItem to `_page_symbols`."""
+        self._page_symbols[doc_item.url].append(doc_item)
+
+    async def clear(self) -> None:
+        """
+        Clear all internal symbol data.
+
+        All currently requested items are waited to be parsed before clearing.
+        """
+        for event in self._item_events.values():
+            await event.wait()
+        if self._parse_task is not None:
+            self._parse_task.cancel()
+            self._parse_task = None
+        self._queue.clear()
+        self._results.clear()
+        self._page_symbols.clear()
+        self._item_events.clear()
+
+
 class InventoryURL(commands.Converter):
     """
     Represents an Intersphinx inventory URL.
@@ -106,6 +211,7 @@ class DocCog(commands.Cog):
         self.base_urls = {}
         self.bot = bot
         self.doc_symbols: Dict[str, DocItem] = {}
+        self.item_fetcher = CachedParser()
         self.renamed_symbols = set()
 
         self.bot.loop.create_task(self.init_refresh_inventory())
@@ -163,7 +269,10 @@ class DocCog(commands.Cog):
                         symbol = f"{api_package_name}.{symbol}"
                         self.renamed_symbols.add(symbol)
 
-                self.doc_symbols[symbol] = DocItem(base_url, relative_doc_url, api_package_name, group_name)
+                relative_url_path, _, symbol_id = relative_doc_url.partition("#")
+                symbol_item = DocItem(api_package_name, group_name, base_url, relative_url_path, symbol_id)
+                self.doc_symbols[symbol] = symbol_item
+                self.item_fetcher.add_item(symbol_item)
 
         log.trace(f"Fetched inventory for {api_package_name}.")
 
@@ -177,7 +286,7 @@ class DocCog(commands.Cog):
         self.base_urls.clear()
         self.doc_symbols.clear()
         self.renamed_symbols.clear()
-        async_cache.cache = OrderedDict()
+        await self.item_fetcher.clear()
 
         # Run all coroutines concurrently - since each of them performs a HTTP
         # request, this speeds up fetching the inventory data heavily.
@@ -198,12 +307,11 @@ class DocCog(commands.Cog):
         if symbol_info is None:
             return None
         self.bot.stats.incr(f"doc_fetches.{symbol_info.package.lower()}")
-        embed_description = await get_symbol_markdown(self.bot.http_session, symbol_info)
 
         embed = discord.Embed(
             title=discord.utils.escape_markdown(symbol),
             url=f"{symbol_info.url}#{symbol_info.symbol_id}",
-            description=embed_description
+            description=await self.item_fetcher.get_markdown(self.bot.http_session, symbol_info)
         )
         # Show all symbols with the same name that were renamed in the footer.
         embed.set_footer(
