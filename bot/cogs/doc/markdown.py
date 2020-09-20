@@ -14,18 +14,18 @@ class DocMarkdownConverter(MarkdownConverter):
     def convert_li(self, el: PageElement, text: str) -> str:
         """Fix markdownify's erroneous indexing in ol tags."""
         parent = el.parent
-        if parent is not None and parent.name == 'ol':
+        if parent is not None and parent.name == "ol":
             li_tags = parent.find_all("li")
-            bullet = '%s.' % (li_tags.index(el)+1)
+            bullet = f"{li_tags.index(el)+1}."
         else:
             depth = -1
             while el:
-                if el.name == 'ul':
+                if el.name == "ul":
                     depth += 1
                 el = el.parent
-            bullets = self.options['bullets']
+            bullets = self.options["bullets"]
             bullet = bullets[depth % len(bullets)]
-        return '%s %s\n' % (bullet, text or '')
+        return f"{bullet} {text}\n"
 
     def convert_hn(self, _n: int, el: PageElement, text: str) -> str:
         """Convert h tags to bold text with ** instead of adding #."""
@@ -33,11 +33,11 @@ class DocMarkdownConverter(MarkdownConverter):
 
     def convert_code(self, el: PageElement, text: str) -> str:
         """Undo `markdownify`s underscore escaping."""
-        return f"`{text}`".replace('\\', '')
+        return f"`{text}`".replace("\\", "")
 
     def convert_pre(self, el: PageElement, text: str) -> str:
         """Wrap any codeblocks in `py` for syntax highlighting."""
-        code = ''.join(el.strings)
+        code = "".join(el.strings)
         return f"```py\n{code}```"
 
     def convert_a(self, el: PageElement, text: str) -> str:
