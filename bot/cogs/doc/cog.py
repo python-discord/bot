@@ -133,9 +133,13 @@ class CachedParser:
         log.trace("Starting queue parsing.")
         while self._queue:
             item, soup = self._queue.pop()
-            self._results[item] = get_symbol_markdown(soup, item)
-            if (event := self._item_events.get(item)) is not None:
-                event.set()
+            try:
+                self._results[item] = get_symbol_markdown(soup, item)
+            except Exception:
+                log.exception(f"Unexpected error when handling {item}")
+            else:
+                if (event := self._item_events.get(item)) is not None:
+                    event.set()
             await asyncio.sleep(0.1)
 
         self._parse_task = None
