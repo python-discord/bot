@@ -4,7 +4,7 @@ from bs4.element import PageElement
 from markdownify import MarkdownConverter
 
 
-class _DocMarkdownConverter(MarkdownConverter):
+class DocMarkdownConverter(MarkdownConverter):
     """Subclass markdownify's MarkdownCoverter to provide custom conversion methods."""
 
     def __init__(self, *, page_url: str, **options):
@@ -51,8 +51,3 @@ class _DocMarkdownConverter(MarkdownConverter):
         if parent is not None and parent.name == "li":
             return f"{text}\n"
         return super().convert_p(el, text)
-
-
-def markdownify(html: str, *, url: str = "") -> str:
-    """Create a DocMarkdownConverter object from the input html."""
-    return _DocMarkdownConverter(bullets='•', page_url=url).convert(html)

@@ -5,13 +5,13 @@ import re
 import string
 import textwrap
 from functools import partial
-from typing import Callable, List, Optional, TYPE_CHECKING, Tuple, Union
+from typing import Callable, Iterable, List, Optional, TYPE_CHECKING, Tuple, Union
 
 from bs4 import BeautifulSoup
 from bs4.element import NavigableString, PageElement, Tag
 
 from .html import Strainer
-from .markdown import markdownify
+from .markdown import DocMarkdownConverter
 if TYPE_CHECKING:
     from .cog import DocItem
 
@@ -39,6 +39,8 @@ _NO_SIGNATURE_GROUPS = {
     "templatetag",
     "term",
 }
+_MAX_DESCRIPTION_LENGTH = 1800
+_TRUNCATE_STRIP_CHARACTERS = "!?:;." + string.whitespace
 
 
 def _find_elements_until_tag(
@@ -80,7 +82,7 @@ _find_next_siblings_until_tag = partial(_find_elements_until_tag, func=Beautiful
 _find_previous_siblings_until_tag = partial(_find_elements_until_tag, func=BeautifulSoup.find_previous_siblings)
 
 
-def _get_general_description(start_element: PageElement) -> Optional[str]:
+def _get_general_description(start_element: PageElement) -> Iterable[Union[Tag, NavigableString]]:
     """
     Get page content to a table or a tag with its class in `SEARCH_END_TAG_ATTRS`.
 
@@ -89,18 +91,13 @@ def _get_general_description(start_element: PageElement) -> Optional[str]:
     """
     header = start_element.find_next("a", attrs={"class": "headerlink"})
     start_tag = header.parent if header is not None else start_element
-    description = "".join(
-        str(tag) for tag in _find_next_siblings_until_tag(start_tag, _match_end_tag, include_strings=True)
-    )
-
-    return description
+    return _find_next_siblings_until_tag(start_tag, _match_end_tag, include_strings=True)
 
 
-def _get_dd_description(symbol: PageElement) -> str:
-    """Get the string contents of the next dd tag, up to a dt or a dl tag."""
+def _get_dd_description(symbol: PageElement) -> List[Union[Tag, NavigableString]]:
+    """Get the contents of the next dd tag, up to a dt or a dl tag."""
     description_tag = symbol.find_next("dd")
-    description_contents = _find_next_children_until_tag(description_tag, ("dt", "dl"), include_strings=True)
-    return "".join(str(tag) for tag in description_contents)
+    return _find_next_children_until_tag(description_tag, ("dt", "dl"), include_strings=True)
 
 
 def _get_signatures(start_signature: PageElement) -> List[str]:
@@ -124,43 +121,57 @@ def _get_signatures(start_signature: PageElement) -> List[str]:
     return signatures
 
 
-def _truncate_markdown(markdown: str, max_length: int) -> str:
+def _get_truncated_description(
+        elements: Iterable[Union[Tag, NavigableString]],
+        markdown_converter: DocMarkdownConverter,
+        max_length: int,
+) -> str:
     """
-    Truncate `markdown` to be at most `max_length` characters.
+    Truncate markdown from `elements` to be at most `max_length` characters visually.
 
-    The markdown string is searched for substrings to cut at, to keep its structure,
-    but if none are found the string is simply sliced.
+    `max_length` limits the length of the rendered characters in the string,
+    with the real string length limited to `_MAX_DESCRIPTION_LENGTH` to accommodate discord length limits
     """
-    if len(markdown) > max_length:
-        shortened = markdown[:max_length]
-        description_cutoff = shortened.rfind('\n\n', 100)
-        if description_cutoff == -1:
-            # Search the shortened version for cutoff points in decreasing desirability,
-            # cutoff at 1000 if none are found.
-            for cutoff_string in (". ", ", ", ",", " "):
-                description_cutoff = shortened.rfind(cutoff_string)
-                if description_cutoff != -1:
-                    break
+    visual_length = 0
+    real_length = 0
+    result = []
+    shortened = False
+
+    for element in elements:
+        is_tag = isinstance(element, Tag)
+        element_length = len(element.text) if is_tag else len(element)
+        if visual_length + element_length < max_length:
+            if is_tag:
+                element_markdown = markdown_converter.process_tag(element)
             else:
-                description_cutoff = max_length
-        markdown = markdown[:description_cutoff]
+                element_markdown = markdown_converter.process_text(element)
 
-        # If there is an incomplete code block, cut it out
-        if markdown.count("```") % 2:
-            codeblock_start = markdown.rfind('```py')
-            markdown = markdown[:codeblock_start].rstrip()
-        markdown = markdown.rstrip(string.punctuation) + "..."
-    return markdown
+            element_markdown_length = len(element_markdown)
+            if real_length + element_markdown_length < _MAX_DESCRIPTION_LENGTH:
+                result.append(element_markdown)
+            else:
+                shortened = True
+                break
+            real_length += element_markdown_length
+            visual_length += element_length
+        else:
+            shortened = True
+            break
+
+    markdown_string = "".join(result)
+    if shortened:
+        markdown_string = markdown_string.rstrip(_TRUNCATE_STRIP_CHARACTERS) + "..."
+    return markdown_string
 
 
-def _parse_into_markdown(signatures: Optional[List[str]], description: str, url: str) -> str:
+def _parse_into_markdown(signatures: Optional[List[str]], description: Iterable[Tag], url: str) -> str:
     """
     Create a markdown string with the signatures at the top, and the converted html description below them.
 
     The signatures are wrapped in python codeblocks, separated from the description by a newline.
     The result string is truncated to be max 1000 symbols long.
     """
-    description = _truncate_markdown(markdownify(description, url=url), 1000)
+    description = _get_truncated_description(description, DocMarkdownConverter(bullets="•", page_url=url), 750)
     description = _WHITESPACE_AFTER_NEWLINES_RE.sub('', description)
     if signatures is not None:
         formatted_markdown = "".join(f"```py\n{textwrap.shorten(signature, 500)}```" for signature in signatures)
@@ -204,5 +215,4 @@ def get_symbol_markdown(soup: BeautifulSoup, symbol_data: DocItem) -> str:
     else:
         signature = _get_signatures(symbol_heading)
         description = _get_dd_description(symbol_heading)
-
-    return _parse_into_markdown(signature, description.replace('¶', ''), symbol_data.url)
+    return _parse_into_markdown(signature, description, symbol_data.url).replace('¶', '')
