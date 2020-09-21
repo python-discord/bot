@@ -44,18 +44,3 @@ class LinePaginatorTests(TestCase):
         self.paginator.add_line('x' * (self.paginator.scale_to_size + 1))
         # Note: item at index 1 is the truncated line, index 0 is prefix
         self.assertEqual(self.paginator._current_page[1], 'x' * self.paginator.scale_to_size)
-
-
-class ImagePaginatorTests(TestCase):
-    """Tests functionality of the `ImagePaginator`."""
-
-    def setUp(self):
-        """Create a paginator for the test method."""
-        self.paginator = pagination.ImagePaginator()
-
-    def test_add_image_appends_image(self):
-        """`add_image` appends the image to the image list."""
-        image = 'lemon'
-        self.paginator.add_image(image)
-
-        assert self.paginator.images == [image]

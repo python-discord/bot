@@ -38,6 +38,17 @@ style:
         status_dnd:     "<:status_dnd:470326272082313216>"
         status_offline: "<:status_offline:470326266537705472>"
 
+        badge_staff: "<:discord_staff:743882896498098226>"
+        badge_partner: "<:partner:748666453242413136>"
+        badge_hypesquad: "<:hypesquad_events:743882896892362873>"
+        badge_bug_hunter: "<:bug_hunter_lvl1:743882896372269137>"
+        badge_hypesquad_bravery: "<:hypesquad_bravery:743882896745693335>"
+        badge_hypesquad_brilliance: "<:hypesquad_brilliance:743882896938631248>"
+        badge_hypesquad_balance: "<:hypesquad_balance:743882896460480625>"
+        badge_early_supporter: "<:early_supporter:743882896909140058>"
+        badge_bug_hunter_level_2: "<:bug_hunter_lvl2:743882896611344505>"
+        badge_verified_bot_developer: "<:verified_bot_dev:743882897299210310>"
+
         incident_actioned:      "<:incident_actioned:719645530128646266>"
         incident_unactioned:    "<:incident_unactioned:719645583245180960>"
         incident_investigating: "<:incident_investigating:719645658671480924>"
@@ -65,9 +76,10 @@ style:
         ducky_maul:     &DUCKY_MAUL     640137724958867467
         ducky_santa:    &DUCKY_SANTA    655360331002019870
 
-        upvotes:        "<:upvotes:638729835245731840>"
-        comments:       "<:comments:638729835073765387>"
-        user:           "<:user:638729835442602003>"
+        # emotes used for #reddit
+        upvotes:        "<:reddit_upvotes:755845219890757644>"
+        comments:       "<:reddit_comments:755845255001014384>"
+        user:           "<:reddit_users:755845303822974997>"
 
     icons:
         crown_blurple: "https://cdn.discordapp.com/emojis/469964153289965568.png"
@@ -123,6 +135,7 @@ style:
 
 guild:
     id: 267624335836053506
+    invite: "https://discord.gg/python"
 
     categories:
         help_available:                     691405807388196926
@@ -225,8 +238,8 @@ guild:
         partners:                               323426753857191936
         python_community:   &PY_COMMUNITY_ROLE  458226413825294336
 
-        # This is the Developers role on PyDis, here named verified for readability reasons
-        verified:                               352427296948486144
+        unverified:                             739794855945044069
+        verified:                               352427296948486144  # @Developers on PyDis
 
         # Staff
         admins:             &ADMINS_ROLE    267628507062992896
@@ -341,9 +354,13 @@ anti_spam:
             interval: 10
             max: 7
 
-        burst_shared:
-            interval: 10
-            max: 20
+        # Burst shared it (temporarily) disabled to prevent
+        # the bug that triggers multiple infractions/DMs per
+        # user. It also tends to catch a lot of innocent users
+        # now that we're so big.
+        # burst_shared:
+        #    interval: 10
+        #    max: 20
 
         chars:
             interval: 5
@@ -374,19 +391,18 @@ anti_spam:
             interval: 10
             max: 3
 
+        # The everyone ping filter is temporarily disabled
+        # until we've fixed a couple of bugs.
+        # everyone_ping:
+        #    interval: 10
+        #    max: 0
+
 
 reddit:
     subreddits:
         - 'r/Python'
     client_id: !ENV "REDDIT_CLIENT_ID"
     secret:    !ENV "REDDIT_SECRET"
-
-
-wolfram:
-    # Max requests per day.
-    user_limit_day: 10
-    guild_limit_day: 67
-    key: !ENV "WOLFRAM_API_KEY"
 
 
 big_brother:
@@ -474,6 +490,19 @@ python_news:
         - 'pypi-announce'
     channel: *PYNEWS_CHANNEL
     webhook: *PYNEWS_WEBHOOK
+
+
+verification:
+    unverified_after: 3  # Days after which non-Developers receive the @Unverified role
+    kicked_after: 30  # Days after which non-Developers get kicked from the guild
+    reminder_frequency: 28  # Hours between @Unverified pings
+    bot_message_delete_delay: 10  # Seconds before deleting bots response in #verification
+
+    # Number in range [0, 1] determining the percentage of unverified users that are safe
+    # to be kicked from the guild in one batch, any larger amount will require staff confirmation,
+    # set this to 0 to require explicit approval for batches of any size
+    kick_confirmation_threshold: 0.01  # 1%
+
 
 config:
     required_keys: ['bot.token']

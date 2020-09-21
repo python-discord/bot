@@ -11,6 +11,7 @@ from bot.bot import Bot
 from bot.constants import Categories, Channels, DEBUG_MODE, Guild, MODERATION_ROLES, Roles, URLs
 from bot.decorators import with_role
 from bot.exts.filters.token_remover import TokenRemover
+from bot.exts.filters.webhook_remover import WEBHOOK_URL_RE
 from bot.utils.messages import wait_for_deletion
 
 log = logging.getLogger(__name__)
@@ -240,6 +241,7 @@ class BotCog(Cog, name="Bot"):
             and not msg.author.bot
             and len(msg.content.splitlines()) > 3
             and not TokenRemover.find_token_in_message(msg)
+            and not WEBHOOK_URL_RE.search(msg.content)
         )
 
         if parse_codeblock:  # no token in the msg
@@ -337,7 +339,7 @@ class BotCog(Cog, name="Bot"):
                         self.codeblock_message_ids[msg.id] = bot_message.id
 
                         self.bot.loop.create_task(
-                            wait_for_deletion(bot_message, user_ids=(msg.author.id,), client=self.bot)
+                            wait_for_deletion(bot_message, (msg.author.id,), self.bot)
                         )
                     else:
                         return

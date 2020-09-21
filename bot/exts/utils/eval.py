@@ -15,6 +15,7 @@ from bot.bot import Bot
 from bot.constants import Roles
 from bot.decorators import with_role
 from bot.interpreter import Interpreter
+from bot.utils import find_nth_occurrence, send_to_paste_service
 
 log = logging.getLogger(__name__)
 
@@ -171,6 +172,30 @@ async def func():  # (None,) -> Any
             res = traceback.format_exc()
 
         out, embed = self._format(code, res)
+        out = out.rstrip("\n")  # Strip empty lines from output
+
+        # Truncate output to max 15 lines or 1500 characters
+        newline_truncate_index = find_nth_occurrence(out, "\n", 15)
+
+        if newline_truncate_index is None or newline_truncate_index > 1500:
+            truncate_index = 1500
+        else:
+            truncate_index = newline_truncate_index
+
+        if len(out) > truncate_index:
+            paste_link = await send_to_paste_service(self.bot.http_session, out, extension="py")
+            if paste_link is not None:
+                paste_text = f"full contents at {paste_link}"
+            else:
+                paste_text = "failed to upload contents to paste service."
+
+            await ctx.send(
+                f"```py\n{out[:truncate_index]}\n```"
+                f"... response truncated; {paste_text}",
+                embed=embed
+            )
+            return
+
         await ctx.send(f"```py\n{out}```", embed=embed)
 
     @group(name='internal', aliases=('int',))

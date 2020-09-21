@@ -215,10 +215,10 @@ class UserInfractionHelperMethodTests(unittest.TestCase):
             with self.subTest(method=method, api_response=api_response, expected_lines=expected_lines):
                 self.bot.api_client.get.return_value = api_response
 
-                expected_output = "\n".join(default_header + expected_lines)
+                expected_output = "\n".join(expected_lines)
                 actual_output = asyncio.run(method(self.member))
 
-                self.assertEqual(expected_output, actual_output)
+                self.assertEqual((default_header, expected_output), actual_output)
 
     def test_basic_user_infraction_counts_returns_correct_strings(self):
         """The method should correctly list both the total and active number of non-hidden infractions."""
@@ -249,7 +249,7 @@ class UserInfractionHelperMethodTests(unittest.TestCase):
             },
         )
 
-        header = ["**Infractions**"]
+        header = "Infractions"
 
         self._method_subtests(self.cog.basic_user_infraction_counts, test_values, header)
 
@@ -258,7 +258,7 @@ class UserInfractionHelperMethodTests(unittest.TestCase):
         test_values = (
             {
                 "api response": [],
-                "expected_lines": ["This user has never received an infraction."],
+                "expected_lines": ["No infractions"],
             },
             # Shows non-hidden inactive infraction as expected
             {
@@ -304,7 +304,7 @@ class UserInfractionHelperMethodTests(unittest.TestCase):
             },
         )
 
-        header = ["**Infractions**"]
+        header = "Infractions"
 
         self._method_subtests(self.cog.expanded_user_infraction_counts, test_values, header)
 
@@ -313,15 +313,15 @@ class UserInfractionHelperMethodTests(unittest.TestCase):
         test_values = (
             {
                 "api response": [],
-                "expected_lines": ["This user has never been nominated."],
+                "expected_lines": ["No nominations"],
             },
             {
                 "api response": [{'active': True}],
-                "expected_lines": ["This user is **currently** nominated (1 nomination in total)."],
+                "expected_lines": ["This user is **currently** nominated", "(1 nomination in total)"],
             },
             {
                 "api response": [{'active': True}, {'active': False}],
-                "expected_lines": ["This user is **currently** nominated (2 nominations in total)."],
+                "expected_lines": ["This user is **currently** nominated", "(2 nominations in total)"],
             },
             {
                 "api response": [{'active': False}],
@@ -334,7 +334,7 @@ class UserInfractionHelperMethodTests(unittest.TestCase):
 
         )
 
-        header = ["**Nominations**"]
+        header = "Nominations"
 
         self._method_subtests(self.cog.user_nomination_counts, test_values, header)
 
@@ -350,7 +350,10 @@ class UserEmbedTests(unittest.TestCase):
         self.bot.api_client.get = unittest.mock.AsyncMock()
         self.cog = information.Information(self.bot)
 
-    @unittest.mock.patch(f"{COG_PATH}.basic_user_infraction_counts", new=unittest.mock.AsyncMock(return_value=""))
+    @unittest.mock.patch(
+        f"{COG_PATH}.basic_user_infraction_counts",
+        new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions"))
+    )
     def test_create_user_embed_uses_string_representation_of_user_in_title_if_nick_is_not_available(self):
         """The embed should use the string representation of the user if they don't have a nick."""
         ctx = helpers.MockContext(channel=helpers.MockTextChannel(id=1))
@@ -362,7 +365,10 @@ class UserEmbedTests(unittest.TestCase):
 
         self.assertEqual(embed.title, "Mr. Hemlock")
 
-    @unittest.mock.patch(f"{COG_PATH}.basic_user_infraction_counts", new=unittest.mock.AsyncMock(return_value=""))
+    @unittest.mock.patch(
+        f"{COG_PATH}.basic_user_infraction_counts",
+        new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions"))
+    )
     def test_create_user_embed_uses_nick_in_title_if_available(self):
         """The embed should use the nick if it's available."""
         ctx = helpers.MockContext(channel=helpers.MockTextChannel(id=1))
@@ -374,7 +380,10 @@ class UserEmbedTests(unittest.TestCase):
 
         self.assertEqual(embed.title, "Cat lover (Mr. Hemlock)")
 
-    @unittest.mock.patch(f"{COG_PATH}.basic_user_infraction_counts", new=unittest.mock.AsyncMock(return_value=""))
+    @unittest.mock.patch(
+        f"{COG_PATH}.basic_user_infraction_counts",
+        new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions"))
+    )
     def test_create_user_embed_ignores_everyone_role(self):
         """Created `!user` embeds should not contain mention of the @everyone-role."""
         ctx = helpers.MockContext(channel=helpers.MockTextChannel(id=1))
@@ -386,8 +395,8 @@ class UserEmbedTests(unittest.TestCase):
 
         embed = asyncio.run(self.cog.create_user_embed(ctx, user))
 
-        self.assertIn("&Admins", embed.description)
-        self.assertNotIn("&Everyone", embed.description)
+        self.assertIn("&Admins", embed.fields[1].value)
+        self.assertNotIn("&Everyone", embed.fields[1].value)
 
     @unittest.mock.patch(f"{COG_PATH}.expanded_user_infraction_counts", new_callable=unittest.mock.AsyncMock)
     @unittest.mock.patch(f"{COG_PATH}.user_nomination_counts", new_callable=unittest.mock.AsyncMock)
@@ -398,8 +407,8 @@ class UserEmbedTests(unittest.TestCase):
         moderators_role = helpers.MockRole(name='Moderators')
         moderators_role.colour = 100
 
-        infraction_counts.return_value = "expanded infractions info"
-        nomination_counts.return_value = "nomination info"
+        infraction_counts.return_value = ("Infractions", "expanded infractions info")
+        nomination_counts.return_value = ("Nominations", "nomination info")
 
         user = helpers.MockMember(id=314, roles=[moderators_role], top_role=moderators_role)
         embed = asyncio.run(self.cog.create_user_embed(ctx, user))
@@ -409,20 +418,19 @@ class UserEmbedTests(unittest.TestCase):
 
         self.assertEqual(
             textwrap.dedent(f"""
-                **User Information**
                 Created: {"1 year ago"}
                 Profile: {user.mention}
                 ID: {user.id}
+            """).strip(),
+            embed.fields[0].value
+        )
 
-                **Member Information**
+        self.assertEqual(
+            textwrap.dedent(f"""
                 Joined: {"1 year ago"}
                 Roles: &Moderators
-
-                expanded infractions info
-
-                nomination info
             """).strip(),
-            embed.description
+            embed.fields[1].value
         )
 
     @unittest.mock.patch(f"{COG_PATH}.basic_user_infraction_counts", new_callable=unittest.mock.AsyncMock)
@@ -433,7 +441,7 @@ class UserEmbedTests(unittest.TestCase):
         moderators_role = helpers.MockRole(name='Moderators')
         moderators_role.colour = 100
 
-        infraction_counts.return_value = "basic infractions info"
+        infraction_counts.return_value = ("Infractions", "basic infractions info")
 
         user = helpers.MockMember(id=314, roles=[moderators_role], top_role=moderators_role)
         embed = asyncio.run(self.cog.create_user_embed(ctx, user))
@@ -442,21 +450,30 @@ class UserEmbedTests(unittest.TestCase):
 
         self.assertEqual(
             textwrap.dedent(f"""
-                **User Information**
                 Created: {"1 year ago"}
                 Profile: {user.mention}
                 ID: {user.id}
-
-                **Member Information**
-                Joined: {"1 year ago"}
-                Roles: &Moderators
-
-                basic infractions info
             """).strip(),
-            embed.description
+            embed.fields[0].value
         )
 
-    @unittest.mock.patch(f"{COG_PATH}.basic_user_infraction_counts", new=unittest.mock.AsyncMock(return_value=""))
+        self.assertEqual(
+            textwrap.dedent(f"""
+                Joined: {"1 year ago"}
+                Roles: &Moderators
+            """).strip(),
+            embed.fields[1].value
+        )
+
+        self.assertEqual(
+            "basic infractions info",
+            embed.fields[3].value
+        )
+
+    @unittest.mock.patch(
+        f"{COG_PATH}.basic_user_infraction_counts",
+        new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions"))
+    )
     def test_create_user_embed_uses_top_role_colour_when_user_has_roles(self):
         """The embed should be created with the colour of the top role, if a top role is available."""
         ctx = helpers.MockContext()
@@ -469,7 +486,10 @@ class UserEmbedTests(unittest.TestCase):
 
         self.assertEqual(embed.colour, discord.Colour(moderators_role.colour))
 
-    @unittest.mock.patch(f"{COG_PATH}.basic_user_infraction_counts", new=unittest.mock.AsyncMock(return_value=""))
+    @unittest.mock.patch(
+        f"{COG_PATH}.basic_user_infraction_counts",
+        new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions"))
+    )
     def test_create_user_embed_uses_blurple_colour_when_user_has_no_roles(self):
         """The embed should be created with a blurple colour if the user has no assigned roles."""
         ctx = helpers.MockContext()
@@ -479,7 +499,10 @@ class UserEmbedTests(unittest.TestCase):
 
         self.assertEqual(embed.colour, discord.Colour.blurple())
 
-    @unittest.mock.patch(f"{COG_PATH}.basic_user_infraction_counts", new=unittest.mock.AsyncMock(return_value=""))
+    @unittest.mock.patch(
+        f"{COG_PATH}.basic_user_infraction_counts",
+        new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions"))
+    )
     def test_create_user_embed_uses_png_format_of_user_avatar_as_thumbnail(self):
         """The embed thumbnail should be set to the user's avatar in `png` format."""
         ctx = helpers.MockContext()

@@ -120,6 +120,10 @@ class ModLog(Cog, name="ModLog"):
             else:
                 content = "@everyone"
 
+        # Truncate content to 2000 characters and append an ellipsis.
+        if content and len(content) > 2000:
+            content = content[:2000 - 3] + "..."
+
         channel = self.bot.get_channel(channel_id)
         log_message = await channel.send(
             content=content,

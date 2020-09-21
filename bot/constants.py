@@ -268,6 +268,17 @@ class Emojis(metaclass=YAMLGetter):
     status_idle: str
     status_dnd: str
 
+    badge_staff: str
+    badge_partner: str
+    badge_hypesquad: str
+    badge_bug_hunter: str
+    badge_hypesquad_bravery: str
+    badge_hypesquad_brilliance: str
+    badge_hypesquad_balance: str
+    badge_early_supporter: str
+    badge_bug_hunter_level_2: str
+    badge_verified_bot_developer: str
+
     incident_actioned: str
     incident_unactioned: str
     incident_investigating: str
@@ -450,6 +461,7 @@ class Roles(metaclass=YAMLGetter):
     partners: int
     python_community: int
     team_leaders: int
+    unverified: int
     verified: int  # This is the Developers role on PyDis, here named verified for readability reasons.
 
 
@@ -457,6 +469,7 @@ class Guild(metaclass=YAMLGetter):
     section = "guild"
 
     id: int
+    invite: str  # Discord invite, gets embedded in chat
     moderation_channels: List[int]
     moderation_roles: List[int]
     modlog_blacklist: List[int]
@@ -501,14 +514,6 @@ class Reddit(metaclass=YAMLGetter):
     subreddits: list
     client_id: Optional[str]
     secret: Optional[str]
-
-
-class Wolfram(metaclass=YAMLGetter):
-    section = "wolfram"
-
-    user_limit_day: int
-    guild_limit_day: int
-    key: Optional[str]
 
 
 class AntiSpam(metaclass=YAMLGetter):
@@ -573,6 +578,16 @@ class PythonNews(metaclass=YAMLGetter):
     mail_lists: List[str]
     channel: int
     webhook: int
+
+
+class Verification(metaclass=YAMLGetter):
+    section = "verification"
+
+    unverified_after: int
+    kicked_after: int
+    reminder_frequency: int
+    bot_message_delete_delay: int
+    kick_confirmation_threshold: float
 
 
 class Event(Enum):
