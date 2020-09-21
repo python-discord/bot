@@ -73,6 +73,27 @@ class Information(Cog):
         member_counts["roles"] = len(guild.roles) - 1  # Exclude @everyone
         return member_counts
 
+    def get_extended_server_info(self, guild: Guild) -> str:
+        """Return additional server info only visible in moderation channels."""
+        unverified_count = guild.member_count - len(guild.get_role(constants.Roles.verified).members)
+        talentpool_count = len(self.bot.get_cog("Talentpool").watched_users)
+        bb_count = len(self.bot.get_cog("Big Brother").watched_users)
+
+        defcon_cog = self.bot.get_cog("Defcon")
+        defcon_status = "Enabled" if defcon_cog.enabled else "Disabled"
+        defcon_days = defcon_cog.days.days if defcon_cog.enabled else "-"
+        python_general = self.bot.get_channel(constants.Channels.python_discussion)
+
+        return textwrap.dedent(f"""
+            Unverified: {unverified_count:,}
+            Nominated: {talentpool_count}
+            BB-watched: {bb_count}
+
+            Defcon status: {defcon_status}
+            Defcon days: {defcon_days}
+            {python_general.mention} cooldown: {python_general.slowmode_delay}s
+        """)
+
     @with_role(*constants.MODERATION_ROLES)
     @command(name="roles")
     async def roles_info(self, ctx: Context) -> None:
@@ -149,6 +170,13 @@ class Information(Cog):
         features = ", ".join(ctx.guild.features)
         region = ctx.guild.region
 
+        embed.description = textwrap.dedent(f"""
+            Created: {created}
+            Voice region: {region}
+            Features: {features}
+        """)
+        embed.set_thumbnail(url=ctx.guild.icon_url)
+
         # Members
         total_members = ctx.guild.member_count
         member_counts = self.get_member_counts(ctx.guild)
@@ -172,12 +200,11 @@ class Information(Cog):
         )
         embed.add_field(name="Member Status:", value=member_status, inline=False)
 
-        embed.description = textwrap.dedent(f"""
-            Created: {created}
-            Voice region: {region}
-            Features: {features}
-        """)
-        embed.set_thumbnail(url=ctx.guild.icon_url)
+        # Additional info if ran in moderation channels
+        if ctx.channel.id in constants.MODERATION_CHANNELS:
+            embed.add_field(
+                name="Moderation Information:", value=self.get_extended_server_info(ctx.guild)
+            )
 
         await ctx.send(embed=embed)
 
