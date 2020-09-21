@@ -14,8 +14,8 @@ from discord.utils import escape_markdown
 from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import (
-    Channels, Colours,
-    Filter, Icons, URLs
+    Channels, Colours, Filter,
+    Guild, Icons, URLs
 )
 from bot.exts.moderation.modlog import ModLog
 from bot.utils.redis_cache import RedisCache
@@ -25,6 +25,12 @@ from bot.utils.scheduling import Scheduler
 log = logging.getLogger(__name__)
 
 # Regular expressions
+CODE_BLOCK_RE = re.compile(
+    r"(?P<delim>``?)[^`]+?(?P=delim)(?!`+)"  # Inline codeblock
+    r"|```(.+?)```",  # Multiline codeblock
+    re.DOTALL | re.MULTILINE
+)
+EVERYONE_PING_RE = re.compile(rf"@everyone|<@&{Guild.id}>|@here")
 SPOILER_RE = re.compile(r"(\|\|.+?\|\|)", re.DOTALL)
 URL_RE = re.compile(r"(https?://[^\s]+)", flags=re.IGNORECASE)
 ZALGO_RE = re.compile(r"[\u0300-\u036F\u0489]")
@@ -81,6 +87,19 @@ class Filtering(Cog):
                     f"Your URL has been removed because it matched a blacklisted domain. {staff_mistake_str}"
                 ),
                 "schedule_deletion": False
+            },
+            "filter_everyone_ping": {
+                "enabled": Filter.filter_everyone_ping,
+                "function": self._has_everyone_ping,
+                "type": "filter",
+                "content_only": True,
+                "user_notification": Filter.notify_user_everyone_ping,
+                "notification_msg": (
+                    "Please don't try to ping `@everyone` or `@here`. "
+                    f"Your message has been removed. {staff_mistake_str}"
+                ),
+                "schedule_deletion": False,
+                "ping_everyone": False
             },
             "watch_regex": {
                 "enabled": Filter.watch_regex,
@@ -332,6 +351,9 @@ class Filtering(Cog):
 
                         log.debug(message)
 
+                        # Allow specific filters to override ping_everyone
+                        ping_everyone = Filter.ping_everyone and _filter.get("ping_everyone", True)
+
                         # Send pretty mod log embed to mod-alerts
                         await self.mod_log.send_log_message(
                             icon_url=Icons.filtering,
@@ -340,7 +362,7 @@ class Filtering(Cog):
                             text=message,
                             thumbnail=msg.author.avatar_url_as(static_format="png"),
                             channel_id=Channels.mod_alerts,
-                            ping_everyone=Filter.ping_everyone if not is_private else False,
+                            ping_everyone=ping_everyone if not is_private else False,
                             additional_embeds=additional_embeds,
                             additional_embeds_msg=additional_embeds_msg
                         )
@@ -527,6 +549,16 @@ class Filtering(Cog):
                         )
                         return False
         return False
+
+    @staticmethod
+    async def _has_everyone_ping(text: str) -> bool:
+        """Determines if `msg` contains an @everyone or @here ping outside of a codeblock."""
+        # First pass to avoid running re.sub on every message
+        if not EVERYONE_PING_RE.search(text):
+            return False
+
+        content_without_codeblocks = CODE_BLOCK_RE.sub("", text)
+        return bool(EVERYONE_PING_RE.search(content_without_codeblocks))
 
     async def notify_member(self, filtered_member: Member, reason: str, channel: TextChannel) -> None:
         """
