@@ -152,16 +152,11 @@ class InformationCogTests(unittest.TestCase):
                 Members: {self.ctx.guild.member_count:,}
                 Staff members: 0
                 Roles: {len(self.ctx.guild.roles)}
-
-                **Member statuses**
-                {constants.Emojis.status_online} 2
-                {constants.Emojis.status_idle} 1
-                {constants.Emojis.status_dnd} 4
-                {constants.Emojis.status_offline} 3
                 """
             )
         )
 
+        # Channels
         channel_field = embed.fields[0]
         self.assertEqual(channel_field.name, "Channels: 3")
         self.assertEqual(
@@ -173,6 +168,16 @@ class InformationCogTests(unittest.TestCase):
                 Staff channels: 0
             """).strip(),
         )
+
+        # Member status
+        status_field = embed.fields[1]
+        self.assertEqual(status_field.name, "Member Status:")
+        self.assertEqual(
+            status_field.value,
+            f"{constants.Emojis.status_online} 2 {constants.Emojis.status_idle} 1 "
+            f"{constants.Emojis.status_dnd} 4 {constants.Emojis.status_offline} 3"
+        )
+
         self.assertEqual(embed.thumbnail.url, 'a-lemon.jpg')
 
 

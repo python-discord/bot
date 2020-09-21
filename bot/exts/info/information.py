@@ -20,9 +20,10 @@ from bot.utils.time import time_since
 log = logging.getLogger(__name__)
 
 STATUS_EMOTES = {
-    Status.offline: constants.Emojis.status_offline,
+    Status.online: constants.Emojis.status_online,
+    Status.idle: constants.Emojis.status_idle,
     Status.dnd: constants.Emojis.status_dnd,
-    Status.idle: constants.Emojis.status_idle
+    Status.offline: constants.Emojis.status_offline,
 }
 
 
@@ -154,9 +155,6 @@ class Information(Cog):
         roles = len(ctx.guild.roles)
         member_count = ctx.guild.member_count
 
-        # How many of each user status?
-        statuses = Counter(member.status for member in ctx.guild.members)
-
         # How many staff members and staff channels do we have?
         staff_member_count = len(ctx.guild.get_role(constants.Roles.helpers).members)
         staff_channel_count = self.get_staff_channel_count(ctx.guild)
@@ -168,6 +166,13 @@ class Information(Cog):
         )
         embed.add_field(name=f"Channels: {total_channels}", value=channel_counts)
 
+        # Member status
+        status_count = Counter(member.status for member in ctx.guild.members)
+        member_status = " ".join(
+            f"{emoji} {status_count[status]:,}" for status, emoji in STATUS_EMOTES.items()
+        )
+        embed.add_field(name="Member Status:", value=member_status, inline=False)
+
         embed.description = textwrap.dedent(f"""
                 Created: {created}
                 Voice region: {region}
@@ -177,12 +182,6 @@ class Information(Cog):
                 Members: {member_count:,}
                 Staff members: {staff_member_count}
                 Roles: {roles}
-
-                **Member statuses**
-                {constants.Emojis.status_online} {statuses[Status.online]:,}
-                {constants.Emojis.status_idle} {statuses[Status.idle]:,}
-                {constants.Emojis.status_dnd} {statuses[Status.dnd]:,}
-                {constants.Emojis.status_offline} {statuses[Status.offline]:,}
             """)
         embed.set_thumbnail(url=ctx.guild.icon_url)
 
