@@ -82,7 +82,7 @@ _find_next_siblings_until_tag = partial(_find_elements_until_tag, func=Beautiful
 _find_previous_siblings_until_tag = partial(_find_elements_until_tag, func=BeautifulSoup.find_previous_siblings)
 
 
-def _get_general_description(start_element: PageElement) -> Iterable[Union[Tag, NavigableString]]:
+def _get_general_description(start_element: PageElement) -> List[Union[Tag, NavigableString]]:
     """
     Get page content to a table or a tag with its class in `SEARCH_END_TAG_ATTRS`.
 
