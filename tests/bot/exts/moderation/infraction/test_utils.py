@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, MagicMock, call, patch
 from discord import Embed, Forbidden, HTTPException, NotFound
 
 from bot.api import ResponseCodeError
-from bot.exts.moderation.infraction import _utils as utils
 from bot.constants import Colours, Icons
+from bot.exts.moderation.infraction import _utils as utils
 from tests.helpers import MockBot, MockContext, MockMember, MockUser
 
 
