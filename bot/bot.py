@@ -2,7 +2,8 @@ import asyncio
 import logging
 import socket
 import warnings
-from typing import Optional
+from collections import defaultdict
+from typing import Dict, Optional
 
 import aiohttp
 import aioredis
@@ -34,6 +35,7 @@ class Bot(commands.Bot):
         self.redis_ready = asyncio.Event()
         self.redis_closed = False
         self.api_client = api.APIClient(loop=self.loop)
+        self.filter_list_cache = defaultdict(dict)
 
         self._connector = None
         self._resolver = None
@@ -48,6 +50,13 @@ class Bot(commands.Bot):
             statsd_url = "127.0.0.1"
 
         self.stats = AsyncStatsClient(self.loop, statsd_url, 8125, prefix="bot")
+
+    async def cache_filter_list_data(self) -> None:
+        """Cache all the data in the FilterList on the site."""
+        full_cache = await self.api_client.get('bot/filter-lists')
+
+        for item in full_cache:
+            self.insert_item_into_filter_list_cache(item)
 
     async def _create_redis_session(self) -> None:
         """
@@ -72,52 +81,6 @@ class Bot(commands.Bot):
 
         self.redis_closed = False
         self.redis_ready.set()
-
-    def add_cog(self, cog: commands.Cog) -> None:
-        """Adds a "cog" to the bot and logs the operation."""
-        super().add_cog(cog)
-        log.info(f"Cog loaded: {cog.qualified_name}")
-
-    def clear(self) -> None:
-        """
-        Clears the internal state of the bot and recreates the connector and sessions.
-
-        Will cause a DeprecationWarning if called outside a coroutine.
-        """
-        # Because discord.py recreates the HTTPClient session, may as well follow suit and recreate
-        # our own stuff here too.
-        self._recreate()
-        super().clear()
-
-    async def close(self) -> None:
-        """Close the Discord connection and the aiohttp session, connector, statsd client, and resolver."""
-        await super().close()
-
-        await self.api_client.close()
-
-        if self.http_session:
-            await self.http_session.close()
-
-        if self._connector:
-            await self._connector.close()
-
-        if self._resolver:
-            await self._resolver.close()
-
-        if self.stats._transport:
-            self.stats._transport.close()
-
-        if self.redis_session:
-            self.redis_closed = True
-            self.redis_session.close()
-            self.redis_ready.clear()
-            await self.redis_session.wait_closed()
-
-    async def login(self, *args, **kwargs) -> None:
-        """Re-create the connector and set up sessions before logging into Discord."""
-        self._recreate()
-        await self.stats.create_socket()
-        await super().login(*args, **kwargs)
 
     def _recreate(self) -> None:
         """Re-create the connector, aiohttp session, the APIClient and the Redis session."""
@@ -158,6 +121,88 @@ class Bot(commands.Bot):
 
         self.http_session = aiohttp.ClientSession(connector=self._connector)
         self.api_client.recreate(force=True, connector=self._connector)
+
+        # Build the FilterList cache
+        self.loop.create_task(self.cache_filter_list_data())
+
+    def add_cog(self, cog: commands.Cog) -> None:
+        """Adds a "cog" to the bot and logs the operation."""
+        super().add_cog(cog)
+        log.info(f"Cog loaded: {cog.qualified_name}")
+
+    def add_command(self, command: commands.Command) -> None:
+        """Add `command` as normal and then add its root aliases to the bot."""
+        super().add_command(command)
+        self._add_root_aliases(command)
+
+    def remove_command(self, name: str) -> Optional[commands.Command]:
+        """
+        Remove a command/alias as normal and then remove its root aliases from the bot.
+
+        Individual root aliases cannot be removed by this function.
+        To remove them, either remove the entire command or manually edit `bot.all_commands`.
+        """
+        command = super().remove_command(name)
+        if command is None:
+            # Even if it's a root alias, there's no way to get the Bot instance to remove the alias.
+            return
+
+        self._remove_root_aliases(command)
+        return command
+
+    def clear(self) -> None:
+        """
+        Clears the internal state of the bot and recreates the connector and sessions.
+
+        Will cause a DeprecationWarning if called outside a coroutine.
+        """
+        # Because discord.py recreates the HTTPClient session, may as well follow suit and recreate
+        # our own stuff here too.
+        self._recreate()
+        super().clear()
+
+    async def close(self) -> None:
+        """Close the Discord connection and the aiohttp session, connector, statsd client, and resolver."""
+        await super().close()
+
+        await self.api_client.close()
+
+        if self.http_session:
+            await self.http_session.close()
+
+        if self._connector:
+            await self._connector.close()
+
+        if self._resolver:
+            await self._resolver.close()
+
+        if self.stats._transport:
+            self.stats._transport.close()
+
+        if self.redis_session:
+            self.redis_closed = True
+            self.redis_session.close()
+            self.redis_ready.clear()
+            await self.redis_session.wait_closed()
+
+    def insert_item_into_filter_list_cache(self, item: Dict[str, str]) -> None:
+        """Add an item to the bots filter_list_cache."""
+        type_ = item["type"]
+        allowed = item["allowed"]
+        content = item["content"]
+
+        self.filter_list_cache[f"{type_}.{allowed}"][content] = {
+            "id": item["id"],
+            "comment": item["comment"],
+            "created_at": item["created_at"],
+            "updated_at": item["updated_at"],
+        }
+
+    async def login(self, *args, **kwargs) -> None:
+        """Re-create the connector and set up sessions before logging into Discord."""
+        self._recreate()
+        await self.stats.create_socket()
+        await super().login(*args, **kwargs)
 
     async def on_guild_available(self, guild: discord.Guild) -> None:
         """
@@ -210,3 +255,24 @@ class Bot(commands.Bot):
             scope.set_extra("kwargs", kwargs)
 
             log.exception(f"Unhandled exception in {event}.")
+
+    def _add_root_aliases(self, command: commands.Command) -> None:
+        """Recursively add root aliases for `command` and any of its subcommands."""
+        if isinstance(command, commands.Group):
+            for subcommand in command.commands:
+                self._add_root_aliases(subcommand)
+
+        for alias in getattr(command, "root_aliases", ()):
+            if alias in self.all_commands:
+                raise commands.CommandRegistrationError(alias, alias_conflict=True)
+
+            self.all_commands[alias] = command
+
+    def _remove_root_aliases(self, command: commands.Command) -> None:
+        """Recursively remove root aliases for `command` and any of its subcommands."""
+        if isinstance(command, commands.Group):
+            for subcommand in command.commands:
+                self._remove_root_aliases(subcommand)
+
+        for alias in getattr(command, "root_aliases", ()):
+            self.all_commands.pop(alias, None)

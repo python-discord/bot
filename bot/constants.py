@@ -226,10 +226,7 @@ class Filter(metaclass=YAMLGetter):
     notify_user_domains: bool
 
     ping_everyone: bool
-    guild_invite_whitelist: List[int]
-    domain_blacklist: List[str]
-    word_watchlist: List[str]
-    token_watchlist: List[str]
+    offensive_msg_delete_days: int
 
     channel_whitelist: List[int]
     role_whitelist: List[int]
@@ -270,6 +267,21 @@ class Emojis(metaclass=YAMLGetter):
     status_offline: str
     status_idle: str
     status_dnd: str
+
+    badge_staff: str
+    badge_partner: str
+    badge_hypesquad: str
+    badge_bug_hunter: str
+    badge_hypesquad_bravery: str
+    badge_hypesquad_brilliance: str
+    badge_hypesquad_balance: str
+    badge_early_supporter: str
+    badge_bug_hunter_level_2: str
+    badge_verified_bot_developer: str
+
+    incident_actioned: str
+    incident_unactioned: str
+    incident_investigating: str
 
     failmail: str
     trashcan: str
@@ -389,14 +401,17 @@ class Channels(metaclass=YAMLGetter):
     attachment_log: int
     big_brother_logs: int
     bot_commands: int
+    cooldown: int
     defcon: int
     dev_contrib: int
     dev_core: int
     dev_log: int
+    dm_log: int
     esoteric: int
     helpers: int
     how_to_get_help: int
     incidents: int
+    incidents_archive: int
     message_log: int
     meta: int
     mod_alerts: int
@@ -420,11 +435,13 @@ class Webhooks(metaclass=YAMLGetter):
     section = "guild"
     subsection = "webhooks"
 
-    talent_pool: int
     big_brother: int
-    reddit: int
-    duck_pond: int
     dev_log: int
+    dm_log: int
+    duck_pond: int
+    incidents_archive: int
+    reddit: int
+    talent_pool: int
 
 
 class Roles(metaclass=YAMLGetter):
@@ -444,6 +461,7 @@ class Roles(metaclass=YAMLGetter):
     partners: int
     python_community: int
     team_leaders: int
+    unverified: int
     verified: int  # This is the Developers role on PyDis, here named verified for readability reasons.
 
 
@@ -451,12 +469,14 @@ class Guild(metaclass=YAMLGetter):
     section = "guild"
 
     id: int
+    invite: str  # Discord invite, gets embedded in chat
     moderation_channels: List[int]
     moderation_roles: List[int]
     modlog_blacklist: List[int]
     reminder_whitelist: List[int]
     staff_channels: List[int]
     staff_roles: List[int]
+
 
 class Keys(metaclass=YAMLGetter):
     section = "keys"
@@ -478,25 +498,13 @@ class URLs(metaclass=YAMLGetter):
     bot_avatar: str
     github_bot_repo: str
 
-    # Site endpoints
+    # Base site vars
     site: str
     site_api: str
-    site_superstarify_api: str
-    site_logs_api: str
-    site_logs_view: str
-    site_reminders_api: str
-    site_reminders_user_api: str
     site_schema: str
-    site_settings_api: str
-    site_tags_api: str
-    site_user_api: str
-    site_user_complete_api: str
-    site_infractions: str
-    site_infractions_user: str
-    site_infractions_type: str
-    site_infractions_by_id: str
-    site_infractions_user_type_current: str
-    site_infractions_user_type: str
+
+    # Site endpoints
+    site_logs_view: str
     paste_service: str
 
 
@@ -508,14 +516,6 @@ class Reddit(metaclass=YAMLGetter):
     secret: Optional[str]
 
 
-class Wolfram(metaclass=YAMLGetter):
-    section = "wolfram"
-
-    user_limit_day: int
-    guild_limit_day: int
-    key: Optional[str]
-
-
 class AntiSpam(metaclass=YAMLGetter):
     section = 'anti_spam'
 
@@ -524,12 +524,6 @@ class AntiSpam(metaclass=YAMLGetter):
 
     punishment: Dict[str, Dict[str, int]]
     rules: Dict[str, Dict[str, int]]
-
-
-class AntiMalware(metaclass=YAMLGetter):
-    section = "anti_malware"
-
-    whitelist: list
 
 
 class BigBrother(metaclass=YAMLGetter):
@@ -584,6 +578,16 @@ class PythonNews(metaclass=YAMLGetter):
     mail_lists: List[str]
     channel: int
     webhook: int
+
+
+class Verification(metaclass=YAMLGetter):
+    section = "verification"
+
+    unverified_after: int
+    kicked_after: int
+    reminder_frequency: int
+    bot_message_delete_delay: int
+    kick_confirmation_threshold: float
 
 
 class Event(Enum):
