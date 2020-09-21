@@ -162,10 +162,9 @@ class InformationCogTests(unittest.TestCase):
         self.assertEqual(
             channel_field.value,
             textwrap.dedent("""
-                Category channels: 1
-                Text channels: 1
-                Voice channels: 1
-                Staff channels: 0
+                Category: 1
+                Text: 1
+                Voice: 1
             """).strip(),
         )
 

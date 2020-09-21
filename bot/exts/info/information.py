@@ -3,7 +3,7 @@ import logging
 import pprint
 import textwrap
 from collections import Counter, defaultdict
-from typing import Any, Mapping, Optional, Tuple, Union
+from typing import Any, DefaultDict, Mapping, Optional, Tuple, Union
 
 from discord import ChannelType, Colour, CustomActivity, Embed, Guild, Member, Message, Role, Status, utils
 from discord.abc import GuildChannel
@@ -34,47 +34,31 @@ class Information(Cog):
         self.bot = bot
 
     @staticmethod
-    def role_can_read(channel: GuildChannel, role: Role) -> bool:
-        """Return True if `role` can read messages in `channel`."""
-        overwrites = channel.overwrites_for(role)
-        return overwrites.read_messages is True
+    def is_staff_channel(guild: Guild, channel: GuildChannel) -> bool:
+        """Determines if a given channel is staff-only."""
+        if channel.type is ChannelType.category:
+            return False
 
-    def get_staff_channel_count(self, guild: Guild) -> int:
-        """
-        Get the number of channels that are staff-only.
-
-        We need to know two things about a channel:
-        - Does the @everyone role have explicit read deny permissions?
-        - Do staff roles have explicit read allow permissions?
-
-        If the answer to both of these questions is yes, it's a staff channel.
-        """
-        channel_ids = set()
-        for channel in guild.channels:
-            if channel.type is ChannelType.category:
-                continue
-
-            everyone_can_read = self.role_can_read(channel, guild.default_role)
-
-            for role in constants.STAFF_ROLES:
-                role_can_read = self.role_can_read(channel, guild.get_role(role))
-                if role_can_read and not everyone_can_read:
-                    channel_ids.add(channel.id)
-                    break
-
-        return len(channel_ids)
+        # Channel is staff-only if staff have explicit read allow perms
+        # and @everyone has explicit read deny perms
+        return any(
+            channel.overwrites_for(guild.get_role(staff_role)).read_messages is True
+            and channel.overwrites_for(guild.default_role).read_messages is False
+            for staff_role in constants.STAFF_ROLES
+        )
 
     @staticmethod
-    def get_channel_type_counts(guild: Guild) -> str:
+    def get_channel_type_counts(guild: Guild) -> DefaultDict[str, int]:
         """Return the total amounts of the various types of channels in `guild`."""
-        channel_counter = Counter(c.type for c in guild.channels)
-        channel_type_list = []
-        for channel, count in channel_counter.items():
-            channel_type = str(channel).title()
-            channel_type_list.append(f"{channel_type} channels: {count}")
+        channel_counter = defaultdict(int)
 
-        channel_type_list = sorted(channel_type_list)
-        return "\n".join(channel_type_list)
+        for channel in guild.channels:
+            if Information.is_staff_channel(guild, channel):
+                channel_counter["staff"] += 1
+            else:
+                channel_counter[str(channel.type)] += 1
+
+        return channel_counter
 
     @with_role(*constants.MODERATION_ROLES)
     @command(name="roles")
@@ -157,14 +141,14 @@ class Information(Cog):
 
         # How many staff members and staff channels do we have?
         staff_member_count = len(ctx.guild.get_role(constants.Roles.helpers).members)
-        staff_channel_count = self.get_staff_channel_count(ctx.guild)
 
+        # Channels
         total_channels = len(ctx.guild.channels)
-        channel_counts = (
-            f"{self.get_channel_type_counts(ctx.guild)}\n"
-            f"Staff channels: {staff_channel_count}"
+        channel_counts = self.get_channel_type_counts(ctx.guild)
+        channel_info = "\n".join(
+            f"{channel.title()}: {count}" for channel, count in sorted(channel_counts.items())
         )
-        embed.add_field(name=f"Channels: {total_channels}", value=channel_counts)
+        embed.add_field(name=f"Channels: {total_channels}", value=channel_info)
 
         # Member status
         status_count = Counter(member.status for member in ctx.guild.members)
@@ -174,14 +158,14 @@ class Information(Cog):
         embed.add_field(name="Member Status:", value=member_status, inline=False)
 
         embed.description = textwrap.dedent(f"""
-                Created: {created}
-                Voice region: {region}
-                Features: {features}
+            Created: {created}
+            Voice region: {region}
+            Features: {features}
 
-                **Member counts**
-                Members: {member_count:,}
-                Staff members: {staff_member_count}
-                Roles: {roles}
+            **Member counts**
+            Members: {member_count:,}
+            Staff members: {staff_member_count}
+            Roles: {roles}
             """)
         embed.set_thumbnail(url=ctx.guild.icon_url)
 
