@@ -8,17 +8,18 @@ from typing import Any, Mapping, Optional, Tuple, Union
 
 from discord import ChannelType, Colour, CustomActivity, Embed, Guild, Member, Message, Role, Status, utils
 from discord.abc import GuildChannel
-from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group
+from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
 from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
-from bot.decorators import in_whitelist, with_role
+from bot.decorators import in_whitelist
 from bot.pagination import LinePaginator
-from bot.utils.checks import InWhitelistCheckFailure, cooldown_with_role_bypass, with_role_check
+from bot.utils.checks import InWhitelistCheckFailure, cooldown_with_role_bypass, has_no_roles_check
 from bot.utils.time import time_since
 
 log = logging.getLogger(__name__)
+
 
 STATUS_EMOTES = {
     Status.offline: constants.Emojis.status_offline,
@@ -76,7 +77,7 @@ class Information(Cog):
         channel_type_list = sorted(channel_type_list)
         return "\n".join(channel_type_list)
 
-    @with_role(*constants.MODERATION_ROLES)
+    @has_any_role(*constants.MODERATION_ROLES)
     @command(name="roles")
     async def roles_info(self, ctx: Context) -> None:
         """Returns a list of all roles and their corresponding IDs."""
@@ -96,7 +97,7 @@ class Information(Cog):
 
         await LinePaginator.paginate(role_list, ctx, embed, empty=False)
 
-    @with_role(*constants.MODERATION_ROLES)
+    @has_any_role(*constants.MODERATION_ROLES)
     @command(name="role")
     async def role_info(self, ctx: Context, *roles: Union[Role, str]) -> None:
         """
@@ -197,12 +198,12 @@ class Information(Cog):
             user = ctx.author
 
         # Do a role check if this is being executed on someone other than the caller
-        elif user != ctx.author and not with_role_check(ctx, *constants.MODERATION_ROLES):
+        elif user != ctx.author and await has_no_roles_check(ctx, *constants.MODERATION_ROLES):
             await ctx.send("You may not use this command on users other than yourself.")
             return
 
         # Non-staff may only do this in #bot-commands
-        if not with_role_check(ctx, *constants.STAFF_ROLES):
+        if await has_no_roles_check(ctx, *constants.STAFF_ROLES):
             if not ctx.channel.id == constants.Channels.bot_commands:
                 raise InWhitelistCheckFailure(constants.Channels.bot_commands)
 

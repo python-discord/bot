@@ -6,14 +6,14 @@ from datetime import datetime, timedelta
 
 import discord
 from discord.ext import tasks
-from discord.ext.commands import Cog, Context, command, group
+from discord.ext.commands import Cog, Context, command, group, has_any_role
 from discord.utils import snowflake_time
 
 from bot import constants
 from bot.bot import Bot
-from bot.decorators import in_whitelist, with_role, without_role
+from bot.decorators import has_no_roles, in_whitelist
 from bot.exts.moderation.modlog import ModLog
-from bot.utils.checks import InWhitelistCheckFailure, without_role_check
+from bot.utils.checks import InWhitelistCheckFailure, has_no_roles_check
 from bot.utils.redis_cache import RedisCache
 
 log = logging.getLogger(__name__)
@@ -568,7 +568,7 @@ class Verification(Cog):
     # endregion
     # region: task management commands
 
-    @with_role(*constants.MODERATION_ROLES)
+    @has_any_role(*constants.MODERATION_ROLES)
     @group(name="verification")
     async def verification_group(self, ctx: Context) -> None:
         """Manage internal verification tasks."""
@@ -653,7 +653,7 @@ class Verification(Cog):
         self.bot.stats.incr(f"verification.{category}")
 
     @command(name='accept', aliases=('verify', 'verified', 'accepted'), hidden=True)
-    @without_role(constants.Roles.verified)
+    @has_no_roles(constants.Roles.verified)
     @in_whitelist(channels=(constants.Channels.verification,))
     async def accept_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
         """Accept our rules and gain access to the rest of the server."""
@@ -736,9 +736,10 @@ class Verification(Cog):
             error.handled = True
 
     @staticmethod
-    def bot_check(ctx: Context) -> bool:
+    async def bot_check(ctx: Context) -> bool:
         """Block any command within the verification channel that is not !accept."""
-        if ctx.channel.id == constants.Channels.verification and without_role_check(ctx, *constants.MODERATION_ROLES):
+        is_verification = ctx.channel.id == constants.Channels.verification
+        if is_verification and await has_no_roles_check(ctx, *constants.MODERATION_ROLES):
             return ctx.command.name == "accept"
         else:
             return True

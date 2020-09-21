@@ -5,11 +5,10 @@ import time
 from typing import Optional, Tuple
 
 from discord import Embed, Message, RawMessageUpdateEvent, TextChannel
-from discord.ext.commands import Cog, Context, command, group
+from discord.ext.commands import Cog, Context, command, group, has_any_role
 
 from bot.bot import Bot
 from bot.constants import Categories, Channels, DEBUG_MODE, Guild, MODERATION_ROLES, Roles, URLs
-from bot.decorators import with_role
 from bot.exts.filters.token_remover import TokenRemover
 from bot.exts.filters.webhook_remover import WEBHOOK_URL_RE
 from bot.utils.messages import wait_for_deletion
@@ -39,13 +38,13 @@ class BotCog(Cog, name="Bot"):
         self.codeblock_message_ids = {}
 
     @group(invoke_without_command=True, name="bot", hidden=True)
-    @with_role(Roles.verified)
+    @has_any_role(Roles.verified)
     async def botinfo_group(self, ctx: Context) -> None:
         """Bot informational commands."""
         await ctx.send_help(ctx.command)
 
     @botinfo_group.command(name='about', aliases=('info',), hidden=True)
-    @with_role(Roles.verified)
+    @has_any_role(Roles.verified)
     async def about_command(self, ctx: Context) -> None:
         """Get information about the bot."""
         embed = Embed(
@@ -63,7 +62,7 @@ class BotCog(Cog, name="Bot"):
         await ctx.send(embed=embed)
 
     @command(name='echo', aliases=('print',))
-    @with_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES)
     async def echo_command(self, ctx: Context, channel: Optional[TextChannel], *, text: str) -> None:
         """Repeat the given message in either a specified channel or the current channel."""
         if channel is None:
@@ -72,7 +71,7 @@ class BotCog(Cog, name="Bot"):
             await channel.send(text)
 
     @command(name='embed')
-    @with_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES)
     async def embed_command(self, ctx: Context, channel: Optional[TextChannel], *, text: str) -> None:
         """Send the input within an embed to either a specified channel or the current channel."""
         embed = Embed(description=text)

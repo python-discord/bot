@@ -5,13 +5,12 @@ from typing import Iterable, Optional
 
 from discord import Colour, Embed, Message, TextChannel, User
 from discord.ext import commands
-from discord.ext.commands import Cog, Context, group
+from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
 from bot.constants import (
     Channels, CleanMessages, Colours, Event, Icons, MODERATION_ROLES, NEGATIVE_REPLIES
 )
-from bot.decorators import with_role
 from bot.exts.moderation.modlog import ModLog
 
 log = logging.getLogger(__name__)
@@ -192,13 +191,13 @@ class Clean(Cog):
         )
 
     @group(invoke_without_command=True, name="clean", aliases=["purge"])
-    @with_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES)
     async def clean_group(self, ctx: Context) -> None:
         """Commands for cleaning messages in channels."""
         await ctx.send_help(ctx.command)
 
     @clean_group.command(name="user", aliases=["users"])
-    @with_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES)
     async def clean_user(
         self,
         ctx: Context,
@@ -210,7 +209,7 @@ class Clean(Cog):
         await self._clean_messages(amount, ctx, user=user, channels=channels)
 
     @clean_group.command(name="all", aliases=["everything"])
-    @with_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES)
     async def clean_all(
         self,
         ctx: Context,
@@ -221,7 +220,7 @@ class Clean(Cog):
         await self._clean_messages(amount, ctx, channels=channels)
 
     @clean_group.command(name="bots", aliases=["bot"])
-    @with_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES)
     async def clean_bots(
         self,
         ctx: Context,
@@ -232,7 +231,7 @@ class Clean(Cog):
         await self._clean_messages(amount, ctx, bots_only=True, channels=channels)
 
     @clean_group.command(name="regex", aliases=["word", "expression"])
-    @with_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES)
     async def clean_regex(
         self,
         ctx: Context,
@@ -244,7 +243,7 @@ class Clean(Cog):
         await self._clean_messages(amount, ctx, regex=regex, channels=channels)
 
     @clean_group.command(name="message", aliases=["messages"])
-    @with_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES)
     async def clean_message(self, ctx: Context, message: Message) -> None:
         """Delete all messages until certain message, stop cleaning after hitting the `message`."""
         await self._clean_messages(
@@ -255,7 +254,7 @@ class Clean(Cog):
         )
 
     @clean_group.command(name="stop", aliases=["cancel", "abort"])
-    @with_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES)
     async def clean_cancel(self, ctx: Context) -> None:
         """If there is an ongoing cleaning process, attempt to immediately cancel it."""
         self.cleaning = False

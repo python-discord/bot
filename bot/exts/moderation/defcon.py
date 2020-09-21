@@ -6,11 +6,10 @@ from datetime import datetime, timedelta
 from enum import Enum
 
 from discord import Colour, Embed, Member
-from discord.ext.commands import Cog, Context, group
+from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Event, Icons, MODERATION_ROLES, Roles
-from bot.decorators import with_role
 from bot.exts.moderation.modlog import ModLog
 
 log = logging.getLogger(__name__)
@@ -119,7 +118,7 @@ class Defcon(Cog):
                 )
 
     @group(name='defcon', aliases=('dc',), invoke_without_command=True)
-    @with_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES)
     async def defcon_group(self, ctx: Context) -> None:
         """Check the DEFCON status or run a subcommand."""
         await ctx.send_help(ctx.command)
@@ -163,7 +162,7 @@ class Defcon(Cog):
             self.bot.stats.gauge("defcon.threshold", days)
 
     @defcon_group.command(name='enable', aliases=('on', 'e'), root_aliases=("defon",))
-    @with_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES)
     async def enable_command(self, ctx: Context) -> None:
         """
         Enable DEFCON mode. Useful in a pinch, but be sure you know what you're doing!
@@ -176,7 +175,7 @@ class Defcon(Cog):
         await self.update_channel_topic()
 
     @defcon_group.command(name='disable', aliases=('off', 'd'), root_aliases=("defoff",))
-    @with_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES)
     async def disable_command(self, ctx: Context) -> None:
         """Disable DEFCON mode. Useful in a pinch, but be sure you know what you're doing!"""
         self.enabled = False
@@ -184,7 +183,7 @@ class Defcon(Cog):
         await self.update_channel_topic()
 
     @defcon_group.command(name='status', aliases=('s',))
-    @with_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES)
     async def status_command(self, ctx: Context) -> None:
         """Check the current status of DEFCON mode."""
         embed = Embed(
@@ -196,7 +195,7 @@ class Defcon(Cog):
         await ctx.send(embed=embed)
 
     @defcon_group.command(name='days')
-    @with_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES)
     async def days_command(self, ctx: Context, days: int) -> None:
         """Set how old an account must be to join the server, in days, with DEFCON mode enabled."""
         self.days = timedelta(days=days)
