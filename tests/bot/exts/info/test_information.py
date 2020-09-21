@@ -147,17 +147,23 @@ class InformationCogTests(unittest.TestCase):
                 Created: {time_since_patch.return_value}
                 Voice region: {self.ctx.guild.region}
                 Features: {', '.join(self.ctx.guild.features)}
-
-                **Member counts**
-                Members: {self.ctx.guild.member_count:,}
-                Staff members: 0
-                Roles: {len(self.ctx.guild.roles)}
                 """
             )
         )
 
+        # Members
+        member_field = embed.fields[0]
+        self.assertEqual(member_field.name, f"Members: {self.ctx.guild.member_count}")
+        self.assertEqual(
+            member_field.value,
+            textwrap.dedent(f"""
+                Staff members: 0
+                Roles: {len(self.ctx.guild.roles)}
+            """),
+        )
+
         # Channels
-        channel_field = embed.fields[0]
+        channel_field = embed.fields[1]
         self.assertEqual(channel_field.name, "Channels: 3")
         self.assertEqual(
             channel_field.value,
@@ -169,7 +175,7 @@ class InformationCogTests(unittest.TestCase):
         )
 
         # Member status
-        status_field = embed.fields[1]
+        status_field = embed.fields[2]
         self.assertEqual(status_field.name, "Member Status:")
         self.assertEqual(
             status_field.value,

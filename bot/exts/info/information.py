@@ -136,11 +136,15 @@ class Information(Cog):
         features = ", ".join(ctx.guild.features)
         region = ctx.guild.region
 
-        roles = len(ctx.guild.roles)
+        # Members
         member_count = ctx.guild.member_count
-
-        # How many staff members and staff channels do we have?
         staff_member_count = len(ctx.guild.get_role(constants.Roles.helpers).members)
+        roles = len(ctx.guild.roles)
+        member_info = textwrap.dedent(f"""
+            Staff members: {staff_member_count}
+            Roles: {roles}
+        """)
+        embed.add_field(name=f"Members: {member_count}", value=member_info)
 
         # Channels
         total_channels = len(ctx.guild.channels)
@@ -161,12 +165,7 @@ class Information(Cog):
             Created: {created}
             Voice region: {region}
             Features: {features}
-
-            **Member counts**
-            Members: {member_count:,}
-            Staff members: {staff_member_count}
-            Roles: {roles}
-            """)
+        """)
         embed.set_thumbnail(url=ctx.guild.icon_url)
 
         await ctx.send(embed=embed)
