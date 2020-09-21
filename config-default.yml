@@ -76,9 +76,10 @@ style:
         ducky_maul:     &DUCKY_MAUL     640137724958867467
         ducky_santa:    &DUCKY_SANTA    655360331002019870
 
-        upvotes:        "<:upvotes:638729835245731840>"
-        comments:       "<:comments:638729835073765387>"
-        user:           "<:user:638729835442602003>"
+        # emotes used for #reddit
+        upvotes:        "<:reddit_upvotes:755845219890757644>"
+        comments:       "<:reddit_comments:755845255001014384>"
+        user:           "<:reddit_users:755845303822974997>"
 
     icons:
         crown_blurple: "https://cdn.discordapp.com/emojis/469964153289965568.png"
@@ -134,6 +135,7 @@ style:
 
 guild:
     id: 267624335836053506
+    invite: "https://discord.gg/python"
 
     categories:
         help_available:                     691405807388196926
@@ -236,8 +238,8 @@ guild:
         partners:                               323426753857191936
         python_community:   &PY_COMMUNITY_ROLE  458226413825294336
 
-        # This is the Developers role on PyDis, here named verified for readability reasons
-        verified:                               352427296948486144
+        unverified:                             739794855945044069
+        verified:                               352427296948486144  # @Developers on PyDis
 
         # Staff
         admins:             &ADMINS_ROLE    267628507062992896
@@ -488,6 +490,19 @@ python_news:
         - 'pypi-announce'
     channel: *PYNEWS_CHANNEL
     webhook: *PYNEWS_WEBHOOK
+
+
+verification:
+    unverified_after: 3  # Days after which non-Developers receive the @Unverified role
+    kicked_after: 30  # Days after which non-Developers get kicked from the guild
+    reminder_frequency: 28  # Hours between @Unverified pings
+    bot_message_delete_delay: 10  # Seconds before deleting bots response in #verification
+
+    # Number in range [0, 1] determining the percentage of unverified users that are safe
+    # to be kicked from the guild in one batch, any larger amount will require staff confirmation,
+    # set this to 0 to require explicit approval for batches of any size
+    kick_confirmation_threshold: 0.01  # 1%
+
 
 config:
     required_keys: ['bot.token']

@@ -1,18 +1,5 @@
-from abc import ABCMeta
-
-from discord.ext.commands import CogMeta
-
+from bot.utils.helpers import CogABCMeta, find_nth_occurrence, pad_base64
 from bot.utils.redis_cache import RedisCache
+from bot.utils.services import send_to_paste_service
 
-__all__ = ['RedisCache', 'CogABCMeta']
-
-
-class CogABCMeta(CogMeta, ABCMeta):
-    """Metaclass for ABCs meant to be implemented as Cogs."""
-
-    pass
-
-
-def pad_base64(data: str) -> str:
-    """Return base64 `data` with padding characters to ensure its length is a multiple of 4."""
-    return data + "=" * (-len(data) % 4)
+__all__ = ['RedisCache', 'CogABCMeta', 'find_nth_occurrence', 'pad_base64', 'send_to_paste_service']
