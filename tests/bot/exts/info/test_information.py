@@ -132,6 +132,15 @@ class InformationCogTests(unittest.TestCase):
             icon_url='a-lemon.jpg',
         )
 
+        self.ctx.guild.get_role = unittest.mock.Mock()
+        self.ctx.guild.get_role.side_effect = lambda id: {
+            constants.Roles.helpers: helpers.MockRole(name="Helpers", id=id, members=[]),
+            constants.Roles.moderators: helpers.MockRole(name="Moderators", id=id, members=[]),
+            constants.Roles.admins: helpers.MockRole(name="Admins", id=id, members=[]),
+            constants.Roles.owners: helpers.MockRole(name="Owners", id=id, members=[]),
+            constants.Roles.contributors: helpers.MockRole(name="Contributors", id=id, members=[]),
+        }[id]
+
         coroutine = self.cog.server_info.callback(self.cog, self.ctx)
         self.assertIsNone(asyncio.run(coroutine))
 
@@ -157,9 +166,12 @@ class InformationCogTests(unittest.TestCase):
         self.assertEqual(
             member_field.value,
             textwrap.dedent(f"""
-                Staff members: 0
-                Roles: {len(self.ctx.guild.roles)}
-            """),
+                Helpers: 0
+                Moderators: 0
+                Admins: 0
+                Contributors: 0
+                Roles: {len(self.ctx.guild.roles) - 1}
+            """).strip(),
         )
 
         # Channels

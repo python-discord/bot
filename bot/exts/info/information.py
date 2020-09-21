@@ -3,7 +3,7 @@ import logging
 import pprint
 import textwrap
 from collections import Counter, defaultdict
-from typing import Any, DefaultDict, Mapping, Optional, Tuple, Union
+from typing import Any, DefaultDict, Dict, Mapping, Optional, Tuple, Union
 
 from discord import ChannelType, Colour, CustomActivity, Embed, Guild, Member, Message, Role, Status, utils
 from discord.abc import GuildChannel
@@ -59,6 +59,19 @@ class Information(Cog):
                 channel_counter[str(channel.type)] += 1
 
         return channel_counter
+
+    @staticmethod
+    def get_member_counts(guild: Guild) -> Dict[str, int]:
+        """Return the total number of members per role in `guild`, and the total number of roles."""
+        roles = (
+            guild.get_role(role_id) for role_id in (
+                constants.Roles.helpers, constants.Roles.moderators,
+                constants.Roles.admins, constants.Roles.contributors,
+            )
+        )
+        member_counts = {role.name: len(role.members) for role in roles}
+        member_counts["roles"] = len(guild.roles) - 1  # Exclude @everyone
+        return member_counts
 
     @with_role(*constants.MODERATION_ROLES)
     @command(name="roles")
@@ -137,14 +150,12 @@ class Information(Cog):
         region = ctx.guild.region
 
         # Members
-        member_count = ctx.guild.member_count
-        staff_member_count = len(ctx.guild.get_role(constants.Roles.helpers).members)
-        roles = len(ctx.guild.roles)
-        member_info = textwrap.dedent(f"""
-            Staff members: {staff_member_count}
-            Roles: {roles}
-        """)
-        embed.add_field(name=f"Members: {member_count}", value=member_info)
+        total_members = ctx.guild.member_count
+        member_counts = self.get_member_counts(ctx.guild)
+        member_info = "\n".join(
+            f"{role.title()}: {count}" for role, count in member_counts.items()
+        )
+        embed.add_field(name=f"Members: {total_members}", value=member_info)
 
         # Channels
         total_channels = len(ctx.guild.channels)
