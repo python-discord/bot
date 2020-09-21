@@ -139,20 +139,14 @@ class InformationCogTests(unittest.TestCase):
         _, kwargs = self.ctx.send.call_args
         embed = kwargs.pop('embed')
         self.assertEqual(embed.colour, discord.Colour.blurple())
+        self.assertEqual(embed.title, "Server Information")
         self.assertEqual(
             embed.description,
             textwrap.dedent(
                 f"""
-                **Server information**
                 Created: {time_since_patch.return_value}
                 Voice region: {self.ctx.guild.region}
                 Features: {', '.join(self.ctx.guild.features)}
-
-                **Channel counts**
-                Category channels: 1
-                Text channels: 1
-                Voice channels: 1
-                Staff channels: 0
 
                 **Member counts**
                 Members: {self.ctx.guild.member_count:,}
@@ -166,6 +160,18 @@ class InformationCogTests(unittest.TestCase):
                 {constants.Emojis.status_offline} 3
                 """
             )
+        )
+
+        channel_field = embed.fields[0]
+        self.assertEqual(channel_field.name, "Channels: 3")
+        self.assertEqual(
+            channel_field.value,
+            textwrap.dedent("""
+                Category channels: 1
+                Text channels: 1
+                Voice channels: 1
+                Staff channels: 0
+            """).strip(),
         )
         self.assertEqual(embed.thumbnail.url, 'a-lemon.jpg')
 

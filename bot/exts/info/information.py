@@ -3,7 +3,6 @@ import logging
 import pprint
 import textwrap
 from collections import Counter, defaultdict
-from string import Template
 from typing import Any, Mapping, Optional, Tuple, Union
 
 from discord import ChannelType, Colour, CustomActivity, Embed, Guild, Member, Message, Role, Status, utils
@@ -143,36 +142,36 @@ class Information(Cog):
     @command(name="server", aliases=["server_info", "guild", "guild_info"])
     async def server_info(self, ctx: Context) -> None:
         """Returns an embed full of server information."""
+        embed = Embed(
+            colour=Colour.blurple(),
+            title="Server Information",
+        )
+
         created = time_since(ctx.guild.created_at, precision="days")
         features = ", ".join(ctx.guild.features)
         region = ctx.guild.region
 
         roles = len(ctx.guild.roles)
         member_count = ctx.guild.member_count
-        channel_counts = self.get_channel_type_counts(ctx.guild)
 
         # How many of each user status?
         statuses = Counter(member.status for member in ctx.guild.members)
-        embed = Embed(colour=Colour.blurple())
 
         # How many staff members and staff channels do we have?
         staff_member_count = len(ctx.guild.get_role(constants.Roles.helpers).members)
         staff_channel_count = self.get_staff_channel_count(ctx.guild)
 
-        # Because channel_counts lacks leading whitespace, it breaks the dedent if it's inserted directly by the
-        # f-string. While this is correctly formated by Discord, it makes unit testing difficult. To keep the formatting
-        # without joining a tuple of strings we can use a Template string to insert the already-formatted channel_counts
-        # after the dedent is made.
-        embed.description = Template(
-            textwrap.dedent(f"""
-                **Server information**
+        total_channels = len(ctx.guild.channels)
+        channel_counts = (
+            f"{self.get_channel_type_counts(ctx.guild)}\n"
+            f"Staff channels: {staff_channel_count}"
+        )
+        embed.add_field(name=f"Channels: {total_channels}", value=channel_counts)
+
+        embed.description = textwrap.dedent(f"""
                 Created: {created}
                 Voice region: {region}
                 Features: {features}
-
-                **Channel counts**
-                $channel_counts
-                Staff channels: {staff_channel_count}
 
                 **Member counts**
                 Members: {member_count:,}
@@ -185,7 +184,6 @@ class Information(Cog):
                 {constants.Emojis.status_dnd} {statuses[Status.dnd]:,}
                 {constants.Emojis.status_offline} {statuses[Status.offline]:,}
             """)
-        ).substitute({"channel_counts": channel_counts})
         embed.set_thumbnail(url=ctx.guild.icon_url)
 
         await ctx.send(embed=embed)
