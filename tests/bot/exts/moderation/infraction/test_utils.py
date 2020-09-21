@@ -123,7 +123,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 else:
                     self.ctx.send.assert_not_awaited()
 
-    @patch("bot.cogs.moderation.utils.send_private_embed")
+    @patch("bot.exts.moderation.infraction._utils.send_private_embed")
     async def test_notify_infraction(self, send_private_embed_mock):
         """
         Should send an embed of a certain format as a DM and return `True` if DM successful.
@@ -238,7 +238,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
 
                 send_private_embed_mock.assert_awaited_once_with(case["args"][0], embed)
 
-    @patch("bot.cogs.moderation.utils.send_private_embed")
+    @patch("bot.exts.moderation.infraction._utils.send_private_embed")
     async def test_notify_pardon(self, send_private_embed_mock):
         """Should send an embed of a certain format as a DM and return `True` if DM successful."""
         test_case = namedtuple("test_case", ["args", "icon", "send_result"])
@@ -330,7 +330,7 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
 
         self.assertTrue("500" in self.ctx.send.call_args[0][0])
 
-    @patch("bot.cogs.moderation.utils.post_user", return_value=None)
+    @patch("bot.exts.moderation.infraction._utils.post_user", return_value=None)
     async def test_user_not_found_none_post_infraction(self, post_user_mock):
         """Should abort and return `None` when a new user fails to be posted."""
         self.bot.api_client.post.side_effect = ResponseCodeError(MagicMock(status=400), {"user": "foo"})
@@ -339,7 +339,7 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(actual)
         post_user_mock.assert_awaited_once_with(self.ctx, self.user)
 
-    @patch("bot.cogs.moderation.utils.post_user", return_value="bar")
+    @patch("bot.exts.moderation.infraction._utils.post_user", return_value="bar")
     async def test_first_fail_second_success_user_post_infraction(self, post_user_mock):
         """Should post the user if they don't exist, POST infraction again, and return the response if successful."""
         payload = {
