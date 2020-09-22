@@ -254,7 +254,7 @@ class DuckPond(metaclass=YAMLGetter):
     section = "duck_pond"
 
     threshold: int
-    custom_emojis: List[int]
+    channel_blacklist: List[int]
 
 
 class Emojis(metaclass=YAMLGetter):
@@ -293,20 +293,6 @@ class Emojis(metaclass=YAMLGetter):
     pencil: str
     cross_mark: str
     check_mark: str
-
-    ducky_yellow: int
-    ducky_blurple: int
-    ducky_regal: int
-    ducky_camo: int
-    ducky_ninja: int
-    ducky_devil: int
-    ducky_tube: int
-    ducky_hunt: int
-    ducky_wizard: int
-    ducky_party: int
-    ducky_angel: int
-    ducky_maul: int
-    ducky_santa: int
 
     upvotes: str
     comments: str
@@ -397,12 +383,14 @@ class Channels(metaclass=YAMLGetter):
     section = "guild"
     subsection = "channels"
 
+    admin_announcements: int
     admin_spam: int
     admins: int
     announcements: int
     attachment_log: int
     big_brother_logs: int
     bot_commands: int
+    change_log: int
     cooldown: int
     defcon: int
     dev_contrib: int
@@ -414,9 +402,11 @@ class Channels(metaclass=YAMLGetter):
     how_to_get_help: int
     incidents: int
     incidents_archive: int
+    mailing_lists: int
     message_log: int
     meta: int
     mod_alerts: int
+    mod_announcements: int
     mod_log: int
     mod_spam: int
     mods: int
@@ -425,7 +415,10 @@ class Channels(metaclass=YAMLGetter):
     off_topic_2: int
     organisation: int
     python_discussion: int
+    python_events: int
+    python_news: int
     reddit: int
+    staff_announcements: int
     talent_pool: int
     user_event_announcements: int
     user_log: int
