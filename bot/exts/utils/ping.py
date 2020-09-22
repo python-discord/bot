@@ -9,7 +9,7 @@ from bot.bot import Bot
 from bot.constants import Emojis, URLs
 
 DESCRIPTIONS = (
-    "Time to receive command information",
+    "Command processing time",
     "Python Discord website latency",
     "Discord API latency"
 )
