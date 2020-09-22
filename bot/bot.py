@@ -6,9 +6,8 @@ from collections import defaultdict
 from typing import Dict, Optional
 
 import aiohttp
-import aioredis
 import discord
-import fakeredis.aioredis
+from async_rediscache import RedisSession
 from discord.ext import commands
 from sentry_sdk import push_scope
 
@@ -21,7 +20,7 @@ log = logging.getLogger('bot')
 class Bot(commands.Bot):
     """A subclass of `discord.ext.commands.Bot` with an aiohttp session and an API client."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, redis_session: RedisSession, **kwargs):
         if "connector" in kwargs:
             warnings.warn(
                 "If login() is called (or the bot is started), the connector will be overwritten "
@@ -31,9 +30,7 @@ class Bot(commands.Bot):
         super().__init__(*args, **kwargs)
 
         self.http_session: Optional[aiohttp.ClientSession] = None
-        self.redis_session: Optional[aioredis.Redis] = None
-        self.redis_ready = asyncio.Event()
-        self.redis_closed = False
+        self.redis_session = redis_session
         self.api_client = api.APIClient(loop=self.loop)
         self.filter_list_cache = defaultdict(dict)
 
@@ -58,30 +55,6 @@ class Bot(commands.Bot):
         for item in full_cache:
             self.insert_item_into_filter_list_cache(item)
 
-    async def _create_redis_session(self) -> None:
-        """
-        Create the Redis connection pool, and then open the redis event gate.
-
-        If constants.Redis.use_fakeredis is True, we'll set up a fake redis pool instead
-        of attempting to communicate with a real Redis server. This is useful because it
-        means contributors don't necessarily need to get Redis running locally just
-        to run the bot.
-
-        The fakeredis cache won't have persistence across restarts, but that
-        usually won't matter for local bot testing.
-        """
-        if constants.Redis.use_fakeredis:
-            log.info("Using fakeredis instead of communicating with a real Redis server.")
-            self.redis_session = await fakeredis.aioredis.create_redis_pool()
-        else:
-            self.redis_session = await aioredis.create_redis_pool(
-                address=(constants.Redis.host, constants.Redis.port),
-                password=constants.Redis.password,
-            )
-
-        self.redis_closed = False
-        self.redis_ready.set()
-
     def _recreate(self) -> None:
         """Re-create the connector, aiohttp session, the APIClient and the Redis session."""
         # Use asyncio for DNS resolution instead of threads so threads aren't spammed.
@@ -94,13 +67,10 @@ class Bot(commands.Bot):
                 "The previous connector was not closed; it will remain open and be overwritten"
             )
 
-        if self.redis_session and not self.redis_session.closed:
-            log.warning(
-                "The previous redis pool was not closed; it will remain open and be overwritten"
-            )
-
-        # Create the redis session
-        self.loop.create_task(self._create_redis_session())
+        if self.redis_session.closed:
+            # If the RedisSession was somehow closed, we try to reconnect it
+            # here. Normally, this shouldn't happen.
+            self.loop.create_task(self.redis_session.connect())
 
         # Use AF_INET as its socket family to prevent HTTPS related problems both locally
         # and in production.
@@ -129,6 +99,26 @@ class Bot(commands.Bot):
         """Adds a "cog" to the bot and logs the operation."""
         super().add_cog(cog)
         log.info(f"Cog loaded: {cog.qualified_name}")
+
+    def add_command(self, command: commands.Command) -> None:
+        """Add `command` as normal and then add its root aliases to the bot."""
+        super().add_command(command)
+        self._add_root_aliases(command)
+
+    def remove_command(self, name: str) -> Optional[commands.Command]:
+        """
+        Remove a command/alias as normal and then remove its root aliases from the bot.
+
+        Individual root aliases cannot be removed by this function.
+        To remove them, either remove the entire command or manually edit `bot.all_commands`.
+        """
+        command = super().remove_command(name)
+        if command is None:
+            # Even if it's a root alias, there's no way to get the Bot instance to remove the alias.
+            return
+
+        self._remove_root_aliases(command)
+        return command
 
     def clear(self) -> None:
         """
@@ -160,10 +150,7 @@ class Bot(commands.Bot):
             self.stats._transport.close()
 
         if self.redis_session:
-            self.redis_closed = True
-            self.redis_session.close()
-            self.redis_ready.clear()
-            await self.redis_session.wait_closed()
+            await self.redis_session.close()
 
     def insert_item_into_filter_list_cache(self, item: Dict[str, str]) -> None:
         """Add an item to the bots filter_list_cache."""
@@ -235,3 +222,24 @@ class Bot(commands.Bot):
             scope.set_extra("kwargs", kwargs)
 
             log.exception(f"Unhandled exception in {event}.")
+
+    def _add_root_aliases(self, command: commands.Command) -> None:
+        """Recursively add root aliases for `command` and any of its subcommands."""
+        if isinstance(command, commands.Group):
+            for subcommand in command.commands:
+                self._add_root_aliases(subcommand)
+
+        for alias in getattr(command, "root_aliases", ()):
+            if alias in self.all_commands:
+                raise commands.CommandRegistrationError(alias, alias_conflict=True)
+
+            self.all_commands[alias] = command
+
+    def _remove_root_aliases(self, command: commands.Command) -> None:
+        """Recursively remove root aliases for `command` and any of its subcommands."""
+        if isinstance(command, commands.Group):
+            for subcommand in command.commands:
+                self._remove_root_aliases(subcommand)
+
+        for alias in getattr(command, "root_aliases", ()):
+            self.all_commands.pop(alias, None)
