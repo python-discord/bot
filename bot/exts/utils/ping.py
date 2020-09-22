@@ -17,7 +17,7 @@ ROUND_LATENCY = 3
 
 
 class Latency(commands.Cog):
-    """Getting the latency between the bot and websites"""
+    """Getting the latency between the bot and websites."""
 
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
