@@ -370,7 +370,6 @@ class UserSyncer(Syncer):
         if diff.created:
             created: list = [user._asdict() for user in diff.created]
             await self.bot.api_client.post("bot/users", json=created)
-
         if diff.updated:
-            updated = [user._asdict() for user in diff.created]
+            updated: list = [user._asdict() for user in diff.updated]
             await self.bot.api_client.patch("bot/users/bulk_patch", json=updated)
