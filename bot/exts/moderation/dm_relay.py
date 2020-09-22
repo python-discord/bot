@@ -2,6 +2,7 @@ import logging
 from typing import Optional
 
 import discord
+from async_rediscache import RedisCache
 from discord import Color
 from discord.ext import commands
 from discord.ext.commands import Cog
@@ -9,7 +10,6 @@ from discord.ext.commands import Cog
 from bot import constants
 from bot.bot import Bot
 from bot.converters import UserMentionOrID
-from bot.utils import RedisCache
 from bot.utils.checks import in_whitelist_check
 from bot.utils.messages import send_attachments
 from bot.utils.webhooks import send_webhook

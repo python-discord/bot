@@ -1,7 +1,9 @@
+import asyncio
 import logging
 
 import discord
 import sentry_sdk
+from async_rediscache import RedisSession
 from discord.ext.commands import when_mentioned_or
 from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
@@ -26,9 +28,28 @@ sentry_sdk.init(
     ]
 )
 
+# Create the redis session instance.
+redis_session = RedisSession(
+    address=(constants.Redis.host, constants.Redis.port),
+    password=constants.Redis.password,
+    minsize=1,
+    maxsize=20,
+    use_fakeredis=constants.Redis.use_fakeredis,
+    global_namespace="bot",
+)
+
+# Connect redis session to ensure it's connected before we try to access Redis
+# from somewhere within the bot. We create the event loop in the same way
+# discord.py normally does and pass it to the bot's __init__.
+loop = asyncio.get_event_loop()
+loop.run_until_complete(redis_session.connect())
+
+
 # Instantiate the bot.
 allowed_roles = [discord.Object(id_) for id_ in constants.MODERATION_ROLES]
 bot = Bot(
+    redis_session=redis_session,
+    loop=loop,
     command_prefix=when_mentioned_or(constants.Bot.prefix),
     activity=discord.Game(name="Commands: !help"),
     case_insensitive=True,
