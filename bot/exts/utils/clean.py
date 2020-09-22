@@ -178,7 +178,8 @@ class Clean(Cog):
         target_channels = ", ".join(channel.mention for channel in channels)
 
         message = (
-            f"**{len(message_ids)}** messages deleted in {target_channels} by **{ctx.author.name}**\n\n"
+            f"**{len(message_ids)}** messages deleted in {target_channels} by "
+            f"{ctx.author.name.mention}\n\n"
             f"A log of the deleted messages can be found [here]({log_url})."
         )
 

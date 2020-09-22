@@ -15,6 +15,7 @@ from bot.decorators import respect_role_hierarchy
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
 from bot.exts.moderation.infraction._utils import UserSnowflake
+from bot.utils.messages import format_user
 
 log = logging.getLogger(__name__)
 
@@ -315,7 +316,7 @@ class Infractions(InfractionScheduler, commands.Cog):
                 icon_url=_utils.INFRACTION_ICONS["mute"][1]
             )
 
-            log_text["Member"] = f"{user.mention}(`{user.id}`)"
+            log_text["Member"] = format_user(user)
             log_text["DM"] = "Sent" if notified else "**Failed**"
         else:
             log.info(f"Failed to unmute user {user_id}: user not found")

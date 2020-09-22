@@ -7,12 +7,14 @@ from pathlib import Path
 
 from discord import Colour, Embed, Member
 from discord.ext.commands import Cog, Context, command, has_any_role
+from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
 from bot.converters import Expiry
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
+from bot.utils.messages import format_user
 from bot.utils.time import format_infraction
 
 log = logging.getLogger(__name__)
@@ -137,7 +139,6 @@ class Superstarify(InfractionScheduler, Cog):
         infraction = await _utils.post_infraction(ctx, member, "superstar", reason, duration, active=True)
         id_ = infraction["id"]
 
-        old_nick = member.display_name
         forced_nick = self.get_nick(id_, member.id)
         expiry_str = format_infraction(infraction["expires_at"])
 
@@ -146,6 +147,9 @@ class Superstarify(InfractionScheduler, Cog):
         self.mod_log.ignore(constants.Event.member_update, member.id)
         await member.edit(nick=forced_nick, reason=reason)
         self.schedule_expiration(infraction)
+
+        old_nick = escape_markdown(member.display_name)
+        forced_nick = escape_markdown(forced_nick)
 
         # Send a DM to the user to notify them of their new infraction.
         await _utils.notify_infraction(
@@ -180,8 +184,8 @@ class Superstarify(InfractionScheduler, Cog):
             title="Member achieved superstardom",
             thumbnail=member.avatar_url_as(static_format="png"),
             text=textwrap.dedent(f"""
-                Member: {member.mention} (`{member.id}`)
-                Actor: {ctx.message.author}
+                Member: {member.mention}
+                Actor: {ctx.message.author.mention}
                 Expires: {expiry_str}
                 Old nickname: `{old_nick}`
                 New nickname: `{forced_nick}`
@@ -220,7 +224,7 @@ class Superstarify(InfractionScheduler, Cog):
         )
 
         return {
-            "Member": f"{user.mention}(`{user.id}`)",
+            "Member": format_user(user),
             "DM": "Sent" if notified else "**Failed**"
         }
 

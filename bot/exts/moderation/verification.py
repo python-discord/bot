@@ -15,6 +15,7 @@ from bot.bot import Bot
 from bot.decorators import has_no_roles, in_whitelist
 from bot.exts.moderation.modlog import ModLog
 from bot.utils.checks import InWhitelistCheckFailure, has_no_roles_check
+from bot.utils.messages import format_user
 
 log = logging.getLogger(__name__)
 
@@ -525,7 +526,7 @@ class Verification(Cog):
             )
 
             embed_text = (
-                f"{message.author.mention} sent a message in "
+                f"{format_user(message.author)} sent a message in "
                 f"{message.channel.mention} that contained user and/or role mentions."
                 f"\n\n**Original message:**\n>>> {message.content}"
             )

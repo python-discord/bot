@@ -19,7 +19,7 @@ from bot.constants import (
 )
 from bot.converters import Duration
 from bot.exts.moderation.modlog import ModLog
-from bot.utils.messages import send_attachments
+from bot.utils.messages import format_user, send_attachments
 
 
 log = logging.getLogger(__name__)
@@ -68,7 +68,7 @@ class DeletionContext:
 
     async def upload_messages(self, actor_id: int, modlog: ModLog) -> None:
         """Method that takes care of uploading the queue and posting modlog alert."""
-        triggered_by_users = ", ".join(f"{m} (`{m.id}`)" for m in self.members.values())
+        triggered_by_users = ", ".join(format_user(m) for m in self.members.values())
 
         mod_alert_message = (
             f"**Triggered by:** {triggered_by_users}\n"
