@@ -532,10 +532,13 @@ class UserCommandTests(unittest.TestCase):
         self.moderator = helpers.MockMember(id=2, name="riffautae", roles=[self.moderator_role])
         self.target = helpers.MockMember(id=3, name="__fluzz__")
 
+        # There's no way to mock the channel constant without deferring imports. The constant is
+        # used as a default value for a parameter, which gets defined upon import.
+        self.bot_command_channel = helpers.MockTextChannel(id=constants.Channels.bot_commands)
+
     def test_regular_member_cannot_target_another_member(self, constants):
         """A regular user should not be able to use `!user` targeting another user."""
         constants.MODERATION_ROLES = [self.moderator_role.id]
-
         ctx = helpers.MockContext(author=self.author)
 
         asyncio.run(self.cog.user_info.callback(self.cog, ctx, self.target))
@@ -546,8 +549,6 @@ class UserCommandTests(unittest.TestCase):
         """A regular user should not be able to use this command outside of bot-commands."""
         constants.MODERATION_ROLES = [self.moderator_role.id]
         constants.STAFF_ROLES = [self.moderator_role.id]
-        constants.Channels.bot_commands = 50
-
         ctx = helpers.MockContext(author=self.author, channel=helpers.MockTextChannel(id=100))
 
         msg = "Sorry, but you may only use this command within <#50>."
@@ -558,9 +559,7 @@ class UserCommandTests(unittest.TestCase):
     def test_regular_user_may_use_command_in_bot_commands_channel(self, create_embed, constants):
         """A regular user should be allowed to use `!user` targeting themselves in bot-commands."""
         constants.STAFF_ROLES = [self.moderator_role.id]
-        constants.Channels.bot_commands = 50
-
-        ctx = helpers.MockContext(author=self.author, channel=helpers.MockTextChannel(id=50))
+        ctx = helpers.MockContext(author=self.author, channel=self.bot_command_channel)
 
         asyncio.run(self.cog.user_info.callback(self.cog, ctx))
 
@@ -568,12 +567,10 @@ class UserCommandTests(unittest.TestCase):
         ctx.send.assert_called_once()
 
     @unittest.mock.patch("bot.exts.info.information.Information.create_user_embed")
-    def test_regular_user_can_explicitly_target_themselves(self, create_embed, constants):
+    def test_regular_user_can_explicitly_target_themselves(self, create_embed, _):
         """A user should target itself with `!user` when a `user` argument was not provided."""
         constants.STAFF_ROLES = [self.moderator_role.id]
-        constants.Channels.bot_commands = 50
-
-        ctx = helpers.MockContext(author=self.author, channel=helpers.MockTextChannel(id=50))
+        ctx = helpers.MockContext(author=self.author, channel=self.bot_command_channel)
 
         asyncio.run(self.cog.user_info.callback(self.cog, ctx, self.author))
 
@@ -584,8 +581,6 @@ class UserCommandTests(unittest.TestCase):
     def test_staff_members_can_bypass_channel_restriction(self, create_embed, constants):
         """Staff members should be able to bypass the bot-commands channel restriction."""
         constants.STAFF_ROLES = [self.moderator_role.id]
-        constants.Channels.bot_commands = 50
-
         ctx = helpers.MockContext(author=self.moderator, channel=helpers.MockTextChannel(id=200))
 
         asyncio.run(self.cog.user_info.callback(self.cog, ctx))
@@ -598,7 +593,6 @@ class UserCommandTests(unittest.TestCase):
         """A moderator should be able to use `!user` targeting another user."""
         constants.MODERATION_ROLES = [self.moderator_role.id]
         constants.STAFF_ROLES = [self.moderator_role.id]
-
         ctx = helpers.MockContext(author=self.moderator, channel=helpers.MockTextChannel(id=50))
 
         asyncio.run(self.cog.user_info.callback(self.cog, ctx, self.target))

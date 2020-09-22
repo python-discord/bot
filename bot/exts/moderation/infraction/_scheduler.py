@@ -12,7 +12,7 @@ from discord.ext.commands import Context
 from bot import constants
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Colours, STAFF_CHANNELS
+from bot.constants import Colours, MODERATION_CHANNELS
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._utils import UserSnowflake
 from bot.exts.moderation.modlog import ModLog
@@ -136,9 +136,9 @@ class InfractionScheduler:
             )
             if reason:
                 end_msg = f" (reason: {textwrap.shorten(reason, width=1500, placeholder='...')})"
-        elif ctx.channel.id not in STAFF_CHANNELS:
+        elif ctx.channel.id not in MODERATION_CHANNELS:
             log.trace(
-                f"Infraction #{id_} context is not in a staff channel; omitting infraction count."
+                f"Infraction #{id_} context is not in a mod channel; omitting infraction count."
             )
         else:
             log.trace(f"Fetching total infraction count for {user}.")
