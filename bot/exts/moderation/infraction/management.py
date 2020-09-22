@@ -179,7 +179,7 @@ class ModManagement(commands.Cog):
     async def infraction_search_group(self, ctx: Context, query: t.Union[UserMention, Snowflake, str]) -> None:
         """Searches for infractions in the database."""
         if isinstance(query, int):
-            await ctx.invoke(self.search_user, query)
+            await ctx.invoke(self.search_user, discord.Object(query))
         else:
             await ctx.invoke(self.search_reason, query)
 
