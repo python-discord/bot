@@ -6,6 +6,7 @@ from typing import List, Mapping, Optional, Tuple, Union
 
 import dateutil
 import discord.errors
+from async_rediscache import RedisCache
 from dateutil.relativedelta import relativedelta
 from discord import Colour, HTTPException, Member, Message, NotFound, TextChannel
 from discord.ext.commands import Cog
@@ -18,7 +19,6 @@ from bot.constants import (
     Guild, Icons, URLs
 )
 from bot.exts.moderation.modlog import ModLog
-from bot.utils.redis_cache import RedisCache
 from bot.utils.regex import INVITE_RE
 from bot.utils.scheduling import Scheduler
 
