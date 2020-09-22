@@ -6,7 +6,8 @@ from discord import Embed
 from discord.ext import commands
 
 from bot.bot import Bot
-from bot.constants import Emojis, URLs
+from bot.constants import Channels, Emojis, STAFF_ROLES, URLs
+from bot.decorators import in_whitelist
 
 DESCRIPTIONS = (
     "Command processing time",
@@ -23,6 +24,7 @@ class Latency(commands.Cog):
         self.bot = bot
 
     @commands.command()
+    @in_whitelist(channels=(Channels.bot_commands,), roles=STAFF_ROLES)
     async def ping(self, ctx: commands.Context) -> None:
         """
         Gets different measures of latency within the bot.
