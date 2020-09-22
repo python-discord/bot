@@ -367,9 +367,10 @@ class UserSyncer(Syncer):
     async def _sync(self, diff: _Diff) -> None:
         """Synchronise the database with the user cache of `guild`."""
         log.trace("Syncing created users...")
-        for user in diff.created:
-            await self.bot.api_client.post('bot/users', json=user._asdict())
+        if diff.created:
+            created: list = [user._asdict() for user in diff.created]
+            await self.bot.api_client.post("bot/users", json=created)
 
-        log.trace("Syncing updated users...")
-        for user in diff.updated:
-            await self.bot.api_client.put(f'bot/users/{user.id}', json=user._asdict())
+        if diff.updated:
+            updated = [user._asdict() for user in diff.created]
+            await self.bot.api_client.patch("bot/users/bulk_patch", json=updated)
