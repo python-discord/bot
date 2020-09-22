@@ -42,7 +42,7 @@ class Latency(commands.Cog):
             site_ping = f"{Emojis.cross_mark} Connection timed out."
 
         # Discord Protocol latency return value is in seconds, must be multiplied by 1000 to get milliseconds.
-        discord_ping = f"{round(self.bot.latency * 1000, ROUND_LATENCY)} ms"
+        discord_ping = f"{self.bot.latency * 1000:.{ROUND_LATENCY}f} ms"
 
         embed = Embed(title="Pong!")
 
