@@ -8,7 +8,7 @@ from discord.ext.commands import Cog, Context, command
 
 from bot import constants
 from bot.bot import Bot
-from bot.decorators import with_role
+from bot.utils.checks import has_any_role
 from bot.utils.messages import send_attachments
 from bot.utils.webhooks import send_webhook
 
@@ -185,7 +185,7 @@ class DuckPond(Cog):
                 await message.add_reaction("✅")
 
     @command(name="duckify", aliases=("duckpond", "pondify"))
-    @with_role(constants.Roles.admins)
+    @has_any_role(constants.Roles.admins)
     async def duckify(self, ctx: Context, message: discord.Message) -> None:
         """Relay a message to the duckpond, no ducks required!"""
         if await self.locked_relay(message):
