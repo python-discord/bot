@@ -209,7 +209,7 @@ class Snowflake(IDConverter):
 
         if time < DISCORD_EPOCH_DT:
             raise BadArgument(f"{error}: timestamp is before the Discord epoch.")
-        elif (datetime.utcnow() - time).days >= 1:
+        elif (datetime.utcnow() - time).days < -1:
             raise BadArgument(f"{error}: timestamp is too far into the future.")
 
         return snowflake
