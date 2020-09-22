@@ -36,7 +36,7 @@ class Latency(commands.Cog):
 
         try:
             delay = await aioping.ping(URLs.site, family=socket.AddressFamily.AF_INET) * 1000
-            site_ping = f"{round(delay, ROUND_LATENCY)} ms"
+            site_ping = f"{delay:.{ROUND_LATENCY}f} ms"
 
         except TimeoutError:
             site_ping = f"{Emojis.cross_mark} Connection timed out."
