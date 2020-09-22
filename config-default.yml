@@ -62,23 +62,10 @@ style:
         cross_mark: "\u274C"
         check_mark: "\u2705"
 
-        ducky_yellow:   &DUCKY_YELLOW   574951975574175744
-        ducky_blurple:  &DUCKY_BLURPLE  574951975310065675
-        ducky_regal:    &DUCKY_REGAL    637883439185395712
-        ducky_camo:     &DUCKY_CAMO     637914731566596096
-        ducky_ninja:    &DUCKY_NINJA    637923502535606293
-        ducky_devil:    &DUCKY_DEVIL    637925314982576139
-        ducky_tube:     &DUCKY_TUBE     637881368008851456
-        ducky_hunt:     &DUCKY_HUNT     639355090909528084
-        ducky_wizard:   &DUCKY_WIZARD   639355996954689536
-        ducky_party:    &DUCKY_PARTY    639468753440210977
-        ducky_angel:    &DUCKY_ANGEL    640121935610511361
-        ducky_maul:     &DUCKY_MAUL     640137724958867467
-        ducky_santa:    &DUCKY_SANTA    655360331002019870
-
-        upvotes:        "<:upvotes:638729835245731840>"
-        comments:       "<:comments:638729835073765387>"
-        user:           "<:user:638729835442602003>"
+        # emotes used for #reddit
+        upvotes:        "<:reddit_upvotes:755845219890757644>"
+        comments:       "<:reddit_comments:755845255001014384>"
+        user:           "<:reddit_users:755845303822974997>"
 
     icons:
         crown_blurple: "https://cdn.discordapp.com/emojis/469964153289965568.png"
@@ -134,6 +121,7 @@ style:
 
 guild:
     id: 267624335836053506
+    invite: "https://discord.gg/python"
 
     categories:
         help_available:                     691405807388196926
@@ -142,9 +130,14 @@ guild:
         modmail:                            714494672835444826
 
     channels:
-        announcements:                              354619224620138496
-        user_event_announcements:   &USER_EVENT_A   592000283102674944
-        python_news:                &PYNEWS_CHANNEL 704372456592506880
+        # Public announcement and news channels
+        change_log:                 &CHANGE_LOG         748238795236704388
+        announcements:              &ANNOUNCEMENTS      354619224620138496
+        python_news:                &PYNEWS_CHANNEL     704372456592506880
+        python_events:              &PYEVENTS_CHANNEL   729674110270963822
+        mailing_lists:              &MAILING_LISTS      704372456592506880
+        reddit:                     &REDDIT_CHANNEL     458224812528238616
+        user_event_announcements:   &USER_EVENT_A       592000283102674944
 
         # Development
         dev_contrib:        &DEV_CONTRIB    635950537262759947
@@ -175,7 +168,6 @@ guild:
         # Special
         bot_commands:       &BOT_CMD        267659945086812160
         esoteric:                           470884583684964352
-        reddit:                             458224812528238616
         verification:                       352442727016693763
 
         # Staff
@@ -190,6 +182,12 @@ guild:
         mod_spam:           &MOD_SPAM       620607373828030464
         organisation:       &ORGANISATION   551789653284356126
         staff_lounge:       &STAFF_LOUNGE   464905259261755392
+        duck_pond:          &DUCK_POND      637820308341915648
+
+        # Staff announcement channels
+        staff_announcements:    &STAFF_ANNOUNCEMENTS    464033278631084042
+        mod_announcements:      &MOD_ANNOUNCEMENTS      372115205867700225
+        admin_announcements:    &ADMIN_ANNOUNCEMENTS    749736155569848370
 
         # Voice
         admins_voice:       &ADMINS_VOICE   500734494840717332
@@ -236,8 +234,8 @@ guild:
         partners:                               323426753857191936
         python_community:   &PY_COMMUNITY_ROLE  458226413825294336
 
-        # This is the Developers role on PyDis, here named verified for readability reasons
-        verified:                               352427296948486144
+        unverified:                             739794855945044069
+        verified:                               352427296948486144  # @Developers on PyDis
 
         # Staff
         admins:             &ADMINS_ROLE    267628507062992896
@@ -273,17 +271,19 @@ guild:
 
 filter:
     # What do we filter?
-    filter_zalgo:       false
-    filter_invites:     true
-    filter_domains:     true
-    watch_regex:        true
-    watch_rich_embeds:  true
+    filter_zalgo:          false
+    filter_invites:        true
+    filter_domains:        true
+    filter_everyone_ping:  true
+    watch_regex:           true
+    watch_rich_embeds:     true
 
     # Notify user on filter?
     # Notifications are not expected for "watchlist" type filters
-    notify_user_zalgo:       false
-    notify_user_invites:     true
-    notify_user_domains:     false
+    notify_user_zalgo:          false
+    notify_user_invites:        true
+    notify_user_domains:        false
+    notify_user_everyone_ping:  true
 
     # Filter configuration
     ping_everyone:             true
@@ -389,12 +389,6 @@ anti_spam:
             interval: 10
             max: 3
 
-        # The everyone ping filter is temporarily disabled
-        # until we've fixed a couple of bugs.
-        # everyone_ping:
-        #    interval: 10
-        #    max: 0
-
 
 reddit:
     subreddits:
@@ -461,21 +455,19 @@ redirect_output:
     delete_delay: 15
 
 duck_pond:
-    threshold: 5
-    custom_emojis:
-        - *DUCKY_YELLOW
-        - *DUCKY_BLURPLE
-        - *DUCKY_CAMO
-        - *DUCKY_DEVIL
-        - *DUCKY_NINJA
-        - *DUCKY_REGAL
-        - *DUCKY_TUBE
-        - *DUCKY_HUNT
-        - *DUCKY_WIZARD
-        - *DUCKY_PARTY
-        - *DUCKY_ANGEL
-        - *DUCKY_MAUL
-        - *DUCKY_SANTA
+    threshold: 4
+    channel_blacklist:
+        - *ANNOUNCEMENTS
+        - *PYNEWS_CHANNEL
+        - *PYEVENTS_CHANNEL
+        - *MAILING_LISTS
+        - *REDDIT_CHANNEL
+        - *USER_EVENT_A
+        - *DUCK_POND
+        - *CHANGE_LOG
+        - *STAFF_ANNOUNCEMENTS
+        - *MOD_ANNOUNCEMENTS
+        - *ADMIN_ANNOUNCEMENTS
 
 python_news:
     mail_lists:
@@ -484,6 +476,19 @@ python_news:
         - 'pypi-announce'
     channel: *PYNEWS_CHANNEL
     webhook: *PYNEWS_WEBHOOK
+
+
+verification:
+    unverified_after: 3  # Days after which non-Developers receive the @Unverified role
+    kicked_after: 30  # Days after which non-Developers get kicked from the guild
+    reminder_frequency: 28  # Hours between @Unverified pings
+    bot_message_delete_delay: 10  # Seconds before deleting bots response in #verification
+
+    # Number in range [0, 1] determining the percentage of unverified users that are safe
+    # to be kicked from the guild in one batch, any larger amount will require staff confirmation,
+    # set this to 0 to require explicit approval for batches of any size
+    kick_confirmation_threshold: 0.01  # 1%
+
 
 config:
     required_keys: ['bot.token']
