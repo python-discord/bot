@@ -50,7 +50,10 @@ class Syncer(abc.ABC):
         """
         log.info(f"Starting {self.name} syncer.")
 
-        message = await ctx.send(f"📊 Synchronising {self.name}s.") if ctx else None
+        if ctx:
+            message = await ctx.send(f"📊 Synchronising {self.name}s.")
+        else:
+            message = None
         diff = await self._get_diff(guild)
 
         try:
