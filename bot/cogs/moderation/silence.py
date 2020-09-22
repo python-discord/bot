@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 
 MSG_SILENCE_FAIL = f"{Emojis.cross_mark} current channel is already silenced."
 MSG_SILENCE_PERMANENT = f"{Emojis.check_mark} silenced current channel indefinitely."
-MSG_SILENCE_SUCCESS = Emojis.check_mark + " silenced current channel for {duration} minute(s)."
+MSG_SILENCE_SUCCESS = f"{Emojis.check_mark} silenced current channel for {{duration}} minute(s)."
 
 MSG_UNSILENCE_FAIL = f"{Emojis.cross_mark} current channel was not silenced."
 MSG_UNSILENCE_MANUAL = (
