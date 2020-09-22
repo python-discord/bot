@@ -11,7 +11,6 @@ from discord.utils import escape_markdown
 from bot import constants
 from bot.bot import Bot
 from bot.converters import Expiry, Snowflake, UserMention, allowed_strings, proxy_user
-from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction.infractions import Infractions
 from bot.exts.moderation.modlog import ModLog
 from bot.pagination import LinePaginator
@@ -217,7 +216,7 @@ class ModManagement(commands.Cog):
         self,
         ctx: Context,
         embed: discord.Embed,
-        infractions: t.Iterable[_utils.Infraction]
+        infractions: t.Iterable[t.Dict[str, t.Any]]
     ) -> None:
         """Send a paginated embed of infractions for the specified user."""
         if not infractions:
