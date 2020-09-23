@@ -1,6 +1,6 @@
 import datetime
 import logging
-from typing import Callable, Container, Iterable, Optional
+from typing import Callable, Container, Iterable, Optional, Union
 
 from discord.ext.commands import (
     BucketType,
@@ -11,6 +11,8 @@ from discord.ext.commands import (
     Context,
     Cooldown,
     CooldownMapping,
+    NoPrivateMessage,
+    has_any_role,
 )
 
 from bot import constants
@@ -89,35 +91,32 @@ def in_whitelist_check(
     return False
 
 
-def with_role_check(ctx: Context, *role_ids: int) -> bool:
-    """Returns True if the user has any one of the roles in role_ids."""
-    if not ctx.guild:  # Return False in a DM
-        log.trace(f"{ctx.author} tried to use the '{ctx.command.name}'command from a DM. "
-                  "This command is restricted by the with_role decorator. Rejecting request.")
+async def has_any_role_check(ctx: Context, *roles: Union[str, int]) -> bool:
+    """
+    Returns True if the context's author has any of the specified roles.
+
+    `roles` are the names or IDs of the roles for which to check.
+    False is always returns if the context is outside a guild.
+    """
+    try:
+        return await has_any_role(*roles).predicate(ctx)
+    except CheckFailure:
         return False
 
-    for role in ctx.author.roles:
-        if role.id in role_ids:
-            log.trace(f"{ctx.author} has the '{role.name}' role, and passes the check.")
-            return True
 
-    log.trace(f"{ctx.author} does not have the required role to use "
-              f"the '{ctx.command.name}' command, so the request is rejected.")
-    return False
+async def has_no_roles_check(ctx: Context, *roles: Union[str, int]) -> bool:
+    """
+    Returns True if the context's author doesn't have any of the specified roles.
 
-
-def without_role_check(ctx: Context, *role_ids: int) -> bool:
-    """Returns True if the user does not have any of the roles in role_ids."""
-    if not ctx.guild:  # Return False in a DM
-        log.trace(f"{ctx.author} tried to use the '{ctx.command.name}' command from a DM. "
-                  "This command is restricted by the without_role decorator. Rejecting request.")
+    `roles` are the names or IDs of the roles for which to check.
+    False is always returns if the context is outside a guild.
+    """
+    try:
+        return not await has_any_role(*roles).predicate(ctx)
+    except NoPrivateMessage:
         return False
-
-    author_roles = [role.id for role in ctx.author.roles]
-    check = all(role not in author_roles for role in role_ids)
-    log.trace(f"{ctx.author} tried to call the '{ctx.command.name}' command. "
-              f"The result of the without_role check was {check}.")
-    return check
+    except CheckFailure:
+        return True
 
 
 def cooldown_with_role_bypass(rate: int, per: float, type: BucketType = BucketType.default, *,
