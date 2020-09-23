@@ -9,7 +9,6 @@ from typing import List, Optional, Sequence, Union
 import discord
 from discord.errors import HTTPException
 from discord.ext.commands import Context
-from discord.utils import escape_markdown
 
 from bot.constants import Emojis, NEGATIVE_REPLIES
 
@@ -142,6 +141,5 @@ async def send_denial(ctx: Context, reason: str) -> None:
 
 
 def format_user(user: discord.abc.User) -> str:
-    """Return a string for `user` which has their mention and name#discriminator."""
-    name = escape_markdown(str(user))
-    return f"{user.mention} ({name})"
+    """Return a string for `user` which has their mention and ID."""
+    return f"{user.mention} (`{user.id}`)"
