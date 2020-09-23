@@ -190,6 +190,13 @@ class ModManagement(commands.Cog):
             'bot/infractions/expanded',
             params={'user__id': str(user.id)}
         )
+
+        user = self.bot.get_user(user.id)
+        if not user and infraction_list:
+            # Use the user data retrieved from the DB for the username.
+            user = infraction_list[0]
+            user = escape_markdown(user["name"]) + f"#{user['discriminator']:04}"
+
         embed = discord.Embed(
             title=f"Infractions for {user} ({len(infraction_list)} total)",
             colour=discord.Colour.orange()
