@@ -155,7 +155,6 @@ class InformationCogTests(unittest.TestCase):
                 f"""
                 Created: {time_since_patch.return_value}
                 Voice region: {self.ctx.guild.region}
-                Features: {', '.join(self.ctx.guild.features)}
                 Roles: {len(self.ctx.guild.roles) - 1}
                 """
             )

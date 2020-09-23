@@ -165,14 +165,20 @@ class Information(Cog):
         )
 
         created = time_since(ctx.guild.created_at, precision="days")
-        features = ", ".join(ctx.guild.features)
         region = ctx.guild.region
         num_roles = len(ctx.guild.roles) - 1  # Exclude @everyone
 
+        # Server Features are only useful in certain channels
+        if ctx.channel.id in (
+            *constants.STAFF_CHANNELS, constants.Channels.dev_core, constants.Channels.dev_contrib
+        ):
+            features = f"\nFeatures: {', '.join(ctx.guild.features)}"
+        else:
+            features = ""
+
         embed.description = textwrap.dedent(f"""
             Created: {created}
-            Voice region: {region}
-            Features: {features}
+            Voice region: {region}{features}
             Roles: {num_roles}
         """)
         embed.set_thumbnail(url=ctx.guild.icon_url)
