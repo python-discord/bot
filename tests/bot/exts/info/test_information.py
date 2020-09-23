@@ -156,6 +156,7 @@ class InformationCogTests(unittest.TestCase):
                 Created: {time_since_patch.return_value}
                 Voice region: {self.ctx.guild.region}
                 Features: {', '.join(self.ctx.guild.features)}
+                Roles: {len(self.ctx.guild.roles) - 1}
                 """
             )
         )
@@ -165,12 +166,11 @@ class InformationCogTests(unittest.TestCase):
         self.assertEqual(member_field.name, f"Members: {self.ctx.guild.member_count}")
         self.assertEqual(
             member_field.value,
-            textwrap.dedent(f"""
+            textwrap.dedent("""
                 Helpers: 0
                 Moderators: 0
                 Admins: 0
                 Contributors: 0
-                Roles: {len(self.ctx.guild.roles) - 1}
             """).strip(),
         )
 

@@ -62,16 +62,14 @@ class Information(Cog):
 
     @staticmethod
     def get_member_counts(guild: Guild) -> Dict[str, int]:
-        """Return the total number of members per role in `guild`, and the total number of roles."""
+        """Return the total number of members for certain roles in `guild`."""
         roles = (
             guild.get_role(role_id) for role_id in (
                 constants.Roles.helpers, constants.Roles.moderators,
                 constants.Roles.admins, constants.Roles.contributors,
             )
         )
-        member_counts = {role.name: len(role.members) for role in roles}
-        member_counts["roles"] = len(guild.roles) - 1  # Exclude @everyone
-        return member_counts
+        return {role.name: len(role.members) for role in roles}
 
     def get_extended_server_info(self, guild: Guild) -> str:
         """Return additional server info only visible in moderation channels."""
@@ -169,11 +167,13 @@ class Information(Cog):
         created = time_since(ctx.guild.created_at, precision="days")
         features = ", ".join(ctx.guild.features)
         region = ctx.guild.region
+        num_roles = len(ctx.guild.roles) - 1  # Exclude @everyone
 
         embed.description = textwrap.dedent(f"""
             Created: {created}
             Voice region: {region}
             Features: {features}
+            Roles: {num_roles}
         """)
         embed.set_thumbnail(url=ctx.guild.icon_url)
 
