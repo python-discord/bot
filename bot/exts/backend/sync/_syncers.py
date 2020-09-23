@@ -65,7 +65,7 @@ class Syncer(abc.ABC):
             results = f"status {e.status}\n```{e.response_json or 'See log output for details'}```"
             content = f":x: Synchronisation of {self.name}s failed: {results}"
         else:
-            diff_dict = diff._asdict()  # Ugly method for transforming the NamedTuple into a dict
+            diff_dict = diff._asdict()
             results = (f"{name} `{len(val)}`" for name, val in diff_dict.items() if val is not None)
             results = ", ".join(results)
 
