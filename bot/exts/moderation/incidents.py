@@ -237,7 +237,7 @@ class Incidents(Cog):
         not all information was relayed, return False. This signals that the original
         message is not safe to be deleted, as we will lose some information.
         """
-        log.debug(f"Archiving incident: {incident.id} (outcome: {outcome}, actioned by: {actioned_by})")
+        log.info(f"Archiving incident: {incident.id} (outcome: {outcome}, actioned by: {actioned_by})")
         embed, attachment_file = await make_embed(incident, outcome, actioned_by)
 
         try:
