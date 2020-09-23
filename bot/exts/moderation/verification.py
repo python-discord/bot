@@ -286,7 +286,7 @@ class Verification(Cog):
 
         Returns the amount of successful requests. Failed requests are logged at info level.
         """
-        log.info(f"Sending {len(members)} requests")
+        log.trace(f"Sending {len(members)} requests")
         n_success, bad_statuses = 0, set()
 
         for progress, member in enumerate(members, start=1):
