@@ -170,6 +170,7 @@ class InformationCogTests(unittest.TestCase):
                 Helpers: 0
                 Moderators: 0
                 Admins: 0
+                Owners: 0
                 Contributors: 0
             """).strip(),
         )
