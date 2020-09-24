@@ -74,20 +74,16 @@ class ModManagement(commands.Cog):
         timestamp can be provided for the duration.
         """
         if isinstance(infraction_id, str):
-            params = {
-                "actor__id": ctx.author.id,
-                "ordering": "-inserted_at"
-            }
-            infractions = await self.bot.api_client.get("bot/infractions", params=params)
+            old_infraction = await self.get_latest_infraction(ctx.author.id)
 
-            if infractions:
-                old_infraction = infractions[0]
-                infraction_id = old_infraction["id"]
-            else:
-                await ctx.send(
+            if old_infraction is None:
+                ctx.send(
                     ":x: Couldn't find most recent infraction; you have never given an infraction."
                 )
                 return
+
+            infraction_id = old_infraction["id"]
+
         else:
             old_infraction = await self.bot.api_client.get(f"bot/infractions/{infraction_id}")
 
@@ -129,20 +125,16 @@ class ModManagement(commands.Cog):
 
         # Retrieve the previous infraction for its information.
         if isinstance(infraction_id, str):
-            params = {
-                "actor__id": ctx.author.id,
-                "ordering": "-inserted_at"
-            }
-            infractions = await self.bot.api_client.get("bot/infractions", params=params)
+            old_infraction = await self.get_latest_infraction(ctx.author.id)
 
-            if infractions:
-                old_infraction = infractions[0]
-                infraction_id = old_infraction["id"]
-            else:
-                await ctx.send(
+            if old_infraction is None:
+                ctx.send(
                     ":x: Couldn't find most recent infraction; you have never given an infraction."
                 )
                 return
+
+            infraction_id = old_infraction["id"]
+
         else:
             old_infraction = await self.bot.api_client.get(f"bot/infractions/{infraction_id}")
 
