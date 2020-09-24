@@ -45,7 +45,7 @@ class ModManagement(commands.Cog):
         """Infraction manipulation commands."""
         await ctx.send_help(ctx.command)
 
-    @infraction_group.command(name="append", aliases=("amend", "add"))
+    @infraction_group.command(name="append", aliases=("amend", "add", "a"))
     async def infraction_append(
         self,
         ctx: Context,
