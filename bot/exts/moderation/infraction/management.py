@@ -77,7 +77,7 @@ class ModManagement(commands.Cog):
             old_infraction = await self.get_latest_infraction(ctx.author.id)
 
             if old_infraction is None:
-                ctx.send(
+                await ctx.send(
                     ":x: Couldn't find most recent infraction; you have never given an infraction."
                 )
                 return
@@ -128,7 +128,7 @@ class ModManagement(commands.Cog):
             old_infraction = await self.get_latest_infraction(ctx.author.id)
 
             if old_infraction is None:
-                ctx.send(
+                await ctx.send(
                     ":x: Couldn't find most recent infraction; you have never given an infraction."
                 )
                 return
