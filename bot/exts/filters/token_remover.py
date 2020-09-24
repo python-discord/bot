@@ -18,10 +18,10 @@ LOG_MESSAGE = (
     "Censored a seemingly valid token sent by {author} (`{author_id}`) in {channel}, "
     "token was `{user_id}.{timestamp}.{hmac}`"
 )
-UNKNOWN_USER_LOG_MESSAGE = "The token user_id decodes into {user_id}."
+UNKNOWN_USER_LOG_MESSAGE = "Decoded user ID: `{user_id}` (Not present in server)."
 KNOWN_USER_LOG_MESSAGE = (
-    "The token user_id decodes into {user_id}, "
-    "which matches `{user_name}` and means this is a valid {kind} token."
+    "Decoded user ID: `{user_id}` **(Present in server)**.\n"
+    "This matches `{user_name}` and means this is likely a valid **{kind}** token."
 )
 DELETION_MESSAGE_TEMPLATE = (
     "Hey {mention}! I noticed you posted a seemingly valid Discord API "
@@ -117,10 +117,12 @@ class TokenRemover(Cog):
     @classmethod
     def format_userid_log_message(cls, msg: Message, token: Token) -> t.Tuple[str, bool]:
         """
-        Format the potion of the log message that includes details about the detected user ID.
+        Format the portion of the log message that includes details about the detected user ID.
 
-        Includes the user ID and, if present on the server, their name and a toggle to
-         mention everyone.
+        If the user is resolved to a member, the format includes the user ID, name, and the
+        kind of user detected.
+
+        If we resolve to a member and it is not a bot, we also return True to ping everyone.
 
         Returns a tuple of (log_message, mention_everyone)
         """
@@ -139,7 +141,7 @@ class TokenRemover(Cog):
     @staticmethod
     def format_log_message(msg: Message, token: Token) -> str:
         """Return the generic portion of the log message to send for `token` being censored in `msg`."""
-        message = LOG_MESSAGE.format(
+        return LOG_MESSAGE.format(
             author=msg.author,
             author_id=msg.author.id,
             channel=msg.channel.mention,
@@ -147,8 +149,6 @@ class TokenRemover(Cog):
             timestamp=token.timestamp,
             hmac='x' * len(token.hmac),
         )
-
-        return message
 
     @classmethod
     def find_token_in_message(cls, msg: Message) -> t.Optional[Token]:

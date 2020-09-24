@@ -22,12 +22,8 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
 
         self.msg = MockMessage(id=555, content="hello world")
         self.msg.channel.mention = "#lemonade-stand"
-        self.msg.guild.get_member = MagicMock(
-            return_value=MagicMock(
-                bot=False,
-                __str__=MagicMock(return_value="Woody"),
-            ),
-        )
+        self.msg.guild.get_member.return_value.bot = False
+        self.msg.guild.get_member.return_value.__str__.return_value = "Woody"
         self.msg.author.__str__ = MagicMock(return_value=self.msg.author.name)
         self.msg.author.avatar_url_as.return_value = "picture-lemon.png"
 
@@ -212,7 +208,7 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         is_valid_timestamp,
         is_maybe_valid_hmac,
     ):
-        """None should be returned if no matches have valid user IDs or timestamps."""
+        """None should be returned if no matches have valid user IDs, HMACs, and timestamps."""
         token_re.finditer.return_value = [mock.create_autospec(Match, spec_set=True, instance=True)]
         token_cls.return_value = mock.create_autospec(Token, spec_set=True, instance=True)
         is_valid_id.return_value = False
@@ -281,10 +277,7 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
 
         return_value = TokenRemover.format_log_message(self.msg, token)
 
-        self.assertEqual(
-            return_value,
-            log_message.format.return_value,
-        )
+        self.assertEqual(return_value, log_message.format.return_value)
         log_message.format.assert_called_once_with(
             author=self.msg.author,
             author_id=self.msg.author.id,
@@ -296,42 +289,29 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
 
     @autospec("bot.exts.filters.token_remover", "UNKNOWN_USER_LOG_MESSAGE")
     def test_format_userid_log_message_unknown(self, unknown_user_log_message):
-        """
-        Should correctly format the user ID portion of the log message when the user ID is
-         not found in the server.
-        """
+        """Should correctly format the user ID portion when the actual user it belongs to is unknown."""
         token = Token("NDcyMjY1OTQzMDYyNDEzMzMy", "XsySD_", "s45jqDV_Iisn-symw0yDRrk_jf4")
         unknown_user_log_message.format.return_value = " Partner"
         msg = MockMessage(id=555, content="hello world")
-        msg.guild.get_member = MagicMock(return_value=None)
+        msg.guild.get_member.return_value = None
 
         return_value = TokenRemover.format_userid_log_message(msg, token)
 
-        self.assertEqual(
-            return_value,
-            (unknown_user_log_message.format.return_value, False),
-        )
-        unknown_user_log_message.format.assert_called_once_with(
-            user_id=472265943062413332,
-        )
+        self.assertEqual(return_value, (unknown_user_log_message.format.return_value, False))
+        unknown_user_log_message.format.assert_called_once_with(user_id=472265943062413332)
 
     @autospec("bot.exts.filters.token_remover", "KNOWN_USER_LOG_MESSAGE")
     def test_format_userid_log_message_bot(self, known_user_log_message):
-        """
-        Should correctly format the user ID portion of the log message when the user ID is
-         not found in the server.
-        """
+        """Should correctly format the user ID portion when the ID belongs to a known bot."""
         token = Token("NDcyMjY1OTQzMDYyNDEzMzMy", "XsySD_", "s45jqDV_Iisn-symw0yDRrk_jf4")
         known_user_log_message.format.return_value = " Partner"
         msg = MockMessage(id=555, content="hello world")
-        msg.guild.get_member = MagicMock(return_value=MagicMock(__str__=MagicMock(return_value="Sam"), bot=True))
+        msg.guild.get_member.return_value.__str__.return_value = "Sam"
+        msg.guild.get_member.return_value.bot = True
 
         return_value = TokenRemover.format_userid_log_message(msg, token)
 
-        self.assertEqual(
-            return_value,
-            (known_user_log_message.format.return_value, False),
-        )
+        self.assertEqual(return_value, (known_user_log_message.format.return_value, False))
 
         known_user_log_message.format.assert_called_once_with(
             user_id=472265943062413332,
@@ -341,16 +321,13 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
 
     @autospec("bot.exts.filters.token_remover", "KNOWN_USER_LOG_MESSAGE")
     def test_format_log_message_user_token_user(self, user_token_message):
-        """Should correctly format the log message with info from the message and token."""
+        """Should correctly format the user ID portion when the ID belongs to a known user."""
         token = Token("NDY3MjIzMjMwNjUwNzc3NjQx", "XsySD_", "s45jqDV_Iisn-symw0yDRrk_jf4")
         user_token_message.format.return_value = "Partner"
 
         return_value = TokenRemover.format_userid_log_message(self.msg, token)
 
-        self.assertEqual(
-            return_value,
-            (user_token_message.format.return_value, True),
-        )
+        self.assertEqual(return_value, (user_token_message.format.return_value, True))
         user_token_message.format.assert_called_once_with(
             user_id=467223230650777641,
             user_name="Woody",
