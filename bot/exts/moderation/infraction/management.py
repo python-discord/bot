@@ -87,7 +87,7 @@ class ModManagement(commands.Cog):
         else:
             old_infraction = await self.bot.api_client.get(f"bot/infractions/{infraction_id}")
 
-        reason = f"{old_infraction['reason']} **Edit:** {reason}"
+        reason = f"{old_infraction['reason']} || **Edit:** {reason}"
 
         await ctx.invoke(self.infraction_edit, infraction_id=infraction_id, duration=duration, reason=reason)
 
