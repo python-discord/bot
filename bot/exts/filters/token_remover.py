@@ -1,6 +1,5 @@
 import base64
 import binascii
-import collections
 import logging
 import re
 import typing as t
@@ -98,14 +97,8 @@ class TokenRemover(Cog):
 
         await msg.channel.send(DELETION_MESSAGE_TEMPLATE.format(mention=msg.author.mention))
 
-        user_name = None
-        user_id = self.extract_user_id(found_token.user_id)
-        user = msg.guild.get_member(user_id)
-
-        if user:
-            user_name = str(user)
-
-        log_message = self.format_log_message(msg, found_token, user_id, user_name)
+        log_message = self.format_log_message(msg, found_token)
+        userid_message, mention_everyone = self.format_userid_log_message(msg, found_token)
         log.debug(log_message)
 
         # Send pretty mod log embed to mod-alerts
@@ -113,26 +106,35 @@ class TokenRemover(Cog):
             icon_url=Icons.token_removed,
             colour=Colour(Colours.soft_red),
             title="Token removed!",
-            text=log_message,
+            text=log_message + "\n" + userid_message,
             thumbnail=msg.author.avatar_url_as(static_format="png"),
             channel_id=Channels.mod_alerts,
-            ping_everyone=user_name is not None,
+            ping_everyone=mention_everyone,
         )
 
         self.bot.stats.incr("tokens.removed_tokens")
 
-    @staticmethod
-    def format_log_message(
-        msg: Message,
-        token: Token,
-        user_id: int,
-        user_name: t.Optional[str] = None,
-    ) -> str:
+    @classmethod
+    def format_userid_log_message(cls, msg: Message, token: Token) -> t.Tuple[str, bool]:
         """
-        Return the log message to send for `token` being censored in `msg`.
+        Format the potion of the log message that includes details about the detected user ID.
 
-        Additonally, mention if the token was decodable into a user id, and if that resolves to a user on the server.
+        Includes the user ID and, if present on the server, their name and a toggle to
+         mention everyone.
+
+        Returns a tuple of (log_message, mention_everyone)
         """
+        user_id = cls.extract_user_id(token.user_id)
+        user = msg.guild.get_member(user_id)
+
+        if user:
+            return USER_TOKEN_MESSAGE.format(user_id=user_id, user_name=str(user)), True
+        else:
+            return DECODED_LOG_MESSAGE.format(user_id=user_id), False
+
+    @staticmethod
+    def format_log_message(msg: Message, token: Token) -> str:
+        """Return the generic portion of the log message to send for `token` being censored in `msg`."""
         message = LOG_MESSAGE.format(
             author=msg.author,
             author_id=msg.author.id,
@@ -141,11 +143,8 @@ class TokenRemover(Cog):
             timestamp=token.timestamp,
             hmac='x' * len(token.hmac),
         )
-        if user_name:
-            more = USER_TOKEN_MESSAGE.format(user_id=user_id, user_name=user_name)
-        else:
-            more = DECODED_LOG_MESSAGE.format(user_id=user_id)
-        return message + "\n" + more
+
+        return message
 
     @classmethod
     def find_token_in_message(cls, msg: Message) -> t.Optional[Token]:
@@ -154,9 +153,11 @@ class TokenRemover(Cog):
         # token check (e.g. `message.channel.send` also matches our token pattern)
         for match in TOKEN_RE.finditer(msg.content):
             token = Token(*match.groups())
-            if cls.is_valid_user_id(token.user_id) \
-                    and cls.is_valid_timestamp(token.timestamp) \
-                    and cls.is_maybevalid_hmac(token.hmac):
+            if (
+                cls.is_valid_user_id(token.user_id)
+                and cls.is_valid_timestamp(token.timestamp)
+                and cls.is_maybe_valid_hmac(token.hmac)
+            ):
                 # Short-circuit on first match
                 return token
 
@@ -165,7 +166,7 @@ class TokenRemover(Cog):
 
     @staticmethod
     def extract_user_id(b64_content: str) -> t.Optional[int]:
-        """Return a userid integer from part of a potential token, or None if it couldn't be decoded."""
+        """Return a user ID integer from part of a potential token, or None if it couldn't be decoded."""
         b64_content = utils.pad_base64(b64_content)
 
         try:
@@ -218,17 +219,19 @@ class TokenRemover(Cog):
             return False
 
     @staticmethod
-    def is_maybevalid_hmac(b64_content: str) -> bool:
+    def is_maybe_valid_hmac(b64_content: str) -> bool:
         """
-        Determine if a given hmac portion of a token is potentially valid.
+        Determine if a given HMAC portion of a token is potentially valid.
 
         If the HMAC has 3 or less characters, it's probably a dummy value like "xxxxxxxxxx",
         and thus the token can probably be skipped.
         """
-        unique = len(collections.Counter(b64_content.lower()).keys())
+        unique = len(set(b64_content.lower()))
         if unique <= 3:
-            log.debug(f"Considering the hmac {b64_content} a dummy because it has {unique}"
-                      " case-insensitively unique characters")
+            log.debug(
+                f"Considering the HMAC {b64_content} a dummy because it has {unique}"
+                " case-insensitively unique characters"
+            )
             return False
         else:
             return True
