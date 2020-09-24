@@ -22,7 +22,12 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
 
         self.msg = MockMessage(id=555, content="hello world")
         self.msg.channel.mention = "#lemonade-stand"
-        self.msg.guild.get_member = MagicMock(return_value="Bob")
+        self.msg.guild.get_member = MagicMock(
+            return_value=MagicMock(
+                bot=False,
+                __str__=MagicMock(return_value="Woody"),
+            ),
+        )
         self.msg.author.__str__ = MagicMock(return_value=self.msg.author.name)
         self.msg.author.avatar_url_as.return_value = "picture-lemon.png"
 
@@ -289,14 +294,14 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
             hmac="x" * len(token.hmac),
         )
 
-    @autospec("bot.exts.filters.token_remover", "DECODED_LOG_MESSAGE")
-    def test_format_userid_log_message_bot(self, decoded_log_message):
+    @autospec("bot.exts.filters.token_remover", "UNKNOWN_USER_LOG_MESSAGE")
+    def test_format_userid_log_message_unknown(self, unknown_user_log_message):
         """
         Should correctly format the user ID portion of the log message when the user ID is
          not found in the server.
         """
         token = Token("NDcyMjY1OTQzMDYyNDEzMzMy", "XsySD_", "s45jqDV_Iisn-symw0yDRrk_jf4")
-        decoded_log_message.format.return_value = " Partner"
+        unknown_user_log_message.format.return_value = " Partner"
         msg = MockMessage(id=555, content="hello world")
         msg.guild.get_member = MagicMock(return_value=None)
 
@@ -304,13 +309,37 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             return_value,
-            (decoded_log_message.format.return_value, False),
+            (unknown_user_log_message.format.return_value, False),
         )
-        decoded_log_message.format.assert_called_once_with(
+        unknown_user_log_message.format.assert_called_once_with(
             user_id=472265943062413332,
         )
 
-    @autospec("bot.exts.filters.token_remover", "USER_TOKEN_MESSAGE")
+    @autospec("bot.exts.filters.token_remover", "KNOWN_USER_LOG_MESSAGE")
+    def test_format_userid_log_message_bot(self, known_user_log_message):
+        """
+        Should correctly format the user ID portion of the log message when the user ID is
+         not found in the server.
+        """
+        token = Token("NDcyMjY1OTQzMDYyNDEzMzMy", "XsySD_", "s45jqDV_Iisn-symw0yDRrk_jf4")
+        known_user_log_message.format.return_value = " Partner"
+        msg = MockMessage(id=555, content="hello world")
+        msg.guild.get_member = MagicMock(return_value=MagicMock(__str__=MagicMock(return_value="Sam"), bot=True))
+
+        return_value = TokenRemover.format_userid_log_message(msg, token)
+
+        self.assertEqual(
+            return_value,
+            (known_user_log_message.format.return_value, False),
+        )
+
+        known_user_log_message.format.assert_called_once_with(
+            user_id=472265943062413332,
+            user_name="Sam",
+            kind="BOT",
+        )
+
+    @autospec("bot.exts.filters.token_remover", "KNOWN_USER_LOG_MESSAGE")
     def test_format_log_message_user_token_user(self, user_token_message):
         """Should correctly format the log message with info from the message and token."""
         token = Token("NDY3MjIzMjMwNjUwNzc3NjQx", "XsySD_", "s45jqDV_Iisn-symw0yDRrk_jf4")
@@ -324,7 +353,8 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         )
         user_token_message.format.assert_called_once_with(
             user_id=467223230650777641,
-            user_name="Bob",
+            user_name="Woody",
+            kind="USER",
         )
 
     @mock.patch.object(TokenRemover, "mod_log", new_callable=mock.PropertyMock)

@@ -18,10 +18,10 @@ LOG_MESSAGE = (
     "Censored a seemingly valid token sent by {author} (`{author_id}`) in {channel}, "
     "token was `{user_id}.{timestamp}.{hmac}`"
 )
-DECODED_LOG_MESSAGE = "The token user_id decodes into {user_id}."
-USER_TOKEN_MESSAGE = (
+UNKNOWN_USER_LOG_MESSAGE = "The token user_id decodes into {user_id}."
+KNOWN_USER_LOG_MESSAGE = (
     "The token user_id decodes into {user_id}, "
-    "which matches `{user_name}` and means this is a valid USER token."
+    "which matches `{user_name}` and means this is a valid {kind} token."
 )
 DELETION_MESSAGE_TEMPLATE = (
     "Hey {mention}! I noticed you posted a seemingly valid Discord API "
@@ -128,9 +128,13 @@ class TokenRemover(Cog):
         user = msg.guild.get_member(user_id)
 
         if user:
-            return USER_TOKEN_MESSAGE.format(user_id=user_id, user_name=str(user)), True
+            return KNOWN_USER_LOG_MESSAGE.format(
+                user_id=user_id,
+                user_name=str(user),
+                kind="BOT" if user.bot else "USER",
+            ), not user.bot
         else:
-            return DECODED_LOG_MESSAGE.format(user_id=user_id), False
+            return UNKNOWN_USER_LOG_MESSAGE.format(user_id=user_id), False
 
     @staticmethod
     def format_log_message(msg: Message, token: Token) -> str:
