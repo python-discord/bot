@@ -45,6 +45,56 @@ class ModManagement(commands.Cog):
         """Infraction manipulation commands."""
         await ctx.send_help(ctx.command)
 
+    @infraction_group.command(name="append", aliases=("amend", "add"))
+    async def infraction_append(
+        self,
+        ctx: Context,
+        infraction_id: t.Union[int, allowed_strings("l", "last", "recent")],  # noqa: F821
+        duration: t.Union[Expiry, allowed_strings("p", "permanent"), None],   # noqa: F821
+        *,
+        reason: str = None
+    ) -> None:
+        """
+        Append text and/or edit the duration of an infraction.
+
+        Durations are relative to the time of updating and should be appended with a unit of time.
+        Units (∗case-sensitive):
+        \u2003`y` - years
+        \u2003`m` - months∗
+        \u2003`w` - weeks
+        \u2003`d` - days
+        \u2003`h` - hours
+        \u2003`M` - minutes∗
+        \u2003`s` - seconds
+
+        Use "l", "last", or "recent" as the infraction ID to specify that the most recent infraction
+        authored by the command invoker should be edited.
+
+        Use "p" or "permanent" to mark the infraction as permanent. Alternatively, an ISO 8601
+        timestamp can be provided for the duration.
+        """
+        if isinstance(infraction_id, str):
+            params = {
+                "actor__id": ctx.author.id,
+                "ordering": "-inserted_at"
+            }
+            infractions = await self.bot.api_client.get("bot/infractions", params=params)
+
+            if infractions:
+                old_infraction = infractions[0]
+                infraction_id = old_infraction["id"]
+            else:
+                await ctx.send(
+                    ":x: Couldn't find most recent infraction; you have never given an infraction."
+                )
+                return
+        else:
+            old_infraction = await self.bot.api_client.get(f"bot/infractions/{infraction_id}")
+
+        reason = f"{old_infraction['reason']} **Edit:** {reason}"
+
+        await ctx.invoke(self.infraction_edit, infraction_id=infraction_id, duration=duration, reason=reason)
+
     @infraction_group.command(name='edit')
     async def infraction_edit(
         self,
