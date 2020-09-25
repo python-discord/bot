@@ -15,7 +15,7 @@ from bot.decorators import respect_role_hierarchy
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
 from bot.exts.moderation.infraction._utils import UserSnowflake
-from bot.utils.checks import with_role_check
+from bot.utils.messages import format_user
 
 log = logging.getLogger(__name__)
 
@@ -316,7 +316,7 @@ class Infractions(InfractionScheduler, commands.Cog):
                 icon_url=_utils.INFRACTION_ICONS["mute"][1]
             )
 
-            log_text["Member"] = f"{user.mention}(`{user.id}`)"
+            log_text["Member"] = format_user(user)
             log_text["DM"] = "Sent" if notified else "**Failed**"
         else:
             log.info(f"Failed to unmute user {user_id}: user not found")
@@ -357,9 +357,9 @@ class Infractions(InfractionScheduler, commands.Cog):
     # endregion
 
     # This cannot be static (must have a __func__ attribute).
-    def cog_check(self, ctx: Context) -> bool:
+    async def cog_check(self, ctx: Context) -> bool:
         """Only allow moderators to invoke the commands in this cog."""
-        return with_role_check(ctx, *constants.MODERATION_ROLES)
+        return await commands.has_any_role(*constants.MODERATION_ROLES).predicate(ctx)
 
     # This cannot be static (must have a __func__ attribute).
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:

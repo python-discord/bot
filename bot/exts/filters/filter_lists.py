@@ -2,14 +2,13 @@ import logging
 from typing import Optional
 
 from discord import Colour, Embed
-from discord.ext.commands import BadArgument, Cog, Context, IDConverter, group
+from discord.ext.commands import BadArgument, Cog, Context, IDConverter, group, has_any_role
 
 from bot import constants
 from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.converters import ValidDiscordServerInvite, ValidFilterListType
 from bot.pagination import LinePaginator
-from bot.utils.checks import with_role_check
 
 log = logging.getLogger(__name__)
 
@@ -263,9 +262,9 @@ class FilterLists(Cog):
         """Syncs both allowlists and denylists with the API."""
         await self._sync_data(ctx)
 
-    def cog_check(self, ctx: Context) -> bool:
+    async def cog_check(self, ctx: Context) -> bool:
         """Only allow moderators to invoke the commands in this cog."""
-        return with_role_check(ctx, *constants.MODERATION_ROLES)
+        return await has_any_role(*constants.MODERATION_ROLES).predicate(ctx)
 
 
 def setup(bot: Bot) -> None:

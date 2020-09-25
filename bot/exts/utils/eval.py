@@ -9,11 +9,10 @@ from io import StringIO
 from typing import Any, Optional, Tuple
 
 import discord
-from discord.ext.commands import Cog, Context, group
+from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
 from bot.constants import Roles
-from bot.decorators import with_role
 from bot.interpreter import Interpreter
 from bot.utils import find_nth_occurrence, send_to_paste_service
 
@@ -199,14 +198,14 @@ async def func():  # (None,) -> Any
         await ctx.send(f"```py\n{out}```", embed=embed)
 
     @group(name='internal', aliases=('int',))
-    @with_role(Roles.owners, Roles.admins)
+    @has_any_role(Roles.owners, Roles.admins)
     async def internal_group(self, ctx: Context) -> None:
         """Internal commands. Top secret!"""
         if not ctx.invoked_subcommand:
             await ctx.send_help(ctx.command)
 
     @internal_group.command(name='eval', aliases=('e',))
-    @with_role(Roles.admins, Roles.owners)
+    @has_any_role(Roles.admins, Roles.owners)
     async def eval(self, ctx: Context, *, code: str) -> None:
         """Run eval in a REPL-like format."""
         code = code.strip("`")

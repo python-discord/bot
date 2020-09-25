@@ -5,16 +5,17 @@ from contextlib import suppress
 from datetime import datetime, timedelta
 
 import discord
+from async_rediscache import RedisCache
 from discord.ext import tasks
-from discord.ext.commands import Cog, Context, command, group
+from discord.ext.commands import Cog, Context, command, group, has_any_role
 from discord.utils import snowflake_time
 
 from bot import constants
 from bot.bot import Bot
-from bot.decorators import in_whitelist, with_role, without_role
+from bot.decorators import has_no_roles, in_whitelist
 from bot.exts.moderation.modlog import ModLog
-from bot.utils.checks import InWhitelistCheckFailure, without_role_check
-from bot.utils.redis_cache import RedisCache
+from bot.utils.checks import InWhitelistCheckFailure, has_no_roles_check
+from bot.utils.messages import format_user
 
 log = logging.getLogger(__name__)
 
@@ -285,7 +286,7 @@ class Verification(Cog):
 
         Returns the amount of successful requests. Failed requests are logged at info level.
         """
-        log.info(f"Sending {len(members)} requests")
+        log.trace(f"Sending {len(members)} requests")
         n_success, bad_statuses = 0, set()
 
         for progress, member in enumerate(members, start=1):
@@ -525,7 +526,7 @@ class Verification(Cog):
             )
 
             embed_text = (
-                f"{message.author.mention} sent a message in "
+                f"{format_user(message.author)} sent a message in "
                 f"{message.channel.mention} that contained user and/or role mentions."
                 f"\n\n**Original message:**\n>>> {message.content}"
             )
@@ -568,7 +569,7 @@ class Verification(Cog):
     # endregion
     # region: task management commands
 
-    @with_role(*constants.MODERATION_ROLES)
+    @has_any_role(*constants.MODERATION_ROLES)
     @group(name="verification")
     async def verification_group(self, ctx: Context) -> None:
         """Manage internal verification tasks."""
@@ -653,7 +654,7 @@ class Verification(Cog):
         self.bot.stats.incr(f"verification.{category}")
 
     @command(name='accept', aliases=('verify', 'verified', 'accepted'), hidden=True)
-    @without_role(constants.Roles.verified)
+    @has_no_roles(constants.Roles.verified)
     @in_whitelist(channels=(constants.Channels.verification,))
     async def accept_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
         """Accept our rules and gain access to the rest of the server."""
@@ -736,9 +737,10 @@ class Verification(Cog):
             error.handled = True
 
     @staticmethod
-    def bot_check(ctx: Context) -> bool:
+    async def bot_check(ctx: Context) -> bool:
         """Block any command within the verification channel that is not !accept."""
-        if ctx.channel.id == constants.Channels.verification and without_role_check(ctx, *constants.MODERATION_ROLES):
+        is_verification = ctx.channel.id == constants.Channels.verification
+        if is_verification and await has_no_roles_check(ctx, *constants.MODERATION_ROLES):
             return ctx.command.name == "accept"
         else:
             return True

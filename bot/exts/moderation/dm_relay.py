@@ -2,6 +2,7 @@ import logging
 from typing import Optional
 
 import discord
+from async_rediscache import RedisCache
 from discord import Color
 from discord.ext import commands
 from discord.ext.commands import Cog
@@ -9,8 +10,7 @@ from discord.ext.commands import Cog
 from bot import constants
 from bot.bot import Bot
 from bot.converters import UserMentionOrID
-from bot.utils import RedisCache
-from bot.utils.checks import in_whitelist_check, with_role_check
+from bot.utils.checks import in_whitelist_check
 from bot.utils.messages import send_attachments
 from bot.utils.webhooks import send_webhook
 
@@ -105,10 +105,10 @@ class DMRelay(Cog):
             except discord.HTTPException:
                 log.exception("Failed to send an attachment to the webhook")
 
-    def cog_check(self, ctx: commands.Context) -> bool:
+    async def cog_check(self, ctx: commands.Context) -> bool:
         """Only allow moderators to invoke the commands in this cog."""
         checks = [
-            with_role_check(ctx, *constants.MODERATION_ROLES),
+            await commands.has_any_role(*constants.MODERATION_ROLES).predicate(ctx),
             in_whitelist_check(
                 ctx,
                 channels=[constants.Channels.dm_log],

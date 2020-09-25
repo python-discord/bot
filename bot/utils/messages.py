@@ -6,8 +6,7 @@ import re
 from io import BytesIO
 from typing import List, Optional, Sequence, Union
 
-from discord import Client, Colour, Embed, File, Member, Message, Reaction, TextChannel, Webhook
-from discord.abc import Snowflake
+import discord
 from discord.errors import HTTPException
 from discord.ext.commands import Context
 
@@ -17,9 +16,9 @@ log = logging.getLogger(__name__)
 
 
 async def wait_for_deletion(
-    message: Message,
-    user_ids: Sequence[Snowflake],
-    client: Client,
+    message: discord.Message,
+    user_ids: Sequence[discord.abc.Snowflake],
+    client: discord.Client,
     deletion_emojis: Sequence[str] = (Emojis.trashcan,),
     timeout: float = 60 * 5,
     attach_emojis: bool = True,
@@ -37,7 +36,7 @@ async def wait_for_deletion(
         for emoji in deletion_emojis:
             await message.add_reaction(emoji)
 
-    def check(reaction: Reaction, user: Member) -> bool:
+    def check(reaction: discord.Reaction, user: discord.Member) -> bool:
         """Check that the deletion emoji is reacted by the appropriate user."""
         return (
             reaction.message.id == message.id
@@ -51,8 +50,8 @@ async def wait_for_deletion(
 
 
 async def send_attachments(
-    message: Message,
-    destination: Union[TextChannel, Webhook],
+    message: discord.Message,
+    destination: Union[discord.TextChannel, discord.Webhook],
     link_large: bool = True
 ) -> List[str]:
     """
@@ -76,9 +75,9 @@ async def send_attachments(
             if attachment.size <= destination.guild.filesize_limit - 512:
                 with BytesIO() as file:
                     await attachment.save(file, use_cached=True)
-                    attachment_file = File(file, filename=attachment.filename)
+                    attachment_file = discord.File(file, filename=attachment.filename)
 
-                    if isinstance(destination, TextChannel):
+                    if isinstance(destination, discord.TextChannel):
                         msg = await destination.send(file=attachment_file)
                         urls.append(msg.attachments[0].url)
                     else:
@@ -99,10 +98,10 @@ async def send_attachments(
 
     if link_large and large:
         desc = "\n".join(f"[{attachment.filename}]({attachment.url})" for attachment in large)
-        embed = Embed(description=desc)
+        embed = discord.Embed(description=desc)
         embed.set_footer(text="Attachments exceed upload size limit.")
 
-        if isinstance(destination, TextChannel):
+        if isinstance(destination, discord.TextChannel):
             await destination.send(embed=embed)
         else:
             await destination.send(
@@ -133,9 +132,14 @@ def sub_clyde(username: Optional[str]) -> Optional[str]:
 
 async def send_denial(ctx: Context, reason: str) -> None:
     """Send an embed denying the user with the given reason."""
-    embed = Embed()
-    embed.colour = Colour.red()
+    embed = discord.Embed()
+    embed.colour = discord.Colour.red()
     embed.title = random.choice(NEGATIVE_REPLIES)
     embed.description = reason
 
     await ctx.send(embed=embed)
+
+
+def format_user(user: discord.abc.User) -> str:
+    """Return a string for `user` which has their mention and ID."""
+    return f"{user.mention} (`{user.id}`)"

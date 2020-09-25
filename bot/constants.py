@@ -217,6 +217,7 @@ class Filter(metaclass=YAMLGetter):
     filter_zalgo: bool
     filter_invites: bool
     filter_domains: bool
+    filter_everyone_ping: bool
     watch_regex: bool
     watch_rich_embeds: bool
 
@@ -224,6 +225,7 @@ class Filter(metaclass=YAMLGetter):
     notify_user_zalgo: bool
     notify_user_invites: bool
     notify_user_domains: bool
+    notify_user_everyone_ping: bool
 
     ping_everyone: bool
     offensive_msg_delete_days: int
@@ -252,7 +254,7 @@ class DuckPond(metaclass=YAMLGetter):
     section = "duck_pond"
 
     threshold: int
-    custom_emojis: List[int]
+    channel_blacklist: List[int]
 
 
 class Emojis(metaclass=YAMLGetter):
@@ -291,20 +293,6 @@ class Emojis(metaclass=YAMLGetter):
     pencil: str
     cross_mark: str
     check_mark: str
-
-    ducky_yellow: int
-    ducky_blurple: int
-    ducky_regal: int
-    ducky_camo: int
-    ducky_ninja: int
-    ducky_devil: int
-    ducky_tube: int
-    ducky_hunt: int
-    ducky_wizard: int
-    ducky_party: int
-    ducky_angel: int
-    ducky_maul: int
-    ducky_santa: int
 
     upvotes: str
     comments: str
@@ -395,12 +383,14 @@ class Channels(metaclass=YAMLGetter):
     section = "guild"
     subsection = "channels"
 
+    admin_announcements: int
     admin_spam: int
     admins: int
     announcements: int
     attachment_log: int
     big_brother_logs: int
     bot_commands: int
+    change_log: int
     cooldown: int
     defcon: int
     dev_contrib: int
@@ -412,9 +402,11 @@ class Channels(metaclass=YAMLGetter):
     how_to_get_help: int
     incidents: int
     incidents_archive: int
+    mailing_lists: int
     message_log: int
     meta: int
     mod_alerts: int
+    mod_announcements: int
     mod_log: int
     mod_spam: int
     mods: int
@@ -423,7 +415,10 @@ class Channels(metaclass=YAMLGetter):
     off_topic_2: int
     organisation: int
     python_discussion: int
+    python_events: int
+    python_news: int
     reddit: int
+    staff_announcements: int
     talent_pool: int
     user_event_announcements: int
     user_log: int
@@ -474,7 +469,6 @@ class Guild(metaclass=YAMLGetter):
     moderation_roles: List[int]
     modlog_blacklist: List[int]
     reminder_whitelist: List[int]
-    staff_channels: List[int]
     staff_roles: List[int]
 
 
@@ -628,7 +622,6 @@ MODERATION_ROLES = Guild.moderation_roles
 STAFF_ROLES = Guild.staff_roles
 
 # Channel combinations
-STAFF_CHANNELS = Guild.staff_channels
 MODERATION_CHANNELS = Guild.moderation_channels
 
 # Bot replies

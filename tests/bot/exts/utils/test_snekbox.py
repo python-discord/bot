@@ -117,12 +117,12 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
             ('<!@', ("<!@\u200B", None), r'Convert <!@ to <!@\u200B'),
             (
                 '\u202E\u202E\u202E',
-                ('Code block escape attempt detected; will not output result', None),
+                ('Code block escape attempt detected; will not output result', 'https://testificate.com/'),
                 'Detect RIGHT-TO-LEFT OVERRIDE'
             ),
             (
                 '\u200B\u200B\u200B',
-                ('Code block escape attempt detected; will not output result', None),
+                ('Code block escape attempt detected; will not output result', 'https://testificate.com/'),
                 'Detect ZERO WIDTH SPACE'
             ),
             ('long\nbeard', ('001 | long\n002 | beard', None), 'Two line output'),

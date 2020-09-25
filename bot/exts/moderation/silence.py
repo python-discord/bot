@@ -10,7 +10,6 @@ from discord.ext.commands import Context
 from bot.bot import Bot
 from bot.constants import Channels, Emojis, Guild, MODERATION_ROLES, Roles
 from bot.converters import HushDurationConverter
-from bot.utils.checks import with_role_check
 from bot.utils.scheduling import Scheduler
 
 log = logging.getLogger(__name__)
@@ -160,9 +159,9 @@ class Silence(commands.Cog):
             asyncio.create_task(self._mod_alerts_channel.send(message))
 
     # This cannot be static (must have a __func__ attribute).
-    def cog_check(self, ctx: Context) -> bool:
+    async def cog_check(self, ctx: Context) -> bool:
         """Only allow moderators to invoke the commands in this cog."""
-        return with_role_check(ctx, *MODERATION_ROLES)
+        return await commands.has_any_role(*MODERATION_ROLES).predicate(ctx)
 
 
 def setup(bot: Bot) -> None:

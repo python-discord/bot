@@ -150,6 +150,7 @@ class Snekbox(Cog):
             output = output.replace("<!@", "<!@\u200B")  # Zero-width space
 
         if ESCAPE_REGEX.findall(output):
+            paste_link = await self.upload_output(original_output)
             return "Code block escape attempt detected; will not output result", paste_link
 
         truncated = False

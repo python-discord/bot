@@ -7,7 +7,6 @@ from more_itertools import unique_everseen
 
 from bot.bot import Bot
 from bot.constants import Roles
-from bot.decorators import with_role
 
 log = logging.getLogger(__name__)
 
@@ -22,7 +21,7 @@ class CodeJams(commands.Cog):
         self.bot = bot
 
     @commands.command()
-    @with_role(Roles.admins)
+    @commands.has_any_role(Roles.admins)
     async def createteam(self, ctx: commands.Context, team_name: str, members: commands.Greedy[Member]) -> None:
         """
         Create team channels (voice and text) in the Code Jams category, assign roles, and add overwrites for the team.

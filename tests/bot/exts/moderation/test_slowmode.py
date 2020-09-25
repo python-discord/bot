@@ -103,9 +103,11 @@ class SlowmodeTests(unittest.IsolatedAsyncioTestCase):
             f'{Emojis.check_mark} The slowmode delay for #meta has been reset to 0 seconds.'
         )
 
-    @mock.patch("bot.exts.moderation.slowmode.with_role_check")
+    @mock.patch("bot.exts.moderation.slowmode.has_any_role")
     @mock.patch("bot.exts.moderation.slowmode.MODERATION_ROLES", new=(1, 2, 3))
-    def test_cog_check(self, role_check):
+    async def test_cog_check(self, role_check):
         """Role check is called with `MODERATION_ROLES`"""
-        self.cog.cog_check(self.ctx)
-        role_check.assert_called_once_with(self.ctx, *(1, 2, 3))
+        role_check.return_value.predicate = mock.AsyncMock()
+        await self.cog.cog_check(self.ctx)
+        role_check.assert_called_once_with(*(1, 2, 3))
+        role_check.return_value.predicate.assert_awaited_once_with(self.ctx)

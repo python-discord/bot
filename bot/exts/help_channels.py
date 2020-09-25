@@ -9,12 +9,11 @@ from pathlib import Path
 
 import discord
 import discord.abc
+from async_rediscache import RedisCache
 from discord.ext import commands
 
 from bot import constants
 from bot.bot import Bot
-from bot.utils import RedisCache
-from bot.utils.checks import with_role_check
 from bot.utils.scheduling import Scheduler
 
 log = logging.getLogger(__name__)
@@ -196,12 +195,12 @@ class HelpChannels(commands.Cog):
             return True
 
         log.trace(f"{ctx.author} is not the help channel claimant, checking roles.")
-        role_check = with_role_check(ctx, *constants.HelpChannels.cmd_whitelist)
+        has_role = await commands.has_any_role(*constants.HelpChannels.cmd_whitelist).predicate(ctx)
 
-        if role_check:
+        if has_role:
             self.bot.stats.incr("help.dormant_invoke.staff")
 
-        return role_check
+        return has_role
 
     @commands.command(name="close", aliases=["dormant", "solved"], enabled=False)
     async def close_command(self, ctx: commands.Context) -> None:
