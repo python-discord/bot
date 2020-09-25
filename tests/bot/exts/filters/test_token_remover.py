@@ -27,20 +27,20 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         self.msg.author.__str__ = MagicMock(return_value=self.msg.author.name)
         self.msg.author.avatar_url_as.return_value = "picture-lemon.png"
 
-    def test_is_valid_user_id_valid(self):
-        """Should consider user IDs valid if they decode entirely to ASCII digits."""
-        ids = (
-            "NDcyMjY1OTQzMDYyNDEzMzMy",
-            "NDc1MDczNjI5Mzk5NTQ3OTA0",
-            "NDY3MjIzMjMwNjUwNzc3NjQx",
+    def test_extract_user_id_valid(self):
+        """Should consider user IDs valid if they decode into an integer ID."""
+        id_pairs = (
+            ("NDcyMjY1OTQzMDYyNDEzMzMy", 472265943062413332),
+            ("NDc1MDczNjI5Mzk5NTQ3OTA0", 475073629399547904),
+            ("NDY3MjIzMjMwNjUwNzc3NjQx", 467223230650777641),
         )
 
-        for user_id in ids:
-            with self.subTest(user_id=user_id):
-                result = TokenRemover.is_valid_user_id(user_id)
-                self.assertTrue(result)
+        for token_id, user_id in id_pairs:
+            with self.subTest(token_id=token_id):
+                result = TokenRemover.extract_user_id(token_id)
+                self.assertEqual(result, user_id)
 
-    def test_is_valid_user_id_invalid(self):
+    def test_extract_user_id_invalid(self):
         """Should consider non-digit and non-ASCII IDs invalid."""
         ids = (
             ("SGVsbG8gd29ybGQ", "non-digit ASCII"),
@@ -54,8 +54,8 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
 
         for user_id, msg in ids:
             with self.subTest(msg=msg):
-                result = TokenRemover.is_valid_user_id(user_id)
-                self.assertFalse(result)
+                result = TokenRemover.extract_user_id(user_id)
+                self.assertIsNone(result)
 
     def test_is_valid_timestamp_valid(self):
         """Should consider timestamps valid if they're greater than the Discord epoch."""
@@ -172,10 +172,17 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(return_value)
         token_re.finditer.assert_called_once_with(self.msg.content)
 
-    @autospec(TokenRemover, "is_valid_user_id", "is_valid_timestamp", "is_maybe_valid_hmac")
+    @autospec(TokenRemover, "extract_user_id", "is_valid_timestamp", "is_maybe_valid_hmac")
     @autospec("bot.exts.filters.token_remover", "Token")
     @autospec("bot.exts.filters.token_remover", "TOKEN_RE")
-    def test_find_token_valid_match(self, token_re, token_cls, is_valid_id, is_valid_timestamp, is_maybe_valid_hmac):
+    def test_find_token_valid_match(
+        self,
+        token_re,
+        token_cls,
+        extract_user_id,
+        is_valid_timestamp,
+        is_maybe_valid_hmac,
+    ):
         """The first match with a valid user ID, timestamp, and HMAC should be returned as a `Token`."""
         matches = [
             mock.create_autospec(Match, spec_set=True, instance=True),
@@ -188,7 +195,7 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
 
         token_re.finditer.return_value = matches
         token_cls.side_effect = tokens
-        is_valid_id.side_effect = (False, True)  # The 1st match will be invalid, 2nd one valid.
+        extract_user_id.side_effect = (None, True)  # The 1st match will be invalid, 2nd one valid.
         is_valid_timestamp.return_value = True
         is_maybe_valid_hmac.return_value = True
 
@@ -197,21 +204,21 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(tokens[1], return_value)
         token_re.finditer.assert_called_once_with(self.msg.content)
 
-    @autospec(TokenRemover, "is_valid_user_id", "is_valid_timestamp", "is_maybe_valid_hmac")
+    @autospec(TokenRemover, "extract_user_id", "is_valid_timestamp", "is_maybe_valid_hmac")
     @autospec("bot.exts.filters.token_remover", "Token")
     @autospec("bot.exts.filters.token_remover", "TOKEN_RE")
     def test_find_token_invalid_matches(
         self,
         token_re,
         token_cls,
-        is_valid_id,
+        extract_user_id,
         is_valid_timestamp,
         is_maybe_valid_hmac,
     ):
         """None should be returned if no matches have valid user IDs, HMACs, and timestamps."""
         token_re.finditer.return_value = [mock.create_autospec(Match, spec_set=True, instance=True)]
         token_cls.return_value = mock.create_autospec(Token, spec_set=True, instance=True)
-        is_valid_id.return_value = False
+        extract_user_id.return_value = None
         is_valid_timestamp.return_value = False
         is_maybe_valid_hmac.return_value = False
 

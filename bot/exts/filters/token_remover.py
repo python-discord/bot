@@ -158,7 +158,7 @@ class TokenRemover(Cog):
         for match in TOKEN_RE.finditer(msg.content):
             token = Token(*match.groups())
             if (
-                cls.is_valid_user_id(token.user_id)
+                (cls.extract_user_id(token.user_id) is not None)
                 and cls.is_valid_timestamp(token.timestamp)
                 and cls.is_maybe_valid_hmac(token.hmac)
             ):
@@ -183,19 +183,6 @@ class TokenRemover(Cog):
             return int(string)
         except (binascii.Error, ValueError):
             return None
-
-    @classmethod
-    def is_valid_user_id(cls, b64_content: str) -> bool:
-        """
-        Check potential token to see if it contains a valid Discord user ID.
-
-        See: https://discordapp.com/developers/docs/reference#snowflakes
-        """
-        decoded_id = cls.extract_user_id(b64_content)
-        if not decoded_id:
-            return False
-
-        return True
 
     @staticmethod
     def is_valid_timestamp(b64_content: str) -> bool:
