@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from discord import Colour, Embed
 
-from bot.cogs import tags
+from bot.exts.info import tags
 from tests.helpers import MockBot, MockContext, MockMember, MockRole, MockTextChannel
 
 
@@ -14,7 +14,7 @@ class TagsBaseTests(unittest.TestCase):
 
     def setUp(self) -> None:
         self.bot = MockBot()
-        with patch("bot.cogs.tags.Path") as path:
+        with patch("bot.exts.info.tags.Path") as path:
             path.return_value = Path("tests", "bot", "resources", "testing-tags")
             self.cog = tags.Tags(self.bot)
         self.member = MockMember(roles=(MockRole(name="Developers"),))
@@ -22,7 +22,7 @@ class TagsBaseTests(unittest.TestCase):
     def test_get_tags(self):
         """Should return `Dict` of tags, fetched from resources and have correct keys."""
         testing_path = Path("tests", "bot", "resources", "testing-tags")
-        with patch("bot.cogs.tags.Path") as path:
+        with patch("bot.exts.info.tags.Path") as path:
             path.return_value = testing_path
             actual = tags.Tags.get_tags()
 
@@ -184,7 +184,7 @@ class TagsCommandsTests(unittest.IsolatedAsyncioTestCase):
         self.bot = MockBot()
         self.member = MockMember(roles=(MockRole(name="Developers"),))
         self.ctx = MockContext(bot=self.bot, author=self.member)
-        with patch("bot.cogs.tags.Path") as path:
+        with patch("bot.exts.info.tags.Path") as path:
             path.return_value = Path("tests", "bot", "resources", "testing-tags")
             self.cog = tags.Tags(self.bot)
 
@@ -273,7 +273,7 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
         self.bot = MockBot()
         self.member = MockMember(roles=(MockRole(name="Developers"), MockRole(name="Moderators")))
         self.ctx = MockContext(bot=self.bot, channel=MockTextChannel(id=1234), author=self.member)
-        with patch("bot.cogs.tags.Path") as path:
+        with patch("bot.exts.info.tags.Path") as path:
             path.return_value = Path("tests", "bot", "resources", "testing-tags")
             self.cog = tags.Tags(self.bot)
 
