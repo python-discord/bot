@@ -316,9 +316,18 @@ class UserSyncer(Syncer):
 
         for db_user in db_users.values():
             guild_user = guild_users.get(db_user.id)
+
             if guild_user is not None:
                 if db_user != guild_user:
-                    users_to_update.add(guild_user)
+                    fields_to_none: dict = {}
+
+                    for field in _User._fields:
+                        # Set un-changed values to None except ID to speed up API PATCH method.
+                        if getattr(db_user, field) == getattr(guild_user, field) and field != "id":
+                            fields_to_none[field] = None
+
+                    new_api_user = guild_user._replace(**fields_to_none)
+                    users_to_update.add(new_api_user)
 
             elif db_user.in_guild:
                 # The user is known in the DB but not the guild, and the
@@ -326,7 +335,13 @@ class UserSyncer(Syncer):
                 # This means that the user has left since the last sync.
                 # Update the `in_guild` attribute of the user on the site
                 # to signify that the user left.
-                new_api_user = db_user._replace(in_guild=False)
+
+                # Set un-changed fields to None except ID as it is required by the API.
+                fields_to_none: dict = {field: None for field in db_user._fields if field not in ["id", "in_guild"]}
+                new_api_user = db_user._replace(
+                    in_guild=False,
+                    **fields_to_none
+                )
                 users_to_update.add(new_api_user)
 
         new_user_ids = set(guild_users.keys()) - set(db_users.keys())
@@ -364,6 +379,15 @@ class UserSyncer(Syncer):
 
         return endpoint, params
 
+    @staticmethod
+    def patch_dict(user: _User) -> dict:
+        """Convert namedtuple to dict by omitting None values."""
+        user_dict: dict = {}
+        for field in user._fields:
+            if (value := getattr(user, field)) is not None:
+                user_dict[field] = value
+        return user_dict
+
     async def _sync(self, diff: _Diff) -> None:
         """Synchronise the database with the user cache of `guild`."""
         log.trace("Syncing created users...")
@@ -371,5 +395,5 @@ class UserSyncer(Syncer):
             created: list = [user._asdict() for user in diff.created]
             await self.bot.api_client.post("bot/users", json=created)
         if diff.updated:
-            updated: list = [user._asdict() for user in diff.updated]
+            updated: list = [self.patch_dict(user) for user in diff.updated]
             await self.bot.api_client.patch("bot/users/bulk_patch", json=updated)
