@@ -335,10 +335,12 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
                 }
             ]
         )
+        self.cog.bot.stats.incr = MagicMock()
 
         for case in test_cases:
             with self.subTest(tag_name=case["tag"], expected=case["expected"]):
                 self.ctx.send.reset_mock()
+                self.cog.bot.stats.incr.reset_mock()
                 self.assertIsNone(await self.cog.get_command.callback(self.cog, self.ctx, tag_name=case["tag"]))
                 if case["expected"] is None:
                     self.ctx.send.assert_not_awaited()
@@ -347,6 +349,20 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
 
                     self.assertEqual(embed.to_dict(), case["expected"])
                     self.ctx.send.assert_awaited_once_with(embed=embed)
+                    self.cog.bot.stats.incr.assert_called_once()
+
+    @patch("bot.exts.info.tags.time.time", MagicMock(return_value=1234))
+    async def test_tag_cooldown(self):
+    	"""Should set tag to cooldown when not in test channels."""
+    	self.assertIsNone(await self.cog.get_command.callback(self.cog, self.ctx, tag_name="class"))
+    	self.assertIn("class", self.cog.tag_cooldowns)
+    	self.assertEqual(self.cog.tag_cooldowns["class"], {"time": 1234, "channel": self.ctx.channel.id})
+
+    async def test_tag_cooldown_test_channel(self):
+    	"""Should not set tag to cooldown when in test channels."""
+    	with patch("bot.exts.info.tags.TEST_CHANNELS", (1234,)):
+    	    self.assertIsNone(await self.cog.get_command.callback(self.cog, self.ctx, tag_name="class"))
+    	self.assertNotIn("class", self.cog.tag_cooldowns)
 
     async def test_tag_using_permissions(self):
         """Should silently return when user don't have required role to use tag."""
