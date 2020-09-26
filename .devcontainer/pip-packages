@@ -1,0 +1,9 @@
+## List of packages to install with pip inside the container
+# Lines starting with "#" are ignored
+
+pip
+setuptools
+
+# Mandatory
+docker-compose
+pipenv

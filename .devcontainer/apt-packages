@@ -1,0 +1,24 @@
+## List of packages to install with apt inside the container
+# Lines starting with "#" are ignored
+
+## Mandatory
+python
+docker
+# Script dependencies
+curl
+git
+# CPython dependencies
+#make
+#build-essential
+#zlib1g-dev
+
+# Additional
+#openssh-client
+#htop
+#wget
+#nano
+#vim
+#locales
+#sudo
+#man-db
+#httpie

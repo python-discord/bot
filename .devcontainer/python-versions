@@ -1,0 +1,5 @@
+## List of python versions to install with pyenv inside the container
+# Lines starting with "#" are ignored
+#3.7.6
+3.8.1
+#3.9-dev
