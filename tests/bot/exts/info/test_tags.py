@@ -353,26 +353,26 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
 
     @patch("bot.exts.info.tags.time.time", MagicMock(return_value=1234))
     async def test_tag_cooldown(self):
-    	"""Should set tag to cooldown when not in test channels."""
-    	self.assertIsNone(await self.cog.get_command.callback(self.cog, self.ctx, tag_name="class"))
-    	self.assertIn("class", self.cog.tag_cooldowns)
-    	self.assertEqual(self.cog.tag_cooldowns["class"], {"time": 1234, "channel": self.ctx.channel.id})
+        """Should set tag to cooldown when not in test channels."""
+        self.assertIsNone(await self.cog.get_command.callback(self.cog, self.ctx, tag_name="class"))
+        self.assertIn("class", self.cog.tag_cooldowns)
+        self.assertEqual(self.cog.tag_cooldowns["class"], {"time": 1234, "channel": self.ctx.channel.id})
 
     async def test_tag_cooldown_test_channel(self):
-    	"""Should not set tag to cooldown when in test channels."""
-    	with patch("bot.exts.info.tags.TEST_CHANNELS", (1234,)):
-    	    self.assertIsNone(await self.cog.get_command.callback(self.cog, self.ctx, tag_name="class"))
-    	self.assertNotIn("class", self.cog.tag_cooldowns)
+        """Should not set tag to cooldown when in test channels."""
+        with patch("bot.exts.info.tags.TEST_CHANNELS", (1234,)):
+            self.assertIsNone(await self.cog.get_command.callback(self.cog, self.ctx, tag_name="class"))
+        self.assertNotIn("class", self.cog.tag_cooldowns)
 
     @patch("bot.exts.info.tags.Tags.check_accessibility")
     async def test_tag_permission_check(self, check_accessibility_mock):
-    	"""Should call check_accessibility for every tag that _get_tag returns."""
-    	self.assertIsNone(await self.cog.get_command.callback(self.cog, self.ctx, tag_name="clas"))
-    	calls = []
-    	for tag in self.cog._get_tag("clas"):
-    		calls.append(call(self.ctx.author, tag))
-    		calls.append(call().__bool__())
-    	check_accessibility_mock.assert_has_calls(calls)
+        """Should call check_accessibility for every tag that _get_tag returns."""
+        self.assertIsNone(await self.cog.get_command.callback(self.cog, self.ctx, tag_name="clas"))
+        calls = []
+        for tag in self.cog._get_tag("clas"):
+            calls.append(call(self.ctx.author, tag))
+            calls.append(call().__bool__())
+        check_accessibility_mock.assert_has_calls(calls)
 
     async def test_tag_using_permissions(self):
         """Should silently return when user don't have required role to use tag."""
