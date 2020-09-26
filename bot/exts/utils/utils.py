@@ -15,7 +15,7 @@ from bot.constants import Channels, MODERATION_ROLES, STAFF_ROLES
 from bot.decorators import in_whitelist
 from bot.pagination import LinePaginator
 from bot.utils import messages
-from bot.utils.cache import async_cache
+from bot.utils.cache import AsyncCache
 
 log = logging.getLogger(__name__)
 
@@ -42,6 +42,9 @@ Namespaces are one honking great idea -- let's do more of those!
 """
 
 ICON_URL = "https://www.python.org/static/opengraph-icon-200x200.png"
+
+# Async cache instance for PEPs
+async_cache = AsyncCache()
 
 
 class Utils(Cog):

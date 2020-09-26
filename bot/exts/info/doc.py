@@ -22,7 +22,7 @@ from bot.bot import Bot
 from bot.constants import MODERATION_ROLES, RedirectOutput
 from bot.converters import ValidPythonIdentifier, ValidURL
 from bot.pagination import LinePaginator
-from bot.utils.cache import async_cache
+from bot.utils.cache import AsyncCache
 from bot.utils.messages import wait_for_deletion
 
 
@@ -65,6 +65,9 @@ WHITESPACE_AFTER_NEWLINES_RE = re.compile(r"(?<=\n\n)(\s+)")
 
 FAILED_REQUEST_RETRY_AMOUNT = 3
 NOT_FOUND_DELETE_DELAY = RedirectOutput.delete_delay
+
+# Async cache instance for docs cog
+async_cache = AsyncCache()
 
 
 class DocMarkdownConverter(MarkdownConverter):
@@ -187,7 +190,7 @@ class Doc(commands.Cog):
         self.base_urls.clear()
         self.inventories.clear()
         self.renamed_symbols.clear()
-        async_cache.cache["get_symbol_embed"] = OrderedDict()
+        async_cache.clear()
 
         # Run all coroutines concurrently - since each of them performs a HTTP
         # request, this speeds up fetching the inventory data heavily.
