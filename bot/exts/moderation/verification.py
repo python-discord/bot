@@ -109,6 +109,25 @@ def is_verified(member: discord.Member) -> bool:
     return len(set(member.roles) - unverified_roles) > 0
 
 
+async def safe_dm(coro: t.Coroutine) -> None:
+    """
+    Execute `coro` ignoring disabled DM warnings.
+
+    The 50_0007 error code indicates that the target user does not accept DMs.
+    As it turns out, this error code can appear on both 400 and 403 statuses,
+    we therefore catch any Discord exception.
+
+    If the request fails on any other error code, the exception propagates,
+    and must be handled by the caller.
+    """
+    try:
+        await coro
+    except discord.HTTPException as discord_exc:
+        log.trace(f"DM dispatch failed on status {discord_exc.status} with code: {discord_exc.code}")
+        if discord_exc.code != 50_007:  # If any reason other than disabled DMs
+            raise
+
+
 class Verification(Cog):
     """
     User verification and role management.
@@ -330,11 +349,9 @@ class Verification(Cog):
         async def kick_request(member: discord.Member) -> None:
             """Send `KICKED_MESSAGE` to `member` and kick them from the guild."""
             try:
-                await member.send(KICKED_MESSAGE)
-            except discord.Forbidden as exc_403:
-                log.trace(f"DM dispatch failed on 403 error with code: {exc_403.code}")
-                if exc_403.code != 50_007:  # 403 raised for any other reason than disabled DMs
-                    raise StopExecution(reason=exc_403)
+                await safe_dm(member.send(KICKED_MESSAGE))  # Suppress disabled DMs
+            except discord.HTTPException as suspicious_exception:
+                raise StopExecution(reason=suspicious_exception)
             await member.kick(reason=f"User has not verified in {constants.Verification.kicked_after} days")
 
         n_kicked = await self._send_requests(members, kick_request, Limit(batch_size=2, sleep_secs=1))
