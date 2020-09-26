@@ -1,81 +1,126 @@
 import asyncio
 import contextlib
+import inspect
 import logging
 import typing as t
-from abc import abstractmethod
+from datetime import datetime
 from functools import partial
 
-from bot.utils import CogABCMeta
 
-log = logging.getLogger(__name__)
+class Scheduler:
+    """
+    Schedule the execution of coroutines and keep track of them.
 
+    When instantiating a Scheduler, a name must be provided. This name is used to distinguish the
+    instance's log messages from other instances. Using the name of the class or module containing
+    the instance is suggested.
 
-class Scheduler(metaclass=CogABCMeta):
-    """Task scheduler."""
+    Coroutines can be scheduled immediately with `schedule` or in the future with `schedule_at`
+    or `schedule_later`. A unique ID is required to be given in order to keep track of the
+    resulting Tasks. Any scheduled task can be cancelled prematurely using `cancel` by providing
+    the same ID used to schedule it.  The `in` operator is supported for checking if a task with a
+    given ID is currently scheduled.
 
-    def __init__(self):
-        # Keep track of the child cog's name so the logs are clear.
-        self.cog_name = self.__class__.__name__
+    Any exception raised in a scheduled task is logged when the task is done.
+    """
 
+    def __init__(self, name: str):
+        self.name = name
+
+        self._log = logging.getLogger(f"{__name__}.{name}")
         self._scheduled_tasks: t.Dict[t.Hashable, asyncio.Task] = {}
 
-    @abstractmethod
-    async def _scheduled_task(self, task_object: t.Any) -> None:
-        """
-        A coroutine which handles the scheduling.
+    def __contains__(self, task_id: t.Hashable) -> bool:
+        """Return True if a task with the given `task_id` is currently scheduled."""
+        return task_id in self._scheduled_tasks
 
-        This is added to the scheduled tasks, and should wait the task duration, execute the desired
-        code, then clean up the task.
-
-        For example, in Reminders this will wait for the reminder duration, send the reminder,
-        then make a site API request to delete the reminder from the database.
+    def schedule(self, task_id: t.Hashable, coroutine: t.Coroutine) -> None:
         """
+        Schedule the execution of a `coroutine`.
 
-    def schedule_task(self, task_id: t.Hashable, task_data: t.Any) -> None:
+        If a task with `task_id` already exists, close `coroutine` instead of scheduling it. This
+        prevents unawaited coroutine warnings. Don't pass a coroutine that'll be re-used elsewhere.
         """
-        Schedules a task.
+        self._log.trace(f"Scheduling task #{task_id}...")
 
-        `task_data` is passed to the `Scheduler._scheduled_task()` coroutine.
-        """
-        log.trace(f"{self.cog_name}: scheduling task #{task_id}...")
+        msg = f"Cannot schedule an already started coroutine for #{task_id}"
+        assert inspect.getcoroutinestate(coroutine) == "CORO_CREATED", msg
 
         if task_id in self._scheduled_tasks:
-            log.debug(
-                f"{self.cog_name}: did not schedule task #{task_id}; task was already scheduled."
-            )
+            self._log.debug(f"Did not schedule task #{task_id}; task was already scheduled.")
+            coroutine.close()
             return
 
-        task = asyncio.create_task(self._scheduled_task(task_data))
+        task = asyncio.create_task(coroutine, name=f"{self.name}_{task_id}")
         task.add_done_callback(partial(self._task_done_callback, task_id))
 
         self._scheduled_tasks[task_id] = task
-        log.debug(f"{self.cog_name}: scheduled task #{task_id} {id(task)}.")
+        self._log.debug(f"Scheduled task #{task_id} {id(task)}.")
 
-    def cancel_task(self, task_id: t.Hashable, ignore_missing: bool = False) -> None:
+    def schedule_at(self, time: datetime, task_id: t.Hashable, coroutine: t.Coroutine) -> None:
         """
-        Unschedule the task identified by `task_id`.
+        Schedule `coroutine` to be executed at the given naïve UTC `time`.
 
-        If `ignore_missing` is True, a warning will not be sent if a task isn't found.
+        If `time` is in the past, schedule `coroutine` immediately.
+
+        If a task with `task_id` already exists, close `coroutine` instead of scheduling it. This
+        prevents unawaited coroutine warnings. Don't pass a coroutine that'll be re-used elsewhere.
         """
-        log.trace(f"{self.cog_name}: cancelling task #{task_id}...")
-        task = self._scheduled_tasks.get(task_id)
+        delay = (time - datetime.utcnow()).total_seconds()
+        if delay > 0:
+            coroutine = self._await_later(delay, task_id, coroutine)
 
-        if not task:
-            if not ignore_missing:
-                log.warning(f"{self.cog_name}: failed to unschedule {task_id} (no task found).")
-            return
+        self.schedule(task_id, coroutine)
 
-        del self._scheduled_tasks[task_id]
-        task.cancel()
+    def schedule_later(self, delay: t.Union[int, float], task_id: t.Hashable, coroutine: t.Coroutine) -> None:
+        """
+        Schedule `coroutine` to be executed after the given `delay` number of seconds.
 
-        log.debug(f"{self.cog_name}: unscheduled task #{task_id} {id(task)}.")
+        If a task with `task_id` already exists, close `coroutine` instead of scheduling it. This
+        prevents unawaited coroutine warnings. Don't pass a coroutine that'll be re-used elsewhere.
+        """
+        self.schedule(task_id, self._await_later(delay, task_id, coroutine))
+
+    def cancel(self, task_id: t.Hashable) -> None:
+        """Unschedule the task identified by `task_id`. Log a warning if the task doesn't exist."""
+        self._log.trace(f"Cancelling task #{task_id}...")
+
+        try:
+            task = self._scheduled_tasks.pop(task_id)
+        except KeyError:
+            self._log.warning(f"Failed to unschedule {task_id} (no task found).")
+        else:
+            task.cancel()
+
+            self._log.debug(f"Unscheduled task #{task_id} {id(task)}.")
 
     def cancel_all(self) -> None:
         """Unschedule all known tasks."""
-        log.debug(f"{self.cog_name}: unscheduling all tasks")
+        self._log.debug("Unscheduling all tasks")
 
         for task_id in self._scheduled_tasks.copy():
-            self.cancel_task(task_id, ignore_missing=True)
+            self.cancel(task_id)
+
+    async def _await_later(self, delay: t.Union[int, float], task_id: t.Hashable, coroutine: t.Coroutine) -> None:
+        """Await `coroutine` after the given `delay` number of seconds."""
+        try:
+            self._log.trace(f"Waiting {delay} seconds before awaiting coroutine for #{task_id}.")
+            await asyncio.sleep(delay)
+
+            # Use asyncio.shield to prevent the coroutine from cancelling itself.
+            self._log.trace(f"Done waiting for #{task_id}; now awaiting the coroutine.")
+            await asyncio.shield(coroutine)
+        finally:
+            # Close it to prevent unawaited coroutine warnings,
+            # which would happen if the task was cancelled during the sleep.
+            # Only close it if it's not been awaited yet. This check is important because the
+            # coroutine may cancel this task, which would also trigger the finally block.
+            state = inspect.getcoroutinestate(coroutine)
+            if state == "CORO_CREATED":
+                self._log.debug(f"Explicitly closing the coroutine for #{task_id}.")
+                coroutine.close()
+            else:
+                self._log.debug(f"Finally block reached for #{task_id}; {state=}")
 
     def _task_done_callback(self, task_id: t.Hashable, done_task: asyncio.Task) -> None:
         """
@@ -84,24 +129,24 @@ class Scheduler(metaclass=CogABCMeta):
         If `done_task` and the task associated with `task_id` are different, then the latter
         will not be deleted. In this case, a new task was likely rescheduled with the same ID.
         """
-        log.trace(f"{self.cog_name}: performing done callback for task #{task_id} {id(done_task)}.")
+        self._log.trace(f"Performing done callback for task #{task_id} {id(done_task)}.")
 
         scheduled_task = self._scheduled_tasks.get(task_id)
 
         if scheduled_task and done_task is scheduled_task:
-            # A task for the ID exists and its the same as the done task.
+            # A task for the ID exists and is the same as the done task.
             # Since this is the done callback, the task is already done so no need to cancel it.
-            log.trace(f"{self.cog_name}: deleting task #{task_id} {id(done_task)}.")
+            self._log.trace(f"Deleting task #{task_id} {id(done_task)}.")
             del self._scheduled_tasks[task_id]
         elif scheduled_task:
             # A new task was likely rescheduled with the same ID.
-            log.debug(
-                f"{self.cog_name}: the scheduled task #{task_id} {id(scheduled_task)} "
+            self._log.debug(
+                f"The scheduled task #{task_id} {id(scheduled_task)} "
                 f"and the done task {id(done_task)} differ."
             )
         elif not done_task.cancelled():
-            log.warning(
-                f"{self.cog_name}: task #{task_id} not found while handling task {id(done_task)}! "
+            self._log.warning(
+                f"Task #{task_id} not found while handling task {id(done_task)}! "
                 f"A task somehow got unscheduled improperly (i.e. deleted but not cancelled)."
             )
 
@@ -109,7 +154,4 @@ class Scheduler(metaclass=CogABCMeta):
             exception = done_task.exception()
             # Log the exception if one exists.
             if exception:
-                log.error(
-                    f"{self.cog_name}: error in task #{task_id} {id(done_task)}!",
-                    exc_info=exception
-                )
+                self._log.error(f"Error in task #{task_id} {id(done_task)}!", exc_info=exception)

@@ -1,9 +1,4 @@
-from abc import ABCMeta
+from bot.utils.helpers import CogABCMeta, find_nth_occurrence, pad_base64
+from bot.utils.services import send_to_paste_service
 
-from discord.ext.commands import CogMeta
-
-
-class CogABCMeta(CogMeta, ABCMeta):
-    """Metaclass for ABCs meant to be implemented as Cogs."""
-
-    pass
+__all__ = ['CogABCMeta', 'find_nth_occurrence', 'pad_base64', 'send_to_paste_service']
