@@ -3,7 +3,6 @@ import functools
 import logging
 import re
 import textwrap
-from collections import OrderedDict
 from contextlib import suppress
 from types import SimpleNamespace
 from typing import Optional, Tuple

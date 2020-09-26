@@ -35,6 +35,6 @@ class AsyncCache:
             return wrapper
         return decorator
 
-    def clear(self):
+    def clear(self) -> None:
         """Clear cache instance."""
         self._cache.clear()

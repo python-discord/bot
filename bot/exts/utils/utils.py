@@ -7,7 +7,7 @@ from email.parser import HeaderParser
 from io import StringIO
 from typing import Dict, Optional, Tuple, Union
 
-from discord import Colour, Embed, Message, utils
+from discord import Colour, Embed, utils
 from discord.ext.commands import BadArgument, Cog, Context, clean_content, command, has_any_role
 
 from bot.bot import Bot
