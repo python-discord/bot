@@ -36,7 +36,7 @@ class TagsBaseTests(unittest.TestCase):
                 if len(parents) > 1:
                     self.assertEqual(parents[-2].name, actual[name]["restricted_to"])
 
-    @patch("bot.cogs.tags.REGEX_NON_ALPHABET")
+    @patch("bot.exts.info.tags.REGEX_NON_ALPHABET")
     def test_fuzzy_search(self, regex):
         """Should return correct words match rate."""
         test_cases = [
