@@ -44,9 +44,7 @@ class Syncer(abc.ABC):
         """
         Synchronise the database with the cache of `guild`.
 
-        If the differences between the cache and the database are greater than
-        `bot.constants.Sync.max_diff`, then a confirmation prompt will be sent to the dev-core
-        channel. The confirmation can be optionally redirect to `ctx` instead.
+        If `ctx` is given, send a message with the results.
         """
         log.info(f"Starting {self.name} syncer.")
 
