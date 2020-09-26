@@ -4,4 +4,4 @@ USER root
 
 WORKDIR /tmp/devcontainer
 COPY . .
-RUN chmod +x ./setup-debian.sh && ./setup-debian.sh
+RUN chmod +x ./base-setup.sh && ./base-setup.sh
