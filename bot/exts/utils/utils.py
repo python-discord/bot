@@ -7,7 +7,7 @@ from email.parser import HeaderParser
 from io import StringIO
 from typing import Dict, Optional, Tuple, Union
 
-from discord import Colour, Embed, utils
+from discord import Colour, Embed, Message, utils
 from discord.ext.commands import BadArgument, Cog, Context, clean_content, command, has_any_role
 
 from bot.bot import Bot
@@ -223,6 +223,9 @@ class Utils(Cog):
         if pep_number == 0:
             pep_embed = self.get_pep_zero_embed()
         else:
+            if not await self.validate_pep_number(ctx, pep_number):
+                return
+
             pep_embed = await self.get_pep_embed(ctx, pep_number)
 
         if pep_embed:
@@ -244,9 +247,8 @@ class Utils(Cog):
 
         return pep_embed
 
-    @async_cache(arg_offset=2)
-    async def get_pep_embed(self, ctx: Context, pep_nr: int) -> Optional[Embed]:
-        """Fetch, generate and return PEP embed. When any error occur, use `self.send_pep_error_embed`."""
+    async def validate_pep_number(self, ctx: Context, pep_nr: int) -> bool:
+        """Validate is PEP number valid. When it isn't, send error and return False. Otherwise return True."""
         if (
             pep_nr not in self.peps
             and (self.last_refreshed_peps + timedelta(minutes=30)) <= datetime.now()
@@ -257,8 +259,34 @@ class Utils(Cog):
         if pep_nr not in self.peps:
             log.trace(f"PEP {pep_nr} was not found")
             not_found = f"PEP {pep_nr} does not exist."
-            return await self.send_pep_error_embed(ctx, "PEP not found", not_found)
+            await self.send_pep_error_embed(ctx, "PEP not found", not_found)
+            return False
 
+        return True
+
+    def generate_pep_embed(self, pep_header: Dict, pep_nr: int) -> Embed:
+        """Generate PEP embed based on PEP headers data."""
+        # Assemble the embed
+        pep_embed = Embed(
+            title=f"**PEP {pep_nr} - {pep_header['Title']}**",
+            description=f"[Link]({self.base_pep_url}{pep_nr:04})",
+        )
+
+        pep_embed.set_thumbnail(url=ICON_URL)
+
+        # Add the interesting information
+        fields_to_check = ("Status", "Python-Version", "Created", "Type")
+        for field in fields_to_check:
+            # Check for a PEP metadata field that is present but has an empty value
+            # embed field values can't contain an empty string
+            if pep_header.get(field, ""):
+                pep_embed.add_field(name=field, value=pep_header[field])
+
+        return pep_embed
+
+    @async_cache(arg_offset=2)
+    async def get_pep_embed(self, ctx: Context, pep_nr: int) -> Optional[Embed]:
+        """Fetch, generate and return PEP embed. When any error occur, use `self.send_pep_error_embed`."""
         response = await self.bot.http_session.get(self.peps[pep_nr])
 
         if response.status == 200:
@@ -267,23 +295,7 @@ class Utils(Cog):
 
             # Taken from https://github.com/python/peps/blob/master/pep0/pep.py#L179
             pep_header = HeaderParser().parse(StringIO(pep_content))
-
-            # Assemble the embed
-            pep_embed = Embed(
-                title=f"**PEP {pep_nr} - {pep_header['Title']}**",
-                description=f"[Link]({self.base_pep_url}{pep_nr:04})",
-            )
-
-            pep_embed.set_thumbnail(url=ICON_URL)
-
-            # Add the interesting information
-            fields_to_check = ("Status", "Python-Version", "Created", "Type")
-            for field in fields_to_check:
-                # Check for a PEP metadata field that is present but has an empty value
-                # embed field values can't contain an empty string
-                if pep_header.get(field, ""):
-                    pep_embed.add_field(name=field, value=pep_header[field])
-            return pep_embed
+            return self.generate_pep_embed(pep_header, pep_nr)
         else:
             log.trace(
                 f"The user requested PEP {pep_nr}, but the response had an unexpected status code: {response.status}."
