@@ -5,7 +5,7 @@ import re
 import string
 import textwrap
 from functools import partial
-from typing import Callable, Iterable, List, Optional, TYPE_CHECKING, Tuple, Union
+from typing import Callable, Collection, Iterable, List, Optional, TYPE_CHECKING, Tuple, Union
 
 from bs4 import BeautifulSoup
 from bs4.element import NavigableString, PageElement, Tag
@@ -19,6 +19,7 @@ log = logging.getLogger(__name__)
 
 _UNWANTED_SIGNATURE_SYMBOLS_RE = re.compile(r"\[source]|\\\\|¶")
 _WHITESPACE_AFTER_NEWLINES_RE = re.compile(r"(?<=\n\n)(\s+)")
+_PARAMETERS_RE = re.compile(r"\((.+)\)")
 
 _SEARCH_END_TAG_ATTRS = (
     "data",
@@ -39,8 +40,59 @@ _NO_SIGNATURE_GROUPS = {
     "templatetag",
     "term",
 }
-_MAX_DESCRIPTION_LENGTH = 1800
+_EMBED_CODE_BLOCK_LENGTH = 61
+# Three code block wrapped lines with py syntax highlight
+_MAX_SIGNATURES_LENGTH = (_EMBED_CODE_BLOCK_LENGTH + 8) * 3
+# Maximum discord message length - signatures on top
+_MAX_DESCRIPTION_LENGTH = 2000 - _MAX_SIGNATURES_LENGTH
 _TRUNCATE_STRIP_CHARACTERS = "!?:;." + string.whitespace
+_BRACKET_PAIRS = {
+    "{": "}",
+    "(": ")",
+    "[": "]",
+}
+
+
+def _split_parameters(parameters_string: str) -> List[str]:
+    """
+    Split parameters of a signature into individual parameter strings on commas.
+
+    Long string literals are not accounted for.
+    """
+    parameters_list = []
+    last_split = 0
+    depth = 0
+    expected_end = None
+    current_search = None
+    previous_character = ""
+
+    for index, character in enumerate(parameters_string):
+        if character in _BRACKET_PAIRS:
+            if current_search is None:
+                current_search = character
+                expected_end = _BRACKET_PAIRS[character]
+            if character == current_search:
+                depth += 1
+
+        elif character in {"'", '"'}:
+            if depth == 0:
+                depth += 1
+            elif not previous_character == "\\":
+                depth -= 1
+
+        elif character == expected_end:
+            depth -= 1
+            if depth == 0:
+                current_search = None
+                expected_end = None
+
+        elif depth == 0 and character == ",":
+            parameters_list.append(parameters_string[last_split:index])
+            last_split = index + 1
+        previous_character = character
+
+    parameters_list.append(parameters_string[last_split:])
+    return parameters_list
 
 
 def _find_elements_until_tag(
@@ -121,6 +173,43 @@ def _get_signatures(start_signature: PageElement) -> List[str]:
     return signatures
 
 
+def _truncate_signatures(signatures: Collection[str]) -> Union[List[str], Collection[str]]:
+    """
+    Truncate passed signatures to not exceed `_MAX_SIGNAUTRES_LENGTH`.
+
+    If the signatures need to be truncated, parameters are collapsed until they fit withing the limit.
+    Individual signatures can consist of max 1, 2 or 3 lines of text, inversely  proportional to the amount of them.
+    A maximum of 3 signatures is assumed to be passed.
+    """
+    if not sum(len(signature) for signature in signatures) > _MAX_SIGNATURES_LENGTH:
+        return signatures
+
+    max_signature_length = _EMBED_CODE_BLOCK_LENGTH * (4 - len(signatures))
+    formatted_signatures = []
+    for signature in signatures:
+        signature = signature.strip()
+        if len(signature) > max_signature_length:
+            if (parameters_match := _PARAMETERS_RE.search(signature)) is None:
+                formatted_signatures.append(textwrap.shorten(signature, max_signature_length))
+                continue
+
+            truncated_signature = []
+            parameters_string = parameters_match[1]
+            running_length = len(signature) - len(parameters_string)
+            for parameter in _split_parameters(parameters_string):
+                if (len(parameter) + running_length) <= max_signature_length - 4:  # account for comma and placeholder
+                    truncated_signature.append(parameter)
+                    running_length += len(parameter) + 1
+                else:
+                    truncated_signature.append(" ...")
+                    formatted_signatures.append(signature.replace(parameters_string, ",".join(truncated_signature)))
+                    break
+        else:
+            formatted_signatures.append(signature)
+
+    return formatted_signatures
+
+
 def _get_truncated_description(
         elements: Iterable[Union[Tag, NavigableString]],
         markdown_converter: DocMarkdownConverter,
@@ -174,7 +263,7 @@ def _parse_into_markdown(signatures: Optional[List[str]], description: Iterable[
     description = _get_truncated_description(description, DocMarkdownConverter(bullets="•", page_url=url), 750)
     description = _WHITESPACE_AFTER_NEWLINES_RE.sub('', description)
     if signatures is not None:
-        formatted_markdown = "".join(f"```py\n{textwrap.shorten(signature, 500)}```" for signature in signatures)
+        formatted_markdown = "".join(f"```py\n{signature}```" for signature in _truncate_signatures(signatures))
     else:
         formatted_markdown = ""
     formatted_markdown += f"\n{description}"
