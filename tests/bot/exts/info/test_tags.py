@@ -349,7 +349,6 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
 
                     self.assertEqual(embed.to_dict(), case["expected"])
                     self.ctx.send.assert_awaited_once_with(embed=embed)
-                    self.cog.bot.stats.incr.assert_called_once()
 
     @patch("bot.exts.info.tags.time.time", MagicMock(return_value=1234))
     async def test_tag_cooldown(self):
