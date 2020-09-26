@@ -17,6 +17,8 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
+_MAX_SIGNATURE_AMOUNT = 3
+
 _UNWANTED_SIGNATURE_SYMBOLS_RE = re.compile(r"\[source]|\\\\|¶")
 _WHITESPACE_AFTER_NEWLINES_RE = re.compile(r"(?<=\n\n)(\s+)")
 _PARAMETERS_RE = re.compile(r"\((.+)\)")
@@ -41,8 +43,8 @@ _NO_SIGNATURE_GROUPS = {
     "term",
 }
 _EMBED_CODE_BLOCK_LENGTH = 61
-# Three code block wrapped lines with py syntax highlight
-_MAX_SIGNATURES_LENGTH = (_EMBED_CODE_BLOCK_LENGTH + 8) * 3
+# _MAX_SIGNATURE_AMOUNT code block wrapped lines with py syntax highlight
+_MAX_SIGNATURES_LENGTH = (_EMBED_CODE_BLOCK_LENGTH + 8) * _MAX_SIGNATURE_AMOUNT
 # Maximum discord message length - signatures on top
 _MAX_DESCRIPTION_LENGTH = 2000 - _MAX_SIGNATURES_LENGTH
 _TRUNCATE_STRIP_CHARACTERS = "!?:;." + string.whitespace
@@ -154,7 +156,7 @@ def _get_dd_description(symbol: PageElement) -> List[Union[Tag, NavigableString]
 
 def _get_signatures(start_signature: PageElement) -> List[str]:
     """
-    Collect up to 3 signatures from dt tags around the `start_signature` dt tag.
+    Collect up to `_MAX_SIGNATURE_AMOUNT` signatures from dt tags around the `start_signature` dt tag.
 
     First the signatures under the `start_signature` are included;
     if less than 2 are found, tags above the start signature are added to the result if any are present.
@@ -164,7 +166,7 @@ def _get_signatures(start_signature: PageElement) -> List[str]:
             *reversed(_find_previous_siblings_until_tag(start_signature, ("dd",), limit=2)),
             start_signature,
             *_find_next_siblings_until_tag(start_signature, ("dd",), limit=2),
-    )[-3:]:
+    )[-_MAX_SIGNATURE_AMOUNT:]:
         signature = _UNWANTED_SIGNATURE_SYMBOLS_RE.sub("", element.text)
 
         if signature:
@@ -178,13 +180,14 @@ def _truncate_signatures(signatures: Collection[str]) -> Union[List[str], Collec
     Truncate passed signatures to not exceed `_MAX_SIGNAUTRES_LENGTH`.
 
     If the signatures need to be truncated, parameters are collapsed until they fit withing the limit.
-    Individual signatures can consist of max 1, 2 or 3 lines of text, inversely  proportional to the amount of them.
-    A maximum of 3 signatures is assumed to be passed.
+    Individual signatures can consist of max 1, 2, ..., `_MAX_SIGNATURE_AMOUNT` lines of text,
+    inversely proportional to the amount of signatures.
+    A maximum of `_MAX_SIGNATURE_AMOUNT` signatures is assumed to be passed.
     """
     if not sum(len(signature) for signature in signatures) > _MAX_SIGNATURES_LENGTH:
         return signatures
 
-    max_signature_length = _EMBED_CODE_BLOCK_LENGTH * (4 - len(signatures))
+    max_signature_length = _EMBED_CODE_BLOCK_LENGTH * (_MAX_SIGNATURE_AMOUNT + 1 - len(signatures))
     formatted_signatures = []
     for signature in signatures:
         signature = signature.strip()
