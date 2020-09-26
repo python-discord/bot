@@ -1,7 +1,7 @@
 import time
 import unittest
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, call, patch
 
 from discord import Colour, Embed
 
@@ -363,6 +363,16 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
     	with patch("bot.exts.info.tags.TEST_CHANNELS", (1234,)):
     	    self.assertIsNone(await self.cog.get_command.callback(self.cog, self.ctx, tag_name="class"))
     	self.assertNotIn("class", self.cog.tag_cooldowns)
+
+    @patch("bot.exts.info.tags.Tags.check_accessibility")
+    async def test_tag_permission_check(self, check_accessibility_mock):
+    	"""Should call check_accessibility for every tag that _get_tag returns."""
+    	self.assertIsNone(await self.cog.get_command.callback(self.cog, self.ctx, tag_name="clas"))
+    	calls = []
+    	for tag in self.cog._get_tag("clas"):
+    		calls.append(call(self.ctx.author, tag))
+    		calls.append(call().__bool__())
+    	check_accessibility_mock.assert_has_calls(calls)
 
     async def test_tag_using_permissions(self):
         """Should silently return when user don't have required role to use tag."""
