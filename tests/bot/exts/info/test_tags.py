@@ -145,7 +145,7 @@ class TagsBaseTests(unittest.TestCase):
             {
                 "keywords": ",",
                 "check": all,
-                "expected": [cache["ytdl"], cache["pep8"]]
+                "expected": [cache["pep8"], cache["ytdl"]]
             }
         ]
 
