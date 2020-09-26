@@ -520,8 +520,10 @@ class Verification(Cog):
             return  # Only listen for PyDis events
 
         log.trace(f"Sending on join message to new member: {member.id}")
-        with suppress(discord.Forbidden):
-            await member.send(ON_JOIN_MESSAGE)
+        try:
+            await safe_dm(member.send(ON_JOIN_MESSAGE))
+        except discord.HTTPException:
+            log.exception("DM dispatch failed on unexpected error code")
 
     @Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
@@ -688,9 +690,9 @@ class Verification(Cog):
             await ctx.author.remove_roles(discord.Object(constants.Roles.unverified))
 
         try:
-            await ctx.author.send(VERIFIED_MESSAGE)
-        except discord.Forbidden:
-            log.info(f"Sending welcome message failed for {ctx.author}.")
+            await safe_dm(ctx.author.send(VERIFIED_MESSAGE))
+        except discord.HTTPException:
+            log.exception(f"Sending welcome message failed for {ctx.author}.")
         finally:
             log.trace(f"Deleting accept message by {ctx.author}.")
             with suppress(discord.NotFound):
