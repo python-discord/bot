@@ -190,6 +190,7 @@ guild:
         admin_announcements:    &ADMIN_ANNOUNCEMENTS    749736155569848370
 
         # Voice
+        code_help_voice:                    755154969761677312
         admins_voice:       &ADMINS_VOICE   500734494840717332
         staff_voice:        &STAFF_VOICE    412375055910043655
 
