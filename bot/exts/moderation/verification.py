@@ -21,12 +21,15 @@ log = logging.getLogger(__name__)
 
 # Sent via DMs once user joins the guild
 ON_JOIN_MESSAGE = f"""
-Hello! Welcome to Python Discord!
+Welcome to Python Discord!
 
-As a new user, you have read-only access to a few select channels to give you a taste of what our server is like.
+To show you what kind of community we are, we've created this video:
+https://youtu.be/ZH26PuX3re0
 
-In order to see the rest of the channels and to send messages, you first have to accept our rules. To do so, \
-please visit <#{constants.Channels.verification}>. Thank you!
+As a new user, you have read-only access to a few select channels to give you a taste of what our server is like. \
+In order to see the rest of the channels and to send messages, you first have to accept our rules.
+
+Please visit <#{constants.Channels.verification}> to get started. Thank you!
 """
 
 # Sent via DMs once user verifies
