@@ -3,9 +3,9 @@ import unittest
 import unittest.mock
 
 from bot import constants
-from bot.decorators import InWhitelistCheckFailure, in_whitelist
+from bot.decorators import in_whitelist
+from bot.utils.checks import InWhitelistCheckFailure
 from tests import helpers
-
 
 InWhitelistTestCase = collections.namedtuple("WhitelistedContextTestCase", ("kwargs", "ctx", "description"))
 

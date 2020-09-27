@@ -4,12 +4,15 @@ import collections
 import itertools
 import logging
 import unittest.mock
-from typing import Iterable, Optional
+from asyncio import AbstractEventLoop
+from typing import Callable, Iterable, Optional
 
 import discord
+from aiohttp import ClientSession
 from discord.ext.commands import Context
 
 from bot.api import APIClient
+from bot.async_stats import AsyncStatsClient
 from bot.bot import Bot
 
 
@@ -21,6 +24,24 @@ for logger in logging.Logger.manager.loggerDict.values():
         continue
 
     logger.setLevel(logging.CRITICAL)
+
+
+def autospec(target, *attributes: str, **kwargs) -> Callable:
+    """Patch multiple `attributes` of a `target` with autospecced mocks and `spec_set` as True."""
+    # Caller's kwargs should take priority and overwrite the defaults.
+    kwargs = {'spec_set': True, 'autospec': True, **kwargs}
+
+    # Import the target if it's a string.
+    # This is to support both object and string targets like patch.multiple.
+    if type(target) is str:
+        target = unittest.mock._importer(target)
+
+    def decorator(func):
+        for attribute in attributes:
+            patcher = unittest.mock.patch.object(target, attribute, **kwargs)
+            func = patcher(func)
+        return func
+    return decorator
 
 
 class HashableMixin(discord.mixins.EqualityComparable):
@@ -205,6 +226,10 @@ class MockRole(CustomMockMixin, unittest.mock.Mock, ColourMixin, HashableMixin):
         """Simplified position-based comparisons similar to those of `discord.Role`."""
         return self.position < other.position
 
+    def __ge__(self, other):
+        """Simplified position-based comparisons similar to those of `discord.Role`."""
+        return self.position >= other.position
+
 
 # Create a Member instance to get a realistic Mock of `discord.Member`
 member_data = {'user': 'lemon', 'roles': [1]}
@@ -264,10 +289,16 @@ class MockAPIClient(CustomMockMixin, unittest.mock.MagicMock):
     spec_set = APIClient
 
 
-# Create a Bot instance to get a realistic MagicMock of `discord.ext.commands.Bot`
-bot_instance = Bot(command_prefix=unittest.mock.MagicMock())
-bot_instance.http_session = None
-bot_instance.api_client = None
+def _get_mock_loop() -> unittest.mock.Mock:
+    """Return a mocked asyncio.AbstractEventLoop."""
+    loop = unittest.mock.create_autospec(spec=AbstractEventLoop, spec_set=True)
+
+    # Since calling `create_task` on our MockBot does not actually schedule the coroutine object
+    # as a task in the asyncio loop, this `side_effect` calls `close()` on the coroutine object
+    # to prevent "has not been awaited"-warnings.
+    loop.create_task.side_effect = lambda coroutine: coroutine.close()
+
+    return loop
 
 
 class MockBot(CustomMockMixin, unittest.mock.MagicMock):
@@ -277,17 +308,20 @@ class MockBot(CustomMockMixin, unittest.mock.MagicMock):
     Instances of this class will follow the specifications of `discord.ext.commands.Bot` instances.
     For more information, see the `MockGuild` docstring.
     """
-    spec_set = bot_instance
-    additional_spec_asyncs = ("wait_for",)
+    spec_set = Bot(
+        command_prefix=unittest.mock.MagicMock(),
+        loop=_get_mock_loop(),
+        redis_session=unittest.mock.MagicMock(),
+    )
+    additional_spec_asyncs = ("wait_for", "redis_ready")
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
-        self.api_client = MockAPIClient()
 
-        # Since calling `create_task` on our MockBot does not actually schedule the coroutine object
-        # as a task in the asyncio loop, this `side_effect` calls `close()` on the coroutine object
-        # to prevent "has not been awaited"-warnings.
-        self.loop.create_task.side_effect = lambda coroutine: coroutine.close()
+        self.loop = _get_mock_loop()
+        self.api_client = MockAPIClient(loop=self.loop)
+        self.http_session = unittest.mock.create_autospec(spec=ClientSession, spec_set=True)
+        self.stats = unittest.mock.create_autospec(spec=AsyncStatsClient, spec_set=True)
 
 
 # Create a TextChannel instance to get a realistic MagicMock of `discord.TextChannel`

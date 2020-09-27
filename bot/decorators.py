@@ -6,31 +6,14 @@ from functools import wraps
 from typing import Callable, Container, Optional, Union
 from weakref import WeakValueDictionary
 
-from discord import Colour, Embed, Member
-from discord.errors import NotFound
+from discord import Colour, Embed, Member, NotFound
 from discord.ext import commands
-from discord.ext.commands import CheckFailure, Cog, Context
+from discord.ext.commands import Cog, Context
 
 from bot.constants import Channels, ERROR_REPLIES, RedirectOutput
-from bot.utils.checks import with_role_check, without_role_check
+from bot.utils.checks import in_whitelist_check
 
 log = logging.getLogger(__name__)
-
-
-class InWhitelistCheckFailure(CheckFailure):
-    """Raised when the `in_whitelist` check fails."""
-
-    def __init__(self, redirect_channel: Optional[int]) -> None:
-        self.redirect_channel = redirect_channel
-
-        if redirect_channel:
-            redirect_message = f" here. Please use the <#{redirect_channel}> channel instead"
-        else:
-            redirect_message = ""
-
-        error_message = f"You are not allowed to use that command{redirect_message}."
-
-        super().__init__(error_message)
 
 
 def in_whitelist(
@@ -39,7 +22,7 @@ def in_whitelist(
     categories: Container[int] = (),
     roles: Container[int] = (),
     redirect: Optional[int] = Channels.bot_commands,
-
+    fail_silently: bool = False,
 ) -> Callable:
     """
     Check if a command was issued in a whitelisted context.
@@ -54,52 +37,29 @@ def in_whitelist(
     redirected to the `redirect` channel that was passed (default: #bot-commands) or simply
     told that they're not allowed to use this particular command (if `None` was passed).
     """
-    if redirect and redirect not in channels:
-        # It does not make sense for the channel whitelist to not contain the redirection
-        # channel (if applicable). That's why we add the redirection channel to the `channels`
-        # container if it's not already in it. As we allow any container type to be passed,
-        # we first create a tuple in order to safely add the redirection channel.
-        #
-        # Note: It's possible for the redirect channel to be in a whitelisted category, but
-        # there's no easy way to check that and as a channel can easily be moved in and out of
-        # categories, it's probably not wise to rely on its category in any case.
-        channels = tuple(channels) + (redirect,)
-
     def predicate(ctx: Context) -> bool:
-        """Check if a command was issued in a whitelisted context."""
-        if channels and ctx.channel.id in channels:
-            log.trace(f"{ctx.author} may use the `{ctx.command.name}` command as they are in a whitelisted channel.")
-            return True
-
-        # Only check the category id if we have a category whitelist and the channel has a `category_id`
-        if categories and hasattr(ctx.channel, "category_id") and ctx.channel.category_id in categories:
-            log.trace(f"{ctx.author} may use the `{ctx.command.name}` command as they are in a whitelisted category.")
-            return True
-
-        # Only check the roles whitelist if we have one and ensure the author's roles attribute returns
-        # an iterable to prevent breakage in DM channels (for if we ever decide to enable commands there).
-        if roles and any(r.id in roles for r in getattr(ctx.author, "roles", ())):
-            log.trace(f"{ctx.author} may use the `{ctx.command.name}` command as they have a whitelisted role.")
-            return True
-
-        log.trace(f"{ctx.author} may not use the `{ctx.command.name}` command within this context.")
-        raise InWhitelistCheckFailure(redirect)
+        """Check if command was issued in a whitelisted context."""
+        return in_whitelist_check(ctx, channels, categories, roles, redirect, fail_silently)
 
     return commands.check(predicate)
 
 
-def with_role(*role_ids: int) -> Callable:
-    """Returns True if the user has any one of the roles in role_ids."""
-    async def predicate(ctx: Context) -> bool:
-        """With role checker predicate."""
-        return with_role_check(ctx, *role_ids)
-    return commands.check(predicate)
+def has_no_roles(*roles: Union[str, int]) -> Callable:
+    """
+    Returns True if the user does not have any of the roles specified.
 
-
-def without_role(*role_ids: int) -> Callable:
-    """Returns True if the user does not have any of the roles in role_ids."""
+    `roles` are the names or IDs of the disallowed roles.
+    """
     async def predicate(ctx: Context) -> bool:
-        return without_role_check(ctx, *role_ids)
+        try:
+            await commands.has_any_role(*roles).predicate(ctx)
+        except commands.MissingAnyRole:
+            return True
+        else:
+            # This error is never shown to users, so don't bother trying to make it too pretty.
+            roles_ = ", ".join(f"'{item}'" for item in roles)
+            raise commands.CheckFailure(f"You have at least one of the disallowed roles: {roles_}")
+
     return commands.check(predicate)
 
 
@@ -121,7 +81,7 @@ def locked() -> Callable:
                 embed = Embed()
                 embed.colour = Colour.red()
 
-                log.debug(f"User tried to invoke a locked command.")
+                log.debug("User tried to invoke a locked command.")
                 embed.description = (
                     "You're already using this command. Please wait until it is done before you use it again."
                 )
