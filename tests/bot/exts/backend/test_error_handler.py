@@ -4,10 +4,10 @@ from unittest.mock import AsyncMock, MagicMock, call, patch
 from discord.ext.commands import errors
 
 from bot.api import ResponseCodeError
-from bot.exts.backend.error_handler import ErrorHandler, setup
-from bot.exts.moderation.silence import Silence
-from bot.exts.info.tags import Tags
 from bot.decorators import InWhitelistCheckFailure
+from bot.exts.backend.error_handler import ErrorHandler, setup
+from bot.exts.info.tags import Tags
+from bot.exts.moderation.silence import Silence
 from tests.helpers import MockBot, MockContext, MockGuild
 
 
