@@ -166,7 +166,7 @@ def _get_signatures(start_signature: PageElement) -> List[str]:
             *reversed(_find_previous_siblings_until_tag(start_signature, ("dd",), limit=2)),
             start_signature,
             *_find_next_siblings_until_tag(start_signature, ("dd",), limit=2),
-    )[-_MAX_SIGNATURE_AMOUNT:]:
+    )[-(_MAX_SIGNATURE_AMOUNT):]:
         signature = _UNWANTED_SIGNATURE_SYMBOLS_RE.sub("", element.text)
 
         if signature:
