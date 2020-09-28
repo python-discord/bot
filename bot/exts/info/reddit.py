@@ -140,7 +140,12 @@ class Reddit(Cog):
                 # Got appropriate response - process and return.
                 content = await response.json()
                 posts = content["data"]["children"]
-                if posts[0]["data"]["over_18"]:
+
+                for post in posts:
+                    if post["data"]["over_18"]:
+                        posts.remove(post)
+
+                if not posts:
                     resp_not_allowed = [
                         {
                             "error": "Oops ! Looks like this subreddit, doesn't fit in the scope of the server."
