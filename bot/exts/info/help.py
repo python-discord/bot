@@ -173,8 +173,11 @@ class CustomHelpCommand(HelpCommand):
         if aliases:
             command_details += f"**Can also use:** {aliases}\n\n"
 
-        # check if the user is allowed to run this command
-        if not command.enabled or not await command.can_run(self.context):
+        # when command is disabled, show message about it
+        # otherwise check if the user is allowed to run this command
+        if not command.enabled:
+            command_details += "***This command is disabled.***\n\n"
+        elif not await command.can_run(self.context):
             command_details += "***You cannot run this command.***\n\n"
 
         command_details += f"*{command.help or 'No details provided.'}*\n"
