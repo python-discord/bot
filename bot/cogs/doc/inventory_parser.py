@@ -1,10 +1,14 @@
+import logging
 import re
 import zlib
 from collections import defaultdict
-from typing import AsyncIterator, DefaultDict, List, Tuple
+from typing import AsyncIterator, DefaultDict, List, Optional, Tuple
 
 import aiohttp
 
+log = logging.getLogger(__name__)
+
+FAILED_REQUEST_ATTEMPTS = 3
 _V2_LINE_RE = re.compile(r'(?x)(.+?)\s+(\S*:\S*)\s+(-?\d+)\s+?(\S*)\s+(.*)')
 
 
@@ -65,7 +69,7 @@ async def _load_v2(stream: aiohttp.StreamReader) -> DefaultDict[str, List[Tuple[
     return invdata
 
 
-async def fetch_inventory(client_session: aiohttp.ClientSession, url: str) -> DefaultDict[str, List[Tuple[str, str]]]:
+async def _fetch_inventory(client_session: aiohttp.ClientSession, url: str) -> DefaultDict[str, List[Tuple[str, str]]]:
     """Fetch, parse and return an intersphinx inventory file from an url."""
     timeout = aiohttp.ClientTimeout(sock_connect=5, sock_read=5)
     async with client_session.get(url, timeout=timeout, raise_for_status=True) as response:
@@ -85,3 +89,32 @@ async def fetch_inventory(client_session: aiohttp.ClientSession, url: str) -> De
             return await _load_v2(stream)
 
         raise ValueError(f"Invalid inventory file at url {url}.")
+
+
+async def fetch_inventory(
+        client_session: aiohttp.ClientSession,
+        url: str
+) -> Optional[DefaultDict[str, List[Tuple[str, str]]]]:
+    """Get inventory from `url`, retrying `FAILED_REQUEST_ATTEMPTS` times on errors."""
+    for attempt in range(1, FAILED_REQUEST_ATTEMPTS+1):
+        try:
+            inventory = await _fetch_inventory(client_session, url)
+        except aiohttp.ClientConnectorError:
+            log.warning(
+                f"Failed to connect to inventory url at {url}, "
+                f"trying again ({attempt}/{FAILED_REQUEST_ATTEMPTS})."
+            )
+        except aiohttp.ClientError:
+            log.error(
+                f"Failed to get inventory from {url}, "
+                f"trying again ({attempt}/{FAILED_REQUEST_ATTEMPTS})."
+            )
+        except Exception:
+            log.exception(
+                f"An unexpected error has occurred during fetching of {url}, "
+                f"trying again ({attempt}/{FAILED_REQUEST_ATTEMPTS})."
+            )
+        else:
+            return inventory
+
+    return None
