@@ -1,22 +1,17 @@
 from __future__ import annotations
 
 import asyncio
-import functools
 import logging
 import re
 import sys
 from collections import defaultdict
 from contextlib import suppress
-from types import SimpleNamespace
 from typing import Dict, List, NamedTuple, Optional, Union
 
 import discord
 from aiohttp import ClientSession
 from bs4 import BeautifulSoup
 from discord.ext import commands
-from requests import ConnectTimeout, ConnectionError, HTTPError
-from sphinx.ext import intersphinx
-from urllib3.exceptions import ProtocolError
 
 from bot.bot import Bot
 from bot.constants import MODERATION_ROLES, RedirectOutput
@@ -24,20 +19,10 @@ from bot.converters import PackageName, ValidURL
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
 from bot.utils.messages import wait_for_deletion
+from .inventory_parser import FAILED_REQUEST_ATTEMPTS, fetch_inventory
 from .parsing import get_symbol_markdown
 
 log = logging.getLogger(__name__)
-logging.getLogger('urllib3').setLevel(logging.WARNING)
-
-# Since Intersphinx is intended to be used with Sphinx,
-# we need to mock its configuration.
-SPHINX_MOCK_APP = SimpleNamespace(
-    config=SimpleNamespace(
-        intersphinx_timeout=3,
-        tls_verify=True,
-        user_agent="python3:python-discord/bot:1.0.0"
-    )
-)
 
 NO_OVERRIDE_GROUPS = (
     "2to3fixer",
@@ -51,7 +36,6 @@ NO_OVERRIDE_PACKAGES = (
 )
 
 WHITESPACE_AFTER_NEWLINES_RE = re.compile(r"(?<=\n\n)(\s+)")
-FAILED_REQUEST_RETRY_AMOUNT = 3
 NOT_FOUND_DELETE_DELAY = RedirectOutput.delete_delay
 
 
@@ -190,21 +174,8 @@ class InventoryURL(commands.Converter):
     async def convert(ctx: commands.Context, url: str) -> str:
         """Convert url to Intersphinx inventory URL."""
         await ctx.trigger_typing()
-        try:
-            intersphinx.fetch_inventory(SPHINX_MOCK_APP, '', url)
-        except AttributeError:
-            raise commands.BadArgument(f"Failed to fetch Intersphinx inventory from URL `{url}`.")
-        except ConnectionError:
-            if url.startswith('https'):
-                raise commands.BadArgument(
-                    f"Cannot establish a connection to `{url}`. Does it support HTTPS?"
-                )
-            raise commands.BadArgument(f"Cannot connect to host with URL `{url}`.")
-        except ValueError:
-            raise commands.BadArgument(
-                f"Failed to read Intersphinx inventory from URL `{url}`. "
-                "Are you sure that it's a valid inventory file?"
-            )
+        if await fetch_inventory(ctx.bot.http_session, url) is None:
+            raise commands.BadArgument(f"Failed to fetch inventory file after {FAILED_REQUEST_ATTEMPTS}.")
         return url
 
 
@@ -235,17 +206,16 @@ class DocCog(commands.Cog):
             * `package_name` is the package name to use, appears in the log
             * `base_url` is the root documentation URL for the specified package, used to build
                 absolute paths that link to specific symbols
-            * `inventory_url` is the absolute URL to the intersphinx inventory, fetched by running
-                `intersphinx.fetch_inventory` in an executor on the bot's event loop
+            * `inventory_url` is the absolute URL to the intersphinx inventory.
         """
         self.base_urls[api_package_name] = base_url
 
-        package = await self._fetch_inventory(inventory_url)
+        package = await fetch_inventory(self.bot.http_session, inventory_url)
         if not package:
             return None
 
-        for group, value in package.items():
-            for symbol, (_package_name, _version, relative_doc_url, _) in value.items():
+        for group, items in package.items():
+            for symbol, relative_doc_url in items:
                 if "/" in symbol:
                     continue  # skip unreachable symbols with slashes
                 # Intern the group names since they're reused in all the DocItems
@@ -455,30 +425,3 @@ class DocCog(commands.Cog):
             description=f"```diff\n{added}\n{removed}```" if added or removed else ""
         )
         await ctx.send(embed=embed)
-
-    async def _fetch_inventory(self, inventory_url: str) -> Optional[dict]:
-        """Get and return inventory from `inventory_url`. If fetching fails, return None."""
-        fetch_func = functools.partial(intersphinx.fetch_inventory, SPHINX_MOCK_APP, '', inventory_url)
-        for retry in range(1, FAILED_REQUEST_RETRY_AMOUNT+1):
-            try:
-                package = await self.bot.loop.run_in_executor(None, fetch_func)
-            except ConnectTimeout:
-                log.error(
-                    f"Fetching of inventory {inventory_url} timed out,"
-                    f" trying again. ({retry}/{FAILED_REQUEST_RETRY_AMOUNT})"
-                )
-            except ProtocolError:
-                log.error(
-                    f"Connection lost while fetching inventory {inventory_url},"
-                    f" trying again. ({retry}/{FAILED_REQUEST_RETRY_AMOUNT})"
-                )
-            except HTTPError as e:
-                log.error(f"Fetching of inventory {inventory_url} failed with status code {e.response.status_code}.")
-                return None
-            except ConnectionError:
-                log.error(f"Couldn't establish connection to inventory {inventory_url}.")
-                return None
-            else:
-                return package
-        log.error(f"Fetching of inventory {inventory_url} failed.")
-        return None
