@@ -1,4 +1,3 @@
-**Need help with another language or related field of interest?**
+**Communities**
 
-This community is dedicated to python, and while we have off-topic channels, it is not always the greatest place to find help regarding other languages or fields. If you need help with another language or particular field of interest, we recommend you check out this [awesome list](https://github.com/mhxion/awesome-discord-communities), a list of communities specialising in a wide range of areas including [Programming languages](https://github.com/mhxion/awesome-discord-communities/blob/main/README.md#programming-languages), [Electricals](https://github.com/mhxion/awesome-discord-communities/blob/main/README.md#electricals), [Computer science](https://github.com/mhxion/awesome-discord-communities/blob/main/README.md#art-of-computer-science) and [Operating systems](https://github.com/mhxion/awesome-discord-communities/blob/main/README.md#operating-systems).  
-Also consider joining the wonderful [communities](https://pythondiscord.com/pages/resources/communities/) we have partnered with.
+The [communities page](https://pythondiscord.com/pages/resources/communities/) on our website contains a number of communities we have partnered with as well as a [curated list](https://github.com/mhxion/awesome-discord-communities) of other communities relating to programming and technology.
