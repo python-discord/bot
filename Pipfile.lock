@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "644012a1c3fa3e3a30f8b8f8e672c468dfaa155d9e43d26e2be8713c8dc5ebb3"
+            "sha256": "073fd0c51749aafa188fdbe96c5b90dd157cb1d23bdd144801fb0d0a369ffa88"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -18,11 +18,11 @@
     "default": {
         "aio-pika": {
             "hashes": [
-                "sha256:4a20d4d941e1f113a950ea529a90bd9159c8d7aafaa1c71e9c707c8c2b526ea6",
-                "sha256:7bf3f183df1eb348d007210a0c1a3c5c755f1b3def1a9a395e93f30b91da1daf"
+                "sha256:9773440a89840941ac3099a7720bf9d51e8764a484066b82ede4d395660ff430",
+                "sha256:a8065be3c722eb8f9fff8c0e7590729e7782202cdb9363d9830d7d5d47b45c7c"
             ],
             "index": "pypi",
-            "version": "==6.7.0"
+            "version": "==6.7.1"
         },
         "aiodns": {
             "hashes": [
@@ -205,22 +205,13 @@
             "index": "pypi",
             "version": "==4.3.2"
         },
-        "discord": {
-            "hashes": [
-                "sha256:9d4debb4a37845543bd4b92cb195bc53a302797333e768e70344222857ff1559",
-                "sha256:ff6653655e342e7721dfb3f10421345fd852c2a33f2cca912b1c39b3778a9429"
-            ],
-            "index": "pypi",
-            "py": "~=1.4.0",
-            "version": "==1.0.1"
-        },
         "discord.py": {
             "hashes": [
-                "sha256:98ea3096a3585c9c379209926f530808f5fcf4930928d8cfb579d2562d119570",
-                "sha256:f9decb3bfa94613d922376288617e6a6f969260923643e2897f4540c34793442"
+                "sha256:3acb61fde0d862ed346a191d69c46021e6063673f63963bc984ae09a685ab211",
+                "sha256:e71089886aa157341644bdecad63a72ff56b44406b1a6467b66db31c8e5a5a15"
             ],
-            "markers": "python_full_version >= '3.5.3'",
-            "version": "==1.4.1"
+            "index": "pypi",
+            "version": "==1.5.0"
         },
         "docutils": {
             "hashes": [
