@@ -19,6 +19,7 @@ from bot.converters import PackageName, ValidURL
 from bot.decorators import with_role
 from bot.pagination import LinePaginator
 from bot.utils.messages import wait_for_deletion
+from bot.utils.scheduling import Scheduler
 from .inventory_parser import FAILED_REQUEST_ATTEMPTS, fetch_inventory
 from .parsing import get_symbol_markdown
 
@@ -189,6 +190,9 @@ class DocCog(commands.Cog):
         self.item_fetcher = CachedParser()
         self.renamed_symbols = set()
 
+        self.inventory_scheduler = Scheduler(self.__class__.__name__)
+        self.scheduled_inventories = set()
+
         self.bot.loop.create_task(self.init_refresh_inventory())
 
     async def init_refresh_inventory(self) -> None:
@@ -198,7 +202,7 @@ class DocCog(commands.Cog):
 
     async def update_single(
         self, api_package_name: str, base_url: str, inventory_url: str
-    ) -> None:
+    ) -> bool:
         """
         Rebuild the inventory for a single package.
 
@@ -207,12 +211,27 @@ class DocCog(commands.Cog):
             * `base_url` is the root documentation URL for the specified package, used to build
                 absolute paths that link to specific symbols
             * `inventory_url` is the absolute URL to the intersphinx inventory.
+
+        If the inventory file is currently unreachable,
+        the update is rescheduled to execute in 2 minutes on the first attempt, and 5 minutes on subsequent attempts.
+
+        Return True on success; False if fetching failed and was rescheduled.
         """
         self.base_urls[api_package_name] = base_url
-
         package = await fetch_inventory(self.bot.http_session, inventory_url)
+
         if not package:
-            return None
+            delay = 2*60 if inventory_url not in self.scheduled_inventories else 5*60
+            log.info(f"Failed to fetch inventory, attempting again in {delay//60} minutes.")
+            self.inventory_scheduler.schedule_later(
+                delay,
+                api_package_name,
+                fetch_inventory(self.bot.http_session, inventory_url)
+            )
+            self.scheduled_inventories.add(api_package_name)
+            return False
+        with suppress(KeyError):
+            self.scheduled_inventories.discard(api_package_name)
 
         for group, items in package.items():
             for symbol, relative_doc_url in items:
@@ -249,6 +268,7 @@ class DocCog(commands.Cog):
                 self.item_fetcher.add_item(symbol_item)
 
         log.trace(f"Fetched inventory for {api_package_name}.")
+        return True
 
     async def refresh_inventory(self) -> None:
         """Refresh internal documentation inventory."""
@@ -260,6 +280,7 @@ class DocCog(commands.Cog):
         self.base_urls.clear()
         self.doc_symbols.clear()
         self.renamed_symbols.clear()
+        self.scheduled_inventories.clear()
         await self.item_fetcher.clear()
 
         # Run all coroutines concurrently - since each of them performs a HTTP
@@ -385,7 +406,11 @@ class DocCog(commands.Cog):
             f"Inventory URL: {inventory_url}"
         )
 
-        await self.update_single(package_name, base_url, inventory_url)
+        if await self.update_single(package_name, base_url, inventory_url) is None:
+            await ctx.send(
+                f"Added package `{package_name}` to database but failed to fetch inventory; rescheduled in 2 minutes."
+            )
+            return
         await ctx.send(f"Added package `{package_name}` to database and refreshed inventory.")
 
     @docs_group.command(name='deletedoc', aliases=('removedoc', 'rm', 'd'))
@@ -399,6 +424,9 @@ class DocCog(commands.Cog):
         """
         await self.bot.api_client.delete(f'bot/documentation-links/{package_name}')
 
+        if package_name in self.scheduled_inventories:
+            self.inventory_scheduler.cancel(package_name)
+
         async with ctx.typing():
             # Rebuild the inventory to ensure that everything
             # that was from this package is properly deleted.
@@ -409,6 +437,9 @@ class DocCog(commands.Cog):
     @with_role(*MODERATION_ROLES)
     async def refresh_command(self, ctx: commands.Context) -> None:
         """Refresh inventories and send differences to channel."""
+        for inventory in self.scheduled_inventories:
+            self.inventory_scheduler.cancel(inventory)
+
         old_inventories = set(self.base_urls)
         with ctx.typing():
             await self.refresh_inventory()
