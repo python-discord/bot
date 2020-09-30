@@ -6,10 +6,9 @@ from collections import Counter, defaultdict
 from string import Template
 from typing import Any, Mapping, Optional, Tuple, Union
 
-from discord import ChannelType, Colour, CustomActivity, Embed, Guild, Member, Message, Role, Status, utils
+from discord import ChannelType, Colour, Embed, Guild, Member, Message, Role, Status, utils
 from discord.abc import GuildChannel
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
-from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
@@ -153,7 +152,9 @@ class Information(Cog):
         channel_counts = self.get_channel_type_counts(ctx.guild)
 
         # How many of each user status?
-        statuses = Counter(member.status for member in ctx.guild.members)
+        py_invite = await self.bot.fetch_invite("python")
+        online_presences = py_invite.approximate_presence_count
+        offline_presences = ctx.guild.member_count - online_presences
         embed = Embed(colour=Colour.blurple())
 
         # How many staff members and staff channels do we have?
@@ -181,10 +182,8 @@ class Information(Cog):
                 Roles: {roles}
 
                 **Member statuses**
-                {constants.Emojis.status_online} {statuses[Status.online]:,}
-                {constants.Emojis.status_idle} {statuses[Status.idle]:,}
-                {constants.Emojis.status_dnd} {statuses[Status.dnd]:,}
-                {constants.Emojis.status_offline} {statuses[Status.offline]:,}
+                {constants.Emojis.status_online} {online_presences:,}
+                {constants.Emojis.status_offline} {offline_presences:,}
             """)
         ).substitute({"channel_counts": channel_counts})
         embed.set_thumbnail(url=ctx.guild.icon_url)
