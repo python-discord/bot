@@ -211,25 +211,6 @@ class Information(Cog):
         """Creates an embed containing information on the `user`."""
         created = time_since(user.created_at, max_units=3)
 
-        # Custom status
-        custom_status = ''
-        for activity in user.activities:
-            if isinstance(activity, CustomActivity):
-                state = ""
-
-                if activity.name:
-                    state = escape_markdown(activity.name)
-
-                emoji = ""
-                if activity.emoji:
-                    # If an emoji is unicode use the emoji, else write the emote like :abc:
-                    if not activity.emoji.id:
-                        emoji += activity.emoji.name + " "
-                    else:
-                        emoji += f"`:{activity.emoji.name}:` "
-
-                custom_status = f'Status: {emoji}{state}\n'
-
         name = str(user)
         if user.nick:
             name = f"{user.nick} ({name})"
@@ -243,10 +224,6 @@ class Information(Cog):
         joined = time_since(user.joined_at, max_units=3)
         roles = ", ".join(role.mention for role in user.roles[1:])
 
-        desktop_status = STATUS_EMOTES.get(user.desktop_status, constants.Emojis.status_online)
-        web_status = STATUS_EMOTES.get(user.web_status, constants.Emojis.status_online)
-        mobile_status = STATUS_EMOTES.get(user.mobile_status, constants.Emojis.status_online)
-
         fields = [
             (
                 "User information",
@@ -254,7 +231,6 @@ class Information(Cog):
                     Created: {created}
                     Profile: {user.mention}
                     ID: {user.id}
-                    {custom_status}
                 """).strip()
             ),
             (
@@ -264,14 +240,6 @@ class Information(Cog):
                     Roles: {roles or None}
                 """).strip()
             ),
-            (
-                "Status",
-                textwrap.dedent(f"""
-                    {desktop_status} Desktop
-                    {web_status} Web
-                    {mobile_status} Mobile
-                """).strip()
-            )
         ]
 
         # Use getattr to future-proof for commands invoked via DMs.
