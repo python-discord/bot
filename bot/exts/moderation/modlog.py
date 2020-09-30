@@ -63,7 +63,7 @@ class ModLog(Cog, name="ModLog"):
                         'id': message.id,
                         'author': message.author.id,
                         'channel_id': message.channel.id,
-                        'content': message.content,
+                        'content': message.content.replace("\0", ""),  # Null chars cause 400.
                         'embeds': [embed.to_dict() for embed in message.embeds],
                         'attachments': attachment,
                     }
