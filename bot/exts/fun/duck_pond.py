@@ -145,6 +145,10 @@ class DuckPond(Cog):
         amount of ducks specified in the config under duck_pond/threshold, it will
         send the message off to the duck pond.
         """
+        # Ignore DMs.
+        if payload.guild_id is None:
+            return
+
         # Was this reaction issued in a blacklisted channel?
         if payload.channel_id in constants.DuckPond.channel_blacklist:
             return
@@ -154,6 +158,9 @@ class DuckPond(Cog):
             return
 
         channel = discord.utils.get(self.bot.get_all_channels(), id=payload.channel_id)
+        if channel is None:
+            return
+
         message = await channel.fetch_message(payload.message_id)
         member = discord.utils.get(message.guild.members, id=payload.user_id)
 
