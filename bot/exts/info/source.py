@@ -36,7 +36,8 @@ class SourceConverter(commands.Converter):
             return argument.lower()
 
         raise commands.BadArgument(
-            f"Unable to convert `{utils.escape_markdown(argument)}` to valid command{', tag,' if show_tag else ''} or Cog."
+            f"Unable to convert `{utils.escape_markdown(argument)}` to valid\
+                 command{', tag,' if show_tag else ''} or Cog."
         )
 
 
