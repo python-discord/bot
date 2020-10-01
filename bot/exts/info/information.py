@@ -106,14 +106,14 @@ class Information(Cog):
 
         To specify multiple roles just add to the arguments, delimit roles with spaces in them using quotation marks.
         """
-        parsed_roles = []
-        failed_roles = []
+        parsed_roles = set()
+        failed_roles = set()
 
         all_roles = {role.id: role.name for role in ctx.guild.roles}
         for role_name in roles:
             if isinstance(role_name, Role):
                 # Role conversion has already succeeded
-                parsed_roles.append(role_name)
+                parsed_roles.add(role_name)
                 continue
 
             match = fuzzywuzzy.process.extractOne(
@@ -122,12 +122,12 @@ class Information(Cog):
             )
 
             if not match:
-                failed_roles.append(role_name)
+                failed_roles.add(role_name)
                 continue
 
             # `match` is a (role name, score, role id) tuple
             role = ctx.guild.get_role(match[2])
-            parsed_roles.append(role)
+            parsed_roles.add(role)
 
         if failed_roles:
             await ctx.send(f":x: Could not retrieve the following roles: {', '.join(failed_roles)}")
