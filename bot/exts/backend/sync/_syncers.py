@@ -353,9 +353,9 @@ class UserSyncer(Syncer):
 
         return _Diff(users_to_create, users_to_update, None)
 
-    async def _get_users(self, endpoint: str = "bot/users", query_params: dict = None) -> t.List[dict]:
+    async def _get_users(self, endpoint: str = "bot/users", query_params: list = None) -> t.List[dict]:
         """GET all users recursively."""
-        users: list = []
+        users = []
         response: dict = await self.bot.api_client.get(endpoint, params=query_params)
         users.extend(response["results"])
 
@@ -363,11 +363,10 @@ class UserSyncer(Syncer):
         if (next_page_url := response["next"]) is not None:
             next_endpoint, query_params = self.get_endpoint(next_page_url)
             users.extend(await self._get_users(next_endpoint, query_params))
-
         return users
 
     @staticmethod
-    def get_endpoint(url: str) -> tuple:
+    def get_endpoint(url: str) -> t.Tuple[str, t.List[tuple]]:
         """Extract the API endpoint and query params from a URL."""
         url = urlparse(url)
 
@@ -380,9 +379,9 @@ class UserSyncer(Syncer):
         return endpoint, params
 
     @staticmethod
-    def patch_dict(user: _User) -> dict:
+    def patch_dict(user: _User) -> t.Dict[str, t.Union[int, str, tuple, bool]]:
         """Convert namedtuple to dict by omitting None values."""
-        user_dict: dict = {}
+        user_dict = {}
         for field in user._fields:
             if (value := getattr(user, field)) is not None:
                 user_dict[field] = value
@@ -392,8 +391,9 @@ class UserSyncer(Syncer):
         """Synchronise the database with the user cache of `guild`."""
         log.trace("Syncing created users...")
         if diff.created:
-            created: list = [user._asdict() for user in diff.created]
+            created = [user._asdict() for user in diff.created]
             await self.bot.api_client.post("bot/users", json=created)
+        log.trace("Syncing updated users...")
         if diff.updated:
-            updated: list = [self.patch_dict(user) for user in diff.updated]
+            updated = [self.patch_dict(user) for user in diff.updated]
             await self.bot.api_client.patch("bot/users/bulk_patch", json=updated)
