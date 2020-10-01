@@ -116,7 +116,10 @@ class Information(Cog):
                 parsed_roles.append(role_name)
                 continue
 
-            match = fuzzywuzzy.process.extractOne(role_name, all_roles, score_cutoff=80)
+            match = fuzzywuzzy.process.extractOne(
+                role_name, all_roles, score_cutoff=80,
+                scorer=fuzzywuzzy.fuzz.ratio
+            )
 
             if not match:
                 failed_roles.append(role_name)
