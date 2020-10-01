@@ -81,14 +81,28 @@ class InfractionScheduler:
         ctx: Context,
         infraction: _utils.Infraction,
         user: UserSnowflake,
-        action_coro: t.Optional[t.Awaitable] = None
-    ) -> None:
-        """Apply an infraction to the user, log the infraction, and optionally notify the user."""
+        action_coro: t.Optional[t.Awaitable] = None,
+        reason_override: t.Optional[str] = None,
+        additional_info: t.Optional[str] = None,
+    ) -> bool:
+        """
+        Apply an infraction to the user, log the infraction, and optionally notify the user.
+
+        `reason_override`, if provided, will be sent to the user in place of the infraction reason.
+        `additional_info` will be attached to the text field in the mod-log embed.
+        Returns whether or not the infraction succeeded.
+        """
         infr_type = infraction["type"]
         icon = _utils.INFRACTION_ICONS[infr_type][0]
         reason = infraction["reason"]
         expiry = time.format_infraction_with_duration(infraction["expires_at"])
         id_ = infraction['id']
+
+        if reason_override is not None:
+            reason_override = reason
+
+        if additional_info is not None:
+            additional_info = ""
 
         log.trace(f"Applying {infr_type} infraction #{id_} to {user}.")
 
@@ -125,7 +139,7 @@ class InfractionScheduler:
                 log.error(f"Failed to DM {user.id}: could not fetch user (status {e.status})")
             else:
                 # Accordingly display whether the user was successfully notified via DM.
-                if await _utils.notify_infraction(user, infr_type, expiry, reason, icon):
+                if await _utils.notify_infraction(user, infr_type, expiry, reason_override, icon):
                     dm_result = ":incoming_envelope: "
                     dm_log_text = "\nDM: Sent"
 
@@ -201,12 +215,14 @@ class InfractionScheduler:
                 Member: {messages.format_user(user)}
                 Actor: {ctx.author.mention}{dm_log_text}{expiry_log_text}
                 Reason: {reason}
+                {additional_info}
             """),
             content=log_content,
             footer=f"ID {infraction['id']}"
         )
 
         log.info(f"Applied {infr_type} infraction #{id_} to {user}.")
+        return not failed
 
     async def pardon_infraction(
             self,
