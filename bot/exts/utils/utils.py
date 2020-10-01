@@ -84,7 +84,7 @@ class Utils(Cog):
                 # Assemble the embed
                 pep_embed = Embed(
                     title=f"**PEP {pep_number} - {pep_header['Title']}**",
-                    description=f"[Link]({self.base_pep_url}{pep_number:04})",
+                    url=f"{self.base_pep_url}{pep_number:04}"
                 )
 
                 pep_embed.set_thumbnail(url=ICON_URL)
