@@ -68,7 +68,7 @@ class InformationCogTests(unittest.TestCase):
             permissions=discord.Permissions(0),
         )
 
-        self.ctx.guild.roles.append([dummy_role, admin_role])
+        self.ctx.guild.roles.extend([dummy_role, admin_role])
 
         self.cog.role_info.can_run = unittest.mock.AsyncMock()
         self.cog.role_info.can_run.return_value = True

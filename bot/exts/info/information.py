@@ -6,7 +6,8 @@ from collections import Counter, defaultdict
 from string import Template
 from typing import Any, Mapping, Optional, Tuple, Union
 
-from discord import ChannelType, Colour, CustomActivity, Embed, Guild, Member, Message, Role, Status, utils
+import fuzzywuzzy
+from discord import ChannelType, Colour, CustomActivity, Embed, Guild, Member, Message, Role, Status
 from discord.abc import GuildChannel
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
 from discord.utils import escape_markdown
@@ -108,18 +109,21 @@ class Information(Cog):
         parsed_roles = []
         failed_roles = []
 
+        all_roles = {role.id: role.name for role in ctx.guild.roles}
         for role_name in roles:
             if isinstance(role_name, Role):
                 # Role conversion has already succeeded
                 parsed_roles.append(role_name)
                 continue
 
-            role = utils.find(lambda r: r.name.lower() == role_name.lower(), ctx.guild.roles)
+            match = fuzzywuzzy.process.extractOne(role_name, all_roles, score_cutoff=80)
 
-            if not role:
+            if not match:
                 failed_roles.append(role_name)
                 continue
 
+            # `match` is a (role name, score, role id) tuple
+            role = ctx.guild.get_role(match[2])
             parsed_roles.append(role)
 
         if failed_roles:
