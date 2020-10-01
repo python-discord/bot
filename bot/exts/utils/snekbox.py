@@ -41,7 +41,7 @@ RAW_CODE_REGEX = re.compile(
 MAX_PASTE_LEN = 1000
 
 # `!eval` command whitelists
-EVAL_CHANNELS = (Channels.bot_commands, Channels.esoteric)
+EVAL_CHANNELS = (Channels.bot_commands, Channels.esoteric, Channels.code_help_voice)
 EVAL_CATEGORIES = (Categories.help_available, Categories.help_in_use)
 EVAL_ROLES = (Roles.helpers, Roles.moderators, Roles.admins, Roles.owners, Roles.python_community, Roles.partners)
 

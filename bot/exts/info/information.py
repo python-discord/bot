@@ -77,7 +77,7 @@ class Information(Cog):
         channel_type_list = sorted(channel_type_list)
         return "\n".join(channel_type_list)
 
-    @has_any_role(*constants.MODERATION_ROLES)
+    @has_any_role(*constants.STAFF_ROLES)
     @command(name="roles")
     async def roles_info(self, ctx: Context) -> None:
         """Returns a list of all roles and their corresponding IDs."""
@@ -97,7 +97,7 @@ class Information(Cog):
 
         await LinePaginator.paginate(role_list, ctx, embed, empty=False)
 
-    @has_any_role(*constants.MODERATION_ROLES)
+    @has_any_role(*constants.STAFF_ROLES)
     @command(name="role")
     async def role_info(self, ctx: Context, *roles: Union[Role, str]) -> None:
         """

@@ -23,23 +23,25 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
 
         self.msg = MockMessage(id=555, content="hello world")
         self.msg.channel.mention = "#lemonade-stand"
+        self.msg.guild.get_member.return_value.bot = False
+        self.msg.guild.get_member.return_value.__str__.return_value = "Woody"
         self.msg.author.__str__ = MagicMock(return_value=self.msg.author.name)
         self.msg.author.avatar_url_as.return_value = "picture-lemon.png"
 
-    def test_is_valid_user_id_valid(self):
-        """Should consider user IDs valid if they decode entirely to ASCII digits."""
-        ids = (
-            "NDcyMjY1OTQzMDYyNDEzMzMy",
-            "NDc1MDczNjI5Mzk5NTQ3OTA0",
-            "NDY3MjIzMjMwNjUwNzc3NjQx",
+    def test_extract_user_id_valid(self):
+        """Should consider user IDs valid if they decode into an integer ID."""
+        id_pairs = (
+            ("NDcyMjY1OTQzMDYyNDEzMzMy", 472265943062413332),
+            ("NDc1MDczNjI5Mzk5NTQ3OTA0", 475073629399547904),
+            ("NDY3MjIzMjMwNjUwNzc3NjQx", 467223230650777641),
         )
 
-        for user_id in ids:
-            with self.subTest(user_id=user_id):
-                result = TokenRemover.is_valid_user_id(user_id)
-                self.assertTrue(result)
+        for token_id, user_id in id_pairs:
+            with self.subTest(token_id=token_id):
+                result = TokenRemover.extract_user_id(token_id)
+                self.assertEqual(result, user_id)
 
-    def test_is_valid_user_id_invalid(self):
+    def test_extract_user_id_invalid(self):
         """Should consider non-digit and non-ASCII IDs invalid."""
         ids = (
             ("SGVsbG8gd29ybGQ", "non-digit ASCII"),
@@ -53,8 +55,8 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
 
         for user_id, msg in ids:
             with self.subTest(msg=msg):
-                result = TokenRemover.is_valid_user_id(user_id)
-                self.assertFalse(result)
+                result = TokenRemover.extract_user_id(user_id)
+                self.assertIsNone(result)
 
     def test_is_valid_timestamp_valid(self):
         """Should consider timestamps valid if they're greater than the Discord epoch."""
@@ -84,6 +86,34 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         for timestamp, msg in timestamps:
             with self.subTest(msg=msg):
                 result = TokenRemover.is_valid_timestamp(timestamp)
+                self.assertFalse(result)
+
+    def test_is_valid_hmac_valid(self):
+        """Should consider an HMAC valid if it has at least 3 unique characters."""
+        valid_hmacs = (
+            "VXmErH7j511turNpfURmb0rVNm8",
+            "Ysnu2wacjaKs7qnoo46S8Dm2us8",
+            "sJf6omBPORBPju3WJEIAcwW9Zds",
+            "s45jqDV_Iisn-symw0yDRrk_jf4",
+        )
+
+        for hmac in valid_hmacs:
+            with self.subTest(msg=hmac):
+                result = TokenRemover.is_maybe_valid_hmac(hmac)
+                self.assertTrue(result)
+
+    def test_is_invalid_hmac_invalid(self):
+        """Should consider an HMAC invalid if has fewer than 3 unique characters."""
+        invalid_hmacs = (
+            ("xxxxxxxxxxxxxxxxxx", "Single character"),
+            ("XxXxXxXxXxXxXxXxXx", "Single character alternating case"),
+            ("ASFasfASFasfASFASsf", "Three characters alternating-case"),
+            ("asdasdasdasdasdasdasd", "Three characters one case"),
+        )
+
+        for hmac, msg in invalid_hmacs:
+            with self.subTest(msg=msg):
+                result = TokenRemover.is_maybe_valid_hmac(hmac)
                 self.assertFalse(result)
 
     def test_mod_log_property(self):
@@ -143,11 +173,18 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(return_value)
         token_re.finditer.assert_called_once_with(self.msg.content)
 
-    @autospec(TokenRemover, "is_valid_user_id", "is_valid_timestamp")
+    @autospec(TokenRemover, "extract_user_id", "is_valid_timestamp", "is_maybe_valid_hmac")
     @autospec("bot.exts.filters.token_remover", "Token")
     @autospec("bot.exts.filters.token_remover", "TOKEN_RE")
-    def test_find_token_valid_match(self, token_re, token_cls, is_valid_id, is_valid_timestamp):
-        """The first match with a valid user ID and timestamp should be returned as a `Token`."""
+    def test_find_token_valid_match(
+        self,
+        token_re,
+        token_cls,
+        extract_user_id,
+        is_valid_timestamp,
+        is_maybe_valid_hmac,
+    ):
+        """The first match with a valid user ID, timestamp, and HMAC should be returned as a `Token`."""
         matches = [
             mock.create_autospec(Match, spec_set=True, instance=True),
             mock.create_autospec(Match, spec_set=True, instance=True),
@@ -159,23 +196,32 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
 
         token_re.finditer.return_value = matches
         token_cls.side_effect = tokens
-        is_valid_id.side_effect = (False, True)  # The 1st match will be invalid, 2nd one valid.
+        extract_user_id.side_effect = (None, True)  # The 1st match will be invalid, 2nd one valid.
         is_valid_timestamp.return_value = True
+        is_maybe_valid_hmac.return_value = True
 
         return_value = TokenRemover.find_token_in_message(self.msg)
 
         self.assertEqual(tokens[1], return_value)
         token_re.finditer.assert_called_once_with(self.msg.content)
 
-    @autospec(TokenRemover, "is_valid_user_id", "is_valid_timestamp")
+    @autospec(TokenRemover, "extract_user_id", "is_valid_timestamp", "is_maybe_valid_hmac")
     @autospec("bot.exts.filters.token_remover", "Token")
     @autospec("bot.exts.filters.token_remover", "TOKEN_RE")
-    def test_find_token_invalid_matches(self, token_re, token_cls, is_valid_id, is_valid_timestamp):
-        """None should be returned if no matches have valid user IDs or timestamps."""
+    def test_find_token_invalid_matches(
+        self,
+        token_re,
+        token_cls,
+        extract_user_id,
+        is_valid_timestamp,
+        is_maybe_valid_hmac,
+    ):
+        """None should be returned if no matches have valid user IDs, HMACs, and timestamps."""
         token_re.finditer.return_value = [mock.create_autospec(Match, spec_set=True, instance=True)]
         token_cls.return_value = mock.create_autospec(Token, spec_set=True, instance=True)
-        is_valid_id.return_value = False
+        extract_user_id.return_value = None
         is_valid_timestamp.return_value = False
+        is_maybe_valid_hmac.return_value = False
 
         return_value = TokenRemover.find_token_in_message(self.msg)
 
@@ -234,7 +280,7 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
     @autospec("bot.exts.filters.token_remover", "LOG_MESSAGE")
     def test_format_log_message(self, log_message):
         """Should correctly format the log message with info from the message and token."""
-        token = Token("NDY3MjIzMjMwNjUwNzc3NjQx", "XsySD_", "s45jqDV_Iisn-symw0yDRrk_jf4")
+        token = Token("NDcyMjY1OTQzMDYyNDEzMzMy", "XsySD_", "s45jqDV_Iisn-symw0yDRrk_jf4")
         log_message.format.return_value = "Howdy"
 
         return_value = TokenRemover.format_log_message(self.msg, token)
@@ -248,18 +294,68 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
             hmac="x" * len(token.hmac),
         )
 
+    @autospec("bot.exts.filters.token_remover", "UNKNOWN_USER_LOG_MESSAGE")
+    def test_format_userid_log_message_unknown(self, unknown_user_log_message):
+        """Should correctly format the user ID portion when the actual user it belongs to is unknown."""
+        token = Token("NDcyMjY1OTQzMDYyNDEzMzMy", "XsySD_", "s45jqDV_Iisn-symw0yDRrk_jf4")
+        unknown_user_log_message.format.return_value = " Partner"
+        msg = MockMessage(id=555, content="hello world")
+        msg.guild.get_member.return_value = None
+
+        return_value = TokenRemover.format_userid_log_message(msg, token)
+
+        self.assertEqual(return_value, (unknown_user_log_message.format.return_value, False))
+        unknown_user_log_message.format.assert_called_once_with(user_id=472265943062413332)
+
+    @autospec("bot.exts.filters.token_remover", "KNOWN_USER_LOG_MESSAGE")
+    def test_format_userid_log_message_bot(self, known_user_log_message):
+        """Should correctly format the user ID portion when the ID belongs to a known bot."""
+        token = Token("NDcyMjY1OTQzMDYyNDEzMzMy", "XsySD_", "s45jqDV_Iisn-symw0yDRrk_jf4")
+        known_user_log_message.format.return_value = " Partner"
+        msg = MockMessage(id=555, content="hello world")
+        msg.guild.get_member.return_value.__str__.return_value = "Sam"
+        msg.guild.get_member.return_value.bot = True
+
+        return_value = TokenRemover.format_userid_log_message(msg, token)
+
+        self.assertEqual(return_value, (known_user_log_message.format.return_value, False))
+
+        known_user_log_message.format.assert_called_once_with(
+            user_id=472265943062413332,
+            user_name="Sam",
+            kind="BOT",
+        )
+
+    @autospec("bot.exts.filters.token_remover", "KNOWN_USER_LOG_MESSAGE")
+    def test_format_log_message_user_token_user(self, user_token_message):
+        """Should correctly format the user ID portion when the ID belongs to a known user."""
+        token = Token("NDY3MjIzMjMwNjUwNzc3NjQx", "XsySD_", "s45jqDV_Iisn-symw0yDRrk_jf4")
+        user_token_message.format.return_value = "Partner"
+
+        return_value = TokenRemover.format_userid_log_message(self.msg, token)
+
+        self.assertEqual(return_value, (user_token_message.format.return_value, True))
+        user_token_message.format.assert_called_once_with(
+            user_id=467223230650777641,
+            user_name="Woody",
+            kind="USER",
+        )
+
     @mock.patch.object(TokenRemover, "mod_log", new_callable=mock.PropertyMock)
     @autospec("bot.exts.filters.token_remover", "log")
-    @autospec(TokenRemover, "format_log_message")
-    async def test_take_action(self, format_log_message, logger, mod_log_property):
+    @autospec(TokenRemover, "format_log_message", "format_userid_log_message")
+    async def test_take_action(self, format_log_message, format_userid_log_message, logger, mod_log_property):
         """Should delete the message and send a mod log."""
         cog = TokenRemover(self.bot)
         mod_log = mock.create_autospec(ModLog, spec_set=True, instance=True)
         token = mock.create_autospec(Token, spec_set=True, instance=True)
+        token.user_id = "no-id"
         log_msg = "testing123"
+        userid_log_message = "userid-log-message"
 
         mod_log_property.return_value = mod_log
         format_log_message.return_value = log_msg
+        format_userid_log_message.return_value = (userid_log_message, True)
 
         await cog.take_action(self.msg, token)
 
@@ -269,6 +365,7 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         )
 
         format_log_message.assert_called_once_with(self.msg, token)
+        format_userid_log_message.assert_called_once_with(self.msg, token)
         logger.debug.assert_called_with(log_msg)
         self.bot.stats.incr.assert_called_once_with("tokens.removed_tokens")
 
@@ -277,9 +374,10 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
             icon_url=constants.Icons.token_removed,
             colour=Colour(constants.Colours.soft_red),
             title="Token removed!",
-            text=log_msg,
+            text=log_msg + "\n" + userid_log_message,
             thumbnail=self.msg.author.avatar_url_as.return_value,
-            channel_id=constants.Channels.mod_alerts
+            channel_id=constants.Channels.mod_alerts,
+            ping_everyone=True,
         )
 
     @mock.patch.object(TokenRemover, "mod_log", new_callable=mock.PropertyMock)
