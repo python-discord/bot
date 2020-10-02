@@ -9,7 +9,7 @@ from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
 from sentry_sdk.integrations.redis import RedisIntegration
 
-from bot import constants, patches
+from bot import constants
 from bot.bot import Bot
 from bot.utils.extensions import EXTENSIONS
 
@@ -64,9 +64,5 @@ if not constants.HelpChannels.enable:
 
 for extension in extensions:
     bot.load_extension(extension)
-
-# Apply `message_edited_at` patch if discord.py did not yet release a bug fix.
-if not hasattr(discord.message.Message, '_handle_edited_timestamp'):
-    patches.message_edited_at.apply_patch()
 
 bot.run(constants.Bot.token)
