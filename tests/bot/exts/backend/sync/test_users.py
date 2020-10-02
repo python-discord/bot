@@ -16,6 +16,16 @@ def fake_user(**kwargs):
     return kwargs
 
 
+def fake_none_user(**kwargs):
+    kwargs.setdefault("id", None)
+    kwargs.setdefault("name", None)
+    kwargs.setdefault("discriminator", None)
+    kwargs.setdefault("roles", None)
+    kwargs.setdefault("in_guild", None)
+
+    return kwargs
+
+
 class UserSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
     """Tests for determining differences between users in the DB and users in the Guild cache."""
 
@@ -41,8 +51,13 @@ class UserSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
         return guild
 
     async def test_empty_diff_for_no_users(self):
-        # TODO: need to fix this test.
         """When no users are given, an empty diff should be returned."""
+        self.bot.api_client.get.return_value = {
+            "count": 3,
+            "next": None,
+            "previous": None,
+            "results": []
+        }
         guild = self.get_guild()
 
         actual_diff = await self.syncer._get_diff(guild)
@@ -68,6 +83,7 @@ class UserSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
     async def test_diff_for_updated_users(self):
         """Only updated users should be added to the 'updated' set of the diff."""
         updated_user = fake_user(id=99, name="new")
+        updated_user_none = fake_none_user(id=99, name="new")
 
         self.bot.api_client.get.return_value = {
             "count": 3,
@@ -78,7 +94,7 @@ class UserSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
         guild = self.get_guild(updated_user, fake_user())
 
         actual_diff = await self.syncer._get_diff(guild)
-        expected_diff = (set(), {_User(**updated_user)}, None)
+        expected_diff = (set(), {_User(**updated_user_none)}, None)
 
         self.assertEqual(actual_diff, expected_diff)
 
@@ -101,7 +117,7 @@ class UserSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_diff_sets_in_guild_false_for_leaving_users(self):
         """When a user leaves the guild, the `in_guild` flag is updated to `False`."""
-        leaving_user = fake_user(id=63, in_guild=False)
+        leaving_user_none = fake_none_user(id=63, in_guild=False)
 
         self.bot.api_client.get.return_value = {
             "count": 3,
@@ -112,15 +128,18 @@ class UserSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
         guild = self.get_guild(fake_user())
 
         actual_diff = await self.syncer._get_diff(guild)
-        expected_diff = (set(), {_User(**leaving_user)}, None)
+        expected_diff = (set(), {_User(**leaving_user_none)}, None)
 
         self.assertEqual(actual_diff, expected_diff)
 
     async def test_diff_for_new_updated_and_leaving_users(self):
         """When users are added, updated, and removed, all of them are returned properly."""
         new_user = fake_user(id=99, name="new")
+
         updated_user = fake_user(id=55, name="updated")
-        leaving_user = fake_user(id=63, in_guild=False)
+        updated_user_none = fake_none_user(id=55, name="updated")
+
+        leaving_user_none = fake_none_user(id=63, in_guild=False)
 
         self.bot.api_client.get.return_value = {
             "count": 3,
@@ -131,7 +150,14 @@ class UserSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
         guild = self.get_guild(fake_user(), new_user, updated_user)
 
         actual_diff = await self.syncer._get_diff(guild)
-        expected_diff = ({_User(**new_user)}, {_User(**updated_user), _User(**leaving_user)}, None)
+        expected_diff = (
+            {_User(**new_user)},
+            {
+                _User(**updated_user_none),
+                _User(**leaving_user_none)
+            },
+            None
+        )
 
         self.assertEqual(actual_diff, expected_diff)
 
