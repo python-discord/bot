@@ -161,9 +161,9 @@ class Information(Cog):
         staff_channel_count = self.get_staff_channel_count(ctx.guild)
 
         # Because channel_counts lacks leading whitespace, it breaks the dedent if it's inserted directly by the
-        # f-string. While this is correctly formated by Discord, it makes unit testing difficult. To keep the formatting
-        # without joining a tuple of strings we can use a Template string to insert the already-formatted channel_counts
-        # after the dedent is made.
+        # f-string. While this is correctly formatted by Discord, it makes unit testing difficult. To keep the
+        # formatting without joining a tuple of strings we can use a Template string to insert the already-formatted
+        # channel_counts after the dedent is made.
         embed.description = Template(
             textwrap.dedent(f"""
                 **Server information**

@@ -130,7 +130,7 @@ class BotCog(Cog, name="Bot"):
                     else:
                         content = "".join(content[1:])
 
-                # Strip it again to remove any leading whitespace. This is neccessary
+                # Strip it again to remove any leading whitespace. This is necessary
                 # if the first line of the message looked like ```python <code>
                 old = content.strip()
 
