@@ -57,6 +57,7 @@ async def send_attachments(
     message: discord.Message,
     destination: Union[discord.TextChannel, discord.Webhook],
     link_large: bool = True,
+    use_cached: bool = False,
     **kwargs
 ) -> List[str]:
     """
@@ -85,7 +86,7 @@ async def send_attachments(
             # but some may get through hence the try-catch.
             if attachment.size <= destination.guild.filesize_limit - 512:
                 with BytesIO() as file:
-                    await attachment.save(file, use_cached=True)
+                    await attachment.save(file, use_cached=use_cached)
                     attachment_file = discord.File(file, filename=attachment.filename)
 
                     if isinstance(destination, discord.TextChannel):
