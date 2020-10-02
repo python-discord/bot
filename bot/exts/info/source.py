@@ -35,9 +35,10 @@ class SourceConverter(commands.Converter):
         elif argument.lower() in tags_cog._cache:
             return argument.lower()
 
+        escaped_arg = utils.escape_markdown(argument)
+
         raise commands.BadArgument(
-            f"Unable to convert `{utils.escape_markdown(argument)}` to valid\
-                 command{', tag,' if show_tag else ''} or Cog."
+            f"Unable to convert '{escaped_arg}' to valid command{', tag,' if show_tag else ''} or Cog."
         )
 
 
