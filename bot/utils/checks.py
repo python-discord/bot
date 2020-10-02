@@ -1,49 +1,122 @@
 import datetime
 import logging
-from typing import Callable, Iterable
+from typing import Callable, Container, Iterable, Optional, Union
 
-from discord.ext.commands import BucketType, Cog, Command, CommandOnCooldown, Context, Cooldown, CooldownMapping
+from discord.ext.commands import (
+    BucketType,
+    CheckFailure,
+    Cog,
+    Command,
+    CommandOnCooldown,
+    Context,
+    Cooldown,
+    CooldownMapping,
+    NoPrivateMessage,
+    has_any_role,
+)
+
+from bot import constants
 
 log = logging.getLogger(__name__)
 
 
-def with_role_check(ctx: Context, *role_ids: int) -> bool:
-    """Returns True if the user has any one of the roles in role_ids."""
-    if not ctx.guild:  # Return False in a DM
-        log.trace(f"{ctx.author} tried to use the '{ctx.command.name}'command from a DM. "
-                  "This command is restricted by the with_role decorator. Rejecting request.")
-        return False
+class InWhitelistCheckFailure(CheckFailure):
+    """Raised when the `in_whitelist` check fails."""
 
-    for role in ctx.author.roles:
-        if role.id in role_ids:
-            log.trace(f"{ctx.author} has the '{role.name}' role, and passes the check.")
-            return True
+    def __init__(self, redirect_channel: Optional[int]) -> None:
+        self.redirect_channel = redirect_channel
 
-    log.trace(f"{ctx.author} does not have the required role to use "
-              f"the '{ctx.command.name}' command, so the request is rejected.")
+        if redirect_channel:
+            redirect_message = f" here. Please use the <#{redirect_channel}> channel instead"
+        else:
+            redirect_message = ""
+
+        error_message = f"You are not allowed to use that command{redirect_message}."
+
+        super().__init__(error_message)
+
+
+def in_whitelist_check(
+    ctx: Context,
+    channels: Container[int] = (),
+    categories: Container[int] = (),
+    roles: Container[int] = (),
+    redirect: Optional[int] = constants.Channels.bot_commands,
+    fail_silently: bool = False,
+) -> bool:
+    """
+    Check if a command was issued in a whitelisted context.
+
+    The whitelists that can be provided are:
+
+    - `channels`: a container with channel ids for whitelisted channels
+    - `categories`: a container with category ids for whitelisted categories
+    - `roles`: a container with with role ids for whitelisted roles
+
+    If the command was invoked in a context that was not whitelisted, the member is either
+    redirected to the `redirect` channel that was passed (default: #bot-commands) or simply
+    told that they're not allowed to use this particular command (if `None` was passed).
+    """
+    if redirect and redirect not in channels:
+        # It does not make sense for the channel whitelist to not contain the redirection
+        # channel (if applicable). That's why we add the redirection channel to the `channels`
+        # container if it's not already in it. As we allow any container type to be passed,
+        # we first create a tuple in order to safely add the redirection channel.
+        #
+        # Note: It's possible for the redirect channel to be in a whitelisted category, but
+        # there's no easy way to check that and as a channel can easily be moved in and out of
+        # categories, it's probably not wise to rely on its category in any case.
+        channels = tuple(channels) + (redirect,)
+
+    if channels and ctx.channel.id in channels:
+        log.trace(f"{ctx.author} may use the `{ctx.command.name}` command as they are in a whitelisted channel.")
+        return True
+
+    # Only check the category id if we have a category whitelist and the channel has a `category_id`
+    if categories and hasattr(ctx.channel, "category_id") and ctx.channel.category_id in categories:
+        log.trace(f"{ctx.author} may use the `{ctx.command.name}` command as they are in a whitelisted category.")
+        return True
+
+    # Only check the roles whitelist if we have one and ensure the author's roles attribute returns
+    # an iterable to prevent breakage in DM channels (for if we ever decide to enable commands there).
+    if roles and any(r.id in roles for r in getattr(ctx.author, "roles", ())):
+        log.trace(f"{ctx.author} may use the `{ctx.command.name}` command as they have a whitelisted role.")
+        return True
+
+    log.trace(f"{ctx.author} may not use the `{ctx.command.name}` command within this context.")
+
+    # Some commands are secret, and should produce no feedback at all.
+    if not fail_silently:
+        raise InWhitelistCheckFailure(redirect)
     return False
 
 
-def without_role_check(ctx: Context, *role_ids: int) -> bool:
-    """Returns True if the user does not have any of the roles in role_ids."""
-    if not ctx.guild:  # Return False in a DM
-        log.trace(f"{ctx.author} tried to use the '{ctx.command.name}' command from a DM. "
-                  "This command is restricted by the without_role decorator. Rejecting request.")
+async def has_any_role_check(ctx: Context, *roles: Union[str, int]) -> bool:
+    """
+    Returns True if the context's author has any of the specified roles.
+
+    `roles` are the names or IDs of the roles for which to check.
+    False is always returns if the context is outside a guild.
+    """
+    try:
+        return await has_any_role(*roles).predicate(ctx)
+    except CheckFailure:
         return False
 
-    author_roles = [role.id for role in ctx.author.roles]
-    check = all(role not in author_roles for role in role_ids)
-    log.trace(f"{ctx.author} tried to call the '{ctx.command.name}' command. "
-              f"The result of the without_role check was {check}.")
-    return check
 
+async def has_no_roles_check(ctx: Context, *roles: Union[str, int]) -> bool:
+    """
+    Returns True if the context's author doesn't have any of the specified roles.
 
-def in_channel_check(ctx: Context, *channel_ids: int) -> bool:
-    """Checks if the command was executed inside the list of specified channels."""
-    check = ctx.channel.id in channel_ids
-    log.trace(f"{ctx.author} tried to call the '{ctx.command.name}' command. "
-              f"The result of the in_channel check was {check}.")
-    return check
+    `roles` are the names or IDs of the roles for which to check.
+    False is always returns if the context is outside a guild.
+    """
+    try:
+        return not await has_any_role(*roles).predicate(ctx)
+    except NoPrivateMessage:
+        return False
+    except CheckFailure:
+        return True
 
 
 def cooldown_with_role_bypass(rate: int, per: float, type: BucketType = BucketType.default, *,

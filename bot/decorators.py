@@ -1,80 +1,65 @@
 import logging
 import random
-from asyncio import Lock, sleep
+from asyncio import Lock, create_task, sleep
 from contextlib import suppress
 from functools import wraps
-from typing import Callable, Container, Union
+from typing import Callable, Container, Optional, Union
 from weakref import WeakValueDictionary
 
-from discord import Colour, Embed, Member
-from discord.errors import NotFound
+from discord import Colour, Embed, Member, NotFound
 from discord.ext import commands
-from discord.ext.commands import CheckFailure, Cog, Context
+from discord.ext.commands import Cog, Context
 
-from bot.constants import ERROR_REPLIES, RedirectOutput
-from bot.utils.checks import with_role_check, without_role_check
+from bot.constants import Channels, ERROR_REPLIES, RedirectOutput
+from bot.utils.checks import in_whitelist_check
 
 log = logging.getLogger(__name__)
 
 
-class InChannelCheckFailure(CheckFailure):
-    """Raised when a check fails for a message being sent in a whitelisted channel."""
-
-    def __init__(self, *channels: int):
-        self.channels = channels
-        channels_str = ', '.join(f"<#{c_id}>" for c_id in channels)
-
-        super().__init__(f"Sorry, but you may only use this command within {channels_str}.")
-
-
-def in_channel(
-    *channels: int,
-    hidden_channels: Container[int] = None,
-    bypass_roles: Container[int] = None
+def in_whitelist(
+    *,
+    channels: Container[int] = (),
+    categories: Container[int] = (),
+    roles: Container[int] = (),
+    redirect: Optional[int] = Channels.bot_commands,
+    fail_silently: bool = False,
 ) -> Callable:
     """
-    Checks that the message is in a whitelisted channel or optionally has a bypass role.
+    Check if a command was issued in a whitelisted context.
 
-    Hidden channels are channels which will not be displayed in the InChannelCheckFailure error
-    message.
+    The whitelists that can be provided are:
+
+    - `channels`: a container with channel ids for whitelisted channels
+    - `categories`: a container with category ids for whitelisted categories
+    - `roles`: a container with with role ids for whitelisted roles
+
+    If the command was invoked in a context that was not whitelisted, the member is either
+    redirected to the `redirect` channel that was passed (default: #bot-commands) or simply
+    told that they're not allowed to use this particular command (if `None` was passed).
     """
-    hidden_channels = hidden_channels or []
-    bypass_roles = bypass_roles or []
-
     def predicate(ctx: Context) -> bool:
-        """In-channel checker predicate."""
-        if ctx.channel.id in channels or ctx.channel.id in hidden_channels:
-            log.debug(f"{ctx.author} tried to call the '{ctx.command.name}' command. "
-                      f"The command was used in a whitelisted channel.")
+        """Check if command was issued in a whitelisted context."""
+        return in_whitelist_check(ctx, channels, categories, roles, redirect, fail_silently)
+
+    return commands.check(predicate)
+
+
+def has_no_roles(*roles: Union[str, int]) -> Callable:
+    """
+    Returns True if the user does not have any of the roles specified.
+
+    `roles` are the names or IDs of the disallowed roles.
+    """
+    async def predicate(ctx: Context) -> bool:
+        try:
+            await commands.has_any_role(*roles).predicate(ctx)
+        except commands.MissingAnyRole:
             return True
+        else:
+            # This error is never shown to users, so don't bother trying to make it too pretty.
+            roles_ = ", ".join(f"'{item}'" for item in roles)
+            raise commands.CheckFailure(f"You have at least one of the disallowed roles: {roles_}")
 
-        if bypass_roles:
-            if any(r.id in bypass_roles for r in ctx.author.roles):
-                log.debug(f"{ctx.author} tried to call the '{ctx.command.name}' command. "
-                          f"The command was not used in a whitelisted channel, "
-                          f"but the author had a role to bypass the in_channel check.")
-                return True
-
-        log.debug(f"{ctx.author} tried to call the '{ctx.command.name}' command. "
-                  f"The in_channel check failed.")
-
-        raise InChannelCheckFailure(*channels)
-
-    return commands.check(predicate)
-
-
-def with_role(*role_ids: int) -> Callable:
-    """Returns True if the user has any one of the roles in role_ids."""
-    async def predicate(ctx: Context) -> bool:
-        """With role checker predicate."""
-        return with_role_check(ctx, *role_ids)
-    return commands.check(predicate)
-
-
-def without_role(*role_ids: int) -> Callable:
-    """Returns True if the user does not have any of the roles in role_ids."""
-    async def predicate(ctx: Context) -> bool:
-        return without_role_check(ctx, *role_ids)
     return commands.check(predicate)
 
 
@@ -96,7 +81,7 @@ def locked() -> Callable:
                 embed = Embed()
                 embed.colour = Colour.red()
 
-                log.debug(f"User tried to invoke a locked command.")
+                log.debug("User tried to invoke a locked command.")
                 embed.description = (
                     "You're already using this command. Please wait until it is done before you use it again."
                 )
@@ -137,13 +122,12 @@ def redirect_output(destination_channel: int, bypass_roles: Container[int] = Non
             log.trace(f"Redirecting output of {ctx.author}'s command '{ctx.command.name}' to {redirect_channel.name}")
             ctx.channel = redirect_channel
             await ctx.channel.send(f"Here's the output of your command, {ctx.author.mention}")
-            await func(self, ctx, *args, **kwargs)
+            create_task(func(self, ctx, *args, **kwargs))
 
             message = await old_channel.send(
                 f"Hey, {ctx.author.mention}, you can find the output of your command here: "
                 f"{redirect_channel.mention}"
             )
-
             if RedirectOutput.delete_invocation:
                 await sleep(RedirectOutput.delete_delay)
 
@@ -154,6 +138,7 @@ def redirect_output(destination_channel: int, bypass_roles: Container[int] = Non
                 with suppress(NotFound):
                     await ctx.message.delete()
                     log.trace("Redirect output: Deleted invocation message")
+
         return inner
     return wrap
 

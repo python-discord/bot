@@ -1,10 +1,15 @@
+import asyncio
 import logging
 import os
 import sys
+from functools import partial, partialmethod
 from logging import Logger, handlers
 from pathlib import Path
 
 import coloredlogs
+from discord.ext import commands
+
+from bot.command import Command
 
 TRACE_LEVEL = logging.TRACE = 5
 logging.addLevelName(TRACE_LEVEL, "TRACE")
@@ -33,7 +38,7 @@ log_format = logging.Formatter(format_string)
 
 log_file = Path("logs", "bot.log")
 log_file.parent.mkdir(exist_ok=True)
-file_handler = handlers.RotatingFileHandler(log_file, maxBytes=5242880, backupCount=7)
+file_handler = handlers.RotatingFileHandler(log_file, maxBytes=5242880, backupCount=7, encoding="utf8")
 file_handler.setFormatter(log_format)
 
 root_log = logging.getLogger()
@@ -58,4 +63,16 @@ coloredlogs.install(logger=root_log, stream=sys.stdout)
 
 logging.getLogger("discord").setLevel(logging.WARNING)
 logging.getLogger("websockets").setLevel(logging.WARNING)
+logging.getLogger("chardet").setLevel(logging.WARNING)
 logging.getLogger(__name__)
+
+
+# On Windows, the selector event loop is required for aiodns.
+if os.name == "nt":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+
+# Monkey-patch discord.py decorators to use the Command subclass which supports root aliases.
+# Must be patched before any cogs are added.
+commands.command = partial(commands.command, cls=Command)
+commands.GroupMixin.command = partialmethod(commands.GroupMixin.command, cls=Command)

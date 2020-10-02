@@ -2,14 +2,17 @@ import asyncio
 import logging
 import socket
 import warnings
-from typing import Optional
+from collections import defaultdict
+from typing import Dict, Optional
 
 import aiohttp
 import discord
+from async_rediscache import RedisSession
 from discord.ext import commands
+from sentry_sdk import push_scope
 
-from bot import api
-from bot import constants
+from bot import DEBUG_MODE, api, constants
+from bot.async_stats import AsyncStatsClient
 
 log = logging.getLogger('bot')
 
@@ -17,7 +20,7 @@ log = logging.getLogger('bot')
 class Bot(commands.Bot):
     """A subclass of `discord.ext.commands.Bot` with an aiohttp session and an API client."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, redis_session: RedisSession, **kwargs):
         if "connector" in kwargs:
             warnings.warn(
                 "If login() is called (or the bot is started), the connector will be overwritten "
@@ -27,50 +30,33 @@ class Bot(commands.Bot):
         super().__init__(*args, **kwargs)
 
         self.http_session: Optional[aiohttp.ClientSession] = None
+        self.redis_session = redis_session
         self.api_client = api.APIClient(loop=self.loop)
+        self.filter_list_cache = defaultdict(dict)
 
         self._connector = None
         self._resolver = None
         self._guild_available = asyncio.Event()
 
-    def add_cog(self, cog: commands.Cog) -> None:
-        """Adds a "cog" to the bot and logs the operation."""
-        super().add_cog(cog)
-        log.info(f"Cog loaded: {cog.qualified_name}")
+        statsd_url = constants.Stats.statsd_host
 
-    def clear(self) -> None:
-        """
-        Clears the internal state of the bot and recreates the connector and sessions.
+        if DEBUG_MODE:
+            # Since statsd is UDP, there are no errors for sending to a down port.
+            # For this reason, setting the statsd host to 127.0.0.1 for development
+            # will effectively disable stats.
+            statsd_url = "127.0.0.1"
 
-        Will cause a DeprecationWarning if called outside a coroutine.
-        """
-        # Because discord.py recreates the HTTPClient session, may as well follow suit and recreate
-        # our own stuff here too.
-        self._recreate()
-        super().clear()
+        self.stats = AsyncStatsClient(self.loop, statsd_url, 8125, prefix="bot")
 
-    async def close(self) -> None:
-        """Close the Discord connection and the aiohttp session, connector, and resolver."""
-        await super().close()
+    async def cache_filter_list_data(self) -> None:
+        """Cache all the data in the FilterList on the site."""
+        full_cache = await self.api_client.get('bot/filter-lists')
 
-        await self.api_client.close()
-
-        if self.http_session:
-            await self.http_session.close()
-
-        if self._connector:
-            await self._connector.close()
-
-        if self._resolver:
-            await self._resolver.close()
-
-    async def login(self, *args, **kwargs) -> None:
-        """Re-create the connector and set up sessions before logging into Discord."""
-        self._recreate()
-        await super().login(*args, **kwargs)
+        for item in full_cache:
+            self.insert_item_into_filter_list_cache(item)
 
     def _recreate(self) -> None:
-        """Re-create the connector, aiohttp session, and the APIClient."""
+        """Re-create the connector, aiohttp session, the APIClient and the Redis session."""
         # Use asyncio for DNS resolution instead of threads so threads aren't spammed.
         # Doesn't seem to have any state with regards to being closed, so no need to worry?
         self._resolver = aiohttp.AsyncResolver()
@@ -80,6 +66,11 @@ class Bot(commands.Bot):
             log.warning(
                 "The previous connector was not closed; it will remain open and be overwritten"
             )
+
+        if self.redis_session.closed:
+            # If the RedisSession was somehow closed, we try to reconnect it
+            # here. Normally, this shouldn't happen.
+            self.loop.create_task(self.redis_session.connect())
 
         # Use AF_INET as its socket family to prevent HTTPS related problems both locally
         # and in production.
@@ -100,6 +91,85 @@ class Bot(commands.Bot):
 
         self.http_session = aiohttp.ClientSession(connector=self._connector)
         self.api_client.recreate(force=True, connector=self._connector)
+
+        # Build the FilterList cache
+        self.loop.create_task(self.cache_filter_list_data())
+
+    def add_cog(self, cog: commands.Cog) -> None:
+        """Adds a "cog" to the bot and logs the operation."""
+        super().add_cog(cog)
+        log.info(f"Cog loaded: {cog.qualified_name}")
+
+    def add_command(self, command: commands.Command) -> None:
+        """Add `command` as normal and then add its root aliases to the bot."""
+        super().add_command(command)
+        self._add_root_aliases(command)
+
+    def remove_command(self, name: str) -> Optional[commands.Command]:
+        """
+        Remove a command/alias as normal and then remove its root aliases from the bot.
+
+        Individual root aliases cannot be removed by this function.
+        To remove them, either remove the entire command or manually edit `bot.all_commands`.
+        """
+        command = super().remove_command(name)
+        if command is None:
+            # Even if it's a root alias, there's no way to get the Bot instance to remove the alias.
+            return
+
+        self._remove_root_aliases(command)
+        return command
+
+    def clear(self) -> None:
+        """
+        Clears the internal state of the bot and recreates the connector and sessions.
+
+        Will cause a DeprecationWarning if called outside a coroutine.
+        """
+        # Because discord.py recreates the HTTPClient session, may as well follow suit and recreate
+        # our own stuff here too.
+        self._recreate()
+        super().clear()
+
+    async def close(self) -> None:
+        """Close the Discord connection and the aiohttp session, connector, statsd client, and resolver."""
+        await super().close()
+
+        await self.api_client.close()
+
+        if self.http_session:
+            await self.http_session.close()
+
+        if self._connector:
+            await self._connector.close()
+
+        if self._resolver:
+            await self._resolver.close()
+
+        if self.stats._transport:
+            self.stats._transport.close()
+
+        if self.redis_session:
+            await self.redis_session.close()
+
+    def insert_item_into_filter_list_cache(self, item: Dict[str, str]) -> None:
+        """Add an item to the bots filter_list_cache."""
+        type_ = item["type"]
+        allowed = item["allowed"]
+        content = item["content"]
+
+        self.filter_list_cache[f"{type_}.{allowed}"][content] = {
+            "id": item["id"],
+            "comment": item["comment"],
+            "created_at": item["created_at"],
+            "updated_at": item["updated_at"],
+        }
+
+    async def login(self, *args, **kwargs) -> None:
+        """Re-create the connector and set up sessions before logging into Discord."""
+        self._recreate()
+        await self.stats.create_socket()
+        await super().login(*args, **kwargs)
 
     async def on_guild_available(self, guild: discord.Guild) -> None:
         """
@@ -141,3 +211,35 @@ class Bot(commands.Bot):
         gateway event before giving up and thus not populating the cache for unavailable guilds.
         """
         await self._guild_available.wait()
+
+    async def on_error(self, event: str, *args, **kwargs) -> None:
+        """Log errors raised in event listeners rather than printing them to stderr."""
+        self.stats.incr(f"errors.event.{event}")
+
+        with push_scope() as scope:
+            scope.set_tag("event", event)
+            scope.set_extra("args", args)
+            scope.set_extra("kwargs", kwargs)
+
+            log.exception(f"Unhandled exception in {event}.")
+
+    def _add_root_aliases(self, command: commands.Command) -> None:
+        """Recursively add root aliases for `command` and any of its subcommands."""
+        if isinstance(command, commands.Group):
+            for subcommand in command.commands:
+                self._add_root_aliases(subcommand)
+
+        for alias in getattr(command, "root_aliases", ()):
+            if alias in self.all_commands:
+                raise commands.CommandRegistrationError(alias, alias_conflict=True)
+
+            self.all_commands[alias] = command
+
+    def _remove_root_aliases(self, command: commands.Command) -> None:
+        """Recursively remove root aliases for `command` and any of its subcommands."""
+        if isinstance(command, commands.Group):
+            for subcommand in command.commands:
+                self._remove_root_aliases(subcommand)
+
+        for alias in getattr(command, "root_aliases", ()):
+            self.all_commands.pop(alias, None)
