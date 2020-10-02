@@ -34,7 +34,11 @@ async def wait_for_deletion(
 
     if attach_emojis:
         for emoji in deletion_emojis:
-            await message.add_reaction(emoji)
+            try:
+                await message.add_reaction(emoji)
+            except discord.NotFound:
+                log.trace(f"Aborting wait_for_deletion: message {message.id} deleted prematurely.")
+                return
 
     def check(reaction: discord.Reaction, user: discord.Member) -> bool:
         """Check that the deletion emoji is reacted by the appropriate user."""
