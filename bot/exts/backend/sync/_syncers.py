@@ -2,7 +2,6 @@ import abc
 import logging
 import typing as t
 from collections import namedtuple
-from functools import partial
 from urllib.parse import parse_qsl, urlparse
 
 from discord import Guild
