@@ -241,12 +241,12 @@ class Snekbox(Cog):
                 )
 
                 code = await self.get_code(new_message)
-                await ctx.message.clear_reactions()
+                await ctx.message.clear_reaction(REEVAL_EMOJI)
                 with contextlib.suppress(HTTPException):
                     await response.delete()
 
             except asyncio.TimeoutError:
-                await ctx.message.clear_reactions()
+                await ctx.message.clear_reaction(REEVAL_EMOJI)
                 return None
 
             return code

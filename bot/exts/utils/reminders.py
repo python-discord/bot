@@ -228,7 +228,7 @@ class Reminders(Cog):
         self, ctx: Context, mentions: Greedy[Mentionable], expiration: Duration, *, content: str
     ) -> None:
         """Commands for managing your reminders."""
-        await ctx.invoke(self.new_reminder, mentions=mentions, expiration=expiration, content=content)
+        await self.new_reminder(ctx, mentions=mentions, expiration=expiration, content=content)
 
     @remind_group.command(name="new", aliases=("add", "create"))
     async def new_reminder(
@@ -286,10 +286,11 @@ class Reminders(Cog):
 
         now = datetime.utcnow() - timedelta(seconds=1)
         humanized_delta = humanize_delta(relativedelta(expiration, now))
-        mention_string = (
-            f"Your reminder will arrive in {humanized_delta} "
-            f"and will mention {len(mentions)} other(s)!"
-        )
+        mention_string = f"Your reminder will arrive in {humanized_delta}"
+
+        if mentions:
+            mention_string += f" and will mention {len(mentions)} other(s)"
+        mention_string += "!"
 
         # Confirm to the user that it worked.
         await self._send_confirmation(
