@@ -286,10 +286,11 @@ class Reminders(Cog):
 
         now = datetime.utcnow() - timedelta(seconds=1)
         humanized_delta = humanize_delta(relativedelta(expiration, now))
-        mention_string = (
-            f"Your reminder will arrive in {humanized_delta} "
-            f"and will mention {len(mentions)} other(s)!"
-        )
+        mention_string = f"Your reminder will arrive in {humanized_delta}"
+
+        if mentions:
+            mention_string += f" and will mention {len(mentions)} other(s)"
+        mention_string += "!"
 
         # Confirm to the user that it worked.
         await self._send_confirmation(
