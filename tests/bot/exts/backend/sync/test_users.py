@@ -1,5 +1,4 @@
 import unittest
-from unittest import mock
 
 from bot.exts.backend.sync._syncers import UserSyncer, _Diff, _User
 from tests import helpers
@@ -192,9 +191,9 @@ class UserSyncerSyncTests(unittest.IsolatedAsyncioTestCase):
         diff = _Diff(user_tuples, set(), None)
         await self.syncer._sync(diff)
 
-        calls = [mock.call("bot/users", json=user) for user in users]
-        self.bot.api_client.post.assert_has_calls(calls, any_order=True)
-        self.assertEqual(self.bot.api_client.post.call_count, len(users))
+        # Convert namedtuples to dicts as done in self.syncer._sync method.
+        created = [user._asdict() for user in diff.created]
+        self.bot.api_client.post.assert_called_once_with("bot/users", json=created)
 
         self.bot.api_client.put.assert_not_called()
         self.bot.api_client.delete.assert_not_called()
@@ -207,9 +206,8 @@ class UserSyncerSyncTests(unittest.IsolatedAsyncioTestCase):
         diff = _Diff(set(), user_tuples, None)
         await self.syncer._sync(diff)
 
-        calls = [mock.call(f"bot/users/{user['id']}", json=user) for user in users]
-        self.bot.api_client.put.assert_has_calls(calls, any_order=True)
-        self.assertEqual(self.bot.api_client.put.call_count, len(users))
+        updated = [self.syncer.patch_dict(user) for user in diff.updated]
+        self.bot.api_client.patch.assert_called_once_with("bot/users/bulk_patch", json=updated)
 
         self.bot.api_client.post.assert_not_called()
         self.bot.api_client.delete.assert_not_called()
