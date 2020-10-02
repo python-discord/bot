@@ -228,7 +228,7 @@ class Reminders(Cog):
         self, ctx: Context, mentions: Greedy[Mentionable], expiration: Duration, *, content: str
     ) -> None:
         """Commands for managing your reminders."""
-        await ctx.invoke(self.new_reminder, mentions=mentions, expiration=expiration, content=content)
+        await self.new_reminder(ctx, mentions=mentions, expiration=expiration, content=content)
 
     @remind_group.command(name="new", aliases=("add", "create"))
     async def new_reminder(
