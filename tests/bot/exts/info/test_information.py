@@ -97,6 +97,7 @@ class InformationCogTests(unittest.TestCase):
         self.assertEqual(admin_embed.title, "Admins info")
         self.assertEqual(admin_embed.colour, discord.Colour.red())
 
+
 class UserInfractionHelperMethodTests(unittest.TestCase):
     """Tests for the helper methods of the `!user` command."""
 
