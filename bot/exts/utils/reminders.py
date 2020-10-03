@@ -16,12 +16,14 @@ from bot.constants import Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES, Role
 from bot.converters import Duration
 from bot.pagination import LinePaginator
 from bot.utils.checks import has_any_role_check, has_no_roles_check
+from bot.utils.lock import lock_arg
 from bot.utils.messages import send_denial
 from bot.utils.scheduling import Scheduler
 from bot.utils.time import humanize_delta
 
 log = logging.getLogger(__name__)
 
+NAMESPACE = "reminder"  # Used for the mutually_exclusive decorator; constant to prevent typos
 WHITELISTED_CHANNELS = Guild.reminder_whitelist
 MAXIMUM_REMINDERS = 5
 
@@ -52,7 +54,7 @@ class Reminders(Cog):
         now = datetime.utcnow()
 
         for reminder in response:
-            is_valid, *_ = self.ensure_valid_reminder(reminder, cancel_task=False)
+            is_valid, *_ = self.ensure_valid_reminder(reminder)
             if not is_valid:
                 continue
 
@@ -65,11 +67,7 @@ class Reminders(Cog):
             else:
                 self.schedule_reminder(reminder)
 
-    def ensure_valid_reminder(
-        self,
-        reminder: dict,
-        cancel_task: bool = True
-    ) -> t.Tuple[bool, discord.User, discord.TextChannel]:
+    def ensure_valid_reminder(self, reminder: dict) -> t.Tuple[bool, discord.User, discord.TextChannel]:
         """Ensure reminder author and channel can be fetched otherwise delete the reminder."""
         user = self.bot.get_user(reminder['author'])
         channel = self.bot.get_channel(reminder['channel_id'])
@@ -80,7 +78,7 @@ class Reminders(Cog):
                 f"Reminder {reminder['id']} invalid: "
                 f"User {reminder['author']}={user}, Channel {reminder['channel_id']}={channel}."
             )
-            asyncio.create_task(self._delete_reminder(reminder['id'], cancel_task))
+            asyncio.create_task(self.bot.api_client.delete(f"bot/reminders/{reminder['id']}"))
 
         return is_valid, user, channel
 
@@ -88,7 +86,7 @@ class Reminders(Cog):
     async def _send_confirmation(
         ctx: Context,
         on_success: str,
-        reminder_id: str,
+        reminder_id: t.Union[str, int],
         delivery_dt: t.Optional[datetime],
     ) -> None:
         """Send an embed confirming the reminder change was made successfully."""
@@ -148,24 +146,8 @@ class Reminders(Cog):
 
     def schedule_reminder(self, reminder: dict) -> None:
         """A coroutine which sends the reminder once the time is reached, and cancels the running task."""
-        reminder_id = reminder["id"]
         reminder_datetime = isoparse(reminder['expiration']).replace(tzinfo=None)
-
-        async def _remind() -> None:
-            await self.send_reminder(reminder)
-
-            log.debug(f"Deleting reminder {reminder_id} (the user has been reminded).")
-            await self._delete_reminder(reminder_id)
-
-        self.scheduler.schedule_at(reminder_datetime, reminder_id, _remind())
-
-    async def _delete_reminder(self, reminder_id: str, cancel_task: bool = True) -> None:
-        """Delete a reminder from the database, given its ID, and cancel the running task."""
-        await self.bot.api_client.delete('bot/reminders/' + str(reminder_id))
-
-        if cancel_task:
-            # Now we can remove it from the schedule list
-            self.scheduler.cancel(reminder_id)
+        self.scheduler.schedule_at(reminder_datetime, reminder["id"], self.send_reminder(reminder))
 
     async def _edit_reminder(self, reminder_id: int, payload: dict) -> dict:
         """
@@ -188,10 +170,12 @@ class Reminders(Cog):
         log.trace(f"Scheduling new task #{reminder['id']}")
         self.schedule_reminder(reminder)
 
+    @lock_arg(NAMESPACE, "reminder", itemgetter("id"), raise_error=True)
     async def send_reminder(self, reminder: dict, late: relativedelta = None) -> None:
         """Send the reminder."""
         is_valid, user, channel = self.ensure_valid_reminder(reminder)
         if not is_valid:
+            # No need to cancel the task too; it'll simply be done once this coroutine returns.
             return
 
         embed = discord.Embed()
@@ -217,11 +201,10 @@ class Reminders(Cog):
             mentionable.mention for mentionable in self.get_mentionables(reminder["mentions"])
         )
 
-        await channel.send(
-            content=f"{user.mention} {additional_mentions}",
-            embed=embed
-        )
-        await self._delete_reminder(reminder["id"])
+        await channel.send(content=f"{user.mention} {additional_mentions}", embed=embed)
+
+        log.debug(f"Deleting reminder #{reminder['id']} (the user has been reminded).")
+        await self.bot.api_client.delete(f"bot/reminders/{reminder['id']}")
 
     @group(name="remind", aliases=("reminder", "reminders", "remindme"), invoke_without_command=True)
     async def remind_group(
@@ -395,6 +378,7 @@ class Reminders(Cog):
         mention_ids = [mention.id for mention in mentions]
         await self.edit_reminder(ctx, id_, {"mentions": mention_ids})
 
+    @lock_arg(NAMESPACE, "id_", raise_error=True)
     async def edit_reminder(self, ctx: Context, id_: int, payload: dict) -> None:
         """Edits a reminder with the given payload, then sends a confirmation message."""
         if not await self._can_modify(ctx, id_):
@@ -414,11 +398,15 @@ class Reminders(Cog):
         await self._reschedule_reminder(reminder)
 
     @remind_group.command("delete", aliases=("remove", "cancel"))
+    @lock_arg(NAMESPACE, "id_", raise_error=True)
     async def delete_reminder(self, ctx: Context, id_: int) -> None:
         """Delete one of your active reminders."""
         if not await self._can_modify(ctx, id_):
             return
-        await self._delete_reminder(id_)
+
+        await self.bot.api_client.delete(f"bot/reminders/{id_}")
+        self.scheduler.cancel(id_)
+
         await self._send_confirmation(
             ctx,
             on_success="That reminder has been deleted successfully!",
