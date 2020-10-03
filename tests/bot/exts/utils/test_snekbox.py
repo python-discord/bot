@@ -154,7 +154,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.cog.send_eval = AsyncMock(return_value=response)
         self.cog.continue_eval = AsyncMock(return_value=None)
 
-        await self.cog.eval_command.callback(self.cog, ctx=ctx, code='MyAwesomeCode')
+        await self.cog.eval_command(self.cog, ctx=ctx, code='MyAwesomeCode')
         self.cog.prepare_input.assert_called_once_with('MyAwesomeCode')
         self.cog.send_eval.assert_called_once_with(ctx, 'MyAwesomeFormattedCode')
         self.cog.continue_eval.assert_called_once_with(ctx, response)
@@ -168,7 +168,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.cog.continue_eval = AsyncMock()
         self.cog.continue_eval.side_effect = ('MyAwesomeCode-2', None)
 
-        await self.cog.eval_command.callback(self.cog, ctx=ctx, code='MyAwesomeCode')
+        await self.cog.eval_command(self.cog, ctx=ctx, code='MyAwesomeCode')
         self.cog.prepare_input.has_calls(call('MyAwesomeCode'), call('MyAwesomeCode-2'))
         self.cog.send_eval.assert_called_with(ctx, 'MyAwesomeFormattedCode')
         self.cog.continue_eval.assert_called_with(ctx, response)
@@ -180,7 +180,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         ctx.author.mention = '@LemonLemonishBeard#0042'
         ctx.send = AsyncMock()
         self.cog.jobs = (42,)
-        await self.cog.eval_command.callback(self.cog, ctx=ctx, code='MyAwesomeCode')
+        await self.cog.eval_command(self.cog, ctx=ctx, code='MyAwesomeCode')
         ctx.send.assert_called_once_with(
             "@LemonLemonishBeard#0042 You've already got a job running - please wait for it to finish!"
         )
@@ -188,8 +188,8 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
     async def test_eval_command_call_help(self):
         """Test if the eval command call the help command if no code is provided."""
         ctx = MockContext(command="sentinel")
-        await self.cog.eval_command.callback(self.cog, ctx=ctx, code='')
-        ctx.send_help.assert_called_once_with("sentinel")
+        await self.cog.eval_command(self.cog, ctx=ctx, code='')
+        ctx.send_help.assert_called_once_with(ctx.command)
 
     async def test_send_eval(self):
         """Test the send_eval function."""
@@ -290,7 +290,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
             )
         )
         ctx.message.add_reaction.assert_called_once_with(snekbox.REEVAL_EMOJI)
-        ctx.message.clear_reactions.assert_called_once()
+        ctx.message.clear_reaction.assert_called_once_with(snekbox.REEVAL_EMOJI)
         response.delete.assert_called_once()
 
     async def test_continue_eval_does_not_continue(self):
@@ -299,7 +299,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
 
         actual = await self.cog.continue_eval(ctx, MockMessage())
         self.assertEqual(actual, None)
-        ctx.message.clear_reactions.assert_called_once()
+        ctx.message.clear_reaction.assert_called_once_with(snekbox.REEVAL_EMOJI)
 
     async def test_get_code(self):
         """Should return 1st arg (or None) if eval cmd in message, otherwise return full content."""

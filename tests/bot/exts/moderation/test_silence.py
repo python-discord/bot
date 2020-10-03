@@ -122,7 +122,7 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
                 starting_unsilenced_state=_silence_patch_return
             ):
                 with mock.patch.object(self.cog, "_silence", return_value=_silence_patch_return):
-                    await self.cog.silence.callback(self.cog, self.ctx, duration)
+                    await self.cog.silence(self.cog, self.ctx, duration)
                     self.ctx.send.assert_called_once_with(result_message)
             self.ctx.reset_mock()
 
@@ -138,7 +138,7 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
                 result_message=result_message
             ):
                 with mock.patch.object(self.cog, "_unsilence", return_value=_unsilence_patch_return):
-                    await self.cog.unsilence.callback(self.cog, self.ctx)
+                    await self.cog.unsilence(self.cog, self.ctx)
                     self.ctx.send.assert_called_once_with(result_message)
             self.ctx.reset_mock()
 

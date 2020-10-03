@@ -1,4 +1,3 @@
-import asyncio
 import textwrap
 import unittest
 import unittest.mock
@@ -13,7 +12,7 @@ from tests import helpers
 COG_PATH = "bot.exts.info.information.Information"
 
 
-class InformationCogTests(unittest.TestCase):
+class InformationCogTests(unittest.IsolatedAsyncioTestCase):
     """Tests the Information cog."""
 
     @classmethod
@@ -29,16 +28,14 @@ class InformationCogTests(unittest.TestCase):
         self.ctx = helpers.MockContext()
         self.ctx.author.roles.append(self.moderator_role)
 
-    def test_roles_command_command(self):
+    async def test_roles_command_command(self):
         """Test if the `role_info` command correctly returns the `moderator_role`."""
         self.ctx.guild.roles.append(self.moderator_role)
 
         self.cog.roles_info.can_run = unittest.mock.AsyncMock()
         self.cog.roles_info.can_run.return_value = True
 
-        coroutine = self.cog.roles_info.callback(self.cog, self.ctx)
-
-        self.assertIsNone(asyncio.run(coroutine))
+        self.assertIsNone(await self.cog.roles_info(self.cog, self.ctx))
         self.ctx.send.assert_called_once()
 
         _, kwargs = self.ctx.send.call_args
@@ -48,7 +45,7 @@ class InformationCogTests(unittest.TestCase):
         self.assertEqual(embed.colour, discord.Colour.blurple())
         self.assertEqual(embed.description, f"\n`{self.moderator_role.id}` - {self.moderator_role.mention}\n")
 
-    def test_role_info_command(self):
+    async def test_role_info_command(self):
         """Tests the `role info` command."""
         dummy_role = helpers.MockRole(
             name="Dummy",
@@ -73,9 +70,7 @@ class InformationCogTests(unittest.TestCase):
         self.cog.role_info.can_run = unittest.mock.AsyncMock()
         self.cog.role_info.can_run.return_value = True
 
-        coroutine = self.cog.role_info.callback(self.cog, self.ctx, dummy_role, admin_role)
-
-        self.assertIsNone(asyncio.run(coroutine))
+        self.assertIsNone(await self.cog.role_info(self.cog, self.ctx, dummy_role, admin_role))
 
         self.assertEqual(self.ctx.send.call_count, 2)
 
@@ -98,7 +93,7 @@ class InformationCogTests(unittest.TestCase):
         self.assertEqual(admin_embed.colour, discord.Colour.red())
 
 
-class UserInfractionHelperMethodTests(unittest.TestCase):
+class UserInfractionHelperMethodTests(unittest.IsolatedAsyncioTestCase):
     """Tests for the helper methods of the `!user` command."""
 
     def setUp(self):
@@ -108,7 +103,7 @@ class UserInfractionHelperMethodTests(unittest.TestCase):
         self.cog = information.Information(self.bot)
         self.member = helpers.MockMember(id=1234)
 
-    def test_user_command_helper_method_get_requests(self):
+    async def test_user_command_helper_method_get_requests(self):
         """The helper methods should form the correct get requests."""
         test_values = (
             {
@@ -130,11 +125,11 @@ class UserInfractionHelperMethodTests(unittest.TestCase):
             endpoint, params = test_value["expected_args"]
 
             with self.subTest(method=helper_method, endpoint=endpoint, params=params):
-                asyncio.run(helper_method(self.member))
+                await helper_method(self.member)
                 self.bot.api_client.get.assert_called_once_with(endpoint, params=params)
                 self.bot.api_client.get.reset_mock()
 
-    def _method_subtests(self, method, test_values, default_header):
+    async def _method_subtests(self, method, test_values, default_header):
         """Helper method that runs the subtests for the different helper methods."""
         for test_value in test_values:
             api_response = test_value["api response"]
@@ -144,11 +139,11 @@ class UserInfractionHelperMethodTests(unittest.TestCase):
                 self.bot.api_client.get.return_value = api_response
 
                 expected_output = "\n".join(expected_lines)
-                actual_output = asyncio.run(method(self.member))
+                actual_output = await method(self.member)
 
                 self.assertEqual((default_header, expected_output), actual_output)
 
-    def test_basic_user_infraction_counts_returns_correct_strings(self):
+    async def test_basic_user_infraction_counts_returns_correct_strings(self):
         """The method should correctly list both the total and active number of non-hidden infractions."""
         test_values = (
             # No infractions means zero counts
@@ -179,9 +174,9 @@ class UserInfractionHelperMethodTests(unittest.TestCase):
 
         header = "Infractions"
 
-        self._method_subtests(self.cog.basic_user_infraction_counts, test_values, header)
+        await self._method_subtests(self.cog.basic_user_infraction_counts, test_values, header)
 
-    def test_expanded_user_infraction_counts_returns_correct_strings(self):
+    async def test_expanded_user_infraction_counts_returns_correct_strings(self):
         """The method should correctly list the total and active number of all infractions split by infraction type."""
         test_values = (
             {
@@ -234,9 +229,9 @@ class UserInfractionHelperMethodTests(unittest.TestCase):
 
         header = "Infractions"
 
-        self._method_subtests(self.cog.expanded_user_infraction_counts, test_values, header)
+        await self._method_subtests(self.cog.expanded_user_infraction_counts, test_values, header)
 
-    def test_user_nomination_counts_returns_correct_strings(self):
+    async def test_user_nomination_counts_returns_correct_strings(self):
         """The method should list the number of active and historical nominations for the user."""
         test_values = (
             {
@@ -264,12 +259,12 @@ class UserInfractionHelperMethodTests(unittest.TestCase):
 
         header = "Nominations"
 
-        self._method_subtests(self.cog.user_nomination_counts, test_values, header)
+        await self._method_subtests(self.cog.user_nomination_counts, test_values, header)
 
 
 @unittest.mock.patch("bot.exts.info.information.time_since", new=unittest.mock.MagicMock(return_value="1 year ago"))
 @unittest.mock.patch("bot.exts.info.information.constants.MODERATION_CHANNELS", new=[50])
-class UserEmbedTests(unittest.TestCase):
+class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
     """Tests for the creation of the `!user` embed."""
 
     def setUp(self):
@@ -282,14 +277,14 @@ class UserEmbedTests(unittest.TestCase):
         f"{COG_PATH}.basic_user_infraction_counts",
         new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions"))
     )
-    def test_create_user_embed_uses_string_representation_of_user_in_title_if_nick_is_not_available(self):
+    async def test_create_user_embed_uses_string_representation_of_user_in_title_if_nick_is_not_available(self):
         """The embed should use the string representation of the user if they don't have a nick."""
         ctx = helpers.MockContext(channel=helpers.MockTextChannel(id=1))
         user = helpers.MockMember()
         user.nick = None
         user.__str__ = unittest.mock.Mock(return_value="Mr. Hemlock")
 
-        embed = asyncio.run(self.cog.create_user_embed(ctx, user))
+        embed = await self.cog.create_user_embed(ctx, user)
 
         self.assertEqual(embed.title, "Mr. Hemlock")
 
@@ -297,14 +292,14 @@ class UserEmbedTests(unittest.TestCase):
         f"{COG_PATH}.basic_user_infraction_counts",
         new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions"))
     )
-    def test_create_user_embed_uses_nick_in_title_if_available(self):
+    async def test_create_user_embed_uses_nick_in_title_if_available(self):
         """The embed should use the nick if it's available."""
         ctx = helpers.MockContext(channel=helpers.MockTextChannel(id=1))
         user = helpers.MockMember()
         user.nick = "Cat lover"
         user.__str__ = unittest.mock.Mock(return_value="Mr. Hemlock")
 
-        embed = asyncio.run(self.cog.create_user_embed(ctx, user))
+        embed = await self.cog.create_user_embed(ctx, user)
 
         self.assertEqual(embed.title, "Cat lover (Mr. Hemlock)")
 
@@ -312,7 +307,7 @@ class UserEmbedTests(unittest.TestCase):
         f"{COG_PATH}.basic_user_infraction_counts",
         new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions"))
     )
-    def test_create_user_embed_ignores_everyone_role(self):
+    async def test_create_user_embed_ignores_everyone_role(self):
         """Created `!user` embeds should not contain mention of the @everyone-role."""
         ctx = helpers.MockContext(channel=helpers.MockTextChannel(id=1))
         admins_role = helpers.MockRole(name='Admins')
@@ -321,14 +316,18 @@ class UserEmbedTests(unittest.TestCase):
         # A `MockMember` has the @Everyone role by default; we add the Admins to that.
         user = helpers.MockMember(roles=[admins_role], top_role=admins_role)
 
-        embed = asyncio.run(self.cog.create_user_embed(ctx, user))
+        embed = await self.cog.create_user_embed(ctx, user)
 
         self.assertIn("&Admins", embed.fields[1].value)
         self.assertNotIn("&Everyone", embed.fields[1].value)
 
     @unittest.mock.patch(f"{COG_PATH}.expanded_user_infraction_counts", new_callable=unittest.mock.AsyncMock)
     @unittest.mock.patch(f"{COG_PATH}.user_nomination_counts", new_callable=unittest.mock.AsyncMock)
-    def test_create_user_embed_expanded_information_in_moderation_channels(self, nomination_counts, infraction_counts):
+    async def test_create_user_embed_expanded_information_in_moderation_channels(
+            self,
+            nomination_counts,
+            infraction_counts
+    ):
         """The embed should contain expanded infractions and nomination info in mod channels."""
         ctx = helpers.MockContext(channel=helpers.MockTextChannel(id=50))
 
@@ -339,7 +338,7 @@ class UserEmbedTests(unittest.TestCase):
         nomination_counts.return_value = ("Nominations", "nomination info")
 
         user = helpers.MockMember(id=314, roles=[moderators_role], top_role=moderators_role)
-        embed = asyncio.run(self.cog.create_user_embed(ctx, user))
+        embed = await self.cog.create_user_embed(ctx, user)
 
         infraction_counts.assert_called_once_with(user)
         nomination_counts.assert_called_once_with(user)
@@ -362,7 +361,7 @@ class UserEmbedTests(unittest.TestCase):
         )
 
     @unittest.mock.patch(f"{COG_PATH}.basic_user_infraction_counts", new_callable=unittest.mock.AsyncMock)
-    def test_create_user_embed_basic_information_outside_of_moderation_channels(self, infraction_counts):
+    async def test_create_user_embed_basic_information_outside_of_moderation_channels(self, infraction_counts):
         """The embed should contain only basic infraction data outside of mod channels."""
         ctx = helpers.MockContext(channel=helpers.MockTextChannel(id=100))
 
@@ -372,7 +371,7 @@ class UserEmbedTests(unittest.TestCase):
         infraction_counts.return_value = ("Infractions", "basic infractions info")
 
         user = helpers.MockMember(id=314, roles=[moderators_role], top_role=moderators_role)
-        embed = asyncio.run(self.cog.create_user_embed(ctx, user))
+        embed = await self.cog.create_user_embed(ctx, user)
 
         infraction_counts.assert_called_once_with(user)
 
@@ -402,7 +401,7 @@ class UserEmbedTests(unittest.TestCase):
         f"{COG_PATH}.basic_user_infraction_counts",
         new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions"))
     )
-    def test_create_user_embed_uses_top_role_colour_when_user_has_roles(self):
+    async def test_create_user_embed_uses_top_role_colour_when_user_has_roles(self):
         """The embed should be created with the colour of the top role, if a top role is available."""
         ctx = helpers.MockContext()
 
@@ -410,7 +409,7 @@ class UserEmbedTests(unittest.TestCase):
         moderators_role.colour = 100
 
         user = helpers.MockMember(id=314, roles=[moderators_role], top_role=moderators_role)
-        embed = asyncio.run(self.cog.create_user_embed(ctx, user))
+        embed = await self.cog.create_user_embed(ctx, user)
 
         self.assertEqual(embed.colour, discord.Colour(moderators_role.colour))
 
@@ -418,12 +417,12 @@ class UserEmbedTests(unittest.TestCase):
         f"{COG_PATH}.basic_user_infraction_counts",
         new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions"))
     )
-    def test_create_user_embed_uses_blurple_colour_when_user_has_no_roles(self):
+    async def test_create_user_embed_uses_blurple_colour_when_user_has_no_roles(self):
         """The embed should be created with a blurple colour if the user has no assigned roles."""
         ctx = helpers.MockContext()
 
         user = helpers.MockMember(id=217)
-        embed = asyncio.run(self.cog.create_user_embed(ctx, user))
+        embed = await self.cog.create_user_embed(ctx, user)
 
         self.assertEqual(embed.colour, discord.Colour.blurple())
 
@@ -431,20 +430,20 @@ class UserEmbedTests(unittest.TestCase):
         f"{COG_PATH}.basic_user_infraction_counts",
         new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions"))
     )
-    def test_create_user_embed_uses_png_format_of_user_avatar_as_thumbnail(self):
+    async def test_create_user_embed_uses_png_format_of_user_avatar_as_thumbnail(self):
         """The embed thumbnail should be set to the user's avatar in `png` format."""
         ctx = helpers.MockContext()
 
         user = helpers.MockMember(id=217)
         user.avatar_url_as.return_value = "avatar url"
-        embed = asyncio.run(self.cog.create_user_embed(ctx, user))
+        embed = await self.cog.create_user_embed(ctx, user)
 
         user.avatar_url_as.assert_called_once_with(static_format="png")
         self.assertEqual(embed.thumbnail.url, "avatar url")
 
 
 @unittest.mock.patch("bot.exts.info.information.constants")
-class UserCommandTests(unittest.TestCase):
+class UserCommandTests(unittest.IsolatedAsyncioTestCase):
     """Tests for the `!user` command."""
 
     def setUp(self):
@@ -464,16 +463,16 @@ class UserCommandTests(unittest.TestCase):
         # used as a default value for a parameter, which gets defined upon import.
         self.bot_command_channel = helpers.MockTextChannel(id=constants.Channels.bot_commands)
 
-    def test_regular_member_cannot_target_another_member(self, constants):
+    async def test_regular_member_cannot_target_another_member(self, constants):
         """A regular user should not be able to use `!user` targeting another user."""
         constants.MODERATION_ROLES = [self.moderator_role.id]
         ctx = helpers.MockContext(author=self.author)
 
-        asyncio.run(self.cog.user_info.callback(self.cog, ctx, self.target))
+        await self.cog.user_info(self.cog, ctx, self.target)
 
         ctx.send.assert_called_once_with("You may not use this command on users other than yourself.")
 
-    def test_regular_member_cannot_use_command_outside_of_bot_commands(self, constants):
+    async def test_regular_member_cannot_use_command_outside_of_bot_commands(self, constants):
         """A regular user should not be able to use this command outside of bot-commands."""
         constants.MODERATION_ROLES = [self.moderator_role.id]
         constants.STAFF_ROLES = [self.moderator_role.id]
@@ -481,49 +480,49 @@ class UserCommandTests(unittest.TestCase):
 
         msg = "Sorry, but you may only use this command within <#50>."
         with self.assertRaises(InWhitelistCheckFailure, msg=msg):
-            asyncio.run(self.cog.user_info.callback(self.cog, ctx))
+            await self.cog.user_info(self.cog, ctx)
 
     @unittest.mock.patch("bot.exts.info.information.Information.create_user_embed")
-    def test_regular_user_may_use_command_in_bot_commands_channel(self, create_embed, constants):
+    async def test_regular_user_may_use_command_in_bot_commands_channel(self, create_embed, constants):
         """A regular user should be allowed to use `!user` targeting themselves in bot-commands."""
         constants.STAFF_ROLES = [self.moderator_role.id]
         ctx = helpers.MockContext(author=self.author, channel=self.bot_command_channel)
 
-        asyncio.run(self.cog.user_info.callback(self.cog, ctx))
+        await self.cog.user_info(self.cog, ctx)
 
         create_embed.assert_called_once_with(ctx, self.author)
         ctx.send.assert_called_once()
 
     @unittest.mock.patch("bot.exts.info.information.Information.create_user_embed")
-    def test_regular_user_can_explicitly_target_themselves(self, create_embed, _):
+    async def test_regular_user_can_explicitly_target_themselves(self, create_embed, _):
         """A user should target itself with `!user` when a `user` argument was not provided."""
         constants.STAFF_ROLES = [self.moderator_role.id]
         ctx = helpers.MockContext(author=self.author, channel=self.bot_command_channel)
 
-        asyncio.run(self.cog.user_info.callback(self.cog, ctx, self.author))
+        await self.cog.user_info(self.cog, ctx, self.author)
 
         create_embed.assert_called_once_with(ctx, self.author)
         ctx.send.assert_called_once()
 
     @unittest.mock.patch("bot.exts.info.information.Information.create_user_embed")
-    def test_staff_members_can_bypass_channel_restriction(self, create_embed, constants):
+    async def test_staff_members_can_bypass_channel_restriction(self, create_embed, constants):
         """Staff members should be able to bypass the bot-commands channel restriction."""
         constants.STAFF_ROLES = [self.moderator_role.id]
         ctx = helpers.MockContext(author=self.moderator, channel=helpers.MockTextChannel(id=200))
 
-        asyncio.run(self.cog.user_info.callback(self.cog, ctx))
+        await self.cog.user_info(self.cog, ctx)
 
         create_embed.assert_called_once_with(ctx, self.moderator)
         ctx.send.assert_called_once()
 
     @unittest.mock.patch("bot.exts.info.information.Information.create_user_embed")
-    def test_moderators_can_target_another_member(self, create_embed, constants):
+    async def test_moderators_can_target_another_member(self, create_embed, constants):
         """A moderator should be able to use `!user` targeting another user."""
         constants.MODERATION_ROLES = [self.moderator_role.id]
         constants.STAFF_ROLES = [self.moderator_role.id]
         ctx = helpers.MockContext(author=self.moderator, channel=helpers.MockTextChannel(id=50))
 
-        asyncio.run(self.cog.user_info.callback(self.cog, ctx, self.target))
+        await self.cog.user_info(self.cog, ctx, self.target)
 
         create_embed.assert_called_once_with(ctx, self.target)
         ctx.send.assert_called_once()
