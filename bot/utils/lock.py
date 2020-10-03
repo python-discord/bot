@@ -81,11 +81,11 @@ def lock(namespace: Hashable, resource_id: ResourceId, *, raise_error: bool = Fa
 
             # Get the lock for the ID. Create a lock if one doesn't exist yet.
             locks = __lock_dicts[namespace]
-            lock = locks.setdefault(id_, LockGuard())
+            lock_guard = locks.setdefault(id_, LockGuard())
 
-            if not lock.locked():
+            if not lock_guard.locked():
                 log.debug(f"{name}: resource {namespace!r}:{id_!r} is free; acquiring it...")
-                with lock:
+                with lock_guard:
                     return await func(*args, **kwargs)
             else:
                 log.info(f"{name}: aborted because resource {namespace!r}:{id_!r} is locked")
