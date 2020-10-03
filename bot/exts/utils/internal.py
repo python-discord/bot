@@ -247,7 +247,7 @@ async def func():  # (None,) -> Any
             color=discord.Color.blurple()
         )
 
-        for event_type, count in self.socket_events.most_common():
+        for event_type, count in self.socket_events.most_common(25):
             stats_embed.add_field(name=event_type, value=count, inline=False)
 
         await ctx.send(embed=stats_embed)
