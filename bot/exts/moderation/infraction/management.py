@@ -89,7 +89,7 @@ class ModManagement(commands.Cog):
 
         reason = fr"{old_infraction['reason']} **\|\|** {reason}"
 
-        await ctx.invoke(self.infraction_edit, infraction_id=infraction_id, duration=duration, reason=reason)
+        await self.infraction_edit(infraction_id=infraction_id, duration=duration, reason=reason)
 
     @infraction_group.command(name='edit')
     async def infraction_edit(
