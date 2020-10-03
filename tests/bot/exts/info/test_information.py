@@ -393,6 +393,11 @@ class UserEmbedTests(unittest.TestCase):
             embed.fields[1].value
         )
 
+        self.assertEqual(
+            "basic infractions info",
+            embed.fields[2].value
+        )
+
     @unittest.mock.patch(
         f"{COG_PATH}.basic_user_infraction_counts",
         new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions"))
