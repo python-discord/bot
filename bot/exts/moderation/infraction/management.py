@@ -10,7 +10,7 @@ from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
-from bot.converters import Expiry, Snowflake, UserMention, allowed_strings, proxy_user
+from bot.converters import Expiry, Infraction, Snowflake, UserMention, allowed_strings, proxy_user
 from bot.exts.moderation.infraction.infractions import Infractions
 from bot.exts.moderation.modlog import ModLog
 from bot.pagination import LinePaginator
@@ -49,7 +49,7 @@ class ModManagement(commands.Cog):
     async def infraction_append(
         self,
         ctx: Context,
-        infraction_id: t.Union[int, allowed_strings("l", "last", "recent")],  # noqa: F821
+        infraction: Infraction,  # noqa: F821
         duration: t.Union[Expiry, allowed_strings("p", "permanent"), None],   # noqa: F821
         *,
         reason: str = None
@@ -73,29 +73,21 @@ class ModManagement(commands.Cog):
         Use "p" or "permanent" to mark the infraction as permanent. Alternatively, an ISO 8601
         timestamp can be provided for the duration.
         """
-        if isinstance(infraction_id, str):
-            old_infraction = await self.get_latest_infraction(ctx.author.id)
+        if not infraction:
+            return
 
-            if old_infraction is None:
-                await ctx.send(
-                    ":x: Couldn't find most recent infraction; you have never given an infraction."
-                )
-                return
-
-            infraction_id = old_infraction["id"]
-
-        else:
-            old_infraction = await self.bot.api_client.get(f"bot/infractions/{infraction_id}")
-
-        reason = fr"{old_infraction['reason']} **\|\|** {reason}"
-
-        await self.infraction_edit(infraction_id=infraction_id, duration=duration, reason=reason)
+        await self.infraction_edit(
+            ctx=ctx,
+            infraction=infraction,
+            duration=duration,
+            reason=fr"{infraction['reason']} **\|\|** {reason}",
+        )
 
     @infraction_group.command(name='edit')
     async def infraction_edit(
         self,
         ctx: Context,
-        infraction_id: t.Union[int, allowed_strings("l", "last", "recent")],  # noqa: F821
+        infraction: Infraction,  # noqa: F821
         duration: t.Union[Expiry, allowed_strings("p", "permanent"), None],   # noqa: F821
         *,
         reason: str = None
@@ -123,20 +115,11 @@ class ModManagement(commands.Cog):
             # Unlike UserInputError, the error handler will show a specified message for BadArgument
             raise commands.BadArgument("Neither a new expiry nor a new reason was specified.")
 
-        # Retrieve the previous infraction for its information.
-        if isinstance(infraction_id, str):
-            old_infraction = await self.get_latest_infraction(ctx.author.id)
+        if not infraction:
+            return
 
-            if old_infraction is None:
-                await ctx.send(
-                    ":x: Couldn't find most recent infraction; you have never given an infraction."
-                )
-                return
-
-            infraction_id = old_infraction["id"]
-
-        else:
-            old_infraction = await self.bot.api_client.get(f"bot/infractions/{infraction_id}")
+        old_infraction = infraction
+        infraction_id = infraction["id"]
 
         request_data = {}
         confirm_messages = []
