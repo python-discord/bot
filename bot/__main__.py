@@ -62,7 +62,7 @@ bot = Bot(
     case_insensitive=True,
     max_messages=10_000,
     allowed_mentions=discord.AllowedMentions(everyone=False, roles=allowed_roles),
-    intents=intents
+    intents=intents,
 )
 
 # Load extensions.
