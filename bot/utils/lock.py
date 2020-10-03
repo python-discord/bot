@@ -26,6 +26,7 @@ class LockGuard:
     def __init__(self):
         self._locked = False
 
+    @property
     def locked(self) -> bool:
         """Return True if currently locked or False if unlocked."""
         return self._locked
@@ -83,7 +84,7 @@ def lock(namespace: Hashable, resource_id: ResourceId, *, raise_error: bool = Fa
             locks = __lock_dicts[namespace]
             lock_guard = locks.setdefault(id_, LockGuard())
 
-            if not lock_guard.locked():
+            if not lock_guard.locked:
                 log.debug(f"{name}: resource {namespace!r}:{id_!r} is free; acquiring it...")
                 with lock_guard:
                     return await func(*args, **kwargs)
