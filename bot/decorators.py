@@ -5,11 +5,12 @@ from contextlib import suppress
 from functools import wraps
 
 from discord import Member, NotFound
-from discord.ext.commands import Cog, Context, check
+from discord.ext import commands
+from discord.ext.commands import Cog, Context
 
 from bot.constants import Channels, RedirectOutput
 from bot.utils import function
-from bot.utils.checks import in_whitelist_check, with_role_check, without_role_check
+from bot.utils.checks import in_whitelist_check
 
 log = logging.getLogger(__name__)
 
@@ -39,22 +40,26 @@ def in_whitelist(
         """Check if command was issued in a whitelisted context."""
         return in_whitelist_check(ctx, channels, categories, roles, redirect, fail_silently)
 
-    return check(predicate)
+    return commands.check(predicate)
 
 
-def with_role(*role_ids: int) -> t.Callable:
-    """Returns True if the user has any one of the roles in role_ids."""
+def has_no_roles(*roles: t.Union[str, int]) -> t.Callable:
+    """
+    Returns True if the user does not have any of the roles specified.
+
+    `roles` are the names or IDs of the disallowed roles.
+    """
     async def predicate(ctx: Context) -> bool:
-        """With role checker predicate."""
-        return with_role_check(ctx, *role_ids)
-    return check(predicate)
+        try:
+            await commands.has_any_role(*roles).predicate(ctx)
+        except commands.MissingAnyRole:
+            return True
+        else:
+            # This error is never shown to users, so don't bother trying to make it too pretty.
+            roles_ = ", ".join(f"'{item}'" for item in roles)
+            raise commands.CheckFailure(f"You have at least one of the disallowed roles: {roles_}")
 
-
-def without_role(*role_ids: int) -> t.Callable:
-    """Returns True if the user does not have any of the roles in role_ids."""
-    async def predicate(ctx: Context) -> bool:
-        return without_role_check(ctx, *role_ids)
-    return check(predicate)
+    return commands.check(predicate)
 
 
 def redirect_output(destination_channel: int, bypass_roles: t.Container[int] = None) -> t.Callable:
