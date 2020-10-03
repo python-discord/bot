@@ -152,9 +152,9 @@ class Information(Cog):
         channel_counts = self.get_channel_type_counts(ctx.guild)
 
         # How many of each user status?
-        py_invite = await self.bot.fetch_invite("python")
+        py_invite = await self.bot.fetch_invite(constants.Guild.invite)
         online_presences = py_invite.approximate_presence_count
-        offline_presences = ctx.guild.member_count - online_presences
+        offline_presences = py_invite.approximate_member_count - online_presences
         embed = Embed(colour=Colour.blurple())
 
         # How many staff members and staff channels do we have?
