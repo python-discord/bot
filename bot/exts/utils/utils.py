@@ -49,13 +49,12 @@ pep_cache = AsyncCache()
 class Utils(Cog):
     """A selection of utilities which don't have a clear category."""
 
+    BASE_PEP_URL = "http://www.python.org/dev/peps/pep-"
+    BASE_GITHUB_PEP_URL = "https://raw.githubusercontent.com/python/peps/master/pep-"
+    PEPS_LISTING_API_URL = "https://api.github.com/repos/python/peps/contents?ref=master"
+
     def __init__(self, bot: Bot):
         self.bot = bot
-
-        self.base_pep_url = "http://www.python.org/dev/peps/pep-"
-        self.base_github_pep_url = "https://raw.githubusercontent.com/python/peps/master/pep-"
-        self.peps_listing_api_url = "https://api.github.com/repos/python/peps/contents?ref=master"
-
         self.peps: Dict[int, str] = {}
         self.last_refreshed_peps: Optional[datetime] = None
         self.bot.loop.create_task(self.refresh_peps_urls())
@@ -198,7 +197,7 @@ class Utils(Cog):
         await self.bot.wait_until_ready()
         log.trace("Started refreshing PEP URLs.")
 
-        async with self.bot.http_session.get(self.peps_listing_api_url) as resp:
+        async with self.bot.http_session.get(self.PEPS_LISTING_API_URL) as resp:
             listing = await resp.json()
 
         log.trace("Got PEP URLs listing from GitHub API")
@@ -268,7 +267,7 @@ class Utils(Cog):
         # Assemble the embed
         pep_embed = Embed(
             title=f"**PEP {pep_nr} - {pep_header['Title']}**",
-            description=f"[Link]({self.base_pep_url}{pep_nr:04})",
+            description=f"[Link]({self.BASE_PEP_URL}{pep_nr:04})",
         )
 
         pep_embed.set_thumbnail(url=ICON_URL)
