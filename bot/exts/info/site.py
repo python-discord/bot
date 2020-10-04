@@ -122,10 +122,14 @@ class Site(Cog):
             return
 
         full_rules = await self.bot.api_client.get('rules', params={'link_format': 'md'})
-        invalid_indices = tuple(
-            pick
-            for pick in rules
-            if pick < 1 or pick > len(full_rules)
+
+        # Remove duplicates and sort the invalid rule indices
+        invalid_indices = sorted(
+            set(
+                pick
+                for pick in rules
+                if pick < 1 or pick > len(full_rules)
+            )
         )
 
         if invalid_indices:
@@ -135,6 +139,9 @@ class Site(Cog):
 
         for rule in rules:
             self.bot.stats.incr(f"rule_uses.{rule}")
+
+        # Remove duplicates and sort the rule indices
+        rules = sorted(set(rules))
 
         final_rules = tuple(f"**{pick}.** {full_rules[pick - 1]}" for pick in rules)
 
