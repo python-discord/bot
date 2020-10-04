@@ -494,7 +494,7 @@ class HelpChannels(commands.Cog):
 
         If `options` are provided, the channel will be edited after the move is completed. This is the
         same order of operations that `discord.TextChannel.edit` uses. For information on available
-        options, see the documention on `discord.TextChannel.edit`. While possible, position-related
+        options, see the documentation on `discord.TextChannel.edit`. While possible, position-related
         options should be avoided, as it may interfere with the category move we perform.
         """
         # Get a fresh copy of the category from the bot to avoid the cache mismatch issue we had.
