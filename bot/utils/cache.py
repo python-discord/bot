@@ -24,7 +24,7 @@ class AsyncCache:
             @functools.wraps(function)
             async def wrapper(*args) -> Any:
                 """Decorator wrapper for the caching logic."""
-                key = ':'.join(str(args[arg_offset:]))
+                key = args[arg_offset:]
 
                 if key not in self._cache:
                     if len(self._cache) > max_size:
