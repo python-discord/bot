@@ -107,8 +107,7 @@ class Site(Cog):
     @site_group.command(name="rules", aliases=("r", "rule"), root_aliases=("rules", "rule"))
     async def site_rules(self, ctx: Context, rules: Greedy[int]) -> None:
         """Provides a link to all rules or, if specified, displays specific rule(s)."""
-        rules_embed = Embed(title='Rules', color=Colour.blurple())
-        rules_embed.url = f"{PAGES_URL}/rules"
+        rules_embed = Embed(title='Rules', color=Colour.blurple(), url=f'{PAGES_URL}/rules')
 
         if not rules:
             # Rules were not submitted. Return the default description.
