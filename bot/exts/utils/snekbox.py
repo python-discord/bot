@@ -31,6 +31,15 @@ FORMATTED_CODE_REGEX = re.compile(
     r"\s*$",                                # any trailing whitespace until the end of the string
     re.DOTALL | re.IGNORECASE               # "." also matches newlines, case insensitive
 )
+CODE_BLOCK_REGEX = re.compile(
+    r"```"                                  # code block delimiter: 3 batckticks
+    r"([a-z]+\n)?"                          # match optional language (only letters plus newline)
+    r"(?:[ \t]*\n)*"                        # any blank (empty or tabs/spaces only) lines before the code
+    r"(?P<code>.*?)"                        # extract all code inside the markup
+    r"\s*"                                  # any more whitespace before the end of the code markup
+    r"```",                                 # code block end
+    re.DOTALL | re.IGNORECASE               # "." also matches newlines, case insensitive
+)
 RAW_CODE_REGEX = re.compile(
     r"^(?:[ \t]*\n)*"                       # any blank (empty or tabs/spaces only) lines before the code
     r"(?P<code>.*?)"                        # extract all the rest as code
@@ -78,7 +87,9 @@ class Snekbox(Cog):
     def prepare_input(code: str) -> str:
         """Extract code from the Markdown, format it, and insert it into the code template."""
         match = FORMATTED_CODE_REGEX.fullmatch(code)
-        if match:
+
+        # Despite the wildcard being lazy, this is a fullmatch so we need to check the presence of the delim explicitly.
+        if match and match.group("delim") not in match.group("code"):
             code, block, lang, delim = match.group("code", "block", "lang", "delim")
             code = textwrap.dedent(code)
             if block:
@@ -86,12 +97,20 @@ class Snekbox(Cog):
             else:
                 info = f"{delim}-enclosed inline code"
             log.trace(f"Extracted {info} for evaluation:\n{code}")
+
         else:
-            code = textwrap.dedent(RAW_CODE_REGEX.fullmatch(code).group("code"))
-            log.trace(
-                f"Eval message contains unformatted or badly formatted code, "
-                f"stripping whitespace only:\n{code}"
-            )
+            code_parts = CODE_BLOCK_REGEX.finditer(code)
+            merge = '\n'.join(map(lambda part: part.group("code"), code_parts))
+            if merge:
+                code = textwrap.dedent(merge)
+                log.trace(f"Merged one or more code blocks from text combined with code:\n{code}")
+
+            else:
+                code = textwrap.dedent(RAW_CODE_REGEX.fullmatch(code).group("code"))
+                log.trace(
+                    f"Eval message contains unformatted or badly formatted code, "
+                    f"stripping whitespace only:\n{code}"
+                )
 
         return code
 
