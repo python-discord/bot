@@ -65,8 +65,7 @@ WHITESPACE_AFTER_NEWLINES_RE = re.compile(r"(?<=\n\n)(\s+)")
 FAILED_REQUEST_RETRY_AMOUNT = 3
 NOT_FOUND_DELETE_DELAY = RedirectOutput.delete_delay
 
-# Async cache instance for docs cog
-async_cache = AsyncCache()
+symbol_cache = AsyncCache()
 
 
 class DocMarkdownConverter(MarkdownConverter):
@@ -189,7 +188,7 @@ class Doc(commands.Cog):
         self.base_urls.clear()
         self.inventories.clear()
         self.renamed_symbols.clear()
-        async_cache.clear()
+        symbol_cache.clear()
 
         # Run all coroutines concurrently - since each of them performs a HTTP
         # request, this speeds up fetching the inventory data heavily.
@@ -254,7 +253,7 @@ class Doc(commands.Cog):
 
         return signatures, description.replace('¶', '')
 
-    @async_cache(arg_offset=1)
+    @symbol_cache(arg_offset=1)
     async def get_symbol_embed(self, symbol: str) -> Optional[discord.Embed]:
         """
         Attempt to scrape and fetch the data for the given `symbol`, and build an embed from its contents.

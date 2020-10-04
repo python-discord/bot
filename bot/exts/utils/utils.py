@@ -43,8 +43,7 @@ Namespaces are one honking great idea -- let's do more of those!
 
 ICON_URL = "https://www.python.org/static/opengraph-icon-200x200.png"
 
-# Async cache instance for PEPs
-async_cache = AsyncCache()
+pep_cache = AsyncCache()
 
 
 class Utils(Cog):
@@ -284,7 +283,7 @@ class Utils(Cog):
 
         return pep_embed
 
-    @async_cache(arg_offset=2)
+    @pep_cache(arg_offset=2)
     async def get_pep_embed(self, ctx: Context, pep_nr: int) -> Optional[Embed]:
         """Fetch, generate and return PEP embed. When any error occur, use `self.send_pep_error_embed`."""
         response = await self.bot.http_session.get(self.peps[pep_nr])
