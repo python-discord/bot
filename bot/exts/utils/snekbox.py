@@ -88,7 +88,7 @@ class Snekbox(Cog):
         """Extract code from the Markdown, format it, and insert it into the code template."""
         match = FORMATTED_CODE_REGEX.fullmatch(code)
 
-        # Despite the wildcard being lazy, this is a fullmatch so we need to check the presence of the delim explicitly.
+        # Despite the wildcard being lazy, the pattern is from start to end and will eat any delimiters in the middle.
         if match and match.group("delim") not in match.group("code"):
             code, block, lang, delim = match.group("code", "block", "lang", "delim")
             code = textwrap.dedent(code)
@@ -100,7 +100,7 @@ class Snekbox(Cog):
 
         else:
             code_parts = CODE_BLOCK_REGEX.finditer(code)
-            merge = '\n'.join(map(lambda part: part.group("code"), code_parts))
+            merge = '\n'.join(part.group("code") for part in code_parts)
             if merge:
                 code = textwrap.dedent(merge)
                 log.trace(f"Merged one or more code blocks from text combined with code:\n{code}")
