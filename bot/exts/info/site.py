@@ -1,7 +1,7 @@
 import logging
 
 from discord import Colour, Embed
-from discord.ext.commands import Cog, Context, group
+from discord.ext.commands import Cog, Context, Greedy, group
 
 from bot.bot import Bot
 from bot.constants import URLs
@@ -105,7 +105,7 @@ class Site(Cog):
         await ctx.send(embed=embed)
 
     @site_group.command(name="rules", aliases=("r", "rule"), root_aliases=("rules", "rule"))
-    async def site_rules(self, ctx: Context, *rules: int) -> None:
+    async def site_rules(self, ctx: Context, rules: Greedy[int]) -> None:
         """Provides a link to all rules or, if specified, displays specific rule(s)."""
         rules_embed = Embed(title='Rules', color=Colour.blurple())
         rules_embed.url = f"{PAGES_URL}/rules"
