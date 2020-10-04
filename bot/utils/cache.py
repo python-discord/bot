@@ -12,10 +12,11 @@ class AsyncCache:
     An offset may be optionally provided to be applied to the coroutine's arguments when creating the cache key.
     """
 
-    def __init__(self):
+    def __init__(self, max_size: int = 128):
         self._cache = OrderedDict()
+        self._max_size = max_size
 
-    def __call__(self, max_size: int = 128, arg_offset: int = 0) -> Callable:
+    def __call__(self, arg_offset: int = 0) -> Callable:
         """Decorator for async cache."""
 
         def decorator(function: Callable) -> Callable:
@@ -27,7 +28,7 @@ class AsyncCache:
                 key = args[arg_offset:]
 
                 if key not in self._cache:
-                    if len(self._cache) > max_size:
+                    if len(self._cache) > self._max_size:
                         self._cache.popitem(last=False)
 
                     self._cache[key] = await function(*args)
