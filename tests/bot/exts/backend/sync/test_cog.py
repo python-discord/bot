@@ -392,14 +392,14 @@ class SyncCogCommandTests(SyncCogTestCase, CommandTestCase):
     async def test_sync_roles_command(self):
         """sync() should be called on the RoleSyncer."""
         ctx = helpers.MockContext()
-        await self.cog.sync_roles_command.callback(self.cog, ctx)
+        await self.cog.sync_roles_command(self.cog, ctx)
 
         self.cog.role_syncer.sync.assert_called_once_with(ctx.guild, ctx)
 
     async def test_sync_users_command(self):
         """sync() should be called on the UserSyncer."""
         ctx = helpers.MockContext()
-        await self.cog.sync_users_command.callback(self.cog, ctx)
+        await self.cog.sync_users_command(self.cog, ctx)
 
         self.cog.user_syncer.sync.assert_called_once_with(ctx.guild, ctx)
 

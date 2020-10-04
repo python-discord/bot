@@ -318,7 +318,7 @@ class Doc(commands.Cog):
     @commands.group(name='docs', aliases=('doc', 'd'), invoke_without_command=True)
     async def docs_group(self, ctx: commands.Context, symbol: commands.clean_content = None) -> None:
         """Lookup documentation for Python symbols."""
-        await ctx.invoke(self.get_command, symbol)
+        await self.get_command(ctx, symbol)
 
     @docs_group.command(name='get', aliases=('g',))
     async def get_command(self, ctx: commands.Context, symbol: commands.clean_content = None) -> None:

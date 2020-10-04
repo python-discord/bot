@@ -236,7 +236,7 @@ class Utils(Cog):
         """Get information embed about PEP 0."""
         pep_embed = Embed(
             title="**PEP 0 - Index of Python Enhancement Proposals (PEPs)**",
-            description="[Link](https://www.python.org/dev/peps/)"
+            url="https://www.python.org/dev/peps/"
         )
         pep_embed.set_thumbnail(url=ICON_URL)
         pep_embed.add_field(name="Status", value="Active")

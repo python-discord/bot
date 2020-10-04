@@ -77,7 +77,7 @@ class Information(Cog):
         channel_type_list = sorted(channel_type_list)
         return "\n".join(channel_type_list)
 
-    @has_any_role(*constants.MODERATION_ROLES)
+    @has_any_role(*constants.STAFF_ROLES)
     @command(name="roles")
     async def roles_info(self, ctx: Context) -> None:
         """Returns a list of all roles and their corresponding IDs."""
@@ -97,7 +97,7 @@ class Information(Cog):
 
         await LinePaginator.paginate(role_list, ctx, embed, empty=False)
 
-    @has_any_role(*constants.MODERATION_ROLES)
+    @has_any_role(*constants.STAFF_ROLES)
     @command(name="role")
     async def role_info(self, ctx: Context, *roles: Union[Role, str]) -> None:
         """
@@ -161,9 +161,9 @@ class Information(Cog):
         staff_channel_count = self.get_staff_channel_count(ctx.guild)
 
         # Because channel_counts lacks leading whitespace, it breaks the dedent if it's inserted directly by the
-        # f-string. While this is correctly formated by Discord, it makes unit testing difficult. To keep the formatting
-        # without joining a tuple of strings we can use a Template string to insert the already-formatted channel_counts
-        # after the dedent is made.
+        # f-string. While this is correctly formatted by Discord, it makes unit testing difficult. To keep the
+        # formatting without joining a tuple of strings we can use a Template string to insert the already-formatted
+        # channel_counts after the dedent is made.
         embed.description = Template(
             textwrap.dedent(f"""
                 **Server information**
