@@ -129,7 +129,7 @@ class Site(Cog):
         )
 
         if invalid_indices:
-            indices = ', '.join(map(str, invalid_indices))
+            indices = ', '.join(str(index) for index in invalid_indices)
             await ctx.send(f":x: Invalid rule indices: {indices}")
             return
 
