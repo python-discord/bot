@@ -553,7 +553,7 @@ class Verification(Cog):
             log.exception("DM dispatch failed on unexpected error code")
 
     @Cog.listener()
-    async def on_member_update(self, before: discord.Member, after: discord.Member):
+    async def on_member_update(self, before: discord.Member, after: discord.Member) -> None:
         """Check if we need to send a verification DM to a gated user."""
         before_roles = [r.id for r in before.roles]
         after_roles = [r.id for r in after.roles]
