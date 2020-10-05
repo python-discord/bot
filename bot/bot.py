@@ -46,7 +46,25 @@ class Bot(commands.Bot):
             # will effectively disable stats.
             statsd_url = "127.0.0.1"
 
-        self.stats = AsyncStatsClient(self.loop, statsd_url, 8125, prefix="bot")
+        try:
+            self.stats = AsyncStatsClient(self.loop, statsd_url, 8125, prefix="bot")
+        except socket.gaierror as socket_error:
+            self.stats = None
+            self.loop.call_later(30, self.retry_statsd_connection, statsd_url)
+            log.warning(f"Statsd client failed to instantiate with error:\n{socket_error}")
+
+    def retry_statsd_connection(self, statsd_url: str, retry_after: int = 30, attempt: int = 1) -> None:
+        """Callback used to retry a connection to statsd if it should fail."""
+        if attempt >= 10:
+            log.error("Reached 10 attempts trying to reconnect AsyncStatsClient. Aborting")
+            return
+
+        try:
+            self.stats = AsyncStatsClient(self.loop, statsd_url, 8125, prefix="bot")
+        except socket.gaierror:
+            log.warning(f"Statsd client failed to reconnect (Retry attempt: {attempt})")
+            # Use a fallback strategy for retrying, up to 10 times.
+            self.loop.call_later(retry_after, self.retry_statsd_connection, statsd_url, retry_after * 2, attempt + 1)
 
     async def cache_filter_list_data(self) -> None:
         """Cache all the data in the FilterList on the site."""
@@ -146,7 +164,7 @@ class Bot(commands.Bot):
         if self._resolver:
             await self._resolver.close()
 
-        if self.stats._transport:
+        if self.stats and self.stats._transport:
             self.stats._transport.close()
 
         if self.redis_session:
@@ -168,7 +186,12 @@ class Bot(commands.Bot):
     async def login(self, *args, **kwargs) -> None:
         """Re-create the connector and set up sessions before logging into Discord."""
         self._recreate()
-        await self.stats.create_socket()
+
+        if self.stats:
+            await self.stats.create_socket()
+        else:
+            log.info("self.stats is not defined, skipping create_socket step in login")
+
         await super().login(*args, **kwargs)
 
     async def on_guild_available(self, guild: discord.Guild) -> None:
@@ -214,7 +237,10 @@ class Bot(commands.Bot):
 
     async def on_error(self, event: str, *args, **kwargs) -> None:
         """Log errors raised in event listeners rather than printing them to stderr."""
-        self.stats.incr(f"errors.event.{event}")
+        if self.stats:
+            self.stats.incr(f"errors.event.{event}")
+        else:
+            log.info(f"self.stats is not defined, skipping errors.event.{event} increment in on_error")
 
         with push_scope() as scope:
             scope.set_tag("event", event)
