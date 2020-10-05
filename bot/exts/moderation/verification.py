@@ -559,13 +559,11 @@ class Verification(Cog):
         after_roles = [r.id for r in after.roles]
 
         if constants.Roles.verified not in before_roles and constants.Roles.verified in after_roles:
-            if await self.member_gating_cache.get(after.id):
+            if await self.member_gating_cache.pop(after.id):
                 try:
                     await safe_dm(after.send(ALTERNATE_VERIFIED_MESSAGE))
                 except discord.HTTPException:
                     log.exception("DM dispatch failed on unexpected error code")
-                finally:
-                    self.member_gating_cache.pop(after.id)
 
     @Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
