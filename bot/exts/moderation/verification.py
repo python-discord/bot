@@ -545,7 +545,7 @@ class Verification(Cog):
         # gate and will not need a welcome DM with verification instructions.
         # We will send them an alternate DM once they verify with the welcome
         # video.
-        if raw_member["is_pending"]:
+        if raw_member.get("is_pending"):
             await self.member_gating_cache.set(member.id, True)
             return
 
