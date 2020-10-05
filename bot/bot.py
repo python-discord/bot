@@ -15,6 +15,7 @@ from bot import DEBUG_MODE, api, constants
 from bot.async_stats import AsyncStatsClient
 
 log = logging.getLogger('bot')
+LOCALHOST = "127.0.0.1"
 
 
 class Bot(commands.Bot):
@@ -44,12 +45,12 @@ class Bot(commands.Bot):
             # Since statsd is UDP, there are no errors for sending to a down port.
             # For this reason, setting the statsd host to 127.0.0.1 for development
             # will effectively disable stats.
-            statsd_url = "127.0.0.1"
+            statsd_url = LOCALHOST
 
         try:
             self.stats = AsyncStatsClient(self.loop, statsd_url, 8125, prefix="bot")
         except socket.gaierror as socket_error:
-            self.stats = None
+            self.stats = AsyncStatsClient(self.loop, LOCALHOST)
             self.loop.call_later(30, self.retry_statsd_connection, statsd_url)
             log.warning(f"Statsd client failed to instantiate with error:\n{socket_error}")
 
