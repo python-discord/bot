@@ -555,8 +555,8 @@ class Verification(Cog):
     @Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member) -> None:
         """Check if we need to send a verification DM to a gated user."""
-        before_roles = [r.id for r in before.roles]
-        after_roles = [r.id for r in after.roles]
+        before_roles = [role.id for role in before.roles]
+        after_roles = [role.id for role in after.roles]
 
         if constants.Roles.verified not in before_roles and constants.Roles.verified in after_roles:
             if await self.member_gating_cache.pop(after.id):
