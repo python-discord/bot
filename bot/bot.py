@@ -165,7 +165,7 @@ class Bot(commands.Bot):
         if self._resolver:
             await self._resolver.close()
 
-        if self.stats and self.stats._transport:
+        if self.stats._transport:
             self.stats._transport.close()
 
         if self.redis_session:
@@ -187,12 +187,7 @@ class Bot(commands.Bot):
     async def login(self, *args, **kwargs) -> None:
         """Re-create the connector and set up sessions before logging into Discord."""
         self._recreate()
-
-        if self.stats:
-            await self.stats.create_socket()
-        else:
-            log.info("self.stats is not defined, skipping create_socket step in login")
-
+        await self.stats.create_socket()
         await super().login(*args, **kwargs)
 
     async def on_guild_available(self, guild: discord.Guild) -> None:
@@ -238,10 +233,7 @@ class Bot(commands.Bot):
 
     async def on_error(self, event: str, *args, **kwargs) -> None:
         """Log errors raised in event listeners rather than printing them to stderr."""
-        if self.stats:
-            self.stats.incr(f"errors.event.{event}")
-        else:
-            log.info(f"self.stats is not defined, skipping errors.event.{event} increment in on_error")
+        self.stats.incr(f"errors.event.{event}")
 
         with push_scope() as scope:
             scope.set_tag("event", event)
