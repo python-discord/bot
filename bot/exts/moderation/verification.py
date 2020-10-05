@@ -546,7 +546,7 @@ class Verification(Cog):
         # We will send them an alternate DM once they verify with the welcome
         # video.
         if raw_member["is_pending"]:
-            await self.member_gating_cache.set(raw_member.id, True)
+            await self.member_gating_cache.set(member.id, True)
             return
 
         log.trace(f"Sending on join message to new member: {member.id}")
