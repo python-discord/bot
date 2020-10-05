@@ -173,7 +173,7 @@ class Verification(Cog):
     # ]
     task_cache = RedisCache()
 
-    # Cache who needs to receive an alternate verified DM.
+    # Create a cache for storing recipients of the alternate welcome DM.
     member_gating_cache = RedisCache()
 
     def __init__(self, bot: Bot) -> None:
