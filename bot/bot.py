@@ -47,14 +47,10 @@ class Bot(commands.Bot):
             # will effectively disable stats.
             statsd_url = LOCALHOST
 
-        try:
-            self.stats = AsyncStatsClient(self.loop, statsd_url, 8125, prefix="bot")
-        except socket.gaierror as socket_error:
-            self.stats = AsyncStatsClient(self.loop, LOCALHOST)
-            self.loop.call_later(30, self.retry_statsd_connection, statsd_url)
-            log.warning(f"Statsd client failed to instantiate with error:\n{socket_error}")
+        self.stats = AsyncStatsClient(self.loop, LOCALHOST)
+        self.connect_statsd(statsd_url)
 
-    def retry_statsd_connection(self, statsd_url: str, retry_after: int = 30, attempt: int = 1) -> None:
+    def connect_statsd(self, statsd_url: str, retry_after: int = 30, attempt: int = 1) -> None:
         """Callback used to retry a connection to statsd if it should fail."""
         if attempt >= 10:
             log.error("Reached 10 attempts trying to reconnect AsyncStatsClient. Aborting")
@@ -63,9 +59,9 @@ class Bot(commands.Bot):
         try:
             self.stats = AsyncStatsClient(self.loop, statsd_url, 8125, prefix="bot")
         except socket.gaierror:
-            log.warning(f"Statsd client failed to reconnect (Retry attempt: {attempt})")
+            log.warning(f"Statsd client failed to connect (Attempts: {attempt})")
             # Use a fallback strategy for retrying, up to 10 times.
-            self.loop.call_later(retry_after, self.retry_statsd_connection, statsd_url, retry_after * 2, attempt + 1)
+            self.loop.call_later(retry_after, self.retry_statsd_connection, statsd_url, retry_after ** 2, attempt + 1)
 
     async def cache_filter_list_data(self) -> None:
         """Cache all the data in the FilterList on the site."""
