@@ -53,6 +53,23 @@ If you'd like to unsubscribe from the announcement notifications, simply send `!
 <#{constants.Channels.bot_commands}>.
 """
 
+ALTERNATE_VERIFIED_MESSAGE = f"""
+Thanks for accepting our rules!
+
+You can find a copy of our rules for reference at <https://pythondiscord.com/pages/rules>.
+
+Additionally, if you'd like to receive notifications for the announcements \
+we post in <#{constants.Channels.announcements}>
+from time to time, you can send `!subscribe` to <#{constants.Channels.bot_commands}> at any time \
+to assign yourself the **Announcements** role. We'll mention this role every time we make an announcement.
+
+If you'd like to unsubscribe from the announcement notifications, simply send `!unsubscribe` to \
+<#{constants.Channels.bot_commands}>.
+
+To introduce you to our community, we've made the following video:
+https://youtu.be/ZH26PuX3re0
+"""
+
 # Sent via DMs to users kicked for failing to verify
 KICKED_MESSAGE = f"""
 Hi! You have been automatically kicked from Python Discord as you have failed to accept our rules \
@@ -155,6 +172,9 @@ class Verification(Cog):
     #   "last_reminder": int (discord.Message.id),
     # ]
     task_cache = RedisCache()
+
+    # Cache who needs to receive an alternate verified DM.
+    member_gating_cache = RedisCache()
 
     def __init__(self, bot: Bot) -> None:
         """Start internal tasks."""
@@ -519,11 +539,33 @@ class Verification(Cog):
         if member.guild.id != constants.Guild.id:
             return  # Only listen for PyDis events
 
+        raw_member = await self.bot.http.get_member(member.guild.id, member.id)
+
+        # Only send the message to users going through our gating system
+        if raw_member["is_pending"]:
+            await self.member_gating_cache.set(raw_member.id, True)
+            return
+
         log.trace(f"Sending on join message to new member: {member.id}")
         try:
             await safe_dm(member.send(ON_JOIN_MESSAGE))
         except discord.HTTPException:
             log.exception("DM dispatch failed on unexpected error code")
+
+    @Cog.listener()
+    async def on_member_update(self, before: discord.Member, after: discord.Member):
+        """Check if we need to send a verification DM to a gated user."""
+        before_roles = [r.id for r in before.roles]
+        after_roles = [r.id for r in after.roles]
+
+        if constants.Roles.verified not in before_roles and constants.Roles.verified in after_roles:
+            if await self.member_gating_cache.get(after.id):
+                try:
+                    await safe_dm(after.send(ALTERNATE_VERIFIED_MESSAGE))
+                except discord.HTTPException:
+                    log.exception("DM dispatch failed on unexpected error code")
+                finally:
+                    self.member_gating_cache.pop(after.id)
 
     @Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
