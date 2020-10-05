@@ -561,6 +561,10 @@ class Verification(Cog):
         if constants.Roles.verified not in before_roles and constants.Roles.verified in after_roles:
             if await self.member_gating_cache.pop(after.id):
                 try:
+                    # If the member has not received a DM from our !accept command
+                    # and has gone through the alternate gating system we should send
+                    # our alternate welcome DM which includes info such as our welcome
+                    # video.
                     await safe_dm(after.send(ALTERNATE_VERIFIED_MESSAGE))
                 except discord.HTTPException:
                     log.exception("DM dispatch failed on unexpected error code")
