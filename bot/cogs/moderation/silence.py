@@ -82,9 +82,9 @@ class Silence(commands.Cog):
         self.bot = bot
         self.scheduler = Scheduler(self.__class__.__name__)
 
-        self._init_task = self.bot.loop.create_task(self._init_cog())
+        self._init_task = self.bot.loop.create_task(self._async_init())
 
-    async def _init_cog(self) -> None:
+    async def _async_init(self) -> None:
         """Set instance attributes once the guild is available and reschedule unsilences."""
         await self.bot.wait_until_guild_available()
 

@@ -91,39 +91,39 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         self.cog = silence.Silence(self.bot)
 
     @autospec(silence, "SilenceNotifier", pass_mocks=False)
-    async def test_init_cog_got_guild(self):
+    async def test_async_init_got_guild(self):
         """Bot got guild after it became available."""
-        await self.cog._init_cog()
+        await self.cog._async_init()
         self.bot.wait_until_guild_available.assert_awaited_once()
         self.bot.get_guild.assert_called_once_with(Guild.id)
 
     @autospec(silence, "SilenceNotifier", pass_mocks=False)
-    async def test_init_cog_got_role(self):
+    async def test_async_init_got_role(self):
         """Got `Roles.verified` role from guild."""
-        await self.cog._init_cog()
+        await self.cog._async_init()
         guild = self.bot.get_guild()
         guild.get_role.assert_called_once_with(Roles.verified)
 
     @autospec(silence, "SilenceNotifier", pass_mocks=False)
-    async def test_init_cog_got_channels(self):
+    async def test_async_init_got_channels(self):
         """Got channels from bot."""
-        await self.cog._init_cog()
+        await self.cog._async_init()
         self.bot.get_channel.called_once_with(Channels.mod_alerts)
         self.bot.get_channel.called_once_with(Channels.mod_log)
 
     @autospec(silence, "SilenceNotifier")
-    async def test_init_cog_got_notifier(self, notifier):
+    async def test_async_init_got_notifier(self, notifier):
         """Notifier was started with channel."""
         mod_log = MockTextChannel()
         self.bot.get_channel.side_effect = (None, mod_log)
-        await self.cog._init_cog()
+        await self.cog._async_init()
         notifier.assert_called_once_with(self.cog._mod_log_channel)
 
     @autospec(silence, "SilenceNotifier", pass_mocks=False)
-    async def test_init_cog_rescheduled(self):
+    async def test_async_init_rescheduled(self):
         """`_reschedule_` coroutine was awaited."""
         self.cog._reschedule = mock.create_autospec(self.cog._reschedule)
-        await self.cog._init_cog()
+        await self.cog._async_init()
         self.cog._reschedule.assert_awaited_once_with()
 
     def test_cog_unload_cancelled_tasks(self):
@@ -154,7 +154,7 @@ class RescheduleTests(unittest.IsolatedAsyncioTestCase):
         self.cog._unsilence_wrapper = mock.create_autospec(self.cog._unsilence_wrapper)
 
         with mock.patch.object(self.cog, "_reschedule", autospec=True):
-            asyncio.run(self.cog._init_cog())  # Populate instance attributes.
+            asyncio.run(self.cog._async_init())  # Populate instance attributes.
 
     async def test_skipped_missing_channel(self):
         """Did nothing because the channel couldn't be retrieved."""
@@ -230,7 +230,7 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         self.cog._init_task = asyncio.Future()
         self.cog._init_task.set_result(None)
 
-        asyncio.run(self.cog._init_cog())  # Populate instance attributes.
+        asyncio.run(self.cog._async_init())  # Populate instance attributes.
 
         self.channel = MockTextChannel()
         self.overwrite = PermissionOverwrite(stream=True, send_messages=True, add_reactions=False)
@@ -367,7 +367,7 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
         overwrites_cache = mock.create_autospec(self.cog.previous_overwrites, spec_set=True)
         self.cog.previous_overwrites = overwrites_cache
 
-        asyncio.run(self.cog._init_cog())  # Populate instance attributes.
+        asyncio.run(self.cog._async_init())  # Populate instance attributes.
 
         self.cog.scheduler.__contains__.return_value = True
         overwrites_cache.get.return_value = '{"send_messages": true, "add_reactions": false}'
