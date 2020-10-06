@@ -110,16 +110,12 @@ class Silence(commands.Cog):
             await ctx.send(MSG_SILENCE_FAIL)
             return
 
+        await self._schedule_unsilence(ctx, duration)
+
         if duration is None:
             await ctx.send(MSG_SILENCE_PERMANENT)
-            await self.unsilence_timestamps.set(ctx.channel.id, -1)
-            return
-
-        await ctx.send(MSG_SILENCE_SUCCESS.format(duration=duration))
-
-        self.scheduler.schedule_later(duration * 60, ctx.channel.id, ctx.invoke(self.unsilence))
-        unsilence_time = (datetime.now(tz=timezone.utc) + timedelta(minutes=duration))
-        await self.unsilence_timestamps.set(ctx.channel.id, unsilence_time.timestamp())
+        else:
+            await ctx.send(MSG_SILENCE_SUCCESS.format(duration=duration))
 
     @commands.command(aliases=("unhush",))
     async def unsilence(self, ctx: Context) -> None:
@@ -169,6 +165,15 @@ class Silence(commands.Cog):
 
         log.info(f"Silenced #{channel} ({channel.id}) for {duration} minute(s).")
         return True
+
+    async def _schedule_unsilence(self, ctx: Context, duration: Optional[int]) -> None:
+        """Schedule `ctx.channel` to be unsilenced if `duration` is not None."""
+        if duration is None:
+            await self.unsilence_timestamps.set(ctx.channel.id, -1)
+        else:
+            self.scheduler.schedule_later(duration * 60, ctx.channel.id, ctx.invoke(self.unsilence))
+            unsilence_time = (datetime.now(tz=timezone.utc) + timedelta(minutes=duration))
+            await self.unsilence_timestamps.set(ctx.channel.id, unsilence_time.timestamp())
 
     async def _unsilence(self, channel: TextChannel) -> bool:
         """
