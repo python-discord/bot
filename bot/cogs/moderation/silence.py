@@ -104,17 +104,23 @@ class Silence(commands.Cog):
         Indefinitely silenced channels get added to a notifier which posts notices every 15 minutes from the start.
         """
         await self._init_task
-        log.debug(f"{ctx.author} is silencing channel #{ctx.channel}.")
 
-        if not await self._silence(ctx.channel, persistent=(duration is None), duration=duration):
+        channel_info = f"#{ctx.channel} ({ctx.channel.id})"
+        log.debug(f"{ctx.author} is silencing channel {channel_info}.")
+
+        if not await self._silence_overwrites(ctx.channel):
+            log.info(f"Tried to silence channel {channel_info} but the channel was already silenced.")
             await ctx.send(MSG_SILENCE_FAIL)
             return
 
         await self._schedule_unsilence(ctx, duration)
 
         if duration is None:
+            log.info(f"Silenced {channel_info} indefinitely.")
             await ctx.send(MSG_SILENCE_PERMANENT)
         else:
+            self.notifier.add_channel(ctx.channel)
+            log.info(f"Silenced {channel_info} for {duration} minute(s).")
             await ctx.send(MSG_SILENCE_SUCCESS.format(duration=duration))
 
     @commands.command(aliases=("unhush",))
@@ -139,31 +145,18 @@ class Silence(commands.Cog):
         else:
             await channel.send(MSG_UNSILENCE_SUCCESS)
 
-    async def _silence(self, channel: TextChannel, persistent: bool, duration: Optional[int]) -> bool:
-        """
-        Silence `channel` for `self._verified_role`.
-
-        If `persistent` is `True` add `channel` to notifier.
-        `duration` is only used for logging; if None is passed `persistent` should be True to not log None.
-        Return `True` if channel permissions were changed, `False` otherwise.
-        """
+    async def _silence_overwrites(self, channel: TextChannel) -> bool:
+        """Set silence permission overwrites for `channel` and return True if successful."""
         overwrite = channel.overwrites_for(self._verified_role)
         prev_overwrites = dict(send_messages=overwrite.send_messages, add_reactions=overwrite.add_reactions)
 
         if channel.id in self.scheduler or all(val is False for val in prev_overwrites.values()):
-            log.info(f"Tried to silence channel #{channel} ({channel.id}) but the channel was already silenced.")
             return False
 
         overwrite.update(send_messages=False, add_reactions=False)
         await channel.set_permissions(self._verified_role, overwrite=overwrite)
         await self.previous_overwrites.set(channel.id, json.dumps(prev_overwrites))
 
-        if persistent:
-            log.info(f"Silenced #{channel} ({channel.id}) indefinitely.")
-            self.notifier.add_channel(channel)
-            return True
-
-        log.info(f"Silenced #{channel} ({channel.id}) for {duration} minute(s).")
         return True
 
     async def _schedule_unsilence(self, ctx: Context, duration: Optional[int]) -> None:
