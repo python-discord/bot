@@ -71,6 +71,23 @@ class Infractions(InfractionScheduler, commands.Cog):
         """Permanently ban a user for the given reason and stop watching them with Big Brother."""
         await self.apply_ban(ctx, user, reason)
 
+    @command()
+    async def purgeban(
+        self,
+        ctx: Context,
+        user: FetchedMember,
+        purge_days: t.Optional[int] = 1,
+        *,
+        reason: t.Optional[str] = None
+    ) -> None:
+        """
+        Same as ban but removes all their messages for the given number of days, default being 1.
+
+        `purge_days` can only be values between 0 and 7.
+        Anything outside these bounds are automatically adjusted to their respective limits.
+        """
+        await self.apply_ban(ctx, user, reason, max(min(purge_days, 7), 0))
+
     # endregion
     # region: Temporary infractions
 
@@ -246,7 +263,14 @@ class Infractions(InfractionScheduler, commands.Cog):
         await self.apply_infraction(ctx, infraction, user, action)
 
     @respect_role_hierarchy(member_arg=2)
-    async def apply_ban(self, ctx: Context, user: UserSnowflake, reason: t.Optional[str], **kwargs) -> None:
+    async def apply_ban(
+        self,
+        ctx: Context,
+        user: UserSnowflake,
+        reason: t.Optional[str],
+        purge_days: t.Optional[int] = 0,
+        **kwargs
+    ) -> None:
         """
         Apply a ban infraction with kwargs passed to `post_infraction`.
 
@@ -278,7 +302,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         if reason:
             reason = textwrap.shorten(reason, width=512, placeholder="...")
 
-        action = ctx.guild.ban(user, reason=reason, delete_message_days=0)
+        action = ctx.guild.ban(user, reason=reason, delete_message_days=purge_days)
         await self.apply_infraction(ctx, infraction, user, action)
 
         if infraction.get('expires_at') is not None:
