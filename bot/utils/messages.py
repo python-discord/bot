@@ -68,10 +68,11 @@ async def send_attachments(
     embed which links to them. Extra kwargs will be passed to send() when sending the attachment.
     """
     webhook_send_kwargs = {
-        'username': sub_clyde(message.author.display_name),
+        'username': message.author.display_name,
         'avatar_url': message.author.avatar_url,
     }
     webhook_send_kwargs.update(kwargs)
+    webhook_send_kwargs['username'] = sub_clyde(webhook_send_kwargs['username'])
 
     large = []
     urls = []
