@@ -110,6 +110,7 @@ ENV/
 
 # Logfiles
 log.*
+*.log.*
 
 # Custom user configuration
 config.yml
