@@ -68,7 +68,9 @@ class SilenceNotifierTests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(current_loop=current_loop):
                 with mock.patch.object(self.notifier, "_current_loop", new=current_loop):
                     await self.notifier._notifier()
-                self.alert_channel.send.assert_called_once_with(f"<@&{Roles.moderators}> currently silenced channels: ")
+                self.alert_channel.send.assert_called_once_with(
+                    f"<@&{Roles.moderators}> currently silenced channels: "
+                )
             self.alert_channel.send.reset_mock()
 
     async def test_notifier_skips_alert(self):
@@ -158,7 +160,7 @@ class RescheduleTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_skipped_missing_channel(self):
         """Did nothing because the channel couldn't be retrieved."""
-        self.cog.unsilence_timestamps.items.return_value = [(123, -1), (123, 1), (123, 100000000000)]
+        self.cog.unsilence_timestamps.items.return_value = [(123, -1), (123, 1), (123, 10000000000)]
         self.bot.get_channel.return_value = None
 
         await self.cog._reschedule()
@@ -229,6 +231,9 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         self.cog = silence.Silence(self.bot)
         self.cog._init_task = asyncio.Future()
         self.cog._init_task.set_result(None)
+
+        # Avoid unawaited coroutine warnings.
+        self.cog.scheduler.schedule_later.side_effect = lambda delay, task_id, coro: coro.close()
 
         asyncio.run(self.cog._async_init())  # Populate instance attributes.
 
