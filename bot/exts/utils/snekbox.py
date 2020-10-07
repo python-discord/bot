@@ -74,7 +74,13 @@ class Snekbox(Cog):
 
     @staticmethod
     def prepare_input(code: str) -> str:
-        """Extract code from the Markdown, format it, and insert it into the code template."""
+        """
+        Extract code from the Markdown, format it, and insert it into the code template.
+
+        If there is Markdown, ignores surrounding text.
+        If there are several Markdown parts in the message, concatenates only the code blocks.
+        If there is inline code but no code blocks, takes the first instance of inline code.
+        """
         if match := list(FORMATTED_CODE_REGEX.finditer(code)):
             blocks = [block for block in match if block.group("block")]
 
