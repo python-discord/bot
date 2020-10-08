@@ -83,7 +83,7 @@ class InfractionScheduler:
         user: UserSnowflake,
         action_coro: t.Optional[t.Awaitable] = None,
         user_reason: t.Optional[str] = None,
-        additional_info: t.Optional[str] = None,
+        additional_info: t.Optional[str] = "",
     ) -> bool:
         """
         Apply an infraction to the user, log the infraction, and optionally notify the user.
@@ -101,9 +101,6 @@ class InfractionScheduler:
 
         if user_reason is None:
             user_reason = reason
-
-        if additional_info is not None:
-            additional_info = ""
 
         log.trace(f"Applying {infr_type} infraction #{id_} to {user}.")
 
