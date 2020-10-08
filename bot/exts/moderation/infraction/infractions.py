@@ -71,7 +71,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         """Permanently ban a user for the given reason and stop watching them with Big Brother."""
         await self.apply_ban(ctx, user, reason)
 
-    @command()
+    @command(aliases=('pban',))
     async def purgeban(
         self,
         ctx: Context,
