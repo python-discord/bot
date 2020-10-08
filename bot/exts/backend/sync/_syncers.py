@@ -155,7 +155,7 @@ class UserSyncer(Syncer):
             elif db_user["in_guild"]:
                 updated_fields["in_guild"] = False
 
-            if updated_fields and updated_fields not in users_to_update:
+            if updated_fields:
                 updated_fields["id"] = db_user["id"]
                 users_to_update.append(updated_fields)
 
