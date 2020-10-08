@@ -40,7 +40,11 @@ class Syncer(abc.ABC):
         raise NotImplementedError  # pragma: no cover
 
     async def sync(self, guild: Guild, ctx: t.Optional[Context] = None) -> None:
-        """If `ctx` is given, send a message with the results."""
+        """
+        Synchronise the database with the cache of `guild`.
+
+        If `ctx` is given, send a message with the results.
+        """
         log.info(f"Starting {self.name} syncer.")
 
         if ctx:
@@ -135,9 +139,11 @@ class UserSyncer(Syncer):
         seen_guild_users = set()
 
         async for db_user in self._get_users():
+            # Store user fields which are to be updated.
             updated_fields = {}
 
             def maybe_update(db_field: str, guild_value: t.Union[str, int]) -> None:
+                # Equalize DB user and guild user attributes.
                 if db_user[db_field] != guild_value:
                     updated_fields[db_field] = guild_value
 
@@ -153,6 +159,11 @@ class UserSyncer(Syncer):
                     updated_fields["roles"] = guild_roles
 
             elif db_user["in_guild"]:
+                # The user is known in the DB but not the guild, and the
+                # DB currently specifies that the user is a member of the guild.
+                # This means that the user has left since the last sync.
+                # Update the `in_guild` attribute of the user on the site
+                # to signify that the user left.
                 updated_fields["in_guild"] = False
 
             if updated_fields:
@@ -161,6 +172,8 @@ class UserSyncer(Syncer):
 
         for member in guild.members:
             if member.id not in seen_guild_users:
+                # The user is known on the guild but not on the API. This means
+                # that the user has joined since the last sync. Create it.
                 new_user = {
                     "id": member.id,
                     "name": member.name,
