@@ -77,9 +77,9 @@ class Snekbox(Cog):
         """
         Extract code from the Markdown, format it, and insert it into the code template.
 
-        If there is Markdown, ignores surrounding text.
-        If there are several Markdown parts in the message, concatenates only the code blocks.
-        If there is inline code but no code blocks, takes the first instance of inline code.
+        If there is any code block, ignore text outside the code block.
+        Use the first code block, but prefer a fenced code block.
+        If there are several fenced code blocks, concatenate only the fenced code blocks.
         """
         if match := list(FORMATTED_CODE_REGEX.finditer(code)):
             blocks = [block for block in match if block.group("block")]
