@@ -168,8 +168,7 @@ class UserSyncer(Syncer):
                     "roles": [role.id for role in member.roles],
                     "in_guild": True
                 }
-                if new_user not in users_to_create:
-                    users_to_create.append(new_user)
+                users_to_create.append(new_user)
 
         return _Diff(users_to_create, users_to_update, None)
 
