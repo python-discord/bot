@@ -102,24 +102,28 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
     @autospec(silence, "SilenceNotifier", pass_mocks=False)
     async def test_async_init_got_role(self):
         """Got `Roles.verified` role from guild."""
-        await self.cog._async_init()
         guild = self.bot.get_guild()
-        guild.get_role.assert_called_once_with(Roles.verified)
+        guild.get_role.side_effect = lambda id_: Mock(id=id_)
+
+        await self.cog._async_init()
+        self.assertEqual(self.cog._verified_role.id, Roles.verified)
 
     @autospec(silence, "SilenceNotifier", pass_mocks=False)
     async def test_async_init_got_channels(self):
         """Got channels from bot."""
+        self.bot.get_channel.side_effect = lambda id_: MockTextChannel(id=id_)
+
         await self.cog._async_init()
-        self.bot.get_channel.called_once_with(Channels.mod_alerts)
-        self.bot.get_channel.called_once_with(Channels.mod_log)
+        self.assertEqual(self.cog._mod_alerts_channel.id, Channels.mod_alerts)
 
     @autospec(silence, "SilenceNotifier")
     async def test_async_init_got_notifier(self, notifier):
         """Notifier was started with channel."""
-        mod_log = MockTextChannel()
-        self.bot.get_channel.side_effect = (None, mod_log)
+        self.bot.get_channel.side_effect = lambda id_: MockTextChannel(id=id_)
+
         await self.cog._async_init()
-        notifier.assert_called_once_with(mod_log)
+        notifier.assert_called_once_with(MockTextChannel(id=Channels.mod_log))
+        self.assertEqual(self.cog.notifier, notifier.return_value)
 
     @autospec(silence, "SilenceNotifier", pass_mocks=False)
     async def test_async_init_rescheduled(self):
