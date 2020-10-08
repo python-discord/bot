@@ -119,7 +119,7 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         mod_log = MockTextChannel()
         self.bot.get_channel.side_effect = (None, mod_log)
         await self.cog._async_init()
-        notifier.assert_called_once_with(self.cog._mod_log_channel)
+        notifier.assert_called_once_with(mod_log)
 
     @autospec(silence, "SilenceNotifier", pass_mocks=False)
     async def test_async_init_rescheduled(self):

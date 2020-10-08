@@ -91,8 +91,7 @@ class Silence(commands.Cog):
         guild = self.bot.get_guild(Guild.id)
         self._verified_role = guild.get_role(Roles.verified)
         self._mod_alerts_channel = self.bot.get_channel(Channels.mod_alerts)
-        self._mod_log_channel = self.bot.get_channel(Channels.mod_log)
-        self.notifier = SilenceNotifier(self._mod_log_channel)
+        self.notifier = SilenceNotifier(self.bot.get_channel(Channels.mod_log))
         await self._reschedule()
 
     @commands.command(aliases=("hush",))
