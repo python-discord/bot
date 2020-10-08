@@ -159,7 +159,7 @@ class Superstarify(InfractionScheduler, Cog):
 
         successful = await self.apply_infraction(
             ctx, infraction, member, action(),
-            reason_override=superstar_reason,
+            user_reason=superstar_reason,
             additional_info=nickname_info
         )
 
