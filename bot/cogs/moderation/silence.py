@@ -116,10 +116,10 @@ class Silence(commands.Cog):
         await self._schedule_unsilence(ctx, duration)
 
         if duration is None:
+            self.notifier.add_channel(ctx.channel)
             log.info(f"Silenced {channel_info} indefinitely.")
             await ctx.send(MSG_SILENCE_PERMANENT)
         else:
-            self.notifier.add_channel(ctx.channel)
             log.info(f"Silenced {channel_info} for {duration} minute(s).")
             await ctx.send(MSG_SILENCE_SUCCESS.format(duration=duration))
 

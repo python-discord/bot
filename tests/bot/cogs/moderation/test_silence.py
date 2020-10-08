@@ -296,17 +296,17 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertDictEqual(prev_overwrite_dict, new_overwrite_dict)
 
-    async def test_temp_added_to_notifier(self):
-        """Channel was added to notifier if a duration was set for the silence."""
+    async def test_temp_not_added_to_notifier(self):
+        """Channel was not added to notifier if a duration was set for the silence."""
         with mock.patch.object(self.cog, "_silence_overwrites", return_value=True):
             await self.cog.silence.callback(self.cog, MockContext(), 15)
-            self.cog.notifier.add_channel.assert_called_once()
+            self.cog.notifier.add_channel.assert_not_called()
 
-    async def test_indefinite_not_added_to_notifier(self):
-        """Channel was not added to notifier if a duration was not set for the silence."""
+    async def test_indefinite_added_to_notifier(self):
+        """Channel was added to notifier if a duration was not set for the silence."""
         with mock.patch.object(self.cog, "_silence_overwrites", return_value=True):
             await self.cog.silence.callback(self.cog, MockContext(), None)
-            self.cog.notifier.add_channel.assert_not_called()
+            self.cog.notifier.add_channel.assert_called_once()
 
     async def test_silenced_not_added_to_notifier(self):
         """Channel was not added to the notifier if it was already silenced."""
