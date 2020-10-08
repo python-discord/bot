@@ -56,15 +56,24 @@ async def wait_for_deletion(
 async def send_attachments(
     message: discord.Message,
     destination: Union[discord.TextChannel, discord.Webhook],
-    link_large: bool = True
+    link_large: bool = True,
+    use_cached: bool = False,
+    **kwargs
 ) -> List[str]:
     """
     Re-upload the message's attachments to the destination and return a list of their new URLs.
 
     Each attachment is sent as a separate message to more easily comply with the request/file size
     limit. If link_large is True, attachments which are too large are instead grouped into a single
-    embed which links to them.
+    embed which links to them. Extra kwargs will be passed to send() when sending the attachment.
     """
+    webhook_send_kwargs = {
+        'username': message.author.display_name,
+        'avatar_url': message.author.avatar_url,
+    }
+    webhook_send_kwargs.update(kwargs)
+    webhook_send_kwargs['username'] = sub_clyde(webhook_send_kwargs['username'])
+
     large = []
     urls = []
     for attachment in message.attachments:
@@ -78,18 +87,14 @@ async def send_attachments(
             # but some may get through hence the try-catch.
             if attachment.size <= destination.guild.filesize_limit - 512:
                 with BytesIO() as file:
-                    await attachment.save(file, use_cached=True)
+                    await attachment.save(file, use_cached=use_cached)
                     attachment_file = discord.File(file, filename=attachment.filename)
 
                     if isinstance(destination, discord.TextChannel):
-                        msg = await destination.send(file=attachment_file)
+                        msg = await destination.send(file=attachment_file, **kwargs)
                         urls.append(msg.attachments[0].url)
                     else:
-                        await destination.send(
-                            file=attachment_file,
-                            username=sub_clyde(message.author.display_name),
-                            avatar_url=message.author.avatar_url
-                        )
+                        await destination.send(file=attachment_file, **webhook_send_kwargs)
             elif link_large:
                 large.append(attachment)
             else:
@@ -106,13 +111,9 @@ async def send_attachments(
         embed.set_footer(text="Attachments exceed upload size limit.")
 
         if isinstance(destination, discord.TextChannel):
-            await destination.send(embed=embed)
+            await destination.send(embed=embed, **kwargs)
         else:
-            await destination.send(
-                embed=embed,
-                username=sub_clyde(message.author.display_name),
-                avatar_url=message.author.avatar_url
-            )
+            await destination.send(embed=embed, **webhook_send_kwargs)
 
     return urls
 
