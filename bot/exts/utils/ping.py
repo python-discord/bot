@@ -33,7 +33,7 @@ class Latency(commands.Cog):
         """
         # datetime.datetime objects do not have the "milliseconds" attribute.
         # It must be converted to seconds before converting to milliseconds.
-        bot_ping = (datetime.utcnow() - ctx.message.created_at).total_seconds() / 1000
+        bot_ping = (datetime.utcnow() - ctx.message.created_at).total_seconds() * 1000
         bot_ping = f"{bot_ping:.{ROUND_LATENCY}f} ms"
 
         try:
