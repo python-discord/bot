@@ -110,7 +110,7 @@ class Bot(commands.Bot):
         await asyncio.gather(*self.closing_tasks)
 
         # Now actually do full close of bot
-        await super(commands.Bot, self).close()
+        await super().close()
 
         await self.api_client.close()
 
