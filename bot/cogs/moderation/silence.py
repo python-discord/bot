@@ -234,7 +234,7 @@ class Silence(commands.Cog):
         # more tasks after cancel_all has finished, despite _init_task.cancel being called first.
         # This is cause cancel() on its own doesn't block until the task is cancelled.
         self._init_task.cancel()
-        self._init_task.add_done_callback(lambda _: self.scheduler.cancel_all)
+        self._init_task.add_done_callback(lambda _: self.scheduler.cancel_all())
 
     # This cannot be static (must have a __func__ attribute).
     def cog_check(self, ctx: Context) -> bool:
