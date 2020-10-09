@@ -308,7 +308,11 @@ class MockBot(CustomMockMixin, unittest.mock.MagicMock):
     Instances of this class will follow the specifications of `discord.ext.commands.Bot` instances.
     For more information, see the `MockGuild` docstring.
     """
-    spec_set = Bot(command_prefix=unittest.mock.MagicMock(), loop=_get_mock_loop())
+    spec_set = Bot(
+        command_prefix=unittest.mock.MagicMock(),
+        loop=_get_mock_loop(),
+        redis_session=unittest.mock.MagicMock(),
+    )
     additional_spec_asyncs = ("wait_for", "redis_ready")
 
     def __init__(self, **kwargs) -> None:
