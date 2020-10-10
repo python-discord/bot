@@ -171,38 +171,32 @@ class WatchChannel(metaclass=CogABCMeta):
 
     async def consume_messages(self, delay_consumption: bool = True) -> None:
         """Consumes the message queues to log watched users' messages."""
-        try:
-            if delay_consumption:
-                self.log.trace(f"Sleeping {BigBrotherConfig.log_delay} seconds before consuming message queue")
-                await asyncio.sleep(BigBrotherConfig.log_delay)
+        if delay_consumption:
+            self.log.trace(f"Sleeping {BigBrotherConfig.log_delay} seconds before consuming message queue")
+            await asyncio.sleep(BigBrotherConfig.log_delay)
 
-            self.log.trace("Started consuming the message queue")
+        self.log.trace("Started consuming the message queue")
 
-            # If the previous consumption Task failed, first consume the existing comsumption_queue
-            if not self.consumption_queue:
-                self.consumption_queue = self.message_queue.copy()
-                self.message_queue.clear()
+        # If the previous consumption Task failed, first consume the existing comsumption_queue
+        if not self.consumption_queue:
+            self.consumption_queue = self.message_queue.copy()
+            self.message_queue.clear()
 
-            for user_channel_queues in self.consumption_queue.values():
-                for channel_queue in user_channel_queues.values():
-                    while channel_queue:
-                        msg = channel_queue.popleft()
+        for user_channel_queues in self.consumption_queue.values():
+            for channel_queue in user_channel_queues.values():
+                while channel_queue:
+                    msg = channel_queue.popleft()
 
-                        self.log.trace(f"Consuming message {msg.id} ({len(msg.attachments)} attachments)")
-                        await self.relay_message(msg)
+                    self.log.trace(f"Consuming message {msg.id} ({len(msg.attachments)} attachments)")
+                    await self.relay_message(msg)
 
-            self.consumption_queue.clear()
+        self.consumption_queue.clear()
 
-            if self.message_queue:
-                self.log.trace("Channel queue not empty: Continuing consuming queues")
-                self._consume_task = self.bot.loop.create_task(self.consume_messages(delay_consumption=False))
-            else:
-                self.log.trace("Done consuming messages.")
-        except asyncio.CancelledError as e:
-            self.log.exception(
-                "The consume task was canceled. Messages may be lost.",
-                exc_info=e
-            )
+        if self.message_queue:
+            self.log.trace("Channel queue not empty: Continuing consuming queues")
+            self._consume_task = self.bot.loop.create_task(self.consume_messages(delay_consumption=False))
+        else:
+            self.log.trace("Done consuming messages.")
 
     async def webhook_send(
         self,
@@ -348,4 +342,14 @@ class WatchChannel(metaclass=CogABCMeta):
         """Takes care of unloading the cog and canceling the consumption task."""
         self.log.trace("Unloading the cog")
         if self._consume_task and not self._consume_task.done():
+            def done_callback(task: asyncio.Task) -> None:
+                """Send exception when consuming task have been cancelled."""
+                try:
+                    task.exception()
+                except asyncio.CancelledError:
+                    self.log.error(
+                        f"The consume task of {type(self).__name__} was canceled. Messages may be lost."
+                    )
+
+            self._consume_task.add_done_callback(done_callback)
             self._consume_task.cancel()
