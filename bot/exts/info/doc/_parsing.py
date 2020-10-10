@@ -132,20 +132,22 @@ def _find_elements_until_tag(
 
 
 _find_next_children_until_tag = partial(_find_elements_until_tag, func=partial(BeautifulSoup.find_all, recursive=False))
+_find_recursive_children_until_tag = partial(_find_elements_until_tag, func=BeautifulSoup.find_all)
 _find_next_siblings_until_tag = partial(_find_elements_until_tag, func=BeautifulSoup.find_next_siblings)
 _find_previous_siblings_until_tag = partial(_find_elements_until_tag, func=BeautifulSoup.find_previous_siblings)
 
 
-def _get_general_description(start_element: PageElement) -> List[Union[Tag, NavigableString]]:
+def _get_general_description(start_element: Tag) -> List[Union[Tag, NavigableString]]:
     """
     Get page content to a table or a tag with its class in `SEARCH_END_TAG_ATTRS`.
 
     A headerlink a tag is attempted to be found to skip repeating the symbol information in the description,
     if it's found it's used as the tag to start the search from instead of the `start_element`.
     """
-    header = start_element.find_next("a", attrs={"class": "headerlink"})
+    child_tags = _find_recursive_children_until_tag(start_element, _class_filter_factory(["section"]), limit=100)
+    header = next(filter(_class_filter_factory(["headerlink"]), child_tags), None)
     start_tag = header.parent if header is not None else start_element
-    return _find_next_siblings_until_tag(start_tag, _match_end_tag, include_strings=True)
+    return _find_next_siblings_until_tag(start_tag, _class_filter_factory(_SEARCH_END_TAG_ATTRS), include_strings=True)
 
 
 def _get_dd_description(symbol: PageElement) -> List[Union[Tag, NavigableString]]:
@@ -274,13 +276,15 @@ def _parse_into_markdown(signatures: Optional[List[str]], description: Iterable[
     return formatted_markdown
 
 
-def _match_end_tag(tag: Tag) -> bool:
-    """Matches `tag` if its class value is in `SEARCH_END_TAG_ATTRS` or the tag is table."""
-    for attr in _SEARCH_END_TAG_ATTRS:
-        if attr in tag.get("class", ()):
-            return True
+def _class_filter_factory(class_names: Iterable[str]) -> Callable[[Tag], bool]:
+    """Create callable that returns True when the passed in tag's class is in `class_names` or when it's is a table."""
+    def match_tag(tag: Tag) -> bool:
+        for attr in class_names:
+            if attr in tag.get("class", ()):
+                return True
+        return tag.name == "table"
 
-    return tag.name == "table"
+    return match_tag
 
 
 def get_symbol_markdown(soup: BeautifulSoup, symbol_data: DocItem) -> str:
