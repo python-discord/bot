@@ -481,5 +481,11 @@ verification:
     kick_confirmation_threshold: 0.01  # 1%
 
 
+voice_gate:
+    minimum_days_verified: 3  # Days how much user have to be verified to pass Voice Gate
+    minimum_messages: 50  # How much messages user must have to pass Voice Gate
+    bot_message_delete_delay: 10  # Seconds before deleting bot's response in Voice Gate
+
+
 config:
     required_keys: ['bot.token']
