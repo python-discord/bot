@@ -1,10 +1,10 @@
-import asyncio
 import difflib
 import logging
 from datetime import datetime, timedelta
 
 from discord import Colour, Embed
 from discord.ext.commands import Cog, Context, group, has_any_role
+from discord.utils import sleep_until
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
@@ -23,8 +23,7 @@ async def update_names(bot: Bot) -> None:
         # we go past midnight in the `seconds_to_sleep` set below.
         today_at_midnight = datetime.utcnow().replace(microsecond=0, second=0, minute=0, hour=0)
         next_midnight = today_at_midnight + timedelta(days=1)
-        seconds_to_sleep = (next_midnight - datetime.utcnow()).seconds + 1
-        await asyncio.sleep(seconds_to_sleep)
+        await sleep_until(next_midnight)
 
         try:
             channel_0_name, channel_1_name, channel_2_name = await bot.api_client.get(

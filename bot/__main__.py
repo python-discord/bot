@@ -9,7 +9,7 @@ from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
 from sentry_sdk.integrations.redis import RedisIntegration
 
-from bot import constants, patches
+from bot import constants
 from bot.bot import Bot
 from bot.utils.extensions import EXTENSIONS
 
@@ -47,6 +47,13 @@ loop.run_until_complete(redis_session.connect())
 
 # Instantiate the bot.
 allowed_roles = [discord.Object(id_) for id_ in constants.MODERATION_ROLES]
+intents = discord.Intents().all()
+intents.presences = False
+intents.dm_typing = False
+intents.dm_reactions = False
+intents.invites = False
+intents.webhooks = False
+intents.integrations = False
 bot = Bot(
     redis_session=redis_session,
     loop=loop,
@@ -54,7 +61,8 @@ bot = Bot(
     activity=discord.Game(name="Commands: !help"),
     case_insensitive=True,
     max_messages=10_000,
-    allowed_mentions=discord.AllowedMentions(everyone=False, roles=allowed_roles)
+    allowed_mentions=discord.AllowedMentions(everyone=False, roles=allowed_roles),
+    intents=intents,
 )
 
 # Load extensions.
@@ -64,9 +72,5 @@ if not constants.HelpChannels.enable:
 
 for extension in extensions:
     bot.load_extension(extension)
-
-# Apply `message_edited_at` patch if discord.py did not yet release a bug fix.
-if not hasattr(discord.message.Message, '_handle_edited_timestamp'):
-    patches.message_edited_at.apply_patch()
 
 bot.run(constants.Bot.token)
