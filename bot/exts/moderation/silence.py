@@ -136,7 +136,7 @@ class Silence(commands.Cog):
         """Unsilence `channel` and send a success/failure message."""
         if not await self._unsilence(channel):
             overwrite = channel.overwrites_for(self._verified_role)
-            if overwrite.send_messages is False and overwrite.add_reactions is False:
+            if overwrite.send_messages is False or overwrite.add_reactions is False:
                 await channel.send(MSG_UNSILENCE_MANUAL)
             else:
                 await channel.send(MSG_UNSILENCE_FAIL)

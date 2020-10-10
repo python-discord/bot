@@ -411,6 +411,8 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
             (True, silence.MSG_UNSILENCE_SUCCESS, unsilenced_overwrite),
             (False, silence.MSG_UNSILENCE_FAIL, unsilenced_overwrite),
             (False, silence.MSG_UNSILENCE_MANUAL, self.overwrite),
+            (False, silence.MSG_UNSILENCE_MANUAL, PermissionOverwrite(send_messages=False)),
+            (False, silence.MSG_UNSILENCE_MANUAL, PermissionOverwrite(add_reactions=False)),
         )
         for was_unsilenced, message, overwrite in test_cases:
             ctx = MockContext()
