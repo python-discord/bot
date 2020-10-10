@@ -22,8 +22,9 @@ MSG_SILENCE_SUCCESS = f"{Emojis.check_mark} silenced current channel for {{durat
 
 MSG_UNSILENCE_FAIL = f"{Emojis.cross_mark} current channel was not silenced."
 MSG_UNSILENCE_MANUAL = (
-    f"{Emojis.cross_mark} current channel was not unsilenced because the current "
-    f"overwrites were set manually. Please edit them manually to unsilence."
+    f"{Emojis.cross_mark} current channel was not unsilenced because the current overwrites were "
+    f"set manually or the cache was prematurely cleared. "
+    f"Please edit the overwrites manually to unsilence."
 )
 MSG_UNSILENCE_SUCCESS = f"{Emojis.check_mark} unsilenced current channel."
 
