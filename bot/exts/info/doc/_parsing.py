@@ -99,7 +99,7 @@ def _split_parameters(parameters_string: str) -> List[str]:
 
 def _find_elements_until_tag(
         start_element: PageElement,
-        tag_filter: Union[Tuple[str, ...], Callable[[Tag], bool]],
+        end_tag_filter: Union[Tuple[str, ...], Callable[[Tag], bool]],
         *,
         func: Callable,
         include_strings: bool = False,
@@ -108,7 +108,7 @@ def _find_elements_until_tag(
     """
     Get all elements up to `limit` or until a tag matching `tag_filter` is found.
 
-    `tag_filter` can be either a tuple of string names to check against,
+    `end_tag_filter` can be either a tuple of string names to check against,
     or a filtering callable that's applied to tags.
 
     When `include_strings` is True, `NavigableString`s from the document will be included in the result along `Tag`s.
@@ -116,15 +116,15 @@ def _find_elements_until_tag(
     `func` takes in a BeautifulSoup unbound method for finding multiple elements, such as `BeautifulSoup.find_all`.
     The method is then iterated over and all elements until the matching tag or the limit are added to the return list.
     """
-    use_tuple_filter = isinstance(tag_filter, tuple)
+    use_tuple_filter = isinstance(end_tag_filter, tuple)
     elements = []
 
     for element in func(start_element, name=Strainer(include_strings=include_strings), limit=limit):
         if isinstance(element, Tag):
             if use_tuple_filter:
-                if element.name in tag_filter:
+                if element.name in end_tag_filter:
                     break
-            elif tag_filter(element):
+            elif end_tag_filter(element):
                 break
         elements.append(element)
 
