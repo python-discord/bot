@@ -150,7 +150,9 @@ class Bot(commands.Bot):
 
     def _remove_extensions(self) -> None:
         """Remove all extensions to trigger cog unloads."""
-        for ext in self.extensions.keys():
+        extensions = list(self.extensions.keys())
+
+        for ext in extensions:
             try:
                 self.unload_extension(ext)
             except Exception:
