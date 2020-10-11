@@ -372,6 +372,9 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         self.mod_log.ignore(Event.member_update, user.id)
 
+        if reason:
+            reason = textwrap.shorten(reason, width=512, placeholder="...")
+
         action = user.remove_roles(self._voice_verified_role, reason=reason)
         await self.apply_infraction(ctx, infraction, user, action)
 

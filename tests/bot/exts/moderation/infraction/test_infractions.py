@@ -153,3 +153,20 @@ class VoiceBanTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(await self.cog.apply_voice_ban(self.ctx, self.user, "foobar"))
         self.user.remove_roles.assert_called_once_with(self.cog._voice_verified_role, reason="foobar")
         self.cog.apply_infraction.assert_awaited_once_with(self.ctx, {"foo": "bar"}, self.user, "my_return_value")
+
+    @patch("bot.exts.moderation.infraction.infractions._utils.post_infraction")
+    @patch("bot.exts.moderation.infraction.infractions._utils.get_active_infraction")
+    async def test_voice_ban_truncate_reason(self, get_active_infraction, post_infraction_mock):
+        """Should truncate reason for voice ban."""
+        self.cog.mod_log.ignore = MagicMock()
+        self.cog.apply_infraction = AsyncMock()
+        self.user.remove_roles = MagicMock(return_value="my_return_value")
+
+        get_active_infraction.return_value = None
+        post_infraction_mock.return_value = {"foo": "bar"}
+
+        self.assertIsNone(await self.cog.apply_voice_ban(self.ctx, self.user, "foobar" * 3000))
+        self.user.remove_roles.assert_called_once_with(
+            self.cog._voice_verified_role, reason=textwrap.shorten("foobar" * 3000, 512, placeholder="...")
+        )
+        self.cog.apply_infraction.assert_awaited_once_with(self.ctx, {"foo": "bar"}, self.user, "my_return_value")
