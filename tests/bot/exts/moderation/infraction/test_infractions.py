@@ -64,6 +64,7 @@ class VoiceBanTests(unittest.IsolatedAsyncioTestCase):
         self.bot = MockBot()
         self.mod = MockMember(top_role=10)
         self.user = MockMember(top_role=1, roles=[MockRole(id=123456)])
+        self.guild = MockGuild()
         self.ctx = MockContext(bot=self.bot, author=self.mod)
         self.cog = Infractions(self.bot)
 
@@ -170,3 +171,9 @@ class VoiceBanTests(unittest.IsolatedAsyncioTestCase):
             self.cog._voice_verified_role, reason=textwrap.shorten("foobar" * 3000, 512, placeholder="...")
         )
         self.cog.apply_infraction.assert_awaited_once_with(self.ctx, {"foo": "bar"}, self.user, "my_return_value")
+
+    async def test_voice_unban_user_not_found(self):
+        """Should include info to return dict when user was not found from guild."""
+        self.guild.get_member.return_value = None
+        result = await self.cog.pardon_voice_ban(self.user.id, self.guild, "foobar")
+        self.assertEqual(result, {"Failure": "User was not found in the guild."})
