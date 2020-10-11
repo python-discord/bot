@@ -2,6 +2,7 @@ import textwrap
 import unittest
 from unittest.mock import AsyncMock, Mock, patch, MagicMock
 
+from bot.constants import Event
 from bot.exts.moderation.infraction.infractions import Infractions
 from tests.helpers import MockBot, MockContext, MockGuild, MockMember, MockRole
 
@@ -123,3 +124,17 @@ class VoiceBanTests(unittest.IsolatedAsyncioTestCase):
         post_infraction_mock.assert_awaited_once_with(
             self.ctx, self.user, "voice_ban", "foobar", active=True, my_kwarg=23
         )
+
+    @patch("bot.exts.moderation.infraction.infractions._utils.post_infraction")
+    @patch("bot.exts.moderation.infraction.infractions._utils.get_active_infraction")
+    async def test_voice_ban_mod_log_ignore(self, get_active_infraction, post_infraction_mock):
+        """Should ignore Voice Verified role removing."""
+        self.cog.mod_log.ignore = MagicMock()
+        self.cog.apply_infraction = AsyncMock()
+        self.user.remove_roles = MagicMock(return_value="my_return_value")
+
+        get_active_infraction.return_value = None
+        post_infraction_mock.return_value = {"foo": "bar"}
+
+        self.assertIsNone(await self.cog.apply_voice_ban(self.ctx, self.user, "foobar"))
+        self.cog.mod_log.ignore.assert_called_once_with(Event.member_update, self.user.id)
