@@ -15,7 +15,6 @@ from bot.decorators import respect_role_hierarchy
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
 from bot.exts.moderation.infraction._utils import UserSnowflake
-from bot.utils.checks import has_any_role_check, has_no_roles_check
 from bot.utils.messages import format_user
 
 log = logging.getLogger(__name__)
