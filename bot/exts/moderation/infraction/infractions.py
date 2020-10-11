@@ -366,8 +366,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         if await _utils.get_active_infraction(ctx, user, "voice_ban"):
             return
 
-        infraction = await _utils.post_infraction(ctx, user, "voice_ban", reason, active=True, **kwargs)
-        if infraction is None:
+        if infraction := await _utils.post_infraction(ctx, user, "voice_ban", reason, active=True, **kwargs):
             return
 
         self.mod_log.ignore(Event.member_update, user.id)
