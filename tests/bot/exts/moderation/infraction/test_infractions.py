@@ -53,3 +53,20 @@ class TruncationTests(unittest.IsolatedAsyncioTestCase):
         self.cog.apply_infraction.assert_awaited_once_with(
             self.ctx, {"foo": "bar"}, self.target, self.target.kick.return_value
         )
+
+
+class VoiceBanTests(unittest.IsolatedAsyncioTestCase):
+    """Tests for voice ban related functions and commands."""
+
+    def setUp(self):
+        self.bot = MockBot()
+        self.mod = MockMember()
+        self.user = MockMember()
+        self.ctx = MockContext(bot=self.bot, author=self.mod)
+        self.cog = Infractions(self.bot)
+
+    async def test_permanent_voice_ban(self):
+        """Should call voice ban applying function."""
+        self.cog.apply_voice_ban = AsyncMock()
+        self.assertIsNone(await self.cog.voice_ban(self.cog, self.ctx, self.user, reason="foobar"))
+        self.cog.apply_voice_ban.assert_awaited_once_with(self.ctx, self.user, "foobar")
