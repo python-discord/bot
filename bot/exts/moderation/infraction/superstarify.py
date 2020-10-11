@@ -135,7 +135,8 @@ class Superstarify(InfractionScheduler, Cog):
             return
 
         # Post the infraction to the API
-        reason = reason or f"old nick: {member.display_name}"
+        old_nick = member.display_name
+        reason = reason or f"old nick: {old_nick}"
         infraction = await _utils.post_infraction(ctx, member, "superstar", reason, duration, active=True)
         id_ = infraction["id"]
 
@@ -148,7 +149,7 @@ class Superstarify(InfractionScheduler, Cog):
         await member.edit(nick=forced_nick, reason=reason)
         self.schedule_expiration(infraction)
 
-        old_nick = escape_markdown(member.display_name)
+        old_nick = escape_markdown(old_nick)
         forced_nick = escape_markdown(forced_nick)
 
         # Send a DM to the user to notify them of their new infraction.

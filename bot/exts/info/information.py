@@ -6,10 +6,9 @@ from collections import Counter, defaultdict
 from string import Template
 from typing import Any, Mapping, Optional, Tuple, Union
 
-from discord import ChannelType, Colour, CustomActivity, Embed, Guild, Member, Message, Role, Status, utils
+from discord import ChannelType, Colour, Embed, Guild, Member, Message, Role, Status, utils
 from discord.abc import GuildChannel
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
-from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
@@ -77,7 +76,7 @@ class Information(Cog):
         channel_type_list = sorted(channel_type_list)
         return "\n".join(channel_type_list)
 
-    @has_any_role(*constants.MODERATION_ROLES)
+    @has_any_role(*constants.STAFF_ROLES)
     @command(name="roles")
     async def roles_info(self, ctx: Context) -> None:
         """Returns a list of all roles and their corresponding IDs."""
@@ -97,7 +96,7 @@ class Information(Cog):
 
         await LinePaginator.paginate(role_list, ctx, embed, empty=False)
 
-    @has_any_role(*constants.MODERATION_ROLES)
+    @has_any_role(*constants.STAFF_ROLES)
     @command(name="role")
     async def role_info(self, ctx: Context, *roles: Union[Role, str]) -> None:
         """
@@ -153,7 +152,9 @@ class Information(Cog):
         channel_counts = self.get_channel_type_counts(ctx.guild)
 
         # How many of each user status?
-        statuses = Counter(member.status for member in ctx.guild.members)
+        py_invite = await self.bot.fetch_invite(constants.Guild.invite)
+        online_presences = py_invite.approximate_presence_count
+        offline_presences = py_invite.approximate_member_count - online_presences
         embed = Embed(colour=Colour.blurple())
 
         # How many staff members and staff channels do we have?
@@ -161,9 +162,9 @@ class Information(Cog):
         staff_channel_count = self.get_staff_channel_count(ctx.guild)
 
         # Because channel_counts lacks leading whitespace, it breaks the dedent if it's inserted directly by the
-        # f-string. While this is correctly formated by Discord, it makes unit testing difficult. To keep the formatting
-        # without joining a tuple of strings we can use a Template string to insert the already-formatted channel_counts
-        # after the dedent is made.
+        # f-string. While this is correctly formatted by Discord, it makes unit testing difficult. To keep the
+        # formatting without joining a tuple of strings we can use a Template string to insert the already-formatted
+        # channel_counts after the dedent is made.
         embed.description = Template(
             textwrap.dedent(f"""
                 **Server information**
@@ -181,10 +182,8 @@ class Information(Cog):
                 Roles: {roles}
 
                 **Member statuses**
-                {constants.Emojis.status_online} {statuses[Status.online]:,}
-                {constants.Emojis.status_idle} {statuses[Status.idle]:,}
-                {constants.Emojis.status_dnd} {statuses[Status.dnd]:,}
-                {constants.Emojis.status_offline} {statuses[Status.offline]:,}
+                {constants.Emojis.status_online} {online_presences:,}
+                {constants.Emojis.status_offline} {offline_presences:,}
             """)
         ).substitute({"channel_counts": channel_counts})
         embed.set_thumbnail(url=ctx.guild.icon_url)
@@ -211,25 +210,6 @@ class Information(Cog):
         """Creates an embed containing information on the `user`."""
         created = time_since(user.created_at, max_units=3)
 
-        # Custom status
-        custom_status = ''
-        for activity in user.activities:
-            if isinstance(activity, CustomActivity):
-                state = ""
-
-                if activity.name:
-                    state = escape_markdown(activity.name)
-
-                emoji = ""
-                if activity.emoji:
-                    # If an emoji is unicode use the emoji, else write the emote like :abc:
-                    if not activity.emoji.id:
-                        emoji += activity.emoji.name + " "
-                    else:
-                        emoji += f"`:{activity.emoji.name}:` "
-
-                custom_status = f'Status: {emoji}{state}\n'
-
         name = str(user)
         if user.nick:
             name = f"{user.nick} ({name})"
@@ -243,10 +223,6 @@ class Information(Cog):
         joined = time_since(user.joined_at, max_units=3)
         roles = ", ".join(role.mention for role in user.roles[1:])
 
-        desktop_status = STATUS_EMOTES.get(user.desktop_status, constants.Emojis.status_online)
-        web_status = STATUS_EMOTES.get(user.web_status, constants.Emojis.status_online)
-        mobile_status = STATUS_EMOTES.get(user.mobile_status, constants.Emojis.status_online)
-
         fields = [
             (
                 "User information",
@@ -254,7 +230,6 @@ class Information(Cog):
                     Created: {created}
                     Profile: {user.mention}
                     ID: {user.id}
-                    {custom_status}
                 """).strip()
             ),
             (
@@ -264,14 +239,6 @@ class Information(Cog):
                     Roles: {roles or None}
                 """).strip()
             ),
-            (
-                "Status",
-                textwrap.dedent(f"""
-                    {desktop_status} Desktop
-                    {web_status} Web
-                    {mobile_status} Mobile
-                """).strip()
-            )
         ]
 
         # Use getattr to future-proof for commands invoked via DMs.
