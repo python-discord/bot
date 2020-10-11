@@ -111,3 +111,15 @@ class VoiceBanTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(await self.cog.apply_voice_ban(self.ctx, self.user, "foobar"))
         post_infraction_mock.assert_awaited_once()
         self.cog.mod_log.ignore.assert_not_called()
+
+    @patch("bot.exts.moderation.infraction.infractions._utils.post_infraction")
+    @patch("bot.exts.moderation.infraction.infractions._utils.get_active_infraction")
+    async def test_voice_ban_infraction_post_add_kwargs(self, get_active_infraction, post_infraction_mock):
+        """Should pass all kwargs passed to apply_voice_ban to post_infraction."""
+        get_active_infraction.return_value = None
+        # We don't want that this continue yet
+        post_infraction_mock.return_value = None
+        self.assertIsNone(await self.cog.apply_voice_ban(self.ctx, self.user, "foobar", my_kwarg=23))
+        post_infraction_mock.assert_awaited_once_with(
+            self.ctx, self.user, "voice_ban", "foobar", active=True, my_kwarg=23
+        )
