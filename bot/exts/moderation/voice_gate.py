@@ -105,6 +105,9 @@ class VoiceGate(Cog):
         if message.channel.id != Channels.voice_gate:
             return
 
+        ctx = await self.bot.get_context(message)
+        is_verify_command = ctx.command is not None and ctx.command.name == "voice_verify"
+
         # When it's bot sent message, delete it after some time
         if message.author.bot:
             with suppress(discord.NotFound):
@@ -112,11 +115,14 @@ class VoiceGate(Cog):
                 return
 
         # Then check is member moderator+, because we don't want to delete their messages.
-        if any(role.id in MODERATION_ROLES for role in message.author.roles):
+        if any(role.id in MODERATION_ROLES for role in message.author.roles) and is_verify_command == False:
             log.trace(f"Excluding moderator message {message.id} from deletion in #{message.channel}.")
             return
 
-        self.mod_log.ignore(Event.message_delete, message.id)
+        # Ignore deleted voice verification messages
+        if ctx.command is not None and ctx.command.name == "voice_verify":
+            self.mod_log.ignore(Event.message_delete, message.id)
+
         with suppress(discord.NotFound):
             await message.delete()
 
