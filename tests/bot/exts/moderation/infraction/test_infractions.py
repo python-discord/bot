@@ -76,3 +76,9 @@ class VoiceBanTests(unittest.IsolatedAsyncioTestCase):
         self.cog.apply_voice_ban = AsyncMock()
         self.assertIsNone(await self.cog.tempvoiceban(self.cog, self.ctx, self.user, "baz", reason="foobar"))
         self.cog.apply_voice_ban.assert_awaited_once_with(self.ctx, self.user, "foobar", expires_at="baz")
+
+    async def test_voice_unban(self):
+        """Should call infraction pardoning function."""
+        self.cog.pardon_infraction = AsyncMock()
+        self.assertIsNone(await self.cog.unvoiceban(self.cog, self.ctx, self.user))
+        self.cog.pardon_infraction.assert_awaited_once_with(self.ctx, "voice_ban", self.user)
