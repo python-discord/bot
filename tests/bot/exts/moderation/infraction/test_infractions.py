@@ -1,6 +1,6 @@
 import textwrap
 import unittest
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, patch, MagicMock
 
 from bot.exts.moderation.infraction.infractions import Infractions
 from tests.helpers import MockBot, MockContext, MockGuild, MockMember, MockRole
@@ -100,3 +100,14 @@ class VoiceBanTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(await self.cog.apply_voice_ban(self.ctx, self.user, "foobar"))
         get_active_infraction.assert_awaited_once()
         post_infraction_mock.assert_not_awaited()
+
+    @patch("bot.exts.moderation.infraction.infractions._utils.post_infraction")
+    @patch("bot.exts.moderation.infraction.infractions._utils.get_active_infraction")
+    async def test_voice_ban_infraction_post_failed(self, get_active_infraction, post_infraction_mock):
+        """Should return early when posting infraction fails."""
+        self.cog.mod_log.ignore = MagicMock()
+        get_active_infraction.return_value = None
+        post_infraction_mock.return_value = None
+        self.assertIsNone(await self.cog.apply_voice_ban(self.ctx, self.user, "foobar"))
+        post_infraction_mock.assert_awaited_once()
+        self.cog.mod_log.ignore.assert_not_called()
