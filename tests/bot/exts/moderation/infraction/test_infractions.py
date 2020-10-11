@@ -98,7 +98,7 @@ class VoiceBanTests(unittest.IsolatedAsyncioTestCase):
         """Should return early when user already have Voice Ban infraction."""
         get_active_infraction.return_value = {"foo": "bar"}
         self.assertIsNone(await self.cog.apply_voice_ban(self.ctx, self.user, "foobar"))
-        get_active_infraction.assert_awaited_once()
+        get_active_infraction.assert_awaited_once_with(self.ctx, self.user, "voice_ban")
         post_infraction_mock.assert_not_awaited()
 
     @patch("bot.exts.moderation.infraction.infractions._utils.post_infraction")
