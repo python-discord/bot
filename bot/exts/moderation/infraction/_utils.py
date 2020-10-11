@@ -18,9 +18,10 @@ INFRACTION_ICONS = {
     "note": (Icons.user_warn, None),
     "superstar": (Icons.superstarify, Icons.unsuperstarify),
     "warning": (Icons.user_warn, None),
+    "voice_ban": (Icons.voice_state_red, Icons.voice_state_green),
 }
 RULES_URL = "https://pythondiscord.com/pages/rules"
-APPEALABLE_INFRACTIONS = ("ban", "mute")
+APPEALABLE_INFRACTIONS = ("ban", "mute", "voice_ban")
 
 # Type aliases
 UserObject = t.Union[discord.Member, discord.User]
