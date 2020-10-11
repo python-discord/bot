@@ -1,6 +1,6 @@
 import textwrap
 import unittest
-from unittest.mock import AsyncMock, Mock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 from bot.constants import Event
 from bot.exts.moderation.infraction.infractions import Infractions

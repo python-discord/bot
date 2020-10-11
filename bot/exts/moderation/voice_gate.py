@@ -4,12 +4,11 @@ from datetime import datetime, timedelta
 
 import discord
 from dateutil import parser
-
 from discord.ext.commands import Cog, Context, command
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Channels, Roles, VoiceGate as VoiceGateConf, MODERATION_ROLES, Event
+from bot.constants import Channels, Event, MODERATION_ROLES, Roles, VoiceGate as VoiceGateConf
 from bot.decorators import has_no_roles, in_whitelist
 from bot.exts.moderation.modlog import ModLog
 from bot.utils.checks import InWhitelistCheckFailure
@@ -55,7 +54,7 @@ class VoiceGate(Cog):
                 log.info(f"Unable to find Metricity data about {ctx.author} ({ctx.author.id})")
             else:
                 log.warning(f"Got response code {e.status} while trying to get {ctx.author.id} metricity data.")
-                await ctx.send(f":x: Got unexpected response from site. Please let us know about this.")
+                await ctx.send(":x: Got unexpected response from site. Please let us know about this.")
             return
 
         # Pre-parse this for better code style
@@ -115,7 +114,7 @@ class VoiceGate(Cog):
                 return
 
         # Then check is member moderator+, because we don't want to delete their messages.
-        if any(role.id in MODERATION_ROLES for role in message.author.roles) and is_verify_command == False:
+        if any(role.id in MODERATION_ROLES for role in message.author.roles) and is_verify_command is False:
             log.trace(f"Excluding moderator message {message.id} from deletion in #{message.channel}.")
             return
 
