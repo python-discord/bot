@@ -55,13 +55,14 @@ class TruncationTests(unittest.IsolatedAsyncioTestCase):
         )
 
 
+@patch("bot.exts.moderation.infraction.infractions.constants.Roles.voice_verified", new=123456)
 class VoiceBanTests(unittest.IsolatedAsyncioTestCase):
     """Tests for voice ban related functions and commands."""
 
     def setUp(self):
         self.bot = MockBot()
         self.mod = MockMember(top_role=10)
-        self.user = MockMember(top_role=1)
+        self.user = MockMember(top_role=1, roles=[MockRole(id=123456)])
         self.ctx = MockContext(bot=self.bot, author=self.mod)
         self.cog = Infractions(self.bot)
 
@@ -83,7 +84,6 @@ class VoiceBanTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(await self.cog.unvoiceban(self.cog, self.ctx, self.user))
         self.cog.pardon_infraction.assert_awaited_once_with(self.ctx, "voice_ban", self.user)
 
-    @patch("bot.exts.moderation.infraction.infractions.constants.Roles.voice_verified", new=123456)
     @patch("bot.exts.moderation.infraction.infractions._utils.get_active_infraction")
     async def test_voice_ban_not_having_voice_verified_role(self, get_active_infraction_mock):
         """Should send message and not apply infraction when user don't have voice verified role."""
@@ -91,3 +91,12 @@ class VoiceBanTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(await self.cog.apply_voice_ban(self.ctx, self.user, "foobar"))
         self.ctx.send.assert_awaited_once()
         get_active_infraction_mock.assert_not_awaited()
+
+    @patch("bot.exts.moderation.infraction.infractions._utils.post_infraction")
+    @patch("bot.exts.moderation.infraction.infractions._utils.get_active_infraction")
+    async def test_voice_ban_user_have_active_infraction(self, get_active_infraction, post_infraction_mock):
+        """Should return early when user already have Voice Ban infraction."""
+        get_active_infraction.return_value = {"foo": "bar"}
+        self.assertIsNone(await self.cog.apply_voice_ban(self.ctx, self.user, "foobar"))
+        get_active_infraction.assert_awaited_once()
+        post_infraction_mock.assert_not_awaited()
