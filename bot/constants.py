@@ -391,6 +391,7 @@ class Channels(metaclass=YAMLGetter):
     big_brother_logs: int
     bot_commands: int
     change_log: int
+    code_help_voice: int
     cooldown: int
     defcon: int
     dev_contrib: int
