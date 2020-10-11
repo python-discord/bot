@@ -12,6 +12,7 @@ from bot.bot import Bot
 from bot.constants import Channels, Roles, VoiceGate as VoiceGateConf, MODERATION_ROLES, Event
 from bot.decorators import has_no_roles, in_whitelist
 from bot.exts.moderation.modlog import ModLog
+from bot.utils.checks import InWhitelistCheckFailure
 
 log = logging.getLogger(__name__)
 
@@ -118,6 +119,11 @@ class VoiceGate(Cog):
         self.mod_log.ignore(Event.message_delete, message.id)
         with suppress(discord.NotFound):
             await message.delete()
+
+    async def cog_command_error(self, ctx: Context, error: Exception) -> None:
+        """Check for & ignore any InWhitelistCheckFailure."""
+        if isinstance(error, InWhitelistCheckFailure):
+            error.handled = True
 
 
 def setup(bot: Bot) -> None:
