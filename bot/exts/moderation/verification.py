@@ -396,6 +396,7 @@ class Verification(Cog):
             except discord.HTTPException as suspicious_exception:
                 raise StopExecution(reason=suspicious_exception)
             await member.kick(reason=f"User has not verified in {constants.Verification.kicked_after} days")
+            await self._add_kick_note(member)
 
         n_kicked = await self._send_requests(members, kick_request, Limit(batch_size=2, sleep_secs=1))
         self.bot.stats.incr("verification.kicked", count=n_kicked)
