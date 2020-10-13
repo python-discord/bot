@@ -553,7 +553,7 @@ class Verification(Cog):
                 icon_url=self.bot.user.avatar_url,
                 colour=discord.Colour.blurple(),
                 title="New native gated user",
-                channel_id=Channels.user_log,
+                channel_id=constants.Channels.user_log,
                 text=f"<@{member.id}> ({member.id})",
             )
 
