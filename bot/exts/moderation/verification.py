@@ -547,7 +547,7 @@ class Verification(Cog):
         # video.
         if raw_member.get("is_pending"):
             await self.member_gating_cache.set(member.id, True)
-            
+
             # TODO: Temporary, remove soon after asking joe.
             await self.mod_log.send_log_message(
                 icon_url=self.bot.user.avatar_url,
