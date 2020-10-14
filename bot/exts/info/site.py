@@ -1,7 +1,7 @@
 import logging
 
 from discord import Colour, Embed
-from discord.ext.commands import Cog, Context, group
+from discord.ext.commands import Cog, Context, Greedy, group
 
 from bot.bot import Bot
 from bot.constants import URLs
@@ -105,10 +105,9 @@ class Site(Cog):
         await ctx.send(embed=embed)
 
     @site_group.command(name="rules", aliases=("r", "rule"), root_aliases=("rules", "rule"))
-    async def site_rules(self, ctx: Context, *rules: int) -> None:
+    async def site_rules(self, ctx: Context, rules: Greedy[int]) -> None:
         """Provides a link to all rules or, if specified, displays specific rule(s)."""
-        rules_embed = Embed(title='Rules', color=Colour.blurple())
-        rules_embed.url = f"{PAGES_URL}/rules"
+        rules_embed = Embed(title='Rules', color=Colour.blurple(), url=f'{PAGES_URL}/rules')
 
         if not rules:
             # Rules were not submitted. Return the default description.
@@ -122,15 +121,13 @@ class Site(Cog):
             return
 
         full_rules = await self.bot.api_client.get('rules', params={'link_format': 'md'})
-        invalid_indices = tuple(
-            pick
-            for pick in rules
-            if pick < 1 or pick > len(full_rules)
-        )
 
-        if invalid_indices:
-            indices = ', '.join(map(str, invalid_indices))
-            await ctx.send(f":x: Invalid rule indices: {indices}")
+        # Remove duplicates and sort the rule indices
+        rules = sorted(set(rules))
+        invalid = ', '.join(str(index) for index in rules if index < 1 or index > len(full_rules))
+
+        if invalid:
+            await ctx.send(f":x: Invalid rule indices: {invalid}")
             return
 
         for rule in rules:

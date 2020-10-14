@@ -15,6 +15,7 @@ from bot.decorators import respect_role_hierarchy
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
 from bot.exts.moderation.infraction._utils import UserSnowflake
+from bot.utils.messages import format_user
 
 log = logging.getLogger(__name__)
 
@@ -69,6 +70,23 @@ class Infractions(InfractionScheduler, commands.Cog):
     async def ban(self, ctx: Context, user: FetchedMember, *, reason: t.Optional[str] = None) -> None:
         """Permanently ban a user for the given reason and stop watching them with Big Brother."""
         await self.apply_ban(ctx, user, reason)
+
+    @command(aliases=('pban',))
+    async def purgeban(
+        self,
+        ctx: Context,
+        user: FetchedMember,
+        purge_days: t.Optional[int] = 1,
+        *,
+        reason: t.Optional[str] = None
+    ) -> None:
+        """
+        Same as ban but removes all their messages for the given number of days, default being 1.
+
+        `purge_days` can only be values between 0 and 7.
+        Anything outside these bounds are automatically adjusted to their respective limits.
+        """
+        await self.apply_ban(ctx, user, reason, max(min(purge_days, 7), 0))
 
     # endregion
     # region: Temporary infractions
@@ -229,7 +247,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         await self.apply_infraction(ctx, infraction, user, action())
 
-    @respect_role_hierarchy()
+    @respect_role_hierarchy(member_arg=2)
     async def apply_kick(self, ctx: Context, user: Member, reason: t.Optional[str], **kwargs) -> None:
         """Apply a kick infraction with kwargs passed to `post_infraction`."""
         infraction = await _utils.post_infraction(ctx, user, "kick", reason, active=False, **kwargs)
@@ -244,8 +262,15 @@ class Infractions(InfractionScheduler, commands.Cog):
         action = user.kick(reason=reason)
         await self.apply_infraction(ctx, infraction, user, action)
 
-    @respect_role_hierarchy()
-    async def apply_ban(self, ctx: Context, user: UserSnowflake, reason: t.Optional[str], **kwargs) -> None:
+    @respect_role_hierarchy(member_arg=2)
+    async def apply_ban(
+        self,
+        ctx: Context,
+        user: UserSnowflake,
+        reason: t.Optional[str],
+        purge_days: t.Optional[int] = 0,
+        **kwargs
+    ) -> None:
         """
         Apply a ban infraction with kwargs passed to `post_infraction`.
 
@@ -277,7 +302,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         if reason:
             reason = textwrap.shorten(reason, width=512, placeholder="...")
 
-        action = ctx.guild.ban(user, reason=reason, delete_message_days=0)
+        action = ctx.guild.ban(user, reason=reason, delete_message_days=purge_days)
         await self.apply_infraction(ctx, infraction, user, action)
 
         if infraction.get('expires_at') is not None:
@@ -315,7 +340,7 @@ class Infractions(InfractionScheduler, commands.Cog):
                 icon_url=_utils.INFRACTION_ICONS["mute"][1]
             )
 
-            log_text["Member"] = f"{user.mention}(`{user.id}`)"
+            log_text["Member"] = format_user(user)
             log_text["DM"] = "Sent" if notified else "**Failed**"
         else:
             log.info(f"Failed to unmute user {user_id}: user not found")

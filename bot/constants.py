@@ -391,6 +391,7 @@ class Channels(metaclass=YAMLGetter):
     big_brother_logs: int
     bot_commands: int
     change_log: int
+    code_help_voice: int
     cooldown: int
     defcon: int
     dev_contrib: int
@@ -469,7 +470,6 @@ class Guild(metaclass=YAMLGetter):
     moderation_roles: List[int]
     modlog_blacklist: List[int]
     reminder_whitelist: List[int]
-    staff_channels: List[int]
     staff_roles: List[int]
 
 
@@ -560,13 +560,6 @@ class RedirectOutput(metaclass=YAMLGetter):
     delete_delay: int
 
 
-class Sync(metaclass=YAMLGetter):
-    section = 'sync'
-
-    confirm_timeout: int
-    max_diff: int
-
-
 class PythonNews(metaclass=YAMLGetter):
     section = 'python_news'
 
@@ -623,7 +616,6 @@ MODERATION_ROLES = Guild.moderation_roles
 STAFF_ROLES = Guild.staff_roles
 
 # Channel combinations
-STAFF_CHANNELS = Guild.staff_channels
 MODERATION_CHANNELS = Guild.moderation_channels
 
 # Bot replies

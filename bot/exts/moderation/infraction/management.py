@@ -6,15 +6,15 @@ from datetime import datetime
 import discord
 from discord.ext import commands
 from discord.ext.commands import Context
+from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
-from bot.converters import Expiry, InfractionSearchQuery, allowed_strings, proxy_user
-from bot.exts.moderation.infraction import _utils
+from bot.converters import Expiry, Snowflake, UserMention, allowed_strings, proxy_user
 from bot.exts.moderation.infraction.infractions import Infractions
 from bot.exts.moderation.modlog import ModLog
 from bot.pagination import LinePaginator
-from bot.utils import time
+from bot.utils import messages, time
 from bot.utils.checks import in_whitelist_check
 
 log = logging.getLogger(__name__)
@@ -154,15 +154,11 @@ class ModManagement(commands.Cog):
         user = ctx.guild.get_member(user_id)
 
         if user:
-            user_text = f"{user.mention} (`{user.id}`)"
+            user_text = messages.format_user(user)
             thumbnail = user.avatar_url_as(static_format="png")
         else:
-            user_text = f"`{user_id}`"
+            user_text = f"<@{user_id}>"
             thumbnail = None
-
-        # The infraction's actor
-        actor_id = new_infraction['actor']
-        actor = ctx.guild.get_member(actor_id) or f"`{actor_id}`"
 
         await self.mod_log.send_log_message(
             icon_url=constants.Icons.pencil,
@@ -171,8 +167,8 @@ class ModManagement(commands.Cog):
             thumbnail=thumbnail,
             text=textwrap.dedent(f"""
                 Member: {user_text}
-                Actor: {actor}
-                Edited by: {ctx.message.author}{log_text}
+                Actor: <@{new_infraction['actor']}>
+                Edited by: {ctx.message.author.mention}{log_text}
             """)
         )
 
@@ -180,20 +176,27 @@ class ModManagement(commands.Cog):
     # region: Search infractions
 
     @infraction_group.group(name="search", invoke_without_command=True)
-    async def infraction_search_group(self, ctx: Context, query: InfractionSearchQuery) -> None:
+    async def infraction_search_group(self, ctx: Context, query: t.Union[UserMention, Snowflake, str]) -> None:
         """Searches for infractions in the database."""
-        if isinstance(query, discord.User):
-            await ctx.invoke(self.search_user, query)
+        if isinstance(query, int):
+            await self.search_user(ctx, discord.Object(query))
         else:
-            await ctx.invoke(self.search_reason, query)
+            await self.search_reason(ctx, query)
 
     @infraction_search_group.command(name="user", aliases=("member", "id"))
     async def search_user(self, ctx: Context, user: t.Union[discord.User, proxy_user]) -> None:
         """Search for infractions by member."""
         infraction_list = await self.bot.api_client.get(
-            'bot/infractions',
+            'bot/infractions/expanded',
             params={'user__id': str(user.id)}
         )
+
+        user = self.bot.get_user(user.id)
+        if not user and infraction_list:
+            # Use the user data retrieved from the DB for the username.
+            user = infraction_list[0]["user"]
+            user = escape_markdown(user["name"]) + f"#{user['discriminator']:04}"
+
         embed = discord.Embed(
             title=f"Infractions for {user} ({len(infraction_list)} total)",
             colour=discord.Colour.orange()
@@ -204,7 +207,7 @@ class ModManagement(commands.Cog):
     async def search_reason(self, ctx: Context, reason: str) -> None:
         """Search for infractions by their reason. Use Re2 for matching."""
         infraction_list = await self.bot.api_client.get(
-            'bot/infractions',
+            'bot/infractions/expanded',
             params={'search': reason}
         )
         embed = discord.Embed(
@@ -220,7 +223,7 @@ class ModManagement(commands.Cog):
         self,
         ctx: Context,
         embed: discord.Embed,
-        infractions: t.Iterable[_utils.Infraction]
+        infractions: t.Iterable[t.Dict[str, t.Any]]
     ) -> None:
         """Send a paginated embed of infractions for the specified user."""
         if not infractions:
@@ -241,37 +244,43 @@ class ModManagement(commands.Cog):
             max_size=1000
         )
 
-    def infraction_to_string(self, infraction: _utils.Infraction) -> str:
+    def infraction_to_string(self, infraction: t.Dict[str, t.Any]) -> str:
         """Convert the infraction object to a string representation."""
-        actor_id = infraction["actor"]
-        guild = self.bot.get_guild(constants.Guild.id)
-        actor = guild.get_member(actor_id)
         active = infraction["active"]
-        user_id = infraction["user"]
-        hidden = infraction["hidden"]
+        user = infraction["user"]
+        expires_at = infraction["expires_at"]
         created = time.format_infraction(infraction["inserted_at"])
 
+        # Format the user string.
+        if user_obj := self.bot.get_user(user["id"]):
+            # The user is in the cache.
+            user_str = messages.format_user(user_obj)
+        else:
+            # Use the user data retrieved from the DB.
+            name = escape_markdown(user['name'])
+            user_str = f"<@{user['id']}> ({name}#{user['discriminator']:04})"
+
         if active:
-            remaining = time.until_expiration(infraction["expires_at"]) or "Expired"
+            remaining = time.until_expiration(expires_at) or "Expired"
         else:
             remaining = "Inactive"
 
-        if infraction["expires_at"] is None:
+        if expires_at is None:
             expires = "*Permanent*"
         else:
             date_from = datetime.strptime(created, time.INFRACTION_FORMAT)
-            expires = time.format_infraction_with_duration(infraction["expires_at"], date_from)
+            expires = time.format_infraction_with_duration(expires_at, date_from)
 
         lines = textwrap.dedent(f"""
             {"**===============**" if active else "==============="}
             Status: {"__**Active**__" if active else "Inactive"}
-            User: {self.bot.get_user(user_id)} (`{user_id}`)
+            User: {user_str}
             Type: **{infraction["type"]}**
-            Shadow: {hidden}
+            Shadow: {infraction["hidden"]}
             Created: {created}
             Expires: {expires}
             Remaining: {remaining}
-            Actor: {actor.mention if actor else actor_id}
+            Actor: <@{infraction["actor"]["id"]}>
             ID: `{infraction["id"]}`
             Reason: {infraction["reason"] or "*None*"}
             {"**===============**" if active else "==============="}

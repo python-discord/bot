@@ -12,12 +12,11 @@ from discord.ext.commands import Context
 from bot import constants
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Colours, STAFF_CHANNELS
+from bot.constants import Colours, MODERATION_CHANNELS
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._utils import UserSnowflake
 from bot.exts.moderation.modlog import ModLog
-from bot.utils import time
-from bot.utils.scheduling import Scheduler
+from bot.utils import messages, scheduling, time
 
 log = logging.getLogger(__name__)
 
@@ -27,7 +26,7 @@ class InfractionScheduler:
 
     def __init__(self, bot: Bot, supported_infractions: t.Container[str]):
         self.bot = bot
-        self.scheduler = Scheduler(self.__class__.__name__)
+        self.scheduler = scheduling.Scheduler(self.__class__.__name__)
 
         self.bot.loop.create_task(self.reschedule_infractions(supported_infractions))
 
@@ -137,9 +136,9 @@ class InfractionScheduler:
             )
             if reason:
                 end_msg = f" (reason: {textwrap.shorten(reason, width=1500, placeholder='...')})"
-        elif ctx.channel.id not in STAFF_CHANNELS:
+        elif ctx.channel.id not in MODERATION_CHANNELS:
             log.trace(
-                f"Infraction #{id_} context is not in a staff channel; omitting infraction count."
+                f"Infraction #{id_} context is not in a mod channel; omitting infraction count."
             )
         else:
             log.trace(f"Fetching total infraction count for {user}.")
@@ -199,8 +198,8 @@ class InfractionScheduler:
             title=f"Infraction {log_title}: {infr_type}",
             thumbnail=user.avatar_url_as(static_format="png"),
             text=textwrap.dedent(f"""
-                Member: {user.mention} (`{user.id}`)
-                Actor: {ctx.author}{dm_log_text}{expiry_log_text}
+                Member: {messages.format_user(user)}
+                Actor: {ctx.author.mention}{dm_log_text}{expiry_log_text}
                 Reason: {reason}
             """),
             content=log_content,
@@ -243,47 +242,11 @@ class InfractionScheduler:
         # Deactivate the infraction and cancel its scheduled expiration task.
         log_text = await self.deactivate_infraction(response[0], send_log=False)
 
-        log_text["Member"] = f"{user.mention}(`{user.id}`)"
-        log_text["Actor"] = str(ctx.author)
+        log_text["Member"] = messages.format_user(user)
+        log_text["Actor"] = ctx.author.mention
         log_content = None
         id_ = response[0]['id']
         footer = f"ID: {id_}"
-
-        # If multiple active infractions were found, mark them as inactive in the database
-        # and cancel their expiration tasks.
-        if len(response) > 1:
-            log.info(
-                f"Found more than one active {infr_type} infraction for user {user.id}; "
-                "deactivating the extra active infractions too."
-            )
-
-            footer = f"Infraction IDs: {', '.join(str(infr['id']) for infr in response)}"
-
-            log_note = f"Found multiple **active** {infr_type} infractions in the database."
-            if "Note" in log_text:
-                log_text["Note"] = f" {log_note}"
-            else:
-                log_text["Note"] = log_note
-
-            # deactivate_infraction() is not called again because:
-            #     1. Discord cannot store multiple active bans or assign multiples of the same role
-            #     2. It would send a pardon DM for each active infraction, which is redundant
-            for infraction in response[1:]:
-                id_ = infraction['id']
-                try:
-                    # Mark infraction as inactive in the database.
-                    await self.bot.api_client.patch(
-                        f"bot/infractions/{id_}",
-                        json={"active": False}
-                    )
-                except ResponseCodeError:
-                    log.exception(f"Failed to deactivate infraction #{id_} ({infr_type})")
-                    # This is simpler and cleaner than trying to concatenate all the errors.
-                    log_text["Failure"] = "See bot's logs for details."
-
-                # Cancel pending expiration task.
-                if infraction["expires_at"] is not None:
-                    self.scheduler.cancel(infraction["id"])
 
         # Accordingly display whether the user was successfully notified via DM.
         dm_emoji = ""
@@ -358,7 +321,7 @@ class InfractionScheduler:
         log_content = None
         log_text = {
             "Member": f"<@{user_id}>",
-            "Actor": str(self.bot.get_user(actor) or actor),
+            "Actor": f"<@{actor}>",
             "Reason": infraction["reason"],
             "Created": created,
         }

@@ -11,6 +11,7 @@ from discord.ext.commands import Cog, Context, group, has_any_role
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Event, Icons, MODERATION_ROLES, Roles
 from bot.exts.moderation.modlog import ModLog
+from bot.utils.messages import format_user
 
 log = logging.getLogger(__name__)
 
@@ -106,7 +107,7 @@ class Defcon(Cog):
                 self.bot.stats.incr("defcon.leaves")
 
                 message = (
-                    f"{member} (`{member.id}`) was denied entry because their account is too new."
+                    f"{format_user(member)} was denied entry because their account is too new."
                 )
 
                 if not message_sent:
