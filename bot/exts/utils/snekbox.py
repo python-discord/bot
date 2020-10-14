@@ -6,7 +6,7 @@ import re
 import textwrap
 from functools import partial
 from signal import Signals
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Callable, Awaitable
 
 from discord import HTTPException, Message, NotFound, Reaction, User
 from discord.ext.commands import Cog, Context, command, guild_only
@@ -21,21 +21,21 @@ log = logging.getLogger(__name__)
 
 ESCAPE_REGEX = re.compile("[`\u202E\u200B]{3,}")
 FORMATTED_CODE_REGEX = re.compile(
-    r"^\s*"                                 # any leading whitespace from the beginning of the string
-    r"(?P<delim>(?P<block>```)|``?)"        # code delimiter: 1-3 backticks; (?P=block) only matches if it's a block
-    r"(?(block)(?:(?P<lang>[a-z]+)\n)?)"    # if we're in a block, match optional language (only letters plus newline)
-    r"(?:[ \t]*\n)*"                        # any blank (empty or tabs/spaces only) lines before the code
-    r"(?P<code>.*?)"                        # extract all code inside the markup
-    r"\s*"                                  # any more whitespace before the end of the code markup
-    r"(?P=delim)"                           # match the exact same delimiter from the start again
-    r"\s*$",                                # any trailing whitespace until the end of the string
-    re.DOTALL | re.IGNORECASE               # "." also matches newlines, case insensitive
+    r"^\s*"  # any leading whitespace from the beginning of the string
+    r"(?P<delim>(?P<block>```)|``?)"  # code delimiter: 1-3 backticks; (?P=block) only matches if it's a block
+    r"(?(block)(?:(?P<lang>[a-z]+)\n)?)"  # if we're in a block, match optional language (only letters plus newline)
+    r"(?:[ \t]*\n)*"  # any blank (empty or tabs/spaces only) lines before the code
+    r"(?P<code>.*?)"  # extract all code inside the markup
+    r"\s*"  # any more whitespace before the end of the code markup
+    r"(?P=delim)"  # match the exact same delimiter from the start again
+    r"\s*$",  # any trailing whitespace until the end of the string
+    re.DOTALL | re.IGNORECASE  # "." also matches newlines, case insensitive
 )
 RAW_CODE_REGEX = re.compile(
-    r"^(?:[ \t]*\n)*"                       # any blank (empty or tabs/spaces only) lines before the code
-    r"(?P<code>.*?)"                        # extract all the rest as code
-    r"\s*$",                                # any trailing whitespace until the end of the string
-    re.DOTALL                               # "." also matches newlines
+    r"^(?:[ \t]*\n)*"  # any blank (empty or tabs/spaces only) lines before the code
+    r"(?P<code>.*?)"  # extract all the rest as code
+    r"\s*$",  # any trailing whitespace until the end of the string
+    re.DOTALL  # "." also matches newlines
 )
 
 MAX_PASTE_LEN = 1000
@@ -240,7 +240,6 @@ class Snekbox(Cog):
             output, time = self.get_time(results)
             icon = self.get_status_emoji(results)
 
-
             if error:
                 output, paste_link = error, None
             else:
@@ -365,7 +364,6 @@ class Snekbox(Cog):
             if not code:
                 break
             log.info(f"Re-evaluating code from message {ctx.message.id}:\n{code}")
-
 
     @command(name="eval", aliases=("e",))
     @guild_only()
