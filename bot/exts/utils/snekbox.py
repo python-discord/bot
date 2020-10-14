@@ -327,7 +327,7 @@ class Snekbox(Cog):
 
         return code
 
-    async def run_eval(self, ctx: Context, code: str, send_func) -> None:
+    async def run_eval(self, ctx: Context, code: str, send_func: Callable[[Context, str], Awaitable[Message]]) -> None:
         if ctx.author.id in self.jobs:
             await ctx.send(
                 f"{ctx.author.mention} You've already got a job running - "
