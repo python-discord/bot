@@ -327,20 +327,7 @@ class Snekbox(Cog):
 
         return code
 
-    @command(name="eval", aliases=("e",))
-    @guild_only()
-    @in_whitelist(channels=EVAL_CHANNELS, categories=EVAL_CATEGORIES, roles=EVAL_ROLES)
-    async def eval_command(self, ctx: Context, *, code: str = None) -> None:
-        """
-        Run Python code and get the results.
-
-        This command supports multiple lines of code, including code wrapped inside a formatted code
-        block. Code can be re-evaluated by editing the original message within 10 seconds and
-        clicking the reaction that subsequently appears.
-
-        We've done our best to make this sandboxed, but do let us know if you manage to find an
-        issue with it!
-        """
+    async def run_eval(self, ctx: Context, code: str, send_func) -> None:
         if ctx.author.id in self.jobs:
             await ctx.send(
                 f"{ctx.author.mention} You've already got a job running - "
@@ -363,6 +350,48 @@ class Snekbox(Cog):
             self.bot.stats.incr("snekbox_usages.channels.bot_commands")
         else:
             self.bot.stats.incr("snekbox_usages.channels.topical")
+
+        log.info(f"Received code from {ctx.author} for evaluation:\n{code}")
+
+        while True:
+            self.jobs[ctx.author.id] = datetime.datetime.now()
+            code = self.prepare_input(code)
+            try:
+                response = await send_func(ctx, code)
+            finally:
+                del self.jobs[ctx.author.id]
+
+            code = await self.continue_eval(ctx, response)
+            if not code:
+                break
+            log.info(f"Re-evaluating code from message {ctx.message.id}:\n{code}")
+
+
+    @command(name="eval", aliases=("e",))
+    @guild_only()
+    @in_whitelist(channels=EVAL_CHANNELS, categories=EVAL_CATEGORIES, roles=EVAL_ROLES)
+    async def eval_command(self, ctx: Context, *, code: str = None) -> None:
+        """
+        Run Python code and get the results.
+
+        This command supports multiple lines of code, including code wrapped inside a formatted code
+        block. Code can be re-evaluated by editing the original message within 10 seconds and
+        clicking the reaction that subsequently appears.
+
+        We've done our best to make this sandboxed, but do let us know if you manage to find an
+        issue with it!
+        """
+
+        await self.run_eval(ctx, code, self.send_eval)
+
+        if Roles.helpers in (role.id for role in ctx.author.roles):
+            self.bot.stats.incr("snekbox_usages.roles.helpers")
+        else:
+            self.bot.stats.incr("snekbox_usages.roles.developers")
+
+        This command supports multiple lines of code, including code wrapped inside a formatted code
+        block. Code can be re-evaluated by editing the original message within 10 seconds and
+        clicking the reaction that subsequently appears.
 
         log.info(f"Received code from {ctx.author} for evaluation:\n{code}")
 
