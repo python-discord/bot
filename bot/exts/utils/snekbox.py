@@ -217,6 +217,62 @@ class Snekbox(Cog):
             log.info(f"{ctx.author}'s job had a return code of {results['returncode']}")
         return response
 
+    @staticmethod
+    def get_time(results: dict) -> Tuple[str, Optional[str]]:
+        output = results["stdout"].strip("\n")
+
+        if results["returncode"] == 0:
+            time_index = output.rfind("\n")
+            if time_index != -1:
+                return output[:time_index], output[time_index:]
+            return "", output
+
+        return output, None
+
+    async def send_timeit(self, ctx: Context, code: str) -> Message:
+        async with ctx.typing():
+            code = code.replace("'", r"\'")
+            code = f"import timeit\n" \
+                   f"timeit.main(['{code}'])"
+
+            results = await self.post_eval(code)
+            msg, error = self.get_results_message(results)
+            output, time = self.get_time(results)
+            icon = self.get_status_emoji(results)
+
+
+            if error:
+                output, paste_link = error, None
+            else:
+                output, paste_link = await self.format_output(output)
+
+            msg = f"{ctx.author.mention} {icon} {msg}.\n\n```\n{output}\n```"
+
+            if time:
+                msg = f"{msg}\nTime:\n```{time}```"
+
+            if paste_link:
+                msg = f"{msg}\nFull output: {paste_link}"
+
+            if icon == ":x:":
+                self.bot.stats.incr("snekbox.python.fail")
+            else:
+                self.bot.stats.incr("snekbox.python.success")
+
+            filter_cog = self.bot.get_cog("Filtering")
+            filter_triggered = False
+            if filter_cog:
+                filter_triggered = await filter_cog.filter_eval(msg, ctx.message)
+            if filter_triggered:
+                response = await ctx.send("Attempt to circumvent filter detected. Moderator team has been alerted.")
+            else:
+                response = await ctx.send(msg)
+            self.bot.loop.create_task(wait_for_deletion(response, (ctx.author.id,), ctx.bot))
+
+            log.info(f"{ctx.author}'s job had a return code of {results['returncode']}")
+
+            return response
+
     async def continue_eval(self, ctx: Context, response: Message) -> Optional[str]:
         """
         Check if the eval session should continue.
