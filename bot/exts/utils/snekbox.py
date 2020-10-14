@@ -6,7 +6,7 @@ import re
 import textwrap
 from functools import partial
 from signal import Signals
-from typing import Optional, Tuple, Callable, Awaitable
+from typing import Awaitable, Callable, Optional, Tuple
 
 from discord import HTTPException, Message, NotFound, Reaction, User
 from discord.ext.commands import Cog, Context, command, guild_only
@@ -219,6 +219,9 @@ class Snekbox(Cog):
 
     @staticmethod
     def get_time(results: dict) -> Tuple[str, Optional[str]]:
+        """
+        Pulls code output and timeit results from results, is eval was not successful time it None
+        """
         output = results["stdout"].strip("\n")
 
         if results["returncode"] == 0:
@@ -230,6 +233,11 @@ class Snekbox(Cog):
         return output, None
 
     async def send_timeit(self, ctx: Context, code: str) -> Message:
+        """
+        Evaluate code with timing, format it, and send the output to the corresponding channel.
+
+        Return the bot response.
+        """
         async with ctx.typing():
             code = code.replace("'", r"\'")
             code = f"import timeit\n" \
@@ -327,6 +335,10 @@ class Snekbox(Cog):
         return code
 
     async def run_eval(self, ctx: Context, code: str, send_func: Callable[[Context, str], Awaitable[Message]]) -> None:
+        """
+        Runs all checks, handles eval stats and calls send_func to evaluate and send the eval.
+        This function also handles re-evaluation.
+        """
         if ctx.author.id in self.jobs:
             await ctx.send(
                 f"{ctx.author.mention} You've already got a job running - "
@@ -379,7 +391,6 @@ class Snekbox(Cog):
         We've done our best to make this sandboxed, but do let us know if you manage to find an
         issue with it!
         """
-
         await self.run_eval(ctx, code, self.send_eval)
 
     @command(name="timeit", aliases=("ti",))
@@ -387,7 +398,7 @@ class Snekbox(Cog):
     @in_whitelist(channels=EVAL_CHANNELS, categories=EVAL_CATEGORIES, roles=EVAL_ROLES)
     async def timeit_command(self, ctx: Context, *, code: str = None) -> None:
         """
-        Profile Python Code to find execution time
+        Profile Python Code to find execution time.
 
         This command supports multiple lines of code, including code wrapped inside a formatted code
         block. Code can be re-evaluated by editing the original message within 10 seconds and
@@ -396,7 +407,6 @@ class Snekbox(Cog):
         We've done our best to make this sandboxed, but do let us know if you manage to find an
         issue with it!
         """
-
         await self.run_eval(ctx, code, self.send_timeit)
 
 
