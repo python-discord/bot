@@ -6,7 +6,7 @@ import re
 import textwrap
 from functools import partial
 from signal import Signals
-from typing import Optional, Tuple
+from typing import Awaitable, Callable, Optional, Tuple
 
 from discord import HTTPException, Message, NotFound, Reaction, User
 from discord.ext.commands import Cog, Context, command, guild_only
@@ -21,21 +21,21 @@ log = logging.getLogger(__name__)
 
 ESCAPE_REGEX = re.compile("[`\u202E\u200B]{3,}")
 FORMATTED_CODE_REGEX = re.compile(
-    r"^\s*"                                 # any leading whitespace from the beginning of the string
-    r"(?P<delim>(?P<block>```)|``?)"        # code delimiter: 1-3 backticks; (?P=block) only matches if it's a block
-    r"(?(block)(?:(?P<lang>[a-z]+)\n)?)"    # if we're in a block, match optional language (only letters plus newline)
-    r"(?:[ \t]*\n)*"                        # any blank (empty or tabs/spaces only) lines before the code
-    r"(?P<code>.*?)"                        # extract all code inside the markup
-    r"\s*"                                  # any more whitespace before the end of the code markup
-    r"(?P=delim)"                           # match the exact same delimiter from the start again
-    r"\s*$",                                # any trailing whitespace until the end of the string
-    re.DOTALL | re.IGNORECASE               # "." also matches newlines, case insensitive
+    r"^\s*"  # any leading whitespace from the beginning of the string
+    r"(?P<delim>(?P<block>```)|``?)"  # code delimiter: 1-3 backticks; (?P=block) only matches if it's a block
+    r"(?(block)(?:(?P<lang>[a-z]+)\n)?)"  # if we're in a block, match optional language (only letters plus newline)
+    r"(?:[ \t]*\n)*"  # any blank (empty or tabs/spaces only) lines before the code
+    r"(?P<code>.*?)"  # extract all code inside the markup
+    r"\s*"  # any more whitespace before the end of the code markup
+    r"(?P=delim)"  # match the exact same delimiter from the start again
+    r"\s*$",  # any trailing whitespace until the end of the string
+    re.DOTALL | re.IGNORECASE  # "." also matches newlines, case insensitive
 )
 RAW_CODE_REGEX = re.compile(
-    r"^(?:[ \t]*\n)*"                       # any blank (empty or tabs/spaces only) lines before the code
-    r"(?P<code>.*?)"                        # extract all the rest as code
-    r"\s*$",                                # any trailing whitespace until the end of the string
-    re.DOTALL                               # "." also matches newlines
+    r"^(?:[ \t]*\n)*"  # any blank (empty or tabs/spaces only) lines before the code
+    r"(?P<code>.*?)"  # extract all the rest as code
+    r"\s*$",  # any trailing whitespace until the end of the string
+    re.DOTALL  # "." also matches newlines
 )
 
 MAX_PASTE_LEN = 1000
@@ -219,6 +219,11 @@ class Snekbox(Cog):
 
     @staticmethod
     def get_time(results: dict) -> Tuple[str, Optional[str]]:
+        """
+        Parses time and output from results dict, if there was an error time is None and output contains the error.
+
+        Returns code output and timeit results
+        """
         output = results["stdout"].strip("\n")
 
         if results["returncode"] == 0:
@@ -230,6 +235,11 @@ class Snekbox(Cog):
         return output, None
 
     async def send_timeit(self, ctx: Context, code: str) -> Message:
+        """
+        Evaluate code with timing, format it, and send the output to the corresponding channel.
+
+        Return the bot response.
+        """
         async with ctx.typing():
             code = code.replace("'", r"\'")
             code = f"import timeit\n" \
@@ -239,7 +249,6 @@ class Snekbox(Cog):
             msg, error = self.get_results_message(results)
             output, time = self.get_time(results)
             icon = self.get_status_emoji(results)
-
 
             if error:
                 output, paste_link = error, None
@@ -327,7 +336,12 @@ class Snekbox(Cog):
 
         return code
 
-    async def run_eval(self, ctx: Context, code: str, send_func) -> None:
+    async def run_eval(self, ctx: Context, code: str, send_func: Callable[[Context, str], Awaitable[Message]]) -> None:
+        """
+        Handles checks, stats and re-evaluation of an eval.
+
+        `send_func` is an async callable that takes a `Context` and string containing code to be evaluated.
+        """
         if ctx.author.id in self.jobs:
             await ctx.send(
                 f"{ctx.author.mention} You've already got a job running - "
@@ -366,7 +380,6 @@ class Snekbox(Cog):
                 break
             log.info(f"Re-evaluating code from message {ctx.message.id}:\n{code}")
 
-
     @command(name="eval", aliases=("e",))
     @guild_only()
     @in_whitelist(channels=EVAL_CHANNELS, categories=EVAL_CATEGORIES, roles=EVAL_ROLES)
@@ -381,7 +394,6 @@ class Snekbox(Cog):
         We've done our best to make this sandboxed, but do let us know if you manage to find an
         issue with it!
         """
-
         await self.run_eval(ctx, code, self.send_eval)
 
     @command(name="timeit", aliases=("ti",))
@@ -389,7 +401,7 @@ class Snekbox(Cog):
     @in_whitelist(channels=EVAL_CHANNELS, categories=EVAL_CATEGORIES, roles=EVAL_ROLES)
     async def timeit_command(self, ctx: Context, *, code: str = None) -> None:
         """
-        Profile Python Code to find execution time
+        Profile Python Code to find execution time.
 
         This command supports multiple lines of code, including code wrapped inside a formatted code
         block. Code can be re-evaluated by editing the original message within 10 seconds and
@@ -398,7 +410,6 @@ class Snekbox(Cog):
         We've done our best to make this sandboxed, but do let us know if you manage to find an
         issue with it!
         """
-
         await self.run_eval(ctx, code, self.send_timeit)
 
 
