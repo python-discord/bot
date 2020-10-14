@@ -338,7 +338,7 @@ class Snekbox(Cog):
 
     async def run_eval(self, ctx: Context, code: str, send_func: Callable[[Context, str], Awaitable[Message]]) -> None:
         """
-        Handles checks, stats and re-evaluation of an eval
+        Handles checks, stats and re-evaluation of an eval.
 
         `send_func` is an async callable that takes a `Context` and string containing code to be evaluated.
         """
