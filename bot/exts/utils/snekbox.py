@@ -220,7 +220,9 @@ class Snekbox(Cog):
     @staticmethod
     def get_time(results: dict) -> Tuple[str, Optional[str]]:
         """
-        Pulls code output and timeit results from results, is eval was not successful time it None
+        Parses time and output from results dict, if there was an error time is None and output contains the error.
+
+        Returns code output and timeit results
         """
         output = results["stdout"].strip("\n")
 
@@ -336,8 +338,9 @@ class Snekbox(Cog):
 
     async def run_eval(self, ctx: Context, code: str, send_func: Callable[[Context, str], Awaitable[Message]]) -> None:
         """
-        Runs all checks, handles eval stats and calls send_func to evaluate and send the eval.
-        This function also handles re-evaluation.
+        Handles checks, stats and re-evaluation of an eval
+
+        `send_func` is an async callable that takes a `Context` and string containing code to be evaluated.
         """
         if ctx.author.id in self.jobs:
             await ctx.send(
