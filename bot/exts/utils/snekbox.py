@@ -317,7 +317,7 @@ class Snekbox(Cog):
         log.trace(f"Getting context for message {message.id}.")
         new_ctx = await self.bot.get_context(message)
 
-        if new_ctx.command is self.eval_command:
+        if new_ctx.command in (self.eval_command, self.timeit_command):
             log.trace(f"Message {message.id} invokes eval command.")
             split = message.content.split(maxsplit=1)
             code = split[1] if len(split) > 1 else None
