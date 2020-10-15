@@ -528,6 +528,15 @@ class BigBrother(metaclass=YAMLGetter):
     header_message_limit: int
 
 
+class CodeBlock(metaclass=YAMLGetter):
+    section = 'code_block'
+
+    channel_whitelist: List[int]
+    cooldown_channels: List[int]
+    cooldown_seconds: int
+    minimum_lines: int
+
+
 class Free(metaclass=YAMLGetter):
     section = 'free'
 

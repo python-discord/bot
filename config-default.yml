@@ -145,8 +145,8 @@ guild:
         dev_log:            &DEV_LOG        622895325144940554
 
         # Discussion
-        meta:               429409067623251969
-        python_discussion:  267624335836053506
+        meta:                               429409067623251969
+        python_discussion:  &PY_DISCUSSION  267624335836053506
 
         # Python Help: Available
         how_to_get_help:    704250143020417084
@@ -392,6 +392,23 @@ reddit:
 big_brother:
     log_delay: 15
     header_message_limit: 15
+
+
+code_block:
+    # The channels in which code blocks will be detected. They are not subject to a cooldown.
+    channel_whitelist:
+        - *BOT_CMD
+
+    # The channels which will be affected by a cooldown. These channels are also whitelisted.
+    cooldown_channels:
+        - *PY_DISCUSSION
+
+    # Sending instructions triggers a cooldown on a per-channel basis.
+    # More instruction messages will not be sent in the same channel until the cooldown has elapsed.
+    cooldown_seconds: 300
+
+    # The minimum amount of lines a message or code block must have for instructions to be sent.
+    minimum_lines: 4
 
 
 free:
