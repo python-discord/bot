@@ -37,8 +37,8 @@ class Superstarify(InfractionScheduler, Cog):
             return  # User didn't change their nickname. Abort!
 
         log.trace(
-            f"{before} ({before.display_name}) is trying to change their nickname to "
-            f"{after.display_name}. Checking if the user is in superstar-prison..."
+            f"""{before} ({before.display_name}) is trying to change their nickname to \
+            {after.display_name}. Checking if the user is in superstar-prison..."""
         )
 
         active_superstarifies = await self.bot.api_client.get(
@@ -167,12 +167,12 @@ class Superstarify(InfractionScheduler, Cog):
             title="Congratulations!",
             colour=constants.Colours.soft_orange,
             description=(
-                f"Your previous nickname, **{old_nick}**, "
-                f"was so bad that we have decided to change it. "
-                f"Your new nickname will be **{forced_nick}**.\n\n"
-                f"You will be unable to change your nickname until **{expiry_str}**.\n\n"
-                "If you're confused by this, please read our "
-                f"[official nickname policy]({NICKNAME_POLICY_URL})."
+                f"""Your previous nickname, **{old_nick}**, \
+                was so bad that we have decided to change it. 
+                Your new nickname will be **{forced_nick}**.\n\n
+                You will be unable to change your nickname until **{expiry_str}**.\n\n
+                If you're confused by this, please read our \
+                [official nickname policy]({NICKNAME_POLICY_URL})."""
             )
         )
         await ctx.send(embed=embed)
@@ -211,8 +211,8 @@ class Superstarify(InfractionScheduler, Cog):
         # Don't bother sending a notification if the user left the guild.
         if not user:
             log.debug(
-                "User left the guild and therefore won't be notified about superstar "
-                f"{infraction['id']} pardon."
+                f"""User left the guild and therefore won't be notified about superstar 
+                {infraction['id']} pardon."""
             )
             return {}
 

@@ -87,8 +87,8 @@ class OffTopicNames(Cog):
                 f"{ctx.author} tried to add channel name '{name}' but it was too similar to '{match}'"
             )
             await ctx.send(
-                f":x: The channel name `{name}` is too similar to `{match}`, and thus was not added. "
-                "Use `!otn forceadd` to override this check."
+                f""":x: The channel name `{name}` is too similar to `{match}`, and thus was not added. 
+                Use `!otn forceadd` to override this check."""
             )
         else:
             await self._add_name(ctx, name)

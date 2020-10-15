@@ -32,10 +32,10 @@ class Site(Cog):
         embed.set_footer(text=url)
         embed.colour = Colour.blurple()
         embed.description = (
-            f"[Our official website]({url}) is an open-source community project "
-            "created with Python and Django. It contains information about the server "
-            "itself, lets you sign up for upcoming events, has its own wiki, contains "
-            "a list of valuable learning resources, and much more."
+            f"""[Our official website]({url}) is an open-source community project \
+            created with Python and Django. It contains information about the server \
+            itself, lets you sign up for upcoming events, has its own wiki, contains \
+            a list of valuable learning resources, and much more."""
         )
 
         await ctx.send(embed=embed)
@@ -49,9 +49,9 @@ class Site(Cog):
         embed.set_footer(text=f"{learning_url}")
         embed.colour = Colour.blurple()
         embed.description = (
-            f"The [Resources page]({learning_url}) on our website contains a "
-            "list of hand-selected learning resources that we regularly recommend "
-            f"to both beginners and experts."
+            f"""The [Resources page]({learning_url}) on our website contains a \
+            list of hand-selected learning resources that we regularly recommend \
+            to both beginners and experts."""
         )
 
         await ctx.send(embed=embed)
@@ -65,8 +65,8 @@ class Site(Cog):
         embed.set_footer(text=f"{tools_url}")
         embed.colour = Colour.blurple()
         embed.description = (
-            f"The [Tools page]({tools_url}) on our website contains a "
-            f"couple of the most popular tools for programming in Python."
+            f"""The [Tools page]({tools_url}) on our website contains a \
+            couple of the most popular tools for programming in Python."""
         )
 
         await ctx.send(embed=embed)
@@ -96,10 +96,10 @@ class Site(Cog):
         embed.set_footer(text=url)
         embed.colour = Colour.blurple()
         embed.description = (
-            "As the largest Python community on Discord, we get hundreds of questions every day. "
-            "Many of these questions have been asked before. We've compiled a list of the most "
-            "frequently asked questions along with their answers, which can be found on "
-            f"our [FAQ page]({url})."
+            """As the largest Python community on Discord, we get hundreds of questions every day. 
+            Many of these questions have been asked before. We've compiled a list of the most \
+            frequently asked questions along with their answers, which can be found on \
+            our [FAQ page]({url})."""
         )
 
         await ctx.send(embed=embed)
@@ -112,9 +112,9 @@ class Site(Cog):
         if not rules:
             # Rules were not submitted. Return the default description.
             rules_embed.description = (
-                "The rules and guidelines that apply to this community can be found on"
-                f" our [rules page]({PAGES_URL}/rules). We expect"
-                " all members of the community to have read and understood these."
+                f"""The rules and guidelines that apply to this community can be found on \
+                our [rules page]({PAGES_URL}/rules). We expect \
+                 all members of the community to have read and understood these."""
             )
 
             await ctx.send(embed=rules_embed)

@@ -37,9 +37,9 @@ class CodeJams(commands.Cog):
         # are always 3 members in the members list.
         if len(members) < 3:
             await ctx.send(
-                ":no_entry_sign: One of your arguments was invalid\n"
-                f"There must be a minimum of 3 valid members in your team. Found: {len(members)}"
-                " members"
+                f""":no_entry_sign: One of your arguments was invalid\n
+                There must be a minimum of 3 valid members in your team. Found: {len(members)} \
+                members"""
             )
             return
 
@@ -47,9 +47,9 @@ class CodeJams(commands.Cog):
         await self.add_roles(ctx.guild, members)
 
         await ctx.send(
-            f":ok_hand: Team created: {team_channel}\n"
-            f"**Team Leader:** {members[0].mention}\n"
-            f"**Team Members:** {' '.join(member.mention for member in members[1:])}"
+            f""":ok_hand: Team created: {team_channel}\n
+            **Team Leader:** {members[0].mention}\n
+            **Team Members:** {' '.join(member.mention for member in members[1:])}"""
         )
 
     async def get_category(self, guild: Guild) -> CategoryChannel:

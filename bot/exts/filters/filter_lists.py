@@ -88,14 +88,14 @@ class FilterLists(Cog):
             if e.status == 400:
                 await ctx.message.add_reaction("❌")
                 log.debug(
-                    f"{ctx.author} tried to add data to a {allow_type}, but the API returned 400, "
-                    "probably because the request violated the UniqueConstraint."
+                    f"""{ctx.author} tried to add data to a {allow_type}, but the API returned 400, \
+                    probably because the request violated the UniqueConstraint."""
                 )
                 raise BadArgument(
-                    f"Unable to add the item to the {allow_type}. "
-                    "The item probably already exists. Keep in mind that a "
-                    "blacklist and a whitelist for the same item cannot co-exist, "
-                    "and we do not permit any duplicates."
+                    f"""Unable to add the item to the {allow_type}. 
+                    The item probably already exists. Keep in mind that a \
+                    blacklist and a whitelist for the same item cannot co-exist, \
+                    and we do not permit any duplicates."""
                 )
             raise
 
@@ -129,8 +129,8 @@ class FilterLists(Cog):
                 await ctx.message.add_reaction("✅")
             except ResponseCodeError as e:
                 log.debug(
-                    f"{ctx.author} tried to delete an item with the id {item['id']}, but "
-                    f"the API raised an unexpected error: {e}"
+                    f"""{ctx.author} tried to delete an item with the id {item['id']}, but \
+                    the API raised an unexpected error: {e}"""
                 )
                 await ctx.message.add_reaction("❌")
         else:
@@ -175,8 +175,8 @@ class FilterLists(Cog):
             await ctx.message.add_reaction("✅")
         except ResponseCodeError as e:
             log.debug(
-                f"{ctx.author} tried to sync FilterList cache data but "
-                f"the API raised an unexpected error: {e}"
+                f"""{ctx.author} tried to sync FilterList cache data but \
+                the API raised an unexpected error: {e}"""
             )
             await ctx.message.add_reaction("❌")
 

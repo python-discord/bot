@@ -73,7 +73,6 @@ yaml.SafeLoader.add_constructor("!JOIN", _join_var_constructor)
 # Pointing old tag to !ENV constructor to avoid breaking existing configs
 yaml.SafeLoader.add_constructor("!REQUIRED_ENV", _env_var_constructor)
 
-
 with open("config-default.yml", encoding="UTF-8") as f:
     _CONFIG_YAML = yaml.safe_load(f)
 
@@ -118,8 +117,8 @@ def check_required_keys(keys):
                     raise KeyError(key)
         except KeyError:
             log.critical(
-                f"A configuration for `{key_path}` is required, but was not found. "
-                "Please set it in `config.yml` or setup an environment variable and try again."
+                f"""A configuration for `{key_path}` is required, but was not found. 
+                Please set it in `config.yml` or setup an environment variable and try again."""
             )
             raise
 
@@ -307,10 +306,10 @@ class Icons(metaclass=YAMLGetter):
     crown_green: str
     crown_red: str
 
-    defcon_denied: str    # noqa: E704
+    defcon_denied: str  # noqa: E704
     defcon_disabled: str  # noqa: E704
-    defcon_enabled: str   # noqa: E704
-    defcon_updated: str   # noqa: E704
+    defcon_enabled: str  # noqa: E704
+    defcon_updated: str  # noqa: E704
 
     filtering: str
 
@@ -360,6 +359,7 @@ class CleanMessages(metaclass=YAMLGetter):
     subsection = "clean"
 
     message_limit: int
+
 
 class Stats(metaclass=YAMLGetter):
     section = "bot"

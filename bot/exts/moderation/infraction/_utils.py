@@ -34,9 +34,9 @@ INFRACTION_APPEAL_FOOTER = f"To appeal this infraction, send an e-mail to {APPEA
 INFRACTION_AUTHOR_NAME = "Infraction information"
 
 INFRACTION_DESCRIPTION_TEMPLATE = (
-    "**Type:** {type}\n"
-    "**Expires:** {expires}\n"
-    "**Reason:** {reason}\n"
+    """**Type:** {type}\n
+    **Expires:** {expires}\n
+    **Reason:** {reason}\n"""
 )
 
 
@@ -135,8 +135,8 @@ async def get_active_infraction(
         if send_msg:
             log.trace(f"{user} has active infractions of type {infr_type}.")
             await ctx.send(
-                f":x: According to my records, this user already has a {infr_type} infraction. "
-                f"See infraction **#{active_infractions[0]['id']}**."
+                f""":x: According to my records, this user already has a {infr_type} infraction. \n
+                See infraction **#{active_infractions[0]['id']}**."""
             )
         return active_infractions[0]
     else:
@@ -208,7 +208,7 @@ async def send_private_embed(user: UserObject, embed: discord.Embed) -> bool:
         return True
     except (discord.HTTPException, discord.Forbidden, discord.NotFound):
         log.debug(
-            f"Infraction-related information could not be sent to user {user} ({user.id}). "
-            "The user either could not be retrieved or probably disabled their DMs."
+            f"""Infraction-related information could not be sent to user {user} ({user.id}). 
+            The user either could not be retrieved or probably disabled their DMs."""
         )
         return False

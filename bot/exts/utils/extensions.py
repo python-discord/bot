@@ -58,8 +58,8 @@ class Extension(commands.Converter):
             matches.sort()
             names = "\n".join(matches)
             raise commands.BadArgument(
-                f":x: `{argument}` is an ambiguous extension name. "
-                f"Please use one of the following fully-qualified names.```\n{names}```"
+                f""":x: `{argument}` is an ambiguous extension name. 
+                Please use one of the following fully-qualified names.```\n{names}```"""
             )
         elif matches:
             return matches[0]

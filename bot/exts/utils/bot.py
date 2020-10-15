@@ -92,8 +92,8 @@ class BotCog(Cog, name="Bot"):
             # Filtering valid Python codeblocks and exiting if a valid Python codeblock is found.
             if re.search("```(?:py|python)\n(.*?)```", msg, re.IGNORECASE | re.DOTALL) and not bad_ticks:
                 log.trace(
-                    "Someone wrote a message that was already a "
-                    "valid Python syntax highlighted code block. No action taken."
+                    """Someone wrote a message that was already a \
+                    valid Python syntax highlighted code block. No action taken."""
                 )
                 return None
 
@@ -315,18 +315,18 @@ class BotCog(Cog, name="Bot"):
 
                             content_escaped_markdown = RE_MARKDOWN.sub(r'\\\1', content)
                             howto += (
-                                "It looks like you're trying to paste code into this channel.\n\n"
-                                "Discord has support for Markdown, which allows you to post code with full "
-                                "syntax highlighting. Please use these whenever you paste code, as this "
-                                "helps improve the legibility and makes it easier for us to help you.\n\n"
-                                f"**To do this, use the following method:**\n"
-                                f"\\`\\`\\`python\n{content_escaped_markdown}\n\\`\\`\\`\n\n"
-                                "**This will result in the following:**\n"
-                                f"```python\n{content}\n```"
+                                f"""It looks like you're trying to paste code into this channel.\n\n
+                                Discord has support for Markdown, which allows you to post code with full \
+                                syntax highlighting. Please use these whenever you paste code, as this \
+                                helps improve the legibility and makes it easier for us to help you.\n\n
+                                **To do this, use the following method:**\n
+                                \\`\\`\\`python\n{content_escaped_markdown}\n\\`\\`\\`\n\n
+                                **This will result in the following:**\n
+                                ```python\n{content}\n```"""
                             )
 
-                            log.debug(f"{msg.author} posted something that needed to be put inside python code "
-                                      "blocks. Sending the user some instructions.")
+                            log.debug(f"""{msg.author} posted something that needed to be put inside python code \
+                                      blocks. Sending the user some instructions.""")
                         else:
                             log.trace("The code consists only of expressions, not sending instructions")
 
@@ -348,9 +348,9 @@ class BotCog(Cog, name="Bot"):
 
                 except SyntaxError:
                     log.trace(
-                        f"{msg.author} posted in a help channel, and when we tried to parse it as Python code, "
-                        "ast.parse raised a SyntaxError. This probably just means it wasn't Python code. "
-                        f"The message that was posted was:\n\n{msg.content}\n\n"
+                        f"""{msg.author} posted in a help channel, and when we tried to parse it as Python code, \
+                        ast.parse raised a SyntaxError. This probably just means it wasn't Python code. 
+                        The message that was posted was:\n\n{msg.content}\n\n"""
                     )
 
     @Cog.listener()

@@ -4,7 +4,7 @@ from discord import Member, Message
 
 
 async def apply(
-    last_message: Message, recent_messages: List[Message], config: Dict[str, int]
+        last_message: Message, recent_messages: List[Message], config: Dict[str, int]
 ) -> Optional[Tuple[str, Iterable[Member], Iterable[Message]]]:
     """Detects total message char count exceeding the limit sent by a single user."""
     relevant_messages = tuple(

@@ -534,8 +534,8 @@ class Filtering(Cog):
                         return msg.embeds
                     else:
                         log.trace(
-                            "Found a rich embed sent by a regular user account, "
-                            "but it was likely just an automatic URL embed."
+                            """Found a rich embed sent by a regular user account, \
+                            but it was likely just an automatic URL embed."""
                         )
                         return False
         return False
@@ -590,8 +590,8 @@ class Filtering(Cog):
                 await msg_obj.delete()
         except NotFound:
             log.info(
-                f"Tried to delete message {msg['id']}, but the message can't be found "
-                f"(it has been probably already deleted)."
+                f"""Tried to delete message {msg['id']}, but the message can't be found \
+                (it has been probably already deleted)."""
             )
         except HTTPException as e:
             log.warning(f"Failed to delete message {msg['id']}: status {e.status}")

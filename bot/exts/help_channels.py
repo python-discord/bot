@@ -316,8 +316,8 @@ class HelpChannels(commands.Cog):
 
         if len(names) > MAX_CHANNELS_PER_CATEGORY:
             log.warning(
-                f"Too many help channels ({len(names)}) already exist! "
-                f"Discord only supports {MAX_CHANNELS_PER_CATEGORY} in a category."
+                f"""Too many help channels ({len(names)}) already exist! 
+                Discord only supports {MAX_CHANNELS_PER_CATEGORY} in a category."""
             )
 
         log.trace(f"Got {len(names)} used names: {names}")
@@ -478,8 +478,8 @@ class HelpChannels(commands.Cog):
 
             delay = idle_seconds - time_elapsed
             log.info(
-                f"#{channel} ({channel.id}) is still active; "
-                f"scheduling it to be moved after {delay} seconds."
+                f"""#{channel} ({channel.id}) is still active; \
+                scheduling it to be moved after {delay} seconds."""
             )
 
             self.scheduler.schedule_later(delay, channel.id, self.move_idle_channel(channel))
@@ -628,9 +628,9 @@ class HelpChannels(commands.Cog):
             allowed_roles = [discord.Object(id_) for id_ in constants.HelpChannels.notify_roles]
 
             message = await channel.send(
-                f"{mentions} A new available help channel is needed but there "
-                f"are no more dormant ones. Consider freeing up some in-use channels manually by "
-                f"using the `{constants.Bot.prefix}dormant` command within the channels.",
+                f"""{mentions} A new available help channel is needed but there \
+                are no more dormant ones. Consider freeing up some in-use channels manually by \
+                using the `{constants.Bot.prefix}dormant` command within the channels.""",
                 allowed_mentions=discord.AllowedMentions(everyone=False, roles=allowed_roles)
             )
 
@@ -922,14 +922,14 @@ def validate_config() -> None:
 
     if total < available:
         raise ValueError(
-            f"max_total_channels ({total}) must be greater than or equal to max_available "
-            f"({available})."
+            f"""max_total_channels ({total}) must be greater than or equal to max_available \
+            ({available})."""
         )
 
     if total > MAX_CHANNELS_PER_CATEGORY:
         raise ValueError(
-            f"max_total_channels ({total}) must be less than or equal to "
-            f"{MAX_CHANNELS_PER_CATEGORY} due to Discord's limit on channels per category."
+            f"""max_total_channels ({total}) must be less than or equal to \
+            {MAX_CHANNELS_PER_CATEGORY} due to Discord's limit on channels per category."""
         )
 
 

@@ -23,8 +23,8 @@ class Bot(commands.Bot):
     def __init__(self, *args, redis_session: RedisSession, **kwargs):
         if "connector" in kwargs:
             warnings.warn(
-                "If login() is called (or the bot is started), the connector will be overwritten "
-                "with an internal one"
+                """If login() is called (or the bot is started), the connector will be overwritten \
+                with an internal one"""
             )
 
         super().__init__(*args, **kwargs)

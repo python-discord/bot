@@ -138,8 +138,8 @@ class InventoryURL(commands.Converter):
             raise commands.BadArgument(f"Cannot connect to host with URL `{url}`.")
         except ValueError:
             raise commands.BadArgument(
-                f"Failed to read Intersphinx inventory from URL `{url}`. "
-                "Are you sure that it's a valid inventory file?"
+                f"""Failed to read Intersphinx inventory from URL `{url}`. 
+                Are you sure that it's a valid inventory file?"""
             )
         return url
 
@@ -478,13 +478,13 @@ class Doc(commands.Cog):
                 package = await self.bot.loop.run_in_executor(None, fetch_func)
             except ConnectTimeout:
                 log.error(
-                    f"Fetching of inventory {inventory_url} timed out,"
-                    f" trying again. ({retry}/{FAILED_REQUEST_RETRY_AMOUNT})"
+                    f"""Fetching of inventory {inventory_url} timed out, \
+                     trying again. ({retry}/{FAILED_REQUEST_RETRY_AMOUNT})"""
                 )
             except ProtocolError:
                 log.error(
-                    f"Connection lost while fetching inventory {inventory_url},"
-                    f" trying again. ({retry}/{FAILED_REQUEST_RETRY_AMOUNT})"
+                    f"""Connection lost while fetching inventory {inventory_url}, \
+                     trying again. ({retry}/{FAILED_REQUEST_RETRY_AMOUNT})"""
                 )
             except HTTPError as e:
                 log.error(f"Fetching of inventory {inventory_url} failed with status code {e.response.status_code}.")

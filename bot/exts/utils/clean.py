@@ -178,9 +178,9 @@ class Clean(Cog):
         target_channels = ", ".join(channel.mention for channel in channels)
 
         message = (
-            f"**{len(message_ids)}** messages deleted in {target_channels} by "
-            f"{ctx.author.mention}\n\n"
-            f"A log of the deleted messages can be found [here]({log_url})."
+            f"""**{len(message_ids)}** messages deleted in {target_channels} by \
+            {ctx.author.mention}\n\n
+            A log of the deleted messages can be found [here]({log_url})."""
         )
 
         await self.mod_log.send_log_message(

@@ -141,12 +141,12 @@ def respect_role_hierarchy(member_arg: function.Argument) -> t.Callable:
 
             if target.top_role >= actor.top_role:
                 log.info(
-                    f"{actor} ({actor.id}) attempted to {cmd} "
-                    f"{target} ({target.id}), who has an equal or higher top role."
+                    f"""{actor} ({actor.id}) attempted to {cmd} \
+                    {target} ({target.id}), who has an equal or higher top role."""
                 )
                 await ctx.send(
-                    f":x: {actor.mention}, you may not {cmd} "
-                    "someone with an equal or higher top role."
+                    f""":x: {actor.mention}, you may not {cmd} \
+                    someone with an equal or higher top role."""
                 )
             else:
                 log.trace(f"{func.__name__}: {target.top_role=} < {actor.top_role=}; calling func")

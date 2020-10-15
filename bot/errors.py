@@ -15,6 +15,6 @@ class LockedResourceError(RuntimeError):
         self.id = resource_id
 
         super().__init__(
-            f"Cannot operate on {self.type.lower()} `{self.id}`; "
-            "it is currently locked and in use by another operation."
+            f"""Cannot operate on {self.type.lower()} `{self.id}`; \
+            it is currently locked and in use by another operation."""
         )

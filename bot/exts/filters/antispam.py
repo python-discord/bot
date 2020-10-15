@@ -267,16 +267,16 @@ def validate_config(rules_: Mapping = AntiSpamConfig.rules) -> Dict[str, str]:
     for name, config in rules_.items():
         if name not in RULE_FUNCTION_MAPPING:
             log.error(
-                f"Unrecognized antispam rule `{name}`. "
-                f"Valid rules are: {', '.join(RULE_FUNCTION_MAPPING)}"
+                f"""Unrecognized antispam rule `{name}`. 
+                Valid rules are: {', '.join(RULE_FUNCTION_MAPPING)}"""
             )
             validation_errors[name] = f"`{name}` is not recognized as an antispam rule."
             continue
         for required_key in ('interval', 'max'):
             if required_key not in config:
                 log.error(
-                    f"`{required_key}` is required but was not "
-                    f"set in rule `{name}`'s configuration."
+                    f"""`{required_key}` is required but was not \
+                    set in rule `{name}`'s configuration."""
                 )
                 validation_errors[name] = f"Key `{required_key}` is required but not set for rule `{name}`"
     return validation_errors

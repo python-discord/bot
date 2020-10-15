@@ -45,7 +45,7 @@ your information removed here as well.
 Feel free to review them at any point!
 
 Additionally, if you'd like to receive notifications for the announcements \
-we post in <#{constants.Channels.announcements}>
+we post in <#{constants.Channels.announcements}>  \
 from time to time, you can send `!subscribe` to <#{constants.Channels.bot_commands}> at any time \
 to assign yourself the **Announcements** role. We'll mention this role every time we make an announcement.
 
@@ -59,7 +59,7 @@ Thanks for accepting our rules!
 You can find a copy of our rules for reference at <https://pythondiscord.com/pages/rules>.
 
 Additionally, if you'd like to receive notifications for the announcements \
-we post in <#{constants.Channels.announcements}>
+we post in <#{constants.Channels.announcements}>  \
 from time to time, you can send `!subscribe` to <#{constants.Channels.bot_commands}> at any time \
 to assign yourself the **Announcements** role. We'll mention this role every time we make an announcement.
 
@@ -250,9 +250,9 @@ class Verification(Cog):
         core_dev_ping = f"<@&{constants.Roles.core_developers}>"
 
         confirmation_msg = await core_dev_channel.send(
-            f"{core_dev_ping} Verification determined that `{n_members}` members should be kicked as they haven't "
-            f"verified in `{constants.Verification.kicked_after}` days. This is `{percentage:.2%}` of the guild's "
-            f"population. Proceed?",
+            f"""{core_dev_ping} Verification determined that `{n_members}` members should be kicked as they haven't \
+            verified in `{constants.Verification.kicked_after}` days. This is `{percentage:.2%}` of the guild's \
+            population. Proceed?""",
             allowed_mentions=mention_role(constants.Roles.core_developers),
         )
 
@@ -388,8 +388,8 @@ class Verification(Cog):
         Returns the amount of successful requests.
         """
         log.info(
-            f"Assigning {role} role to {len(members)} members (not verified "
-            f"after {constants.Verification.unverified_after} days)"
+            f"""Assigning {role} role to {len(members)} members (not verified \
+            after {constants.Verification.unverified_after} days)"""
         )
 
         async def role_request(member: discord.Member) -> None:
@@ -600,14 +600,14 @@ class Verification(Cog):
         # alert the mods in mod-alerts channel
         if message.mentions or message.role_mentions:
             log.debug(
-                f"{message.author} mentioned one or more users "
-                f"and/or roles in {message.channel.name}"
+                f"""{message.author} mentioned one or more users \
+                and/or roles in {message.channel.name}"""
             )
 
             embed_text = (
-                f"{format_user(message.author)} sent a message in "
-                f"{message.channel.mention} that contained user and/or role mentions."
-                f"\n\n**Original message:**\n>>> {message.content}"
+                f"""{format_user(message.author)} sent a message in \
+                {message.channel.mention} that contained user and/or role mentions.
+                \n\n**Original message:**\n>>> {message.content}"""
             )
 
             # Send pretty mod log embed to mod-alerts
@@ -632,12 +632,12 @@ class Verification(Cog):
             return
 
         log.debug(
-            f"{ctx.author} posted '{ctx.message.content}' in the verification "
-            "channel. We are providing instructions how to verify."
+            f"""{ctx.author} posted '{ctx.message.content}' in the verification \
+            channel. We are providing instructions how to verify."""
         )
         await ctx.send(
-            f"{ctx.author.mention} Please type `!accept` to verify that you accept our rules, "
-            f"and gain access to the rest of the server.",
+            f"""{ctx.author.mention} Please type `!accept` to verify that you accept our rules, \
+            and gain access to the rest of the server.""",
             delete_after=20
         )
 

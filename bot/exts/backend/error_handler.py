@@ -87,8 +87,8 @@ class ErrorHandler(Cog):
             return  # Exit early to avoid logging.
 
         log.debug(
-            f"Command {command} invoked by {ctx.message.author} with error "
-            f"{e.__class__.__name__}: {e}"
+            f"""Command {command} invoked by {ctx.message.author} with error \
+            {e.__class__.__name__}: {e}"""
         )
 
     @staticmethod
@@ -151,8 +151,8 @@ class ErrorHandler(Cog):
             tag_name = await TagNameConverter.convert(ctx, ctx.invoked_with)
         except errors.BadArgument:
             log.debug(
-                f"{ctx.author} tried to use an invalid command "
-                f"and the fallback tag failed validation in TagNameConverter."
+                f"""{ctx.author} tried to use an invalid command \
+                and the fallback tag failed validation in TagNameConverter."""
             )
         else:
             with contextlib.suppress(ResponseCodeError):

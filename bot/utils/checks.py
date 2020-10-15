@@ -153,8 +153,8 @@ def cooldown_with_role_bypass(rate: int, per: float, type: BucketType = BucketTy
         #
         # if the `before_invoke` detail is ever a problem then I can quickly just swap over.
         if not isinstance(command, Command):
-            raise TypeError('Decorator `cooldown_with_role_bypass` must be applied after the command decorator. '
-                            'This means it has to be above the command decorator in the code.')
+            raise TypeError("""Decorator `cooldown_with_role_bypass` must be applied after the command decorator. 
+                            This means it has to be above the command decorator in the code.""")
 
         command._before_invoke = predicate
 

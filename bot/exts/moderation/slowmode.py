@@ -64,8 +64,8 @@ class Slowmode(Cog):
 
         else:
             log.info(
-                f'{ctx.author} tried to set the slowmode delay of #{channel} to {humanized_delay}, '
-                'which is not between 0 and 6 hours.'
+                f'''{ctx.author} tried to set the slowmode delay of #{channel} to {humanized_delay}, \
+                which is not between 0 and 6 hours.'''
             )
 
             await ctx.send(

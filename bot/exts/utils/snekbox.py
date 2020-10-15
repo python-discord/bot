@@ -89,8 +89,8 @@ class Snekbox(Cog):
         else:
             code = textwrap.dedent(RAW_CODE_REGEX.fullmatch(code).group("code"))
             log.trace(
-                f"Eval message contains unformatted or badly formatted code, "
-                f"stripping whitespace only:\n{code}"
+                f"""Eval message contains unformatted or badly formatted code, \
+                stripping whitespace only:\n{code}"""
             )
 
         return code
@@ -287,8 +287,8 @@ class Snekbox(Cog):
         """
         if ctx.author.id in self.jobs:
             await ctx.send(
-                f"{ctx.author.mention} You've already got a job running - "
-                "please wait for it to finish!"
+                f"""{ctx.author.mention} You've already got a job running - \
+                please wait for it to finish!"""
             )
             return
 

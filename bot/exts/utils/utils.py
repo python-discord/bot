@@ -124,9 +124,9 @@ class Utils(Cog):
         if match:
             return await messages.send_denial(
                 ctx,
-                "**Non-Character Detected**\n"
-                "Only unicode characters can be processed, but a custom Discord emoji "
-                "was found. Please remove it and try again."
+                """**Non-Character Detected**\n
+                Only unicode characters can be processed, but a custom Discord emoji \
+                was found. Please remove it and try again."""
             )
 
         if len(characters) > 50:

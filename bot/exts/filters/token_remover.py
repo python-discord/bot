@@ -16,8 +16,8 @@ from bot.utils.messages import format_user
 log = logging.getLogger(__name__)
 
 LOG_MESSAGE = (
-    "Censored a seemingly valid token sent by {author} in {channel}, "
-    "token was `{user_id}.{timestamp}.{hmac}`"
+    """Censored a seemingly valid token sent by {author} in {channel}, \
+    token was `{user_id}.{timestamp}.{hmac}`"""
 )
 UNKNOWN_USER_LOG_MESSAGE = "Decoded user ID: `{user_id}` (Not present in server)."
 KNOWN_USER_LOG_MESSAGE = (
@@ -25,13 +25,13 @@ KNOWN_USER_LOG_MESSAGE = (
     "This matches `{user_name}` and means this is likely a valid **{kind}** token."
 )
 DELETION_MESSAGE_TEMPLATE = (
-    "Hey {mention}! I noticed you posted a seemingly valid Discord API "
-    "token in your message and have removed your message. "
-    "This means that your token has been **compromised**. "
-    "Please change your token **immediately** at: "
-    "<https://discordapp.com/developers/applications/me>\n\n"
-    "Feel free to re-post it with the token removed. "
-    "If you believe this was a mistake, please let us know!"
+    """Hey {mention}! I noticed you posted a seemingly valid Discord API \
+    token in your message and have removed your message. 
+    This means that your token has been **compromised**. 
+    Please change your token **immediately** at: 
+    <https://discordapp.com/developers/applications/me>\n\n
+    Feel free to re-post it with the token removed. 
+    If you believe this was a mistake, please let us know!"""
 )
 DISCORD_EPOCH = 1_420_070_400
 TOKEN_EPOCH = 1_293_840_000
@@ -220,8 +220,8 @@ class TokenRemover(Cog):
         unique = len(set(b64_content.lower()))
         if unique <= 3:
             log.debug(
-                f"Considering the HMAC {b64_content} a dummy because it has {unique}"
-                " case-insensitively unique characters"
+                f"""Considering the HMAC {b64_content} a dummy because it has {unique} \
+                 case-insensitively unique characters"""
             )
             return False
         else:

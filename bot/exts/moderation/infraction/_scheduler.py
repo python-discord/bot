@@ -66,8 +66,8 @@ class InfractionScheduler:
         # Mark as inactive if less than a minute remains.
         if delta < 60:
             log.info(
-                "Infraction will be deactivated instead of re-applied "
-                "because less than 1 minute remains."
+                """Infraction will be deactivated instead of re-applied \
+                because less than 1 minute remains."""
             )
             await self.deactivate_infraction(infraction)
             return
