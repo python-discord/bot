@@ -208,6 +208,10 @@ def _fix_indentation(content: str) -> str:
     first_indent = _get_leading_spaces(content)
     first_line = lines[0][first_indent:]
 
+    # Can't assume there'll be multiple lines cause line counts of edited messages aren't checked.
+    if len(lines) == 1:
+        return first_line
+
     second_indent = _get_leading_spaces(lines[1])
 
     # If the first line ends with a colon, all successive lines need to be indented one
