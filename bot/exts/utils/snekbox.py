@@ -37,6 +37,11 @@ RAW_CODE_REGEX = re.compile(
     r"\s*$",  # any trailing whitespace until the end of the string
     re.DOTALL  # "." also matches newlines
 )
+ESCAPE_CODE_TRANS = str.maketrans({
+            "\n": "\\n",
+            "'": "\'",
+            '"': '\"'
+        })
 
 MAX_PASTE_LEN = 1000
 
@@ -234,6 +239,11 @@ class Snekbox(Cog):
 
         return output, None
 
+    @staticmethod
+    def escape_code(code: str) -> str:
+        """Escapes quotes and newlines in code string."""
+        return code.translate(ESCAPE_TRANS)
+
     async def send_timeit(self, ctx: Context, code: str) -> Message:
         """
         Evaluate code with timing, format it, and send the output to the corresponding channel.
@@ -241,7 +251,7 @@ class Snekbox(Cog):
         Return the bot response.
         """
         async with ctx.typing():
-            code = code.replace("'", r"\'")
+            code = self.escape_code(code)
             code = f"import timeit\n" \
                    f"timeit.main(['{code}'])"
 
