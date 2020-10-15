@@ -367,7 +367,7 @@ class Verification(Cog):
             "actor": self.bot.user.id,  # Bot actions this autonomously
             "expires_at": None,
             "hidden": True,
-            "reason": f"Kicked for not having verified after {constants.Verification.kicked_after} days",
+            "reason": "Verification kick",
             "type": "note",
             "user": member.id,
         }
