@@ -252,21 +252,6 @@ class HelpChannels(commands.Cog):
         return channel
 
     @staticmethod
-    def get_clean_channel_name(channel: discord.TextChannel) -> str:
-        """Return a clean channel name without status emojis prefix."""
-        prefix = constants.HelpChannels.name_prefix
-        try:
-            # Try to remove the status prefix using the index of the channel prefix
-            name = channel.name[channel.name.index(prefix):]
-            log.trace(f"The clean name for `{channel}` is `{name}`")
-        except ValueError:
-            # If, for some reason, the channel name does not contain "help-" fall back gracefully
-            log.info(f"Can't get clean name because `{channel}` isn't prefixed by `{prefix}`.")
-            name = channel.name
-
-        return name
-
-    @staticmethod
     def is_excluded_channel(channel: discord.abc.GuildChannel) -> bool:
         """Check if a channel should be excluded from the help channel system."""
         return not isinstance(channel, discord.TextChannel) or channel.id in EXCLUDED_CHANNELS
@@ -317,7 +302,7 @@ class HelpChannels(commands.Cog):
         names = set()
         for cat in (self.available_category, self.in_use_category, self.dormant_category):
             for channel in self.get_category_channels(cat):
-                names.add(self.get_clean_channel_name(channel))
+                names.add(channel.name)
 
         if len(names) > MAX_CHANNELS_PER_CATEGORY:
             log.warning(
