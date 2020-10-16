@@ -2,7 +2,7 @@ import logging
 
 from bot import constants
 from bot.bot import Bot
-from bot.exts.help_channels._channels import MAX_CHANNELS_PER_CATEGORY
+from bot.exts.help_channels._channel import MAX_CHANNELS_PER_CATEGORY
 
 log = logging.getLogger(__name__)
 

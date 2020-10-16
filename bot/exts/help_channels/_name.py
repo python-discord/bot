@@ -7,7 +7,7 @@ from pathlib import Path
 import discord
 
 from bot import constants
-from bot.exts.help_channels._channels import MAX_CHANNELS_PER_CATEGORY, get_category_channels
+from bot.exts.help_channels._channel import MAX_CHANNELS_PER_CATEGORY, get_category_channels
 
 log = logging.getLogger(__name__)
 

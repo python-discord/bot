@@ -11,8 +11,8 @@ from discord.ext import commands
 
 from bot import constants
 from bot.bot import Bot
-from bot.exts.help_channels import _channels
-from bot.exts.help_channels._names import create_name_queue
+from bot.exts.help_channels import _channel
+from bot.exts.help_channels._name import create_name_queue
 from bot.utils import channel as channel_utils
 from bot.utils.scheduling import Scheduler
 
@@ -147,7 +147,7 @@ class HelpChannels(commands.Cog):
         """
         log.trace("Creating the channel queue.")
 
-        channels = list(_channels.get_category_channels(self.dormant_category))
+        channels = list(_channel.get_category_channels(self.dormant_category))
         random.shuffle(channels)
 
         log.trace("Populating the channel queue with channels.")
@@ -278,7 +278,7 @@ class HelpChannels(commands.Cog):
         """Initialise the Available category with channels."""
         log.trace("Initialising the Available category with channels.")
 
-        channels = list(_channels.get_category_channels(self.available_category))
+        channels = list(_channel.get_category_channels(self.available_category))
         missing = constants.HelpChannels.max_available - len(channels)
 
         # If we've got less than `max_available` channel available, we should add some.
@@ -329,7 +329,7 @@ class HelpChannels(commands.Cog):
         )
 
         log.trace("Moving or rescheduling in-use channels.")
-        for channel in _channels.get_category_channels(self.in_use_category):
+        for channel in _channel.get_category_channels(self.in_use_category):
             await self.move_idle_channel(channel, has_task=False)
 
         # Prevent the command from being used until ready.
@@ -347,9 +347,9 @@ class HelpChannels(commands.Cog):
 
     def report_stats(self) -> None:
         """Report the channel count stats."""
-        total_in_use = sum(1 for _ in _channels.get_category_channels(self.in_use_category))
-        total_available = sum(1 for _ in _channels.get_category_channels(self.available_category))
-        total_dormant = sum(1 for _ in _channels.get_category_channels(self.dormant_category))
+        total_in_use = sum(1 for _ in _channel.get_category_channels(self.in_use_category))
+        total_available = sum(1 for _ in _channel.get_category_channels(self.available_category))
+        total_dormant = sum(1 for _ in _channel.get_category_channels(self.dormant_category))
 
         self.bot.stats.gauge("help.total.in_use", total_in_use)
         self.bot.stats.gauge("help.total.available", total_available)
@@ -595,7 +595,7 @@ class HelpChannels(commands.Cog):
         await self.check_for_answer(message)
 
         is_available = channel_utils.is_in_category(channel, constants.Categories.help_available)
-        if not is_available or _channels.is_excluded_channel(channel):
+        if not is_available or _channel.is_excluded_channel(channel):
             return  # Ignore messages outside the Available category or in excluded channels.
 
         log.trace("Waiting for the cog to be ready before processing messages.")
