@@ -12,7 +12,7 @@ from discord.ext import commands
 from bot import constants
 from bot.bot import Bot
 from bot.exts.help_channels import _channels
-from bot.exts.help_channels._names import MAX_CHANNELS_PER_CATEGORY, create_name_queue
+from bot.exts.help_channels._names import create_name_queue
 from bot.utils import channel as channel_utils
 from bot.utils.scheduling import Scheduler
 
@@ -826,25 +826,3 @@ class HelpChannels(commands.Cog):
         self.queue_tasks.remove(task)
 
         return channel
-
-
-def validate_config() -> None:
-    """Raise a ValueError if the cog's config is invalid."""
-    log.trace("Validating config.")
-    total = constants.HelpChannels.max_total_channels
-    available = constants.HelpChannels.max_available
-
-    if total == 0 or available == 0:
-        raise ValueError("max_total_channels and max_available and must be greater than 0.")
-
-    if total < available:
-        raise ValueError(
-            f"max_total_channels ({total}) must be greater than or equal to max_available "
-            f"({available})."
-        )
-
-    if total > MAX_CHANNELS_PER_CATEGORY:
-        raise ValueError(
-            f"max_total_channels ({total}) must be less than or equal to "
-            f"{MAX_CHANNELS_PER_CATEGORY} due to Discord's limit on channels per category."
-        )
