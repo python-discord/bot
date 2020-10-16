@@ -42,9 +42,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
     async def test_upload_output(self, mock_paste_util):
         """Upload the eval output to the URLs.paste_service.format(key="documents") endpoint."""
         await self.cog.upload_output("Test output.")
-        mock_paste_util.assert_called_once_with(
-            self.bot.http_session, "Test output.", extension="txt"
-        )
+        mock_paste_util.assert_called_once_with("Test output.", extension="txt")
 
     def test_prepare_input(self):
         cases = (

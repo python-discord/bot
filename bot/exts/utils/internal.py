@@ -195,7 +195,7 @@ async def func():  # (None,) -> Any
             truncate_index = newline_truncate_index
 
         if len(out) > truncate_index:
-            paste_link = await send_to_paste_service(self.bot.http_session, out, extension="py")
+            paste_link = await send_to_paste_service(out, extension="py")
             if paste_link is not None:
                 paste_text = f"full contents at {paste_link}"
             else:
