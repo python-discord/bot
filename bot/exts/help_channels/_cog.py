@@ -928,13 +928,3 @@ def validate_config() -> None:
             f"max_total_channels ({total}) must be less than or equal to "
             f"{MAX_CHANNELS_PER_CATEGORY} due to Discord's limit on channels per category."
         )
-
-
-def setup(bot: Bot) -> None:
-    """Load the HelpChannels cog."""
-    try:
-        validate_config()
-    except ValueError as e:
-        log.error(f"HelpChannels cog will not be loaded due to misconfiguration: {e}")
-    else:
-        bot.add_cog(HelpChannels(bot))
