@@ -11,6 +11,7 @@ from discord.ext.commands import Cog, Context, command, group, has_any_role
 from discord.utils import snowflake_time
 
 from bot import constants
+from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.decorators import has_no_roles, in_whitelist
 from bot.exts.moderation.modlog import ModLog
@@ -355,6 +356,28 @@ class Verification(Cog):
 
         return n_success
 
+    async def _add_kick_note(self, member: discord.Member) -> None:
+        """
+        Post a note regarding `member` being kicked to site.
+
+        Allows keeping track of kicked members for auditing purposes.
+        """
+        payload = {
+            "active": False,
+            "actor": self.bot.user.id,  # Bot actions this autonomously
+            "expires_at": None,
+            "hidden": True,
+            "reason": "Verification kick",
+            "type": "note",
+            "user": member.id,
+        }
+
+        log.trace(f"Posting kick note for member {member} ({member.id})")
+        try:
+            await self.bot.api_client.post("bot/infractions", json=payload)
+        except ResponseCodeError as api_exc:
+            log.warning("Failed to post kick note", exc_info=api_exc)
+
     async def _kick_members(self, members: t.Collection[discord.Member]) -> int:
         """
         Kick `members` from the PyDis guild.
@@ -373,6 +396,7 @@ class Verification(Cog):
             except discord.HTTPException as suspicious_exception:
                 raise StopExecution(reason=suspicious_exception)
             await member.kick(reason=f"User has not verified in {constants.Verification.kicked_after} days")
+            await self._add_kick_note(member)
 
         n_kicked = await self._send_requests(members, kick_request, Limit(batch_size=2, sleep_secs=1))
         self.bot.stats.incr("verification.kicked", count=n_kicked)
