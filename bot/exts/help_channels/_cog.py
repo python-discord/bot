@@ -12,6 +12,7 @@ from discord.ext import commands
 from bot import constants
 from bot.bot import Bot
 from bot.exts.help_channels import _channel
+from bot.exts.help_channels._message import pin, unpin
 from bot.exts.help_channels._name import create_name_queue
 from bot.utils import channel as channel_utils
 from bot.utils.scheduling import Scheduler
@@ -102,10 +103,6 @@ class HelpChannels(commands.Cog):
     # This dictionary maps a help channel to the time it was claimed
     # RedisCache[discord.TextChannel.id, UtcPosixTimestamp]
     claim_times = RedisCache()
-
-    # This cache maps a help channel to original question message in same channel.
-    # RedisCache[discord.TextChannel.id, discord.Message.id]
-    question_messages = RedisCache()
 
     def __init__(self, bot: Bot):
         self.bot = bot
@@ -495,7 +492,7 @@ class HelpChannels(commands.Cog):
         embed = discord.Embed(description=DORMANT_MSG)
         await channel.send(embed=embed)
 
-        await self.unpin(channel)
+        await unpin(channel)
 
         log.trace(f"Pushing #{channel} ({channel.id}) into the channel queue.")
         self.channel_queue.put_nowait(channel)
@@ -616,7 +613,7 @@ class HelpChannels(commands.Cog):
             await self.move_to_in_use(channel)
             await self.revoke_send_permissions(message.author)
 
-            await self.pin(message)
+            await pin(message)
 
             # Add user with channel for dormant check.
             await self.help_channel_claimants.set(channel.id, message.author.id)
@@ -772,47 +769,6 @@ class HelpChannels(commands.Cog):
         else:
             log.trace(f"Dormant message not found in {channel_info}; sending a new message.")
             await channel.send(embed=embed)
-
-    async def pin_wrapper(self, msg_id: int, channel: discord.TextChannel, *, pin: bool) -> bool:
-        """
-        Pin message `msg_id` in `channel` if `pin` is True or unpin if it's False.
-
-        Return True if successful and False otherwise.
-        """
-        channel_str = f"#{channel} ({channel.id})"
-        if pin:
-            func = self.bot.http.pin_message
-            verb = "pin"
-        else:
-            func = self.bot.http.unpin_message
-            verb = "unpin"
-
-        try:
-            await func(channel.id, msg_id)
-        except discord.HTTPException as e:
-            if e.code == 10008:
-                log.debug(f"Message {msg_id} in {channel_str} doesn't exist; can't {verb}.")
-            else:
-                log.exception(
-                    f"Error {verb}ning message {msg_id} in {channel_str}: {e.status} ({e.code})"
-                )
-            return False
-        else:
-            log.trace(f"{verb.capitalize()}ned message {msg_id} in {channel_str}.")
-            return True
-
-    async def pin(self, message: discord.Message) -> None:
-        """Pin an initial question `message` and store it in a cache."""
-        if await self.pin_wrapper(message.id, message.channel, pin=True):
-            await self.question_messages.set(message.channel.id, message.id)
-
-    async def unpin(self, channel: discord.TextChannel) -> None:
-        """Unpin the initial question message sent in `channel`."""
-        msg_id = await self.question_messages.pop(channel.id)
-        if msg_id is None:
-            log.debug(f"#{channel} ({channel.id}) doesn't have a message pinned.")
-        else:
-            await self.pin_wrapper(msg_id, channel, pin=False)
 
     async def wait_for_dormant_channel(self) -> discord.TextChannel:
         """Wait for a dormant channel to become available in the queue and return it."""
