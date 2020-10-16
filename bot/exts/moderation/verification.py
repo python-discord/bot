@@ -372,7 +372,7 @@ class Verification(Cog):
             "user": member.id,
         }
 
-        log.trace(f"Posting kick note: {payload!r}")
+        log.trace(f"Posting kick note for member {member} ({member.id})")
         try:
             await self.bot.api_client.post("bot/infractions", json=payload)
         except ResponseCodeError as api_exc:
