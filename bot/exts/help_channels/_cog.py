@@ -1,11 +1,8 @@
 import asyncio
-import json
 import logging
 import random
 import typing as t
-from collections import deque
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
 import discord
 import discord.abc
@@ -14,14 +11,14 @@ from discord.ext import commands
 
 from bot import constants
 from bot.bot import Bot
+from bot.exts.help_channels import _channels
+from bot.exts.help_channels._names import MAX_CHANNELS_PER_CATEGORY, create_name_queue
 from bot.utils import channel as channel_utils
 from bot.utils.scheduling import Scheduler
 
 log = logging.getLogger(__name__)
 
 ASKING_GUIDE_URL = "https://pythondiscord.com/pages/asking-good-questions/"
-MAX_CHANNELS_PER_CATEGORY = 50
-EXCLUDED_CHANNELS = (constants.Channels.how_to_get_help, constants.Channels.cooldown)
 
 HELP_CHANNEL_TOPIC = """
 This is a Python help channel. You can claim your own help channel in the Python Help: Available category.
@@ -123,7 +120,6 @@ class HelpChannels(commands.Cog):
         self.channel_queue: asyncio.Queue[discord.TextChannel] = None
         self.name_queue: t.Deque[str] = None
 
-        self.name_positions = self.get_names()
         self.last_notification: t.Optional[datetime] = None
 
         # Asyncio stuff
@@ -151,7 +147,7 @@ class HelpChannels(commands.Cog):
         """
         log.trace("Creating the channel queue.")
 
-        channels = list(self.get_category_channels(self.dormant_category))
+        channels = list(_channels.get_category_channels(self.dormant_category))
         random.shuffle(channels)
 
         log.trace("Populating the channel queue with channels.")
@@ -179,18 +175,6 @@ class HelpChannels(commands.Cog):
 
         log.debug(f"Creating a new dormant channel named {name}.")
         return await self.dormant_category.create_text_channel(name, topic=HELP_CHANNEL_TOPIC)
-
-    def create_name_queue(self) -> deque:
-        """Return a queue of element names to use for creating new channels."""
-        log.trace("Creating the chemical element name queue.")
-
-        used_names = self.get_used_names()
-
-        log.trace("Determining the available names.")
-        available_names = (name for name in self.name_positions if name not in used_names)
-
-        log.trace("Populating the name queue with names.")
-        return deque(available_names)
 
     async def dormant_check(self, ctx: commands.Context) -> bool:
         """Return True if the user is the help channel claimant or passes the role check."""
@@ -251,20 +235,6 @@ class HelpChannels(commands.Cog):
 
         return channel
 
-    @staticmethod
-    def is_excluded_channel(channel: discord.abc.GuildChannel) -> bool:
-        """Check if a channel should be excluded from the help channel system."""
-        return not isinstance(channel, discord.TextChannel) or channel.id in EXCLUDED_CHANNELS
-
-    def get_category_channels(self, category: discord.CategoryChannel) -> t.Iterable[discord.TextChannel]:
-        """Yield the text channels of the `category` in an unsorted manner."""
-        log.trace(f"Getting text channels in the category '{category}' ({category.id}).")
-
-        # This is faster than using category.channels because the latter sorts them.
-        for channel in self.bot.get_guild(constants.Guild.id).channels:
-            if channel.category_id == category.id and not self.is_excluded_channel(channel):
-                yield channel
-
     async def get_in_use_time(self, channel_id: int) -> t.Optional[timedelta]:
         """Return the duration `channel_id` has been in use. Return None if it's not in use."""
         log.trace(f"Calculating in use time for channel {channel_id}.")
@@ -273,45 +243,6 @@ class HelpChannels(commands.Cog):
         if claimed_timestamp:
             claimed = datetime.utcfromtimestamp(claimed_timestamp)
             return datetime.utcnow() - claimed
-
-    @staticmethod
-    def get_names() -> t.List[str]:
-        """
-        Return a truncated list of prefixed element names.
-
-        The amount of names is configured with `HelpChannels.max_total_channels`.
-        The prefix is configured with `HelpChannels.name_prefix`.
-        """
-        count = constants.HelpChannels.max_total_channels
-        prefix = constants.HelpChannels.name_prefix
-
-        log.trace(f"Getting the first {count} element names from JSON.")
-
-        with Path("bot/resources/elements.json").open(encoding="utf-8") as elements_file:
-            all_names = json.load(elements_file)
-
-        if prefix:
-            return [prefix + name for name in all_names[:count]]
-        else:
-            return all_names[:count]
-
-    def get_used_names(self) -> t.Set[str]:
-        """Return channel names which are already being used."""
-        log.trace("Getting channel names which are already being used.")
-
-        names = set()
-        for cat in (self.available_category, self.in_use_category, self.dormant_category):
-            for channel in self.get_category_channels(cat):
-                names.add(channel.name)
-
-        if len(names) > MAX_CHANNELS_PER_CATEGORY:
-            log.warning(
-                f"Too many help channels ({len(names)}) already exist! "
-                f"Discord only supports {MAX_CHANNELS_PER_CATEGORY} in a category."
-            )
-
-        log.trace(f"Got {len(names)} used names: {names}")
-        return names
 
     @classmethod
     async def get_idle_time(cls, channel: discord.TextChannel) -> t.Optional[int]:
@@ -347,7 +278,7 @@ class HelpChannels(commands.Cog):
         """Initialise the Available category with channels."""
         log.trace("Initialising the Available category with channels.")
 
-        channels = list(self.get_category_channels(self.available_category))
+        channels = list(_channels.get_category_channels(self.available_category))
         missing = constants.HelpChannels.max_available - len(channels)
 
         # If we've got less than `max_available` channel available, we should add some.
@@ -391,10 +322,14 @@ class HelpChannels(commands.Cog):
         await self.check_cooldowns()
 
         self.channel_queue = self.create_channel_queue()
-        self.name_queue = self.create_name_queue()
+        self.name_queue = create_name_queue(
+            self.available_category,
+            self.in_use_category,
+            self.dormant_category,
+        )
 
         log.trace("Moving or rescheduling in-use channels.")
-        for channel in self.get_category_channels(self.in_use_category):
+        for channel in _channels.get_category_channels(self.in_use_category):
             await self.move_idle_channel(channel, has_task=False)
 
         # Prevent the command from being used until ready.
@@ -412,9 +347,9 @@ class HelpChannels(commands.Cog):
 
     def report_stats(self) -> None:
         """Report the channel count stats."""
-        total_in_use = sum(1 for _ in self.get_category_channels(self.in_use_category))
-        total_available = sum(1 for _ in self.get_category_channels(self.available_category))
-        total_dormant = sum(1 for _ in self.get_category_channels(self.dormant_category))
+        total_in_use = sum(1 for _ in _channels.get_category_channels(self.in_use_category))
+        total_available = sum(1 for _ in _channels.get_category_channels(self.available_category))
+        total_dormant = sum(1 for _ in _channels.get_category_channels(self.dormant_category))
 
         self.bot.stats.gauge("help.total.in_use", total_in_use)
         self.bot.stats.gauge("help.total.available", total_available)
@@ -660,7 +595,7 @@ class HelpChannels(commands.Cog):
         await self.check_for_answer(message)
 
         is_available = channel_utils.is_in_category(channel, constants.Categories.help_available)
-        if not is_available or self.is_excluded_channel(channel):
+        if not is_available or _channels.is_excluded_channel(channel):
             return  # Ignore messages outside the Available category or in excluded channels.
 
         log.trace("Waiting for the cog to be ready before processing messages.")
