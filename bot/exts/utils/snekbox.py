@@ -212,7 +212,7 @@ class Snekbox(Cog):
                 response = await ctx.send("Attempt to circumvent filter detected. Moderator team has been alerted.")
             else:
                 response = await ctx.send(msg)
-            self.bot.loop.create_task(wait_for_deletion(response, (ctx.author.id,), ctx.bot))
+            self.bot.loop.create_task(wait_for_deletion(response, (ctx.author.id,)))
 
             log.info(f"{ctx.author}'s job had a return code of {results['returncode']}")
         return response
