@@ -22,8 +22,11 @@ class RoleSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
     """Tests for determining differences between roles in the DB and roles in the Guild cache."""
 
     def setUp(self):
-        self.bot = helpers.MockBot()
-        self.syncer = RoleSyncer(self.bot)
+        patcher = mock.patch("bot.instance", new=helpers.MockBot())
+        self.bot = patcher.start()
+        self.addCleanup(patcher.stop)
+
+        self.syncer = RoleSyncer()
 
     @staticmethod
     def get_guild(*roles):
@@ -108,8 +111,11 @@ class RoleSyncerSyncTests(unittest.IsolatedAsyncioTestCase):
     """Tests for the API requests that sync roles."""
 
     def setUp(self):
-        self.bot = helpers.MockBot()
-        self.syncer = RoleSyncer(self.bot)
+        patcher = mock.patch("bot.instance", new=helpers.MockBot())
+        self.bot = patcher.start()
+        self.addCleanup(patcher.stop)
+
+        self.syncer = RoleSyncer()
 
     async def test_sync_created_roles(self):
         """Only POST requests should be made with the correct payload."""

@@ -18,21 +18,21 @@ class TestSyncer(Syncer):
 class SyncerBaseTests(unittest.TestCase):
     """Tests for the syncer base class."""
 
-    def setUp(self):
-        self.bot = helpers.MockBot()
-
     def test_instantiation_fails_without_abstract_methods(self):
         """The class must have abstract methods implemented."""
         with self.assertRaisesRegex(TypeError, "Can't instantiate abstract class"):
-            Syncer(self.bot)
+            Syncer()
 
 
 class SyncerSyncTests(unittest.IsolatedAsyncioTestCase):
     """Tests for main function orchestrating the sync."""
 
     def setUp(self):
-        self.bot = helpers.MockBot(user=helpers.MockMember(bot=True))
-        self.syncer = TestSyncer(self.bot)
+        patcher = mock.patch("bot.instance", new=helpers.MockBot(user=helpers.MockMember(bot=True)))
+        self.bot = patcher.start()
+        self.addCleanup(patcher.stop)
+
+        self.syncer = TestSyncer()
         self.guild = helpers.MockGuild()
 
         # Make sure `_get_diff` returns a MagicMock, not an AsyncMock

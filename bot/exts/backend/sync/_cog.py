@@ -18,8 +18,8 @@ class Sync(Cog):
 
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
-        self.role_syncer = _syncers.RoleSyncer(self.bot)
-        self.user_syncer = _syncers.UserSyncer(self.bot)
+        self.role_syncer = _syncers.RoleSyncer()
+        self.user_syncer = _syncers.UserSyncer()
 
         self.bot.loop.create_task(self.sync_guild())
 

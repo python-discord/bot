@@ -1,4 +1,5 @@
 import unittest
+from unittest import mock
 
 from bot.exts.backend.sync._syncers import UserSyncer, _Diff
 from tests import helpers
@@ -19,8 +20,11 @@ class UserSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
     """Tests for determining differences between users in the DB and users in the Guild cache."""
 
     def setUp(self):
-        self.bot = helpers.MockBot()
-        self.syncer = UserSyncer(self.bot)
+        patcher = mock.patch("bot.instance", new=helpers.MockBot())
+        self.bot = patcher.start()
+        self.addCleanup(patcher.stop)
+
+        self.syncer = UserSyncer()
 
     @staticmethod
     def get_guild(*members):
@@ -186,8 +190,11 @@ class UserSyncerSyncTests(unittest.IsolatedAsyncioTestCase):
     """Tests for the API requests that sync users."""
 
     def setUp(self):
-        self.bot = helpers.MockBot()
-        self.syncer = UserSyncer(self.bot)
+        patcher = mock.patch("bot.instance", new=helpers.MockBot())
+        self.bot = patcher.start()
+        self.addCleanup(patcher.stop)
+
+        self.syncer = UserSyncer()
 
     async def test_sync_created_users(self):
         """Only POST requests should be made with the correct payload."""

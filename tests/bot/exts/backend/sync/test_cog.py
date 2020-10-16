@@ -29,24 +29,24 @@ class SyncCogTestCase(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.bot = helpers.MockBot()
 
-        self.role_syncer_patcher = mock.patch(
+        role_syncer_patcher = mock.patch(
             "bot.exts.backend.sync._syncers.RoleSyncer",
             autospec=Syncer,
             spec_set=True
         )
-        self.user_syncer_patcher = mock.patch(
+        user_syncer_patcher = mock.patch(
             "bot.exts.backend.sync._syncers.UserSyncer",
             autospec=Syncer,
             spec_set=True
         )
-        self.RoleSyncer = self.role_syncer_patcher.start()
-        self.UserSyncer = self.user_syncer_patcher.start()
+
+        self.RoleSyncer = role_syncer_patcher.start()
+        self.UserSyncer = user_syncer_patcher.start()
+
+        self.addCleanup(role_syncer_patcher.stop)
+        self.addCleanup(user_syncer_patcher.stop)
 
         self.cog = Sync(self.bot)
-
-    def tearDown(self):
-        self.role_syncer_patcher.stop()
-        self.user_syncer_patcher.stop()
 
     @staticmethod
     def response_error(status: int) -> ResponseCodeError:
@@ -73,8 +73,8 @@ class SyncCogTests(SyncCogTestCase):
 
         Sync(self.bot)
 
-        self.RoleSyncer.assert_called_once_with(self.bot)
-        self.UserSyncer.assert_called_once_with(self.bot)
+        self.RoleSyncer.assert_called_once_with()
+        self.UserSyncer.assert_called_once_with()
         sync_guild.assert_called_once_with()
         self.bot.loop.create_task.assert_called_once_with(mock_sync_guild_coro)
 
