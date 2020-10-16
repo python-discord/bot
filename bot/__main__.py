@@ -9,6 +9,7 @@ from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
 from sentry_sdk.integrations.redis import RedisIntegration
 
+import bot
 from bot import constants
 from bot.bot import Bot
 from bot.utils.extensions import EXTENSIONS
@@ -54,7 +55,7 @@ intents.dm_reactions = False
 intents.invites = False
 intents.webhooks = False
 intents.integrations = False
-bot = Bot(
+bot.instance = Bot(
     redis_session=redis_session,
     loop=loop,
     command_prefix=when_mentioned_or(constants.Bot.prefix),
@@ -71,6 +72,6 @@ if not constants.HelpChannels.enable:
     extensions.remove("bot.exts.help_channels")
 
 for extension in extensions:
-    bot.load_extension(extension)
+    bot.instance.load_extension(extension)
 
-bot.run(constants.Bot.token)
+bot.instance.run(constants.Bot.token)

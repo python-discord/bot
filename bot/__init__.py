@@ -5,11 +5,15 @@ import sys
 from functools import partial, partialmethod
 from logging import Logger, handlers
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import coloredlogs
 from discord.ext import commands
 
 from bot.command import Command
+
+if TYPE_CHECKING:
+    from bot.bot import Bot
 
 TRACE_LEVEL = logging.TRACE = 5
 logging.addLevelName(TRACE_LEVEL, "TRACE")
@@ -76,3 +80,5 @@ if os.name == "nt":
 # Must be patched before any cogs are added.
 commands.command = partial(commands.command, cls=Command)
 commands.GroupMixin.command = partialmethod(commands.GroupMixin.command, cls=Command)
+
+instance: "Bot" = None  # Global Bot instance.
