@@ -11,45 +11,15 @@ from discord.ext import commands
 
 from bot import constants
 from bot.bot import Bot
-from bot.exts.help_channels import _channel
-from bot.exts.help_channels._message import pin, unpin
+from bot.exts.help_channels import _channel, _message
 from bot.exts.help_channels._name import create_name_queue
 from bot.utils import channel as channel_utils
 from bot.utils.scheduling import Scheduler
 
 log = logging.getLogger(__name__)
 
-ASKING_GUIDE_URL = "https://pythondiscord.com/pages/asking-good-questions/"
-
 HELP_CHANNEL_TOPIC = """
 This is a Python help channel. You can claim your own help channel in the Python Help: Available category.
-"""
-
-AVAILABLE_MSG = f"""
-**Send your question here to claim the channel**
-This channel will be dedicated to answering your question only. Others will try to answer and help you solve the issue.
-
-**Keep in mind:**
-• It's always ok to just ask your question. You don't need permission.
-• Explain what you expect to happen and what actually happens.
-• Include a code sample and error message, if you got any.
-
-For more tips, check out our guide on **[asking good questions]({ASKING_GUIDE_URL})**.
-"""
-
-AVAILABLE_TITLE = "Available help channel"
-
-AVAILABLE_FOOTER = f"Closes after {constants.HelpChannels.idle_minutes} minutes of inactivity or when you send !close."
-
-DORMANT_MSG = f"""
-This help channel has been marked as **dormant**, and has been moved into the **Help: Dormant** \
-category at the bottom of the channel list. It is no longer possible to send messages in this \
-channel until it becomes available again.
-
-If your question wasn't answered yet, you can claim a new help channel from the \
-**Help: Available** category by simply asking your question again. Consider rephrasing the \
-question to maximize your chance of getting a good answer. If you're not sure how, have a look \
-through our guide for **[asking a good question]({ASKING_GUIDE_URL})**.
 """
 
 CoroutineFunc = t.Callable[..., t.Coroutine]
@@ -93,12 +63,6 @@ class HelpChannels(commands.Cog):
     # This cache tracks which channels are claimed by which members.
     # RedisCache[discord.TextChannel.id, t.Union[discord.User.id, discord.Member.id]]
     help_channel_claimants = RedisCache()
-
-    # This cache maps a help channel to whether it has had any
-    # activity other than the original claimant. True being no other
-    # activity and False being other activity.
-    # RedisCache[discord.TextChannel.id, bool]
-    unanswered = RedisCache()
 
     # This dictionary maps a help channel to the time it was claimed
     # RedisCache[discord.TextChannel.id, UtcPosixTimestamp]
@@ -227,7 +191,12 @@ class HelpChannels(commands.Cog):
 
             if not channel:
                 log.info("Couldn't create a candidate channel; waiting to get one from the queue.")
-                await self.notify()
+                notify_channel = self.bot.get_channel(constants.HelpChannels.notify_channel)
+                last_notification = await _message.notify(notify_channel, self.last_notification)
+                if last_notification:
+                    self.last_notification = last_notification
+                    self.bot.stats.incr("help.out_of_channel_alerts")
+
                 channel = await self.wait_for_dormant_channel()
 
         return channel
@@ -241,8 +210,8 @@ class HelpChannels(commands.Cog):
             claimed = datetime.utcfromtimestamp(claimed_timestamp)
             return datetime.utcnow() - claimed
 
-    @classmethod
-    async def get_idle_time(cls, channel: discord.TextChannel) -> t.Optional[int]:
+    @staticmethod
+    async def get_idle_time(channel: discord.TextChannel) -> t.Optional[int]:
         """
         Return the time elapsed, in seconds, since the last message sent in the `channel`.
 
@@ -250,7 +219,7 @@ class HelpChannels(commands.Cog):
         """
         log.trace(f"Getting the idle time for #{channel} ({channel.id}).")
 
-        msg = await cls.get_last_message(channel)
+        msg = await _message.get_last_message(channel)
         if not msg:
             log.debug(f"No idle time available; #{channel} ({channel.id}) has no messages.")
             return None
@@ -259,17 +228,6 @@ class HelpChannels(commands.Cog):
 
         log.trace(f"#{channel} ({channel.id}) has been idle for {idle_time} seconds.")
         return idle_time
-
-    @staticmethod
-    async def get_last_message(channel: discord.TextChannel) -> t.Optional[discord.Message]:
-        """Return the last message sent in the channel or None if no messages exist."""
-        log.trace(f"Getting the last message in #{channel} ({channel.id}).")
-
-        try:
-            return await channel.history(limit=1).next()  # noqa: B305
-        except discord.NoMoreItems:
-            log.debug(f"No last message available; #{channel} ({channel.id}) has no messages.")
-            return None
 
     async def init_available(self) -> None:
         """Initialise the Available category with channels."""
@@ -357,17 +315,6 @@ class HelpChannels(commands.Cog):
         """Return True if `member` has the 'Help Cooldown' role."""
         return any(constants.Roles.help_cooldown == role.id for role in member.roles)
 
-    def match_bot_embed(self, message: t.Optional[discord.Message], description: str) -> bool:
-        """Return `True` if the bot's `message`'s embed description matches `description`."""
-        if not message or not message.embeds:
-            return False
-
-        bot_msg_desc = message.embeds[0].description
-        if bot_msg_desc is discord.Embed.Empty:
-            log.trace("Last message was a bot embed but it was empty.")
-            return False
-        return message.author == self.bot.user and bot_msg_desc.strip() == description.strip()
-
     async def move_idle_channel(self, channel: discord.TextChannel, has_task: bool = True) -> None:
         """
         Make the `channel` dormant if idle or schedule the move if still active.
@@ -377,7 +324,7 @@ class HelpChannels(commands.Cog):
         """
         log.trace(f"Handling in-use channel #{channel} ({channel.id}).")
 
-        if not await self.is_empty(channel):
+        if not await _message.is_empty(channel):
             idle_seconds = constants.HelpChannels.idle_minutes * 60
         else:
             idle_seconds = constants.HelpChannels.deleted_idle_minutes * 60
@@ -450,7 +397,7 @@ class HelpChannels(commands.Cog):
         channel = await self.get_available_candidate()
         log.info(f"Making #{channel} ({channel.id}) available.")
 
-        await self.send_available_message(channel)
+        await _message.send_available_message(channel)
 
         log.trace(f"Moving #{channel} ({channel.id}) to the Available category.")
 
@@ -481,7 +428,7 @@ class HelpChannels(commands.Cog):
         if in_use_time:
             self.bot.stats.timing("help.in_use_time", in_use_time)
 
-        unanswered = await self.unanswered.get(channel.id)
+        unanswered = await _message.unanswered.get(channel.id)
         if unanswered:
             self.bot.stats.incr("help.sessions.unanswered")
         elif unanswered is not None:
@@ -489,10 +436,10 @@ class HelpChannels(commands.Cog):
 
         log.trace(f"Position of #{channel} ({channel.id}) is actually {channel.position}.")
         log.trace(f"Sending dormant message for #{channel} ({channel.id}).")
-        embed = discord.Embed(description=DORMANT_MSG)
+        embed = discord.Embed(description=_message.DORMANT_MSG)
         await channel.send(embed=embed)
 
-        await unpin(channel)
+        await _message.unpin(channel)
 
         log.trace(f"Pushing #{channel} ({channel.id}) into the channel queue.")
         self.channel_queue.put_nowait(channel)
@@ -513,74 +460,6 @@ class HelpChannels(commands.Cog):
         self.scheduler.schedule_later(timeout, channel.id, self.move_idle_channel(channel))
         self.report_stats()
 
-    async def notify(self) -> None:
-        """
-        Send a message notifying about a lack of available help channels.
-
-        Configuration:
-
-        * `HelpChannels.notify` - toggle notifications
-        * `HelpChannels.notify_channel` - destination channel for notifications
-        * `HelpChannels.notify_minutes` - minimum interval between notifications
-        * `HelpChannels.notify_roles` - roles mentioned in notifications
-        """
-        if not constants.HelpChannels.notify:
-            return
-
-        log.trace("Notifying about lack of channels.")
-
-        if self.last_notification:
-            elapsed = (datetime.utcnow() - self.last_notification).seconds
-            minimum_interval = constants.HelpChannels.notify_minutes * 60
-            should_send = elapsed >= minimum_interval
-        else:
-            should_send = True
-
-        if not should_send:
-            log.trace("Notification not sent because it's too recent since the previous one.")
-            return
-
-        try:
-            log.trace("Sending notification message.")
-
-            channel = self.bot.get_channel(constants.HelpChannels.notify_channel)
-            mentions = " ".join(f"<@&{role}>" for role in constants.HelpChannels.notify_roles)
-            allowed_roles = [discord.Object(id_) for id_ in constants.HelpChannels.notify_roles]
-
-            message = await channel.send(
-                f"{mentions} A new available help channel is needed but there "
-                f"are no more dormant ones. Consider freeing up some in-use channels manually by "
-                f"using the `{constants.Bot.prefix}dormant` command within the channels.",
-                allowed_mentions=discord.AllowedMentions(everyone=False, roles=allowed_roles)
-            )
-
-            self.bot.stats.incr("help.out_of_channel_alerts")
-
-            self.last_notification = message.created_at
-        except Exception:
-            # Handle it here cause this feature isn't critical for the functionality of the system.
-            log.exception("Failed to send notification about lack of dormant channels!")
-
-    async def check_for_answer(self, message: discord.Message) -> None:
-        """Checks for whether new content in a help channel comes from non-claimants."""
-        channel = message.channel
-
-        # Confirm the channel is an in use help channel
-        if channel_utils.is_in_category(channel, constants.Categories.help_in_use):
-            log.trace(f"Checking if #{channel} ({channel.id}) has been answered.")
-
-            # Check if there is an entry in unanswered
-            if await self.unanswered.contains(channel.id):
-                claimant_id = await self.help_channel_claimants.get(channel.id)
-                if not claimant_id:
-                    # The mapping for this channel doesn't exist, we can't do anything.
-                    return
-
-                # Check the message did not come from the claimant
-                if claimant_id != message.author.id:
-                    # Mark the channel as answered
-                    await self.unanswered.set(channel.id, False)
-
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
         """Move an available channel to the In Use category and replace it with a dormant one."""
@@ -589,7 +468,7 @@ class HelpChannels(commands.Cog):
 
         channel = message.channel
 
-        await self.check_for_answer(message)
+        await _message.check_for_answer(message)
 
         is_available = channel_utils.is_in_category(channel, constants.Categories.help_available)
         if not is_available or _channel.is_excluded_channel(channel):
@@ -613,7 +492,7 @@ class HelpChannels(commands.Cog):
             await self.move_to_in_use(channel)
             await self.revoke_send_permissions(message.author)
 
-            await pin(message)
+            await _message.pin(message)
 
             # Add user with channel for dormant check.
             await self.help_channel_claimants.set(channel.id, message.author.id)
@@ -624,7 +503,7 @@ class HelpChannels(commands.Cog):
             timestamp = datetime.now(timezone.utc).timestamp()
             await self.claim_times.set(channel.id, timestamp)
 
-            await self.unanswered.set(channel.id, True)
+            await _message.unanswered.set(channel.id, True)
 
             log.trace(f"Releasing on_message lock for {message.id}.")
 
@@ -643,7 +522,7 @@ class HelpChannels(commands.Cog):
         if not channel_utils.is_in_category(msg.channel, constants.Categories.help_in_use):
             return
 
-        if not await self.is_empty(msg.channel):
+        if not await _message.is_empty(msg.channel):
             return
 
         log.info(f"Claimant of #{msg.channel} ({msg.author}) deleted message, channel is empty now. Rescheduling task.")
@@ -653,24 +532,6 @@ class HelpChannels(commands.Cog):
 
         delay = constants.HelpChannels.deleted_idle_minutes * 60
         self.scheduler.schedule_later(delay, msg.channel.id, self.move_idle_channel(msg.channel))
-
-    async def is_empty(self, channel: discord.TextChannel) -> bool:
-        """Return True if there's an AVAILABLE_MSG and the messages leading up are bot messages."""
-        log.trace(f"Checking if #{channel} ({channel.id}) is empty.")
-
-        # A limit of 100 results in a single API call.
-        # If AVAILABLE_MSG isn't found within 100 messages, then assume the channel is not empty.
-        # Not gonna do an extensive search for it cause it's too expensive.
-        async for msg in channel.history(limit=100):
-            if not msg.author.bot:
-                log.trace(f"#{channel} ({channel.id}) has a non-bot message.")
-                return False
-
-            if self.match_bot_embed(msg, AVAILABLE_MSG):
-                log.trace(f"#{channel} ({channel.id}) has the available message embed.")
-                return True
-
-        return False
 
     async def check_cooldowns(self) -> None:
         """Remove expired cooldowns and re-schedule active ones."""
@@ -749,26 +610,6 @@ class HelpChannels(commands.Cog):
 
         delay = constants.HelpChannels.claim_minutes * 60
         self.scheduler.schedule_later(delay, member.id, self.remove_cooldown_role(member))
-
-    async def send_available_message(self, channel: discord.TextChannel) -> None:
-        """Send the available message by editing a dormant message or sending a new message."""
-        channel_info = f"#{channel} ({channel.id})"
-        log.trace(f"Sending available message in {channel_info}.")
-
-        embed = discord.Embed(
-            color=constants.Colours.bright_green,
-            description=AVAILABLE_MSG,
-        )
-        embed.set_author(name=AVAILABLE_TITLE, icon_url=constants.Icons.green_checkmark)
-        embed.set_footer(text=AVAILABLE_FOOTER)
-
-        msg = await self.get_last_message(channel)
-        if self.match_bot_embed(msg, DORMANT_MSG):
-            log.trace(f"Found dormant message {msg.id} in {channel_info}; editing it.")
-            await msg.edit(embed=embed)
-        else:
-            log.trace(f"Dormant message not found in {channel_info}; sending a new message.")
-            await channel.send(embed=embed)
 
     async def wait_for_dormant_channel(self) -> discord.TextChannel:
         """Wait for a dormant channel to become available in the queue and return it."""
