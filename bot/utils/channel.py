@@ -2,6 +2,7 @@ import logging
 
 import discord
 
+import bot
 from bot.constants import Categories
 
 log = logging.getLogger(__name__)
@@ -20,14 +21,14 @@ def is_in_category(channel: discord.TextChannel, category_id: int) -> bool:
     return getattr(channel, "category_id", None) == category_id
 
 
-async def try_get_channel(channel_id: int, client: discord.Client) -> discord.abc.GuildChannel:
+async def try_get_channel(channel_id: int) -> discord.abc.GuildChannel:
     """Attempt to get or fetch a channel and return it."""
     log.trace(f"Getting the channel {channel_id}.")
 
-    channel = client.get_channel(channel_id)
+    channel = bot.instance.get_channel(channel_id)
     if not channel:
         log.debug(f"Channel {channel_id} is not in cache; fetching from API.")
-        channel = await client.fetch_channel(channel_id)
+        channel = await bot.instance.fetch_channel(channel_id)
 
     log.trace(f"Channel #{channel} ({channel_id}) retrieved.")
     return channel
