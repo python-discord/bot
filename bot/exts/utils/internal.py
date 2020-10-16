@@ -30,7 +30,7 @@ class Internal(Cog):
         self.ln = 0
         self.stdout = StringIO()
 
-        self.interpreter = Interpreter(bot)
+        self.interpreter = Interpreter()
 
         self.socket_since = datetime.utcnow()
         self.socket_event_total = 0
