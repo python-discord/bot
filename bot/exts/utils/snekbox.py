@@ -38,7 +38,7 @@ RAW_CODE_REGEX = re.compile(
     re.DOTALL                               # "." also matches newlines
 )
 
-MAX_PASTE_LEN = 1000
+MAX_PASTE_LEN = 10000
 
 # `!eval` command whitelists
 EVAL_CHANNELS = (Channels.bot_commands, Channels.esoteric, Channels.code_help_voice)

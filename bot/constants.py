@@ -456,6 +456,7 @@ class Roles(metaclass=YAMLGetter):
     owners: int
     partners: int
     python_community: int
+    sprinters: int
     team_leaders: int
     unverified: int
     verified: int  # This is the Developers role on PyDis, here named verified for readability reasons.
@@ -526,6 +527,15 @@ class BigBrother(metaclass=YAMLGetter):
 
     log_delay: int
     header_message_limit: int
+
+
+class CodeBlock(metaclass=YAMLGetter):
+    section = 'code_block'
+
+    channel_whitelist: List[int]
+    cooldown_channels: List[int]
+    cooldown_seconds: int
+    minimum_lines: int
 
 
 class Free(metaclass=YAMLGetter):
