@@ -137,11 +137,7 @@ class InfractionScheduler:
             )
             if reason:
                 end_msg = f" (reason: {textwrap.shorten(reason, width=1500, placeholder='...')})"
-        elif not is_mod_channel(ctx.channel):
-            log.trace(
-                f"Infraction #{id_} context is not in a mod channel; omitting infraction count."
-            )
-        else:
+        elif is_mod_channel(ctx.channel):
             log.trace(f"Fetching total infraction count for {user}.")
 
             infractions = await self.bot.api_client.get(
