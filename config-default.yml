@@ -119,6 +119,7 @@ style:
         voice_state_green: "https://cdn.discordapp.com/emojis/656899770094452754.png"
         voice_state_red: "https://cdn.discordapp.com/emojis/656899769905709076.png"
 
+
 guild:
     id: 267624335836053506
     invite: "https://discord.gg/python"
@@ -225,6 +226,7 @@ guild:
         muted:              &MUTED_ROLE         277914926603829249
         partners:                               323426753857191936
         python_community:   &PY_COMMUNITY_ROLE  458226413825294336
+        sprinters:          &SPRINTERS          758422482289426471
 
         unverified:                             739794855945044069
         verified:                               352427296948486144  # @Developers on PyDis
@@ -260,6 +262,7 @@ guild:
         python_news:        &PYNEWS_WEBHOOK 704381182279942324
         reddit:                             635408384794951680
         talent_pool:                        569145364800602132
+
 
 filter:
     # What do we filter?
@@ -298,6 +301,7 @@ filter:
         - *OWNERS_ROLE
         - *HELPERS_ROLE
         - *PY_COMMUNITY_ROLE
+        - *SPRINTERS
 
 
 keys:
@@ -325,6 +329,7 @@ urls:
     # Misc URLs
     bot_avatar:      "https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle/logo_circle.png"
     github_bot_repo: "https://github.com/python-discord/bot"
+
 
 anti_spam:
     # Clean messages that violate a rule.
@@ -459,9 +464,11 @@ help_channels:
     notify_roles:
         - *HELPERS_ROLE
 
+
 redirect_output:
     delete_invocation: true
     delete_delay: 15
+
 
 duck_pond:
     threshold: 4
@@ -477,6 +484,7 @@ duck_pond:
         - *STAFF_ANNOUNCEMENTS
         - *MOD_ANNOUNCEMENTS
         - *ADMIN_ANNOUNCEMENTS
+
 
 python_news:
     mail_lists:
