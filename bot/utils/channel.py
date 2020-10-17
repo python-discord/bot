@@ -2,7 +2,8 @@ import logging
 
 import discord
 
-from bot.constants import Categories, MODERATION_CHANNELS
+from bot import constants
+from bot.constants import Categories
 
 log = logging.getLogger(__name__)
 
@@ -20,7 +21,8 @@ def is_mod_channel(channel: discord.TextChannel) -> bool:
     log.trace(f"Checking if #{channel} is a mod channel.")
     categories = (Categories.modmail, Categories.logs)
 
-    return channel.id in MODERATION_CHANNELS or any(is_in_category(channel, category) for category in categories)
+    return channel.id in constants.MODERATION_CHANNELS \
+        or any(is_in_category(channel, category) for category in categories)
 
 
 def is_in_category(channel: discord.TextChannel, category_id: int) -> bool:
