@@ -128,8 +128,8 @@ guild:
         help_available:                     691405807388196926
         help_in_use:                        696958401460043776
         help_dormant:                       691405908919451718
-        modmail:                            714494672835444826
-        logs:                               468520609152892958
+        modmail:            &MODMAIL        714494672835444826
+        logs:               &LOGS           468520609152892958
 
     channels:
         # Public announcement and news channels
@@ -199,6 +199,10 @@ guild:
         # Watch
         big_brother_logs:   &BB_LOGS        468507907357409333
         talent_pool:        &TALENT_POOL    534321732593647616
+
+    moderation_categories:
+        - *MODMAIL
+        - *LOGS
 
     moderation_channels:
         - *ADMINS

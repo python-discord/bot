@@ -19,10 +19,11 @@ def is_help_channel(channel: discord.TextChannel) -> bool:
 def is_mod_channel(channel: discord.TextChannel) -> bool:
     """Return True if `channel` is one of the moderation channels or in one of the moderation categories."""
     log.trace(f"Checking if #{channel} is a mod channel.")
-    categories = (Categories.modmail, Categories.logs)
 
-    return (channel.id in constants.MODERATION_CHANNELS
-            or any(is_in_category(channel, category) for category in categories))
+    return (
+        channel.id in constants.MODERATION_CHANNELS
+        or any(is_in_category(channel, category) for category in constants.MODERATION_CATEGORIES)
+    )
 
 
 def is_in_category(channel: discord.TextChannel, category_id: int) -> bool:
