@@ -18,9 +18,6 @@ class Sync(Cog):
 
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
-        self.role_syncer = _syncers.RoleSyncer()
-        self.user_syncer = _syncers.UserSyncer()
-
         self.bot.loop.create_task(self.sync_guild())
 
     async def sync_guild(self) -> None:
@@ -31,7 +28,7 @@ class Sync(Cog):
         if guild is None:
             return
 
-        for syncer in (self.role_syncer, self.user_syncer):
+        for syncer in (_syncers.RoleSyncer, _syncers.UserSyncer):
             await syncer.sync(guild)
 
     async def patch_user(self, user_id: int, json: Dict[str, Any], ignore_404: bool = False) -> None:
@@ -171,10 +168,10 @@ class Sync(Cog):
     @commands.has_permissions(administrator=True)
     async def sync_roles_command(self, ctx: Context) -> None:
         """Manually synchronise the guild's roles with the roles on the site."""
-        await self.role_syncer.sync(ctx.guild, ctx)
+        await _syncers.RoleSyncer.sync(ctx.guild, ctx)
 
     @sync_group.command(name='users')
     @commands.has_permissions(administrator=True)
     async def sync_users_command(self, ctx: Context) -> None:
         """Manually synchronise the guild's users with the users on the site."""
-        await self.user_syncer.sync(ctx.guild, ctx)
+        await _syncers.UserSyncer.sync(ctx.guild, ctx)

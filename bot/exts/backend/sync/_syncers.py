@@ -17,12 +17,15 @@ _Role = namedtuple('Role', ('id', 'name', 'colour', 'permissions', 'position'))
 _Diff = namedtuple('Diff', ('created', 'updated', 'deleted'))
 
 
+# Implementation of static abstract methods are not enforced if the subclass is never instantiated.
+# However, methods are kept abstract to at least symbolise that they should be abstract.
 class Syncer(abc.ABC):
     """Base class for synchronising the database with objects in the Discord cache."""
 
+    @staticmethod
     @property
     @abc.abstractmethod
-    def name(self) -> str:
+    def name() -> str:
         """The name of the syncer; used in output messages and logging."""
         raise NotImplementedError  # pragma: no cover
 
@@ -38,35 +41,36 @@ class Syncer(abc.ABC):
         """Perform the API calls for synchronisation."""
         raise NotImplementedError  # pragma: no cover
 
-    async def sync(self, guild: Guild, ctx: t.Optional[Context] = None) -> None:
+    @classmethod
+    async def sync(cls, guild: Guild, ctx: t.Optional[Context] = None) -> None:
         """
         Synchronise the database with the cache of `guild`.
 
         If `ctx` is given, send a message with the results.
         """
-        log.info(f"Starting {self.name} syncer.")
+        log.info(f"Starting {cls.name} syncer.")
 
         if ctx:
-            message = await ctx.send(f"📊 Synchronising {self.name}s.")
+            message = await ctx.send(f"📊 Synchronising {cls.name}s.")
         else:
             message = None
-        diff = await self._get_diff(guild)
+        diff = await cls._get_diff(guild)
 
         try:
-            await self._sync(diff)
+            await cls._sync(diff)
         except ResponseCodeError as e:
-            log.exception(f"{self.name} syncer failed!")
+            log.exception(f"{cls.name} syncer failed!")
 
             # Don't show response text because it's probably some really long HTML.
             results = f"status {e.status}\n```{e.response_json or 'See log output for details'}```"
-            content = f":x: Synchronisation of {self.name}s failed: {results}"
+            content = f":x: Synchronisation of {cls.name}s failed: {results}"
         else:
             diff_dict = diff._asdict()
             results = (f"{name} `{len(val)}`" for name, val in diff_dict.items() if val is not None)
             results = ", ".join(results)
 
-            log.info(f"{self.name} syncer finished: {results}.")
-            content = f":ok_hand: Synchronisation of {self.name}s complete: {results}"
+            log.info(f"{cls.name} syncer finished: {results}.")
+            content = f":ok_hand: Synchronisation of {cls.name}s complete: {results}"
 
         if message:
             await message.edit(content=content)
