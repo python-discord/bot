@@ -145,7 +145,7 @@ class InfractionScheduler:
                 params={"user__id": str(user.id)}
             )
             total = len(infractions)
-            end_msg = f" ({total} infraction{ngettext('', 's', total)} total)"
+            end_msg = f" (#{id_} ; {total} infraction{ngettext('', 's', total)} total)"
 
         # Execute the necessary actions to apply the infraction on Discord.
         if action_coro:
