@@ -58,7 +58,10 @@ class VoiceGate(Cog):
             return
 
         # Pre-parse this for better code style
-        data["verified_at"] = parser.isoparse(data["verified_at"])
+        if data["verified_at"] is not None:
+            data["verified_at"] = parser.isoparse(data["verified_at"])
+        else:
+            data["verified_at"] = datetime.now() - timedelta(days=3)
 
         failed = False
         failed_reasons = []
