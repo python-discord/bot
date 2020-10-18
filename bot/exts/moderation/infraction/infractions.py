@@ -428,10 +428,6 @@ class Infractions(InfractionScheduler, commands.Cog):
         log_text = {}
 
         if user:
-            # Add Voice Verified role back to user.
-            self.mod_log.ignore(Event.member_update, user.id)
-            await user.add_roles(self._voice_verified_role, reason=reason)
-
             # DM user about infraction expiration
             notified = await _utils.notify_pardon(
                 user=user,
