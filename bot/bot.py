@@ -11,7 +11,7 @@ from async_rediscache import RedisSession
 from discord.ext import commands
 from sentry_sdk import push_scope
 
-from bot import DEBUG_MODE, api, constants
+from bot import api, constants
 from bot.async_stats import AsyncStatsClient
 
 log = logging.getLogger('bot')
@@ -40,7 +40,7 @@ class Bot(commands.Bot):
 
         statsd_url = constants.Stats.statsd_host
 
-        if DEBUG_MODE:
+        if constants.DEBUG_MODE:
             # Since statsd is UDP, there are no errors for sending to a down port.
             # For this reason, setting the statsd host to 127.0.0.1 for development
             # will effectively disable stats.

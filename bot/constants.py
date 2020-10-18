@@ -614,7 +614,7 @@ class Event(Enum):
 
 
 # Debug mode
-DEBUG_MODE = True if 'local' in os.environ.get("SITE_URL", "local") else False
+DEBUG_MODE = 'local' in os.environ.get("SITE_URL", "local")
 
 # Paths
 BOT_DIR = os.path.dirname(__file__)

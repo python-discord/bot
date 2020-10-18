@@ -1,33 +1,14 @@
 import asyncio
-import logging
 
 import discord
-import sentry_sdk
 from async_rediscache import RedisSession
 from discord.ext.commands import when_mentioned_or
-from sentry_sdk.integrations.aiohttp import AioHttpIntegration
-from sentry_sdk.integrations.logging import LoggingIntegration
-from sentry_sdk.integrations.redis import RedisIntegration
 
 import bot
 from bot import constants
 from bot.bot import Bot
 from bot.utils.extensions import EXTENSIONS
 
-# Set up Sentry.
-sentry_logging = LoggingIntegration(
-    level=logging.DEBUG,
-    event_level=logging.WARNING
-)
-
-sentry_sdk.init(
-    dsn=constants.Bot.sentry_dsn,
-    integrations=[
-        sentry_logging,
-        AioHttpIntegration(),
-        RedisIntegration(),
-    ]
-)
 
 # Create the redis session instance.
 redis_session = RedisSession(
