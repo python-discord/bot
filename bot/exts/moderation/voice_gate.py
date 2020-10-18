@@ -49,7 +49,7 @@ class VoiceGate(Cog):
         - You must not be actively banned from using our voice channels
         """
         # Send this as first thing in order to return after sending DM
-        await ctx.send("Check your DMs for result.")
+        await ctx.send("You will get response to DM.")
 
         try:
             data = await self.bot.api_client.get(f"bot/users/{ctx.author.id}/metricity_data")
