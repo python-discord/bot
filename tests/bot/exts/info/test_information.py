@@ -92,77 +92,6 @@ class InformationCogTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(admin_embed.title, "Admins info")
         self.assertEqual(admin_embed.colour, discord.Colour.red())
 
-    @unittest.mock.patch('bot.exts.info.information.time_since')
-    async def test_server_info_command(self, time_since_patch):
-        time_since_patch.return_value = '2 days ago'
-
-        self.ctx.guild = helpers.MockGuild(
-            features=('lemons', 'apples'),
-            region="The Moon",
-            roles=[self.moderator_role],
-            channels=[
-                discord.TextChannel(
-                    state={},
-                    guild=self.ctx.guild,
-                    data={'id': 42, 'name': 'lemons-offering', 'position': 22, 'type': 'text'}
-                ),
-                discord.CategoryChannel(
-                    state={},
-                    guild=self.ctx.guild,
-                    data={'id': 5125, 'name': 'the-lemon-collection', 'position': 22, 'type': 'category'}
-                ),
-                discord.VoiceChannel(
-                    state={},
-                    guild=self.ctx.guild,
-                    data={'id': 15290, 'name': 'listen-to-lemon', 'position': 22, 'type': 'voice'}
-                )
-            ],
-            members=[
-                *(helpers.MockMember(status=discord.Status.online) for _ in range(2)),
-                *(helpers.MockMember(status=discord.Status.idle) for _ in range(1)),
-                *(helpers.MockMember(status=discord.Status.dnd) for _ in range(4)),
-                *(helpers.MockMember(status=discord.Status.offline) for _ in range(3)),
-            ],
-            member_count=1_234,
-            icon_url='a-lemon.jpg',
-        )
-
-        self.assertIsNone(await self.cog.server_info(self.cog, self.ctx))
-
-        time_since_patch.assert_called_once_with(self.ctx.guild.created_at, precision='days')
-        _, kwargs = self.ctx.send.call_args
-        embed = kwargs.pop('embed')
-        self.assertEqual(embed.colour, discord.Colour.blurple())
-        self.assertEqual(
-            embed.description,
-            textwrap.dedent(
-                f"""
-                **Server information**
-                Created: {time_since_patch.return_value}
-                Voice region: {self.ctx.guild.region}
-                Features: {', '.join(self.ctx.guild.features)}
-
-                **Channel counts**
-                Category channels: 1
-                Text channels: 1
-                Voice channels: 1
-                Staff channels: 0
-
-                **Member counts**
-                Members: {self.ctx.guild.member_count:,}
-                Staff members: 0
-                Roles: {len(self.ctx.guild.roles)}
-
-                **Member statuses**
-                {constants.Emojis.status_online} 2
-                {constants.Emojis.status_idle} 1
-                {constants.Emojis.status_dnd} 4
-                {constants.Emojis.status_offline} 3
-                """
-            )
-        )
-        self.assertEqual(embed.thumbnail.url, 'a-lemon.jpg')
-
 
 class UserInfractionHelperMethodTests(unittest.IsolatedAsyncioTestCase):
     """Tests for the helper methods of the `!user` command."""
@@ -465,7 +394,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             "basic infractions info",
-            embed.fields[3].value
+            embed.fields[2].value
         )
 
     @unittest.mock.patch(

@@ -47,14 +47,22 @@ loop.run_until_complete(redis_session.connect())
 
 # Instantiate the bot.
 allowed_roles = [discord.Object(id_) for id_ in constants.MODERATION_ROLES]
+intents = discord.Intents().all()
+intents.presences = False
+intents.dm_typing = False
+intents.dm_reactions = False
+intents.invites = False
+intents.webhooks = False
+intents.integrations = False
 bot = Bot(
     redis_session=redis_session,
     loop=loop,
     command_prefix=when_mentioned_or(constants.Bot.prefix),
-    activity=discord.Game(name="Commands: !help"),
+    activity=discord.Game(name=f"Commands: {constants.Bot.prefix}help"),
     case_insensitive=True,
     max_messages=10_000,
-    allowed_mentions=discord.AllowedMentions(everyone=False, roles=allowed_roles)
+    allowed_mentions=discord.AllowedMentions(everyone=False, roles=allowed_roles),
+    intents=intents,
 )
 
 # Load extensions.

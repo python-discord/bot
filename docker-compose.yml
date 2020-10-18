@@ -41,6 +41,7 @@ services:
       - postgres
     environment:
       DATABASE_URL: postgres://pysite:pysite@postgres:5432/pysite
+      METRICITY_DB_URL: postgres://pysite:pysite@postgres:5432/metricity
       SECRET_KEY: suitable-for-development-only
       STATIC_ROOT: /var/www/static
 

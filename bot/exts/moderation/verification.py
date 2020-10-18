@@ -11,6 +11,7 @@ from discord.ext.commands import Cog, Context, command, group, has_any_role
 from discord.utils import snowflake_time
 
 from bot import constants
+from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.decorators import has_no_roles, in_whitelist
 from bot.exts.moderation.modlog import ModLog
@@ -51,6 +52,23 @@ to assign yourself the **Announcements** role. We'll mention this role every tim
 
 If you'd like to unsubscribe from the announcement notifications, simply send `!unsubscribe` to \
 <#{constants.Channels.bot_commands}>.
+"""
+
+ALTERNATE_VERIFIED_MESSAGE = f"""
+Thanks for accepting our rules!
+
+You can find a copy of our rules for reference at <https://pythondiscord.com/pages/rules>.
+
+Additionally, if you'd like to receive notifications for the announcements \
+we post in <#{constants.Channels.announcements}>
+from time to time, you can send `!subscribe` to <#{constants.Channels.bot_commands}> at any time \
+to assign yourself the **Announcements** role. We'll mention this role every time we make an announcement.
+
+If you'd like to unsubscribe from the announcement notifications, simply send `!unsubscribe` to \
+<#{constants.Channels.bot_commands}>.
+
+To introduce you to our community, we've made the following video:
+https://youtu.be/ZH26PuX3re0
 """
 
 # Sent via DMs to users kicked for failing to verify
@@ -155,6 +173,9 @@ class Verification(Cog):
     #   "last_reminder": int (discord.Message.id),
     # ]
     task_cache = RedisCache()
+
+    # Create a cache for storing recipients of the alternate welcome DM.
+    member_gating_cache = RedisCache()
 
     def __init__(self, bot: Bot) -> None:
         """Start internal tasks."""
@@ -335,6 +356,28 @@ class Verification(Cog):
 
         return n_success
 
+    async def _add_kick_note(self, member: discord.Member) -> None:
+        """
+        Post a note regarding `member` being kicked to site.
+
+        Allows keeping track of kicked members for auditing purposes.
+        """
+        payload = {
+            "active": False,
+            "actor": self.bot.user.id,  # Bot actions this autonomously
+            "expires_at": None,
+            "hidden": True,
+            "reason": "Verification kick",
+            "type": "note",
+            "user": member.id,
+        }
+
+        log.trace(f"Posting kick note for member {member} ({member.id})")
+        try:
+            await self.bot.api_client.post("bot/infractions", json=payload)
+        except ResponseCodeError as api_exc:
+            log.warning("Failed to post kick note", exc_info=api_exc)
+
     async def _kick_members(self, members: t.Collection[discord.Member]) -> int:
         """
         Kick `members` from the PyDis guild.
@@ -353,6 +396,7 @@ class Verification(Cog):
             except discord.HTTPException as suspicious_exception:
                 raise StopExecution(reason=suspicious_exception)
             await member.kick(reason=f"User has not verified in {constants.Verification.kicked_after} days")
+            await self._add_kick_note(member)
 
         n_kicked = await self._send_requests(members, kick_request, Limit(batch_size=2, sleep_secs=1))
         self.bot.stats.incr("verification.kicked", count=n_kicked)
@@ -519,11 +563,48 @@ class Verification(Cog):
         if member.guild.id != constants.Guild.id:
             return  # Only listen for PyDis events
 
+        raw_member = await self.bot.http.get_member(member.guild.id, member.id)
+
+        # If the user has the is_pending flag set, they will be using the alternate
+        # gate and will not need a welcome DM with verification instructions.
+        # We will send them an alternate DM once they verify with the welcome
+        # video.
+        if raw_member.get("is_pending"):
+            await self.member_gating_cache.set(member.id, True)
+
+            # TODO: Temporary, remove soon after asking joe.
+            await self.mod_log.send_log_message(
+                icon_url=self.bot.user.avatar_url,
+                colour=discord.Colour.blurple(),
+                title="New native gated user",
+                channel_id=constants.Channels.user_log,
+                text=f"<@{member.id}> ({member.id})",
+            )
+
+            return
+
         log.trace(f"Sending on join message to new member: {member.id}")
         try:
             await safe_dm(member.send(ON_JOIN_MESSAGE))
         except discord.HTTPException:
             log.exception("DM dispatch failed on unexpected error code")
+
+    @Cog.listener()
+    async def on_member_update(self, before: discord.Member, after: discord.Member) -> None:
+        """Check if we need to send a verification DM to a gated user."""
+        before_roles = [role.id for role in before.roles]
+        after_roles = [role.id for role in after.roles]
+
+        if constants.Roles.verified not in before_roles and constants.Roles.verified in after_roles:
+            if await self.member_gating_cache.pop(after.id):
+                try:
+                    # If the member has not received a DM from our !accept command
+                    # and has gone through the alternate gating system we should send
+                    # our alternate welcome DM which includes info such as our welcome
+                    # video.
+                    await safe_dm(after.send(ALTERNATE_VERIFIED_MESSAGE))
+                except discord.HTTPException:
+                    log.exception("DM dispatch failed on unexpected error code")
 
     @Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
