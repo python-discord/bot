@@ -31,6 +31,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         self.category = "Moderation"
         self._muted_role = discord.Object(constants.Roles.muted)
+        self._voice_verified_role = discord.Object(constants.Roles.voice_verified)
 
     @commands.Cog.listener()
     async def on_member_join(self, member: Member) -> None:
@@ -88,6 +89,11 @@ class Infractions(InfractionScheduler, commands.Cog):
         """
         await self.apply_ban(ctx, user, reason, max(min(purge_days, 7), 0))
 
+    @command(aliases=('vban',))
+    async def voiceban(self, ctx: Context, user: FetchedMember, *, reason: t.Optional[str]) -> None:
+        """Permanently ban user from using voice channels."""
+        await self.apply_voice_ban(ctx, user, reason)
+
     # endregion
     # region: Temporary infractions
 
@@ -135,6 +141,32 @@ class Infractions(InfractionScheduler, commands.Cog):
         Alternatively, an ISO 8601 timestamp can be provided for the duration.
         """
         await self.apply_ban(ctx, user, reason, expires_at=duration)
+
+    @command(aliases=("tempvban", "tvban"))
+    async def tempvoiceban(
+            self,
+            ctx: Context,
+            user: FetchedMember,
+            duration: Expiry,
+            *,
+            reason: t.Optional[str]
+    ) -> None:
+        """
+        Temporarily voice ban a user for the given reason and duration.
+
+        A unit of time should be appended to the duration.
+        Units (∗case-sensitive):
+        \u2003`y` - years
+        \u2003`m` - months∗
+        \u2003`w` - weeks
+        \u2003`d` - days
+        \u2003`h` - hours
+        \u2003`M` - minutes∗
+        \u2003`s` - seconds
+
+        Alternatively, an ISO 8601 timestamp can be provided for the duration.
+        """
+        await self.apply_voice_ban(ctx, user, reason, expires_at=duration)
 
     # endregion
     # region: Permanent shadow infractions
@@ -224,6 +256,11 @@ class Infractions(InfractionScheduler, commands.Cog):
     async def unban(self, ctx: Context, user: FetchedMember) -> None:
         """Prematurely end the active ban infraction for the user."""
         await self.pardon_infraction(ctx, "ban", user)
+
+    @command(aliases=("uvban",))
+    async def unvoiceban(self, ctx: Context, user: FetchedMember) -> None:
+        """Prematurely end the active voice ban infraction for the user."""
+        await self.pardon_infraction(ctx, "voice_ban", user)
 
     # endregion
     # region: Base apply functions
@@ -319,6 +356,24 @@ class Infractions(InfractionScheduler, commands.Cog):
         bb_reason = "User has been permanently banned from the server. Automatically removed."
         await bb_cog.apply_unwatch(ctx, user, bb_reason, send_message=False)
 
+    @respect_role_hierarchy(member_arg=2)
+    async def apply_voice_ban(self, ctx: Context, user: UserSnowflake, reason: t.Optional[str], **kwargs) -> None:
+        """Apply a voice ban infraction with kwargs passed to `post_infraction`."""
+        if await _utils.get_active_infraction(ctx, user, "voice_ban"):
+            return
+
+        infraction = await _utils.post_infraction(ctx, user, "voice_ban", reason, active=True, **kwargs)
+        if infraction is None:
+            return
+
+        self.mod_log.ignore(Event.member_update, user.id)
+
+        if reason:
+            reason = textwrap.shorten(reason, width=512, placeholder="...")
+
+        action = user.remove_roles(self._voice_verified_role, reason=reason)
+        await self.apply_infraction(ctx, infraction, user, action)
+
     # endregion
     # region: Base pardon functions
 
@@ -363,6 +418,27 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         return log_text
 
+    async def pardon_voice_ban(self, user_id: int, guild: discord.Guild, reason: t.Optional[str]) -> t.Dict[str, str]:
+        """Add Voice Verified role back to user, DM them a notification, and return a log dict."""
+        user = guild.get_member(user_id)
+        log_text = {}
+
+        if user:
+            # DM user about infraction expiration
+            notified = await _utils.notify_pardon(
+                user=user,
+                title="Voice ban ended",
+                content="You have been unbanned and can verify yourself again in the server.",
+                icon_url=_utils.INFRACTION_ICONS["voice_ban"][1]
+            )
+
+            log_text["Member"] = format_user(user)
+            log_text["DM"] = "Sent" if notified else "**Failed**"
+        else:
+            log_text["Info"] = "User was not found in the guild."
+
+        return log_text
+
     async def _pardon_action(self, infraction: _utils.Infraction) -> t.Optional[t.Dict[str, str]]:
         """
         Execute deactivation steps specific to the infraction's type and return a log dict.
@@ -377,6 +453,8 @@ class Infractions(InfractionScheduler, commands.Cog):
             return await self.pardon_mute(user_id, guild, reason)
         elif infraction["type"] == "ban":
             return await self.pardon_ban(user_id, guild, reason)
+        elif infraction["type"] == "voice_ban":
+            return await self.pardon_voice_ban(user_id, guild, reason)
 
     # endregion
 

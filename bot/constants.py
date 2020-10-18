@@ -425,6 +425,7 @@ class Channels(metaclass=YAMLGetter):
     user_event_announcements: int
     user_log: int
     verification: int
+    voice_gate: int
     voice_log: int
 
 
@@ -461,6 +462,7 @@ class Roles(metaclass=YAMLGetter):
     team_leaders: int
     unverified: int
     verified: int  # This is the Developers role on PyDis, here named verified for readability reasons.
+    voice_verified: int
 
 
 class Guild(metaclass=YAMLGetter):
@@ -587,6 +589,14 @@ class Verification(metaclass=YAMLGetter):
     reminder_frequency: int
     bot_message_delete_delay: int
     kick_confirmation_threshold: float
+
+
+class VoiceGate(metaclass=YAMLGetter):
+    section = "voice_gate"
+
+    minimum_days_verified: int
+    minimum_messages: int
+    bot_message_delete_delay: int
 
 
 class Event(Enum):

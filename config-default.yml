@@ -170,6 +170,7 @@ guild:
         bot_commands:       &BOT_CMD        267659945086812160
         esoteric:                           470884583684964352
         verification:                       352442727016693763
+        voice_gate:                         764802555427029012
 
         # Staff
         admins:             &ADMINS         365960823622991872
@@ -231,6 +232,7 @@ guild:
 
         unverified:                             739794855945044069
         verified:                               352427296948486144  # @Developers on PyDis
+        voice_verified:                         764802720779337729
 
         # Staff
         admins:             &ADMINS_ROLE    267628507062992896
@@ -506,6 +508,12 @@ verification:
     # to be kicked from the guild in one batch, any larger amount will require staff confirmation,
     # set this to 0 to require explicit approval for batches of any size
     kick_confirmation_threshold: 0.01  # 1%
+
+
+voice_gate:
+    minimum_days_verified: 3  # How many days the user must have been verified for
+    minimum_messages: 50  # How many messages a user must have to be eligible for voice
+    bot_message_delete_delay: 10  # Seconds before deleting bot's response in Voice Gate
 
 
 config:
