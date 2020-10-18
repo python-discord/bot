@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 
 import discord
 from dateutil import parser
+from discord import Colour
 from discord.ext.commands import Cog, Context, command
 
 from bot.api import ResponseCodeError
@@ -46,15 +47,28 @@ class VoiceGate(Cog):
         - You must have accepted our rules over a certain number of days ago
         - You must not be actively banned from using our voice channels
         """
+        # Send this as first thing in order to return after sending DM
+        await ctx.send("Check your DMs for result.")
+
         try:
             data = await self.bot.api_client.get(f"bot/users/{ctx.author.id}/metricity_data")
         except ResponseCodeError as e:
             if e.status == 404:
-                await ctx.send(f":x: {ctx.author.mention} Unable to find Metricity data about you.")
+                embed = discord.Embed(
+                    title="Not found",
+                    description=f"{ctx.author.mention} Unable to find Metricity data about you.",
+                    color=Colour.red()
+                )
                 log.info(f"Unable to find Metricity data about {ctx.author} ({ctx.author.id})")
             else:
-                log.warning(f"Got response code {e.status} while trying to get {ctx.author.id} metricity data.")
-                await ctx.send(":x: Got unexpected response from site. Please let us know about this.")
+                embed = discord.Embed(
+                    title="Unexpected response",
+                    description="Got unexpected response from site. Please let us know about this.",
+                    color=Colour.red()
+                )
+                log.warning(f"Got response code {e.status} while trying to get {ctx.author.id} Metricity data.")
+
+            await ctx.author.send(embed=embed)
             return
 
         # Pre-parse this for better code style
@@ -85,19 +99,22 @@ class VoiceGate(Cog):
             else:
                 reasons = failed_reasons[0]
 
-            await ctx.send(
-                FAILED_MESSAGE.format(
-                    user=ctx.author.mention,
-                    reasons=reasons
-                )
+            embed = discord.Embed(
+                title="Voice Gate not passed",
+                description=FAILED_MESSAGE.format(user=ctx.author.mention, reasons=reasons),
+                color=Colour.red()
             )
+            await ctx.author.send(embed=embed)
             return
 
         self.mod_log.ignore(Event.member_update, ctx.author.id)
         await ctx.author.add_roles(discord.Object(Roles.voice_verified), reason="Voice Gate passed")
-        await ctx.author.send(
-            ":tada: Congratulations! You have been granted permission to use voice channels in Python Discord."
+        embed = discord.Embed(
+            title="Congratulations",
+            description="You have been granted permission to use voice channels in Python Discord.",
+            color=Colour.green()
         )
+        await ctx.author.send(embed=embed)
         self.bot.stats.incr("voice_gate.passed")
 
     @Cog.listener()
