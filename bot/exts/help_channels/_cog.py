@@ -11,7 +11,7 @@ from discord.ext import commands
 
 from bot import constants
 from bot.bot import Bot
-from bot.exts.help_channels import _channel, _message
+from bot.exts.help_channels import _channel, _cooldown, _message
 from bot.exts.help_channels._name import create_name_queue
 from bot.utils import channel as channel_utils
 from bot.utils.scheduling import Scheduler
@@ -21,8 +21,6 @@ log = logging.getLogger(__name__)
 HELP_CHANNEL_TOPIC = """
 This is a Python help channel. You can claim your own help channel in the Python Help: Available category.
 """
-
-CoroutineFunc = t.Callable[..., t.Coroutine]
 
 
 class HelpChannels(commands.Cog):
@@ -164,7 +162,7 @@ class HelpChannels(commands.Cog):
         log.trace("close command invoked; checking if the channel is in-use.")
         if ctx.channel.category == self.in_use_category:
             if await self.dormant_check(ctx):
-                await self.remove_cooldown_role(ctx.author)
+                await _cooldown.remove_cooldown_role(ctx.author)
 
                 # Ignore missing task when cooldown has passed but the channel still isn't dormant.
                 if ctx.author.id in self.scheduler:
@@ -246,7 +244,7 @@ class HelpChannels(commands.Cog):
 
         log.trace("Initialising the cog.")
         await self.init_categories()
-        await self.check_cooldowns()
+        await _cooldown.check_cooldowns(self.scheduler)
 
         self.channel_queue = self.create_channel_queue()
         self.name_queue = create_name_queue(
@@ -462,7 +460,7 @@ class HelpChannels(commands.Cog):
 
             log.info(f"Channel #{channel} was claimed by `{message.author.id}`.")
             await self.move_to_in_use(channel)
-            await self.revoke_send_permissions(message.author)
+            await _cooldown.revoke_send_permissions(message.author, self.scheduler)
 
             await _message.pin(message)
 
@@ -504,84 +502,6 @@ class HelpChannels(commands.Cog):
 
         delay = constants.HelpChannels.deleted_idle_minutes * 60
         self.scheduler.schedule_later(delay, msg.channel.id, self.move_idle_channel(msg.channel))
-
-    async def check_cooldowns(self) -> None:
-        """Remove expired cooldowns and re-schedule active ones."""
-        log.trace("Checking all cooldowns to remove or re-schedule them.")
-        guild = self.bot.get_guild(constants.Guild.id)
-        cooldown = constants.HelpChannels.claim_minutes * 60
-
-        for channel_id, member_id in await self.help_channel_claimants.items():
-            member = guild.get_member(member_id)
-            if not member:
-                continue  # Member probably left the guild.
-
-            in_use_time = await self.get_in_use_time(channel_id)
-
-            if not in_use_time or in_use_time.seconds > cooldown:
-                # Remove the role if no claim time could be retrieved or if the cooldown expired.
-                # Since the channel is in the claimants cache, it is definitely strange for a time
-                # to not exist. However, it isn't a reason to keep the user stuck with a cooldown.
-                await self.remove_cooldown_role(member)
-            else:
-                # The member is still on a cooldown; re-schedule it for the remaining time.
-                delay = cooldown - in_use_time.seconds
-                self.scheduler.schedule_later(delay, member.id, self.remove_cooldown_role(member))
-
-    async def add_cooldown_role(self, member: discord.Member) -> None:
-        """Add the help cooldown role to `member`."""
-        log.trace(f"Adding cooldown role for {member} ({member.id}).")
-        await self._change_cooldown_role(member, member.add_roles)
-
-    async def remove_cooldown_role(self, member: discord.Member) -> None:
-        """Remove the help cooldown role from `member`."""
-        log.trace(f"Removing cooldown role for {member} ({member.id}).")
-        await self._change_cooldown_role(member, member.remove_roles)
-
-    async def _change_cooldown_role(self, member: discord.Member, coro_func: CoroutineFunc) -> None:
-        """
-        Change `member`'s cooldown role via awaiting `coro_func` and handle errors.
-
-        `coro_func` is intended to be `discord.Member.add_roles` or `discord.Member.remove_roles`.
-        """
-        guild = self.bot.get_guild(constants.Guild.id)
-        role = guild.get_role(constants.Roles.help_cooldown)
-        if role is None:
-            log.warning(f"Help cooldown role ({constants.Roles.help_cooldown}) could not be found!")
-            return
-
-        try:
-            await coro_func(role)
-        except discord.NotFound:
-            log.debug(f"Failed to change role for {member} ({member.id}): member not found")
-        except discord.Forbidden:
-            log.debug(
-                f"Forbidden to change role for {member} ({member.id}); "
-                f"possibly due to role hierarchy"
-            )
-        except discord.HTTPException as e:
-            log.error(f"Failed to change role for {member} ({member.id}): {e.status} {e.code}")
-
-    async def revoke_send_permissions(self, member: discord.Member) -> None:
-        """
-        Disallow `member` to send messages in the Available category for a certain time.
-
-        The time until permissions are reinstated can be configured with
-        `HelpChannels.claim_minutes`.
-        """
-        log.trace(
-            f"Revoking {member}'s ({member.id}) send message permissions in the Available category."
-        )
-
-        await self.add_cooldown_role(member)
-
-        # Cancel the existing task, if any.
-        # Would mean the user somehow bypassed the lack of permissions (e.g. user is guild owner).
-        if member.id in self.scheduler:
-            self.scheduler.cancel(member.id)
-
-        delay = constants.HelpChannels.claim_minutes * 60
-        self.scheduler.schedule_later(delay, member.id, self.remove_cooldown_role(member))
 
     async def wait_for_dormant_channel(self) -> discord.TextChannel:
         """Wait for a dormant channel to become available in the queue and return it."""
