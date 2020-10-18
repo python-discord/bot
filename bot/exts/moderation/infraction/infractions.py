@@ -359,10 +359,6 @@ class Infractions(InfractionScheduler, commands.Cog):
     @respect_role_hierarchy(member_arg=2)
     async def apply_voice_ban(self, ctx: Context, user: UserSnowflake, reason: t.Optional[str], **kwargs) -> None:
         """Apply a voice ban infraction with kwargs passed to `post_infraction`."""
-        if constants.Roles.voice_verified not in [role.id for role in user.roles]:
-            await ctx.send(":x: Can't apply Voice Ban to user who have not passed the Voice Gate.")
-            return
-
         if await _utils.get_active_infraction(ctx, user, "voice_ban"):
             return
 
