@@ -138,7 +138,7 @@ class InfractionScheduler:
                 end_msg = f" (reason: {textwrap.shorten(reason, width=1500, placeholder='...')})"
         elif ctx.channel.id not in MODERATION_CHANNELS:
             log.trace(
-                f"Infraction #{id_} context is not in a mod channel; omitting infraction count."
+                f"Infraction #{id_} context is not in a mod channel; omitting infraction count and id."
             )
         else:
             log.trace(f"Fetching total infraction count for {user}.")
@@ -148,7 +148,7 @@ class InfractionScheduler:
                 params={"user__id": str(user.id)}
             )
             total = len(infractions)
-            end_msg = f" ({total} infraction{ngettext('', 's', total)} total)"
+            end_msg = f" (#{id_} ; {total} infraction{ngettext('', 's', total)} total)"
 
         # Execute the necessary actions to apply the infraction on Discord.
         if action_coro:

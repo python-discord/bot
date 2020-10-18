@@ -58,7 +58,7 @@ bot = Bot(
     redis_session=redis_session,
     loop=loop,
     command_prefix=when_mentioned_or(constants.Bot.prefix),
-    activity=discord.Game(name="Commands: !help"),
+    activity=discord.Game(name=f"Commands: {constants.Bot.prefix}help"),
     case_insensitive=True,
     max_messages=10_000,
     allowed_mentions=discord.AllowedMentions(everyone=False, roles=allowed_roles),

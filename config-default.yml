@@ -119,6 +119,7 @@ style:
         voice_state_green: "https://cdn.discordapp.com/emojis/656899770094452754.png"
         voice_state_red: "https://cdn.discordapp.com/emojis/656899769905709076.png"
 
+
 guild:
     id: 267624335836053506
     invite: "https://discord.gg/python"
@@ -145,8 +146,8 @@ guild:
         dev_log:            &DEV_LOG        622895325144940554
 
         # Discussion
-        meta:               429409067623251969
-        python_discussion:  267624335836053506
+        meta:                               429409067623251969
+        python_discussion:  &PY_DISCUSSION  267624335836053506
 
         # Python Help: Available
         how_to_get_help:    704250143020417084
@@ -192,6 +193,7 @@ guild:
 
         # Voice
         code_help_voice:                    755154969761677312
+        code_help_voice_2:                  766330079135268884
         admins_voice:       &ADMINS_VOICE   500734494840717332
         staff_voice:        &STAFF_VOICE    412375055910043655
 
@@ -226,6 +228,7 @@ guild:
         muted:              &MUTED_ROLE         277914926603829249
         partners:                               323426753857191936
         python_community:   &PY_COMMUNITY_ROLE  458226413825294336
+        sprinters:          &SPRINTERS          758422482289426471
 
         unverified:                             739794855945044069
         verified:                               352427296948486144  # @Developers on PyDis
@@ -262,6 +265,7 @@ guild:
         python_news:        &PYNEWS_WEBHOOK 704381182279942324
         reddit:                             635408384794951680
         talent_pool:                        569145364800602132
+
 
 filter:
     # What do we filter?
@@ -300,6 +304,7 @@ filter:
         - *OWNERS_ROLE
         - *HELPERS_ROLE
         - *PY_COMMUNITY_ROLE
+        - *SPRINTERS
 
 
 keys:
@@ -327,6 +332,7 @@ urls:
     # Misc URLs
     bot_avatar:      "https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle/logo_circle.png"
     github_bot_repo: "https://github.com/python-discord/bot"
+
 
 anti_spam:
     # Clean messages that violate a rule.
@@ -396,6 +402,23 @@ big_brother:
     header_message_limit: 15
 
 
+code_block:
+    # The channels in which code blocks will be detected. They are not subject to a cooldown.
+    channel_whitelist:
+        - *BOT_CMD
+
+    # The channels which will be affected by a cooldown. These channels are also whitelisted.
+    cooldown_channels:
+        - *PY_DISCUSSION
+
+    # Sending instructions triggers a cooldown on a per-channel basis.
+    # More instruction messages will not be sent in the same channel until the cooldown has elapsed.
+    cooldown_seconds: 300
+
+    # The minimum amount of lines a message or code block must have for instructions to be sent.
+    minimum_lines: 4
+
+
 free:
     # Seconds to elapse for a channel
     # to be considered inactive.
@@ -444,9 +467,11 @@ help_channels:
     notify_roles:
         - *HELPERS_ROLE
 
+
 redirect_output:
     delete_invocation: true
     delete_delay: 15
+
 
 duck_pond:
     threshold: 4
@@ -462,6 +487,7 @@ duck_pond:
         - *STAFF_ANNOUNCEMENTS
         - *MOD_ANNOUNCEMENTS
         - *ADMIN_ANNOUNCEMENTS
+
 
 python_news:
     mail_lists:
