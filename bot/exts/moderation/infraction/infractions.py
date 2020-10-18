@@ -428,7 +428,7 @@ class Infractions(InfractionScheduler, commands.Cog):
             notified = await _utils.notify_pardon(
                 user=user,
                 title="Voice ban ended",
-                content="You can verify yourself for voice access again.",
+                content="You have been unbanned and can verify yourself again in the server.",
                 icon_url=_utils.INFRACTION_ICONS["voice_ban"][1]
             )
 
