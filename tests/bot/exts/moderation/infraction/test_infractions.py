@@ -71,7 +71,7 @@ class VoiceBanTests(unittest.IsolatedAsyncioTestCase):
     async def test_permanent_voice_ban(self):
         """Should call voice ban applying function without expiry."""
         self.cog.apply_voice_ban = AsyncMock()
-        self.assertIsNone(await self.cog.voice_ban(self.cog, self.ctx, self.user, reason="foobar"))
+        self.assertIsNone(await self.cog.voiceban(self.cog, self.ctx, self.user, reason="foobar"))
         self.cog.apply_voice_ban.assert_awaited_once_with(self.ctx, self.user, "foobar")
 
     async def test_temporary_voice_ban(self):
