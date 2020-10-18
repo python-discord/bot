@@ -220,16 +220,18 @@ class Utils(Cog):
         # Handle PEP 0 directly because it's not in .rst or .txt so it can't be accessed like other PEPs.
         if pep_number == 0:
             pep_embed = self.get_pep_zero_embed()
+            success = True
         else:
-            if not await self.validate_pep_number(ctx, pep_number):
-                return
+            success = False
+            if not (pep_embed := await self.validate_pep_number(pep_number)):
+                pep_embed, success = await self.get_pep_embed(pep_number)
 
-            pep_embed = await self.get_pep_embed(ctx, pep_number)
-
-        if pep_embed:
-            await ctx.send(embed=pep_embed)
+        await ctx.send(embed=pep_embed)
+        if success:
             log.trace(f"PEP {pep_number} getting and sending finished successfully. Increasing stat.")
             self.bot.stats.incr(f"pep_fetches.{pep_number}")
+        else:
+            log.trace(f"Getting PEP {pep_number} failed. Error embed sent.")
 
     @staticmethod
     def get_pep_zero_embed() -> Embed:
@@ -245,8 +247,8 @@ class Utils(Cog):
 
         return pep_embed
 
-    async def validate_pep_number(self, ctx: Context, pep_nr: int) -> bool:
-        """Validate is PEP number valid. When it isn't, send error and return False. Otherwise return True."""
+    async def validate_pep_number(self, pep_nr: int) -> Optional[Embed]:
+        """Validate is PEP number valid. When it isn't, return error embed, otherwise None."""
         if (
             pep_nr not in self.peps
             and (self.last_refreshed_peps + timedelta(minutes=30)) <= datetime.now()
@@ -256,11 +258,13 @@ class Utils(Cog):
 
         if pep_nr not in self.peps:
             log.trace(f"PEP {pep_nr} was not found")
-            not_found = f"PEP {pep_nr} does not exist."
-            await self.send_pep_error_embed(ctx, "PEP not found", not_found)
-            return False
+            return Embed(
+                title="PEP not found",
+                description=f"PEP {pep_nr} does not exist.",
+                colour=Colour.red()
+            )
 
-        return True
+        return None
 
     def generate_pep_embed(self, pep_header: Dict, pep_nr: int) -> Embed:
         """Generate PEP embed based on PEP headers data."""
@@ -283,8 +287,8 @@ class Utils(Cog):
         return pep_embed
 
     @pep_cache(arg_offset=2)
-    async def get_pep_embed(self, ctx: Context, pep_nr: int) -> Optional[Embed]:
-        """Fetch, generate and return PEP embed. When any error occur, use `self.send_pep_error_embed`."""
+    async def get_pep_embed(self, pep_nr: int) -> Tuple[Embed, bool]:
+        """Fetch, generate and return PEP embed. Second item of return tuple show does getting success."""
         response = await self.bot.http_session.get(self.peps[pep_nr])
 
         if response.status == 200:
@@ -293,19 +297,16 @@ class Utils(Cog):
 
             # Taken from https://github.com/python/peps/blob/master/pep0/pep.py#L179
             pep_header = HeaderParser().parse(StringIO(pep_content))
-            return self.generate_pep_embed(pep_header, pep_nr)
+            return self.generate_pep_embed(pep_header, pep_nr), True
         else:
             log.trace(
                 f"The user requested PEP {pep_nr}, but the response had an unexpected status code: {response.status}."
             )
-            error_message = "Unexpected HTTP error during PEP search. Please let us know."
-            return await self.send_pep_error_embed(ctx, "Unexpected error", error_message)
-
-    @staticmethod
-    async def send_pep_error_embed(ctx: Context, title: str, description: str) -> None:
-        """Send error PEP embed with `ctx.send`."""
-        embed = Embed(title=title, description=description, colour=Colour.red())
-        await ctx.send(embed=embed)
+            return Embed(
+                title="Unexpected error",
+                description="Unexpected HTTP error during PEP search. Please let us know.",
+                colour=Colour.red()
+            ), False
     # endregion
 
 
