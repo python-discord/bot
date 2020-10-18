@@ -21,7 +21,7 @@ FAILED_MESSAGE = """{user} you don't meet with our current requirements to pass 
 MESSAGE_FIELD_MAP = {
     "verified_at": f"haven't been verified for at least {GateConf.minimum_days_verified} days",
     "voice_banned": "are voice banned",
-    "total_messages": f"haven't sent at least {GateConf.minimum_messages} messages",
+    "total_messages": f"have sent less than {GateConf.minimum_messages} messages",
 }
 
 
@@ -49,7 +49,7 @@ class VoiceGate(Cog):
         - You must not be actively banned from using our voice channels
         """
         # Send this as first thing in order to return after sending DM
-        await ctx.send("You will get response to DM.")
+        await ctx.send(f"{ctx.author.mention}, check your DMs.")
 
         try:
             data = await self.bot.api_client.get(f"bot/users/{ctx.author.id}/metricity_data")
@@ -57,14 +57,14 @@ class VoiceGate(Cog):
             if e.status == 404:
                 embed = discord.Embed(
                     title="Not found",
-                    description=f"{ctx.author.mention} Unable to find Metricity data about you.",
+                    description=f"We were unable to find user data for you. Please try again shortly, if this problem persists please contact the server staff through Modmail.",
                     color=Colour.red()
                 )
                 log.info(f"Unable to find Metricity data about {ctx.author} ({ctx.author.id})")
             else:
                 embed = discord.Embed(
                     title="Unexpected response",
-                    description="Got unexpected response from site. Please let us know about this.",
+                    description="We encountered an error while attempting to find data for your user. Please try again and let us know if the problem persists.",
                     color=Colour.red()
                 )
                 log.warning(f"Got response code {e.status} while trying to get {ctx.author.id} Metricity data.")
@@ -104,7 +104,7 @@ class VoiceGate(Cog):
         self.mod_log.ignore(Event.member_update, ctx.author.id)
         await ctx.author.add_roles(discord.Object(Roles.voice_verified), reason="Voice Gate passed")
         embed = discord.Embed(
-            title="Congratulations",
+            title="Voice gate passed",
             description="You have been granted permission to use voice channels in Python Discord.",
             color=Colour.green()
         )
