@@ -176,7 +176,7 @@ class VoiceBanTests(unittest.IsolatedAsyncioTestCase):
         """Should include info to return dict when user was not found from guild."""
         self.guild.get_member.return_value = None
         result = await self.cog.pardon_voice_ban(self.user.id, self.guild, "foobar")
-        self.assertEqual(result, {"Failure": "User was not found in the guild."})
+        self.assertEqual(result, {"Info": "User was not found in the guild."})
 
     @patch("bot.exts.moderation.infraction.infractions._utils.notify_pardon")
     @patch("bot.exts.moderation.infraction.infractions.format_user")
