@@ -19,8 +19,8 @@ log = logging.getLogger(__name__)
 FAILED_MESSAGE = """{user} you don't meet with our current requirements to pass Voice Gate. You {reasons}."""
 
 MESSAGE_FIELD_MAP = {
-    "verified_at": f"haven't been verified for at least {GateConf.minimum_days_verified} days",
-    "voice_banned": "are voice banned",
+    "verified_at": f"have been verified for less {GateConf.minimum_days_verified} days",
+    "voice_banned": "have an active voice ban infraction",
     "total_messages": f"have sent less than {GateConf.minimum_messages} messages",
 }
 
