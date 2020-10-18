@@ -435,8 +435,8 @@ class Infractions(InfractionScheduler, commands.Cog):
             # DM user about infraction expiration
             notified = await _utils.notify_pardon(
                 user=user,
-                title="Your Voice Ban have been removed",
-                content="You can now speak again in voice channels.",
+                title="Voice ban pardoned",
+                content="You can now verify yourself for voice access again.",
                 icon_url=_utils.INFRACTION_ICONS["voice_ban"][1]
             )
 
