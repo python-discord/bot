@@ -102,7 +102,10 @@ class VoiceGate(Cog):
                 description=FAILED_MESSAGE.format(reasons="\n".join(f'• You {reason}.' for reason in failed_reasons)),
                 color=Colour.red()
             )
-            await ctx.author.send(embed=embed)
+            try:
+                await ctx.author.send(embed=embed)
+            except discord.Forbidden:
+                await ctx.channel.send(ctx.author.mention, embed=embed)
             return
 
         self.mod_log.ignore(Event.member_update, ctx.author.id)
@@ -112,7 +115,10 @@ class VoiceGate(Cog):
             description="You have been granted permission to use voice channels in Python Discord.",
             color=Colour.green()
         )
-        await ctx.author.send(embed=embed)
+        try:
+            await ctx.author.send(embed=embed)
+        except discord.Forbidden:
+            await ctx.channel.send(ctx.author.mention, embed=embed)
         self.bot.stats.incr("voice_gate.passed")
 
     @Cog.listener()
