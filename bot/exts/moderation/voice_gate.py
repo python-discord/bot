@@ -59,14 +59,21 @@ class VoiceGate(Cog):
             if e.status == 404:
                 embed = discord.Embed(
                     title="Not found",
-                    description=f"We were unable to find user data for you. Please try again shortly, if this problem persists please contact the server staff through Modmail.",
+                    description=(
+                        "We were unable to find user data for you. "
+                        "Please try again shortly, "
+                        "if this problem persists please contact the server staff through Modmail.",
+                    ),
                     color=Colour.red()
                 )
                 log.info(f"Unable to find Metricity data about {ctx.author} ({ctx.author.id})")
             else:
                 embed = discord.Embed(
                     title="Unexpected response",
-                    description="We encountered an error while attempting to find data for your user. Please try again and let us know if the problem persists.",
+                    description=(
+                        "We encountered an error while attempting to find data for your user. "
+                        "Please try again and let us know if the problem persists."
+                    ),
                     color=Colour.red()
                 )
                 log.warning(f"Got response code {e.status} while trying to get {ctx.author.id} Metricity data.")
