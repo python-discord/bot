@@ -22,7 +22,7 @@ FAILED_MESSAGE = (
 )
 
 MESSAGE_FIELD_MAP = {
-    "verified_at": f"have been verified for less {GateConf.minimum_days_verified} days",
+    "verified_at": f"have been verified for less than {GateConf.minimum_days_verified} days",
     "voice_banned": "have an active voice ban infraction",
     "total_messages": f"have sent less than {GateConf.minimum_messages} messages",
 }
