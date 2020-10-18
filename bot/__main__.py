@@ -1,58 +1,7 @@
-import asyncio
-
-import discord
-from async_rediscache import RedisSession
-from discord.ext.commands import when_mentioned_or
-
 import bot
 from bot import constants
 from bot.bot import Bot
-from bot.utils.extensions import EXTENSIONS
 
-
-# Create the redis session instance.
-redis_session = RedisSession(
-    address=(constants.Redis.host, constants.Redis.port),
-    password=constants.Redis.password,
-    minsize=1,
-    maxsize=20,
-    use_fakeredis=constants.Redis.use_fakeredis,
-    global_namespace="bot",
-)
-
-# Connect redis session to ensure it's connected before we try to access Redis
-# from somewhere within the bot. We create the event loop in the same way
-# discord.py normally does and pass it to the bot's __init__.
-loop = asyncio.get_event_loop()
-loop.run_until_complete(redis_session.connect())
-
-
-# Instantiate the bot.
-allowed_roles = [discord.Object(id_) for id_ in constants.MODERATION_ROLES]
-intents = discord.Intents().all()
-intents.presences = False
-intents.dm_typing = False
-intents.dm_reactions = False
-intents.invites = False
-intents.webhooks = False
-intents.integrations = False
-bot.instance = Bot(
-    redis_session=redis_session,
-    loop=loop,
-    command_prefix=when_mentioned_or(constants.Bot.prefix),
-    activity=discord.Game(name=f"Commands: {constants.Bot.prefix}help"),
-    case_insensitive=True,
-    max_messages=10_000,
-    allowed_mentions=discord.AllowedMentions(everyone=False, roles=allowed_roles),
-    intents=intents,
-)
-
-# Load extensions.
-extensions = set(EXTENSIONS)  # Create a mutable copy.
-if not constants.HelpChannels.enable:
-    extensions.remove("bot.exts.help_channels")
-
-for extension in extensions:
-    bot.instance.load_extension(extension)
-
+bot.instance = Bot.create()
+bot.instance.load_extensions()
 bot.instance.run(constants.Bot.token)
