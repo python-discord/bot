@@ -9,19 +9,20 @@ from discord.ext.commands import Cog, Context, command
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Channels, Event, MODERATION_ROLES, Roles, VoiceGate as VoiceGateConf
+from bot.constants import Channels, Event, MODERATION_ROLES, Roles, VoiceGate as GateConf
 from bot.decorators import has_no_roles, in_whitelist
 from bot.exts.moderation.modlog import ModLog
 from bot.utils.checks import InWhitelistCheckFailure
 
 log = logging.getLogger(__name__)
 
-# Messages for case when user don't meet with requirements
-NOT_ENOUGH_MESSAGES = f"haven't sent at least {VoiceGateConf.minimum_messages} messages"
-NOT_ENOUGH_DAYS_AFTER_VERIFICATION = f"haven't been verified for at least {VoiceGateConf.minimum_days_verified} days"
-VOICE_BANNED = "are voice banned"
-
 FAILED_MESSAGE = """{user} you don't meet with our current requirements to pass Voice Gate. You {reasons}."""
+
+MESSAGE_FIELD_MAP = {
+    "verified_at": f"haven't been verified for at least {GateConf.minimum_days_verified} days",
+    "voice_banned": "are voice banned",
+    "total_messages": f"haven't sent at least {GateConf.minimum_messages} messages",
+}
 
 
 class VoiceGate(Cog):
@@ -75,23 +76,16 @@ class VoiceGate(Cog):
         if data["verified_at"] is not None:
             data["verified_at"] = parser.isoparse(data["verified_at"])
         else:
-            data["verified_at"] = datetime.now() - timedelta(days=3)
+            data["verified_at"] = datetime.utcnow() - timedelta(days=3)
 
-        failed = False
-        failed_reasons = []
-
-        if data["verified_at"] > datetime.utcnow() - timedelta(days=VoiceGateConf.minimum_days_verified):
-            failed_reasons.append(NOT_ENOUGH_DAYS_AFTER_VERIFICATION)
-            failed = True
-            self.bot.stats.incr("voice_gate.failed.verified_at")
-        if data["total_messages"] < VoiceGateConf.minimum_messages:
-            failed_reasons.append(NOT_ENOUGH_MESSAGES)
-            failed = True
-            self.bot.stats.incr("voice_gate.failed.total_messages")
-        if data["voice_banned"]:
-            failed_reasons.append(VOICE_BANNED)
-            failed = True
-            self.bot.stats.incr("voice_gate.failed.voice_banned")
+        checks = {
+            "verified_at": data["verified_at"] > datetime.utcnow() - timedelta(days=GateConf.minimum_days_verified),
+            "total_messages": data["total_messages"] < GateConf.minimum_messages,
+            "voice_banned": data["voice_banned"]
+        }
+        failed = any(checks.values())
+        failed_reasons = [MESSAGE_FIELD_MAP[key] for key, value in checks.items() if value is True]
+        [self.bot.stats.incr(f"voice_gate.failed.{key}") for key, value in checks.items() if value is True]
 
         if failed:
             if len(failed_reasons) > 1:
@@ -130,7 +124,7 @@ class VoiceGate(Cog):
         # When it's bot sent message, delete it after some time
         if message.author.bot:
             with suppress(discord.NotFound):
-                await message.delete(delay=VoiceGateConf.bot_message_delete_delay)
+                await message.delete(delay=GateConf.bot_message_delete_delay)
                 return
 
         # Then check is member moderator+, because we don't want to delete their messages.
