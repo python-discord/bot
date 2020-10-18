@@ -511,8 +511,8 @@ verification:
 
 
 voice_gate:
-    minimum_days_verified: 3  # Days how much user have to be verified to pass Voice Gate
-    minimum_messages: 50  # How much messages user must have to pass Voice Gate
+    minimum_days_verified: 3  # How many days the user must have been verified for
+    minimum_messages: 50  # How many messages a user must have to be eligible for voice
     bot_message_delete_delay: 10  # Seconds before deleting bot's response in Voice Gate
 
 
