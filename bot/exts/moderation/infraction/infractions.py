@@ -443,8 +443,7 @@ class Infractions(InfractionScheduler, commands.Cog):
             log_text["Member"] = format_user(user)
             log_text["DM"] = "Sent" if notified else "**Failed**"
         else:
-            log.info(f"Failed to remove Voice Ban from user {user_id}: user not found")
-            log_text["Failure"] = "User was not found in the guild."
+            log_text["Info"] = "User was not found in the guild."
 
         return log_text
 
