@@ -286,7 +286,7 @@ class Utils(Cog):
 
         return pep_embed
 
-    @pep_cache(arg_offset=2)
+    @pep_cache(arg_offset=1)
     async def get_pep_embed(self, pep_nr: int) -> Tuple[Embed, bool]:
         """Fetch, generate and return PEP embed. Second item of return tuple show does getting success."""
         response = await self.bot.http_session.get(self.peps[pep_nr])
