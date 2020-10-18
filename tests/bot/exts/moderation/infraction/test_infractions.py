@@ -182,7 +182,6 @@ class VoiceBanTests(unittest.IsolatedAsyncioTestCase):
     @patch("bot.exts.moderation.infraction.infractions.format_user")
     async def test_voice_unban_user_found(self, format_user_mock, notify_pardon_mock):
         """Should add role back with ignoring, notify user and return log dictionary.."""
-        self.cog.mod_log.ignore = MagicMock()
         self.guild.get_member.return_value = self.user
         notify_pardon_mock.return_value = True
         format_user_mock.return_value = "my-user"
@@ -192,8 +191,6 @@ class VoiceBanTests(unittest.IsolatedAsyncioTestCase):
             "Member": "my-user",
             "DM": "Sent"
         })
-        self.cog.mod_log.ignore.assert_called_once_with(Event.member_update, self.user.id)
-        self.user.add_roles.assert_awaited_once_with(self.cog._voice_verified_role, reason="foobar")
         notify_pardon_mock.assert_awaited_once()
 
     @patch("bot.exts.moderation.infraction.infractions._utils.notify_pardon")
