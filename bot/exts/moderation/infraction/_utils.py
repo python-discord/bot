@@ -155,7 +155,7 @@ async def notify_infraction(
     log.trace(f"Sending {user} a DM about their {infr_type} infraction.")
 
     text = INFRACTION_DESCRIPTION_TEMPLATE.format(
-        type=infr_type.capitalize(),
+        type=infr_type.title(),
         expires=expires_at or "N/A",
         reason=reason or "No reason provided."
     )
