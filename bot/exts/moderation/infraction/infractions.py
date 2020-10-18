@@ -371,6 +371,8 @@ class Infractions(InfractionScheduler, commands.Cog):
         if reason:
             reason = textwrap.shorten(reason, width=512, placeholder="...")
 
+        await user.move_to(None, reason="Disconnected from voice to apply voiceban.")
+
         action = user.remove_roles(self._voice_verified_role, reason=reason)
         await self.apply_infraction(ctx, infraction, user, action)
 
