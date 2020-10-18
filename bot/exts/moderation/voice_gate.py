@@ -93,7 +93,7 @@ class VoiceGate(Cog):
         self.mod_log.ignore(Event.member_update, ctx.author.id)
         await ctx.author.add_roles(discord.Object(Roles.voice_verified), reason="Voice Gate passed")
         await ctx.author.send(
-            ":tada: Congratulations! You are now Voice Verified and have access to PyDis Voice Channels."
+            ":tada: Congratulations! You have been granted permission to use voice channels in Python Discord."
         )
         self.bot.stats.incr("voice_gate.passed")
 
