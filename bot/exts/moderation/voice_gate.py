@@ -113,6 +113,10 @@ class VoiceGate(Cog):
             description="You have been granted permission to use voice channels in Python Discord.",
             color=Colour.green()
         )
+
+        if ctx.author.voice:
+            embed.description += "\n\nPlease reconnect to your voice channel to be granted your new permissions."
+
         try:
             await ctx.author.send(embed=embed)
             await ctx.send(f"{ctx.author}, please check your DMs.")
