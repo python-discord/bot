@@ -66,7 +66,6 @@ def _split_parameters(parameters_string: str) -> List[str]:
     depth = 0
     expected_end = None
     current_search = None
-    previous_character = ""
 
     for index, character in enumerate(parameters_string):
         if character in _BRACKET_PAIRS:
@@ -79,7 +78,9 @@ def _split_parameters(parameters_string: str) -> List[str]:
         elif character in {"'", '"'}:
             if depth == 0:
                 depth += 1
-            elif not previous_character == "\\":
+            elif parameters_string[index-1] != "\\":
+                depth -= 1
+            elif parameters_string[index-2] == "\\":
                 depth -= 1
 
         elif character == expected_end:
@@ -91,7 +92,6 @@ def _split_parameters(parameters_string: str) -> List[str]:
         elif depth == 0 and character == ",":
             parameters_list.append(parameters_string[last_split:index])
             last_split = index + 1
-        previous_character = character
 
     parameters_list.append(parameters_string[last_split:])
     return parameters_list
