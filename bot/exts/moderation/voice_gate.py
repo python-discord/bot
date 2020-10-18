@@ -38,7 +38,7 @@ class VoiceGate(Cog):
         """Get the currently loaded ModLog cog instance."""
         return self.bot.get_cog("ModLog")
 
-    @command(aliases=('voiceverify', 'vverify', 'voicev', 'vv'))
+    @command(aliases=('voiceverify',))
     @has_no_roles(Roles.voice_verified)
     @in_whitelist(channels=(Channels.voice_gate,), redirect=None)
     async def voice_verify(self, ctx: Context, *_) -> None:
