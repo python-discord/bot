@@ -89,8 +89,8 @@ class Infractions(InfractionScheduler, commands.Cog):
         """
         await self.apply_ban(ctx, user, reason, max(min(purge_days, 7), 0))
 
-    @command(aliases=('vban', 'voiceban'))
-    async def voice_ban(self, ctx: Context, user: FetchedMember, *, reason: t.Optional[str]) -> None:
+    @command(aliases=('vban',))
+    async def voiceban(self, ctx: Context, user: FetchedMember, *, reason: t.Optional[str]) -> None:
         """Permanently ban user from using voice channels."""
         await self.apply_voice_ban(ctx, user, reason)
 
