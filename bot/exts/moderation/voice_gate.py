@@ -16,7 +16,9 @@ from bot.utils.checks import InWhitelistCheckFailure
 
 log = logging.getLogger(__name__)
 
-FAILED_MESSAGE = """{user} you don't meet with our current requirements to pass Voice Gate. You {reasons}."""
+FAILED_MESSAGE = (
+    """You are not currently eligible to use voice inside Python Discord for the following reasons:\n\n{reasons}"""
+)
 
 MESSAGE_FIELD_MAP = {
     "verified_at": f"have been verified for less {GateConf.minimum_days_verified} days",
@@ -88,14 +90,9 @@ class VoiceGate(Cog):
         [self.bot.stats.incr(f"voice_gate.failed.{key}") for key, value in checks.items() if value is True]
 
         if failed:
-            if len(failed_reasons) > 1:
-                reasons = f"{', '.join(failed_reasons[:-1])} and {failed_reasons[-1]}"
-            else:
-                reasons = failed_reasons[0]
-
             embed = discord.Embed(
                 title="Voice Gate not passed",
-                description=FAILED_MESSAGE.format(user=ctx.author.mention, reasons=reasons),
+                description=FAILED_MESSAGE.format(reasons="\n".join(f'- You {reason}.' for reason in failed_reasons)),
                 color=Colour.red()
             )
             await ctx.author.send(embed=embed)
