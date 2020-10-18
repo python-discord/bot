@@ -98,7 +98,7 @@ class VoiceGate(Cog):
 
         if failed:
             embed = discord.Embed(
-                title="Voice Gate not passed",
+                title="Voice Gate failed",
                 description=FAILED_MESSAGE.format(reasons="\n".join(f'• You {reason}.' for reason in failed_reasons)),
                 color=Colour.red()
             )
