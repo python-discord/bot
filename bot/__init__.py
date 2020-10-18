@@ -12,7 +12,6 @@ if TYPE_CHECKING:
     from bot.bot import Bot
 
 log.setup()
-log.setup_sentry()
 
 # On Windows, the selector event loop is required for aiodns.
 if os.name == "nt":
