@@ -2,6 +2,7 @@ import asyncio
 import logging
 from typing import Optional
 from urllib.parse import quote as quote_url
+from urllib.parse import urlparse
 
 import aiohttp
 
@@ -58,7 +59,7 @@ class APIClient:
 
     @staticmethod
     def _url_for(endpoint: str) -> str:
-        return f"{URLs.site_schema}{URLs.site_api}/{quote_url(endpoint)}"
+        return urlparse(f"{URLs.site_api}/{quote_url(endpoint)}", "http").geturl()
 
     async def _create_session(self, **session_kwargs) -> None:
         """
