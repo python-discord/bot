@@ -83,7 +83,6 @@ class HelpChannels(commands.Cog):
 
         # Asyncio stuff
         self.queue_tasks: t.List[asyncio.Task] = []
-        self.ready = asyncio.Event()
         self.on_message_lock = asyncio.Lock()
         self.init_task = self.bot.loop.create_task(self.init_cog())
 
@@ -264,11 +263,9 @@ class HelpChannels(commands.Cog):
         self.close_command.enabled = True
 
         await self.init_available()
+        self.report_stats()
 
         log.info("Cog is ready!")
-        self.ready.set()
-
-        self.report_stats()
 
     def report_stats(self) -> None:
         """Report the channel count stats."""
@@ -439,8 +436,9 @@ class HelpChannels(commands.Cog):
         if not is_available or _channel.is_excluded_channel(channel):
             return  # Ignore messages outside the Available category or in excluded channels.
 
-        log.trace("Waiting for the cog to be ready before processing messages.")
-        await self.ready.wait()
+        if not self.init_task.done():
+            log.trace("Waiting for the cog to be ready before processing messages.")
+            await self.init_task
 
         log.trace("Acquiring lock to prevent a channel from being processed twice...")
         async with self.on_message_lock:
