@@ -488,6 +488,10 @@ class HelpChannels(commands.Cog):
         if not await _message.is_empty(msg.channel):
             return
 
+        if not self.init_task.done():
+            log.trace("Waiting for the cog to be ready before processing deleted messages.")
+            await self.init_task
+
         log.info(f"Claimant of #{msg.channel} ({msg.author}) deleted message, channel is empty now. Rescheduling task.")
 
         # Cancel existing dormant task before scheduling new.
