@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from contextlib import suppress
 from datetime import datetime, timedelta
@@ -21,7 +22,7 @@ FAILED_MESSAGE = (
 )
 
 MESSAGE_FIELD_MAP = {
-    "verified_at": f"have been verified for less {GateConf.minimum_days_verified} days",
+    "verified_at": f"have been verified for less than {GateConf.minimum_days_verified} days",
     "voice_banned": "have an active voice ban infraction",
     "total_messages": f"have sent less than {GateConf.minimum_messages} messages",
 }
@@ -50,9 +51,6 @@ class VoiceGate(Cog):
         - You must have accepted our rules over a certain number of days ago
         - You must not be actively banned from using our voice channels
         """
-        # Send this as first thing in order to return after sending DM
-        await ctx.send(f"{ctx.author.mention}, check your DMs.")
-
         try:
             data = await self.bot.api_client.get(f"bot/users/{ctx.author.id}/metricity_data")
         except ResponseCodeError as e:
@@ -104,21 +102,31 @@ class VoiceGate(Cog):
             )
             try:
                 await ctx.author.send(embed=embed)
+                await ctx.send(f"{ctx.author}, please check your DMs.")
             except discord.Forbidden:
                 await ctx.channel.send(ctx.author.mention, embed=embed)
             return
 
         self.mod_log.ignore(Event.member_update, ctx.author.id)
-        await ctx.author.add_roles(discord.Object(Roles.voice_verified), reason="Voice Gate passed")
         embed = discord.Embed(
             title="Voice gate passed",
             description="You have been granted permission to use voice channels in Python Discord.",
             color=Colour.green()
         )
+
+        if ctx.author.voice:
+            embed.description += "\n\nPlease reconnect to your voice channel to be granted your new permissions."
+
         try:
             await ctx.author.send(embed=embed)
+            await ctx.send(f"{ctx.author}, please check your DMs.")
         except discord.Forbidden:
             await ctx.channel.send(ctx.author.mention, embed=embed)
+
+        # wait a little bit so those who don't get DMs see the response in-channel before losing perms to see it.
+        await asyncio.sleep(3)
+        await ctx.author.add_roles(discord.Object(Roles.voice_verified), reason="Voice Gate passed")
+
         self.bot.stats.incr("voice_gate.passed")
 
     @Cog.listener()
