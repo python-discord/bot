@@ -14,6 +14,7 @@ from bot import constants
 from bot.bot import Bot
 from bot.decorators import in_whitelist
 from bot.pagination import LinePaginator
+from bot.utils.channel import is_mod_channel
 from bot.utils.checks import cooldown_with_role_bypass, has_no_roles_check, in_whitelist_check
 from bot.utils.time import time_since
 
@@ -241,14 +242,8 @@ class Information(Cog):
             ),
         ]
 
-        # Use getattr to future-proof for commands invoked via DMs.
-        show_verbose = (
-            ctx.channel.id in constants.MODERATION_CHANNELS
-            or getattr(ctx.channel, "category_id", None) == constants.Categories.modmail
-        )
-
         # Show more verbose output in moderation channels for infractions and nominations
-        if show_verbose:
+        if is_mod_channel(ctx.channel):
             fields.append(await self.expanded_user_infraction_counts(user))
             fields.append(await self.user_nomination_counts(user))
         else:

@@ -471,6 +471,7 @@ class Guild(metaclass=YAMLGetter):
     id: int
     invite: str  # Discord invite, gets embedded in chat
     moderation_channels: List[int]
+    moderation_categories: List[int]
     moderation_roles: List[int]
     modlog_blacklist: List[int]
     reminder_whitelist: List[int]
@@ -638,6 +639,9 @@ STAFF_ROLES = Guild.staff_roles
 
 # Channel combinations
 MODERATION_CHANNELS = Guild.moderation_channels
+
+# Category combinations
+MODERATION_CATEGORIES = Guild.moderation_categories
 
 # Bot replies
 NEGATIVE_REPLIES = [
