@@ -2,6 +2,7 @@ import json
 import logging
 from contextlib import suppress
 from datetime import datetime, timedelta, timezone
+from operator import attrgetter
 from typing import Optional
 
 from async_rediscache import RedisCache
@@ -12,9 +13,12 @@ from discord.ext.commands import Context
 from bot.bot import Bot
 from bot.constants import Channels, Emojis, Guild, MODERATION_ROLES, Roles
 from bot.converters import HushDurationConverter
+from bot.utils.lock import LockedResourceError, lock_arg
 from bot.utils.scheduling import Scheduler
 
 log = logging.getLogger(__name__)
+
+LOCK_NAMESPACE = "silence"
 
 MSG_SILENCE_FAIL = f"{Emojis.cross_mark} current channel is already silenced."
 MSG_SILENCE_PERMANENT = f"{Emojis.check_mark} silenced current channel indefinitely."
@@ -95,6 +99,7 @@ class Silence(commands.Cog):
         await self._reschedule()
 
     @commands.command(aliases=("hush",))
+    @lock_arg(LOCK_NAMESPACE, "ctx", attrgetter("channel"), raise_error=True)
     async def silence(self, ctx: Context, duration: HushDurationConverter = 10) -> None:
         """
         Silence the current channel for `duration` minutes or `forever`.
@@ -133,6 +138,7 @@ class Silence(commands.Cog):
         log.debug(f"Unsilencing channel #{ctx.channel} from {ctx.author}'s command.")
         await self._unsilence_wrapper(ctx.channel)
 
+    @lock_arg(LOCK_NAMESPACE, "channel", raise_error=True)
     async def _unsilence_wrapper(self, channel: TextChannel) -> None:
         """Unsilence `channel` and send a success/failure message."""
         if not await self._unsilence(channel):
@@ -222,7 +228,9 @@ class Silence(commands.Cog):
             dt = datetime.fromtimestamp(timestamp, tz=timezone.utc)
             delta = (dt - datetime.now(tz=timezone.utc)).total_seconds()
             if delta <= 0:
-                await self._unsilence_wrapper(channel)
+                # Suppress the error since it's not being invoked by a user via the command.
+                with suppress(LockedResourceError):
+                    await self._unsilence_wrapper(channel)
             else:
                 log.info(f"Rescheduling silence for #{channel} ({channel.id}).")
                 self.scheduler.schedule_later(delta, channel_id, self._unsilence_wrapper(channel))
