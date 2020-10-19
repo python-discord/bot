@@ -2,7 +2,7 @@ import asyncio
 import logging
 import random
 import typing as t
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import discord
 import discord.abc
@@ -201,34 +201,6 @@ class HelpChannels(commands.Cog):
 
         return channel
 
-    async def get_in_use_time(self, channel_id: int) -> t.Optional[timedelta]:
-        """Return the duration `channel_id` has been in use. Return None if it's not in use."""
-        log.trace(f"Calculating in use time for channel {channel_id}.")
-
-        claimed_timestamp = await self.claim_times.get(channel_id)
-        if claimed_timestamp:
-            claimed = datetime.utcfromtimestamp(claimed_timestamp)
-            return datetime.utcnow() - claimed
-
-    @staticmethod
-    async def get_idle_time(channel: discord.TextChannel) -> t.Optional[int]:
-        """
-        Return the time elapsed, in seconds, since the last message sent in the `channel`.
-
-        Return None if the channel has no messages.
-        """
-        log.trace(f"Getting the idle time for #{channel} ({channel.id}).")
-
-        msg = await _message.get_last_message(channel)
-        if not msg:
-            log.debug(f"No idle time available; #{channel} ({channel.id}) has no messages.")
-            return None
-
-        idle_time = (datetime.utcnow() - msg.created_at).seconds
-
-        log.trace(f"#{channel} ({channel.id}) has been idle for {idle_time} seconds.")
-        return idle_time
-
     async def init_available(self) -> None:
         """Initialise the Available category with channels."""
         log.trace("Initialising the Available category with channels.")
@@ -329,7 +301,7 @@ class HelpChannels(commands.Cog):
         else:
             idle_seconds = constants.HelpChannels.deleted_idle_minutes * 60
 
-        time_elapsed = await self.get_idle_time(channel)
+        time_elapsed = await _channel.get_idle_time(channel)
 
         if time_elapsed is None or time_elapsed >= idle_seconds:
             log.info(
@@ -424,7 +396,7 @@ class HelpChannels(commands.Cog):
 
         self.bot.stats.incr(f"help.dormant_calls.{caller}")
 
-        in_use_time = await self.get_in_use_time(channel.id)
+        in_use_time = await _channel.get_in_use_time(channel.id)
         if in_use_time:
             self.bot.stats.timing("help.in_use_time", in_use_time)
 
