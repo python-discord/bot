@@ -107,7 +107,7 @@ class Silence(commands.Cog):
         channel_info = f"#{ctx.channel} ({ctx.channel.id})"
         log.debug(f"{ctx.author} is silencing channel {channel_info}.")
 
-        if not await self._silence_overwrites(ctx.channel):
+        if not await self._set_silence_overwrites(ctx.channel):
             log.info(f"Tried to silence channel {channel_info} but the channel was already silenced.")
             await ctx.send(MSG_SILENCE_FAIL)
             return
@@ -144,7 +144,7 @@ class Silence(commands.Cog):
         else:
             await channel.send(MSG_UNSILENCE_SUCCESS)
 
-    async def _silence_overwrites(self, channel: TextChannel) -> bool:
+    async def _set_silence_overwrites(self, channel: TextChannel) -> bool:
         """Set silence permission overwrites for `channel` and return True if successful."""
         overwrite = channel.overwrites_for(self._verified_role)
         prev_overwrites = dict(send_messages=overwrite.send_messages, add_reactions=overwrite.add_reactions)
