@@ -280,11 +280,6 @@ class HelpChannels(commands.Cog):
         self.bot.stats.gauge("help.total.available", total_available)
         self.bot.stats.gauge("help.total.dormant", total_dormant)
 
-    @staticmethod
-    def is_claimant(member: discord.Member) -> bool:
-        """Return True if `member` has the 'Help Cooldown' role."""
-        return any(constants.Roles.help_cooldown == role.id for role in member.roles)
-
     async def move_idle_channel(self, channel: discord.TextChannel, has_task: bool = True) -> None:
         """
         Make the `channel` dormant if idle or schedule the move if still active.
