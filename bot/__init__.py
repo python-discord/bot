@@ -65,7 +65,6 @@ logging.getLogger("discord").setLevel(logging.WARNING)
 logging.getLogger("websockets").setLevel(logging.WARNING)
 logging.getLogger("chardet").setLevel(logging.WARNING)
 logging.getLogger("async_rediscache").setLevel(logging.WARNING)
-logging.getLogger(__name__)
 
 
 # On Windows, the selector event loop is required for aiodns.
