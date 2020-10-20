@@ -6,12 +6,11 @@ from datetime import datetime, timezone
 
 import discord
 import discord.abc
-from async_rediscache import RedisCache
 from discord.ext import commands
 
 from bot import constants
 from bot.bot import Bot
-from bot.exts.help_channels import _channel, _cooldown, _message
+from bot.exts.help_channels import _caches, _channel, _cooldown, _message
 from bot.exts.help_channels._name import create_name_queue
 from bot.utils import channel as channel_utils
 from bot.utils.scheduling import Scheduler
@@ -57,14 +56,6 @@ class HelpChannels(commands.Cog):
 
     Help channels are named after the chemical elements in `bot/resources/elements.json`.
     """
-
-    # This cache tracks which channels are claimed by which members.
-    # RedisCache[discord.TextChannel.id, t.Union[discord.User.id, discord.Member.id]]
-    help_channel_claimants = RedisCache()
-
-    # This dictionary maps a help channel to the time it was claimed
-    # RedisCache[discord.TextChannel.id, UtcPosixTimestamp]
-    claim_times = RedisCache()
 
     def __init__(self, bot: Bot):
         self.bot = bot
@@ -136,7 +127,7 @@ class HelpChannels(commands.Cog):
 
     async def dormant_check(self, ctx: commands.Context) -> bool:
         """Return True if the user is the help channel claimant or passes the role check."""
-        if await self.help_channel_claimants.get(ctx.channel.id) == ctx.author.id:
+        if await _caches.claimants.get(ctx.channel.id) == ctx.author.id:
             log.trace(f"{ctx.author} is the help channel claimant, passing the check for dormant.")
             self.bot.stats.incr("help.dormant_invoke.claimant")
             return True
@@ -378,7 +369,7 @@ class HelpChannels(commands.Cog):
         """
         log.info(f"Moving #{channel} ({channel.id}) to the Dormant category.")
 
-        await self.help_channel_claimants.delete(channel.id)
+        await _caches.claimants.delete(channel.id)
         await self.move_to_bottom_position(
             channel=channel,
             category_id=constants.Categories.help_dormant,
@@ -390,7 +381,7 @@ class HelpChannels(commands.Cog):
         if in_use_time:
             self.bot.stats.timing("help.in_use_time", in_use_time)
 
-        unanswered = await _message.unanswered.get(channel.id)
+        unanswered = await _caches.unanswered.get(channel.id)
         if unanswered:
             self.bot.stats.incr("help.sessions.unanswered")
         elif unanswered is not None:
@@ -458,15 +449,15 @@ class HelpChannels(commands.Cog):
             await _message.pin(message)
 
             # Add user with channel for dormant check.
-            await self.help_channel_claimants.set(channel.id, message.author.id)
+            await _caches.claimants.set(channel.id, message.author.id)
 
             self.bot.stats.incr("help.claimed")
 
             # Must use a timezone-aware datetime to ensure a correct POSIX timestamp.
             timestamp = datetime.now(timezone.utc).timestamp()
-            await self.claim_times.set(channel.id, timestamp)
+            await _caches.claim_times.set(channel.id, timestamp)
 
-            await _message.unanswered.set(channel.id, True)
+            await _caches.unanswered.set(channel.id, True)
 
             log.trace(f"Releasing on_message lock for {message.id}.")
 

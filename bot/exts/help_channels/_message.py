@@ -3,10 +3,10 @@ import typing as t
 from datetime import datetime
 
 import discord
-from async_rediscache import RedisCache
 
 import bot
 from bot import constants
+from bot.exts.help_channels import _caches
 from bot.utils.channel import is_in_category
 
 log = logging.getLogger(__name__)
@@ -40,20 +40,6 @@ question to maximize your chance of getting a good answer. If you're not sure ho
 through our guide for **[asking a good question]({ASKING_GUIDE_URL})**.
 """
 
-# This cache maps a help channel to whether it has had any
-# activity other than the original claimant. True being no other
-# activity and False being other activity.
-# RedisCache[discord.TextChannel.id, bool]
-unanswered = RedisCache(namespace="HelpChannels.unanswered")
-
-# This cache tracks which channels are claimed by which members.
-# RedisCache[discord.TextChannel.id, t.Union[discord.User.id, discord.Member.id]]
-_help_channel_claimants = RedisCache(namespace="HelpChannels.help_channel_claimants")
-
-# This cache maps a help channel to original question message in same channel.
-# RedisCache[discord.TextChannel.id, discord.Message.id]
-_question_messages = RedisCache(namespace="HelpChannels.question_messages")
-
 
 async def check_for_answer(message: discord.Message) -> None:
     """Checks for whether new content in a help channel comes from non-claimants."""
@@ -64,8 +50,8 @@ async def check_for_answer(message: discord.Message) -> None:
         log.trace(f"Checking if #{channel} ({channel.id}) has been answered.")
 
         # Check if there is an entry in unanswered
-        if await unanswered.contains(channel.id):
-            claimant_id = await _help_channel_claimants.get(channel.id)
+        if await _caches.unanswered.contains(channel.id):
+            claimant_id = await _caches.claimants.get(channel.id)
             if not claimant_id:
                 # The mapping for this channel doesn't exist, we can't do anything.
                 return
@@ -73,7 +59,7 @@ async def check_for_answer(message: discord.Message) -> None:
             # Check the message did not come from the claimant
             if claimant_id != message.author.id:
                 # Mark the channel as answered
-                await unanswered.set(channel.id, False)
+                await _caches.unanswered.set(channel.id, False)
 
 
 async def get_last_message(channel: discord.TextChannel) -> t.Optional[discord.Message]:
@@ -154,7 +140,7 @@ async def notify(channel: discord.TextChannel, last_notification: t.Optional[dat
 async def pin(message: discord.Message) -> None:
     """Pin an initial question `message` and store it in a cache."""
     if await _pin_wrapper(message.id, message.channel, pin=True):
-        await _question_messages.set(message.channel.id, message.id)
+        await _caches.question_messages.set(message.channel.id, message.id)
 
 
 async def send_available_message(channel: discord.TextChannel) -> None:
@@ -180,7 +166,7 @@ async def send_available_message(channel: discord.TextChannel) -> None:
 
 async def unpin(channel: discord.TextChannel) -> None:
     """Unpin the initial question message sent in `channel`."""
-    msg_id = await _question_messages.pop(channel.id)
+    msg_id = await _caches.question_messages.pop(channel.id)
     if msg_id is None:
         log.debug(f"#{channel} ({channel.id}) doesn't have a message pinned.")
     else:

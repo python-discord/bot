@@ -2,19 +2,14 @@ import logging
 from typing import Callable, Coroutine
 
 import discord
-from async_rediscache import RedisCache
 
 import bot
 from bot import constants
-from bot.exts.help_channels import _channel
+from bot.exts.help_channels import _caches, _channel
 from bot.utils.scheduling import Scheduler
 
 log = logging.getLogger(__name__)
 CoroutineFunc = Callable[..., Coroutine]
-
-# This cache tracks which channels are claimed by which members.
-# RedisCache[discord.TextChannel.id, t.Union[discord.User.id, discord.Member.id]]
-_help_channel_claimants = RedisCache(namespace="HelpChannels.help_channel_claimants")
 
 
 async def add_cooldown_role(member: discord.Member) -> None:
@@ -29,7 +24,7 @@ async def check_cooldowns(scheduler: Scheduler) -> None:
     guild = bot.instance.get_guild(constants.Guild.id)
     cooldown = constants.HelpChannels.claim_minutes * 60
 
-    for channel_id, member_id in await _help_channel_claimants.items():
+    for channel_id, member_id in await _caches.claimants.items():
         member = guild.get_member(member_id)
         if not member:
             continue  # Member probably left the guild.

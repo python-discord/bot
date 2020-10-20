@@ -3,19 +3,14 @@ import typing as t
 from datetime import datetime, timedelta
 
 import discord
-from async_rediscache import RedisCache
 
 from bot import constants
-from bot.exts.help_channels import _message
+from bot.exts.help_channels import _caches, _message
 
 log = logging.getLogger(__name__)
 
 MAX_CHANNELS_PER_CATEGORY = 50
 EXCLUDED_CHANNELS = (constants.Channels.how_to_get_help, constants.Channels.cooldown)
-
-# This dictionary maps a help channel to the time it was claimed
-# RedisCache[discord.TextChannel.id, UtcPosixTimestamp]
-_claim_times = RedisCache(namespace="HelpChannels.claim_times")
 
 
 def get_category_channels(category: discord.CategoryChannel) -> t.Iterable[discord.TextChannel]:
@@ -51,7 +46,7 @@ async def get_in_use_time(channel_id: int) -> t.Optional[timedelta]:
     """Return the duration `channel_id` has been in use. Return None if it's not in use."""
     log.trace(f"Calculating in use time for channel {channel_id}.")
 
-    claimed_timestamp = await _claim_times.get(channel_id)
+    claimed_timestamp = await _caches.claim_times.get(channel_id)
     if claimed_timestamp:
         claimed = datetime.utcfromtimestamp(claimed_timestamp)
         return datetime.utcnow() - claimed
