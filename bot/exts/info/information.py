@@ -6,7 +6,7 @@ from collections import Counter, defaultdict
 from string import Template
 from typing import Any, Mapping, Optional, Tuple, Union
 
-from discord import ChannelType, Colour, Embed, Guild, Member, Message, Role, Status, utils
+from discord import ChannelType, Colour, Embed, Guild, Member, Message, Role, Status, User, utils
 from discord.abc import GuildChannel
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
 
@@ -192,7 +192,7 @@ class Information(Cog):
         await ctx.send(embed=embed)
 
     @command(name="user", aliases=["user_info", "member", "member_info"])
-    async def user_info(self, ctx: Context, user: Member = None) -> None:
+    async def user_info(self, ctx: Context, user: Union[Member, User] = None) -> None:
         """Returns info about a user."""
         if user is None:
             user = ctx.author
@@ -207,12 +207,14 @@ class Information(Cog):
             embed = await self.create_user_embed(ctx, user)
             await ctx.send(embed=embed)
 
-    async def create_user_embed(self, ctx: Context, user: Member) -> Embed:
+    async def create_user_embed(self, ctx: Context, user: Union[User, Member]) -> Embed:
         """Creates an embed containing information on the `user`."""
+        on_server = bool(ctx.guild.get_member(user.id))
+
         created = time_since(user.created_at, max_units=3)
 
         name = str(user)
-        if user.nick:
+        if on_server and user.nick:
             name = f"{user.nick} ({name})"
 
         badges = []
@@ -221,8 +223,16 @@ class Information(Cog):
             if is_set and (emoji := getattr(constants.Emojis, f"badge_{badge}", None)):
                 badges.append(emoji)
 
-        joined = time_since(user.joined_at, max_units=3)
-        roles = ", ".join(role.mention for role in user.roles[1:])
+        if on_server:
+            joined = time_since(user.joined_at, max_units=3)
+            roles = ", ".join(role.mention for role in user.roles[1:])
+            membership = textwrap.dedent(f"""
+                             Joined: {joined}
+                             Roles: {roles or None}
+                         """).strip()
+        else:
+            roles = None
+            membership = "The user is not a member of the server"
 
         fields = [
             (
@@ -235,10 +245,7 @@ class Information(Cog):
             ),
             (
                 "Member information",
-                textwrap.dedent(f"""
-                    Joined: {joined}
-                    Roles: {roles or None}
-                """).strip()
+                membership
             ),
         ]
 
@@ -263,13 +270,13 @@ class Information(Cog):
 
         return embed
 
-    async def basic_user_infraction_counts(self, member: Member) -> Tuple[str, str]:
+    async def basic_user_infraction_counts(self, user: Union[User, Member]) -> Tuple[str, str]:
         """Gets the total and active infraction counts for the given `member`."""
         infractions = await self.bot.api_client.get(
             'bot/infractions',
             params={
                 'hidden': 'False',
-                'user__id': str(member.id)
+                'user__id': str(user.id)
             }
         )
 
@@ -280,7 +287,7 @@ class Information(Cog):
 
         return "Infractions", infraction_output
 
-    async def expanded_user_infraction_counts(self, member: Member) -> Tuple[str, str]:
+    async def expanded_user_infraction_counts(self, user: Union[User, Member]) -> Tuple[str, str]:
         """
         Gets expanded infraction counts for the given `member`.
 
@@ -290,7 +297,7 @@ class Information(Cog):
         infractions = await self.bot.api_client.get(
             'bot/infractions',
             params={
-                'user__id': str(member.id)
+                'user__id': str(user.id)
             }
         )
 
@@ -321,12 +328,12 @@ class Information(Cog):
 
         return "Infractions", "\n".join(infraction_output)
 
-    async def user_nomination_counts(self, member: Member) -> Tuple[str, str]:
+    async def user_nomination_counts(self, user: Union[User, Member]) -> Tuple[str, str]:
         """Gets the active and historical nomination counts for the given `member`."""
         nominations = await self.bot.api_client.get(
             'bot/nominations',
             params={
-                'user__id': str(member.id)
+                'user__id': str(user.id)
             }
         )
 
