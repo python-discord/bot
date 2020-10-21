@@ -15,7 +15,7 @@ from bot.exts.moderation.infraction.infractions import Infractions
 from bot.exts.moderation.modlog import ModLog
 from bot.pagination import LinePaginator
 from bot.utils import messages, time
-from bot.utils.checks import in_whitelist_check
+from bot.utils.channel import is_mod_channel
 
 log = logging.getLogger(__name__)
 
@@ -295,13 +295,7 @@ class ModManagement(commands.Cog):
         """Only allow moderators inside moderator channels to invoke the commands in this cog."""
         checks = [
             await commands.has_any_role(*constants.MODERATION_ROLES).predicate(ctx),
-            in_whitelist_check(
-                ctx,
-                channels=constants.MODERATION_CHANNELS,
-                categories=[constants.Categories.modmail],
-                redirect=None,
-                fail_silently=True,
-            )
+            is_mod_channel(ctx.channel)
         ]
         return all(checks)
 
