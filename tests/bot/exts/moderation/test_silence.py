@@ -43,7 +43,7 @@ class SilenceNotifierTests(unittest.IsolatedAsyncioTestCase):
         self.notifier.start = self.notifier_start_mock = Mock()
 
     def test_add_channel_adds_channel(self):
-        """Channel in FirstHash with current loop is added to internal set."""
+        """Channel is added to `_silenced_channels` with the current loop."""
         channel = Mock()
         with mock.patch.object(self.notifier, "_silenced_channels") as silenced_channels:
             self.notifier.add_channel(channel)
@@ -61,7 +61,7 @@ class SilenceNotifierTests(unittest.IsolatedAsyncioTestCase):
         self.notifier_start_mock.assert_not_called()
 
     def test_remove_channel_removes_channel(self):
-        """Channel in FirstHash is removed from `_silenced_channels`."""
+        """Channel is removed from `_silenced_channels`."""
         channel = Mock()
         with mock.patch.object(self.notifier, "_silenced_channels") as silenced_channels:
             self.notifier.remove_channel(channel)
