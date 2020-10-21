@@ -498,6 +498,7 @@ python_news:
         - 'python-ideas'
         - 'python-announce-list'
         - 'pypi-announce'
+        - 'python-dev'
     channel: *PYNEWS_CHANNEL
     webhook: *PYNEWS_WEBHOOK
 
