@@ -130,6 +130,7 @@ guild:
         help_dormant:                       691405908919451718
         modmail:            &MODMAIL        714494672835444826
         logs:               &LOGS           468520609152892958
+        voice:                              356013253765234688
 
     channels:
         # Public announcement and news channels
