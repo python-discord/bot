@@ -130,6 +130,7 @@ guild:
         help_dormant:                       691405908919451718
         modmail:            &MODMAIL        714494672835444826
         logs:               &LOGS           468520609152892958
+        voice:                              356013253765234688
 
     channels:
         # Public announcement and news channels
@@ -195,6 +196,7 @@ guild:
         # Voice
         code_help_voice:                    755154969761677312
         code_help_voice_2:                  766330079135268884
+        voice_chat:                         412357430186344448
         admins_voice:       &ADMINS_VOICE   500734494840717332
         staff_voice:        &STAFF_VOICE    412375055910043655
 

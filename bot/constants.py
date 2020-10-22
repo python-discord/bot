@@ -377,6 +377,7 @@ class Categories(metaclass=YAMLGetter):
     help_in_use: int
     help_dormant: int
     modmail: int
+    voice: int
 
 
 class Channels(metaclass=YAMLGetter):
@@ -425,6 +426,7 @@ class Channels(metaclass=YAMLGetter):
     user_event_announcements: int
     user_log: int
     verification: int
+    voice_chat: int
     voice_gate: int
     voice_log: int
 
