@@ -425,6 +425,7 @@ class Channels(metaclass=YAMLGetter):
     user_event_announcements: int
     user_log: int
     verification: int
+    voice_chat: int
     voice_gate: int
     voice_log: int
 
