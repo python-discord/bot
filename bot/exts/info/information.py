@@ -6,12 +6,13 @@ from collections import Counter, defaultdict
 from string import Template
 from typing import Any, Mapping, Optional, Tuple, Union
 
-from discord import ChannelType, Colour, Embed, Guild, Member, Message, Role, Status, User, utils
+from discord import ChannelType, Colour, Embed, Guild, Message, Role, Status, utils
 from discord.abc import GuildChannel
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
 
 from bot import constants
 from bot.bot import Bot
+from bot.converters import FetchedMember
 from bot.decorators import in_whitelist
 from bot.pagination import LinePaginator
 from bot.utils.channel import is_mod_channel
@@ -192,7 +193,7 @@ class Information(Cog):
         await ctx.send(embed=embed)
 
     @command(name="user", aliases=["user_info", "member", "member_info"])
-    async def user_info(self, ctx: Context, user: Union[Member, User] = None) -> None:
+    async def user_info(self, ctx: Context, user: FetchedMember = None) -> None:
         """Returns info about a user."""
         if user is None:
             user = ctx.author
@@ -207,7 +208,7 @@ class Information(Cog):
             embed = await self.create_user_embed(ctx, user)
             await ctx.send(embed=embed)
 
-    async def create_user_embed(self, ctx: Context, user: Union[User, Member]) -> Embed:
+    async def create_user_embed(self, ctx: Context, user: FetchedMember) -> Embed:
         """Creates an embed containing information on the `user`."""
         on_server = bool(ctx.guild.get_member(user.id))
 
@@ -270,7 +271,7 @@ class Information(Cog):
 
         return embed
 
-    async def basic_user_infraction_counts(self, user: Union[User, Member]) -> Tuple[str, str]:
+    async def basic_user_infraction_counts(self, user: FetchedMember) -> Tuple[str, str]:
         """Gets the total and active infraction counts for the given `member`."""
         infractions = await self.bot.api_client.get(
             'bot/infractions',
@@ -287,7 +288,7 @@ class Information(Cog):
 
         return "Infractions", infraction_output
 
-    async def expanded_user_infraction_counts(self, user: Union[User, Member]) -> Tuple[str, str]:
+    async def expanded_user_infraction_counts(self, user: FetchedMember) -> Tuple[str, str]:
         """
         Gets expanded infraction counts for the given `member`.
 
@@ -328,7 +329,7 @@ class Information(Cog):
 
         return "Infractions", "\n".join(infraction_output)
 
-    async def user_nomination_counts(self, user: Union[User, Member]) -> Tuple[str, str]:
+    async def user_nomination_counts(self, user: FetchedMember) -> Tuple[str, str]:
         """Gets the active and historical nomination counts for the given `member`."""
         nominations = await self.bot.api_client.get(
             'bot/nominations',
