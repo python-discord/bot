@@ -21,7 +21,6 @@ from urllib3.exceptions import ProtocolError
 from bot.bot import Bot
 from bot.constants import MODERATION_ROLES, RedirectOutput
 from bot.converters import ValidPythonIdentifier, ValidURL
-from bot.decorators import with_role
 from bot.pagination import LinePaginator
 from bot.utils.messages import wait_for_deletion
 
@@ -346,7 +345,7 @@ class Doc(commands.Cog):
     @commands.group(name='docs', aliases=('doc', 'd'), invoke_without_command=True)
     async def docs_group(self, ctx: commands.Context, symbol: commands.clean_content = None) -> None:
         """Lookup documentation for Python symbols."""
-        await ctx.invoke(self.get_command, symbol)
+        await self.get_command(ctx, symbol)
 
     @docs_group.command(name='get', aliases=('g',))
     async def get_command(self, ctx: commands.Context, symbol: commands.clean_content = None) -> None:
@@ -396,7 +395,7 @@ class Doc(commands.Cog):
                 await wait_for_deletion(msg, (ctx.author.id,), client=self.bot)
 
     @docs_group.command(name='set', aliases=('s',))
-    @with_role(*MODERATION_ROLES)
+    @commands.has_any_role(*MODERATION_ROLES)
     async def set_command(
         self, ctx: commands.Context, package_name: ValidPythonIdentifier,
         base_url: ValidURL, inventory_url: InventoryURL
@@ -433,7 +432,7 @@ class Doc(commands.Cog):
         await ctx.send(f"Added package `{package_name}` to database and refreshed inventory.")
 
     @docs_group.command(name='delete', aliases=('remove', 'rm', 'd'))
-    @with_role(*MODERATION_ROLES)
+    @commands.has_any_role(*MODERATION_ROLES)
     async def delete_command(self, ctx: commands.Context, package_name: ValidPythonIdentifier) -> None:
         """
         Removes the specified package from the database.
@@ -450,7 +449,7 @@ class Doc(commands.Cog):
         await ctx.send(f"Successfully deleted `{package_name}` and refreshed inventory.")
 
     @docs_group.command(name="refresh", aliases=("rfsh", "r"))
-    @with_role(*MODERATION_ROLES)
+    @commands.has_any_role(*MODERATION_ROLES)
     async def refresh_command(self, ctx: commands.Context) -> None:
         """Refresh inventories and send differences to channel."""
         old_inventories = set(self.base_urls)

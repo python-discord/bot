@@ -8,14 +8,13 @@ from typing import List
 
 from aiohttp import BasicAuth, ClientError
 from discord import Colour, Embed, TextChannel
-from discord.ext.commands import Cog, Context, group
+from discord.ext.commands import Cog, Context, group, has_any_role
 from discord.ext.tasks import loop
-from discord.utils import escape_markdown
+from discord.utils import escape_markdown, sleep_until
 
 from bot.bot import Bot
 from bot.constants import Channels, ERROR_REPLIES, Emojis, Reddit as RedditConfig, STAFF_ROLES, Webhooks
 from bot.converters import Subreddit
-from bot.decorators import with_role
 from bot.pagination import LinePaginator
 from bot.utils.messages import sub_clyde
 
@@ -141,7 +140,10 @@ class Reddit(Cog):
                 # Got appropriate response - process and return.
                 content = await response.json()
                 posts = content["data"]["children"]
-                return posts[:amount]
+
+                filtered_posts = [post for post in posts if not post["data"]["over_18"]]
+
+                return filtered_posts[:amount]
 
             await asyncio.sleep(3)
 
@@ -164,12 +166,11 @@ class Reddit(Cog):
             amount=amount,
             params={"t": time}
         )
-
         if not posts:
             embed.title = random.choice(ERROR_REPLIES)
             embed.colour = Colour.red()
             embed.description = (
-                "Sorry! We couldn't find any posts from that subreddit. "
+                "Sorry! We couldn't find any SFW posts from that subreddit. "
                 "If this problem persists, please let us know."
             )
 
@@ -204,13 +205,13 @@ class Reddit(Cog):
     @loop()
     async def auto_poster_loop(self) -> None:
         """Post the top 5 posts daily, and the top 5 posts weekly."""
-        # once we upgrade to d.py 1.3 this can be removed and the loop can use the `time=datetime.time.min` parameter
+        # once d.py get support for `time` parameter in loop decorator,
+        # this can be removed and the loop can use the `time=datetime.time.min` parameter
         now = datetime.utcnow()
         tomorrow = now + timedelta(days=1)
         midnight_tomorrow = tomorrow.replace(hour=0, minute=0, second=0)
-        seconds_until = (midnight_tomorrow - now).total_seconds()
 
-        await asyncio.sleep(seconds_until)
+        await sleep_until(midnight_tomorrow)
 
         await self.bot.wait_until_guild_available()
         if not self.webhook:
@@ -282,7 +283,7 @@ class Reddit(Cog):
 
         await ctx.send(content=f"Here are this week's top {subreddit} posts!", embed=embed)
 
-    @with_role(*STAFF_ROLES)
+    @has_any_role(*STAFF_ROLES)
     @reddit_group.command(name="subreddits", aliases=("subs",))
     async def subreddits_command(self, ctx: Context) -> None:
         """Send a paginated embed of all the subreddits we're relaying."""

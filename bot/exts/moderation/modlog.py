@@ -12,10 +12,10 @@ from deepdiff import DeepDiff
 from discord import Colour
 from discord.abc import GuildChannel
 from discord.ext.commands import Cog, Context
-from discord.utils import escape_markdown
 
 from bot.bot import Bot
 from bot.constants import Categories, Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, URLs
+from bot.utils.messages import format_user
 from bot.utils.time import humanize_delta
 
 log = logging.getLogger(__name__)
@@ -63,7 +63,7 @@ class ModLog(Cog, name="ModLog"):
                         'id': message.id,
                         'author': message.author.id,
                         'channel_id': message.channel.id,
-                        'content': message.content,
+                        'content': message.content.replace("\0", ""),  # Null chars cause 400.
                         'embeds': [embed.to_dict() for embed in message.embeds],
                         'attachments': attachment,
                     }
@@ -396,7 +396,7 @@ class ModLog(Cog, name="ModLog"):
 
         await self.send_log_message(
             Icons.user_ban, Colours.soft_red,
-            "User banned", f"{member} (`{member.id}`)",
+            "User banned", format_user(member),
             thumbnail=member.avatar_url_as(static_format="png"),
             channel_id=Channels.user_log
         )
@@ -407,12 +407,10 @@ class ModLog(Cog, name="ModLog"):
         if member.guild.id != GuildConstant.id:
             return
 
-        member_str = escape_markdown(str(member))
-        message = f"{member_str} (`{member.id}`)"
         now = datetime.utcnow()
         difference = abs(relativedelta(now, member.created_at))
 
-        message += "\n\n**Account age:** " + humanize_delta(difference)
+        message = format_user(member) + "\n\n**Account age:** " + humanize_delta(difference)
 
         if difference.days < 1 and difference.months < 1 and difference.years < 1:  # New user account!
             message = f"{Emojis.new} {message}"
@@ -434,10 +432,9 @@ class ModLog(Cog, name="ModLog"):
             self._ignored[Event.member_remove].remove(member.id)
             return
 
-        member_str = escape_markdown(str(member))
         await self.send_log_message(
             Icons.sign_out, Colours.soft_red,
-            "User left", f"{member_str} (`{member.id}`)",
+            "User left", format_user(member),
             thumbnail=member.avatar_url_as(static_format="png"),
             channel_id=Channels.user_log
         )
@@ -452,10 +449,9 @@ class ModLog(Cog, name="ModLog"):
             self._ignored[Event.member_unban].remove(member.id)
             return
 
-        member_str = escape_markdown(str(member))
         await self.send_log_message(
             Icons.user_unban, Colour.blurple(),
-            "User unbanned", f"{member_str} (`{member.id}`)",
+            "User unbanned", format_user(member),
             thumbnail=member.avatar_url_as(static_format="png"),
             channel_id=Channels.mod_log
         )
@@ -515,8 +511,7 @@ class ModLog(Cog, name="ModLog"):
         for item in sorted(changes):
             message += f"{Emojis.bullet} {item}\n"
 
-        member_str = escape_markdown(str(after))
-        message = f"**{member_str}** (`{after.id}`)\n{message}"
+        message = f"{format_user(after)}\n{message}"
 
         await self.send_log_message(
             icon_url=Icons.user_update,
@@ -549,17 +544,16 @@ class ModLog(Cog, name="ModLog"):
         if author.bot:
             return
 
-        author_str = escape_markdown(str(author))
         if channel.category:
             response = (
-                f"**Author:** {author_str} (`{author.id}`)\n"
+                f"**Author:** {format_user(author)}\n"
                 f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{message.id}`\n"
                 "\n"
             )
         else:
             response = (
-                f"**Author:** {author_str} (`{author.id}`)\n"
+                f"**Author:** {format_user(author)}\n"
                 f"**Channel:** #{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{message.id}`\n"
                 "\n"
@@ -645,9 +639,6 @@ class ModLog(Cog, name="ModLog"):
         if msg_before.content == msg_after.content:
             return
 
-        author = msg_before.author
-        author_str = escape_markdown(str(author))
-
         channel = msg_before.channel
         channel_name = f"{channel.category}/#{channel.name}" if channel.category else f"#{channel.name}"
 
@@ -679,7 +670,7 @@ class ModLog(Cog, name="ModLog"):
                 content_after.append(sub)
 
         response = (
-            f"**Author:** {author_str} (`{author.id}`)\n"
+            f"**Author:** {format_user(msg_before.author)}\n"
             f"**Channel:** {channel_name} (`{channel.id}`)\n"
             f"**Message ID:** `{msg_before.id}`\n"
             "\n"
@@ -731,12 +722,11 @@ class ModLog(Cog, name="ModLog"):
             self._cached_edits.remove(event.message_id)
             return
 
-        author = message.author
         channel = message.channel
         channel_name = f"{channel.category}/#{channel.name}" if channel.category else f"#{channel.name}"
 
         before_response = (
-            f"**Author:** {author} (`{author.id}`)\n"
+            f"**Author:** {format_user(message.author)}\n"
             f"**Channel:** {channel_name} (`{channel.id}`)\n"
             f"**Message ID:** `{message.id}`\n"
             "\n"
@@ -744,7 +734,7 @@ class ModLog(Cog, name="ModLog"):
         )
 
         after_response = (
-            f"**Author:** {author} (`{author.id}`)\n"
+            f"**Author:** {format_user(message.author)}\n"
             f"**Channel:** {channel_name} (`{channel.id}`)\n"
             f"**Message ID:** `{message.id}`\n"
             "\n"
@@ -822,9 +812,8 @@ class ModLog(Cog, name="ModLog"):
         if not changes:
             return
 
-        member_str = escape_markdown(str(member))
         message = "\n".join(f"{Emojis.bullet} {item}" for item in sorted(changes))
-        message = f"**{member_str}** (`{member.id}`)\n{message}"
+        message = f"{format_user(member)}\n{message}"
 
         await self.send_log_message(
             icon_url=icon,

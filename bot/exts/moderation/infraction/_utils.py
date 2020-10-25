@@ -1,5 +1,4 @@
 import logging
-import textwrap
 import typing as t
 from datetime import datetime
 
@@ -19,14 +18,27 @@ INFRACTION_ICONS = {
     "note": (Icons.user_warn, None),
     "superstar": (Icons.superstarify, Icons.unsuperstarify),
     "warning": (Icons.user_warn, None),
+    "voice_ban": (Icons.voice_state_red, Icons.voice_state_green),
 }
 RULES_URL = "https://pythondiscord.com/pages/rules"
-APPEALABLE_INFRACTIONS = ("ban", "mute")
+APPEALABLE_INFRACTIONS = ("ban", "mute", "voice_ban")
 
 # Type aliases
 UserObject = t.Union[discord.Member, discord.User]
 UserSnowflake = t.Union[UserObject, discord.Object]
 Infraction = t.Dict[str, t.Union[str, int, bool]]
+
+APPEAL_EMAIL = "appeals@pythondiscord.com"
+
+INFRACTION_TITLE = f"Please review our rules over at {RULES_URL}"
+INFRACTION_APPEAL_FOOTER = f"To appeal this infraction, send an e-mail to {APPEAL_EMAIL}"
+INFRACTION_AUTHOR_NAME = "Infraction information"
+
+INFRACTION_DESCRIPTION_TEMPLATE = (
+    "**Type:** {type}\n"
+    "**Expires:** {expires}\n"
+    "**Reason:** {reason}\n"
+)
 
 
 async def post_user(ctx: Context, user: UserSnowflake) -> t.Optional[dict]:
@@ -142,25 +154,27 @@ async def notify_infraction(
     """DM a user about their new infraction and return True if the DM is successful."""
     log.trace(f"Sending {user} a DM about their {infr_type} infraction.")
 
-    text = textwrap.dedent(f"""
-        **Type:** {infr_type.capitalize()}
-        **Expires:** {expires_at or "N/A"}
-        **Reason:** {reason or "No reason provided."}
-    """)
+    text = INFRACTION_DESCRIPTION_TEMPLATE.format(
+        type=infr_type.title(),
+        expires=expires_at or "N/A",
+        reason=reason or "No reason provided."
+    )
+
+    # For case when other fields than reason is too long and this reach limit, then force-shorten string
+    if len(text) > 2048:
+        text = f"{text[:2045]}..."
 
     embed = discord.Embed(
-        description=textwrap.shorten(text, width=2048, placeholder="..."),
+        description=text,
         colour=Colours.soft_red
     )
 
-    embed.set_author(name="Infraction information", icon_url=icon_url, url=RULES_URL)
-    embed.title = f"Please review our rules over at {RULES_URL}"
+    embed.set_author(name=INFRACTION_AUTHOR_NAME, icon_url=icon_url, url=RULES_URL)
+    embed.title = INFRACTION_TITLE
     embed.url = RULES_URL
 
     if infr_type in APPEALABLE_INFRACTIONS:
-        embed.set_footer(
-            text="To appeal this infraction, send an e-mail to appeals@pythondiscord.com"
-        )
+        embed.set_footer(text=INFRACTION_APPEAL_FOOTER)
 
     return await send_private_embed(user, embed)
 

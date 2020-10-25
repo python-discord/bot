@@ -2,29 +2,22 @@ import colorsys
 import logging
 import pprint
 import textwrap
-from collections import Counter, defaultdict
+from collections import defaultdict
 from typing import Any, DefaultDict, Dict, Mapping, Optional, Tuple, Union
 
-from discord import ChannelType, Colour, CustomActivity, Embed, Guild, Member, Message, Role, Status, utils
+from discord import ChannelType, Colour, Embed, Guild, Member, Message, Role, utils
 from discord.abc import GuildChannel
-from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group
-from discord.utils import escape_markdown
+from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
 
 from bot import constants
 from bot.bot import Bot
-from bot.decorators import in_whitelist, with_role
+from bot.decorators import in_whitelist
 from bot.pagination import LinePaginator
-from bot.utils.checks import InWhitelistCheckFailure, cooldown_with_role_bypass, with_role_check
+from bot.utils.channel import is_mod_channel
+from bot.utils.checks import cooldown_with_role_bypass, has_no_roles_check, in_whitelist_check
 from bot.utils.time import time_since
 
 log = logging.getLogger(__name__)
-
-STATUS_EMOTES = {
-    Status.online: constants.Emojis.status_online,
-    Status.idle: constants.Emojis.status_idle,
-    Status.dnd: constants.Emojis.status_dnd,
-    Status.offline: constants.Emojis.status_offline,
-}
 
 
 class Information(Cog):
@@ -69,7 +62,7 @@ class Information(Cog):
                 constants.Roles.owners, constants.Roles.contributors,
             )
         )
-        return {role.name: len(role.members) for role in roles}
+        return {role.name.title(): len(role.members) for role in roles}
 
     def get_extended_server_info(self, guild: Guild) -> str:
         """Return additional server info only visible in moderation channels."""
@@ -92,7 +85,7 @@ class Information(Cog):
             {python_general.mention} cooldown: {python_general.slowmode_delay}s
         """)
 
-    @with_role(*constants.MODERATION_ROLES)
+    @has_any_role(*constants.STAFF_ROLES)
     @command(name="roles")
     async def roles_info(self, ctx: Context) -> None:
         """Returns a list of all roles and their corresponding IDs."""
@@ -112,7 +105,7 @@ class Information(Cog):
 
         await LinePaginator.paginate(role_list, ctx, embed, empty=False)
 
-    @with_role(*constants.MODERATION_ROLES)
+    @has_any_role(*constants.STAFF_ROLES)
     @command(name="role")
     async def role_info(self, ctx: Context, *roles: Union[Role, str]) -> None:
         """
@@ -176,10 +169,20 @@ class Information(Cog):
         else:
             features = ""
 
+        # Member status
+        py_invite = await self.bot.fetch_invite(constants.Guild.invite)
+        online_presences = py_invite.approximate_presence_count
+        offline_presences = py_invite.approximate_member_count - online_presences
+        member_status = (
+            f"{constants.Emojis.status_online} {online_presences} "
+            f"{constants.Emojis.status_offline} {offline_presences}"
+        )
+
         embed.description = textwrap.dedent(f"""
             Created: {created}
             Voice region: {region}{features}
             Roles: {num_roles}
+            Member status: {member_status}
         """)
         embed.set_thumbnail(url=ctx.guild.icon_url)
 
@@ -187,7 +190,7 @@ class Information(Cog):
         total_members = ctx.guild.member_count
         member_counts = self.get_member_counts(ctx.guild)
         member_info = "\n".join(
-            f"{role.title()}: {count}" for role, count in member_counts.items()
+            f"{role}: {count}" for role, count in member_counts.items()
         )
         embed.add_field(name=f"Members: {total_members}", value=member_info)
 
@@ -198,13 +201,6 @@ class Information(Cog):
             f"{channel.title()}: {count}" for channel, count in sorted(channel_counts.items())
         )
         embed.add_field(name=f"Channels: {total_channels}", value=channel_info)
-
-        # Member status
-        status_count = Counter(member.status for member in ctx.guild.members)
-        member_status = " ".join(
-            f"{emoji} {status_count[status]:,}" for status, emoji in STATUS_EMOTES.items()
-        )
-        embed.add_field(name="Member Status:", value=member_status, inline=False)
 
         # Additional info if ran in moderation channels
         if ctx.channel.id in constants.MODERATION_CHANNELS:
@@ -221,41 +217,18 @@ class Information(Cog):
             user = ctx.author
 
         # Do a role check if this is being executed on someone other than the caller
-        elif user != ctx.author and not with_role_check(ctx, *constants.MODERATION_ROLES):
+        elif user != ctx.author and await has_no_roles_check(ctx, *constants.MODERATION_ROLES):
             await ctx.send("You may not use this command on users other than yourself.")
             return
 
-        # Non-staff may only do this in #bot-commands
-        if not with_role_check(ctx, *constants.STAFF_ROLES):
-            if not ctx.channel.id == constants.Channels.bot_commands:
-                raise InWhitelistCheckFailure(constants.Channels.bot_commands)
-
-        embed = await self.create_user_embed(ctx, user)
-
-        await ctx.send(embed=embed)
+        # Will redirect to #bot-commands if it fails.
+        if in_whitelist_check(ctx, roles=constants.STAFF_ROLES):
+            embed = await self.create_user_embed(ctx, user)
+            await ctx.send(embed=embed)
 
     async def create_user_embed(self, ctx: Context, user: Member) -> Embed:
         """Creates an embed containing information on the `user`."""
         created = time_since(user.created_at, max_units=3)
-
-        # Custom status
-        custom_status = ''
-        for activity in user.activities:
-            if isinstance(activity, CustomActivity):
-                state = ""
-
-                if activity.name:
-                    state = escape_markdown(activity.name)
-
-                emoji = ""
-                if activity.emoji:
-                    # If an emoji is unicode use the emoji, else write the emote like :abc:
-                    if not activity.emoji.id:
-                        emoji += activity.emoji.name + " "
-                    else:
-                        emoji += f"`:{activity.emoji.name}:` "
-
-                custom_status = f'Status: {emoji}{state}\n'
 
         name = str(user)
         if user.nick:
@@ -270,10 +243,6 @@ class Information(Cog):
         joined = time_since(user.joined_at, max_units=3)
         roles = ", ".join(role.mention for role in user.roles[1:])
 
-        desktop_status = STATUS_EMOTES.get(user.desktop_status, constants.Emojis.status_online)
-        web_status = STATUS_EMOTES.get(user.web_status, constants.Emojis.status_online)
-        mobile_status = STATUS_EMOTES.get(user.mobile_status, constants.Emojis.status_online)
-
         fields = [
             (
                 "User information",
@@ -281,7 +250,6 @@ class Information(Cog):
                     Created: {created}
                     Profile: {user.mention}
                     ID: {user.id}
-                    {custom_status}
                 """).strip()
             ),
             (
@@ -291,18 +259,10 @@ class Information(Cog):
                     Roles: {roles or None}
                 """).strip()
             ),
-            (
-                "Status",
-                textwrap.dedent(f"""
-                    {desktop_status} Desktop
-                    {web_status} Web
-                    {mobile_status} Mobile
-                """).strip()
-            )
         ]
 
         # Show more verbose output in moderation channels for infractions and nominations
-        if ctx.channel.id in constants.MODERATION_CHANNELS:
+        if is_mod_channel(ctx.channel):
             fields.append(await self.expanded_user_infraction_counts(user))
             fields.append(await self.user_nomination_counts(user))
         else:

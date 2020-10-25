@@ -2,10 +2,11 @@ import asyncio
 import logging
 import re
 from datetime import datetime, timedelta
-from typing import List, Mapping, Optional, Tuple, Union
+from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Union
 
 import dateutil
 import discord.errors
+from async_rediscache import RedisCache
 from dateutil.relativedelta import relativedelta
 from discord import Colour, HTTPException, Member, Message, NotFound, TextChannel
 from discord.ext.commands import Cog
@@ -14,17 +15,23 @@ from discord.utils import escape_markdown
 from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import (
-    Channels, Colours,
-    Filter, Icons, URLs
+    Channels, Colours, Filter,
+    Guild, Icons, URLs
 )
 from bot.exts.moderation.modlog import ModLog
-from bot.utils.redis_cache import RedisCache
+from bot.utils.messages import format_user
 from bot.utils.regex import INVITE_RE
 from bot.utils.scheduling import Scheduler
 
 log = logging.getLogger(__name__)
 
 # Regular expressions
+CODE_BLOCK_RE = re.compile(
+    r"(?P<delim>``?)[^`]+?(?P=delim)(?!`+)"  # Inline codeblock
+    r"|```(.+?)```",  # Multiline codeblock
+    re.DOTALL | re.MULTILINE
+)
+EVERYONE_PING_RE = re.compile(rf"@everyone|<@&{Guild.id}>|@here")
 SPOILER_RE = re.compile(r"(\|\|.+?\|\|)", re.DOTALL)
 URL_RE = re.compile(r"(https?://[^\s]+)", flags=re.IGNORECASE)
 ZALGO_RE = re.compile(r"[\u0300-\u036F\u0489]")
@@ -32,6 +39,16 @@ ZALGO_RE = re.compile(r"[\u0300-\u036F\u0489]")
 # Other constants.
 DAYS_BETWEEN_ALERTS = 3
 OFFENSIVE_MSG_DELETE_TIME = timedelta(days=Filter.offensive_msg_delete_days)
+
+FilterMatch = Union[re.Match, dict, bool, List[discord.Embed]]
+
+
+class Stats(NamedTuple):
+    """Additional stats on a triggered filter to append to a mod log."""
+
+    message_content: str
+    additional_embeds: Optional[List[discord.Embed]]
+    additional_embeds_msg: Optional[str]
 
 
 class Filtering(Cog):
@@ -81,6 +98,19 @@ class Filtering(Cog):
                     f"Your URL has been removed because it matched a blacklisted domain. {staff_mistake_str}"
                 ),
                 "schedule_deletion": False
+            },
+            "filter_everyone_ping": {
+                "enabled": Filter.filter_everyone_ping,
+                "function": self._has_everyone_ping,
+                "type": "filter",
+                "content_only": True,
+                "user_notification": Filter.notify_user_everyone_ping,
+                "notification_msg": (
+                    "Please don't try to ping `@everyone` or `@here`. "
+                    f"Your message has been removed. {staff_mistake_str}"
+                ),
+                "schedule_deletion": False,
+                "ping_everyone": False
             },
             "watch_regex": {
                 "enabled": Filter.watch_regex,
@@ -175,8 +205,8 @@ class Filtering(Cog):
             log.info(f"Sending bad nickname alert for '{member.display_name}' ({member.id}).")
 
             log_string = (
-                f"**User:** {member.mention} (`{member.id}`)\n"
-                f"**Display Name:** {member.display_name}\n"
+                f"**User:** {format_user(member)}\n"
+                f"**Display Name:** {escape_markdown(member.display_name)}\n"
                 f"**Bad Matches:** {', '.join(match.group() for match in matches)}"
             )
 
@@ -215,35 +245,8 @@ class Filtering(Cog):
                         if _filter["type"] == "filter":
                             filter_triggered = True
 
-                        # We do not have to check against DM channels since !eval cannot be used there.
-                        channel_str = f"in {msg.channel.mention}"
-
-                        message_content, additional_embeds, additional_embeds_msg = self._add_stats(
-                            filter_name, match, result
-                        )
-
-                        message = (
-                            f"The {filter_name} {_filter['type']} was triggered "
-                            f"by **{msg.author}** "
-                            f"(`{msg.author.id}`) {channel_str} using !eval with "
-                            f"[the following message]({msg.jump_url}):\n\n"
-                            f"{message_content}"
-                        )
-
-                        log.debug(message)
-
-                        # Send pretty mod log embed to mod-alerts
-                        await self.mod_log.send_log_message(
-                            icon_url=Icons.filtering,
-                            colour=Colour(Colours.soft_red),
-                            title=f"{_filter['type'].title()} triggered!",
-                            text=message,
-                            thumbnail=msg.author.avatar_url_as(static_format="png"),
-                            channel_id=Channels.mod_alerts,
-                            ping_everyone=Filter.ping_everyone,
-                            additional_embeds=additional_embeds,
-                            additional_embeds_msg=additional_embeds_msg
-                        )
+                        stats = self._add_stats(filter_name, match, result)
+                        await self._send_log(filter_name, _filter["type"], msg, stats, is_eval=True)
 
                         break  # We don't want multiple filters to trigger
 
@@ -313,43 +316,52 @@ class Filtering(Cog):
                                 self.schedule_msg_delete(data)
                                 log.trace(f"Offensive message {msg.id} will be deleted on {delete_date}")
 
-                        if is_private:
-                            channel_str = "via DM"
-                        else:
-                            channel_str = f"in {msg.channel.mention}"
-
-                        message_content, additional_embeds, additional_embeds_msg = self._add_stats(
-                            filter_name, match, msg.content
-                        )
-
-                        message = (
-                            f"The {filter_name} {_filter['type']} was triggered "
-                            f"by **{msg.author}** "
-                            f"(`{msg.author.id}`) {channel_str} with [the "
-                            f"following message]({msg.jump_url}):\n\n"
-                            f"{message_content}"
-                        )
-
-                        log.debug(message)
-
-                        # Send pretty mod log embed to mod-alerts
-                        await self.mod_log.send_log_message(
-                            icon_url=Icons.filtering,
-                            colour=Colour(Colours.soft_red),
-                            title=f"{_filter['type'].title()} triggered!",
-                            text=message,
-                            thumbnail=msg.author.avatar_url_as(static_format="png"),
-                            channel_id=Channels.mod_alerts,
-                            ping_everyone=Filter.ping_everyone if not is_private else False,
-                            additional_embeds=additional_embeds,
-                            additional_embeds_msg=additional_embeds_msg
-                        )
+                        stats = self._add_stats(filter_name, match, msg.content)
+                        await self._send_log(filter_name, _filter, msg, stats)
 
                         break  # We don't want multiple filters to trigger
 
-    def _add_stats(self, name: str, match: Union[re.Match, dict, bool, List[discord.Embed]], content: str) -> Tuple[
-        str, Optional[List[discord.Embed]], Optional[str]
-    ]:
+    async def _send_log(
+        self,
+        filter_name: str,
+        _filter: Dict[str, Any],
+        msg: discord.Message,
+        stats: Stats,
+        *,
+        is_eval: bool = False,
+    ) -> None:
+        """Send a mod log for a triggered filter."""
+        if msg.channel.type is discord.ChannelType.private:
+            channel_str = "via DM"
+            ping_everyone = False
+        else:
+            channel_str = f"in {msg.channel.mention}"
+            # Allow specific filters to override ping_everyone
+            ping_everyone = Filter.ping_everyone and _filter.get("ping_everyone", True)
+
+        eval_msg = "using !eval " if is_eval else ""
+        message = (
+            f"The {filter_name} {_filter['type']} was triggered by {format_user(msg.author)} "
+            f"{channel_str} {eval_msg}with [the following message]({msg.jump_url}):\n\n"
+            f"{stats.message_content}"
+        )
+
+        log.debug(message)
+
+        # Send pretty mod log embed to mod-alerts
+        await self.mod_log.send_log_message(
+            icon_url=Icons.filtering,
+            colour=Colour(Colours.soft_red),
+            title=f"{_filter['type'].title()} triggered!",
+            text=message,
+            thumbnail=msg.author.avatar_url_as(static_format="png"),
+            channel_id=Channels.mod_alerts,
+            ping_everyone=ping_everyone,
+            additional_embeds=stats.additional_embeds,
+            additional_embeds_msg=stats.additional_embeds_msg
+        )
+
+    def _add_stats(self, name: str, match: FilterMatch, content: str) -> Stats:
         """Adds relevant statistical information to the relevant filter and increments the bot's stats."""
         # Word and match stats for watch_regex
         if name == "watch_regex":
@@ -386,7 +398,7 @@ class Filtering(Cog):
             additional_embeds = match
             additional_embeds_msg = "With the following embed(s):"
 
-        return message_content, additional_embeds, additional_embeds_msg
+        return Stats(message_content, additional_embeds, additional_embeds_msg)
 
     @staticmethod
     def _check_filter(msg: Message) -> bool:
@@ -527,6 +539,16 @@ class Filtering(Cog):
                         )
                         return False
         return False
+
+    @staticmethod
+    async def _has_everyone_ping(text: str) -> bool:
+        """Determines if `msg` contains an @everyone or @here ping outside of a codeblock."""
+        # First pass to avoid running re.sub on every message
+        if not EVERYONE_PING_RE.search(text):
+            return False
+
+        content_without_codeblocks = CODE_BLOCK_RE.sub("", text)
+        return bool(EVERYONE_PING_RE.search(content_without_codeblocks))
 
     async def notify_member(self, filtered_member: Member, reason: str, channel: TextChannel) -> None:
         """

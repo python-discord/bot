@@ -7,11 +7,11 @@ from io import StringIO
 from typing import Tuple, Union
 
 from discord import Colour, Embed, utils
-from discord.ext.commands import BadArgument, Cog, Context, clean_content, command
+from discord.ext.commands import BadArgument, Cog, Context, clean_content, command, has_any_role
 
 from bot.bot import Bot
 from bot.constants import Channels, MODERATION_ROLES, STAFF_ROLES
-from bot.decorators import in_whitelist, with_role
+from bot.decorators import in_whitelist
 from bot.pagination import LinePaginator
 from bot.utils import messages
 
@@ -84,7 +84,7 @@ class Utils(Cog):
                 # Assemble the embed
                 pep_embed = Embed(
                     title=f"**PEP {pep_number} - {pep_header['Title']}**",
-                    description=f"[Link]({self.base_pep_url}{pep_number:04})",
+                    url=f"{self.base_pep_url}{pep_number:04}"
                 )
 
                 pep_embed.set_thumbnail(url=ICON_URL)
@@ -224,7 +224,7 @@ class Utils(Cog):
         await ctx.send(embed=embed)
 
     @command(aliases=("poll",))
-    @with_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES)
     async def vote(self, ctx: Context, title: clean_content(fix_channel_mentions=True), *options: str) -> None:
         """
         Build a quick voting poll with matching reactions with the provided options.
@@ -250,7 +250,7 @@ class Utils(Cog):
         """Send information about PEP 0."""
         pep_embed = Embed(
             title="**PEP 0 - Index of Python Enhancement Proposals (PEPs)**",
-            description="[Link](https://www.python.org/dev/peps/)"
+            url="https://www.python.org/dev/peps/"
         )
         pep_embed.set_thumbnail(url=ICON_URL)
         pep_embed.add_field(name="Status", value="Active")

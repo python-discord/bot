@@ -38,10 +38,10 @@ RAW_CODE_REGEX = re.compile(
     re.DOTALL                               # "." also matches newlines
 )
 
-MAX_PASTE_LEN = 1000
+MAX_PASTE_LEN = 10000
 
 # `!eval` command whitelists
-EVAL_CHANNELS = (Channels.bot_commands, Channels.esoteric)
+EVAL_CHANNELS = (Channels.bot_commands, Channels.esoteric, Channels.code_help_voice, Channels.code_help_voice_2)
 EVAL_CATEGORIES = (Categories.help_available, Categories.help_in_use)
 EVAL_ROLES = (Roles.helpers, Roles.moderators, Roles.admins, Roles.owners, Roles.python_community, Roles.partners)
 
@@ -150,6 +150,7 @@ class Snekbox(Cog):
             output = output.replace("<!@", "<!@\u200B")  # Zero-width space
 
         if ESCAPE_REGEX.findall(output):
+            paste_link = await self.upload_output(original_output)
             return "Code block escape attempt detected; will not output result", paste_link
 
         truncated = False
@@ -240,12 +241,12 @@ class Snekbox(Cog):
                 )
 
                 code = await self.get_code(new_message)
-                await ctx.message.clear_reactions()
+                await ctx.message.clear_reaction(REEVAL_EMOJI)
                 with contextlib.suppress(HTTPException):
                     await response.delete()
 
             except asyncio.TimeoutError:
-                await ctx.message.clear_reactions()
+                await ctx.message.clear_reaction(REEVAL_EMOJI)
                 return None
 
             return code
