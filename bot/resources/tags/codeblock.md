@@ -4,4 +4,4 @@ Here's how to format Python code on Discord:
 print('Hello world!')
 \```
 
-**These are backticks, not quotes.** Backticks can usually be found to the left of the `1` key.  
+**These are backticks, not quotes.** See [here](https://superuser.com/questions/254076/how-do-i-type-the-tick-and-backtick-characters-on-windows/254077#254077) if you can't find the backtick key.
