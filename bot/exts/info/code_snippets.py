@@ -144,7 +144,9 @@ def snippet_to_codeblock(file_contents: str, file_path: str, start_line: str, en
 
     # Extracts the code language and checks whether it's a "valid" language
     language = file_path.split('/')[-1].split('.')[-1]
-    if not language.replace('-', '').replace('+', '').replace('_', '').isalnum():
+    trimmed_language = language.replace('-', '').replace('+', '').replace('_', '')
+    is_valid_language = trimmed_language.isalnum()
+    if not is_valid_language:
         language = ''
 
     if len(required) != 0:
