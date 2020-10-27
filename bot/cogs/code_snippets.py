@@ -10,8 +10,8 @@ from bot.bot import Bot
 from bot.utils.messages import wait_for_deletion
 
 
-async def fetch_http(session: ClientSession, url: str, response_format: str, **kwargs) -> str:
-    """Uses aiohttp to make http GET requests."""
+async def fetch_response(session: ClientSession, url: str, response_format: str, **kwargs) -> str:
+    """Makes http requests using aiohttp."""
     async with session.get(url, **kwargs) as response:
         if response_format == 'text':
             return await response.text()
@@ -37,12 +37,12 @@ async def fetch_github_snippet(session: ClientSession, repo: str,
     headers = {'Accept': 'application/vnd.github.v3.raw'}
 
     # Search the GitHub API for the specified branch
-    refs = (await fetch_http(session, f'https://api.github.com/repos/{repo}/branches', 'json', headers=headers)
-            + await fetch_http(session, f'https://api.github.com/repos/{repo}/tags', 'json', headers=headers))
+    refs = (await fetch_response(session, f'https://api.github.com/repos/{repo}/branches', 'json', headers=headers)
+            + await fetch_response(session, f'https://api.github.com/repos/{repo}/tags', 'json', headers=headers))
 
     ref, file_path = find_ref(path, refs)
 
-    file_contents = await fetch_http(
+    file_contents = await fetch_response(
         session,
         f'https://api.github.com/repos/{repo}/contents/{file_path}?ref={ref}',
         'text',
@@ -56,7 +56,7 @@ async def fetch_github_gist_snippet(session: ClientSession, gist_id: str, revisi
     """Fetches a snippet from a GitHub gist."""
     headers = {'Accept': 'application/vnd.github.v3.raw'}
 
-    gist_json = await fetch_http(
+    gist_json = await fetch_response(
         session,
         f'https://api.github.com/gists/{gist_id}{f"/{revision}" if len(revision) > 0 else ""}',
         'json',
@@ -66,7 +66,7 @@ async def fetch_github_gist_snippet(session: ClientSession, gist_id: str, revisi
     # Check each file in the gist for the specified file
     for gist_file in gist_json['files']:
         if file_path == gist_file.lower().replace('.', '-'):
-            file_contents = await fetch_http(
+            file_contents = await fetch_response(
                 session,
                 gist_json['files'][gist_file]['raw_url'],
                 'text',
@@ -81,14 +81,14 @@ async def fetch_gitlab_snippet(session: ClientSession, repo: str,
     enc_repo = quote_plus(repo)
 
     # Searches the GitLab API for the specified branch
-    refs = (await fetch_http(session, f'https://gitlab.com/api/v4/projects/{enc_repo}/repository/branches', 'json')
-            + await fetch_http(session, f'https://gitlab.com/api/v4/projects/{enc_repo}/repository/tags', 'json'))
+    refs = (await fetch_response(session, f'https://gitlab.com/api/v4/projects/{enc_repo}/repository/branches', 'json')
+            + await fetch_response(session, f'https://gitlab.com/api/v4/projects/{enc_repo}/repository/tags', 'json'))
 
     ref, file_path = find_ref(path, refs)
     enc_ref = quote_plus(ref)
     enc_file_path = quote_plus(file_path)
 
-    file_contents = await fetch_http(
+    file_contents = await fetch_response(
         session,
         f'https://gitlab.com/api/v4/projects/{enc_repo}/repository/files/{enc_file_path}/raw?ref={enc_ref}',
         'text',
@@ -99,7 +99,7 @@ async def fetch_gitlab_snippet(session: ClientSession, repo: str,
 async def fetch_bitbucket_snippet(session: ClientSession, repo: str, ref: str,
                                   file_path: str, start_line: int, end_line: int) -> str:
     """Fetches a snippet from a BitBucket repo."""
-    file_contents = await fetch_http(
+    file_contents = await fetch_response(
         session,
         f'https://bitbucket.org/{quote_plus(repo)}/raw/{quote_plus(ref)}/{quote_plus(file_path)}',
         'text',
