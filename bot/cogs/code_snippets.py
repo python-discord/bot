@@ -176,7 +176,7 @@ BITBUCKET_RE = re.compile(
 
 class CodeSnippets(Cog):
     """
-    Cog that prints out snippets to Discord.
+    Cog that parses and sends code snippets to Discord.
 
     Matches each message against a regex and prints the contents of all matched snippets.
     """
