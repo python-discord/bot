@@ -39,9 +39,9 @@ async def fetch_github_snippet(session: ClientSession, repo: str,
     headers = {'Accept': 'application/vnd.github.v3.raw'}
 
     # Search the GitHub API for the specified branch
-    refs = (await fetch_response(session, f'https://api.github.com/repos/{repo}/branches', 'json', headers=headers)
-            + await fetch_response(session, f'https://api.github.com/repos/{repo}/tags', 'json', headers=headers))
-
+    branches = await fetch_response(session, f'https://api.github.com/repos/{repo}/branches', 'json', headers=headers)
+    tags = await fetch_response(session, f'https://api.github.com/repos/{repo}/tags', 'json', headers=headers)
+    refs = branches + tags
     ref, file_path = find_ref(path, refs)
 
     file_contents = await fetch_response(
@@ -83,9 +83,9 @@ async def fetch_gitlab_snippet(session: ClientSession, repo: str,
     enc_repo = quote_plus(repo)
 
     # Searches the GitLab API for the specified branch
-    refs = (await fetch_response(session, f'https://gitlab.com/api/v4/projects/{enc_repo}/repository/branches', 'json')
-            + await fetch_response(session, f'https://gitlab.com/api/v4/projects/{enc_repo}/repository/tags', 'json'))
-
+    branches = await fetch_response(session, f'https://api.github.com/repos/{repo}/branches', 'json')
+    tags = await fetch_response(session, f'https://api.github.com/repos/{repo}/tags', 'json')
+    refs = branches + tags
     ref, file_path = find_ref(path, refs)
     enc_ref = quote_plus(ref)
     enc_file_path = quote_plus(file_path)
