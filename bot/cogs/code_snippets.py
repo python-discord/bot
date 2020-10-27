@@ -19,6 +19,18 @@ async def fetch_http(session: ClientSession, url: str, response_format: str, **k
             return await response.json()
 
 
+def find_ref(path: str, refs: tuple) -> tuple:
+    """Loops through all branches and tags to find the required ref."""
+    ref = path.split('/')[0]
+    file_path = '/'.join(path.split('/')[1:])
+    for possible_ref in refs:
+        if path.startswith(possible_ref['name'] + '/'):
+            ref = possible_ref['name']
+            file_path = path[len(ref) + 1:]
+            break
+    return (ref, file_path)
+
+
 async def fetch_github_snippet(session: ClientSession, repo: str,
                                path: str, start_line: str, end_line: str) -> str:
     """Fetches a snippet from a GitHub repo."""
@@ -28,13 +40,7 @@ async def fetch_github_snippet(session: ClientSession, repo: str,
     refs = (await fetch_http(session, f'https://api.github.com/repos/{repo}/branches', 'json', headers=headers)
             + await fetch_http(session, f'https://api.github.com/repos/{repo}/tags', 'json', headers=headers))
 
-    ref = path.split('/')[0]
-    file_path = '/'.join(path.split('/')[1:])
-    for possible_ref in refs:
-        if path.startswith(possible_ref['name'] + '/'):
-            ref = possible_ref['name']
-            file_path = path[len(ref) + 1:]
-            break
+    ref, file_path = find_ref(path, refs)
 
     file_contents = await fetch_http(
         session,
@@ -42,7 +48,6 @@ async def fetch_github_snippet(session: ClientSession, repo: str,
         'text',
         headers=headers,
     )
-
     return await snippet_to_md(file_contents, file_path, start_line, end_line)
 
 
@@ -66,9 +71,7 @@ async def fetch_github_gist_snippet(session: ClientSession, gist_id: str, revisi
                 gist_json['files'][gist_file]['raw_url'],
                 'text',
             )
-
             return await snippet_to_md(file_contents, gist_file, start_line, end_line)
-
     return ''
 
 
@@ -81,14 +84,7 @@ async def fetch_gitlab_snippet(session: ClientSession, repo: str,
     refs = (await fetch_http(session, f'https://gitlab.com/api/v4/projects/{enc_repo}/repository/branches', 'json')
             + await fetch_http(session, f'https://gitlab.com/api/v4/projects/{enc_repo}/repository/tags', 'json'))
 
-    ref = path.split('/')[0]
-    file_path = '/'.join(path.split('/')[1:])
-    for possible_ref in refs:
-        if path.startswith(possible_ref['name'] + '/'):
-            ref = possible_ref['name']
-            file_path = path[len(ref) + 1:]
-            break
-
+    ref, file_path = find_ref(path, refs)
     enc_ref = quote_plus(ref)
     enc_file_path = quote_plus(file_path)
 
@@ -97,7 +93,6 @@ async def fetch_gitlab_snippet(session: ClientSession, repo: str,
         f'https://gitlab.com/api/v4/projects/{enc_repo}/repository/files/{enc_file_path}/raw?ref={enc_ref}',
         'text',
     )
-
     return await snippet_to_md(file_contents, file_path, start_line, end_line)
 
 
@@ -109,7 +104,6 @@ async def fetch_bitbucket_snippet(session: ClientSession, repo: str, ref: str,
         f'https://bitbucket.org/{quote_plus(repo)}/raw/{quote_plus(ref)}/{quote_plus(file_path)}',
         'text',
     )
-
     return await snippet_to_md(file_contents, file_path, start_line, end_line)
 
 
