@@ -21,8 +21,10 @@ async def fetch_response(session: ClientSession, url: str, response_format: str,
 
 def find_ref(path: str, refs: tuple) -> tuple:
     """Loops through all branches and tags to find the required ref."""
+    # Base case: there is no slash in the branch name
     ref = path.split('/')[0]
     file_path = '/'.join(path.split('/')[1:])
+    # In case there are slashes in the branch name, we loop through all branches and tags
     for possible_ref in refs:
         if path.startswith(possible_ref['name'] + '/'):
             ref = possible_ref['name']
@@ -48,7 +50,7 @@ async def fetch_github_snippet(session: ClientSession, repo: str,
         'text',
         headers=headers,
     )
-    return await snippet_to_md(file_contents, file_path, start_line, end_line)
+    return snippet_to_codeblock(file_contents, file_path, start_line, end_line)
 
 
 async def fetch_github_gist_snippet(session: ClientSession, gist_id: str, revision: str,
@@ -71,7 +73,7 @@ async def fetch_github_gist_snippet(session: ClientSession, gist_id: str, revisi
                 gist_json['files'][gist_file]['raw_url'],
                 'text',
             )
-            return await snippet_to_md(file_contents, gist_file, start_line, end_line)
+            return snippet_to_codeblock(file_contents, gist_file, start_line, end_line)
     return ''
 
 
@@ -93,7 +95,7 @@ async def fetch_gitlab_snippet(session: ClientSession, repo: str,
         f'https://gitlab.com/api/v4/projects/{enc_repo}/repository/files/{enc_file_path}/raw?ref={enc_ref}',
         'text',
     )
-    return await snippet_to_md(file_contents, file_path, start_line, end_line)
+    return snippet_to_codeblock(file_contents, file_path, start_line, end_line)
 
 
 async def fetch_bitbucket_snippet(session: ClientSession, repo: str, ref: str,
@@ -104,11 +106,21 @@ async def fetch_bitbucket_snippet(session: ClientSession, repo: str, ref: str,
         f'https://bitbucket.org/{quote_plus(repo)}/raw/{quote_plus(ref)}/{quote_plus(file_path)}',
         'text',
     )
-    return await snippet_to_md(file_contents, file_path, start_line, end_line)
+    return snippet_to_codeblock(file_contents, file_path, start_line, end_line)
 
 
-async def snippet_to_md(file_contents: str, file_path: str, start_line: str, end_line: str) -> str:
-    """Given file contents, file path, start line and end line creates a code block."""
+def snippet_to_codeblock(file_contents: str, file_path: str, start_line: str, end_line: str) -> str:
+    """
+    Given the entire file contents and target lines, creates a code block.
+
+    First, we split the file contents into a list of lines and then keep and join only the required
+    ones together.
+
+    We then dedent the lines to look nice, and replace all ` characters with `\u200b to prevent
+    markdown injection.
+
+    Finally, we surround the code with ``` characters.
+    """
     # Parse start_line and end_line into integers
     if end_line is None:
         start_line = end_line = int(start_line)
