@@ -11,7 +11,7 @@ ZeroDivisionError: integer division or modulo by zero
 ```
 The best way to read your traceback is bottom to top.
 
-• Identify the exception raised (e.g. ZeroDivisonError)  
+• Identify the exception raised (e.g. ZeroDivisionError)  
 • Make note of the line number, and navigate there in your program.  
 • Try to understand why the error occurred.  
 
