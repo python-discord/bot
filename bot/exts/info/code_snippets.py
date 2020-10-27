@@ -199,25 +199,18 @@ class CodeSnippets(Cog):
     @Cog.listener()
     async def on_message(self, message: Message) -> None:
         """Checks if the message has a snippet link, removes the embed, then sends the snippet contents."""
-        gh_match = GITHUB_RE.search(message.content)
-        gh_gist_match = GITHUB_GIST_RE.search(message.content)
-        gl_match = GITLAB_RE.search(message.content)
-        bb_match = BITBUCKET_RE.search(message.content)
-
-        if (gh_match or gh_gist_match or gl_match or bb_match) and not message.author.bot:
+        if not message.author.bot:
             message_to_send = ''
+            pattern_handlers = [
+                (GITHUB_RE, self._fetch_github_snippet),
+                (GITHUB_GIST_RE, self._fetch_github_gist_snippet),
+                (GITLAB_RE, self._fetch_gitlab_snippet),
+                (BITBUCKET_RE, self._fetch_bitbucket_snippet)
+            ]
 
-            for gh in GITHUB_RE.finditer(message.content):
-                message_to_send += await self._fetch_github_snippet(**gh.groupdict())
-
-            for gh_gist in GITHUB_GIST_RE.finditer(message.content):
-                message_to_send += await self._fetch_github_gist_snippet(**gh_gist.groupdict())
-
-            for gl in GITLAB_RE.finditer(message.content):
-                message_to_send += await self._fetch_gitlab_snippet(**gl.groupdict())
-
-            for bb in BITBUCKET_RE.finditer(message.content):
-                message_to_send += await self._fetch_bitbucket_snippet(**bb.groupdict())
+            for pattern, handler in pattern_handlers:
+                for match in pattern.finditer(message.content):
+                    message_to_send += await handler(**match.groupdict())
 
             if 0 < len(message_to_send) <= 2000 and message_to_send.count('\n') <= 15:
                 await message.edit(suppress=True)
