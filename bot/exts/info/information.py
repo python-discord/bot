@@ -1,12 +1,14 @@
+import asyncio
 import colorsys
 import logging
 import pprint
 import textwrap
 from collections import Counter, defaultdict
+from contextlib import suppress
 from string import Template
 from typing import Any, Mapping, Optional, Tuple, Union
 
-from discord import ChannelType, Colour, Embed, Guild, Message, Role, Status, utils
+from discord import ChannelType, Colour, Embed, Guild, Member, Message, NotFound, Reaction, Role, Status, utils
 from discord.abc import GuildChannel
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
 
@@ -27,6 +29,8 @@ STATUS_EMOTES = {
     Status.dnd: constants.Emojis.status_dnd,
     Status.idle: constants.Emojis.status_idle
 }
+
+INFR_EMOJI = "\u26a0\ufe0f"  # :warning:
 
 
 class Information(Cog):
@@ -206,7 +210,8 @@ class Information(Cog):
         # Will redirect to #bot-commands if it fails.
         if in_whitelist_check(ctx, roles=constants.STAFF_ROLES):
             embed = await self.create_user_embed(ctx, user)
-            await ctx.send(embed=embed)
+            message = await ctx.send(embed=embed)
+            await self.user_info_menu(ctx, message, user)
 
     async def create_user_embed(self, ctx: Context, user: FetchedMember) -> Embed:
         """Creates an embed containing information on the `user`."""
@@ -353,6 +358,52 @@ class Information(Cog):
                 output.append(f"This user has {count} historical {nomination_noun}, but is currently not nominated.")
 
         return "Nominations", "\n".join(output)
+
+    @staticmethod
+    def embed_field_value(embed: Embed, header: str) -> str:
+        """Get the value of a field from an embed with the appropriate header."""
+        for embed_proxy in embed.fields:
+            if embed_proxy.name == header:
+                return embed_proxy.value
+
+        return ""
+
+    async def user_info_menu(self, ctx: Context, message: Message, user: FetchedMember) -> None:
+        """Creates and manages a reaction-based menu for the user info embed."""
+        def event_check(reaction_: Reaction, user_: Member) -> bool:
+            """Make sure that this reaction is what we want to operate on."""
+            return str(reaction_.emoji) in options and user_.id != ctx.bot.user.id
+
+        options = list()
+        if is_mod_channel(ctx.channel):
+            # Allow an infraction search if the user has infractions.
+            if self.embed_field_value(message.embeds[0], "Infractions") != "No infractions":
+                options.append(INFR_EMOJI)
+
+        if options:
+            # Add all the applicable reactions to the message
+            for reaction in options:
+                log.trace(f"Adding reaction: {repr(reaction)}")
+                await message.add_reaction(reaction)
+
+            while True:
+                try:
+                    reaction, reacter = await ctx.bot.wait_for("reaction_add", timeout=60, check=event_check)
+                    log.trace(f"Got reaction: {reaction}")
+                except asyncio.TimeoutError:
+                    log.debug("Timed out waiting for a reaction")
+                    break  # We're done, no reactions within the timeout period
+
+                await message.remove_reaction(reaction.emoji, reacter)
+
+                if reaction.emoji == INFR_EMOJI:
+                    search = ctx.bot.get_command("infraction search")
+                    if search:
+                        await search(ctx, user.id)
+
+            log.debug("Ending user menu and clearing reactions.")
+            with suppress(NotFound):
+                await message.clear_reactions()
 
     def format_fields(self, mapping: Mapping[str, Any], field_width: Optional[int] = None) -> str:
         """Format a mapping to be readable to a human."""
