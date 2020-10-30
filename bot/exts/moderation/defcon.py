@@ -4,8 +4,10 @@ import logging
 from collections import namedtuple
 from datetime import datetime, timedelta
 from enum import Enum
+from gettext import ngettext
 
 from discord import Colour, Embed, Member
+from discord.ext import tasks
 from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
@@ -83,6 +85,7 @@ class Defcon(Cog):
                 self.days = timedelta(days=0)
                 log.info("DEFCON disabled")
 
+            self.update_notifier()
             await self.update_channel_topic()
 
     @Cog.listener()
@@ -153,6 +156,10 @@ class Defcon(Cog):
                     }
                 }
             )
+
+            self.days = timedelta(days=days)
+            self.update_notifier()
+
         except Exception as err:
             log.exception("Unable to update DEFCON settings.")
             error = err
@@ -199,7 +206,6 @@ class Defcon(Cog):
     @has_any_role(*MODERATION_ROLES)
     async def days_command(self, ctx: Context, days: int) -> None:
         """Set how old an account must be to join the server, in days, with DEFCON mode enabled."""
-        self.days = timedelta(days=days)
         self.enabled = True
         await self._defcon_action(ctx, days=days, action=Action.UPDATED)
         await self.update_channel_topic()
@@ -251,6 +257,21 @@ class Defcon(Cog):
             )
 
         await self.mod_log.send_log_message(info.icon, info.color, status_msg, log_msg)
+
+    def update_notifier(self) -> None:
+        """Start or stop the notifier according to the DEFCON status."""
+        if self.days.days != 0 and not self.defcon_notifier.is_running():
+            log.info("DEFCON notifier started.")
+            self.defcon_notifier.start()
+
+        elif self.days.days == 0 and self.defcon_notifier.is_running():
+            log.info("DEFCON notifier stopped.")
+            self.defcon_notifier.cancel()
+
+    @tasks.loop(hours=1)
+    async def defcon_notifier(self) -> None:
+        """Routinely notify moderators that DEFCON is active."""
+        await self.channel.send(f"Defcon is on and is set to {self.days.days} day{ngettext('', 's', self.days.days)}.")
 
 
 def setup(bot: Bot) -> None:
