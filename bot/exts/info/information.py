@@ -399,7 +399,7 @@ class Information(Cog):
                 if reaction.emoji == INFR_EMOJI:
                     search = ctx.bot.get_command("infraction search")
                     if search:
-                        await search(ctx, user.id)
+                        asyncio.create_task(search(ctx, user.id))
 
             log.debug("Ending user menu and clearing reactions.")
             with suppress(NotFound):
