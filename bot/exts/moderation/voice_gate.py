@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 import discord
 from dateutil import parser
-from discord import Colour
+from discord import Colour, Member, VoiceState
 from discord.ext.commands import Cog, Context, command
 
 from bot.api import ResponseCodeError
@@ -156,6 +156,10 @@ class VoiceGate(Cog):
 
         with suppress(discord.NotFound):
             await message.delete()
+
+    @Cog.listener()
+    async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState):
+        pass
 
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:
         """Check for & ignore any InWhitelistCheckFailure."""
