@@ -600,6 +600,7 @@ class VoiceGate(metaclass=YAMLGetter):
     minimum_days_verified: int
     minimum_messages: int
     bot_message_delete_delay: int
+    minimum_activity_blocks: int
 
 
 class Event(Enum):
