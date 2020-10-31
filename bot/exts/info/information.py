@@ -372,38 +372,29 @@ class Information(Cog):
         """Creates and manages a reaction-based menu for the user info embed."""
         def event_check(reaction_: Reaction, user_: Member) -> bool:
             """Make sure that this reaction is what we want to operate on."""
-            return str(reaction_.emoji) in options and user_.id != ctx.bot.user.id
+            return str(reaction_.emoji) == INFR_EMOJI and user_.id != ctx.bot.user.id
 
-        options = list()
-        if is_mod_channel(ctx.channel):
-            # Allow an infraction search if the user has infractions.
-            if self.embed_field_value(message.embeds[0], "Infractions") != "No infractions":
-                options.append(INFR_EMOJI)
+        # Allow an infraction search if the user has infractions.
+        if (
+            is_mod_channel(ctx.channel)
+            and self.embed_field_value(message.embeds[0], "Infractions") != "No infractions"
+        ):
+            log.trace(f"Adding reaction: {INFR_EMOJI}")
+            await message.add_reaction(INFR_EMOJI)
 
-        if options:
-            # Add all the applicable reactions to the message
-            for reaction in options:
-                log.trace(f"Adding reaction: {repr(reaction)}")
-                await message.add_reaction(reaction)
-
-            while True:
-                try:
-                    reaction, reacter = await ctx.bot.wait_for("reaction_add", timeout=60, check=event_check)
-                    log.trace(f"Got reaction: {reaction}")
-                except asyncio.TimeoutError:
-                    log.debug("Timed out waiting for a reaction")
-                    break  # We're done, no reactions within the timeout period
-
-                await message.remove_reaction(reaction.emoji, reacter)
-
-                if reaction.emoji == INFR_EMOJI:
-                    search = ctx.bot.get_command("infraction search")
-                    if search:
-                        asyncio.create_task(search(ctx, user.id))
-
-            log.debug("Ending user menu and clearing reactions.")
-            with suppress(NotFound):
-                await message.clear_reactions()
+            try:
+                reaction, _ = await ctx.bot.wait_for("reaction_add", timeout=60, check=event_check)
+                log.trace(f"Got reaction: {reaction}")
+            except asyncio.TimeoutError:
+                log.debug("Timed out waiting for a reaction")
+            else:
+                search = ctx.bot.get_command("infraction search")
+                if search:
+                    asyncio.create_task(search(ctx, user.id))
+            finally:
+                log.debug("Ending user menu and clearing reactions.")
+                with suppress(NotFound):
+                    await message.clear_reactions()
 
     def format_fields(self, mapping: Mapping[str, Any], field_width: Optional[int] = None) -> str:
         """Format a mapping to be readable to a human."""
