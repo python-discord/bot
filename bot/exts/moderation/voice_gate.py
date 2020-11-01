@@ -25,6 +25,7 @@ MESSAGE_FIELD_MAP = {
     "verified_at": f"have been verified for less than {GateConf.minimum_days_verified} days",
     "voice_banned": "have an active voice ban infraction",
     "total_messages": f"have sent less than {GateConf.minimum_messages} messages",
+    "activity_blocks": f"have been active for fewer than {GateConf.minimum_activity_blocks} ten-minute blocks",
 }
 
 
@@ -50,6 +51,7 @@ class VoiceGate(Cog):
         - You must have over a certain number of messages within the Discord server
         - You must have accepted our rules over a certain number of days ago
         - You must not be actively banned from using our voice channels
+        - You must have been active for over a certain number of 10-minute blocks
         """
         try:
             data = await self.bot.api_client.get(f"bot/users/{ctx.author.id}/metricity_data")
@@ -60,7 +62,7 @@ class VoiceGate(Cog):
                     description=(
                         "We were unable to find user data for you. "
                         "Please try again shortly, "
-                        "if this problem persists please contact the server staff through Modmail.",
+                        "if this problem persists please contact the server staff through Modmail."
                     ),
                     color=Colour.red()
                 )
@@ -88,7 +90,8 @@ class VoiceGate(Cog):
         checks = {
             "verified_at": data["verified_at"] > datetime.utcnow() - timedelta(days=GateConf.minimum_days_verified),
             "total_messages": data["total_messages"] < GateConf.minimum_messages,
-            "voice_banned": data["voice_banned"]
+            "voice_banned": data["voice_banned"],
+            "activity_blocks": data["activity_blocks"] < GateConf.minimum_activity_blocks
         }
         failed = any(checks.values())
         failed_reasons = [MESSAGE_FIELD_MAP[key] for key, value in checks.items() if value is True]
