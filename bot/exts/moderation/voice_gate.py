@@ -25,7 +25,7 @@ MESSAGE_FIELD_MAP = {
     "verified_at": f"have been verified for less than {GateConf.minimum_days_verified} days",
     "voice_banned": "have an active voice ban infraction",
     "total_messages": f"have sent less than {GateConf.minimum_messages} messages",
-    "activity_blocks": f"have been active for less than {GateConf.minimum_activity_blocks} ten-minute blocks"
+    "activity_blocks": f"have been active for fewer than {GateConf.minimum_activity_blocks} ten-minute blocks",
 }
 
 
