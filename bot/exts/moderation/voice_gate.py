@@ -51,7 +51,7 @@ class VoiceGate(Cog):
         - You must have over a certain number of messages within the Discord server
         - You must have accepted our rules over a certain number of days ago
         - You must not be actively banned from using our voice channels
-        - You must have been active for over a certain number of 10-minute blocks.
+        - You must have been active for over a certain number of 10-minute blocks
         """
         try:
             data = await self.bot.api_client.get(f"bot/users/{ctx.author.id}/metricity_data")
