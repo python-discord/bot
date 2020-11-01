@@ -60,8 +60,8 @@ class VoiceGate(Cog):
                 embed = discord.Embed(
                     title="Not found",
                     description=(
-                        "We were unable to find user data for you. "
-                        "Please try again shortly, "
+                        "We were unable to find user data for you. ",
+                        "Please try again shortly, ",
                         "if this problem persists please contact the server staff through Modmail.",
                     ),
                     color=Colour.red()
