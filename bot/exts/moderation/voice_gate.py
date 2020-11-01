@@ -91,7 +91,7 @@ class VoiceGate(Cog):
             "verified_at": data["verified_at"] > datetime.utcnow() - timedelta(days=GateConf.minimum_days_verified),
             "total_messages": data["total_messages"] < GateConf.minimum_messages,
             "voice_banned": data["voice_banned"],
-            "activity_blocks": data["activity_blocks"] < GateConf.activity_blocks
+            "activity_blocks": data["activity_blocks"] < GateConf.minimum_activity_blocks
         }
         failed = any(checks.values())
         failed_reasons = [MESSAGE_FIELD_MAP[key] for key, value in checks.items() if value is True]
