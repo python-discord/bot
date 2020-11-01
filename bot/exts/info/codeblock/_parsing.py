@@ -12,7 +12,7 @@ from bot.utils import has_lines
 log = logging.getLogger(__name__)
 
 BACKTICK = "`"
-PY_LANG_CODES = ("python", "python-repl", "pycon", "py")  # Order is important; "py" is last cause it's a subset.
+PY_LANG_CODES = ("python-repl", "python", "pycon", "py")  # Order is important; "py" is last cause it's a subset.
 _TICKS = {
     BACKTICK,
     "'",
