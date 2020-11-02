@@ -4,8 +4,9 @@ from contextlib import suppress
 from datetime import datetime, timedelta
 
 import discord
+from async_rediscache import RedisCache
 from dateutil import parser
-from discord import Colour, Member, VoiceState
+from discord import Colour, Member
 from discord.ext.commands import Cog, Context, command
 
 from bot.api import ResponseCodeError
@@ -31,8 +32,16 @@ MESSAGE_FIELD_MAP = {
 class VoiceGate(Cog):
     """Voice channels verification management."""
 
-    def __init__(self, bot: Bot):
+    # RedisCache[t.Union[discord.User.id, discord.Member.id], t.Optional[discord.Message.id]]
+    redis_cache = RedisCache()
+
+    def __init__(self, bot: Bot) -> None:
         self.bot = bot
+        self._init_task = self.bot.loop.create_task(self._async_init())
+
+    async def _aysnc_init(self) -> None:
+        await self.bot.wait_until_guild_available()
+        self._voice_verification_channel = self.bot.get_channel(Channels.voice_gate)
 
     @property
     def mod_log(self) -> ModLog:
@@ -158,8 +167,18 @@ class VoiceGate(Cog):
             await message.delete()
 
     @Cog.listener()
-    async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState):
-        pass
+    async def on_voice_state_update(self, member: Member, *_) -> None:
+        """Pings a user if they've never joined the voice chat before and aren't verified"""
+
+        in_cache = await self.redis_cache.get(member.id)
+
+        # member.voice will return None if the user is not in a voice channel
+        if not in_cache and member.voice is not None:
+            log.trace("User not in cache and is in a voice channel")
+            verified = any(Roles.voice_verified == role.id for role in member.roles)
+            if verified:
+                await self.redis_cache.set(member.id, None)
+                return
 
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:
         """Check for & ignore any InWhitelistCheckFailure."""
