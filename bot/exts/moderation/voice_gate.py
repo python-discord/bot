@@ -60,6 +60,13 @@ class VoiceGate(Cog):
         - You must have accepted our rules over a certain number of days ago
         - You must not be actively banned from using our voice channels
         """
+
+        # If user has received a ping in voice_verification, delete the message
+        if message_id := self.redis_cache.get(ctx.author.id, None) is not None:
+            ping_message = await ctx.channel.fetch_message(message_id)
+            await ping_message.delete()
+            await self.redis_cache.update(ctx.author.id, None)
+
         try:
             data = await self.bot.api_client.get(f"bot/users/{ctx.author.id}/metricity_data")
         except ResponseCodeError as e:
@@ -170,6 +177,10 @@ class VoiceGate(Cog):
     async def on_voice_state_update(self, member: Member, *_) -> None:
         """Pings a user if they've never joined the voice chat before and aren't verified"""
 
+        if member.bot:
+            log.trace("User is a bot. Ignore.")
+            return
+
         in_cache = await self.redis_cache.get(member.id)
 
         # member.voice will return None if the user is not in a voice channel
@@ -177,8 +188,20 @@ class VoiceGate(Cog):
             log.trace("User not in cache and is in a voice channel")
             verified = any(Roles.voice_verified == role.id for role in member.roles)
             if verified:
+                log.trace("User is verified, add to the cache and ignore")
                 await self.redis_cache.set(member.id, None)
                 return
+
+            log.trace("User is unverified. Send ping.")
+            message = self._voice_verification_channel.send(
+                f"Hello, {member.mention}! Wondering why you can't talk in the voice channels? "
+                "Use the `!voiceverify` command in here to verify. "
+                "If you don't yet qualify, you'll be told why!"
+            )
+            await self.redis_cache.set(member.id, message.id)
+
+            # Message will try to be deleted after 5 minutes. If it fails, it'll do so silently
+            await message.delete(delay=300)
 
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:
         """Check for & ignore any InWhitelistCheckFailure."""
