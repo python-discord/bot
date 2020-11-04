@@ -269,6 +269,15 @@ class UserEvents(Cog):
         status = "Not scheduled"
         await self._update_user_event_status(status, scheduled_event["user_event"])
 
+    async def check_if_user_is_organizer(self, user_id: int, event_name: str) -> Optional[dict]:
+        """Check if user is the organizer of an event."""
+        # This will automatically raise error if event does not exist
+        user_event = await self.bot.api_client.get(f"bot/user-events/{event_name}")
+
+        if user_event["organizer"] != user_id:
+            return None
+        return user_event
+
     @has_role(USER_EVENT_COORD_ROLE)
     @group(name="userevent", invoke_without_command=True)
     async def user_event(self, ctx: Context) -> None:
