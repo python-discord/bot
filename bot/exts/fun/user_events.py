@@ -61,9 +61,9 @@ class UserEvents(Cog):
         for event in scheduled_events:
             # If event is live
             if datetime.now() > parse(event["start_time"]).replace(tzinfo=None):
-                await self._schedule_event_end_reminder(event)
+                self.schedule_event_end_reminder(event)
             else:
-                await self._schedule_event_start_reminder(event)
+                await self.schedule_event_start_reminder(event)
 
     @staticmethod
     def not_scheduled() -> str:
@@ -117,9 +117,7 @@ class UserEvents(Cog):
         return self.bot.get_channel(USER_EVENT_VOICE_CHANNEL)
 
     @staticmethod
-    def user_event_embed(
-            event_name: str, event_description: str, organizer: Member, status: str = "Not scheduled"
-    ) -> Embed:
+    def user_event_embed(event_name: str, event_description: str, organizer: Member, status: str) -> Embed:
         """Embed representing a user event."""
         embed = Embed(
             title=f"{event_name}",
@@ -139,7 +137,7 @@ class UserEvents(Cog):
         users = await reaction.users().flatten()
         return users
 
-    async def _sync_subscribers(self, event_name: str, sub_ids: list) -> None:
+    async def sync_subscribers(self, event_name: str, sub_ids: list) -> None:
         """Sync subscribers with the site."""
         data = {
             "subscriptions": sub_ids
@@ -149,8 +147,8 @@ class UserEvents(Cog):
             data=data
         )
 
-    async def _update_user_event_status(self, status: str, user_event: dict) -> None:
-        """Update event status on #user-events-list channel."""
+    async def update_user_event_message(self, status: str, user_event: dict) -> None:
+        """Update event message on #user-events-list channel."""
         message = await self.user_events_list_channel.fetch_message(user_event["message_id"])
         embed = self.user_event_embed(
             user_event["name"],
@@ -161,7 +159,7 @@ class UserEvents(Cog):
         embed.set_footer(text="React to be notified.")
         await message.edit(embed=embed)
 
-    async def _event_preparation(self, scheduled_event: dict) -> None:
+    async def event_preparation(self, scheduled_event: dict) -> None:
         """Notify event organizer 30min before event and add User Event: Ongoing role."""
         organizer = self.guild.get_member(scheduled_event["user_event"]["organizer"])
 
@@ -177,24 +175,24 @@ class UserEvents(Cog):
             f"command to start the event."
         )
 
-        await self._schedule_event_end_reminder(scheduled_event)
+        self.schedule_event_end_reminder(scheduled_event)
 
-    async def _event_end(self, scheduled_event: dict) -> None:
+    async def event_end(self, scheduled_event: dict) -> None:
         """End user event."""
         organizer = self.guild.get_member(scheduled_event["user_event"]["organizer"])
         role = self.guild.get_role(USER_EVENT_ONGOING_ROLE)
 
         await organizer.remove_roles(role)
 
-        status = "Not Scheduled"
-        await self._update_user_event_status(status, scheduled_event["user_event"])
+        status = self.not_scheduled()
+        await self.update_user_event_message(status, scheduled_event["user_event"])
 
         await self.edit_events_vc(False)
 
         await self.user_event_coord_channel.send(f"{organizer.mention} event has ended! Voice channel is now closed.")
         await self._cancel_scheduled_event(scheduled_event)
 
-    async def _schedule_event_start_reminder(self, scheduled_event: dict) -> None:
+    async def schedule_event_start_reminder(self, scheduled_event: dict) -> None:
         """Schedule reminder to remind user 30min before event start."""
         start_datetime = isoparse(scheduled_event["start_time"]).replace(tzinfo=None)
 
@@ -202,23 +200,23 @@ class UserEvents(Cog):
 
         # check if current time is already past reminder's time
         if reminder < datetime.now():
-            await self._event_preparation(scheduled_event)
+            await self.event_preparation(scheduled_event)
             return
 
         self.scheduler.schedule_at(
             reminder,
             scheduled_event["user_event"]["organizer"],
-            self._event_preparation(scheduled_event)
+            self.event_preparation(scheduled_event)
         )
 
-    async def _send_confirmation_message(
+    async def send_confirmation_message(
             self,
             event_name: str,
             event_description: str,
             author: Member
     ) -> Tuple[Message, Embed]:
         """Send confirmation message for user event creation."""
-        embed = self.user_event_embed(event_name, event_description, author)
+        embed = self.user_event_embed(event_name, event_description, author, self.not_scheduled())
         message = await self.user_event_coord_channel.send(embed=embed)
 
         await message.add_reaction(EMOJIS["check"])
@@ -226,14 +224,14 @@ class UserEvents(Cog):
 
         return message, embed
 
-    async def _schedule_event_end_reminder(self, scheduled_event: dict) -> None:
+    def schedule_event_end_reminder(self, scheduled_event: dict) -> None:
         """Schedule reminder to remind user about event end."""
         reminder = isoparse(scheduled_event["end_time"]).replace(tzinfo=None)
 
         self.scheduler.schedule_at(
             reminder,
             scheduled_event["user_event"]["organizer"],
-            self._event_end(scheduled_event)
+            self.event_end(scheduled_event)
         )
 
     async def list_new_event(self, embed: Embed) -> Message:
@@ -266,8 +264,8 @@ class UserEvents(Cog):
         await self.bot.api_client.delete(f"bot/scheduled-events/{scheduled_event['id']}")
 
         # Update user event status
-        status = "Not scheduled"
-        await self._update_user_event_status(status, scheduled_event["user_event"])
+        status = self.not_scheduled()
+        await self.update_user_event_message(status, scheduled_event["user_event"])
 
     async def check_if_user_is_organizer(self, user_id: int, event_name: str) -> Optional[dict]:
         """Check if user is the organizer of an event."""
@@ -292,7 +290,7 @@ class UserEvents(Cog):
         organizer = ctx.author.id
 
         # Ask user to confirm before event creation
-        confirmation_message, embed = await self._send_confirmation_message(event_name, event_description, ctx.author)
+        confirmation_message, embed = await self.send_confirmation_message(event_name, event_description, ctx.author)
 
         def check(reaction: Reaction, user: Member) -> bool:
             """Check for correct reaction and user."""
@@ -379,11 +377,9 @@ class UserEvents(Cog):
     async def delete_user_event(self, ctx: Context, event_name: str) -> None:
         """Delete user event."""
         # Check if user is event organizer
-        # This will automatically raise error if event does not exist
-        user_event = await self.bot.api_client.get(f"bot/user-events/{event_name}")
-
-        if user_event["organizer"] != ctx.author.id:
-            await ctx.send("You can only cancel your events!")
+        user_event = self.check_if_user_is_organizer(ctx.author.id, event_name)
+        if not user_event:
+            await ctx.send("You can only delete your events!")
             return
 
         # Check if the event is scheduled
@@ -446,17 +442,12 @@ class UserEvents(Cog):
             data=post_data
         )
 
-        readable_datetime = (
-            f"{start_datetime.day}{DATE_PREFIX.get(start_datetime.day, 'th')} "
-            f"{list(calendar.month_name)[start_datetime.month]}, {start_datetime.year}.\n"
-            f"{start_datetime.time().strftime('%H:%M:%S')} UTC (24-hour format)"
-        )
-        status = f"Scheduled for\n{readable_datetime}"
+        status = self.scheduled(start_datetime)
 
         # Send message in #user-events-announcements regarding event schedule
         embed = Embed(
             title=f"{user_event['name']} Event Scheduled!",
-            description=readable_datetime
+            description=status
         )
 
         # Announce scheduled user event
@@ -466,10 +457,10 @@ class UserEvents(Cog):
         await self.user_event_announcement_channel.send(embed=embed)
 
         # Update status in #user-events-list channel
-        await self._update_user_event_status(status, user_event)
+        await self.update_user_event_message(status, user_event)
 
         # Set start reminders for scheduled event organizer.
-        await self._schedule_event_start_reminder(scheduled_event)
+        await self.schedule_event_start_reminder(scheduled_event)
 
     @has_role(USER_EVENT_COORD_ROLE)
     @user_event.command(name="cancel")
@@ -490,7 +481,7 @@ class UserEvents(Cog):
 
         await self._cancel_scheduled_event(scheduled_event[0])
 
-        await ctx.send(f"{scheduled_event['user_event']['name']} event is cancelled.")
+        await ctx.send(f"{scheduled_event[0]['user_event']['name']} event is cancelled.")
 
     @has_role(USER_EVENT_COORD_ROLE)
     @user_event.command(name="open")
@@ -525,7 +516,7 @@ class UserEvents(Cog):
         ]
 
         # Sync subscribers with the site
-        await self._sync_subscribers(
+        await self.sync_subscribers(
             scheduled_event[0]["user_event"]["name"],
             [sub.id for sub in subscribers]
         )
@@ -538,8 +529,8 @@ class UserEvents(Cog):
             message = announcement_message + subscribers
 
         # Update event status
-        status = "Live"
-        await self._update_user_event_status(status, scheduled_event[0]["user_event"])
+        status = self.live()
+        await self.update_user_event_message(status, scheduled_event[0]["user_event"])
 
         await self.user_event_announcement_channel.send(message)
 
