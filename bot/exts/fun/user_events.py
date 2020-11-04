@@ -334,6 +334,47 @@ class UserEvents(Cog):
         await ctx.send(f"User Event **{event_name}** created.")
 
     @has_role(USER_EVENT_COORD_ROLE)
+    @user_event.command(name="change_desc", aliases=["cd", "desc"])
+    async def change_description(self, ctx: Context, event_name: str, *, event_description: str) -> None:
+        """Change user event description."""
+        # Check if user is event organizer
+        if not self.check_if_user_is_organizer(ctx.author.id, event_name):
+            await ctx.send("You can only modify your events!")
+            return
+        data = {
+            "description": event_description
+        }
+        # Patch event description
+        # This is raise 404 error if event does not exist
+        user_event = await self.bot.api_client.patch(
+            f"bot/user-events/{event_name}",
+            data=data
+        )
+
+        # Update event message
+        # Check if event is scheduled
+        query_params = {
+            "user_event__organizer": ctx.author.id
+        }
+        scheduled_event = await self.bot.api_client.get(
+            "bot/scheduled-events",
+            params=query_params
+        )
+        # If event is scheduled
+        if scheduled_event:
+            await self.update_user_event_message(
+                status=self.scheduled(isoparse(scheduled_event[0]["start_time"])),
+                user_event=scheduled_event[0]["user_event"]
+            )
+            return
+
+        # If event is not scheduled
+        await self.update_user_event_message(
+            status=self.not_scheduled(),
+            user_event=user_event
+        )
+
+    @has_role(USER_EVENT_COORD_ROLE)
     @user_event.command(name="delete")
     async def delete_user_event(self, ctx: Context, event_name: str) -> None:
         """Delete user event."""
