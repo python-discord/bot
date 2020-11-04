@@ -6,6 +6,7 @@ from collections import Counter, defaultdict
 from string import Template
 from typing import Any, Mapping, Optional, Tuple, Union
 
+from dateutil import parser
 from discord import ChannelType, Colour, Embed, Guild, Message, Role, Status, utils
 from discord.abc import GuildChannel
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
@@ -20,7 +21,6 @@ from bot.utils.checks import cooldown_with_role_bypass, has_no_roles_check, in_w
 from bot.utils.time import time_since
 
 log = logging.getLogger(__name__)
-
 
 STATUS_EMOTES = {
     Status.offline: constants.Emojis.status_offline,
@@ -254,6 +254,7 @@ class Information(Cog):
         if is_mod_channel(ctx.channel):
             fields.append(await self.expanded_user_infraction_counts(user))
             fields.append(await self.user_nomination_counts(user))
+            fields.append(await self.user_verification_and_messages(user))
         else:
             fields.append(await self.basic_user_infraction_counts(user))
 
@@ -353,6 +354,25 @@ class Information(Cog):
                 output.append(f"This user has {count} historical {nomination_noun}, but is currently not nominated.")
 
         return "Nominations", "\n".join(output)
+
+    async def user_verification_and_messages(self, user: FetchedMember) -> Tuple[str, str]:
+        """Gets the time of verification and amount of messages for `member`."""
+        user_activity = await self.bot.api_client.get(f'bot/users/{user.id}/metricity_data')
+
+        activity_output = []
+
+        if user_activity['verified_at'] is not None:
+            verified_delta_formatted = time_since(parser.isoparse(user_activity['verified_at']), max_units=3)
+            activity_output.append(f'This user verified {verified_delta_formatted}')
+        else:
+            activity_output.append('This user is not verified.')
+
+        if user_activity['total_messages']:
+            activity_output.append(f"This user has a total of {user_activity['total_messages']} messages.")
+        else:
+            activity_output.append(f"This user has not sent any messages on this server.")
+
+        return "Activity", "\n".join(activity_output)
 
     def format_fields(self, mapping: Mapping[str, Any], field_width: Optional[int] = None) -> str:
         """Format a mapping to be readable to a human."""
