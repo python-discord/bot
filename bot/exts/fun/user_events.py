@@ -65,6 +65,27 @@ class UserEvents(Cog):
             else:
                 await self._schedule_event_start_reminder(event)
 
+    @staticmethod
+    def not_scheduled() -> str:
+        """To indicate user event is not scheduled."""
+        return "Not scheduled"
+
+    @staticmethod
+    def live() -> str:
+        """To indicate user event is live."""
+        return "Live"
+
+    @staticmethod
+    def scheduled(start_datetime: datetime) -> str:
+        """To indicate user event is scheduled."""
+        readable_datetime = (
+            f"{start_datetime.day}{DATE_PREFIX.get(start_datetime.day, 'th')} "
+            f"{list(calendar.month_name)[start_datetime.month]}, {start_datetime.year}.\n"
+            f"{start_datetime.time().strftime('%H:%M:%S')} UTC (24-hour format)"
+        )
+        status = f"Scheduled for\n{readable_datetime}"
+        return status
+
     @property
     def developers_role(self) -> Role:
         """Return guild developers role."""
