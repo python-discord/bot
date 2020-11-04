@@ -377,7 +377,7 @@ class UserEvents(Cog):
     async def delete_user_event(self, ctx: Context, event_name: str) -> None:
         """Delete user event."""
         # Check if user is event organizer
-        user_event = self.check_if_user_is_organizer(ctx.author.id, event_name)
+        user_event = await self.check_if_user_is_organizer(ctx.author.id, event_name)
         if not user_event:
             await ctx.send("You can only delete your events!")
             return
