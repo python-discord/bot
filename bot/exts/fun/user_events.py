@@ -58,10 +58,12 @@ class UserEvents(Cog):
         """Restart scheduled event reminders when bot restarts."""
         await self.bot.wait_until_guild_available()
         scheduled_events = await self.bot.api_client.get("bot/scheduled-events")
+
         for event in scheduled_events:
             # If event is live
             if datetime.now() > parse(event["start_time"]).replace(tzinfo=None):
                 self.schedule_event_end_reminder(event)
+
             else:
                 await self.schedule_event_start_reminder(event)
 
@@ -127,7 +129,6 @@ class UserEvents(Cog):
                 f"**Status:** {status}"
             )
         )
-        embed.set_footer(text="Confirm event creation.")
         return embed
 
     async def fetch_subscribers(self, message_id: int) -> list:
@@ -209,21 +210,6 @@ class UserEvents(Cog):
             self.event_preparation(scheduled_event)
         )
 
-    async def send_confirmation_message(
-            self,
-            event_name: str,
-            event_description: str,
-            author: Member
-    ) -> Tuple[Message, Embed]:
-        """Send confirmation message for user event creation."""
-        embed = self.user_event_embed(event_name, event_description, author, self.not_scheduled())
-        message = await self.user_event_coord_channel.send(embed=embed)
-
-        await message.add_reaction(EMOJIS["check"])
-        await message.add_reaction(EMOJIS["cross"])
-
-        return message, embed
-
     def schedule_event_end_reminder(self, scheduled_event: dict) -> None:
         """Schedule reminder to remind user about event end."""
         reminder = isoparse(scheduled_event["end_time"]).replace(tzinfo=None)
@@ -233,6 +219,23 @@ class UserEvents(Cog):
             scheduled_event["user_event"]["organizer"],
             self.event_end(scheduled_event)
         )
+
+    async def send_confirmation_message(
+            self,
+            event_name: str,
+            event_description: str,
+            author: Member
+    ) -> Tuple[Message, Embed]:
+        """Send confirmation message for user event creation."""
+        embed = self.user_event_embed(event_name, event_description, author, self.not_scheduled())
+        embed.set_footer(text="Confirm event creation.")
+
+        message = await self.user_event_coord_channel.send(embed=embed)
+
+        await message.add_reaction(EMOJIS["check"])
+        await message.add_reaction(EMOJIS["cross"])
+
+        return message, embed
 
     async def list_new_event(self, embed: Embed) -> Message:
         """List new event in the user-events-list channel."""
