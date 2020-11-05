@@ -28,6 +28,12 @@ MESSAGE_FIELD_MAP = {
     "total_messages": f"have sent less than {GateConf.minimum_messages} messages",
 }
 
+VOICE_PING = (
+    "Hello, {}! Wondering why you can't talk in the voice channels? "
+    "Use the `!voiceverify` command in here to verify. "
+    "If you don't yet qualify, you'll be told why!"
+)
+
 
 class VoiceGate(Cog):
     """Voice channels verification management."""
@@ -158,6 +164,10 @@ class VoiceGate(Cog):
 
         # When it's bot sent message, delete it after some time
         if message.author.bot:
+            # Comparing the message with the voice ping constant
+            if message.content.endswith(VOICE_PING[-45:]):
+                log.trace("Message is the voice verification ping. Ignore.")
+                return
             with suppress(discord.NotFound):
                 await message.delete(delay=GateConf.bot_message_delete_delay)
                 return
@@ -177,7 +187,6 @@ class VoiceGate(Cog):
     @Cog.listener()
     async def on_voice_state_update(self, member: Member, *_) -> None:
         """Pings a user if they've never joined the voice chat before and aren't verified"""
-
         if member.bot:
             log.trace("User is a bot. Ignore.")
             return
@@ -185,7 +194,7 @@ class VoiceGate(Cog):
         in_cache = await self.redis_cache.get(member.id, None)
 
         # member.voice will return None if the user is not in a voice channel
-        if in_cache is not None and member.voice is not None:
+        if in_cache is None and member.voice is not None:
             log.trace("User not in cache and is in a voice channel")
             verified = any(Roles.voice_verified == role.id for role in member.roles)
             if verified:
@@ -195,15 +204,14 @@ class VoiceGate(Cog):
                 return
 
             log.trace("User is unverified. Send ping.")
-            message = await self._voice_verification_channel.send(
-                f"Hello, {member.mention}! Wondering why you can't talk in the voice channels? "
-                "Use the `!voiceverify` command in here to verify. "
-                "If you don't yet qualify, you'll be told why!"
-            )
+            message = await self._voice_verification_channel.send(VOICE_PING.format(member.mention))
             await self.redis_cache.set(member.id, message.id)
 
-            # Message will try to be deleted after 5 minutes. If it fails, it'll do so silently
-            await message.delete(delay=300)
+            # Message will try to be deleted after 1 minutes. If it fails, it'll do so silently
+            await message.delete(delay=GateConf.voice_ping_delete_delay)
+        else:
+            log.trace("User is either in the cache or not in a voice channel. Ignore.")
+            return
 
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:
         """Check for & ignore any InWhitelistCheckFailure."""
