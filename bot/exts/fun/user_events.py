@@ -7,7 +7,7 @@ from typing import Optional, Tuple
 from dateutil.parser import isoparse, parse
 from dateutil.relativedelta import relativedelta
 from discord import Embed, Guild, Member, Message, Reaction, Role, TextChannel, VoiceChannel
-from discord.ext.commands import Cog, Context, group, has_role
+from discord.ext.commands import Cog, CommandInvokeError, Context, group, has_role
 
 from bot import constants
 from bot.api import ResponseCodeError
@@ -543,10 +543,23 @@ class UserEvents(Cog):
 
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:
         """Handle ResponseCodeError locally."""
-        if isinstance(error, ResponseCodeError):
-            error_message = "\n".join("\n".join(value) for value in error.response_json.values())
-            await ctx.send(error_message)
-            error.handled = True
+        # Custom errors are raised via the CommandInvokeError
+        if isinstance(error, CommandInvokeError):
+
+            if isinstance(error.original, ResponseCodeError):
+
+                # Parse 400 error responses from site
+                if error.original.status == 400:
+
+                    # 400 error messages are usually of the
+                    # format -> { field: [error message(s)] }
+                    error_message = "\n".join(
+                        "\n".join(value)
+                        for value in error.original.response_json.values()
+                    )
+
+                    await ctx.send(error_message)
+                    error.handled = True
 
 
 def setup(bot: Bot) -> None:
