@@ -29,7 +29,7 @@ MESSAGE_FIELD_MAP = {
 }
 
 VOICE_PING = (
-    "Hello, {}! Wondering why you can't talk in the voice channels? "
+    "Hello, {0}! Wondering why you can't talk in the voice channels? "
     "Use the `!voiceverify` command in here to verify. "
     "If you don't yet qualify, you'll be told why!"
 )
@@ -66,7 +66,6 @@ class VoiceGate(Cog):
         - You must have accepted our rules over a certain number of days ago
         - You must not be actively banned from using our voice channels
         """
-
         # If user has received a ping in voice_verification, delete the message
         if message_id := await self.redis_cache.get(ctx.author.id, None):
             with suppress(discord.NotFound):
@@ -186,7 +185,7 @@ class VoiceGate(Cog):
 
     @Cog.listener()
     async def on_voice_state_update(self, member: Member, *_) -> None:
-        """Pings a user if they've never joined the voice chat before and aren't verified"""
+        """Pings a user if they've never joined the voice chat before and aren't verified."""
         if member.bot:
             log.trace("User is a bot. Ignore.")
             return
