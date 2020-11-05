@@ -279,8 +279,7 @@ class UserEvents(Cog):
     @group(name="userevent", invoke_without_command=True)
     async def user_event(self, ctx: Context) -> None:
         """Commands to perform CRUD operations on user events and scheduled events."""
-        if ctx.channel.id == USER_EVENT_COORDINATORS_CHANNEL:
-            await ctx.send_help(ctx.command)
+        await ctx.send_help(ctx.command)
 
     @user_event.command(name="create")
     async def create_user_event(self, ctx: Context, event_name: str, *, event_description: str) -> None:
@@ -565,7 +564,10 @@ class UserEvents(Cog):
 
     async def cog_check(self, ctx: Context) -> bool:
         """Allow users with event coordinator role to exec cog commands."""
-        return has_role(USER_EVENT_COORD_ROLE).predicate(ctx)
+        return (
+            has_role(USER_EVENT_COORD_ROLE).predicate(ctx)
+            and ctx.channel.id == USER_EVENT_COORDINATORS_CHANNEL
+        )
 
 
 def setup(bot: Bot) -> None:
