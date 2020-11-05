@@ -133,7 +133,7 @@ def _get_no_lang_message(content: str) -> Optional[str]:
     log.trace("Creating instructions for a missing language.")
 
     if _parsing.is_python_code(content):
-        example_blocks = _get_example("python")
+        example_blocks = _get_example("py")
 
         # Note that _get_bad_ticks_message expects the first line to have two newlines.
         return (
