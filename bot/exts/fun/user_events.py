@@ -283,7 +283,6 @@ class UserEvents(Cog):
         if ctx.channel.id == USER_EVENT_COORDINATORS_CHANNEL:
             await ctx.send_help(ctx.command)
 
-    @has_role(USER_EVENT_COORD_ROLE)
     @user_event.command(name="create")
     async def create_user_event(self, ctx: Context, event_name: str, *, event_description: str) -> None:
         """Create a new user event."""
@@ -331,7 +330,6 @@ class UserEvents(Cog):
 
         await ctx.send(f"User Event **{event_name}** created.")
 
-    @has_role(USER_EVENT_COORD_ROLE)
     @user_event.command(name="change_desc", aliases=["cd", "desc"])
     async def change_description(self, ctx: Context, event_name: str, *, event_description: str) -> None:
         """Change user event description."""
@@ -372,7 +370,6 @@ class UserEvents(Cog):
             user_event=user_event
         )
 
-    @has_role(USER_EVENT_COORD_ROLE)
     @user_event.command(name="delete")
     async def delete_user_event(self, ctx: Context, event_name: str) -> None:
         """Delete user event."""
@@ -406,7 +403,6 @@ class UserEvents(Cog):
 
         await ctx.send(f"User Event **{event_name}** deleted!")
 
-    @has_role(USER_EVENT_COORD_ROLE)
     @user_event.command(name="schedule")
     async def schedule_user_event(
             self,
@@ -462,7 +458,6 @@ class UserEvents(Cog):
         # Set start reminders for scheduled event organizer.
         await self.schedule_event_start_reminder(scheduled_event)
 
-    @has_role(USER_EVENT_COORD_ROLE)
     @user_event.command(name="cancel")
     async def cancel_scheduled_event(self, ctx: Context) -> None:
         """Cancel a scheduled event."""
@@ -483,14 +478,12 @@ class UserEvents(Cog):
 
         await ctx.send(f"{scheduled_event[0]['user_event']['name']} event is cancelled.")
 
-    @has_role(USER_EVENT_COORD_ROLE)
     @user_event.command(name="open")
     async def open_voice_channel(self, ctx: Context) -> None:
         """Open the events voice channel for developers."""
         await self.edit_events_vc(True)
         await ctx.send("Channel is now open, have fun!")
 
-    @has_role(USER_EVENT_COORD_ROLE)
     @user_event.command(name="announce")
     async def announce_event_start(self, ctx: Context, *, announcement_message: Optional[str]) -> None:
         """Inform all event subscribers that the event is starting."""
@@ -534,7 +527,6 @@ class UserEvents(Cog):
 
         await self.user_event_announcement_channel.send(message)
 
-    @has_role(USER_EVENT_COORD_ROLE)
     @user_event.command(name="close")
     async def close_voice_channel(self, ctx: Context) -> None:
         """Close the events voice channel for developers."""
@@ -560,6 +552,10 @@ class UserEvents(Cog):
 
                     await ctx.send(error_message)
                     error.handled = True
+
+    async def cog_check(self, ctx: Context) -> bool:
+        """Allow users with event coordinator role to exec cog commands."""
+        return has_role(USER_EVENT_COORD_ROLE).predicate(ctx)
 
 
 def setup(bot: Bot) -> None:
