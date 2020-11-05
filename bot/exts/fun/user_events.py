@@ -187,7 +187,7 @@ class UserEvents(Cog):
         status = self.not_scheduled()
         await self.update_user_event_message(status, scheduled_event["user_event"])
 
-        await self.edit_events_vc(False)
+        await self.edit_events_vc(open_vc=False)
 
         await self.user_event_coord_channel.send(f"{organizer.mention} event has ended! Voice channel is now closed.")
         await self._cancel_scheduled_event(scheduled_event)
@@ -255,6 +255,15 @@ class UserEvents(Cog):
             speak=open_vc
         )
 
+    async def check_if_user_is_organizer(self, user_id: int, event_name: str) -> Optional[dict]:
+        """Check if user is the organizer of an event."""
+        # This will automatically raise error if event does not exist
+        user_event = await self.bot.api_client.get(f"bot/user-events/{event_name}")
+
+        if user_event["organizer"] != user_id:
+            return None
+        return user_event
+
     async def _cancel_scheduled_event(self, scheduled_event: dict) -> None:
         """Cancel a scheduled event."""
         # Remove scheduler related to the scheduled event
@@ -267,16 +276,6 @@ class UserEvents(Cog):
         status = self.not_scheduled()
         await self.update_user_event_message(status, scheduled_event["user_event"])
 
-    async def check_if_user_is_organizer(self, user_id: int, event_name: str) -> Optional[dict]:
-        """Check if user is the organizer of an event."""
-        # This will automatically raise error if event does not exist
-        user_event = await self.bot.api_client.get(f"bot/user-events/{event_name}")
-
-        if user_event["organizer"] != user_id:
-            return None
-        return user_event
-
-    @has_role(USER_EVENT_COORD_ROLE)
     @group(name="userevent", invoke_without_command=True)
     async def user_event(self, ctx: Context) -> None:
         """Commands to perform CRUD operations on user events and scheduled events."""
@@ -411,8 +410,17 @@ class UserEvents(Cog):
             start_datetime: str,
             duration: float = 3.0
     ) -> None:
-        """Schedule a user event at a particular date and time."""
-        # Check if user event is registered.
+        """
+        Schedule a user event at a particular date and time.
+
+        The time should be in UTC and 24hour format.
+        Default duration is 3 hours.
+
+        Examples:
+        !userevent schedule minecraft "october 10th 2020 14:00:00" 1.5
+        !userevent schedule "among us" "october 10th 2020 14:00:00" 2
+        """
+        # Check if author is event organizer.
         query_params = {
             "organizer": ctx.author.id
         }
@@ -450,6 +458,7 @@ class UserEvents(Cog):
         event_message = await self.user_events_list_channel.fetch_message(scheduled_event["user_event"]["message_id"])
         embed.url = event_message.jump_url + "/discord"
         embed.set_footer(text="Follow embed link and react to message to be notified.")
+
         await self.user_event_announcement_channel.send(embed=embed)
 
         # Update status in #user-events-list channel
@@ -472,6 +481,7 @@ class UserEvents(Cog):
 
         # If user has not scheduled any event
         if not scheduled_event:
+            await ctx.send("You do not have an event scheduled.")
             return
 
         await self._cancel_scheduled_event(scheduled_event[0])
@@ -481,7 +491,7 @@ class UserEvents(Cog):
     @user_event.command(name="open")
     async def open_voice_channel(self, ctx: Context) -> None:
         """Open the events voice channel for developers."""
-        await self.edit_events_vc(True)
+        await self.edit_events_vc(open_vc=True)
         await ctx.send("Channel is now open, have fun!")
 
     @user_event.command(name="announce")
@@ -530,7 +540,7 @@ class UserEvents(Cog):
     @user_event.command(name="close")
     async def close_voice_channel(self, ctx: Context) -> None:
         """Close the events voice channel for developers."""
-        await self.edit_events_vc(False)
+        await self.edit_events_vc(open_vc=False)
         await ctx.send("Voice Channel is now closed.")
 
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:
