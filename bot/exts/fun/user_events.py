@@ -184,7 +184,7 @@ class UserEvents(Cog):
         """End user event."""
         organizer = self.guild.get_member(scheduled_event["user_event"]["organizer"])
 
-        # Remove the `user event: ongoing` role to the organizer
+        # Remove the `user event: ongoing` role from the organizer
         await organizer.remove_roles(self.user_event_ongoing_role)
 
         status = self.not_scheduled()
@@ -283,6 +283,16 @@ class UserEvents(Cog):
         # Update user event status
         status = self.not_scheduled()
         await self.update_user_event_message(status, scheduled_event["user_event"])
+
+        # Remove the `user event: ongoing` role from the organizer incase
+        # the event is canceled using the cancel command when it is Live as
+        # the organizer decides to stop the event early
+
+        # It is not required to use the cancel command to stop the event though,
+        # the ending timer, when done, will remove the role anyway
+        organizer = self.guild.get_member(scheduled_event["user_event"]["organizer"])
+
+        await organizer.remove_roles(self.user_event_ongoing_role)
 
     @group(name="userevent", invoke_without_command=True)
     async def user_event(self, ctx: Context) -> None:
