@@ -390,6 +390,8 @@ class UserEvents(Cog):
             user_event=user_event
         )
 
+        await ctx.send("Event description updated.")
+
     @user_event.command(name="delete")
     async def delete_user_event(self, ctx: Context, event_name: str) -> None:
         """Delete user event."""
@@ -489,6 +491,8 @@ class UserEvents(Cog):
 
         # Set start reminders for scheduled event organizer.
         await self.schedule_event_start_reminder(scheduled_event)
+
+        await ctx.send("Event scheduled.")
 
     @user_event.command(name="cancel")
     async def cancel_scheduled_event(self, ctx: Context) -> None:
