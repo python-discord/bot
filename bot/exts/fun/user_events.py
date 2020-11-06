@@ -436,7 +436,7 @@ class UserEvents(Cog):
         """
         Schedule a user event at a particular date and time.
 
-        The time should be in UTC and 24hour format.
+        The time should be in UTC.
         Default duration is 3 hours.
 
         Examples:
@@ -557,7 +557,7 @@ class UserEvents(Cog):
         message = subscribers
 
         if announcement_message:
-            message = announcement_message + subscribers
+            message += announcement_message
 
         # Update event status
         status = self.live()
