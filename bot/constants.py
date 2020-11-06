@@ -423,7 +423,10 @@ class Channels(metaclass=YAMLGetter):
     reddit: int
     staff_announcements: int
     talent_pool: int
+    user_event_list: int
     user_event_announcements: int
+    user_event_coordinators: int
+    user_event_voice: int
     user_log: int
     verification: int
     voice_chat: int
@@ -462,6 +465,8 @@ class Roles(metaclass=YAMLGetter):
     python_community: int
     sprinters: int
     team_leaders: int
+    user_event_coordinator: int
+    user_event_ongoing: int
     unverified: int
     verified: int  # This is the Developers role on PyDis, here named verified for readability reasons.
     voice_verified: int

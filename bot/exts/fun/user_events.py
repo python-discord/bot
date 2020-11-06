@@ -9,9 +9,9 @@ from dateutil.relativedelta import relativedelta
 from discord import Embed, Guild, Member, Message, Reaction, Role, TextChannel, VoiceChannel
 from discord.ext.commands import Cog, CommandInvokeError, Context, group, has_role
 
-from bot import constants
 from bot.api import ResponseCodeError
 from bot.bot import Bot
+from bot.constants import Channels, Guild as Server, Roles
 from bot.utils.scheduling import Scheduler
 from bot.utils.time import humanize_delta
 
@@ -27,18 +27,6 @@ DATE_PREFIX = {
     2: 'nd', 22: 'nd',
     3: 'rd', 23: 'rd'
 }
-
-USER_EVENTS_LIST_CHANNEL = 766316218944323594
-USER_EVENT_ANNOUNCEMENTS_CHANNEL = 756769546777395207
-
-USER_EVENT_COORDINATORS_CHANNEL = 766318368500219976
-USER_EVENT_COORD_ROLE = 765955273138372618
-
-USER_EVENT_ONGOING_ROLE = 766315117104726076
-
-USER_EVENT_VOICE_CHANNEL = 766623039692734465
-
-DEVELOPERS_ROLE = 756769543237533742
 
 
 class UserEvents(Cog):
@@ -91,32 +79,37 @@ class UserEvents(Cog):
     @property
     def developers_role(self) -> Role:
         """Return guild developers role."""
-        return self.guild.get_role(DEVELOPERS_ROLE)
+        return self.guild.get_role(Roles.verified)
+
+    @property
+    def user_event_ongoing_role(self) -> Role:
+        """Return guild user-event-ongoing role."""
+        return self.guild.get_role(Roles.user_event_ongoing)
 
     @property
     def guild(self) -> Guild:
         """Return guild instance."""
-        return self.bot.get_guild(constants.Guild.id)
+        return self.bot.get_guild(Server.id)
 
     @property
     def user_event_coord_channel(self) -> TextChannel:
         """Return #user-events-coordinators channel."""
-        return self.bot.get_channel(USER_EVENT_COORDINATORS_CHANNEL)
+        return self.bot.get_channel(Channels.user_event_coordinators)
 
     @property
     def user_event_announcement_channel(self) -> TextChannel:
         """Return #user-events-announcement channel."""
-        return self.bot.get_channel(USER_EVENT_ANNOUNCEMENTS_CHANNEL)
+        return self.bot.get_channel(Channels.user_event_announcements)
 
     @property
     def user_events_list_channel(self) -> TextChannel:
         """Return #user-events-list channel."""
-        return self.bot.get_channel(USER_EVENTS_LIST_CHANNEL)
+        return self.bot.get_channel(Channels.user_event_list)
 
     @property
     def user_event_voice_channel(self) -> VoiceChannel:
         """Return #user-events-voice channel."""
-        return self.bot.get_channel(USER_EVENT_VOICE_CHANNEL)
+        return self.bot.get_channel(Channels.user_event_voice)
 
     @staticmethod
     def user_event_embed(event_name: str, event_description: str, organizer: Member, status: str) -> Embed:
@@ -164,9 +157,7 @@ class UserEvents(Cog):
         """Notify event organizer 30min before event and add User Event: Ongoing role."""
         organizer = self.guild.get_member(scheduled_event["user_event"]["organizer"])
 
-        if USER_EVENT_ONGOING_ROLE not in [role.id for role in organizer.roles]:
-            role = self.guild.get_role(USER_EVENT_ONGOING_ROLE)
-            await organizer.add_roles(role)
+        await organizer.add_roles(self.user_event_ongoing_role)
 
         start_time = isoparse(scheduled_event["start_time"]).replace(tzinfo=None)
         time_remaining = humanize_delta(relativedelta(start_time, datetime.now()))
@@ -181,7 +172,7 @@ class UserEvents(Cog):
     async def event_end(self, scheduled_event: dict) -> None:
         """End user event."""
         organizer = self.guild.get_member(scheduled_event["user_event"]["organizer"])
-        role = self.guild.get_role(USER_EVENT_ONGOING_ROLE)
+        role = self.user_event_ongoing_role
 
         await organizer.remove_roles(role)
 
@@ -568,8 +559,8 @@ class UserEvents(Cog):
     async def cog_check(self, ctx: Context) -> bool:
         """Allow users with event coordinator role to exec cog commands."""
         return (
-            has_role(USER_EVENT_COORD_ROLE).predicate(ctx)
-            and ctx.channel.id == USER_EVENT_COORDINATORS_CHANNEL
+            has_role(Roles.user_event_coordinator).predicate(ctx)
+            and ctx.channel.id == Channels.user_event_coordinators
         )
 
 

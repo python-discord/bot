@@ -140,7 +140,6 @@ guild:
         python_events:              &PYEVENTS_CHANNEL   729674110270963822
         mailing_lists:              &MAILING_LISTS      704372456592506880
         reddit:                     &REDDIT_CHANNEL     458224812528238616
-        user_event_announcements:   &USER_EVENT_A       592000283102674944
 
         # Development
         dev_contrib:        &DEV_CONTRIB    635950537262759947
@@ -199,10 +198,16 @@ guild:
         voice_chat:                         412357430186344448
         admins_voice:       &ADMINS_VOICE   500734494840717332
         staff_voice:        &STAFF_VOICE    412375055910043655
+        user_event_voice:                   751592185077563462
 
         # Watch
         big_brother_logs:   &BB_LOGS        468507907357409333
         talent_pool:        &TALENT_POOL    534321732593647616
+
+        # User events
+        user_event_list:            &USER_EVENT_L       0
+        user_event_announcements:   &USER_EVENT_A       592000283102674944
+        user_event_coordinators:    &USER_EVENT_C       1
 
     moderation_categories:
         - *MODMAIL
@@ -250,6 +255,10 @@ guild:
         # Code Jam
         jammers:        737249140966162473
         team_leaders:   737250302834638889
+
+        # User Events
+        user_event_coordinator:   591999763478609927
+        user_event_ongoing:       757666374607831221
 
     moderation_roles:
         - *OWNERS_ROLE
@@ -303,6 +312,8 @@ filter:
         - *STAFF_LOUNGE
         - *TALENT_POOL
         - *USER_EVENT_A
+        - *USER_EVENT_L
+        - *USER_EVENT_C
 
     role_whitelist:
         - *ADMINS_ROLE
@@ -488,6 +499,8 @@ duck_pond:
         - *MAILING_LISTS
         - *REDDIT_CHANNEL
         - *USER_EVENT_A
+        - *USER_EVENT_L
+        - *USER_EVENT_C
         - *DUCK_POND
         - *CHANGE_LOG
         - *STAFF_ANNOUNCEMENTS
