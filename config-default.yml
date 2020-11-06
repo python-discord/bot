@@ -205,9 +205,9 @@ guild:
         talent_pool:        &TALENT_POOL    534321732593647616
 
         # User events
-        user_event_list:            &USER_EVENT_L       0
+        user_event_list:            &USER_EVENT_L       774324592374317077
         user_event_announcements:   &USER_EVENT_A       592000283102674944
-        user_event_coordinators:    &USER_EVENT_C       1
+        user_event_coordinators:    &USER_EVENT_C       752260285951377429
 
     moderation_categories:
         - *MODMAIL
