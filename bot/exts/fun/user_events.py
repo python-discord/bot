@@ -66,14 +66,17 @@ class UserEvents(Cog):
         return "Live"
 
     @staticmethod
-    def scheduled(start_datetime: datetime) -> str:
+    def scheduled(start_datetime: datetime, end_datetime: datetime) -> str:
         """To indicate user event is scheduled."""
-        readable_datetime = (
+        readable_date = (
             f"{start_datetime.day}{DATE_PREFIX.get(start_datetime.day, 'th')} "
-            f"{list(calendar.month_name)[start_datetime.month]}, {start_datetime.year}.\n"
-            f"{start_datetime.time().strftime('%H:%M:%S')} UTC (24-hour format)"
+            f"{list(calendar.month_name)[start_datetime.month]} {start_datetime.year}"
         )
-        status = f"Scheduled for\n{readable_datetime}"
+        readable_time = (
+            f"from {start_datetime.time().strftime('%H:%M')} UTC "
+            f"To {end_datetime.time().strftime('%H:%M')} UTC.\n(24-hour format)"
+        )
+        status = f"Scheduled on {readable_date},\n{readable_time}"
         return status
 
     @property
@@ -230,7 +233,7 @@ class UserEvents(Cog):
 
     async def list_new_event(self, embed: Embed) -> Message:
         """List new event in the user-events-list channel."""
-        embed.set_footer(text="React to be notified.")
+        embed.set_footer(text="React to be notified during event start.")
 
         # send event embed in #User-events-list channel
         event_message = await self.user_events_list_channel.send(embed=embed)
@@ -350,8 +353,12 @@ class UserEvents(Cog):
         )
         # If event is scheduled
         if scheduled_event:
+            status = self.scheduled(
+                isoparse(scheduled_event[0]["start_time"]),
+                isoparse(scheduled_event[0]["end_time"])
+            )
             await self.update_user_event_message(
-                status=self.scheduled(isoparse(scheduled_event[0]["start_time"])),
+                status=status,
                 user_event=scheduled_event[0]["user_event"]
             )
             return
@@ -428,18 +435,20 @@ class UserEvents(Cog):
             await ctx.send("Invalid start datetime.")
             return
 
+        end_datetime = start_datetime + timedelta(hours=duration)
+
         # Register scheduled event on site
         post_data = {
             "user_event_name": user_event["name"],
             "start_time": start_datetime.isoformat(),
-            "end_time": (start_datetime + timedelta(hours=duration)).isoformat()
+            "end_time": end_datetime.isoformat()
         }
         scheduled_event = await self.bot.api_client.post(
             "bot/scheduled-events",
             data=post_data
         )
 
-        status = self.scheduled(start_datetime)
+        status = self.scheduled(start_datetime, end_datetime)
 
         # Send message in #user-events-announcements regarding event schedule
         embed = Embed(
