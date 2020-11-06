@@ -67,14 +67,22 @@ class UserEvents(Cog):
 
     @staticmethod
     def scheduled(start_datetime: datetime, end_datetime: datetime) -> str:
-        """To indicate user event is scheduled."""
+        """
+        To indicate user event is scheduled.
+
+        The following code returns(an example):
+
+        Scheduled on 7th November 2020,
+        from 17:30 UTC To 18:00 UTC
+        (24-hour format).
+        """
         readable_date = (
             f"{start_datetime.day}{DATE_PREFIX.get(start_datetime.day, 'th')} "
             f"{list(calendar.month_name)[start_datetime.month]} {start_datetime.year}"
         )
         readable_time = (
             f"from {start_datetime.time().strftime('%H:%M')} UTC "
-            f"To {end_datetime.time().strftime('%H:%M')} UTC.\n(24-hour format)"
+            f"To {end_datetime.time().strftime('%H:%M')} UTC\n(24-hour format)."
         )
         status = f"Scheduled on {readable_date},\n{readable_time}"
         return status
@@ -129,8 +137,12 @@ class UserEvents(Cog):
 
     async def fetch_subscribers(self, message_id: int) -> list:
         """Fetch reacted users to event message as subscribers."""
+        # Fetch the event message
         message = await self.user_events_list_channel.fetch_message(message_id)
+
         reaction = message.reactions[0]
+
+        # Flatten into a list
         users = await reaction.users().flatten()
         return users
 
@@ -146,7 +158,9 @@ class UserEvents(Cog):
 
     async def update_user_event_message(self, status: str, user_event: dict) -> None:
         """Update event message on #user-events-list channel."""
+        # Fetch user event message
         message = await self.user_events_list_channel.fetch_message(user_event["message_id"])
+
         embed = self.user_event_embed(
             user_event["name"],
             user_event["description"],
@@ -154,16 +168,20 @@ class UserEvents(Cog):
             status
         )
         embed.set_footer(text="React to be notified.")
+
         await message.edit(embed=embed)
 
     async def event_preparation(self, scheduled_event: dict) -> None:
         """Notify event organizer 30min before event and add User Event: Ongoing role."""
         organizer = self.guild.get_member(scheduled_event["user_event"]["organizer"])
 
+        # Add the `user event: ongoing` role to the organizer
         await organizer.add_roles(self.user_event_ongoing_role)
 
+        # Calculate remaining time for event start
         start_time = isoparse(scheduled_event["start_time"]).replace(tzinfo=None)
         time_remaining = humanize_delta(relativedelta(start_time, datetime.now()))
+
         await self.user_event_coord_channel.send(
             f"{organizer.mention} Event to start in {time_remaining}. "
             f"use `!userevent announce` "
@@ -175,16 +193,19 @@ class UserEvents(Cog):
     async def event_end(self, scheduled_event: dict) -> None:
         """End user event."""
         organizer = self.guild.get_member(scheduled_event["user_event"]["organizer"])
-        role = self.user_event_ongoing_role
 
-        await organizer.remove_roles(role)
+        # Remove the `user event: ongoing` role to the organizer
+        await organizer.remove_roles(self.user_event_ongoing_role)
 
         status = self.not_scheduled()
         await self.update_user_event_message(status, scheduled_event["user_event"])
 
+        # Close user events voice channel
         await self.edit_events_vc(open_vc=False)
 
         await self.user_event_coord_channel.send(f"{organizer.mention} event has ended! Voice channel is now closed.")
+
+        # cancel the scheduler event and DELETE on site
         await self._cancel_scheduled_event(scheduled_event)
 
     async def schedule_event_start_reminder(self, scheduled_event: dict) -> None:
@@ -486,6 +507,7 @@ class UserEvents(Cog):
             await ctx.send("You do not have an event scheduled.")
             return
 
+        # cancel the scheduler and DELETE on site
         await self._cancel_scheduled_event(scheduled_event[0])
 
         await ctx.send(f"{scheduled_event[0]['user_event']['name']} event is cancelled.")
@@ -549,7 +571,6 @@ class UserEvents(Cog):
         """Handle ResponseCodeError locally."""
         # Custom errors are raised via the CommandInvokeError
         if isinstance(error, CommandInvokeError):
-
             if isinstance(error.original, ResponseCodeError):
 
                 # Parse 400 error responses from site
