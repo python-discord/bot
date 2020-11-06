@@ -146,16 +146,6 @@ class UserEvents(Cog):
         users = await reaction.users().flatten()
         return users
 
-    async def sync_subscribers(self, event_name: str, sub_ids: list) -> None:
-        """Sync subscribers with the site."""
-        data = {
-            "subscriptions": sub_ids
-        }
-        await self.bot.api_client.patch(
-            f"bot/user-events/{event_name}",
-            data=data
-        )
-
     async def update_user_event_message(self, status: str, user_event: dict) -> None:
         """Update event message on #user-events-list channel."""
         # Fetch user event message
@@ -545,12 +535,6 @@ class UserEvents(Cog):
             if sub.id != scheduled_event[0]["user_event"]["organizer"]
             and not sub.bot
         ]
-
-        # Sync subscribers with the site
-        await self.sync_subscribers(
-            scheduled_event[0]["user_event"]["name"],
-            [sub.id for sub in subscribers]
-        )
 
         # Send message in #user-event-announcements channel
         subscribers = "".join(sub.mention for sub in subscribers)
