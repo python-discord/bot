@@ -140,11 +140,16 @@ class UserEvents(Cog):
         # Fetch the event message
         message = await self.user_events_list_channel.fetch_message(message_id)
 
-        reaction = message.reactions[0]
+        for reaction in message.reactions:
+            # The `check` reaction will be added by the bot during event creation
+            # So the chances of it being removed or not present is negligible
 
-        # Flatten into a list
-        users = await reaction.users().flatten()
-        return users
+            if str(reaction) == EMOJIS["check"]:
+                # Flatten into a list
+                users = await reaction.users().flatten()
+                return users
+
+        return []
 
     async def update_user_event_message(self, status: str, user_event: dict) -> None:
         """Update event message on #user-events-list channel."""
