@@ -348,7 +348,7 @@ class WatchChannel(metaclass=CogABCMeta):
             def done_callback(task: asyncio.Task) -> None:
                 """Send exception when consuming task have been cancelled."""
                 try:
-                    task.exception()
+                    task.result()
                 except asyncio.CancelledError:
                     self.log.error(
                         f"The consume task of {type(self).__name__} was canceled. Messages may be lost."
