@@ -232,7 +232,7 @@ class CustomHelpCommand(HelpCommand):
 
     async def send_cog_help(self, cog: Cog) -> None:
         """Send help for a cog."""
-        # sort commands by name, and remove any the user cant run or are hidden.
+        # sort commands by name, and remove any the user can't run or are hidden.
         commands_ = await self.filter_commands(cog.get_commands(), sort=True)
 
         embed = Embed()
