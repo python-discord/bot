@@ -3,6 +3,7 @@ import logging
 import re
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Union
+from urllib import parse
 
 import dateutil
 import discord.errors
@@ -444,8 +445,9 @@ class Filtering(Cog):
         text = text.lower()
         domain_blacklist = self._get_filterlist_items("domain_name", allowed=False)
 
-        for url in domain_blacklist:
-            if url.lower() in text:
+        for url in URL_RE.findall(text):
+            parsed = parse.urlparse(url)
+            if parsed.netloc.lower() in domain_blacklist:
                 return True
 
         return False
