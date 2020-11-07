@@ -2,7 +2,8 @@ import asyncio
 import calendar
 import logging
 from datetime import datetime, timedelta
-from typing import Optional, Tuple
+from functools import wraps
+from typing import Callable, Optional, Tuple
 
 from dateutil.parser import isoparse, parse
 from dateutil.relativedelta import relativedelta
@@ -30,6 +31,21 @@ DATE_PREFIX = {
 
 NOT_SCHEDULED = "Not scheduled"
 LIVE = "Live"
+
+
+def is_event_organizer(func: Callable) -> Callable:
+    """Check if the user is event organizer."""
+    @wraps(func)
+    async def wrapper(self: Cog, ctx: Context, event_name: str, *args, **kwargs) -> None:
+        user_event = await self.bot.api_client.get(f"bot/user-events/{event_name}")
+
+        if user_event["organizer"] != ctx.author.id:
+            await ctx.send(f"You are not the organizer of the event **{event_name}**.")
+            return
+
+        await func(self, ctx, event_name, *args, **kwargs)
+
+    return wrapper
 
 
 class UserEvents(Cog):
@@ -271,15 +287,6 @@ class UserEvents(Cog):
             speak=open_vc
         )
 
-    async def check_if_user_is_organizer(self, user_id: int, event_name: str) -> Optional[dict]:
-        """Check if user is the organizer of an event."""
-        # This will automatically raise error if event does not exist
-        user_event = await self.bot.api_client.get(f"bot/user-events/{event_name}")
-
-        if user_event["organizer"] != user_id:
-            return None
-        return user_event
-
     async def _cancel_scheduled_event(self, scheduled_event: dict) -> None:
         """Cancel a scheduled event."""
         # Remove scheduler related to the scheduled event
@@ -355,12 +362,9 @@ class UserEvents(Cog):
         await ctx.send(f"User Event **{event_name}** created.")
 
     @user_event.command(name="change_desc", aliases=["cd", "desc"])
+    @is_event_organizer
     async def change_description(self, ctx: Context, event_name: str, *, event_description: str) -> None:
         """Change user event description."""
-        # Check if user is event organizer
-        if not self.check_if_user_is_organizer(ctx.author.id, event_name):
-            await ctx.send("You can only modify your events!")
-            return
         data = {
             "description": event_description
         }
@@ -401,16 +405,14 @@ class UserEvents(Cog):
         await ctx.send("Event description updated.")
 
     @user_event.command(name="delete")
+    @is_event_organizer
     async def delete_user_event(self, ctx: Context, event_name: str) -> None:
         """Delete user event."""
-        # Check if user is event organizer
-        user_event = await self.check_if_user_is_organizer(ctx.author.id, event_name)
-        if not user_event:
-            await ctx.send("You can only delete your events!")
-            return
-
         # Check if the event is scheduled
+        user_event = await self.bot.api_client.get(f"bot/user-events/{event_name}")
+
         query_params = {
+            "user_event__name": user_event["name"],
             "user_event__organizer": ctx.author.id
         }
         scheduled_event = await self.bot.api_client.get(
@@ -595,7 +597,7 @@ class UserEvents(Cog):
     async def cog_check(self, ctx: Context) -> bool:
         """Allow users with event coordinator role to exec cog commands."""
         return (
-            has_role(Roles.user_event_coordinator).predicate(ctx)
+            await has_role(Roles.user_event_coordinator).predicate(ctx)
             and ctx.channel.id == Channels.user_event_coordinators
         )
 
