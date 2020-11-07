@@ -12,6 +12,7 @@ from discord.abc import GuildChannel
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
 
 from bot import constants
+from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.converters import FetchedMember
 from bot.decorators import in_whitelist
@@ -235,14 +236,18 @@ class Information(Cog):
             roles = None
             membership = "The user is not a member of the server"
 
+        verified_at, activity = await self.user_verification_and_messages(user)
+        verified_at = f"Verified: {verified_at}" if is_mod_channel(ctx.channel) else ""
+
         fields = [
             (
                 "User information",
                 textwrap.dedent(f"""
                     Created: {created}
+                    {verified_at}
                     Profile: {user.mention}
                     ID: {user.id}
-                """).strip()
+                """).strip().replace("\n\n", "\n")
             ),
             (
                 "Member information",
@@ -252,9 +257,10 @@ class Information(Cog):
 
         # Show more verbose output in moderation channels for infractions and nominations
         if is_mod_channel(ctx.channel):
+            fields.append(activity)
+
             fields.append(await self.expanded_user_infraction_counts(user))
             fields.append(await self.user_nomination_counts(user))
-            fields.append(await self.user_verification_and_messages(user))
         else:
             fields.append(await self.basic_user_infraction_counts(user))
 
@@ -355,24 +361,35 @@ class Information(Cog):
 
         return "Nominations", "\n".join(output)
 
-    async def user_verification_and_messages(self, user: FetchedMember) -> Tuple[str, str]:
+    async def user_verification_and_messages(self, user: FetchedMember) -> Tuple[Union[bool, str], Tuple[str, str]]:
         """Gets the time of verification and amount of messages for `member`."""
-        user_activity = await self.bot.api_client.get(f'bot/users/{user.id}/metricity_data')
-
         activity_output = []
 
-        if user_activity['verified_at'] is not None:
-            verified_delta_formatted = time_since(parser.isoparse(user_activity['verified_at']), max_units=3)
-            activity_output.append(f'This user verified {verified_delta_formatted}')
+        try:
+            user_activity = await self.bot.api_client.get(f'bot/users/{user.id}/metricity_data')
+        except ResponseCodeError as e:
+            verified_at = False
+            activity_output = f"{e.status}: No activity"
         else:
-            activity_output.append('This user is not verified.')
+            if user_activity['verified_at'] is not None:
+                verified_at = time_since(parser.isoparse(user_activity["verified_at"]), max_units=3)
+            else:
+                verified_at = "Not verified"
 
-        if user_activity['total_messages']:
-            activity_output.append(f"This user has a total of {user_activity['total_messages']} messages.")
-        else:
-            activity_output.append(f"This user has not sent any messages on this server.")
+            if user_activity["total_messages"]:
+                activity_output.append(user_activity['total_messages'])
+            else:
+                activity_output.append("No messages")
 
-        return "Activity", "\n".join(activity_output)
+            if user_activity["activity_blocks"]:
+                activity_output.append(user_activity["activity_blocks"])
+            else:
+                activity_output.append("No activity")
+
+            activity_output = "\n".join(
+                f"{name}: {metric}" for name, metric in zip(["Messages", "Activity blocks"], activity_output))
+
+        return verified_at, ("Activity", activity_output)
 
     def format_fields(self, mapping: Mapping[str, Any], field_width: Optional[int] = None) -> str:
         """Format a mapping to be readable to a human."""
