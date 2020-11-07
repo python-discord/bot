@@ -2,7 +2,9 @@ import asyncio
 import logging
 import socket
 import warnings
-from typing import List, Optional
+from collections import defaultdict
+from contextlib import suppress
+from typing import Dict, List, Optional
 
 import aiohttp
 import discord
@@ -148,20 +150,12 @@ class Bot(commands.Bot):
         """Not implemented! Re-instantiate the bot instead of attempting to re-use a closed one."""
         raise NotImplementedError("Re-using a Bot object after closing it is not supported.")
 
-    def _remove_extensions(self) -> None:
-        """Remove all extensions to trigger cog unloads."""
-        extensions = list(self.extensions.keys())
-
-        for ext in extensions:
-            try:
-                self.unload_extension(ext)
-            except Exception:
-                pass
-
     async def close(self) -> None:
         """Close the Discord connection and the aiohttp session, connector, statsd client, and resolver."""
         # Done before super().close() to allow tasks finish before the HTTP session closes.
-        self._remove_extensions()
+        with suppress(Exception):
+            [self.unload_extension(ext) for ext in tuple(self.extensions)]
+            [self.remove_cog(cog) for cog in tuple(self.cogs)]
 
         # Wait until all tasks that have to be completed before bot is closing is done
         log.trace("Waiting for tasks before closing.")
