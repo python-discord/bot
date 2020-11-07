@@ -5,7 +5,7 @@ from contextlib import suppress
 from typing import List, Union
 
 from discord import Colour, Embed
-from discord.ext.commands import Bot, Cog, Command, Context, Group, HelpCommand, DisabledCommand, CommandError
+from discord.ext.commands import Bot, Cog, Command, CommandError, Context, DisabledCommand, Group, HelpCommand
 from fuzzywuzzy import fuzz, process
 from fuzzywuzzy.utils import full_process
 
