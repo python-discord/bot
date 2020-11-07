@@ -28,6 +28,9 @@ DATE_PREFIX = {
     3: 'rd', 23: 'rd'
 }
 
+NOT_SCHEDULED = "Not scheduled"
+LIVE = "Live"
+
 
 class UserEvents(Cog):
     """Manage user events with the provided commands."""
@@ -162,7 +165,7 @@ class UserEvents(Cog):
             self.guild.get_member(user_event["organizer"]),
             status
         )
-        embed.set_footer(text="React to be notified.")
+        embed.set_footer(text="React to get notified about event start.")
 
         await message.edit(embed=embed)
 
@@ -192,7 +195,7 @@ class UserEvents(Cog):
         # Remove the `user event: ongoing` role from the organizer
         await organizer.remove_roles(self.user_event_ongoing_role)
 
-        status = self.not_scheduled()
+        status = NOT_SCHEDULED
         await self.update_user_event_message(status, scheduled_event["user_event"])
 
         # Close user events voice channel
@@ -237,7 +240,7 @@ class UserEvents(Cog):
             author: Member
     ) -> Tuple[Message, Embed]:
         """Send confirmation message for user event creation."""
-        embed = self.user_event_embed(event_name, event_description, author, self.not_scheduled())
+        embed = self.user_event_embed(event_name, event_description, author, NOT_SCHEDULED)
         embed.set_footer(text="Confirm event creation.")
 
         message = await self.user_event_coord_channel.send(embed=embed)
@@ -286,7 +289,7 @@ class UserEvents(Cog):
         await self.bot.api_client.delete(f"bot/scheduled-events/{scheduled_event['id']}")
 
         # Update user event status
-        status = self.not_scheduled()
+        status = NOT_SCHEDULED
         await self.update_user_event_message(status, scheduled_event["user_event"])
 
         # Remove the `user event: ongoing` role from the organizer incase
@@ -391,7 +394,7 @@ class UserEvents(Cog):
 
         # If event is not scheduled
         await self.update_user_event_message(
-            status=self.not_scheduled(),
+            status=NOT_SCHEDULED,
             user_event=user_event
         )
 
@@ -559,7 +562,7 @@ class UserEvents(Cog):
             message += announcement_message
 
         # Update event status
-        status = self.live()
+        status = LIVE
         await self.update_user_event_message(status, scheduled_event[0]["user_event"])
 
         await self.user_event_announcement_channel.send(message)
