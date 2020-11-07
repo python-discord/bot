@@ -257,18 +257,10 @@ class Infractions(InfractionScheduler, commands.Cog):
         self.mod_log.ignore(Event.member_update, user.id)
 
         async def action() -> None:
-            try:
-                await user.add_roles(self._muted_role, reason=reason)
-            except discord.HTTPException as e:
-                if e.code == 10007:
-                    log.info(f"User {user} ({user.id}) left from guild. Can't give Muted role.")
-                else:
-                    log.warning(
-                        f"Got response {e.code} (HTTP {e.status}) while giving muted role to {user} ({user.id})."
-                    )
-            else:
-                log.trace(f"Attempting to kick {user} from voice because they've been muted.")
-                await user.move_to(None, reason=reason)
+            await user.add_roles(self._muted_role, reason=reason)
+
+            log.trace(f"Attempting to kick {user} from voice because they've been muted.")
+            await user.move_to(None, reason=reason)
 
         await self.apply_infraction(ctx, infraction, user, action())
 

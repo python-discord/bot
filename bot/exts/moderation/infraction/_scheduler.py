@@ -79,6 +79,16 @@ class InfractionScheduler:
         except discord.NotFound:
             # When user joined and then right after this left again before action completed, this can't add roles
             log.info(f"Can't reapply {infraction['type']} to user {infraction['user']} because user left again.")
+        except discord.HTTPException as e:
+            if e.code == 10007:
+                log.info(f"Can't reapply {infraction['type']} to user {infraction['user']} because user left again.")
+            else:
+                log.warning(
+                    (
+                        f"Got unexpected HTTPException (HTTP {e.status}, Discord code {e.code})"
+                        f"when awaiting {infraction['type']} coroutine for {infraction['user']}."
+                    )
+                )
         else:
             log.info(f"Re-applied {infraction['type']} to user {infraction['user']} upon rejoining.")
 
@@ -172,6 +182,8 @@ class InfractionScheduler:
                 if expiry:
                     # Schedule the expiration of the infraction.
                     self.schedule_expiration(infraction)
+            except discord.NotFound:
+                log.info(f"Can't apply {infraction['type']} to user {infraction['user']} because user left from guild.")
             except discord.HTTPException as e:
                 # Accordingly display that applying the infraction failed.
                 # Don't use ctx.message.author; antispam only patches ctx.author.
@@ -183,6 +195,10 @@ class InfractionScheduler:
                 log_msg = f"Failed to apply {' '.join(infr_type.split('_'))} infraction #{id_} to {user}"
                 if isinstance(e, discord.Forbidden):
                     log.warning(f"{log_msg}: bot lacks permissions.")
+                elif e.code == 10007:
+                    log.info(
+                        f"Can't apply {infraction['type']} to user {infraction['user']} because user left from guild."
+                    )
                 else:
                     log.exception(log_msg)
                 failed = True
@@ -356,10 +372,17 @@ class InfractionScheduler:
             log.warning(f"Failed to deactivate infraction #{id_} ({type_}): bot lacks permissions.")
             log_text["Failure"] = "The bot lacks permissions to do this (role hierarchy?)"
             log_content = mod_role.mention
+        except discord.NotFound:
+            log.info(f"Can't pardon {infraction['type']} for user {infraction['user']} because user left from guild.")
         except discord.HTTPException as e:
-            log.exception(f"Failed to deactivate infraction #{id_} ({type_})")
-            log_text["Failure"] = f"HTTPException with status {e.status} and code {e.code}."
-            log_content = mod_role.mention
+            if e.code == 10007:
+                log.info(
+                    f"Can't pardon {infraction['type']} for user {infraction['user']} because user left from guild."
+                )
+            else:
+                log.exception(f"Failed to deactivate infraction #{id_} ({type_})")
+                log_text["Failure"] = f"HTTPException with status {e.status} and code {e.code}."
+                log_content = mod_role.mention
 
         # Check if the user is currently being watched by Big Brother.
         try:
