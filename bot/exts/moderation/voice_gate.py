@@ -199,8 +199,7 @@ class VoiceGate(Cog):
             log.trace("User not in a voice channel. Ignore.")
             return
 
-        in_cache = await self.redis_cache.get(member.id, NO_MSG)
-        if in_cache:
+        if await self.redis_cache.contains(member.id):
             log.trace("User already in cache. Ignore.")
             return
 
