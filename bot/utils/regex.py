@@ -10,3 +10,5 @@ INVITE_RE = re.compile(
     r"([a-zA-Z0-9\-]+)",                              # the invite code itself
     flags=re.IGNORECASE
 )
+
+END_PUNCTUATION_RE = re.compile("^.+?[.?!]$")
