@@ -48,8 +48,6 @@ class VoiceGate(Cog):
 
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
-        # voice_verification_channel set to None so that we have a placeholder to get it later in the cog
-        self.voice_verification_channel = None
 
     @property
     def mod_log(self) -> ModLog:
@@ -71,9 +69,9 @@ class VoiceGate(Cog):
         """
         # If user has received a ping in voice_verification, delete the message
         if message_id := await self.redis_cache.get(ctx.author.id, NO_MSG):
+            log.trace(f"Removing voice gate reminder message for user: {ctx.author.id}")
             with suppress(discord.NotFound):
-                self.voice_verification_channel = self.bot.get_channel(Channels.voice_gate)
-                await self.bot.http.delete_message(self.voice_verification_channel, message_id)
+                await self.bot.http.delete_message(Channels.voice_gate, message_id)
             await self.redis_cache.set(ctx.author.id, NO_MSG)
 
         try:
