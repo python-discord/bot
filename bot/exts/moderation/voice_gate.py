@@ -217,7 +217,7 @@ class VoiceGate(Cog):
         message = await voice_verification_channel.send(f"Hello, {member.mention}! {VOICE_PING}")
         await self.redis_cache.set(member.id, message.id)
 
-        await asyncio.sleep(60)
+        await asyncio.sleep(GateConf.voice_ping_delete_delay)
         if message := await self.redis_cache.get(member.id):
             await message.delete()
             await self.redis_cache.set(member.id, NO_MSG)
