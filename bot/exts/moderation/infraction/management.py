@@ -49,7 +49,7 @@ class ModManagement(commands.Cog):
     async def infraction_append(
         self,
         ctx: Context,
-        infraction: Infraction,  # noqa: F821
+        infraction: Infraction,
         duration: t.Union[Expiry, allowed_strings("p", "permanent"), None],   # noqa: F821
         *,
         reason: str = None
@@ -87,7 +87,7 @@ class ModManagement(commands.Cog):
     async def infraction_edit(
         self,
         ctx: Context,
-        infraction: Infraction,  # noqa: F821
+        infraction: Infraction,
         duration: t.Union[Expiry, allowed_strings("p", "permanent"), None],   # noqa: F821
         *,
         reason: str = None
