@@ -112,14 +112,13 @@ class ModManagement(commands.Cog):
             # Unlike UserInputError, the error handler will show a specified message for BadArgument
             raise commands.BadArgument("Neither a new expiry nor a new reason was specified.")
 
-        old_infraction = infraction
         infraction_id = infraction["id"]
 
         request_data = {}
         confirm_messages = []
         log_text = ""
 
-        if duration is not None and not old_infraction['active']:
+        if duration is not None and not infraction['active']:
             if reason is None:
                 await ctx.send(":x: Cannot edit the expiration of an expired infraction.")
                 return
@@ -138,7 +137,7 @@ class ModManagement(commands.Cog):
             request_data['reason'] = reason
             confirm_messages.append("set a new reason")
             log_text += f"""
-                Previous reason: {old_infraction['reason']}
+                Previous reason: {infraction['reason']}
                 New reason: {reason}
             """.rstrip()
         else:
@@ -153,7 +152,7 @@ class ModManagement(commands.Cog):
         # Re-schedule infraction if the expiration has been updated
         if 'expires_at' in request_data:
             # A scheduled task should only exist if the old infraction wasn't permanent
-            if old_infraction['expires_at']:
+            if infraction['expires_at']:
                 self.infractions_cog.scheduler.cancel(new_infraction['id'])
 
             # If the infraction was not marked as permanent, schedule a new expiration task
@@ -161,7 +160,7 @@ class ModManagement(commands.Cog):
                 self.infractions_cog.schedule_expiration(new_infraction)
 
             log_text += f"""
-                Previous expiry: {old_infraction['expires_at'] or "Permanent"}
+                Previous expiry: {infraction['expires_at'] or "Permanent"}
                 New expiry: {new_infraction['expires_at'] or "Permanent"}
             """.rstrip()
 
