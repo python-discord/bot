@@ -48,6 +48,8 @@ class VoiceGate(Cog):
 
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
+        # voice_verification_channel set to None so that we have a placeholder to get it later in the cog
+        self.voice_verification_channel = None
 
     @property
     def mod_log(self) -> ModLog:
@@ -70,8 +72,8 @@ class VoiceGate(Cog):
         # If user has received a ping in voice_verification, delete the message
         if message_id := await self.redis_cache.get(ctx.author.id, NO_MSG):
             with suppress(discord.NotFound):
-                ping_message = await ctx.channel.fetch_message(message_id)
-                await ping_message.delete()
+                self.voice_verification_channel = self.bot.get_channel(Channels.voice_gate)
+                await self.bot.http.delete_message(self.voice_verification_channel, message_id)
             await self.redis_cache.set(ctx.author.id, NO_MSG)
 
         try:
@@ -202,7 +204,7 @@ class VoiceGate(Cog):
             log.trace("User not in a voice channel. Ignore.")
             return
 
-        in_cache = await self.redis_cache.get(member.id, None)
+        in_cache = await self.redis_cache.get(member.id, NO_MSG)
         if in_cache:
             log.trace("User already in cache. Ignore.")
             return
@@ -221,8 +223,10 @@ class VoiceGate(Cog):
         message = await voice_verification_channel.send(f"Hello, {member.mention}! {VOICE_PING}")
         await self.redis_cache.set(member.id, message.id)
 
-        # Message will try to be deleted after 1 minutes. If it fails, it'll do so silently
-        await message.delete(delay=GateConf.voice_ping_delete_delay)
+        await asyncio.sleep(60)
+        if message := await self.redis_cache.get(member.id):
+            await message.delete()
+            await self.redis_cache.set(member.id, NO_MSG)
 
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:
         """Check for & ignore any InWhitelistCheckFailure."""
