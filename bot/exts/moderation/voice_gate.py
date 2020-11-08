@@ -216,8 +216,11 @@ class VoiceGate(Cog):
         await self.redis_cache.set(member.id, message.id)
 
         await asyncio.sleep(GateConf.voice_ping_delete_delay)
-        if message := await self.redis_cache.get(member.id):
-            await message.delete()
+
+        if message_id := await self.redis_cache.get(member.id):
+            log.trace(f"Removing voice gate reminder message for user: {member.id}")
+            with suppress(discord.NotFound):
+                await self.bot.http.delete_message(Channels.voice_gate, message_id)
             await self.redis_cache.set(member.id, NO_MSG)
 
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:
