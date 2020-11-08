@@ -568,12 +568,11 @@ class Infraction(Converter):
             infractions = await ctx.bot.api_client.get("bot/infractions", params=params)
 
             if not infractions:
-                await ctx.send(
-                    ":x: Couldn't find most recent infraction; you have never given an infraction."
+                raise BadArgument(
+                    "Couldn't find most recent infraction; you have never given an infraction."
                 )
-                return None
-
-            return infractions[0]
+            else:
+                return infractions[0]
 
         else:
             return ctx.bot.api_client.get(f"bot/infractions/{arg}")

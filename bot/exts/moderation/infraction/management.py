@@ -73,9 +73,6 @@ class ModManagement(commands.Cog):
         Use "p" or "permanent" to mark the infraction as permanent. Alternatively, an ISO 8601
         timestamp can be provided for the duration.
         """
-        if not infraction:
-            return
-
         await self.infraction_edit(
             ctx=ctx,
             infraction=infraction,
@@ -114,9 +111,6 @@ class ModManagement(commands.Cog):
         if duration is None and reason is None:
             # Unlike UserInputError, the error handler will show a specified message for BadArgument
             raise commands.BadArgument("Neither a new expiry nor a new reason was specified.")
-
-        if not infraction:
-            return
 
         old_infraction = infraction
         infraction_id = infraction["id"]
