@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import discord
 from async_rediscache import RedisCache
 from dateutil import parser
-from discord import Colour, Member
+from discord import Colour, Member, VoiceState
 from discord.ext.commands import Cog, Context, command
 
 from bot.api import ResponseCodeError
@@ -188,12 +188,7 @@ class VoiceGate(Cog):
             await message.delete()
 
     @Cog.listener()
-    async def on_voice_state_update(
-            self,
-            member: Member,
-            before: discord.VoiceState,
-            after: discord.VoiceState
-    ) -> None:
+    async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState) -> None:
         """Pings a user if they've never joined the voice chat before and aren't voice verified."""
         if member.bot:
             log.trace("User is a bot. Ignore.")
