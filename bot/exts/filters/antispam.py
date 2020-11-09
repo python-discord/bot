@@ -15,7 +15,6 @@ from bot.constants import (
     AntiSpam as AntiSpamConfig, Channels,
     Colours, DEBUG_MODE, Event, Filter,
     Guild as GuildConfig, Icons,
-    STAFF_ROLES,
 )
 from bot.converters import Duration
 from bot.exts.moderation.modlog import ModLog
@@ -149,7 +148,7 @@ class AntiSpam(Cog):
             or message.guild.id != GuildConfig.id
             or message.author.bot
             or (message.channel.id in Filter.channel_whitelist and not DEBUG_MODE)
-            or (any(role.id in STAFF_ROLES for role in message.author.roles) and not DEBUG_MODE)
+            or (any(role.id in Filter.role_whitelist for role in message.author.roles) and not DEBUG_MODE)
         ):
             return
 

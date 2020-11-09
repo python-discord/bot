@@ -15,7 +15,7 @@ from bot.exts.moderation.infraction.infractions import Infractions
 from bot.exts.moderation.modlog import ModLog
 from bot.pagination import LinePaginator
 from bot.utils import messages, time
-from bot.utils.checks import in_whitelist_check
+from bot.utils.channel import is_mod_channel
 from bot.utils.regex import END_PUNCTUATION_RE
 
 log = logging.getLogger(__name__)
@@ -202,9 +202,9 @@ class ModManagement(commands.Cog):
     async def infraction_search_group(self, ctx: Context, query: t.Union[UserMention, Snowflake, str]) -> None:
         """Searches for infractions in the database."""
         if isinstance(query, int):
-            await ctx.invoke(self.search_user, discord.Object(query))
+            await self.search_user(ctx, discord.Object(query))
         else:
-            await ctx.invoke(self.search_reason, query)
+            await self.search_reason(ctx, query)
 
     @infraction_search_group.command(name="user", aliases=("member", "id"))
     async def search_user(self, ctx: Context, user: t.Union[discord.User, proxy_user]) -> None:
@@ -217,7 +217,7 @@ class ModManagement(commands.Cog):
         user = self.bot.get_user(user.id)
         if not user and infraction_list:
             # Use the user data retrieved from the DB for the username.
-            user = infraction_list[0]
+            user = infraction_list[0]["user"]
             user = escape_markdown(user["name"]) + f"#{user['discriminator']:04}"
 
         embed = discord.Embed(
@@ -332,13 +332,7 @@ class ModManagement(commands.Cog):
         """Only allow moderators inside moderator channels to invoke the commands in this cog."""
         checks = [
             await commands.has_any_role(*constants.MODERATION_ROLES).predicate(ctx),
-            in_whitelist_check(
-                ctx,
-                channels=constants.MODERATION_CHANNELS,
-                categories=[constants.Categories.modmail],
-                redirect=None,
-                fail_silently=True,
-            )
+            is_mod_channel(ctx.channel)
         ]
         return all(checks)
 
