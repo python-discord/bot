@@ -22,6 +22,7 @@ class DuckPond(Cog):
         self.bot = bot
         self.webhook_id = constants.Webhooks.duck_pond
         self.webhook = None
+        self.ducked_messages = []
         self.bot.loop.create_task(self.fetch_webhook())
         self.relay_lock = None
 
@@ -176,7 +177,8 @@ class DuckPond(Cog):
         duck_count = await self.count_ducks(message)
 
         # If we've got more than the required amount of ducks, send the message to the duck_pond.
-        if duck_count >= constants.DuckPond.threshold:
+        if duck_count >= constants.DuckPond.threshold and message.id not in self.ducked_messages:
+            self.ducked_messages.append(message.id)
             await self.locked_relay(message)
 
     @Cog.listener()
