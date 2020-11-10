@@ -26,17 +26,14 @@ from ._redis_cache import DocRedisCache
 
 log = logging.getLogger(__name__)
 
-NO_OVERRIDE_GROUPS = (
+# symbols with a group contained here will get the group prefixed on duplicates
+FORCE_PREFIX_GROUPS = (
     "2to3fixer",
     "token",
     "label",
     "pdbcommand",
     "term",
 )
-NO_OVERRIDE_PACKAGES = (
-    "python",
-)
-
 WHITESPACE_AFTER_NEWLINES_RE = re.compile(r"(?<=\n\n)(\s+)")
 NOT_FOUND_DELETE_DELAY = RedirectOutput.delete_delay
 
@@ -245,14 +242,11 @@ class DocCog(commands.Cog):
                 group_name = sys.intern(group.split(":")[1])
 
                 if (original_symbol := self.doc_symbols.get(symbol)) is not None:
-                    if (
-                        group_name in NO_OVERRIDE_GROUPS
-                        or any(package == original_symbol.package for package in NO_OVERRIDE_PACKAGES)
-                    ):
+                    if group_name in FORCE_PREFIX_GROUPS:
                         symbol = f"{group_name}.{symbol}"
                         self.renamed_symbols.add(symbol)
 
-                    elif (overridden_symbol_group := original_symbol.group) in NO_OVERRIDE_GROUPS:
+                    elif (overridden_symbol_group := original_symbol.group) in FORCE_PREFIX_GROUPS:
                         overridden_symbol = f"{overridden_symbol_group}.{symbol}"
                         if overridden_symbol in self.renamed_symbols:
                             overridden_symbol = f"{api_package_name}.{overridden_symbol}"
