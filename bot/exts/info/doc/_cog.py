@@ -4,6 +4,7 @@ import asyncio
 import logging
 import re
 import sys
+import urllib.parse
 from collections import defaultdict
 from contextlib import suppress
 from typing import Dict, List, NamedTuple, Optional, Union
@@ -21,6 +22,7 @@ from bot.utils.messages import wait_for_deletion
 from bot.utils.scheduling import Scheduler
 from ._inventory_parser import FAILED_REQUEST_ATTEMPTS, fetch_inventory
 from ._parsing import get_symbol_markdown
+from ._redis_cache import DocRedisCache
 
 log = logging.getLogger(__name__)
 
@@ -182,6 +184,8 @@ class InventoryURL(commands.Converter):
 class DocCog(commands.Cog):
     """A set of commands for querying & displaying documentation."""
 
+    doc_cache = DocRedisCache()
+
     def __init__(self, bot: Bot):
         self.base_urls = {}
         self.bot = bot
@@ -296,16 +300,30 @@ class DocCog(commands.Cog):
         Attempt to scrape and fetch the data for the given `symbol`, and build an embed from its contents.
 
         If the symbol is known, an Embed with documentation about it is returned.
+
+        First check the DocRedisCache before querying the cog's `CachedParser`,
+        if not present also create a redis entry for the symbol.
         """
+        log.trace(f"Building embed for symbol `{symbol}`")
         symbol_info = self.doc_symbols.get(symbol)
         if symbol_info is None:
+            log.debug("Symbol does not exist.")
             return None
         self.bot.stats.incr(f"doc_fetches.{symbol_info.package.lower()}")
 
+        item_url = f"{symbol_info.url}#{symbol_info.symbol_id}"
+        redis_key = "".join(urllib.parse.urlparse(item_url)[1:])  # url without scheme
+
+        markdown = await self.doc_cache.get(redis_key)
+        if markdown is None:
+            log.debug(f"Redis cache miss for symbol `{symbol}`.")
+            markdown = await self.item_fetcher.get_markdown(self.bot.http_session, symbol_info)
+            await self.doc_cache.set(redis_key, markdown)
+
         embed = discord.Embed(
             title=discord.utils.escape_markdown(symbol),
-            url=f"{symbol_info.url}#{symbol_info.symbol_id}",
-            description=await self.item_fetcher.get_markdown(self.bot.http_session, symbol_info)
+            url=item_url,
+            description=markdown
         )
         # Show all symbols with the same name that were renamed in the footer.
         embed.set_footer(
