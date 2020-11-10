@@ -227,8 +227,8 @@ class DocCog(commands.Cog):
                         symbol = f"{group_name}.{symbol}"
                         self.renamed_symbols.add(symbol)
 
-                    elif (overridden_symbol_group := original_symbol.group) in FORCE_PREFIX_GROUPS:
-                        overridden_symbol = f"{overridden_symbol_group}.{symbol}"
+                    elif (original_symbol_group := original_symbol.group) in FORCE_PREFIX_GROUPS:
+                        overridden_symbol = f"{original_symbol_group}.{symbol}"
                         if overridden_symbol in self.renamed_symbols:
                             overridden_symbol = f"{api_package_name}.{overridden_symbol}"
 

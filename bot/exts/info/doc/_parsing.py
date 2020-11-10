@@ -42,9 +42,9 @@ _NO_SIGNATURE_GROUPS = {
     "templatetag",
     "term",
 }
-_EMBED_CODE_BLOCK_LENGTH = 61
+_EMBED_CODE_BLOCK_LINE_LENGTH = 61
 # _MAX_SIGNATURE_AMOUNT code block wrapped lines with py syntax highlight
-_MAX_SIGNATURES_LENGTH = (_EMBED_CODE_BLOCK_LENGTH + 8) * _MAX_SIGNATURE_AMOUNT
+_MAX_SIGNATURES_LENGTH = (_EMBED_CODE_BLOCK_LINE_LENGTH + 8) * _MAX_SIGNATURE_AMOUNT
 # Maximum discord message length - signatures on top
 _MAX_DESCRIPTION_LENGTH = 2000 - _MAX_SIGNATURES_LENGTH
 _TRUNCATE_STRIP_CHARACTERS = "!?:;." + string.whitespace
@@ -189,7 +189,7 @@ def _truncate_signatures(signatures: Collection[str]) -> Union[List[str], Collec
     if not sum(len(signature) for signature in signatures) > _MAX_SIGNATURES_LENGTH:
         return signatures
 
-    max_signature_length = _EMBED_CODE_BLOCK_LENGTH * (_MAX_SIGNATURE_AMOUNT + 1 - len(signatures))
+    max_signature_length = _EMBED_CODE_BLOCK_LINE_LENGTH * (_MAX_SIGNATURE_AMOUNT + 1 - len(signatures))
     formatted_signatures = []
     for signature in signatures:
         signature = signature.strip()
@@ -221,12 +221,12 @@ def _get_truncated_description(
         max_length: int,
 ) -> str:
     """
-    Truncate markdown from `elements` to be at most `max_length` characters visually.
+    Truncate markdown from `elements` to be at most `max_length` characters when rendered.
 
     `max_length` limits the length of the rendered characters in the string,
     with the real string length limited to `_MAX_DESCRIPTION_LENGTH` to accommodate discord length limits
     """
-    visual_length = 0
+    rendered_length = 0
     real_length = 0
     result = []
     shortened = False
@@ -234,7 +234,7 @@ def _get_truncated_description(
     for element in elements:
         is_tag = isinstance(element, Tag)
         element_length = len(element.text) if is_tag else len(element)
-        if visual_length + element_length < max_length:
+        if rendered_length + element_length < max_length:
             if is_tag:
                 element_markdown = markdown_converter.process_tag(element)
             else:
@@ -247,7 +247,7 @@ def _get_truncated_description(
                 shortened = True
                 break
             real_length += element_markdown_length
-            visual_length += element_length
+            rendered_length += element_length
         else:
             shortened = True
             break
@@ -258,7 +258,7 @@ def _get_truncated_description(
     return markdown_string
 
 
-def _parse_into_markdown(signatures: Optional[List[str]], description: Iterable[Tag], url: str) -> str:
+def _create_markdown(signatures: Optional[List[str]], description: Iterable[Tag], url: str) -> str:
     """
     Create a markdown string with the signatures at the top, and the converted html description below them.
 
@@ -309,4 +309,4 @@ def get_symbol_markdown(soup: BeautifulSoup, symbol_data: DocItem) -> str:
     else:
         signature = _get_signatures(symbol_heading)
         description = _get_dd_description(symbol_heading)
-    return _parse_into_markdown(signature, description, symbol_data.url).replace('¶', '')
+    return _create_markdown(signature, description, symbol_data.url).replace('¶', '')
