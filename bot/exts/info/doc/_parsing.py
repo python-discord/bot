@@ -263,7 +263,7 @@ def _create_markdown(signatures: Optional[List[str]], description: Iterable[Tag]
     Create a markdown string with the signatures at the top, and the converted html description below them.
 
     The signatures are wrapped in python codeblocks, separated from the description by a newline.
-    The result string is truncated to be max 1000 symbols long.
+    The result markdown string is max 750 rendered characters for the description with signatures at the start.
     """
     description = _get_truncated_description(description, DocMarkdownConverter(bullets="•", page_url=url), 750)
     description = _WHITESPACE_AFTER_NEWLINES_RE.sub('', description)
