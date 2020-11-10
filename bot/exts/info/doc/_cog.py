@@ -260,8 +260,7 @@ class DocCog(commands.Cog):
                         self.doc_symbols[overridden_symbol] = original_symbol
                         self.renamed_symbols.add(overridden_symbol)
 
-                    # If renamed `symbol` already exists, add library name in front to differentiate between them.
-                    elif symbol in self.renamed_symbols:
+                    else:
                         symbol = f"{api_package_name}.{symbol}"
                         self.renamed_symbols.add(symbol)
 
