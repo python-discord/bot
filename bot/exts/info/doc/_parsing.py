@@ -5,7 +5,7 @@ import re
 import string
 import textwrap
 from functools import partial
-from typing import Callable, Collection, Iterable, List, Optional, TYPE_CHECKING, Tuple, Union
+from typing import Callable, Collection, Container, Iterable, List, Optional, TYPE_CHECKING, Union
 
 from bs4 import BeautifulSoup
 from bs4.element import NavigableString, PageElement, Tag
@@ -99,7 +99,7 @@ def _split_parameters(parameters_string: str) -> List[str]:
 
 def _find_elements_until_tag(
         start_element: PageElement,
-        end_tag_filter: Union[Tuple[str, ...], Callable[[Tag], bool]],
+        end_tag_filter: Union[Container[str], Callable[[Tag], bool]],
         *,
         func: Callable,
         include_strings: bool = False,
@@ -108,7 +108,7 @@ def _find_elements_until_tag(
     """
     Get all elements up to `limit` or until a tag matching `tag_filter` is found.
 
-    `end_tag_filter` can be either a tuple of string names to check against,
+    `end_tag_filter` can be either a container of string names to check against,
     or a filtering callable that's applied to tags.
 
     When `include_strings` is True, `NavigableString`s from the document will be included in the result along `Tag`s.
@@ -116,12 +116,12 @@ def _find_elements_until_tag(
     `func` takes in a BeautifulSoup unbound method for finding multiple elements, such as `BeautifulSoup.find_all`.
     The method is then iterated over and all elements until the matching tag or the limit are added to the return list.
     """
-    use_tuple_filter = isinstance(end_tag_filter, tuple)
+    use_container_filter = not callable(end_tag_filter)
     elements = []
 
     for element in func(start_element, name=Strainer(include_strings=include_strings), limit=limit):
         if isinstance(element, Tag):
-            if use_tuple_filter:
+            if use_container_filter:
                 if element.name in end_tag_filter:
                     break
             elif end_tag_filter(element):
