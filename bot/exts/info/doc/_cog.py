@@ -16,11 +16,11 @@ from discord.ext import commands
 
 from bot.bot import Bot
 from bot.constants import MODERATION_ROLES, RedirectOutput
-from bot.converters import PackageName, ValidURL
+from bot.converters import InventoryURL, PackageName, ValidURL
 from bot.pagination import LinePaginator
 from bot.utils.messages import wait_for_deletion
 from bot.utils.scheduling import Scheduler
-from ._inventory_parser import FAILED_REQUEST_ATTEMPTS, fetch_inventory
+from ._inventory_parser import fetch_inventory
 from ._parsing import get_symbol_markdown
 from ._redis_cache import DocRedisCache
 
@@ -157,25 +157,6 @@ class CachedParser:
         self._results.clear()
         self._page_symbols.clear()
         self._item_events.clear()
-
-
-class InventoryURL(commands.Converter):
-    """
-    Represents an Intersphinx inventory URL.
-
-    This converter checks whether intersphinx accepts the given inventory URL, and raises
-    `BadArgument` if that is not the case.
-
-    Otherwise, it simply passes through the given URL.
-    """
-
-    @staticmethod
-    async def convert(ctx: commands.Context, url: str) -> str:
-        """Convert url to Intersphinx inventory URL."""
-        await ctx.trigger_typing()
-        if await fetch_inventory(ctx.bot.http_session, url) is None:
-            raise commands.BadArgument(f"Failed to fetch inventory file after {FAILED_REQUEST_ATTEMPTS}.")
-        return url
 
 
 class DocCog(commands.Cog):

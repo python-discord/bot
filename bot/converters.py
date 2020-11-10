@@ -15,6 +15,7 @@ from discord.utils import DISCORD_EPOCH, snowflake_time
 
 from bot.api import ResponseCodeError
 from bot.constants import URLs
+from bot.exts.info.doc import _inventory_parser
 from bot.utils.regex import INVITE_RE
 
 log = logging.getLogger(__name__)
@@ -172,6 +173,25 @@ class ValidURL(Converter):
             raise BadArgument(f"`{url}` doesn't look like a valid hostname to me.")
         except ClientConnectorError:
             raise BadArgument(f"Cannot connect to host with URL `{url}`.")
+        return url
+
+
+class InventoryURL(Converter):
+    """
+    Represents an Intersphinx inventory URL.
+
+    This converter checks whether intersphinx accepts the given inventory URL, and raises
+    `BadArgument` if that is not the case.
+
+    Otherwise, it simply passes through the given URL.
+    """
+
+    @staticmethod
+    async def convert(ctx: Context, url: str) -> str:
+        """Convert url to Intersphinx inventory URL."""
+        await ctx.trigger_typing()
+        if await _inventory_parser.fetch_inventory(ctx.bot.http_session, url) is None:
+            raise BadArgument(f"Failed to fetch inventory file after {_inventory_parser.FAILED_REQUEST_ATTEMPTS}.")
         return url
 
 
