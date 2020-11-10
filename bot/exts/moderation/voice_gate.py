@@ -71,6 +71,37 @@ class VoiceGate(Cog):
         else:
             log.trace(f"Voice gate reminder message for user {member_id} was already removed")
 
+    @redis_cache.atomic_transaction
+    async def _ping_newcomer(self, member: discord.Member) -> bool:
+        """
+        See if `member` should be sent a voice verification notification, and send it if so.
+
+        Returns False if the notification was not sent. This happens when:
+        * The `member` has already received the notification
+        * The `member` is already voice-verified
+
+        Otherwise, the notification message ID is stored in `redis_cache` and True is returned.
+        """
+        if await self.redis_cache.contains(member.id):
+            log.trace("User already in cache. Ignore.")
+            return False
+
+        log.trace("User not in cache and is in a voice channel.")
+        verified = any(Roles.voice_verified == role.id for role in member.roles)
+        if verified:
+            log.trace("User is verified, add to the cache and ignore.")
+            await self.redis_cache.set(member.id, NO_MSG)
+            return False
+
+        log.trace("User is unverified. Send ping.")
+        await self.bot.wait_until_guild_available()
+        voice_verification_channel = self.bot.get_channel(Channels.voice_gate)
+
+        message = await voice_verification_channel.send(f"Hello, {member.mention}! {VOICE_PING}")
+        await self.redis_cache.set(member.id, message.id)
+
+        return True
+
     @command(aliases=('voiceverify',))
     @has_no_roles(Roles.voice_verified)
     @in_whitelist(channels=(Channels.voice_gate,), redirect=None)
@@ -209,27 +240,15 @@ class VoiceGate(Cog):
             log.trace("User not in a voice channel. Ignore.")
             return
 
-        if await self.redis_cache.contains(member.id):
-            log.trace("User already in cache. Ignore.")
-            return
+        # To avoid race conditions, checking if the user should receive a notification
+        # and sending it if appropriate is delegated to an atomic helper
+        notification_sent = await self._ping_newcomer(member)
 
-        log.trace("User not in cache and is in a voice channel.")
-        verified = any(Roles.voice_verified == role.id for role in member.roles)
-        if verified:
-            log.trace("User is verified, add to the cache and ignore.")
-            await self.redis_cache.set(member.id, NO_MSG)
-            return
-
-        log.trace("User is unverified. Send ping.")
-        await self.bot.wait_until_guild_available()
-        voice_verification_channel = self.bot.get_channel(Channels.voice_gate)
-
-        message = await voice_verification_channel.send(f"Hello, {member.mention}! {VOICE_PING}")
-        await self.redis_cache.set(member.id, message.id)
-
-        await asyncio.sleep(GateConf.voice_ping_delete_delay)
-
-        await self._delete_ping(member.id)
+        # Schedule the notification to be deleted after the configured delay, which is
+        # again delegated to an atomic helper
+        if notification_sent:
+            await asyncio.sleep(GateConf.voice_ping_delete_delay)
+            await self._delete_ping(member.id)
 
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:
         """Check for & ignore any InWhitelistCheckFailure."""
