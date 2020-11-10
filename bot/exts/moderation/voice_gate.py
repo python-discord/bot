@@ -18,6 +18,10 @@ from bot.utils.checks import InWhitelistCheckFailure
 
 log = logging.getLogger(__name__)
 
+# Flag written to the cog's RedisCache as a value when the Member's (key) notification
+# was already removed ~ this signals both that no further notifications should be sent,
+# and that the notification does not need to be removed. The implementation relies on
+# this being falsey!
 NO_MSG = 0
 
 FAILED_MESSAGE = (
