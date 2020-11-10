@@ -292,7 +292,10 @@ class DocCog(commands.Cog):
         if markdown is None:
             log.debug(f"Redis cache miss for symbol `{symbol}`.")
             markdown = await self.item_fetcher.get_markdown(self.bot.http_session, symbol_info)
-            await self.doc_cache.set(redis_key, markdown)
+            if markdown is not None:
+                await self.doc_cache.set(redis_key, markdown)
+            else:
+                markdown = "Unable to parse the requested symbol."
 
         embed = discord.Embed(
             title=discord.utils.escape_markdown(symbol),

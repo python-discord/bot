@@ -287,7 +287,7 @@ def _class_filter_factory(class_names: Iterable[str]) -> Callable[[Tag], bool]:
     return match_tag
 
 
-def get_symbol_markdown(soup: BeautifulSoup, symbol_data: DocItem) -> str:
+def get_symbol_markdown(soup: BeautifulSoup, symbol_data: DocItem) -> Optional[str]:
     """
     Return parsed markdown of the passed symbol using the passed in soup, truncated to 1000 characters.
 
@@ -296,7 +296,7 @@ def get_symbol_markdown(soup: BeautifulSoup, symbol_data: DocItem) -> str:
     symbol_heading = soup.find(id=symbol_data.symbol_id)
     if symbol_heading is None:
         log.warning("Symbol present in loaded inventories not found on site, consider refreshing inventories.")
-        return "Unable to parse the requested symbol."
+        return None
     signature = None
     # Modules, doc pages and labels don't point to description list tags but to tags like divs,
     # no special parsing can be done so we only try to include what's under them.
