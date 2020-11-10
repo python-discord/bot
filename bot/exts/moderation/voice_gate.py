@@ -54,6 +54,23 @@ class VoiceGate(Cog):
         """Get the currently loaded ModLog cog instance."""
         return self.bot.get_cog("ModLog")
 
+    @redis_cache.atomic_transaction  # Fully process each call until starting the next
+    async def _delete_ping(self, member_id: int) -> None:
+        """
+        If `redis_cache` holds a message ID for `member_id`, delete the message.
+
+        If the message was deleted, the value under the `member_id` key is then set to `NO_MSG`.
+        When `member_id` is not in the cache, or has a value of `NO_MSG` already, this function
+        does nothing.
+        """
+        if message_id := await self.redis_cache.get(member_id):
+            log.trace(f"Removing voice gate reminder message for user: {member_id}")
+            with suppress(discord.NotFound):
+                await self.bot.http.delete_message(Channels.voice_gate, message_id)
+            await self.redis_cache.set(member_id, NO_MSG)
+        else:
+            log.trace(f"Voice gate reminder message for user {member_id} was already removed")
+
     @command(aliases=('voiceverify',))
     @has_no_roles(Roles.voice_verified)
     @in_whitelist(channels=(Channels.voice_gate,), redirect=None)
@@ -67,12 +84,7 @@ class VoiceGate(Cog):
         - You must not be actively banned from using our voice channels
         - You must have been active for over a certain number of 10-minute blocks
         """
-        # If user has received a ping in voice_verification, delete the message
-        if message_id := await self.redis_cache.get(ctx.author.id, NO_MSG):
-            log.trace(f"Removing voice gate reminder message for user: {ctx.author.id}")
-            with suppress(discord.NotFound):
-                await self.bot.http.delete_message(Channels.voice_gate, message_id)
-            await self.redis_cache.set(ctx.author.id, NO_MSG)
+        await self._delete_ping(ctx.author.id)  # If user has received a ping in voice_verification, delete the message
 
         try:
             data = await self.bot.api_client.get(f"bot/users/{ctx.author.id}/metricity_data")
@@ -217,11 +229,7 @@ class VoiceGate(Cog):
 
         await asyncio.sleep(GateConf.voice_ping_delete_delay)
 
-        if message_id := await self.redis_cache.get(member.id):
-            log.trace(f"Removing voice gate reminder message for user: {member.id}")
-            with suppress(discord.NotFound):
-                await self.bot.http.delete_message(Channels.voice_gate, message_id)
-            await self.redis_cache.set(member.id, NO_MSG)
+        await self._delete_ping(member.id)
 
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:
         """Check for & ignore any InWhitelistCheckFailure."""
