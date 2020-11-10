@@ -140,7 +140,10 @@ class Reddit(Cog):
                 # Got appropriate response - process and return.
                 content = await response.json()
                 posts = content["data"]["children"]
-                return posts[:amount]
+
+                filtered_posts = [post for post in posts if not post["data"]["over_18"]]
+
+                return filtered_posts[:amount]
 
             await asyncio.sleep(3)
 
@@ -163,12 +166,11 @@ class Reddit(Cog):
             amount=amount,
             params={"t": time}
         )
-
         if not posts:
             embed.title = random.choice(ERROR_REPLIES)
             embed.colour = Colour.red()
             embed.description = (
-                "Sorry! We couldn't find any posts from that subreddit. "
+                "Sorry! We couldn't find any SFW posts from that subreddit. "
                 "If this problem persists, please let us know."
             )
 
