@@ -34,7 +34,7 @@ jobs:
       - task: Cache@2
         displayName: 'Restore Python environment'
         inputs:
-          key: python | $(Agent.OS) | "$(python.pythonLocation)" | 0 | ./Pipfile | ./Pipfile.lock
+          key: python | $(Agent.OS) | "$(python.pythonLocation)" | 1 | ./Pipfile | ./Pipfile.lock
           cacheHitVar: PY_ENV_RESTORED
           path: $(PYTHONUSERBASE)
         continueOnError: true
