@@ -524,5 +524,6 @@ voice_gate:
     minimum_activity_blocks: 3  # Number of 10 minute blocks during which a user must have been active
     voice_ping_delete_delay: 60  # Seconds before deleting the bot's ping to user in Voice Gate
 
+
 config:
     required_keys: ['bot.token']
