@@ -250,6 +250,8 @@ class DocCog(commands.Cog):
     async def refresh_inventory(self) -> None:
         """Refresh internal documentation inventory."""
         log.debug("Refreshing documentation inventory...")
+        for inventory in self.scheduled_inventories:
+            self.inventory_scheduler.cancel(inventory)
 
         # Clear the old base URLS and doc symbols to ensure
         # that we start from a fresh local dataset.
@@ -418,9 +420,6 @@ class DocCog(commands.Cog):
         """
         await self.bot.api_client.delete(f'bot/documentation-links/{package_name}')
 
-        if package_name in self.scheduled_inventories:
-            self.inventory_scheduler.cancel(package_name)
-
         async with ctx.typing():
             # Rebuild the inventory to ensure that everything
             # that was from this package is properly deleted.
@@ -431,9 +430,6 @@ class DocCog(commands.Cog):
     @commands.has_any_role(*MODERATION_ROLES)
     async def refresh_command(self, ctx: commands.Context) -> None:
         """Refresh inventories and send differences to channel."""
-        for inventory in self.scheduled_inventories:
-            self.inventory_scheduler.cancel(inventory)
-
         old_inventories = set(self.base_urls)
         with ctx.typing():
             await self.refresh_inventory()
