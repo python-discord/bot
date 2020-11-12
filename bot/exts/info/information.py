@@ -225,29 +225,34 @@ class Information(Cog):
             if is_set and (emoji := getattr(constants.Emojis, f"badge_{badge}", None)):
                 badges.append(emoji)
 
+        verified_at, activity = await self.user_verification_and_messages(user)
+
         if on_server:
             joined = time_since(user.joined_at, max_units=3)
             roles = ", ".join(role.mention for role in user.roles[1:])
-            membership = textwrap.dedent(f"""
-                             Joined: {joined}
-                             Roles: {roles or None}
-                         """).strip()
+            if is_mod_channel(ctx.channel):
+                membership = textwrap.dedent(f"""
+                                 Joined: {joined}
+                                 Verified: {verified_at}
+                                 Roles: {roles or None}
+                             """).strip()
+            else:
+                membership = textwrap.dedent(f"""
+                                 Joined: {joined}
+                                 Roles: {roles or None}
+                             """).strip()
         else:
             roles = None
             membership = "The user is not a member of the server"
-
-        verified_at, activity = await self.user_verification_and_messages(user)
-        verified_at = f"Verified: {verified_at}" if is_mod_channel(ctx.channel) else ""
 
         fields = [
             (
                 "User information",
                 textwrap.dedent(f"""
                     Created: {created}
-                    {verified_at}
                     Profile: {user.mention}
                     ID: {user.id}
-                """).strip().replace("\n\n", "\n")
+                """).strip()
             ),
             (
                 "Member information",
@@ -364,17 +369,18 @@ class Information(Cog):
     async def user_verification_and_messages(self, user: FetchedMember) -> Tuple[Union[bool, str], Tuple[str, str]]:
         """Gets the time of verification and amount of messages for `member`."""
         activity_output = []
+        verified_at = False
 
         try:
             user_activity = await self.bot.api_client.get(f'bot/users/{user.id}/metricity_data')
         except ResponseCodeError as e:
-            verified_at = False
-            activity_output = f"{e.status}: No activity"
+            if e.status == 404:
+                activity_output = "No activity"
+
         else:
-            if user_activity['verified_at'] is not None:
+            verified_at = user_activity['verified_at']
+            if verified_at is not None:
                 verified_at = time_since(parser.isoparse(user_activity["verified_at"]), max_units=3)
-            else:
-                verified_at = "Not verified"
 
             if user_activity["total_messages"]:
                 activity_output.append(user_activity['total_messages'])
