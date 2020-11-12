@@ -361,6 +361,7 @@ class CleanMessages(metaclass=YAMLGetter):
 
     message_limit: int
 
+
 class Stats(metaclass=YAMLGetter):
     section = "bot"
     subsection = "stats"
@@ -601,6 +602,7 @@ class VoiceGate(metaclass=YAMLGetter):
     minimum_messages: int
     bot_message_delete_delay: int
     minimum_activity_blocks: int
+    voice_ping_delete_delay: int
 
 
 class Event(Enum):
