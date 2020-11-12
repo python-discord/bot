@@ -218,10 +218,8 @@ class DocCog(commands.Cog):
             for symbol, relative_doc_url in items:
                 if "/" in symbol:
                     continue  # skip unreachable symbols with slashes
-                # Intern the group names since they're reused in all the DocItems
-                # to remove unnecessary memory consumption from them being unique objects
-                group_name = sys.intern(group.split(":")[1])
 
+                group_name = group.split(":")[1]
                 if (original_symbol := self.doc_symbols.get(symbol)) is not None:
                     if group_name in FORCE_PREFIX_GROUPS:
                         symbol = f"{group_name}.{symbol}"
@@ -240,7 +238,14 @@ class DocCog(commands.Cog):
                         self.renamed_symbols.add(symbol)
 
                 relative_url_path, _, symbol_id = relative_doc_url.partition("#")
-                symbol_item = DocItem(api_package_name, group_name, base_url, relative_url_path, symbol_id)
+                # Intern fields that have shared content so we're not storing unique strings for every object
+                symbol_item = DocItem(
+                    api_package_name,
+                    sys.intern(group_name),
+                    base_url,
+                    sys.intern(relative_url_path),
+                    symbol_id
+                )
                 self.doc_symbols[symbol] = symbol_item
                 self.item_fetcher.add_item(symbol_item)
 
