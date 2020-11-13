@@ -1,5 +1,6 @@
 import itertools
 import logging
+import re
 from collections import namedtuple
 from contextlib import suppress
 from typing import List, Union
@@ -177,7 +178,9 @@ class CustomHelpCommand(HelpCommand):
         if not await command.can_run(self.context):
             command_details += "***You cannot run this command.***\n\n"
 
-        command_details += f"*{command.help or 'No details provided.'}*\n"
+        # Remove line breaks from docstrings, if not used to separate paragraphs
+        formatted_doc = re.sub("(?<!\n)\n(?!\n)", " ", command.help)
+        command_details += f"*{formatted_doc or 'No details provided.'}*\n"
         embed.description = command_details
 
         return embed
