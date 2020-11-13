@@ -37,7 +37,6 @@ jobs:
           key: python | $(Agent.OS) | "$(python.pythonLocation)" | 2 | ./Pipfile | ./Pipfile.lock
           cacheHitVar: PY_ENV_RESTORED
           path: $(PYTHONUSERBASE)
-        continueOnError: true
 
       - script: echo '##vso[task.prependpath]$(PYTHONUSERBASE)/bin'
         displayName: 'Prepend PATH'
@@ -65,7 +64,6 @@ jobs:
         inputs:
           key: pre-commit | "$(python.pythonLocation)" | 0 | .pre-commit-config.yaml
           path: $(PRE_COMMIT_HOME)
-        continueOnError: true
 
       # pre-commit's venv doesn't allow user installs - not that they're really needed anyway.
       - script: export PIP_USER=0; pre-commit run --all-files
