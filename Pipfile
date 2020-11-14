@@ -39,6 +39,7 @@ flake8-tidy-imports = "~=4.0"
 flake8-todo = "~=0.7"
 pep8-naming = "~=0.9"
 pre-commit = "~=2.1"
+coveralls = "~=2.1"
 
 [requires]
 python_version = "3.8"

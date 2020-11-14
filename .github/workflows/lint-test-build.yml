@@ -90,9 +90,7 @@ jobs:
       - name: Publish coverage report to coveralls.io
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          pip install coveralls
-          coveralls
+        run: coveralls
 
   build-and-push:
     needs: lint-test
