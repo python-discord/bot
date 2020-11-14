@@ -10,6 +10,7 @@ from typing import Callable, Collection, Container, Iterable, List, Optional, TY
 from bs4 import BeautifulSoup
 from bs4.element import NavigableString, PageElement, Tag
 
+from bot.utils.helpers import find_nth_occurrence
 from ._html import Strainer
 from ._markdown import DocMarkdownConverter
 if TYPE_CHECKING:
@@ -219,21 +220,23 @@ def _get_truncated_description(
         elements: Iterable[Union[Tag, NavigableString]],
         markdown_converter: DocMarkdownConverter,
         max_length: int,
+        max_lines: int,
 ) -> str:
     """
-    Truncate markdown from `elements` to be at most `max_length` characters when rendered.
+    Truncate markdown from `elements` to be at most `max_length` characters when rendered or `max_lines` newlines.
 
     `max_length` limits the length of the rendered characters in the string,
     with the real string length limited to `_MAX_DESCRIPTION_LENGTH` to accommodate discord length limits
     """
+    result = ""
+    markdown_element_ends = []
     rendered_length = 0
-    real_length = 0
-    result = []
-    shortened = False
 
+    tag_end_index = 0
     for element in elements:
         is_tag = isinstance(element, Tag)
         element_length = len(element.text) if is_tag else len(element)
+
         if rendered_length + element_length < max_length:
             if is_tag:
                 element_markdown = markdown_converter.process_tag(element)
@@ -241,21 +244,29 @@ def _get_truncated_description(
                 element_markdown = markdown_converter.process_text(element)
 
             element_markdown_length = len(element_markdown)
-            if real_length + element_markdown_length < _MAX_DESCRIPTION_LENGTH:
-                result.append(element_markdown)
-            else:
-                shortened = True
-                break
-            real_length += element_markdown_length
             rendered_length += element_length
+            tag_end_index += element_markdown_length
+
+            if not element_markdown.isspace():
+                markdown_element_ends.append(tag_end_index)
+            result += element_markdown
         else:
-            shortened = True
             break
 
-    markdown_string = "".join(result)
-    if shortened:
-        markdown_string = markdown_string.rstrip(_TRUNCATE_STRIP_CHARACTERS) + "..."
-    return markdown_string
+    if not markdown_element_ends:
+        return ""
+
+    newline_truncate_index = find_nth_occurrence(result, "\n", max_lines)
+    if newline_truncate_index is not None and newline_truncate_index < _MAX_DESCRIPTION_LENGTH:
+        truncate_index = newline_truncate_index
+    else:
+        truncate_index = _MAX_DESCRIPTION_LENGTH
+
+    if truncate_index >= markdown_element_ends[-1]:
+        return result
+
+    markdown_truncate_index = max(cut for cut in markdown_element_ends if cut < truncate_index)
+    return result[:markdown_truncate_index].strip(_TRUNCATE_STRIP_CHARACTERS) + "..."
 
 
 def _create_markdown(signatures: Optional[List[str]], description: Iterable[Tag], url: str) -> str:
@@ -265,7 +276,12 @@ def _create_markdown(signatures: Optional[List[str]], description: Iterable[Tag]
     The signatures are wrapped in python codeblocks, separated from the description by a newline.
     The result markdown string is max 750 rendered characters for the description with signatures at the start.
     """
-    description = _get_truncated_description(description, DocMarkdownConverter(bullets="•", page_url=url), 750)
+    description = _get_truncated_description(
+        description,
+        markdown_converter=DocMarkdownConverter(bullets="•", page_url=url),
+        max_length=750,
+        max_lines=13
+    )
     description = _WHITESPACE_AFTER_NEWLINES_RE.sub('', description)
     if signatures is not None:
         formatted_markdown = "".join(f"```py\n{signature}```" for signature in _truncate_signatures(signatures))
