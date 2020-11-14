@@ -33,8 +33,12 @@ jobs:
       - name: Add custom PYTHONUSERBASE to PATH
         run: echo '${{ env.PYTHONUSERBASE }}/bin/' >> $GITHUB_PATH
 
+      # We don't want to persist credentials, as our GitHub Action
+      # may be run when a PR is made from a fork.
       - name: Checkout repository
         uses: actions/checkout@v2
+        with:
+          persist-credentials: false
 
       - name: Setup python
         id: python
@@ -59,14 +63,15 @@ jobs:
 
       - name: Pre-commit Environment Caching
         uses: actions/cache@v2
-        id: pre_commit_cache
         with:
           path: ${{ env.PRE_COMMIT_HOME }}
           key: "precommit-0-${{ runner.os }}-${{ env.PRE_COMMIT_HOME }}-\
           ${{ steps.python.outputs.python-version }}-\
           ${{ hashFiles('./.pre-commit-config.yaml') }}"
 
-      # We will not run `flake8` here, as we will use a separate flake8 action
+      # We will not run `flake8` here, as we will use a separate flake8
+      # action. As pre-commit does not support user installs, and we don't
+      # really need it, we set PIP_USER=0.
       - name: Run pre-commit hooks
         run: export PIP_USER=0; SKIP=flake8 pre-commit run --all-files
 
