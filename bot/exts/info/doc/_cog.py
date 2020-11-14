@@ -36,6 +36,8 @@ FORCE_PREFIX_GROUPS = (
 WHITESPACE_AFTER_NEWLINES_RE = re.compile(r"(?<=\n\n)(\s+)")
 NOT_FOUND_DELETE_DELAY = RedirectOutput.delete_delay
 
+doc_cache = DocRedisCache(namespace="Docs")
+
 
 class DocItem(NamedTuple):
     """Holds inventory symbol information."""
@@ -116,7 +118,9 @@ class CachedParser:
         while self._queue:
             item, soup = self._queue.pop()
             try:
-                self._results[item] = get_symbol_markdown(soup, item)
+                markdown = get_symbol_markdown(soup, item)
+                await doc_cache.set_if_exists(item, markdown)
+                self._results[item] = markdown
             except Exception:
                 log.exception(f"Unexpected error when handling {item}")
             else:
@@ -161,8 +165,6 @@ class CachedParser:
 class DocCog(commands.Cog):
     """A set of commands for querying & displaying documentation."""
 
-    doc_cache = DocRedisCache()
-
     def __init__(self, bot: Bot):
         self.base_urls = {}
         self.bot = bot
@@ -174,7 +176,7 @@ class DocCog(commands.Cog):
         self.scheduled_inventories = set()
 
         self.bot.loop.create_task(self.init_refresh_inventory())
-        self.bot.loop.create_task(self.doc_cache.delete_expired())
+        self.bot.loop.create_task(doc_cache.delete_expired())
 
     async def init_refresh_inventory(self) -> None:
         """Refresh documentation inventory on cog initialization."""
@@ -292,12 +294,12 @@ class DocCog(commands.Cog):
             return None
         self.bot.stats.incr(f"doc_fetches.{symbol_info.package.lower()}")
 
-        markdown = await self.doc_cache.get(symbol_info)
+        markdown = await doc_cache.get(symbol_info)
         if markdown is None:
             log.debug(f"Redis cache miss for symbol `{symbol}`.")
             markdown = await self.item_fetcher.get_markdown(self.bot.http_session, symbol_info)
             if markdown is not None:
-                await self.doc_cache.set(symbol_info, markdown)
+                await doc_cache.set(symbol_info, markdown)
             else:
                 markdown = "Unable to parse the requested symbol."
 

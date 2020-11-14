@@ -28,6 +28,23 @@ class DocRedisCache(RedisObject):
             )
 
     @namespace_lock
+    async def set_if_exists(self, item: DocItem, value: str) -> None:
+        """
+        Set markdown `value` for `key` if `key` exists.
+
+        Keys expire after a week to keep data up to date.
+        """
+        expiry_timestamp = datetime.datetime.now().timestamp() + 7 * 24 * 60 * 60
+
+        with await self._get_pool_connection() as connection:
+            if await connection.hexists(f"{self.namespace}:{item.package}", self.get_item_key(item)):
+                await connection.hset(
+                    f"{self.namespace}:{item.package}",
+                    self.get_item_key(item),
+                    pickle.dumps((value, expiry_timestamp))
+                )
+
+    @namespace_lock
     async def get(self, item: DocItem) -> Optional[str]:
         """Get markdown contents for `key`."""
         with await self._get_pool_connection() as connection:
