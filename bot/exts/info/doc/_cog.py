@@ -4,7 +4,6 @@ import asyncio
 import logging
 import re
 import sys
-import urllib.parse
 from collections import defaultdict
 from contextlib import suppress
 from typing import Dict, List, NamedTuple, Optional, Union
@@ -175,6 +174,7 @@ class DocCog(commands.Cog):
         self.scheduled_inventories = set()
 
         self.bot.loop.create_task(self.init_refresh_inventory())
+        self.bot.loop.create_task(self.doc_cache.delete_expired())
 
     async def init_refresh_inventory(self) -> None:
         """Refresh documentation inventory on cog initialization."""
@@ -292,21 +292,18 @@ class DocCog(commands.Cog):
             return None
         self.bot.stats.incr(f"doc_fetches.{symbol_info.package.lower()}")
 
-        item_url = f"{symbol_info.url}#{symbol_info.symbol_id}"
-        redis_key = "".join(urllib.parse.urlparse(item_url)[1:])  # url without scheme
-
-        markdown = await self.doc_cache.get(redis_key)
+        markdown = await self.doc_cache.get(symbol_info)
         if markdown is None:
             log.debug(f"Redis cache miss for symbol `{symbol}`.")
             markdown = await self.item_fetcher.get_markdown(self.bot.http_session, symbol_info)
             if markdown is not None:
-                await self.doc_cache.set(redis_key, markdown)
+                await self.doc_cache.set(symbol_info, markdown)
             else:
                 markdown = "Unable to parse the requested symbol."
 
         embed = discord.Embed(
             title=discord.utils.escape_markdown(symbol),
-            url=item_url,
+            url=f"{symbol_info.url}#{symbol_info.symbol_id}",
             description=markdown
         )
         # Show all symbols with the same name that were renamed in the footer.
