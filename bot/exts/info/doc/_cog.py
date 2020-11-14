@@ -428,6 +428,7 @@ class DocCog(commands.Cog):
             # Rebuild the inventory to ensure that everything
             # that was from this package is properly deleted.
             await self.refresh_inventory()
+            await doc_cache.delete(package_name)
         await ctx.send(f"Successfully deleted `{package_name}` and refreshed inventory.")
 
     @docs_group.command(name="refreshdoc", aliases=("rfsh", "r"))
@@ -450,3 +451,10 @@ class DocCog(commands.Cog):
             description=f"```diff\n{added}\n{removed}```" if added or removed else ""
         )
         await ctx.send(embed=embed)
+
+    @docs_group.command(name="cleardoccache")
+    @commands.has_any_role(*MODERATION_ROLES)
+    async def clear_cache_command(self, ctx: commands.Context, package_name: PackageName) -> None:
+        """Clear persistent redis cache for `package`."""
+        await doc_cache.delete(package_name)
+        await ctx.send(f"Succesfully cleared cache for {package_name}")
