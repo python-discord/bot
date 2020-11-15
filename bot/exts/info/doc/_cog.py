@@ -33,6 +33,9 @@ FORCE_PREFIX_GROUPS = (
     "pdbcommand",
     "term",
 )
+PRIORITY_PACKAGES = (
+    "python",
+)
 WHITESPACE_AFTER_NEWLINES_RE = re.compile(r"(?<=\n\n)(\s+)")
 NOT_FOUND_DELETE_DELAY = RedirectOutput.delete_delay
 
@@ -234,6 +237,10 @@ class DocCog(commands.Cog):
 
                         self.doc_symbols[overridden_symbol] = original_symbol
                         self.renamed_symbols.add(overridden_symbol)
+
+                    elif api_package_name in PRIORITY_PACKAGES:
+                        self.doc_symbols[f"{original_symbol.package}.{symbol}"] = original_symbol
+                        self.renamed_symbols.add(symbol)
 
                     else:
                         symbol = f"{api_package_name}.{symbol}"
