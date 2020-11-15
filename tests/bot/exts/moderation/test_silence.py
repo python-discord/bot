@@ -123,7 +123,7 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         guild.get_role.side_effect = lambda id_: Mock(id=id_)
 
         await self.cog._async_init()
-        self.assertEqual(self.cog._verified_role.id, Roles.verified)
+        self.assertEqual(self.cog._verified_msg_role.id, Roles.verified)
 
     @autospec(silence, "SilenceNotifier", pass_mocks=False)
     async def test_async_init_got_channels(self):
@@ -277,7 +277,7 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
             with mock.patch.object(self.cog, "_set_silence_overwrites", return_value=was_silenced):
                 with self.subTest(was_silenced=was_silenced, message=message, duration=duration):
                     await self.cog.silence.callback(self.cog, ctx, duration)
-                    ctx.send.assert_called_once_with(message)
+                    ctx.channel.send.assert_called_once_with(message)
 
     async def test_skipped_already_silenced(self):
         """Permissions were not set and `False` was returned for an already silenced channel."""
@@ -302,7 +302,7 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(self.overwrite.send_messages)
         self.assertFalse(self.overwrite.add_reactions)
         self.channel.set_permissions.assert_awaited_once_with(
-            self.cog._verified_role,
+            self.cog._verified_msg_role,
             overwrite=self.overwrite
         )
 
@@ -372,7 +372,7 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
 
         args = (300, ctx.channel.id, ctx.invoke.return_value)
         self.cog.scheduler.schedule_later.assert_called_once_with(*args)
-        ctx.invoke.assert_called_once_with(self.cog.unsilence)
+        ctx.invoke.assert_called_once_with(self.cog.unsilence, channel=ctx.channel)
 
     async def test_permanent_not_scheduled(self):
         """A task was not scheduled for a permanent silence."""
@@ -435,7 +435,7 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
         """Channel's `send_message` and `add_reactions` overwrites were restored."""
         await self.cog._unsilence(self.channel)
         self.channel.set_permissions.assert_awaited_once_with(
-            self.cog._verified_role,
+            self.cog._verified_msg_role,
             overwrite=self.overwrite,
         )
 
@@ -449,7 +449,7 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
 
         await self.cog._unsilence(self.channel)
         self.channel.set_permissions.assert_awaited_once_with(
-            self.cog._verified_role,
+            self.cog._verified_msg_role,
             overwrite=self.overwrite,
         )
 
