@@ -26,7 +26,7 @@ services:
     privileged: true
 
   web:
-    image: pythondiscord/site:latest
+    image: ghcr.io/python-discord/site:latest
     command: ["run", "--debug"]
     networks:
       default:
