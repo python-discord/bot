@@ -27,6 +27,7 @@ style:
         soft_red: 0xcd6d6d
         soft_green: 0x68c290
         soft_orange: 0xf9cb54
+        bright_green: 0x01d277
 
     emojis:
         defcon_disabled: "<:defcondisabled:470326273952972810>"

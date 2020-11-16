@@ -248,6 +248,7 @@ class Colours(metaclass=YAMLGetter):
     soft_red: int
     soft_green: int
     soft_orange: int
+    bright_green: int
 
 
 class DuckPond(metaclass=YAMLGetter):
