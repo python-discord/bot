@@ -28,16 +28,20 @@ This is a Python help channel. You can claim your own help channel in the Python
 """
 
 AVAILABLE_MSG = f"""
-This help channel is now **available**, which means that you can claim it by simply typing your \
-question into it. Once claimed, the channel will move into the **Python Help: Occupied** category, \
-and will be yours until it has been inactive for {constants.HelpChannels.idle_minutes} minutes or \
-is closed manually with `!close`. When that happens, it will be set to **dormant** and moved into \
-the **Help: Dormant** category.
+**Send your question here to claim the channel**
+This channel will be dedicated to answering your question only. We’ll try to answer and help you solve the issue.
 
-Try to write the best question you can by providing a detailed description and telling us what \
-you've tried already. For more information on asking a good question, \
-check out our guide on **[asking good questions]({ASKING_GUIDE_URL})**.
+**Keep in mind:**
+• It's always ok to just ask your question. You don't need permission.
+• Explain what you expect to happen and what actually happens.
+• Include a code sample and error message, if you got one.
+
+For more tips, check out our guide on **[asking good questions]({ASKING_GUIDE_URL})**.
 """
+
+AVAILABLE_TITLE = "✅ Available help channel"
+
+AVAILABLE_FOOTER = f"Closes after {constants.HelpChannels.idle_minutes} minutes of inactivity or when you send !close."
 
 DORMANT_MSG = f"""
 This help channel has been marked as **dormant**, and has been moved into the **Help: Dormant** \
@@ -837,7 +841,12 @@ class HelpChannels(commands.Cog):
         channel_info = f"#{channel} ({channel.id})"
         log.trace(f"Sending available message in {channel_info}.")
 
-        embed = discord.Embed(description=AVAILABLE_MSG)
+        embed = discord.Embed(
+            title=AVAILABLE_TITLE,
+            color=constants.Colours.bright_green,
+            description=AVAILABLE_MSG,
+        )
+        embed.set_footer(text=AVAILABLE_FOOTER)
 
         msg = await self.get_last_message(channel)
         if self.match_bot_embed(msg, DORMANT_MSG):
