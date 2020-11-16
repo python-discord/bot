@@ -53,7 +53,7 @@ def setup() -> None:
     logging.getLogger("discord").setLevel(logging.WARNING)
     logging.getLogger("websockets").setLevel(logging.WARNING)
     logging.getLogger("chardet").setLevel(logging.WARNING)
-    logging.getLogger(__name__)
+    logging.getLogger("async_rediscache").setLevel(logging.WARNING)
 
 
 def setup_sentry() -> None:

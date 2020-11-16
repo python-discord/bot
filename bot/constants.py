@@ -361,6 +361,7 @@ class CleanMessages(metaclass=YAMLGetter):
 
     message_limit: int
 
+
 class Stats(metaclass=YAMLGetter):
     section = "bot"
     subsection = "stats"
@@ -377,6 +378,7 @@ class Categories(metaclass=YAMLGetter):
     help_in_use: int
     help_dormant: int
     modmail: int
+    voice: int
 
 
 class Channels(metaclass=YAMLGetter):
@@ -392,6 +394,7 @@ class Channels(metaclass=YAMLGetter):
     bot_commands: int
     change_log: int
     code_help_voice: int
+    code_help_voice_2: int
     cooldown: int
     defcon: int
     dev_contrib: int
@@ -424,6 +427,8 @@ class Channels(metaclass=YAMLGetter):
     user_event_announcements: int
     user_log: int
     verification: int
+    voice_chat: int
+    voice_gate: int
     voice_log: int
 
 
@@ -456,9 +461,11 @@ class Roles(metaclass=YAMLGetter):
     owners: int
     partners: int
     python_community: int
+    sprinters: int
     team_leaders: int
     unverified: int
     verified: int  # This is the Developers role on PyDis, here named verified for readability reasons.
+    voice_verified: int
 
 
 class Guild(metaclass=YAMLGetter):
@@ -467,6 +474,7 @@ class Guild(metaclass=YAMLGetter):
     id: int
     invite: str  # Discord invite, gets embedded in chat
     moderation_channels: List[int]
+    moderation_categories: List[int]
     moderation_roles: List[int]
     modlog_blacklist: List[int]
     reminder_whitelist: List[int]
@@ -587,6 +595,16 @@ class Verification(metaclass=YAMLGetter):
     kick_confirmation_threshold: float
 
 
+class VoiceGate(metaclass=YAMLGetter):
+    section = "voice_gate"
+
+    minimum_days_verified: int
+    minimum_messages: int
+    bot_message_delete_delay: int
+    minimum_activity_blocks: int
+    voice_ping_delete_delay: int
+
+
 class Event(Enum):
     """
     Event names. This does not include every event (for example, raw
@@ -626,6 +644,9 @@ STAFF_ROLES = Guild.staff_roles
 
 # Channel combinations
 MODERATION_CHANNELS = Guild.moderation_channels
+
+# Category combinations
+MODERATION_CATEGORIES = Guild.moderation_categories
 
 # Bot replies
 NEGATIVE_REPLIES = [

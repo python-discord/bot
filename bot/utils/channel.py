@@ -3,6 +3,7 @@ import logging
 import discord
 
 import bot
+from bot import constants
 from bot.constants import Categories
 
 log = logging.getLogger(__name__)
@@ -14,6 +15,21 @@ def is_help_channel(channel: discord.TextChannel) -> bool:
     categories = (Categories.help_available, Categories.help_in_use)
 
     return any(is_in_category(channel, category) for category in categories)
+
+
+def is_mod_channel(channel: discord.TextChannel) -> bool:
+    """True if `channel` is considered a mod channel."""
+    if channel.id in constants.MODERATION_CHANNELS:
+        log.trace(f"Channel #{channel} is a configured mod channel")
+        return True
+
+    elif any(is_in_category(channel, category) for category in constants.MODERATION_CATEGORIES):
+        log.trace(f"Channel #{channel} is in a configured mod category")
+        return True
+
+    else:
+        log.trace(f"Channel #{channel} is not a mod channel")
+        return False
 
 
 def is_in_category(channel: discord.TextChannel, category_id: int) -> bool:
