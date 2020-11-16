@@ -523,5 +523,9 @@ branding:
     cycle_frequency: 3  # How many days bot wait before refreshing server icon
 
 
+tokens:
+    github: !ENV "GITHUB_TOKEN"
+
+
 config:
     required_keys: ['bot.token']
