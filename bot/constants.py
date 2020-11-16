@@ -13,7 +13,7 @@ their default values from `config-default.yml`.
 import logging
 import os
 from collections.abc import Mapping
-from enum import Enum
+from enum import Enum, IntEnum
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -625,6 +625,24 @@ class Event(Enum):
     message_edit = "message_edit"
 
     voice_state_update = "voice_state_update"
+
+
+class Month(IntEnum):
+    JANUARY = 1
+    FEBRUARY = 2
+    MARCH = 3
+    APRIL = 4
+    MAY = 5
+    JUNE = 6
+    JULY = 7
+    AUGUST = 8
+    SEPTEMBER = 9
+    OCTOBER = 10
+    NOVEMBER = 11
+    DECEMBER = 12
+
+    def __str__(self) -> str:
+        return self.name.title()
 
 
 # Debug mode
