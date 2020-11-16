@@ -657,6 +657,17 @@ class Month(IntEnum):
         return self.name.title()
 
 
+class AssetType(Enum):
+    """
+    Discord media assets.
+
+    The values match exactly the kwarg keys that can be passed to `Guild.edit`.
+    """
+
+    BANNER = "banner"
+    SERVER_ICON = "icon"
+
+
 # Debug mode
 DEBUG_MODE = 'local' in os.environ.get("SITE_URL", "local")
 
