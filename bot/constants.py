@@ -605,6 +605,12 @@ class VoiceGate(metaclass=YAMLGetter):
     voice_ping_delete_delay: int
 
 
+class Branding(metaclass=YAMLGetter):
+    section = "branding"
+
+    cycle_frequency: int
+
+
 class Event(Enum):
     """
     Event names. This does not include every event (for example, raw

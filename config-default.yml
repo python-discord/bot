@@ -525,5 +525,9 @@ voice_gate:
     voice_ping_delete_delay: 60  # Seconds before deleting the bot's ping to user in Voice Gate
 
 
+branding:
+    cycle_frequency: 3  # How many days bot wait before refreshing server icon
+
+
 config:
     required_keys: ['bot.token']
