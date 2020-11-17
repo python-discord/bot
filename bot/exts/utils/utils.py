@@ -11,7 +11,7 @@ from discord import Colour, Embed, utils
 from discord.ext.commands import BadArgument, Cog, Context, clean_content, command, has_any_role
 
 from bot.bot import Bot
-from bot.constants import Channels, MODERATION_ROLES, STAFF_ROLES
+from bot.constants import Channels, Keys, MODERATION_ROLES, STAFF_ROLES
 from bot.decorators import in_whitelist
 from bot.pagination import LinePaginator
 from bot.utils import messages
@@ -44,6 +44,11 @@ Namespaces are one honking great idea -- let's do more of those!
 ICON_URL = "https://www.python.org/static/opengraph-icon-200x200.png"
 
 pep_cache = AsyncCache()
+
+# Add GitHub token when it's set to raise limit of requests per hour
+GITHUB_HEADERS = {}
+if Keys.github:
+    GITHUB_HEADERS["Authorization"] = f"token {Keys.github}"
 
 
 class Utils(Cog):
@@ -197,7 +202,7 @@ class Utils(Cog):
         await self.bot.wait_until_ready()
         log.trace("Started refreshing PEP URLs.")
 
-        async with self.bot.http_session.get(self.PEPS_LISTING_API_URL) as resp:
+        async with self.bot.http_session.get(self.PEPS_LISTING_API_URL, headers=GITHUB_HEADERS) as resp:
             listing = await resp.json()
 
         log.trace("Got PEP URLs listing from GitHub API")
