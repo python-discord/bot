@@ -34,7 +34,7 @@ This channel will be dedicated to answering your question only. We’ll try to a
 **Keep in mind:**
 • It's always ok to just ask your question. You don't need permission.
 • Explain what you expect to happen and what actually happens.
-• Include a code sample and error message, if you got one.
+• Include a code sample and error message, if you got any.
 
 For more tips, check out our guide on **[asking good questions]({ASKING_GUIDE_URL})**.
 """
