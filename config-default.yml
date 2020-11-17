@@ -321,6 +321,7 @@ filter:
 
 keys:
     site_api:    !ENV "BOT_API_KEY"
+    github:      !ENV "GITHUB_TOKEN"
 
 
 urls:
@@ -533,10 +534,6 @@ voice_gate:
 
 branding:
     cycle_frequency: 3  # How many days bot wait before refreshing server icon
-
-
-tokens:
-    github: !ENV "GITHUB_TOKEN"
 
 
 config:

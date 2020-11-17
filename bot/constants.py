@@ -491,6 +491,7 @@ class Keys(metaclass=YAMLGetter):
     section = "keys"
 
     site_api: Optional[str]
+    github: Optional[str]
 
 
 class URLs(metaclass=YAMLGetter):
@@ -615,12 +616,6 @@ class Branding(metaclass=YAMLGetter):
     section = "branding"
 
     cycle_frequency: int
-
-
-class Tokens(metaclass=YAMLGetter):
-    section = "tokens"
-
-    github: str
 
 
 class Event(Enum):
