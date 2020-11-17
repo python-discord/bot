@@ -248,6 +248,10 @@ class Colours(metaclass=YAMLGetter):
     soft_red: int
     soft_green: int
     soft_orange: int
+    bright_green: int
+    orange: int
+    pink: int
+    purple: int
 
 
 class DuckPond(metaclass=YAMLGetter):
@@ -297,6 +301,8 @@ class Emojis(metaclass=YAMLGetter):
     upvotes: str
     comments: str
     user: str
+
+    ok_hand: str
 
 
 class Icons(metaclass=YAMLGetter):
