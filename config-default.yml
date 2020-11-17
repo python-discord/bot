@@ -120,6 +120,8 @@ style:
         voice_state_green: "https://cdn.discordapp.com/emojis/656899770094452754.png"
         voice_state_red: "https://cdn.discordapp.com/emojis/656899769905709076.png"
 
+        green_checkmark: "https://raw.githubusercontent.com/python-discord/branding/master/icons/checkmark/green-checkmark-dist.png"
+
 
 guild:
     id: 267624335836053506

@@ -355,6 +355,8 @@ class Icons(metaclass=YAMLGetter):
     voice_state_green: str
     voice_state_red: str
 
+    green_checkmark: str
+
 
 class CleanMessages(metaclass=YAMLGetter):
     section = "bot"
