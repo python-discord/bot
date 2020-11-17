@@ -842,10 +842,10 @@ class HelpChannels(commands.Cog):
         log.trace(f"Sending available message in {channel_info}.")
 
         embed = discord.Embed(
-            title=AVAILABLE_TITLE,
             color=constants.Colours.bright_green,
             description=AVAILABLE_MSG,
         )
+        embed.set_author(name=AVAILABLE_TITLE, icon_url=constants.Icons.green_checkmark)
         embed.set_footer(text=AVAILABLE_FOOTER)
 
         msg = await self.get_last_message(channel)
