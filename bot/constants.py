@@ -607,12 +607,6 @@ class Branding(metaclass=YAMLGetter):
     cycle_frequency: int
 
 
-class Tokens(metaclass=YAMLGetter):
-    section = "tokens"
-
-    github: str
-
-
 class Event(Enum):
     """
     Event names. This does not include every event (for example, raw
