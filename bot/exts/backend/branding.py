@@ -13,9 +13,9 @@ from discord.ext import commands
 
 from bot.bot import Bot
 from bot.constants import AssetType, Branding, Colours, Emojis, Guild, Keys, MODERATION_ROLES
-from bot.seasons import SeasonBase, get_all_seasons, get_current_season, get_season
 from bot.decorators import in_whitelist, mock_in_debug
 from bot.errors import BrandingError
+from bot.seasons import SeasonBase, get_all_seasons, get_current_season, get_season
 
 log = logging.getLogger(__name__)
 

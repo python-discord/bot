@@ -11,7 +11,7 @@ from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Channels, Colours, ERROR_REPLIES
 from bot.converters import TagNameConverter
-from bot.errors import LockedResourceError, BrandingError
+from bot.errors import BrandingError, LockedResourceError
 from bot.utils.checks import InWhitelistCheckFailure
 
 log = logging.getLogger(__name__)
