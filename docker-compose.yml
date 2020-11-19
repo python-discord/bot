@@ -18,7 +18,7 @@ services:
       - "127.0.0.1:6379:6379"
 
   snekbox:
-    image: pythondiscord/snekbox:latest
+    image: ghcr.io/python-discord/snekbox:latest
     init: true
     ipc: none
     ports:
