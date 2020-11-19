@@ -1,0 +1,171 @@
+name: Lint, Test, Build
+
+on:
+  push:
+    branches:
+      - master
+  # We use pull_request_target as we get PRs from
+  # forks, but need to be able to add annotations
+  # for our flake8 step.
+  pull_request_target:
+
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    env:
+      # Dummy values for required bot environment variables
+      BOT_API_KEY: foo
+      BOT_SENTRY_DSN: blah
+      BOT_TOKEN: bar
+      REDDIT_CLIENT_ID: spam
+      REDDIT_SECRET: ham
+      REDIS_PASSWORD: ''
+
+      # Configure pip to cache dependencies and do a user install
+      PIP_NO_CACHE_DIR: false
+      PIP_USER: 1
+
+      # Hide the graphical elements from pipenv's output
+      PIPENV_HIDE_EMOJIS: 1
+      PIPENV_NOSPIN: 1
+
+      # Make sure pipenv does not try reuse an environment it's running in
+      PIPENV_IGNORE_VIRTUALENVS: 1
+
+      # Specify explicit paths for python dependencies and the pre-commit
+      # environment so we know which directories to cache
+      PYTHONUSERBASE: ${{ github.workspace }}/.cache/py-user-base
+      PRE_COMMIT_HOME: ${{ github.workspace }}/.cache/pre-commit-cache
+
+    steps:
+      - name: Add custom PYTHONUSERBASE to PATH
+        run: echo '${{ env.PYTHONUSERBASE }}/bin/' >> $GITHUB_PATH
+
+      # We don't want to persist credentials, as our GitHub Action
+      # may be run when a PR is made from a fork.
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+
+      - name: Setup python
+        id: python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+
+      # This step caches our Python dependencies. To make sure we
+      # only restore a cache when the dependencies, the python version,
+      # the runner operating system, and the dependency location haven't
+      # changed, we create a cache key that is a composite of those states.
+      #
+      # Only when the context is exactly the same, we will restore the cache.
+      - name: Python Dependency Caching
+        uses: actions/cache@v2
+        id: python_cache
+        with:
+          path: ${{ env.PYTHONUSERBASE }}
+          key: "python-0-${{ runner.os }}-${{ env.PYTHONUSERBASE }}-\
+          ${{ steps.python.outputs.python-version }}-\
+          ${{ hashFiles('./Pipfile', './Pipfile.lock') }}"
+
+      # Install our dependencies if we did not restore a dependency cache
+      - name: Install dependencies using pipenv
+        if: steps.python_cache.outputs.cache-hit != 'true'
+        run: |
+          pip install pipenv
+          pipenv install --dev --deploy --system
+
+      # This step caches our pre-commit environment. To make sure we
+      # do create a new environment when our pre-commit setup changes,
+      # we create a cache key based on relevant factors.
+      - name: Pre-commit Environment Caching
+        uses: actions/cache@v2
+        with:
+          path: ${{ env.PRE_COMMIT_HOME }}
+          key: "precommit-0-${{ runner.os }}-${{ env.PRE_COMMIT_HOME }}-\
+          ${{ steps.python.outputs.python-version }}-\
+          ${{ hashFiles('./.pre-commit-config.yaml') }}"
+
+      # We will not run `flake8` here, as we will use a separate flake8
+      # action. As pre-commit does not support user installs, we set
+      # PIP_USER=0 to not do a user install.
+      - name: Run pre-commit hooks
+        run: export PIP_USER=0; SKIP=flake8 pre-commit run --all-files
+
+      # This step requires `pull_request_target`, as adding annotations
+      # requires "write" permissions to the repo.
+      - name: Run flake8
+        uses: julianwachholz/flake8-action@v1
+        with:
+          checkName: lint-test
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # We run `coverage` using the `python` command so we can suppress
+      # irrelevant warnings in our CI output.
+      - name: Run tests and generate coverage report
+        run: |
+            python -Wignore -m coverage run -m unittest
+            coverage report -m
+
+      # This step will publish the coverage reports coveralls.io and
+      # print a "job" link in the output of the GitHub Action
+      - name: Publish coverage report to coveralls.io
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: coveralls
+
+  build-and-push:
+    needs: lint-test
+    if: github.event_name != 'pull_request_target' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+
+    steps:
+      # Create a commit SHA-based tag for the container repositories
+      - name: Create SHA Container Tag
+        id: sha_tag
+        run: |
+          tag=$(cut -c 1-7 <<< $GITHUB_SHA)
+          echo "::set-output name=tag::$tag"
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GHCR_TOKEN  }}
+
+      # This step builds and pushed the container to the
+      # Github Container Registry tagged with "latest" and
+      # the short SHA of the commit.
+      - name: Build and push
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          cache-from: type=registry,ref=ghcr.io/python-discord/bot:latest
+          tags: |
+            ghcr.io/python-discord/bot:latest
+            ghcr.io/python-discord/bot:${{ steps.sha_tag.outputs.tag }}
+
+      - name: Authenticate with Kubernetes
+        uses: azure/k8s-set-context@v1
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBECONFIG }}
+
+      - name: Deploy to Kubernetes
+        uses: Azure/k8s-deploy@v1
+        with:
+          manifests: |
+              deployment.yaml
+          images: 'ghcr.io/python-discord/bot:${{ steps.sha_tag.outputs.tag }}'
+          kubectl-version: 'latest'
