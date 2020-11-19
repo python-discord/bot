@@ -15,6 +15,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Create SHA Container Tag
+        id: sha_tag
+        run: |
+          tag=$(cut -c 1-7 <<< $GITHUB_SHA)
+          echo "::set-output name=tag::$tag"
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
       - name: Authenticate with Kubernetes
         uses: azure/k8s-set-context@v1
         with:
