@@ -329,7 +329,7 @@ urls:
     paste_service:                      !JOIN [*SCHEMA, *PASTE, "/{key}"]
 
     # Snekbox
-    snekbox_eval_api: "http://snekbox:8060/eval"
+    snekbox_eval_api: "http://snekbox.default.svc.cluster.local/eval"
 
     # Discord API URLs
     discord_api:        &DISCORD_API "https://discordapp.com/api/v7/"
