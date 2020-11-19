@@ -1,8 +1,9 @@
 # Python Utility Bot
 
-[![Discord](https://img.shields.io/static/v1?label=Python%20Discord&logo=discord&message=%3E100k%20members&color=%237289DA&logoColor=white)](https://discord.gg/2B963hn)
+[![Discord][7]][8]
 [![Lint & Test][1]][2]
 [![Build][3]][4]
+[![Deploy][5]][6]
 [![Coverage Status](https://coveralls.io/repos/github/python-discord/bot/badge.svg)](https://coveralls.io/github/python-discord/bot)
 [![License](https://img.shields.io/github/license/python-discord/bot)](LICENSE)
 [![Website](https://img.shields.io/badge/website-visit-brightgreen)](https://pythondiscord.com)
@@ -16,3 +17,7 @@ Read the [Contributing Guide](https://pythondiscord.com/pages/contributing/bot/)
 [2]: https://github.com/python-discord/bot/actions?query=workflow%3A%22Lint+%26+Test%22+branch%3Amaster
 [3]: https://github.com/python-discord/bot/workflows/Build/badge.svg?branch=master
 [4]: https://github.com/python-discord/bot/actions?query=workflow%3ABuild+branch%3Amaster
+[5]: https://github.com/python-discord/bot/workflows/Deploy/badge.svg?branch=master
+[6]: https://github.com/python-discord/bot/actions?query=workflow%3ADeploy+branch%3Amaster
+[7]: https://img.shields.io/static/v1?label=Python%20Discord&logo=discord&message=%3E100k%20members&color=%237289DA&logoColor=white
+[8]: https://discord.gg/2B963hn
