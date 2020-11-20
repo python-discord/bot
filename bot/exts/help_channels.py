@@ -380,16 +380,13 @@ class HelpChannels(commands.Cog):
 
         try:
             self.available_category = await channel_utils.try_get_channel(
-                constants.Categories.help_available,
-                self.bot
+                constants.Categories.help_available
             )
             self.in_use_category = await channel_utils.try_get_channel(
-                constants.Categories.help_in_use,
-                self.bot
+                constants.Categories.help_in_use
             )
             self.dormant_category = await channel_utils.try_get_channel(
-                constants.Categories.help_dormant,
-                self.bot
+                constants.Categories.help_dormant
             )
         except discord.HTTPException:
             log.exception("Failed to get a category; cog will be removed")
@@ -500,7 +497,7 @@ class HelpChannels(commands.Cog):
         options should be avoided, as it may interfere with the category move we perform.
         """
         # Get a fresh copy of the category from the bot to avoid the cache mismatch issue we had.
-        category = await channel_utils.try_get_channel(category_id, self.bot)
+        category = await channel_utils.try_get_channel(category_id)
 
         payload = [{"id": c.id, "position": c.position} for c in category.channels]
 
