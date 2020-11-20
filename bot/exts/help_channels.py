@@ -39,7 +39,7 @@ This channel will be dedicated to answering your question only. Others will try 
 For more tips, check out our guide on **[asking good questions]({ASKING_GUIDE_URL})**.
 """
 
-AVAILABLE_TITLE = "✅ Available help channel"
+AVAILABLE_TITLE = "Available help channel"
 
 AVAILABLE_FOOTER = f"Closes after {constants.HelpChannels.idle_minutes} minutes of inactivity or when you send !close."
 
