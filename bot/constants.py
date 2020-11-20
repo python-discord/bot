@@ -248,6 +248,7 @@ class Colours(metaclass=YAMLGetter):
     soft_red: int
     soft_green: int
     soft_orange: int
+    bright_green: int
 
 
 class DuckPond(metaclass=YAMLGetter):
@@ -353,6 +354,8 @@ class Icons(metaclass=YAMLGetter):
     voice_state_blue: str
     voice_state_green: str
     voice_state_red: str
+
+    green_checkmark: str
 
 
 class CleanMessages(metaclass=YAMLGetter):
