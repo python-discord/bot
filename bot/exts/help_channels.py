@@ -29,7 +29,7 @@ This is a Python help channel. You can claim your own help channel in the Python
 
 AVAILABLE_MSG = f"""
 **Send your question here to claim the channel**
-This channel will be dedicated to answering your question only. We’ll try to answer and help you solve the issue.
+This channel will be dedicated to answering your question only. Others will try to answer and help you solve the issue.
 
 **Keep in mind:**
 • It's always ok to just ask your question. You don't need permission.
