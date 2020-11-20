@@ -10,6 +10,7 @@ import discord
 from discord.errors import HTTPException
 from discord.ext.commands import Context
 
+import bot
 from bot.constants import Emojis, NEGATIVE_REPLIES
 
 log = logging.getLogger(__name__)
@@ -18,7 +19,6 @@ log = logging.getLogger(__name__)
 async def wait_for_deletion(
     message: discord.Message,
     user_ids: Sequence[discord.abc.Snowflake],
-    client: discord.Client,
     deletion_emojis: Sequence[str] = (Emojis.trashcan,),
     timeout: float = 60 * 5,
     attach_emojis: bool = True,
@@ -49,7 +49,7 @@ async def wait_for_deletion(
         )
 
     with contextlib.suppress(asyncio.TimeoutError):
-        await client.wait_for('reaction_add', check=check, timeout=timeout)
+        await bot.instance.wait_for('reaction_add', check=check, timeout=timeout)
         await message.delete()
 
 
