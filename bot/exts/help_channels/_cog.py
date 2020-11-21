@@ -10,8 +10,7 @@ from discord.ext import commands
 
 from bot import constants
 from bot.bot import Bot
-from bot.exts.help_channels import _caches, _channel, _cooldown, _message
-from bot.exts.help_channels._name import create_name_queue
+from bot.exts.help_channels import _caches, _channel, _cooldown, _message, _name
 from bot.utils import channel as channel_utils
 from bot.utils.scheduling import Scheduler
 
@@ -237,7 +236,7 @@ class HelpChannels(commands.Cog):
         await _cooldown.check_cooldowns(self.scheduler)
 
         self.channel_queue = self.create_channel_queue()
-        self.name_queue = create_name_queue(
+        self.name_queue = _name.create_name_queue(
             self.available_category,
             self.in_use_category,
             self.dormant_category,
