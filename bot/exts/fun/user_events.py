@@ -201,8 +201,7 @@ class UserEvents(Cog):
         # Remove the `user event: ongoing` role from the organizer
         await organizer.remove_roles(self.user_event_ongoing_role)
 
-        status = NOT_SCHEDULED
-        await self.update_user_event_message(status, scheduled_event["user_event"])
+        await self.update_user_event_message(NOT_SCHEDULED, scheduled_event["user_event"])
 
         # Close user events voice channel
         await self.edit_events_vc(open_vc=False)
@@ -286,8 +285,8 @@ class UserEvents(Cog):
         await self.bot.api_client.delete(f"bot/scheduled-events/{scheduled_event['id']}")
 
         # Update user event status
-        status = NOT_SCHEDULED
-        await self.update_user_event_message(status, scheduled_event["user_event"])
+
+        await self.update_user_event_message(NOT_SCHEDULED, scheduled_event["user_event"])
 
         # Remove the `user event: ongoing` role from the organizer incase
         # the event is canceled using the cancel command when it is Live as
@@ -380,17 +379,11 @@ class UserEvents(Cog):
                 isoparse(scheduled_event[0]["start_time"]),
                 isoparse(scheduled_event[0]["end_time"])
             )
-            await self.update_user_event_message(
-                status=status,
-                user_event=scheduled_event[0]["user_event"]
-            )
+            await self.update_user_event_message(status, scheduled_event[0]["user_event"])
             return
 
         # If event is not scheduled
-        await self.update_user_event_message(
-            status=NOT_SCHEDULED,
-            user_event=user_event
-        )
+        await self.update_user_event_message(NOT_SCHEDULED, user_event)
 
         await ctx.send("Event description updated.")
 
@@ -554,8 +547,7 @@ class UserEvents(Cog):
             message += announcement_message
 
         # Update event status
-        status = LIVE
-        await self.update_user_event_message(status, scheduled_event[0]["user_event"])
+        await self.update_user_event_message(LIVE, scheduled_event[0]["user_event"])
 
         await self.user_event_announcement_channel.send(message)
 
