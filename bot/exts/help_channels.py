@@ -213,18 +213,23 @@ class HelpChannels(commands.Cog):
         and reset the send permissions cooldown for the user who started the session.
         """
         log.trace("close command invoked; checking if the channel is in-use.")
-        if ctx.channel.category == self.in_use_category:
-            if await self.dormant_check(ctx):
-                await self.remove_cooldown_role(ctx.author)
-
-                # Ignore missing task when cooldown has passed but the channel still isn't dormant.
-                if ctx.author.id in self.scheduler:
-                    self.scheduler.cancel(ctx.author.id)
-
-                await self.move_to_dormant(ctx.channel, "command")
-                self.scheduler.cancel(ctx.channel.id)
-        else:
+        if ctx.channel.category != self.in_use_category:
             log.debug(f"{ctx.author} invoked command 'dormant' outside an in-use help channel")
+            return
+
+        if not await self.dormant_check(ctx):
+            return
+
+        guild = self.bot.get_guild(constants.Guild.id)
+        claimant = guild.get_member(await self.help_channel_claimants.get(ctx.channel.id))
+        await self.move_to_dormant(ctx.channel, "command")
+        await self.remove_cooldown_role(claimant)
+
+        # Ignore missing task when cooldown has passed but the channel still isn't dormant.
+        if ctx.author.id in self.scheduler:
+            self.scheduler.cancel(ctx.author.id)
+
+        self.scheduler.cancel(ctx.channel.id)
 
     async def get_available_candidate(self) -> discord.TextChannel:
         """
