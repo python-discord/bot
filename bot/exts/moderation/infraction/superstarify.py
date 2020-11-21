@@ -5,7 +5,7 @@ import textwrap
 import typing as t
 from pathlib import Path
 
-from discord import Colour, Embed, Member
+from discord import Embed, Member
 from discord.ext.commands import Cog, Context, command, has_any_role
 from discord.utils import escape_markdown
 
@@ -143,57 +143,44 @@ class Superstarify(InfractionScheduler, Cog):
         forced_nick = self.get_nick(id_, member.id)
         expiry_str = format_infraction(infraction["expires_at"])
 
-        # Apply the infraction and schedule the expiration task.
-        log.debug(f"Changing nickname of {member} to {forced_nick}.")
-        self.mod_log.ignore(constants.Event.member_update, member.id)
-        await member.edit(nick=forced_nick, reason=reason)
-        self.schedule_expiration(infraction)
+        # Apply the infraction
+        async def action() -> None:
+            log.debug(f"Changing nickname of {member} to {forced_nick}.")
+            self.mod_log.ignore(constants.Event.member_update, member.id)
+            await member.edit(nick=forced_nick, reason=reason)
 
         old_nick = escape_markdown(old_nick)
         forced_nick = escape_markdown(forced_nick)
 
-        # Send a DM to the user to notify them of their new infraction.
-        await _utils.notify_infraction(
-            user=member,
-            infr_type="Superstarify",
-            expires_at=expiry_str,
-            icon_url=_utils.INFRACTION_ICONS["superstar"][0],
-            reason=f"Your nickname didn't comply with our [nickname policy]({NICKNAME_POLICY_URL})."
+        superstar_reason = f"Your nickname didn't comply with our [nickname policy]({NICKNAME_POLICY_URL})."
+        nickname_info = textwrap.dedent(f"""
+            Old nickname: `{old_nick}`
+            New nickname: `{forced_nick}`
+        """).strip()
+
+        successful = await self.apply_infraction(
+            ctx, infraction, member, action(),
+            user_reason=superstar_reason,
+            additional_info=nickname_info
         )
 
-        # Send an embed with the infraction information to the invoking context.
-        log.trace(f"Sending superstar #{id_} embed.")
-        embed = Embed(
-            title="Congratulations!",
-            colour=constants.Colours.soft_orange,
-            description=(
-                f"Your previous nickname, **{old_nick}**, "
-                f"was so bad that we have decided to change it. "
-                f"Your new nickname will be **{forced_nick}**.\n\n"
-                f"You will be unable to change your nickname until **{expiry_str}**.\n\n"
-                "If you're confused by this, please read our "
-                f"[official nickname policy]({NICKNAME_POLICY_URL})."
+        # Send an embed with the infraction information to the invoking context if
+        # superstar was successful.
+        if successful:
+            log.trace(f"Sending superstar #{id_} embed.")
+            embed = Embed(
+                title="Congratulations!",
+                colour=constants.Colours.soft_orange,
+                description=(
+                    f"Your previous nickname, **{old_nick}**, "
+                    f"was so bad that we have decided to change it. "
+                    f"Your new nickname will be **{forced_nick}**.\n\n"
+                    f"You will be unable to change your nickname until **{expiry_str}**.\n\n"
+                    "If you're confused by this, please read our "
+                    f"[official nickname policy]({NICKNAME_POLICY_URL})."
+                )
             )
-        )
-        await ctx.send(embed=embed)
-
-        # Log to the mod log channel.
-        log.trace(f"Sending apply mod log for superstar #{id_}.")
-        await self.mod_log.send_log_message(
-            icon_url=_utils.INFRACTION_ICONS["superstar"][0],
-            colour=Colour.gold(),
-            title="Member achieved superstardom",
-            thumbnail=member.avatar_url_as(static_format="png"),
-            text=textwrap.dedent(f"""
-                Member: {member.mention}
-                Actor: {ctx.message.author.mention}
-                Expires: {expiry_str}
-                Old nickname: `{old_nick}`
-                New nickname: `{forced_nick}`
-                Reason: {reason}
-            """),
-            footer=f"ID {id_}"
-        )
+            await ctx.send(embed=embed)
 
     @command(name="unsuperstarify", aliases=("release_nick", "unstar"))
     async def unsuperstarify(self, ctx: Context, member: Member) -> None:
