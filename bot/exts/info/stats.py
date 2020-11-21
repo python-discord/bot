@@ -1,13 +1,12 @@
 import string
-from datetime import datetime
 
-from discord import Member, Message, Status
+from discord import Member, Message
 from discord.ext.commands import Cog, Context
 from discord.ext.tasks import loop
 
 from bot.bot import Bot
-from bot.constants import Categories, Channels, Guild, Stats as StatConf
-
+from bot.constants import Categories, Channels, Guild
+from bot.utils.channel import is_in_category
 
 CHANNEL_NAME_OVERRIDES = {
     Channels.off_topic_0: "off_topic_0",
@@ -36,8 +35,7 @@ class Stats(Cog):
         if message.guild.id != Guild.id:
             return
 
-        cat = getattr(message.channel, "category", None)
-        if cat is not None and cat.id == Categories.modmail:
+        if is_in_category(message.channel, Categories.modmail):
             if message.channel.id != Channels.incidents:
                 # Do not report modmail channels to stats, there are too many
                 # of them for interesting statistics to be drawn out of this.
@@ -78,38 +76,6 @@ class Stats(Cog):
             return
 
         self.bot.stats.gauge("guild.total_members", len(member.guild.members))
-
-    @Cog.listener()
-    async def on_member_update(self, _before: Member, after: Member) -> None:
-        """Update presence estimates on member update."""
-        if after.guild.id != Guild.id:
-            return
-
-        if self.last_presence_update:
-            if (datetime.now() - self.last_presence_update).seconds < StatConf.presence_update_timeout:
-                return
-
-        self.last_presence_update = datetime.now()
-
-        online = 0
-        idle = 0
-        dnd = 0
-        offline = 0
-
-        for member in after.guild.members:
-            if member.status is Status.online:
-                online += 1
-            elif member.status is Status.dnd:
-                dnd += 1
-            elif member.status is Status.idle:
-                idle += 1
-            elif member.status is Status.offline:
-                offline += 1
-
-        self.bot.stats.gauge("guild.status.online", online)
-        self.bot.stats.gauge("guild.status.idle", idle)
-        self.bot.stats.gauge("guild.status.do_not_disturb", dnd)
-        self.bot.stats.gauge("guild.status.offline", offline)
 
     @loop(hours=1)
     async def update_guild_boost(self) -> None:

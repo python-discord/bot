@@ -135,7 +135,8 @@ class Superstarify(InfractionScheduler, Cog):
             return
 
         # Post the infraction to the API
-        reason = reason or f"old nick: {member.display_name}"
+        old_nick = member.display_name
+        reason = reason or f"old nick: {old_nick}"
         infraction = await _utils.post_infraction(ctx, member, "superstar", reason, duration, active=True)
         id_ = infraction["id"]
 
@@ -148,7 +149,7 @@ class Superstarify(InfractionScheduler, Cog):
             self.mod_log.ignore(constants.Event.member_update, member.id)
             await member.edit(nick=forced_nick, reason=reason)
 
-        old_nick = escape_markdown(member.display_name)
+        old_nick = escape_markdown(old_nick)
         forced_nick = escape_markdown(forced_nick)
 
         superstar_reason = f"Your nickname didn't comply with our [nickname policy]({NICKNAME_POLICY_URL})."

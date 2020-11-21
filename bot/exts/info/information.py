@@ -6,15 +6,16 @@ from collections import Counter, defaultdict
 from string import Template
 from typing import Any, Mapping, Optional, Tuple, Union
 
-from discord import ChannelType, Colour, CustomActivity, Embed, Guild, Member, Message, Role, Status, utils
+from discord import ChannelType, Colour, Embed, Guild, Message, Role, Status, utils
 from discord.abc import GuildChannel
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
-from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
+from bot.converters import FetchedMember
 from bot.decorators import in_whitelist
 from bot.pagination import LinePaginator
+from bot.utils.channel import is_mod_channel
 from bot.utils.checks import cooldown_with_role_bypass, has_no_roles_check, in_whitelist_check
 from bot.utils.time import time_since
 
@@ -153,7 +154,9 @@ class Information(Cog):
         channel_counts = self.get_channel_type_counts(ctx.guild)
 
         # How many of each user status?
-        statuses = Counter(member.status for member in ctx.guild.members)
+        py_invite = await self.bot.fetch_invite(constants.Guild.invite)
+        online_presences = py_invite.approximate_presence_count
+        offline_presences = py_invite.approximate_member_count - online_presences
         embed = Embed(colour=Colour.blurple())
 
         # How many staff members and staff channels do we have?
@@ -161,9 +164,9 @@ class Information(Cog):
         staff_channel_count = self.get_staff_channel_count(ctx.guild)
 
         # Because channel_counts lacks leading whitespace, it breaks the dedent if it's inserted directly by the
-        # f-string. While this is correctly formated by Discord, it makes unit testing difficult. To keep the formatting
-        # without joining a tuple of strings we can use a Template string to insert the already-formatted channel_counts
-        # after the dedent is made.
+        # f-string. While this is correctly formatted by Discord, it makes unit testing difficult. To keep the
+        # formatting without joining a tuple of strings we can use a Template string to insert the already-formatted
+        # channel_counts after the dedent is made.
         embed.description = Template(
             textwrap.dedent(f"""
                 **Server information**
@@ -181,10 +184,8 @@ class Information(Cog):
                 Roles: {roles}
 
                 **Member statuses**
-                {constants.Emojis.status_online} {statuses[Status.online]:,}
-                {constants.Emojis.status_idle} {statuses[Status.idle]:,}
-                {constants.Emojis.status_dnd} {statuses[Status.dnd]:,}
-                {constants.Emojis.status_offline} {statuses[Status.offline]:,}
+                {constants.Emojis.status_online} {online_presences:,}
+                {constants.Emojis.status_offline} {offline_presences:,}
             """)
         ).substitute({"channel_counts": channel_counts})
         embed.set_thumbnail(url=ctx.guild.icon_url)
@@ -192,7 +193,7 @@ class Information(Cog):
         await ctx.send(embed=embed)
 
     @command(name="user", aliases=["user_info", "member", "member_info"])
-    async def user_info(self, ctx: Context, user: Member = None) -> None:
+    async def user_info(self, ctx: Context, user: FetchedMember = None) -> None:
         """Returns info about a user."""
         if user is None:
             user = ctx.author
@@ -207,31 +208,14 @@ class Information(Cog):
             embed = await self.create_user_embed(ctx, user)
             await ctx.send(embed=embed)
 
-    async def create_user_embed(self, ctx: Context, user: Member) -> Embed:
+    async def create_user_embed(self, ctx: Context, user: FetchedMember) -> Embed:
         """Creates an embed containing information on the `user`."""
+        on_server = bool(ctx.guild.get_member(user.id))
+
         created = time_since(user.created_at, max_units=3)
 
-        # Custom status
-        custom_status = ''
-        for activity in user.activities:
-            if isinstance(activity, CustomActivity):
-                state = ""
-
-                if activity.name:
-                    state = escape_markdown(activity.name)
-
-                emoji = ""
-                if activity.emoji:
-                    # If an emoji is unicode use the emoji, else write the emote like :abc:
-                    if not activity.emoji.id:
-                        emoji += activity.emoji.name + " "
-                    else:
-                        emoji += f"`:{activity.emoji.name}:` "
-
-                custom_status = f'Status: {emoji}{state}\n'
-
         name = str(user)
-        if user.nick:
+        if on_server and user.nick:
             name = f"{user.nick} ({name})"
 
         badges = []
@@ -240,12 +224,16 @@ class Information(Cog):
             if is_set and (emoji := getattr(constants.Emojis, f"badge_{badge}", None)):
                 badges.append(emoji)
 
-        joined = time_since(user.joined_at, max_units=3)
-        roles = ", ".join(role.mention for role in user.roles[1:])
-
-        desktop_status = STATUS_EMOTES.get(user.desktop_status, constants.Emojis.status_online)
-        web_status = STATUS_EMOTES.get(user.web_status, constants.Emojis.status_online)
-        mobile_status = STATUS_EMOTES.get(user.mobile_status, constants.Emojis.status_online)
+        if on_server:
+            joined = time_since(user.joined_at, max_units=3)
+            roles = ", ".join(role.mention for role in user.roles[1:])
+            membership = textwrap.dedent(f"""
+                             Joined: {joined}
+                             Roles: {roles or None}
+                         """).strip()
+        else:
+            roles = None
+            membership = "The user is not a member of the server"
 
         fields = [
             (
@@ -254,34 +242,16 @@ class Information(Cog):
                     Created: {created}
                     Profile: {user.mention}
                     ID: {user.id}
-                    {custom_status}
                 """).strip()
             ),
             (
                 "Member information",
-                textwrap.dedent(f"""
-                    Joined: {joined}
-                    Roles: {roles or None}
-                """).strip()
+                membership
             ),
-            (
-                "Status",
-                textwrap.dedent(f"""
-                    {desktop_status} Desktop
-                    {web_status} Web
-                    {mobile_status} Mobile
-                """).strip()
-            )
         ]
 
-        # Use getattr to future-proof for commands invoked via DMs.
-        show_verbose = (
-            ctx.channel.id in constants.MODERATION_CHANNELS
-            or getattr(ctx.channel, "category_id", None) == constants.Categories.modmail
-        )
-
         # Show more verbose output in moderation channels for infractions and nominations
-        if show_verbose:
+        if is_mod_channel(ctx.channel):
             fields.append(await self.expanded_user_infraction_counts(user))
             fields.append(await self.user_nomination_counts(user))
         else:
@@ -301,13 +271,13 @@ class Information(Cog):
 
         return embed
 
-    async def basic_user_infraction_counts(self, member: Member) -> Tuple[str, str]:
+    async def basic_user_infraction_counts(self, user: FetchedMember) -> Tuple[str, str]:
         """Gets the total and active infraction counts for the given `member`."""
         infractions = await self.bot.api_client.get(
             'bot/infractions',
             params={
                 'hidden': 'False',
-                'user__id': str(member.id)
+                'user__id': str(user.id)
             }
         )
 
@@ -318,7 +288,7 @@ class Information(Cog):
 
         return "Infractions", infraction_output
 
-    async def expanded_user_infraction_counts(self, member: Member) -> Tuple[str, str]:
+    async def expanded_user_infraction_counts(self, user: FetchedMember) -> Tuple[str, str]:
         """
         Gets expanded infraction counts for the given `member`.
 
@@ -328,7 +298,7 @@ class Information(Cog):
         infractions = await self.bot.api_client.get(
             'bot/infractions',
             params={
-                'user__id': str(member.id)
+                'user__id': str(user.id)
             }
         )
 
@@ -359,12 +329,12 @@ class Information(Cog):
 
         return "Infractions", "\n".join(infraction_output)
 
-    async def user_nomination_counts(self, member: Member) -> Tuple[str, str]:
+    async def user_nomination_counts(self, user: FetchedMember) -> Tuple[str, str]:
         """Gets the active and historical nomination counts for the given `member`."""
         nominations = await self.bot.api_client.get(
             'bot/nominations',
             params={
-                'user__id': str(member.id)
+                'user__id': str(user.id)
             }
         )
 

@@ -90,7 +90,11 @@ class DMRelay(Cog):
         # Handle any attachments
         if message.attachments:
             try:
-                await send_attachments(message, self.webhook)
+                await send_attachments(
+                    message,
+                    self.webhook,
+                    username=f"{message.author.display_name} ({message.author.id})"
+                )
             except (discord.errors.Forbidden, discord.errors.NotFound):
                 e = discord.Embed(
                     description=":x: **This message contained an attachment, but it could not be retrieved**",
