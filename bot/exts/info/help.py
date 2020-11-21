@@ -181,8 +181,8 @@ class CustomHelpCommand(HelpCommand):
                 command_details += "***You cannot run this command.***\n\n"
         except DisabledCommand:
             command_details += "***This command is disabled.***\n\n"
-        except CommandError as e:
-            log.warning(f"An exception raised when trying to check {command.name} command running permission: {e}")
+        except CommandError:
+            command_details += "***You cannot run this command.***\n\n"
 
         command_details += f"*{command.help or 'No details provided.'}*\n"
         embed.description = command_details
