@@ -75,16 +75,6 @@ class UserEvents(Cog):
                 await self.schedule_event_start_reminder(event)
 
     @staticmethod
-    def not_scheduled() -> str:
-        """To indicate user event is not scheduled."""
-        return "Not scheduled"
-
-    @staticmethod
-    def live() -> str:
-        """To indicate user event is live."""
-        return "Live"
-
-    @staticmethod
     def scheduled(start_datetime: datetime, end_datetime: datetime) -> str:
         """
         To indicate user event is scheduled.
