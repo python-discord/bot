@@ -10,6 +10,7 @@ from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Channels, Colours
 from bot.converters import TagNameConverter
+from bot.errors import LockedResourceError
 from bot.utils.checks import InWhitelistCheckFailure
 
 log = logging.getLogger(__name__)
@@ -75,6 +76,8 @@ class ErrorHandler(Cog):
         elif isinstance(e, errors.CommandInvokeError):
             if isinstance(e.original, ResponseCodeError):
                 await self.handle_api_error(ctx, e.original)
+            elif isinstance(e.original, LockedResourceError):
+                await ctx.send(f"{e.original} Please wait for it to finish and try again later.")
             else:
                 await self.handle_unexpected_error(ctx, e.original)
             return  # Exit early to avoid logging.

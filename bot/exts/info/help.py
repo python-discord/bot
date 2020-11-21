@@ -186,7 +186,7 @@ class CustomHelpCommand(HelpCommand):
         """Send help for a single command."""
         embed = await self.command_formatting(command)
         message = await self.context.send(embed=embed)
-        await wait_for_deletion(message, (self.context.author.id,), self.context.bot)
+        await wait_for_deletion(message, (self.context.author.id,))
 
     @staticmethod
     def get_commands_brief_details(commands_: List[Command], return_as_list: bool = False) -> Union[List[str], str]:
@@ -225,11 +225,11 @@ class CustomHelpCommand(HelpCommand):
             embed.description += f"\n**Subcommands:**\n{command_details}"
 
         message = await self.context.send(embed=embed)
-        await wait_for_deletion(message, (self.context.author.id,), self.context.bot)
+        await wait_for_deletion(message, (self.context.author.id,))
 
     async def send_cog_help(self, cog: Cog) -> None:
         """Send help for a cog."""
-        # sort commands by name, and remove any the user cant run or are hidden.
+        # sort commands by name, and remove any the user can't run or are hidden.
         commands_ = await self.filter_commands(cog.get_commands(), sort=True)
 
         embed = Embed()
@@ -241,7 +241,7 @@ class CustomHelpCommand(HelpCommand):
             embed.description += f"\n\n**Commands:**\n{command_details}"
 
         message = await self.context.send(embed=embed)
-        await wait_for_deletion(message, (self.context.author.id,), self.context.bot)
+        await wait_for_deletion(message, (self.context.author.id,))
 
     @staticmethod
     def _category_key(command: Command) -> str:

@@ -160,7 +160,7 @@ class Tags(Cog):
     @group(name='tags', aliases=('tag', 't'), invoke_without_command=True)
     async def tags_group(self, ctx: Context, *, tag_name: TagNameConverter = None) -> None:
         """Show all known tags, a single tag, or run a subcommand."""
-        await ctx.invoke(self.get_command, tag_name=tag_name)
+        await self.get_command(ctx, tag_name=tag_name)
 
     @tags_group.group(name='search', invoke_without_command=True)
     async def search_tag_content(self, ctx: Context, *, keywords: str) -> None:
@@ -236,7 +236,6 @@ class Tags(Cog):
                 await wait_for_deletion(
                     await ctx.send(embed=Embed.from_dict(tag['embed'])),
                     [ctx.author.id],
-                    self.bot
                 )
             elif founds and len(tag_name) >= 3:
                 await wait_for_deletion(
@@ -247,7 +246,6 @@ class Tags(Cog):
                         )
                     ),
                     [ctx.author.id],
-                    self.bot
                 )
 
         else:

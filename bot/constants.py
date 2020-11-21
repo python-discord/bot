@@ -248,6 +248,7 @@ class Colours(metaclass=YAMLGetter):
     soft_red: int
     soft_green: int
     soft_orange: int
+    bright_green: int
 
 
 class DuckPond(metaclass=YAMLGetter):
@@ -354,12 +355,15 @@ class Icons(metaclass=YAMLGetter):
     voice_state_green: str
     voice_state_red: str
 
+    green_checkmark: str
+
 
 class CleanMessages(metaclass=YAMLGetter):
     section = "bot"
     subsection = "clean"
 
     message_limit: int
+
 
 class Stats(metaclass=YAMLGetter):
     section = "bot"
@@ -377,6 +381,7 @@ class Categories(metaclass=YAMLGetter):
     help_in_use: int
     help_dormant: int
     modmail: int
+    voice: int
 
 
 class Channels(metaclass=YAMLGetter):
@@ -391,6 +396,8 @@ class Channels(metaclass=YAMLGetter):
     big_brother_logs: int
     bot_commands: int
     change_log: int
+    code_help_voice: int
+    code_help_voice_2: int
     cooldown: int
     defcon: int
     dev_contrib: int
@@ -423,6 +430,8 @@ class Channels(metaclass=YAMLGetter):
     user_event_announcements: int
     user_log: int
     verification: int
+    voice_chat: int
+    voice_gate: int
     voice_log: int
 
 
@@ -455,9 +464,11 @@ class Roles(metaclass=YAMLGetter):
     owners: int
     partners: int
     python_community: int
+    sprinters: int
     team_leaders: int
     unverified: int
     verified: int  # This is the Developers role on PyDis, here named verified for readability reasons.
+    voice_verified: int
 
 
 class Guild(metaclass=YAMLGetter):
@@ -466,6 +477,7 @@ class Guild(metaclass=YAMLGetter):
     id: int
     invite: str  # Discord invite, gets embedded in chat
     moderation_channels: List[int]
+    moderation_categories: List[int]
     moderation_roles: List[int]
     modlog_blacklist: List[int]
     reminder_whitelist: List[int]
@@ -527,6 +539,15 @@ class BigBrother(metaclass=YAMLGetter):
     header_message_limit: int
 
 
+class CodeBlock(metaclass=YAMLGetter):
+    section = 'code_block'
+
+    channel_whitelist: List[int]
+    cooldown_channels: List[int]
+    cooldown_seconds: int
+    minimum_lines: int
+
+
 class Free(metaclass=YAMLGetter):
     section = 'free'
 
@@ -559,13 +580,6 @@ class RedirectOutput(metaclass=YAMLGetter):
     delete_delay: int
 
 
-class Sync(metaclass=YAMLGetter):
-    section = 'sync'
-
-    confirm_timeout: int
-    max_diff: int
-
-
 class PythonNews(metaclass=YAMLGetter):
     section = 'python_news'
 
@@ -582,6 +596,16 @@ class Verification(metaclass=YAMLGetter):
     reminder_frequency: int
     bot_message_delete_delay: int
     kick_confirmation_threshold: float
+
+
+class VoiceGate(metaclass=YAMLGetter):
+    section = "voice_gate"
+
+    minimum_days_verified: int
+    minimum_messages: int
+    bot_message_delete_delay: int
+    minimum_activity_blocks: int
+    voice_ping_delete_delay: int
 
 
 class Event(Enum):
@@ -611,7 +635,7 @@ class Event(Enum):
 
 
 # Debug mode
-DEBUG_MODE = True if 'local' in os.environ.get("SITE_URL", "local") else False
+DEBUG_MODE = 'local' in os.environ.get("SITE_URL", "local")
 
 # Paths
 BOT_DIR = os.path.dirname(__file__)
@@ -623,6 +647,9 @@ STAFF_ROLES = Guild.staff_roles
 
 # Channel combinations
 MODERATION_CHANNELS = Guild.moderation_channels
+
+# Category combinations
+MODERATION_CATEGORIES = Guild.moderation_categories
 
 # Bot replies
 NEGATIVE_REPLIES = [
