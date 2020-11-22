@@ -6,7 +6,7 @@ from operator import attrgetter
 from typing import Optional, Union
 
 from async_rediscache import RedisCache
-from discord import TextChannel, VoiceChannel
+from discord import HTTPException, Member, PermissionOverwrite, TextChannel, VoiceChannel
 from discord.ext import commands, tasks
 from discord.ext.commands import Context
 
@@ -93,9 +93,13 @@ class Silence(commands.Cog):
         await self.bot.wait_until_guild_available()
 
         guild = self.bot.get_guild(Guild.id)
+
         self._verified_msg_role = guild.get_role(Roles.verified)
         self._verified_voice_role = guild.get_role(Roles.voice_verified)
+        self._helper_role = guild.get_role(Roles.helpers)
+
         self._mod_alerts_channel = self.bot.get_channel(Channels.mod_alerts)
+
         self.notifier = SilenceNotifier(self.bot.get_channel(Channels.mod_log))
         await self._reschedule()
 
@@ -226,12 +230,70 @@ class Silence(commands.Cog):
         else:
             overwrite.update(speak=False)
             await channel.set_permissions(self._verified_voice_role, overwrite=overwrite)
+            try:
+                await self._force_voice_silence(channel)
+            except HTTPException:
+                # TODO: Relay partial failure to invocation channel
+                pass
 
         await self.previous_overwrites.set(channel.id, json.dumps(prev_overwrites))
 
         return True
 
-    async def _schedule_unsilence(self, ctx: Context, channel: typing.Union[TextChannel, VoiceChannel],
+    async def _force_voice_silence(self, channel: VoiceChannel, member: Optional[Member] = None) -> None:
+        """
+        Move all non-staff members from `channel` to a temporary channel and back to force toggle role mute.
+
+        If `member` is passed, the mute only occurs to that member.
+        Permission modification has to happen before this function.
+
+        Raises `discord.HTTPException` if the task fails.
+        """
+        # Obtain temporary channel
+        afk_channel = channel.guild.afk_channel
+        if afk_channel is None:
+            try:
+                overwrites = {
+                    channel.guild.default_role: PermissionOverwrite(speak=False, connect=False, view_channel=False)
+                }
+                afk_channel = await channel.guild.create_voice_channel("mute-temp", overwrites=overwrites)
+                log.info(f"Failed to get afk-channel, created temporary channel #{afk_channel} ({afk_channel.id})")
+
+                # Schedule channel deletion in case function errors out
+                self.scheduler.schedule_later(30, afk_channel.id,
+                                              afk_channel.delete(reason="Deleting temp mute channel."))
+
+            except HTTPException as e:
+                log.warning("Failed to create temporary mute channel.", exc_info=e)
+                raise e
+
+        # Handle member picking logic
+        if member is not None:
+            members = [member]
+        else:
+            members = channel.members
+
+        # Move all members to temporary channel and back
+        for member in members:
+            # Skip staff
+            if self._helper_role in member.roles:
+                continue
+
+            try:
+                await member.move_to(afk_channel, reason="Muting member.")
+                log.debug(f"Moved {member.name} to afk channel.")
+
+                await member.move_to(channel, reason="Muting member.")
+                log.debug(f"Moved {member.name} to original voice channel.")
+
+            except HTTPException as e:
+                log.warning(f"Failed to move {member.name} while muting, falling back to kick.", exc_info=e)
+                try:
+                    await member.move_to(None, reason="Forcing member mute.")
+                except HTTPException:
+                    pass
+
+    async def _schedule_unsilence(self, ctx: Context, channel: Union[TextChannel, VoiceChannel],
                                   duration: Optional[int]) -> None:
         """Schedule `ctx.channel` to be unsilenced if `duration` is not None."""
         if duration is None:
