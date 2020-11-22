@@ -141,7 +141,7 @@ class Silence(commands.Cog):
     @commands.command(aliases=("hush",))
     @lock_arg(LOCK_NAMESPACE, "ctx", attrgetter("channel"), raise_error=True)
     async def silence(self, ctx: Context, duration: HushDurationConverter = 10,
-                      channel: AnyChannelConverter = None) -> None:
+                      *, channel: AnyChannelConverter = None) -> None:
         """
         Silence the current channel for `duration` minutes or `forever`.
 
@@ -171,7 +171,7 @@ class Silence(commands.Cog):
             await self.send_message(MSG_SILENCE_SUCCESS, ctx.channel, channel, True, duration)
 
     @commands.command(aliases=("unhush",))
-    async def unsilence(self, ctx: Context, channel: AnyChannelConverter = None) -> None:
+    async def unsilence(self, ctx: Context, *, channel: AnyChannelConverter = None) -> None:
         """
         Unsilence the given channel if given, else the current one.
 

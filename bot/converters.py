@@ -536,7 +536,7 @@ class FetchedUser(UserConverter):
             raise BadArgument(f"User `{arg}` does not exist")
 
 
-class AnyChannelConverter(UserConverter):
+class AnyChannelConverter(Converter):
     """
     Converts to a `discord.Channel` or, raises an error.
 
@@ -557,15 +557,15 @@ class AnyChannelConverter(UserConverter):
 
     async def convert(self, ctx: Context, arg: str) -> t.Union[discord.TextChannel, discord.VoiceChannel]:
         """Convert the `arg` to a `TextChannel` or `VoiceChannel`."""
-        stripped = arg.strip().lstrip("<").lstrip("#").rstrip(">")
+        stripped = arg.strip().lstrip("<").lstrip("#").rstrip(">").lower()
 
         # Filter channels by name and ID
-        channels = [channel for channel in ctx.guild.channels if stripped in (channel.name, str(channel.id))]
+        channels = [channel for channel in ctx.guild.channels if stripped in (channel.name.lower(), str(channel.id))]
 
         if len(channels) == 0:
             # Couldn't find a matching channel
             log.debug(f"Could not convert `{arg}` to channel, no matches found.")
-            raise BadArgument("The provided argument returned no matches.")
+            raise BadArgument(f"{arg} returned no matches.")
 
         elif len(channels) > 1:
             # Couldn't discern the desired channel
