@@ -1,10 +1,9 @@
 import json
 import logging
-import typing
 from contextlib import suppress
 from datetime import datetime, timedelta, timezone
 from operator import attrgetter
-from typing import Optional
+from typing import Optional, Union
 
 from async_rediscache import RedisCache
 from discord import TextChannel, VoiceChannel
@@ -13,7 +12,7 @@ from discord.ext.commands import Context
 
 from bot.bot import Bot
 from bot.constants import Channels, Emojis, Guild, MODERATION_ROLES, Roles
-from bot.converters import HushDurationConverter, AnyChannelConverter
+from bot.converters import AnyChannelConverter, HushDurationConverter
 from bot.utils.lock import LockedResourceError, lock_arg
 from bot.utils.scheduling import Scheduler
 
@@ -42,7 +41,7 @@ class SilenceNotifier(tasks.Loop):
         self._silenced_channels = {}
         self._alert_channel = alert_channel
 
-    def add_channel(self, channel: typing.Union[TextChannel, VoiceChannel]) -> None:
+    def add_channel(self, channel: Union[TextChannel, VoiceChannel]) -> None:
         """Add channel to `_silenced_channels` and start loop if not launched."""
         if not self._silenced_channels:
             self.start()
@@ -101,9 +100,9 @@ class Silence(commands.Cog):
         await self._reschedule()
 
     async def send_message(self, message: str, source_channel: TextChannel,
-                           target_channel: typing.Union[TextChannel, VoiceChannel],
+                           target_channel: Union[TextChannel, VoiceChannel],
                            alert_target: bool = False, duration: HushDurationConverter = 0) -> None:
-        """Helper function to send message confirmation to `source_channel`, and notification to `target_channel`"""
+        """Helper function to send message confirmation to `source_channel`, and notification to `target_channel`."""
         if isinstance(source_channel, TextChannel):
             await source_channel.send(
                 message.replace("current", target_channel.mention if source_channel != target_channel else "current")
@@ -184,8 +183,8 @@ class Silence(commands.Cog):
         await self._unsilence_wrapper(channel, ctx)
 
     @lock_arg(LOCK_NAMESPACE, "channel", raise_error=True)
-    async def _unsilence_wrapper(self, channel: typing.Union[TextChannel, VoiceChannel],
-                                 ctx: typing.Optional[Context] = None) -> None:
+    async def _unsilence_wrapper(self, channel: Union[TextChannel, VoiceChannel],
+                                 ctx: Optional[Context] = None) -> None:
         """Unsilence `channel` and send a success/failure message."""
         msg_channel = channel
         if ctx is not None:
@@ -209,7 +208,7 @@ class Silence(commands.Cog):
             # Send success message to muted channel or voice chat channel, and invocation channel
             await self.send_message(MSG_UNSILENCE_SUCCESS, msg_channel, channel, True)
 
-    async def _set_silence_overwrites(self, channel: typing.Union[TextChannel, VoiceChannel]) -> bool:
+    async def _set_silence_overwrites(self, channel: Union[TextChannel, VoiceChannel]) -> bool:
         """Set silence permission overwrites for `channel` and return True if successful."""
         if isinstance(channel, TextChannel):
             overwrite = channel.overwrites_for(self._verified_msg_role)
@@ -242,7 +241,7 @@ class Silence(commands.Cog):
             unsilence_time = datetime.now(tz=timezone.utc) + timedelta(minutes=duration)
             await self.unsilence_timestamps.set(channel.id, unsilence_time.timestamp())
 
-    async def _unsilence(self, channel: typing.Union[TextChannel, VoiceChannel]) -> bool:
+    async def _unsilence(self, channel: Union[TextChannel, VoiceChannel]) -> bool:
         """
         Unsilence `channel`.
 
