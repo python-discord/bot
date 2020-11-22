@@ -277,9 +277,9 @@ class Clean(Cog):
         """Delete all messages that match a certain regex, stop cleaning after traversing `amount` messages."""
         await self._clean_messages(amount, ctx, regex=regex, channels=channels)
 
-    @clean_group.command(name="message", aliases=["messages"])
+    @clean_group.command(name="until")
     @has_any_role(*MODERATION_ROLES)
-    async def clean_message(self, ctx: Context, message: Message) -> None:
+    async def clean_until(self, ctx: Context, message: Message) -> None:
         """Delete all messages until certain message, stop cleaning after hitting the `message`."""
         await self._clean_messages(
             CleanMessages.message_limit,
