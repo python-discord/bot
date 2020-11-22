@@ -23,10 +23,11 @@ LOCK_NAMESPACE = "silence"
 MSG_SILENCE_FAIL = f"{Emojis.cross_mark} current channel is already silenced."
 MSG_SILENCE_PERMANENT = f"{Emojis.check_mark} silenced current channel indefinitely."
 MSG_SILENCE_SUCCESS = f"{Emojis.check_mark} silenced current channel for {{duration}} minute(s)."
+MSG_SILENCE_PERM_FAIL = f"{Emojis.cross_mark} failed to force-mute members, permissions updated."
 
 MSG_UNSILENCE_FAIL = f"{Emojis.cross_mark} current channel was not silenced."
 MSG_UNSILENCE_MANUAL = (
-    f"{Emojis.cross_mark} current channel was not unsilenced because the current overwrites were "
+    f"{Emojis.cross_mark} current channel was not unsilenced because the channel overwrites were "
     f"set manually or the cache was prematurely cleared. "
     f"Please edit the overwrites manually to unsilence."
 )
@@ -116,18 +117,18 @@ class Silence(commands.Cog):
         voice_chat = None
         if isinstance(target_channel, VoiceChannel):
             # Send to relevant channel
-            # TODO: Figure out a non-hardcoded way of doing this
-            if "offtopic" in target_channel.name.lower():
-                voice_chat = self.bot.get_channel(Channels.voice_chat)
-            elif "code-help" in target_channel.name.lower():
-                if "1" in target_channel.name.lower():
-                    voice_chat = self.bot.get_channel(Channels.code_help_voice)
-                else:
-                    voice_chat = self.bot.get_channel(Channels.code_help_voice_2)
-            elif "admin" in target_channel.name.lower():
-                voice_chat = self.bot.get_channel(Channels.admins_voice)
-            elif "staff" in target_channel.name.lower():
-                voice_chat = self.bot.get_channel(Channels.staff_voice)
+            # TODO: Figure out a dynamic way of doing this
+            channels = {
+                "offtopic": Channels.voice_chat,
+                "code/help 1": Channels.code_help_voice,
+                "code/help 2": Channels.code_help_voice,
+                "admin": Channels.admins_voice,
+                "staff": Channels.staff_voice
+            }
+            for name in channels.keys():
+                if name in target_channel.name.lower():
+                    voice_chat = self.bot.get_channel(channels[name])
+                    break
 
         if alert_target and source_channel != target_channel:
             if isinstance(target_channel, VoiceChannel):
@@ -157,9 +158,15 @@ class Silence(commands.Cog):
         channel_info = f"#{channel} ({channel.id})"
         log.debug(f"{ctx.author} is silencing channel {channel_info}.")
 
-        if not await self._set_silence_overwrites(channel):
-            log.info(f"Tried to silence channel {channel_info} but the channel was already silenced.")
-            await self.send_message(MSG_SILENCE_FAIL, ctx.channel, channel)
+        try:
+            if not await self._set_silence_overwrites(channel):
+                log.info(f"Tried to silence channel {channel_info} but the channel was already silenced.")
+                await self.send_message(MSG_SILENCE_FAIL, ctx.channel, channel)
+                return
+
+        except HTTPException:
+            log.info(f"Could not force mute {channel_info} members. Permissions updated.")
+            await self.send_message(MSG_SILENCE_PERM_FAIL, ctx.channel, channel)
             return
 
         await self._schedule_unsilence(ctx, channel, duration)
@@ -230,11 +237,7 @@ class Silence(commands.Cog):
         else:
             overwrite.update(speak=False)
             await channel.set_permissions(self._verified_voice_role, overwrite=overwrite)
-            try:
-                await self._force_voice_silence(channel)
-            except HTTPException:
-                # TODO: Relay partial failure to invocation channel
-                pass
+            await self._force_voice_silence(channel)
 
         await self.previous_overwrites.set(channel.id, json.dumps(prev_overwrites))
 
