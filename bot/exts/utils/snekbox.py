@@ -70,7 +70,7 @@ class Snekbox(Cog):
         if len(output) > MAX_PASTE_LEN:
             log.info("Full output is too long to upload")
             return "too long to upload"
-        return await send_to_paste_service(self.bot.http_session, output, extension="txt")
+        return await send_to_paste_service(output, extension="txt")
 
     @staticmethod
     def prepare_input(code: str) -> str:
@@ -219,7 +219,7 @@ class Snekbox(Cog):
                 response = await ctx.send("Attempt to circumvent filter detected. Moderator team has been alerted.")
             else:
                 response = await ctx.send(msg)
-            self.bot.loop.create_task(wait_for_deletion(response, (ctx.author.id,), ctx.bot))
+            self.bot.loop.create_task(wait_for_deletion(response, (ctx.author.id,)))
 
             log.info(f"{ctx.author}'s job had a return code of {results['returncode']}")
         return response

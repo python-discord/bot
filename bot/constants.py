@@ -248,6 +248,7 @@ class Colours(metaclass=YAMLGetter):
     soft_red: int
     soft_green: int
     soft_orange: int
+    bright_green: int
 
 
 class DuckPond(metaclass=YAMLGetter):
@@ -353,6 +354,8 @@ class Icons(metaclass=YAMLGetter):
     voice_state_blue: str
     voice_state_green: str
     voice_state_red: str
+
+    green_checkmark: str
 
 
 class CleanMessages(metaclass=YAMLGetter):
@@ -634,7 +637,7 @@ class Event(Enum):
 
 
 # Debug mode
-DEBUG_MODE = True if 'local' in os.environ.get("SITE_URL", "local") else False
+DEBUG_MODE = 'local' in os.environ.get("SITE_URL", "local")
 
 # Paths
 BOT_DIR = os.path.dirname(__file__)
