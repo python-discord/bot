@@ -1,9 +1,10 @@
 import logging
 import random
 import re
-from typing import Iterable, Optional
+import time
+from typing import Dict, Iterable, List, Optional
 
-from discord import Colour, Embed, Message, TextChannel, User
+from discord import Colour, Embed, Message, NotFound, TextChannel, User
 from discord.ext import commands
 from discord.ext.commands import Cog, Context, group, has_any_role
 
@@ -35,6 +36,14 @@ class Clean(Cog):
     def mod_log(self) -> ModLog:
         """Get currently loaded ModLog cog instance."""
         return self.bot.get_cog("ModLog")
+
+    async def _delete_messages_individually(self, messages: List[Message]) -> None:
+        for message in messages:
+            try:
+                await message.delete()
+            except NotFound:
+                # message doesn't exist or was already deleted
+                continue
 
     async def _clean_messages(
         self,
@@ -107,7 +116,7 @@ class Clean(Cog):
         elif regex:
             predicate = predicate_regex          # Delete messages that match regex
         else:
-            predicate = None                     # Delete all messages
+            predicate = lambda m: True           # Delete all messages  # noqa: E731
 
         # Default to using the invoking context's channel
         if not channels:
@@ -117,19 +126,28 @@ class Clean(Cog):
         self.mod_log.ignore(Event.message_delete, ctx.message.id)
         await ctx.message.delete()
 
-        messages = []
+        # we need Channel to Message mapping for easier deletion via TextChannel.delete_messages
+        message_mappings: Dict[TextChannel, List[Message]] = {}
         message_ids = []
         self.cleaning = True
 
         # Find the IDs of the messages to delete. IDs are needed in order to ignore mod log events.
         for channel in channels:
+
+            messages = []
+
             async for message in channel.history(limit=amount):
 
                 # If at any point the cancel command is invoked, we should stop.
                 if not self.cleaning:
                     return
 
-                # If we are looking for specific message.
+                # If the message passes predicate, let's save it.
+                if predicate(message):
+                    messages.append(message)
+                    message_ids.append(message)
+
+                # if we are looking for specific message
                 if until_message:
 
                     # we could use ID's here however in case if the message we are looking for gets deleted,
@@ -138,33 +156,49 @@ class Clean(Cog):
                         # means we have found the message until which we were supposed to be deleting.
                         break
 
-                    # Since we will be using `delete_messages` method of a TextChannel and we need message objects to
-                    # use it as well as to send logs we will start appending messages here instead adding them from
-                    # purge.
-                    messages.append(message)
-
-                # If the message passes predicate, let's save it.
-                if predicate is None or predicate(message):
-                    message_ids.append(message.id)
+            if len(messages) > 0:
+                # we don't want to create mappings of TextChannel to empty list
+                message_mappings[channel] = messages
 
         self.cleaning = False
 
         # Now let's delete the actual messages with purge.
         self.mod_log.ignore(Event.message_delete, *message_ids)
-        for channel in channels:
-            if until_message:
-                for i in range(0, len(messages), 100):
-                    # while purge automatically handles the amount of messages
-                    # delete_messages only allows for up to 100 messages at once
-                    # thus we need to paginate the amount to always be <= 100
-                    await channel.delete_messages(messages[i:i + 100])
-            else:
-                messages += await channel.purge(limit=amount, check=predicate)
 
-        # Reverse the list to restore chronological order
-        if messages:
-            messages = reversed(messages)
-            log_url = await self.mod_log.upload_log(messages, ctx.author.id)
+        # Creates ID like int object that would represent an object that is exactly 14 days old
+        minimum_time = int((time.time() - 14 * 24 * 60 * 60) * 1000.0 - 1420070400000) << 22
+
+        for channel, messages in message_mappings.items():
+
+            to_delete = []
+
+            for current_index, message in enumerate(messages):
+
+                if message.id < minimum_time:
+                    # further messages are too old to be deleted in bulk
+                    await self._delete_messages_individually(messages[current_index:])
+                    break
+
+                to_delete.append(message)
+
+                if len(to_delete) == 100:
+                    # we can only delete up to 100 messages in a bulk
+                    await channel.delete_messages(to_delete)
+                    to_delete.clear()
+
+            if len(to_delete) > 0:
+                # deleting any leftover messages if there are any
+                await channel.delete_messages(to_delete)
+
+        log_messages = []
+
+        for messages in message_mappings.values():
+            log_messages.extend(messages)
+
+        if log_messages:
+            # Reverse the list to restore chronological order
+            log_messages = reversed(log_messages)
+            log_url = await self.mod_log.upload_log(log_messages, ctx.author.id)
         else:
             # Can't build an embed, nothing to clean!
             embed = Embed(
