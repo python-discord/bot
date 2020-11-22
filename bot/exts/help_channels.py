@@ -28,16 +28,20 @@ This is a Python help channel. You can claim your own help channel in the Python
 """
 
 AVAILABLE_MSG = f"""
-This help channel is now **available**, which means that you can claim it by simply typing your \
-question into it. Once claimed, the channel will move into the **Python Help: Occupied** category, \
-and will be yours until it has been inactive for {constants.HelpChannels.idle_minutes} minutes or \
-is closed manually with `!close`. When that happens, it will be set to **dormant** and moved into \
-the **Help: Dormant** category.
+**Send your question here to claim the channel**
+This channel will be dedicated to answering your question only. Others will try to answer and help you solve the issue.
 
-Try to write the best question you can by providing a detailed description and telling us what \
-you've tried already. For more information on asking a good question, \
-check out our guide on **[asking good questions]({ASKING_GUIDE_URL})**.
+**Keep in mind:**
+• It's always ok to just ask your question. You don't need permission.
+• Explain what you expect to happen and what actually happens.
+• Include a code sample and error message, if you got any.
+
+For more tips, check out our guide on **[asking good questions]({ASKING_GUIDE_URL})**.
 """
+
+AVAILABLE_TITLE = "Available help channel"
+
+AVAILABLE_FOOTER = f"Closes after {constants.HelpChannels.idle_minutes} minutes of inactivity or when you send !close."
 
 DORMANT_MSG = f"""
 This help channel has been marked as **dormant**, and has been moved into the **Help: Dormant** \
@@ -380,16 +384,13 @@ class HelpChannels(commands.Cog):
 
         try:
             self.available_category = await channel_utils.try_get_channel(
-                constants.Categories.help_available,
-                self.bot
+                constants.Categories.help_available
             )
             self.in_use_category = await channel_utils.try_get_channel(
-                constants.Categories.help_in_use,
-                self.bot
+                constants.Categories.help_in_use
             )
             self.dormant_category = await channel_utils.try_get_channel(
-                constants.Categories.help_dormant,
-                self.bot
+                constants.Categories.help_dormant
             )
         except discord.HTTPException:
             log.exception("Failed to get a category; cog will be removed")
@@ -500,7 +501,7 @@ class HelpChannels(commands.Cog):
         options should be avoided, as it may interfere with the category move we perform.
         """
         # Get a fresh copy of the category from the bot to avoid the cache mismatch issue we had.
-        category = await channel_utils.try_get_channel(category_id, self.bot)
+        category = await channel_utils.try_get_channel(category_id)
 
         payload = [{"id": c.id, "position": c.position} for c in category.channels]
 
@@ -837,7 +838,12 @@ class HelpChannels(commands.Cog):
         channel_info = f"#{channel} ({channel.id})"
         log.trace(f"Sending available message in {channel_info}.")
 
-        embed = discord.Embed(description=AVAILABLE_MSG)
+        embed = discord.Embed(
+            color=constants.Colours.bright_green,
+            description=AVAILABLE_MSG,
+        )
+        embed.set_author(name=AVAILABLE_TITLE, icon_url=constants.Icons.green_checkmark)
+        embed.set_footer(text=AVAILABLE_FOOTER)
 
         msg = await self.get_last_message(channel)
         if self.match_bot_embed(msg, DORMANT_MSG):
