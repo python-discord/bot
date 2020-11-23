@@ -415,9 +415,13 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
 
         asyncio.run(self.cog._async_init())  # Populate instance attributes.
 
-        self.channel = MockTextChannel()
-        self.overwrite = PermissionOverwrite(stream=True, send_messages=True, add_reactions=False)
-        self.channel.overwrites_for.return_value = self.overwrite
+        self.text_channel = MockTextChannel()
+        self.text_overwrite = PermissionOverwrite(stream=True, send_messages=True, add_reactions=False)
+        self.text_channel.overwrites_for.return_value = self.text_overwrite
+
+        self.voice_channel = MockVoiceChannel()
+        self.voice_overwrite = PermissionOverwrite(speak=True)
+        self.voice_channel.overwrites_for.return_value = self.voice_overwrite
 
     async def test_sent_correct_message(self):
         """Appropriate failure/success message was sent by the command."""
@@ -477,19 +481,19 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_silenced_channel(self):
         """Channel had `send_message` and `add_reactions` permissions revoked for verified role."""
-        self.assertTrue(await self.cog._set_silence_overwrites(self.channel))
-        self.assertFalse(self.overwrite.send_messages)
-        self.assertFalse(self.overwrite.add_reactions)
-        self.channel.set_permissions.assert_awaited_once_with(
+        self.assertTrue(await self.cog._set_silence_overwrites(self.text_channel))
+        self.assertFalse(self.text_overwrite.send_messages)
+        self.assertFalse(self.text_overwrite.add_reactions)
+        self.text_channel.set_permissions.assert_awaited_once_with(
             self.cog._verified_msg_role,
-            overwrite=self.overwrite
+            overwrite=self.text_overwrite
         )
 
     async def test_preserved_other_overwrites(self):
         """Channel's other unrelated overwrites were not changed."""
-        prev_overwrite_dict = dict(self.overwrite)
-        await self.cog._set_silence_overwrites(self.channel)
-        new_overwrite_dict = dict(self.overwrite)
+        prev_overwrite_dict = dict(self.text_overwrite)
+        await self.cog._set_silence_overwrites(self.text_channel)
+        new_overwrite_dict = dict(self.text_overwrite)
 
         # Remove 'send_messages' & 'add_reactions' keys because they were changed by the method.
         del prev_overwrite_dict['send_messages']
@@ -520,8 +524,8 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
     async def test_cached_previous_overwrites(self):
         """Channel's previous overwrites were cached."""
         overwrite_json = '{"send_messages": true, "add_reactions": false}'
-        await self.cog._set_silence_overwrites(self.channel)
-        self.cog.previous_overwrites.set.assert_called_once_with(self.channel.id, overwrite_json)
+        await self.cog._set_silence_overwrites(self.text_channel)
+        self.cog.previous_overwrites.set.assert_called_once_with(self.text_channel.id, overwrite_json)
 
     @autospec(silence, "datetime")
     async def test_cached_unsilence_time(self, datetime_mock):
@@ -531,7 +535,7 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         timestamp = now_timestamp + duration * 60
         datetime_mock.now.return_value = datetime.fromtimestamp(now_timestamp, tz=timezone.utc)
 
-        ctx = MockContext(channel=self.channel)
+        ctx = MockContext(channel=self.text_channel)
         await self.cog.silence.callback(self.cog, ctx, duration)
 
         self.cog.unsilence_timestamps.set.assert_awaited_once_with(ctx.channel.id, timestamp)
@@ -539,13 +543,13 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_cached_indefinite_time(self):
         """A value of -1 was cached for a permanent silence."""
-        ctx = MockContext(channel=self.channel)
+        ctx = MockContext(channel=self.text_channel)
         await self.cog.silence.callback(self.cog, ctx, None)
         self.cog.unsilence_timestamps.set.assert_awaited_once_with(ctx.channel.id, -1)
 
     async def test_scheduled_task(self):
         """An unsilence task was scheduled."""
-        ctx = MockContext(channel=self.channel, invoke=mock.MagicMock())
+        ctx = MockContext(channel=self.text_channel, invoke=mock.MagicMock())
 
         await self.cog.silence.callback(self.cog, ctx, 5)
 
@@ -555,9 +559,20 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_permanent_not_scheduled(self):
         """A task was not scheduled for a permanent silence."""
-        ctx = MockContext(channel=self.channel)
+        ctx = MockContext(channel=self.text_channel)
         await self.cog.silence.callback(self.cog, ctx, None)
         self.cog.scheduler.schedule_later.assert_not_called()
+
+    async def test_correct_permission_updates(self):
+        """Tests if  _set_silence_overwrites can correctly get and update permissions."""
+        self.assertTrue(await self.cog._set_silence_overwrites(self.text_channel))
+        self.assertFalse(self.text_overwrite.send_messages or self.text_overwrite.add_reactions)
+
+        self.assertTrue(await self.cog._set_silence_overwrites(self.voice_channel))
+        self.assertFalse(self.voice_overwrite.speak)
+
+        self.assertTrue(await self.cog._set_silence_overwrites(self.voice_channel, True))
+        self.assertFalse(self.voice_overwrite.speak or self.voice_overwrite.connect)
 
 
 @autospec(silence.Silence, "unsilence_timestamps", pass_mocks=False)
