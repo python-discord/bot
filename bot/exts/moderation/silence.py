@@ -6,7 +6,7 @@ from operator import attrgetter
 from typing import Optional, Union
 
 from async_rediscache import RedisCache
-from discord import HTTPException, Member, PermissionOverwrite, TextChannel, VoiceChannel
+from discord import Member, PermissionOverwrite, TextChannel, VoiceChannel
 from discord.ext import commands, tasks
 from discord.ext.commands import Context
 
@@ -23,7 +23,6 @@ LOCK_NAMESPACE = "silence"
 MSG_SILENCE_FAIL = f"{Emojis.cross_mark} current channel is already silenced."
 MSG_SILENCE_PERMANENT = f"{Emojis.check_mark} silenced current channel indefinitely."
 MSG_SILENCE_SUCCESS = f"{Emojis.check_mark} silenced current channel for {{duration}} minute(s)."
-MSG_SILENCE_PERM_FAIL = f"{Emojis.cross_mark} failed to force-mute members, permissions updated."
 
 MSG_UNSILENCE_FAIL = f"{Emojis.cross_mark} current channel was not silenced."
 MSG_UNSILENCE_MANUAL = (
@@ -163,15 +162,9 @@ class Silence(commands.Cog):
         channel_info = f"#{channel} ({channel.id})"
         log.debug(f"{ctx.author} is silencing channel {channel_info}.")
 
-        try:
-            if not await self._set_silence_overwrites(channel, kick):
-                log.info(f"Tried to silence channel {channel_info} but the channel was already silenced.")
-                await self.send_message(MSG_SILENCE_FAIL, ctx.channel, channel)
-                return
-
-        except HTTPException:
-            log.info(f"Could not force mute {channel_info} members. Permissions updated.")
-            await self.send_message(MSG_SILENCE_PERM_FAIL, ctx.channel, channel)
+        if not await self._set_silence_overwrites(channel, kick):
+            log.info(f"Tried to silence channel {channel_info} but the channel was already silenced.")
+            await self.send_message(MSG_SILENCE_FAIL, ctx.channel, channel)
             return
 
         await self._schedule_unsilence(ctx, channel, duration)
@@ -222,7 +215,9 @@ class Silence(commands.Cog):
 
         else:
             # Send success message to muted channel or voice chat channel, and invocation channel
-            await self._force_voice_sync(channel)
+            if isinstance(channel, VoiceChannel):
+                await self._force_voice_sync(channel)
+
             await self.send_message(MSG_UNSILENCE_SUCCESS, msg_channel, channel, True)
 
     async def _set_silence_overwrites(self, channel: Union[TextChannel, VoiceChannel], kick: bool = False) -> bool:
@@ -248,7 +243,6 @@ class Silence(commands.Cog):
                 overwrite.update(connect=False)
 
             await channel.set_permissions(self._verified_voice_role, overwrite=overwrite)
-
             await self._force_voice_sync(channel, kick=kick)
 
         await self.previous_overwrites.set(channel.id, json.dumps(prev_overwrites))
@@ -263,9 +257,7 @@ class Silence(commands.Cog):
         If `member` is passed, the mute only occurs to that member.
         Permission modification has to happen before this function.
 
-        If `kick_all` is True, members will not be added back to the voice channel
-
-        Raises `discord.HTTPException` if the task fails.
+        If `kick_all` is True, members will not be added back to the voice channel.
         """
         # Handle member picking logic
         if member is not None:
@@ -284,20 +276,15 @@ class Silence(commands.Cog):
         # Obtain temporary channel
         afk_channel = channel.guild.afk_channel
         if afk_channel is None:
-            try:
-                overwrites = {
-                    channel.guild.default_role: PermissionOverwrite(speak=False, connect=False, view_channel=False)
-                }
-                afk_channel = await channel.guild.create_voice_channel("mute-temp", overwrites=overwrites)
-                log.info(f"Failed to get afk-channel, created temporary channel #{afk_channel} ({afk_channel.id})")
+            overwrites = {
+                channel.guild.default_role: PermissionOverwrite(speak=False, connect=False, view_channel=False)
+            }
+            afk_channel = await channel.guild.create_voice_channel("mute-temp", overwrites=overwrites)
+            log.info(f"Failed to get afk-channel, created temporary channel #{afk_channel} ({afk_channel.id})")
 
-                # Schedule channel deletion in case function errors out
-                self.scheduler.schedule_later(30, afk_channel.id,
-                                              afk_channel.delete(reason="Deleting temp mute channel."))
-
-            except HTTPException as e:
-                log.warning("Failed to create temporary mute channel.", exc_info=e)
-                raise e
+            # Schedule channel deletion in case function errors out
+            self.scheduler.schedule_later(30, afk_channel.id,
+                                          afk_channel.delete(reason="Deleting temp mute channel."))
 
         # Move all members to temporary channel and back
         for member in members:
@@ -305,16 +292,11 @@ class Silence(commands.Cog):
             if self._helper_role in member.roles:
                 continue
 
-            try:
-                await member.move_to(afk_channel, reason="Muting member.")
-                log.debug(f"Moved {member.name} to afk channel.")
+            await member.move_to(afk_channel, reason="Muting member.")
+            log.debug(f"Moved {member.name} to afk channel.")
 
-                await member.move_to(channel, reason="Muting member.")
-                log.debug(f"Moved {member.name} to original voice channel.")
-
-            except HTTPException as e:
-                log.warning(f"Failed to move {member.name} while muting, falling back to kick.", exc_info=e)
-                await member.move_to(None, reason="Forcing member mute.")
+            await member.move_to(channel, reason="Muting member.")
+            log.debug(f"Moved {member.name} to original voice channel.")
 
     async def _schedule_unsilence(self, ctx: Context, channel: Union[TextChannel, VoiceChannel],
                                   duration: Optional[int]) -> None:
