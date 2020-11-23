@@ -7,7 +7,7 @@ from typing import Callable, Optional, Tuple
 
 from dateutil.parser import isoparse, parse
 from dateutil.relativedelta import relativedelta
-from discord import Embed, Member, Message, Reaction, Role, TextChannel, VoiceChannel
+from discord import Embed, Member, Message, Reaction
 from discord.ext.commands import Cog, CommandInvokeError, Context, group, has_role
 
 from bot.api import ResponseCodeError
@@ -74,7 +74,7 @@ class UserEvents(Cog):
         """Cancel scheduled tasks."""
         self.scheduler.cancel_all()
 
-    async def load_required_assets(self):
+    async def load_required_assets(self) -> None:
         """Load discord guild components required by this cog."""
         await self.bot.wait_until_guild_available()
 
