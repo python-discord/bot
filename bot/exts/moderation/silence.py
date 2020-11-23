@@ -104,6 +104,20 @@ class Silence(commands.Cog):
         self.notifier = SilenceNotifier(self.bot.get_channel(Channels.mod_log))
         await self._reschedule()
 
+    async def _get_related_text_channel(self, channel: VoiceChannel) -> Optional[TextChannel]:
+        """Returns the text channel related to a voice channel."""
+        # TODO: Figure out a dynamic way of doing this
+        channels = {
+            "off-topic": Channels.voice_chat,
+            "code/help 1": Channels.code_help_voice,
+            "code/help 2": Channels.code_help_voice,
+            "admin": Channels.admins_voice,
+            "staff": Channels.staff_voice
+        }
+        for name in channels.keys():
+            if name in channel.name.lower():
+                return self.bot.get_channel(channels[name])
+
     async def send_message(self, message: str, source_channel: TextChannel,
                            target_channel: Union[TextChannel, VoiceChannel],
                            alert_target: bool = False, duration: HushDurationConverter = 0) -> None:
@@ -116,18 +130,7 @@ class Silence(commands.Cog):
         voice_chat = None
         if isinstance(target_channel, VoiceChannel):
             # Send to relevant channel
-            # TODO: Figure out a dynamic way of doing this
-            channels = {
-                "offtopic": Channels.voice_chat,
-                "code/help 1": Channels.code_help_voice,
-                "code/help 2": Channels.code_help_voice,
-                "admin": Channels.admins_voice,
-                "staff": Channels.staff_voice
-            }
-            for name in channels.keys():
-                if name in target_channel.name.lower():
-                    voice_chat = self.bot.get_channel(channels[name])
-                    break
+            voice_chat = await self._get_related_text_channel(target_channel)
 
         if alert_target and source_channel != target_channel:
             if isinstance(target_channel, VoiceChannel):
