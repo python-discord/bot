@@ -7,12 +7,12 @@ from typing import Callable, Optional, Tuple
 
 from dateutil.parser import isoparse, parse
 from dateutil.relativedelta import relativedelta
-from discord import Embed, Guild, Member, Message, Reaction, Role, TextChannel, VoiceChannel
+from discord import Embed, Member, Message, Reaction, Role, TextChannel, VoiceChannel
 from discord.ext.commands import Cog, CommandInvokeError, Context, group, has_role
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Channels, Guild as Server, Roles
+from bot.constants import Channels, Guild, Roles
 from bot.utils.scheduling import Scheduler
 from bot.utils.time import humanize_delta
 
@@ -55,11 +55,41 @@ class UserEvents(Cog):
         self.bot = bot
         self.scheduler = Scheduler(self.__class__.__name__)
 
+        self.guild = None
+
+        # Load required channels.
+        self.user_event_coord_channel = None
+        self.user_event_announcement_channel = None
+        self.user_events_list_channel = None
+        self.user_event_voice_channel = None
+
+        # Load required roles.
+        self.developers_role = None
+        self.user_event_ongoing_role = None
+
+        self.bot.loop.create_task(self.load_required_assets())
         self.bot.loop.create_task(self.restart_event_reminders())
 
     def cog_unload(self) -> None:
         """Cancel scheduled tasks."""
         self.scheduler.cancel_all()
+
+    async def load_required_assets(self):
+        """Load discord guild components required by this cog."""
+        await self.bot.wait_until_guild_available()
+
+        # Get guild
+        self.guild = self.bot.get_guild(Guild.id)
+
+        # Load required channels.
+        self.user_event_coord_channel = self.bot.get_channel(Channels.user_event_coordinators)
+        self.user_event_announcement_channel = self.bot.get_channel(Channels.user_event_announcements)
+        self.user_events_list_channel = self.bot.get_channel(Channels.user_event_list)
+        self.user_event_voice_channel = self.bot.get_channel(Channels.user_event_voice)
+
+        # Load required roles.
+        self.developers_role = self.guild.get_role(Roles.verified)
+        self.user_event_ongoing_role = self.guild.get_role(Roles.user_event_ongoing)
 
     async def restart_event_reminders(self) -> None:
         """Restart scheduled event reminders when bot restarts."""
@@ -70,7 +100,6 @@ class UserEvents(Cog):
             # If event is live
             if datetime.now() > parse(event["start_time"]).replace(tzinfo=None):
                 self.schedule_event_end_reminder(event)
-
             else:
                 await self.schedule_event_start_reminder(event)
 
@@ -95,41 +124,6 @@ class UserEvents(Cog):
         )
         status = f"Scheduled on {readable_date},\n{readable_time}"
         return status
-
-    @property
-    def developers_role(self) -> Role:
-        """Return guild developers role."""
-        return self.guild.get_role(Roles.verified)
-
-    @property
-    def user_event_ongoing_role(self) -> Role:
-        """Return guild user-event-ongoing role."""
-        return self.guild.get_role(Roles.user_event_ongoing)
-
-    @property
-    def guild(self) -> Guild:
-        """Return guild instance."""
-        return self.bot.get_guild(Server.id)
-
-    @property
-    def user_event_coord_channel(self) -> TextChannel:
-        """Return #user-events-coordinators channel."""
-        return self.bot.get_channel(Channels.user_event_coordinators)
-
-    @property
-    def user_event_announcement_channel(self) -> TextChannel:
-        """Return #user-events-announcement channel."""
-        return self.bot.get_channel(Channels.user_event_announcements)
-
-    @property
-    def user_events_list_channel(self) -> TextChannel:
-        """Return #user-events-list channel."""
-        return self.bot.get_channel(Channels.user_event_list)
-
-    @property
-    def user_event_voice_channel(self) -> VoiceChannel:
-        """Return #user-events-voice channel."""
-        return self.bot.get_channel(Channels.user_event_voice)
 
     @staticmethod
     def user_event_embed(event_name: str, event_description: str, organizer: Member, status: str) -> Embed:
