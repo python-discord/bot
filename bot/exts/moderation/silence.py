@@ -223,7 +223,7 @@ class Silence(commands.Cog):
             await self._force_voice_sync(channel)
             await self.send_message(MSG_UNSILENCE_SUCCESS, msg_channel, channel, True)
 
-    async def _set_silence_overwrites(self, channel: Union[TextChannel, VoiceChannel], kick: bool) -> bool:
+    async def _set_silence_overwrites(self, channel: Union[TextChannel, VoiceChannel], kick: bool = False) -> bool:
         """Set silence permission overwrites for `channel` and return True if successful."""
         if isinstance(channel, TextChannel):
             overwrite = channel.overwrites_for(self._verified_msg_role)
