@@ -108,11 +108,10 @@ class Silence(commands.Cog):
                            target_channel: Union[TextChannel, VoiceChannel],
                            alert_target: bool = False, duration: HushDurationConverter = 0) -> None:
         """Helper function to send message confirmation to `source_channel`, and notification to `target_channel`."""
-        if isinstance(source_channel, TextChannel):
-            await source_channel.send(
-                message.replace("current", target_channel.mention if source_channel != target_channel else "current")
-                       .replace("{duration}", str(duration))
-            )
+        await source_channel.send(
+            message.replace("current", target_channel.mention if source_channel != target_channel else "current")
+                   .replace("{duration}", str(duration))
+        )
 
         voice_chat = None
         if isinstance(target_channel, VoiceChannel):
@@ -136,7 +135,7 @@ class Silence(commands.Cog):
                     return
 
                 await voice_chat.send(
-                    message.replace("{duration}", str(duration)).replace("current", voice_chat.mention)
+                    message.replace("{duration}", str(duration)).replace("current", target_channel.mention)
                 )
 
             else:
