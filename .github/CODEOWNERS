@@ -19,3 +19,8 @@ bot/utils/scheduling.py                 @MarkKoz
 # Tests
 tests/_autospec.py                      @MarkKoz
 tests/bot/exts/test_cogs.py             @MarkKoz
+
+# CI & Docker
+.github/workflows/**                    @MarkKoz
+Dockerfile                              @MarkKoz
+docker-compose.yml                      @MarkKoz
