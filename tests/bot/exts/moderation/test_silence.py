@@ -564,7 +564,7 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         self.cog.scheduler.schedule_later.assert_not_called()
 
     async def test_correct_permission_updates(self):
-        """Tests if  _set_silence_overwrites can correctly get and update permissions."""
+        """Tests if _set_silence_overwrites can correctly get and update permissions."""
         self.assertTrue(await self.cog._set_silence_overwrites(self.text_channel))
         self.assertFalse(self.text_overwrite.send_messages or self.text_overwrite.add_reactions)
 
