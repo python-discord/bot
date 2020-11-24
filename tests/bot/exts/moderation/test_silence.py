@@ -821,6 +821,6 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
 
                         channel.set_permissions.assert_called_once_with(role, overwrite=overwrites)
                         if channel != ctx.channel:
-                            ctx.channel.assert_not_called()
+                            ctx.channel.send.assert_not_called()
 
             await reset()
