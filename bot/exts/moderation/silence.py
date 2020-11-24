@@ -124,7 +124,9 @@ class Silence(commands.Cog):
         """Helper function to send message confirmation to `source_channel`, and notification to `target_channel`."""
         # Get TextChannel connected to VoiceChannel if channel is of type voice
         voice_chat = None
-        if isinstance(target_channel, VoiceChannel):
+        target_is_voice_channel = isinstance(target_channel, VoiceChannel)
+
+        if target_is_voice_channel:
             voice_chat = await self._get_related_text_channel(target_channel)
 
         # Reply to invocation channel
@@ -135,7 +137,7 @@ class Silence(commands.Cog):
 
         # Reply to target channel
         if alert_target and source_channel not in [target_channel, voice_chat]:
-            if isinstance(target_channel, VoiceChannel):
+            if target_is_voice_channel:
                 if voice_chat is not None:
                     await voice_chat.send(message.replace("current channel", target_channel.mention))
 
@@ -223,7 +225,9 @@ class Silence(commands.Cog):
 
     async def _set_silence_overwrites(self, channel: Union[TextChannel, VoiceChannel], kick: bool = False) -> bool:
         """Set silence permission overwrites for `channel` and return True if successful."""
-        if isinstance(channel, TextChannel):
+        is_text_channel = isinstance(channel, TextChannel)
+
+        if is_text_channel:
             overwrite = channel.overwrites_for(self._verified_msg_role)
             prev_overwrites = dict(send_messages=overwrite.send_messages, add_reactions=overwrite.add_reactions)
         else:
@@ -235,7 +239,7 @@ class Silence(commands.Cog):
         if channel.id in self.scheduler or all(val is False for val in prev_overwrites.values()):
             return False
 
-        if isinstance(channel, TextChannel):
+        if is_text_channel:
             overwrite.update(send_messages=False, add_reactions=False)
             await channel.set_permissions(self._verified_msg_role, overwrite=overwrite)
         else:
@@ -326,7 +330,9 @@ class Silence(commands.Cog):
             log.info(f"Tried to unsilence channel #{channel} ({channel.id}) but the channel was not silenced.")
             return False
 
-        if isinstance(channel, TextChannel):
+        is_text_channel = isinstance(channel, TextChannel)
+
+        if is_text_channel:
             overwrite = channel.overwrites_for(self._verified_msg_role)
         else:
             overwrite = channel.overwrites_for(self._verified_voice_role)
@@ -337,7 +343,7 @@ class Silence(commands.Cog):
         else:
             overwrite.update(**json.loads(prev_overwrites))
 
-        if isinstance(channel, TextChannel):
+        if is_text_channel:
             await channel.set_permissions(self._verified_msg_role, overwrite=overwrite)
         else:
             await channel.set_permissions(self._verified_voice_role, overwrite=overwrite)
