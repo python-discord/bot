@@ -446,11 +446,13 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
     async def test_sent_to_correct_channel(self):
         """Test function sends messages to the correct channels."""
         text_channel = MockTextChannel()
+        voice_channel = MockVoiceChannel()
         ctx = MockContext()
 
         test_cases = (
             (None, silence.MSG_SILENCE_SUCCESS.format(duration=10)),
             (text_channel, silence.MSG_SILENCE_SUCCESS.format(duration=10)),
+            (voice_channel, silence.MSG_SILENCE_SUCCESS.format(duration=10)),
             (ctx.channel, silence.MSG_SILENCE_SUCCESS.format(duration=10)),
         )
 
@@ -460,14 +462,14 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
                     await self.cog.silence.callback(self.cog, ctx, 10, False, channel=target)
                     if ctx.channel == target or target is None:
                         ctx.channel.send.assert_called_once_with(message)
+
                     else:
-                        ctx.channel.send.assert_called_once_with(
-                            message.replace("current channel", text_channel.mention)
-                        )
-                        target.send.assert_called_once_with(message)
+                        ctx.channel.send.assert_called_once_with(message.replace("current channel", target.mention))
+                        if isinstance(target, MockTextChannel):
+                            target.send.assert_called_once_with(message)
 
             ctx.channel.send.reset_mock()
-            if target is not None:
+            if target is not None and isinstance(target, MockTextChannel):
                 target.send.reset_mock()
 
     async def test_skipped_already_silenced(self):

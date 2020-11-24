@@ -134,9 +134,10 @@ class Silence(commands.Cog):
         await source_channel.send(source_reply)
 
         # Reply to target channel
-        if alert_target and source_channel != target_channel and source_channel != voice_chat:
-            if isinstance(target_channel, VoiceChannel) and (voice_chat is not None or voice_chat != source_channel):
-                await voice_chat.send(message.replace("current channel", target_channel.mention))
+        if alert_target and source_channel not in [target_channel, voice_chat]:
+            if isinstance(target_channel, VoiceChannel):
+                if voice_chat is not None:
+                    await voice_chat.send(message.replace("current channel", target_channel.mention))
 
             else:
                 await target_channel.send(message)
@@ -166,6 +167,9 @@ class Silence(commands.Cog):
             log.info(f"Tried to silence channel {channel_info} but the channel was already silenced.")
             await self.send_message(MSG_SILENCE_FAIL, ctx.channel, channel)
             return
+
+        if isinstance(channel, VoiceChannel):
+            await self._force_voice_sync(channel, kick=kick)
 
         await self._schedule_unsilence(ctx, channel, duration)
 
@@ -244,7 +248,6 @@ class Silence(commands.Cog):
                 overwrite.update(connect=False)
 
             await channel.set_permissions(self._verified_voice_role, overwrite=overwrite)
-            await self._force_voice_sync(channel, kick=kick)
 
         await self.previous_overwrites.set(channel.id, json.dumps(prev_overwrites))
 
