@@ -333,7 +333,7 @@ class Silence(commands.Cog):
 
         if prev_overwrites is None:
             log.info(f"Missing previous overwrites for #{channel} ({channel.id}); defaulting to None.")
-            overwrite.update(send_messages=None, add_reactions=None, speak=None)
+            overwrite.update(send_messages=None, add_reactions=None, speak=None, connect=None)
         else:
             overwrite.update(**json.loads(prev_overwrites))
 
@@ -360,7 +360,7 @@ class Silence(commands.Cog):
             else:
                 await self._mod_alerts_channel.send(
                     f"<@&{Roles.admins}> Restored overwrites with default values after unsilencing "
-                    f"{channel.mention}. Please check that the `Speak` "
+                    f"{channel.mention}. Please check that the `Speak` and `Connect`"
                     f"overwrites for {self._verified_voice_role.mention} are at their desired values."
                 )
 
