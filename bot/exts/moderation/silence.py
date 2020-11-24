@@ -109,7 +109,7 @@ class Silence(commands.Cog):
         channels = {
             "off-topic": Channels.voice_chat,
             "code/help 1": Channels.code_help_voice,
-            "code/help 2": Channels.code_help_voice,
+            "code/help 2": Channels.code_help_voice_2,
             "admin": Channels.admins_voice,
             "staff": Channels.staff_voice
         }
