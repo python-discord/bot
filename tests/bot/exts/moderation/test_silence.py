@@ -7,7 +7,7 @@ from unittest.mock import Mock
 from async_rediscache import RedisSession
 from discord import PermissionOverwrite
 
-from bot.constants import Channels, Emojis, Guild, Roles
+from bot.constants import Channels, Guild, Roles
 from bot.exts.moderation import silence
 from tests.helpers import MockBot, MockContext, MockGuild, MockMember, MockTextChannel, MockVoiceChannel, autospec
 
@@ -198,42 +198,48 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
 
         reset()
         with self.subTest("Replacement One Channel Test"):
-            await self.cog.send_message("The following should be replaced: current",
-                                        text_channel_1, text_channel_2, False)
-            text_channel_1.send.assert_called_once_with(f"The following should be replaced: {text_channel_1.mention}")
+            await self.cog.send_message(
+                "Current. The following should be replaced: current channel.", text_channel_1, text_channel_2, False
+            )
+
+            text_channel_1.send.assert_called_once_with(
+                f"Current. The following should be replaced: {text_channel_1.mention}."
+            )
+
             text_channel_2.send.assert_not_called()
 
         reset()
         with self.subTest("Replacement Two Channel Test"):
-            await self.cog.send_message("The following should be replaced: current",
-                                        text_channel_1, text_channel_2, True)
-            text_channel_1.send.assert_called_once_with(f"The following should be replaced: {text_channel_1.mention}")
-            text_channel_2.send.assert_called_once_with("The following should be replaced: current")
+            await self.cog.send_message(
+                "Current. The following should be replaced: current channel.", text_channel_1, text_channel_2, True
+            )
 
-        reset()
-        with self.subTest("Replace Duration"):
-            await self.cog.send_message(f"{Emojis.check_mark} The following should be replaced: {{duration}}",
-                                        text_channel_1, text_channel_2, False)
-            text_channel_1.send.assert_called_once_with(f"{Emojis.check_mark} The following should be replaced: 0")
-            text_channel_2.send.assert_not_called()
+            text_channel_1.send.assert_called_once_with(
+                f"Current. The following should be replaced: {text_channel_1.mention}."
+            )
+
+            text_channel_2.send.assert_called_once_with("Current. The following should be replaced: current channel.")
 
         reset()
         with self.subTest("Text and Voice"):
-            await self.cog.send_message("This should show up just here",
-                                        text_channel_1, voice_channel, False)
+            await self.cog.send_message(
+                "This should show up just here", text_channel_1, voice_channel, False
+            )
             text_channel_1.send.assert_called_once_with("This should show up just here")
 
         reset()
         with self.subTest("Text and Voice"):
-            await self.cog.send_message("This should show up as current",
-                                        text_channel_1, voice_channel, True)
+            await self.cog.send_message(
+                "This should show up as current channel", text_channel_1, voice_channel, True
+            )
             text_channel_1.send.assert_called_once_with(f"This should show up as {voice_channel.mention}")
             text_channel_2.send.assert_called_once_with(f"This should show up as {voice_channel.mention}")
 
         reset()
         with self.subTest("Text and Voice Same Invocation"):
-            await self.cog.send_message("This should show up as current",
-                                        text_channel_2, voice_channel, True)
+            await self.cog.send_message(
+                "This should show up as current channel", text_channel_2, voice_channel, True
+            )
             text_channel_2.send.assert_called_once_with(f"This should show up as {voice_channel.mention}")
 
     async def test_get_related_text_channel(self):
@@ -455,7 +461,9 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
                     if ctx.channel == target or target is None:
                         ctx.channel.send.assert_called_once_with(message)
                     else:
-                        ctx.channel.send.assert_called_once_with(message.replace("current", text_channel.mention))
+                        ctx.channel.send.assert_called_once_with(
+                            message.replace("current channel", text_channel.mention)
+                        )
                         target.send.assert_called_once_with(message)
 
             ctx.channel.send.reset_mock()
@@ -643,7 +651,9 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
                     if ctx.channel == target or target is None:
                         ctx.channel.send.assert_called_once_with(message)
                     else:
-                        ctx.channel.send.assert_called_once_with(message.replace("current", text_channel.mention))
+                        ctx.channel.send.assert_called_once_with(
+                            message.replace("current channel", text_channel.mention)
+                        )
                         target.send.assert_called_once_with(message)
 
             ctx.channel.send.reset_mock()

@@ -26,7 +26,7 @@ MSG_SILENCE_SUCCESS = f"{Emojis.check_mark} silenced current channel for {{durat
 
 MSG_UNSILENCE_FAIL = f"{Emojis.cross_mark} current channel was not silenced."
 MSG_UNSILENCE_MANUAL = (
-    f"{Emojis.cross_mark} current channel was not unsilenced because the channel overwrites were "
+    f"{Emojis.cross_mark} current channel was not unsilenced because the current overwrites were "
     f"set manually or the cache was prematurely cleared. "
     f"Please edit the overwrites manually to unsilence."
 )
@@ -119,30 +119,27 @@ class Silence(commands.Cog):
 
     async def send_message(
         self, message: str, source_channel: TextChannel, target_channel: Union[TextChannel, VoiceChannel],
-        alert_target: bool = False, duration: int = 0
+        alert_target: bool = False
     ) -> None:
         """Helper function to send message confirmation to `source_channel`, and notification to `target_channel`."""
-        await source_channel.send(
-            message.replace("current", target_channel.mention if source_channel != target_channel else "current")
-                   .replace("{duration}", str(duration))
-        )
-
+        # Get TextChannel connected to VoiceChannel if channel is of type voice
         voice_chat = None
         if isinstance(target_channel, VoiceChannel):
-            # Send to relevant channel
             voice_chat = await self._get_related_text_channel(target_channel)
 
-        if alert_target and source_channel != target_channel:
-            if isinstance(target_channel, VoiceChannel):
-                if voice_chat is None or voice_chat == source_channel:
-                    return
+        # Reply to invocation channel
+        source_reply = message
+        if source_channel != target_channel:
+            source_reply = source_reply.replace("current channel", target_channel.mention)
+        await source_channel.send(source_reply)
 
-                await voice_chat.send(
-                    message.replace("{duration}", str(duration)).replace("current", target_channel.mention)
-                )
+        # Reply to target channel
+        if alert_target and source_channel != target_channel and source_channel != voice_chat:
+            if isinstance(target_channel, VoiceChannel) and (voice_chat is not None or voice_chat != source_channel):
+                await voice_chat.send(message.replace("current channel", target_channel.mention))
 
             else:
-                await target_channel.send(message.replace("{duration}", str(duration)))
+                await target_channel.send(message)
 
     @commands.command(aliases=("hush",))
     @lock_arg(LOCK_NAMESPACE, "ctx", attrgetter("channel"), raise_error=True)
@@ -179,7 +176,7 @@ class Silence(commands.Cog):
 
         else:
             log.info(f"Silenced {channel_info} for {duration} minute(s).")
-            await self.send_message(MSG_SILENCE_SUCCESS, ctx.channel, channel, True, duration)
+            await self.send_message(MSG_SILENCE_SUCCESS.format(duration=duration), ctx.channel, channel, True)
 
     @commands.command(aliases=("unhush",))
     async def unsilence(self, ctx: Context, *, channel: Union[TextChannel, VoiceChannel] = None) -> None:
