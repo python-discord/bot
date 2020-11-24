@@ -117,9 +117,10 @@ class Silence(commands.Cog):
             if name in channel.name.lower():
                 return self.bot.get_channel(channels[name])
 
-    async def send_message(self, message: str, source_channel: TextChannel,
-                           target_channel: Union[TextChannel, VoiceChannel],
-                           alert_target: bool = False, duration: HushDurationConverter = 0) -> None:
+    async def send_message(
+        self, message: str, source_channel: TextChannel, target_channel: Union[TextChannel, VoiceChannel],
+        alert_target: bool = False, duration: int = 0
+    ) -> None:
         """Helper function to send message confirmation to `source_channel`, and notification to `target_channel`."""
         await source_channel.send(
             message.replace("current", target_channel.mention if source_channel != target_channel else "current")
@@ -145,8 +146,10 @@ class Silence(commands.Cog):
 
     @commands.command(aliases=("hush",))
     @lock_arg(LOCK_NAMESPACE, "ctx", attrgetter("channel"), raise_error=True)
-    async def silence(self, ctx: Context, duration: HushDurationConverter = 10, kick: bool = False,
-                      *, channel: Optional[AnyChannelConverter] = None) -> None:
+    async def silence(
+        self, ctx: Context, duration: HushDurationConverter = 10, kick: bool = False,
+        *, channel: Optional[AnyChannelConverter] = None
+    ) -> None:
         """
         Silence the current channel for `duration` minutes or `forever`.
 
@@ -192,8 +195,9 @@ class Silence(commands.Cog):
         await self._unsilence_wrapper(channel, ctx)
 
     @lock_arg(LOCK_NAMESPACE, "channel", raise_error=True)
-    async def _unsilence_wrapper(self, channel: Union[TextChannel, VoiceChannel],
-                                 ctx: Optional[Context] = None) -> None:
+    async def _unsilence_wrapper(
+        self, channel: Union[TextChannel, VoiceChannel], ctx: Optional[Context] = None
+    ) -> None:
         """Unsilence `channel` and send a success/failure message."""
         msg_channel = channel
         if ctx is not None:
@@ -249,8 +253,9 @@ class Silence(commands.Cog):
 
         return True
 
-    async def _force_voice_sync(self, channel: VoiceChannel, member: Optional[Member] = None,
-                                kick: bool = False) -> None:
+    async def _force_voice_sync(
+        self, channel: VoiceChannel, member: Optional[Member] = None, kick: bool = False
+    ) -> None:
         """
         Move all non-staff members from `channel` to a temporary channel and back to force toggle role mute.
 
@@ -283,8 +288,9 @@ class Silence(commands.Cog):
             log.info(f"Failed to get afk-channel, created temporary channel #{afk_channel} ({afk_channel.id})")
 
             # Schedule channel deletion in case function errors out
-            self.scheduler.schedule_later(30, afk_channel.id,
-                                          afk_channel.delete(reason="Deleting temp mute channel."))
+            self.scheduler.schedule_later(
+                30, afk_channel.id, afk_channel.delete(reason="Deleting temp mute channel.")
+            )
 
         # Move all members to temporary channel and back
         for member in members:
@@ -298,8 +304,9 @@ class Silence(commands.Cog):
             await member.move_to(channel, reason="Muting member.")
             log.debug(f"Moved {member.name} to original voice channel.")
 
-    async def _schedule_unsilence(self, ctx: Context, channel: Union[TextChannel, VoiceChannel],
-                                  duration: Optional[int]) -> None:
+    async def _schedule_unsilence(
+            self, ctx: Context, channel: Union[TextChannel, VoiceChannel], duration: Optional[int]
+    ) -> None:
         """Schedule `ctx.channel` to be unsilenced if `duration` is not None."""
         if duration is None:
             await self.unsilence_timestamps.set(channel.id, -1)
