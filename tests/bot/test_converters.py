@@ -7,7 +7,6 @@ from dateutil.relativedelta import relativedelta
 from discord.ext.commands import BadArgument
 
 from bot.converters import (
-    AnyChannelConverter,
     Duration,
     HushDurationConverter,
     ISODateTime,
@@ -24,18 +23,6 @@ class ConverterTests(unittest.IsolatedAsyncioTestCase):
     def setUpClass(cls):
         cls.context = MagicMock
         cls.context.author = 'bob'
-
-        cls.context.guild = MagicMock
-        cls.context.guild.channels = []
-
-        for i in range(10):
-            channel = MagicMock()
-            channel.name = f"test-{i}"
-            channel.id = str(i) * 18
-
-            cls.context.guild.channels.append(channel)
-            if i > 7:
-                cls.context.guild.channels.append(channel)
 
         cls.fixed_utc_now = datetime.datetime.fromisoformat('2019-01-01T00:00:00')
 
@@ -325,38 +312,3 @@ class ConverterTests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(invalid_minutes_string=invalid_minutes_string, exception_message=exception_message):
                 with self.assertRaisesRegex(BadArgument, re.escape(exception_message)):
                     await converter.convert(self.context, invalid_minutes_string)
-
-    async def test_any_channel_converter_for_valid(self):
-        """AnyChannelConverter returns correct channel from input."""
-        test_values = (
-            ("test-0", self.context.guild.channels[0]),
-            ("#test-0", self.context.guild.channels[0]),
-            ("   #tEsT-0  ", self.context.guild.channels[0]),
-            (f"<#{'0' * 18}>", self.context.guild.channels[0]),
-            (f"{'0' * 18}", self.context.guild.channels[0]),
-            ("test-5", self.context.guild.channels[5]),
-            ("#test-5", self.context.guild.channels[5]),
-            (f"<#{'5' * 18}>", self.context.guild.channels[5]),
-            (f"{'5' * 18}", self.context.guild.channels[5]),
-        )
-
-        converter = AnyChannelConverter()
-        for input_string, expected_channel in test_values:
-            with self.subTest(input_string=input_string, expected_channel=expected_channel):
-                converted = await converter.convert(self.context, input_string)
-                self.assertEqual(expected_channel, converted)
-
-    async def test_any_channel_converter_for_invalid(self):
-        """AnyChannelConverter raises BadArgument for invalid channels."""
-        test_values = (
-            ("#test-8", "The provided argument returned too many matches (2)."),
-            ("#test-9", "The provided argument returned too many matches (2)."),
-            ("#random-name", "#random-name returned no matches."),
-            ("test-10", "test-10 returned no matches.")
-        )
-
-        converter = AnyChannelConverter()
-        for invalid_input, exception_message in test_values:
-            with self.subTest(invalid_input=invalid_input, exception_message=exception_message):
-                with self.assertRaisesRegex(BadArgument, re.escape(exception_message)):
-                    await converter.convert(self.context, invalid_input)

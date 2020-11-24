@@ -12,7 +12,7 @@ from discord.ext.commands import Context
 
 from bot.bot import Bot
 from bot.constants import Channels, Emojis, Guild, MODERATION_ROLES, Roles
-from bot.converters import AnyChannelConverter, HushDurationConverter
+from bot.converters import HushDurationConverter
 from bot.utils.lock import LockedResourceError, lock_arg
 from bot.utils.scheduling import Scheduler
 
@@ -148,7 +148,7 @@ class Silence(commands.Cog):
     @lock_arg(LOCK_NAMESPACE, "ctx", attrgetter("channel"), raise_error=True)
     async def silence(
         self, ctx: Context, duration: HushDurationConverter = 10, kick: bool = False,
-        *, channel: Optional[AnyChannelConverter] = None
+        *, channel: Union[TextChannel, VoiceChannel] = None
     ) -> None:
         """
         Silence the current channel for `duration` minutes or `forever`.
@@ -182,7 +182,7 @@ class Silence(commands.Cog):
             await self.send_message(MSG_SILENCE_SUCCESS, ctx.channel, channel, True, duration)
 
     @commands.command(aliases=("unhush",))
-    async def unsilence(self, ctx: Context, *, channel: AnyChannelConverter = None) -> None:
+    async def unsilence(self, ctx: Context, *, channel: Union[TextChannel, VoiceChannel] = None) -> None:
         """
         Unsilence the given channel if given, else the current one.
 

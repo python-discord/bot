@@ -536,46 +536,6 @@ class FetchedUser(UserConverter):
             raise BadArgument(f"User `{arg}` does not exist")
 
 
-class AnyChannelConverter(Converter):
-    """
-    Converts to a `discord.Channel` or, raises an error.
-
-    Unlike the default Channel Converter, this converter can handle channels given
-    in string, id, or mention formatting for both `TextChannel`s and `VoiceChannel`s.
-    Always returns 1 or fewer channels, errors if more than one match exists.
-
-    It is able to handle the following formats (caveats noted below:)
-    1. Convert from ID - Example: 267631170882240512
-    2. Convert from Explicit Mention - Example: #welcome
-    3. Convert from ID Mention - Example: <#267631170882240512>
-    4. Convert from Unmentioned Name: - Example: welcome
-
-    All the previous conversions are valid for both text and voice channels, but explicit
-    raw names (#4) do not work for non-unique channels, instead opting for an error.
-    Explicit mentions (#2) do not work for non-unique voice channels either.
-    """
-
-    async def convert(self, ctx: Context, arg: str) -> t.Union[discord.TextChannel, discord.VoiceChannel]:
-        """Convert the `arg` to a `TextChannel` or `VoiceChannel`."""
-        stripped = arg.strip().lstrip("<").lstrip("#").rstrip(">").lower()
-
-        # Filter channels by name and ID
-        channels = [channel for channel in ctx.guild.channels if stripped in (channel.name.lower(), str(channel.id))]
-
-        if len(channels) == 0:
-            # Couldn't find a matching channel
-            log.debug(f"Could not convert `{arg}` to channel, no matches found.")
-            raise BadArgument(f"{arg} returned no matches.")
-
-        elif len(channels) > 1:
-            # Couldn't discern the desired channel
-            log.debug(f"Could not convert `{arg}` to channel, {len(channels)} matches found.")
-            raise BadArgument(f"The provided argument returned too many matches ({len(channels)}).")
-
-        else:
-            return channels[0]
-
-
 def _snowflake_from_regex(pattern: t.Pattern, arg: str) -> int:
     """
     Extract the snowflake from `arg` using a regex `pattern` and return it as an int.
