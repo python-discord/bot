@@ -725,7 +725,7 @@ TIME_FORMATS = {
         "mul": 86400
     },
     "year": {
-        "aliases": ("yr", "yrs", "years"),
+        "aliases": ("yr", "yrs", "years", "y"),
         "mul": 31536000
     }
 }
