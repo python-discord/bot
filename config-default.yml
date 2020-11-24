@@ -251,6 +251,9 @@ guild:
         jammers:        737249140966162473
         team_leaders:   737250302834638889
 
+        # Streaming
+        video: 764245844798079016
+
     moderation_roles:
         - *OWNERS_ROLE
         - *ADMINS_ROLE
