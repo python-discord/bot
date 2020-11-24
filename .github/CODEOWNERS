@@ -1,2 +1,21 @@
 # Request Joe and Dennis for any PR
 * @jb3 @Den4200
+
+# Extensions
+**/bot/exts/backend/sync/**             @MarkKoz
+**/bot/exts/filters/*token_remover.py   @MarkKoz
+**/bot/exts/moderation/*silence.py      @MarkKoz
+bot/exts/info/codeblock/**              @MarkKoz
+bot/exts/utils/extensions.py            @MarkKoz
+bot/exts/utils/snekbox.py               @MarkKoz
+bot/exts/help_channels.py               @MarkKoz
+
+# Utils
+bot/utils/extensions.py                 @MarkKoz
+bot/utils/function.py                   @MarkKoz
+bot/utils/lock.py                       @MarkKoz
+bot/utils/scheduling.py                 @MarkKoz
+
+# Tests
+tests/_autospec.py                      @MarkKoz
+tests/bot/exts/test_cogs.py             @MarkKoz
