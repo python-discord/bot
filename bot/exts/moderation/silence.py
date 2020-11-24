@@ -352,17 +352,17 @@ class Silence(commands.Cog):
 
         if prev_overwrites is None:
             if isinstance(channel, TextChannel):
-                await self._mod_alerts_channel.send(
-                    f"<@&{Roles.admins}> Restored overwrites with default values after unsilencing "
-                    f"{channel.mention}. Please check that the `Send Messages` and `Add Reactions` "
-                    f"overwrites for {self._verified_msg_role.mention} are at their desired values."
-                )
+                permissions = "`Send Messages` and `Add Reactions`"
+                role = self._verified_msg_role
             else:
-                await self._mod_alerts_channel.send(
-                    f"<@&{Roles.admins}> Restored overwrites with default values after unsilencing "
-                    f"{channel.mention}. Please check that the `Speak` and `Connect`"
-                    f"overwrites for {self._verified_voice_role.mention} are at their desired values."
-                )
+                permissions = "`Speak` and `Connect`"
+                role = self._verified_voice_role
+
+            await self._mod_alerts_channel.send(
+                f"<@&{Roles.admins}> Restored overwrites with default values after unsilencing "
+                f"{channel.mention}. Please check that the {permissions} "
+                f"overwrites for {role.mention} are at their desired values."
+            )
 
         return True
 
