@@ -398,6 +398,9 @@ class Channels(metaclass=YAMLGetter):
     change_log: int
     code_help_voice: int
     code_help_voice_2: int
+    general_voice: int
+    admins_voice: int
+    staff_voice: int
     cooldown: int
     defcon: int
     dev_contrib: int
@@ -430,7 +433,11 @@ class Channels(metaclass=YAMLGetter):
     user_event_announcements: int
     user_log: int
     verification: int
+    code_help_chat: int
+    code_help_chat_2: int
     voice_chat: int
+    admins_voice_chat: int
+    staff_voice_chat: int
     voice_gate: int
     voice_log: int
 
