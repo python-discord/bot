@@ -219,10 +219,6 @@ class Silence(commands.Cog):
                 await self.send_message(MSG_UNSILENCE_FAIL, msg_channel, channel)
 
         else:
-            # Send success message to muted channel or voice chat channel, and invocation channel
-            if isinstance(channel, VoiceChannel):
-                await self._force_voice_sync(channel)
-
             await self.send_message(MSG_UNSILENCE_SUCCESS, msg_channel, channel, True)
 
     async def _set_silence_overwrites(self, channel: Union[TextChannel, VoiceChannel], kick: bool = False) -> bool:
@@ -345,6 +341,8 @@ class Silence(commands.Cog):
             await channel.set_permissions(self._verified_msg_role, overwrite=overwrite)
         else:
             await channel.set_permissions(self._verified_voice_role, overwrite=overwrite)
+            await self._force_voice_sync(channel)
+
         log.info(f"Unsilenced channel #{channel} ({channel.id}).")
 
         self.scheduler.cancel(channel.id)
