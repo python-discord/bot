@@ -3,9 +3,9 @@ import unittest
 
 from async_rediscache import RedisSession
 
-from bot.constants import TIME_FORMATS, Roles
+from bot.constants import Roles
 from bot.exts.moderation.stream import Stream
-from tests.helpers import MockBot, MockRole, MockMember
+from tests.helpers import MockBot, MockMember, MockRole
 
 redis_session = None
 redis_loop = asyncio.get_event_loop()
@@ -36,10 +36,6 @@ class StreamCommandTest(unittest.IsolatedAsyncioTestCase):
         This Test checks _link_from_alias method
         Checking for whether alias or key exists in TIME_FORMATS is done before calling this function
         """
-        FORMATS = []
-        for key, entry in TIME_FORMATS.items():
-            FORMATS.extend(entry["aliases"])
-            FORMATS.append(key)
 
         test_cases = (("sec", "second"),
                       ("s", "second"),

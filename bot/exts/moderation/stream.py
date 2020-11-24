@@ -1,10 +1,11 @@
-from discord.ext import commands, tasks
-import discord
-
-from bot.constants import Roles, STAFF_ROLES, Guild, TIME_FORMATS
-from bot.bot import Bot
 import time
+
+import discord
 from async_rediscache import RedisCache
+from discord.ext import commands, tasks
+
+from bot.bot import Bot
+from bot.constants import Guild, Roles, STAFF_ROLES, TIME_FORMATS
 
 # Constant error messages
 NO_USER_SPECIFIED = "Please specify a user"
@@ -23,7 +24,7 @@ for key, entry in TIME_FORMATS.items():
 
 
 class Stream(commands.Cog):
-    """Stream class handles giving screen sharing permission with commands"""
+    """Stream class handles giving screen sharing permission with commands."""
 
     # Data cache storing userid to unix_time relation
     # user id is used to get member who's streaming permission need to be revoked after some time
@@ -36,14 +37,14 @@ class Stream(commands.Cog):
         self.guild_static = None
 
     @staticmethod
-    def _link_from_alias(time_format) -> (dict, str):
-        """Get TIME_FORMATS key and entry by time format or any of its aliases"""
+    def _link_from_alias(time_format: str) -> (dict, str):
+        """Get TIME_FORMATS key and entry by time format or any of its aliases."""
         for format_key, val in TIME_FORMATS.items():
             if format_key == time_format or time_format in val["aliases"]:
                 return TIME_FORMATS[format_key], format_key
 
-    def _parse_time_to_seconds(self, duration, time_format) -> int:
-        """Get time in seconds from duration and time format"""
+    def _parse_time_to_seconds(self, duration: int, time_format: str) -> int:
+        """Get time in seconds from duration and time format."""
         return duration * self._link_from_alias(time_format)[0]["mul"]
 
     @commands.command(aliases=("streaming", "share"))
@@ -55,13 +56,13 @@ class Stream(commands.Cog):
             duration: int = 1,
             time_format: str = "h",
             *_
-    ):
+    ) -> None:
         """
-        stream handles <prefix>stream command
+        Stream handles <prefix>stream command.
+
         argument user - required user mention, any errors should be handled by upper level handler
         duration - int must be higher than 0 - defaults to 1
         time_format - str defining what time unit you want to use, must be any of FORMATS - defaults to h
-
         Command give user permission to stream and takes it away after provided duration
         """
         # Check for required user argument
@@ -93,10 +94,8 @@ class Stream(commands.Cog):
         await ctx.send(f"{user.mention} can now stream for {duration} {self._link_from_alias(time_format)[1]}/s")
 
     @tasks.loop(seconds=30)
-    async def remove_permissions(self):
-        """
-        background loop for removing streaming permission
-        """
+    async def remove_permissions(self) -> None:
+        """Background loop for removing streaming permission."""
         all_entries = await self.user_cache.items()
         for user_id, delete_time in all_entries:
             if time.time() > delete_time:
@@ -106,10 +105,8 @@ class Stream(commands.Cog):
                     await self.user_cache.pop(user_id)
 
     @remove_permissions.before_loop
-    async def await_ready(self):
-        """Wait for bot to be ready before starting remove_permissions loop
-        and get guild by id
-        """
+    async def await_ready(self) -> None:
+        """Wait for bot to be ready before starting remove_permissions loop and get guild by id."""
         await self.bot.wait_until_ready()
         self.guild_static = self.bot.get_guild(Guild.id)
 
@@ -119,11 +116,11 @@ class Stream(commands.Cog):
             self,
             ctx: commands.Context,
             user: discord.Member = None
-    ):
+    ) -> None:
         """
-        stream handles <prefix>revokestream command
-        argument user - required user mention, any errors should be handled by upper level handler
+        Revokestream handles <prefix>revokestream command.
 
+        argument user - required user mention, any errors should be handled by upper level handler
         command removes streaming permission from a user
         """
         not_allowed = not any(Roles.video == role.id for role in user.roles)
