@@ -2,7 +2,7 @@ from discord.ext import commands, tasks
 import discord
 
 from bot.constants import Roles, STAFF_ROLES, Guild, TIME_FORMATS
-from bot import Bot
+from bot.bot import Bot
 import time
 from async_rediscache import RedisCache
 
