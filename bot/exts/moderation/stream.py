@@ -24,7 +24,7 @@ for key, entry in TIME_FORMATS.items():
 
 
 class Stream(commands.Cog):
-    """Stream class handles giving screen sharing permission with commands."""
+    """Grant and revoke streaming permissions from users."""
 
     # Data cache storing userid to unix_time relation
     # user id is used to get member who's streaming permission need to be revoked after some time
