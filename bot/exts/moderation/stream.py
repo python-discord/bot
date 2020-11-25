@@ -8,7 +8,6 @@ from bot.bot import Bot
 from bot.constants import Guild, Roles, STAFF_ROLES, TIME_FORMATS
 
 # Constant error messages
-NO_USER_SPECIFIED = "Please specify a user"
 TIME_FORMAT_NOT_VALID = "Please specify a valid time format ex. 10h or 1day"
 TIME_LESS_EQ_0 = "Duration can not be a 0 or lower"
 USER_ALREADY_ALLOWED_TO_STREAM = "This user can already stream"
@@ -52,7 +51,7 @@ class Stream(commands.Cog):
     async def stream(
             self,
             ctx: commands.Context,
-            user: discord.Member = None,
+            user: discord.Member,
             duration: int = 1,
             time_format: str = "h",
             *_
@@ -65,12 +64,6 @@ class Stream(commands.Cog):
         time_format - str defining what time unit you want to use, must be any of FORMATS - defaults to h
         Command give user permission to stream and takes it away after provided duration
         """
-        # Check for required user argument
-        # if not provided send NO_USER_SPECIFIED message
-        if not user:
-            await ctx.send(NO_USER_SPECIFIED)
-            return
-
         # Time can't be negative lol
         if duration <= 0:
             await ctx.send(TIME_LESS_EQ_0)
