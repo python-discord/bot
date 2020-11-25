@@ -5,13 +5,13 @@ from async_rediscache import RedisCache
 from discord.ext import commands, tasks
 
 from bot.bot import Bot
-from bot.constants import Guild, Roles, STAFF_ROLES, TIME_FORMATS
+from bot.constants import Guild, Roles, STAFF_ROLES, TIME_FORMATS, Emojis
 
 # Constant error messages
-TIME_FORMAT_NOT_VALID = "Please specify a valid time format ex. 10h or 1day"
-TIME_LESS_EQ_0 = "Duration can not be a 0 or lower"
-USER_ALREADY_ALLOWED_TO_STREAM = "This user can already stream"
-USER_ALREADY_NOT_ALLOWED_TO_STREAM = "This user already can't stream"
+TIME_FORMAT_NOT_VALID = f"{Emojis.cross_mark}Please specify a valid time format ex. 10h or 1day."
+TIME_LESS_EQ_0 = f"{Emojis.cross_mark}Duration can not be a 0 or lower."
+USER_ALREADY_ALLOWED_TO_STREAM = f"{Emojis.cross_mark}This user can already stream."
+USER_ALREADY_NOT_ALLOWED_TO_STREAM = f"{Emojis.cross_mark}This user already can't stream."
 
 
 # FORMATS holds a combined list of all allowed time units
@@ -84,7 +84,8 @@ class Stream(commands.Cog):
         # Set user id - time in redis cache and add streaming permission role
         await self.user_cache.set(user.id, time.time() + self._parse_time_to_seconds(duration, time_format))
         await user.add_roles(discord.Object(Roles.video), reason="Temporary streaming access granted")
-        await ctx.send(f"{user.mention} can now stream for {duration} {self._link_from_alias(time_format)[1]}/s")
+        await ctx.send(f"{Emojis.check_mark}{user.mention} can now stream for "
+                       f"{duration} {self._link_from_alias(time_format)[1]}/s.")
 
     @tasks.loop(seconds=30)
     async def remove_permissions(self) -> None:
