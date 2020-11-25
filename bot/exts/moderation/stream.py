@@ -99,7 +99,7 @@ class Stream(commands.Cog):
         all_entries = await self.user_cache.items()
         for user_id, delete_time in all_entries:
             if time.time() > delete_time:
-                member = self.guild_static.fetch_memebr(user_id)
+                member = self.guild_static.fetch_memeber(user_id)
                 if member:
                     await member.remove_roles(discord.Object(Roles.video), reason="Temporary streaming access revoked")
                     await self.user_cache.pop(user_id)
