@@ -220,13 +220,7 @@ class HelpChannels(commands.Cog):
         if not await self.dormant_check(ctx):
             return
 
-        guild = self.bot.get_guild(constants.Guild.id)
-        claimant = guild.get_member(await self.help_channel_claimants.get(ctx.channel.id))
         await self.move_to_dormant(ctx.channel, "command")
-
-        # Remove the cooldown role if they have no other channels left
-        if claimant.id not in {user_id for _, user_id in await self.help_channel_claimants.items()}:
-            await self.remove_cooldown_role(claimant)
 
         # Ignore missing task when cooldown has passed but the channel still isn't dormant.
         if ctx.author.id in self.scheduler:
@@ -552,17 +546,24 @@ class HelpChannels(commands.Cog):
 
     async def move_to_dormant(self, channel: discord.TextChannel, caller: str) -> None:
         """
-        Make the `channel` dormant.
+        Make the `channel` dormant and remove the help cooldown role if it was the claimant's only channel.
 
         A caller argument is provided for metrics.
         """
         log.info(f"Moving #{channel} ({channel.id}) to the Dormant category.")
+
+        guild = self.bot.get_guild(constants.Guild.id)
+        claimant = guild.get_member(await self.help_channel_claimants.get(channel.id))
 
         await self.help_channel_claimants.delete(channel.id)
         await self.move_to_bottom_position(
             channel=channel,
             category_id=constants.Categories.help_dormant,
         )
+
+        # Remove the cooldown role if the claimant has no other channels left
+        if claimant.id not in {user_id for _, user_id in await self.help_channel_claimants.items()}:
+            await self.remove_cooldown_role(claimant)
 
         self.bot.stats.incr(f"help.dormant_calls.{caller}")
 
