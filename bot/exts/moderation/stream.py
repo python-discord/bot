@@ -47,7 +47,7 @@ class Stream(commands.Cog):
         """Get time in seconds from duration and time format."""
         return duration * self._link_from_alias(time_format)[0]["mul"]
 
-    @commands.command(aliases=("streaming", "share"))
+    @commands.command(aliases=("streaming",))
     @commands.has_any_role(*STAFF_ROLES)
     async def stream(
             self,
