@@ -117,12 +117,7 @@ class Stream(commands.Cog):
             ctx: commands.Context,
             user: discord.Member = None
     ) -> None:
-        """
-        Revokestream handles <prefix>revokestream command.
-
-        argument user - required user mention, any errors should be handled by upper level handler
-        command removes streaming permission from a user
-        """
+        """Revoke streaming permissions from a user."""
         not_allowed = not any(Roles.video == role.id for role in user.roles)
         if not_allowed:
             await user.remove_roles(discord.Object(Roles.video))
