@@ -223,7 +223,10 @@ class HelpChannels(commands.Cog):
         guild = self.bot.get_guild(constants.Guild.id)
         claimant = guild.get_member(await self.help_channel_claimants.get(ctx.channel.id))
         await self.move_to_dormant(ctx.channel, "command")
-        await self.remove_cooldown_role(claimant)
+
+        # Remove the cooldown role if they have no other channels left
+        if claimant.id not in {user_id for _, user_id in await self.help_channel_claimants.items()}:
+            await self.remove_cooldown_role(claimant)
 
         # Ignore missing task when cooldown has passed but the channel still isn't dormant.
         if ctx.author.id in self.scheduler:
@@ -412,6 +415,8 @@ class HelpChannels(commands.Cog):
         log.trace("Moving or rescheduling in-use channels.")
         for channel in self.get_category_channels(self.in_use_category):
             await self.move_idle_channel(channel, has_task=False)
+
+        log.trace(f'Initial state of help_channel_claimants: {await self.help_channel_claimants.items()}')
 
         # Prevent the command from being used until ready.
         # The ready event wasn't used because channels could change categories between the time
