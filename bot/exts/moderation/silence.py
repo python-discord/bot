@@ -123,12 +123,6 @@ class Silence(commands.Cog):
     ) -> None:
         """Helper function to send message confirmation to `source_channel`, and notification to `target_channel`."""
         # Get TextChannel connected to VoiceChannel if channel is of type voice
-        voice_chat = None
-        target_is_voice_channel = isinstance(target_channel, VoiceChannel)
-
-        if target_is_voice_channel:
-            voice_chat = await self._get_related_text_channel(target_channel)
-
         # Reply to invocation channel
         source_reply = message
         if source_channel != target_channel:
@@ -136,12 +130,12 @@ class Silence(commands.Cog):
         await source_channel.send(source_reply)
 
         # Reply to target channel
-        if alert_target and source_channel not in [target_channel, voice_chat]:
-            if target_is_voice_channel:
-                if voice_chat is not None:
+        if alert_target:
+            if isinstance(target_channel, VoiceChannel):
+                voice_chat = await self._get_related_text_channel(target_channel)
+                if voice_chat and source_channel != voice_chat:
                     await voice_chat.send(message.replace("current channel", target_channel.mention))
-
-            else:
+            elif source_channel != target_channel:
                 await target_channel.send(message)
 
     @commands.command(aliases=("hush",))
