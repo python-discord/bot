@@ -115,6 +115,7 @@ class Stream(commands.Cog):
         not_allowed = not any(Roles.video == role.id for role in user.roles)
         if not_allowed:
             await user.remove_roles(discord.Object(Roles.video))
+            await ctx.send(f"{Emojis.check_mark}Streaming permission taken from {user.display_name}")
         else:
             await ctx.send(USER_ALREADY_NOT_ALLOWED_TO_STREAM)
 
