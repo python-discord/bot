@@ -10,7 +10,7 @@ from bot.exts.help_channels import _caches, _message
 log = logging.getLogger(__name__)
 
 MAX_CHANNELS_PER_CATEGORY = 50
-EXCLUDED_CHANNELS = (constants.Channels.how_to_get_help, constants.Channels.cooldown)
+EXCLUDED_CHANNELS = (constants.Channels.cooldown,)
 
 
 def get_category_channels(category: discord.CategoryChannel) -> t.Iterable[discord.TextChannel]:
