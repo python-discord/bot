@@ -96,6 +96,9 @@ async def notify(channel: discord.TextChannel, last_notification: t.Optional[dat
     """
     Send a message in `channel` notifying about a lack of available help channels.
 
+    If a notification was sent, return the `datetime` at which the message was sent. Otherwise,
+    return None.
+
     Configuration:
 
     * `HelpChannels.notify` - toggle notifications
