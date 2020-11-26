@@ -221,16 +221,9 @@ class HelpChannels(commands.Cog):
             log.debug(f"{ctx.author} invoked command 'dormant' outside an in-use help channel")
             return
 
-        if not await self.dormant_check(ctx):
-            return
-
-        await self.move_to_dormant(ctx.channel, "command")
-
-        # Ignore missing task when cooldown has passed but the channel still isn't dormant.
-        if ctx.author.id in self.scheduler:
-            self.scheduler.cancel(ctx.author.id)
-
-        self.scheduler.cancel(ctx.channel.id)
+        if await self.dormant_check(ctx):
+            await self.move_to_dormant(ctx.channel, "command")
+            self.scheduler.cancel(ctx.channel.id)
 
     async def get_available_candidate(self) -> discord.TextChannel:
         """
@@ -414,8 +407,6 @@ class HelpChannels(commands.Cog):
         for channel in self.get_category_channels(self.in_use_category):
             await self.move_idle_channel(channel, has_task=False)
 
-        log.trace(f'Initial state of help_channel_claimants: {await self.help_channel_claimants.items()}')
-
         # Prevent the command from being used until ready.
         # The ready event wasn't used because channels could change categories between the time
         # the command is invoked and the cog is ready (e.g. if move_idle_channel wasn't called yet).
@@ -550,24 +541,18 @@ class HelpChannels(commands.Cog):
 
     async def move_to_dormant(self, channel: discord.TextChannel, caller: str) -> None:
         """
-        Make the `channel` dormant and remove the help cooldown role if it was the claimant's only channel.
+        Make the `channel` dormant.
 
         A caller argument is provided for metrics.
         """
         log.info(f"Moving #{channel} ({channel.id}) to the Dormant category.")
 
-        guild = self.bot.get_guild(constants.Guild.id)
-        claimant = guild.get_member(await self.help_channel_claimants.get(channel.id))
-
-        await self.help_channel_claimants.delete(channel.id)
         await self.move_to_bottom_position(
             channel=channel,
             category_id=constants.Categories.help_dormant,
         )
 
-        # Remove the cooldown role if the claimant has no other channels left
-        if claimant.id not in {user_id for _, user_id in await self.help_channel_claimants.items()}:
-            await self.remove_cooldown_role(claimant)
+        await self.unclaim_channel(channel)
 
         self.bot.stats.incr(f"help.dormant_calls.{caller}")
 
@@ -591,6 +576,27 @@ class HelpChannels(commands.Cog):
         log.trace(f"Pushing #{channel} ({channel.id}) into the channel queue.")
         self.channel_queue.put_nowait(channel)
         self.report_stats()
+
+    async def unclaim_channel(self, channel: discord.TextChannel) -> None:
+        """
+        Deletes `channel` from the mapping of channels to claimants and removes the help cooldown
+        role from the claimant if it was their only channel
+        """
+        claimant_id = await self.help_channel_claimants.pop(channel.id)
+
+        # Ignore missing task when cooldown has passed but the channel still isn't dormant.
+        if claimant_id in self.scheduler:
+            self.scheduler.cancel(claimant_id)
+
+        claimant = self.bot.get_guild(constants.Guild.id).get_member(claimant_id)
+
+        if claimant is None:
+            # `claimant` has left the guild, so the cooldown role need not be removed
+            return
+
+        # Remove the cooldown role if the claimant has no other channels left
+        if not any(claimant.id == user_id for _, user_id in await self.help_channel_claimants.items()):
+            await self.remove_cooldown_role(claimant)
 
     async def move_to_in_use(self, channel: discord.TextChannel) -> None:
         """Make a channel in-use and schedule it to be made dormant."""
