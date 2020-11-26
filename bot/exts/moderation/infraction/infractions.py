@@ -27,7 +27,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     category_description = "Server moderation tools."
 
     def __init__(self, bot: Bot):
-        super().__init__(bot, supported_infractions={"ban", "kick", "mute", "note", "warning"})
+        super().__init__(bot, supported_infractions={"ban", "kick", "mute", "note", "warning", "voice_ban"})
 
         self.category = "Moderation"
         self._muted_role = discord.Object(constants.Roles.muted)
