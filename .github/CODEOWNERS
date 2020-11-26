@@ -1,5 +1,5 @@
-# Request Joe and Dennis for any PR
-* @jb3 @Den4200
+# Request Dennis for any PR
+* @Den4200
 
 # Extensions
 **/bot/exts/backend/sync/**             @MarkKoz
@@ -24,3 +24,7 @@ tests/bot/exts/test_cogs.py             @MarkKoz
 .github/workflows/**                    @MarkKoz
 Dockerfile                              @MarkKoz
 docker-compose.yml                      @MarkKoz
+
+# Statistics
+bot/async_stats.py @jb3
+bot/exts/info/stats.py @jb3
