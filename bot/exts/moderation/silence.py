@@ -2,7 +2,6 @@ import json
 import logging
 from contextlib import suppress
 from datetime import datetime, timedelta, timezone
-from operator import attrgetter
 from typing import Optional, Union
 
 from async_rediscache import RedisCache
@@ -13,7 +12,7 @@ from discord.ext.commands import Context
 from bot.bot import Bot
 from bot.constants import Channels, Emojis, Guild, MODERATION_ROLES, Roles
 from bot.converters import HushDurationConverter
-from bot.utils.lock import LockedResourceError, lock_arg
+from bot.utils.lock import LockedResourceError, lock, lock_arg
 from bot.utils.scheduling import Scheduler
 
 log = logging.getLogger(__name__)
@@ -137,8 +136,17 @@ class Silence(commands.Cog):
             elif source_channel != target_channel:
                 await target_channel.send(message)
 
+    async def _select_lock_channel(*args) -> Union[TextChannel, VoiceChannel]:
+        """Passes the channel to be silenced to the resource lock."""
+        channel = args[0].get("channel")
+        if channel is not None:
+            return channel
+
+        else:
+            return args[0].get("ctx").channel
+
     @commands.command(aliases=("hush",))
-    @lock_arg(LOCK_NAMESPACE, "ctx", attrgetter("channel"), raise_error=True)
+    @lock(LOCK_NAMESPACE, _select_lock_channel, raise_error=True)
     async def silence(
         self, ctx: Context, duration: HushDurationConverter = 10, kick: bool = False,
         *, channel: Union[TextChannel, VoiceChannel] = None
