@@ -8,7 +8,7 @@
 bot/exts/info/codeblock/**              @MarkKoz
 bot/exts/utils/extensions.py            @MarkKoz
 bot/exts/utils/snekbox.py               @MarkKoz
-bot/exts/help_channels.py               @MarkKoz
+bot/exts/help_channels/**               @MarkKoz
 
 # Utils
 bot/utils/extensions.py                 @MarkKoz

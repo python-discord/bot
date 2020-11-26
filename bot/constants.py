@@ -406,7 +406,6 @@ class Channels(metaclass=YAMLGetter):
     dm_log: int
     esoteric: int
     helpers: int
-    how_to_get_help: int
     incidents: int
     incidents_archive: int
     mailing_lists: int
