@@ -180,11 +180,6 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         await self.apply_infraction(ctx, infraction, user)
 
-    @command(hidden=True, aliases=['shadowkick', 'skick'])
-    async def shadow_kick(self, ctx: Context, user: Member, *, reason: t.Optional[str] = None) -> None:
-        """Kick a user for the given reason without notifying the user."""
-        await self.apply_kick(ctx, user, reason, hidden=True)
-
     @command(hidden=True, aliases=['shadowban', 'sban'])
     async def shadow_ban(self, ctx: Context, user: FetchedMember, *, reason: t.Optional[str] = None) -> None:
         """Permanently ban a user for the given reason without notifying the user."""
@@ -192,31 +187,6 @@ class Infractions(InfractionScheduler, commands.Cog):
 
     # endregion
     # region: Temporary shadow infractions
-
-    @command(hidden=True, aliases=["shadowtempmute, stempmute", "shadowmute", "smute"])
-    async def shadow_tempmute(
-        self, ctx: Context,
-        user: Member,
-        duration: Expiry,
-        *,
-        reason: t.Optional[str] = None
-    ) -> None:
-        """
-        Temporarily mute a user for the given reason and duration without notifying the user.
-
-        A unit of time should be appended to the duration.
-        Units (∗case-sensitive):
-        \u2003`y` - years
-        \u2003`m` - months∗
-        \u2003`w` - weeks
-        \u2003`d` - days
-        \u2003`h` - hours
-        \u2003`M` - minutes∗
-        \u2003`s` - seconds
-
-        Alternatively, an ISO 8601 timestamp can be provided for the duration.
-        """
-        await self.apply_mute(ctx, user, reason, expires_at=duration, hidden=True)
 
     @command(hidden=True, aliases=["shadowtempban, stempban"])
     async def shadow_tempban(
