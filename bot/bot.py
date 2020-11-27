@@ -53,20 +53,22 @@ class Bot(commands.Bot):
 
     def _connect_statsd(self, statsd_url: str, retry_after: int = 2, attempt: int = 1) -> None:
         """Callback used to retry a connection to statsd if it should fail."""
-        if self._statsd_timerhandle and not self._statsd_timerhandle.cancelled:
-            self._statsd_timerhandle.cancel()
-
-        if attempt >= 5:
-            log.error("Reached 5 attempts trying to reconnect AsyncStatsClient. Aborting")
+        if attempt >= 8:
+            log.error("Reached 8 attempts trying to reconnect AsyncStatsClient. Aborting")
             return
 
         try:
             self.stats = AsyncStatsClient(self.loop, statsd_url, 8125, prefix="bot")
         except socket.gaierror:
             log.warning(f"Statsd client failed to connect (Attempt(s): {attempt})")
-            # Use a fallback strategy for retrying, up to 5 times.
+            # Use a fallback strategy for retrying, up to 8 times.
             self._statsd_timerhandle = self.loop.call_later(
-                retry_after, self._connect_statsd, statsd_url, retry_after * 5, attempt + 1)
+                retry_after,
+                self._connect_statsd,
+                statsd_url,
+                retry_after * 2,
+                attempt + 1
+            )
 
     async def cache_filter_list_data(self) -> None:
         """Cache all the data in the FilterList on the site."""
@@ -172,7 +174,7 @@ class Bot(commands.Bot):
         if self.redis_session:
             await self.redis_session.close()
 
-        if self._statsd_timerhandle and not self._statsd_timerhandle.cancelled:
+        if self._statsd_timerhandle:
             self._statsd_timerhandle.cancel()
 
     def insert_item_into_filter_list_cache(self, item: Dict[str, str]) -> None:
