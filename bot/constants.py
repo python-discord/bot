@@ -705,30 +705,3 @@ ERROR_REPLIES = [
     "Noooooo!!",
     "I can't believe you've done this",
 ]
-
-# TIME_FORMATS defines aliases and multipliers for time formats
-# key is a standard time unit name like second ,year, decade etc.
-# mul is a multiplier where duration of said time unit * multiplier = time in seconds
-# eg. 1 day = 1 * multiplier seconds, so mul = 86400
-TIME_FORMATS = {
-    "second": {
-        "aliases": ("s", "sec", "seconds", "secs"),
-        "mul": 1
-    },
-    "minute": {
-        "aliases": ("m", "min", "mins", "minutes"),
-        "mul": 60
-    },
-    "hour": {
-        "aliases": ("h", "hr", "hrs", "hours"),
-        "mul": 3600
-    },
-    "day": {
-        "aliases": ("d", "days"),
-        "mul": 86400
-    },
-    "year": {
-        "aliases": ("yr", "yrs", "years", "y"),
-        "mul": 31536000
-    }
-}
