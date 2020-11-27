@@ -23,7 +23,7 @@ class Stream(commands.Cog):
 
     @staticmethod
     async def _remove_streaming_permission(schedule_user: discord.Member) -> None:
-        """Remove streaming permission from Member"""
+        """Remove streaming permission from Member."""
         await schedule_user.remove_roles(discord.Object(Roles.video), reason="Temporary streaming access revoked")
 
     @commands.command(aliases=("streaming",))
@@ -37,6 +37,7 @@ class Stream(commands.Cog):
     ) -> None:
         """
         Temporarily grant streaming permissions to a user for a given duration.
+
         A unit of time should be appended to the duration.
         Units (∗case-sensitive):
         \u2003`y` - years
@@ -67,7 +68,7 @@ class Stream(commands.Cog):
             ctx: commands.Context,
             user: discord.Member
     ) -> None:
-        """Take away streaming permission from a user"""
+        """Take away streaming permission from a user."""
         # Check if user has the streaming permission to begin with
         allowed = any(Roles.video == role.id for role in user.roles)
         if allowed:
