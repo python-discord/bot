@@ -10,6 +10,6 @@ This means the library you're installing has code written in other languages and
 
 **1.** Open [https://visualstudio.microsoft.com/visual-cpp-build-tools/](https://visualstudio.microsoft.com/visual-cpp-build-tools/).
 **2.** Click **`Download Build Tools >`**. A file named `vs_BuildTools` or `vs_BuildTools.exe` should start downloading. If no downloads start after a few seconds, click **`click here to retry`**.
-**3.** Run the downloaded file. If a **`User Account Control`** dialog pops up, click **`Yes`**. Click **`Continue`** to proceed.
+**3.** Run the downloaded file. Click **`Continue`** to proceed.
 **4.** Choose **C++ build tools** and press **`Install`**. You may need a reboot after the installation.
 **5.** Try installing the library via `pip` again.
