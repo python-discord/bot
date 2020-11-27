@@ -25,7 +25,7 @@ tests/bot/exts/test_cogs.py             @MarkKoz
 tests/**                                @Akarys42
 
 # CI & Docker
-.github/workflows/**                    @MarkKoz @Akarys42
+.github/workflows/**                    @MarkKoz @Akarys42 @SebastiaanZ
 Dockerfile                              @MarkKoz @Akarys42
 docker-compose.yml                      @MarkKoz @Akarys42
 
