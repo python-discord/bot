@@ -197,13 +197,13 @@ guild:
         admin_announcements:    &ADMIN_ANNOUNCEMENTS    749736155569848370
 
         # Voice Chat
-        code_help_chat_1:                     755154969761677312
+        code_help_chat_1:                   755154969761677312
         code_help_chat_2:                   766330079135268884
         voice_chat:                         412357430186344448
         staff_voice_chat:                   541638762007101470
 
         # Voice Channels
-        code_help_voice_1:                    751592231726481530
+        code_help_voice_1:                  751592231726481530
         code_help_voice_2:                  764232549840846858
         general_voice:                      751591688538947646
         admins_voice:       &ADMINS_VOICE   500734494840717332
