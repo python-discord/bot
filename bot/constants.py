@@ -436,7 +436,6 @@ class Channels(metaclass=YAMLGetter):
     code_help_chat: int
     code_help_chat_2: int
     voice_chat: int
-    admins_voice_chat: int
     staff_voice_chat: int
     voice_gate: int
     voice_log: int

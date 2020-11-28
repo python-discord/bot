@@ -200,7 +200,6 @@ guild:
         code_help_chat:                     755154969761677312
         code_help_chat_2:                   766330079135268884
         voice_chat:                         412357430186344448
-        admins_voice_chat:                  000000000000000000 # FIXME
         staff_voice_chat:                   541638762007101470
 
         # Voice Channels
