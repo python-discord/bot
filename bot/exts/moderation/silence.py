@@ -31,6 +31,8 @@ MSG_UNSILENCE_MANUAL = (
 )
 MSG_UNSILENCE_SUCCESS = f"{constants.Emojis.check_mark} unsilenced current channel."
 
+TextOrVoiceChannel = Union[TextChannel, VoiceChannel]
+
 
 class SilenceNotifier(tasks.Loop):
     """Loop notifier for posting notices to `alert_channel` containing added channels."""
@@ -40,7 +42,7 @@ class SilenceNotifier(tasks.Loop):
         self._silenced_channels = {}
         self._alert_channel = alert_channel
 
-    def add_channel(self, channel: Union[TextChannel, VoiceChannel]) -> None:
+    def add_channel(self, channel: TextOrVoiceChannel) -> None:
         """Add channel to `_silenced_channels` and start loop if not launched."""
         if not self._silenced_channels:
             self.start()
@@ -119,7 +121,10 @@ class Silence(commands.Cog):
                 return self.bot.get_channel(channels[name])
 
     async def send_message(
-        self, message: str, source_channel: TextChannel, target_channel: Union[TextChannel, VoiceChannel],
+        self,
+        message: str,
+        source_channel: TextChannel,
+        target_channel: TextOrVoiceChannel,
         alert_target: bool = False
     ) -> None:
         """Helper function to send message confirmation to `source_channel`, and notification to `target_channel`."""
@@ -138,7 +143,7 @@ class Silence(commands.Cog):
             elif source_channel != target_channel:
                 await target_channel.send(message)
 
-    async def _select_lock_channel(*args) -> Union[TextChannel, VoiceChannel]:
+    async def _select_lock_channel(*args) -> TextOrVoiceChannel:
         """Passes the channel to be silenced to the resource lock."""
         channel = args[0].get("channel")
         if channel is not None:
@@ -150,8 +155,11 @@ class Silence(commands.Cog):
     @commands.command(aliases=("hush",))
     @lock(LOCK_NAMESPACE, _select_lock_channel, raise_error=True)
     async def silence(
-        self, ctx: Context, duration: HushDurationConverter = 10, kick: bool = False,
-        *, channel: Union[TextChannel, VoiceChannel] = None
+        self,
+        ctx: Context,
+        duration: HushDurationConverter = 10,
+        kick: bool = False,
+        *, channel: TextOrVoiceChannel = None
     ) -> None:
         """
         Silence the current channel for `duration` minutes or `forever`.
@@ -191,7 +199,7 @@ class Silence(commands.Cog):
             await self.send_message(MSG_SILENCE_SUCCESS.format(duration=duration), ctx.channel, channel, True)
 
     @commands.command(aliases=("unhush",))
-    async def unsilence(self, ctx: Context, *, channel: Union[TextChannel, VoiceChannel] = None) -> None:
+    async def unsilence(self, ctx: Context, *, channel: TextOrVoiceChannel = None) -> None:
         """
         Unsilence the given channel if given, else the current one.
 
@@ -204,9 +212,7 @@ class Silence(commands.Cog):
         await self._unsilence_wrapper(channel, ctx)
 
     @lock_arg(LOCK_NAMESPACE, "channel", raise_error=True)
-    async def _unsilence_wrapper(
-        self, channel: Union[TextChannel, VoiceChannel], ctx: Optional[Context] = None
-    ) -> None:
+    async def _unsilence_wrapper(self, channel: TextOrVoiceChannel, ctx: Optional[Context] = None) -> None:
         """Unsilence `channel` and send a success/failure message."""
         msg_channel = channel
         if ctx is not None:
@@ -229,7 +235,7 @@ class Silence(commands.Cog):
         else:
             await self.send_message(MSG_UNSILENCE_SUCCESS, msg_channel, channel, True)
 
-    async def _set_silence_overwrites(self, channel: Union[TextChannel, VoiceChannel], kick: bool = False) -> bool:
+    async def _set_silence_overwrites(self, channel: TextOrVoiceChannel, kick: bool = False) -> bool:
         """Set silence permission overwrites for `channel` and return True if successful."""
         # Get the original channel overwrites
         if isinstance(channel, TextChannel):
@@ -307,9 +313,7 @@ class Silence(commands.Cog):
             if delete_channel:
                 await afk_channel.delete(reason="Deleting temp mute channel.")
 
-    async def _schedule_unsilence(
-            self, ctx: Context, channel: Union[TextChannel, VoiceChannel], duration: Optional[int]
-    ) -> None:
+    async def _schedule_unsilence(self, ctx: Context, channel: TextOrVoiceChannel, duration: Optional[int]) -> None:
         """Schedule `ctx.channel` to be unsilenced if `duration` is not None."""
         if duration is None:
             await self.unsilence_timestamps.set(channel.id, -1)
@@ -318,7 +322,7 @@ class Silence(commands.Cog):
             unsilence_time = datetime.now(tz=timezone.utc) + timedelta(minutes=duration)
             await self.unsilence_timestamps.set(channel.id, unsilence_time.timestamp())
 
-    async def _unsilence(self, channel: Union[TextChannel, VoiceChannel]) -> bool:
+    async def _unsilence(self, channel: TextOrVoiceChannel) -> bool:
         """
         Unsilence `channel`.
 
