@@ -396,7 +396,7 @@ class Channels(metaclass=YAMLGetter):
     big_brother_logs: int
     bot_commands: int
     change_log: int
-    code_help_voice: int
+    code_help_voice_1: int
     code_help_voice_2: int
     general_voice: int
     admins_voice: int
@@ -433,7 +433,7 @@ class Channels(metaclass=YAMLGetter):
     user_event_announcements: int
     user_log: int
     verification: int
-    code_help_chat: int
+    code_help_chat_1: int
     code_help_chat_2: int
     voice_chat: int
     staff_voice_chat: int
