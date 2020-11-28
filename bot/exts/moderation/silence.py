@@ -5,12 +5,12 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, Union
 
 from async_rediscache import RedisCache
-from discord import Member, PermissionOverwrite, TextChannel, VoiceChannel
+from discord import Guild, PermissionOverwrite, TextChannel, VoiceChannel
 from discord.ext import commands, tasks
 from discord.ext.commands import Context
 
+from bot import constants
 from bot.bot import Bot
-from bot.constants import Channels, Emojis, Guild, MODERATION_ROLES, Roles
 from bot.converters import HushDurationConverter
 from bot.utils.lock import LockedResourceError, lock, lock_arg
 from bot.utils.scheduling import Scheduler
@@ -19,17 +19,17 @@ log = logging.getLogger(__name__)
 
 LOCK_NAMESPACE = "silence"
 
-MSG_SILENCE_FAIL = f"{Emojis.cross_mark} current channel is already silenced."
-MSG_SILENCE_PERMANENT = f"{Emojis.check_mark} silenced current channel indefinitely."
-MSG_SILENCE_SUCCESS = f"{Emojis.check_mark} silenced current channel for {{duration}} minute(s)."
+MSG_SILENCE_FAIL = f"{constants.Emojis.cross_mark} current channel is already silenced."
+MSG_SILENCE_PERMANENT = f"{constants.Emojis.check_mark} silenced current channel indefinitely."
+MSG_SILENCE_SUCCESS = f"{constants.Emojis.check_mark} silenced current channel for {{duration}} minute(s)."
 
-MSG_UNSILENCE_FAIL = f"{Emojis.cross_mark} current channel was not silenced."
+MSG_UNSILENCE_FAIL = f"{constants.Emojis.cross_mark} current channel was not silenced."
 MSG_UNSILENCE_MANUAL = (
-    f"{Emojis.cross_mark} current channel was not unsilenced because the current overwrites were "
+    f"{constants.Emojis.cross_mark} current channel was not unsilenced because the current overwrites were "
     f"set manually or the cache was prematurely cleared. "
     f"Please edit the overwrites manually to unsilence."
 )
-MSG_UNSILENCE_SUCCESS = f"{Emojis.check_mark} unsilenced current channel."
+MSG_UNSILENCE_SUCCESS = f"{constants.Emojis.check_mark} unsilenced current channel."
 
 
 class SilenceNotifier(tasks.Loop):
@@ -67,7 +67,9 @@ class SilenceNotifier(tasks.Loop):
                 f"{channel.mention} for {(self._current_loop-start)//60} min"
                 for channel, start in self._silenced_channels.items()
             )
-            await self._alert_channel.send(f"<@&{Roles.moderators}> currently silenced channels: {channels_text}")
+            await self._alert_channel.send(
+                f"<@&{constants.Roles.moderators}> currently silenced channels: {channels_text}"
+            )
 
 
 class Silence(commands.Cog):
@@ -91,26 +93,26 @@ class Silence(commands.Cog):
         """Set instance attributes once the guild is available and reschedule unsilences."""
         await self.bot.wait_until_guild_available()
 
-        guild = self.bot.get_guild(Guild.id)
+        guild = self.bot.get_guild(constants.Guild.id)
 
-        self._verified_msg_role = guild.get_role(Roles.verified)
-        self._verified_voice_role = guild.get_role(Roles.voice_verified)
-        self._helper_role = guild.get_role(Roles.helpers)
+        self._verified_msg_role = guild.get_role(constants.Roles.verified)
+        self._verified_voice_role = guild.get_role(constants.Roles.voice_verified)
+        self._helper_role = guild.get_role(constants.Roles.helpers)
 
-        self._mod_alerts_channel = self.bot.get_channel(Channels.mod_alerts)
+        self._mod_alerts_channel = self.bot.get_channel(constants.Channels.mod_alerts)
 
-        self.notifier = SilenceNotifier(self.bot.get_channel(Channels.mod_log))
+        self.notifier = SilenceNotifier(self.bot.get_channel(constants.Channels.mod_log))
         await self._reschedule()
 
     async def _get_related_text_channel(self, channel: VoiceChannel) -> Optional[TextChannel]:
         """Returns the text channel related to a voice channel."""
         # TODO: Figure out a dynamic way of doing this
         channels = {
-            "off-topic": Channels.voice_chat,
-            "code/help 1": Channels.code_help_voice,
-            "code/help 2": Channels.code_help_voice_2,
-            "admin": Channels.admins_voice,
-            "staff": Channels.staff_voice
+            "off-topic": constants.Channels.voice_chat,
+            "code/help 1": constants.Channels.code_help_voice,
+            "code/help 2": constants.Channels.code_help_voice_2,
+            "admin": constants.Channels.admins_voice,
+            "staff": constants.Channels.staff_voice
         }
         for name in channels.keys():
             if name in channel.name.lower():
@@ -360,7 +362,7 @@ class Silence(commands.Cog):
         # Alert Admin team if old overwrites were not available
         if prev_overwrites is None:
             await self._mod_alerts_channel.send(
-                f"<@&{Roles.admins}> Restored overwrites with default values after unsilencing "
+                f"<@&{constants.Roles.admins}> Restored overwrites with default values after unsilencing "
                 f"{channel.mention}. Please check that the {permissions} "
                 f"overwrites for {role.mention} are at their desired values."
             )
@@ -402,7 +404,7 @@ class Silence(commands.Cog):
     # This cannot be static (must have a __func__ attribute).
     async def cog_check(self, ctx: Context) -> bool:
         """Only allow moderators to invoke the commands in this cog."""
-        return await commands.has_any_role(*MODERATION_ROLES).predicate(ctx)
+        return await commands.has_any_role(*constants.MODERATION_ROLES).predicate(ctx)
 
 
 def setup(bot: Bot) -> None:

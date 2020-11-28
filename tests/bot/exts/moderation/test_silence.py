@@ -158,7 +158,7 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(self.cog._init_task.cancelled())
 
     @autospec("discord.ext.commands", "has_any_role")
-    @mock.patch.object(silence, "MODERATION_ROLES", new=(1, 2, 3))
+    @mock.patch.object(silence.constants, "MODERATION_ROLES", new=(1, 2, 3))
     async def test_cog_check(self, role_check):
         """Role check was called with `MODERATION_ROLES`"""
         ctx = MockContext()
