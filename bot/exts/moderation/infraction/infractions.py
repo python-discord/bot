@@ -10,7 +10,7 @@ from discord.ext.commands import Context, command
 from bot import constants
 from bot.bot import Bot
 from bot.constants import Event
-from bot.converters import Expiry, FetchedMember
+from bot.converters import Duration, Expiry, FetchedMember
 from bot.decorators import respect_role_hierarchy
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
@@ -98,7 +98,13 @@ class Infractions(InfractionScheduler, commands.Cog):
     # region: Temporary infractions
 
     @command(aliases=["mute"])
-    async def tempmute(self, ctx: Context, user: Member, duration: Expiry, *, reason: t.Optional[str] = None) -> None:
+    async def tempmute(
+        self, ctx: Context,
+        user: Member,
+        duration: t.Optional[Expiry] = None,
+        *,
+        reason: t.Optional[str] = None
+    ) -> None:
         """
         Temporarily mute a user for the given reason and duration.
 
@@ -113,7 +119,11 @@ class Infractions(InfractionScheduler, commands.Cog):
         \u2003`s` - seconds
 
         Alternatively, an ISO 8601 timestamp can be provided for the duration.
+
+        If no duration is given, a one hour duration is used by default.
         """
+        if duration is None:
+            duration = await Duration().convert(ctx, "1h")
         await self.apply_mute(ctx, user, reason, expires_at=duration)
 
     @command()
