@@ -2,7 +2,7 @@ import asyncio
 import unittest
 from datetime import datetime, timezone
 from unittest import mock
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 from async_rediscache import RedisSession
 from discord import PermissionOverwrite
@@ -266,67 +266,69 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         """Tests the _force_voice_sync helper function."""
         await self.cog._async_init()
 
-        afk_channel = MockVoiceChannel()
-        channel = MockVoiceChannel(guild=MockGuild(afk_channel=afk_channel))
-
         members = []
         for _ in range(10):
             members.append(MockMember())
 
-        channel.members = members
-        test_cases = (
-            (members[0], False, "Muting member."),
-            (members[0], True, "Kicking voice channel member."),
-            (None, False, "Muting member."),
-            (None, True, "Kicking voice channel member."),
-        )
+        afk_channel = MockVoiceChannel()
+        channel = MockVoiceChannel(guild=MockGuild(afk_channel=afk_channel), members=members)
 
-        for member, kick, reason in test_cases:
-            with self.subTest(members=member, kick=kick, reason=reason):
-                await self.cog._force_voice_sync(channel, member, kick)
-
-                for single_member in channel.members if member is None else [member]:
-                    if kick:
-                        single_member.move_to.assert_called_once_with(None, reason=reason)
-                    else:
-                        self.assertEqual(single_member.move_to.call_count, 2)
-                        single_member.move_to.assert_has_calls([
-                            mock.call(afk_channel, reason=reason),
-                            mock.call(channel, reason=reason)
-                        ], any_order=False)
-
-                    single_member.reset_mock()
+        await self.cog._force_voice_sync(channel)
+        for member in members:
+            self.assertEqual(member.move_to.call_count, 2)
+            member.move_to.assert_has_calls([
+                mock.call(afk_channel, reason="Muting VC member."),
+                mock.call(channel, reason="Muting VC member.")
+            ], any_order=False)
 
     async def test_force_voice_sync_staff(self):
         """Tests to ensure _force_voice_sync does not kick staff members."""
         await self.cog._async_init()
         member = MockMember(roles=[self.cog._helper_role])
 
-        await self.cog._force_voice_sync(MockVoiceChannel(), member)
+        await self.cog._force_voice_sync(MockVoiceChannel(members=[member]))
         member.move_to.assert_not_called()
 
     async def test_force_voice_sync_no_channel(self):
         """Test to ensure _force_voice_sync can create its own voice channel if one is not available."""
         await self.cog._async_init()
 
-        member = MockMember()
         channel = MockVoiceChannel(guild=MockGuild(afk_channel=None))
-
-        new_channel = MockVoiceChannel(delete=Mock())
+        new_channel = MockVoiceChannel(delete=AsyncMock())
         channel.guild.create_voice_channel.return_value = new_channel
 
-        with mock.patch.object(self.cog.scheduler, "schedule_later") as scheduler:
-            await self.cog._force_voice_sync(channel, member)
+        await self.cog._force_voice_sync(channel)
 
-            # Check channel creation
-            overwrites = {
-                channel.guild.default_role: PermissionOverwrite(speak=False, connect=False, view_channel=False)
-            }
-            channel.guild.create_voice_channel.assert_called_once_with("mute-temp", overwrites=overwrites)
+        # Check channel creation
+        overwrites = {
+            channel.guild.default_role: PermissionOverwrite(speak=False, connect=False, view_channel=False)
+        }
+        channel.guild.create_voice_channel.assert_called_once_with("mute-temp", overwrites=overwrites)
 
-            # Check bot queued deletion
-            new_channel.delete.assert_called_once_with(reason="Deleting temp mute channel.")
-            scheduler.assert_called_once_with(30, new_channel.id, new_channel.delete())
+        # Check bot deleted channel
+        new_channel.delete.assert_called_once_with(reason="Deleting temp mute channel.")
+
+    async def test_voice_kick(self):
+        """Test to ensure kick function can remove all members from a voice channel."""
+        await self.cog._async_init()
+
+        members = []
+        for _ in range(10):
+            members.append(MockMember())
+
+        channel = MockVoiceChannel(members=members)
+        await self.cog._kick_voice_members(channel)
+
+        for member in members:
+            member.move_to.assert_called_once_with(None, reason="Kicking member from voice channel.")
+
+    async def test_voice_kick_staff(self):
+        """Test to ensure voice kick skips staff members."""
+        await self.cog._async_init()
+        member = MockMember(roles=[self.cog._helper_role])
+
+        await self.cog._kick_voice_members(MockVoiceChannel(members=[member]))
+        member.move_to.assert_not_called()
 
 
 @autospec(silence.Silence, "previous_overwrites", "unsilence_timestamps", pass_mocks=False)
@@ -457,20 +459,44 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         )
 
         for target, message in test_cases:
-            with mock.patch.object(self.cog, "_set_silence_overwrites", return_value=True):
-                with self.subTest(target_channel=target, message=message):
-                    await self.cog.silence.callback(self.cog, ctx, 10, False, channel=target)
-                    if ctx.channel == target or target is None:
-                        ctx.channel.send.assert_called_once_with(message)
+            with mock.patch.object(self.cog, "_force_voice_sync") as voice_sync:
+                with mock.patch.object(self.cog, "_set_silence_overwrites", return_value=True):
+                    with self.subTest(target_channel=target, message=message):
+                        await self.cog.silence.callback(self.cog, ctx, 10, False, channel=target)
+                        if ctx.channel == target or target is None:
+                            ctx.channel.send.assert_called_once_with(message)
 
-                    else:
-                        ctx.channel.send.assert_called_once_with(message.replace("current channel", target.mention))
-                        if isinstance(target, MockTextChannel):
-                            target.send.assert_called_once_with(message)
+                        else:
+                            ctx.channel.send.assert_called_once_with(message.replace("current channel", target.mention))
+                            if isinstance(target, MockTextChannel):
+                                target.send.assert_called_once_with(message)
+                            else:
+                                voice_sync.assert_called_once_with(target)
 
             ctx.channel.send.reset_mock()
             if target is not None and isinstance(target, MockTextChannel):
                 target.send.reset_mock()
+
+    @mock.patch.object(silence.Silence, "_kick_voice_members")
+    @mock.patch.object(silence.Silence, "_force_voice_sync")
+    async def test_sync_or_kick_called(self, sync, kick):
+        """Tests if silence command calls kick or sync on voice channels when appropriate."""
+        channel = MockVoiceChannel()
+        ctx = MockContext()
+
+        with mock.patch.object(self.cog, "_set_silence_overwrites", return_value=True):
+            with self.subTest("Test calls kick"):
+                await self.cog.silence.callback(self.cog, ctx, 10, kick=True, channel=channel)
+                kick.assert_called_once_with(channel)
+                sync.assert_not_called()
+
+            kick.reset_mock()
+            sync.reset_mock()
+
+            with self.subTest("Test calls sync"):
+                await self.cog.silence.callback(self.cog, ctx, 10, kick=False, channel=channel)
+                sync.assert_called_once_with(channel)
+                kick.assert_not_called()
 
     async def test_skipped_already_silenced(self):
         """Permissions were not set and `False` was returned for an already silenced channel."""

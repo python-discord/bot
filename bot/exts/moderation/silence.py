@@ -174,7 +174,10 @@ class Silence(commands.Cog):
             return
 
         if isinstance(channel, VoiceChannel):
-            await self._force_voice_sync(channel, kick=kick)
+            if kick:
+                await self._kick_voice_members(channel)
+            else:
+                await self._force_voice_sync(channel)
 
         await self._schedule_unsilence(ctx, channel, duration)
 
@@ -252,56 +255,57 @@ class Silence(commands.Cog):
 
         return True
 
-    async def _force_voice_sync(
-        self, channel: VoiceChannel, member: Optional[Member] = None, kick: bool = False
-    ) -> None:
+    @staticmethod
+    async def _get_afk_channel(guild: Guild) -> VoiceChannel:
+        """Get a guild's AFK channel, or create one if it does not exist."""
+        afk_channel = guild.afk_channel
+
+        if afk_channel is None:
+            overwrites = {
+                guild.default_role: PermissionOverwrite(speak=False, connect=False, view_channel=False)
+            }
+            afk_channel = await guild.create_voice_channel("mute-temp", overwrites=overwrites)
+            log.info(f"Failed to get afk-channel, created temporary channel #{afk_channel} ({afk_channel.id})")
+
+        return afk_channel
+
+    async def _kick_voice_members(self, channel: VoiceChannel) -> None:
+        """Remove all non-staff members from a voice channel."""
+        log.debug(f"Removing all non staff members from #{channel.name} ({channel.id}).")
+
+        for member in channel.members:
+            if self._helper_role not in member.roles:
+                await member.move_to(None, reason="Kicking member from voice channel.")
+
+        log.debug("Removed all members.")
+
+    async def _force_voice_sync(self, channel: VoiceChannel) -> None:
         """
         Move all non-staff members from `channel` to a temporary channel and back to force toggle role mute.
 
-        If `member` is passed, the mute only occurs to that member.
         Permission modification has to happen before this function.
-
-        If `kick_all` is True, members will not be added back to the voice channel.
         """
-        # Handle member picking logic
-        if member is not None:
-            members = [member]
-        else:
-            members = channel.members
-
-        # Handle kick logic
-        if kick:
-            for member in members:
-                await member.move_to(None, reason="Kicking voice channel member.")
-
-            log.debug(f"Kicked all members from #{channel.name} ({channel.id}).")
-            return
-
         # Obtain temporary channel
-        afk_channel = channel.guild.afk_channel
-        if afk_channel is None:
-            overwrites = {
-                channel.guild.default_role: PermissionOverwrite(speak=False, connect=False, view_channel=False)
-            }
-            afk_channel = await channel.guild.create_voice_channel("mute-temp", overwrites=overwrites)
-            log.info(f"Failed to get afk-channel, created temporary channel #{afk_channel} ({afk_channel.id})")
+        delete_channel = channel.guild.afk_channel is None
+        afk_channel = await self._get_afk_channel(channel.guild)
 
-            # Schedule channel deletion in case function errors out
-            self.scheduler.schedule_later(
-                30, afk_channel.id, afk_channel.delete(reason="Deleting temp mute channel.")
-            )
+        try:
+            # Move all members to temporary channel and back
+            for member in channel.members:
+                # Skip staff
+                if self._helper_role in member.roles:
+                    continue
 
-        # Move all members to temporary channel and back
-        for member in members:
-            # Skip staff
-            if self._helper_role in member.roles:
-                continue
+                await member.move_to(afk_channel, reason="Muting VC member.")
+                log.debug(f"Moved {member.name} to afk channel.")
 
-            await member.move_to(afk_channel, reason="Muting member.")
-            log.debug(f"Moved {member.name} to afk channel.")
+                await member.move_to(channel, reason="Muting VC member.")
+                log.debug(f"Moved {member.name} to original voice channel.")
 
-            await member.move_to(channel, reason="Muting member.")
-            log.debug(f"Moved {member.name} to original voice channel.")
+        finally:
+            # Delete VC channel if it was created.
+            if delete_channel:
+                await afk_channel.delete(reason="Deleting temp mute channel.")
 
     async def _schedule_unsilence(
             self, ctx: Context, channel: Union[TextChannel, VoiceChannel], duration: Optional[int]
