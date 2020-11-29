@@ -16,7 +16,6 @@ from bot.exts.moderation.modlog import ModLog
 from bot.pagination import LinePaginator
 from bot.utils import messages, time
 from bot.utils.channel import is_mod_channel
-from bot.utils.regex import END_PUNCTUATION_RE
 
 log = logging.getLogger(__name__)
 
@@ -77,13 +76,13 @@ class ModManagement(commands.Cog):
         If a previous infraction reason does not end with an ending punctuation mark, this automatically
         adds a period before the amended reason.
         """
-        add_period = not END_PUNCTUATION_RE.match(infraction["reason"])
+        old_reason = infraction["reason"]
 
-        new_reason = "".join((
-            infraction["reason"], ". " if add_period else " ", reason,
-        ))
+        if old_reason is not None:
+            add_period = not old_reason.endswith((".", "!", "?"))
+            reason = old_reason + (". " if add_period else " ") + reason
 
-        await self.infraction_edit(ctx, infraction, duration, reason=new_reason)
+        await self.infraction_edit(ctx, infraction, duration, reason=reason)
 
     @infraction_group.command(name='edit')
     async def infraction_edit(
