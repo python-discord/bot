@@ -395,8 +395,10 @@ class HelpChannels(commands.Cog):
 
     async def unclaim_channel(self, channel: discord.TextChannel) -> None:
         """
-        Remove the claimant from the claimant cache and remove the cooldown role
-        if it was their last open help channel.
+        Mark the channel as unclaimed and remove the cooldown role from the claimant if needed.
+
+        The role is only removed if they have no claimed channels left once the current one is unclaimed.
+        This method also handles canceling the automatic removal of the cooldown role.
         """
         claimant_id = await _caches.claimants.pop(channel.id)
 
