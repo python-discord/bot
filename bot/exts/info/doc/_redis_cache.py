@@ -19,7 +19,8 @@ class DocRedisCache(RedisObject):
 
         Keys expire after a week to keep data up to date.
         """
-        expiry_timestamp = datetime.datetime.now().timestamp() + 7 * 24 * 60 * 60
+        expiry_timestamp = (datetime.datetime.now() + datetime.timedelta(weeks=1)).timestamp()
+
         with await self._get_pool_connection() as connection:
             await connection.hset(
                 f"{self.namespace}:{item.package}",
@@ -34,7 +35,7 @@ class DocRedisCache(RedisObject):
 
         Keys expire after a week to keep data up to date.
         """
-        expiry_timestamp = datetime.datetime.now().timestamp() + 7 * 24 * 60 * 60
+        expiry_timestamp = (datetime.datetime.now() + datetime.timedelta(weeks=1)).timestamp()
 
         with await self._get_pool_connection() as connection:
             if await connection.hexists(f"{self.namespace}:{item.package}", self.get_item_key(item)):
