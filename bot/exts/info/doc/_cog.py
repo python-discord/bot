@@ -139,9 +139,8 @@ class CachedParser:
         # The parse queue stores soups along with the doc symbols in QueueItem objects,
         # in case we're moving a DocItem we have to get the associated QueueItem first and then move it.
         item_index = self._queue.index(item)
-        queue_item = self._queue[item_index]
+        queue_item = self._queue.pop(item_index)
 
-        del self._queue[item_index]
         self._queue.append(queue_item)
 
     def add_item(self, doc_item: DocItem) -> None:
