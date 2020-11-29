@@ -215,8 +215,8 @@ class DocCog(commands.Cog):
             )
             self.scheduled_inventories.add(api_package_name)
             return False
-        with suppress(KeyError):
-            self.scheduled_inventories.discard(api_package_name)
+
+        self.scheduled_inventories.discard(api_package_name)
 
         for group, items in package.items():
             for symbol, relative_doc_url in items:
