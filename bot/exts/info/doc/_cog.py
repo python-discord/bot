@@ -207,7 +207,7 @@ class DocCog(commands.Cog):
 
         if not package:
             delay = 2*60 if inventory_url not in self.scheduled_inventories else 5*60
-            log.info(f"Failed to fetch inventory, attempting again in {delay//60} minutes.")
+            log.info(f"Failed to fetch inventory; attempting again in {delay//60} minutes.")
             self.inventory_scheduler.schedule_later(
                 delay,
                 api_package_name,
@@ -275,7 +275,7 @@ class DocCog(commands.Cog):
         self.scheduled_inventories.clear()
         await self.item_fetcher.clear()
 
-        # Run all coroutines concurrently - since each of them performs a HTTP
+        # Run all coroutines concurrently - since each of them performs an HTTP
         # request, this speeds up fetching the inventory data heavily.
         coros = [
             self.update_single(
@@ -322,7 +322,7 @@ class DocCog(commands.Cog):
 
     @commands.group(name='docs', aliases=('doc', 'd'), invoke_without_command=True)
     async def docs_group(self, ctx: commands.Context, *, symbol: Optional[str]) -> None:
-        """Lookup documentation for Python symbols."""
+        """Look up documentation for Python symbols."""
         await ctx.invoke(self.get_command, symbol=symbol)
 
     @docs_group.command(name='getdoc', aliases=('g',))
@@ -414,7 +414,8 @@ class DocCog(commands.Cog):
 
         if await self.update_single(package_name, base_url, inventory_url) is None:
             await ctx.send(
-                f"Added package `{package_name}` to database but failed to fetch inventory; rescheduled in 2 minutes."
+                f"Added the package `{package_name}` to the database but failed to fetch inventory; "
+                f"trying again in 2 minutes."
             )
             return
         await ctx.send(f"Added package `{package_name}` to database and refreshed inventory.")
@@ -425,7 +426,7 @@ class DocCog(commands.Cog):
         """
         Removes the specified package from the database.
 
-        Examples:
+        Example:
             !docs deletedoc aiohttp
         """
         await self.bot.api_client.delete(f'bot/documentation-links/{package_name}')
@@ -435,12 +436,12 @@ class DocCog(commands.Cog):
             # that was from this package is properly deleted.
             await self.refresh_inventory()
             await doc_cache.delete(package_name)
-        await ctx.send(f"Successfully deleted `{package_name}` and refreshed inventory.")
+        await ctx.send(f"Successfully deleted `{package_name}` and refreshed the inventory.")
 
     @docs_group.command(name="refreshdoc", aliases=("rfsh", "r"))
     @commands.has_any_role(*MODERATION_ROLES)
     async def refresh_command(self, ctx: commands.Context) -> None:
-        """Refresh inventories and send differences to channel."""
+        """Refresh inventories and show the difference."""
         old_inventories = set(self.base_urls)
         with ctx.typing():
             await self.refresh_inventory()
@@ -461,6 +462,6 @@ class DocCog(commands.Cog):
     @docs_group.command(name="cleardoccache")
     @commands.has_any_role(*MODERATION_ROLES)
     async def clear_cache_command(self, ctx: commands.Context, package_name: PackageName) -> None:
-        """Clear persistent redis cache for `package`."""
+        """Clear the persistent redis cache for `package`."""
         await doc_cache.delete(package_name)
-        await ctx.send(f"Succesfully cleared cache for {package_name}")
+        await ctx.send(f"Successfully cleared the cache for `{package_name}`.")

@@ -101,17 +101,17 @@ async def fetch_inventory(
             inventory = await _fetch_inventory(client_session, url)
         except aiohttp.ClientConnectorError:
             log.warning(
-                f"Failed to connect to inventory url at {url}, "
+                f"Failed to connect to inventory url at {url}; "
                 f"trying again ({attempt}/{FAILED_REQUEST_ATTEMPTS})."
             )
         except aiohttp.ClientError:
             log.error(
-                f"Failed to get inventory from {url}, "
+                f"Failed to get inventory from {url}; "
                 f"trying again ({attempt}/{FAILED_REQUEST_ATTEMPTS})."
             )
         except Exception:
             log.exception(
-                f"An unexpected error has occurred during fetching of {url}, "
+                f"An unexpected error has occurred during fetching of {url}; "
                 f"trying again ({attempt}/{FAILED_REQUEST_ATTEMPTS})."
             )
         else:
