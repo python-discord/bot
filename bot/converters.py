@@ -575,7 +575,7 @@ class Infraction(Converter):
                 return infractions[0]
 
         else:
-            return ctx.bot.api_client.get(f"bot/infractions/{arg}")
+            return await ctx.bot.api_client.get(f"bot/infractions/{arg}")
 
 
 Expiry = t.Union[Duration, ISODateTime]
