@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 from bot.constants import Event
 from bot.exts.moderation.infraction.infractions import Infractions
-from tests.helpers import MockBot, MockContext, MockGuild, MockMember, MockRole
+from tests.helpers import MockBot, MockContext, MockGuild, MockMember, MockRole, MockUser
 
 
 class TruncationTests(unittest.IsolatedAsyncioTestCase):
@@ -163,6 +163,19 @@ class VoiceBanTests(unittest.IsolatedAsyncioTestCase):
             self.cog._voice_verified_role, reason=textwrap.shorten("foobar" * 3000, 512, placeholder="...")
         )
         self.cog.apply_infraction.assert_awaited_once_with(self.ctx, {"foo": "bar"}, self.user, "my_return_value")
+
+    @patch("bot.exts.moderation.infraction._utils.get_active_infraction", return_value=None)
+    @patch("bot.exts.moderation.infraction._utils.post_infraction")
+    @patch("bot.exts.moderation.infraction.infractions.Infractions.apply_infraction")
+    async def test_voice_ban_user_left_guild(self, apply_infraction_mock, post_infraction_mock, _):
+        """Should voice ban user that left the guild without throwing an error."""
+        infraction = {"foo": "bar"}
+        post_infraction_mock.return_value = {"foo": "bar"}
+
+        user = MockUser()
+        await self.cog.voiceban(self.cog, self.ctx, user, reason=None)
+        post_infraction_mock.assert_called_once_with(self.ctx, user, "voice_ban", None, active=True)
+        apply_infraction_mock.assert_called_once_with(self.ctx, infraction, user, None)
 
     async def test_voice_unban_user_not_found(self):
         """Should include info to return dict when user was not found from guild."""
