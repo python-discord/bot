@@ -40,7 +40,7 @@ class ModManagement(commands.Cog):
 
     # region: Edit infraction commands
 
-    @commands.group(name='infraction', aliases=('infr', 'infractions', 'inf'), invoke_without_command=True)
+    @commands.group(name='infraction', aliases=('infr', 'infractions', 'inf', 'i'), invoke_without_command=True)
     async def infraction_group(self, ctx: Context) -> None:
         """Infraction manipulation commands."""
         await ctx.send_help(ctx.command)
@@ -84,7 +84,7 @@ class ModManagement(commands.Cog):
 
         await self.infraction_edit(ctx, infraction, duration, reason=reason)
 
-    @infraction_group.command(name='edit')
+    @infraction_group.command(name='edit', aliases=('e',))
     async def infraction_edit(
         self,
         ctx: Context,

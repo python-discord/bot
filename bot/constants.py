@@ -248,6 +248,7 @@ class Colours(metaclass=YAMLGetter):
     soft_red: int
     soft_green: int
     soft_orange: int
+    bright_green: int
 
 
 class DuckPond(metaclass=YAMLGetter):
@@ -354,12 +355,15 @@ class Icons(metaclass=YAMLGetter):
     voice_state_green: str
     voice_state_red: str
 
+    green_checkmark: str
+
 
 class CleanMessages(metaclass=YAMLGetter):
     section = "bot"
     subsection = "clean"
 
     message_limit: int
+
 
 class Stats(metaclass=YAMLGetter):
     section = "bot"
@@ -402,7 +406,6 @@ class Channels(metaclass=YAMLGetter):
     dm_log: int
     esoteric: int
     helpers: int
-    how_to_get_help: int
     incidents: int
     incidents_archive: int
     mailing_lists: int
@@ -601,6 +604,7 @@ class VoiceGate(metaclass=YAMLGetter):
     minimum_messages: int
     bot_message_delete_delay: int
     minimum_activity_blocks: int
+    voice_ping_delete_delay: int
 
 
 class Event(Enum):
@@ -630,7 +634,7 @@ class Event(Enum):
 
 
 # Debug mode
-DEBUG_MODE = True if 'local' in os.environ.get("SITE_URL", "local") else False
+DEBUG_MODE = 'local' in os.environ.get("SITE_URL", "local")
 
 # Paths
 BOT_DIR = os.path.dirname(__file__)

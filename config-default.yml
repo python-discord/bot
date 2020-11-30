@@ -4,13 +4,13 @@ bot:
     sentry_dsn:  !ENV "BOT_SENTRY_DSN"
 
     redis:
-        host:  "redis"
+        host:  "redis.default.svc.cluster.local"
         port:  6379
         password: !ENV "REDIS_PASSWORD"
         use_fakeredis: false
 
     stats:
-        statsd_host: "graphite"
+        statsd_host: "graphite.default.svc.cluster.local"
         presence_update_timeout: 300
 
     cooldowns:
@@ -27,6 +27,7 @@ style:
         soft_red: 0xcd6d6d
         soft_green: 0x68c290
         soft_orange: 0xf9cb54
+        bright_green: 0x01d277
 
     emojis:
         defcon_disabled: "<:defcondisabled:470326273952972810>"
@@ -119,6 +120,8 @@ style:
         voice_state_green: "https://cdn.discordapp.com/emojis/656899770094452754.png"
         voice_state_red: "https://cdn.discordapp.com/emojis/656899769905709076.png"
 
+        green_checkmark: "https://raw.githubusercontent.com/python-discord/branding/master/icons/checkmark/green-checkmark-dist.png"
+
 
 guild:
     id: 267624335836053506
@@ -152,7 +155,6 @@ guild:
         python_discussion:  &PY_DISCUSSION  267624335836053506
 
         # Python Help: Available
-        how_to_get_help:    704250143020417084
         cooldown:           720603994149486673
 
         # Logs
@@ -329,7 +331,7 @@ urls:
     paste_service:                      !JOIN [*SCHEMA, *PASTE, "/{key}"]
 
     # Snekbox
-    snekbox_eval_api: "http://snekbox:8060/eval"
+    snekbox_eval_api: "http://snekbox.default.svc.cluster.local/eval"
 
     # Discord API URLs
     discord_api:        &DISCORD_API "https://discordapp.com/api/v7/"
@@ -522,6 +524,7 @@ voice_gate:
     minimum_messages: 50  # How many messages a user must have to be eligible for voice
     bot_message_delete_delay: 10  # Seconds before deleting bot's response in Voice Gate
     minimum_activity_blocks: 3  # Number of 10 minute blocks during which a user must have been active
+    voice_ping_delete_delay: 60  # Seconds before deleting the bot's ping to user in Voice Gate
 
 
 config:

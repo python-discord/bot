@@ -1,0 +1,42 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["Build"]
+    branches:
+      - master
+    types:
+      - completed
+
+jobs:
+  build:
+    if: github.event.workflow_run.conclusion == 'success'
+    name: Build & Push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create SHA Container Tag
+        id: sha_tag
+        run: |
+          tag=$(cut -c 1-7 <<< $GITHUB_SHA)
+          echo "::set-output name=tag::$tag"
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          repository: python-discord/kubernetes
+          token: ${{ secrets.REPO_TOKEN }}
+
+      - name: Authenticate with Kubernetes
+        uses: azure/k8s-set-context@v1
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBECONFIG }}
+
+      - name: Deploy to Kubernetes
+        uses: Azure/k8s-deploy@v1
+        with:
+          manifests: |
+              bot/deployment.yaml
+          images: 'ghcr.io/python-discord/bot:${{ steps.sha_tag.outputs.tag }}'
+          kubectl-version: 'latest'
