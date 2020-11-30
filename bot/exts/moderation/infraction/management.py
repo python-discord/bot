@@ -310,20 +310,6 @@ class ModManagement(commands.Cog):
 
         return lines.strip()
 
-    async def get_latest_infraction(self, actor: int) -> t.Optional[dict]:
-        """Obtains the latest infraction from an actor."""
-        params = {
-            "actor__id": actor,
-            "ordering": "-inserted_at"
-        }
-
-        infractions = await self.bot.api_client.get("bot/infractions", params=params)
-
-        if infractions:
-            return infractions[0]
-
-        return None
-
     # endregion
 
     # This cannot be static (must have a __func__ attribute).
