@@ -168,8 +168,8 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         role_check.assert_called_once_with(*(1, 2, 3))
         role_check.return_value.predicate.assert_awaited_once_with(ctx)
 
-    @mock.patch.object(silence.Silence, "_get_related_text_channel")
-    async def test_send_message(self, mock_get_related_text_channel):
+    @mock.patch.object(silence, "VOICE_CHANNELS")
+    async def test_send_message(self, mock_voice_channels):
         """Test the send function reports to the correct channels."""
         text_channel_1 = MockTextChannel()
         text_channel_2 = MockTextChannel()
@@ -178,12 +178,13 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         voice_channel.name = "General/Offtopic"
         voice_channel.mention = f"#{voice_channel.name}"
 
-        mock_get_related_text_channel.return_value = text_channel_2
+        mock_voice_channels.get.return_value = text_channel_2.id
 
         def reset():
             text_channel_1.reset_mock()
             text_channel_2.reset_mock()
             voice_channel.reset_mock()
+            mock_voice_channels.reset_mock()
 
         with self.subTest("Basic One Channel Test"):
             await self.cog.send_message("Text basic message.", text_channel_1, text_channel_2, False)
@@ -217,38 +218,29 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
             await self.cog.send_message("This should show up just here", text_channel_1, voice_channel, False)
             text_channel_1.send.assert_called_once_with("This should show up just here")
 
-        reset()
-        with self.subTest("Text and Voice"):
-            message = "This should show up as current channel"
-            await self.cog.send_message(message, text_channel_1, voice_channel, True)
-            text_channel_1.send.assert_called_once_with(message.replace("current channel", voice_channel.mention))
-            text_channel_2.send.assert_called_once_with(message.replace("current channel", voice_channel.mention))
+        with mock.patch.object(self.cog, "bot") as bot_mock:
+            bot_mock.get_channel.return_value = text_channel_2
 
-        reset()
-        with self.subTest("Text and Voice Same Invocation"):
-            message = "This should show up as current channel"
-            await self.cog.send_message(message, text_channel_2, voice_channel, True)
-            text_channel_2.send.assert_called_once_with(message.replace("current channel", voice_channel.mention))
+            reset()
+            with self.subTest("Text and Voice"):
+                message = "This should show up as current channel"
+                await self.cog.send_message(message, text_channel_1, voice_channel, True)
+                text_channel_1.send.assert_called_once_with(message.replace("current channel", voice_channel.mention))
+                text_channel_2.send.assert_called_once_with(message.replace("current channel", voice_channel.mention))
 
-    async def test_get_related_text_channel(self):
-        """Tests the helper function that connects voice to text channels."""
-        voice_channel = MockVoiceChannel()
+                mock_voice_channels.get.assert_called_once_with(voice_channel.id)
+                bot_mock.get_channel.assert_called_once_with(text_channel_2.id)
+                bot_mock.reset_mock()
 
-        tests = (
-            ("Off-Topic/General", Channels.voice_chat),
-            ("code/help 1", Channels.code_help_voice),
-            ("Staff", Channels.staff_voice),
-            ("ADMIN", Channels.admins_voice),
-            ("not in the channel list", None)
-        )
+            reset()
+            with self.subTest("Text and Voice Same Invocation"):
+                message = "This should show up as current channel"
+                await self.cog.send_message(message, text_channel_2, voice_channel, True)
+                text_channel_2.send.assert_called_once_with(message.replace("current channel", voice_channel.mention))
 
-        with mock.patch.object(self.cog.bot, "get_channel", lambda x: x):
-            for (name, channel_id) in tests:
-                voice_channel.name = name
-                voice_channel.id = channel_id
-
-                result_id = await self.cog._get_related_text_channel(voice_channel)
-                self.assertEqual(result_id, channel_id)
+                mock_voice_channels.get.assert_called_once_with(voice_channel.id)
+                bot_mock.get_channel.assert_called_once_with(text_channel_2.id)
+                bot_mock.reset_mock()
 
     async def test_force_voice_sync(self):
         """Tests the _force_voice_sync helper function."""
@@ -451,7 +443,10 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
 
         for target, message in test_cases:
             with self.subTest(target_channel=target, message=message):
-                await self.cog.silence.callback(self.cog, ctx, 10, False, channel=target)
+                with mock.patch.object(self.cog, "bot") as bot_mock:
+                    bot_mock.get_channel.return_value = AsyncMock()
+                    await self.cog.silence.callback(self.cog, ctx, 10, False, channel=target)
+
                 if ctx.channel == target or target is None:
                     ctx.channel.send.assert_called_once_with(message)
 
@@ -466,14 +461,17 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
             if target is not None and isinstance(target, MockTextChannel):
                 target.send.reset_mock()
 
+    @mock.patch.object(silence.Silence, "_set_silence_overwrites", return_value=True)
     @mock.patch.object(silence.Silence, "_kick_voice_members")
     @mock.patch.object(silence.Silence, "_force_voice_sync")
-    async def test_sync_or_kick_called(self, sync, kick):
+    async def test_sync_or_kick_called(self, sync, kick, _):
         """Tests if silence command calls kick or sync on voice channels when appropriate."""
         channel = MockVoiceChannel()
         ctx = MockContext()
 
-        with mock.patch.object(self.cog, "_set_silence_overwrites", return_value=True):
+        with mock.patch.object(self.cog, "bot") as bot_mock:
+            bot_mock.get_channel.return_value = AsyncMock()
+
             with self.subTest("Test calls kick"):
                 await self.cog.silence.callback(self.cog, ctx, 10, kick=True, channel=channel)
                 kick.assert_called_once_with(channel)
