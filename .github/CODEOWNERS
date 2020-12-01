@@ -1,2 +1,38 @@
-# Request Joe for any PR
-* @jb3
+# Request Dennis for any PR
+* @Den4200
+
+# Extensions
+**/bot/exts/backend/sync/**             @MarkKoz
+**/bot/exts/filters/*token_remover.py   @MarkKoz
+**/bot/exts/moderation/*silence.py      @MarkKoz
+bot/exts/info/codeblock/**              @MarkKoz
+bot/exts/utils/extensions.py            @MarkKoz
+bot/exts/utils/snekbox.py               @MarkKoz @Akarys42
+bot/exts/help_channels/**               @MarkKoz @Akarys42
+bot/exts/moderation/**                  @Akarys42 @mbaruh
+bot/exts/info/**                        @Akarys42 @mbaruh
+bot/exts/filters/**                     @mbaruh
+
+# Utils
+bot/utils/extensions.py                 @MarkKoz
+bot/utils/function.py                   @MarkKoz
+bot/utils/lock.py                       @MarkKoz
+bot/utils/regex.py                      @Akarys42
+bot/utils/scheduling.py                 @MarkKoz
+
+# Tests
+tests/_autospec.py                      @MarkKoz
+tests/bot/exts/test_cogs.py             @MarkKoz
+tests/**                                @Akarys42
+
+# CI & Docker
+.github/workflows/**                    @MarkKoz @Akarys42 @SebastiaanZ
+Dockerfile                              @MarkKoz @Akarys42
+docker-compose.yml                      @MarkKoz @Akarys42
+
+# Tools
+Pipfile*                                @Akarys42
+
+# Statistics
+bot/async_stats.py                      @jb3
+bot/exts/info/stats.py                  @jb3

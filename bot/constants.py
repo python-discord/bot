@@ -410,7 +410,6 @@ class Channels(metaclass=YAMLGetter):
     esoteric: int
     general_voice: int
     helpers: int
-    how_to_get_help: int
     incidents: int
     incidents_archive: int
     mailing_lists: int
