@@ -10,7 +10,7 @@ from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
-from bot.converters import Expiry, Snowflake, UserMention, allowed_strings, proxy_user
+from bot.converters import Expiry, Infraction, Snowflake, UserMention, allowed_strings, proxy_user
 from bot.exts.moderation.infraction.infractions import Infractions
 from bot.exts.moderation.modlog import ModLog
 from bot.pagination import LinePaginator
@@ -40,16 +40,55 @@ class ModManagement(commands.Cog):
 
     # region: Edit infraction commands
 
-    @commands.group(name='infraction', aliases=('infr', 'infractions', 'inf'), invoke_without_command=True)
+    @commands.group(name='infraction', aliases=('infr', 'infractions', 'inf', 'i'), invoke_without_command=True)
     async def infraction_group(self, ctx: Context) -> None:
         """Infraction manipulation commands."""
         await ctx.send_help(ctx.command)
 
-    @infraction_group.command(name='edit')
+    @infraction_group.command(name="append", aliases=("amend", "add", "a"))
+    async def infraction_append(
+        self,
+        ctx: Context,
+        infraction: Infraction,
+        duration: t.Union[Expiry, allowed_strings("p", "permanent"), None],   # noqa: F821
+        *,
+        reason: str = None
+    ) -> None:
+        """
+        Append text and/or edit the duration of an infraction.
+
+        Durations are relative to the time of updating and should be appended with a unit of time.
+        Units (∗case-sensitive):
+        \u2003`y` - years
+        \u2003`m` - months∗
+        \u2003`w` - weeks
+        \u2003`d` - days
+        \u2003`h` - hours
+        \u2003`M` - minutes∗
+        \u2003`s` - seconds
+
+        Use "l", "last", or "recent" as the infraction ID to specify that the most recent infraction
+        authored by the command invoker should be edited.
+
+        Use "p" or "permanent" to mark the infraction as permanent. Alternatively, an ISO 8601
+        timestamp can be provided for the duration.
+
+        If a previous infraction reason does not end with an ending punctuation mark, this automatically
+        adds a period before the amended reason.
+        """
+        old_reason = infraction["reason"]
+
+        if old_reason is not None:
+            add_period = not old_reason.endswith((".", "!", "?"))
+            reason = old_reason + (". " if add_period else " ") + reason
+
+        await self.infraction_edit(ctx, infraction, duration, reason=reason)
+
+    @infraction_group.command(name='edit', aliases=('e',))
     async def infraction_edit(
         self,
         ctx: Context,
-        infraction_id: t.Union[int, allowed_strings("l", "last", "recent")],  # noqa: F821
+        infraction: Infraction,
         duration: t.Union[Expiry, allowed_strings("p", "permanent"), None],   # noqa: F821
         *,
         reason: str = None
@@ -77,30 +116,13 @@ class ModManagement(commands.Cog):
             # Unlike UserInputError, the error handler will show a specified message for BadArgument
             raise commands.BadArgument("Neither a new expiry nor a new reason was specified.")
 
-        # Retrieve the previous infraction for its information.
-        if isinstance(infraction_id, str):
-            params = {
-                "actor__id": ctx.author.id,
-                "ordering": "-inserted_at"
-            }
-            infractions = await self.bot.api_client.get("bot/infractions", params=params)
-
-            if infractions:
-                old_infraction = infractions[0]
-                infraction_id = old_infraction["id"]
-            else:
-                await ctx.send(
-                    ":x: Couldn't find most recent infraction; you have never given an infraction."
-                )
-                return
-        else:
-            old_infraction = await self.bot.api_client.get(f"bot/infractions/{infraction_id}")
+        infraction_id = infraction["id"]
 
         request_data = {}
         confirm_messages = []
         log_text = ""
 
-        if duration is not None and not old_infraction['active']:
+        if duration is not None and not infraction['active']:
             if reason is None:
                 await ctx.send(":x: Cannot edit the expiration of an expired infraction.")
                 return
@@ -119,7 +141,7 @@ class ModManagement(commands.Cog):
             request_data['reason'] = reason
             confirm_messages.append("set a new reason")
             log_text += f"""
-                Previous reason: {old_infraction['reason']}
+                Previous reason: {infraction['reason']}
                 New reason: {reason}
             """.rstrip()
         else:
@@ -134,7 +156,7 @@ class ModManagement(commands.Cog):
         # Re-schedule infraction if the expiration has been updated
         if 'expires_at' in request_data:
             # A scheduled task should only exist if the old infraction wasn't permanent
-            if old_infraction['expires_at']:
+            if infraction['expires_at']:
                 self.infractions_cog.scheduler.cancel(new_infraction['id'])
 
             # If the infraction was not marked as permanent, schedule a new expiration task
@@ -142,7 +164,7 @@ class ModManagement(commands.Cog):
                 self.infractions_cog.schedule_expiration(new_infraction)
 
             log_text += f"""
-                Previous expiry: {old_infraction['expires_at'] or "Permanent"}
+                Previous expiry: {infraction['expires_at'] or "Permanent"}
                 New expiry: {new_infraction['expires_at'] or "Permanent"}
             """.rstrip()
 
