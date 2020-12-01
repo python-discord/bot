@@ -391,12 +391,15 @@ class Channels(metaclass=YAMLGetter):
     admin_announcements: int
     admin_spam: int
     admins: int
+    admins_voice: int
     announcements: int
     attachment_log: int
     big_brother_logs: int
     bot_commands: int
     change_log: int
-    code_help_voice: int
+    code_help_chat_1: int
+    code_help_chat_2: int
+    code_help_voice_1: int
     code_help_voice_2: int
     cooldown: int
     defcon: int
@@ -405,6 +408,7 @@ class Channels(metaclass=YAMLGetter):
     dev_log: int
     dm_log: int
     esoteric: int
+    general_voice: int
     helpers: int
     incidents: int
     incidents_archive: int
@@ -425,6 +429,8 @@ class Channels(metaclass=YAMLGetter):
     python_news: int
     reddit: int
     staff_announcements: int
+    staff_voice: int
+    staff_voice_chat: int
     talent_pool: int
     user_event_announcements: int
     user_log: int
