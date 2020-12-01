@@ -33,6 +33,13 @@ MSG_UNSILENCE_SUCCESS = f"{constants.Emojis.check_mark} unsilenced current chann
 
 TextOrVoiceChannel = Union[TextChannel, VoiceChannel]
 
+VOICE_CHANNELS = {
+    constants.Channels.code_help_voice_1: constants.Channels.code_help_chat_1,
+    constants.Channels.code_help_voice_2: constants.Channels.code_help_chat_2,
+    constants.Channels.general_voice: constants.Channels.voice_chat,
+    constants.Channels.staff_voice: constants.Channels.staff_voice_chat,
+}
+
 
 class SilenceNotifier(tasks.Loop):
     """Loop notifier for posting notices to `alert_channel` containing added channels."""
@@ -106,20 +113,6 @@ class Silence(commands.Cog):
         self.notifier = SilenceNotifier(self.bot.get_channel(constants.Channels.mod_log))
         await self._reschedule()
 
-    async def _get_related_text_channel(self, channel: VoiceChannel) -> Optional[TextChannel]:
-        """Returns the text channel related to a voice channel."""
-        # TODO: Figure out a dynamic way of doing this
-        channels = {
-            "off-topic": constants.Channels.voice_chat,
-            "code/help 1": constants.Channels.code_help_voice,
-            "code/help 2": constants.Channels.code_help_voice_2,
-            "admin": constants.Channels.admins_voice,
-            "staff": constants.Channels.staff_voice
-        }
-        for name in channels.keys():
-            if name in channel.name.lower():
-                return self.bot.get_channel(channels[name])
-
     async def send_message(
         self,
         message: str,
@@ -137,9 +130,10 @@ class Silence(commands.Cog):
         # Reply to target channel
         if alert_target:
             if isinstance(target_channel, VoiceChannel):
-                voice_chat = await self._get_related_text_channel(target_channel)
+                voice_chat = self.bot.get_channel(VOICE_CHANNELS.get(target_channel.id))
                 if voice_chat and source_channel != voice_chat:
                     await voice_chat.send(message.replace("current channel", target_channel.mention))
+
             elif source_channel != target_channel:
                 await target_channel.send(message)
 
