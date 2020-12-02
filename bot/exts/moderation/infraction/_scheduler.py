@@ -359,6 +359,8 @@ class InfractionScheduler:
                 log.info(
                     f"Can't pardon {infraction['type']} for user {infraction['user']} because user left the guild."
                 )
+                log_text["Failure"] = f"User left the guild."
+                log_content = mod_role.mention
             else:
                 log.exception(f"Failed to deactivate infraction #{id_} ({type_})")
                 log_text["Failure"] = f"HTTPException with status {e.status} and code {e.code}."
