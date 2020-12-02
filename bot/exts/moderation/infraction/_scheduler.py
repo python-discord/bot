@@ -79,7 +79,9 @@ class InfractionScheduler:
         except discord.HTTPException as e:
             # When user joined and then right after this left again before action completed, this can't apply roles
             if e.code == 10007 or e.status == 404:
-                log.info(f"Can't reapply {infraction['type']} to user {infraction['user']} because user left again.")
+                log.info(
+                    f"Can't reapply {infraction['type']} to user {infraction['user']} because user left the guild."
+                )
             else:
                 log.warning(
                     (
@@ -357,7 +359,7 @@ class InfractionScheduler:
         except discord.HTTPException as e:
             if e.code == 10007 or e.status == 404:
                 log.info(
-                    f"Can't pardon {infraction['type']} for user {infraction['user']} because user left from guild."
+                    f"Can't pardon {infraction['type']} for user {infraction['user']} because user left the guild."
                 )
             else:
                 log.exception(f"Failed to deactivate infraction #{id_} ({type_})")
