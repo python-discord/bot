@@ -84,10 +84,8 @@ class InfractionScheduler:
                 )
             else:
                 log.exception(
-                    (
-                        f"Got unexpected HTTPException (HTTP {e.status}, Discord code {e.code})"
-                        f"when awaiting {infraction['type']} coroutine for {infraction['user']}."
-                    )
+                    f"Got unexpected HTTPException (HTTP {e.status}, Discord code {e.code})"
+                    f"when awaiting {infraction['type']} coroutine for {infraction['user']}."
                 )
         else:
             log.info(f"Re-applied {infraction['type']} to user {infraction['user']} upon rejoining.")
