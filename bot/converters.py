@@ -549,6 +549,35 @@ def _snowflake_from_regex(pattern: t.Pattern, arg: str) -> int:
     return int(match.group(1))
 
 
+class Infraction(Converter):
+    """
+    Attempts to convert a given infraction ID into an infraction.
+
+    Alternatively, `l`, `last`, or `recent` can be passed in order to
+    obtain the most recent infraction by the actor.
+    """
+
+    async def convert(self, ctx: Context, arg: str) -> t.Optional[dict]:
+        """Attempts to convert `arg` into an infraction `dict`."""
+        if arg in ("l", "last", "recent"):
+            params = {
+                "actor__id": ctx.author.id,
+                "ordering": "-inserted_at"
+            }
+
+            infractions = await ctx.bot.api_client.get("bot/infractions", params=params)
+
+            if not infractions:
+                raise BadArgument(
+                    "Couldn't find most recent infraction; you have never given an infraction."
+                )
+            else:
+                return infractions[0]
+
+        else:
+            return await ctx.bot.api_client.get(f"bot/infractions/{arg}")
+
+
 Expiry = t.Union[Duration, ISODateTime]
 FetchedMember = t.Union[discord.Member, FetchedUser]
 UserMention = partial(_snowflake_from_regex, RE_USER_MENTION)
