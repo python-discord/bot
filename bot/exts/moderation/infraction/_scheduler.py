@@ -83,7 +83,7 @@ class InfractionScheduler:
                     f"Can't reapply {infraction['type']} to user {infraction['user']} because user left the guild."
                 )
             else:
-                log.warning(
+                log.exception(
                     (
                         f"Got unexpected HTTPException (HTTP {e.status}, Discord code {e.code})"
                         f"when awaiting {infraction['type']} coroutine for {infraction['user']}."
