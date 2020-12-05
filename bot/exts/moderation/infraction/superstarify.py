@@ -104,7 +104,7 @@ class Superstarify(InfractionScheduler, Cog):
 
             await self.reapply_infraction(infraction, action)
 
-    @command(name="superstarify", aliases=("force_nick", "star"))
+    @command(name="superstarify", aliases=("force_nick", "star", "starify"))
     async def superstarify(
         self,
         ctx: Context,
@@ -182,7 +182,7 @@ class Superstarify(InfractionScheduler, Cog):
             )
             await ctx.send(embed=embed)
 
-    @command(name="unsuperstarify", aliases=("release_nick", "unstar"))
+    @command(name="unsuperstarify", aliases=("release_nick", "unstar", "unstarify"))
     async def unsuperstarify(self, ctx: Context, member: Member) -> None:
         """Remove the superstarify infraction and allow the user to change their nickname."""
         await self.pardon_infraction(ctx, "superstar", member)
