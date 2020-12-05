@@ -111,7 +111,7 @@ class Superstarify(InfractionScheduler, Cog):
         member: Member,
         duration: Expiry,
         *,
-        reason: str = None,
+        reason: str = '',
     ) -> None:
         """
         Temporarily force a random superstar name (like Taylor Swift) to be the user's nickname.
@@ -128,15 +128,16 @@ class Superstarify(InfractionScheduler, Cog):
 
         Alternatively, an ISO 8601 timestamp can be provided for the duration.
 
-        An optional reason can be provided. If no reason is given, the original name will be shown
-        in a generated reason.
+        An optional reason can be provided, which would be added to a message stating their old nickname
+        and linking to the nickname policy.
         """
         if await _utils.get_active_infraction(ctx, member, "superstar"):
             return
 
         # Post the infraction to the API
         old_nick = member.display_name
-        reason = reason or f"old nick: {old_nick}"
+        reason = (f"Nickname '{old_nick}' does not comply with our [nickname policy]({NICKNAME_POLICY_URL}). "
+                  f"{reason}")
         infraction = await _utils.post_infraction(ctx, member, "superstar", reason, duration, active=True)
         id_ = infraction["id"]
 
@@ -152,7 +153,6 @@ class Superstarify(InfractionScheduler, Cog):
         old_nick = escape_markdown(old_nick)
         forced_nick = escape_markdown(forced_nick)
 
-        superstar_reason = f"Your nickname didn't comply with our [nickname policy]({NICKNAME_POLICY_URL})."
         nickname_info = textwrap.dedent(f"""
             Old nickname: `{old_nick}`
             New nickname: `{forced_nick}`
@@ -160,7 +160,7 @@ class Superstarify(InfractionScheduler, Cog):
 
         successful = await self.apply_infraction(
             ctx, infraction, member, action(),
-            user_reason=superstar_reason,
+            user_reason=reason,
             additional_info=nickname_info
         )
 
