@@ -136,9 +136,8 @@ class Superstarify(InfractionScheduler, Cog):
 
         # Post the infraction to the API
         old_nick = member.display_name
-        reason = (f"Nickname '{old_nick}' does not comply with our [nickname policy]({NICKNAME_POLICY_URL}). "
-                  f"{reason}")
-        infraction = await _utils.post_infraction(ctx, member, "superstar", reason, duration, active=True)
+        infraction_reason = f'Old nickname: {old_nick}. {reason}'
+        infraction = await _utils.post_infraction(ctx, member, "superstar", infraction_reason, duration, active=True)
         id_ = infraction["id"]
 
         forced_nick = self.get_nick(id_, member.id)
@@ -158,9 +157,21 @@ class Superstarify(InfractionScheduler, Cog):
             New nickname: `{forced_nick}`
         """).strip()
 
+        formatted_reason = f'**Additional details:** {reason}\n\n' if reason else ''
+
+        embed_reason = (
+            f"Your previous nickname, **{old_nick}**, "
+            f"didn't comply with our nickname policy. "
+            f"Your new nickname will be **{forced_nick}**.\n\n"
+            f"{formatted_reason}"
+            f"You will be unable to change your nickname until **{expiry_str}**. "
+            "If you're confused by this, please read our "
+            f"[official nickname policy]({NICKNAME_POLICY_URL})."
+        )
+
         successful = await self.apply_infraction(
             ctx, infraction, member, action(),
-            user_reason=reason,
+            user_reason=embed_reason,
             additional_info=nickname_info
         )
 
@@ -171,14 +182,7 @@ class Superstarify(InfractionScheduler, Cog):
             embed = Embed(
                 title="Congratulations!",
                 colour=constants.Colours.soft_orange,
-                description=(
-                    f"Your previous nickname, **{old_nick}**, "
-                    f"was so bad that we have decided to change it. "
-                    f"Your new nickname will be **{forced_nick}**.\n\n"
-                    f"You will be unable to change your nickname until **{expiry_str}**.\n\n"
-                    "If you're confused by this, please read our "
-                    f"[official nickname policy]({NICKNAME_POLICY_URL})."
-                )
+                description=embed_reason
             )
             await ctx.send(embed=embed)
 
