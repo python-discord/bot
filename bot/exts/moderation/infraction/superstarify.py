@@ -157,32 +157,29 @@ class Superstarify(InfractionScheduler, Cog):
             New nickname: `{forced_nick}`
         """).strip()
 
-        formatted_reason = f'**Additional details:** {reason}\n\n' if reason else ''
-
-        embed_reason = (
+        user_message = (
             f"Your previous nickname, **{old_nick}**, "
-            f"didn't comply with our nickname policy. "
+            f"was so bad that we have decided to change it. "
             f"Your new nickname will be **{forced_nick}**.\n\n"
-            f"{formatted_reason}"
+            "{reason}"
             f"You will be unable to change your nickname until **{expiry_str}**. "
             "If you're confused by this, please read our "
             f"[official nickname policy]({NICKNAME_POLICY_URL})."
-        )
+        ).format
 
         successful = await self.apply_infraction(
             ctx, infraction, member, action(),
-            user_reason=embed_reason,
+            user_reason=user_message(reason=f'**Additional details:** {reason}\n\n' if reason else ''),
             additional_info=nickname_info
         )
 
-        # Send an embed with the infraction information to the invoking context if
-        # superstar was successful.
+        # Send an embed with to the invoking context if superstar was successful.
         if successful:
             log.trace(f"Sending superstar #{id_} embed.")
             embed = Embed(
-                title="Congratulations!",
+                title="Superstarified!",
                 colour=constants.Colours.soft_orange,
-                description=embed_reason
+                description=user_message(reason='')
             )
             await ctx.send(embed=embed)
 
