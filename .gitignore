@@ -111,6 +111,7 @@ ENV/
 # Logfiles
 log.*
 *.log.*
+!log.py
 
 # Custom user configuration
 config.yml
