@@ -1,6 +1,3 @@
-# Request Dennis for any PR
-* @Den4200
-
 # Extensions
 **/bot/exts/backend/sync/**             @MarkKoz
 **/bot/exts/filters/*token_remover.py   @MarkKoz
@@ -9,8 +6,8 @@ bot/exts/info/codeblock/**              @MarkKoz
 bot/exts/utils/extensions.py            @MarkKoz
 bot/exts/utils/snekbox.py               @MarkKoz @Akarys42
 bot/exts/help_channels/**               @MarkKoz @Akarys42
-bot/exts/moderation/**                  @Akarys42 @mbaruh
-bot/exts/info/**                        @Akarys42 @mbaruh
+bot/exts/moderation/**                  @Akarys42 @mbaruh @Den4200
+bot/exts/info/**                        @Akarys42 @mbaruh @Den4200
 bot/exts/filters/**                     @mbaruh
 
 # Utils
@@ -26,9 +23,9 @@ tests/bot/exts/test_cogs.py             @MarkKoz
 tests/**                                @Akarys42
 
 # CI & Docker
-.github/workflows/**                    @MarkKoz @Akarys42 @SebastiaanZ
-Dockerfile                              @MarkKoz @Akarys42
-docker-compose.yml                      @MarkKoz @Akarys42
+.github/workflows/**                    @MarkKoz @Akarys42 @SebastiaanZ @Den4200
+Dockerfile                              @MarkKoz @Akarys42 @Den4200
+docker-compose.yml                      @MarkKoz @Akarys42 @Den4200
 
 # Tools
 Pipfile*                                @Akarys42
