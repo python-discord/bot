@@ -54,8 +54,7 @@ class CodeSnippets(Cog):
     def _find_ref(self, path: str, refs: tuple) -> tuple:
         """Loops through all branches and tags to find the required ref."""
         # Base case: there is no slash in the branch name
-        ref = path.split('/')[0]
-        file_path = '/'.join(path.split('/')[1:])
+        ref, file_path = path.split('/', 1)
         # In case there are slashes in the branch name, we loop through all branches and tags
         for possible_ref in refs:
             if path.startswith(possible_ref['name'] + '/'):
