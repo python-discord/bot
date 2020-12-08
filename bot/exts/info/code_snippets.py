@@ -188,9 +188,16 @@ class CodeSnippets(Cog):
         if not is_valid_language:
             language = ''
 
+        # Adds a label showing the file path to the snippet
+        if start_line == end_line:
+            ret = f'`{file_path}` line {start_line}\n'
+        else:
+            ret = f'`{file_path}` lines {start_line} to {end_line}\n'
+
         if len(required) != 0:
-            return f'```{language}\n{required}```\n'
-        return ''
+            return f'{ret}```{language}\n{required}```\n'
+        # Returns an empty codeblock if the snippet is empty
+        return f'{ret}``` ```\n'
 
     def __init__(self, bot: Bot):
         """Initializes the cog's bot."""
