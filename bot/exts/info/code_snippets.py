@@ -1,3 +1,4 @@
+import logging
 import re
 import textwrap
 from urllib.parse import quote_plus
@@ -8,6 +9,7 @@ from discord.ext.commands import Cog
 from bot.bot import Bot
 from bot.utils.messages import wait_for_deletion
 
+log = logging.getLogger(__name__)
 
 GITHUB_RE = re.compile(
     r'https://github\.com/(?P<repo>.+?)/blob/(?P<path>.+/.+)'
@@ -40,11 +42,14 @@ class CodeSnippets(Cog):
 
     async def _fetch_response(self, url: str, response_format: str, **kwargs) -> str:
         """Makes http requests using aiohttp."""
-        async with self.bot.http_session.get(url, **kwargs) as response:
-            if response_format == 'text':
-                return await response.text()
-            elif response_format == 'json':
-                return await response.json()
+        try:
+            async with self.bot.http_session.get(url, **kwargs) as response:
+                if response_format == 'text':
+                    return await response.text()
+                elif response_format == 'json':
+                    return await response.json()
+        except Exception:
+            log.exception(f'Failed to fetch code snippet from {url}.')
 
     def _find_ref(self, path: str, refs: tuple) -> tuple:
         """Loops through all branches and tags to find the required ref."""
