@@ -6,7 +6,7 @@ import string
 import textwrap
 from collections import namedtuple
 from functools import partial
-from typing import Callable, Collection, Container, Iterable, List, Optional, TYPE_CHECKING, Union
+from typing import Callable, Collection, Container, Iterable, Iterator, List, Optional, TYPE_CHECKING, Union
 
 from bs4 import BeautifulSoup
 from bs4.element import NavigableString, PageElement, Tag
@@ -68,13 +68,12 @@ def _is_closing_quote(search_string: str, index: int) -> bool:
     return False
 
 
-def _split_parameters(parameters_string: str) -> List[str]:
+def _split_parameters(parameters_string: str) -> Iterator[str]:
     """
     Split parameters of a signature into individual parameter strings on commas.
 
     Long string literals are not accounted for.
     """
-    parameters_list = []
     last_split = 0
     depth = 0
     current_search: Optional[BracketPair] = None
@@ -113,11 +112,10 @@ def _split_parameters(parameters_string: str) -> List[str]:
                 current_search = None
 
         elif depth == 0 and character == ",":
-            parameters_list.append(parameters_string[last_split:index])
+            yield parameters_string[last_split:index]
             last_split = index + 1
 
-    parameters_list.append(parameters_string[last_split:])
-    return parameters_list
+    yield parameters_string[last_split:]
 
 
 def _find_elements_until_tag(
