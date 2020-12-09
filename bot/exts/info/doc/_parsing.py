@@ -56,6 +56,15 @@ _BRACKET_PAIRS = {
 }
 
 
+def _is_closing_quote(search_string: str, index: int) -> bool:
+    """Check whether the quote at `index` inside `search_string` can be a closing quote."""
+    if search_string[index - 1] != "\\":
+        return True
+    elif search_string[index - 2] == "\\":
+        return True
+    return False
+
+
 def _split_parameters(parameters_string: str) -> List[str]:
     """
     Split parameters of a signature into individual parameter strings on commas.
@@ -67,9 +76,11 @@ def _split_parameters(parameters_string: str) -> List[str]:
     depth = 0
     expected_end = None
     current_search = None
+    quote_character = None
 
-    for index, character in enumerate(parameters_string):
-        if character in _BRACKET_PAIRS:
+    enumerated_string = enumerate(parameters_string)
+    for index, character in enumerated_string:
+        if quote_character is None and character in _BRACKET_PAIRS:
             if current_search is None:
                 current_search = character
                 expected_end = _BRACKET_PAIRS[character]
@@ -77,12 +88,22 @@ def _split_parameters(parameters_string: str) -> List[str]:
                 depth += 1
 
         elif character in {"'", '"'}:
-            if depth == 0:
+            if current_search is not None:
+                # We're currently searching for a bracket, skip all characters that belong to the string
+                # to avoid false positives of closing brackets
+                quote_character = character
+                for index, character in enumerated_string:
+                    if character == quote_character and _is_closing_quote(parameters_string, index):
+                        break
+
+            elif depth == 0:
                 depth += 1
-            elif parameters_string[index-1] != "\\":
-                depth -= 1
-            elif parameters_string[index-2] == "\\":
-                depth -= 1
+                quote_character = character
+            elif character == quote_character:
+                if _is_closing_quote(parameters_string, index):
+                    depth -= 1
+                if depth == 0:
+                    quote_character = None
 
         elif character == expected_end:
             depth -= 1
