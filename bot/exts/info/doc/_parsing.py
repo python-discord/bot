@@ -4,6 +4,7 @@ import logging
 import re
 import string
 import textwrap
+from collections import namedtuple
 from functools import partial
 from typing import Callable, Collection, Container, Iterable, List, Optional, TYPE_CHECKING, Union
 
@@ -49,10 +50,12 @@ _MAX_SIGNATURES_LENGTH = (_EMBED_CODE_BLOCK_LINE_LENGTH + 8) * _MAX_SIGNATURE_AM
 # Maximum discord message length - signatures on top
 _MAX_DESCRIPTION_LENGTH = 2000 - _MAX_SIGNATURES_LENGTH
 _TRUNCATE_STRIP_CHARACTERS = "!?:;." + string.whitespace
+
+BracketPair = namedtuple("BracketPair", ["opening_bracket", "closing_bracket"])
 _BRACKET_PAIRS = {
-    "{": "}",
-    "(": ")",
-    "[": "]",
+    "{": BracketPair("{", "}"),
+    "(": BracketPair("(", ")"),
+    "[": BracketPair("[", "]"),
 }
 
 
@@ -74,17 +77,16 @@ def _split_parameters(parameters_string: str) -> List[str]:
     parameters_list = []
     last_split = 0
     depth = 0
-    expected_end = None
-    current_search = None
+    current_search: Optional[BracketPair] = None
     quote_character = None
 
     enumerated_string = enumerate(parameters_string)
     for index, character in enumerated_string:
         if quote_character is None and character in _BRACKET_PAIRS:
             if current_search is None:
-                current_search = character
-                expected_end = _BRACKET_PAIRS[character]
-            if character == current_search:
+                current_search = _BRACKET_PAIRS[character]
+                depth = 1
+            elif character == current_search.opening_bracket:
                 depth += 1
 
         elif character in {"'", '"'}:
@@ -105,11 +107,10 @@ def _split_parameters(parameters_string: str) -> List[str]:
                 if depth == 0:
                     quote_character = None
 
-        elif character == expected_end:
+        elif current_search is not None and character == current_search.closing_bracket:
             depth -= 1
             if depth == 0:
                 current_search = None
-                expected_end = None
 
         elif depth == 0 and character == ",":
             parameters_list.append(parameters_string[last_split:index])
