@@ -168,7 +168,7 @@ class Utils(Cog):
         embed.description = best_match
         await ctx.send(embed=embed)
 
-    @command(aliases=("snf", "snfl"))
+    @command(aliases=("snf", "snfl", "sf"))
     @in_whitelist(channels=(Channels.bot_commands,), roles=STAFF_ROLES)
     async def snowflake(self, ctx: Context, snowflake: int) -> None:
         """Get Discord snowflake creation time."""
