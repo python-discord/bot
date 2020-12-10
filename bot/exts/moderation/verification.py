@@ -848,6 +848,22 @@ class Verification(Cog):
         else:
             return True
 
+    @command(name='verify')
+    @has_any_role(*constants.MODERATION_ROLES)
+    async def apply_developer_role(self, ctx: Context, user: discord.Member) -> None:
+        """Command for moderators to apply the Developer role to any user."""
+        log.trace(f'verify command called by {ctx.author} for {user.id}.')
+        developer_role = self.bot.get_guild(constants.Guild.id).get_role(constants.Roles.verified)
+
+        if developer_role in user.roles:
+            log.trace(f'{user.id} is already a developer, aborting.')
+            await ctx.send(f'{constants.Emojis.cross_mark} {user} is already a developer.')
+            return
+
+        await user.add_roles(developer_role)
+        log.trace(f'Developer role successfully applied to {user.id}')
+        await ctx.send(f'{constants.Emojis.check_mark} Developer role applied to {user}.')
+
     # endregion
 
 
