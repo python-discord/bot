@@ -756,7 +756,7 @@ class Verification(Cog):
         log.trace(f"Bumping verification stats in category: {category}")
         self.bot.stats.incr(f"verification.{category}")
 
-    @command(name='accept', aliases=('verify', 'verified', 'accepted'), hidden=True)
+    @command(name='accept', aliases=('verified', 'accepted'), hidden=True)
     @has_no_roles(constants.Roles.verified)
     @in_whitelist(channels=(constants.Channels.verification,))
     async def accept_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
