@@ -13,6 +13,7 @@ from discord.utils import snowflake_time
 
 from bot.bot import Bot
 from bot.constants import Channels, MODERATION_ROLES, STAFF_ROLES
+from bot.converters import Snowflake
 from bot.decorators import in_whitelist
 from bot.pagination import LinePaginator
 from bot.utils import messages
@@ -170,7 +171,7 @@ class Utils(Cog):
 
     @command(aliases=("snf", "snfl", "sf"))
     @in_whitelist(channels=(Channels.bot_commands,), roles=STAFF_ROLES)
-    async def snowflake(self, ctx: Context, snowflake: int) -> None:
+    async def snowflake(self, ctx: Context, snowflake: Snowflake) -> None:
         """Get Discord snowflake creation time."""
         created_at = snowflake_time(snowflake)
         embed = Embed(
