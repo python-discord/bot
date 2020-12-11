@@ -387,7 +387,8 @@ class Information(Cog):
                 activity_output.append("No activity")
 
             activity_output = "\n".join(
-                f"{name}: {metric}" for name, metric in zip(["Messages", "Activity blocks"], activity_output))
+                f"{name}: {metric}" for name, metric in zip(["Messages", "Activity blocks"], activity_output)
+            )
 
         return verified_at, ("Activity", activity_output)
 
