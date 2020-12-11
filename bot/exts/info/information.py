@@ -230,7 +230,7 @@ class Information(Cog):
         if on_server:
             joined = time_since(user.joined_at, max_units=3)
             roles = ", ".join(role.mention for role in user.roles[1:])
-            membership = {"Joined": joined, "Verified": verified_at, "Roles": roles or None}
+            membership = {"Joined": joined, "Verified": verified_at or "False", "Roles": roles or None}
             if not is_mod_channel(ctx.channel):
                 membership.pop("Verified")
 
@@ -377,9 +377,12 @@ class Information(Cog):
                 activity_output = "No activity"
 
         else:
-            verified_at = user_activity['verified_at']
-            if verified_at is not None:
-                verified_at = time_since(parser.isoparse(user_activity["verified_at"]), max_units=3)
+            try:
+                if (verified_at := user_activity['verified_at']) is not None:
+                    verified_at = time_since(parser.isoparse(verified_at), max_units=3)
+            except ValueError:
+                log.warning('Could not parse ISO string correctly for user verification date.')
+                verified_at = None
 
             activity_output.append(user_activity['total_messages'] or "No messages")
             activity_output.append(user_activity["activity_blocks"] or "No activity")
