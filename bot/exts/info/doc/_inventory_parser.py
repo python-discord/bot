@@ -6,6 +6,8 @@ from typing import AsyncIterator, DefaultDict, List, Optional, Tuple
 
 import aiohttp
 
+import bot
+
 log = logging.getLogger(__name__)
 
 FAILED_REQUEST_ATTEMPTS = 3
@@ -69,10 +71,10 @@ async def _load_v2(stream: aiohttp.StreamReader) -> DefaultDict[str, List[Tuple[
     return invdata
 
 
-async def _fetch_inventory(client_session: aiohttp.ClientSession, url: str) -> DefaultDict[str, List[Tuple[str, str]]]:
+async def _fetch_inventory(url: str) -> DefaultDict[str, List[Tuple[str, str]]]:
     """Fetch, parse and return an intersphinx inventory file from an url."""
     timeout = aiohttp.ClientTimeout(sock_connect=5, sock_read=5)
-    async with client_session.get(url, timeout=timeout, raise_for_status=True) as response:
+    async with bot.instance.http_session.get(url, timeout=timeout, raise_for_status=True) as response:
         stream = response.content
 
         inventory_header = (await stream.readline()).decode().rstrip()
@@ -91,14 +93,11 @@ async def _fetch_inventory(client_session: aiohttp.ClientSession, url: str) -> D
         raise ValueError(f"Invalid inventory file at url {url}.")
 
 
-async def fetch_inventory(
-        client_session: aiohttp.ClientSession,
-        url: str
-) -> Optional[DefaultDict[str, List[Tuple[str, str]]]]:
+async def fetch_inventory(url: str) -> Optional[DefaultDict[str, List[Tuple[str, str]]]]:
     """Get inventory from `url`, retrying `FAILED_REQUEST_ATTEMPTS` times on errors."""
     for attempt in range(1, FAILED_REQUEST_ATTEMPTS+1):
         try:
-            inventory = await _fetch_inventory(client_session, url)
+            inventory = await _fetch_inventory(url)
         except aiohttp.ClientConnectorError:
             log.warning(
                 f"Failed to connect to inventory url at {url}; "

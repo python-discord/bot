@@ -9,10 +9,10 @@ from contextlib import suppress
 from typing import Dict, List, NamedTuple, Optional, Union
 
 import discord
-from aiohttp import ClientSession
 from bs4 import BeautifulSoup
 from discord.ext import commands
 
+from bot import instance as bot_instance
 from bot.bot import Bot
 from bot.constants import MODERATION_ROLES, RedirectOutput
 from bot.converters import InventoryURL, PackageName, ValidURL
@@ -85,7 +85,7 @@ class CachedParser:
         self._item_events: Dict[DocItem, asyncio.Event] = {}
         self._parse_task = None
 
-    async def get_markdown(self, client_session: ClientSession, doc_item: DocItem) -> str:
+    async def get_markdown(self, doc_item: DocItem) -> str:
         """
         Get result markdown of `doc_item`.
 
@@ -96,7 +96,7 @@ class CachedParser:
             return symbol
 
         if (symbols_to_queue := self._page_symbols.get(doc_item.url)) is not None:
-            async with client_session.get(doc_item.url) as response:
+            async with bot_instance.http_session.get(doc_item.url) as response:
                 soup = BeautifulSoup(await response.text(encoding="utf8"), "lxml")
 
             self._queue.extend(QueueItem(symbol, soup) for symbol in symbols_to_queue)
@@ -202,7 +202,7 @@ class DocCog(commands.Cog):
         Return True on success; False if fetching failed and was rescheduled.
         """
         self.base_urls[api_package_name] = base_url
-        package = await fetch_inventory(self.bot.http_session, inventory_url)
+        package = await fetch_inventory(inventory_url)
 
         if not package:
             delay = 2*60 if inventory_url not in self.scheduled_inventories else 5*60
@@ -210,7 +210,7 @@ class DocCog(commands.Cog):
             self.inventory_scheduler.schedule_later(
                 delay,
                 api_package_name,
-                fetch_inventory(self.bot.http_session, inventory_url)
+                fetch_inventory(inventory_url)
             )
             self.scheduled_inventories.add(api_package_name)
             return False
@@ -302,7 +302,7 @@ class DocCog(commands.Cog):
         markdown = await doc_cache.get(symbol_info)
         if markdown is None:
             log.debug(f"Redis cache miss for symbol `{symbol}`.")
-            markdown = await self.item_fetcher.get_markdown(self.bot.http_session, symbol_info)
+            markdown = await self.item_fetcher.get_markdown(symbol_info)
             if markdown is not None:
                 await doc_cache.set(symbol_info, markdown)
             else:
