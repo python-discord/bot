@@ -80,9 +80,8 @@ class CachedParser:
 
     def __init__(self):
         self._queue: List[QueueItem] = []
-        self._results = {}
         self._page_symbols: Dict[str, List[DocItem]] = defaultdict(list)
-        self._item_events: Dict[DocItem, asyncio.Event] = {}
+        self._item_futures: Dict[DocItem, asyncio.Future] = {}
         self._parse_task = None
 
     async def get_markdown(self, doc_item: DocItem) -> str:
@@ -107,9 +106,8 @@ class CachedParser:
                 self._parse_task = asyncio.create_task(self._parse_queue())
 
         self._move_to_front(doc_item)
-        self._item_events[doc_item] = item_event = asyncio.Event()
-        await item_event.wait()
-        return self._results[doc_item]
+        self._item_futures[doc_item] = item_future = asyncio.Future()
+        return await item_future
 
     async def _parse_queue(self) -> None:
         """
@@ -123,12 +121,11 @@ class CachedParser:
             try:
                 markdown = get_symbol_markdown(soup, item)
                 await doc_cache.set(item, markdown)
-                self._results[item] = markdown
             except Exception:
                 log.exception(f"Unexpected error when handling {item}")
             else:
-                if (event := self._item_events.get(item)) is not None:
-                    event.set()
+                if (future := self._item_futures.get(item)) is not None:
+                    future.set_result(markdown)
             await asyncio.sleep(0.1)
 
         self._parse_task = None
@@ -153,15 +150,14 @@ class CachedParser:
 
         All currently requested items are waited to be parsed before clearing.
         """
-        for event in self._item_events.values():
-            await event.wait()
+        for future in self._item_futures.values():
+            await future
         if self._parse_task is not None:
             self._parse_task.cancel()
             self._parse_task = None
         self._queue.clear()
-        self._results.clear()
         self._page_symbols.clear()
-        self._item_events.clear()
+        self._item_futures.clear()
 
 
 class DocCog(commands.Cog):
