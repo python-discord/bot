@@ -122,7 +122,7 @@ class CachedParser:
             item, soup = self._queue.pop()
             try:
                 markdown = get_symbol_markdown(soup, item)
-                await doc_cache.set_if_exists(item, markdown)
+                await doc_cache.set(item, markdown)
                 self._results[item] = markdown
             except Exception:
                 log.exception(f"Unexpected error when handling {item}")
@@ -178,7 +178,6 @@ class DocCog(commands.Cog):
         self.scheduled_inventories = set()
 
         self.bot.loop.create_task(self.init_refresh_inventory())
-        self.bot.loop.create_task(doc_cache.delete_expired())
 
     async def init_refresh_inventory(self) -> None:
         """Refresh documentation inventory on cog initialization."""

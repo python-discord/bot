@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import datetime
-import pickle
 from typing import Optional, TYPE_CHECKING
 
 from async_rediscache.types.base import RedisObject, namespace_lock
@@ -12,77 +11,55 @@ if TYPE_CHECKING:
 class DocRedisCache(RedisObject):
     """Interface for redis functionality needed by the Doc cog."""
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._set_expires = set()
+
     @namespace_lock
     async def set(self, item: DocItem, value: str) -> None:
         """
-        Set markdown `value` for `key`.
+        Set the Markdown `value` for the symbol `item`.
 
-        Keys expire after a week to keep data up to date.
+        All keys from a single page are stored together, expiring a week after the first set.
         """
-        expiry_timestamp = (datetime.datetime.now() + datetime.timedelta(weeks=1)).timestamp()
+        url_key = remove_suffix(item.relative_url_path, ".html")
+        redis_key = f"{self.namespace}:{item.package}:{url_key}"
+        needs_expire = False
 
         with await self._get_pool_connection() as connection:
-            await connection.hset(
-                f"{self.namespace}:{item.package}",
-                self.get_item_key(item),
-                pickle.dumps((value, expiry_timestamp))
-            )
+            if item.package+url_key not in self._set_expires:
+                self._set_expires.add(item.package+url_key)
+                needs_expire = not await connection.exists(redis_key)
 
-    @namespace_lock
-    async def set_if_exists(self, item: DocItem, value: str) -> None:
-        """
-        Set markdown `value` for `key` if `key` exists.
-
-        Keys expire after a week to keep data up to date.
-        """
-        expiry_timestamp = (datetime.datetime.now() + datetime.timedelta(weeks=1)).timestamp()
-
-        with await self._get_pool_connection() as connection:
-            if await connection.hexists(f"{self.namespace}:{item.package}", self.get_item_key(item)):
-                await connection.hset(
-                    f"{self.namespace}:{item.package}",
-                    self.get_item_key(item),
-                    pickle.dumps((value, expiry_timestamp))
-                )
+            await connection.hset(redis_key, item.symbol_id, value)
+            if needs_expire:
+                await connection.expire(redis_key, datetime.timedelta(weeks=1).total_seconds())
 
     @namespace_lock
     async def get(self, item: DocItem) -> Optional[str]:
-        """Get markdown contents for `key`."""
+        """Return the Markdown content of the symbol `item` if it exists."""
+        url_key = remove_suffix(item.relative_url_path, ".html")
+
         with await self._get_pool_connection() as connection:
-            cached_value = await connection.hget(f"{self.namespace}:{item.package}", self.get_item_key(item))
-            if cached_value is None:
-                return None
-
-            value, expire = pickle.loads(cached_value)
-            if expire <= datetime.datetime.now().timestamp():
-                await connection.hdel(f"{self.namespace}:{item.package}", self.get_item_key(item))
-                return None
-
-            return value
+            return await connection.hget(f"{self.namespace}:{item.package}:{url_key}", item.symbol_id, encoding="utf8")
 
     @namespace_lock
-    async def delete(self, package: str) -> None:
-        """Remove all values for `package`."""
+    async def delete(self, package: str) -> bool:
+        """Remove all values for `package`; return True if at least one key was deleted, False otherwise."""
         with await self._get_pool_connection() as connection:
-            await connection.delete(f"{self.namespace}:{package}")
+            package_keys = [
+                package_key async for package_key in connection.iscan(match=f"{self.namespace}:{package}:*")
+            ]
+            if package_keys:
+                await connection.delete(*package_keys)
+                return True
+            return False
 
-    @namespace_lock
-    async def delete_expired(self) -> None:
-        """Delete all expired keys."""
-        current_timestamp = datetime.datetime.now().timestamp()
-        with await self._get_pool_connection() as connection:
-            async for package_key in connection.iscan(match=f"{self.namespace}*"):
-                expired_fields = []
 
-                for field, cached_value in (await connection.hgetall(package_key)).items():
-                    _, expire = pickle.loads(cached_value)
-                    if expire <= current_timestamp:
-                        expired_fields.append(field)
-
-                if expired_fields:
-                    await connection.hdel(package_key, *expired_fields)
-
-    @staticmethod
-    def get_item_key(item: DocItem) -> str:
-        """Create redis key for `item`."""
-        return item.relative_url_path + item.symbol_id
+def remove_suffix(string: str, suffix: str) -> str:
+    """Remove `suffix` from end of `string`."""
+    # TODO replace usages with str.removesuffix on 3.9
+    if string.endswith(suffix):
+        return string[:-len(suffix)]
+    else:
+        return string
