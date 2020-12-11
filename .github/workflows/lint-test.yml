@@ -129,7 +129,7 @@ jobs:
       # `continue-on-error` conclusion is applied, we use the
       # `.outcome` value. This step also fails silently.
       - name: Upload a Build Artifact
-        if: steps.prepare-artifact.outcome == 'success'
+        if: always() && steps.prepare-artifact.outcome == 'success'
         continue-on-error: true
         uses: actions/upload-artifact@v2
         with:
