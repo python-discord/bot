@@ -230,17 +230,11 @@ class Information(Cog):
         if on_server:
             joined = time_since(user.joined_at, max_units=3)
             roles = ", ".join(role.mention for role in user.roles[1:])
-            if is_mod_channel(ctx.channel):
-                membership = textwrap.dedent(f"""
-                                 Joined: {joined}
-                                 Verified: {verified_at}
-                                 Roles: {roles or None}
-                             """).strip()
-            else:
-                membership = textwrap.dedent(f"""
-                                 Joined: {joined}
-                                 Roles: {roles or None}
-                             """).strip()
+            membership = {"Joined": joined, "Verified": verified_at, "Roles": roles or None}
+            if not is_mod_channel(ctx.channel):
+                membership.pop("Verified")
+
+            membership = textwrap.dedent("\n".join([f"{key}: {value}" for key, value in membership.items()]))
         else:
             roles = None
             membership = "The user is not a member of the server"
