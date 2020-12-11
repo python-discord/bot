@@ -11,10 +11,11 @@ from async_rediscache import RedisSession
 from discord.ext import commands
 from sentry_sdk import push_scope
 
-from bot import DEBUG_MODE, api, constants
+from bot import api, constants
 from bot.async_stats import AsyncStatsClient
 
 log = logging.getLogger('bot')
+LOCALHOST = "127.0.0.1"
 
 
 class Bot(commands.Bot):
@@ -36,17 +37,38 @@ class Bot(commands.Bot):
 
         self._connector = None
         self._resolver = None
+        self._statsd_timerhandle: asyncio.TimerHandle = None
         self._guild_available = asyncio.Event()
 
         statsd_url = constants.Stats.statsd_host
 
-        if DEBUG_MODE:
+        if constants.DEBUG_MODE:
             # Since statsd is UDP, there are no errors for sending to a down port.
             # For this reason, setting the statsd host to 127.0.0.1 for development
             # will effectively disable stats.
-            statsd_url = "127.0.0.1"
+            statsd_url = LOCALHOST
 
-        self.stats = AsyncStatsClient(self.loop, statsd_url, 8125, prefix="bot")
+        self.stats = AsyncStatsClient(self.loop, LOCALHOST)
+        self._connect_statsd(statsd_url)
+
+    def _connect_statsd(self, statsd_url: str, retry_after: int = 2, attempt: int = 1) -> None:
+        """Callback used to retry a connection to statsd if it should fail."""
+        if attempt >= 8:
+            log.error("Reached 8 attempts trying to reconnect AsyncStatsClient. Aborting")
+            return
+
+        try:
+            self.stats = AsyncStatsClient(self.loop, statsd_url, 8125, prefix="bot")
+        except socket.gaierror:
+            log.warning(f"Statsd client failed to connect (Attempt(s): {attempt})")
+            # Use a fallback strategy for retrying, up to 8 times.
+            self._statsd_timerhandle = self.loop.call_later(
+                retry_after,
+                self._connect_statsd,
+                statsd_url,
+                retry_after * 2,
+                attempt + 1
+            )
 
     async def cache_filter_list_data(self) -> None:
         """Cache all the data in the FilterList on the site."""
@@ -94,6 +116,43 @@ class Bot(commands.Bot):
 
         # Build the FilterList cache
         self.loop.create_task(self.cache_filter_list_data())
+
+    @classmethod
+    def create(cls) -> "Bot":
+        """Create and return an instance of a Bot."""
+        loop = asyncio.get_event_loop()
+        allowed_roles = [discord.Object(id_) for id_ in constants.MODERATION_ROLES]
+
+        intents = discord.Intents().all()
+        intents.presences = False
+        intents.dm_typing = False
+        intents.dm_reactions = False
+        intents.invites = False
+        intents.webhooks = False
+        intents.integrations = False
+
+        return cls(
+            redis_session=_create_redis_session(loop),
+            loop=loop,
+            command_prefix=commands.when_mentioned_or(constants.Bot.prefix),
+            activity=discord.Game(name=f"Commands: {constants.Bot.prefix}help"),
+            case_insensitive=True,
+            max_messages=10_000,
+            allowed_mentions=discord.AllowedMentions(everyone=False, roles=allowed_roles),
+            intents=intents,
+        )
+
+    def load_extensions(self) -> None:
+        """Load all enabled extensions."""
+        # Must be done here to avoid a circular import.
+        from bot.utils.extensions import EXTENSIONS
+
+        extensions = set(EXTENSIONS)  # Create a mutable copy.
+        if not constants.HelpChannels.enable:
+            extensions.remove("bot.exts.help_channels")
+
+        for extension in extensions:
+            self.load_extension(extension)
 
     def add_cog(self, cog: commands.Cog) -> None:
         """Adds a "cog" to the bot and logs the operation."""
@@ -151,6 +210,9 @@ class Bot(commands.Bot):
 
         if self.redis_session:
             await self.redis_session.close()
+
+        if self._statsd_timerhandle:
+            self._statsd_timerhandle.cancel()
 
     def insert_item_into_filter_list_cache(self, item: Dict[str, str]) -> None:
         """Add an item to the bots filter_list_cache."""
@@ -243,3 +305,22 @@ class Bot(commands.Bot):
 
         for alias in getattr(command, "root_aliases", ()):
             self.all_commands.pop(alias, None)
+
+
+def _create_redis_session(loop: asyncio.AbstractEventLoop) -> RedisSession:
+    """
+    Create and connect to a redis session.
+
+    Ensure the connection is established before returning to prevent race conditions.
+    `loop` is the event loop on which to connect. The Bot should use this same event loop.
+    """
+    redis_session = RedisSession(
+        address=(constants.Redis.host, constants.Redis.port),
+        password=constants.Redis.password,
+        minsize=1,
+        maxsize=20,
+        use_fakeredis=constants.Redis.use_fakeredis,
+        global_namespace="bot",
+    )
+    loop.run_until_complete(redis_session.connect())
+    return redis_session
