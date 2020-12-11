@@ -361,7 +361,12 @@ class Information(Cog):
         return "Nominations", "\n".join(output)
 
     async def user_verification_and_messages(self, user: FetchedMember) -> Tuple[Union[bool, str], Tuple[str, str]]:
-        """Gets the time of verification and amount of messages for `member`."""
+        """
+        Gets the time of verification and amount of messages for `member`.
+
+        Fetches information from the metricity database that's hosted by the site.
+        If the database returns a code besides a 404, then many parts of the bot are broken including this one.
+        """
         activity_output = []
         verified_at = False
 
