@@ -106,8 +106,9 @@ class CachedParser:
                 self._parse_task = asyncio.create_task(self._parse_queue())
 
         self._move_to_front(doc_item)
-        self._item_futures[doc_item] = item_future = asyncio.Future()
-        return await item_future
+        if doc_item not in self._item_futures:
+            self._item_futures[doc_item] = bot_instance.loop.create_future()
+        return await self._item_futures[doc_item]
 
     async def _parse_queue(self) -> None:
         """
