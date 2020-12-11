@@ -117,20 +117,21 @@ class CachedParser:
         The coroutine will run as long as the queue is not empty, resetting `self._parse_task` to None when finished.
         """
         log.trace("Starting queue parsing.")
-        while self._queue:
-            item, soup = self._queue.pop()
-            try:
-                markdown = get_symbol_markdown(soup, item)
-                await doc_cache.set(item, markdown)
-            except Exception:
-                log.exception(f"Unexpected error when handling {item}")
-            else:
-                if (future := self._item_futures.get(item)) is not None:
-                    future.set_result(markdown)
-            await asyncio.sleep(0.1)
-
-        self._parse_task = None
-        log.trace("Finished parsing queue.")
+        try:
+            while self._queue:
+                item, soup = self._queue.pop()
+                try:
+                    markdown = get_symbol_markdown(soup, item)
+                    await doc_cache.set(item, markdown)
+                except Exception:
+                    log.exception(f"Unexpected error when handling {item}")
+                else:
+                    if (future := self._item_futures.get(item)) is not None:
+                        future.set_result(markdown)
+                await asyncio.sleep(0.1)
+        finally:
+            self._parse_task = None
+            log.trace("Finished parsing queue.")
 
     def _move_to_front(self, item: Union[QueueItem, DocItem]) -> None:
         """Map a DocItem to its page so that the symbol will be parsed once the page is requested."""
@@ -155,7 +156,6 @@ class CachedParser:
             await future
         if self._parse_task is not None:
             self._parse_task.cancel()
-            self._parse_task = None
         self._queue.clear()
         self._page_symbols.clear()
         self._item_futures.clear()
