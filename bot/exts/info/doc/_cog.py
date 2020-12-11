@@ -366,19 +366,14 @@ class DocCog(commands.Cog):
                     colour=discord.Colour.red()
                 )
                 error_message = await ctx.send(embed=error_embed)
-                await wait_for_deletion(
-                    error_message,
-                    (ctx.author.id,),
-                    timeout=NOT_FOUND_DELETE_DELAY,
-                    client=self.bot
-                )
+                await wait_for_deletion(error_message, (ctx.author.id,), timeout=NOT_FOUND_DELETE_DELAY)
                 with suppress(discord.NotFound):
                     await ctx.message.delete()
                 with suppress(discord.NotFound):
                     await error_message.delete()
             else:
                 msg = await ctx.send(embed=doc_embed)
-                await wait_for_deletion(msg, (ctx.author.id,), client=self.bot)
+                await wait_for_deletion(msg, (ctx.author.id,))
 
     @docs_group.command(name='setdoc', aliases=('s',))
     @commands.has_any_role(*MODERATION_ROLES)
