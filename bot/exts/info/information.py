@@ -382,15 +382,8 @@ class Information(Cog):
             if verified_at is not None:
                 verified_at = time_since(parser.isoparse(user_activity["verified_at"]), max_units=3)
 
-            if user_activity["total_messages"]:
-                activity_output.append(user_activity['total_messages'])
-            else:
-                activity_output.append("No messages")
-
-            if user_activity["activity_blocks"]:
-                activity_output.append(user_activity["activity_blocks"])
-            else:
-                activity_output.append("No activity")
+            activity_output.append(user_activity['total_messages'] or "No messages")
+            activity_output.append(user_activity["activity_blocks"] or "No activity")
 
             activity_output = "\n".join(
                 f"{name}: {metric}" for name, metric in zip(["Messages", "Activity blocks"], activity_output))
