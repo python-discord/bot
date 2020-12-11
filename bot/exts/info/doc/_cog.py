@@ -454,5 +454,7 @@ class DocCog(commands.Cog):
     @commands.has_any_role(*MODERATION_ROLES)
     async def clear_cache_command(self, ctx: commands.Context, package_name: PackageName) -> None:
         """Clear the persistent redis cache for `package`."""
-        await doc_cache.delete(package_name)
-        await ctx.send(f"Successfully cleared the cache for `{package_name}`.")
+        if await doc_cache.delete(package_name):
+            await ctx.send(f"Successfully cleared the cache for `{package_name}`.")
+        else:
+            await ctx.send("No keys matching the package found.")
