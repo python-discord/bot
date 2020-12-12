@@ -417,8 +417,8 @@ class DocCog(commands.Cog):
                 f"Added the package `{package_name}` to the database but failed to fetch inventory; "
                 f"trying again in 2 minutes."
             )
-            return
-        await ctx.send(f"Added package `{package_name}` to database and refreshed inventory.")
+        else:
+            await ctx.send(f"Added package `{package_name}` to database and refreshed inventory.")
 
     @docs_group.command(name='deletedoc', aliases=('removedoc', 'rm', 'd'))
     @commands.has_any_role(*MODERATION_ROLES)
