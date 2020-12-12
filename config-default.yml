@@ -175,6 +175,7 @@ guild:
         esoteric:                           470884583684964352
         verification:                       352442727016693763
         voice_gate:                         764802555427029012
+        how-to-get-help:                    704250143020417084
 
         # Staff
         admins:             &ADMINS         365960823622991872
