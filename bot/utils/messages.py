@@ -135,14 +135,14 @@ def sub_clyde(username: Optional[str]) -> Optional[str]:
         return username  # Empty string or None
 
 
-async def send_denial(ctx: Context, reason: str) -> None:
+async def send_denial(ctx: Context, reason: str) -> discord.Message:
     """Send an embed denying the user with the given reason."""
     embed = discord.Embed()
     embed.colour = discord.Colour.red()
     embed.title = random.choice(NEGATIVE_REPLIES)
     embed.description = reason
 
-    await ctx.send(embed=embed)
+    return await ctx.send(embed=embed)
 
 
 def format_user(user: discord.abc.User) -> str:
