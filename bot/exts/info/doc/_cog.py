@@ -6,6 +6,7 @@ import re
 import sys
 from collections import defaultdict
 from contextlib import suppress
+from types import SimpleNamespace
 from typing import Dict, List, NamedTuple, Optional, Union
 
 import discord
@@ -39,6 +40,8 @@ PRIORITY_PACKAGES = (
 )
 WHITESPACE_AFTER_NEWLINES_RE = re.compile(r"(?<=\n\n)(\s+)")
 NOT_FOUND_DELETE_DELAY = RedirectOutput.delete_delay
+# Delay to wait before trying to reach a rescheduled inventory again, in minutes
+FETCH_RESCHEDULE_DELAY = SimpleNamespace(first=2, repeated=5)
 
 REFRESH_EVENT = asyncio.Event()
 REFRESH_EVENT.set()
@@ -197,7 +200,8 @@ class DocCog(commands.Cog):
             * `inventory_url` is the absolute URL to the intersphinx inventory.
 
         If the inventory file is currently unreachable,
-        the update is rescheduled to execute in 2 minutes on the first attempt, and 5 minutes on subsequent attempts.
+        the update is rescheduled to execute in FETCH_RESCHEDULE_DELAY.first minutes on the first attempt,
+        and FETCH_RESCHEDULE_DELAY.repeated minutes on the subsequent attempts.
 
         Return True on success; False if fetching failed and was rescheduled.
         """
@@ -205,7 +209,10 @@ class DocCog(commands.Cog):
         package = await fetch_inventory(inventory_url)
 
         if not package:
-            delay = 2*60 if inventory_url not in self.scheduled_inventories else 5*60
+            if inventory_url not in self.scheduled_inventories:
+                delay = FETCH_RESCHEDULE_DELAY.first * 60
+            else:
+                delay = FETCH_RESCHEDULE_DELAY.repeated * 60
             log.info(f"Failed to fetch inventory; attempting again in {delay//60} minutes.")
             self.inventory_scheduler.schedule_later(
                 delay,
@@ -413,7 +420,7 @@ class DocCog(commands.Cog):
         if await self.update_single(package_name, base_url, inventory_url) is None:
             await ctx.send(
                 f"Added the package `{package_name}` to the database but failed to fetch inventory; "
-                f"trying again in 2 minutes."
+                f"trying again in {FETCH_RESCHEDULE_DELAY.first} minutes."
             )
         else:
             await ctx.send(f"Added the package `{package_name}` to the database and refreshed the inventory.")
