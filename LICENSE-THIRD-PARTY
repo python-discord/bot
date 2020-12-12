@@ -37,11 +37,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ---------------------------------------------------------------------------------------------------
                                        BSD 2-Clause License
 Applies to:
-    - bot/cogs/doc/inventory_parser.py: _load_v1, _load_v2 and ZlibStreamReader.__aiter__.
+    - Copyright (c) 2007-2020 by the Sphinx team (see AUTHORS file). All rights reserved.
+        - bot/cogs/doc/inventory_parser.py: _load_v1, _load_v2 and ZlibStreamReader.__aiter__.
 ---------------------------------------------------------------------------------------------------
-
-Copyright (c) 2007-2020 by the Sphinx team (see AUTHORS file).
-All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
