@@ -345,4 +345,4 @@ def get_symbol_markdown(soup: BeautifulSoup, symbol_data: DocItem) -> Optional[s
     else:
         signature = _get_signatures(symbol_heading)
         description = _get_dd_description(symbol_heading)
-    return _create_markdown(signature, description, symbol_data.url).replace('¶', '')
+    return _create_markdown(signature, description, symbol_data.url).replace('¶', '').strip()
