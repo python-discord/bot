@@ -62,7 +62,7 @@ class DocItem(NamedTuple):
     @property
     def url(self) -> str:
         """Return the absolute url to the symbol."""
-        return "".join((self.base_url, self.relative_url_path))
+        return self.base_url + self.relative_url_path
 
 
 class QueueItem(NamedTuple):
