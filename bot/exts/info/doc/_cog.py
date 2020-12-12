@@ -187,9 +187,7 @@ class DocCog(commands.Cog):
         await self.bot.wait_until_guild_available()
         await self.refresh_inventory()
 
-    async def update_single(
-        self, api_package_name: str, base_url: str, inventory_url: str
-    ) -> bool:
+    async def update_single(self, api_package_name: str, base_url: str, inventory_url: str) -> bool:
         """
         Rebuild the inventory for a single package.
 
@@ -391,8 +389,11 @@ class DocCog(commands.Cog):
     @commands.has_any_role(*MODERATION_ROLES)
     @lock("doc", COMMAND_LOCK_SINGLETON, raise_error=True)
     async def set_command(
-        self, ctx: commands.Context, package_name: PackageName,
-        base_url: ValidURL, inventory_url: InventoryURL
+        self,
+        ctx: commands.Context,
+        package_name: PackageName,
+        base_url: ValidURL,
+        inventory_url: InventoryURL,
     ) -> None:
         """
         Adds a new documentation metadata object to the site's database.
