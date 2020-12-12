@@ -17,6 +17,7 @@ from bot.bot import Bot
 from bot.constants import MODERATION_ROLES, RedirectOutput
 from bot.converters import InventoryURL, PackageName, ValidURL
 from bot.pagination import LinePaginator
+from bot.utils.lock import lock
 from bot.utils.messages import wait_for_deletion
 from bot.utils.scheduling import Scheduler
 from ._inventory_parser import fetch_inventory
@@ -38,6 +39,10 @@ PRIORITY_PACKAGES = (
 )
 WHITESPACE_AFTER_NEWLINES_RE = re.compile(r"(?<=\n\n)(\s+)")
 NOT_FOUND_DELETE_DELAY = RedirectOutput.delete_delay
+
+REFRESH_EVENT = asyncio.Event()
+REFRESH_EVENT.set()
+COMMAND_LOCK_SINGLETON = "inventory refresh"
 
 doc_cache = DocRedisCache(namespace="Docs")
 
@@ -91,9 +96,6 @@ class CachedParser:
         If no symbols were fetched from `doc_item`s page before,
         the HTML has to be fetched before parsing can be queued.
         """
-        if (symbol := self._results.get(doc_item)) is not None:
-            return symbol
-
         if (symbols_to_queue := self._page_symbols.get(doc_item.url)) is not None:
             async with bot_instance.http_session.get(doc_item.url) as response:
                 soup = BeautifulSoup(await response.text(encoding="utf8"), "lxml")
@@ -176,6 +178,7 @@ class DocCog(commands.Cog):
 
         self.bot.loop.create_task(self.init_refresh_inventory())
 
+    @lock("doc", COMMAND_LOCK_SINGLETON, raise_error=True)
     async def init_refresh_inventory(self) -> None:
         """Refresh documentation inventory on cog initialization."""
         await self.bot.wait_until_guild_available()
@@ -258,6 +261,7 @@ class DocCog(commands.Cog):
 
     async def refresh_inventory(self) -> None:
         """Refresh internal documentation inventory."""
+        REFRESH_EVENT.clear()
         log.debug("Refreshing documentation inventory...")
         for inventory in self.scheduled_inventories:
             self.inventory_scheduler.cancel(inventory)
@@ -279,6 +283,7 @@ class DocCog(commands.Cog):
             ) for package in await self.bot.api_client.get('bot/documentation-links')
         ]
         await asyncio.gather(*coros)
+        REFRESH_EVENT.set()
 
     async def get_symbol_embed(self, symbol: str) -> Optional[discord.Embed]:
         """
@@ -299,6 +304,9 @@ class DocCog(commands.Cog):
         markdown = await doc_cache.get(symbol_info)
         if markdown is None:
             log.debug(f"Redis cache miss for symbol `{symbol}`.")
+            if not REFRESH_EVENT.is_set():
+                log.debug("Waiting for inventories to be refreshed before processing item.")
+                await REFRESH_EVENT.wait()
             markdown = await self.item_fetcher.get_markdown(symbol_info)
             if markdown is not None:
                 await doc_cache.set(symbol_info, markdown)
@@ -374,6 +382,7 @@ class DocCog(commands.Cog):
 
     @docs_group.command(name='setdoc', aliases=('s',))
     @commands.has_any_role(*MODERATION_ROLES)
+    @lock("doc", COMMAND_LOCK_SINGLETON, raise_error=True)
     async def set_command(
         self, ctx: commands.Context, package_name: PackageName,
         base_url: ValidURL, inventory_url: InventoryURL
@@ -413,6 +422,7 @@ class DocCog(commands.Cog):
 
     @docs_group.command(name='deletedoc', aliases=('removedoc', 'rm', 'd'))
     @commands.has_any_role(*MODERATION_ROLES)
+    @lock("doc", COMMAND_LOCK_SINGLETON, raise_error=True)
     async def delete_command(self, ctx: commands.Context, package_name: PackageName) -> None:
         """
         Removes the specified package from the database.
@@ -431,6 +441,7 @@ class DocCog(commands.Cog):
 
     @docs_group.command(name="refreshdoc", aliases=("rfsh", "r"))
     @commands.has_any_role(*MODERATION_ROLES)
+    @lock("doc", COMMAND_LOCK_SINGLETON, raise_error=True)
     async def refresh_command(self, ctx: commands.Context) -> None:
         """Refresh inventories and show the difference."""
         old_inventories = set(self.base_urls)
