@@ -71,7 +71,6 @@ def redirect_output(destination_channel: int, bypass_roles: t.Container[int] = N
     This decorator must go before (below) the `command` decorator.
     """
     def wrap(func: t.Callable) -> t.Callable:
-        @wraps(func)
         async def inner(self: Cog, ctx: Context, *args, **kwargs) -> None:
             if ctx.channel.id == destination_channel:
                 log.trace(f"Command {ctx.command.name} was invoked in destination_channel, not redirecting")
@@ -106,7 +105,7 @@ def redirect_output(destination_channel: int, bypass_roles: t.Container[int] = N
                     await ctx.message.delete()
                     log.trace("Redirect output: Deleted invocation message")
 
-        return inner
+        return wraps(func)(function.update_wrapper_globals(inner, func))
     return wrap
 
 
@@ -123,7 +122,6 @@ def respect_role_hierarchy(member_arg: function.Argument) -> t.Callable:
     This decorator must go before (below) the `command` decorator.
     """
     def decorator(func: t.Callable) -> t.Callable:
-        @wraps(func)
         async def wrapper(*args, **kwargs) -> None:
             log.trace(f"{func.__name__}: respect role hierarchy decorator called")
 
@@ -151,5 +149,5 @@ def respect_role_hierarchy(member_arg: function.Argument) -> t.Callable:
             else:
                 log.trace(f"{func.__name__}: {target.top_role=} < {actor.top_role=}; calling func")
                 await func(*args, **kwargs)
-        return wrapper
+        return wraps(func)(function.update_wrapper_globals(wrapper, func))
     return decorator

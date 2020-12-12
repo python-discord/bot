@@ -61,7 +61,6 @@ def lock(namespace: Hashable, resource_id: ResourceId, *, raise_error: bool = Fa
     def decorator(func: Callable) -> Callable:
         name = func.__name__
 
-        @wraps(func)
         async def wrapper(*args, **kwargs) -> Any:
             log.trace(f"{name}: mutually exclusive decorator called")
 
@@ -93,7 +92,7 @@ def lock(namespace: Hashable, resource_id: ResourceId, *, raise_error: bool = Fa
                 if raise_error:
                     raise LockedResourceError(str(namespace), id_)
 
-        return wrapper
+        return wraps(func)(function.update_wrapper_globals(wrapper, func))
     return decorator
 
 

@@ -1,6 +1,7 @@
 """Utilities for interaction with functions."""
 
 import inspect
+import types
 import typing as t
 
 Argument = t.Union[int, str]
@@ -73,3 +74,29 @@ def get_bound_args(func: t.Callable, args: t.Tuple, kwargs: t.Dict[str, t.Any]) 
     bound_args.apply_defaults()
 
     return bound_args.arguments
+
+
+def update_wrapper_globals(wrapper: types.FunctionType, func: types.FunctionType) -> types.FunctionType:
+    """
+    Update globals of `wrapper` with the globals from `func`.
+
+    For forwardrefs in command annotations discordpy uses the __global__ attribute of the function
+    to resolve their values, with decorators that replace the function this breaks because they have
+    their own globals.
+
+    This function creates a new function functionally identical to `wrapper`, which has the globals replaced with
+    a merge of `func`s globals and the `wrapper`s globals.
+
+    In case a global name from `func` conflicts with a name from `wrapper`'s globals, `wrapper` will win
+    to keep it functional, but this may cause problems if the name is used as an annotation and
+    discord.py uses it as a converter on a parameter from `func`.
+    """
+    new_globals = wrapper.__globals__.copy()
+    new_globals.update((k, v) for k, v in func.__globals__.items() if k not in wrapper.__code__.co_names)
+    return types.FunctionType(
+        code=wrapper.__code__,
+        globals=new_globals,
+        name=wrapper.__name__,
+        argdefs=wrapper.__defaults__,
+        closure=wrapper.__closure__,
+    )
