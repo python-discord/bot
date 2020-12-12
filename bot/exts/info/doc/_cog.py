@@ -268,8 +268,7 @@ class DocCog(commands.Cog):
         """Refresh internal documentation inventory."""
         REFRESH_EVENT.clear()
         log.debug("Refreshing documentation inventory...")
-        for inventory in self.scheduled_inventories:
-            self.inventory_scheduler.cancel(inventory)
+        self.inventory_scheduler.cancel_all()
 
         # Clear the old base URLS and doc symbols to ensure
         # that we start from a fresh local dataset.
