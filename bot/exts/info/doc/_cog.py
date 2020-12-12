@@ -334,7 +334,7 @@ class DocCog(commands.Cog):
     @commands.group(name='docs', aliases=('doc', 'd'), invoke_without_command=True)
     async def docs_group(self, ctx: commands.Context, *, symbol: Optional[str]) -> None:
         """Look up documentation for Python symbols."""
-        await ctx.invoke(self.get_command, symbol=symbol)
+        await self.get_command(ctx, symbol=symbol)
 
     @docs_group.command(name='getdoc', aliases=('g',))
     async def get_command(self, ctx: commands.Context, *, symbol: Optional[str]) -> None:
