@@ -76,10 +76,10 @@ class QueueItem(NamedTuple):
 
 class CachedParser:
     """
-    Get symbol markdown from pages with smarter caching.
+    Get the symbol Markdown from pages with smarter caching.
 
     DocItems are added through the `add_item` method which adds them to the `_page_symbols` dict.
-    `get_markdown` is used to fetch the markdown; when this is used for the first time on a page,
+    `get_markdown` is used to fetch the Markdown; when this is used for the first time on a page,
     all of the symbols are queued to be parsed to avoid multiple web requests to the same page.
     """
 
@@ -91,7 +91,7 @@ class CachedParser:
 
     async def get_markdown(self, doc_item: DocItem) -> str:
         """
-        Get result markdown of `doc_item`.
+        Get the result Markdown of `doc_item`.
 
         If no symbols were fetched from `doc_item`s page before,
         the HTML has to be fetched before parsing can be queued.
@@ -418,7 +418,7 @@ class DocCog(commands.Cog):
                 f"trying again in 2 minutes."
             )
         else:
-            await ctx.send(f"Added package `{package_name}` to database and refreshed inventory.")
+            await ctx.send(f"Added the package `{package_name}` to the database and refreshed the inventory.")
 
     @docs_group.command(name='deletedoc', aliases=('removedoc', 'rm', 'd'))
     @commands.has_any_role(*MODERATION_ROLES)
