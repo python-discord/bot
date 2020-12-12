@@ -384,15 +384,8 @@ class Information(Cog):
                 log.warning(f"Could not parse ISO string correctly for user {user.id} verification date.")
                 verified_at = None
 
-            if messages := user_activity["total_messages"]:
-                activity_output.append(f"{messages:,}")
-            else:
-                activity_output.append("No messages")
-
-            if activity_blocks := user_activity["activity_blocks"]:
-                activity_output.append(f"{activity_blocks:,}")
-            else:
-                activity_output.append("No activity")
+            activity_output.append(f"{user_activity['total_messages']:,}" or "No messages")
+            activity_output.append(f"{user_activity['activity_blocks']:,}" or "No activity")
 
             activity_output = "\n".join(
                 f"{name}: {metric}" for name, metric in zip(["Messages", "Activity blocks"], activity_output)
