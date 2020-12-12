@@ -19,7 +19,9 @@ log = logging.getLogger(__name__)
 HELP_CHANNEL_TOPIC = """
 This is a Python help channel. You can claim your own help channel in the Python Help: Available category.
 """
-
+AVAILABLE_CHANNELS_MESSAGE = """
+There are currently {} help channels available: {}
+"""
 
 class HelpChannels(commands.Cog):
     """
@@ -142,10 +144,8 @@ class HelpChannels(commands.Cog):
     @commands.command(name="close", aliases=["dormant", "solved"], enabled=False)
     async def close_command(self, ctx: commands.Context) -> None:
         """
-        Make the current in-use help channel dormant.
-
-        Make the channel dormant if the user passes the `dormant_check`,
-        delete the message that invoked this.
+        Make the current in-use help channel dormant and change the dynamic message
+        in the help instructions channel to match the new available channels.
         """
         log.trace("close command invoked; checking if the channel is in-use.")
 
@@ -159,7 +159,8 @@ class HelpChannels(commands.Cog):
 
     async def get_available_candidate(self) -> discord.TextChannel:
         """
-        Return a dormant channel to turn into an available channel.
+        Return a dormant channel to turn into an available channel and change the
+        message in the help instructions channel to match the new available channels.
 
         If no channel is available, wait indefinitely until one becomes available.
         """
@@ -180,6 +181,22 @@ class HelpChannels(commands.Cog):
                     self.bot.stats.incr("help.out_of_channel_alerts")
 
                 channel = await self.wait_for_dormant_channel()
+        
+        message = await channel.fetch_message(channel.last_message_id)
+        channels = _channel.get_category_channels(constants.Categories.help_available)
+        string = AVAILABLE_CHANNELS_MESSAGE.format(len(channels), ", ".join(channels))
+        
+        # Attempt to get the message from channel.history if last_message_id fails.
+        if message is None:
+            history = await channel.history()
+            message = await history.flatten()[0]
+        
+        # Edit the message if it exists, send it if it doesn't.
+        if message is None:
+            log.info("Couldn't fetch the latest message in the help instructions message; creating one.")
+            await channel.send(string)
+        else:
+            await message.edit(string)
 
         return channel
 
