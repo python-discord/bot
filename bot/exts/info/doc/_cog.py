@@ -407,9 +407,7 @@ class DocCog(commands.Cog):
 
         log.info(
             f"User @{ctx.author} ({ctx.author.id}) added a new documentation package:\n"
-            f"Package name: {package_name}\n"
-            f"Base url: {base_url}\n"
-            f"Inventory URL: {inventory_url}"
+            + "\n".join(f"{key}: {value}" for key, value in body.items())
         )
 
         if await self.update_single(package_name, base_url, inventory_url) is None:
