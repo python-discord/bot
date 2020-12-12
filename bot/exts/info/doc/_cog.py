@@ -19,7 +19,7 @@ from bot.constants import MODERATION_ROLES, RedirectOutput
 from bot.converters import InventoryURL, PackageName, ValidURL
 from bot.pagination import LinePaginator
 from bot.utils.lock import lock
-from bot.utils.messages import wait_for_deletion
+from bot.utils.messages import send_denial, wait_for_deletion
 from bot.utils.scheduling import Scheduler
 from ._inventory_parser import fetch_inventory
 from ._parsing import get_symbol_markdown
@@ -370,12 +370,7 @@ class DocCog(commands.Cog):
                 doc_embed = await self.get_symbol_embed(symbol)
 
             if doc_embed is None:
-                symbol = await discord.ext.commands.clean_content().convert(ctx, symbol)
-                error_embed = discord.Embed(
-                    description=f"Sorry, I could not find any documentation for `{(symbol)}`.",
-                    colour=discord.Colour.red()
-                )
-                error_message = await ctx.send(embed=error_embed)
+                error_message = await send_denial(ctx, "No documentation found for the requested symbol.")
                 await wait_for_deletion(error_message, (ctx.author.id,), timeout=NOT_FOUND_DELETE_DELAY)
                 with suppress(discord.NotFound):
                     await ctx.message.delete()
