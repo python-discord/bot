@@ -23,6 +23,7 @@ AVAILABLE_CHANNELS_MESSAGE = """
 There are currently {} help channels available: {}
 """
 
+
 class HelpChannels(commands.Cog):
     """
     Manage the help channel system of the guild.
@@ -179,22 +180,18 @@ class HelpChannels(commands.Cog):
                 if last_notification:
                     self.last_notification = last_notification
                     self.bot.stats.incr("help.out_of_channel_alerts")
-
                 channel = await self.wait_for_dormant_channel()
         
         message = await channel.fetch_message(channel.last_message_id)
         channels = _channel.get_category_channels(constants.Categories.help_available)
         string = AVAILABLE_CHANNELS_MESSAGE.format(len(channels), ", ".join(channels))
-        
         # Attempt to get the message from channel.history if last_message_id fails.
         if message is None:
-            history = await channel.history()
-            
+            history = await channel.history() 
             try:
                 message = await history.flatten()[0]
             except IndexError:
                 pass
-        
         # Edit the message if it exists, send it if it doesn't.
         if message is None:
             log.info("Couldn't fetch the latest message in the help instructions message; creating one.")
