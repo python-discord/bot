@@ -181,13 +181,12 @@ class HelpChannels(commands.Cog):
                     self.last_notification = last_notification
                     self.bot.stats.incr("help.out_of_channel_alerts")
                 channel = await self.wait_for_dormant_channel()
-        
         message = await channel.fetch_message(channel.last_message_id)
         channels = _channel.get_category_channels(constants.Categories.help_available)
         string = AVAILABLE_CHANNELS_MESSAGE.format(len(channels), ", ".join(channels))
         # Attempt to get the message from channel.history if last_message_id fails.
         if message is None:
-            history = await channel.history() 
+            history = await channel.history()
             try:
                 message = await history.flatten()[0]
             except IndexError:
