@@ -189,7 +189,11 @@ class HelpChannels(commands.Cog):
         # Attempt to get the message from channel.history if last_message_id fails.
         if message is None:
             history = await channel.history()
-            message = await history.flatten()[0]
+            
+            try:
+                message = await history.flatten()[0]
+            except IndexError:
+                pass
         
         # Edit the message if it exists, send it if it doesn't.
         if message is None:
