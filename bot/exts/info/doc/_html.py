@@ -1,7 +1,9 @@
-from collections.abc import Iterable
+import logging
 from typing import List, Union
 
-from bs4.element import NavigableString, PageElement, SoupStrainer, Tag
+from bs4.element import PageElement, SoupStrainer
+
+log = logging.getLogger(__name__)
 
 
 class Strainer(SoupStrainer):
@@ -9,25 +11,18 @@ class Strainer(SoupStrainer):
 
     def __init__(self, *, include_strings: bool, **kwargs):
         self.include_strings = include_strings
+        passed_text = kwargs.pop("text", None)
+        if passed_text is not None:
+            log.warning("`text` is not a supported kwarg in the custom strainer.")
         super().__init__(**kwargs)
 
     markup_hint = Union[PageElement, List["markup_hint"]]
 
     def search(self, markup: markup_hint) -> Union[PageElement, str]:
         """Extend default SoupStrainer behaviour to allow matching both `Tag`s` and `NavigableString`s."""
-        if isinstance(markup, Iterable) and not isinstance(markup, (Tag, str)):
-            for element in markup:
-                if isinstance(element, NavigableString) and self.search(element):
-                    return element
-        elif isinstance(markup, Tag):
-            # Also include tags while we're searching for strings and tags.
-            if self.include_strings or (not self.text or self.name or self.attrs):
-                return self.search_tag(markup)
-
-        elif isinstance(markup, str):
+        if isinstance(markup, str):
             # Let everything through the text filter if we're including strings and tags.
-            text_filter = None if not self.include_strings else True
-            if not self.name and not self.attrs and self._matches(markup, text_filter):
+            if not self.name and not self.attrs and self.include_strings:
                 return markup
         else:
-            raise Exception(f"I don't know how to match against a {markup.__class__}")
+            return super().search(markup)
