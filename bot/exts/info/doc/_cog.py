@@ -152,7 +152,7 @@ class CachedParser:
         self._queue.append(queue_item)
 
     def add_item(self, doc_item: DocItem) -> None:
-        """Add a DocItem to `_page_symbols`."""
+        """Map a DocItem to its page so that the symbol will be parsed once the page is requested."""
         self._page_symbols[doc_item.url].append(doc_item)
 
     async def clear(self) -> None:
