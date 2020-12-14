@@ -6,6 +6,7 @@ import re
 import sys
 from collections import defaultdict
 from contextlib import suppress
+from functools import partial
 from types import SimpleNamespace
 from typing import Dict, List, NamedTuple, Optional, Union
 
@@ -126,7 +127,10 @@ class CachedParser:
             while self._queue:
                 item, soup = self._queue.pop()
                 try:
-                    markdown = get_symbol_markdown(soup, item)
+                    markdown = await bot_instance.loop.run_in_executor(
+                        None,
+                        partial(get_symbol_markdown, soup, item),
+                    )
                     await doc_cache.set(item, markdown)
                 except Exception:
                     log.exception(f"Unexpected error when handling {item}")
