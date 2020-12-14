@@ -143,7 +143,7 @@ class CachedParser:
             log.trace("Finished parsing queue.")
 
     def _move_to_front(self, item: Union[QueueItem, DocItem]) -> None:
-        """Map a DocItem to its page so that the symbol will be parsed once the page is requested."""
+        """Move `item` to the front of the parse queue."""
         # The parse queue stores soups along with the doc symbols in QueueItem objects,
         # in case we're moving a DocItem we have to get the associated QueueItem first and then move it.
         item_index = self._queue.index(item)
