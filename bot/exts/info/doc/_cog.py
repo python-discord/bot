@@ -304,6 +304,7 @@ class DocCog(commands.Cog):
             ) for package in await self.bot.api_client.get('bot/documentation-links')
         ]
         await asyncio.gather(*coros)
+        log.debug("Finished inventory refresh.")
         REFRESH_EVENT.set()
 
     async def get_symbol_embed(self, symbol: str) -> Optional[discord.Embed]:
@@ -316,6 +317,10 @@ class DocCog(commands.Cog):
         if not present also create a redis entry for the symbol.
         """
         log.trace(f"Building embed for symbol `{symbol}`")
+        if not REFRESH_EVENT.is_set():
+            log.debug("Waiting for inventories to be refreshed before processing item.")
+            await REFRESH_EVENT.wait()
+
         symbol_info = self.doc_symbols.get(symbol)
         if symbol_info is None:
             log.debug("Symbol does not exist.")
@@ -325,9 +330,6 @@ class DocCog(commands.Cog):
         markdown = await doc_cache.get(symbol_info)
         if markdown is None:
             log.debug(f"Redis cache miss for symbol `{symbol}`.")
-            if not REFRESH_EVENT.is_set():
-                log.debug("Waiting for inventories to be refreshed before processing item.")
-                await REFRESH_EVENT.wait()
             markdown = await self.item_fetcher.get_markdown(symbol_info)
             if markdown is not None:
                 await doc_cache.set(symbol_info, markdown)
