@@ -18,12 +18,12 @@ from discord.ext import commands
 from bot import instance as bot_instance
 from bot.bot import Bot
 from bot.constants import MODERATION_ROLES, RedirectOutput
-from bot.converters import InventoryURL, PackageName, ValidURL
+from bot.converters import Inventory, PackageName, ValidURL
 from bot.pagination import LinePaginator
 from bot.utils.lock import lock
 from bot.utils.messages import send_denial, wait_for_deletion
 from bot.utils.scheduling import Scheduler
-from ._inventory_parser import fetch_inventory
+from ._inventory_parser import INVENTORY_DICT, fetch_inventory
 from ._parsing import get_symbol_markdown
 from ._redis_cache import DocRedisCache
 
@@ -204,7 +204,7 @@ class DocCog(commands.Cog):
         await self.bot.wait_until_guild_available()
         await self.refresh_inventory()
 
-    async def update_single(self, api_package_name: str, base_url: str, inventory_url: str) -> bool:
+    async def update_single(self, api_package_name: str, base_url: str, package: INVENTORY_DICT) -> None:
         """
         Rebuild the inventory for a single package.
 
@@ -213,31 +213,8 @@ class DocCog(commands.Cog):
             * `base_url` is the root documentation URL for the specified package, used to build
                 absolute paths that link to specific symbols
             * `inventory_url` is the absolute URL to the intersphinx inventory.
-
-        If the inventory file is currently unreachable,
-        the update is rescheduled to execute in FETCH_RESCHEDULE_DELAY.first minutes on the first attempt,
-        and FETCH_RESCHEDULE_DELAY.repeated minutes on the subsequent attempts.
-
-        Return True on success; False if fetching failed and was rescheduled.
         """
         self.base_urls[api_package_name] = base_url
-        package = await fetch_inventory(inventory_url)
-
-        if not package:
-            if inventory_url not in self.scheduled_inventories:
-                delay = FETCH_RESCHEDULE_DELAY.first * 60
-            else:
-                delay = FETCH_RESCHEDULE_DELAY.repeated * 60
-            log.info(f"Failed to fetch inventory; attempting again in {delay//60} minutes.")
-            self.inventory_scheduler.schedule_later(
-                delay,
-                api_package_name,
-                fetch_inventory(inventory_url)
-            )
-            self.scheduled_inventories.add(api_package_name)
-            return False
-
-        self.scheduled_inventories.discard(api_package_name)
 
         for group, items in package.items():
             for symbol, relative_doc_url in items:
@@ -279,7 +256,37 @@ class DocCog(commands.Cog):
                 self.item_fetcher.add_item(symbol_item)
 
         log.trace(f"Fetched inventory for {api_package_name}.")
-        return True
+
+    async def update_or_reschedule_inventory(
+            self,
+            api_package_name: str,
+            base_url: str,
+            inventory_url: str
+    ) -> Optional[INVENTORY_DICT]:
+        """
+        Update the cog's inventory, or reschedule this method to execute again if the remote inventory unreachable.
+
+        The first attempt is rescheduled to execute in `FETCH_RESCHEDULE_DELAY.first` minutes, the subsequent attempts
+        in `FETCH_RESCHEDULE_DELAY.repeated` minutes.
+        """
+        package = await fetch_inventory(inventory_url)
+
+        if not package:
+            if inventory_url not in self.scheduled_inventories:
+                delay = FETCH_RESCHEDULE_DELAY.first
+            else:
+                delay = FETCH_RESCHEDULE_DELAY.repeated
+            log.info(f"Failed to fetch inventory; attempting again in {delay} minutes.")
+            self.inventory_scheduler.schedule_later(
+                delay*60,
+                api_package_name,
+                self.update_or_reschedule_inventory(api_package_name, base_url, inventory_url)
+            )
+            self.scheduled_inventories.add(api_package_name)
+            return
+
+        self.scheduled_inventories.discard(api_package_name)
+        await self.update_single(api_package_name, base_url, package)
 
     async def refresh_inventory(self) -> None:
         """Refresh internal documentation inventory."""
@@ -299,7 +306,7 @@ class DocCog(commands.Cog):
         # Run all coroutines concurrently - since each of them performs an HTTP
         # request, this speeds up fetching the inventory data heavily.
         coros = [
-            self.update_single(
+            self.update_or_reschedule_inventory(
                 package["package"], package["base_url"], package["inventory_url"]
             ) for package in await self.bot.api_client.get('bot/documentation-links')
         ]
@@ -406,7 +413,7 @@ class DocCog(commands.Cog):
         ctx: commands.Context,
         package_name: PackageName,
         base_url: ValidURL,
-        inventory_url: InventoryURL,
+        inventory: Inventory,
     ) -> None:
         """
         Adds a new documentation metadata object to the site's database.
@@ -419,6 +426,7 @@ class DocCog(commands.Cog):
                     https://docs.python.org/3/ \
                     https://docs.python.org/3/objects.inv
         """
+        inventory_url, inventory_dict = inventory
         body = {
             'package': package_name,
             'base_url': base_url,
@@ -431,13 +439,8 @@ class DocCog(commands.Cog):
             + "\n".join(f"{key}: {value}" for key, value in body.items())
         )
 
-        if await self.update_single(package_name, base_url, inventory_url) is None:
-            await ctx.send(
-                f"Added the package `{package_name}` to the database but failed to fetch inventory; "
-                f"trying again in {FETCH_RESCHEDULE_DELAY.first} minutes."
-            )
-        else:
-            await ctx.send(f"Added the package `{package_name}` to the database and refreshed the inventory.")
+        await self.update_single(package_name, base_url, inventory_dict)
+        await ctx.send(f"Added the package `{package_name}` to the database and refreshed the inventory.")
 
     @docs_group.command(name='deletedoc', aliases=('removedoc', 'rm', 'd'))
     @commands.has_any_role(*MODERATION_ROLES)

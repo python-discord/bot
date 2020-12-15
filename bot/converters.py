@@ -176,23 +176,23 @@ class ValidURL(Converter):
         return url
 
 
-class InventoryURL(Converter):
+class Inventory(Converter):
     """
     Represents an Intersphinx inventory URL.
 
     This converter checks whether intersphinx accepts the given inventory URL, and raises
-    `BadArgument` if that is not the case.
+    `BadArgument` if that is not the case or if the url is unreachable.
 
-    Otherwise, it simply passes through the given URL.
+    Otherwise, it returns the url and the fetched inventory dict in a tuple.
     """
 
     @staticmethod
-    async def convert(ctx: Context, url: str) -> str:
+    async def convert(ctx: Context, url: str) -> t.Tuple[str, _inventory_parser.INVENTORY_DICT]:
         """Convert url to Intersphinx inventory URL."""
         await ctx.trigger_typing()
-        if await _inventory_parser.fetch_inventory(url) is None:
+        if (inventory := await _inventory_parser.fetch_inventory(url)) is None:
             raise BadArgument(f"Failed to fetch inventory file after {_inventory_parser.FAILED_REQUEST_ATTEMPTS}.")
-        return url
+        return url, inventory
 
 
 class Snowflake(IDConverter):
