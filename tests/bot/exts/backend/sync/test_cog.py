@@ -29,24 +29,24 @@ class SyncCogTestCase(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.bot = helpers.MockBot()
 
-        self.role_syncer_patcher = mock.patch(
+        role_syncer_patcher = mock.patch(
             "bot.exts.backend.sync._syncers.RoleSyncer",
             autospec=Syncer,
             spec_set=True
         )
-        self.user_syncer_patcher = mock.patch(
+        user_syncer_patcher = mock.patch(
             "bot.exts.backend.sync._syncers.UserSyncer",
             autospec=Syncer,
             spec_set=True
         )
-        self.RoleSyncer = self.role_syncer_patcher.start()
-        self.UserSyncer = self.user_syncer_patcher.start()
+
+        self.RoleSyncer = role_syncer_patcher.start()
+        self.UserSyncer = user_syncer_patcher.start()
+
+        self.addCleanup(role_syncer_patcher.stop)
+        self.addCleanup(user_syncer_patcher.stop)
 
         self.cog = Sync(self.bot)
-
-    def tearDown(self):
-        self.role_syncer_patcher.stop()
-        self.user_syncer_patcher.stop()
 
     @staticmethod
     def response_error(status: int) -> ResponseCodeError:
@@ -73,8 +73,6 @@ class SyncCogTests(SyncCogTestCase):
 
         Sync(self.bot)
 
-        self.RoleSyncer.assert_called_once_with(self.bot)
-        self.UserSyncer.assert_called_once_with(self.bot)
         sync_guild.assert_called_once_with()
         self.bot.loop.create_task.assert_called_once_with(mock_sync_guild_coro)
 
@@ -83,8 +81,8 @@ class SyncCogTests(SyncCogTestCase):
         for guild in (helpers.MockGuild(), None):
             with self.subTest(guild=guild):
                 self.bot.reset_mock()
-                self.cog.role_syncer.reset_mock()
-                self.cog.user_syncer.reset_mock()
+                self.RoleSyncer.reset_mock()
+                self.UserSyncer.reset_mock()
 
                 self.bot.get_guild = mock.MagicMock(return_value=guild)
 
@@ -94,11 +92,11 @@ class SyncCogTests(SyncCogTestCase):
                 self.bot.get_guild.assert_called_once_with(constants.Guild.id)
 
                 if guild is None:
-                    self.cog.role_syncer.sync.assert_not_called()
-                    self.cog.user_syncer.sync.assert_not_called()
+                    self.RoleSyncer.sync.assert_not_called()
+                    self.UserSyncer.sync.assert_not_called()
                 else:
-                    self.cog.role_syncer.sync.assert_called_once_with(guild)
-                    self.cog.user_syncer.sync.assert_called_once_with(guild)
+                    self.RoleSyncer.sync.assert_called_once_with(guild)
+                    self.UserSyncer.sync.assert_called_once_with(guild)
 
     async def patch_user_helper(self, side_effect: BaseException) -> None:
         """Helper to set a side effect for bot.api_client.patch and then assert it is called."""
@@ -394,14 +392,14 @@ class SyncCogCommandTests(SyncCogTestCase, CommandTestCase):
         ctx = helpers.MockContext()
         await self.cog.sync_roles_command(self.cog, ctx)
 
-        self.cog.role_syncer.sync.assert_called_once_with(ctx.guild, ctx)
+        self.RoleSyncer.sync.assert_called_once_with(ctx.guild, ctx)
 
     async def test_sync_users_command(self):
         """sync() should be called on the UserSyncer."""
         ctx = helpers.MockContext()
         await self.cog.sync_users_command(self.cog, ctx)
 
-        self.cog.user_syncer.sync.assert_called_once_with(ctx.guild, ctx)
+        self.UserSyncer.sync.assert_called_once_with(ctx.guild, ctx)
 
     async def test_commands_require_admin(self):
         """The sync commands should only run if the author has the administrator permission."""
