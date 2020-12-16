@@ -565,11 +565,11 @@ class Verification(Cog):
 
         raw_member = await self.bot.http.get_member(member.guild.id, member.id)
 
-        # If the user has the is_pending flag set, they will be using the alternate
+        # If the user has the pending flag set, they will be using the alternate
         # gate and will not need a welcome DM with verification instructions.
         # We will send them an alternate DM once they verify with the welcome
         # video.
-        if raw_member.get("is_pending"):
+        if raw_member.get("pending"):
             await self.member_gating_cache.set(member.id, True)
 
             # TODO: Temporary, remove soon after asking joe.
