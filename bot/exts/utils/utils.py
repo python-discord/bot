@@ -9,13 +9,16 @@ from typing import Dict, Optional, Tuple, Union
 
 from discord import Colour, Embed, utils
 from discord.ext.commands import BadArgument, Cog, Context, clean_content, command, has_any_role
+from discord.utils import snowflake_time
 
 from bot.bot import Bot
 from bot.constants import Channels, Keys, MODERATION_ROLES, STAFF_ROLES
+from bot.converters import Snowflake
 from bot.decorators import in_whitelist
 from bot.pagination import LinePaginator
 from bot.utils import messages
 from bot.utils.cache import AsyncCache
+from bot.utils.time import time_since
 
 log = logging.getLogger(__name__)
 
@@ -169,6 +172,21 @@ class Utils(Cog):
 
         embed.title += f" (line {match_index}):"
         embed.description = best_match
+        await ctx.send(embed=embed)
+
+    @command(aliases=("snf", "snfl", "sf"))
+    @in_whitelist(channels=(Channels.bot_commands,), roles=STAFF_ROLES)
+    async def snowflake(self, ctx: Context, snowflake: Snowflake) -> None:
+        """Get Discord snowflake creation time."""
+        created_at = snowflake_time(snowflake)
+        embed = Embed(
+            description=f"**Created at {created_at}** ({time_since(created_at, max_units=3)}).",
+            colour=Colour.blue()
+        )
+        embed.set_author(
+            name=f"Snowflake: {snowflake}",
+            icon_url="https://github.com/twitter/twemoji/blob/master/assets/72x72/2744.png?raw=true"
+        )
         await ctx.send(embed=embed)
 
     @command(aliases=("poll",))

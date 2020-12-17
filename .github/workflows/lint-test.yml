@@ -1,13 +1,10 @@
-name: Lint, Test, Build
+name: Lint & Test
 
 on:
   push:
     branches:
       - master
-  # We use pull_request_target as we get PRs from
-  # forks, but need to be able to add annotations
-  # for our flake8 step.
-  pull_request_target:
+  pull_request:
 
 
 jobs:
@@ -42,12 +39,8 @@ jobs:
       - name: Add custom PYTHONUSERBASE to PATH
         run: echo '${{ env.PYTHONUSERBASE }}/bin/' >> $GITHUB_PATH
 
-      # We don't want to persist credentials, as our GitHub Action
-      # may be run when a PR is made from a fork.
       - name: Checkout repository
         uses: actions/checkout@v2
-        with:
-          persist-credentials: false
 
       - name: Setup python
         id: python
@@ -94,14 +87,18 @@ jobs:
       - name: Run pre-commit hooks
         run: export PIP_USER=0; SKIP=flake8 pre-commit run --all-files
 
-      # This step requires `pull_request_target`, as adding annotations
-      # requires "write" permissions to the repo.
+      # Run flake8 and have it format the linting errors in the format of
+      # the GitHub Workflow command to register error annotations. This
+      # means that our flake8 output is automatically added as an error
+      # annotation to both the run result and in the "Files" tab of a
+      # pull request.
+      #
+      # Format used:
+      # ::error file={filename},line={line},col={col}::{message}
       - name: Run flake8
-        uses: julianwachholz/flake8-action@v1
-        with:
-          checkName: lint-test
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: "flake8 \
+        --format='::error file=%(path)s,line=%(row)d,col=%(col)d::\
+        [flake8] %(code)s: %(text)s'"
 
       # We run `coverage` using the `python` command so we can suppress
       # irrelevant warnings in our CI output.
@@ -117,41 +114,24 @@ jobs:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: coveralls
 
-  build-and-push:
-    needs: lint-test
-    if: github.event_name != 'pull_request_target' && github.ref == 'refs/heads/master'
-    runs-on: ubuntu-latest
+      # Prepare the Pull Request Payload artifact. If this fails, we
+      # we fail silently using the `continue-on-error` option. It's
+      # nice if this succeeds, but if it fails for any reason, it
+      # does not mean that our lint-test checks failed.
+      - name: Prepare Pull Request Payload artifact
+        id: prepare-artifact
+        if: always() && github.event_name == 'pull_request'
+        continue-on-error: true
+        run: cat $GITHUB_EVENT_PATH | jq '.pull_request' > pull_request_payload.json
 
-    steps:
-      # Create a commit SHA-based tag for the container repositories
-      - name: Create SHA Container Tag
-        id: sha_tag
-        run: |
-          tag=$(cut -c 1-7 <<< $GITHUB_SHA)
-          echo "::set-output name=tag::$tag"
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-
-      - name: Login to Github Container Registry
-        uses: docker/login-action@v1
+      # This only makes sense if the previous step succeeded. To
+      # get the original outcome of the previous step before the
+      # `continue-on-error` conclusion is applied, we use the
+      # `.outcome` value. This step also fails silently.
+      - name: Upload a Build Artifact
+        if: always() && steps.prepare-artifact.outcome == 'success'
+        continue-on-error: true
+        uses: actions/upload-artifact@v2
         with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GHCR_TOKEN  }}
-
-      # This step builds and pushed the container to the
-      # Github Container Registry tagged with "latest" and
-      # the short SHA of the commit.
-      - name: Build and push
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          cache-from: type=registry,ref=ghcr.io/python-discord/bot:latest
-          tags: |
-            ghcr.io/python-discord/bot:latest
-            ghcr.io/python-discord/bot:${{ steps.sha_tag.outputs.tag }}
+          name: pull-request-payload
+          path: pull_request_payload.json

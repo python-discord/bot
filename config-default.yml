@@ -4,13 +4,13 @@ bot:
     sentry_dsn:  !ENV "BOT_SENTRY_DSN"
 
     redis:
-        host:  "redis"
+        host:  "redis.default.svc.cluster.local"
         port:  6379
         password: !ENV "REDIS_PASSWORD"
         use_fakeredis: false
 
     stats:
-        statsd_host: "graphite"
+        statsd_host: "graphite.default.svc.cluster.local"
         presence_update_timeout: 300
 
     cooldowns:
@@ -125,6 +125,8 @@ style:
         voice_state_green: "https://cdn.discordapp.com/emojis/656899770094452754.png"
         voice_state_red: "https://cdn.discordapp.com/emojis/656899769905709076.png"
 
+        green_checkmark: "https://raw.githubusercontent.com/python-discord/branding/master/icons/checkmark/green-checkmark-dist.png"
+
 
 guild:
     id: 267624335836053506
@@ -158,7 +160,6 @@ guild:
         python_discussion:  &PY_DISCUSSION  267624335836053506
 
         # Python Help: Available
-        how_to_get_help:    704250143020417084
         cooldown:           720603994149486673
 
         # Logs
@@ -199,12 +200,18 @@ guild:
         mod_announcements:      &MOD_ANNOUNCEMENTS      372115205867700225
         admin_announcements:    &ADMIN_ANNOUNCEMENTS    749736155569848370
 
-        # Voice
-        code_help_voice:                    755154969761677312
-        code_help_voice_2:                  766330079135268884
-        voice_chat:                         412357430186344448
+        # Voice Channels
         admins_voice:       &ADMINS_VOICE   500734494840717332
+        code_help_voice_1:                  751592231726481530
+        code_help_voice_2:                  764232549840846858
+        general_voice:                      751591688538947646
         staff_voice:        &STAFF_VOICE    412375055910043655
+
+        # Voice Chat
+        code_help_chat_1:                   755154969761677312
+        code_help_chat_2:                   766330079135268884
+        staff_voice_chat:                   541638762007101470
+        voice_chat:                         412357430186344448
 
         # Watch
         big_brother_logs:   &BB_LOGS        468507907357409333
@@ -336,7 +343,7 @@ urls:
     paste_service:                      !JOIN [*SCHEMA, *PASTE, "/{key}"]
 
     # Snekbox
-    snekbox_eval_api: "http://snekbox:8060/eval"
+    snekbox_eval_api: "http://snekbox.default.svc.cluster.local/eval"
 
     # Discord API URLs
     discord_api:        &DISCORD_API "https://discordapp.com/api/v7/"
