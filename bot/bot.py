@@ -16,6 +16,7 @@ from bot import api, constants
 from bot.async_stats import AsyncStatsClient
 
 log = logging.getLogger('bot')
+LOCALHOST = "127.0.0.1"
 
 
 class Bot(commands.Bot):
@@ -37,6 +38,7 @@ class Bot(commands.Bot):
 
         self._connector = None
         self._resolver = None
+        self._statsd_timerhandle: asyncio.TimerHandle = None
         self._guild_available = asyncio.Event()
 
         statsd_url = constants.Stats.statsd_host
@@ -45,9 +47,29 @@ class Bot(commands.Bot):
             # Since statsd is UDP, there are no errors for sending to a down port.
             # For this reason, setting the statsd host to 127.0.0.1 for development
             # will effectively disable stats.
-            statsd_url = "127.0.0.1"
+            statsd_url = LOCALHOST
 
-        self.stats = AsyncStatsClient(self.loop, statsd_url, 8125, prefix="bot")
+        self.stats = AsyncStatsClient(self.loop, LOCALHOST)
+        self._connect_statsd(statsd_url)
+
+    def _connect_statsd(self, statsd_url: str, retry_after: int = 2, attempt: int = 1) -> None:
+        """Callback used to retry a connection to statsd if it should fail."""
+        if attempt >= 8:
+            log.error("Reached 8 attempts trying to reconnect AsyncStatsClient. Aborting")
+            return
+
+        try:
+            self.stats = AsyncStatsClient(self.loop, statsd_url, 8125, prefix="bot")
+        except socket.gaierror:
+            log.warning(f"Statsd client failed to connect (Attempt(s): {attempt})")
+            # Use a fallback strategy for retrying, up to 8 times.
+            self._statsd_timerhandle = self.loop.call_later(
+                retry_after,
+                self._connect_statsd,
+                statsd_url,
+                retry_after * 2,
+                attempt + 1
+            )
 
         # All tasks that need to block closing until finished
         self.closing_tasks: List[asyncio.Task] = []
@@ -206,6 +228,9 @@ class Bot(commands.Bot):
 
         if self.redis_session:
             await self.redis_session.close()
+
+        if self._statsd_timerhandle:
+            self._statsd_timerhandle.cancel()
 
     def insert_item_into_filter_list_cache(self, item: Dict[str, str]) -> None:
         """Add an item to the bots filter_list_cache."""

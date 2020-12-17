@@ -565,11 +565,11 @@ class Verification(Cog):
 
         raw_member = await self.bot.http.get_member(member.guild.id, member.id)
 
-        # If the user has the is_pending flag set, they will be using the alternate
+        # If the user has the pending flag set, they will be using the alternate
         # gate and will not need a welcome DM with verification instructions.
         # We will send them an alternate DM once they verify with the welcome
         # video.
-        if raw_member.get("is_pending"):
+        if raw_member.get("pending"):
             await self.member_gating_cache.set(member.id, True)
 
             # TODO: Temporary, remove soon after asking joe.
@@ -756,7 +756,7 @@ class Verification(Cog):
         log.trace(f"Bumping verification stats in category: {category}")
         self.bot.stats.incr(f"verification.{category}")
 
-    @command(name='accept', aliases=('verify', 'verified', 'accepted'), hidden=True)
+    @command(name='accept', aliases=('verified', 'accepted'), hidden=True)
     @has_no_roles(constants.Roles.verified)
     @in_whitelist(channels=(constants.Channels.verification,))
     async def accept_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
@@ -847,6 +847,22 @@ class Verification(Cog):
             return ctx.command.name == "accept"
         else:
             return True
+
+    @command(name='verify')
+    @has_any_role(*constants.MODERATION_ROLES)
+    async def apply_developer_role(self, ctx: Context, user: discord.Member) -> None:
+        """Command for moderators to apply the Developer role to any user."""
+        log.trace(f'verify command called by {ctx.author} for {user.id}.')
+        developer_role = self.bot.get_guild(constants.Guild.id).get_role(constants.Roles.verified)
+
+        if developer_role in user.roles:
+            log.trace(f'{user.id} is already a developer, aborting.')
+            await ctx.send(f'{constants.Emojis.cross_mark} {user} is already a developer.')
+            return
+
+        await user.add_roles(developer_role)
+        log.trace(f'Developer role successfully applied to {user.id}')
+        await ctx.send(f'{constants.Emojis.check_mark} Developer role applied to {user}.')
 
     # endregion
 
