@@ -347,7 +347,7 @@ class WatchChannel(metaclass=CogABCMeta):
                 try:
                     task.result()
                 except asyncio.CancelledError:
-                    self.log.error(
+                    self.log.info(
                         f"The consume task of {type(self).__name__} was canceled. Messages may be lost."
                     )
 
