@@ -1,7 +1,7 @@
 import inspect
 import logging
 from collections import defaultdict
-from functools import partial, wraps
+from functools import partial, update_wrapper
 from typing import Any, Awaitable, Callable, Hashable, Union
 from weakref import WeakValueDictionary
 
@@ -91,8 +91,7 @@ def lock(namespace: Hashable, resource_id: ResourceId, *, raise_error: bool = Fa
                 log.info(f"{name}: aborted because resource {namespace!r}:{id_!r} is locked")
                 if raise_error:
                     raise LockedResourceError(str(namespace), id_)
-
-        return wraps(func)(function.update_wrapper_globals(wrapper, func))
+        return update_wrapper(function.update_wrapper_globals(wrapper, func), func)
     return decorator
 
 

@@ -2,7 +2,7 @@ import asyncio
 import logging
 import typing as t
 from contextlib import suppress
-from functools import wraps
+from functools import update_wrapper
 
 from discord import Member, NotFound
 from discord.ext import commands
@@ -105,7 +105,7 @@ def redirect_output(destination_channel: int, bypass_roles: t.Container[int] = N
                     await ctx.message.delete()
                     log.trace("Redirect output: Deleted invocation message")
 
-        return wraps(func)(function.update_wrapper_globals(inner, func))
+        return update_wrapper(function.update_wrapper_globals(inner, func), func)
     return wrap
 
 
@@ -149,5 +149,5 @@ def respect_role_hierarchy(member_arg: function.Argument) -> t.Callable:
             else:
                 log.trace(f"{func.__name__}: {target.top_role=} < {actor.top_role=}; calling func")
                 await func(*args, **kwargs)
-        return wraps(func)(function.update_wrapper_globals(wrapper, func))
+        return update_wrapper(function.update_wrapper_globals(wrapper, func), func)
     return decorator
