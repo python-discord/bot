@@ -857,13 +857,13 @@ class Verification(Cog):
 
         if developer_role in user.roles:
             log.trace(f'{user.id} is already a developer, aborting.')
-            await ctx.send(f'{constants.Emojis.cross_mark} {user} is already a developer.')
+            await ctx.send(f'{constants.Emojis.cross_mark} {user.mention} is already a developer.')
             return
 
         await user.add_roles(developer_role)
         await safe_dm(user.send(ALTERNATE_VERIFIED_MESSAGE))
         log.trace(f'Developer role successfully applied to {user.id}')
-        await ctx.send(f'{constants.Emojis.check_mark} Developer role applied to {user}.')
+        await ctx.send(f'{constants.Emojis.check_mark} Developer role applied to {user.mention}.')
 
     # endregion
 
