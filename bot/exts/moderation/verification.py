@@ -55,7 +55,7 @@ If you'd like to unsubscribe from the announcement notifications, simply send `!
 """
 
 ALTERNATE_VERIFIED_MESSAGE = f"""
-Thanks for accepting our rules!
+You're now verified!
 
 You can find a copy of our rules for reference at <https://pythondiscord.com/pages/rules>.
 
@@ -861,6 +861,7 @@ class Verification(Cog):
             return
 
         await user.add_roles(developer_role)
+        await safe_dm(user.send(ALTERNATE_VERIFIED_MESSAGE))
         log.trace(f'Developer role successfully applied to {user.id}')
         await ctx.send(f'{constants.Emojis.check_mark} Developer role applied to {user}.')
 
