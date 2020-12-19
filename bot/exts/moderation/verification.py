@@ -583,7 +583,6 @@ class Verification(Cog):
     @Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member) -> None:
         """Check if we need to send a verification DM to a gated user."""
-
         if before.pending is True and after.pending is False:
             try:
                 # If the member has not received a DM from our !accept command
