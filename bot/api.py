@@ -37,34 +37,27 @@ class APIClient:
     session: Optional[aiohttp.ClientSession] = None
     loop: asyncio.AbstractEventLoop = None
 
-    def __init__(self, loop: asyncio.AbstractEventLoop, **kwargs):
+    def __init__(self, **session_kwargs):
         auth_headers = {
             'Authorization': f"Token {Keys.site_api}"
         }
 
-        if 'headers' in kwargs:
-            kwargs['headers'].update(auth_headers)
+        if 'headers' in session_kwargs:
+            session_kwargs['headers'].update(auth_headers)
         else:
-            kwargs['headers'] = auth_headers
+            session_kwargs['headers'] = auth_headers
 
-        self.session = None
-        self.loop = loop
-
-        # It has to be instantiated in a task/coroutine to avoid warnings from aiohttp.
-        self._creation_task = self.loop.create_task(self._create_session(**kwargs))
+        # aiohttp will complain if APIClient gets instantiated outside a coroutine. Thankfully, we
+        # don't and shouldn't need to do that, so we can avoid scheduling a task to create it.
+        self.session = aiohttp.ClientSession(**session_kwargs)
 
     @staticmethod
     def _url_for(endpoint: str) -> str:
         return f"{URLs.site_schema}{URLs.site_api}/{quote_url(endpoint)}"
 
-    async def _create_session(self, **session_kwargs) -> None:
-        """Create the aiohttp session with `session_kwargs`."""
-        self.session = aiohttp.ClientSession(**session_kwargs)
-
     async def close(self) -> None:
-        """Close the aiohttp session and unset the ready event."""
-        if self.session:
-            await self.session.close()
+        """Close the aiohttp session."""
+        await self.session.close()
 
     async def maybe_raise_for_status(self, response: aiohttp.ClientResponse, should_raise: bool) -> None:
         """Raise ResponseCodeError for non-OK response if an exception should be raised."""
@@ -78,8 +71,6 @@ class APIClient:
 
     async def request(self, method: str, endpoint: str, *, raise_for_status: bool = True, **kwargs) -> dict:
         """Send an HTTP request to the site API and return the JSON response."""
-        await self._creation_task
-
         async with self.session.request(method.upper(), self._url_for(endpoint), **kwargs) as resp:
             await self.maybe_raise_for_status(resp, raise_for_status)
             return await resp.json()
@@ -102,8 +93,6 @@ class APIClient:
 
     async def delete(self, endpoint: str, *, raise_for_status: bool = True, **kwargs) -> Optional[dict]:
         """Site API DELETE."""
-        await self._creation_task
-
         async with self.session.delete(self._url_for(endpoint), **kwargs) as resp:
             if resp.status == 204:
                 return None

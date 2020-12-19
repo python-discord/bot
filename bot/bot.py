@@ -198,7 +198,7 @@ class Bot(commands.Bot):
         self.http.connector = self._connector
 
         self.http_session = aiohttp.ClientSession(connector=self._connector)
-        self.api_client = api.APIClient(loop=self.loop, connector=self._connector)
+        self.api_client = api.APIClient(connector=self._connector)
 
         if self.redis_session.closed:
             # If the RedisSession was somehow closed, we try to reconnect it
