@@ -182,6 +182,8 @@ class Verification(Cog):
         self.bot = bot
         self.bot.loop.create_task(self._maybe_start_tasks())
 
+        self.pending_members = set()
+
     def cog_unload(self) -> None:
         """
         Cancel internal tasks.
@@ -570,24 +572,24 @@ class Verification(Cog):
         # We will send them an alternate DM once they verify with the welcome
         # video.
         if raw_member.get("pending"):
-            await self.member_gating_cache.set(member.id, True)
-
-            # TODO: Temporary, remove soon after asking joe.
-            await self.mod_log.send_log_message(
-                icon_url=self.bot.user.avatar_url,
-                colour=discord.Colour.blurple(),
-                title="New native gated user",
-                channel_id=constants.Channels.user_log,
-                text=f"<@{member.id}> ({member.id})",
-            )
-
-            return
+            self.pending_members.add(member.id)
 
         log.trace(f"Sending on join message to new member: {member.id}")
         try:
             await safe_dm(member.send(ON_JOIN_MESSAGE))
         except discord.HTTPException:
             log.exception("DM dispatch failed on unexpected error code")
+
+    @Cog.listener()
+    async def on_socket_response(self, msg: dict) -> None:
+        """Check if the users pending status has changed and send them them a welcome message."""
+        if msg.get("t") == "GUILD_MEMBER_UPDATE":
+            user_id = int(msg["user"]["id"])
+
+            if user_id in self.pending_members:
+                self.pending_members.remove(user_id)
+                if member := self.bot.get_guild(constants.Guild.id).get_member(user_id):
+                    await safe_dm(member.send(ALTERNATE_VERIFIED_MESSAGE))
 
     @Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member) -> None:
