@@ -606,7 +606,7 @@ class Verification(metaclass=YAMLGetter):
 class VoiceGate(metaclass=YAMLGetter):
     section = "voice_gate"
 
-    minimum_days_verified: int
+    minimum_days_member: int
     minimum_messages: int
     bot_message_delete_delay: int
     minimum_activity_blocks: int
