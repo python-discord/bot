@@ -572,7 +572,7 @@ class Verification(Cog):
         # We will send them an alternate DM once they verify with the welcome
         # video.
         if raw_member.get("pending"):
-            self.pending_members.add(member.id)
+            return self.pending_members.add(member.id)
 
         log.trace(f"Sending on join message to new member: {member.id}")
         try:
@@ -586,7 +586,7 @@ class Verification(Cog):
         if msg.get("t") == "GUILD_MEMBER_UPDATE":
             user_id = int(msg["d"]["user"]["id"])
 
-            if msg["d"]["pending"] is False:
+            if msg["d"].get("pending") is False:
                 if user_id in self.pending_members:
                     self.pending_members.remove(user_id)
                     if member := self.bot.get_guild(constants.Guild.id).get_member(user_id):
