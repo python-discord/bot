@@ -6,7 +6,6 @@ from collections import Counter, defaultdict
 from string import Template
 from typing import Any, Mapping, Optional, Tuple, Union
 
-from dateutil import parser
 from discord import ChannelType, Colour, Embed, Guild, Message, Role, Status, utils
 from discord.abc import GuildChannel
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role

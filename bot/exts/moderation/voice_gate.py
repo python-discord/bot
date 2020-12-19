@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 
 import discord
 from async_rediscache import RedisCache
-from dateutil import parser
 from discord import Colour, Member, VoiceState
 from discord.ext.commands import Cog, Context, command
 
