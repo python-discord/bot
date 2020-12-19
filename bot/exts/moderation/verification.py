@@ -174,9 +174,6 @@ class Verification(Cog):
     # ]
     task_cache = RedisCache()
 
-    # Create a cache for storing recipients of the alternate welcome DM.
-    member_gating_cache = RedisCache()
-
     def __init__(self, bot: Bot) -> None:
         """Start internal tasks."""
         self.bot = bot
