@@ -17,13 +17,11 @@ class BotCog(Cog, name="Bot"):
         self.bot = bot
 
     @group(invoke_without_command=True, name="bot", hidden=True)
-    @has_any_role(Roles.verified)
     async def botinfo_group(self, ctx: Context) -> None:
         """Bot informational commands."""
         await ctx.send_help(ctx.command)
 
     @botinfo_group.command(name='about', aliases=('info',), hidden=True)
-    @has_any_role(Roles.verified)
     async def about_command(self, ctx: Context) -> None:
         """Get information about the bot."""
         embed = Embed(
