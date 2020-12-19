@@ -293,7 +293,7 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(self.overwrite.send_messages)
         self.assertFalse(self.overwrite.add_reactions)
         self.channel.set_permissions.assert_awaited_once_with(
-            self.cog._verified_role,
+            self.cog._everyone_role,
             overwrite=self.overwrite
         )
 
@@ -426,7 +426,7 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
         """Channel's `send_message` and `add_reactions` overwrites were restored."""
         await self.cog._unsilence(self.channel)
         self.channel.set_permissions.assert_awaited_once_with(
-            self.cog._verified_role,
+            self.cog._everyone_role,
             overwrite=self.overwrite,
         )
 
@@ -440,7 +440,7 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
 
         await self.cog._unsilence(self.channel)
         self.channel.set_permissions.assert_awaited_once_with(
-            self.cog._verified_role,
+            self.cog._everyone_role,
             overwrite=self.overwrite,
         )
 
