@@ -149,7 +149,7 @@ class VoiceGate(Cog):
             return
 
         checks = {
-            "joined_at": ctx.author.joined_at > datetime.utcnow() - timedelta(days=GateConf.minimum_days_verified),
+            "joined_at": ctx.author.joined_at > datetime.utcnow() - timedelta(days=GateConf.minimum_days_member),
             "total_messages": data["total_messages"] < GateConf.minimum_messages,
             "voice_banned": data["voice_banned"],
             "activity_blocks": data["activity_blocks"] < GateConf.minimum_activity_blocks
