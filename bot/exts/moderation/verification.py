@@ -584,12 +584,13 @@ class Verification(Cog):
     async def on_socket_response(self, msg: dict) -> None:
         """Check if the users pending status has changed and send them them a welcome message."""
         if msg.get("t") == "GUILD_MEMBER_UPDATE":
-            user_id = int(msg["user"]["id"])
+            user_id = int(msg["d"]["user"]["id"])
 
-            if user_id in self.pending_members:
-                self.pending_members.remove(user_id)
-                if member := self.bot.get_guild(constants.Guild.id).get_member(user_id):
-                    await safe_dm(member.send(ALTERNATE_VERIFIED_MESSAGE))
+            if msg["d"]["pending"] is False:
+                if user_id in self.pending_members:
+                    self.pending_members.remove(user_id)
+                    if member := self.bot.get_guild(constants.Guild.id).get_member(user_id):
+                        await safe_dm(member.send(ALTERNATE_VERIFIED_MESSAGE))
 
     @Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member) -> None:
