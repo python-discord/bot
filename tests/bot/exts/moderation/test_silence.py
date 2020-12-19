@@ -117,15 +117,6 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         self.bot.get_guild.assert_called_once_with(Guild.id)
 
     @autospec(silence, "SilenceNotifier", pass_mocks=False)
-    async def test_async_init_got_role(self):
-        """Got `Roles.verified` role from guild."""
-        guild = self.bot.get_guild()
-        guild.get_role.side_effect = lambda id_: Mock(id=id_)
-
-        await self.cog._async_init()
-        self.assertEqual(self.cog._verified_role.id, Roles.verified)
-
-    @autospec(silence, "SilenceNotifier", pass_mocks=False)
     async def test_async_init_got_channels(self):
         """Got channels from bot."""
         self.bot.get_channel.side_effect = lambda id_: MockTextChannel(id=id_)
