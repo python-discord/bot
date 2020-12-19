@@ -110,17 +110,3 @@ class APIClient:
 
             await self.maybe_raise_for_status(resp, raise_for_status)
             return await resp.json()
-
-
-def loop_is_running() -> bool:
-    """
-    Determine if there is a running asyncio event loop.
-
-    This helps enable "call this when event loop is running" logic (see: Twisted's `callWhenRunning`),
-    which is currently not provided by asyncio.
-    """
-    try:
-        asyncio.get_running_loop()
-    except RuntimeError:
-        return False
-    return True
