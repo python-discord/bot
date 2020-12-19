@@ -229,9 +229,9 @@ class Information(Cog):
         if on_server:
             joined = time_since(user.joined_at, max_units=3)
             roles = ", ".join(role.mention for role in user.roles[1:])
-            membership = {"Joined": joined, "Verified": user.pending, "Roles": roles or None}
+            membership = {"Joined": joined, "Pending": user.pending, "Roles": roles or None}
             if not is_mod_channel(ctx.channel):
-                membership.pop("Verified")
+                membership.pop("Pending")
 
             membership = textwrap.dedent("\n".join([f"{key}: {value}" for key, value in membership.items()]))
         else:
