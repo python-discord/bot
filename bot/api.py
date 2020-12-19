@@ -50,51 +50,21 @@ class APIClient:
         self.session = None
         self.loop = loop
 
-        self._ready = asyncio.Event(loop=loop)
-        self._creation_task = None
-        self._default_session_kwargs = kwargs
-
-        self.recreate()
+        # It has to be instantiated in a task/coroutine to avoid warnings from aiohttp.
+        self._creation_task = self.loop.create_task(self._create_session(**kwargs))
 
     @staticmethod
     def _url_for(endpoint: str) -> str:
         return f"{URLs.site_schema}{URLs.site_api}/{quote_url(endpoint)}"
 
     async def _create_session(self, **session_kwargs) -> None:
-        """
-        Create the aiohttp session with `session_kwargs` and set the ready event.
-
-        `session_kwargs` is merged with `_default_session_kwargs` and overwrites its values.
-        If an open session already exists, it will first be closed.
-        """
-        await self.close()
-        self.session = aiohttp.ClientSession(**{**self._default_session_kwargs, **session_kwargs})
-        self._ready.set()
+        """Create the aiohttp session with `session_kwargs`."""
+        self.session = aiohttp.ClientSession(**session_kwargs)
 
     async def close(self) -> None:
         """Close the aiohttp session and unset the ready event."""
         if self.session:
             await self.session.close()
-
-        self._ready.clear()
-
-    def recreate(self, force: bool = False, **session_kwargs) -> None:
-        """
-        Schedule the aiohttp session to be created with `session_kwargs` if it's been closed.
-
-        If `force` is True, the session will be recreated even if an open one exists. If a task to
-        create the session is pending, it will be cancelled.
-
-        `session_kwargs` is merged with the kwargs given when the `APIClient` was created and
-        overwrites those default kwargs.
-        """
-        if force or self.session is None or self.session.closed:
-            if force and self._creation_task:
-                self._creation_task.cancel()
-
-            # Don't schedule a task if one is already in progress.
-            if force or self._creation_task is None or self._creation_task.done():
-                self._creation_task = self.loop.create_task(self._create_session(**session_kwargs))
 
     async def maybe_raise_for_status(self, response: aiohttp.ClientResponse, should_raise: bool) -> None:
         """Raise ResponseCodeError for non-OK response if an exception should be raised."""
@@ -108,7 +78,7 @@ class APIClient:
 
     async def request(self, method: str, endpoint: str, *, raise_for_status: bool = True, **kwargs) -> dict:
         """Send an HTTP request to the site API and return the JSON response."""
-        await self._ready.wait()
+        await self._creation_task
 
         async with self.session.request(method.upper(), self._url_for(endpoint), **kwargs) as resp:
             await self.maybe_raise_for_status(resp, raise_for_status)
@@ -132,7 +102,7 @@ class APIClient:
 
     async def delete(self, endpoint: str, *, raise_for_status: bool = True, **kwargs) -> Optional[dict]:
         """Site API DELETE."""
-        await self._ready.wait()
+        await self._creation_task
 
         async with self.session.delete(self._url_for(endpoint), **kwargs) as resp:
             if resp.status == 204:

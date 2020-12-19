@@ -32,7 +32,7 @@ class Bot(commands.Bot):
 
         self.http_session: Optional[aiohttp.ClientSession] = None
         self.redis_session = redis_session
-        self.api_client = api.APIClient(loop=self.loop)
+        self.api_client = None
         self.filter_list_cache = defaultdict(dict)
 
         self._connector = None
@@ -112,7 +112,7 @@ class Bot(commands.Bot):
             )
 
         self.http_session = aiohttp.ClientSession(connector=self._connector)
-        self.api_client.recreate(force=True, connector=self._connector)
+        self.api_client = api.APIClient(loop=self.loop, connector=self._connector)
 
         # Build the FilterList cache
         self.loop.create_task(self.cache_filter_list_data())
@@ -194,7 +194,8 @@ class Bot(commands.Bot):
         """Close the Discord connection and the aiohttp session, connector, statsd client, and resolver."""
         await super().close()
 
-        await self.api_client.close()
+        if self.api_client:
+            await self.api_client.close()
 
         if self.http_session:
             await self.http_session.close()
