@@ -21,4 +21,4 @@ jobs:
         with:
           tagName: ${{ github.sha }}
           environment: production
-          releaseNamePrefix: pydis-bot@
+          releaseNamePrefix: bot@
