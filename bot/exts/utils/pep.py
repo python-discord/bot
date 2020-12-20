@@ -39,6 +39,10 @@ class PythonEnhancementProposals(Cog):
         self.last_refreshed_peps = datetime.now()
 
         async with self.bot.http_session.get(self.PEPS_LISTING_API_URL) as resp:
+            if resp.status != 200:
+                log.warning(f"Fetching PEP URLs from GitHub API failed with code {resp.status}")
+                return
+
             listing = await resp.json()
 
         log.trace("Got PEP URLs listing from GitHub API")
