@@ -13,14 +13,6 @@ class APIClientTests(unittest.IsolatedAsyncioTestCase):
         cls.error_api_response = MagicMock()
         cls.error_api_response.status = 999
 
-    def test_loop_is_not_running_by_default(self):
-        """The event loop should not be running by default."""
-        self.assertFalse(api.loop_is_running())
-
-    async def test_loop_is_running_in_async_context(self):
-        """The event loop should be running in an async context."""
-        self.assertTrue(api.loop_is_running())
-
     def test_response_code_error_default_initialization(self):
         """Test the default initialization of `ResponseCodeError` without `text` or `json`"""
         error = api.ResponseCodeError(response=self.error_api_response)
