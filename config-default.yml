@@ -526,7 +526,7 @@ verification:
 
 
 voice_gate:
-    minimum_days_verified: 3  # How many days the user must have been verified for
+    minimum_days_member: 3  # How many days the user must have been a member for
     minimum_messages: 50  # How many messages a user must have to be eligible for voice
     bot_message_delete_delay: 10  # Seconds before deleting bot's response in Voice Gate
     minimum_activity_blocks: 3  # Number of 10 minute blocks during which a user must have been active

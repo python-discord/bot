@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 
 import discord
 from async_rediscache import RedisCache
-from dateutil import parser
 from discord import Colour, Member, VoiceState
 from discord.ext.commands import Cog, Context, command
 
@@ -29,7 +28,7 @@ FAILED_MESSAGE = (
 )
 
 MESSAGE_FIELD_MAP = {
-    "verified_at": f"have been verified for less than {GateConf.minimum_days_verified} days",
+    "joined_at": f"have been on the server for less than {GateConf.minimum_days_member} days",
     "voice_banned": "have an active voice ban infraction",
     "total_messages": f"have sent less than {GateConf.minimum_messages} messages",
     "activity_blocks": f"have been active for fewer than {GateConf.minimum_activity_blocks} ten-minute blocks",
@@ -149,14 +148,8 @@ class VoiceGate(Cog):
             await ctx.author.send(embed=embed)
             return
 
-        # Pre-parse this for better code style
-        if data["verified_at"] is not None:
-            data["verified_at"] = parser.isoparse(data["verified_at"])
-        else:
-            data["verified_at"] = datetime.utcnow() - timedelta(days=3)
-
         checks = {
-            "verified_at": data["verified_at"] > datetime.utcnow() - timedelta(days=GateConf.minimum_days_verified),
+            "joined_at": ctx.author.joined_at > datetime.utcnow() - timedelta(days=GateConf.minimum_days_member),
             "total_messages": data["total_messages"] < GateConf.minimum_messages,
             "voice_banned": data["voice_banned"],
             "activity_blocks": data["activity_blocks"] < GateConf.minimum_activity_blocks

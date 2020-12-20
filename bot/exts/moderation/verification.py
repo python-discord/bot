@@ -174,13 +174,12 @@ class Verification(Cog):
     # ]
     task_cache = RedisCache()
 
-    # Create a cache for storing recipients of the alternate welcome DM.
-    member_gating_cache = RedisCache()
-
     def __init__(self, bot: Bot) -> None:
         """Start internal tasks."""
         self.bot = bot
         self.bot.loop.create_task(self._maybe_start_tasks())
+
+        self.pending_members = set()
 
     def cog_unload(self) -> None:
         """
@@ -568,19 +567,8 @@ class Verification(Cog):
         # If the user has the pending flag set, they will be using the alternate
         # gate and will not need a welcome DM with verification instructions.
         # We will send them an alternate DM once they verify with the welcome
-        # video.
+        # video when they pass the gate.
         if raw_member.get("pending"):
-            await self.member_gating_cache.set(member.id, True)
-
-            # TODO: Temporary, remove soon after asking joe.
-            await self.mod_log.send_log_message(
-                icon_url=self.bot.user.avatar_url,
-                colour=discord.Colour.blurple(),
-                title="New native gated user",
-                channel_id=constants.Channels.user_log,
-                text=f"<@{member.id}> ({member.id})",
-            )
-
             return
 
         log.trace(f"Sending on join message to new member: {member.id}")
@@ -592,19 +580,15 @@ class Verification(Cog):
     @Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member) -> None:
         """Check if we need to send a verification DM to a gated user."""
-        before_roles = [role.id for role in before.roles]
-        after_roles = [role.id for role in after.roles]
-
-        if constants.Roles.verified not in before_roles and constants.Roles.verified in after_roles:
-            if await self.member_gating_cache.pop(after.id):
-                try:
-                    # If the member has not received a DM from our !accept command
-                    # and has gone through the alternate gating system we should send
-                    # our alternate welcome DM which includes info such as our welcome
-                    # video.
-                    await safe_dm(after.send(ALTERNATE_VERIFIED_MESSAGE))
-                except discord.HTTPException:
-                    log.exception("DM dispatch failed on unexpected error code")
+        if before.pending is True and after.pending is False:
+            try:
+                # If the member has not received a DM from our !accept command
+                # and has gone through the alternate gating system we should send
+                # our alternate welcome DM which includes info such as our welcome
+                # video.
+                await safe_dm(after.send(ALTERNATE_VERIFIED_MESSAGE))
+            except discord.HTTPException:
+                log.exception("DM dispatch failed on unexpected error code")
 
     @Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
