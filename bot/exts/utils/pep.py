@@ -8,6 +8,7 @@ from discord import Colour, Embed
 from discord.ext.commands import Cog, Context, command
 
 from bot.bot import Bot
+from bot.constants import Keys
 from bot.utils.cache import AsyncCache
 
 log = logging.getLogger(__name__)
@@ -15,6 +16,10 @@ log = logging.getLogger(__name__)
 ICON_URL = "https://www.python.org/static/opengraph-icon-200x200.png"
 
 pep_cache = AsyncCache()
+
+GITHUB_API_HEADERS = {}
+if Keys.github:
+    GITHUB_API_HEADERS["Authorization"] = f"token {Keys.github}"
 
 
 class PythonEnhancementProposals(Cog):
@@ -38,7 +43,10 @@ class PythonEnhancementProposals(Cog):
         log.trace("Started refreshing PEP URLs.")
         self.last_refreshed_peps = datetime.now()
 
-        async with self.bot.http_session.get(self.PEPS_LISTING_API_URL) as resp:
+        async with self.bot.http_session.get(
+            self.PEPS_LISTING_API_URL,
+            headers=GITHUB_API_HEADERS
+        ) as resp:
             if resp.status != 200:
                 log.warning(f"Fetching PEP URLs from GitHub API failed with code {resp.status}")
                 return
