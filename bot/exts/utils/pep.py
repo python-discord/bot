@@ -26,7 +26,6 @@ class PythonEnhancementProposals(Cog):
     """Cog for displaying information about PEPs."""
 
     BASE_PEP_URL = "http://www.python.org/dev/peps/pep-"
-    BASE_GITHUB_PEP_URL = "https://raw.githubusercontent.com/python/peps/master/pep-"
     PEPS_LISTING_API_URL = "https://api.github.com/repos/python/peps/contents?ref=master"
 
     def __init__(self, bot: Bot):
