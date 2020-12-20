@@ -35,6 +35,7 @@ class PythonEnhancementProposals(Cog):
         # Wait until HTTP client is available
         await self.bot.wait_until_ready()
         log.trace("Started refreshing PEP URLs.")
+        self.last_refreshed_peps = datetime.now()
 
         async with self.bot.http_session.get(self.PEPS_LISTING_API_URL) as resp:
             listing = await resp.json()
@@ -47,7 +48,6 @@ class PythonEnhancementProposals(Cog):
                 pep_number = name.replace("pep-", "").split(".")[0]
                 self.peps[int(pep_number)] = file["download_url"]
 
-        self.last_refreshed_peps = datetime.now()
         log.info("Successfully refreshed PEP URLs listing.")
 
     @staticmethod
