@@ -56,4 +56,4 @@ jobs:
             ghcr.io/python-discord/bot:latest
             ghcr.io/python-discord/bot:${{ steps.sha_tag.outputs.tag }}
           build-args: |
-            git_sha=${{ GITHUB_SHA }}
+            git_sha=${{ github.sha }}
