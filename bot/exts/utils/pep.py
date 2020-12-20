@@ -27,7 +27,8 @@ class PythonEnhancementProposals(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.peps: Dict[int, str] = {}
-        self.last_refreshed_peps: Optional[datetime] = None
+        # To avoid situations where we don't have last datetime, set this to now.
+        self.last_refreshed_peps: datetime = datetime.now()
         self.bot.loop.create_task(self.refresh_peps_urls())
 
     async def refresh_peps_urls(self) -> None:
