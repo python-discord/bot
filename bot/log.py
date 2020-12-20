@@ -69,7 +69,8 @@ def setup_sentry() -> None:
             sentry_logging,
             AioHttpIntegration(),
             RedisIntegration(),
-        ]
+        ],
+        release=f"bot@{constants.GIT_SHA}"
     )
 
 
