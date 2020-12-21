@@ -5,7 +5,7 @@ from discord import Embed, TextChannel
 from discord.ext.commands import Cog, Context, command, group, has_any_role
 
 from bot.bot import Bot
-from bot.constants import Guild, MODERATION_ROLES, Roles, URLs
+from bot.constants import Guild, MODERATION_ROLES, URLs
 
 log = logging.getLogger(__name__)
 
@@ -17,13 +17,11 @@ class BotCog(Cog, name="Bot"):
         self.bot = bot
 
     @group(invoke_without_command=True, name="bot", hidden=True)
-    @has_any_role(Roles.verified)
     async def botinfo_group(self, ctx: Context) -> None:
         """Bot informational commands."""
         await ctx.send_help(ctx.command)
 
     @botinfo_group.command(name='about', aliases=('info',), hidden=True)
-    @has_any_role(Roles.verified)
     async def about_command(self, ctx: Context) -> None:
         """Get information about the bot."""
         embed = Embed(

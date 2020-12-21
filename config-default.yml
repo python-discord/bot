@@ -154,7 +154,6 @@ guild:
         python_discussion:  &PY_DISCUSSION  267624335836053506
 
         # Python Help: Available
-        how_to_get_help:    704250143020417084
         cooldown:           720603994149486673
 
         # Logs
@@ -195,13 +194,19 @@ guild:
         mod_announcements:      &MOD_ANNOUNCEMENTS      372115205867700225
         admin_announcements:    &ADMIN_ANNOUNCEMENTS    749736155569848370
 
-        # Voice
-        code_help_voice:                    755154969761677312
-        code_help_voice_2:                  766330079135268884
-        voice_chat:                         412357430186344448
+        # Voice Channels
         admins_voice:       &ADMINS_VOICE   500734494840717332
+        code_help_voice_1:                  751592231726481530
+        code_help_voice_2:                  764232549840846858
+        general_voice:                      751591688538947646
         staff_voice:        &STAFF_VOICE    412375055910043655
         user_event_voice:                   751592185077563462
+
+        # Voice Chat
+        code_help_chat_1:                   755154969761677312
+        code_help_chat_2:                   766330079135268884
+        staff_voice_chat:                   541638762007101470
+        voice_chat:                         412357430186344448
 
         # Watch
         big_brother_logs:   &BB_LOGS        468507907357409333
@@ -534,7 +539,7 @@ verification:
 
 
 voice_gate:
-    minimum_days_verified: 3  # How many days the user must have been verified for
+    minimum_days_member: 3  # How many days the user must have been a member for
     minimum_messages: 50  # How many messages a user must have to be eligible for voice
     bot_message_delete_delay: 10  # Seconds before deleting bot's response in Voice Gate
     minimum_activity_blocks: 3  # Number of 10 minute blocks during which a user must have been active
