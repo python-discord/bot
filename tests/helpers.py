@@ -229,7 +229,7 @@ class MockMember(CustomMockMixin, unittest.mock.Mock, ColourMixin, HashableMixin
     spec_set = member_instance
 
     def __init__(self, roles: Optional[Iterable[MockRole]] = None, **kwargs) -> None:
-        default_kwargs = {'name': 'member', 'id': next(self.discord_id), 'bot': False}
+        default_kwargs = {'name': 'member', 'id': next(self.discord_id), 'bot': False, "pending": False}
         super().__init__(**collections.ChainMap(kwargs, default_kwargs))
 
         self.roles = [MockRole(name="@everyone", position=1, id=0)]

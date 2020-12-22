@@ -197,7 +197,7 @@ class ModManagement(commands.Cog):
     # endregion
     # region: Search infractions
 
-    @infraction_group.group(name="search", invoke_without_command=True)
+    @infraction_group.group(name="search", aliases=('s',), invoke_without_command=True)
     async def infraction_search_group(self, ctx: Context, query: t.Union[UserMention, Snowflake, str]) -> None:
         """Searches for infractions in the database."""
         if isinstance(query, int):

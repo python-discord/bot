@@ -104,7 +104,7 @@ class Silence(commands.Cog):
 
         guild = self.bot.get_guild(constants.Guild.id)
 
-        self._verified_msg_role = guild.get_role(constants.Roles.verified)
+        self._everyone_role = guild.default_role
         self._verified_voice_role = guild.get_role(constants.Roles.voice_verified)
         self._helper_role = guild.get_role(constants.Roles.helpers)
 
@@ -217,7 +217,7 @@ class Silence(commands.Cog):
                 overwrite = channel.overwrites_for(self._verified_voice_role)
                 manual = overwrite.speak is False
             else:
-                overwrite = channel.overwrites_for(self._verified_msg_role)
+                overwrite = channel.overwrites_for(self._everyone_role)
                 manual = overwrite.send_messages is False or overwrite.add_reactions is False
 
             # Send fail message to muted channel or voice chat channel, and invocation channel
@@ -233,7 +233,7 @@ class Silence(commands.Cog):
         """Set silence permission overwrites for `channel` and return True if successful."""
         # Get the original channel overwrites
         if isinstance(channel, TextChannel):
-            role = self._verified_msg_role
+            role = self._everyone_role
             overwrite = channel.overwrites_for(role)
             prev_overwrites = dict(send_messages=overwrite.send_messages, add_reactions=overwrite.add_reactions)
 
@@ -334,7 +334,7 @@ class Silence(commands.Cog):
 
         # Select the role based on channel type, and get current overwrites
         if isinstance(channel, TextChannel):
-            role = self._verified_msg_role
+            role = self._everyone_role
             overwrite = channel.overwrites_for(role)
             permissions = "`Send Messages` and `Add Reactions`"
         else:

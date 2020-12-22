@@ -117,15 +117,6 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         self.bot.get_guild.assert_called_once_with(Guild.id)
 
     @autospec(silence, "SilenceNotifier", pass_mocks=False)
-    async def test_async_init_got_role(self):
-        """Got `Roles.verified` role from guild."""
-        guild = self.bot.get_guild()
-        guild.get_role.side_effect = lambda id_: Mock(id=id_)
-
-        await self.cog._async_init()
-        self.assertEqual(self.cog._verified_msg_role.id, Roles.verified)
-
-    @autospec(silence, "SilenceNotifier", pass_mocks=False)
     async def test_async_init_got_channels(self):
         """Got channels from bot."""
         self.bot.get_channel.side_effect = lambda id_: MockTextChannel(id=id_)
@@ -508,7 +499,7 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(self.text_overwrite.send_messages)
         self.assertFalse(self.text_overwrite.add_reactions)
         self.text_channel.set_permissions.assert_awaited_once_with(
-            self.cog._verified_msg_role,
+            self.cog._everyone_role,
             overwrite=self.text_overwrite
         )
 
@@ -688,7 +679,7 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
         """Channel's `send_message` and `add_reactions` overwrites were restored."""
         await self.cog._unsilence(self.channel)
         self.channel.set_permissions.assert_awaited_once_with(
-            self.cog._verified_msg_role,
+            self.cog._everyone_role,
             overwrite=self.overwrite,
         )
 
@@ -702,7 +693,7 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
 
         await self.cog._unsilence(self.channel)
         self.channel.set_permissions.assert_awaited_once_with(
-            self.cog._verified_msg_role,
+            self.cog._everyone_role,
             overwrite=self.overwrite,
         )
 
@@ -765,7 +756,7 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
         ctx = MockContext()
 
         text_channel = MockTextChannel()
-        text_role = self.cog.bot.get_guild(Guild.id).get_role(Roles.verified)
+        text_role = self.cog.bot.get_guild(Guild.id).default_role
 
         voice_channel = MockVoiceChannel()
         voice_role = self.cog.bot.get_guild(Guild.id).get_role(Roles.voice_verified)
@@ -802,7 +793,7 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
         ctx = MockContext()
 
         text_channel = MockTextChannel()
-        text_role = self.cog.bot.get_guild(Guild.id).get_role(Roles.verified)
+        text_role = self.cog.bot.get_guild(Guild.id).default_role
 
         voice_channel = MockVoiceChannel()
         voice_role = self.cog.bot.get_guild(Guild.id).get_role(Roles.voice_verified)

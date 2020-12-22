@@ -11,6 +11,7 @@ from discord.abc import GuildChannel
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
 
 from bot import constants
+from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.converters import FetchedMember
 from bot.decorators import in_whitelist
@@ -20,7 +21,6 @@ from bot.utils.checks import cooldown_with_role_bypass, has_no_roles_check, in_w
 from bot.utils.time import time_since
 
 log = logging.getLogger(__name__)
-
 
 STATUS_EMOTES = {
     Status.offline: constants.Emojis.status_offline,
@@ -224,13 +224,16 @@ class Information(Cog):
             if is_set and (emoji := getattr(constants.Emojis, f"badge_{badge}", None)):
                 badges.append(emoji)
 
+        activity = await self.user_messages(user)
+
         if on_server:
             joined = time_since(user.joined_at, max_units=3)
             roles = ", ".join(role.mention for role in user.roles[1:])
-            membership = textwrap.dedent(f"""
-                             Joined: {joined}
-                             Roles: {roles or None}
-                         """).strip()
+            membership = {"Joined": joined, "Pending": user.pending, "Roles": roles or None}
+            if not is_mod_channel(ctx.channel):
+                membership.pop("Pending")
+
+            membership = textwrap.dedent("\n".join([f"{key}: {value}" for key, value in membership.items()]))
         else:
             roles = None
             membership = "The user is not a member of the server"
@@ -252,6 +255,8 @@ class Information(Cog):
 
         # Show more verbose output in moderation channels for infractions and nominations
         if is_mod_channel(ctx.channel):
+            fields.append(activity)
+
             fields.append(await self.expanded_user_infraction_counts(user))
             fields.append(await self.user_nomination_counts(user))
         else:
@@ -353,6 +358,30 @@ class Information(Cog):
                 output.append(f"This user has {count} historical {nomination_noun}, but is currently not nominated.")
 
         return "Nominations", "\n".join(output)
+
+    async def user_messages(self, user: FetchedMember) -> Tuple[Union[bool, str], Tuple[str, str]]:
+        """
+        Gets the amount of messages for `member`.
+
+        Fetches information from the metricity database that's hosted by the site.
+        If the database returns a code besides a 404, then many parts of the bot are broken including this one.
+        """
+        activity_output = []
+
+        try:
+            user_activity = await self.bot.api_client.get(f"bot/users/{user.id}/metricity_data")
+        except ResponseCodeError as e:
+            if e.status == 404:
+                activity_output = "No activity"
+        else:
+            activity_output.append(user_activity["total_messages"] or "No messages")
+            activity_output.append(user_activity["activity_blocks"] or "No activity")
+
+            activity_output = "\n".join(
+                f"{name}: {metric}" for name, metric in zip(["Messages", "Activity blocks"], activity_output)
+            )
+
+        return ("Activity", activity_output)
 
     def format_fields(self, mapping: Mapping[str, Any], field_width: Optional[int] = None) -> str:
         """Format a mapping to be readable to a human."""
