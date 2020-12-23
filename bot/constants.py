@@ -493,6 +493,7 @@ class Keys(metaclass=YAMLGetter):
     section = "keys"
 
     site_api: Optional[str]
+    github: Optional[str]
 
 
 class URLs(metaclass=YAMLGetter):
