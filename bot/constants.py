@@ -657,6 +657,9 @@ MODERATION_CHANNELS = Guild.moderation_channels
 # Category combinations
 MODERATION_CATEGORIES = Guild.moderation_categories
 
+# Git SHA for Sentry
+GIT_SHA = os.environ.get("GIT_SHA", "development")
+
 # Bot replies
 NEGATIVE_REPLIES = [
     "Noooooo!!",
