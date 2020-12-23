@@ -14,6 +14,8 @@ from bot.utils.cache import AsyncCache
 log = logging.getLogger(__name__)
 
 ICON_URL = "https://www.python.org/static/opengraph-icon-200x200.png"
+BASE_PEP_URL = "http://www.python.org/dev/peps/pep-"
+PEPS_LISTING_API_URL = "https://api.github.com/repos/python/peps/contents?ref=master"
 
 pep_cache = AsyncCache()
 
@@ -24,9 +26,6 @@ if Keys.github:
 
 class PythonEnhancementProposals(Cog):
     """Cog for displaying information about PEPs."""
-
-    BASE_PEP_URL = "http://www.python.org/dev/peps/pep-"
-    PEPS_LISTING_API_URL = "https://api.github.com/repos/python/peps/contents?ref=master"
 
     def __init__(self, bot: Bot):
         self.bot = bot
@@ -43,7 +42,7 @@ class PythonEnhancementProposals(Cog):
         self.last_refreshed_peps = datetime.now()
 
         async with self.bot.http_session.get(
-            self.PEPS_LISTING_API_URL,
+            PEPS_LISTING_API_URL,
             headers=GITHUB_API_HEADERS
         ) as resp:
             if resp.status != 200:
@@ -100,7 +99,7 @@ class PythonEnhancementProposals(Cog):
         # Assemble the embed
         pep_embed = Embed(
             title=f"**PEP {pep_nr} - {pep_header['Title']}**",
-            description=f"[Link]({self.BASE_PEP_URL}{pep_nr:04})",
+            description=f"[Link]({BASE_PEP_URL}{pep_nr:04})",
         )
 
         pep_embed.set_thumbnail(url=ICON_URL)
