@@ -55,7 +55,7 @@ If you'd like to unsubscribe from the announcement notifications, simply send `!
 """
 
 ALTERNATE_VERIFIED_MESSAGE = f"""
-You're now verified!
+You are now verified!
 
 You can find a copy of our rules for reference at <https://pythondiscord.com/pages/rules>.
 
